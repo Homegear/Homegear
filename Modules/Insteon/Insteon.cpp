@@ -70,7 +70,7 @@ void Insteon::dispose()
 	GD::defaultPhysicalInterface.reset();
 }
 
-std::shared_ptr<BaseLib::Systems::Central> Insteon::getCentral() { return std::shared_ptr<BaseLib::Systems::Central>(); /*return _central;*/ }
+std::shared_ptr<BaseLib::Systems::Central> Insteon::getCentral() { return _central; }
 
 std::shared_ptr<BaseLib::Systems::IPhysicalInterface> Insteon::createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings)
 {
@@ -219,7 +219,7 @@ void Insteon::load()
 			switch((DeviceType)deviceType)
 			{
 			case DeviceType::INSTEONCENTRAL:
-				_central = std::shared_ptr<InsteonDevice>(new InsteonCentral(deviceID, serialNumber, address));
+				_central = std::shared_ptr<InsteonCentral>(new InsteonCentral(deviceID, serialNumber, address, this));
 				device = _central;
 				break;
 			case DeviceType::INSTEONSD:
@@ -265,7 +265,6 @@ void Insteon::createSpyDevice()
 	{
 		uint32_t seed = 0xfe0000 + BaseLib::HelperFunctions::getRandomNumber(1, 65535);
 
-		//ToDo: Use HMWiredCentral to get unique address
 		int32_t address = getUniqueAddress(seed);
 		std::string serialNumber(getUniqueSerialNumber("VIS", BaseLib::HelperFunctions::getRandomNumber(1, 9999999)));
 

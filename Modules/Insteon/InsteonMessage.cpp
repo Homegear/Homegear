@@ -36,17 +36,17 @@ InsteonMessage::InsteonMessage()
 {
 }
 
-InsteonMessage::InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, int32_t access, void (InsteonDevice::*messageHandler)(int32_t, std::shared_ptr<InsteonPacket>)) : _messageType(messageType), _messageSubtype(messageSubtype), _device(device), _access(access), _messageHandlerIncoming(messageHandler)
+InsteonMessage::InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, int32_t access, void (InsteonDevice::*messageHandler)(std::shared_ptr<InsteonPacket>)) : _messageType(messageType), _messageSubtype(messageSubtype), _device(device), _access(access), _messageHandlerIncoming(messageHandler)
 {
     _direction = DIRECTIONIN;
 }
 
-InsteonMessage::InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, int32_t access, int32_t accessPairing, void (InsteonDevice::*messageHandler)(int32_t, std::shared_ptr<InsteonPacket>)) : _messageType(messageType), _messageSubtype(messageSubtype), _device(device), _access(access), _accessPairing(accessPairing), _messageHandlerIncoming(messageHandler)
+InsteonMessage::InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, int32_t access, int32_t accessPairing, void (InsteonDevice::*messageHandler)(std::shared_ptr<InsteonPacket>)) : _messageType(messageType), _messageSubtype(messageSubtype), _device(device), _access(access), _accessPairing(accessPairing), _messageHandlerIncoming(messageHandler)
 {
     _direction = DIRECTIONIN;
 }
 
-InsteonMessage::InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, void (InsteonDevice::*messageHandler)(int32_t, int32_t, std::shared_ptr<InsteonPacket>)) : _messageType(messageType), _messageSubtype(messageSubtype), _device(device), _messageHandlerOutgoing(messageHandler)
+InsteonMessage::InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, void (InsteonDevice::*messageHandler)(int32_t, std::shared_ptr<InsteonPacket>)) : _messageType(messageType), _messageSubtype(messageSubtype), _device(device), _messageHandlerOutgoing(messageHandler)
 {
     _direction = DIRECTIONOUT;
 }
@@ -60,7 +60,7 @@ void InsteonMessage::invokeMessageHandlerIncoming(std::shared_ptr<InsteonPacket>
 	try
 	{
 		if(_device == nullptr || _messageHandlerIncoming == nullptr || packet == nullptr) return;
-		((_device)->*(_messageHandlerIncoming))(packet->messageCounter(), packet);
+		((_device)->*(_messageHandlerIncoming))(packet);
 	}
 	catch(const std::exception& ex)
 	{
@@ -81,9 +81,7 @@ void InsteonMessage::invokeMessageHandlerOutgoing(std::shared_ptr<InsteonPacket>
 	try
 	{
 		if(_device == nullptr || _messageHandlerOutgoing == nullptr || packet == nullptr) return;
-		//Actually the message counter implementation is not correct. See https://sathya.de/HMCWiki/index.php/Examples:Message_Counter
-		_device->messageCounter()->at(packet->senderAddress())++;
-		((_device)->*(_messageHandlerOutgoing))(_device->messageCounter()->at(packet->senderAddress()), _messageSubtype, packet);
+		((_device)->*(_messageHandlerOutgoing))(_messageSubtype, packet);
 	}
 	catch(const std::exception& ex)
 	{

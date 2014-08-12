@@ -37,29 +37,59 @@
 namespace Insteon
 {
 
+enum class InsteonPacketFlags : uint32_t
+{
+	Direct = 				0,
+	DirectAck = 			1,
+	GroupCleanupDirect = 	2,
+	GroupCleanupDirectAck = 3,
+	Broadcast =				4,
+	DirectNak =				5,
+	GroupBroadcast =		6,
+	GroupCleanupDirectNak = 7
+};
+
 class InsteonPacket : public BaseLib::Systems::Packet
 {
     public:
         //Properties
         InsteonPacket();
         InsteonPacket(std::string packet, int64_t timeReceived = 0);
-        InsteonPacket(std::vector<char>& packet, uint32_t packetSize, int64_t timeReceived = 0);
+        InsteonPacket(std::vector<char>& packet, int64_t timeReceived = 0);
+        InsteonPacket(std::vector<uint8_t>& packet, int64_t timeReceived = 0);
+        InsteonPacket(uint8_t messageType, uint8_t messageSubtype, int32_t destinationAddress, uint8_t hopsLeft, uint8_t hopsMax, InsteonPacketFlags flags, bool extended, std::vector<uint8_t> payload);
         virtual ~InsteonPacket();
 
+        void import(std::vector<char>& packet);
+        void import(std::vector<uint8_t>& packet);
+        void import(std::string packetHex);
+
+        bool extended() { return _extended; }
+        InsteonPacketFlags flags() { return _flags; }
+        void setFlags(InsteonPacketFlags value) { _flags = value; }
+        uint8_t hopsLeft() { return _hopsLeft; }
+        uint8_t hopsMax() { return _hopsMax; }
+        uint8_t messageType() { return _messageType; }
+        void setMessageType(uint8_t type) { _messageType = type; }
+        uint8_t messageSubtype() { return _messageSubtype; }
         virtual std::string hexString();
         virtual std::vector<char> byteArray();
 
-        void import(std::vector<char>& packet, uint32_t packetSize);
-        void import(std::string packetHex);
-    protected:
-    private:
-        //Packet content
-        std::vector<char> _packet;
-        //End packet content
+        virtual std::vector<uint8_t> getPosition(double index, double size, int32_t mask);
+        virtual void setPosition(double index, double size, std::vector<uint8_t>& value);
 
-        void init();
-        void reset();
+        bool equals(std::shared_ptr<InsteonPacket>& rhs);
+    protected:
+        bool _extended = false;
+        InsteonPacketFlags _flags = InsteonPacketFlags::Direct;
+        uint8_t _hopsLeft = 0;
+        uint8_t _hopsMax = 0;
+        uint8_t _messageType = 0;
+        uint8_t _messageSubtype = 0;
+
+        virtual uint8_t getByte(std::string);
+        int32_t getInt(std::string);
 };
 
 }
-#endif /* TCPPACKET_H_ */
+#endif

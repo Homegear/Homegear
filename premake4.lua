@@ -80,6 +80,7 @@ solution "homegear"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
 
+--[[
    project "homematicbidcos"
       kind "SharedLib"
       language "C++"
@@ -163,13 +164,13 @@ solution "homegear"
          targetdir "./lib/Modules/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
+--]]
 
---[[
    project "insteon"
       kind "SharedLib"
       language "C++"
       files { "./Modules/Insteon/*.h", "./Modules/Insteon/*.cpp" }
-      files { "./Modules/Insteon/Devices/*.h", "./Modules/Insteon/Devices/*.cpp" }
+      files { "./Modules/Insteon/LogicalDevices/*.h", "./Modules/Insteon/LogicalDevices/*.cpp" }
       files { "./Modules/Insteon/PhysicalDevices/*.h", "./Modules/Insteon/PhysicalDevices/*.cpp" }
       linkoptions { "-l base" }
 	   
@@ -192,7 +193,6 @@ solution "homegear"
          targetdir "./lib/Modules/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
---]]
 
    project "user"
       kind "StaticLib"

@@ -35,37 +35,62 @@ namespace Insteon
 
 InsteonHubX10::InsteonHubX10(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : BaseLib::Systems::IPhysicalInterface(GD::bl, settings)
 {
+	_out.init(GD::bl);
+	_out.setPrefix(GD::out.getPrefix() + "Insteon Hub X10 \"" + settings->id + "\": ");
+
 	signal(SIGPIPE, SIG_IGN);
 	_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl));
 
-	if(settings->listenThreadPriority == -1)
-	{
-		settings->listenThreadPriority = 0;
-		settings->listenThreadPolicy = SCHED_OTHER;
-	}
+	_lengthLookup[0x50] = 11;
+	_lengthLookup[0x51] = 25;
+	_lengthLookup[0x52] = 4;
+	_lengthLookup[0x53] = 10;
+	_lengthLookup[0x54] = 3;
+	_lengthLookup[0x55] = 2;
+	_lengthLookup[0x56] = 13;
+	_lengthLookup[0x57] = 10;
+	_lengthLookup[0x58] = 3;
+	_lengthLookup[0x60] = 9;
+	_lengthLookup[0x61] = 6;
+	_lengthLookup[0x62] = 23;
+	_lengthLookup[0x63] = 5;
+	_lengthLookup[0x64] = 5;
+	_lengthLookup[0x65] = 3;
+	_lengthLookup[0x66] = 6;
+	_lengthLookup[0x67] = 3;
+	_lengthLookup[0x68] = 4;
+	_lengthLookup[0x69] = 3;
+	_lengthLookup[0x6A] = 3;
+	_lengthLookup[0x6B] = 4;
+	_lengthLookup[0x6C] = 3;
+	_lengthLookup[0x6D] = 3;
+	_lengthLookup[0x6E] = 3;
+	_lengthLookup[0x6F] = 12;
+	_lengthLookup[0x70] = 4;
+	_lengthLookup[0x71] = 5;
+	_lengthLookup[0x72] = 3;
+	_lengthLookup[0x73] = 6;
 }
 
 InsteonHubX10::~InsteonHubX10()
 {
 	try
 	{
-		if(_listenThread.joinable())
-		{
-			_stopCallbackThread = true;
-			_listenThread.join();
-		}
+		_stopCallbackThread = true;
+		if(_initThread.joinable()) _initThread.join();
+		if(_listenThread.joinable()) _listenThread.join();
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -75,55 +100,199 @@ void InsteonHubX10::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 	{
 		if(!packet)
 		{
-			GD::out.printWarning("Warning: Packet was nullptr.");
+			_out.printWarning("Warning: Packet was nullptr.");
 			return;
 		}
 		_lastAction = BaseLib::HelperFunctions::getTime();
 
 		std::shared_ptr<InsteonPacket> insteonPacket(std::dynamic_pointer_cast<InsteonPacket>(packet));
 		if(!insteonPacket) return;
-		std::vector<char> data = insteonPacket->byteArray();
-		send(data, true);
+
+		std::vector<char> requestPacket { 0x02, 0x62 };
+		requestPacket.push_back(insteonPacket->destinationAddress() >> 16);
+		requestPacket.push_back((insteonPacket->destinationAddress() >> 8) & 0xFF);
+		requestPacket.push_back(insteonPacket->destinationAddress() & 0xFF);
+		requestPacket.push_back(((uint8_t)insteonPacket->flags() << 5) + ((uint8_t)insteonPacket->extended() << 4) + (insteonPacket->hopsLeft() << 2) + insteonPacket->hopsMax());
+		requestPacket.push_back(insteonPacket->messageType());
+		requestPacket.push_back(insteonPacket->messageSubtype());
+		requestPacket.insert(requestPacket.end(), insteonPacket->payload()->begin(), insteonPacket->payload()->end());
+
+		std::vector<uint8_t> responsePacket;
+		for(int32_t i = 0; i < 20; i++)
+		{
+			getResponse(requestPacket, responsePacket, 0x62);
+			if(responsePacket.size() > 1) break;
+			if(i == 19)
+			{
+				_out.printError("Error: No or wrong response to \"send packet\" request.");
+				_stopped = true;
+				return;
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(200));
+		}
+
 		_lastPacketSent = BaseLib::HelperFunctions::getTime();
 	}
 	catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-void InsteonHubX10::send(std::vector<char>& packet, bool printPacket)
+void InsteonHubX10::getResponse(const std::vector<char>& packet, std::vector<uint8_t>& response, uint8_t responseType)
+{
+	try
+    {
+		if(_stopped) return;
+		_requestMutex.lock();
+		_request.reset(new Request(responseType));
+		_request->mutex.try_lock(); //Lock and return immediately
+		send(packet, false);
+		if(!_request->mutex.try_lock_for(std::chrono::milliseconds(10000)))
+		{
+			_out.printError("Error: No response received to packet: " + _bl->hf.getHexString(packet));
+		}
+		_request->mutex.unlock();
+		response = _request->response;
+	}
+	catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _request.reset();
+    _requestMutex.unlock();
+}
+
+void InsteonHubX10::send(const std::vector<char>& data, bool printPacket)
 {
     try
     {
     	_sendMutex.lock();
-    	int32_t written = _socket->proofwrite(packet);
+    	if(!_socket->connected() || _stopped)
+    	{
+    		_out.printWarning("Warning: !!!Not!!! sending (Port " + _settings->port + "): " + _bl->hf.getHexString(data));
+    		_sendMutex.unlock();
+    		return;
+    	}
+    	if(_bl->debugLevel >= 5) _out.printDebug("Debug: Sending (Port " + _settings->port + "): " + _bl->hf.getHexString(data));
+    	int32_t written = _socket->proofwrite(data);
     }
     catch(BaseLib::SocketOperationException& ex)
     {
-    	GD::out.printError(ex.what());
+    	_out.printError(ex.what());
     }
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _sendMutex.unlock();
+}
+
+void InsteonHubX10::doInit()
+{
+	try
+	{
+		int32_t i = 0;
+		while(!_stopCallbackThread && !GD::family->getCentral() && i < 30)
+		{
+			_out.printDebug("Debug: Waiting for central to load.");
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			i++;
+		}
+		if(_stopCallbackThread) return;
+		if(!GD::family->getCentral())
+		{
+			_stopCallbackThread = true;
+			_out.printError("Error: Could not get central address. Stopping listening.");
+			return;
+		}
+
+		if(_stopped) return;
+
+		_initStarted = true;
+		/*
+		=> 0260
+		<= 0260 1eb784 032e9c
+		=> 026b48
+		<= 026b4806
+		*/
+
+		std::vector<char> requestPacket { 0x02, 0x60 };
+		std::vector<uint8_t> responsePacket;
+		for(int32_t i = 0; i < 20; i++)
+		{
+			getResponse(requestPacket, responsePacket, 0x60);
+			if(responsePacket.size() == 9)
+			{
+				_myAddress = (responsePacket.at(2) << 16) + (responsePacket.at(3) << 8) + responsePacket.at(4);
+				_out.printInfo("Info: Received device type: 0x" + BaseLib::HelperFunctions::getHexString((responsePacket.at(5) << 8) + responsePacket.at(6), 4) + " Firmware version is: 0x" + BaseLib::HelperFunctions::getHexString(responsePacket.at(7), 2));
+				break;
+			}
+			if(i == 19)
+			{
+				_out.printError("Error: No or wrong response to first init packet. Reconnecting...");
+				_stopped = true;
+				return;
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(200));
+		}
+
+		requestPacket = std::vector<char> { 0x02, 0x6B, 0x48 };
+		responsePacket.clear();
+		for(int32_t i = 0; i < 20; i++)
+		{
+			getResponse(requestPacket, responsePacket, 0x6B);
+			if(responsePacket.size() == 4) break;
+			if(i == 19)
+			{
+				_out.printError("Error: No or wrong response to first init packet. Reconnecting...");
+				_stopped = true;
+				return;
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(200));
+		}
+
+		_out.printInfo("Info: Init queue completed.");
+		_initComplete = true;
+		return;
+	}
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _stopped = true;
 }
 
 void InsteonHubX10::startListening()
@@ -131,25 +300,56 @@ void InsteonHubX10::startListening()
 	try
 	{
 		stopListening();
-		_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl, _settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate));
-		GD::out.printDebug("Connecting to Insteon Hub X10 with Hostname " + _settings->host + " on port " + _settings->port + "...");
+		_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl, _settings->host, _settings->port));
+		_out.printDebug("Connecting to Insteon Hub X10 with Hostname " + _settings->host + " on port " + _settings->port + "...");
 		_socket->open();
-		GD::out.printInfo("Connected to Insteon Hub X10 with Hostname " + _settings->host + " on port " + _settings->port + ".");
+		_out.printInfo("Connected to Insteon Hub X10 with Hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
 		_listenThread = std::thread(&InsteonHubX10::listen, this);
-		BaseLib::Threads::setThreadPriority(GD::bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
+		if(_settings->listenThreadPriority > -1) BaseLib::Threads::setThreadPriority(GD::bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
+		_initThread = std::thread(&InsteonHubX10::doInit, this);
+		if(_settings->listenThreadPriority > -1) BaseLib::Threads::setThreadPriority(_bl, _initThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void InsteonHubX10::reconnect()
+{
+	try
+	{
+		_socket->close();
+		if(_initThread.joinable()) _initThread.join();
+		_initStarted = false;
+		_initComplete = false;
+		_out.printDebug("Connecting to Insteon Hub with hostname " + _settings->host + " on port " + _settings->port + "...");
+		_socket->open();
+		_out.printInfo("Connected to Insteon Hub with hostname " + _settings->host + " on port " + _settings->port + ".");
+		_stopped = false;
+		_initThread = std::thread(&InsteonHubX10::doInit, this);
+		if(_settings->listenThreadPriority > -1) BaseLib::Threads::setThreadPriority(_bl, _initThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
+	}
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -166,18 +366,20 @@ void InsteonHubX10::stopListening()
 		_socket->close();
 		_stopped = true;
 		_sendMutex.unlock(); //In case it is deadlocked - shouldn't happen of course
+		_initStarted = false;
+		_initComplete = false;
 	}
 	catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -185,57 +387,180 @@ void InsteonHubX10::listen()
 {
     try
     {
-    	uint32_t receivedBytes;
-    	int32_t bufferMax = 1024 * 1024;
+    	while(!_initStarted && !_stopCallbackThread)
+    	{
+    		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    	}
+
+    	uint32_t receivedBytes = 0;
+    	int32_t bufferMax = 2048;
 		std::vector<char> buffer(bufferMax);
+
+		std::vector<uint8_t> data;
         while(!_stopCallbackThread)
         {
         	if(_stopped)
         	{
-        		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         		if(_stopCallbackThread) return;
+        		_out.printWarning("Warning: Connection closed. Trying to reconnect...");
+        		reconnect();
         		continue;
         	}
         	try
 			{
-				receivedBytes = _socket->proofread(&buffer[0], bufferMax);
+        		do
+				{
+        			receivedBytes = _socket->proofread(&buffer[0], bufferMax);
+        			if(receivedBytes > 0)
+					{
+						data.insert(data.end(), &buffer.at(0), &buffer.at(0) + receivedBytes);
+						if(data.size() > 1000000)
+						{
+							_out.printError("Could not read from Insteon Hub: Too much data.");
+							break;
+						}
+					}
+				} while(receivedBytes == bufferMax);
 			}
-			catch(BaseLib::SocketTimeOutException& ex) { continue; }
+			catch(BaseLib::SocketTimeOutException& ex)
+			{
+				if(data.empty()) //When receivedBytes is exactly 2048 bytes long, proofread will be called again, time out and the packet is received with a delay of 5 seconds. It doesn't matter as packets this big are only received at start up.
+				{
+					continue;
+				}
+			}
 			catch(BaseLib::SocketClosedException& ex)
 			{
-				GD::out.printWarning("Warning: " + ex.what());
-				std::this_thread::sleep_for(std::chrono::milliseconds(30000));
+				_stopped = true;
+				_out.printWarning("Warning: " + ex.what());
+				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
 			catch(BaseLib::SocketOperationException& ex)
 			{
-				GD::out.printError("Error: " + ex.what());
-				std::this_thread::sleep_for(std::chrono::milliseconds(30000));
+				_stopped = true;
+				_out.printError("Error: " + ex.what());
+				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
-        	if(receivedBytes == 0) continue;
-        	if(receivedBytes == bufferMax)
-        	{
-        		GD::out.printError("Could not read from Insteon Hub X10: Too much data.");
-        		continue;
-        	}
+        	if(data.size() < 3 && data.at(0) == 0x02)
+			{
+				//The rest of the packet comes with the next read.
+				continue;
+			}
+			if(data.empty()) continue;
+			if(data.size() > 1000000)
+			{
+				data.clear();
+				continue;
+			}
 
-			std::shared_ptr<InsteonPacket> packet(new InsteonPacket(buffer, receivedBytes, BaseLib::HelperFunctions::getTime()));
-			raisePacketReceived(packet);
-			_lastPacketReceived = BaseLib::HelperFunctions::getTime();
+			if(_bl->debugLevel >= 6) _out.printDebug("Debug: Packet received on port " + _settings->port + ". Raw data: " + BaseLib::HelperFunctions::getHexString(data));
+
+			processData(data);
+        	data.clear();
+
+        	_lastPacketReceived = BaseLib::HelperFunctions::getTime();
         }
     }
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void InsteonHubX10::processData(std::vector<uint8_t>& data)
+{
+	try
+	{
+		if(data.empty()) return;
+
+		for(int32_t i = 0; i < data.size();)
+		{
+			if(data.at(i) == 0x15)
+			{
+				std::vector<uint8_t> packetBytes(&data.at(i), &data.at(i) + 1);
+				processPacket(packetBytes);
+				if(i + 1 <= data.size() && data.at(i + 1) == 0x15) i += 2;
+				else i += 1;
+				continue;
+			}
+			if(_lengthLookup.find(data.at(i + 1)) == _lengthLookup.end())
+			{
+				_out.printError("Error: Unknown packet received from Insteon Hub. Discarding whole buffer. Buffer is: " + BaseLib::HelperFunctions::getHexString(data));
+				return;
+			}
+			uint8_t type = data.at(i + 1);
+			int32_t length = _lengthLookup[type];
+			//0x62 can be 9 or 23 bytes long
+			if(type == 0x62 && i + 5 <= data.size() && (data.at(i + 5) & 16) == 0) length = 9;
+			if(i + length > data.size())
+			{
+				_out.printError("Error: Length (" + std::to_string(length) + ") is larger than buffer. Buffer is: " + BaseLib::HelperFunctions::getHexString(data));
+				return;
+			}
+			std::vector<uint8_t> packetBytes(&data.at(i), &data.at(i) + length);
+			processPacket(packetBytes);
+			i += length;
+		}
+	}
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void InsteonHubX10::processPacket(std::vector<uint8_t>& data)
+{
+	try
+	{
+		if(data.empty()) return;
+
+		if(_bl->debugLevel >= 5) _out.printDebug(std::string("Debug: Packet received on port " + _settings->port + ": " + BaseLib::HelperFunctions::getHexString(data)));
+
+		if(_request && (data.size() == 1 || _request->getResponseType() == data.at(1)))
+		{
+			_request->response = data;
+			_request->mutex.unlock();
+			return;
+		}
+
+		if(data.size() < 11) return;
+		if(data.at(1) == 0x50 || data.at(1) == 0x51)
+		{
+			std::vector<uint8_t> binaryPacket(&data.at(2), &data.at(0) + data.size());
+			std::shared_ptr<InsteonPacket> insteonPacket(new InsteonPacket(binaryPacket, BaseLib::HelperFunctions::getTime()));
+			raisePacketReceived(insteonPacket, false);
+		}
+	}
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

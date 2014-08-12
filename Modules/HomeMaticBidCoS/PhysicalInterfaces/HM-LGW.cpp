@@ -1023,12 +1023,13 @@ void HM_LGW::doInit()
 		_packetIndex = 0;
 
 		int32_t i = 0;
-		while(!GD::family->getCentral() && i < 30)
+		while(!_stopCallbackThread && !GD::family->getCentral() && i < 30)
 		{
 			_out.printDebug("Debug: Waiting for central to load.");
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			i++;
 		}
+		if(_stopCallbackThread) return;
 		if(!GD::family->getCentral())
 		{
 			_stopCallbackThread = true;
@@ -1480,11 +1481,11 @@ void HM_LGW::startListening()
 		_out.printDebug("Connecting to HM-LGW with hostname " + _settings->host + " on port " + _settings->port + "...");
 		_stopped = false;
 		_listenThread = std::thread(&HM_LGW::listen, this);
-		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
+		if(_settings->listenThreadPriority > -1) BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 		_listenThreadKeepAlive = std::thread(&HM_LGW::listenKeepAlive, this);
-		BaseLib::Threads::setThreadPriority(_bl, _listenThreadKeepAlive.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
+		if(_settings->listenThreadPriority > -1) BaseLib::Threads::setThreadPriority(_bl, _listenThreadKeepAlive.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 		_initThread = std::thread(&HM_LGW::doInit, this);
-		BaseLib::Threads::setThreadPriority(_bl, _initThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
+		if(_settings->listenThreadPriority > -1) BaseLib::Threads::setThreadPriority(_bl, _initThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 	}
     catch(const std::exception& ex)
     {
@@ -1521,7 +1522,7 @@ void HM_LGW::reconnect()
 		_out.printInfo("Connected to HM-LGW with hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
 		_initThread = std::thread(&HM_LGW::doInit, this);
-		BaseLib::Threads::setThreadPriority(_bl, _initThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
+		if(_settings->listenThreadPriority > -1) BaseLib::Threads::setThreadPriority(_bl, _initThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 	}
     catch(const std::exception& ex)
     {
@@ -2412,7 +2413,6 @@ void HM_LGW::processData(std::vector<uint8_t>& data)
 	try
 	{
 		if(data.empty()) return;
-		std::string packets;
 		if(!_aesExchangeComplete)
 		{
 			aesKeyExchange(data);

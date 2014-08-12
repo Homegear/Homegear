@@ -115,13 +115,11 @@ InsteonPeer::InsteonPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink
 		pendingQueues.reset(new PendingQueues());
 	}
 	setPhysicalInterface(GD::defaultPhysicalInterface);
-	_lastTimePacket = BaseLib::HelperFunctions::getTime() + (BaseLib::HelperFunctions::getRandomNumber(1, 1000) * 10000);
 }
 
 InsteonPeer::InsteonPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(GD::bl, id, address, serialNumber, parentID, centralFeatures, eventHandler)
 {
 	setPhysicalInterface(GD::defaultPhysicalInterface);
-	_lastTimePacket = BaseLib::HelperFunctions::getTime() + (BaseLib::HelperFunctions::getRandomNumber(1, 1000) * 10000);
 }
 
 InsteonPeer::~InsteonPeer()
@@ -198,35 +196,9 @@ void InsteonPeer::worker()
 	int64_t time;
 	try
 	{
-		time = BaseLib::HelperFunctions::getTime();
-		if(rpcDevice)
-		{
-			serviceMessages->checkUnreach(rpcDevice->cyclicTimeout, getLastPacketReceived());
-			if(rpcDevice->needsTime && (time - _lastTimePacket) > 43200000)
-			{
-				_lastTimePacket = time;
-				std::shared_ptr<InsteonCentral> central = std::dynamic_pointer_cast<InsteonCentral>(getCentral());
-				std::shared_ptr<PacketQueue> queue(new PacketQueue(_physicalInterface, PacketQueueType::PEER));
-				queue->peer = central->getPeer(_peerID);
-				queue->noSending = true;
-
-				queue->push(central->getTimePacket(central->messageCounter()->at(0)++, _address, getRXModes() & Device::RXModes::burst));
-				queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-				queue->parameterName = "CURRENT_TIME";
-				queue->channel = 0;
-				pendingQueues->removeQueue("CURRENT_TIME", 0);
-				pendingQueues->push(queue);
-				if((getRXModes() & Device::RXModes::always) || (getRXModes() & Device::RXModes::burst)) central->enqueuePendingQueues(_address);
-			}
-		}
 		if(serviceMessages->getConfigPending())
 		{
 			if(!pendingQueues || pendingQueues->empty()) serviceMessages->setConfigPending(false);
-			else if(_bl->settings.devLog() && (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp) && (_bl->hf.getTime() - serviceMessages->getConfigPendingSetTime()) > 360000)
-			{
-				GD::out.printWarning("Devlog warning: Configuration for peer with id " + std::to_string(_peerID) + " supporting wake up is pending since more than 6 minutes.");
-				serviceMessages->resetConfigPendingSetTime();
-			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -469,9 +441,6 @@ void InsteonPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::sh
 		{
 			switch(row->second.at(2)->intValue)
 			{
-			case 5:
-				_messageCounter = row->second.at(3)->intValue;
-				break;
 			case 12:
 				unserializePeers(row->second.at(5)->binaryValue);
 				break;
@@ -545,7 +514,6 @@ void InsteonPeer::saveVariables()
 	{
 		if(_peerID == 0) return;
 		Peer::saveVariables();
-		saveVariable(5, (int32_t)_messageCounter);
 		savePeers(); //12
 		savePendingQueues(); //16
 		saveVariable(19, _physicalInterfaceID);
@@ -897,7 +865,6 @@ void InsteonPeer::packetReceived(std::shared_ptr<InsteonPacket> packet)
 		if(!central) return;
 		if(packet->messageType() == 0) packet->setMessageType(0xFF);
 		setLastPacketReceived();
-		setRSSIDevice(packet->rssiDevice());
 		serviceMessages->endUnreach();
 		std::vector<FrameValues> frameValues;
 		getValuesFromPacket(packet, frameValues);
@@ -957,27 +924,10 @@ void InsteonPeer::packetReceived(std::shared_ptr<InsteonPacket> packet)
 			}
 		}
 
-		if(packet->senderAddress() == _address && pendingQueues && !pendingQueues->empty())
+		if(packet->senderAddress() == _address && packet->destinationAddress() == central->getAddress() && pendingQueues && !pendingQueues->empty())
 		{
-			if(packet->destinationAddress() == central->getAddress())
-			{
-				pendingQueues->front()->setWakeOnRadio(false);
-
-				std::vector<uint8_t> payload;
-				payload.push_back(0);
-				payload.push_back(0);
-				std::shared_ptr<InsteonPacket> wakeUpPacket(new InsteonPacket(packet->messageCounter(), 0x02, 0x00, central->getAddress(), _address, payload, false));
-				central->sendPacket(_physicalInterface, wakeUpPacket, false);
-
-				if(packet->messageSubtype() & 2) central->enqueuePendingQueues(_address);
-			}
-			else if(packet->messageSubtype() & 2) //Wait for the last packet and then enqueue
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(60)); //Wait for the response from the receiving device. 80ms is maximum, 55ms is minimum => With 60ms buffer of 20ms
-				central->enqueuePendingQueues(_address);
-			}
+			central->enqueuePendingQueues(_address);
 		}
-		else if(packet->messageType() != 0x02 && packet->messageType() != 0xFF && packet->destinationAddress() == central->getAddress()) central->sendOK(packet->messageCounter(), packet->senderAddress());
 
 		//if(!rpcValues.empty() && !resendPacket)
 		if(!rpcValues.empty())
@@ -1026,39 +976,6 @@ std::string InsteonPeer::getFirmwareVersionString(int32_t firmwareVersion)
 	return "";
 }
 
-void InsteonPeer::setRSSIDevice(uint8_t rssi)
-{
-	try
-	{
-		if(!_centralFeatures || _disposing || rssi == 0) return;
-		uint32_t time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-		if(valuesCentral.find(0) != valuesCentral.end() && valuesCentral.at(0).find("RSSI_DEVICE") != valuesCentral.at(0).end() && (time - _lastRSSIDevice) > 10)
-		{
-			_lastRSSIDevice = time;
-			BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral.at(0).at("RSSI_DEVICE");
-			parameter->data.at(0) = rssi;
-
-			std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({std::string("RSSI_DEVICE")}));
-			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
-			rpcValues->push_back(parameter->rpcParameter->convertFromPacket(parameter->data));
-
-			raiseRPCEvent(_peerID, 0, _serialNumber + ":0", valueKeys, rpcValues);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
 //RPC Methods
 std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonPeer::getDeviceInfo(std::map<std::string, bool> fields)
 {
@@ -1102,202 +1019,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonPeer::getParamsetDescription(i
 
 		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets[type];
 		return Peer::getParamsetDescription(parameterSet);
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
-std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonPeer::putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool onlyPushing)
-{
-	try
-	{
-		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
-		if(!_centralFeatures) return BaseLib::RPC::RPCVariable::createError(-2, "Not a central peer.");
-		if(channel < 0) channel = 0;
-		if(remoteChannel < 0) remoteChannel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel.");
-		if(type == BaseLib::RPC::ParameterSet::Type::none) type = BaseLib::RPC::ParameterSet::Type::link;
-		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set.");
-		std::shared_ptr<ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets.at(type);
-		if(variables->structValue->empty()) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
-
-		if(type == BaseLib::RPC::ParameterSet::Type::Enum::master)
-		{
-			std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>> changedParameters;
-			//allParameters is necessary to temporarily store all values. It is used to set changedParameters.
-			//This is necessary when there are multiple variables per index and not all of them are changed.
-			std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>> allParameters;
-			for(BaseLib::RPC::RPCStruct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
-			{
-				if(i->first.empty() || !i->second) continue;
-				std::vector<uint8_t> value;
-				if(configCentral[channel].find(i->first) == configCentral[channel].end()) continue;
-				BaseLib::Systems::RPCConfigurationParameter* parameter = &configCentral[channel][i->first];
-				if(!parameter->rpcParameter) continue;
-				value = parameter->rpcParameter->convertToPacket(i->second);
-				std::vector<uint8_t> shiftedValue = value;
-				parameter->rpcParameter->adjustBitPosition(shiftedValue);
-				int32_t intIndex = (int32_t)parameter->rpcParameter->physicalParameter->index;
-				int32_t list = parameter->rpcParameter->physicalParameter->list;
-				if(list == 9999) list = 0;
-				if(allParameters[list].find(intIndex) == allParameters[list].end()) allParameters[list][intIndex] = shiftedValue;
-				else
-				{
-					uint32_t index = 0;
-					for(std::vector<uint8_t>::iterator j = shiftedValue.begin(); j != shiftedValue.end(); ++j)
-					{
-						if(index >= allParameters[list][intIndex].size()) allParameters[list][intIndex].push_back(0);
-						allParameters[list][intIndex].at(index) |= *j;
-						index++;
-					}
-				}
-				parameter->data = value;
-				saveParameter(parameter->databaseID, parameter->data);
-				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
-				//Only send to device when parameter is of type config
-				if(parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::configString) continue;
-				changedParameters[list][intIndex] = allParameters[list][intIndex];
-			}
-
-			if(changedParameters.empty() || changedParameters.begin()->second.empty()) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
-
-			std::shared_ptr<InsteonCentral> central = std::dynamic_pointer_cast<InsteonCentral>(getCentral());
-			std::shared_ptr<PacketQueue> queue(new PacketQueue(_physicalInterface, PacketQueueType::CONFIG));
-			queue->noSending = true;
-			queue->peer = central->getPeer(_peerID);
-
-			bool firstPacket = true;
-			for(std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>>::iterator i = changedParameters.begin(); i != changedParameters.end(); ++i)
-			{
-				std::vector<uint8_t> payload;
-				payload.push_back(0);
-				payload.push_back(i->first);
-				std::shared_ptr<InsteonPacket> configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(_messageCounter, 0x10, 0x00, central->getAddress(), _address, payload, firstPacket && (getRXModes() & Device::RXModes::burst)));
-				firstPacket = false;
-
-				for(std::map<int32_t, std::vector<uint8_t>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
-				{
-					configPacket->setPosition(j->first - (j->second.size() - 1), j->second.size(), j->second);
-				}
-
-				//Fill in all missing parameters
-				std::vector<std::shared_ptr<Parameter>> allListParameters = parameterSet->getList(i->first);
-				for(std::vector<std::shared_ptr<Parameter>>::iterator j = allListParameters.begin(); j!= allListParameters.end(); ++j)
-				{
-					if(i->second.find((int32_t)(*j)->physicalParameter->index) != i->second.end()) continue;
-					if(configCentral[channel].find((*j)->id) == configCentral[channel].end()) continue;
-					RPCConfigurationParameter* parameter = &configCentral[channel][(*j)->id];
-					configPacket->setPosition((*j)->physicalParameter->index - (std::lround(std::ceil(((*j)->physicalParameter->size))) - 1), (*j)->physicalParameter->size, parameter->data);
-				}
-
-				if(configPacket->payload()->size() > 2)
-				{
-					queue->push(configPacket);
-					queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-					payload.clear();
-					setMessageCounter(_messageCounter + 1);
-				}
-			}
-
-			pendingQueues->push(queue);
-			serviceMessages->setConfigPending(true);
-			if(!onlyPushing) central->enqueuePendingQueues(_address);
-			raiseRPCUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), 0);
-		}
-		else if(type == BaseLib::RPC::ParameterSet::Type::Enum::values)
-		{
-			for(BaseLib::RPC::RPCStruct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
-			{
-				if(i->first.empty() || !i->second) continue;
-				setValue(channel, i->first, i->second);
-			}
-		}
-		else if(type == ParameterSet::Type::values)
-		{
-			return BaseLib::RPC::RPCVariable::createError(-3, "Parameter set type is not supported.");
-		}
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
-std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonPeer::getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
-{
-	try
-	{
-		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
-		if(channel < 0) channel = 0;
-		if(remoteChannel < 0) remoteChannel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel.");
-		if(type == BaseLib::RPC::ParameterSet::Type::none) type = BaseLib::RPC::ParameterSet::Type::link;
-		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels[channel];
-		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end()) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set.");
-		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcChannel->parameterSets[type];
-		if(!parameterSet) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set.");
-		std::shared_ptr<BaseLib::RPC::RPCVariable> variables(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-
-		for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator i = parameterSet->parameters.begin(); i != parameterSet->parameters.end(); ++i)
-		{
-			if((*i)->id.empty() || (*i)->hidden) continue;
-			if(!((*i)->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::visible) && !((*i)->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::service) && !((*i)->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::internal) && !((*i)->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::transform))
-			{
-				GD::out.printDebug("Debug: Omitting parameter " + (*i)->id + " because of it's ui flag.");
-				continue;
-			}
-			std::shared_ptr<BaseLib::RPC::RPCVariable> element;
-			if(type == BaseLib::RPC::ParameterSet::Type::Enum::values)
-			{
-				if(!((*i)->operations & BaseLib::RPC::Parameter::Operations::read) && !((*i)->operations & BaseLib::RPC::Parameter::Operations::event)) continue;
-				if(valuesCentral.find(channel) == valuesCentral.end()) continue;
-				if(valuesCentral[channel].find((*i)->id) == valuesCentral[channel].end()) continue;
-				element = (*i)->convertFromPacket(valuesCentral[channel][(*i)->id].data);
-			}
-			else if(type == BaseLib::RPC::ParameterSet::Type::Enum::master)
-			{
-				if(configCentral.find(channel) == configCentral.end()) continue;
-				if(configCentral[channel].find((*i)->id) == configCentral[channel].end()) continue;
-				element = (*i)->convertFromPacket(configCentral[channel][(*i)->id].data);
-			}
-			else if(type == BaseLib::RPC::ParameterSet::Type::Enum::link)
-			{
-				std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer;
-				if(remoteID == 0) remoteID = 0xFFFFFFFFFFFFFFFF; //Remote peer is central
-				remotePeer = getPeer(channel, remoteID, remoteChannel);
-				if(!remotePeer) return BaseLib::RPC::RPCVariable::createError(-3, "Not paired to this peer.");
-				if(linksCentral.find(channel) == linksCentral.end()) continue;
-				if(linksCentral[channel][remotePeer->address][remotePeer->channel].find((*i)->id) == linksCentral[channel][remotePeer->address][remotePeer->channel].end()) continue;
-				if(remotePeer->channel != remoteChannel) continue;
-				element = (*i)->convertFromPacket(linksCentral[channel][remotePeer->address][remotePeer->channel][(*i)->id].data);
-			}
-
-			if(!element) continue;
-			if(element->type == BaseLib::RPC::RPCVariableType::rpcVoid) continue;
-			variables->structValue->insert(BaseLib::RPC::RPCStructElement((*i)->id, element));
-		}
-		return variables;
 	}
 	catch(const std::exception& ex)
     {
@@ -1421,7 +1142,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonPeer::setValue(uint32_t channe
 			while((signed)payload.size() - 1 < frame->channelField - 9) payload.push_back(0);
 			payload.at(frame->channelField - 9) = (uint8_t)channel;
 		}
-		std::shared_ptr<InsteonPacket> packet(new InsteonPacket(_messageCounter, (uint8_t)frame->type, frame->subtype, getCentral()->physicalAddress(), _address, payload, getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst));
+		std::shared_ptr<InsteonPacket> packet(new InsteonPacket((uint8_t)frame->type, frame->subtype, _address, 0, 0, InsteonPacketFlags::Direct, false, payload));
 
 		for(std::vector<BaseLib::RPC::Parameter>::iterator i = frame->parameters.begin(); i != frame->parameters.end(); ++i)
 		{
@@ -1492,14 +1213,12 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonPeer::setValue(uint32_t channe
 				}
 			}
 		}
-		setMessageCounter(_messageCounter + 1);
 		queue->parameterName = valueKey;
 		queue->channel = channel;
 		queue->push(packet);
 		queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		pendingQueues->removeQueue(valueKey, channel);
 		pendingQueues->push(queue);
-		if(InsteonDevice::isSwitch(_deviceType)) queue->retries = 12;
 		central->enqueuePendingQueues(_address);
 
 		if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);

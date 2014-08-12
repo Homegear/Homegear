@@ -35,7 +35,7 @@
 namespace Insteon
 {
 class InsteonDevice;
-//class InsteonCentral;
+class InsteonCentral;
 
 class Insteon : public BaseLib::Systems::DeviceFamily
 {

@@ -67,9 +67,7 @@ class InsteonDevice : public BaseLib::Systems::LogicalDevice
 		void setPhysicalInterfaceID(std::string);
 		//End
 
-		std::unordered_map<int32_t, uint8_t>* messageCounter() { return &_messageCounter; }
 		virtual bool isCentral();
-		static bool isSwitch(BaseLib::Systems::LogicalDeviceType type);
 
         InsteonDevice(IDeviceEventSink* eventHandler);
         InsteonDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
@@ -88,13 +86,9 @@ class InsteonDevice : public BaseLib::Systems::LogicalDevice
 		virtual bool isInPairingMode() { return _pairing; }
 		virtual std::shared_ptr<InsteonMessages> getMessages() { return _messages; }
 		std::shared_ptr<InsteonPacket> getSentPacket(int32_t address) { return _sentPackets.get(address); }
-		std::shared_ptr<InsteonPacket> getTimePacket(uint8_t messageCounter, int32_t receiverAddress, bool burst);
 
         virtual void loadVariables();
         virtual void saveVariables();
-        virtual void saveMessageCounters();
-        virtual void serializeMessageCounters(std::vector<uint8_t>& encodedData);
-        virtual void unserializeMessageCounters(std::shared_ptr<std::vector<char>> serializedData);
         virtual void loadPeers();
         virtual void savePeers(bool full);
 
@@ -102,14 +96,10 @@ class InsteonDevice : public BaseLib::Systems::LogicalDevice
 
         virtual void handleAck(int32_t messageCounter, std::shared_ptr<InsteonPacket> packet) {}
         virtual void handlePairingRequest(int32_t messageCounter, std::shared_ptr<InsteonPacket> packet) {}
-        virtual void handleTimeRequest(int32_t messageCounter, std::shared_ptr<InsteonPacket> packet);
-
-        virtual void sendOK(int32_t messageCounter, int32_t destinationAddress);
     protected:
         //In table variables
         int32_t _firmwareVersion = 0;
         int32_t _centralAddress = 0;
-        std::unordered_map<int32_t, uint8_t> _messageCounter;
         std::string _physicalInterfaceID;
         //End
 

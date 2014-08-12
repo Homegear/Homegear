@@ -53,7 +53,7 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-bool _dbDumpFailed = false;
+//bool _dbDumpFailed = false;
 bool _startAsDaemon = false;
 bool _startUpComplete = false;
 
@@ -152,22 +152,22 @@ void terminate(int32_t signalNumber)
 		}
 		else
 		{
-			if(!_dbDumpFailed)
-			{
-				_dbDumpFailed = true;
+			//if(!_dbDumpFailed)
+			//{
+				//_dbDumpFailed = true;
 				GD::out.printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
-				GD::out.printCritical("Critical: Trying to save data to " + GD::bl->settings.databasePath() + ".crash");
-				GD::db.open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".crash");
-				if(GD::db.isOpen())
-				{
-					GD::familyController.saveAndDispose(false, true);
-					GD::db.dispose();
-				}
-			}
-			else
-			{
-				GD::out.printCritical("Critical: Database dump failed. Stopping Homegear...");
-			}
+				//GD::out.printCritical("Critical: Trying to save data to " + GD::bl->settings.databasePath() + ".crash");
+				//GD::db.open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".crash");
+				//if(GD::db.isOpen())
+				//{
+					//GD::familyController.saveAndDispose(false, true);
+					//GD::db.dispose();
+				//}
+			//}
+			//else
+			//{
+				//GD::out.printCritical("Critical: Database dump failed. Stopping Homegear...");
+			//}
 			signal(signalNumber, SIG_DFL); //Reset signal handler for the current signal to default
 			kill(getpid(), signalNumber); //Generate core dump
 		}

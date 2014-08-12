@@ -69,12 +69,10 @@ public:
 	virtual ~InsteonPeer();
 
 	//Features
-	virtual bool wireless() { return true; }
+	virtual bool wireless() { return false; }
 	//End features
 
 	//In table variables:
-	int32_t getMessageCounter() { return _messageCounter; }
-	void setMessageCounter(int32_t value) { _messageCounter = value; saveVariable(5, value); }
 	std::string getPhysicalInterfaceID() { return _physicalInterfaceID; }
 	void setPhysicalInterfaceID(std::string);
 	//End
@@ -102,25 +100,21 @@ public:
     virtual bool firmwareUpdateAvailable() { return false; }
 
     std::shared_ptr<IPhysicalInterface> getPhysicalInterface() { return _physicalInterface; }
-    void setRSSIDevice(uint8_t rssi);
 	void getValuesFromPacket(std::shared_ptr<InsteonPacket> packet, std::vector<FrameValues>& frameValue);
 	void packetReceived(std::shared_ptr<InsteonPacket> packet);
 
 	//RPC methods
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceInfo(std::map<std::string, bool> fields);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool onlyPushing = false);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel) { return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set."); }
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool onlyPushing = false) { return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set."); }
 	std::shared_ptr<BaseLib::RPC::RPCVariable> setInterface(std::string interfaceID);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
 	//End RPC methods
 protected:
-	uint32_t _lastRSSIDevice = 0;
 	std::shared_ptr<IPhysicalInterface> _physicalInterface;
-	int64_t _lastTimePacket = 0;
 
 	//In table variables:
-	uint8_t _messageCounter = 0;
 	std::string _physicalInterfaceID;
 	//End
 

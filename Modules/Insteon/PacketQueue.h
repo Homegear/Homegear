@@ -30,7 +30,6 @@
 #ifndef PACKETQUEUE_H
 #define PACKETQUEUE_H
 
-#include "delegate.hpp"
 #include "../Base/BaseLib.h"
 #include "InsteonPacket.h"
 
@@ -109,7 +108,7 @@ class PacketQueue
         void (InsteonDevice::*_queueProcessed)() = nullptr;
         void pushPendingQueue();
         void sleepAndPushPendingQueue();
-        void resend(uint32_t threadId, bool burst);
+        void resend(uint32_t threadId);
         void startResendThread(bool force);
         void stopResendThread();
         void popWaitThread(uint32_t threadId, uint32_t waitingTime);
@@ -142,7 +141,6 @@ class PacketQueue
         bool isEmpty();
         bool pendingQueuesEmpty();
         void clear();
-        void setWakeOnRadio(bool value);
         void send(std::shared_ptr<InsteonPacket> packet, bool stealthy);
         void keepAlive();
         void longKeepAlive();

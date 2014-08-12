@@ -51,9 +51,9 @@ class InsteonMessage
 {
     public:
         InsteonMessage();
-        InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, int32_t access, void (InsteonDevice::*messageHandlerIncoming)(int32_t, std::shared_ptr<InsteonPacket>));
-        InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, int32_t access, int32_t accessPairing, void (InsteonDevice::*messageHandlerIncoming)(int32_t, std::shared_ptr<InsteonPacket>));
-        InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, void (InsteonDevice::*messageHandlerOutgoing)(int32_t, int32_t, std::shared_ptr<InsteonPacket>));
+        InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, int32_t access, void (InsteonDevice::*messageHandlerIncoming)(std::shared_ptr<InsteonPacket>));
+        InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, int32_t access, int32_t accessPairing, void (InsteonDevice::*messageHandlerIncoming)(std::shared_ptr<InsteonPacket>));
+        InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, void (InsteonDevice::*messageHandlerOutgoing)(int32_t, std::shared_ptr<InsteonPacket>));
         virtual ~InsteonMessage();
 
         MessageDirection getDirection() { return _direction; }
@@ -86,8 +86,8 @@ class InsteonMessage
         int32_t _access = 0;
         int32_t _accessPairing = 0;
         std::vector<std::pair<uint32_t, int32_t>> _subtypes;
-        void (InsteonDevice::*_messageHandlerIncoming)(int32_t, std::shared_ptr<InsteonPacket>) = nullptr;
-        void (InsteonDevice::*_messageHandlerOutgoing)(int32_t, int32_t, std::shared_ptr<InsteonPacket>) = nullptr;
+        void (InsteonDevice::*_messageHandlerIncoming)(std::shared_ptr<InsteonPacket>) = nullptr;
+        void (InsteonDevice::*_messageHandlerOutgoing)(int32_t, std::shared_ptr<InsteonPacket>) = nullptr;
     private:
 };
 }

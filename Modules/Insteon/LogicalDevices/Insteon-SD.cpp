@@ -262,7 +262,7 @@ std::string Insteon_SD::handleCLICommand(std::string command)
 			}
 
 			std::shared_ptr<InsteonPacket> packet(new InsteonPacket(packetHex));
-			sendPacket(packet);
+			sendPacket(GD::defaultPhysicalInterface, packet, false);
 			stringStream << "Packet sent: " << packet->hexString() << std::endl;
 			return stringStream.str();
 		}

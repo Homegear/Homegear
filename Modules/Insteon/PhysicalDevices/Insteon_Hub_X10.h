@@ -27,8 +27,8 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef TCPSOCKETDEVICE_H
-#define TCPSOCKETDEVICE_H
+#ifndef INSTEONHUBX10_H
+#define INSTEONHUBX10_H
 
 #include "../InsteonPacket.h"
 #include "../../Base/BaseLib.h"
@@ -62,18 +62,43 @@ class InsteonHubX10  : public BaseLib::Systems::IPhysicalInterface
         int64_t lastAction() { return _lastAction; }
         virtual bool isOpen() { return _socket->connected(); }
     protected:
+        class Request
+        {
+        public:
+        	std::timed_mutex mutex;
+        	std::vector<uint8_t> response;
+        	uint8_t getResponseType() { return _responseType; }
+
+        	Request(uint8_t responseType) { _responseType = responseType; };
+        	virtual ~Request() {};
+        private:
+        	uint8_t _responseType;
+        };
+
+        BaseLib::Output _out;
+        std::thread _initThread;
         int64_t _lastAction = 0;
         std::string _hostname;
         std::string _port;
         std::unique_ptr<BaseLib::SocketOperations> _socket;
+        std::mutex _requestMutex;
+        std::shared_ptr<Request> _request;
         std::mutex _sendMutex;
+        bool _initStarted = false;
+        bool _initComplete = false;
+        int32_t _myAddress = 0xFFFFFF;
+        std::map<int32_t, int32_t> _lengthLookup;
 
-        void send(std::vector<char>& packet, bool printPacket);
+        void reconnect();
+        void doInit();
+        void processData(std::vector<uint8_t>& data);
+        void processPacket(std::vector<uint8_t>& packet);
+        void getResponse(const std::vector<char>& packet, std::vector<uint8_t>& response, uint8_t responseType);
+        void send(const std::vector<char>& packet, bool printPacket);
         void listen();
         void getFileDescriptor(bool& timedout);
         std::shared_ptr<BaseLib::FileDescriptor> getConnection(std::string& hostname, const std::string& port, std::string& ipAddress);
-    private:
 };
 
 }
-#endif // TCPSOCKETDEVICE_H
+#endif
