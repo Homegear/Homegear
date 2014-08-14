@@ -212,7 +212,6 @@ void HM_CFG_LAN::addPeers(std::vector<PeerInfo>& peerInfos)
 {
 	try
 	{
-		_peersMutex.lock();
 		for(std::vector<PeerInfo>::iterator i = peerInfos.begin(); i != peerInfos.end(); ++i)
 		{
 			addPeer(*i);
@@ -230,7 +229,6 @@ void HM_CFG_LAN::addPeers(std::vector<PeerInfo>& peerInfos)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _peersMutex.unlock();
 }
 
 void HM_CFG_LAN::sendPeers()

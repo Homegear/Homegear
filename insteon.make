@@ -108,6 +108,7 @@ OBJECTS := \
 	$(OBJDIR)/Insteon.o \
 	$(OBJDIR)/Insteon-SD.o \
 	$(OBJDIR)/InsteonCentral.o \
+	$(OBJDIR)/IInsteonInterface.o \
 	$(OBJDIR)/Insteon_Hub_X10.o \
 
 RESOURCES := \
@@ -215,7 +216,10 @@ $(OBJDIR)/Insteon-SD.o: Modules/Insteon/LogicalDevices/Insteon-SD.cpp
 $(OBJDIR)/InsteonCentral.o: Modules/Insteon/LogicalDevices/InsteonCentral.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Insteon_Hub_X10.o: Modules/Insteon/PhysicalDevices/Insteon_Hub_X10.cpp
+$(OBJDIR)/IInsteonInterface.o: Modules/Insteon/PhysicalInterfaces/IInsteonInterface.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Insteon_Hub_X10.o: Modules/Insteon/PhysicalInterfaces/Insteon_Hub_X10.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

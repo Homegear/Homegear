@@ -168,7 +168,7 @@ public:
 	virtual ~Parameter() {}
 	virtual bool checkCondition(int32_t value);
 	virtual std::shared_ptr<RPC::RPCVariable> convertFromPacket(const std::vector<uint8_t>& data, bool isEvent = false);
-	virtual std::vector<uint8_t> convertToPacket(std::shared_ptr<RPC::RPCVariable> value);
+	virtual std::vector<uint8_t> convertToPacket(const std::shared_ptr<RPC::RPCVariable> value);
 	virtual std::vector<uint8_t> convertToPacket(std::string value);
 	virtual std::vector<uint8_t> reverseData(const std::vector<uint8_t>& data);
 	virtual void adjustBitPosition(std::vector<uint8_t>& data);

@@ -28,7 +28,7 @@
  */
 
 #include "Insteon.h"
-#include "PhysicalDevices/Insteon_Hub_X10.h"
+#include "PhysicalInterfaces/Insteon_Hub_X10.h"
 #include "InsteonDeviceTypes.h"
 #include "LogicalDevices/InsteonCentral.h"
 #include "LogicalDevices/Insteon-SD.h"
@@ -76,7 +76,7 @@ std::shared_ptr<BaseLib::Systems::IPhysicalInterface> Insteon::createPhysicalDev
 {
 	try
 	{
-		std::shared_ptr<BaseLib::Systems::IPhysicalInterface> device;
+		std::shared_ptr<IInsteonInterface> device;
 		if(!settings) return device;
 		GD::out.printDebug("Debug: Creating physical device. Type defined in physicalinterfaces.conf is: " + settings->type);
 		if(settings->type == "insteonhubx10") device.reset(new InsteonHubX10(settings));

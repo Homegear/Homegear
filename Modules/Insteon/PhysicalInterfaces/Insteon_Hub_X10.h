@@ -31,6 +31,7 @@
 #define INSTEONHUBX10_H
 
 #include "../InsteonPacket.h"
+#include "IInsteonInterface.h"
 #include "../../Base/BaseLib.h"
 
 #include <thread>
@@ -42,6 +43,7 @@
 #include <chrono>
 #include <ctime>
 #include <iomanip>
+#include <set>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -51,7 +53,7 @@
 namespace Insteon
 {
 
-class InsteonHubX10  : public BaseLib::Systems::IPhysicalInterface
+class InsteonHubX10  : public IInsteonInterface
 {
     public:
         InsteonHubX10(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
@@ -61,6 +63,13 @@ class InsteonHubX10  : public BaseLib::Systems::IPhysicalInterface
         void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
         int64_t lastAction() { return _lastAction; }
         virtual bool isOpen() { return _socket->connected(); }
+
+        virtual void addPeer(int32_t address);
+		virtual void addPeers(std::vector<int32_t>& addresses);
+		virtual void removePeer(int32_t address);
+
+        virtual void enablePairingMode();
+        virtual void disablePairingMode();
     protected:
         class Request
         {
@@ -75,8 +84,11 @@ class InsteonHubX10  : public BaseLib::Systems::IPhysicalInterface
         	uint8_t _responseType;
         };
 
-        BaseLib::Output _out;
         std::thread _initThread;
+        std::mutex _peersMutex;
+        std::map<int32_t, PeerInfo> _peers;
+        std::set<int32_t> _pairedPeers;
+        std::set<int32_t> _usedDatabaseAddresses;
         int64_t _lastAction = 0;
         std::string _hostname;
         std::string _port;
@@ -86,18 +98,22 @@ class InsteonHubX10  : public BaseLib::Systems::IPhysicalInterface
         std::mutex _sendMutex;
         bool _initStarted = false;
         bool _initComplete = false;
-        int32_t _myAddress = 0xFFFFFF;
+        int32_t _centralAddress = 0xFFFFFF;
         std::map<int32_t, int32_t> _lengthLookup;
+        const uint32_t _maxLinks = 415;
 
         void reconnect();
         void doInit();
-        void processData(std::vector<uint8_t>& data);
+        bool processData(std::vector<uint8_t>& data);
         void processPacket(std::vector<uint8_t>& packet);
         void getResponse(const std::vector<char>& packet, std::vector<uint8_t>& response, uint8_t responseType);
         void send(const std::vector<char>& packet, bool printPacket);
         void listen();
         void getFileDescriptor(bool& timedout);
         std::shared_ptr<BaseLib::FileDescriptor> getConnection(std::string& hostname, const std::string& port, std::string& ipAddress);
+        void checkPeers();
+        void storePeer(PeerInfo& peerInfo);
+        int32_t getFreeDatabaseAddress();
 };
 
 }

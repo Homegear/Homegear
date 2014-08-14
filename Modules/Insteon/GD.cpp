@@ -33,8 +33,8 @@ namespace Insteon
 {
 	BaseLib::Obj* GD::bl = nullptr;
 	Insteon* GD::family = nullptr;
-	std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> GD::physicalInterfaces;
-	std::shared_ptr<BaseLib::Systems::IPhysicalInterface> GD::defaultPhysicalInterface;
+	std::map<std::string, std::shared_ptr<IInsteonInterface>> GD::physicalInterfaces;
+	std::shared_ptr<IInsteonInterface> GD::defaultPhysicalInterface;
 	BaseLib::Output GD::out;
 	BaseLib::RPC::Devices GD::rpcDevices(BaseLib::Systems::DeviceFamilies::Insteon);
 }

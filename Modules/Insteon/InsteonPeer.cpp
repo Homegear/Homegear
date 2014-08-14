@@ -87,7 +87,7 @@ void InsteonPeer::setPhysicalInterfaceID(std::string id)
 	}
 }
 
-void InsteonPeer::setPhysicalInterface(std::shared_ptr<IPhysicalInterface> interface)
+void InsteonPeer::setPhysicalInterface(std::shared_ptr<IInsteonInterface> interface)
 {
 	try
 	{
@@ -1216,7 +1216,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonPeer::setValue(uint32_t channe
 		queue->parameterName = valueKey;
 		queue->channel = channel;
 		queue->push(packet);
-		queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+		//queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		pendingQueues->removeQueue(valueKey, channel);
 		pendingQueues->push(queue);
 		central->enqueuePendingQueues(_address);

@@ -52,8 +52,8 @@ public:
 	virtual void enqueuePendingQueues(int32_t deviceAddress);
 	void reset(uint64_t id);
 
-	virtual void handleAck(int32_t messageCounter, std::shared_ptr<InsteonPacket>);
-	virtual void handlePairingRequest(int32_t messageCounter, std::shared_ptr<InsteonPacket>);
+	virtual void handleDatabaseOpResponse(std::shared_ptr<InsteonPacket> packet);
+	virtual void handlePairingRequest(std::shared_ptr<InsteonPacket> packet);
 
 	virtual bool knowsDevice(std::string serialNumber);
 	virtual bool knowsDevice(uint64_t id);

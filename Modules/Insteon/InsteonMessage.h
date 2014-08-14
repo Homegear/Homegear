@@ -51,9 +51,9 @@ class InsteonMessage
 {
     public:
         InsteonMessage();
-        InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, int32_t access, void (InsteonDevice::*messageHandlerIncoming)(std::shared_ptr<InsteonPacket>));
-        InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, int32_t access, int32_t accessPairing, void (InsteonDevice::*messageHandlerIncoming)(std::shared_ptr<InsteonPacket>));
-        InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, void (InsteonDevice::*messageHandlerOutgoing)(int32_t, std::shared_ptr<InsteonPacket>));
+        InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonPacketFlags flags, InsteonDevice* device, int32_t access, void (InsteonDevice::*messageHandlerIncoming)(std::shared_ptr<InsteonPacket>));
+        InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonPacketFlags flags, InsteonDevice* device, int32_t access, int32_t accessPairing, void (InsteonDevice::*messageHandlerIncoming)(std::shared_ptr<InsteonPacket>));
+        InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonPacketFlags flags, InsteonDevice* device, void (InsteonDevice::*messageHandlerOutgoing)(int32_t, std::shared_ptr<InsteonPacket>));
         virtual ~InsteonMessage();
 
         MessageDirection getDirection() { return _direction; }
@@ -62,6 +62,8 @@ class InsteonMessage
         void setMessageSubtype(int32_t messageSubtype) { _messageSubtype = messageSubtype; }
         int32_t getMessageType() { return _messageType; }
         void setMessageType(int32_t messageType) { _messageType = messageType; }
+        InsteonPacketFlags getMessageFlags() { return _messageFlags; }
+        void setMessageFlags(InsteonPacketFlags value) { _messageFlags = value; }
         int32_t getMessageAccess() { return _access; }
         void setMessageAccess(int32_t access) { _access = access; }
         int32_t getMessageAccessPairing() { return _accessPairing; }
@@ -77,9 +79,10 @@ class InsteonMessage
         bool typeIsEqual(std::shared_ptr<InsteonPacket> packet);
         bool typeIsEqual(std::shared_ptr<InsteonMessage> message, std::shared_ptr<InsteonPacket> packet);
         bool typeIsEqual(std::shared_ptr<InsteonMessage> message);
-        bool typeIsEqual(int32_t messageType, int32_t messageSubtype, std::vector<std::pair<uint32_t, int32_t>>* subtypes);
+        bool typeIsEqual(int32_t messageType, int32_t messageSubtype, InsteonPacketFlags flags, std::vector<std::pair<uint32_t, int32_t>>* subtypes);
     protected:
         MessageDirection _direction = DIRECTIONIN;
+        InsteonPacketFlags _messageFlags;
         int32_t _messageType = -1;
         int32_t _messageSubtype = -1;
         InsteonDevice* _device = nullptr;

@@ -64,6 +64,7 @@ class InsteonPacket : public BaseLib::Systems::Packet
         void import(std::vector<uint8_t>& packet);
         void import(std::string packetHex);
 
+        void setDestinationAddress(int32_t value) { _destinationAddress = value; }
         bool extended() { return _extended; }
         InsteonPacketFlags flags() { return _flags; }
         void setFlags(InsteonPacketFlags value) { _flags = value; }

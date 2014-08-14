@@ -308,7 +308,11 @@ void InsteonPacket::setPosition(double index, double size, std::vector<uint8_t>&
 		}
 		if(index < 9)
 		{
-			GD::out.printError("Error: Packet index < 9 requested.");
+			if(index < 7) GD::out.printError("Error: Tried to set packet index < 7.");
+			if(size != 1.0 || std::floor(index) != index) GD::out.printError("Error: Only whole bytes are allowed for packet indexes < 9.");
+			if(value.empty()) value.push_back(0);
+			if(index == 7.0) _messageType = value.at(0);
+			else if(index == 8.0) _messageSubtype = value.at(0);
 			return;
 		}
 		index -= 9;

@@ -60,7 +60,7 @@ void InsteonCentral::init()
 
 		_deviceType = (uint32_t)DeviceType::INSTEONCENTRAL;
 
-		for(std::map<std::string, std::shared_ptr<IPhysicalInterface>>::iterator i = GD::physicalInterfaces.begin(); i != GD::physicalInterfaces.end(); ++i)
+		for(std::map<std::string, std::shared_ptr<IInsteonInterface>>::iterator i = GD::physicalInterfaces.begin(); i != GD::physicalInterfaces.end(); ++i)
 		{
 			i->second->addEventHandler((IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
 		}
@@ -84,7 +84,11 @@ void InsteonCentral::setUpInsteonMessages()
 	try
 	{
 		//Don't call InsteonDevice::setUpInsteonMessages!
+		_messages->add(std::shared_ptr<InsteonMessage>(new InsteonMessage(0x01, 0x00, InsteonPacketFlags::Broadcast, this, ACCESSPAIREDTOSENDER, FULLACCESS, &InsteonDevice::handlePairingRequest)));
 
+		_messages->add(std::shared_ptr<InsteonMessage>(new InsteonMessage(0x2F, -1, InsteonPacketFlags::DirectAck, this, ACCESSPAIREDTOSENDER, FULLACCESS, &InsteonDevice::handleDatabaseOpResponse)));
+
+		_messages->add(std::shared_ptr<InsteonMessage>(new InsteonMessage(0x2F, -1, InsteonPacketFlags::DirectNak, this, ACCESSPAIREDTOSENDER, FULLACCESS, &InsteonDevice::handleDatabaseOpResponse)));
 	}
     catch(const std::exception& ex)
     {
@@ -248,7 +252,7 @@ void InsteonCentral::reset(uint64_t id)
 		payload.push_back(0);
 		//std::shared_ptr<InsteonPacket> resetPacket(new InsteonPacket(_messageCounter[0], 0xF0, 0, _address, peer->getAddress(), payload, false));
 		//pendingQueue->push(resetPacket);
-		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+		//pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 
 		while(!peer->pendingQueues->empty()) peer->pendingQueues->pop();
 		peer->pendingQueues->push(pendingQueue);
@@ -828,7 +832,7 @@ void InsteonCentral::addHomegearFeatures(std::shared_ptr<InsteonPeer> peer)
 	try
 	{
 		if(!peer) return;
-		//if(peer->getDeviceType().type() == (uint32_t)DeviceType::BCRTTRXCYG3) addHomegearFeaturesValveDrive(peer);
+		//if(peer->getDeviceType().type() == (uint32_t)DeviceType::INTEONBLA) addHomegearFeaturesValveDrive(peer);
 	}
 	catch(const std::exception& ex)
 	{
@@ -845,14 +849,14 @@ void InsteonCentral::addHomegearFeatures(std::shared_ptr<InsteonPeer> peer)
 }
 
 //Packet handlers
-void InsteonCentral::handleAck(int32_t messageCounter, std::shared_ptr<InsteonPacket> packet)
+void InsteonCentral::handleDatabaseOpResponse(std::shared_ptr<InsteonPacket> packet)
 {
 	try
 	{
 		std::shared_ptr<PacketQueue> queue = _queueManager.get(packet->senderAddress());
 		if(!queue) return;
 		std::shared_ptr<InsteonPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
-		if(packet->payload()->size() > 1 && (packet->payload()->at(1) & 0x80))
+		if(packet->flags() == InsteonPacketFlags::DirectNak || packet->flags() == InsteonPacketFlags::GroupCleanupDirectNak)
 		{
 			if(_bl->debugLevel >= 2)
 			{
@@ -866,7 +870,7 @@ void InsteonCentral::handleAck(int32_t messageCounter, std::shared_ptr<InsteonPa
 		}
 		if(queue->getQueueType() == PacketQueueType::PAIRING)
 		{
-			if(sentPacket && sentPacket->messageType() == 0x01 && sentPacket->messageSubtype() == 0)
+			if(sentPacket && sentPacket->payload()->size() > 5 && sentPacket->payload()->at(5) == 0xE2)
 			{
 				if(!peerExists(packet->senderAddress()))
 				{
@@ -898,6 +902,7 @@ void InsteonCentral::handleAck(int32_t messageCounter, std::shared_ptr<InsteonPa
 						_peersMutex.unlock();
 						GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 					}
+					queue->peer->getPhysicalInterface()->addPeer(queue->peer->getAddress());
 					std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 					deviceDescriptions->arrayValue = queue->peer->getDeviceDescriptions(true, std::map<std::string, bool>());
 					raiseRPCNewDevices(deviceDescriptions);
@@ -930,40 +935,32 @@ void InsteonCentral::handleAck(int32_t messageCounter, std::shared_ptr<InsteonPa
     }
 }
 
-void InsteonCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<InsteonPacket> packet)
+void InsteonCentral::handlePairingRequest(std::shared_ptr<InsteonPacket> packet)
 {
 	try
 	{
-		if(packet->destinationAddress() != 0 && packet->destinationAddress() != _address)
-		{
-			GD::out.printError("Error: Pairing packet rejected, because this peer is already paired to another central.");
-			return;
-		}
-		if(packet->payload()->size() < 14)
-		{
-			GD::out.printError("Error: Pairing packet is too small (payload size has to be at least 14).");
-			return;
-		}
-
-		std::string serialNumber(&packet->payload()->at(4), &packet->payload()->at(4) + 10);
-		uint32_t rawType = (packet->payload()->at(2) << 8) + packet->payload()->at(3);
+		uint32_t rawType = packet->destinationAddress() >> 8;
 		LogicalDeviceType deviceType(BaseLib::Systems::DeviceFamilies::Insteon, rawType);
 
 		std::shared_ptr<InsteonPeer> peer(getPeer(packet->senderAddress()));
-		if(peer && (peer->getSerialNumber() != serialNumber || peer->getDeviceType() != deviceType))
+		if(peer && peer->getDeviceType() != deviceType)
 		{
-			GD::out.printError("Error: Pairing packet rejected, because a peer with the same address but different serial number or device type is already paired to this central.");
+			GD::out.printError("Error: Pairing packet rejected, because a peer with the same address but different device type is already paired to this central.");
 			return;
 		}
 
-		std::vector<uint8_t> payload;
 		if(_pairing)
 		{
+			_stopPairingModeThread = true;
+			if(_pairingModeThread.joinable()) _pairingModeThread.join();
+			_stopPairingModeThread = false;
+
 			std::shared_ptr<PacketQueue> queue = _queueManager.createQueue(this, getPhysicalInterface(packet->senderAddress()), PacketQueueType::PAIRING, packet->senderAddress());
 
 			if(!peer)
 			{
-				int32_t firmwareVersion = (packet->payload()->at(0) << 8) + packet->payload()->at(1);
+				int32_t firmwareVersion = packet->destinationAddress() & 0xFF;
+				std::string serialNumber = BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6);
 				//Do not save here
 				queue->peer = createPeer(packet->senderAddress(), firmwareVersion, deviceType, serialNumber, false);
 				if(!queue->peer)
@@ -980,23 +977,55 @@ void InsteonCentral::handlePairingRequest(int32_t messageCounter, std::shared_pt
 				return;
 			}
 
-			//INCLUSION
+			//ACK and get database info
+			std::vector<uint8_t> payload;
+			payload.push_back(1);
 			payload.push_back(0);
-			payload.push_back(0);
-			//std::shared_ptr<InsteonPacket> configPacket(new InsteonPacket(_messageCounter[0], 0x01, 0, _address, packet->senderAddress(), payload, peer->getRXModes() & Device::RXModes::burst));
-			//queue->push(configPacket);
-			queue->push(_messages->find(DIRECTIONIN, 0x02, -1, std::vector<std::pair<uint32_t, int32_t>>()));
+			payload.push_back(0x0F);
+			payload.push_back(0xFF);
+			payload.push_back(1);
+			std::shared_ptr<InsteonPacket> configPacket(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+			queue->push(configPacket);
+			queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
 			payload.clear();
 
-			//WAKEUP
-			/*payload.clear();
-			payload.push_back(0);
-			payload.push_back(0x3F);
-			configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(_messageCounter[0], 0xF1, 0, _address, packet->senderAddress(), payload, false));
+			payload.push_back(0); //Write
+			payload.push_back(2); //Write
+			payload.push_back(0x0F); //First byte of link database address
+			payload.push_back(0xFF); //Second byte of link database address
+			payload.push_back(0x08); //Entry size?
+			payload.push_back(0xA2); //Bit 7 => Record in use, Bit 6 => Controller, Bit 5 => ACK required, Bit 4, 3, 2 => reserved, Bit 1 => Record has been used before, Bit 0 => unused
+			payload.push_back(0x00); //Group
+			payload.push_back(GD::defaultPhysicalInterface->address() >> 16);
+			payload.push_back((GD::defaultPhysicalInterface->address() >> 8) & 0xFF);
+			payload.push_back(GD::defaultPhysicalInterface->address() & 0xFF);
+			payload.push_back(0xFF); //Data1 => Level in this case
+			payload.push_back(0x1F); //Data2 => Ramp rate?
+			payload.push_back(0x01); //Data3
+			payload.push_back(0x9F); //?
+			configPacket.reset(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::Direct, true, payload));
 			queue->push(configPacket);
-			queue->push(_messages->find(DIRECTIONIN, 0x02, -1, std::vector<std::pair<uint32_t, int32_t>>()));
+			queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
 			payload.clear();
-			_messageCounter[0]++;*/
+
+			payload.push_back(0); //Write
+			payload.push_back(2); //Write
+			payload.push_back(0x0F); //First byte of link database address
+			payload.push_back(0xF7); //Second byte of link database address
+			payload.push_back(0x08); //Entry size?
+			payload.push_back(0xE2); //Bit 7 => Record in use, Bit 6 => Controller, Bit 5 => ACK required, Bit 4, 3, 2 => reserved, Bit 1 => Record has been used before, Bit 0 => unused
+			payload.push_back(0x01); //Group
+			payload.push_back(GD::defaultPhysicalInterface->address() >> 16);
+			payload.push_back((GD::defaultPhysicalInterface->address() >> 8) & 0xFF);
+			payload.push_back(GD::defaultPhysicalInterface->address() & 0xFF);
+			payload.push_back(0x03); //Data1
+			payload.push_back(0x1F); //Data2
+			payload.push_back(0x01); //Data3
+			payload.push_back(0x62); //?
+			configPacket.reset(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::Direct, true, payload));
+			queue->push(configPacket);
+			queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
+			payload.clear();
 		}
 	}
 	catch(const std::exception& ex)
@@ -1248,6 +1277,7 @@ void InsteonCentral::pairingModeTimer(int32_t duration, bool debugOutput)
 			timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - startTime;
 			_timeLeftInPairingMode = duration - (timePassed / 1000);
 		}
+		GD::defaultPhysicalInterface->disablePairingMode();
 		_timeLeftInPairingMode = 0;
 		_pairing = false;
 		if(debugOutput) GD::out.printInfo("Info: Pairing mode disabled.");
@@ -1277,6 +1307,7 @@ std::shared_ptr<RPCVariable> InsteonCentral::setInstallMode(bool on, uint32_t du
 		if(on && duration >= 5)
 		{
 			_timeLeftInPairingMode = duration; //It's important to set it here, because the thread often doesn't completely initialize before getInstallMode requests _timeLeftInPairingMode
+			GD::defaultPhysicalInterface->enablePairingMode();
 			_pairingModeThread = std::thread(&InsteonCentral::pairingModeTimer, this, duration, debugOutput);
 		}
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));

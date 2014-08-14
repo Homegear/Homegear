@@ -106,6 +106,7 @@ void PacketQueue::serialize(std::vector<uint8_t>& encodedData)
 				encoder.encodeByte(encodedData, message->getDirection());
 				encoder.encodeByte(encodedData, message->getMessageType());
 				encoder.encodeByte(encodedData, message->getMessageSubtype());
+				encoder.encodeByte(encodedData, (uint8_t)message->getMessageFlags());
 				std::vector<std::pair<uint32_t, int32_t>>* subtypes = message->getSubtypes();
 				encoder.encodeByte(encodedData, subtypes->size());
 				for(std::vector<std::pair<uint32_t, int32_t>>::iterator j = subtypes->begin(); j != subtypes->end(); ++j)
@@ -166,13 +167,14 @@ void PacketQueue::unserialize(std::shared_ptr<std::vector<char>> serializedData,
 				int32_t direction = decoder.decodeByte(serializedData, position);
 				int32_t messageType = decoder.decodeByte(serializedData, position);
 				int32_t messageSubtype = decoder.decodeByte(serializedData, position);
+				InsteonPacketFlags flags = (InsteonPacketFlags)decoder.decodeByte(serializedData, position);
 				uint32_t subtypeSize = decoder.decodeByte(serializedData, position);
 				std::vector<std::pair<uint32_t, int32_t>> subtypes;
 				for(uint32_t j = 0; j < subtypeSize; j++)
 				{
 					subtypes.push_back(std::pair<uint32_t, int32_t>(decoder.decodeByte(serializedData, position), decoder.decodeByte(serializedData, position)));
 				}
-				entry->setMessage(device->getMessages()->find(direction, messageType, messageSubtype, subtypes), false);
+				entry->setMessage(device->getMessages()->find(direction, messageType, messageSubtype, flags, subtypes), false);
 			}
 			parameterName = decoder.decodeString(serializedData, position);
 			channel = decoder.decodeInteger(serializedData, position);
@@ -282,10 +284,10 @@ void PacketQueue::resend(uint32_t threadId)
 		if(_stopResendThread) return;
 		if(_resendCounter < 3)
 		{
-			//Sleep for 200 ms
+			//Sleep for 1000 ms
 			i = 0;
-			keepAlive();
-			sleepingTime = std::chrono::milliseconds(20);
+			longKeepAlive();
+			sleepingTime = std::chrono::milliseconds(100);
 			while(!_stopResendThread && i < 10)
 			{
 				std::this_thread::sleep_for(sleepingTime);
@@ -294,11 +296,11 @@ void PacketQueue::resend(uint32_t threadId)
 		}
 		else
 		{
-			//Sleep for 400 ms
+			//Sleep for 3000 ms
 			i = 0;
-			keepAlive();
-			sleepingTime = std::chrono::milliseconds(20);
-			while(!_stopResendThread && i < 20)
+			longKeepAlive();
+			sleepingTime = std::chrono::milliseconds(100);
+			while(!_stopResendThread && i < 30)
 			{
 				std::this_thread::sleep_for(sleepingTime);
 				i++;

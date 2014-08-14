@@ -310,7 +310,9 @@ void HM_LGW::addPeers(std::vector<PeerInfo>& peerInfos)
 		_peersMutex.lock();
 		for(std::vector<PeerInfo>::iterator i = peerInfos.begin(); i != peerInfos.end(); ++i)
 		{
-			addPeer(*i);
+			if(i->address == 0) continue;
+			_peers[i->address] = *i;
+			if(_initComplete) sendPeer(*i);
 		}
 	}
     catch(const std::exception& ex)
@@ -764,6 +766,13 @@ void HM_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			return;
 		}
 		_lastAction = BaseLib::HelperFunctions::getTime();
+
+		if(!_initComplete)
+    	{
+    		_out.printWarning("Warning: !!!Not!!! sending (Port " + _settings->port + "), because the init sequence is not completed: " + packet->hexString());
+    		_sendMutex.unlock();
+    		return;
+    	}
 
 		std::shared_ptr<BidCoSPacket> bidCoSPacket(std::dynamic_pointer_cast<BidCoSPacket>(packet));
 		if(!bidCoSPacket) return;

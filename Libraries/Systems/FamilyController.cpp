@@ -434,7 +434,8 @@ void FamilyController::dispose()
 				GD::out.printError("Error: Disposing of device family with index " + std::to_string((int32_t)i->first) + " failed, because the pointer was empty.");
 				continue;
 			}
-			i->second->dispose();
+			//Calls dispose()
+			i->second->~DeviceFamily();
 		}
 		GD::deviceFamilies.clear();
 		moduleLoaders.clear();

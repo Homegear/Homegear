@@ -27,31 +27,51 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef GD_H_
-#define GD_H_
+#ifndef IINSTEONINTERFACE_H_
+#define IINSTEONINTERFACE_H_
 
-#include "PhysicalInterfaces/IInsteonInterface.h"
-#include "../Base/BaseLib.h"
-#include "Insteon.h"
+#include "../../Base/BaseLib.h"
 
-namespace Insteon
-{
+namespace Insteon {
 
-class GD
+class IInsteonInterface : public BaseLib::Systems::IPhysicalInterface
 {
 public:
-	virtual ~GD();
+	IInsteonInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
+	virtual ~IInsteonInterface();
 
-	static BaseLib::Obj* bl;
-	static Insteon* family;
-	static std::map<std::string, std::shared_ptr<IInsteonInterface>> physicalInterfaces;
-	static std::shared_ptr<IInsteonInterface> defaultPhysicalInterface;
-	static BaseLib::RPC::Devices rpcDevices;
-	static BaseLib::Output out;
-private:
-	GD();
+	virtual int32_t address() { return _myAddress; }
+
+	virtual void addPeer(int32_t address) {}
+	virtual void addPeers(std::vector<int32_t>& addresses) {}
+	virtual void removePeer(int32_t address) {}
+
+	virtual void enablePairingMode() = 0;
+	virtual void disablePairingMode() = 0;
+protected:
+	class PeerInfo
+	{
+	public:
+		PeerInfo() {}
+		virtual ~PeerInfo() {}
+
+		int32_t address = 0;
+		uint8_t flagsResponder = 0;
+		int32_t databaseAddressResponder = 0;
+		uint8_t data1Responder = 0;
+		uint8_t data2Responder = 0;
+		uint8_t data3Responder = 0;
+		uint8_t flagsController = 0;
+		int32_t databaseAddressController = 0;
+		uint8_t data1Controller = 0;
+		uint8_t data2Controller = 0;
+		uint8_t data3Controller = 0;
+	};
+
+	BaseLib::Output _out;
+	int32_t _myAddress = 0xFFFFFF;
 };
 
 }
 
-#endif /* GD_H_ */
+#endif

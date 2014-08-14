@@ -639,34 +639,34 @@ std::vector<uint8_t> Parameter::convertToPacket(std::string value)
     return std::vector<uint8_t>();
 }
 
-std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> value)
+std::vector<uint8_t> Parameter::convertToPacket(const std::shared_ptr<RPCVariable> value)
 {
 	std::vector<uint8_t> data;
 	try
 	{
 		if(!value) return data;
+		std::shared_ptr<RPCVariable> variable(new RPC::RPCVariable());
+		*variable = *value;
 		if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum && conversion.empty())
 		{
 			LogicalParameterEnum* parameter = (LogicalParameterEnum*)logicalParameter.get();
-			if(value->integerValue > parameter->max) value->integerValue = parameter->max;
-			if(value->integerValue < parameter->min) value->integerValue = parameter->min;
+			if(variable->integerValue > parameter->max) variable->integerValue = parameter->max;
+			if(variable->integerValue < parameter->min) variable->integerValue = parameter->min;
 		}
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction && conversion.empty())
 		{
-			value->integerValue = (int32_t)value->booleanValue;
+			variable->integerValue = (int32_t)variable->booleanValue;
 		}
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString && conversion.empty())
 		{
-			if(value->stringValue.size() > 0)
+			if(variable->stringValue.size() > 0)
 			{
-				data.insert(data.end(), value->stringValue.begin(), value->stringValue.end());
+				data.insert(data.end(), variable->stringValue.begin(), variable->stringValue.end());
 			}
 			if(data.size() < std::lround(physicalParameter->size)) data.push_back(0); //0 termination. Otherwise parts of old string will still be visible
 		}
 		else if(!conversion.empty() && conversion.at(0)->type == ParameterConversion::Type::cfm)
 		{
-			std::shared_ptr<RPCVariable> variable(new RPC::RPCVariable());
-			*variable = *value;
 			//Cannot currently easily be handled by ParameterConversion::toPacket
 			data.resize(14, 0);
 			if(variable->stringValue.empty() || variable->stringValue == "0") return data;
@@ -708,12 +708,12 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 			if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat)
 			{
 				LogicalParameterFloat* parameter = (LogicalParameterFloat*)logicalParameter.get();
-				bool specialValue = (value->floatValue == parameter->defaultValue);
+				bool specialValue = (variable->floatValue == parameter->defaultValue);
 				if(!specialValue)
 				{
 					for(std::unordered_map<std::string, double>::const_iterator i = parameter->specialValues.begin(); i != parameter->specialValues.end(); ++i)
 					{
-						if(i->second == value->floatValue)
+						if(i->second == variable->floatValue)
 						{
 							specialValue = true;
 							break;
@@ -722,19 +722,19 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 				}
 				if(!specialValue)
 				{
-					if(value->floatValue > parameter->max) value->floatValue = parameter->max;
-					else if(value->floatValue < parameter->min) value->floatValue = parameter->min;
+					if(variable->floatValue > parameter->max) variable->floatValue = parameter->max;
+					else if(variable->floatValue < parameter->min) variable->floatValue = parameter->min;
 				}
 			}
 			else if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger)
 			{
 				LogicalParameterInteger* parameter = (LogicalParameterInteger*)logicalParameter.get();
-				bool specialValue = (value->integerValue == parameter->defaultValue);
+				bool specialValue = (variable->integerValue == parameter->defaultValue);
 				if(!specialValue)
 				{
 					for(std::unordered_map<std::string, int32_t>::const_iterator i = parameter->specialValues.begin(); i != parameter->specialValues.end(); ++i)
 					{
-						if(i->second == value->integerValue)
+						if(i->second == variable->integerValue)
 						{
 							specialValue = true;
 							break;
@@ -743,12 +743,10 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 				}
 				if(!specialValue)
 				{
-					if(value->integerValue > parameter->max) value->integerValue = parameter->max;
-					else if(value->integerValue < parameter->min) value->integerValue = parameter->min;
+					if(variable->integerValue > parameter->max) variable->integerValue = parameter->max;
+					else if(variable->integerValue < parameter->min) variable->integerValue = parameter->min;
 				}
 			}
-			std::shared_ptr<RPCVariable> variable(new RPC::RPCVariable());
-			*variable = *value;
 			if(conversion.empty())
 			{
 				if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean) variable->integerValue = (int32_t)variable->booleanValue;
@@ -760,7 +758,6 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 					(*i)->toPacket(variable);
 				}
 			}
-			value->integerValue = variable->integerValue;
 		}
 		if(physicalParameter->type != PhysicalParameter::Type::Enum::typeString)
 		{
@@ -775,9 +772,9 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 					bitSize = 0;
 				}
 				int32_t valueMask = 0xFFFFFFFF >> (((4 - byteSize) * 8) - bitSize);
-				value->integerValue &= valueMask;
+				variable->integerValue &= valueMask;
 			}
-			_bl->hf.memcpyBigEndian(data, value->integerValue);
+			_bl->hf.memcpyBigEndian(data, variable->integerValue);
 		}
 
 		if(physicalParameter->endian == PhysicalParameter::Endian::Enum::little) data = reverseData(data);

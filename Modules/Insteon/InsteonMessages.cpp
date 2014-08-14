@@ -87,13 +87,13 @@ std::shared_ptr<InsteonMessage> InsteonMessages::find(int32_t direction, std::sh
 	return std::shared_ptr<InsteonMessage>();
 }
 
-std::shared_ptr<InsteonMessage> InsteonMessages::find(int32_t direction, int32_t messageType, int32_t messageSubtype, std::vector<std::pair<uint32_t, int32_t>> subtypes)
+std::shared_ptr<InsteonMessage> InsteonMessages::find(int32_t direction, int32_t messageType, int32_t messageSubtype, InsteonPacketFlags flags, std::vector<std::pair<uint32_t, int32_t>> subtypes)
 {
 	try
 	{
 		for(uint32_t i = 0; i < _messages.size(); i++)
 		{
-			if(_messages[i]->getDirection() == direction && _messages[i]->typeIsEqual(messageType, messageSubtype, &subtypes)) return _messages[i];
+			if(_messages[i]->getDirection() == direction && _messages[i]->typeIsEqual(messageType, messageSubtype, flags, &subtypes)) return _messages[i];
 		}
 	}
 	catch(const std::exception& ex)

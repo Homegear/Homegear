@@ -27,31 +27,24 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef GD_H_
-#define GD_H_
-
-#include "PhysicalInterfaces/IInsteonInterface.h"
-#include "../Base/BaseLib.h"
-#include "Insteon.h"
+#include "IInsteonInterface.h"
+#include "../GD.h"
 
 namespace Insteon
 {
 
-class GD
+IInsteonInterface::IInsteonInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IPhysicalInterface(GD::bl, settings)
 {
-public:
-	virtual ~GD();
+	if(settings->listenThreadPriority == -1)
+	{
+		settings->listenThreadPriority = 0;
+		settings->listenThreadPolicy = SCHED_OTHER;
+	}
+}
 
-	static BaseLib::Obj* bl;
-	static Insteon* family;
-	static std::map<std::string, std::shared_ptr<IInsteonInterface>> physicalInterfaces;
-	static std::shared_ptr<IInsteonInterface> defaultPhysicalInterface;
-	static BaseLib::RPC::Devices rpcDevices;
-	static BaseLib::Output out;
-private:
-	GD();
-};
+IInsteonInterface::~IInsteonInterface()
+{
 
 }
 
-#endif /* GD_H_ */
+}

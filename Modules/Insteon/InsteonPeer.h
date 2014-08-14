@@ -33,6 +33,7 @@
 #include "../Base/BaseLib.h"
 #include "InsteonPacket.h"
 #include "PendingQueues.h"
+#include "PhysicalInterfaces/IInsteonInterface.h"
 
 #include <list>
 
@@ -99,7 +100,7 @@ public:
 	virtual std::string getFirmwareVersionString(int32_t firmwareVersion);
     virtual bool firmwareUpdateAvailable() { return false; }
 
-    std::shared_ptr<IPhysicalInterface> getPhysicalInterface() { return _physicalInterface; }
+    std::shared_ptr<IInsteonInterface> getPhysicalInterface() { return _physicalInterface; }
 	void getValuesFromPacket(std::shared_ptr<InsteonPacket> packet, std::vector<FrameValues>& frameValue);
 	void packetReceived(std::shared_ptr<InsteonPacket> packet);
 
@@ -112,13 +113,13 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
 	//End RPC methods
 protected:
-	std::shared_ptr<IPhysicalInterface> _physicalInterface;
+	std::shared_ptr<IInsteonInterface> _physicalInterface;
 
 	//In table variables:
 	std::string _physicalInterfaceID;
 	//End
 
-	virtual void setPhysicalInterface(std::shared_ptr<IPhysicalInterface> interface);
+	virtual void setPhysicalInterface(std::shared_ptr<IInsteonInterface> interface);
 
 	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 	virtual std::shared_ptr<BaseLib::Systems::LogicalDevice> getDevice(int32_t address);

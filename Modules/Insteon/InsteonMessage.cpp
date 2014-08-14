@@ -36,17 +36,17 @@ InsteonMessage::InsteonMessage()
 {
 }
 
-InsteonMessage::InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, int32_t access, void (InsteonDevice::*messageHandler)(std::shared_ptr<InsteonPacket>)) : _messageType(messageType), _messageSubtype(messageSubtype), _device(device), _access(access), _messageHandlerIncoming(messageHandler)
+InsteonMessage::InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonPacketFlags flags, InsteonDevice* device, int32_t access, void (InsteonDevice::*messageHandler)(std::shared_ptr<InsteonPacket>)) : _messageType(messageType), _messageSubtype(messageSubtype), _messageFlags(flags), _device(device), _access(access), _messageHandlerIncoming(messageHandler)
 {
     _direction = DIRECTIONIN;
 }
 
-InsteonMessage::InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, int32_t access, int32_t accessPairing, void (InsteonDevice::*messageHandler)(std::shared_ptr<InsteonPacket>)) : _messageType(messageType), _messageSubtype(messageSubtype), _device(device), _access(access), _accessPairing(accessPairing), _messageHandlerIncoming(messageHandler)
+InsteonMessage::InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonPacketFlags flags, InsteonDevice* device, int32_t access, int32_t accessPairing, void (InsteonDevice::*messageHandler)(std::shared_ptr<InsteonPacket>)) : _messageType(messageType), _messageSubtype(messageSubtype), _messageFlags(flags), _device(device), _access(access), _accessPairing(accessPairing), _messageHandlerIncoming(messageHandler)
 {
     _direction = DIRECTIONIN;
 }
 
-InsteonMessage::InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonDevice* device, void (InsteonDevice::*messageHandler)(int32_t, std::shared_ptr<InsteonPacket>)) : _messageType(messageType), _messageSubtype(messageSubtype), _device(device), _messageHandlerOutgoing(messageHandler)
+InsteonMessage::InsteonMessage(int32_t messageType, int32_t messageSubtype, InsteonPacketFlags flags, InsteonDevice* device, void (InsteonDevice::*messageHandler)(int32_t, std::shared_ptr<InsteonPacket>)) : _messageType(messageType), _messageSubtype(messageSubtype), _messageFlags(flags), _device(device), _messageHandlerOutgoing(messageHandler)
 {
     _direction = DIRECTIONOUT;
 }
@@ -97,11 +97,11 @@ void InsteonMessage::invokeMessageHandlerOutgoing(std::shared_ptr<InsteonPacket>
 	}
 }
 
-bool InsteonMessage::typeIsEqual(int32_t messageType, int32_t messageSubtype, std::vector<std::pair<uint32_t, int32_t> >* subtypes)
+bool InsteonMessage::typeIsEqual(int32_t messageType, int32_t messageSubtype, InsteonPacketFlags flags, std::vector<std::pair<uint32_t, int32_t> >* subtypes)
 {
 	try
 	{
-		if(_messageType != messageType || (_messageSubtype > -1 && messageSubtype > -1 && _messageSubtype != messageSubtype)) return false;
+		if(_messageType != messageType || (_messageSubtype > -1 && messageSubtype > -1 && _messageSubtype != messageSubtype) || _messageFlags != flags) return false;
 		if(subtypes->size() != _subtypes.size()) return false;
 		for(uint32_t i = 0; i < subtypes->size(); i++)
 		{
@@ -129,7 +129,7 @@ bool InsteonMessage::typeIsEqual(std::shared_ptr<InsteonPacket> packet)
 {
 	try
 	{
-		if(_messageType != packet->messageType() || (_messageSubtype > -1 && packet->messageSubtype() > -1 && _messageSubtype != packet->messageSubtype())) return false;
+		if(_messageType != packet->messageType() || (_messageSubtype > -1 && packet->messageSubtype() > -1 && _messageSubtype != packet->messageSubtype()) || _messageFlags != packet->flags()) return false;
 		std::vector<uint8_t>* payload = packet->payload();
 		if(_subtypes.empty()) return true;
 		for(std::vector<std::pair<uint32_t, int32_t>>::const_iterator i = _subtypes.begin(); i != _subtypes.end(); ++i)
@@ -158,7 +158,7 @@ bool InsteonMessage::typeIsEqual(std::shared_ptr<InsteonMessage> message)
 {
 	try
 	{
-		if(_messageType != message->getMessageType()) return false;
+		if(_messageType != message->getMessageType() || _messageFlags != message->getMessageFlags()) return false;
 		if(message->getMessageSubtype() > -1 && _messageSubtype > -1 && message->getMessageSubtype() != _messageSubtype) return false;
 		if(_subtypes.empty()) return true;
 		if(message->subtypeCount() != _subtypes.size()) return false;
@@ -188,7 +188,7 @@ bool InsteonMessage::typeIsEqual(std::shared_ptr<InsteonMessage> message, std::s
 {
 	try
 	{
-		if(message->getMessageType() != packet->messageType()) return false;
+		if(message->getMessageType() != packet->messageType() || message->getMessageFlags() != packet->flags()) return false;
 		if(message->getMessageSubtype() > -1 && packet->messageSubtype() > -1 && message->getMessageSubtype() != packet->messageSubtype()) return false;
 		std::vector<std::pair<uint32_t, int32_t>>* subtypes = message->getSubtypes();
 		std::vector<uint8_t>* payload = packet->payload();

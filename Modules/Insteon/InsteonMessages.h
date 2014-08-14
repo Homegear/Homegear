@@ -45,7 +45,7 @@ class InsteonMessages
         virtual ~InsteonMessages() {}
         void add(std::shared_ptr<InsteonMessage> message);
         std::shared_ptr<InsteonMessage> find(int32_t direction, std::shared_ptr<InsteonPacket> packet);
-        std::shared_ptr<InsteonMessage> find(int32_t direction, int32_t messageType, int32_t messageSubtype, std::vector<std::pair<uint32_t, int32_t> > subtypes);
+        std::shared_ptr<InsteonMessage> find(int32_t direction, int32_t messageType, int32_t messageSubtype, InsteonPacketFlags flags, std::vector<std::pair<uint32_t, int32_t> > subtypes);
     protected:
     private:
         std::vector<std::shared_ptr<InsteonMessage>> _messages;
