@@ -60,6 +60,7 @@ public:
 	virtual bool knowsDevice(std::string serialNumber);
 	virtual bool knowsDevice(uint64_t id);
 
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> addDevice(std::string serialNumber);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> deleteDevice(std::string serialNumber, int32_t flags);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> deleteDevice(uint64_t peerID, int32_t flags);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceInfo(uint64_t id, std::map<std::string, bool> fields);
@@ -76,8 +77,10 @@ protected:
 	std::thread _pairingModeThread;
 
 	std::shared_ptr<InsteonPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
+	void createPairingQueue(int32_t address, std::shared_ptr<InsteonPeer> peer = nullptr);
 	void deletePeer(uint64_t id);
 	std::mutex _peerInitMutex;
+	std::mutex _pairingMutex;
 	virtual void setUpInsteonMessages();
 	virtual void worker();
 	virtual void init();

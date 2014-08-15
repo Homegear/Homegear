@@ -86,7 +86,7 @@ void InsteonCentral::setUpInsteonMessages()
 	try
 	{
 		//Don't call InsteonDevice::setUpInsteonMessages!
-		_messages->add(std::shared_ptr<InsteonMessage>(new InsteonMessage(0x01, 0x00, InsteonPacketFlags::Broadcast, this, ACCESSPAIREDTOSENDER, FULLACCESS, &InsteonDevice::handlePairingRequest)));
+		_messages->add(std::shared_ptr<InsteonMessage>(new InsteonMessage(0x01, -1, InsteonPacketFlags::Broadcast, this, ACCESSPAIREDTOSENDER, FULLACCESS, &InsteonDevice::handlePairingRequest)));
 
 		_messages->add(std::shared_ptr<InsteonMessage>(new InsteonMessage(0x09, 0x01, InsteonPacketFlags::DirectAck, this, ACCESSPAIREDTOSENDER, FULLACCESS, &InsteonDevice::handleLinkingModeResponse)));
 
@@ -878,6 +878,137 @@ void InsteonCentral::addHomegearFeatures(std::shared_ptr<InsteonPeer> peer)
 	}
 }
 
+void InsteonCentral::createPairingQueue(int32_t address, std::shared_ptr<InsteonPeer> peer)
+{
+	try
+	{
+		_stopPairingModeThread = true;
+		std::shared_ptr<PacketQueue> queue = _queueManager.createQueue(this, getPhysicalInterface(address), PacketQueueType::PAIRING, address);
+		queue->peer = peer;
+
+		std::vector<uint8_t> payload;
+		payload.push_back(1); //Write
+		payload.push_back(0); //Write
+		payload.push_back(0x0F); //First byte of link database address
+		payload.push_back(0xFF); //Second byte of link database address
+		payload.push_back(0x01); //Entry size?
+		std::shared_ptr<InsteonPacket> configPacket(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+		queue->push(configPacket);
+		queue->push(_messages->find(DIRECTIONIN, 0x2F, -1, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
+		payload.clear();
+
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0xF6);
+		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x09, 0x01, address, 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+		queue->push(configPacket);
+		queue->push(_messages->find(DIRECTIONIN, 0x09, 0x01, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
+		queue->push(_messages->find(DIRECTIONIN, 0x01, 0x00, InsteonPacketFlags::Broadcast, std::vector<std::pair<uint32_t, int32_t>>()));
+		payload.clear();
+
+		payload.push_back(1); //Write
+		payload.push_back(0); //Write
+		payload.push_back(0x0F); //First byte of link database address
+		payload.push_back(0xFF); //Second byte of link database address
+		payload.push_back(0x01); //Entry size?
+		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+		queue->push(configPacket);
+		queue->push(_messages->find(DIRECTIONIN, 0x2F, -1, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
+		payload.clear();
+
+		payload.push_back(0); //Write
+		payload.push_back(2); //Write
+		payload.push_back(0x0F); //First byte of link database address
+		payload.push_back(0xFF); //Second byte of link database address
+		payload.push_back(0x08); //Entry size?
+		payload.push_back(0xA2); //Bit 7 => Record in use, Bit 6 => Controller, Bit 5 => ACK required, Bit 4, 3, 2 => reserved, Bit 1 => Record has been used before, Bit 0 => unused
+		payload.push_back(0x00); //Group
+		payload.push_back(GD::defaultPhysicalInterface->address() >> 16);
+		payload.push_back((GD::defaultPhysicalInterface->address() >> 8) & 0xFF);
+		payload.push_back(GD::defaultPhysicalInterface->address() & 0xFF);
+		payload.push_back(0xFF); //Data1 => Level in this case
+		payload.push_back(0x1F); //Data2 => Ramp rate?
+		payload.push_back(0x01); //Data3
+		payload.push_back(0x9F); //?
+		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::Direct, true, payload));
+		queue->push(configPacket);
+		queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
+		payload.clear();
+
+		payload.push_back(1); //Write
+		payload.push_back(0); //Write
+		payload.push_back(0x0F); //First byte of link database address
+		payload.push_back(0xFF); //Second byte of link database address
+		payload.push_back(0x01); //Entry size?
+		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+		queue->push(configPacket);
+		queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
+		payload.clear();
+
+		payload.push_back(1); //Write
+		payload.push_back(0); //Write
+		payload.push_back(0x0F); //First byte of link database address
+		payload.push_back(0xF7); //Second byte of link database address
+		payload.push_back(0x01); //Entry size?
+		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+		queue->push(configPacket);
+		queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
+		payload.clear();
+
+		payload.push_back(0); //Write
+		payload.push_back(2); //Write
+		payload.push_back(0x0F); //First byte of link database address
+		payload.push_back(0xF7); //Second byte of link database address
+		payload.push_back(0x08); //Entry size?
+		payload.push_back(0xE2); //Bit 7 => Record in use, Bit 6 => Controller, Bit 5 => ACK required, Bit 4, 3, 2 => reserved, Bit 1 => Record has been used before, Bit 0 => unused
+		payload.push_back(0x01); //Group
+		payload.push_back(GD::defaultPhysicalInterface->address() >> 16);
+		payload.push_back((GD::defaultPhysicalInterface->address() >> 8) & 0xFF);
+		payload.push_back(GD::defaultPhysicalInterface->address() & 0xFF);
+		payload.push_back(0x03); //Data1
+		payload.push_back(0x1F); //Data2
+		payload.push_back(0x01); //Data3
+		payload.push_back(0x62); //?
+		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::Direct, true, payload));
+		queue->push(configPacket);
+		queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
+		payload.clear();
+
+		payload.push_back(1); //Write
+		payload.push_back(0); //Write
+		payload.push_back(0x0F); //First byte of link database address
+		payload.push_back(0xF7); //Second byte of link database address
+		payload.push_back(0x01); //Entry size?
+		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+		queue->push(configPacket);
+		queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
+		payload.clear();
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 //Packet handlers
 void InsteonCentral::handleNak(std::shared_ptr<InsteonPacket> packet)
 {
@@ -1053,12 +1184,32 @@ void InsteonCentral::handlePairingRequest(std::shared_ptr<InsteonPacket> packet)
 			std::shared_ptr<PacketQueue> queue = _queueManager.get(packet->senderAddress());
 			if(queue)
 			{
+				//Handle pairing packet during pairing process, which is sent in response to "0x0901". Or pairing requests received through "addDevice".
+
+				if(!queue->peer)
+				{
+					int32_t firmwareVersion = packet->destinationAddress() & 0xFF;
+					std::string serialNumber = BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6);
+					//Do not save here
+					queue->peer = createPeer(packet->senderAddress(), firmwareVersion, deviceType, serialNumber, false);
+					if(!queue->peer)
+					{
+						queue->clear();
+						GD::out.printWarning("Warning: Device type 0x" + GD::bl->hf.getHexString(deviceType.type(), 4) + " with firmware version 0x" + BaseLib::HelperFunctions::getHexString(firmwareVersion, 4) + " not supported. Sender address 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6) + ".");
+						return;
+					}
+
+					if(!queue->peer->rpcDevice)
+					{
+						queue->clear();
+						GD::out.printWarning("Warning: Device type not supported. Sender address 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6) + ".");
+						return;
+					}
+				}
+
 				if(queue->getQueueType() == PacketQueueType::PAIRING) queue->pop();
 				return;
 			}
-
-			_stopPairingModeThread = true;
-			queue = _queueManager.createQueue(this, getPhysicalInterface(packet->senderAddress()), PacketQueueType::PAIRING, packet->senderAddress());
 
 			if(!peer)
 			{
@@ -1080,114 +1231,7 @@ void InsteonCentral::handlePairingRequest(std::shared_ptr<InsteonPacket> packet)
 				return;
 			}
 
-			std::vector<uint8_t> payload;
-			payload.push_back(1); //Write
-			payload.push_back(0); //Write
-			payload.push_back(0x0F); //First byte of link database address
-			payload.push_back(0xFF); //Second byte of link database address
-			payload.push_back(0x01); //Entry size?
-			std::shared_ptr<InsteonPacket> configPacket(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::DirectAck, true, payload));
-			queue->push(configPacket);
-			queue->push(_messages->find(DIRECTIONIN, 0x2F, -1, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
-			payload.clear();
-
-			payload.push_back(0);
-			payload.push_back(0);
-			payload.push_back(0);
-			payload.push_back(0);
-			payload.push_back(0);
-			payload.push_back(0);
-			payload.push_back(0);
-			payload.push_back(0);
-			payload.push_back(0);
-			payload.push_back(0);
-			payload.push_back(0);
-			payload.push_back(0);
-			payload.push_back(0);
-			payload.push_back(0xF6);
-			configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x09, 0x01, packet->senderAddress(), 3, 3, InsteonPacketFlags::DirectAck, true, payload));
-			queue->push(configPacket);
-			queue->push(_messages->find(DIRECTIONIN, 0x09, 0x01, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
-			queue->push(_messages->find(DIRECTIONIN, 0x01, 0x00, InsteonPacketFlags::Broadcast, std::vector<std::pair<uint32_t, int32_t>>()));
-			payload.clear();
-
-			payload.push_back(1); //Write
-			payload.push_back(0); //Write
-			payload.push_back(0x0F); //First byte of link database address
-			payload.push_back(0xFF); //Second byte of link database address
-			payload.push_back(0x01); //Entry size?
-			configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::DirectAck, true, payload));
-			queue->push(configPacket);
-			queue->push(_messages->find(DIRECTIONIN, 0x2F, -1, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
-			payload.clear();
-
-			payload.push_back(0); //Write
-			payload.push_back(2); //Write
-			payload.push_back(0x0F); //First byte of link database address
-			payload.push_back(0xFF); //Second byte of link database address
-			payload.push_back(0x08); //Entry size?
-			payload.push_back(0xA2); //Bit 7 => Record in use, Bit 6 => Controller, Bit 5 => ACK required, Bit 4, 3, 2 => reserved, Bit 1 => Record has been used before, Bit 0 => unused
-			payload.push_back(0x00); //Group
-			payload.push_back(GD::defaultPhysicalInterface->address() >> 16);
-			payload.push_back((GD::defaultPhysicalInterface->address() >> 8) & 0xFF);
-			payload.push_back(GD::defaultPhysicalInterface->address() & 0xFF);
-			payload.push_back(0xFF); //Data1 => Level in this case
-			payload.push_back(0x1F); //Data2 => Ramp rate?
-			payload.push_back(0x01); //Data3
-			payload.push_back(0x9F); //?
-			configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::Direct, true, payload));
-			queue->push(configPacket);
-			queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
-			payload.clear();
-
-			payload.push_back(1); //Write
-			payload.push_back(0); //Write
-			payload.push_back(0x0F); //First byte of link database address
-			payload.push_back(0xFF); //Second byte of link database address
-			payload.push_back(0x01); //Entry size?
-			configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::DirectAck, true, payload));
-			queue->push(configPacket);
-			queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
-			payload.clear();
-
-			payload.push_back(1); //Write
-			payload.push_back(0); //Write
-			payload.push_back(0x0F); //First byte of link database address
-			payload.push_back(0xF7); //Second byte of link database address
-			payload.push_back(0x01); //Entry size?
-			configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::DirectAck, true, payload));
-			queue->push(configPacket);
-			queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
-			payload.clear();
-
-			payload.push_back(0); //Write
-			payload.push_back(2); //Write
-			payload.push_back(0x0F); //First byte of link database address
-			payload.push_back(0xF7); //Second byte of link database address
-			payload.push_back(0x08); //Entry size?
-			payload.push_back(0xE2); //Bit 7 => Record in use, Bit 6 => Controller, Bit 5 => ACK required, Bit 4, 3, 2 => reserved, Bit 1 => Record has been used before, Bit 0 => unused
-			payload.push_back(0x01); //Group
-			payload.push_back(GD::defaultPhysicalInterface->address() >> 16);
-			payload.push_back((GD::defaultPhysicalInterface->address() >> 8) & 0xFF);
-			payload.push_back(GD::defaultPhysicalInterface->address() & 0xFF);
-			payload.push_back(0x03); //Data1
-			payload.push_back(0x1F); //Data2
-			payload.push_back(0x01); //Data3
-			payload.push_back(0x62); //?
-			configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::Direct, true, payload));
-			queue->push(configPacket);
-			queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
-			payload.clear();
-
-			payload.push_back(1); //Write
-			payload.push_back(0); //Write
-			payload.push_back(0x0F); //First byte of link database address
-			payload.push_back(0xF7); //Second byte of link database address
-			payload.push_back(0x01); //Entry size?
-			configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::DirectAck, true, payload));
-			queue->push(configPacket);
-			queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
-			payload.clear();
+			createPairingQueue(peer->getAddress(), peer);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1206,6 +1250,45 @@ void InsteonCentral::handlePairingRequest(std::shared_ptr<InsteonPacket> packet)
 //End packet handlers
 
 //RPC functions
+std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonCentral::addDevice(std::string serialNumber)
+{
+	try
+	{
+		_stopPairingModeThread = true;
+		if(serialNumber.size() != 6 || !BaseLib::HelperFunctions::isNumber(serialNumber)) return BaseLib::RPC::RPCVariable::createError(-2, "Serial number is invalid.");
+		BaseLib::HelperFunctions::toUpper(serialNumber);
+
+		std::shared_ptr<InsteonPeer> peer(getPeer(serialNumber));
+		if(peer) return peer->getDeviceDescription(-1, std::map<std::string, bool>());
+
+		createPairingQueue(BaseLib::HelperFunctions::getNumber(serialNumber, true), nullptr);
+
+		int32_t i = 0;
+		while(!peer && i < 30)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			peer = getPeer(serialNumber);
+			i++;
+		}
+
+		if(!peer) return BaseLib::RPC::RPCVariable::createError(-1, "No response from device.");
+		else return peer->getDeviceDescription(-1, std::map<std::string, bool>());
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonCentral::deleteDevice(std::string serialNumber, int32_t flags)
 {
 	try

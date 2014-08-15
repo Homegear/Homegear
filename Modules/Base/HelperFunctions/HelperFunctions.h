@@ -101,6 +101,12 @@ public:
 		return s;
 	}
 
+	static inline std::string& toUpper (std::string& s)
+	{
+		std::transform(s.begin(), s.end(), s.begin(), ::toupper);
+		return s;
+	}
+
 	static inline std::string& stringReplace(std::string& haystack, std::string search, std::string replace)
 	{
 		int32_t pos = 0;
