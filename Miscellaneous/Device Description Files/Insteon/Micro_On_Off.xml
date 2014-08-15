@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<device version="1">
+	<types>
+		<type name="Micro On/Off" id="2443-422">
+			<type_id>0x0231</type_id>
+			<firmware cond_op="GE">0x10</firmware>
+		</type>
+	</types>
+	<channels>
+		<channel index="0" type="MAINTENANCE" ui_flags="internal" class="maintenance" count="1">
+			<parameters type="MASTER" id="maint_ch_master"/>
+			<parameters type="VALUES" id="maint_ch_values">
+				<parameter id="UNREACH" operations="read,event" ui_flags="service">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="UNREACH"/>
+				</parameter>
+				<parameter id="STICKY_UNREACH" operations="read,write,event" ui_flags="service,sticky">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="STICKY_UNREACH"/>
+				</parameter>
+				<parameter id="CONFIG_PENDING" operations="read,event" ui_flags="service">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="CONFIG_PENDING"/>
+				</parameter>
+			</parameters>
+		</channel>
+		<channel index="1" type="SWITCH">
+			<parameters type="VALUES" id="switch_ch_values">
+				<parameter id="STATE" operations="read,write,event" control="SWITCH.STATE">
+					<logical type="boolean" default="false"/>
+					<physical type="integer" interface="command" value_id="STATE" id="STATE">
+						<event packet="ACK_STATE"/>
+						<event packet="ACK_STATE_OFF"/>
+						<setEx cond_op="eq" value="0x00" packet="LEVEL_SET_OFF"/>
+						<setEx cond_op="ge" value="0x01" packet="LEVEL_SET"/>
+					</physical>
+					<conversion type="boolean_integer" threshold="0x01" false="0x00" true="0xFF"/>
+				</parameter>
+				<parameter id="BEEP" operations="write">
+					<logical type="action"/>
+					<physical type="integer" interface="command">
+						<set request="BEEP"/>
+					</physical>
+				</parameter>
+			</parameters>
+		</channel>
+	</channels>
+	<packets>
+		<packet id="BEEP" direction="to_device" type="0x30">
+			<parameter type="integer" index="8.0" size="1.0" const_value="1"/>
+		</packet>
+		<packet id="LEVEL_SET" direction="to_device" type="0x11">
+			<parameter type="integer" index="8.0" size="1.0" param="STATE"/>
+		</packet>
+		<packet id="ACK_STATE" direction="from_device" type="0x11" fixed_channel="1">
+			<parameter type="integer" index="8.0" size="1.0" param="STATE"/>
+		</packet>
+		<packet id="LEVEL_SET_OFF" direction="to_device" type="0x13">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0"/>
+		</packet>
+		<packet id="ACK_STATE_OFF" direction="from_device" type="0x13" fixed_channel="1">
+			<parameter type="integer" index="8.0" size="1.0" param="STATE"/>
+		</packet>
+	</packets>
+</device>
