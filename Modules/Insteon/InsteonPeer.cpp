@@ -690,11 +690,6 @@ void InsteonPeer::getValuesFromPacket(std::shared_ptr<InsteonPacket> packet, std
 				GD::out.printDebug("Debug: Frame has wrong direction.");
 				continue;
 			}
-			if(packet->payload()->empty())
-			{
-				GD::out.printDebug("Debug: Packet has no payload. Aborting.");
-				break;
-			}
 			if(frame->subtype > -1 && packet->messageSubtype() != frame->subtype)
 			{
 				GD::out.printDebug("Debug: Packet has wrong subtype. Continuing with next frame.");
@@ -718,7 +713,6 @@ void InsteonPeer::getValuesFromPacket(std::shared_ptr<InsteonPacket> packet, std
 				std::vector<uint8_t> data;
 				if(j->size > 0 && j->index > 0)
 				{
-					if(((int32_t)j->index) - 9 >= (signed)packet->payload()->size()) continue;
 					data = packet->getPosition(j->index, j->size, -1);
 
 					if(j->constValue > -1)
@@ -727,47 +721,12 @@ void InsteonPeer::getValuesFromPacket(std::shared_ptr<InsteonPacket> packet, std
 						_bl->hf.memcpyBigEndian(intValue, data);
 						if(intValue != j->constValue) break; else continue;
 					}
-
-					//Process split data
-					if(j->size2 > 0 && j->index2 > 0 && j->index2Offset > 0) //Only
-					{
-						if(j->size2 > 1.0) GD::out.printWarning("Warning: size2 of frame parameter is larger than 1 byte. That is not supported.");
-						else if(((int32_t)j->index2) - 9 < (signed)packet->payload()->size())
-						{
-							std::vector<uint8_t> data2 = packet->getPosition(j->index2, j->size2, -1);
-							int32_t byteIndex = j->index2Offset / 8;
-							int32_t bitIndex = j->index2Offset % 8;
-							if(data2.size() == 1)
-							{
-								if(byteIndex < data.size())
-								{
-									data.at(byteIndex) |= (data2.at(0) << bitIndex);
-								}
-								else
-								{
-									data2.insert(data2.end(), data.begin(), data.end());
-									data = data2;
-								}
-							}
-						}
-					}
 				}
 				else if(j->constValue > -1)
 				{
 					_bl->hf.memcpyBigEndian(data, j->constValue);
 				}
 				else continue;
-
-				//Check for low battery
-				if(j->param == "LOWBAT")
-				{
-					if(data.size() > 0 && data.at(0))
-					{
-						serviceMessages->set("LOWBAT", true);
-						if(_bl->debugLevel >= 4) GD::out.printInfo("Info: LOWBAT of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + " was set to \"true\".");
-					}
-					else serviceMessages->set("LOWBAT", false);
-				}
 
 				for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator k = frame->associatedValues.begin(); k != frame->associatedValues.end(); ++k)
 				{

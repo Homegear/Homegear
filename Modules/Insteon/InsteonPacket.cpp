@@ -397,7 +397,7 @@ std::vector<uint8_t> InsteonPacket::getPosition(double index, double size, int32
 		}
 		if(index < 9)
 		{
-			if(size > 0.8)
+			if(size > 1.0)
 			{
 				GD::out.printError("Error: Packet index < 9 and size > 1 requested.");
 				result.push_back(0);
@@ -405,6 +405,7 @@ std::vector<uint8_t> InsteonPacket::getPosition(double index, double size, int32
 			}
 
 			uint32_t bitSize = std::lround(size * 10);
+			if(bitSize > 8) bitSize = 8;
 			uint32_t intIndex = std::lround(std::floor(index));
 			if(intIndex == 0) result.push_back(((_senderAddress >> 16) >> (std::lround(index * 10) % 10)) & _bitmask[bitSize]);
 			else if(intIndex == 1) result.push_back(((_senderAddress >> 8) >> (std::lround(index * 10) % 10)) & _bitmask[bitSize]);
