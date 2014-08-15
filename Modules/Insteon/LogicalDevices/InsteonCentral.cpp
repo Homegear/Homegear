@@ -45,11 +45,13 @@ InsteonCentral::InsteonCentral(uint32_t deviceID, std::string serialNumber, int3
 InsteonCentral::~InsteonCentral()
 {
 	dispose();
+	_pairingModeThreadMutex.lock();
 	if(_pairingModeThread.joinable())
 	{
 		_stopPairingModeThread = true;
 		_pairingModeThread.join();
 	}
+	_pairingModeThreadMutex.unlock();
 }
 
 void InsteonCentral::init()
@@ -86,9 +88,11 @@ void InsteonCentral::setUpInsteonMessages()
 		//Don't call InsteonDevice::setUpInsteonMessages!
 		_messages->add(std::shared_ptr<InsteonMessage>(new InsteonMessage(0x01, 0x00, InsteonPacketFlags::Broadcast, this, ACCESSPAIREDTOSENDER, FULLACCESS, &InsteonDevice::handlePairingRequest)));
 
-		_messages->add(std::shared_ptr<InsteonMessage>(new InsteonMessage(0x2F, -1, InsteonPacketFlags::DirectAck, this, ACCESSPAIREDTOSENDER, FULLACCESS, &InsteonDevice::handleDatabaseOpResponse)));
+		_messages->add(std::shared_ptr<InsteonMessage>(new InsteonMessage(0x09, 0x01, InsteonPacketFlags::DirectAck, this, ACCESSPAIREDTOSENDER, FULLACCESS, &InsteonDevice::handleLinkingModeResponse)));
 
-		_messages->add(std::shared_ptr<InsteonMessage>(new InsteonMessage(0x2F, -1, InsteonPacketFlags::DirectNak, this, ACCESSPAIREDTOSENDER, FULLACCESS, &InsteonDevice::handleDatabaseOpResponse)));
+		_messages->add(std::shared_ptr<InsteonMessage>(new InsteonMessage(0x2F, -1, InsteonPacketFlags::Direct, this, ACCESSPAIREDTOSENDER, FULLACCESS, &InsteonDevice::handleDatabaseOpResponse)));
+
+		_messages->add(std::shared_ptr<InsteonMessage>(new InsteonMessage(0x2F, -1, InsteonPacketFlags::DirectAck, this, ACCESSPAIREDTOSENDER, FULLACCESS, &InsteonDevice::handleDatabaseOpResponse)));
 	}
     catch(const std::exception& ex)
     {
@@ -238,32 +242,58 @@ bool InsteonCentral::onPacketReceived(std::string& senderID, std::shared_ptr<Bas
     return false;
 }
 
-void InsteonCentral::reset(uint64_t id)
+void InsteonCentral::unpair(uint64_t id)
 {
 	try
 	{
 		std::shared_ptr<InsteonPeer> peer(getPeer(id));
 		if(!peer) return;
-		std::shared_ptr<PacketQueue> pendingQueue(new PacketQueue(peer->getPhysicalInterface(), PacketQueueType::UNPAIRING));
-		pendingQueue->noSending = true;
-
-		//RESET
-		std::vector<uint8_t> payload;
-		payload.push_back(0);
-		//std::shared_ptr<InsteonPacket> resetPacket(new InsteonPacket(_messageCounter[0], 0xF0, 0, _address, peer->getAddress(), payload, false));
-		//pendingQueue->push(resetPacket);
-		//pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 
 		while(!peer->pendingQueues->empty()) peer->pendingQueues->pop();
-		peer->pendingQueues->push(pendingQueue);
 		peer->serviceMessages->setConfigPending(true);
 
-		if((peer->getRXModes() & Device::RXModes::burst) || (peer->getRXModes() & Device::RXModes::always))
-		{
-			std::shared_ptr<PacketQueue> queue = _queueManager.createQueue(this, peer->getPhysicalInterface(), PacketQueueType::UNPAIRING, peer->getAddress());
-			queue->peer = peer;
-			queue->push(peer->pendingQueues);
-		}
+		std::shared_ptr<PacketQueue> queue = _queueManager.createQueue(this, getPhysicalInterface(peer->getAddress()), PacketQueueType::UNPAIRING, peer->getAddress());
+		queue->peer = peer;
+
+		peer->getPhysicalInterface()->removePeer(peer->getAddress());
+
+		std::vector<uint8_t> payload;
+		payload.push_back(0); //Write
+		payload.push_back(2); //Write
+		payload.push_back(0x0F); //First byte of link database address
+		payload.push_back(0xF7); //Second byte of link database address
+		payload.push_back(0x08); //Entry size?
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0xC1);
+		std::shared_ptr<InsteonPacket> configPacket(new InsteonPacket(0x2F, 0, peer->getAddress(), 3, 3, InsteonPacketFlags::Direct, true, payload));
+		queue->push(configPacket);
+		queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
+		payload.clear();
+
+		payload.push_back(0); //Write
+		payload.push_back(2); //Write
+		payload.push_back(0x0F); //First byte of link database address
+		payload.push_back(0xFF); //Second byte of link database address
+		payload.push_back(0x08); //Entry size?
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0);
+		payload.push_back(0xB9);
+		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, peer->getAddress(), 3, 3, InsteonPacketFlags::Direct, true, payload));
+		queue->push(configPacket);
+		queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
 	}
 	catch(const std::exception& ex)
     {
@@ -494,7 +524,7 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 			{
 				if(_currentPeer && _currentPeer->getID() == peerID) _currentPeer.reset();
 				stringStream << "Unpairing peer " << std::to_string(peerID) << std::endl;
-				reset(peerID);
+				unpair(peerID);
 			}
 			return stringStream.str();
 		}
@@ -849,6 +879,52 @@ void InsteonCentral::addHomegearFeatures(std::shared_ptr<InsteonPeer> peer)
 }
 
 //Packet handlers
+void InsteonCentral::handleNak(std::shared_ptr<InsteonPacket> packet)
+{
+	try
+	{
+		std::shared_ptr<PacketQueue> queue = _queueManager.get(packet->senderAddress());
+		if(!queue) return;
+		std::shared_ptr<InsteonPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
+		if(queue->getQueueType() == PacketQueueType::PAIRING)
+		{
+			//Handle Nak in response to first pairing queue packet
+			if(_bl->debugLevel >= 5)
+			{
+				if(sentPacket) GD::out.printDebug("Debug: NACK received from 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6) + " in response to " + sentPacket->hexString() + ".");
+				else GD::out.printDebug("Debug: NACK received from 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6));
+			}
+
+			setInstallMode(true, 60, false);
+			if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::PACKET) queue->pop(); //Pop sent packet
+			queue->pop();
+		}
+		else if(queue->getQueueType() == PacketQueueType::UNPAIRING)
+		{
+			if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::PACKET) queue->pop(); //Pop sent packet
+			queue->pop();
+			if(queue->isEmpty())
+			{
+				//Just remove the peer. Probably the link database packet was sent twice, that's why we receive a NAK.
+				std::shared_ptr<InsteonPeer> peer = getPeer(packet->senderAddress());
+				if(peer) deletePeer(peer->getID());
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void InsteonCentral::handleDatabaseOpResponse(std::shared_ptr<InsteonPacket> packet)
 {
 	try
@@ -856,70 +932,93 @@ void InsteonCentral::handleDatabaseOpResponse(std::shared_ptr<InsteonPacket> pac
 		std::shared_ptr<PacketQueue> queue = _queueManager.get(packet->senderAddress());
 		if(!queue) return;
 		std::shared_ptr<InsteonPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
-		if(packet->flags() == InsteonPacketFlags::DirectNak || packet->flags() == InsteonPacketFlags::GroupCleanupDirectNak)
+
+		if(queue->getQueueType() == PacketQueueType::PAIRING && sentPacket && sentPacket->payload()->size() > 5 && sentPacket->payload()->at(5) == 0xE2)
 		{
-			if(_bl->debugLevel >= 2)
+			if(!peerExists(packet->senderAddress()))
 			{
-				if(sentPacket) GD::out.printError("Error: NACK received from 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6) + " in response to " + sentPacket->hexString() + ".");
-				else GD::out.printError("Error: NACK received from 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6));
-				if(queue->getQueueType() == PacketQueueType::PAIRING) GD::out.printError("Try resetting the device to factory defaults before pairing it to this central.");
+				if(!queue->peer) return;
+				try
+				{
+					_peersMutex.lock();
+					_peers[queue->peer->getAddress()] = queue->peer;
+					if(!queue->peer->getSerialNumber().empty()) _peersBySerial[queue->peer->getSerialNumber()] = queue->peer;
+					_peersMutex.unlock();
+					queue->peer->save(true, true, false);
+					queue->peer->initializeCentralConfig();
+					_peersMutex.lock();
+					_peersByID[queue->peer->getID()] = queue->peer;
+					_peersMutex.unlock();
+				}
+				catch(const std::exception& ex)
+				{
+					_peersMutex.unlock();
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(BaseLib::Exception& ex)
+				{
+					_peersMutex.unlock();
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(...)
+				{
+					_peersMutex.unlock();
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				}
+				queue->peer->getPhysicalInterface()->addPeer(queue->peer->getAddress());
+				std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+				deviceDescriptions->arrayValue = queue->peer->getDeviceDescriptions(true, std::map<std::string, bool>());
+				raiseRPCNewDevices(deviceDescriptions);
+				GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(queue->peer->getAddress()) + ".");
+				addHomegearFeatures(queue->peer);
 			}
-			if(queue->getQueueType() == PacketQueueType::PAIRING) queue->clear(); //Abort
-			else queue->pop(); //Otherwise the queue might persist forever. NACKS shouldn't be received when not pairing
+		}
+		else if(queue->getQueueType() == PacketQueueType::UNPAIRING && sentPacket && sentPacket->payload()->size() > 3 && sentPacket->payload()->at(3) == 0xFF)
+		{
+			std::shared_ptr<InsteonPeer> peer = getPeer(packet->senderAddress());
+			if(peer) deletePeer(peer->getID());
+		}
+
+		queue->pop(true); //Messages are not popped by default.
+
+		if(queue->getQueueType() == PacketQueueType::PAIRING && !queue->isEmpty() && queue->front()->getType() == QueueEntryType::PACKET && queue->front()->getPacket()->messageType() == 0x09)
+		{
+			//Remove packets needed for a NAK as first response
+			while(!queue->isEmpty())
+			{
+				if(queue->front()->getType() == QueueEntryType::PACKET && queue->front()->getPacket()->payload()->size() == 14 && queue->front()->getPacket()->payload()->at(1) == 2 && queue->front()->getPacket()->messageType() == 0x2F)
+				{
+					queue->processCurrentQueueEntry(); //Necessary for the packet to be sent after silent popping
+					break;
+				}
+
+				queue->pop(true);
+				continue;
+			}
 			return;
 		}
-		if(queue->getQueueType() == PacketQueueType::PAIRING)
-		{
-			if(sentPacket && sentPacket->payload()->size() > 5 && sentPacket->payload()->at(5) == 0xE2)
-			{
-				if(!peerExists(packet->senderAddress()))
-				{
-					if(!queue->peer) return;
-					try
-					{
-						_peersMutex.lock();
-						_peers[queue->peer->getAddress()] = queue->peer;
-						if(!queue->peer->getSerialNumber().empty()) _peersBySerial[queue->peer->getSerialNumber()] = queue->peer;
-						_peersMutex.unlock();
-						queue->peer->save(true, true, false);
-						queue->peer->initializeCentralConfig();
-						_peersMutex.lock();
-						_peersByID[queue->peer->getID()] = queue->peer;
-						_peersMutex.unlock();
-					}
-					catch(const std::exception& ex)
-					{
-						_peersMutex.unlock();
-						GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-					}
-					catch(BaseLib::Exception& ex)
-					{
-						_peersMutex.unlock();
-						GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-					}
-					catch(...)
-					{
-						_peersMutex.unlock();
-						GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-					}
-					queue->peer->getPhysicalInterface()->addPeer(queue->peer->getAddress());
-					std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-					deviceDescriptions->arrayValue = queue->peer->getDeviceDescriptions(true, std::map<std::string, bool>());
-					raiseRPCNewDevices(deviceDescriptions);
-					GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(queue->peer->getAddress()) + ".");
-					addHomegearFeatures(queue->peer);
-				}
-			}
-		}
-		else if(queue->getQueueType() == PacketQueueType::UNPAIRING)
-		{
-			if(sentPacket && sentPacket->messageType() == 0xF0 && sentPacket->messageSubtype() == 0)
-			{
-				std::shared_ptr<InsteonPeer> peer = getPeer(packet->senderAddress());
-				if(peer) deletePeer(peer->getID());
-			}
-		}
-		queue->pop(); //Messages are not popped by default.
+		else queue->processCurrentQueueEntry(); //We popped silently before the "if"
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void InsteonCentral::handleLinkingModeResponse(std::shared_ptr<InsteonPacket> packet)
+{
+	try
+	{
+		std::shared_ptr<PacketQueue> queue = _queueManager.get(packet->senderAddress());
+		if(queue && queue->getQueueType() == PacketQueueType::PAIRING) queue->pop(); //Messages are not popped by default.
 	}
 	catch(const std::exception& ex)
     {
@@ -951,11 +1050,15 @@ void InsteonCentral::handlePairingRequest(std::shared_ptr<InsteonPacket> packet)
 
 		if(_pairing)
 		{
-			_stopPairingModeThread = true;
-			if(_pairingModeThread.joinable()) _pairingModeThread.join();
-			_stopPairingModeThread = false;
+			std::shared_ptr<PacketQueue> queue = _queueManager.get(packet->senderAddress());
+			if(queue)
+			{
+				if(queue->getQueueType() == PacketQueueType::PAIRING) queue->pop();
+				return;
+			}
 
-			std::shared_ptr<PacketQueue> queue = _queueManager.createQueue(this, getPhysicalInterface(packet->senderAddress()), PacketQueueType::PAIRING, packet->senderAddress());
+			_stopPairingModeThread = true;
+			queue = _queueManager.createQueue(this, getPhysicalInterface(packet->senderAddress()), PacketQueueType::PAIRING, packet->senderAddress());
 
 			if(!peer)
 			{
@@ -977,16 +1080,45 @@ void InsteonCentral::handlePairingRequest(std::shared_ptr<InsteonPacket> packet)
 				return;
 			}
 
-			//ACK and get database info
 			std::vector<uint8_t> payload;
-			payload.push_back(1);
-			payload.push_back(0);
-			payload.push_back(0x0F);
-			payload.push_back(0xFF);
-			payload.push_back(1);
+			payload.push_back(1); //Write
+			payload.push_back(0); //Write
+			payload.push_back(0x0F); //First byte of link database address
+			payload.push_back(0xFF); //Second byte of link database address
+			payload.push_back(0x01); //Entry size?
 			std::shared_ptr<InsteonPacket> configPacket(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::DirectAck, true, payload));
 			queue->push(configPacket);
-			queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
+			queue->push(_messages->find(DIRECTIONIN, 0x2F, -1, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
+			payload.clear();
+
+			payload.push_back(0);
+			payload.push_back(0);
+			payload.push_back(0);
+			payload.push_back(0);
+			payload.push_back(0);
+			payload.push_back(0);
+			payload.push_back(0);
+			payload.push_back(0);
+			payload.push_back(0);
+			payload.push_back(0);
+			payload.push_back(0);
+			payload.push_back(0);
+			payload.push_back(0);
+			payload.push_back(0xF6);
+			configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x09, 0x01, packet->senderAddress(), 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+			queue->push(configPacket);
+			queue->push(_messages->find(DIRECTIONIN, 0x09, 0x01, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
+			queue->push(_messages->find(DIRECTIONIN, 0x01, 0x00, InsteonPacketFlags::Broadcast, std::vector<std::pair<uint32_t, int32_t>>()));
+			payload.clear();
+
+			payload.push_back(1); //Write
+			payload.push_back(0); //Write
+			payload.push_back(0x0F); //First byte of link database address
+			payload.push_back(0xFF); //Second byte of link database address
+			payload.push_back(0x01); //Entry size?
+			configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+			queue->push(configPacket);
+			queue->push(_messages->find(DIRECTIONIN, 0x2F, -1, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
 			payload.clear();
 
 			payload.push_back(0); //Write
@@ -1003,9 +1135,29 @@ void InsteonCentral::handlePairingRequest(std::shared_ptr<InsteonPacket> packet)
 			payload.push_back(0x1F); //Data2 => Ramp rate?
 			payload.push_back(0x01); //Data3
 			payload.push_back(0x9F); //?
-			configPacket.reset(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::Direct, true, payload));
+			configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::Direct, true, payload));
 			queue->push(configPacket);
 			queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
+			payload.clear();
+
+			payload.push_back(1); //Write
+			payload.push_back(0); //Write
+			payload.push_back(0x0F); //First byte of link database address
+			payload.push_back(0xFF); //Second byte of link database address
+			payload.push_back(0x01); //Entry size?
+			configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+			queue->push(configPacket);
+			queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
+			payload.clear();
+
+			payload.push_back(1); //Write
+			payload.push_back(0); //Write
+			payload.push_back(0x0F); //First byte of link database address
+			payload.push_back(0xF7); //Second byte of link database address
+			payload.push_back(0x01); //Entry size?
+			configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+			queue->push(configPacket);
+			queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
 			payload.clear();
 
 			payload.push_back(0); //Write
@@ -1022,9 +1174,19 @@ void InsteonCentral::handlePairingRequest(std::shared_ptr<InsteonPacket> packet)
 			payload.push_back(0x1F); //Data2
 			payload.push_back(0x01); //Data3
 			payload.push_back(0x62); //?
-			configPacket.reset(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::Direct, true, payload));
+			configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::Direct, true, payload));
 			queue->push(configPacket);
 			queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
+			payload.clear();
+
+			payload.push_back(1); //Write
+			payload.push_back(0); //Write
+			payload.push_back(0x0F); //First byte of link database address
+			payload.push_back(0xF7); //Second byte of link database address
+			payload.push_back(0x01); //Entry size?
+			configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, packet->senderAddress(), 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+			queue->push(configPacket);
+			queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
 			payload.clear();
 		}
 	}
@@ -1081,7 +1243,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonCentral::deleteDevice(uint64_t
 
 		bool defer = flags & 0x04;
 		bool force = flags & 0x02;
-		std::thread t(&InsteonCentral::reset, this, id);
+		std::thread t(&InsteonCentral::unpair, this, id);
 		t.detach();
 		//Force delete
 		if(force) deletePeer(peer->getID());
@@ -1300,6 +1462,7 @@ std::shared_ptr<RPCVariable> InsteonCentral::setInstallMode(bool on, uint32_t du
 {
 	try
 	{
+		_pairingModeThreadMutex.lock();
 		_stopPairingModeThread = true;
 		if(_pairingModeThread.joinable()) _pairingModeThread.join();
 		_stopPairingModeThread = false;
@@ -1310,6 +1473,7 @@ std::shared_ptr<RPCVariable> InsteonCentral::setInstallMode(bool on, uint32_t du
 			GD::defaultPhysicalInterface->enablePairingMode();
 			_pairingModeThread = std::thread(&InsteonCentral::pairingModeTimer, this, duration, debugOutput);
 		}
+		_pairingModeThreadMutex.unlock();
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
@@ -1324,6 +1488,7 @@ std::shared_ptr<RPCVariable> InsteonCentral::setInstallMode(bool on, uint32_t du
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _pairingModeThreadMutex.unlock();
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 

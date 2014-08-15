@@ -161,7 +161,20 @@ void MAXPacket::import(std::string& packet, bool removeFirstCharacter)
 		{
 			_payload.push_back(getByte(packet.substr(i, 2)));
 		}
-		if(i < packet.size() - tailLength) _rssiDevice = getByte(packet.substr(i, 2));
+		if(i < packet.size() - tailLength)
+		{
+			int32_t rssiDevice = getByte(packet.substr(i, 2));
+			//1) Read the RSSI status register
+			//2) Convert the reading from a hexadecimal
+			//number to a decimal number (RSSI_dec)
+			//3) If RSSI_dec ≥ 128 then RSSI_dBm =
+			//(RSSI_dec - 256)/2 – RSSI_offset
+			//4) Else if RSSI_dec < 128 then RSSI_dBm =
+			//(RSSI_dec)/2 – RSSI_offset
+			if(rssiDevice >= 128) rssiDevice = ((rssiDevice - 256) / 2) - 74;
+			else rssiDevice = (rssiDevice / 2) - 74;
+			_rssiDevice = rssiDevice * -1;
+		}
 	}
 	catch(const std::exception& ex)
     {

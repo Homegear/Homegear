@@ -94,7 +94,9 @@ class InsteonDevice : public BaseLib::Systems::LogicalDevice
 
         virtual void sendPacket(std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface, std::shared_ptr<InsteonPacket> packet, bool stealthy = false);
 
+        virtual void handleNak(std::shared_ptr<InsteonPacket> packet) {}
         virtual void handleDatabaseOpResponse(std::shared_ptr<InsteonPacket> packet) {}
+        virtual void handleLinkingModeResponse(std::shared_ptr<InsteonPacket> packet) {}
         virtual void handlePairingRequest(std::shared_ptr<InsteonPacket> packet) {}
     protected:
         //In table variables

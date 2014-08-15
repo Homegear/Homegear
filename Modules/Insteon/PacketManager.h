@@ -66,6 +66,7 @@ public:
 	void deletePacket(int32_t address, uint32_t id);
 	void keepAlive(int32_t address);
 	void dispose(bool wait = true);
+	void setKeepAliveTime(uint32_t value) { _deleteAfter = value; }
 protected:
 	bool _disposing = false;
 	bool _stopWorkerThread = false;
@@ -73,6 +74,7 @@ protected:
 	uint32_t _id = 0;
 	std::unordered_map<int32_t, std::shared_ptr<InsteonPacketInfo>> _packets;
 	std::mutex _packetMutex;
+	int32_t _deleteAfter = 1000;
 
 	void worker();
 };

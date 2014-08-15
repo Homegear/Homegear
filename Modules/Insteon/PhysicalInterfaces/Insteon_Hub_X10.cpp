@@ -103,18 +103,7 @@ void InsteonHubX10::enablePairingMode()
 	{
 		std::vector<char> requestPacket { 0x02, 0x64, 0x03, 0x00 };
 		std::vector<uint8_t> responsePacket;
-		for(int32_t i = 0; i < 20; i++)
-		{
-			getResponse(requestPacket, responsePacket, 0x64);
-			if(responsePacket.size() == 5) break;
-			if(i == 19)
-			{
-				_out.printError("Error: No or wrong response to \"enable pairing mode\" request.");
-				_stopped = true;
-				return;
-			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(240));
-		}
+		getResponse(requestPacket, responsePacket, 0x64);
 	}
 	catch(const std::exception& ex)
     {
@@ -136,18 +125,7 @@ void InsteonHubX10::disablePairingMode()
 	{
 		std::vector<char> requestPacket { 0x02, 0x65 };
 		std::vector<uint8_t> responsePacket;
-		for(int32_t i = 0; i < 20; i++)
-		{
-			getResponse(requestPacket, responsePacket, 0x65);
-			if(responsePacket.size() == 3) break;
-			if(i == 19)
-			{
-				_out.printError("Error: No or wrong response to \"disable pairing mode\" request.");
-				_stopped = true;
-				return;
-			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(240));
-		}
+		getResponse(requestPacket, responsePacket, 0x65);
 	}
 	catch(const std::exception& ex)
     {
@@ -346,6 +324,8 @@ void InsteonHubX10::storePeer(PeerInfo& peerInfo)
 		}
 
 		requestPacket.clear();
+		requestPacket.push_back(0x02);
+		requestPacket.push_back(0x76);
 		requestPacket.push_back(peerInfo.databaseAddressResponder >> 8);
 		requestPacket.push_back(peerInfo.databaseAddressResponder & 0xFF);
 		requestPacket.push_back(peerInfo.flagsResponder);
@@ -473,7 +453,7 @@ void InsteonHubX10::getResponse(const std::vector<char>& packet, std::vector<uin
 			_request->mutex.unlock();
 			response = _request->response;
 			if(response.size() > 1 && response.at(0) != 0x15) break;
-			if((response.size() < 1 || response.at(0) != 15) && i == 3)
+			if((response.size() < 1 || response.at(0) != 0x15) && i == 3)
 			{
 				_out.printError("Error: No or wrong response to packet. Reconnecting...");
 				_stopped = true;

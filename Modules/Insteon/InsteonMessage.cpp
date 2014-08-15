@@ -225,12 +225,17 @@ bool InsteonMessage::checkAccess(std::shared_ptr<InsteonPacket> packet, std::sha
 		if(access == NOACCESS) return false;
 		if(queue && !queue->isEmpty() && packet->destinationAddress() == _device->getAddress())
 		{
+			if(!_device->isInPairingMode() && queue->getQueueType() == PacketQueueType::PAIRING) access = _accessPairing;
 			if(queue->front()->getType() == QueueEntryType::PACKET)
 			{
 				std::shared_ptr<InsteonPacket> backup = queue->front()->getPacket();
 				queue->pop(); //Popping takes place here to be able to process resent messages.
-				if(queue->front()->getType() == QueueEntryType::MESSAGE && !typeIsEqual(queue->front()->getMessage())) queue->pushFront(backup, false, false, false);
-				if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::MESSAGE && !typeIsEqual(queue->front()->getMessage())) return false;
+				if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::MESSAGE && !typeIsEqual(queue->front()->getMessage()))
+				{
+					GD::out.printDebug("Debug: Readding message to queue, because the received packet does not match.");
+					queue->pushFront(backup);
+					return false;
+				}
 			}
 		}
 		if(access & FULLACCESS) return true;

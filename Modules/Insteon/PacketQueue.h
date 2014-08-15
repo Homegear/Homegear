@@ -131,12 +131,13 @@ class PacketQueue
 
         void push(std::shared_ptr<InsteonMessage> message, bool forceResend = false);
         void push(std::shared_ptr<InsteonMessage> message, std::shared_ptr<InsteonPacket> packet, bool forceResend = false);
-        void pushFront(std::shared_ptr<InsteonPacket> packet, bool stealthy = false, bool popBeforePushing = false, bool forceResend = false);
+        void pushFront(std::shared_ptr<InsteonPacket> packet);
         void push(std::shared_ptr<InsteonPacket> packet, bool forceResend = false, bool stealthy = false);
         void push(std::shared_ptr<PendingQueues>& pendingQueues);
         void push(std::shared_ptr<PacketQueue> pendingQueue, bool popImmediately, bool clearPendingQueues);
         PacketQueueEntry* front() { return &_queue.front(); }
-        void pop();
+        void pop(bool silently = false);
+        void processCurrentQueueEntry() { nextQueueEntry(); }
         void popWait(uint32_t waitingTime);
         bool isEmpty();
         bool pendingQueuesEmpty();

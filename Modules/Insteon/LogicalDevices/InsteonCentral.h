@@ -50,9 +50,11 @@ public:
 	virtual std::string handleCLICommand(std::string command);
 	virtual uint64_t getPeerIDFromSerial(std::string serialNumber) { std::shared_ptr<InsteonPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
 	virtual void enqueuePendingQueues(int32_t deviceAddress);
-	void reset(uint64_t id);
+	void unpair(uint64_t id);
 
+	virtual void handleNak(std::shared_ptr<InsteonPacket> packet);
 	virtual void handleDatabaseOpResponse(std::shared_ptr<InsteonPacket> packet);
+	virtual void handleLinkingModeResponse(std::shared_ptr<InsteonPacket> packet);
 	virtual void handlePairingRequest(std::shared_ptr<InsteonPacket> packet);
 
 	virtual bool knowsDevice(std::string serialNumber);
@@ -70,6 +72,7 @@ protected:
 	uint32_t _timeLeftInPairingMode = 0;
 	void pairingModeTimer(int32_t duration, bool debugOutput = true);
 	bool _stopPairingModeThread = false;
+	std::mutex _pairingModeThreadMutex;
 	std::thread _pairingModeThread;
 
 	std::shared_ptr<InsteonPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);

@@ -231,8 +231,11 @@ bool MAXMessage::checkAccess(std::shared_ptr<MAXPacket> packet, std::shared_ptr<
 			{
 				std::shared_ptr<MAXPacket> backup = queue->front()->getPacket();
 				queue->pop(); //Popping takes place here to be able to process resent messages.
-				if(queue->front()->getType() == QueueEntryType::MESSAGE && !typeIsEqual(queue->front()->getMessage())) queue->pushFront(backup, false, false, false);
-				if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::MESSAGE && !typeIsEqual(queue->front()->getMessage())) return false;
+				if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::MESSAGE && !typeIsEqual(queue->front()->getMessage()))
+				{
+					queue->pushFront(backup, false, false, false);
+					return false;
+				}
 			}
 		}
 		if(access & FULLACCESS) return true;

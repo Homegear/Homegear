@@ -47,11 +47,13 @@ void InsteonDevice::setPhysicalInterfaceID(std::string id)
 InsteonDevice::InsteonDevice(IDeviceEventSink* eventHandler) : LogicalDevice(BaseLib::Systems::DeviceFamilies::Insteon, GD::bl, eventHandler)
 {
 	_physicalInterface = GD::defaultPhysicalInterface;
+	_receivedPackets.setKeepAliveTime(600);
 }
 
 InsteonDevice::InsteonDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : LogicalDevice(BaseLib::Systems::DeviceFamilies::Insteon, GD::bl, deviceID, serialNumber, address, eventHandler)
 {
 	_physicalInterface = GD::defaultPhysicalInterface;
+	_receivedPackets.setKeepAliveTime(600);
 }
 
 InsteonDevice::~InsteonDevice()
@@ -518,20 +520,27 @@ bool InsteonDevice::onPacketReceived(std::string& senderID, std::shared_ptr<Base
 	try
 	{
 		if(_disposing) return false;
-		std::shared_ptr<InsteonPacket> maxPacket(std::dynamic_pointer_cast<InsteonPacket>(packet));
-		if(!maxPacket) return false;
-		if(maxPacket->senderAddress() == _address && GD::physicalInterfaces.size() > 1)
+		std::shared_ptr<InsteonPacket> insteonPacket(std::dynamic_pointer_cast<InsteonPacket>(packet));
+		if(!insteonPacket) return false;
+		if(insteonPacket->senderAddress() == _address && GD::physicalInterfaces.size() > 1)
 		{
 			//Packet we sent was received by another interface
 			return true;
 		}
-		if(_receivedPackets.set(maxPacket->senderAddress(), maxPacket, maxPacket->timeReceived())) return true;
-		std::shared_ptr<InsteonMessage> message = _messages->find(DIRECTIONIN, maxPacket);
-		if(message && message->checkAccess(maxPacket, _queueManager.get(maxPacket->senderAddress())))
+		if(_receivedPackets.set(insteonPacket->senderAddress(), insteonPacket, insteonPacket->timeReceived())) return true;
+		if(insteonPacket->flags() == InsteonPacketFlags::DirectNak || insteonPacket->flags() == InsteonPacketFlags::GroupCleanupDirectNak)
 		{
-			if(_bl->debugLevel >= 6) GD::out.printDebug("Debug: Device " + std::to_string(_deviceID) + ": Access granted for packet " + maxPacket->hexString());
-			message->invokeMessageHandlerIncoming(maxPacket);
-			return true;
+			handleNak(insteonPacket);
+		}
+		else
+		{
+			std::shared_ptr<InsteonMessage> message = _messages->find(DIRECTIONIN, insteonPacket);
+			if(message && message->checkAccess(insteonPacket, _queueManager.get(insteonPacket->senderAddress())))
+			{
+				if(_bl->debugLevel >= 5) GD::out.printDebug("Debug: Device " + std::to_string(_deviceID) + ": Access granted for packet " + insteonPacket->hexString());
+				message->invokeMessageHandlerIncoming(insteonPacket);
+				return true;
+			}
 		}
 	}
 	catch(const std::exception& ex)

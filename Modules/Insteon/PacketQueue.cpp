@@ -284,11 +284,11 @@ void PacketQueue::resend(uint32_t threadId)
 		if(_stopResendThread) return;
 		if(_resendCounter < 3)
 		{
-			//Sleep for 1000 ms
+			//Sleep for 10000 ms
 			i = 0;
-			longKeepAlive();
+			keepAlive();
 			sleepingTime = std::chrono::milliseconds(100);
-			while(!_stopResendThread && i < 10)
+			while(!_stopResendThread && i < 100)
 			{
 				std::this_thread::sleep_for(sleepingTime);
 				i++;
@@ -296,11 +296,11 @@ void PacketQueue::resend(uint32_t threadId)
 		}
 		else
 		{
-			//Sleep for 3000 ms
+			//Sleep for 10000 ms
 			i = 0;
-			longKeepAlive();
+			keepAlive();
 			sleepingTime = std::chrono::milliseconds(100);
-			while(!_stopResendThread && i < 30)
+			while(!_stopResendThread && i < 100)
 			{
 				std::this_thread::sleep_for(sleepingTime);
 				i++;
@@ -613,64 +613,32 @@ void PacketQueue::push(std::shared_ptr<InsteonMessage> message, bool forceResend
     }
 }
 
-void PacketQueue::pushFront(std::shared_ptr<InsteonPacket> packet, bool stealthy, bool popBeforePushing, bool forceResend)
+void PacketQueue::pushFront(std::shared_ptr<InsteonPacket> packet)
 {
 	try
 	{
 		if(_disposing) return;
 		keepAlive();
-		if(popBeforePushing)
-		{
-			GD::out.printDebug("Popping from queue and pushing packet at the front: " + std::to_string(id));
-			if(_popWaitThread.joinable()) _stopPopWaitThread = true;
-			if(_resendThread.joinable()) _stopResendThread = true;
-			_queueMutex.lock();
-			_queue.pop_front();
-			_queueMutex.unlock();
-		}
 		PacketQueueEntry entry;
 		entry.setPacket(packet, true);
-		entry.stealthy = stealthy;
-		entry.forceResend = forceResend;
-		if(!noSending)
-		{
-			_queueMutex.lock();
-			_queue.push_front(entry);
-			_queueMutex.unlock();
-			_resendCounter = 0;
-			if(!noSending)
-			{
-				_sendThreadMutex.lock();
-				if(_sendThread.joinable()) _sendThread.join();
-				_sendThread = std::thread(&PacketQueue::send, this, entry.getPacket(), entry.stealthy);
-				BaseLib::Threads::setThreadPriority(GD::bl, _sendThread.native_handle(), GD::bl->settings.packetQueueThreadPriority(), GD::bl->settings.packetQueueThreadPolicy());
-				_sendThreadMutex.unlock();
-				startResendThread(forceResend);
-			}
-		}
-		else
-		{
-			_queueMutex.lock();
-			_queue.push_front(entry);
-			_queueMutex.unlock();
-		}
+
+		_queueMutex.lock();
+		_queue.push_front(entry);
+		_queueMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
 		_queueMutex.unlock();
-		_sendThreadMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
     	_queueMutex.unlock();
-    	_sendThreadMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_queueMutex.unlock();
-    	_sendThreadMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -991,7 +959,7 @@ void PacketQueue::keepAlive()
 void PacketQueue::longKeepAlive()
 {
 	if(_disposing) return;
-	if(lastAction) *lastAction = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + 5000;
+	if(lastAction) *lastAction = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + 15000;
 }
 
 void PacketQueue::nextQueueEntry()
@@ -1077,13 +1045,14 @@ void PacketQueue::nextQueueEntry()
     }
 }
 
-void PacketQueue::pop()
+void PacketQueue::pop(bool silently)
 {
 	try
 	{
 		if(_disposing) return;
 		keepAlive();
-		GD::out.printDebug("Popping from queue: " + std::to_string(id));
+		if(silently) GD::out.printDebug("Popping silently from queue: " + std::to_string(id));
+		else GD::out.printDebug("Popping from queue: " + std::to_string(id));
 		if(_popWaitThread.joinable()) _stopPopWaitThread = true;
 		if(_resendThread.joinable()) _stopResendThread = true;
 		_lastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -1097,10 +1066,10 @@ void PacketQueue::pop()
 		if(GD::bl->debugLevel >= 5 && !_queue.empty())
 		{
 			if(_queue.front().getType() == QueueEntryType::PACKET && _queue.front().getPacket()) GD::out.printDebug("Packet now at front of queue: " + _queue.front().getPacket()->hexString());
-			else if(_queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()) GD::out.printDebug("Message now at front: Message type: 0x" + BaseLib::HelperFunctions::getHexString(_queue.front().getMessage()->getMessageType()) + " Message subtype: 0x" + BaseLib::HelperFunctions::getHexString(_queue.front().getMessage()->getMessageSubtype()));
+			else if(_queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()) GD::out.printDebug("Message now at front: Message type: 0x" + BaseLib::HelperFunctions::getHexString(_queue.front().getMessage()->getMessageType(), 2) + " Message subtype: 0x" + BaseLib::HelperFunctions::getHexString(_queue.front().getMessage()->getMessageSubtype(), 2) + " Message flags: 0x" + BaseLib::HelperFunctions::getHexString((int32_t)_queue.front().getMessage()->getMessageFlags()));
 		}
 		_queueMutex.unlock();
-		nextQueueEntry();
+		if(!silently) nextQueueEntry();
 	}
 	catch(const std::exception& ex)
     {
