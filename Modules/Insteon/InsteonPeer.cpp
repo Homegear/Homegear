@@ -672,7 +672,7 @@ void InsteonPeer::getValuesFromPacket(std::shared_ptr<InsteonPacket> packet, std
 		std::multimap<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator i = range.first;
 		do
 		{
-			GD::out.printDebug("Debug: Found frame matching packet type 0x" + std::to_string(packet->messageType()) + ".");
+			GD::out.printDebug("Debug: Found frame matching packet type 0x" + BaseLib::HelperFunctions::getHexString(packet->messageType(), 2) + ".");
 			FrameValues currentFrameValues;
 			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame(i->second);
 			if(!frame)
@@ -1117,109 +1117,139 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonPeer::setValue(uint32_t channe
 			else return BaseLib::RPC::RPCVariable::createError(-6, "Toggle parameter has to be of type boolean, float or integer.");
 			return setValue(channel, toggleKey, toggleValue);
 		}
-		std::string setRequest = rpcParameter->physicalParameter->setRequest;
-		if(setRequest.empty()) return BaseLib::RPC::RPCVariable::createError(-6, "parameter is read only");
-		if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return BaseLib::RPC::RPCVariable::createError(-6, "No frame was found for parameter " + valueKey);
-		std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
-		std::vector<uint8_t> data = rpcParameter->convertToPacket(value);
-		parameter->data = data;
-		saveParameter(parameter->databaseID, data);
-		if(_bl->debugLevel > 4) GD::out.printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(data) + ".");
+
+		std::vector<uint8_t> physicalValue = rpcParameter->convertToPacket(value);
+
+		std::vector<std::string> setRequests;
+		if(!rpcParameter->physicalParameter->setRequest.empty()) setRequests.push_back(rpcParameter->physicalParameter->setRequest);
+		if(!rpcParameter->physicalParameter->setRequestsEx.empty())
+		{
+			for(std::vector<std::shared_ptr<SetRequestEx>>::iterator i = rpcParameter->physicalParameter->setRequestsEx.begin(); i != rpcParameter->physicalParameter->setRequestsEx.end(); ++i)
+			{
+				if((*i)->conditionOperator != SetRequestEx::BooleanOperator::none)
+				{
+					int32_t intValue = 0;
+					_bl->hf.memcpyBigEndian(intValue, physicalValue);
+					if(!(*i)->checkCondition(intValue)) continue;
+				}
+				setRequests.push_back((*i)->frame);
+			}
+		}
+		if(setRequests.empty()) return BaseLib::RPC::RPCVariable::createError(-6, "No matching packet found for setting this parameter. Is the parameter read only?");
+
+		parameter->data = physicalValue;
+		saveParameter(parameter->databaseID, physicalValue);
+		if(_bl->debugLevel > 4) GD::out.printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(physicalValue) + ".");
 
 		std::shared_ptr<InsteonCentral> central = std::dynamic_pointer_cast<InsteonCentral>(getCentral());
-		std::shared_ptr<PacketQueue> queue(new PacketQueue(_physicalInterface, PacketQueueType::PEER));
-		queue->peer = central->getPeer(_peerID);
-		queue->noSending = true;
+		std::shared_ptr<InsteonPeer> peer = central->getPeer(_peerID);
 
-		std::vector<uint8_t> payload;
-		if(frame->subtype > -1 && frame->subtypeIndex >= 9)
+		for(std::vector<std::string>::iterator i = setRequests.begin(); i != setRequests.end(); ++i)
 		{
-			while((signed)payload.size() - 1 < frame->subtypeIndex - 9) payload.push_back(0);
-			payload.at(frame->subtypeIndex - 9) = (uint8_t)frame->subtype;
-		}
-		if(frame->channelField >= 9)
-		{
-			while((signed)payload.size() - 1 < frame->channelField - 9) payload.push_back(0);
-			payload.at(frame->channelField - 9) = (uint8_t)channel;
-		}
-		std::shared_ptr<InsteonPacket> packet(new InsteonPacket((uint8_t)frame->type, frame->subtype, _address, 0, 0, InsteonPacketFlags::Direct, false, payload));
+			if(rpcDevice->framesByID.find(*i) == rpcDevice->framesByID.end()) return BaseLib::RPC::RPCVariable::createError(-6, "Packet \"" + *i + "\" was not found for parameter \"" + valueKey + "\".");
+			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[*i];
+			std::shared_ptr<PacketQueue> queue(new PacketQueue(_physicalInterface, PacketQueueType::PEER));
+			queue->peer = peer;
+			queue->noSending = true;
+			queue->setResendSleepingTime(1000);
 
-		for(std::vector<BaseLib::RPC::Parameter>::iterator i = frame->parameters.begin(); i != frame->parameters.end(); ++i)
-		{
-			if(i->constValue > -1)
+			std::vector<uint8_t> payload;
+			if(frame->subtype > -1 && frame->subtypeIndex >= 9)
 			{
-				std::vector<uint8_t> data;
-				_bl->hf.memcpyBigEndian(data, i->constValue);
-				packet->setPosition(i->index, i->size, data);
-				continue;
+				while((signed)payload.size() - 1 < frame->subtypeIndex - 9) payload.push_back(0);
+				payload.at(frame->subtypeIndex - 9) = (uint8_t)frame->subtype;
 			}
-			BaseLib::Systems::RPCConfigurationParameter* additionalParameter = nullptr;
-			//We can't just search for param, because it is ambiguous (see for example LEVEL for HM-CC-TC.
-			if(i->param.empty() && !i->additionalParameter.empty() && valuesCentral[channel].find(i->additionalParameter) != valuesCentral[channel].end())
+			if(frame->channelField >= 9)
 			{
-				additionalParameter = &valuesCentral[channel][i->additionalParameter];
-				int32_t intValue = 0;
-				_bl->hf.memcpyBigEndian(intValue, additionalParameter->data);
-				if(!i->omitIfSet || intValue != i->omitIf)
+				while((signed)payload.size() - 1 < frame->channelField - 9) payload.push_back(0);
+				payload.at(frame->channelField - 9) = (uint8_t)channel;
+			}
+			std::shared_ptr<InsteonPacket> packet(new InsteonPacket((uint8_t)frame->type, frame->subtype, _address, 3, 3, InsteonPacketFlags::Direct, false, payload));
+
+			for(std::vector<BaseLib::RPC::Parameter>::iterator i = frame->parameters.begin(); i != frame->parameters.end(); ++i)
+			{
+				if(i->constValue > -1)
 				{
-					//Don't set ON_TIME when value is false
-					if(i->additionalParameter != "ON_TIME" || (rpcParameter->physicalParameter->valueID == "STATE" && value->booleanValue) || (rpcParameter->physicalParameter->valueID == "LEVEL" && value->floatValue > 0)) packet->setPosition(i->index, i->size, additionalParameter->data);
+					std::vector<uint8_t> data;
+					_bl->hf.memcpyBigEndian(data, i->constValue);
+					packet->setPosition(i->index, i->size, data);
+					continue;
 				}
-			}
-			//param sometimes is ambiguous (e. g. LEVEL of HM-CC-TC), so don't search and use the given parameter when possible
-			else if(i->param == rpcParameter->physicalParameter->valueID || i->param == rpcParameter->physicalParameter->id)
-			{
-				std::vector<uint8_t> data = valuesCentral[channel][valueKey].data;
-				if(i->mask != 0 && data.size() == 1) data.at(0) &= i->mask;
-				packet->setPosition(i->index, i->size, data);
-			}
-			//Search for all other parameters
-			else
-			{
-				bool paramFound = false;
-				for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator j = valuesCentral[channel].begin(); j != valuesCentral[channel].end(); ++j)
+				BaseLib::Systems::RPCConfigurationParameter* additionalParameter = nullptr;
+				//We can't just search for param, because it is ambiguous (see for example LEVEL for HM-CC-TC.
+				if(i->param.empty() && !i->additionalParameter.empty() && valuesCentral[channel].find(i->additionalParameter) != valuesCentral[channel].end())
 				{
-					//Only compare id. Till now looking for value_id was not necessary.
-					if(i->param == j->second.rpcParameter->physicalParameter->id)
+					additionalParameter = &valuesCentral[channel][i->additionalParameter];
+					int32_t intValue = 0;
+					_bl->hf.memcpyBigEndian(intValue, additionalParameter->data);
+					if(!i->omitIfSet || intValue != i->omitIf)
 					{
-						std::vector<uint8_t> data = j->second.data;
-						if(i->mask != 0 && data.size() == 1) data.at(0) &= i->mask;
-						packet->setPosition(i->index, i->size, data);
-						paramFound = true;
-						break;
+						//Don't set ON_TIME when value is false
+						if(i->additionalParameter != "ON_TIME" || (rpcParameter->physicalParameter->valueID == "STATE" && value->booleanValue) || (rpcParameter->physicalParameter->valueID == "LEVEL" && value->floatValue > 0)) packet->setPosition(i->index, i->size, additionalParameter->data);
 					}
 				}
-				if(!paramFound) GD::out.printError("Error constructing packet. param \"" + i->param + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
-			}
-		}
-		if(!rpcParameter->physicalParameter->resetAfterSend.empty())
-		{
-			for(std::vector<std::string>::iterator j = rpcParameter->physicalParameter->resetAfterSend.begin(); j != rpcParameter->physicalParameter->resetAfterSend.end(); ++j)
-			{
-				if(valuesCentral.at(channel).find(*j) == valuesCentral.at(channel).end()) continue;
-				std::shared_ptr<BaseLib::RPC::RPCVariable> logicalDefaultValue = valuesCentral.at(channel).at(*j).rpcParameter->logicalParameter->getDefaultValue();
-				std::vector<uint8_t> defaultValue = valuesCentral.at(channel).at(*j).rpcParameter->convertToPacket(logicalDefaultValue);
-				if(defaultValue != valuesCentral.at(channel).at(*j).data)
+				//param sometimes is ambiguous (e. g. LEVEL of HM-CC-TC), so don't search and use the given parameter when possible
+				else if(i->param == rpcParameter->physicalParameter->valueID || i->param == rpcParameter->physicalParameter->id)
 				{
-					BaseLib::Systems::RPCConfigurationParameter* tempParam = &valuesCentral.at(channel).at(*j);
-					tempParam->data = defaultValue;
-					saveParameter(tempParam->databaseID, tempParam->data);
-					GD::out.printInfo( "Info: Parameter \"" + *j + "\" was reset to " + BaseLib::HelperFunctions::getHexString(defaultValue) + ". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
-					if((rpcParameter->operations & BaseLib::RPC::Parameter::Operations::read) || (rpcParameter->operations & BaseLib::RPC::Parameter::Operations::event))
+					std::vector<uint8_t> data = valuesCentral[channel][valueKey].data;
+					if(i->mask != 0 && data.size() == 1) data.at(0) &= i->mask;
+					packet->setPosition(i->index, i->size, data);
+				}
+				//Search for all other parameters
+				else
+				{
+					bool paramFound = false;
+					for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator j = valuesCentral[channel].begin(); j != valuesCentral[channel].end(); ++j)
 					{
-						valueKeys->push_back(*j);
-						values->push_back(logicalDefaultValue);
+						//Only compare id. Till now looking for value_id was not necessary.
+						if(i->param == j->second.rpcParameter->physicalParameter->id)
+						{
+							std::vector<uint8_t> data = j->second.data;
+							if(i->mask != 0 && data.size() == 1) data.at(0) &= i->mask;
+							packet->setPosition(i->index, i->size, data);
+							paramFound = true;
+							break;
+						}
+					}
+					if(!paramFound) GD::out.printError("Error constructing packet. param \"" + i->param + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+				}
+			}
+			if(!rpcParameter->physicalParameter->resetAfterSend.empty())
+			{
+				for(std::vector<std::string>::iterator j = rpcParameter->physicalParameter->resetAfterSend.begin(); j != rpcParameter->physicalParameter->resetAfterSend.end(); ++j)
+				{
+					if(valuesCentral.at(channel).find(*j) == valuesCentral.at(channel).end()) continue;
+					std::shared_ptr<BaseLib::RPC::RPCVariable> logicalDefaultValue = valuesCentral.at(channel).at(*j).rpcParameter->logicalParameter->getDefaultValue();
+					std::vector<uint8_t> defaultValue = valuesCentral.at(channel).at(*j).rpcParameter->convertToPacket(logicalDefaultValue);
+					if(defaultValue != valuesCentral.at(channel).at(*j).data)
+					{
+						BaseLib::Systems::RPCConfigurationParameter* tempParam = &valuesCentral.at(channel).at(*j);
+						tempParam->data = defaultValue;
+						saveParameter(tempParam->databaseID, tempParam->data);
+						GD::out.printInfo( "Info: Parameter \"" + *j + "\" was reset to " + BaseLib::HelperFunctions::getHexString(defaultValue) + ". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+						if((rpcParameter->operations & BaseLib::RPC::Parameter::Operations::read) || (rpcParameter->operations & BaseLib::RPC::Parameter::Operations::event))
+						{
+							valueKeys->push_back(*j);
+							values->push_back(logicalDefaultValue);
+						}
 					}
 				}
 			}
+
+			std::shared_ptr<InsteonPacket> noHopPacket(new InsteonPacket());
+			*noHopPacket = *packet;
+			noHopPacket->setHopsLeft(0);
+			noHopPacket->setHopsMax(0);
+			central->sendPacket(getPhysicalInterface(), noHopPacket, true);
+
+			queue->parameterName = valueKey;
+			queue->channel = channel;
+			queue->push(packet);
+			queue->push(central->getMessages()->find(DIRECTIONIN, packet->messageType(), packet->messageSubtype(), InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
+			pendingQueues->removeQueue(valueKey, channel);
+			pendingQueues->push(queue);
+			central->enqueuePendingQueues(_address);
 		}
-		queue->parameterName = valueKey;
-		queue->channel = channel;
-		queue->push(packet);
-		//queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-		pendingQueues->removeQueue(valueKey, channel);
-		pendingQueues->push(queue);
-		central->enqueuePendingQueues(_address);
 
 		if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
 

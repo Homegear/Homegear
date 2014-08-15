@@ -191,11 +191,11 @@ bool InsteonCentral::onPacketReceived(std::string& senderID, std::shared_ptr<Bas
 	try
 	{
 		if(_disposing) return false;
-		std::shared_ptr<InsteonPacket> InsteonPacket(std::dynamic_pointer_cast<InsteonPacket>(packet));
-		if(!InsteonPacket) return false;
-		if(InsteonPacket->senderAddress() == _address) //Packet spoofed
+		std::shared_ptr<InsteonPacket> insteonPacket(std::dynamic_pointer_cast<InsteonPacket>(packet));
+		if(!insteonPacket) return false;
+		if(insteonPacket->senderAddress() == _address) //Packet spoofed
 		{
-			std::shared_ptr<InsteonPeer> peer(getPeer(InsteonPacket->destinationAddress()));
+			std::shared_ptr<InsteonPeer> peer(getPeer(insteonPacket->destinationAddress()));
 			if(peer)
 			{
 				if(senderID != peer->getPhysicalInterfaceID()) return true; //Packet we sent was received by another interface
@@ -208,16 +208,16 @@ bool InsteonCentral::onPacketReceived(std::string& senderID, std::shared_ptr<Bas
 			}
 			return false;
 		}
-		std::shared_ptr<IPhysicalInterface> physicalInterface = getPhysicalInterface(InsteonPacket->senderAddress());
+		std::shared_ptr<IPhysicalInterface> physicalInterface = getPhysicalInterface(insteonPacket->senderAddress());
 		if(physicalInterface->getID() != senderID) return true;
-		bool handled = InsteonDevice::onPacketReceived(senderID, InsteonPacket);
-		std::shared_ptr<InsteonPeer> peer(getPeer(InsteonPacket->senderAddress()));
+		bool handled = InsteonDevice::onPacketReceived(senderID, insteonPacket);
+		std::shared_ptr<InsteonPeer> peer(getPeer(insteonPacket->senderAddress()));
 		if(!peer) return false;
 		std::shared_ptr<InsteonPeer> team;
 		if(handled)
 		{
 			//This block is not necessary for teams as teams will never have queues.
-			std::shared_ptr<PacketQueue> queue = _queueManager.get(InsteonPacket->senderAddress());
+			std::shared_ptr<PacketQueue> queue = _queueManager.get(insteonPacket->senderAddress());
 			if(queue && queue->getQueueType() != PacketQueueType::PEER)
 			{
 				peer->setLastPacketReceived();
@@ -225,7 +225,7 @@ bool InsteonCentral::onPacketReceived(std::string& senderID, std::shared_ptr<Bas
 				return true; //Packet is handled by queue. Don't check if queue is empty!
 			}
 		}
-		peer->packetReceived(InsteonPacket);
+		peer->packetReceived(insteonPacket);
 	}
 	catch(const std::exception& ex)
     {
@@ -1056,6 +1056,46 @@ void InsteonCentral::handleNak(std::shared_ptr<InsteonPacket> packet)
     }
 }
 
+void InsteonCentral::handleAck(std::shared_ptr<InsteonPacket> packet)
+{
+	try
+	{
+		std::shared_ptr<PacketQueue> queue = _queueManager.get(packet->senderAddress());
+		if(queue && !queue->isEmpty() && packet->destinationAddress() == _address)
+		{
+			if(queue->front()->getType() == QueueEntryType::PACKET)
+			{
+				std::shared_ptr<InsteonPacket> backup = queue->front()->getPacket();
+				queue->pop(); //Popping takes place here to be able to process resent messages.
+				if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::MESSAGE)
+				{
+					if(queue->front()->getMessage()->typeIsEqual(packet))
+					{
+						queue->pop();
+					}
+					else
+					{
+						GD::out.printDebug("Debug: Readding message to queue, because the received packet does not match.");
+						queue->pushFront(backup);
+					}
+				}
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void InsteonCentral::handleDatabaseOpResponse(std::shared_ptr<InsteonPacket> packet)
 {
 	try
@@ -1216,14 +1256,15 @@ void InsteonCentral::handlePairingRequest(std::shared_ptr<InsteonPacket> packet)
 				int32_t firmwareVersion = packet->destinationAddress() & 0xFF;
 				std::string serialNumber = BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6);
 				//Do not save here
-				queue->peer = createPeer(packet->senderAddress(), firmwareVersion, deviceType, serialNumber, false);
-				if(!queue->peer)
+				peer = createPeer(packet->senderAddress(), firmwareVersion, deviceType, serialNumber, false);
+				if(!peer)
 				{
 					GD::out.printWarning("Warning: Device type 0x" + GD::bl->hf.getHexString(deviceType.type(), 4) + " with firmware version 0x" + BaseLib::HelperFunctions::getHexString(firmwareVersion, 4) + " not supported. Sender address 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6) + ".");
 					return;
 				}
-				peer = queue->peer;
 			}
+
+			if(!peer) return;
 
 			if(!peer->rpcDevice)
 			{

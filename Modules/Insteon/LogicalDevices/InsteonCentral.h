@@ -53,6 +53,7 @@ public:
 	void unpair(uint64_t id);
 
 	virtual void handleNak(std::shared_ptr<InsteonPacket> packet);
+	virtual void handleAck(std::shared_ptr<InsteonPacket> packet);
 	virtual void handleDatabaseOpResponse(std::shared_ptr<InsteonPacket> packet);
 	virtual void handleLinkingModeResponse(std::shared_ptr<InsteonPacket> packet);
 	virtual void handlePairingRequest(std::shared_ptr<InsteonPacket> packet);

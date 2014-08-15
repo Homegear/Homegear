@@ -95,12 +95,6 @@ public:
 		return s;
 	}
 
-	static inline std::wstring& toLower (std::wstring& s)
-	{
-		std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-		return s;
-	}
-
 	static inline std::string& toUpper (std::string& s)
 	{
 		std::transform(s.begin(), s.end(), s.begin(), ::toupper);

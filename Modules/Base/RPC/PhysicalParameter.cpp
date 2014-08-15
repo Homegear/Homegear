@@ -34,6 +34,61 @@ namespace BaseLib
 {
 namespace RPC
 {
+SetRequestEx::SetRequestEx(Obj* baseLib, xml_node<char>* node)
+{
+	try
+	{
+		for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
+		{
+			std::string attributeName(attr->name());
+			std::string attributeValue(attr->value());
+			if(attributeName == "cond_op")
+			{
+				HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
+				if(attributeValue == "e" || attributeValue == "eq") conditionOperator = BooleanOperator::Enum::e;
+				else if(attributeValue == "g") conditionOperator = BooleanOperator::Enum::g;
+				else if(attributeValue == "l") conditionOperator = BooleanOperator::Enum::l;
+				else if(attributeValue == "ge") conditionOperator = BooleanOperator::Enum::ge;
+				else if(attributeValue == "le") conditionOperator = BooleanOperator::Enum::le;
+				else baseLib->out.printWarning("Warning: Unknown attribute value for \"cond\" in node \"setEx\": " + attributeValue);
+			}
+			else if(attributeName == "value") value = baseLib->hf.getNumber(attributeValue);
+			else if(attributeName == "packet") frame = attributeValue;
+			else baseLib->out.printWarning("Warning: Unknown attribute for \"setEx\": " + attributeName);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+bool SetRequestEx::checkCondition(int32_t lhs)
+{
+	switch(conditionOperator)
+	{
+	case BooleanOperator::Enum::e:
+		return lhs == value;
+	case BooleanOperator::Enum::g:
+		return lhs > value;
+	case BooleanOperator::Enum::l:
+		return lhs < value;
+	case BooleanOperator::Enum::ge:
+		return lhs >= value;
+	case BooleanOperator::Enum::le:
+		return lhs <= value;
+	default:
+		return false;
+	}
+}
 
 PhysicalParameter::PhysicalParameter()
 {
@@ -152,6 +207,11 @@ PhysicalParameter::PhysicalParameter(BaseLib::Obj* baseLib, xml_node<>* node) : 
 				}
 				else baseLib->out.printWarning("Warning: domino_event is only supported for physical type integer.");
 				eventFrames.push_back(event);
+			}
+			else if(nodeName == "setEx")
+			{
+				std::shared_ptr<SetRequestEx> setRequestEx(new SetRequestEx(baseLib, physicalNode));
+				setRequestsEx.push_back(setRequestEx);
 			}
 			else if(nodeName == "address")
 			{

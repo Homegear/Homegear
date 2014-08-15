@@ -282,29 +282,13 @@ void PacketQueue::resend(uint32_t threadId)
 			}
 		}
 		if(_stopResendThread) return;
-		if(_resendCounter < 3)
+		i = 0;
+		keepAlive();
+		sleepingTime = std::chrono::milliseconds(100);
+		while(!_stopResendThread && i < (_resendSleepingTime / 100))
 		{
-			//Sleep for 10000 ms
-			i = 0;
-			keepAlive();
-			sleepingTime = std::chrono::milliseconds(100);
-			while(!_stopResendThread && i < 100)
-			{
-				std::this_thread::sleep_for(sleepingTime);
-				i++;
-			}
-		}
-		else
-		{
-			//Sleep for 10000 ms
-			i = 0;
-			keepAlive();
-			sleepingTime = std::chrono::milliseconds(100);
-			while(!_stopResendThread && i < 100)
-			{
-				std::this_thread::sleep_for(sleepingTime);
-				i++;
-			}
+			std::this_thread::sleep_for(sleepingTime);
+			i++;
 		}
 		if(_stopResendThread) return;
 
@@ -884,6 +868,7 @@ void PacketQueue::pushPendingQueue()
 		if(!queue) return; //Not really necessary, as the mutex is locked, but I had a segmentation fault in this function, so just to make
 		_queueType = queue->getQueueType();
 		retries = queue->retries;
+		_resendSleepingTime = queue->getResendSleepingTime();
 		pendingQueueID = queue->pendingQueueID;
 		for(std::list<PacketQueueEntry>::iterator i = queue->getQueue()->begin(); i != queue->getQueue()->end(); ++i)
 		{

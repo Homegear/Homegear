@@ -234,6 +234,7 @@ bool InsteonMessage::checkAccess(std::shared_ptr<InsteonPacket> packet, std::sha
 				{
 					GD::out.printDebug("Debug: Readding message to queue, because the received packet does not match.");
 					queue->pushFront(backup);
+					queue->processCurrentQueueEntry();
 					return false;
 				}
 			}

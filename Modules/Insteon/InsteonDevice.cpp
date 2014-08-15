@@ -531,15 +531,23 @@ bool InsteonDevice::onPacketReceived(std::string& senderID, std::shared_ptr<Base
 		if(insteonPacket->flags() == InsteonPacketFlags::DirectNak || insteonPacket->flags() == InsteonPacketFlags::GroupCleanupDirectNak)
 		{
 			handleNak(insteonPacket);
+			return true;
 		}
 		else
 		{
 			std::shared_ptr<InsteonMessage> message = _messages->find(DIRECTIONIN, insteonPacket);
-			if(message && message->checkAccess(insteonPacket, _queueManager.get(insteonPacket->senderAddress())))
+			if(message)
 			{
-				if(_bl->debugLevel >= 5) GD::out.printDebug("Debug: Device " + std::to_string(_deviceID) + ": Access granted for packet " + insteonPacket->hexString());
-				message->invokeMessageHandlerIncoming(insteonPacket);
-				return true;
+				if(message->checkAccess(insteonPacket, _queueManager.get(insteonPacket->senderAddress())))
+				{
+					if(_bl->debugLevel >= 5) GD::out.printDebug("Debug: Device " + std::to_string(_deviceID) + ": Access granted for packet " + insteonPacket->hexString());
+					message->invokeMessageHandlerIncoming(insteonPacket);
+					return true;
+				}
+			}
+			else
+			{
+				handleAck(insteonPacket);
 			}
 		}
 	}

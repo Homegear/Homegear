@@ -69,7 +69,9 @@ class InsteonPacket : public BaseLib::Systems::Packet
         InsteonPacketFlags flags() { return _flags; }
         void setFlags(InsteonPacketFlags value) { _flags = value; }
         uint8_t hopsLeft() { return _hopsLeft; }
+        void setHopsLeft(uint8_t value) { _hopsLeft = value; }
         uint8_t hopsMax() { return _hopsMax; }
+        void setHopsMax(uint8_t value) { _hopsMax = value; }
         uint8_t messageType() { return _messageType; }
         void setMessageType(uint8_t type) { _messageType = type; }
         uint8_t messageSubtype() { return _messageSubtype; }

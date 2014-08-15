@@ -72,6 +72,28 @@ public:
 	Operation::Enum operation;
 	double index = 0;
 	double step = 0;
+
+	PhysicalParameterAddress() {}
+	virtual ~PhysicalParameterAddress() {}
+};
+
+class SetRequestEx
+{
+public:
+	struct BooleanOperator
+	{
+		enum Enum { none, e, g, l, ge, le };
+	};
+
+	std::string frame;
+	BooleanOperator::Enum conditionOperator = BooleanOperator::Enum::none;
+	int32_t value = 0;
+
+	SetRequestEx() {}
+	SetRequestEx(BaseLib::Obj* baseLib, xml_node<>* node);
+	virtual ~SetRequestEx() {}
+
+	bool checkCondition(int32_t value);
 };
 
 class PhysicalParameter
@@ -103,7 +125,9 @@ public:
 	std::string valueID;
 	bool noInit = false;
 	std::string getRequest;
+	std::vector<std::shared_ptr<SetRequestEx>> setRequestsEx;
 	std::string setRequest;
+
 	std::string counter;
 	std::vector<std::shared_ptr<PhysicalParameterEvent>> eventFrames;
 	std::vector<std::string> resetAfterSend;

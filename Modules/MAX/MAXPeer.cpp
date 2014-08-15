@@ -704,7 +704,7 @@ void MAXPeer::getValuesFromPacket(std::shared_ptr<MAXPacket> packet, std::vector
 		std::multimap<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator i = range.first;
 		do
 		{
-			GD::out.printDebug("Debug: Found frame matching packet type 0x" + std::to_string(packet->messageType()) + ".");
+			GD::out.printDebug("Debug: Found frame matching packet type 0x" + BaseLib::HelperFunctions::getHexString(packet->messageType(), 2) + ".");
 			FrameValues currentFrameValues;
 			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame(i->second);
 			if(!frame)

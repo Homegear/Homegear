@@ -105,6 +105,7 @@ class PacketQueue
         std::mutex _pushPendingQueueThreadMutex;
         bool _workingOnPendingQueue = false;
         int64_t _lastPop = 0;
+        uint32_t _resendSleepingTime = 10000;
         void (InsteonDevice::*_queueProcessed)() = nullptr;
         void pushPendingQueue();
         void sleepAndPushPendingQueue();
@@ -148,6 +149,8 @@ class PacketQueue
         void dispose();
         void serialize(std::vector<uint8_t>& encodedData);
         void unserialize(std::shared_ptr<std::vector<char>> serializedData, InsteonDevice* device, uint32_t position = 0);
+        uint32_t getResendSleepingTime() { return _resendSleepingTime; }
+        void setResendSleepingTime(uint32_t value) { _resendSleepingTime = value; }
 
         PacketQueue();
         PacketQueue(std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface);
