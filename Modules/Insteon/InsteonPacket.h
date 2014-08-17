@@ -57,7 +57,7 @@ class InsteonPacket : public BaseLib::Systems::Packet
         InsteonPacket(std::string packet, int64_t timeReceived = 0);
         InsteonPacket(std::vector<char>& packet, int64_t timeReceived = 0);
         InsteonPacket(std::vector<uint8_t>& packet, int64_t timeReceived = 0);
-        InsteonPacket(uint8_t messageType, uint8_t messageSubtype, int32_t destinationAddress, uint8_t hopsLeft, uint8_t hopsMax, InsteonPacketFlags flags, bool extended, std::vector<uint8_t> payload);
+        InsteonPacket(uint8_t messageType, uint8_t messageSubtype, int32_t destinationAddress, uint8_t hopsLeft, uint8_t hopsMax, InsteonPacketFlags flags, std::vector<uint8_t> payload);
         virtual ~InsteonPacket();
 
         void import(std::vector<char>& packet);

@@ -34,12 +34,34 @@
 						<setEx cond_op="eq" value="0x00" packet="LEVEL_SET_OFF"/>
 						<setEx cond_op="ge" value="0x01" packet="LEVEL_SET"/>
 					</physical>
-					<conversion type="boolean_integer" threshold="0x01" false="0x00" true="0xFF"/>
+					<conversion type="boolean_integer" threshold="0x02" false="0x00" true="0xFF"/>
 				</parameter>
 				<parameter id="BEEP" operations="write">
 					<logical type="action"/>
 					<physical type="integer" interface="command">
 						<set request="BEEP"/>
+					</physical>
+				</parameter>
+				<parameter id="MODE" operations="read,write,event">
+					<logical type="option">
+						<option id="Latching"/>
+						<option id="Latching 3-Way-Toggle"/>
+						<option id="Single Momentary"/>
+						<option id="Dual Momentary"/>
+					</logical>
+					<physical type="integer" interface="command" id="MODE">
+						<setEx cond_op="eq" value="0x00" packet="LATCHING_SET_1"/>
+						<setEx cond_op="eq" value="0x00" packet="LATCHING_SET_2"/>
+						<setEx cond_op="eq" value="0x00" packet="LATCHING_SET_3"/>
+						<setEx cond_op="eq" value="0x01" packet="LATCHING_3_WAY_TOGGLE_SET_1"/>
+						<setEx cond_op="eq" value="0x01" packet="LATCHING_3_WAY_TOGGLE_SET_2"/>
+						<setEx cond_op="eq" value="0x01" packet="LATCHING_3_WAY_TOGGLE_SET_3"/>
+						<setEx cond_op="eq" value="0x02" packet="SINGLE_MOMENTARY_SET_1"/>
+						<setEx cond_op="eq" value="0x02" packet="SINGLE_MOMENTARY_SET_2"/>
+						<setEx cond_op="eq" value="0x02" packet="SINGLE_MOMENTARY_SET_3"/>
+						<setEx cond_op="eq" value="0x03" packet="DUAL_MOMENTARY_SET_1"/>
+						<setEx cond_op="eq" value="0x03" packet="DUAL_MOMENTARY_SET_2"/>
+						<setEx cond_op="eq" value="0x03" packet="DUAL_MOMENTARY_SET_3"/>
 					</physical>
 				</parameter>
 			</parameters>
@@ -60,6 +82,54 @@
 		</packet>
 		<packet id="ACK_STATE_OFF" direction="from_device" type="0x13" fixed_channel="1">
 			<parameter type="integer" index="8.0" size="1.0" param="STATE"/>
+		</packet>
+		<packet id="LATCHING_SET_1" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x1E"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xC2"/>
+		</packet>
+		<packet id="LATCHING_SET_2" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x20"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xC0"/>
+		</packet>
+		<packet id="LATCHING_SET_3" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x23"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xBD"/>
+		</packet>
+		<packet id="LATCHING_3_WAY_TOGGLE_SET_1" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x1E"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xC2"/>
+		</packet>
+		<packet id="LATCHING_3_WAY_TOGGLE_SET_2" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x20"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xC0"/>
+		</packet>
+		<packet id="LATCHING_3_WAY_TOGGLE_SET_3" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x22"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xBE"/>
+		</packet>
+		<packet id="SINGLE_MOMENTARY_SET_1" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x1E"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xC2"/>
+		</packet>
+		<packet id="SINGLE_MOMENTARY_SET_2" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x21"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xBF"/>
+		</packet>
+		<packet id="SINGLE_MOMENTARY_SET_3" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x23"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xBD"/>
+		</packet>
+		<packet id="DUAL_MOMENTARY_SET_1" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x1F"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xC1"/>
+		</packet>
+		<packet id="DUAL_MOMENTARY_SET_2" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x21"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xBF"/>
+		</packet>
+		<packet id="DUAL_MOMENTARY_SET_3" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x23"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xBD"/>
 		</packet>
 	</packets>
 </device>

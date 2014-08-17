@@ -54,7 +54,7 @@ InsteonPacket::InsteonPacket(std::vector<uint8_t>& packet, int64_t timeReceived)
 	import(packet);
 }
 
-InsteonPacket::InsteonPacket(uint8_t messageType, uint8_t messageSubtype, int32_t destinationAddress, uint8_t hopsLeft, uint8_t hopsMax, InsteonPacketFlags flags, bool extended, std::vector<uint8_t> payload)
+InsteonPacket::InsteonPacket(uint8_t messageType, uint8_t messageSubtype, int32_t destinationAddress, uint8_t hopsLeft, uint8_t hopsMax, InsteonPacketFlags flags, std::vector<uint8_t> payload)
 {
 	_length = 9 + _payload.size();
 	_hopsLeft = hopsLeft & 3;
@@ -64,8 +64,8 @@ InsteonPacket::InsteonPacket(uint8_t messageType, uint8_t messageSubtype, int32_
 	_messageSubtype = messageSubtype;
 	_destinationAddress = destinationAddress;
 	_payload = payload;
-	_extended = extended;
-	if(extended)
+	_extended = !_payload.empty();
+	if(_extended)
 	{
 		while(_payload.size() < 14) _payload.push_back(0);
 	}
@@ -315,6 +315,7 @@ void InsteonPacket::setPosition(double index, double size, std::vector<uint8_t>&
 			else if(index == 8.0) _messageSubtype = value.at(0);
 			return;
 		}
+		_extended = true;
 		index -= 9;
 		double byteIndex = std::floor(index);
 		if(byteIndex != index || size < 0.8) //0.8 == 8 Bits

@@ -272,7 +272,7 @@ void InsteonCentral::unpair(uint64_t id)
 		payload.push_back(0);
 		payload.push_back(0);
 		payload.push_back(0xC1);
-		std::shared_ptr<InsteonPacket> configPacket(new InsteonPacket(0x2F, 0, peer->getAddress(), 3, 3, InsteonPacketFlags::Direct, true, payload));
+		std::shared_ptr<InsteonPacket> configPacket(new InsteonPacket(0x2F, 0, peer->getAddress(), 3, 3, InsteonPacketFlags::Direct, payload));
 		queue->push(configPacket);
 		queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
 		payload.clear();
@@ -291,7 +291,7 @@ void InsteonCentral::unpair(uint64_t id)
 		payload.push_back(0);
 		payload.push_back(0);
 		payload.push_back(0xB9);
-		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, peer->getAddress(), 3, 3, InsteonPacketFlags::Direct, true, payload));
+		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, peer->getAddress(), 3, 3, InsteonPacketFlags::Direct, payload));
 		queue->push(configPacket);
 		queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
 	}
@@ -892,7 +892,7 @@ void InsteonCentral::createPairingQueue(int32_t address, std::shared_ptr<Insteon
 		payload.push_back(0x0F); //First byte of link database address
 		payload.push_back(0xFF); //Second byte of link database address
 		payload.push_back(0x01); //Entry size?
-		std::shared_ptr<InsteonPacket> configPacket(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+		std::shared_ptr<InsteonPacket> configPacket(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::DirectAck, payload));
 		queue->push(configPacket);
 		queue->push(_messages->find(DIRECTIONIN, 0x2F, -1, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
 		payload.clear();
@@ -911,7 +911,7 @@ void InsteonCentral::createPairingQueue(int32_t address, std::shared_ptr<Insteon
 		payload.push_back(0);
 		payload.push_back(0);
 		payload.push_back(0xF6);
-		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x09, 0x01, address, 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x09, 0x01, address, 3, 3, InsteonPacketFlags::DirectAck, payload));
 		queue->push(configPacket);
 		queue->push(_messages->find(DIRECTIONIN, 0x09, 0x01, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
 		queue->push(_messages->find(DIRECTIONIN, 0x01, 0x00, InsteonPacketFlags::Broadcast, std::vector<std::pair<uint32_t, int32_t>>()));
@@ -922,7 +922,7 @@ void InsteonCentral::createPairingQueue(int32_t address, std::shared_ptr<Insteon
 		payload.push_back(0x0F); //First byte of link database address
 		payload.push_back(0xFF); //Second byte of link database address
 		payload.push_back(0x01); //Entry size?
-		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::DirectAck, payload));
 		queue->push(configPacket);
 		queue->push(_messages->find(DIRECTIONIN, 0x2F, -1, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
 		payload.clear();
@@ -941,7 +941,7 @@ void InsteonCentral::createPairingQueue(int32_t address, std::shared_ptr<Insteon
 		payload.push_back(0x1F); //Data2 => Ramp rate?
 		payload.push_back(0x01); //Data3
 		payload.push_back(0x9F); //?
-		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::Direct, true, payload));
+		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::Direct, payload));
 		queue->push(configPacket);
 		queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
 		payload.clear();
@@ -951,7 +951,7 @@ void InsteonCentral::createPairingQueue(int32_t address, std::shared_ptr<Insteon
 		payload.push_back(0x0F); //First byte of link database address
 		payload.push_back(0xFF); //Second byte of link database address
 		payload.push_back(0x01); //Entry size?
-		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::DirectAck, payload));
 		queue->push(configPacket);
 		queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
 		payload.clear();
@@ -961,7 +961,7 @@ void InsteonCentral::createPairingQueue(int32_t address, std::shared_ptr<Insteon
 		payload.push_back(0x0F); //First byte of link database address
 		payload.push_back(0xF7); //Second byte of link database address
 		payload.push_back(0x01); //Entry size?
-		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::DirectAck, payload));
 		queue->push(configPacket);
 		queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
 		payload.clear();
@@ -980,7 +980,7 @@ void InsteonCentral::createPairingQueue(int32_t address, std::shared_ptr<Insteon
 		payload.push_back(0x1F); //Data2
 		payload.push_back(0x01); //Data3
 		payload.push_back(0x62); //?
-		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::Direct, true, payload));
+		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::Direct, payload));
 		queue->push(configPacket);
 		queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
 		payload.clear();
@@ -990,7 +990,7 @@ void InsteonCentral::createPairingQueue(int32_t address, std::shared_ptr<Insteon
 		payload.push_back(0x0F); //First byte of link database address
 		payload.push_back(0xF7); //Second byte of link database address
 		payload.push_back(0x01); //Entry size?
-		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::DirectAck, true, payload));
+		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x2F, 0, address, 3, 3, InsteonPacketFlags::DirectAck, payload));
 		queue->push(configPacket);
 		queue->push(_messages->find(DIRECTIONIN, 0x2F, 0, InsteonPacketFlags::Direct, std::vector<std::pair<uint32_t, int32_t>>()));
 		payload.clear();

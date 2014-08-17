@@ -1123,7 +1123,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonPeer::setValue(uint32_t channe
 				while((signed)payload.size() - 1 < frame->channelField - 9) payload.push_back(0);
 				payload.at(frame->channelField - 9) = (uint8_t)channel;
 			}
-			std::shared_ptr<InsteonPacket> packet(new InsteonPacket((uint8_t)frame->type, frame->subtype, _address, 3, 3, InsteonPacketFlags::Direct, false, payload));
+			std::shared_ptr<InsteonPacket> packet(new InsteonPacket((uint8_t)frame->type, frame->subtype, _address, 3, 3, InsteonPacketFlags::Direct, payload));
 
 			for(std::vector<BaseLib::RPC::Parameter>::iterator i = frame->parameters.begin(); i != frame->parameters.end(); ++i)
 			{

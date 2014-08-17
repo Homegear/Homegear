@@ -846,14 +846,14 @@ bool InsteonHubX10::processData(std::vector<uint8_t>& data)
 			}
 			if(i + 1 >= data.size())
 			{
-				_out.printError("Error: Too small packet received: " + BaseLib::HelperFunctions::getHexString(data));
+				if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Too small packet received: " + BaseLib::HelperFunctions::getHexString(data));
 				std::vector<uint8_t> data2(&data.at(i), &data.at(0) + data.size());
 				data = data2;
 				return false;
 			}
 			uint8_t type = data.at(i + 1);
 			int32_t length = 1; //1 to make 100% sure that i is incremented
-			if(_lengthLookup.find(data.at(i + 1)) == _lengthLookup.end())
+			if(_lengthLookup.find(type) == _lengthLookup.end())
 			{
 				//Sometimes "0x02" is missing
 				if(_lengthLookup.find(data.at(i)) != _lengthLookup.end())
