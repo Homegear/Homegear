@@ -42,9 +42,9 @@ Insteon::Insteon(BaseLib::Obj* bl, IFamilyEventSink* eventHandler) : BaseLib::Sy
 	GD::bl = bl;
 	GD::family = this;
 	GD::out.init(bl);
-	GD::out.setPrefix("Module Insteon: ");
+	GD::out.setPrefix("Module INSTEON: ");
 	GD::out.printDebug("Debug: Loading module...");
-	_family = BaseLib::Systems::DeviceFamilies::Insteon;
+	_family = BaseLib::Systems::DeviceFamilies::INSTEON;
 	GD::rpcDevices.init(_bl);
 }
 

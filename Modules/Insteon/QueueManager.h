@@ -72,9 +72,9 @@ public:
 	QueueManager();
 	virtual ~QueueManager();
 
-	std::shared_ptr<PacketQueue> get(int32_t address);
+	std::shared_ptr<PacketQueue> get(int32_t address, std::string interfaceID);
 	std::shared_ptr<PacketQueue> createQueue(InsteonDevice* device, std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface, PacketQueueType queueType, int32_t address);
-	void resetQueue(int32_t address, uint32_t id);
+	void resetQueue(int32_t address, std::string interfaceID, uint32_t id);
 	void dispose(bool wait = true);
 protected:
 	bool _disposing = false;
@@ -83,7 +83,7 @@ protected:
     std::thread _resetQueueThread;
     std::mutex _workerThreadMutex;
 	uint32_t _id = 0;
-	std::unordered_map<int32_t, std::shared_ptr<QueueData>> _queues;
+	std::unordered_map<int32_t, std::map<std::string, std::shared_ptr<QueueData>>> _queues;
 	std::mutex _queueMutex;
 
 	void worker();

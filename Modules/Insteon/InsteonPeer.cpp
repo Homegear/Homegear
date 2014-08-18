@@ -672,42 +672,20 @@ void InsteonPeer::getValuesFromPacket(std::shared_ptr<InsteonPacket> packet, std
 		std::multimap<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator i = range.first;
 		do
 		{
-			GD::out.printDebug("Debug: Found frame matching packet type 0x" + BaseLib::HelperFunctions::getHexString(packet->messageType(), 2) + ".");
 			FrameValues currentFrameValues;
 			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame(i->second);
-			if(!frame)
-			{
-				GD::out.printDebug("Debug: Found frame is nullptr. Continuing with next frame.");
-				continue;
-			}
-			if(frame->direction == BaseLib::RPC::DeviceFrame::Direction::Enum::fromDevice && packet->senderAddress() != _address)
-			{
-				GD::out.printDebug("Debug: Frame has wrong direction.");
-				continue;
-			}
-			if(frame->direction == BaseLib::RPC::DeviceFrame::Direction::Enum::toDevice && packet->destinationAddress() != _address)
-			{
-				GD::out.printDebug("Debug: Frame has wrong direction.");
-				continue;
-			}
-			if(frame->subtype > -1 && packet->messageSubtype() != frame->subtype)
-			{
-				GD::out.printDebug("Debug: Packet has wrong subtype. Continuing with next frame.");
-				continue;
-			}
+			if(!frame) continue;
+			if(frame->direction == BaseLib::RPC::DeviceFrame::Direction::Enum::fromDevice && packet->senderAddress() != _address) continue;
+			if(frame->direction == BaseLib::RPC::DeviceFrame::Direction::Enum::toDevice && packet->destinationAddress() != _address) continue;
+			if(frame->subtype > -1 && packet->messageSubtype() != frame->subtype) continue;
 			int32_t channelIndex = frame->channelField;
 			int32_t channel = -1;
 			if(channelIndex >= 9 && (signed)packet->payload()->size() > (channelIndex - 9)) channel = packet->payload()->at(channelIndex - 9) - frame->channelIndexOffset;
 			if(channel > -1 && frame->channelFieldSize < 1.0) channel &= (0xFF >> (8 - std::lround(frame->channelFieldSize * 10) % 10));
 			if(frame->fixedChannel > -1) channel = frame->fixedChannel;
-			if(frame->size > 0 && packet->length() != frame->size)
-			{
-				GD::out.printDebug("Debug: Packet has wrong size. Continuing with next frame.");
-				continue;
-			}
+			if(frame->size > 0 && packet->length() != frame->size) continue;
 			currentFrameValues.frameID = frame->id;
 
-			GD::out.printDebug("Debug: Frame with ID \"" + frame->id + "\" matches packet.");
 			for(std::vector<BaseLib::RPC::Parameter>::iterator j = frame->parameters.begin(); j != frame->parameters.end(); ++j)
 			{
 				std::vector<uint8_t> data;
@@ -1103,6 +1081,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonPeer::setValue(uint32_t channe
 		std::shared_ptr<InsteonCentral> central = std::dynamic_pointer_cast<InsteonCentral>(getCentral());
 		std::shared_ptr<InsteonPeer> peer = central->getPeer(_peerID);
 
+		//Remove existing queues setting the same parameter
+		pendingQueues->removeQueue(valueKey, channel);
+
 		for(std::vector<std::string>::iterator i = setRequests.begin(); i != setRequests.end(); ++i)
 		{
 			if(rpcDevice->framesByID.find(*i) == rpcDevice->framesByID.end()) return BaseLib::RPC::RPCVariable::createError(-6, "Packet \"" + *i + "\" was not found for parameter \"" + valueKey + "\".");
@@ -1123,7 +1104,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonPeer::setValue(uint32_t channe
 				while((signed)payload.size() - 1 < frame->channelField - 9) payload.push_back(0);
 				payload.at(frame->channelField - 9) = (uint8_t)channel;
 			}
-			std::shared_ptr<InsteonPacket> packet(new InsteonPacket((uint8_t)frame->type, frame->subtype, _address, 3, 3, InsteonPacketFlags::Direct, payload));
+			std::shared_ptr<InsteonPacket> packet(new InsteonPacket((uint8_t)frame->type, frame->subtype, _address, 0, 0, InsteonPacketFlags::Direct, payload));
 
 			for(std::vector<BaseLib::RPC::Parameter>::iterator i = frame->parameters.begin(); i != frame->parameters.end(); ++i)
 			{
@@ -1195,17 +1176,20 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonPeer::setValue(uint32_t channe
 				}
 			}
 
-			std::shared_ptr<InsteonPacket> noHopPacket(new InsteonPacket());
-			*noHopPacket = *packet;
-			noHopPacket->setHopsLeft(0);
-			noHopPacket->setHopsMax(0);
-			central->sendPacket(getPhysicalInterface(), noHopPacket, true);
+			if(frame->doubleSend)
+			{
+				std::shared_ptr<InsteonPacket> noHopPacket(new InsteonPacket());
+				*noHopPacket = *packet;
+				central->sendPacket(getPhysicalInterface(), noHopPacket, true);
+				//Set maximum amount of hops for second packet
+				packet->setHopsLeft(3);
+				packet->setHopsMax(3);
+			}
 
 			queue->parameterName = valueKey;
 			queue->channel = channel;
 			queue->push(packet);
 			queue->push(central->getMessages()->find(DIRECTIONIN, packet->messageType(), packet->messageSubtype(), InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
-			pendingQueues->removeQueue(valueKey, channel);
 			pendingQueues->push(queue);
 			central->enqueuePendingQueues(_address);
 		}

@@ -35,6 +35,7 @@ namespace Insteon
 
 IInsteonInterface::IInsteonInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IPhysicalInterface(GD::bl, settings)
 {
+	_maxPacketProcessingTime = 15000;
 	if(settings->listenThreadPriority == -1)
 	{
 		settings->listenThreadPriority = 0;

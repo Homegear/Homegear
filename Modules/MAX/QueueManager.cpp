@@ -91,17 +91,14 @@ void QueueManager::worker()
 				_queueMutex.lock();
 				if(!_queues.empty())
 				{
-					if(!_queues.empty())
+					std::unordered_map<int32_t, std::shared_ptr<QueueData>>::iterator nextQueue = _queues.find(lastQueue);
+					if(nextQueue != _queues.end())
 					{
-						std::unordered_map<int32_t, std::shared_ptr<QueueData>>::iterator nextQueue = _queues.find(lastQueue);
-						if(nextQueue != _queues.end())
-						{
-							nextQueue++;
-							if(nextQueue == _queues.end()) nextQueue = _queues.begin();
-						}
-						else nextQueue = _queues.begin();
-						lastQueue = nextQueue->first;
+						nextQueue++;
+						if(nextQueue == _queues.end()) nextQueue = _queues.begin();
 					}
+					else nextQueue = _queues.begin();
+					lastQueue = nextQueue->first;
 				}
 				std::shared_ptr<QueueData> queue;
 				if(_queues.find(lastQueue) != _queues.end()) queue = _queues.at(lastQueue);
@@ -219,6 +216,12 @@ void QueueManager::resetQueue(int32_t address, uint32_t id)
 	{
 		if(_disposing) return;
 		_queueMutex.lock();
+		if(_queues.empty())
+		{
+			_stopWorkerThread = true;
+			_queueMutex.unlock();
+			return;
+		}
 		if(_queues.find(address) != _queues.end() && _queues.at(address) && _queues.at(address)->queue && !_queues.at(address)->queue->isEmpty() && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= *_queues.at(address)->lastAction + 2000)
 		{
 			_queueMutex.unlock();
@@ -231,7 +234,7 @@ void QueueManager::resetQueue(int32_t address, uint32_t id)
 		if(_queues.find(address) != _queues.end() && _queues.at(address) && _queues.at(address)->id == id)
 		{
 			queue = _queues.at(address);
-			if(queue->queue.use_count() > 1 && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= *_queues.at(address)->lastAction + 20000)
+			if(queue->queue.use_count() > 1 && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= *queue->lastAction + 20000)
 			{
 				_queueMutex.unlock();
 				GD::out.printDebug("Debug: Postponing deletion of queue " + std::to_string(id) + " for peer with address 0x" + BaseLib::HelperFunctions::getHexString(address) + ", because it is still in use (" + std::to_string(queue->queue.use_count()) + " referring objects).");

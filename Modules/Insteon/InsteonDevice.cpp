@@ -44,16 +44,14 @@ void InsteonDevice::setPhysicalInterfaceID(std::string id)
 	}
 }
 
-InsteonDevice::InsteonDevice(IDeviceEventSink* eventHandler) : LogicalDevice(BaseLib::Systems::DeviceFamilies::Insteon, GD::bl, eventHandler)
+InsteonDevice::InsteonDevice(IDeviceEventSink* eventHandler) : LogicalDevice(BaseLib::Systems::DeviceFamilies::INSTEON, GD::bl, eventHandler)
 {
 	_physicalInterface = GD::defaultPhysicalInterface;
-	_receivedPackets.setKeepAliveTime(600);
 }
 
-InsteonDevice::InsteonDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : LogicalDevice(BaseLib::Systems::DeviceFamilies::Insteon, GD::bl, deviceID, serialNumber, address, eventHandler)
+InsteonDevice::InsteonDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : LogicalDevice(BaseLib::Systems::DeviceFamilies::INSTEON, GD::bl, deviceID, serialNumber, address, eventHandler)
 {
 	_physicalInterface = GD::defaultPhysicalInterface;
-	_receivedPackets.setKeepAliveTime(600);
 }
 
 InsteonDevice::~InsteonDevice()
@@ -538,7 +536,7 @@ bool InsteonDevice::onPacketReceived(std::string& senderID, std::shared_ptr<Base
 			std::shared_ptr<InsteonMessage> message = _messages->find(DIRECTIONIN, insteonPacket);
 			if(message)
 			{
-				if(message->checkAccess(insteonPacket, _queueManager.get(insteonPacket->senderAddress())))
+				if(message->checkAccess(insteonPacket, _queueManager.get(insteonPacket->senderAddress(), senderID)))
 				{
 					if(_bl->debugLevel >= 5) GD::out.printDebug("Debug: Device " + std::to_string(_deviceID) + ": Access granted for packet " + insteonPacket->hexString());
 					message->invokeMessageHandlerIncoming(insteonPacket);
@@ -570,8 +568,6 @@ std::shared_ptr<IPhysicalInterface> InsteonDevice::getPhysicalInterface(int32_t 
 {
 	try
 	{
-		std::shared_ptr<PacketQueue> queue = _queueManager.get(peerAddress);
-		if(queue) return queue->getPhysicalInterface();
 		std::shared_ptr<InsteonPeer> peer = getPeer(peerAddress);
 		return peer ? peer->getPhysicalInterface() : GD::defaultPhysicalInterface;
 	}
@@ -622,6 +618,7 @@ void InsteonDevice::sendPacket(std::shared_ptr<IPhysicalInterface> physicalInter
 			}
 			//Set time to now. This is necessary if two packets are sent after each other without a response in between
 			packetInfo->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+			_receivedPackets.deletePacket(packet->destinationAddress(), packetInfo->id);
 		}
 		else if(_bl->debugLevel > 4) GD::out.printDebug("Debug: Sending packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
 		physicalInterface->sendPacket(packet);

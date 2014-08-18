@@ -31,6 +31,7 @@
 #define INSTEONPACKET_H_
 
 #include "../Base/BaseLib.h"
+#include "PhysicalInterfaces/IInsteonInterface.h"
 
 #include <map>
 
@@ -54,9 +55,9 @@ class InsteonPacket : public BaseLib::Systems::Packet
     public:
         //Properties
         InsteonPacket();
-        InsteonPacket(std::string packet, int64_t timeReceived = 0);
-        InsteonPacket(std::vector<char>& packet, int64_t timeReceived = 0);
-        InsteonPacket(std::vector<uint8_t>& packet, int64_t timeReceived = 0);
+        InsteonPacket(std::string packet, std::string interfaceID = "", int64_t timeReceived = 0);
+        InsteonPacket(std::vector<char>& packet, std::string interfaceID = "", int64_t timeReceived = 0);
+        InsteonPacket(std::vector<uint8_t>& packet, std::string interfaceID = "", int64_t timeReceived = 0);
         InsteonPacket(uint8_t messageType, uint8_t messageSubtype, int32_t destinationAddress, uint8_t hopsLeft, uint8_t hopsMax, InsteonPacketFlags flags, std::vector<uint8_t> payload);
         virtual ~InsteonPacket();
 
@@ -64,6 +65,8 @@ class InsteonPacket : public BaseLib::Systems::Packet
         void import(std::vector<uint8_t>& packet);
         void import(std::string packetHex);
 
+        std::string interfaceID() { return _interfaceID; }
+        void setInterfaceID(std::string value) { _interfaceID = value; }
         void setDestinationAddress(int32_t value) { _destinationAddress = value; }
         bool extended() { return _extended; }
         InsteonPacketFlags flags() { return _flags; }
@@ -83,6 +86,7 @@ class InsteonPacket : public BaseLib::Systems::Packet
 
         bool equals(std::shared_ptr<InsteonPacket>& rhs);
     protected:
+        std::string _interfaceID;
         bool _extended = false;
         InsteonPacketFlags _flags = InsteonPacketFlags::Direct;
         uint8_t _hopsLeft = 0;

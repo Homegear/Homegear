@@ -79,6 +79,7 @@ protected:
 	std::shared_ptr<MAXPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
 	void deletePeer(uint64_t id);
 	std::mutex _peerInitMutex;
+	std::mutex _enqueuePendingQueuesMutex;
 	virtual void setUpMAXMessages();
 	virtual void worker();
 	virtual void init();

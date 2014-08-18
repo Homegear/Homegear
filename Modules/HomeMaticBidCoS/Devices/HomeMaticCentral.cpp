@@ -273,11 +273,20 @@ void HomeMaticCentral::enqueuePendingQueues(int32_t deviceAddress)
 {
 	try
 	{
+		_enqueuePendingQueuesMutex.lock();
 		std::shared_ptr<BidCoSPeer> peer = getPeer(deviceAddress);
-		if(!peer || !peer->pendingBidCoSQueues) return;
+		if(!peer || !peer->pendingBidCoSQueues)
+		{
+			_enqueuePendingQueuesMutex.unlock();
+			return;
+		}
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(deviceAddress);
 		if(!queue) queue = _bidCoSQueueManager.createQueue(this, peer->getPhysicalInterface(), BidCoSQueueType::DEFAULT, deviceAddress);
-		if(!queue) return;
+		if(!queue)
+		{
+			_enqueuePendingQueuesMutex.unlock();
+			return;
+		}
 		if(!queue->peer) queue->peer = peer;
 		if(queue->pendingQueuesEmpty())
 		{
@@ -297,6 +306,7 @@ void HomeMaticCentral::enqueuePendingQueues(int32_t deviceAddress)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _enqueuePendingQueuesMutex.unlock();
 }
 
 void HomeMaticCentral::enqueuePackets(int32_t deviceAddress, std::shared_ptr<BidCoSQueue> packets, bool pushPendingBidCoSQueues)

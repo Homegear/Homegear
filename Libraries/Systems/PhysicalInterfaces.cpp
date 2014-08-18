@@ -93,7 +93,7 @@ void PhysicalInterfaces::load(std::string filename)
 						BaseLib::HelperFunctions::toLower(name);
 						if(name == "homematicbidcos") settings->family = BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS;
 						else if(name == "homematicwired") settings->family = BaseLib::Systems::DeviceFamilies::HomeMaticWired;
-						else if(name == "insteon") settings->family = BaseLib::Systems::DeviceFamilies::Insteon;
+						else if(name == "insteon") settings->family = BaseLib::Systems::DeviceFamilies::INSTEON;
 						else if(name == "fs20") settings->family = BaseLib::Systems::DeviceFamilies::FS20;
 						else if(name == "max") settings->family = BaseLib::Systems::DeviceFamilies::MAX;
 						if(GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end()) GD::out.printDebug("Debug: Reading config for physical device family " + GD::deviceFamilies.at(settings->family)->getName());

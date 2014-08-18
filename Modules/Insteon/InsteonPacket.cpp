@@ -36,21 +36,24 @@ InsteonPacket::InsteonPacket()
 {
 }
 
-InsteonPacket::InsteonPacket(std::string packet, int64_t timeReceived)
+InsteonPacket::InsteonPacket(std::string packet, std::string interfaceID, int64_t timeReceived)
 {
 	_timeReceived = timeReceived;
+	_interfaceID = interfaceID;
 	import(packet);
 }
 
-InsteonPacket::InsteonPacket(std::vector<char>& packet, int64_t timeReceived)
+InsteonPacket::InsteonPacket(std::vector<char>& packet, std::string interfaceID, int64_t timeReceived)
 {
 	_timeReceived = timeReceived;
+	_interfaceID = interfaceID;
 	import(packet);
 }
 
-InsteonPacket::InsteonPacket(std::vector<uint8_t>& packet, int64_t timeReceived)
+InsteonPacket::InsteonPacket(std::vector<uint8_t>& packet, std::string interfaceID, int64_t timeReceived)
 {
 	_timeReceived = timeReceived;
+	_interfaceID = interfaceID;
 	import(packet);
 }
 
@@ -67,7 +70,19 @@ InsteonPacket::InsteonPacket(uint8_t messageType, uint8_t messageSubtype, int32_
 	_extended = !_payload.empty();
 	if(_extended)
 	{
-		while(_payload.size() < 14) _payload.push_back(0);
+		while(_payload.size() < 13) _payload.push_back(0);
+		//Calculate checksum if not within payload already
+		if(_payload.size() < 14)
+		{
+			uint8_t checksum = 0;
+			checksum -= _messageType;
+			checksum -= _messageSubtype;
+			for(std::vector<uint8_t>::iterator i = _payload.begin(); i != _payload.end(); ++i)
+			{
+				checksum -= *i;
+			}
+			_payload.push_back(checksum);
+		}
 	}
 }
 
@@ -494,7 +509,6 @@ bool InsteonPacket::equals(std::shared_ptr<InsteonPacket>& rhs)
 	if(_destinationAddress != rhs->destinationAddress()) return false;
 	if(_flags != rhs->flags()) return false;
 	if(_extended != rhs->extended()) return false;
-	if(_hopsLeft != rhs->hopsLeft()) return false;
 	if(_hopsMax != rhs->hopsMax()) return false;
 	if(_payload == (*rhs->payload())) return true;
 	return false;

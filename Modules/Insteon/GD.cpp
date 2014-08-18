@@ -36,5 +36,5 @@ namespace Insteon
 	std::map<std::string, std::shared_ptr<IInsteonInterface>> GD::physicalInterfaces;
 	std::shared_ptr<IInsteonInterface> GD::defaultPhysicalInterface;
 	BaseLib::Output GD::out;
-	BaseLib::RPC::Devices GD::rpcDevices(BaseLib::Systems::DeviceFamilies::Insteon);
+	BaseLib::RPC::Devices GD::rpcDevices(BaseLib::Systems::DeviceFamilies::INSTEON);
 }

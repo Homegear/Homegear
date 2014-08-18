@@ -79,9 +79,10 @@ void QueueManager::worker()
 {
 	try
 	{
-		std::chrono::milliseconds sleepingTime(100);
-		int32_t lastQueue;
-		lastQueue = 0;
+		std::chrono::milliseconds sleepingTime(500);
+		int32_t lastQueueOuter;
+		lastQueueOuter = 0;
+		std::string lastQueueInner;
 		while(!_stopWorkerThread)
 		{
 			try
@@ -91,26 +92,35 @@ void QueueManager::worker()
 				_queueMutex.lock();
 				if(!_queues.empty())
 				{
-					if(!_queues.empty())
+					std::unordered_map<int32_t, std::map<std::string, std::shared_ptr<QueueData>>>::iterator nextQueueOuter = _queues.find(lastQueueOuter);
+					if(nextQueueOuter != _queues.end())
 					{
-						std::unordered_map<int32_t, std::shared_ptr<QueueData>>::iterator nextQueue = _queues.find(lastQueue);
-						if(nextQueue != _queues.end())
+						std::map<std::string, std::shared_ptr<QueueData>>::iterator nextQueueInner = nextQueueOuter->second.find(lastQueueInner);
+						nextQueueInner++;
+						if(nextQueueInner == nextQueueOuter->second.end())
 						{
-							nextQueue++;
-							if(nextQueue == _queues.end()) nextQueue = _queues.begin();
+							nextQueueOuter++;
+							if(nextQueueOuter == _queues.end()) nextQueueOuter = _queues.begin();
+							if(!nextQueueOuter->second.empty()) lastQueueInner = nextQueueOuter->second.begin()->first;
+							else lastQueueInner = "";
 						}
-						else nextQueue = _queues.begin();
-						lastQueue = nextQueue->first;
+						else lastQueueInner = nextQueueInner->first;
 					}
+					else
+					{
+						nextQueueOuter = _queues.begin();
+						if(!nextQueueOuter->second.empty()) lastQueueInner = nextQueueOuter->second.begin()->first;
+					}
+					lastQueueOuter = nextQueueOuter->first;
 				}
 				std::shared_ptr<QueueData> queue;
-				if(_queues.find(lastQueue) != _queues.end()) queue = _queues.at(lastQueue);
+				if(_queues.find(lastQueueOuter) != _queues.end() && _queues.at(lastQueueOuter).find(lastQueueInner) != _queues.at(lastQueueOuter).end()) queue = _queues.at(lastQueueOuter).at(lastQueueInner);
 				_queueMutex.unlock();
 				if(queue)
 				{
 					if(_resetQueueThread.joinable()) _resetQueueThread.join();
 					//Has to be called in a thread as resetQueue might cause queuing (retrying in setUnreach) and therefore a deadlock
-					_resetQueueThread = std::thread(&QueueManager::resetQueue, this, lastQueue, queue->id);
+					_resetQueueThread = std::thread(&QueueManager::resetQueue, this, lastQueueOuter, lastQueueInner, queue->id);
 					_resetQueueThread.detach();
 				}
 			}
@@ -178,8 +188,12 @@ std::shared_ptr<PacketQueue> QueueManager::createQueue(InsteonDevice* device, st
 		}
 		else if(_queues.find(address) != _queues.end())
 		{
-			_queues.erase(_queues.find(address));
-			_queueMutex.unlock();
+			if(_queues.at(address).find(physicalInterface->getID()) != _queues.at(address).end())
+			{
+				_queues.at(address).erase(physicalInterface->getID());
+				_queueMutex.unlock();
+			}
+			else _queueMutex.unlock();
 		}
 		else _queueMutex.unlock();
 
@@ -190,7 +204,11 @@ std::shared_ptr<PacketQueue> QueueManager::createQueue(InsteonDevice* device, st
 		queueData->queue->lastAction = queueData->lastAction;
 		queueData->queue->id = _id++;
 		queueData->id = queueData->queue->id;
-		_queues.insert(std::pair<int32_t, std::shared_ptr<QueueData>>(address, queueData));
+		if(_queues.find(address) == _queues.end())
+		{
+			_queues.insert(std::pair<int32_t, std::map<std::string, std::shared_ptr<QueueData>>>(address, std::map<std::string, std::shared_ptr<QueueData>>()));
+		}
+		_queues.at(address).insert(std::pair<std::string, std::shared_ptr<QueueData>>(physicalInterface->getID(), queueData));
 		_queueMutex.unlock();
 		GD::out.printDebug("Creating SAVEPOINT PacketQueue" + std::to_string(address) + "_" + std::to_string(queueData->id));
 		raiseCreateSavepoint("PacketQueue" + std::to_string(address) + "_" + std::to_string(queueData->id));
@@ -213,41 +231,62 @@ std::shared_ptr<PacketQueue> QueueManager::createQueue(InsteonDevice* device, st
     return std::shared_ptr<PacketQueue>();
 }
 
-void QueueManager::resetQueue(int32_t address, uint32_t id)
+void QueueManager::resetQueue(int32_t address, std::string interfaceID, uint32_t id)
 {
 	try
 	{
 		if(_disposing) return;
 		_queueMutex.lock();
-		if(_queues.find(address) != _queues.end() && _queues.at(address) && _queues.at(address)->queue && !_queues.at(address)->queue->isEmpty() && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= *_queues.at(address)->lastAction + 15000)
+		if(_queues.empty())
+		{
+			_stopWorkerThread = true;
+			_queueMutex.unlock();
+			return;
+		}
+		std::shared_ptr<QueueData> queueData;
+		if(_queues.find(address) != _queues.end() && _queues.at(address).find(interfaceID) != _queues.at(address).end())
+		{
+			queueData = _queues.at(address).at(interfaceID);
+			if(!queueData || !queueData->queue)
+			{
+				_queueMutex.unlock();
+				return;
+			}
+			if(!queueData->queue->isEmpty() && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= *queueData->lastAction + 15000)
+			{
+				_queueMutex.unlock();
+				return;
+			}
+		}
+		else
 		{
 			_queueMutex.unlock();
 			return;
 		}
 
-		std::shared_ptr<QueueData> queue;
 		std::shared_ptr<InsteonPeer> peer;
 		bool setUnreach = false;
-		if(_queues.find(address) != _queues.end() && _queues.at(address) && _queues.at(address)->id == id)
+
+		if(queueData && queueData->id == id)
 		{
-			queue = _queues.at(address);
-			if(queue->queue.use_count() > 1 && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= *_queues.at(address)->lastAction + 20000)
+			if(queueData->queue.use_count() > 1 && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= *queueData->lastAction + 20000)
 			{
 				_queueMutex.unlock();
-				GD::out.printDebug("Debug: Postponing deletion of queue " + std::to_string(id) + " for peer with address 0x" + BaseLib::HelperFunctions::getHexString(address) + ", because it is still in use (" + std::to_string(queue->queue.use_count()) + " referring objects).");
+				GD::out.printDebug("Debug: Postponing deletion of queue " + std::to_string(id) + " for interface \"" + interfaceID + "\" and peer with address 0x" + BaseLib::HelperFunctions::getHexString(address) + ", because it is still in use (" + std::to_string(queueData->queue.use_count()) + " referring objects).");
 				return;
 			}
-			GD::out.printDebug("Debug: Deleting queue " + std::to_string(id) + " for peer with address 0x" + BaseLib::HelperFunctions::getHexString(address));
-			_queues.erase(address);
-			if(!queue->queue->isEmpty() && queue->queue->getQueueType() != PacketQueueType::PAIRING)
+			GD::out.printDebug("Debug: Deleting queue " + std::to_string(id) + " for interface \"" + interfaceID + "\" and peer with address 0x" + BaseLib::HelperFunctions::getHexString(address));
+			_queues.at(address).erase(interfaceID);
+			if(_queues.at(address).empty()) _queues.erase(address);
+			if(!queueData->queue->isEmpty() && queueData->queue->getQueueType() != PacketQueueType::PAIRING)
 			{
-				peer = queue->queue->peer;
+				peer = queueData->queue->peer;
 				if(peer && peer->rpcDevice && ((peer->getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (peer->getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst)))
 				{
 					setUnreach = true;
 				}
 			}
-			queue->queue->dispose();
+			queueData->queue->dispose();
 		}
 		//setUnreach calls enqueuePendingQueues, which calls PacketQueueManger::get => deadlock,
 		//so we need to unlock first
@@ -274,14 +313,14 @@ void QueueManager::resetQueue(int32_t address, uint32_t id)
     raiseReleaseSavepoint("PacketQueue" + std::to_string(address) + "_" + std::to_string(id));
 }
 
-std::shared_ptr<PacketQueue> QueueManager::get(int32_t address)
+std::shared_ptr<PacketQueue> QueueManager::get(int32_t address, std::string interfaceID)
 {
 	try
 	{
 		if(_disposing) return std::shared_ptr<PacketQueue>();
 		_queueMutex.lock();
 		//Make a copy to make sure, the element exists
-		std::shared_ptr<PacketQueue> queue((_queues.find(address) != _queues.end()) ? _queues[address]->queue : std::shared_ptr<PacketQueue>());
+		std::shared_ptr<PacketQueue> queue((_queues.find(address) != _queues.end() && _queues.at(address).find(interfaceID) != _queues.at(address).end()) ? _queues.at(address).at(interfaceID)->queue : std::shared_ptr<PacketQueue>());
 		if(queue) queue->keepAlive(); //Don't delete queue in the next second
 		_queueMutex.unlock();
 		return queue;

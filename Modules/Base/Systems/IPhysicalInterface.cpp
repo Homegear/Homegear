@@ -98,7 +98,7 @@ void IPhysicalInterface::raisePacketReceivedThread(std::shared_ptr<Packet> packe
 {
 	try
 	{
-		if(_threadCounter > 10) _bl->out.printWarning("Warning: More than ten packets are queued to be processed. Your packet processing is too slow.");
+		if(_threadCounter > 15) _bl->out.printWarning("Warning: More than ten packets are queued to be processed. Your packet processing is too slow.");
 		if(_threadCounter > 20)
 		{
 			_bl->out.printError("Error: More than 20 packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
@@ -113,11 +113,15 @@ void IPhysicalInterface::raisePacketReceivedThread(std::shared_ptr<Packet> packe
 			if(*i) eventHandlers.push_back((IPhysicalInterfaceEventSink*)(*i));
 		}
 		_eventHandlerMutex.unlock();
-		_lastPacketReceived = HelperFunctions::getTime();
+		int64_t processingTime = HelperFunctions::getTime();
+		_lastPacketReceived = processingTime;
 		for(std::vector<IPhysicalInterfaceEventSink*>::iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i)
 		{
 			(*i)->onPacketReceived(_settings->id, packet);
 		}
+		processingTime = HelperFunctions::getTime() - processingTime;
+		_bl->out.printInfo("Info: Packet processing took " + std::to_string(processingTime) + " ms.");
+		if(processingTime > _maxPacketProcessingTime) _bl->out.printWarning("Warning: Packet processing took longer than 500ms. That is too slow! You need a faster CPU!");
 	}
     catch(const std::exception& ex)
     {

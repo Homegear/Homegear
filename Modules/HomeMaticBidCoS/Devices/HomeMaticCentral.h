@@ -106,6 +106,7 @@ protected:
 	bool _stopPairingModeThread = false;
 	std::thread _pairingModeThread;
 	std::map<std::string, std::shared_ptr<BaseLib::RPC::RPCVariable>> _metadata;
+	std::mutex _enqueuePendingQueuesMutex;
 
 	//Updates:
 	bool _updateMode = false;

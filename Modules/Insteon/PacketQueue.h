@@ -107,14 +107,14 @@ class PacketQueue
         int64_t _lastPop = 0;
         uint32_t _resendSleepingTime = 10000;
         void (InsteonDevice::*_queueProcessed)() = nullptr;
-        void pushPendingQueue();
+        void pushPendingQueue(bool sendImmediately);
         void sleepAndPushPendingQueue();
         void resend(uint32_t threadId);
         void startResendThread(bool force);
         void stopResendThread();
         void popWaitThread(uint32_t threadId, uint32_t waitingTime);
         void stopPopWaitThread();
-        void nextQueueEntry();
+        void nextQueueEntry(bool sendImmediately);
     public:
         uint32_t retries = 3;
         uint32_t id = 0;
@@ -138,7 +138,7 @@ class PacketQueue
         void push(std::shared_ptr<PacketQueue> pendingQueue, bool popImmediately, bool clearPendingQueues);
         PacketQueueEntry* front() { return &_queue.front(); }
         void pop(bool silently = false);
-        void processCurrentQueueEntry() { nextQueueEntry(); }
+        void processCurrentQueueEntry(bool startResendOnly);
         void popWait(uint32_t waitingTime);
         bool isEmpty();
         bool pendingQueuesEmpty();

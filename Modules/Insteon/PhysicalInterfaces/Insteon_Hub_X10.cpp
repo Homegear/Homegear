@@ -405,6 +405,8 @@ void InsteonHubX10::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		requestPacket.push_back(insteonPacket->messageSubtype());
 		requestPacket.insert(requestPacket.end(), insteonPacket->payload()->begin(), insteonPacket->payload()->end());
 
+		_out.printInfo("Info: Sending (" + _settings->id + "): " + packet->hexString());
+
 		std::vector<uint8_t> responsePacket;
 		for(int32_t i = 0; i < 20; i++)
 		{
@@ -936,7 +938,7 @@ void InsteonHubX10::processPacket(std::vector<uint8_t>& data)
 		if(data.at(1) == 0x50 || data.at(1) == 0x51)
 		{
 			std::vector<uint8_t> binaryPacket(&data.at(2), &data.at(0) + data.size());
-			std::shared_ptr<InsteonPacket> insteonPacket(new InsteonPacket(binaryPacket, BaseLib::HelperFunctions::getTime()));
+			std::shared_ptr<InsteonPacket> insteonPacket(new InsteonPacket(binaryPacket, _settings->id, BaseLib::HelperFunctions::getTime()));
 			if(insteonPacket->destinationAddress() == _myAddress) insteonPacket->setDestinationAddress(_centralAddress);
 			raisePacketReceived(insteonPacket, false);
 		}

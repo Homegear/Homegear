@@ -69,7 +69,6 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> paramset);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(uint64_t peerID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> paramset);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setInstallMode(bool on, uint32_t duration = 60, bool debugOutput = true);
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setInterface(uint64_t peerID, std::string interfaceID);
 protected:
 	uint32_t _timeLeftInPairingMode = 0;
 	void pairingModeTimer(int32_t duration, bool debugOutput = true);
@@ -77,11 +76,13 @@ protected:
 	std::mutex _pairingModeThreadMutex;
 	std::thread _pairingModeThread;
 
+	void addPeer(std::shared_ptr<InsteonPeer> peer);
 	std::shared_ptr<InsteonPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
-	void createPairingQueue(int32_t address, std::shared_ptr<InsteonPeer> peer = nullptr);
+	void createPairingQueue(int32_t address, std::string interfaceID, std::shared_ptr<InsteonPeer> peer = nullptr);
 	void deletePeer(uint64_t id);
 	std::mutex _peerInitMutex;
 	std::mutex _pairingMutex;
+	std::mutex _enqueuePendingQueuesMutex;
 	virtual void setUpInsteonMessages();
 	virtual void worker();
 	virtual void init();

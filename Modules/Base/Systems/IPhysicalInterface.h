@@ -114,6 +114,7 @@ protected:
 	std::map<uint32_t, std::shared_ptr<FileDescriptor>> _gpioDescriptors;
 	int64_t _lastPacketSent = -1;
 	int64_t _lastPacketReceived = -1;
+	int64_t _maxPacketProcessingTime = 500;
 	bool _updateMode = false;
 
 	//Event handling

@@ -723,11 +723,20 @@ void MAXCentral::enqueuePendingQueues(int32_t deviceAddress)
 {
 	try
 	{
+		_enqueuePendingQueuesMutex.lock();
 		std::shared_ptr<MAXPeer> peer = getPeer(deviceAddress);
-		if(!peer || !peer->pendingQueues) return;
+		if(!peer || !peer->pendingQueues)
+		{
+			_enqueuePendingQueuesMutex.unlock();
+			return;
+		}
 		std::shared_ptr<PacketQueue> queue = _queueManager.get(deviceAddress);
 		if(!queue) queue = _queueManager.createQueue(this, peer->getPhysicalInterface(), PacketQueueType::DEFAULT, deviceAddress);
-		if(!queue) return;
+		if(!queue)
+		{
+			_enqueuePendingQueuesMutex.unlock();
+			return;
+		}
 		if(!queue->peer) queue->peer = peer;
 		if(queue->pendingQueuesEmpty()) queue->push(peer->pendingQueues);
 	}
@@ -743,6 +752,7 @@ void MAXCentral::enqueuePendingQueues(int32_t deviceAddress)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _enqueuePendingQueuesMutex.unlock();
 }
 
 std::shared_ptr<MAXPeer> MAXCentral::createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save)

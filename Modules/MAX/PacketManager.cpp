@@ -101,17 +101,14 @@ void PacketManager::worker()
 				_packetMutex.lock();
 				if(!_packets.empty())
 				{
-					if(!_packets.empty())
+					std::unordered_map<int32_t, std::shared_ptr<MAXPacketInfo>>::iterator nextPacket = _packets.find(lastPacket);
+					if(nextPacket != _packets.end())
 					{
-						std::unordered_map<int32_t, std::shared_ptr<MAXPacketInfo>>::iterator nextPacket = _packets.find(lastPacket);
-						if(nextPacket != _packets.end())
-						{
-							nextPacket++;
-							if(nextPacket == _packets.end()) nextPacket = _packets.begin();
-						}
-						else nextPacket = _packets.begin();
-						lastPacket = nextPacket->first;
+						nextPacket++;
+						if(nextPacket == _packets.end()) nextPacket = _packets.begin();
 					}
+					else nextPacket = _packets.begin();
+					lastPacket = nextPacket->first;
 				}
 				std::shared_ptr<MAXPacketInfo> packet;
 				if(_packets.find(lastPacket) != _packets.end()) packet = _packets.at(lastPacket);

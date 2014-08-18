@@ -41,7 +41,7 @@ enum class DeviceFamilies : uint32_t
 	none = 0xFF,
 	HomeMaticBidCoS = 0x00,
 	HomeMaticWired = 0x01,
-	Insteon = 0x02,
+	INSTEON = 0x02,
 	FS20 = 0x03,
 	MAX = 0x04,
 	CUSTOM01 = 0x05,

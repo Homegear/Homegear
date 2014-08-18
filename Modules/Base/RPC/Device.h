@@ -326,6 +326,7 @@ public:
 	AllowedReceivers::Enum allowedReceivers = AllowedReceivers::Enum::none;
 	std::string id;
 	bool isEvent = false;
+	bool doubleSend = false;
 	uint32_t type = 0;
 	int32_t subtype = -1;
 	int32_t subtypeIndex = -1;

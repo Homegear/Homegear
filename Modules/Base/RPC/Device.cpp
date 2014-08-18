@@ -120,6 +120,7 @@ DeviceFrame::DeviceFrame(BaseLib::Obj* baseLib, xml_node<>* node) : DeviceFrame(
 			else fixedChannel = HelperFunctions::getNumber(attributeValue);
 		}
 		else if(attributeName == "size") size = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "double_send") { if(attributeValue == "true") doubleSend = true; }
 		else _bl->out.printWarning("Warning: Unknown attribute for \"frame\": " + attributeName);
 	}
 	for(xml_node<>* frameNode = node->first_node("parameter"); frameNode; frameNode = frameNode->next_sibling("parameter"))
