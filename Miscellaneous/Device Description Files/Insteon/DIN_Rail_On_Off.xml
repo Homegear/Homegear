@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <device version="1">
 	<types>
-		<type name="Micro On/Off" id="2443-422">
-			<type_id>0x0231</type_id>
+		<type name="DIN Rail On/Off" id="2453-422">
+			<type_id>0x0233</type_id>
 			<firmware cond_op="GE">0x10</firmware>
 		</type>
 	</types>

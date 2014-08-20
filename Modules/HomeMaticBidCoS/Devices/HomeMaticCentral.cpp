@@ -2973,11 +2973,11 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::addDevice(std::stri
 {
 	try
 	{
+		if(serialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Serial number is empty.");
+		if(serialNumber.size() != 10) return BaseLib::RPC::RPCVariable::createError(-2, "Serial number length is not 10.");
+
 		bool oldPairingModeState = _pairing;
 		if(!_pairing) _pairing = true;
-
-		if(serialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Serial number is empty.");
-		if(serialNumber.size() > 10) return BaseLib::RPC::RPCVariable::createError(-2, "Serial number is too long.");
 
 		std::vector<uint8_t> payload;
 		payload.push_back(0x01);

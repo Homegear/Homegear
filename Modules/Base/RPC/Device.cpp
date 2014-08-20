@@ -99,6 +99,8 @@ DeviceFrame::DeviceFrame(BaseLib::Obj* baseLib, xml_node<>* node) : DeviceFrame(
 		}
 		else if(attributeName == "subtype") subtype = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "subtype_index") subtypeIndex = std::stoll(attributeValue);
+		else if(attributeName == "response_type") responseType = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "response_subtype") responseSubtype = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "channel_field")
 		{
 			if(channelField == -1) //Might already be set by receiver_channel_field. We don't need both

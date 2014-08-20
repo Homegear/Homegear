@@ -330,6 +330,8 @@ public:
 	uint32_t type = 0;
 	int32_t subtype = -1;
 	int32_t subtypeIndex = -1;
+	int32_t responseType = -1;
+	int32_t responseSubtype = -1;
 	int32_t channelField = -1;
 	double channelFieldSize = 1.0;
 	int32_t channelIndexOffset = 0;

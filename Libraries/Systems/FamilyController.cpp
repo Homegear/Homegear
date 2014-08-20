@@ -380,6 +380,7 @@ void FamilyController::init()
 		}
 		for(std::vector<BaseLib::Systems::DeviceFamilies>::iterator i = familiesToRemove.begin(); i != familiesToRemove.end(); ++i)
 		{
+			GD::deviceFamilies.at(*i)->~DeviceFamily(); //Calls dispose
 			GD::deviceFamilies.erase(*i);
 		}
 	}

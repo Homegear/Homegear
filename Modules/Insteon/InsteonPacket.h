@@ -96,6 +96,7 @@ class InsteonPacket : public BaseLib::Systems::Packet
 
         virtual uint8_t getByte(std::string);
         int32_t getInt(std::string);
+        void calculateChecksum();
 };
 
 }

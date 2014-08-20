@@ -188,19 +188,19 @@ bool PacketManager::set(int32_t address, std::shared_ptr<InsteonPacket>& packet,
     return false;
 }
 
-void PacketManager::deletePacket(int32_t address, uint32_t id)
+void PacketManager::deletePacket(int32_t address, uint32_t id, bool force)
 {
 	try
 	{
 		if(_disposing) return;
 		_packetMutex.lock();
-		if(_packets.find(address) != _packets.end() && _packets.at(address) && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= _packets.at(address)->time + _deleteAfter)
-		{
-			_packetMutex.unlock();
-			return;
-		}
 		if(_packets.find(address) != _packets.end() && _packets.at(address) && _packets.at(address)->id == id)
 		{
+			if(!force && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= _packets.at(address)->time + _deleteAfter)
+			{
+				_packetMutex.unlock();
+				return;
+			}
 			_packets.erase(address);
 		}
 	}

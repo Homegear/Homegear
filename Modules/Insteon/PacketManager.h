@@ -63,7 +63,7 @@ public:
 	std::shared_ptr<InsteonPacket> get(int32_t address);
 	std::shared_ptr<InsteonPacketInfo> getInfo(int32_t address);
 	bool set(int32_t address, std::shared_ptr<InsteonPacket>& packet, int64_t time = 0);
-	void deletePacket(int32_t address, uint32_t id);
+	void deletePacket(int32_t address, uint32_t id, bool force = false);
 	void keepAlive(int32_t address);
 	void dispose(bool wait = true);
 	void setKeepAliveTime(uint32_t value) { _deleteAfter = value; }

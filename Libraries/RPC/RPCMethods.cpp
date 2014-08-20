@@ -287,12 +287,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCAddDevice::invoke(std::shared_ptr<
 			return GD::deviceFamilies.at((BaseLib::Systems::DeviceFamilies)familyID)->getCentral()->addDevice(serialNumber);
 		}
 
+		std::shared_ptr<BaseLib::RPC::RPCVariable> result;
+		std::shared_ptr<BaseLib::RPC::RPCVariable> returnResult;
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
-			if(central) return central->addDevice(serialNumber);
+			if(central) result = central->addDevice(serialNumber);
+			if(result && !result->errorStruct) returnResult = result;
 		}
-
+		if(returnResult) return returnResult;
 		return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
 	}
 	catch(const std::exception& ex)

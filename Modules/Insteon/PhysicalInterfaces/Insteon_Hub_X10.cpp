@@ -396,6 +396,9 @@ void InsteonHubX10::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		std::shared_ptr<InsteonPacket> insteonPacket(std::dynamic_pointer_cast<InsteonPacket>(packet));
 		if(!insteonPacket) return;
 
+		//Don't move this, because packet->hexString() also calculates the checksum!
+		_out.printInfo("Info: Sending (" + _settings->id + "): " + packet->hexString());
+
 		std::vector<char> requestPacket { 0x02, 0x62 };
 		requestPacket.push_back(insteonPacket->destinationAddress() >> 16);
 		requestPacket.push_back((insteonPacket->destinationAddress() >> 8) & 0xFF);
@@ -404,8 +407,6 @@ void InsteonHubX10::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		requestPacket.push_back(insteonPacket->messageType());
 		requestPacket.push_back(insteonPacket->messageSubtype());
 		requestPacket.insert(requestPacket.end(), insteonPacket->payload()->begin(), insteonPacket->payload()->end());
-
-		_out.printInfo("Info: Sending (" + _settings->id + "): " + packet->hexString());
 
 		std::vector<uint8_t> responsePacket;
 		for(int32_t i = 0; i < 20; i++)
@@ -542,6 +543,26 @@ void InsteonHubX10::doInit()
 
 		_centralAddress = GD::family->getCentral()->physicalAddress();
 
+		while(!_stopCallbackThread && !_stopped && !_socket->connected())
+		{
+			try
+			{
+				_socket->open();
+			}
+			catch(const std::exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+		}
+
 		_initStarted = true;
 		/*
 		=> 0260
@@ -654,9 +675,8 @@ void InsteonHubX10::startListening()
 	{
 		stopListening();
 		_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl, _settings->host, _settings->port));
+		_socket->setReadTimeout(1000000);
 		_out.printDebug("Connecting to Insteon Hub X10 with Hostname " + _settings->host + " on port " + _settings->port + "...");
-		_socket->open();
-		_out.printInfo("Connected to Insteon Hub X10 with Hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
 		_listenThread = std::thread(&InsteonHubX10::listen, this);
 		if(_settings->listenThreadPriority > -1) BaseLib::Threads::setThreadPriority(GD::bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
@@ -710,14 +730,12 @@ void InsteonHubX10::stopListening()
 {
 	try
 	{
-		if(_listenThread.joinable())
-		{
-			_stopCallbackThread = true;
-			_listenThread.join();
-		}
+		if(_initThread.joinable()) _initThread.join();
+		_stopCallbackThread = true;
+		if(_listenThread.joinable()) _listenThread.join();
+		_stopped = true;
 		_stopCallbackThread = false;
 		_socket->close();
-		_stopped = true;
 		_sendMutex.unlock(); //In case it is deadlocked - shouldn't happen of course
 		_initStarted = false;
 		_initComplete = false;

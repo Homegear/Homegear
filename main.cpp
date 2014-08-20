@@ -99,11 +99,13 @@ void terminate(int32_t signalNumber)
 				GD::cliServer.stop();
 			}
 			stopRPCServers();
+			GD::rpcServers.clear();
 			GD::out.printInfo( "(Shutdown) => Stopping RPC client");
 			GD::rpcClient.reset();
+			GD::rpcClient.~Client();
 			GD::out.printInfo( "(Shutdown) => Closing physical devices");
 			GD::physicalInterfaces.stopListening();
-			GD::physicalInterfaces.dispose();
+			GD::physicalInterfaces.~PhysicalInterfaces();
 			GD::familyController.saveAndDispose(false);
 			GD::db.dispose();
 			GD::out.printMessage("(Shutdown) => Shutdown complete.");
@@ -117,6 +119,10 @@ void terminate(int32_t signalNumber)
 			gcry_control(GCRYCTL_TERM_SECMEM);
 			gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
 			exit(0);
+		}
+		else if(signalNumber == SIGABRT)
+		{
+			GD::out.printError("Error: Signal SIGABRT (6) received.");
 		}
 		else if(signalNumber == SIGHUP)
 		{

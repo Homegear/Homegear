@@ -73,8 +73,10 @@ protected:
 	uint32_t _timeLeftInPairingMode = 0;
 	void pairingModeTimer(int32_t duration, bool debugOutput = true);
 	bool _stopPairingModeThread = false;
+	bool _abortPairingModeThread = false;
 	std::mutex _pairingModeThreadMutex;
 	std::thread _pairingModeThread;
+	int64_t _manualPairingModeStarted = -1;
 
 	void addPeer(std::shared_ptr<InsteonPeer> peer);
 	std::shared_ptr<InsteonPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
@@ -86,6 +88,8 @@ protected:
 	virtual void setUpInsteonMessages();
 	virtual void worker();
 	virtual void init();
+	void enablePairingMode(std::string interfaceID = "");
+	void disablePairingMode(std::string interfaceID = "");
 
 	void addHomegearFeatures(std::shared_ptr<InsteonPeer> peer);
 	void addHomegearFeaturesValveDrive(std::shared_ptr<InsteonPeer> peer);

@@ -36,6 +36,8 @@ PhysicalInterfaces::PhysicalInterfaces()
 
 void PhysicalInterfaces::dispose()
 {
+	if(_disposing) return;
+	_disposing = true;
 	_physicalInterfacesMutex.lock();
 	_physicalInterfaces.clear();
 	_physicalInterfacesMutex.unlock();
@@ -328,7 +330,14 @@ void PhysicalInterfaces::clear(BaseLib::Systems::DeviceFamilies family)
 	try
 	{
 		_physicalInterfacesMutex.lock();
-		if(_physicalInterfaces.find(family) != _physicalInterfaces.end()) _physicalInterfaces.erase(family);
+		if(_physicalInterfaces.find(family) != _physicalInterfaces.end())
+		{
+			for(std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>::iterator j = _physicalInterfaces.at(family).begin(); j != _physicalInterfaces.at(family).end(); ++j)
+			{
+				j->second->stopListening();
+			}
+			_physicalInterfaces.erase(family);
+		}
 	}
 	catch(const std::exception& ex)
     {

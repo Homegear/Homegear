@@ -1189,7 +1189,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonPeer::setValue(uint32_t channe
 			queue->parameterName = valueKey;
 			queue->channel = channel;
 			queue->push(packet);
-			queue->push(central->getMessages()->find(DIRECTIONIN, packet->messageType(), packet->messageSubtype(), InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
+			if(frame->responseType > -1 && frame->responseSubtype > -1)
+			{
+				queue->push(central->getMessages()->find(DIRECTIONIN, frame->responseType, frame->responseSubtype, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
+			}
+			else
+			{
+				queue->push(central->getMessages()->find(DIRECTIONIN, packet->messageType(), packet->messageSubtype(), InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
+			}
 			pendingQueues->push(queue);
 			central->enqueuePendingQueues(_address);
 		}

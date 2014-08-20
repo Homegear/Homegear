@@ -202,11 +202,27 @@ void InsteonPacket::import(std::string packetHex)
     }
 }
 
+void InsteonPacket::calculateChecksum()
+{
+	if(_payload.empty() || _payload.size() == 14) return;
+	while(_payload.size() < 14) _payload.push_back(0);
+	//Calculate checksum if not within payload already
+	uint8_t checksum = 0;
+	checksum -= _messageType;
+	checksum -= _messageSubtype;
+	for(std::vector<uint8_t>::iterator i = _payload.begin(); i != _payload.end(); ++i)
+	{
+		checksum -= *i;
+	}
+	_payload.at(13) = checksum;
+}
+
 std::string InsteonPacket::hexString()
 {
 	try
 	{
 		if(_payload.size() > 200) return "";
+		calculateChecksum();
 		std::ostringstream stringStream;
 		stringStream << std::hex << std::uppercase << std::setfill('0') << std::setw(2);
 		stringStream << std::setw(6) << _senderAddress;
@@ -238,6 +254,7 @@ std::vector<char> InsteonPacket::byteArray()
 	{
 		std::vector<char> data;
 		if(_payload.size() > 200) return data;
+		calculateChecksum();
 		data.push_back(_senderAddress >> 16);
 		data.push_back((_senderAddress >> 8) & 0xFF);
 		data.push_back(_senderAddress & 0xFF);

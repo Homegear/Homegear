@@ -116,7 +116,7 @@ class InsteonDevice : public BaseLib::Systems::LogicalDevice
         std::shared_ptr<InsteonMessages> _messages;
         std::shared_ptr<BaseLib::Systems::IPhysicalInterface> _physicalInterface;
 
-        virtual std::shared_ptr<IPhysicalInterface> getPhysicalInterface(int32_t peerAddress);
+        virtual std::shared_ptr<IPhysicalInterface> getPhysicalInterface(int32_t peerAddress, std::string interfaceID = "");
         virtual void worker();
 
         virtual void init();

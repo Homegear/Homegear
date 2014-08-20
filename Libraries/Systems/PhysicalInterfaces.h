@@ -44,7 +44,7 @@ class PhysicalInterfaces
 {
 public:
 	PhysicalInterfaces();
-	virtual ~PhysicalInterfaces() {}
+	virtual ~PhysicalInterfaces() { dispose(); }
 	virtual void dispose();
 	void load(std::string filename);
 
@@ -58,6 +58,7 @@ public:
 	void setup(int32_t userID, int32_t groupID);
 	std::shared_ptr<BaseLib::RPC::RPCVariable> listInterfaces(int32_t familyID);
 private:
+	bool _disposing = false;
 	std::mutex _physicalInterfacesMutex;
 	std::map<BaseLib::Systems::DeviceFamilies, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>> _physicalInterfaces;
 

@@ -135,6 +135,11 @@ void InsteonCentral::worker()
 					}
 					_peersMutex.unlock();
 				}
+				if(_manualPairingModeStarted > -1 && (BaseLib::HelperFunctions::getTime() - _manualPairingModeStarted) > 60000)
+				{
+					disablePairingMode();
+					_manualPairingModeStarted = -1;
+				}
 				_peersMutex.lock();
 				if(!_peers.empty())
 				{
@@ -208,8 +213,9 @@ bool InsteonCentral::onPacketReceived(std::string& senderID, std::shared_ptr<Bas
 			}
 			return false;
 		}
-		std::shared_ptr<IPhysicalInterface> physicalInterface = getPhysicalInterface(insteonPacket->senderAddress());
-		if(physicalInterface->getID() != senderID) return true;
+		std::shared_ptr<IPhysicalInterface> physicalInterface = getPhysicalInterface(insteonPacket->senderAddress(), insteonPacket->interfaceID());
+		//Allow pairing packets from all interfaces when pairing mode is enabled.
+		if(!(_pairing && insteonPacket->messageType() == 0x01) && physicalInterface->getID() != senderID) return true;
 		bool handled = InsteonDevice::onPacketReceived(senderID, insteonPacket);
 		std::shared_ptr<InsteonPeer> peer(getPeer(insteonPacket->senderAddress()));
 		if(!peer) return false;
@@ -892,8 +898,9 @@ void InsteonCentral::createPairingQueue(int32_t address, std::string interfaceID
 {
 	try
 	{
-		_stopPairingModeThread = true;
 		std::shared_ptr<IInsteonInterface> interface = (GD::physicalInterfaces.find(interfaceID) == GD::physicalInterfaces.end()) ? GD::defaultPhysicalInterface : GD::physicalInterfaces.at(interfaceID);
+		_abortPairingModeThread = true;
+		disablePairingMode(interface->getID());
 		std::shared_ptr<PacketQueue> queue = _queueManager.createQueue(this, interface, PacketQueueType::PAIRING, address);
 		queue->peer = peer;
 
@@ -934,7 +941,7 @@ void InsteonCentral::createPairingQueue(int32_t address, std::string interfaceID
 		configPacket = std::shared_ptr<InsteonPacket>(new InsteonPacket(0x09, 0x01, address, 3, 3, InsteonPacketFlags::DirectAck, payload));
 		queue->push(configPacket);
 		queue->push(_messages->find(DIRECTIONIN, 0x09, 0x01, InsteonPacketFlags::DirectAck, std::vector<std::pair<uint32_t, int32_t>>()));
-		queue->push(_messages->find(DIRECTIONIN, 0x01, 0x00, InsteonPacketFlags::Broadcast, std::vector<std::pair<uint32_t, int32_t>>()));
+		queue->push(_messages->find(DIRECTIONIN, 0x01, -1, InsteonPacketFlags::Broadcast, std::vector<std::pair<uint32_t, int32_t>>()));
 		payload.clear();
 
 		payload.push_back(1); //Read
@@ -963,9 +970,9 @@ void InsteonCentral::createPairingQueue(int32_t address, std::string interfaceID
 		payload.push_back(0x08); //Entry size?
 		payload.push_back(0xA2); //Bit 7 => Record in use, Bit 6 => Controller, Bit 5 => ACK required, Bit 4, 3, 2 => reserved, Bit 1 => Record has been used before, Bit 0 => unused
 		payload.push_back(0x00); //Group
-		payload.push_back(GD::defaultPhysicalInterface->address() >> 16);
-		payload.push_back((GD::defaultPhysicalInterface->address() >> 8) & 0xFF);
-		payload.push_back(GD::defaultPhysicalInterface->address() & 0xFF);
+		payload.push_back(interface->address() >> 16);
+		payload.push_back((interface->address() >> 8) & 0xFF);
+		payload.push_back(interface->address() & 0xFF);
 		payload.push_back(0xFF); //Data1 => Level in this case
 		payload.push_back(0x1F); //Data2 => Ramp rate?
 		payload.push_back(0x01); //Data3
@@ -1019,9 +1026,9 @@ void InsteonCentral::createPairingQueue(int32_t address, std::string interfaceID
 		payload.push_back(0x08); //Entry size?
 		payload.push_back(0xE2); //Bit 7 => Record in use, Bit 6 => Controller, Bit 5 => ACK required, Bit 4, 3, 2 => reserved, Bit 1 => Record has been used before, Bit 0 => unused
 		payload.push_back(0x01); //Group
-		payload.push_back(GD::defaultPhysicalInterface->address() >> 16);
-		payload.push_back((GD::defaultPhysicalInterface->address() >> 8) & 0xFF);
-		payload.push_back(GD::defaultPhysicalInterface->address() & 0xFF);
+		payload.push_back(interface->address() >> 16);
+		payload.push_back((interface->address() >> 8) & 0xFF);
+		payload.push_back(interface->address() & 0xFF);
 		payload.push_back(0x03); //Data1
 		payload.push_back(0x1F); //Data2
 		payload.push_back(0x01); //Data3
@@ -1063,6 +1070,84 @@ void InsteonCentral::createPairingQueue(int32_t address, std::string interfaceID
 	}
 }
 
+void InsteonCentral::enablePairingMode(std::string interfaceID)
+{
+	try
+	{
+		_manualPairingModeStarted = BaseLib::HelperFunctions::getTime();
+		_pairing = true;
+		if(interfaceID.empty())
+		{
+			for(std::map<std::string, std::shared_ptr<IInsteonInterface>>::iterator i = GD::physicalInterfaces.begin(); i != GD::physicalInterfaces.end(); i++)
+			{
+				i->second->enablePairingMode();
+			}
+		}
+		else
+		{
+			if(GD::physicalInterfaces.find(interfaceID) == GD::physicalInterfaces.end())
+			{
+				GD::defaultPhysicalInterface->enablePairingMode();
+			}
+			else
+			{
+				GD::physicalInterfaces.at(interfaceID)->enablePairingMode();
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void InsteonCentral::disablePairingMode(std::string interfaceID)
+{
+	try
+	{
+		if(interfaceID.empty())
+		{
+			_manualPairingModeStarted = -1;
+			_pairing = false;
+			for(std::map<std::string, std::shared_ptr<IInsteonInterface>>::iterator i = GD::physicalInterfaces.begin(); i != GD::physicalInterfaces.end(); i++)
+			{
+				i->second->disablePairingMode();
+			}
+		}
+		else
+		{
+			if(GD::physicalInterfaces.find(interfaceID) == GD::physicalInterfaces.end())
+			{
+				GD::defaultPhysicalInterface->disablePairingMode();
+			}
+			else
+			{
+				GD::physicalInterfaces.at(interfaceID)->disablePairingMode();
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 //Packet handlers
 void InsteonCentral::handleNak(std::shared_ptr<InsteonPacket> packet)
 {
@@ -1085,7 +1170,7 @@ void InsteonCentral::handleNak(std::shared_ptr<InsteonPacket> packet)
 				if(sentPacket->payload()->at(0) == 0x01 && sentPacket->payload()->at(1) == 0x00)
 				{
 					//First "read"
-					setInstallMode(true, 60, false);
+					enablePairingMode(packet->interfaceID());
 				}
 			}
 			if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::PACKET) queue->pop(); //Pop sent packet
@@ -1221,7 +1306,7 @@ void InsteonCentral::handleDatabaseOpResponse(std::shared_ptr<InsteonPacket> pac
 
 		if(queue->getQueueType() == PacketQueueType::PAIRING && sentPacket && sentPacket->messageType() == 0x2F && sentPacket->payload()->size() == 14)
 		{
-			if(queue->peer && sentPacket->payload()->at(0) == 1 && packet->payload()->size() == 14 && (packet->payload()->at(5) & 0x80)) //Read and "record is in use" and "controller bit"
+			if(queue->peer && sentPacket->payload()->at(0) == 1 && packet->payload()->size() == 14 && (packet->payload()->at(5) & 0x80)) //Read and "record is in use"
 			{
 				int32_t address = (packet->payload()->at(7) << 16) + (packet->payload()->at(8) << 8) + packet->payload()->at(9);
 				if(packet->payload()->at(5) & 0x40) //Controller bit?
@@ -1332,6 +1417,8 @@ void InsteonCentral::handlePairingRequest(std::shared_ptr<InsteonPacket> packet)
 			{
 				//Handle pairing packet during pairing process, which is sent in response to "0x0901". Or pairing requests received through "addDevice".
 
+				disablePairingMode(packet->interfaceID());
+
 				if(!queue->peer)
 				{
 					int32_t firmwareVersion = packet->destinationAddress() & 0xFF;
@@ -1405,8 +1492,10 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonCentral::addDevice(std::string
 {
 	try
 	{
+		if(serialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Serial number is empty.");
+		if(serialNumber.size() != 6  || !BaseLib::HelperFunctions::isNumber(serialNumber)) return BaseLib::RPC::RPCVariable::createError(-2, "Serial number length is not 6 or provided serial number is not a number.");
+
 		_stopPairingModeThread = true;
-		if(serialNumber.size() != 6 || !BaseLib::HelperFunctions::isNumber(serialNumber)) return BaseLib::RPC::RPCVariable::createError(-2, "Serial number is invalid.");
 		BaseLib::HelperFunctions::toUpper(serialNumber);
 
 		std::shared_ptr<InsteonPeer> peer(getPeer(serialNumber));
@@ -1418,16 +1507,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonCentral::addDevice(std::string
 			createPairingQueue(address, i->first, nullptr);
 		}
 
-		int32_t i = 0;
-		while(!peer && i < 30)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-			peer = getPeer(address);
-			i++;
-		}
-
-		if(!peer) return BaseLib::RPC::RPCVariable::createError(-1, "No response from device.");
-		else return peer->getDeviceDescription(-1, std::map<std::string, bool>());
+		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
 	{
@@ -1666,20 +1746,18 @@ void InsteonCentral::pairingModeTimer(int32_t duration, bool debugOutput)
 {
 	try
 	{
-		_pairing = true;
 		if(debugOutput) GD::out.printInfo("Info: Pairing mode enabled.");
 		_timeLeftInPairingMode = duration;
 		int64_t startTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		int64_t timePassed = 0;
-		while(timePassed < (duration * 1000) && !_stopPairingModeThread)
+		while(timePassed < (duration * 1000) && !_stopPairingModeThread && !_abortPairingModeThread)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(250));
 			timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - startTime;
 			_timeLeftInPairingMode = duration - (timePassed / 1000);
 		}
-		GD::defaultPhysicalInterface->disablePairingMode();
+		if(!_abortPairingModeThread) disablePairingMode();
 		_timeLeftInPairingMode = 0;
-		_pairing = false;
 		if(debugOutput) GD::out.printInfo("Info: Pairing mode disabled.");
 	}
 	catch(const std::exception& ex)
@@ -1704,11 +1782,13 @@ std::shared_ptr<RPCVariable> InsteonCentral::setInstallMode(bool on, uint32_t du
 		_stopPairingModeThread = true;
 		if(_pairingModeThread.joinable()) _pairingModeThread.join();
 		_stopPairingModeThread = false;
+		_abortPairingModeThread = false;
 		_timeLeftInPairingMode = 0;
+		_manualPairingModeStarted = -1;
 		if(on && duration >= 5)
 		{
-			_timeLeftInPairingMode = duration; //It's important to set it here, because the thread often doesn't completely initialize before getInstallMode requests _timeLeftInPairingMode
-			GD::defaultPhysicalInterface->enablePairingMode();
+			_timeLeftInPairingMode = duration; //Has to be set here, so getInstallMode is working immediately
+			enablePairingMode("");
 			_pairingModeThread = std::thread(&InsteonCentral::pairingModeTimer, this, duration, debugOutput);
 		}
 		_pairingModeThreadMutex.unlock();
