@@ -62,6 +62,8 @@ class COC : public IBidCoSInterface
         void enableUpdateMode();
         void disableUpdateMode();
     protected:
+        std::string stackPrefix;
+
         void openDevice();
         void closeDevice();
         void setupDevice();

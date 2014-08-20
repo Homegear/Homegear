@@ -63,6 +63,7 @@ public:
 	std::string type;
 	uint32_t responseDelay = 95;
 	std::map<uint32_t, GPIOSetting> gpio;
+	uint32_t stackPosition = 0;
 	std::string host;
 	std::string port;
 	std::string portKeepAlive;

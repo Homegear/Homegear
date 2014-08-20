@@ -61,6 +61,8 @@ class COC : public BaseLib::Systems::IPhysicalInterface
         virtual void setup(int32_t userID, int32_t groupID);
     protected:
         BaseLib::Output _out;
+        std::string stackPrefix;
+
         void openDevice();
         void closeDevice();
         void setupDevice();

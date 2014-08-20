@@ -44,6 +44,11 @@ COC::COC(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) 
 		settings->listenThreadPriority = 45;
 		settings->listenThreadPolicy = SCHED_FIFO;
 	}
+	stackPrefix = "";
+	for(int32_t i = 0; i < settings->stackPosition; i++)
+	{
+		stackPrefix.push_back('*');
+	}
 }
 
 COC::~COC()
@@ -307,6 +312,7 @@ void COC::writeToDevice(std::string data, bool printSending)
         int32_t bytesWritten = 0;
         int32_t i;
         if(_bl->debugLevel > 3 && printSending) _out.printInfo("Info: Sending (" + _settings->id + ", WOR: " + (data.at(1) == 's' ? "yes" : "no") + "): " + data.substr(2, data.size() - 6));
+        if(stackPrefix.length() > 0) data = stackPrefix + data;
         _sendMutex.lock();
         while(bytesWritten < (signed)data.length())
         {
@@ -423,6 +429,16 @@ void COC::listen()
         		continue;
         	}
         	std::string packetHex = readFromDevice();
+        	if(stackPrefix.empty())
+        	{
+        		if(packetHex.size() > 0 && packetHex.at(0) == '*') return;
+        	}
+        	else
+        	{
+        		if(packetHex.size() <= stackPrefix.size()) return;
+        		if(stackPrefix.substr(0, stackPrefix.size()) != stackPrefix) return;
+        		else packetHex = packetHex.substr(stackPrefix.size());
+        	}
         	if(packetHex.size() > 21) //21 is minimal packet length (=10 Byte + COC "Z")
         	{
 				std::shared_ptr<MAXPacket> packet(new MAXPacket(packetHex, BaseLib::HelperFunctions::getTime()));

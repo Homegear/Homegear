@@ -108,6 +108,7 @@ void terminate(int32_t signalNumber)
 			GD::physicalInterfaces.~PhysicalInterfaces();
 			GD::familyController.saveAndDispose(false);
 			GD::db.dispose();
+			std::this_thread::sleep_for(std::chrono::milliseconds(2000)); //Wait for everything to dispose
 			GD::out.printMessage("(Shutdown) => Shutdown complete.");
 			if(_startAsDaemon)
 			{

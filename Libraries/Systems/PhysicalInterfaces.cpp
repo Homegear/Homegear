@@ -202,6 +202,15 @@ void PhysicalInterfaces::load(std::string filename)
 						GD::out.printDebug("Debug: GPIO3 of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->gpio[3].number));
 					}
 				}
+				else if(name == "stackposition")
+				{
+					int32_t number = BaseLib::HelperFunctions::getNumber(value);
+					if(number > 0)
+					{
+						settings->stackPosition = number;
+						GD::out.printDebug("Debug: stackPosition of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->stackPosition));
+					}
+				}
 				else if(name == "host")
 				{
 					settings->host = value;
