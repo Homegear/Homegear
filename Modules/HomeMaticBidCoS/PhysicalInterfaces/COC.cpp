@@ -46,7 +46,7 @@ COC::COC(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) 
 		settings->listenThreadPolicy = SCHED_FIFO;
 	}
 	stackPrefix = "";
-	for(int32_t i = 0; i < settings->stackPosition; i++)
+	for(int32_t i = 2; i < settings->stackPosition; i++)
 	{
 		stackPrefix.push_back('*');
 	}
@@ -169,45 +169,23 @@ void COC::openDevice()
 	{
 		if(_fileDescriptor->descriptor > -1) closeDevice();
 
-		_lockfile = "/var/lock" + _settings->device.substr(_settings->device.find_last_of('/')) + ".lock";
-		int lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-		if(lockfileDescriptor == -1)
-		{
-			if(errno != EEXIST)
-			{
-				_out.printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
-				return;
-			}
-
-			int processID = 0;
-			std::ifstream lockfileStream(_lockfile.c_str());
-			lockfileStream >> processID;
-			if(getpid() != processID && kill(processID, 0) == 0)
-			{
-				_out.printCritical("COC device is in use: " + _settings->device);
-				return;
-			}
-			unlink(_lockfile.c_str());
-			lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-			if(lockfileDescriptor == -1)
-			{
-				_out.printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
-				return;
-			}
-		}
-		dprintf(lockfileDescriptor, "%10i", getpid());
-		close(lockfileDescriptor);
+		/**/
 		//std::string chmod("chmod 666 " + _lockfile);
 		//system(chmod.c_str());
 
-		_fileDescriptor = _bl->fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
-		if(_fileDescriptor->descriptor == -1)
+		_fileDescriptor = _bl->fileDescriptorManager.get(_settings->device);
+		if(!_fileDescriptor || _fileDescriptor->descriptor == -1)
 		{
-			_out.printCritical("Couldn't open COC device \"" + _settings->device + "\": " + strerror(errno));
-			return;
-		}
+			_fileDescriptor = _bl->fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
+			if(_fileDescriptor->descriptor == -1)
+			{
+				_out.printCritical("Couldn't open COC device \"" + _settings->device + "\": " + strerror(errno));
+				return;
+			}
 
-		setupDevice();
+			setupDevice();
+		}
+		else _bl->fileDescriptorManager.add(_settings->device);
 	}
 	catch(const std::exception& ex)
     {
@@ -228,7 +206,7 @@ void COC::closeDevice()
 	try
 	{
 		_bl->fileDescriptorManager.close(_fileDescriptor);
-		unlink(_lockfile.c_str());
+		//unlink(_lockfile.c_str());
 	}
     catch(const std::exception& ex)
     {
@@ -403,16 +381,20 @@ void COC::startListening()
 		if(gpioDefined(2))
 		{
 			openGPIO(2, false);
-			setGPIO(2, true);
+			if(!getGPIO(2)) setGPIO(2, true);
 			closeGPIO(2);
 		}
 		if(gpioDefined(1))
 		{
 			openGPIO(1, false);
-			setGPIO(1, false);
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-			setGPIO(1, true);
-			std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+			if(!getGPIO(1))
+			{
+				setGPIO(1, false);
+				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+				setGPIO(1, true);
+				std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+			}
+			else std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 			closeGPIO(1);
 		}
 		_stopped = false;
@@ -483,12 +465,12 @@ void COC::listen()
         	std::string packetHex = readFromDevice();
         	if(stackPrefix.empty())
         	{
-        		if(packetHex.size() > 0 && packetHex.at(0) == '*') return;
+        		if(packetHex.size() > 0 && packetHex.at(0) == '*') continue;
         	}
         	else
         	{
-        		if(packetHex.size() <= stackPrefix.size()) return;
-        		if(stackPrefix.substr(0, stackPrefix.size()) != stackPrefix) return;
+        		if(packetHex.size() + 1 <= stackPrefix.size()) continue;
+        		if(packetHex.substr(0, stackPrefix.size()) != stackPrefix || packetHex.at(stackPrefix.size() + 1) == '*') continue;
         		else packetHex = packetHex.substr(stackPrefix.size());
         	}
         	if(packetHex.size() > 21) //21 is minimal packet length (=10 Byte + COC "A")

@@ -315,7 +315,7 @@ void PacketQueue::resend(uint32_t threadId)
 					_queueMutex.unlock();
 					_sendThreadMutex.lock();
 					if(_sendThread.joinable()) _sendThread.join();
-					if(_stopResendThread)
+					if(_stopResendThread || _disposing)
 					{
 						_sendThreadMutex.unlock();
 						return;
@@ -330,7 +330,7 @@ void PacketQueue::resend(uint32_t threadId)
 					_queueMutex.unlock();
 					_sendThreadMutex.lock();
 					if(_sendThread.joinable()) _sendThread.join();
-					if(_stopResendThread)
+					if(_stopResendThread || _disposing)
 					{
 						_sendThreadMutex.unlock();
 						return;
@@ -346,6 +346,11 @@ void PacketQueue::resend(uint32_t threadId)
 			{
 				_resendCounter++;
 				_startResendThreadMutex.lock();
+				if(_disposing)
+				{
+					_startResendThreadMutex.unlock();
+					return;
+				}
 				if(_startResendThread.joinable()) _startResendThread.join();
 				_startResendThread = std::thread(&PacketQueue::startResendThread, this, forceResend);
 				_startResendThreadMutex.unlock();
@@ -395,6 +400,11 @@ void PacketQueue::push(std::shared_ptr<InsteonPacket> packet, bool stealthy, boo
 			if(!noSending)
 			{
 				_sendThreadMutex.lock();
+				if(_disposing)
+				{
+					_sendThreadMutex.unlock();
+					return;
+				}
 				if(_sendThread.joinable()) _sendThread.join();
 				_sendThread = std::thread(&PacketQueue::send, this, entry.getPacket(), entry.stealthy);
 				BaseLib::Threads::setThreadPriority(GD::bl, _sendThread.native_handle(), GD::bl->settings.packetQueueThreadPriority(), GD::bl->settings.packetQueueThreadPolicy());
@@ -514,6 +524,11 @@ void PacketQueue::push(std::shared_ptr<InsteonMessage> message, std::shared_ptr<
 			if(!noSending)
 			{
 				_sendThreadMutex.lock();
+				if(_disposing)
+				{
+					_sendThreadMutex.unlock();
+					return;
+				}
 				if(_sendThread.joinable()) _sendThread.join();
 				_sendThread = std::thread(&InsteonMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
 				BaseLib::Threads::setThreadPriority(GD::bl, _sendThread.native_handle(), GD::bl->settings.packetQueueThreadPriority(), GD::bl->settings.packetQueueThreadPolicy());
@@ -566,6 +581,11 @@ void PacketQueue::push(std::shared_ptr<InsteonMessage> message, bool forceResend
 			if(!noSending)
 			{
 				_sendThreadMutex.lock();
+				if(_disposing)
+				{
+					_sendThreadMutex.unlock();
+					return;
+				}
 				if(_sendThread.joinable()) _sendThread.join();
 				_sendThread = std::thread(&InsteonMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
 				BaseLib::Threads::setThreadPriority(GD::bl, _sendThread.native_handle(), GD::bl->settings.packetQueueThreadPriority(), GD::bl->settings.packetQueueThreadPolicy());
@@ -905,6 +925,11 @@ void PacketQueue::pushPendingQueue(bool sendImmediately)
 					if(sendImmediately)
 					{
 						_sendThreadMutex.lock();
+						if(_disposing)
+						{
+							_sendThreadMutex.unlock();
+							return;
+						}
 						if(_sendThread.joinable()) _sendThread.join();
 						_lastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 						_sendThread = std::thread(&InsteonMessage::invokeMessageHandlerOutgoing, i->getMessage().get(), i->getPacket());
@@ -925,6 +950,11 @@ void PacketQueue::pushPendingQueue(bool sendImmediately)
 					if(sendImmediately)
 					{
 						_sendThreadMutex.lock();
+						if(_disposing)
+						{
+							_sendThreadMutex.unlock();
+							return;
+						}
 						if(_sendThread.joinable()) _sendThread.join();
 						_lastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 						_sendThread = std::thread(&PacketQueue::send, this, i->getPacket(), i->stealthy);
@@ -996,6 +1026,11 @@ void PacketQueue::nextQueueEntry(bool sendImmediately)
 				_queueMutex.unlock();
 				GD::out.printDebug("Queue " + std::to_string(id) + " is empty. Pushing pending queue...");
 				_pushPendingQueueThreadMutex.lock();
+				if(_disposing)
+				{
+					_pushPendingQueueThreadMutex.unlock();
+					return;
+				}
 				if(_pushPendingQueueThread.joinable()) _pushPendingQueueThread.join();
 				_pushPendingQueueThread = std::thread(&PacketQueue::pushPendingQueue, this, sendImmediately);
 				BaseLib::Threads::setThreadPriority(GD::bl, _pushPendingQueueThread.native_handle(), GD::bl->settings.packetQueueThreadPriority(), GD::bl->settings.packetQueueThreadPolicy());
@@ -1017,6 +1052,11 @@ void PacketQueue::nextQueueEntry(bool sendImmediately)
 						InsteonMessage* message = _queue.front().getMessage().get();
 						_queueMutex.unlock();
 						_sendThreadMutex.lock();
+						if(_disposing)
+						{
+							_sendThreadMutex.unlock();
+							return;
+						}
 						if(_sendThread.joinable()) _sendThread.join();
 						_sendThread = std::thread(&InsteonMessage::invokeMessageHandlerOutgoing, message, packet);
 						_sendThreadMutex.unlock();
@@ -1026,6 +1066,11 @@ void PacketQueue::nextQueueEntry(bool sendImmediately)
 						bool stealthy = _queue.front().stealthy;
 						_queueMutex.unlock();
 						_sendThreadMutex.lock();
+						if(_disposing)
+						{
+							_sendThreadMutex.unlock();
+							return;
+						}
 						if(_sendThread.joinable()) _sendThread.join();
 						_sendThread = std::thread(&PacketQueue::send, this, packet, stealthy);
 						_sendThreadMutex.unlock();

@@ -1592,6 +1592,12 @@ std::shared_ptr<RPCVariable> MAXCentral::setInstallMode(bool on, uint32_t durati
 {
 	try
 	{
+		_pairingModeThreadMutex.lock();
+		if(_disposing)
+		{
+			_pairingModeThreadMutex.unlock();
+			return BaseLib::RPC::RPCVariable::createError(-32500, "Central is disposing.");
+		}
 		_stopPairingModeThread = true;
 		if(_pairingModeThread.joinable()) _pairingModeThread.join();
 		_stopPairingModeThread = false;
@@ -1601,6 +1607,7 @@ std::shared_ptr<RPCVariable> MAXCentral::setInstallMode(bool on, uint32_t durati
 			_timeLeftInPairingMode = duration; //It's important to set it here, because the thread often doesn't completely initialize before getInstallMode requests _timeLeftInPairingMode
 			_pairingModeThread = std::thread(&MAXCentral::pairingModeTimer, this, duration, debugOutput);
 		}
+		_pairingModeThreadMutex.unlock();
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
@@ -1615,6 +1622,7 @@ std::shared_ptr<RPCVariable> MAXCentral::setInstallMode(bool on, uint32_t durati
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _pairingModeThreadMutex.unlock();
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 

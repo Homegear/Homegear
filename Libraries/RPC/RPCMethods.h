@@ -454,6 +454,8 @@ public:
 
 	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 private:
+	bool _disposing = false;
+	std::mutex _initServerThreadMutex;
 	std::thread _initServerThread;
 };
 

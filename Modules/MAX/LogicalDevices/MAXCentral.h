@@ -74,6 +74,7 @@ protected:
 	uint32_t _timeLeftInPairingMode = 0;
 	void pairingModeTimer(int32_t duration, bool debugOutput = true);
 	bool _stopPairingModeThread = false;
+	std::mutex _pairingModeThreadMutex;
 	std::thread _pairingModeThread;
 
 	std::shared_ptr<MAXPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);

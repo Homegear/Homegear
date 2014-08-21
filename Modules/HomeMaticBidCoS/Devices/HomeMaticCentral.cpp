@@ -50,12 +50,16 @@ HomeMaticCentral::~HomeMaticCentral()
 	try
 	{
 		dispose();
+		_pairingModeThreadMutex.lock();
 		if(_pairingModeThread.joinable())
 		{
 			_stopPairingModeThread = true;
 			_pairingModeThread.join();
 		}
+		_pairingModeThreadMutex.unlock();
+		_updateFirmwareThreadMutex.lock();
 		if(_updateFirmwareThread.joinable()) _updateFirmwareThread.join();
+		_updateFirmwareThreadMutex.unlock();
 	}
     catch(const std::exception& ex)
     {
@@ -3946,6 +3950,12 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setInstallMode(bool
 {
 	try
 	{
+		_pairingModeThreadMutex.lock();
+		if(_disposing)
+		{
+			_pairingModeThreadMutex.unlock();
+			return BaseLib::RPC::RPCVariable::createError(-32500, "Central is disposing.");
+		}
 		_stopPairingModeThread = true;
 		if(_pairingModeThread.joinable()) _pairingModeThread.join();
 		_stopPairingModeThread = false;
@@ -3955,6 +3965,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setInstallMode(bool
 			_timeLeftInPairingMode = duration; //It's important to set it here, because the thread often doesn't completely initialize before getInstallMode requests _timeLeftInPairingMode
 			_pairingModeThread = std::thread(&HomeMaticCentral::pairingModeTimer, this, duration, debugOutput);
 		}
+		_pairingModeThreadMutex.unlock();
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
@@ -3969,6 +3980,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setInstallMode(bool
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _pairingModeThreadMutex.unlock();
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
@@ -3977,8 +3989,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::updateFirmware(std:
 	try
 	{
 		if(_updateMode || _bl->deviceUpdateInfo.currentDevice > 0) return BaseLib::RPC::RPCVariable::createError(-32500, "Central is already already updating a device. Please wait until the current update is finished.");
+		_updateFirmwareThreadMutex.lock();
+		if(_disposing)
+		{
+			_updateFirmwareThreadMutex.unlock();
+			return BaseLib::RPC::RPCVariable::createError(-32500, "Central is disposing.");
+		}
 		if(_updateFirmwareThread.joinable()) _updateFirmwareThread.join();
 		_updateFirmwareThread = std::thread(&HomeMaticCentral::updateFirmwares, this, ids, manual);
+		_updateFirmwareThreadMutex.unlock();
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
@@ -3993,6 +4012,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::updateFirmware(std:
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _updateFirmwareThreadMutex.unlock();
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 

@@ -46,7 +46,9 @@ HMWiredCentral::~HMWiredCentral()
 {
 	dispose();
 
+	_updateFirmwareThreadMutex.lock();
 	if(_updateFirmwareThread.joinable()) _updateFirmwareThread.join();
+	_updateFirmwareThreadMutex.unlock();
 }
 
 void HMWiredCentral::init()
@@ -1703,8 +1705,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::updateFirmware(std::v
 	try
 	{
 		if(_updateMode || _bl->deviceUpdateInfo.currentDevice > 0) return BaseLib::RPC::RPCVariable::createError(-32500, "Central is already already updating a device. Please wait until the current update is finished.");
+		_updateFirmwareThreadMutex.lock();
+		if(_disposing)
+		{
+			_updateFirmwareThreadMutex.unlock();
+			return BaseLib::RPC::RPCVariable::createError(-32500, "Central is disposing.");
+		}
 		if(_updateFirmwareThread.joinable()) _updateFirmwareThread.join();
 		_updateFirmwareThread = std::thread(&HMWiredCentral::updateFirmwares, this, ids);
+		_updateFirmwareThreadMutex.unlock();
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)

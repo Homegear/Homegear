@@ -52,7 +52,12 @@ IPhysicalInterface::IPhysicalInterface(BaseLib::Obj* baseLib, std::shared_ptr<Ph
 
 IPhysicalInterface::~IPhysicalInterface()
 {
-
+	int32_t i = 0;
+	while(_packetReceivedThreads.size() > 0 && i < 300)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		i++;
+	}
 }
 
 void IPhysicalInterface::enableUpdateMode()
@@ -69,16 +74,18 @@ void IPhysicalInterface::raisePacketReceived(std::shared_ptr<Packet> packet, boo
 {
 	try
 	{
-		std::thread t(&IPhysicalInterface::raisePacketReceivedThread, this, packet);
+		_packetReceivedThreadsMutex.lock();
+		uint32_t threadID = _currentPacketReceivedThreadID++;
+		std::shared_ptr<std::thread> t(new std::thread(&IPhysicalInterface::raisePacketReceivedThread, this, threadID, packet));
+		_packetReceivedThreads[threadID] = t;
 		if(highPriority)
 		{
-			BaseLib::Threads::setThreadPriority(_bl, t.native_handle(), 45, SCHED_FIFO);
+			BaseLib::Threads::setThreadPriority(_bl, t->native_handle(), 45, SCHED_FIFO);
 		}
 		else
 		{
-			BaseLib::Threads::setThreadPriority(_bl, t.native_handle(), _bl->settings.packetReceivedThreadPriority(), _bl->settings.packetReceivedThreadPolicy());
+			BaseLib::Threads::setThreadPriority(_bl, t->native_handle(), _bl->settings.packetReceivedThreadPriority(), _bl->settings.packetReceivedThreadPolicy());
 		}
-		t.detach();
 	}
     catch(const std::exception& ex)
     {
@@ -92,9 +99,10 @@ void IPhysicalInterface::raisePacketReceived(std::shared_ptr<Packet> packet, boo
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _packetReceivedThreadsMutex.unlock();
 }
 
-void IPhysicalInterface::raisePacketReceivedThread(std::shared_ptr<Packet> packet)
+void IPhysicalInterface::raisePacketReceivedThread(uint32_t threadID, std::shared_ptr<Packet> packet)
 {
 	try
 	{
@@ -102,6 +110,7 @@ void IPhysicalInterface::raisePacketReceivedThread(std::shared_ptr<Packet> packe
 		if(_threadCounter > 20)
 		{
 			_bl->out.printError("Error: More than 20 packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
+			removePacketReceivedThread(threadID);
 			return;
 		}
 		_threadCounter++;
@@ -133,11 +142,35 @@ void IPhysicalInterface::raisePacketReceivedThread(std::shared_ptr<Packet> packe
     }
     catch(...)
     {
-
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     _threadCounter--;
+    removePacketReceivedThread(threadID);
+}
+
+void IPhysicalInterface::removePacketReceivedThread(uint32_t threadID)
+{
+	try
+	{
+    	_packetReceivedThreadsMutex.lock();
+    	std::shared_ptr<std::thread> t = _packetReceivedThreads[threadID];
+    	if(t) t->detach();
+    	_packetReceivedThreads.erase(threadID);
+    }
+    catch(const std::exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _packetReceivedThreadsMutex.unlock();
 }
 
 void IPhysicalInterface::setDevicePermission(int32_t userID, int32_t groupID)
@@ -297,6 +330,38 @@ void IPhysicalInterface::closeGPIO(uint32_t index)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+bool IPhysicalInterface::getGPIO(uint32_t index)
+{
+	try
+	{
+		if(!gpioOpen(index))
+		{
+			_bl->out.printError("Failed to set GPIO with index \"" + std::to_string(index) + "\": Device not open.");
+			return false;
+		}
+		std::vector<char> buffer(1);
+		if(read(_gpioDescriptors[index]->descriptor, &buffer.at(0), 1) != 1)
+		{
+			_bl->out.printError("Could not read GPIO with index " + std::to_string(index) + ".");
+			return false;
+		}
+		return buffer.at(0) == '1';
+	}
+	catch(const std::exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
 }
 
 void IPhysicalInterface::setGPIO(uint32_t index, bool value)

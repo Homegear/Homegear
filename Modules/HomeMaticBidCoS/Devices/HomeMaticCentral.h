@@ -104,12 +104,14 @@ protected:
 	uint32_t _timeLeftInPairingMode = 0;
 	void pairingModeTimer(int32_t duration, bool debugOutput = true);
 	bool _stopPairingModeThread = false;
+	std::mutex _pairingModeThreadMutex;
 	std::thread _pairingModeThread;
 	std::map<std::string, std::shared_ptr<BaseLib::RPC::RPCVariable>> _metadata;
 	std::mutex _enqueuePendingQueuesMutex;
 
 	//Updates:
 	bool _updateMode = false;
+	std::mutex _updateFirmwareThreadMutex;
 	std::mutex _updateMutex;
 	std::thread _updateFirmwareThread;
 	//End

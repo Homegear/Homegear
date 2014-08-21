@@ -57,8 +57,9 @@ public:
 	ClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor) { fileDescriptor = clientFileDescriptor; }
 	virtual ~ClientData() {}
 
-	int32_t id = 0;
+	uint32_t id = 0;
 	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
+	std::shared_ptr<std::thread> readThread;
 };
 
 class Server {
@@ -75,16 +76,15 @@ private:
 	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
 	int32_t _maxConnections = 100;
 	std::mutex _stateMutex;
-	std::vector<std::shared_ptr<ClientData>> _fileDescriptors;
-	std::vector<std::thread> _readThreads;
-	int32_t _currentClientID = 0;
+	std::map<uint32_t, std::shared_ptr<ClientData>> _clientData;
+	uint32_t _currentClientID = 0;
 
 	void handleCommand(std::string& command, std::shared_ptr<ClientData> clientData);
 	std::string handleUserCommand(std::string& command);
 	std::string handleGlobalCommand(std::string& command);
 	void getFileDescriptor(bool deleteOldSocket = false);
 	std::shared_ptr<BaseLib::FileDescriptor> getClientFileDescriptor();
-	void removeClientData(int32_t clientFileDescriptor);
+	void removeClientData(uint32_t clientID);
 	void mainThread();
 	void readClient(std::shared_ptr<ClientData> clientData);
 };

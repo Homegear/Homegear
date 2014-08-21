@@ -52,7 +52,10 @@ BidCoSQueueManager::~BidCoSQueueManager()
 		if(!_disposing) dispose();
 		_workerThreadMutex.lock();
 		if(_workerThread.joinable()) _workerThread.join();
+		_workerThreadMutex.unlock();
+		_resetQueueThreadMutex.lock();
 		if(_resetQueueThread.joinable()) _resetQueueThread.join(); //After waiting for worker thread!
+		_resetQueueThreadMutex.unlock();
 	}
     catch(const std::exception& ex)
     {
@@ -66,7 +69,6 @@ BidCoSQueueManager::~BidCoSQueueManager()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-	_workerThreadMutex.unlock();
 }
 
 void BidCoSQueueManager::dispose(bool wait)
@@ -105,10 +107,31 @@ void BidCoSQueueManager::worker()
 				_queueMutex.unlock();
 				if(queue)
 				{
-					if(_resetQueueThread.joinable()) _resetQueueThread.join();
-					//Has to be called in a thread as resetQueue might cause queuing (retrying in setUnreach) and therefore a deadlock
-					_resetQueueThread = std::thread(&BidCoSQueueManager::resetQueue, this, lastQueue, queue->id);
-					_resetQueueThread.detach();
+					try
+					{
+						_resetQueueThreadMutex.lock();
+						if(_disposing)
+						{
+							_resetQueueThreadMutex.unlock();
+							return;
+						}
+						if(_resetQueueThread.joinable()) _resetQueueThread.join();
+						//Has to be called in a thread as resetQueue might cause queuing (retrying in setUnreach) and therefore a deadlock
+						_resetQueueThread = std::thread(&BidCoSQueueManager::resetQueue, this, lastQueue, queue->id);
+					}
+					catch(const std::exception& ex)
+					{
+						GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+					}
+					catch(BaseLib::Exception& ex)
+					{
+						GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+					}
+					catch(...)
+					{
+						GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+					}
+					_resetQueueThreadMutex.unlock();
 				}
 			}
 			catch(const std::exception& ex)
@@ -155,6 +178,11 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 			_workerThreadMutex.lock();
 			if(_stopWorkerThread)
 			{
+				if(_disposing)
+				{
+					_workerThreadMutex.unlock();
+					return std::shared_ptr<BidCoSQueue>();
+				}
 				try //Catch "Resource deadlock avoided". Error should be fixed, but just in case.
 				{
 					if(_workerThread.joinable()) _workerThread.join();

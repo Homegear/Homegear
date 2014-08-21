@@ -74,6 +74,7 @@ protected:
 
 	//Updates:
 	bool _updateMode = false;
+	std::mutex _updateFirmwareThreadMutex;
 	std::mutex _updateMutex;
 	std::thread _updateFirmwareThread;
 	//End

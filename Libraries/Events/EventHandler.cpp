@@ -1323,23 +1323,20 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, std::shared_p
 					_stopThread = false;
 					_mainThread = std::thread(&EventHandler::mainThread, this);
 				}
-				_mainThreadMutex.unlock();
 			}
 			catch(const std::exception& ex)
 			{
-				_mainThreadMutex.unlock();
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(BaseLib::Exception& ex)
 			{
-				_mainThreadMutex.unlock();
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(...)
 			{
-				_mainThreadMutex.unlock();
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
+			_mainThreadMutex.unlock();
 		}
 		save(event);
 	}

@@ -70,6 +70,7 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 {
 	try
 	{
+		stop();
 		_stopServer = false;
 		_settings = settings;
 		if(!_settings)
@@ -182,6 +183,13 @@ void RPCServer::stop()
 		_stopped = true;
 		_stopServer = true;
 		if(_mainThread.joinable()) _mainThread.join();
+		int32_t i = 0;
+		while(_clients.size() > 0 && i < 600)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			i++;
+			if(i == 599) GD::out.printError("Error: " + std::to_string(_clients.size()) + " RPC clients are still connected to RPC server.");
+		}
 		int32_t result = 0;
 		if(_x509Cred)
 		{
@@ -329,7 +337,6 @@ void RPCServer::mainThread()
 
 				client->readThread = std::thread(&RPCServer::readClient, this, client);
 				BaseLib::Threads::setThreadPriority(GD::bl.get(), client->readThread.native_handle(), _threadPriority, _threadPolicy);
-				client->readThread.detach();
 			}
 			catch(const std::exception& ex)
 			{
@@ -652,7 +659,11 @@ void RPCServer::removeClient(int32_t clientID)
 	try
 	{
 		_stateMutex.lock();
-		if(_clients.find(clientID) != _clients.end()) _clients.erase(clientID);
+		if(_clients.find(clientID) != _clients.end())
+		{
+			_clients.at(clientID)->readThread.detach();
+			_clients.erase(clientID);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -772,9 +783,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				else
 				{
 					packetLength = 0;
-					std::thread t(&RPCServer::packetReceived, this, client, packet, packetType, true);
-					BaseLib::Threads::setThreadPriority(GD::bl.get(), t.native_handle(), _threadPriority, _threadPolicy);
-					t.detach();
+					packetReceived(client, packet, packetType, true);
 				}
 			}
 			else if(!strncmp(&buffer[0], "POST", 4) || !strncmp(&buffer[0], "HTTP/1.", 7))
@@ -835,9 +844,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					if(packetLength == dataSize)
 					{
 						packet->push_back('\0');
-						std::thread t(&RPCServer::packetReceived, this, client, packet, packetType, true);
-						BaseLib::Threads::setThreadPriority(GD::bl.get(), t.native_handle(), _threadPriority, _threadPolicy);
-						t.detach();
+						packetReceived(client, packet, packetType, true);
 						packetLength = 0;
 					}
 				}
@@ -866,9 +873,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			}
 			if(http.isFinished())
 			{
-				std::thread t(&RPCServer::packetReceived, this, client, http.getContent(), packetType, http.getHeader()->connection == HTTP::Connection::Enum::keepAlive);
-				BaseLib::Threads::setThreadPriority(GD::bl.get(), t.native_handle(), _threadPriority, _threadPolicy);
-				t.detach();
+				packetReceived(client, http.getContent(), packetType, http.getHeader()->connection == HTTP::Connection::Enum::keepAlive);
 				packetLength = 0;
 				http.reset();
 			}

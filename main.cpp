@@ -35,7 +35,6 @@
 
 #include <readline/readline.h>
 #include <readline/history.h>
-//#include <ncurses.h>
 #include <execinfo.h>
 #include <signal.h>
 #include <sys/resource.h>
@@ -50,6 +49,10 @@
 #include <algorithm>
 
 #include <gcrypt.h>
+
+//Test
+#include "Libraries/ScriptEngine/ScriptEngine.h"
+//Test end
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
@@ -100,6 +103,8 @@ void terminate(int32_t signalNumber)
 			}
 			stopRPCServers();
 			GD::rpcServers.clear();
+			GD::out.printInfo( "(Shutdown) => Stopping Event handler");
+			GD::eventHandler.~EventHandler();
 			GD::out.printInfo( "(Shutdown) => Stopping RPC client");
 			GD::rpcClient.reset();
 			GD::rpcClient.~Client();
@@ -574,7 +579,12 @@ int main(int argc, char* argv[])
 				input = std::string(inputBuffer);
 				bytes = strlen(inputBuffer);
 				if(inputBuffer[0] == '\n' || inputBuffer[0] == 0) continue;
-				if(strcmp(inputBuffer, "quit") == 0 || strcmp(inputBuffer, "exit") == 0) break;
+				if(strncmp(inputBuffer, "quit", 4) == 0 || strncmp(inputBuffer, "exit", 4) == 0 || strncmp(inputBuffer, "moin", 4) == 0) break;
+				if(input == "test")
+				{
+					ScriptEngine bla;
+					bla.test();
+				}
 
 				add_history(inputBuffer); //Sets inputBuffer to 0
 

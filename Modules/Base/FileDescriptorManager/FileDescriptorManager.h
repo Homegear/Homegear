@@ -54,6 +54,7 @@ public:
 	int32_t id = -1;
 	int32_t descriptor = -1;
 	gnutls_session_t tlsSession = nullptr;
+	int32_t handles = 0;
 };
 
 class FileDescriptorManager
@@ -64,10 +65,15 @@ public:
 	void init(BaseLib::Obj* baseLib);
 
 	virtual std::shared_ptr<FileDescriptor> add(int32_t fileDescriptor);
+	virtual std::shared_ptr<FileDescriptor> add(int32_t fileDescriptor, std::string device);
+	virtual std::shared_ptr<FileDescriptor> add(std::string device);
 	virtual void remove(std::shared_ptr<FileDescriptor> descriptor);
+	virtual void remove(std::shared_ptr<FileDescriptor> descriptor, std::string device);
 	virtual void close(std::shared_ptr<FileDescriptor> descriptor);
+	virtual void close(std::shared_ptr<FileDescriptor> descriptor, std::string device);
 	virtual void shutdown(std::shared_ptr<FileDescriptor> descriptor);
 	virtual std::shared_ptr<FileDescriptor> get(int32_t fileDescriptor);
+	virtual std::shared_ptr<FileDescriptor> get(std::string device);
 	virtual bool isValid(int32_t fileDescriptor, int32_t id);
 	virtual bool isValid(std::shared_ptr<FileDescriptor> descriptor);
 	virtual void lock();
@@ -77,6 +83,8 @@ private:
 	uint32_t _currentID = 0;
 	std::mutex _descriptorsMutex;
 	std::map<int32_t, std::shared_ptr<FileDescriptor>> _descriptors;
+	std::mutex _knownDevicesMutex;
+	std::map<std::string, std::shared_ptr<FileDescriptor>> _knownDevices;
 };
 }
 #endif

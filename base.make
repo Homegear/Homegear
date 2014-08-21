@@ -122,6 +122,7 @@ OBJECTS := \
 	$(OBJDIR)/XMLRPCDecoder.o \
 	$(OBJDIR)/BinaryEncoder.o \
 	$(OBJDIR)/SocketOperations.o \
+	$(OBJDIR)/SerialReaderWriter.o \
 	$(OBJDIR)/Threads.o \
 	$(OBJDIR)/Settings.o \
 
@@ -270,6 +271,9 @@ $(OBJDIR)/BinaryEncoder.o: Modules/Base/Encoding/BinaryEncoder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/SocketOperations.o: Modules/Base/Sockets/SocketOperations.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/SerialReaderWriter.o: Modules/Base/Sockets/SerialReaderWriter.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Threads.o: Modules/Base/Threads/Threads.cpp

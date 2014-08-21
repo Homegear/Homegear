@@ -1779,6 +1779,11 @@ std::shared_ptr<RPCVariable> InsteonCentral::setInstallMode(bool on, uint32_t du
 	try
 	{
 		_pairingModeThreadMutex.lock();
+		if(_disposing)
+		{
+			_pairingModeThreadMutex.unlock();
+			return BaseLib::RPC::RPCVariable::createError(-32500, "Central is disposing.");
+		}
 		_stopPairingModeThread = true;
 		if(_pairingModeThread.joinable()) _pairingModeThread.join();
 		_stopPairingModeThread = false;

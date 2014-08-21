@@ -40,14 +40,21 @@ Server::Server()
 Server::~Server()
 {
 	stop();
+	int32_t i = 0;
+	while(_clientData.size() > 0 && i < 300)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		i++;
+	}
 }
 
 void Server::start()
 {
 	try
 	{
+		stop();
+		_stopServer = false;
 		_mainThread = std::thread(&Server::mainThread, this);
-		_mainThread.detach();
 	}
     catch(const std::exception& ex)
     {
@@ -68,22 +75,20 @@ void Server::stop()
 	try
 	{
 		_stopServer = true;
+		if(_mainThread.joinable()) _mainThread.join();
 		unlink(GD::socketPath.c_str());
 	}
 	catch(const std::exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		_stateMutex.unlock();
 	}
 	catch(BaseLib::Exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		_stateMutex.unlock();
 	}
 	catch(...)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		_stateMutex.unlock();
 	}
 }
 
@@ -92,6 +97,7 @@ void Server::mainThread()
 	try
 	{
 		getFileDescriptor(true); //Deletes an existing socket file
+		std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor;
 		while(!_stopServer)
 		{
 			try
@@ -102,7 +108,7 @@ void Server::mainThread()
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					continue;
 				}
-				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = getClientFileDescriptor();
+				clientFileDescriptor = getClientFileDescriptor();
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor < 0) continue;
 				if(clientFileDescriptor->descriptor > _maxConnections)
 				{
@@ -110,30 +116,40 @@ void Server::mainThread()
 					GD::bl->fileDescriptorManager.shutdown(clientFileDescriptor);
 					continue;
 				}
-				std::shared_ptr<ClientData> clientData = std::shared_ptr<ClientData>(new ClientData(clientFileDescriptor));
-				clientData->id = _currentClientID++;
-				_stateMutex.lock();
-				_fileDescriptors.push_back(clientData);
-				_stateMutex.unlock();
-
-				_readThreads.push_back(std::thread(&Server::readClient, this, clientData));
-				_readThreads.back().detach();
 			}
 			catch(const std::exception& ex)
 			{
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				_stateMutex.unlock();
 			}
 			catch(BaseLib::Exception& ex)
 			{
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				_stateMutex.unlock();
 			}
 			catch(...)
 			{
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-				_stateMutex.unlock();
 			}
+			try
+			{
+				std::shared_ptr<ClientData> clientData = std::shared_ptr<ClientData>(new ClientData(clientFileDescriptor));
+				clientData->id = _currentClientID++;
+				_stateMutex.lock();
+				_clientData[clientData->id] = clientData;
+				clientData->readThread = std::shared_ptr<std::thread>(new std::thread(&Server::readClient, this, clientData));
+			}
+			catch(const std::exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			_stateMutex.unlock();
 		}
 		GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 	}
@@ -195,37 +211,31 @@ std::shared_ptr<BaseLib::FileDescriptor> Server::getClientFileDescriptor()
     return descriptor;
 }
 
-void Server::removeClientData(int32_t clientID)
+void Server::removeClientData(uint32_t clientID)
 {
 	try
 	{
 		_stateMutex.lock();
-		for(std::vector<std::shared_ptr<ClientData>>::iterator i = _fileDescriptors.begin(); i != _fileDescriptors.end(); ++i)
+		if(_clientData.find(clientID) != _clientData.end())
 		{
-			if((*i)->id == clientID)
-			{
-				_fileDescriptors.erase(i);
-				_stateMutex.unlock();
-				return;
-			}
+			std::shared_ptr<ClientData> clientData = _clientData.at(clientID);
+			clientData->readThread->detach();
+			_clientData.erase(clientID);
 		}
-		_stateMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-    	_stateMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	_stateMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_stateMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _stateMutex.unlock();
 }
 
 void Server::getFileDescriptor(bool deleteOldSocket)

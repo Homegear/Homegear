@@ -480,6 +480,12 @@ void DeviceFamily::remove(uint64_t id)
 {
 	try
 	{
+		_removeThreadMutex.lock();
+		if(_disposed)
+		{
+			_removeThreadMutex.unlock();
+			return;
+		}
 		if(_removeThread.joinable()) _removeThread.join();
 		_removeThread = std::thread(&DeviceFamily::removeThread, this, id);
 	}
@@ -495,6 +501,7 @@ void DeviceFamily::remove(uint64_t id)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _removeThreadMutex.unlock();
 }
 
 void DeviceFamily::removeThread(uint64_t id)
@@ -556,7 +563,9 @@ void DeviceFamily::dispose()
 				(*i)->dispose(false);
 			}
 		}
+		_removeThreadMutex.lock();
 		if(_removeThread.joinable()) _removeThread.join();
+		_removeThreadMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {

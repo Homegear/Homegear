@@ -123,6 +123,7 @@ protected:
 	IFamilyEventSink* _eventHandler;
 	DeviceFamilies _family = DeviceFamilies::none;
 	std::timed_mutex _devicesMutex;
+	std::mutex _removeThreadMutex;
 	std::thread _removeThread;
 	std::vector<std::shared_ptr<LogicalDevice>> _devices;
 	std::shared_ptr<BaseLib::Systems::LogicalDevice> _currentDevice;

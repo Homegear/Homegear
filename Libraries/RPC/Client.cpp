@@ -40,7 +40,12 @@ Client::Client()
 
 Client::~Client()
 {
-
+	int32_t i = 0;
+	while(_invokeBroadcastThreads.size() > 0 && i < 300)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		i++;
+	}
 }
 
 void Client::init()
@@ -75,6 +80,78 @@ void Client::initServerMethods(std::pair<std::string, std::string> address)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+void Client::startInvokeBroadcastThread(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
+{
+	try
+	{
+		_invokeBroadcastThreadsMutex.lock();
+		int32_t threadID = _currentInvokeBroadcastThreadID++;
+		std::shared_ptr<std::thread> t = std::shared_ptr<std::thread>(new std::thread(&Client::invokeBroadcastThread, this, threadID, server, methodName, parameters));
+		BaseLib::Threads::setThreadPriority(GD::bl.get(), t->native_handle(), GD::bl->settings.rpcClientThreadPriority(), GD::bl->settings.rpcClientThreadPolicy());
+		_invokeBroadcastThreads[threadID] = t;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _invokeBroadcastThreadsMutex.unlock();
+}
+
+void Client::invokeBroadcastThread(uint32_t threadID, std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
+{
+	try
+	{
+		if(_client)	_client->invokeBroadcast(server, methodName, parameters);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    removeBroadcastThread(threadID);
+}
+
+void Client::removeBroadcastThread(uint32_t threadID)
+{
+	try
+	{
+		_invokeBroadcastThreadsMutex.lock();
+		if(_invokeBroadcastThreads.find(threadID) != _invokeBroadcastThreads.end())
+		{
+			_invokeBroadcastThreads.at(threadID)->detach();
+			_invokeBroadcastThreads.erase(threadID);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _invokeBroadcastThreadsMutex.unlock();
 }
 
 void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
@@ -115,9 +192,7 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 			}
 			parameters->push_back(array);
 			//Sadly some clients only support multicall and not "event" directly for single events. That's why we use multicall even when there is only one value.
-			std::thread t(&RPCClient::invokeBroadcast, _client.get(), (*server), "system.multicall", parameters);
-			BaseLib::Threads::setThreadPriority(GD::bl.get(), t.native_handle(), GD::bl->settings.rpcClientThreadPriority(), GD::bl->settings.rpcClientThreadPolicy());
-			t.detach();
+			startInvokeBroadcastThread((*server), "system.multicall", parameters);
 		}
 		_serversMutex.unlock();
 		if(!_serversToRemove.empty())
@@ -310,8 +385,7 @@ void Client::broadcastNewDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> devi
 			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*server)->id)));
 			parameters->push_back(deviceDescriptions);
-			std::thread t(&RPCClient::invokeBroadcast, _client.get(), (*server), "newDevices", parameters);
-			t.detach();
+			startInvokeBroadcastThread((*server), "newDevices", parameters);
 		}
 	}
 	catch(const std::exception& ex)
@@ -341,8 +415,7 @@ void Client::broadcastNewEvent(std::shared_ptr<BaseLib::RPC::RPCVariable> eventD
 			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*server)->id)));
 			parameters->push_back(eventDescription);
-			std::thread t(&RPCClient::invokeBroadcast, _client.get(), (*server), "newEvent", parameters);
-			t.detach();
+			startInvokeBroadcastThread((*server), "newEvent", parameters);
 		}
 	}
 	catch(const std::exception& ex)
@@ -373,8 +446,7 @@ void Client::broadcastDeleteDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> d
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*server)->id)));
 			if((*server)->useID) parameters->push_back(deviceInfo);
 			else parameters->push_back(deviceAddresses);
-			std::thread t(&RPCClient::invokeBroadcast, _client.get(), (*server), "deleteDevices", parameters);
-			t.detach();
+			startInvokeBroadcastThread((*server), "deleteDevices", parameters);
 		}
 		_serversMutex.unlock();
 	}
@@ -411,8 +483,7 @@ void Client::broadcastDeleteEvent(std::string id, int32_t type, uint64_t peerID,
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)peerID)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(channel)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(variable)));
-			std::thread t(&RPCClient::invokeBroadcast, _client.get(), (*server), "deleteEvent", parameters);
-			t.detach();
+			startInvokeBroadcastThread((*server), "deleteEvent", parameters);
 		}
 	}
 	catch(const std::exception& ex)
@@ -448,8 +519,7 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
 			}
 			else parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(address)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)hint)));
-			std::thread t(&RPCClient::invokeBroadcast, _client.get(), (*server), "updateDevice", parameters);
-			t.detach();
+			startInvokeBroadcastThread((*server), "updateDevice", parameters);
 		}
 	}
 	catch(const std::exception& ex)
@@ -483,8 +553,7 @@ void Client::broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID,
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)peerID)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)channel)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(variable)));
-			std::thread t(&RPCClient::invokeBroadcast, _client.get(), (*server), "updateEvent", parameters);
-			t.detach();
+			startInvokeBroadcastThread((*server), "updateEvent", parameters);
 		}
 	}
 	catch(const std::exception& ex)

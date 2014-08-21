@@ -74,6 +74,13 @@ private:
 	std::unique_ptr<RPCClient> _client;
 	std::mutex _serversMutex;
 	std::shared_ptr<std::vector<std::shared_ptr<RemoteRPCServer>>> _servers;
+	std::mutex _invokeBroadcastThreadsMutex;
+	uint32_t _currentInvokeBroadcastThreadID = 0;
+	std::map<uint32_t, std::shared_ptr<std::thread>> _invokeBroadcastThreads;
+
+	void removeBroadcastThread(uint32_t threadID);
+	void startInvokeBroadcastThread(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
+	void invokeBroadcastThread(uint32_t threadID, std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 }

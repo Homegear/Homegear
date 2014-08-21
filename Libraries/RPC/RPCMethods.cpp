@@ -1753,7 +1753,10 @@ RPCInit::~RPCInit()
 {
 	try
 	{
+		_disposing = true;
+		_initServerThreadMutex.lock();
 		if(_initServerThread.joinable()) _initServerThread.join();
+		_initServerThreadMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
@@ -1816,8 +1819,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCInit::invoke(std::shared_ptr<std::
 				if(parameters->at(2)->integerValue & 2) eventServer->binary = true;
 				if(parameters->at(2)->integerValue & 4) eventServer->useID = true;
 			}
+			_initServerThreadMutex.lock();
+			if(_disposing)
+			{
+				_initServerThreadMutex.unlock();
+				return BaseLib::RPC::RPCVariable::createError(-32500, "I'm disposing.");
+			}
 			if(_initServerThread.joinable()) _initServerThread.join();
 			_initServerThread = std::thread(&RPC::Client::initServerMethods, &GD::rpcClient, server);
+			_initServerThreadMutex.unlock();
 		}
 
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));

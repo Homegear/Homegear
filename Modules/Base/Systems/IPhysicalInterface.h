@@ -116,15 +116,19 @@ protected:
 	int64_t _lastPacketReceived = -1;
 	int64_t _maxPacketProcessingTime = 500;
 	bool _updateMode = false;
+	uint32_t _currentPacketReceivedThreadID = 0;
+	std::mutex _packetReceivedThreadsMutex;
+	std::map<uint32_t, std::shared_ptr<std::thread>> _packetReceivedThreads;
 
 	//Event handling
 	virtual void raisePacketReceived(std::shared_ptr<Packet> packet, bool highPriority = false);
-	virtual void raisePacketReceivedThread(std::shared_ptr<Packet> packet);
+	virtual void raisePacketReceivedThread(uint32_t threadID, std::shared_ptr<Packet> packet);
 	//End event handling
 	virtual void setDevicePermission(int32_t userID, int32_t groupID);
 	virtual void openGPIO(uint32_t index, bool readOnly);
 	virtual void getGPIOPath(uint32_t index);
 	virtual void closeGPIO(uint32_t index);
+	virtual bool getGPIO(uint32_t index);
 	virtual void setGPIO(uint32_t index, bool value);
 	virtual void setGPIOPermission(uint32_t index, int32_t userID, int32_t groupID, bool readOnly);
 	virtual void exportGPIO(uint32_t index);
@@ -132,6 +136,7 @@ protected:
 	virtual void setGPIOEdge(uint32_t index, GPIOEdge::Enum edge);
 	virtual bool gpioDefined(uint32_t);
 	virtual bool gpioOpen(uint32_t);
+	virtual void removePacketReceivedThread(uint32_t threadID);
 };
 
 }

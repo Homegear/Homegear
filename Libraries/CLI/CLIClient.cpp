@@ -153,7 +153,7 @@ void Client::start()
 			if(_closed) break;
 			bytes = strlen(sendBuffer);
 			if(sendBuffer[0] == '\n' || sendBuffer[0] == 0) continue;
-			if(strcmp(sendBuffer, "quit") == 0 || strcmp(sendBuffer, "exit") == 0)
+			if(strncmp(sendBuffer, "quit", 4) == 0 || strncmp(sendBuffer, "exit", 4) == 0 || strncmp(sendBuffer, "moin", 4) == 0)
 			{
 				_closed = true;
 				//If we close the socket, the socket file gets deleted. We don't want that

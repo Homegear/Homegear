@@ -445,7 +445,7 @@ void InsteonHubX10::getResponse(const std::vector<char>& packet, std::vector<uin
 		_requestMutex.lock();
 		for(int32_t i = 0; i < 50; i++)
 		{
-			if(_stopped) break;
+			if(_stopped || _stopCallbackThread) break;
 			_request.reset(new Request(responseType));
 			_request->mutex.try_lock(); //Lock and return immediately
 			send(packet, false);
@@ -730,8 +730,8 @@ void InsteonHubX10::stopListening()
 {
 	try
 	{
-		if(_initThread.joinable()) _initThread.join();
 		_stopCallbackThread = true;
+		if(_initThread.joinable()) _initThread.join();
 		if(_listenThread.joinable()) _listenThread.join();
 		_stopped = true;
 		_stopCallbackThread = false;

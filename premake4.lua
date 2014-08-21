@@ -301,6 +301,28 @@ solution "homegear"
          targetdir "./lib/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
+         
+   project "scriptengine"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/ScriptEngine/*.h", "./Libraries/ScriptEngine/*.cpp", "./Libraries/ScriptEngine/*.c" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
 		 
    project "gd"
       kind "StaticLib"
@@ -329,7 +351,7 @@ solution "homegear"
       language "C++"
       files { "*.h", "*.cpp" }
 	  files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
-      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l sqlite3", "-l readline", "-l gpg-error", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l base" }
+      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l sqlite3", "-l readline", "-l gpg-error", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l scriptengine", "-l base" }
  
       configuration "Debug"
          defines { "DEBUG" }
