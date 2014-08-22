@@ -35,6 +35,7 @@ namespace BaseLib
 Obj::Obj(std::string exePath)
 {
 	fileDescriptorManager.init(this);
+	serialDeviceManager.init(this);
 	hf.init(this);
 	settings.init(this);
 	out.init(this);

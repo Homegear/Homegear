@@ -32,25 +32,10 @@
 
 #include "IBidCoSInterface.h"
 
-#include <thread>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <list>
-#include <mutex>
-#include <chrono>
-#include <ctime>
-#include <iomanip>
-
-#include <unistd.h>
-#include <fcntl.h>
-#include <termios.h>
-#include <signal.h>
-
 namespace BidCoS
 {
 
-class COC : public IBidCoSInterface
+class COC : public IBidCoSInterface, public BaseLib::SerialReaderWriter::ISerialReaderWriterEventSink
 {
     public:
 		COC(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
@@ -61,17 +46,18 @@ class COC : public IBidCoSInterface
         virtual void setup(int32_t userID, int32_t groupID);
         void enableUpdateMode();
         void disableUpdateMode();
+        bool isOpen() { return _socket && _socket->isOpen(); }
     protected:
+        //Event handling
+        virtual void lineReceived(const std::string& data);
+        //End event handling
+
+        std::shared_ptr<BaseLib::SerialReaderWriter> _socket;
         std::string stackPrefix;
 
-        void openDevice();
-        void closeDevice();
-        void setupDevice();
-        void writeToDevice(std::string, bool);
-        std::string readFromDevice();
-        void listen();
+        void writeToDevice(std::string data);
     private:
 };
 
 }
-#endif // COC_H
+#endif

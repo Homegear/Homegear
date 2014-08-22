@@ -32,25 +32,10 @@
 
 #include "../../Base/BaseLib.h"
 
-#include <thread>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <list>
-#include <mutex>
-#include <chrono>
-#include <ctime>
-#include <iomanip>
-
-#include <unistd.h>
-#include <fcntl.h>
-#include <termios.h>
-#include <signal.h>
-
 namespace MAX
 {
 
-class COC : public BaseLib::Systems::IPhysicalInterface
+class COC : public BaseLib::Systems::IPhysicalInterface, public BaseLib::SerialReaderWriter::ISerialReaderWriterEventSink
 {
     public:
 		COC(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
@@ -59,18 +44,19 @@ class COC : public BaseLib::Systems::IPhysicalInterface
         void stopListening();
         void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
         virtual void setup(int32_t userID, int32_t groupID);
+        bool isOpen() { return _socket && _socket->isOpen(); }
     protected:
+        //Event handling
+        virtual void lineReceived(const std::string& data);
+        //End event handling
+
         BaseLib::Output _out;
+        std::shared_ptr<BaseLib::SerialReaderWriter> _socket;
         std::string stackPrefix;
 
-        void openDevice();
-        void closeDevice();
-        void setupDevice();
-        void writeToDevice(std::string, bool);
-        std::string readFromDevice();
-        void listen();
+        void writeToDevice(std::string data);
     private:
 };
 
 }
-#endif // COC_H
+#endif

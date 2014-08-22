@@ -40,13 +40,8 @@ COC::COC(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) 
 	_out.init(GD::bl);
 	_out.setPrefix(GD::out.getPrefix() + "COC \"" + settings->id + "\": ");
 
-	if(settings->listenThreadPriority == -1)
-	{
-		settings->listenThreadPriority = 45;
-		settings->listenThreadPolicy = SCHED_FIFO;
-	}
 	stackPrefix = "";
-	for(int32_t i = 2; i < settings->stackPosition; i++)
+	for(int32_t i = 1; i < settings->stackPosition; i++)
 	{
 		stackPrefix.push_back('*');
 	}
@@ -56,12 +51,12 @@ COC::~COC()
 {
 	try
 	{
-		if(_listenThread.joinable())
+		if(_socket)
 		{
-			_stopCallbackThread = true;
-			_listenThread.join();
+			_socket->removeEventHandler(this);
+			_socket->closeDevice();
+			_socket.reset();
 		}
-		closeDevice();
 	}
     catch(const std::exception& ex)
     {
@@ -86,7 +81,11 @@ void COC::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			_out.printWarning("Warning: Packet was nullptr.");
 			return;
 		}
-		if(_fileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't write to COC device, because the file descriptor is not valid: " + _settings->device));
+		if(!_socket)
+		{
+			_out.printError("Error: Couldn't write to COC device, because the device descriptor is not valid: " + _settings->device);
+			return;
+		}
 		if(packet->payload()->size() > 54)
 		{
 			if(_bl->debugLevel >= 2) _out.printError("Error: Tried to send packet larger than 64 bytes. That is not supported.");
@@ -103,7 +102,9 @@ void COC::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			}
 		}
 
-		writeToDevice("As" + packet->hexString() + "\nAr\n", true);
+		std::string packetHex = packet->hexString();
+		if(_bl->debugLevel > 3) _out.printInfo("Info: Sending (" + _settings->id + "): " + packetHex);
+		writeToDevice(stackPrefix + "As" + packetHex + "\n" + stackPrefix + "Ar\n");
 	}
 	catch(const std::exception& ex)
     {
@@ -124,7 +125,7 @@ void COC::enableUpdateMode()
 	try
 	{
 		_updateMode = true;
-		writeToDevice("AR\n", false);
+		writeToDevice(stackPrefix + "AR\n");
 	}
     catch(const std::exception& ex)
     {
@@ -163,197 +164,16 @@ void COC::disableUpdateMode()
     }
 }
 
-void COC::openDevice()
-{
-	try
-	{
-		if(_fileDescriptor->descriptor > -1) closeDevice();
-
-		/**/
-		//std::string chmod("chmod 666 " + _lockfile);
-		//system(chmod.c_str());
-
-		_fileDescriptor = _bl->fileDescriptorManager.get(_settings->device);
-		if(!_fileDescriptor || _fileDescriptor->descriptor == -1)
-		{
-			_fileDescriptor = _bl->fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
-			if(_fileDescriptor->descriptor == -1)
-			{
-				_out.printCritical("Couldn't open COC device \"" + _settings->device + "\": " + strerror(errno));
-				return;
-			}
-
-			setupDevice();
-		}
-		else _bl->fileDescriptorManager.add(_settings->device);
-	}
-	catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void COC::closeDevice()
-{
-	try
-	{
-		_bl->fileDescriptorManager.close(_fileDescriptor);
-		//unlink(_lockfile.c_str());
-	}
-    catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void COC::setupDevice()
-{
-	try
-	{
-		if(_fileDescriptor->descriptor == -1) return;
-		struct termios term;
-		term.c_cflag = B38400 | CS8 | CREAD;
-		term.c_iflag = 0;
-		term.c_oflag = 0;
-		term.c_lflag = 0;
-		term.c_cc[VMIN] = 1;
-		term.c_cc[VTIME] = 0;
-		cfsetispeed(&term, B38400);
-		cfsetospeed(&term, B38400);
-		if(tcflush(_fileDescriptor->descriptor, TCIFLUSH) == -1) throw(BaseLib::Exception("Couldn't flush COC device " + _settings->device));
-		if(tcsetattr(_fileDescriptor->descriptor, TCSANOW, &term) == -1) throw(BaseLib::Exception("Couldn't set COC device settings: " + _settings->device));
-
-		int flags = fcntl(_fileDescriptor->descriptor, F_GETFL);
-		if(!(flags & O_NONBLOCK))
-		{
-			if(fcntl(_fileDescriptor->descriptor, F_SETFL, flags | O_NONBLOCK) == -1)
-			{
-				throw(BaseLib::Exception("Couldn't set COC device to non blocking mode: " + _settings->device));
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-std::string COC::readFromDevice()
-{
-	try
-	{
-		if(_stopped) return "";
-		if(_fileDescriptor->descriptor == -1)
-		{
-			_out.printCritical("Couldn't read from COC device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
-			closeDevice();
-			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-			openDevice();
-			if(!isOpen()) return "";
-		}
-		std::string packet;
-		int32_t i;
-		char localBuffer[1];
-		fd_set readFileDescriptor;
-		FD_ZERO(&readFileDescriptor);
-		FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
-
-		while((!_stopCallbackThread && localBuffer[0] != '\n' && _fileDescriptor->descriptor > -1))
-		{
-			FD_ZERO(&readFileDescriptor);
-			FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
-			//Timeout needs to be set every time, so don't put it outside of the while loop
-			timeval timeout;
-			timeout.tv_sec = 0;
-			timeout.tv_usec = 500000;
-			i = select(_fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
-			switch(i)
-			{
-				case 0: //Timeout
-					if(!_stopCallbackThread) continue;
-					else return "";
-				case -1:
-					_out.printError("Error reading from COC device: " + _settings->device);
-					return "";
-				case 1:
-					break;
-				default:
-					_out.printError("Error reading from COC device: " + _settings->device);
-					return "";
-			}
-			i = read(_fileDescriptor->descriptor, localBuffer, 1);
-			if(i == -1)
-			{
-				if(errno == EAGAIN) continue;
-				_out.printError("Error reading from COC device: " + _settings->device);
-				return "";
-			}
-			packet.push_back(localBuffer[0]);
-			if(packet.size() > 200)
-			{
-				_out.printError("COC was disconnected.");
-				closeDevice();
-				return "";
-			}
-		}
-		return packet;
-	}
-	catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-	return "";
-}
-
-void COC::writeToDevice(std::string data, bool printSending)
+void COC::writeToDevice(std::string data)
 {
     try
     {
-    	if(_stopped) return;
-        if(_fileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't write to COC device, because the file descriptor is not valid: " + _settings->device));
-        int32_t bytesWritten = 0;
-        int32_t i;
-        if(_bl->debugLevel > 3 && printSending) _out.printInfo("Info: Sending (" + _settings->id + "): " + data.substr(2, data.size() - 6));
-        if(stackPrefix.length() > 0) data = stackPrefix + data;
-        _sendMutex.lock();
-        while(bytesWritten < (signed)data.length())
-        {
-            i = write(_fileDescriptor->descriptor, data.c_str() + bytesWritten, data.length() - bytesWritten);
-            if(i == -1)
-            {
-                if(errno == EAGAIN) continue;
-                throw(BaseLib::Exception("Error writing to COC device (3, " + std::to_string(errno) + "): " + _settings->device));
-            }
-            bytesWritten += i;
-        }
+        if(!_socket)
+		{
+			_out.printError("Error: Couldn't write to COC device, because the device descriptor is not valid: " + _settings->device);
+			return;
+		}
+        _socket->writeLine(data);
     }
     catch(const std::exception& ex)
     {
@@ -367,7 +187,6 @@ void COC::writeToDevice(std::string data, bool printSending)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _sendMutex.unlock();
     _lastPacketSent = BaseLib::HelperFunctions::getTime();
 }
 
@@ -375,9 +194,11 @@ void COC::startListening()
 {
 	try
 	{
-		stopListening();
-		openDevice();
-		if(_fileDescriptor->descriptor == -1) return;
+		_socket = GD::bl->serialDeviceManager.get(_settings->device);
+		if(!_socket) _socket = GD::bl->serialDeviceManager.create(_settings->device, 38400, O_RDWR | O_NOCTTY | O_NDELAY, true, 45);
+		if(!_socket) return;
+		_socket->addEventHandler(this);
+		_socket->openDevice();
 		if(gpioDefined(2))
 		{
 			openGPIO(2, false);
@@ -397,11 +218,8 @@ void COC::startListening()
 			else std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 			closeGPIO(1);
 		}
-		_stopped = false;
-		writeToDevice("X21\nAr\n", false);
+		writeToDevice(stackPrefix + "X21\n" + stackPrefix + "Ar\n");
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-		_listenThread = std::thread(&COC::listen, this);
-		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 	}
     catch(const std::exception& ex)
     {
@@ -421,20 +239,10 @@ void COC::stopListening()
 {
 	try
 	{
-		if(_listenThread.joinable())
-		{
-			_stopCallbackThread = true;
-			_listenThread.join();
-		}
-		_stopCallbackThread = false;
-		if(_fileDescriptor->descriptor > -1)
-		{
-			//Other X commands than 00 seem to slow down data processing
-			writeToDevice("Ax\nX00\n", false);
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-			closeDevice();
-		}
-		_stopped = true;
+		if(!_socket) return;
+		_socket->removeEventHandler(this);
+		_socket->closeDevice();
+		_socket.reset();
 	}
 	catch(const std::exception& ex)
     {
@@ -450,40 +258,32 @@ void COC::stopListening()
     }
 }
 
-void COC::listen()
+void COC::lineReceived(const std::string& data)
 {
     try
     {
-        while(!_stopCallbackThread)
-        {
-        	if(_stopped)
-        	{
-        		std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        		if(_stopCallbackThread) return;
-        		continue;
-        	}
-        	std::string packetHex = readFromDevice();
-        	if(stackPrefix.empty())
-        	{
-        		if(packetHex.size() > 0 && packetHex.at(0) == '*') continue;
-        	}
-        	else
-        	{
-        		if(packetHex.size() + 1 <= stackPrefix.size()) continue;
-        		if(packetHex.substr(0, stackPrefix.size()) != stackPrefix || packetHex.at(stackPrefix.size() + 1) == '*') continue;
-        		else packetHex = packetHex.substr(stackPrefix.size());
-        	}
-        	if(packetHex.size() > 21) //21 is minimal packet length (=10 Byte + COC "A")
-        	{
-				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(packetHex, BaseLib::HelperFunctions::getTime()));
-				raisePacketReceived(packet);
-        	}
-        	else if(!packetHex.empty())
-        	{
-        		if(packetHex == "LOVF") _out.printWarning("Warning: COC with id " + _settings->id + " reached 1% limit. You need to wait, before sending is allowed again.");
-        		else _out.printWarning("Warning: Too short packet received: " + packetHex);
-        	}
-        }
+    	std::string packetHex;
+		if(stackPrefix.empty())
+		{
+			if(data.size() > 0 && data.at(0) == '*') return;
+			packetHex = data;
+		}
+		else
+		{
+			if(data.size() + 1 <= stackPrefix.size()) return;
+			if(data.substr(0, stackPrefix.size()) != stackPrefix || data.at(stackPrefix.size()) == '*') return;
+			else packetHex = data.substr(stackPrefix.size());
+		}
+		if(packetHex.size() > 21) //21 is minimal packet length (=10 Byte + COC "A")
+		{
+			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(packetHex, BaseLib::HelperFunctions::getTime()));
+			raisePacketReceived(packet);
+		}
+		else if(!packetHex.empty())
+		{
+			if(packetHex == "LOVF") _out.printWarning("Warning: COC with id " + _settings->id + " reached 1% limit. You need to wait, before sending is allowed again.");
+			else _out.printWarning("Warning: Too short packet received: " + packetHex);
+		}
     }
     catch(const std::exception& ex)
     {

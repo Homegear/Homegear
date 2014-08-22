@@ -31,7 +31,7 @@
 #define SERIALREADERWRITER_H_
 
 #include "../Exception.h"
-#include "../FileDescriptorManager/FileDescriptorManager.h"
+#include "../Managers/FileDescriptorManager.h"
 #include "../IEvents.h"
 
 #include <thread>
@@ -56,13 +56,14 @@ public:
 	class ISerialReaderWriterEventSink : public IEventSinkBase
 	{
 	public:
-		virtual void lineReceived(std::string& data) = 0;
+		virtual void lineReceived(const std::string& data) = 0;
 	};
 	//End event handling
 
 	SerialReaderWriter(BaseLib::Obj* baseLib, std::string device, int32_t baudrate, int32_t flags, bool createLockFile, int32_t readThreadPriority);
 	virtual ~SerialReaderWriter();
 
+	bool isOpen() { return _fileDescriptor && _fileDescriptor->descriptor > -1; }
 	void openDevice();
 	void closeDevice();
 	void writeLine(std::string& data);
@@ -75,6 +76,7 @@ protected:
 	bool _createLockFile;
 	std::string _lockfile;
 	int32_t _readThreadPriority = 0;
+	int32_t _handles = 0;
 
 	bool _stopped = true;
 	bool _stopReadThread = false;

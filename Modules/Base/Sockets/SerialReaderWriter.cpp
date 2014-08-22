@@ -46,12 +46,14 @@ SerialReaderWriter::SerialReaderWriter(BaseLib::Obj* baseLib, std::string device
 
 SerialReaderWriter::~SerialReaderWriter()
 {
+	_handles = 0;
 	closeDevice();
 }
 
 void SerialReaderWriter::openDevice()
 {
-	if(_fileDescriptor->descriptor > -1) closeDevice();
+	_handles++;
+	if(_fileDescriptor->descriptor > -1) return;
 	if(_createLockFile) createLockFile();
 	_fileDescriptor = _bl->fileDescriptorManager.add(open(_device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
 	if(_fileDescriptor->descriptor == -1) throw SerialReaderWriterException("Couldn't open device \"" + _device + "\": " + strerror(errno));
@@ -134,6 +136,7 @@ void SerialReaderWriter::openDevice()
 	_readThreadMutex.lock();
 	if(_readThread.joinable()) _readThread.join();
 	_stopped = false;
+	_stopReadThread = false;
 	_readThread = std::thread(&SerialReaderWriter::readThread, this);
 	if(_readThreadPriority > -1) Threads::setThreadPriority(_bl, _readThread.native_handle(), _readThreadPriority, SCHED_FIFO);
 	_readThreadMutex.unlock();
@@ -141,6 +144,8 @@ void SerialReaderWriter::openDevice()
 
 void SerialReaderWriter::closeDevice()
 {
+	_handles--;
+	if(_handles > 0) return;
 	_readThreadMutex.lock();
 	_stopped = true;
 	_stopReadThread = true;
@@ -153,8 +158,8 @@ void SerialReaderWriter::closeDevice()
 void SerialReaderWriter::createLockFile()
 {
 	_lockfile = "/var/lock" + _device.substr(_device.find_last_of('/')) + ".lock";
-	int lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-	if(lockfileDescriptor == -1)
+	std::shared_ptr<FileDescriptor> lockfileDescriptor = _bl->fileDescriptorManager.add(open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH));
+	if(lockfileDescriptor->descriptor == -1)
 	{
 		if(errno != EEXIST)
 		{
@@ -169,15 +174,15 @@ void SerialReaderWriter::createLockFile()
 			throw SerialReaderWriterException("COC device is in use: " + _device);
 		}
 		unlink(_lockfile.c_str());
-		lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-		if(lockfileDescriptor == -1)
+		lockfileDescriptor = _bl->fileDescriptorManager.add(open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH));
+		if(lockfileDescriptor->descriptor == -1)
 		{
 			throw SerialReaderWriterException("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
 			return;
 		}
 	}
-	dprintf(lockfileDescriptor, "%10i", getpid());
-	close(lockfileDescriptor);
+	dprintf(lockfileDescriptor->descriptor, "%10i", getpid());
+	_bl->fileDescriptorManager.close(lockfileDescriptor);
 }
 
 void SerialReaderWriter::writeLine(std::string& data)
@@ -191,6 +196,7 @@ void SerialReaderWriter::writeLine(std::string& data)
         _sendMutex.lock();
         while(bytesWritten < (signed)data.length())
         {
+        	_bl->out.printInfo("Writing: " + data);
             i = write(_fileDescriptor->descriptor, data.c_str() + bytesWritten, data.length() - bytesWritten);
             if(i == -1)
             {
@@ -217,66 +223,61 @@ void SerialReaderWriter::writeLine(std::string& data)
 
 void SerialReaderWriter::readThread()
 {
+	std::string data;
+	int32_t i;
+	char localBuffer[1];
+	fd_set readFileDescriptor;
 	while(!_stopReadThread)
 	{
 		if(_fileDescriptor->descriptor == -1)
 		{
-			_bl->fileDescriptorManager.close(_fileDescriptor);
+			closeDevice();
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-			openDevice();
-			if(!_fileDescriptor || _fileDescriptor->descriptor == -1) throw SerialReaderWriterException("Couldn't read from device \"" + _device + "\", because the file descriptor is not valid.");
+			std::thread t(&SerialReaderWriter::openDevice, this);
+			t.detach();
+			return;
 		}
-		std::string data;
-		int32_t i;
-		char localBuffer[1];
-		fd_set readFileDescriptor;
 		FD_ZERO(&readFileDescriptor);
 		FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
-
-		while((!_stopReadThread && _fileDescriptor->descriptor > -1))
+		//Timeout needs to be set every time, so don't put it outside of the while loop
+		timeval timeout;
+		timeout.tv_sec = 0;
+		timeout.tv_usec = 500000;
+		i = select(_fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
+		switch(i)
 		{
-			FD_ZERO(&readFileDescriptor);
-			FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
-			//Timeout needs to be set every time, so don't put it outside of the while loop
-			timeval timeout;
-			timeout.tv_sec = 0;
-			timeout.tv_usec = 500000;
-			i = select(_fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
-			switch(i)
-			{
-				case 0: //Timeout
-					if(!_stopReadThread) continue;
-					else return;
-				case 1:
-					break;
-				default:
-					//Error
-					_bl->fileDescriptorManager.close(_fileDescriptor);
-					continue;
-			}
-			i = read(_fileDescriptor->descriptor, localBuffer, 1);
-			if(i == -1)
-			{
-				if(errno == EAGAIN) continue;
+			case 0: //Timeout
+				if(!_stopReadThread) continue;
+				else return;
+			case 1:
+				break;
+			default:
+				//Error
 				_bl->fileDescriptorManager.close(_fileDescriptor);
 				continue;
-			}
-			data.push_back(localBuffer[0]);
-			if(data.size() > 1024)
+		}
+		i = read(_fileDescriptor->descriptor, localBuffer, 1);
+		if(i == -1)
+		{
+			if(errno == EAGAIN) continue;
+			_bl->fileDescriptorManager.close(_fileDescriptor);
+			continue;
+		}
+		data.push_back(localBuffer[0]);
+		if(data.size() > 1024)
+		{
+			//Something is wrong
+			_bl->fileDescriptorManager.close(_fileDescriptor);
+		}
+		if(localBuffer[0] == '\n')
+		{
+			_eventHandlerMutex.lock();
+			for(std::forward_list<IEventSinkBase*>::const_iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 			{
-				//Something is wrong
-				_bl->fileDescriptorManager.close(_fileDescriptor);
+				if(*i) ((ISerialReaderWriterEventSink*)(*i))->lineReceived(data);
 			}
-			if(localBuffer[0] == '\n')
-			{
-				_eventHandlerMutex.lock();
-				for(std::forward_list<IEventSinkBase*>::const_iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-				{
-					if(*i) ((ISerialReaderWriterEventSink*)(*i))->lineReceived(data);
-				}
-				_eventHandlerMutex.unlock();
-				data.clear();
-			}
+			_eventHandlerMutex.unlock();
+			data.clear();
 		}
 	}
 }

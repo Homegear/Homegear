@@ -6,7 +6,8 @@
 #include "Encoding/XMLRPCEncoder.h"
 #include "Encoding/RPCDecoder.h"
 #include "Encoding/RPCEncoder.h"
-#include "FileDescriptorManager/FileDescriptorManager.h"
+#include "Managers/SerialDeviceManager.h"
+#include "Managers/FileDescriptorManager.h"
 #include "HelperFunctions/HelperFunctions.h"
 #include "Output/Output.h"
 #include "RPC/Devices.h"
@@ -27,6 +28,7 @@ public:
 	int32_t debugLevel;
 	std::string executablePath;
 	FileDescriptorManager fileDescriptorManager;
+	SerialDeviceManager serialDeviceManager;
 	Settings settings;
 	Systems::UpdateInfo deviceUpdateInfo;
 	HelperFunctions hf;

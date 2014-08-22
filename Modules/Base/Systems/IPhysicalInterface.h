@@ -32,7 +32,7 @@
 
 #include "../IEvents.h"
 #include "PhysicalInterfaceSettings.h"
-#include "../FileDescriptorManager/FileDescriptorManager.h"
+#include "../Managers/FileDescriptorManager.h"
 
 #include <list>
 #include <thread>

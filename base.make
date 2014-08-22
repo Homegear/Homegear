@@ -113,6 +113,7 @@ OBJECTS := \
 	$(OBJDIR)/Packet.o \
 	$(OBJDIR)/Central.o \
 	$(OBJDIR)/Peer.o \
+	$(OBJDIR)/SerialDeviceManager.o \
 	$(OBJDIR)/FileDescriptorManager.o \
 	$(OBJDIR)/XMLRPCEncoder.o \
 	$(OBJDIR)/RPCHeader.o \
@@ -246,7 +247,10 @@ $(OBJDIR)/Central.o: Modules/Base/Systems/Central.cpp
 $(OBJDIR)/Peer.o: Modules/Base/Systems/Peer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/FileDescriptorManager.o: Modules/Base/FileDescriptorManager/FileDescriptorManager.cpp
+$(OBJDIR)/SerialDeviceManager.o: Modules/Base/Managers/SerialDeviceManager.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/FileDescriptorManager.o: Modules/Base/Managers/FileDescriptorManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/XMLRPCEncoder.o: Modules/Base/Encoding/XMLRPCEncoder.cpp

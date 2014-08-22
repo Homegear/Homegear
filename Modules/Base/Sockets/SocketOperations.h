@@ -31,7 +31,7 @@
 #define SOCKETOPERATIONS_H_
 
 #include "../Exception.h"
-#include "../FileDescriptorManager/FileDescriptorManager.h"
+#include "../Managers/FileDescriptorManager.h"
 
 #include <thread>
 #include <iostream>

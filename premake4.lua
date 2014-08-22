@@ -54,7 +54,7 @@ solution "homegear"
         "./Modules/Base/Output/*.h", "./Modules/Base/Output/*.cpp",
         "./Modules/Base/RPC/*.h", "./Modules/Base/RPC/*.cpp",
         "./Modules/Base/Systems/*.h", "./Modules/Base/Systems/*.cpp",
-        "./Modules/Base/FileDescriptorManager/*.h", "./Modules/Base/FileDescriptorManager/*.cpp",
+        "./Modules/Base/Managers/*.h", "./Modules/Base/Managers/*.cpp",
         "./Modules/Base/Encoding/*.h", "./Modules/Base/Encoding/*.cpp",
         "./Modules/Base/Database/*.h", "./Modules/Base/Database/*.cpp",
         "./Modules/Base/Sockets/*.h", "./Modules/Base/Sockets/*.cpp",

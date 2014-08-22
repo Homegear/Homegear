@@ -83,58 +83,6 @@ std::shared_ptr<FileDescriptor> FileDescriptorManager::add(int32_t fileDescripto
 	return std::shared_ptr<FileDescriptor>(new FileDescriptor());
 }
 
-std::shared_ptr<FileDescriptor> FileDescriptorManager::add(int32_t fileDescriptor, std::string device)
-{
-	std::shared_ptr<FileDescriptor> descriptor = get(device);
-	if(!descriptor) add(fileDescriptor);
-	try
-	{
-		if(!descriptor || descriptor->descriptor < 0) return descriptor;
-		_knownDevicesMutex.lock();
-		_knownDevices[device] = descriptor;
-		descriptor->handles++;
-	}
-	catch(const std::exception& ex)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(Exception& ex)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	_knownDevicesMutex.unlock();
-	return descriptor;
-}
-
-std::shared_ptr<FileDescriptor> FileDescriptorManager::add(std::string device)
-{
-	std::shared_ptr<FileDescriptor> descriptor = get(device);
-	try
-	{
-		if(!descriptor || descriptor->descriptor < 0) return descriptor;
-		_knownDevicesMutex.lock();
-		descriptor->handles++;
-	}
-	catch(const std::exception& ex)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(Exception& ex)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	_knownDevicesMutex.unlock();
-	return descriptor;
-}
-
 void FileDescriptorManager::remove(std::shared_ptr<FileDescriptor> descriptor)
 {
 	try
@@ -161,32 +109,6 @@ void FileDescriptorManager::remove(std::shared_ptr<FileDescriptor> descriptor)
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_descriptorsMutex.unlock();
-}
-
-void FileDescriptorManager::remove(std::shared_ptr<FileDescriptor> descriptor, std::string device)
-{
-	try
-	{
-		if(!descriptor || descriptor->descriptor < 0) return;
-		descriptor->handles--;
-		if(descriptor->handles > 0) return;
-		remove(descriptor);
-		_knownDevicesMutex.lock();
-		if(_knownDevices.find(device) != _knownDevices.end()) _knownDevices.erase(device);
-	}
-	catch(const std::exception& ex)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(Exception& ex)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	_knownDevicesMutex.unlock();
 }
 
 void FileDescriptorManager::close(std::shared_ptr<FileDescriptor> descriptor)
@@ -220,39 +142,11 @@ void FileDescriptorManager::close(std::shared_ptr<FileDescriptor> descriptor)
 	_descriptorsMutex.unlock();
 }
 
-void FileDescriptorManager::close(std::shared_ptr<FileDescriptor> descriptor, std::string device)
-{
-	try
-	{
-		if(!descriptor || descriptor->descriptor < 0) return;
-		descriptor->handles--;
-		if(descriptor->handles > 0) return;
-		close(descriptor);
-		_knownDevicesMutex.lock();
-		if(_knownDevices.find(device) != _knownDevices.end()) _knownDevices.erase(device);
-	}
-	catch(const std::exception& ex)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(Exception& ex)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	_knownDevicesMutex.unlock();
-}
-
 void FileDescriptorManager::shutdown(std::shared_ptr<FileDescriptor> descriptor)
 {
 	try
 	{
 		if(!descriptor || descriptor->descriptor < 0) return;
-		descriptor->handles--;
-		if(descriptor->handles > 0) return;
 		_descriptorsMutex.lock();
 		if(_descriptors.find(descriptor->descriptor) != _descriptors.end() && _descriptors.at(descriptor->descriptor)->id == descriptor->id)
 		{
@@ -316,30 +210,6 @@ std::shared_ptr<FileDescriptor> FileDescriptorManager::get(int32_t fileDescripto
 	}
 	_descriptorsMutex.unlock();
 	return std::shared_ptr<FileDescriptor>();
-}
-
-std::shared_ptr<FileDescriptor> FileDescriptorManager::get(std::string device)
-{
-	std::shared_ptr<FileDescriptor> descriptor;
-	try
-	{
-		_knownDevicesMutex.lock();
-		if(_knownDevices.find(device) != _knownDevices.end()) descriptor = _knownDevices.at(device);
-	}
-	catch(const std::exception& ex)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(Exception& ex)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	_knownDevicesMutex.unlock();
-	return descriptor;
 }
 
 bool FileDescriptorManager::isValid(int32_t fileDescriptor, int32_t id)
