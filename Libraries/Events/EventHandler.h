@@ -92,6 +92,7 @@ class EventHandler
 public:
 	EventHandler();
 	virtual ~EventHandler();
+	virtual void dispose();
 
 	void init();
 	void load();

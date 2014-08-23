@@ -59,6 +59,7 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 //bool _dbDumpFailed = false;
 bool _startAsDaemon = false;
 bool _startUpComplete = false;
+bool _disposing = false;
 
 void startRPCServers()
 {
@@ -95,6 +96,7 @@ void terminate(int32_t signalNumber)
 	{
 		if(signalNumber == SIGTERM)
 		{
+			_disposing = true;
 			GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
 			if(_startAsDaemon)
 			{
@@ -104,13 +106,12 @@ void terminate(int32_t signalNumber)
 			stopRPCServers();
 			GD::rpcServers.clear();
 			GD::out.printInfo( "(Shutdown) => Stopping Event handler");
-			GD::eventHandler.~EventHandler();
-			GD::out.printInfo( "(Shutdown) => Stopping RPC client");
-			GD::rpcClient.reset();
-			GD::rpcClient.~Client();
+			GD::eventHandler.dispose();
+			GD::out.printInfo( "(Shutdown) => Stopping RPC client");;
+			GD::rpcClient.dispose();
 			GD::out.printInfo( "(Shutdown) => Closing physical devices");
 			GD::physicalInterfaces.stopListening();
-			GD::physicalInterfaces.~PhysicalInterfaces();
+			GD::physicalInterfaces.dispose();
 			GD::familyController.saveAndDispose(false);
 			GD::db.dispose();
 			std::this_thread::sleep_for(std::chrono::milliseconds(2000)); //Wait for everything to dispose
@@ -128,6 +129,11 @@ void terminate(int32_t signalNumber)
 		}
 		else if(signalNumber == SIGABRT)
 		{
+			if(_disposing)
+			{
+				signal(signalNumber, SIG_DFL); //Reset signal handler for the current signal to default
+				kill(getpid(), signalNumber); //Generate core dump
+			}
 			GD::out.printError("Error: Signal SIGABRT (6) received.");
 		}
 		else if(signalNumber == SIGHUP)

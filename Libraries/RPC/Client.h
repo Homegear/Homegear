@@ -51,6 +51,7 @@ public:
 
 	Client();
 	virtual ~Client();
+	void dispose();
 	void init();
 
 	void initServerMethods(std::pair<std::string, std::string> address);
@@ -71,6 +72,7 @@ public:
 	std::shared_ptr<BaseLib::RPC::RPCVariable> clientServerInitialized(std::string id);
 	void reset();
 private:
+	bool _disposing = false;
 	std::unique_ptr<RPCClient> _client;
 	std::mutex _serversMutex;
 	std::shared_ptr<std::vector<std::shared_ptr<RemoteRPCServer>>> _servers;

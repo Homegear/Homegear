@@ -37,6 +37,12 @@ EventHandler::EventHandler()
 
 EventHandler::~EventHandler()
 {
+	dispose();
+}
+
+void EventHandler::dispose()
+{
+	if(_disposing) return;
 	_disposing = true;
 	_stopThread = true;
 	uint32_t i = 0;
@@ -44,8 +50,15 @@ EventHandler::~EventHandler()
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		i++;
+		if(i == 299) GD::out.printError("Error: Waiting for event handler's trigger threads timed out.");
 	}
 	if(_mainThread.joinable()) _mainThread.join();
+	_timedEvents.clear();
+	_triggeredEvents.clear();
+	_eventsToReset.clear();
+	_timesToReset.clear();
+	_rpcDecoder.reset();
+	_rpcEncoder.reset();
 }
 
 void EventHandler::init()

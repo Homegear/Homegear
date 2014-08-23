@@ -40,11 +40,20 @@ Client::Client()
 
 Client::~Client()
 {
+	dispose();
+}
+
+void Client::dispose()
+{
+	if(_disposing) return;
+	_disposing = true;
+	reset();
 	int32_t i = 0;
 	while(_invokeBroadcastThreads.size() > 0 && i < 300)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		i++;
+		if(i == 299) GD::out.printError("Error: RPC client: Waiting for \"invoke broadcast threads\" timed out.");
 	}
 }
 
