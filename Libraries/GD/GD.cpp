@@ -49,6 +49,7 @@ RPC::ClientSettings GD::clientSettings;
 EventHandler GD::eventHandler;
 PhysicalInterfaces GD::physicalInterfaces;
 std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>> GD::deviceFamilies;
+ScriptEngine GD::scriptEngine;
 
 /*void GD::init()
 {

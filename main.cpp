@@ -114,7 +114,6 @@ void terminate(int32_t signalNumber)
 			GD::physicalInterfaces.dispose();
 			GD::familyController.saveAndDispose(false);
 			GD::db.dispose();
-			std::this_thread::sleep_for(std::chrono::milliseconds(2000)); //Wait for everything to dispose
 			GD::out.printMessage("(Shutdown) => Shutdown complete.");
 			if(_startAsDaemon)
 			{
@@ -152,6 +151,7 @@ void terminate(int32_t signalNumber)
 			GD::bl->settings.load(GD::configPath + "main.conf");
 			GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
 			GD::serverSettings.load(GD::bl->settings.serverSettingsPath());
+			GD::scriptEngine.clearPrograms();
 			GD::physicalInterfaces.startListening();
 			startRPCServers();
 			//Reopen log files, important for logrotate
@@ -586,10 +586,11 @@ int main(int argc, char* argv[])
 				bytes = strlen(inputBuffer);
 				if(inputBuffer[0] == '\n' || inputBuffer[0] == 0) continue;
 				if(strncmp(inputBuffer, "quit", 4) == 0 || strncmp(inputBuffer, "exit", 4) == 0 || strncmp(inputBuffer, "moin", 4) == 0) break;
-				if(input == "test")
+				if(strncmp(inputBuffer, "machwas", 7) == 0)
 				{
-					ScriptEngine bla;
-					bla.test();
+					std::cout << "Doin' somethin'" << std::endl;
+					GD::scriptEngine.execute("/var/lib/homegear/scripts/PH7.php");
+					continue;
 				}
 
 				add_history(inputBuffer); //Sets inputBuffer to 0

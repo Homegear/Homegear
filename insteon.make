@@ -31,7 +31,7 @@ ifeq ($(config),debug)
   OBJDIR     = obj/Debug/insteon
   TARGETDIR  = lib/Modules/Debug
   TARGET     = $(TARGETDIR)/libinsteon.so
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -fPIC -std=c++11
@@ -53,7 +53,7 @@ ifeq ($(config),release)
   OBJDIR     = obj/Release/insteon
   TARGETDIR  = lib/Modules/Release
   TARGET     = $(TARGETDIR)/libinsteon.so
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -fPIC -std=c++11
@@ -75,7 +75,7 @@ ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/insteon
   TARGETDIR  = lib/Modules/Profiling
   TARGET     = $(TARGETDIR)/libinsteon.so
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -fPIC -std=c++11 -pg

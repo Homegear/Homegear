@@ -30,17 +30,11 @@
 #include "ScriptEngine.h"
 #include "../GD/GD.h"
 
-int Output_Consumer(const void *pOutput, unsigned int nOutputLen, void *pUserData /* Unused */)
+int32_t logScriptOutput(const void *output, unsigned int outputLen, void *userData /* Unused */)
 {
-  /*
-   * Note that it's preferable to use the write() system call to display the output
-   * rather than using the libc printf() which everybody now is extremely slow.
-   */
-  printf("%.*s",
-      nOutputLen,
-      (const char *)pOutput /* Not null terminated */
-   );
-    /* All done, VM output was redirected to STDOUT */
+	if(!output || outputLen == 0) return PH7_OK;
+	std::string stringOutput((const char*)output, (const char*)output + outputLen);
+	GD::out.printMessage("Script output: " + stringOutput);
     return PH7_OK;
  }
 
@@ -48,7 +42,21 @@ ScriptEngine::ScriptEngine()
 {
 	try
 	{
-		
+		if(ph7_init(&_engine) != PH7_OK)
+		{
+			GD::out.printError("Error while allocating a new PH7 engine instance.");
+			ph7_lib_shutdown();
+			_engine = nullptr;
+			return;
+		}
+		if(!ph7_lib_is_threadsafe())
+		{
+			GD::out.printError("Error: PH7 library is not thread safe.");
+			ph7_release(_engine);
+			_engine = nullptr;
+			ph7_lib_shutdown();
+		}
+		ph7_lib_config(PH7_LIB_CONFIG_THREAD_LEVEL_MULTI);
 	}
 	catch(const std::exception& ex)
 	{
@@ -64,85 +72,93 @@ ScriptEngine::ScriptEngine()
 	}
 }
 
-#define PHP_PROG "<?php "\
-"echo 'Welcome guest'.PHP_EOL;"\
-"echo 'Current system time is: '.date('Y-m-d H:i:s').PHP_EOL;"\
-"echo 'and you are running '.php_uname();"\
-"?>" 
+ScriptEngine::~ScriptEngine()
+{
+	dispose();
+}
 
-void ScriptEngine::test()
+void ScriptEngine::dispose()
+{
+	if(_disposing) return;
+	_disposing = true;
+	ph7_release(_engine);
+	_engine = nullptr;
+	ph7_lib_shutdown();
+	clearPrograms();
+}
+
+void ScriptEngine::clearPrograms()
+{
+	_executeMutex.lock();
+	_programsMutex.lock();
+	for(std::map<std::string, ph7_vm*>::iterator i = _programs.begin(); i != _programs.end(); ++i)
+	{
+		ph7_vm_release(i->second);
+	}
+	_programs.clear();
+	_programsMutex.unlock();
+	_executeMutex.unlock();
+}
+
+ph7_vm* ScriptEngine::addProgram(std::string path)
 {
 	try
 	{
-		ph7 *pEngine; /* PH7 engine */
-		ph7_vm *pVm; /* Compiled PHP program */
-		int rc;
-		/* Allocate a new PH7 engine instance */
-		rc = ph7_init(&pEngine);
-		if( rc != PH7_OK )
+		if(!_engine)
 		{
-			/*
-	* If the supplied memory subsystem is so sick that we are unable
-	* to allocate a tiny chunk of memory, there is no much we can do here.
-	*/
-			GD::out.printError("Error while allocating a new PH7 engine instance");
-			ph7_lib_shutdown();
-			return;
+			GD::out.printError("Error: Script engine is nullptr.");
+			return nullptr;
 		}
-		/* Compile the PHP test program defined above */
-		rc = ph7_compile_v2(
-		pEngine, /* PH7 engine */
-		PHP_PROG, /* PHP test program */
-		-1 /* Compute input length automatically*/,
-		&pVm, /* OUT: Compiled PHP program */
-		0 /* IN: Compile flags */
-		);
-		if( rc != PH7_OK )
+		std::string content;
+		try
 		{
-			if( rc == PH7_COMPILE_ERR ){
-				const char *zErrLog;
-				int nLen;
-				/* Extract error log */
-				ph7_config(pEngine,
-				PH7_CONFIG_ERR_LOG,
-				&zErrLog,
-				&nLen
-				);
-				if( nLen > 0 ){
-					/* zErrLog is null terminated */
-					puts(zErrLog);
-				}
+			content = GD::bl->hf.getFileContent(path);
+		}
+		catch(BaseLib::Exception& ex)
+		{
+			GD::bl->out.printError("Error in script engine: Script \"" + path + "\" not found.");
+		}
+		if(content.empty())
+		{
+			GD::out.printError("Error: Script file \"" + path + "\" is empty.");
+			return nullptr;
+		}
+		ph7_vm* compiledProgram = nullptr;
+		int32_t result = ph7_compile_v2(_engine, content.c_str(), -1, &compiledProgram, 0);
+		if(result != PH7_OK)
+		{
+			if(result == PH7_COMPILE_ERR)
+			{
+				const char* errorLog;
+				int32_t length;
+				ph7_config(_engine, PH7_CONFIG_ERR_LOG,	&errorLog, &length);
+				if(length > 0) GD::out.printError("Error compiling script \"" + path + "\": " + std::string(errorLog));
 			}
-			/* Exit */
-			GD::out.printError("Compile error");
-			ph7_lib_shutdown();
-			return;
+			return nullptr;
 		}
-		/*
-* Now we have our script compiled, it's time to configure our VM.
-* We will install the output consumer callback defined above
-* so that we can consume and redirect the VM output to STDOUT.
-*/
-		rc = ph7_vm_config(pVm,
-		PH7_VM_CONFIG_OUTPUT,
-		Output_Consumer, /* Output Consumer callback */
-		0 /* Callback private data */
-		);
-		if( rc != PH7_OK )
+		result = ph7_vm_config(compiledProgram, PH7_VM_CONFIG_OUTPUT, logScriptOutput, 0);
+		if(result != PH7_OK)
 		{
-			GD::out.printError("Error while installing the VM output consumer callback");
-			ph7_lib_shutdown();
-			return;
+			GD::out.printError("Error while installing the VM output consumer callback for script \"" + path + "\".");
+			ph7_vm_release(compiledProgram);
+			return nullptr;
 		}
-		/*
-* And finally, execute our program. Note that your output (STDOUT in our case)
-* should display the result.
-*/
-		ph7_vm_exec(pVm,0);
-		/* All done, cleanup the mess left behind.
-*/
-		ph7_vm_release(pVm);
-		ph7_release(pEngine);
+		_programsMutex.lock();
+		if(_programs.find(path) != _programs.end())
+		{
+			_executeMutex.lock(); //Don't release program while executing it
+			ph7_vm_release(_programs.at(path));
+			_programs.erase(path);
+			_executeMutex.unlock();
+		}
+		if(!_disposing) _programs[path] = compiledProgram;
+		else
+		{
+			ph7_vm_release(compiledProgram);
+			compiledProgram = nullptr;
+		}
+		_programsMutex.unlock();
+		return compiledProgram;
 	}
 	catch(const std::exception& ex)
 	{
@@ -156,4 +172,102 @@ void ScriptEngine::test()
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	_programsMutex.unlock();
+	return nullptr;
+}
+
+ph7_vm* ScriptEngine::getProgram(std::string path)
+{
+	try
+	{
+		//Detect modification
+		ph7_vm* compiledProgram = nullptr;
+		_programsMutex.lock();
+		if(!_disposing && _programs.find(path) != _programs.end()) compiledProgram = _programs.at(path);
+		_programsMutex.unlock();
+		return compiledProgram;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_programsMutex.unlock();
+	return nullptr;
+}
+
+void ScriptEngine::removeProgram(std::string path)
+{
+	try
+	{
+		_programsMutex.lock();
+		if(_programs.find(path) != _programs.end())
+		{
+			_executeMutex.lock(); //Don't release program while executing it
+			ph7_vm_release(_programs.at(path));
+			_programs.erase(path);
+			_executeMutex.unlock();
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_programsMutex.unlock();
+}
+
+void ScriptEngine::execute(std::string path)
+{
+	_executeMutex.lock();
+	if(_disposing)
+	{
+		return;
+		_executeMutex.unlock();
+	}
+	try
+	{
+		ph7_vm* compiledProgram = getProgram(path);
+		if(!compiledProgram) compiledProgram = addProgram(path);
+		if(!compiledProgram)
+		{
+			_executeMutex.unlock();
+			return;
+		}
+		if(ph7_vm_exec(compiledProgram, 0) != PH7_OK)
+		{
+			GD::out.printError("Error executing script \"" + path + "\".");
+		}
+		if(ph7_vm_reset(compiledProgram) != PH7_OK)
+		{
+			GD::out.printError("Error resetting script \"" + path + "\".");
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_executeMutex.unlock();
 }

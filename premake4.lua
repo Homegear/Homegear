@@ -36,7 +36,7 @@ solution "homegear"
    configuration { "linux", "gmake" }
       buildoptions { "-std=c++11" }
       --GCRYPT_NO_DEPRECATED only works after modifying the header file. See: http://lists.gnupg.org/pipermail/gcrypt-devel/2011-September/001844.html
-      defines { "FORTIFY_SOURCE=2", "GCRYPT_NO_DEPRECATED" }
+      defines { "FORTIFY_SOURCE=2", "GCRYPT_NO_DEPRECATED", "PH7_ENABLE_THREADS" }
 
    configuration { "rpi", "gmake" }
       buildoptions { "-std=c++11" }

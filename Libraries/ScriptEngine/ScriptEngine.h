@@ -32,18 +32,34 @@
 
 #include "../../Modules/Base/BaseLib.h"
 
+#include <mutex>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "ph7.h" 
 
-static int Output_Consumer(const void *pOutput, unsigned int nOutputLen, void *pUserData /* Unused */);
+static int32_t logScriptOutput(const void *output, unsigned int outputLen, void *userData);
 
 class ScriptEngine
 {
 public:
 	ScriptEngine();
-	virtual ~ScriptEngine() {}
+	virtual ~ScriptEngine();
+	void dispose();
 	
-	void test();
+	void execute(std::string path);
+	void clearPrograms();
+protected:
+	bool _disposing = false;
+	ph7 *_engine = nullptr;
+
+	std::mutex _programsMutex;
+	std::map<std::string, ph7_vm*> _programs;
+	std::mutex _executeMutex;
+
+	ph7_vm* addProgram(std::string path);
+	ph7_vm* getProgram(std::string path);
+	void removeProgram(std::string path);
+	void printError(int32_t code);
 };
 #endif

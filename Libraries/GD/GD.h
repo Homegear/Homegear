@@ -38,6 +38,7 @@
 #include "../../Modules/Base/BaseLib.h"
 #include "../RPC/Server.h"
 #include "../RPC/Client.h"
+#include "../ScriptEngine/ScriptEngine.h"
 
 #include <vector>
 #include <map>
@@ -67,6 +68,7 @@ public:
 	static EventHandler eventHandler;
 	static PhysicalInterfaces physicalInterfaces;
 	static std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>> deviceFamilies;
+	static ScriptEngine scriptEngine;
 
 	virtual ~GD() {}
 private:
