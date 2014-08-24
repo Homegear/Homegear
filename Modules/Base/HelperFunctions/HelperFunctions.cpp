@@ -118,6 +118,13 @@ bool HelperFunctions::fileExists(std::string filename)
 	return in;
 }
 
+int32_t HelperFunctions::getFileLastModifiedTime(const std::string& filename)
+{
+	struct stat attributes;
+	if(stat(filename.c_str(), &attributes) == -1) return -1;
+	return attributes.st_mtim.tv_sec;
+}
+
 std::string HelperFunctions::getFileContent(std::string filename)
 {
 	std::ifstream in(filename.c_str(), std::ios::in | std::ios::binary);

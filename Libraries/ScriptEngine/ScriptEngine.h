@@ -50,15 +50,33 @@ public:
 	void execute(std::string path);
 	void clearPrograms();
 protected:
+	class ScriptInfo
+	{
+	public:
+		ScriptInfo() {}
+		virtual ~ScriptInfo()
+		{
+			if(compiledProgram)
+			{
+				ph7_vm_release(compiledProgram);
+				compiledProgram = nullptr;
+			}
+		}
+
+		ph7_vm* compiledProgram = nullptr;
+		int32_t lastModified = 0;
+	};
+
 	bool _disposing = false;
 	ph7 *_engine = nullptr;
 
 	std::mutex _programsMutex;
-	std::map<std::string, ph7_vm*> _programs;
+	std::map<std::string, ScriptInfo> _programs;
 	std::mutex _executeMutex;
 
 	ph7_vm* addProgram(std::string path);
 	ph7_vm* getProgram(std::string path);
+	bool isValid(const std::string& path, ph7_vm* compiledProgram);
 	void removeProgram(std::string path);
 	void printError(int32_t code);
 };

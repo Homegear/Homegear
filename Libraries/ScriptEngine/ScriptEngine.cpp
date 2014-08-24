@@ -91,9 +91,10 @@ void ScriptEngine::clearPrograms()
 {
 	_executeMutex.lock();
 	_programsMutex.lock();
-	for(std::map<std::string, ph7_vm*>::iterator i = _programs.begin(); i != _programs.end(); ++i)
+	for(std::map<std::string, ScriptInfo>::iterator i = _programs.begin(); i != _programs.end(); ++i)
 	{
-		ph7_vm_release(i->second);
+		ph7_vm_release(i->second.compiledProgram);
+		i->second.compiledProgram = nullptr;
 	}
 	_programs.clear();
 	_programsMutex.unlock();
@@ -147,11 +148,16 @@ ph7_vm* ScriptEngine::addProgram(std::string path)
 		if(_programs.find(path) != _programs.end())
 		{
 			_executeMutex.lock(); //Don't release program while executing it
-			ph7_vm_release(_programs.at(path));
+			ph7_vm_release(_programs.at(path).compiledProgram);
+			_programs.at(path).compiledProgram = nullptr;
 			_programs.erase(path);
 			_executeMutex.unlock();
 		}
-		if(!_disposing) _programs[path] = compiledProgram;
+		if(!_disposing)
+		{
+			_programs[path].compiledProgram = compiledProgram;
+			_programs[path].lastModified = GD::bl->hf.getFileLastModifiedTime(path);
+		}
 		else
 		{
 			ph7_vm_release(compiledProgram);
@@ -180,11 +186,22 @@ ph7_vm* ScriptEngine::getProgram(std::string path)
 {
 	try
 	{
-		//Detect modification
 		ph7_vm* compiledProgram = nullptr;
 		_programsMutex.lock();
-		if(!_disposing && _programs.find(path) != _programs.end()) compiledProgram = _programs.at(path);
-		_programsMutex.unlock();
+		if(!_disposing && _programs.find(path) != _programs.end())
+		{
+			if(GD::bl->hf.getFileLastModifiedTime(path) > _programs.at(path).lastModified)
+			{
+				_programsMutex.unlock();
+				return addProgram(path);
+			}
+			else
+			{
+				compiledProgram = _programs.at(path).compiledProgram;
+				_programsMutex.unlock();
+			}
+		}
+		else _programsMutex.unlock();
 		return compiledProgram;
 	}
 	catch(const std::exception& ex)
@@ -211,7 +228,8 @@ void ScriptEngine::removeProgram(std::string path)
 		if(_programs.find(path) != _programs.end())
 		{
 			_executeMutex.lock(); //Don't release program while executing it
-			ph7_vm_release(_programs.at(path));
+			ph7_vm_release(_programs.at(path).compiledProgram);
+			_programs.at(path).compiledProgram = nullptr;
 			_programs.erase(path);
 			_executeMutex.unlock();
 		}
@@ -231,20 +249,52 @@ void ScriptEngine::removeProgram(std::string path)
 	_programsMutex.unlock();
 }
 
+bool ScriptEngine::isValid(const std::string& path, ph7_vm* compiledProgram)
+{
+	try
+	{
+		_programsMutex.lock();
+		if(_programs.find(path) != _programs.end())
+		{
+			if(_programs.at(path).compiledProgram == compiledProgram)
+			{
+				_programsMutex.unlock();
+				return true;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_programsMutex.unlock();
+	return false;
+}
+
 void ScriptEngine::execute(std::string path)
 {
-	_executeMutex.lock();
-	if(_disposing)
-	{
-		return;
-		_executeMutex.unlock();
-	}
 	try
 	{
 		ph7_vm* compiledProgram = getProgram(path);
 		if(!compiledProgram) compiledProgram = addProgram(path);
-		if(!compiledProgram)
+		if(!compiledProgram) return;
+		_executeMutex.lock();
+		if(_disposing)
 		{
+			_executeMutex.unlock();
+			return;
+		}
+		if(!isValid(path, compiledProgram)) //Check if compiledProgram is valid within mutex
+		{
+			GD::out.printError("Error: Script changed during execution: " + path);
 			_executeMutex.unlock();
 			return;
 		}

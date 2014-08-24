@@ -1,0 +1,252 @@
+<?xml version="1.0"?>
+<device version="1">
+	<types>
+		<type name="Micro Open/Close" id="2444-422">
+			<type_id>0x0E02</type_id>
+			<firmware cond_op="GE">0x10</firmware>
+		</type>
+	</types>
+	<channels>
+		<channel index="0" type="MAINTENANCE" ui_flags="internal" class="maintenance" count="1">
+			<parameters type="MASTER" id="maint_ch_master"/>
+			<parameters type="VALUES" id="maint_ch_values">
+				<parameter id="UNREACH" operations="read,event" ui_flags="service">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="UNREACH"/>
+				</parameter>
+				<parameter id="STICKY_UNREACH" operations="read,write,event" ui_flags="service,sticky">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="STICKY_UNREACH"/>
+				</parameter>
+				<parameter id="CONFIG_PENDING" operations="read,event" ui_flags="service">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="CONFIG_PENDING"/>
+				</parameter>
+			</parameters>
+		</channel>
+		<channel index="1" type="SWITCH">
+			<parameters type="VALUES" id="switch_ch_values">
+				<parameter id="STATE" operations="read,write,event" control="SWITCH.STATE">
+					<logical type="boolean" default="false"/>
+					<physical type="integer" interface="command" value_id="STATE" id="STATE">
+						<event packet="ACK_STATE"/>
+						<event packet="ACK_STATE_OFF"/>
+						<setEx cond_op="eq" value="0x00" packet="LEVEL_SET_OFF"/>
+						<setEx cond_op="ge" value="0x01" packet="LEVEL_SET"/>
+					</physical>
+					<conversion type="boolean_integer" threshold="0x02" false="0x00" true="0xFF"/>
+				</parameter>
+				<parameter id="BEEP" operations="write">
+					<logical type="action"/>
+					<physical type="integer" interface="command">
+						<set request="BEEP"/>
+					</physical>
+				</parameter>
+				<parameter id="MODE" operations="read,write,event">
+					<logical type="option">
+						<option id="Latching"/>
+						<option id="Latching 3-Way-Toggle" default="true"/>
+						<option id="Single Momentary"/>
+						<option id="Dual Momentary"/>
+					</logical>
+					<physical type="integer" interface="command" id="MODE">
+						<setEx cond_op="eq" value="0x00" packet="LATCHING_SET_1"/>
+						<setEx cond_op="eq" value="0x00" packet="LATCHING_SET_2"/>
+						<setEx cond_op="eq" value="0x00" packet="LATCHING_SET_3"/>
+						<setEx cond_op="eq" value="0x01" packet="LATCHING_3_WAY_TOGGLE_SET_1"/>
+						<setEx cond_op="eq" value="0x01" packet="LATCHING_3_WAY_TOGGLE_SET_2"/>
+						<setEx cond_op="eq" value="0x01" packet="LATCHING_3_WAY_TOGGLE_SET_3"/>
+						<setEx cond_op="eq" value="0x02" packet="SINGLE_MOMENTARY_SET_1"/>
+						<setEx cond_op="eq" value="0x02" packet="SINGLE_MOMENTARY_SET_2"/>
+						<setEx cond_op="eq" value="0x02" packet="SINGLE_MOMENTARY_SET_3"/>
+						<setEx cond_op="eq" value="0x03" packet="DUAL_MOMENTARY_SET_1"/>
+						<setEx cond_op="eq" value="0x03" packet="DUAL_MOMENTARY_SET_2"/>
+						<setEx cond_op="eq" value="0x03" packet="DUAL_MOMENTARY_SET_3"/>
+					</physical>
+				</parameter>
+				<parameter id="BEEP_ON_BUTTON_PRESS" operations="read,write,event">
+					<logical type="boolean" default="false"/>
+					<physical type="integer" interface="command" value_id="BEEP_ON_BUTTON_PRESS" id="BEEP_ON_BUTTON_PRESS">
+						<setEx cond_op="ge" value="0x01" packet="BEEP_ON_BUTTON_PRESS_ON"/>
+						<setEx cond_op="eq" value="0x00" packet="BEEP_ON_BUTTON_PRESS_OFF"/>
+					</physical>
+					<conversion type="boolean_integer" threshold="0x01" false="0x00" true="0x01"/>
+				</parameter>
+				<parameter id="ERROR_BLINK" operations="read,write,event">
+					<logical type="boolean" default="true"/>
+					<physical type="integer" interface="command" value_id="ERROR_BLINK" id="ERROR_BLINK">
+						<setEx cond_op="ge" value="0x01" packet="ERROR_BLINK_ON"/>
+						<setEx cond_op="eq" value="0x00" packet="ERROR_BLINK_OFF"/>
+					</physical>
+					<conversion type="boolean_integer" threshold="0x01" false="0x00" true="0x01"/>
+				</parameter>
+				<parameter id="PROGRAMMING_LOCK" operations="read,write,event">
+					<logical type="boolean" default="false"/>
+					<physical type="integer" interface="command" value_id="PROGRAMMING_LOCK" id="PROGRAMMING_LOCK">
+						<setEx cond_op="ge" value="0x01" packet="PROGRAMMING_LOCK_ON"/>
+						<setEx cond_op="eq" value="0x00" packet="PROGRAMMING_LOCK_OFF"/>
+					</physical>
+					<conversion type="boolean_integer" threshold="0x01" false="0x00" true="0x01"/>
+				</parameter>
+				<parameter id="LED_BLINK_ON_TRAFFIC" operations="read,write,event">
+					<logical type="boolean" default="false"/>
+					<physical type="integer" interface="command" value_id="LED_BLINK_ON_TRAFFIC" id="LED_BLINK_ON_TRAFFIC">
+						<setEx cond_op="ge" value="0x01" packet="LED_BLINK_ON_TRAFFIC_ON"/>
+						<setEx cond_op="eq" value="0x00" packet="LED_BLINK_ON_TRAFFIC_OFF"/>
+					</physical>
+					<conversion type="boolean_integer" threshold="0x01" false="0x00" true="0x01"/>
+				</parameter>
+				<parameter id="LED_BRIGHTNESS" operations="read,write,event">
+					<logical type="integer" min="0" max="127" default="64" />
+					<physical type="integer" interface="command" value_id="LED_BRIGHTNESS" id="LED_BRIGHTNESS">
+						<setEx cond_op="eq" value="0x00" packet="LED_OFF"/>
+						<setEx cond_op="ge" value="0x01" packet="LED_ON"/>
+						<setEx cond_op="ge" value="0x01" packet="LED_BRIGHTNESS_SET"/>
+					</physical>
+				</parameter>
+				<parameter id="RUN_TIME" operations="read,write,event">
+					<logical type="integer" min="10" max="540" default="10" />
+					<physical type="integer" interface="command" value_id="RUN_TIME" id="RUN_TIME">
+						<set request="RUN_TIME_SET"/>
+					</physical>
+					<conversion type="integer_integer_scale" mul="120"/>
+				</parameter>
+				<parameter id="REVERSE_BUTTON_DIRECTION" operations="read,write,event">
+					<logical type="boolean" default="false"/>
+					<physical type="integer" interface="command" value_id="REVERSE_BUTTON_DIRECTION" id="REVERSE_BUTTON_DIRECTION">
+						<setEx cond_op="ge" value="0x01" packet="REVERSE_BUTTON_DIRECTION_ON"/>
+						<setEx cond_op="eq" value="0x00" packet="REVERSE_BUTTON_DIRECTION_OFF"/>
+					</physical>
+					<conversion type="boolean_integer" threshold="0x01" false="0x00" true="0x01"/>
+				</parameter>
+			</parameters>
+		</channel>
+	</channels>
+	<packets>
+		<packet id="BEEP" direction="to_device" type="0x30">
+			<parameter type="integer" index="8.0" size="1.0" const_value="1"/>
+		</packet>
+		<packet id="LEVEL_SET" direction="to_device" type="0x11" double_send="true">
+			<parameter type="integer" index="8.0" size="1.0" param="STATE"/>
+		</packet>
+		<packet id="ACK_STATE" direction="from_device" type="0x11" fixed_channel="1">
+			<!-- Index 7 is always 0x11, which is >1, so STATE is set to "true" -->
+			<parameter type="integer" index="7.0" size="1.0" param="STATE"/>
+		</packet>
+		<packet id="LEVEL_SET_OFF" direction="to_device" type="0x13" double_send="true">
+			<!-- Index 8 is 0x00 or 0x01, so STATE is set to "false" -->
+			<parameter type="integer" index="8.0" size="1.0" const_value="0"/>
+		</packet>
+		<packet id="ACK_STATE_OFF" direction="from_device" type="0x13" fixed_channel="1">
+			<parameter type="integer" index="8.0" size="1.0" param="STATE"/>
+		</packet>
+		<packet id="LATCHING_SET_1" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x1E"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xC2"/>
+		</packet>
+		<packet id="LATCHING_SET_2" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x20"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xC0"/>
+		</packet>
+		<packet id="LATCHING_SET_3" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x23"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xBD"/>
+		</packet>
+		<packet id="LATCHING_3_WAY_TOGGLE_SET_1" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x1E"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xC2"/>
+		</packet>
+		<packet id="LATCHING_3_WAY_TOGGLE_SET_2" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x20"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xC0"/>
+		</packet>
+		<packet id="LATCHING_3_WAY_TOGGLE_SET_3" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x22"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xBE"/>
+		</packet>
+		<packet id="SINGLE_MOMENTARY_SET_1" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x1E"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xC2"/>
+		</packet>
+		<packet id="SINGLE_MOMENTARY_SET_2" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x21"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xBF"/>
+		</packet>
+		<packet id="SINGLE_MOMENTARY_SET_3" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x23"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xBD"/>
+		</packet>
+		<packet id="DUAL_MOMENTARY_SET_1" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x1F"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xC1"/>
+		</packet>
+		<packet id="DUAL_MOMENTARY_SET_2" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x21"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xBF"/>
+		</packet>
+		<packet id="DUAL_MOMENTARY_SET_3" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x23"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xBD"/>
+		</packet>
+		<packet id="BEEP_ON_BUTTON_PRESS_ON" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x0A"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xD6"/>
+		</packet>
+		<packet id="BEEP_ON_BUTTON_PRESS_OFF" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x0B"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xD5"/>
+		</packet>
+		<packet id="ERROR_BLINK_ON" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x15"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xCB"/>
+		</packet>
+		<packet id="ERROR_BLINK_OFF" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x14"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xCC"/>
+		</packet>
+		<packet id="PROGRAMMING_LOCK_ON" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x00"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xE0"/>
+		</packet>
+		<packet id="PROGRAMMING_LOCK_OFF" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x01"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xDF"/>
+		</packet>
+		<packet id="LED_BLINK_ON_TRAFFIC_ON" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x02"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xDE"/>
+		</packet>
+		<packet id="LED_BLINK_ON_TRAFFIC_OFF" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x03"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xDD"/>
+		</packet>
+		<packet id="LED_ON" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x09"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xD7"/>
+		</packet>
+		<packet id="LED_OFF" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x08"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xD8"/>
+		</packet>
+		<packet id="LED_BRIGHTNESS_SET" direction="to_device" type="0x2E">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x00"/>
+			<parameter type="integer" index="9.0" size="1.0" const_value="0x01"/>
+			<parameter type="integer" index="10.0" size="1.0" const_value="0x07"/>
+			<parameter type="integer" index="11.0" size="1.0" param="LED_BRIGHTNESS"/>
+		</packet>
+		<packet id="REVERSE_BUTTON_DIRECTION_ON" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x25"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xBB"/>
+		</packet>
+		<packet id="REVERSE_BUTTON_DIRECTION_OFF" direction="to_device" type="0x20">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x24"/>
+			<parameter type="integer" index="22.0" size="1.0" const_value="0xBC"/>
+		</packet>
+		<packet id="RUN_TIME_SET" direction="to_device" type="0x2E">
+			<parameter type="integer" index="8.0" size="1.0" const_value="0x00"/>
+			<parameter type="integer" index="9.0" size="1.0" const_value="0x00"/>
+			<parameter type="integer" index="10.0" size="1.0" const_value="0x10"/>
+			<parameter type="integer" index="11.0" size="2.0" param="RUN_TIME"/>
+		</packet>
+	</packets>
+</device>

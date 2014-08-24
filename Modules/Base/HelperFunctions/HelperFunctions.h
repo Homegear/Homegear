@@ -70,6 +70,7 @@ public:
 
 	static int64_t getTime();
 	static int32_t getTimeSeconds();
+	static int32_t getFileLastModifiedTime(const std::string& filename);
 	static std::string getTimeString(int64_t time = 0);
 
 	static inline std::string &ltrim(std::string &s)
