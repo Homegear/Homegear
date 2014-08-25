@@ -70,6 +70,7 @@ void MAX::dispose()
 
 	GD::physicalInterfaces.clear();
 	GD::defaultPhysicalInterface.reset();
+	_central.reset();
 }
 
 std::shared_ptr<BaseLib::Systems::Central> MAX::getCentral() { return _central; }

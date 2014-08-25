@@ -78,11 +78,23 @@ void Settings::reset()
 	_gpioPath = "/sys/class/gpio/";
 }
 
+bool Settings::changed()
+{
+	if(_bl->hf.getFileLastModifiedTime(_path) != _lastModified ||
+		_bl->hf.getFileLastModifiedTime(_clientSettingsPath) != _clientSettingsLastModified ||
+		_bl->hf.getFileLastModifiedTime(_serverSettingsPath) != _serverSettingsLastModified)
+	{
+		return true;
+	}
+	return false;
+}
+
 void Settings::load(std::string filename)
 {
 	try
 	{
 		reset();
+		_path = filename;
 		char input[1024];
 		FILE *fin;
 		int32_t len, ptr;
@@ -332,6 +344,9 @@ void Settings::load(std::string filename)
 		}
 
 		fclose(fin);
+		_lastModified = _bl->hf.getFileLastModifiedTime(filename);
+		_clientSettingsLastModified = _bl->hf.getFileLastModifiedTime(_clientSettingsPath);
+		_serverSettingsLastModified = _bl->hf.getFileLastModifiedTime(_serverSettingsPath);
 	}
 	catch(const std::exception& ex)
     {

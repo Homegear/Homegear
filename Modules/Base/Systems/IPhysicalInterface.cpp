@@ -130,7 +130,7 @@ void IPhysicalInterface::raisePacketReceivedThread(uint32_t threadID, std::share
 		}
 		processingTime = HelperFunctions::getTime() - processingTime;
 		_bl->out.printInfo("Info (" + _settings->id + "): Packet processing took " + std::to_string(processingTime) + " ms.");
-		if(processingTime > _maxPacketProcessingTime) _bl->out.printWarning("Warning (" + _settings->id + "): Packet processing took longer than 500ms. That is too slow! You need a faster CPU!");
+		if(processingTime > _maxPacketProcessingTime) _bl->out.printWarning("Warning (" + _settings->id + "): Packet processing took longer than 1 second. That is too slow! You need a faster CPU!");
 	}
     catch(const std::exception& ex)
     {

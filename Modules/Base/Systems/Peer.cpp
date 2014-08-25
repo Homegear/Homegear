@@ -98,7 +98,6 @@ void Peer::dispose()
 {
 	_disposing = true;
 	_central.reset();
-	_rpcCache.clear();
 	_peers.clear();
 }
 

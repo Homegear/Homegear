@@ -68,6 +68,7 @@ void Insteon::dispose()
 
 	GD::physicalInterfaces.clear();
 	GD::defaultPhysicalInterface.reset();
+	_central.reset();
 }
 
 std::shared_ptr<BaseLib::Systems::Central> Insteon::getCentral() { return _central; }

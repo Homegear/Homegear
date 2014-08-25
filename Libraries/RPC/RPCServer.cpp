@@ -184,11 +184,11 @@ void RPCServer::stop()
 		_stopServer = true;
 		if(_mainThread.joinable()) _mainThread.join();
 		int32_t i = 0;
-		while(_clients.size() > 0 && i < 600)
+		while(_clients.size() > 0 && i < 300)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			i++;
-			if(i == 599) GD::out.printError("Error: " + std::to_string(_clients.size()) + " RPC clients are still connected to RPC server.");
+			if(i == 299) GD::out.printError("Error: " + std::to_string(_clients.size()) + " RPC clients are still connected to RPC server.");
 		}
 		int32_t result = 0;
 		if(_x509Cred)
@@ -323,20 +323,38 @@ void RPCServer::mainThread()
 				_clients[client->id] = client;
 				_stateMutex.unlock();
 
-				if(_settings->ssl)
+				try
 				{
-					getSSLSocketDescriptor(client);
-					if(!client->socketDescriptor->tlsSession)
+					if(_settings->ssl)
 					{
-						//Remove client from _clients again. Socket is already closed.
-						closeClientConnection(client);
-						continue;
+						getSSLSocketDescriptor(client);
+						if(!client->socketDescriptor->tlsSession)
+						{
+							//Remove client from _clients again. Socket is already closed.
+							closeClientConnection(client);
+							continue;
+						}
 					}
-				}
-				client->socket = std::shared_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl.get(), client->socketDescriptor));
+					client->socket = std::shared_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl.get(), client->socketDescriptor));
 
-				client->readThread = std::thread(&RPCServer::readClient, this, client);
-				BaseLib::Threads::setThreadPriority(GD::bl.get(), client->readThread.native_handle(), _threadPriority, _threadPolicy);
+					client->readThread = std::thread(&RPCServer::readClient, this, client);
+					BaseLib::Threads::setThreadPriority(GD::bl.get(), client->readThread.native_handle(), _threadPriority, _threadPolicy);
+				}
+				catch(const std::exception& ex)
+				{
+					closeClientConnection(client);
+					_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(BaseLib::Exception& ex)
+				{
+					closeClientConnection(client);
+					_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(...)
+				{
+					closeClientConnection(client);
+					_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				}
 			}
 			catch(const std::exception& ex)
 			{
@@ -878,8 +896,6 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				http.reset();
 			}
 		}
-		//This point is only reached, when stopServer is true or the socket is closed
-		closeClientConnection(client);
 	}
     catch(const std::exception& ex)
     {
@@ -893,6 +909,8 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    //This point is only reached, when stopServer is true, the socket is closed or an error occured
+	closeClientConnection(client);
 }
 
 std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientSocketDescriptor()

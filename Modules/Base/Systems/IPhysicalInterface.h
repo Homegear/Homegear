@@ -114,7 +114,7 @@ protected:
 	std::map<uint32_t, std::shared_ptr<FileDescriptor>> _gpioDescriptors;
 	int64_t _lastPacketSent = -1;
 	int64_t _lastPacketReceived = -1;
-	int64_t _maxPacketProcessingTime = 500;
+	int64_t _maxPacketProcessingTime = 1000;
 	bool _updateMode = false;
 	uint32_t _currentPacketReceivedThreadID = 0;
 	std::mutex _packetReceivedThreadsMutex;

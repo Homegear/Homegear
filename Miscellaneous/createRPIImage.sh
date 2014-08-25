@@ -190,8 +190,8 @@ echo \"************* Welcome to your homegear system! *************\"
 echo \"************************************************************\"
 echo \"************************************************************\"
 echo \"Downloading device description files...\"
-/etc/homegear/GetDeviceFiles.sh 1
-[ $? -ne 0 ] && echo \"Download of device description files failed. Please execute '/etc/homegear/GetDeviceFiles.sh' manually. Homegear won't work until the files are downloaded.\"
+/var/lib/homegear/GetDeviceFiles.sh 1
+[ $? -ne 0 ] && echo \"Download of device description files failed. Please execute '/var/lib/homegear/GetDeviceFiles.sh' manually. Homegear won't work until the files are downloaded.\"
 echo \"Downloading firmware updates...\"
 /var/lib/homegear/firmware/GetFirmwareUpdates.sh
 [ $? -ne 0 ] && echo \"Download of firmware updates failed. Please execute '/var/lib/homegear/firmware/GetFirmwareUpdates.sh' manually.\"

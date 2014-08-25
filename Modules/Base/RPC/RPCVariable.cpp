@@ -34,28 +34,9 @@ namespace BaseLib
 {
 namespace RPC
 {
-
-/*RPCVariable::RPCVariable(RPCVariableType variableType, std::vector<uint8_t> data) : RPCVariable()
+RPCVariable::~RPCVariable()
 {
-	type = variableType;
-	if(data.empty()) return;
-	if(variableType == RPCVariableType::rpcBoolean)
-	{
-		booleanValue = false;
-		for(std::vector<uint8_t>::iterator i = data.begin(); i != data.end(); ++i)
-		{
-			if(*i != 0)
-			{
-				booleanValue = true;
-				break;
-			}
-		}
-	}
-	else if(variableType == RPCVariableType::rpcInteger)
-	{
-		HelperFunctions::memcpyBigEndian(integerValue, data);
-	}
-}*/
+}
 
 std::shared_ptr<RPCVariable> RPCVariable::createError(int32_t faultCode, std::string faultString)
 {

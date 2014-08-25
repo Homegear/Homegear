@@ -218,7 +218,6 @@ public:
 protected:
     BaseLib::Obj* _bl = nullptr;
     std::map<uint32_t, uint32_t> _variableDatabaseIDs;
-    std::map<std::string, std::shared_ptr<BaseLib::RPC::RPCVariable>> _rpcCache;
     std::shared_ptr<Central> _central;
 
 	//In table peers:

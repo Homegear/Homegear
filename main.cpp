@@ -142,17 +142,19 @@ void terminate(int32_t signalNumber)
 				return;
 			}
 			_startUpComplete = false;
-			stopRPCServers();
-			GD::physicalInterfaces.stopListening();
-			//Binding fails sometimes with "address is already in use" without waiting.
-			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-			GD::out.printMessage("Reloading settings...");
-			GD::bl->settings.load(GD::configPath + "main.conf");
-			GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
-			GD::serverSettings.load(GD::bl->settings.serverSettingsPath());
-			GD::scriptEngine.clearPrograms();
-			GD::physicalInterfaces.startListening();
-			startRPCServers();
+			if(GD::bl->settings.changed())
+			{
+				stopRPCServers();
+				GD::physicalInterfaces.stopListening();
+				//Binding fails sometimes with "address is already in use" without waiting.
+				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+				GD::out.printMessage("Reloading settings...");
+				GD::bl->settings.load(GD::configPath + "main.conf");
+				GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
+				GD::serverSettings.load(GD::bl->settings.serverSettingsPath());
+				GD::physicalInterfaces.startListening();
+				startRPCServers();
+			}
 			//Reopen log files, important for logrotate
 			if(_startAsDaemon)
 			{
@@ -170,7 +172,6 @@ void terminate(int32_t signalNumber)
 		else
 		{
 			GD::out.printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
-			GD::out.printCritical("Critical: Database dump failed. Stopping Homegear...");
 			signal(signalNumber, SIG_DFL); //Reset signal handler for the current signal to default
 			kill(getpid(), signalNumber); //Generate core dump
 		}
@@ -338,9 +339,13 @@ int main(int argc, char* argv[])
     				if(userID == -1 || groupID == -1)
     				{
     					GD::out.printCritical("Could not setup physical devices. Username or group name is not valid.");
+    					GD::physicalInterfaces.dispose();
+    					GD::familyController.dispose();
     					exit(1);
     				}
     				GD::physicalInterfaces.setup(userID, groupID);
+    				GD::physicalInterfaces.dispose();
+    				GD::familyController.dispose();
     				exit(0);
     			}
     			else
@@ -571,12 +576,6 @@ int main(int argc, char* argv[])
 				bytes = strlen(inputBuffer);
 				if(inputBuffer[0] == '\n' || inputBuffer[0] == 0) continue;
 				if(strncmp(inputBuffer, "quit", 4) == 0 || strncmp(inputBuffer, "exit", 4) == 0 || strncmp(inputBuffer, "moin", 4) == 0) break;
-				if(strncmp(inputBuffer, "machwas", 7) == 0)
-				{
-					std::cout << "Doin' somethin'" << std::endl;
-					GD::scriptEngine.execute("/var/lib/homegear/scripts/PH7.php");
-					continue;
-				}
 
 				add_history(inputBuffer); //Sets inputBuffer to 0
 

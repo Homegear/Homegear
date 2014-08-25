@@ -76,6 +76,7 @@ void BidCoS::dispose()
 
 	GD::physicalInterfaces.clear();
 	GD::defaultPhysicalInterface.reset();
+	_central.reset();
 }
 
 std::shared_ptr<BaseLib::Systems::Central> BidCoS::getCentral() { return _central; }

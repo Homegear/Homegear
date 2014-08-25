@@ -108,6 +108,7 @@ FamilyController::FamilyController()
 
 FamilyController::~FamilyController()
 {
+	dispose();
 }
 
 //Device event handling
@@ -380,7 +381,7 @@ void FamilyController::init()
 		}
 		for(std::vector<BaseLib::Systems::DeviceFamilies>::iterator i = familiesToRemove.begin(); i != familiesToRemove.end(); ++i)
 		{
-			GD::deviceFamilies.at(*i)->~DeviceFamily(); //Calls dispose
+			GD::deviceFamilies.at(*i)->dispose(); //Calls dispose
 			GD::deviceFamilies.erase(*i);
 		}
 	}
@@ -428,15 +429,16 @@ void FamilyController::dispose()
 {
 	try
 	{
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		if(_disposed) return;
+		_disposed = true;
+		_rpcCache.reset();
+		if(!GD::deviceFamilies.empty())
 		{
-			if(!i->second)
+			for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 			{
-				GD::out.printError("Error: Disposing of device family with index " + std::to_string((int32_t)i->first) + " failed, because the pointer was empty.");
-				continue;
+				if(!i->second) continue;
+				i->second->dispose();
 			}
-			//Calls dispose()
-			i->second->~DeviceFamily();
 		}
 		GD::deviceFamilies.clear();
 		moduleLoaders.clear();
@@ -455,7 +457,7 @@ void FamilyController::dispose()
     }
 }
 
-void FamilyController::saveAndDispose(bool full, bool crash)
+void FamilyController::saveAndDispose(bool full)
 {
 	try
 	{
@@ -464,11 +466,8 @@ void FamilyController::saveAndDispose(bool full, bool crash)
 		{
 			if(i->second) i->second->save(full);
 		}
-		if(!crash)
-		{
-			GD::out.printMessage("(Shutdown) => Waiting for threads");
-			dispose();
-		}
+		GD::out.printMessage("(Shutdown) => Disposing device families");
+		dispose();
 	}
 	catch(const std::exception& ex)
     {
@@ -608,6 +607,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> FamilyController::listFamilies()
 		if(_rpcCache) return _rpcCache;
 
 		std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		if(_disposed) return array;
 
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{

@@ -30,13 +30,307 @@
 #include "ScriptEngine.h"
 #include "../GD/GD.h"
 
-int32_t logScriptOutput(const void *output, unsigned int outputLen, void *userData /* Unused */)
+int32_t logScriptOutput(const void *output, unsigned int outputLen, void *userData)
 {
 	if(!output || outputLen == 0) return PH7_OK;
 	std::string stringOutput((const char*)output, (const char*)output + outputLen);
 	GD::out.printMessage("Script output: " + stringOutput);
     return PH7_OK;
- }
+}
+
+int32_t logScriptError(const char* message, int32_t messageType, const char* destination, const char* header)
+{
+	if(!message) return PH7_OK;
+	std::string stringMessage(message);
+	GD::out.printError("Script output: Error (type " + std::to_string(messageType) + "): " + stringMessage);
+    return PH7_OK;
+}
+
+int32_t hg_set_system(ph7_context* context, int32_t argc, ph7_value** argv)
+{
+	if(argc != 2)
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Wrong parameter count.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_string(argv[0]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "First parameter is no string.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	int32_t length = 0;
+	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+	for(int32_t i = 0; i < argc; i++)
+	{
+		std::shared_ptr<BaseLib::RPC::RPCVariable> parameter = PH7VariableConverter::getRPCVariable(argv[i]);
+		if(parameter) parameters->arrayValue->push_back(parameter);
+	}
+	std::shared_ptr<BaseLib::RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod("setSystemVariable", parameters);
+	if(result->errorStruct)
+	{
+		std::string errorString("RPC error (Code " + std::to_string(result->structValue->at("faultCode")->integerValue) + "): " + result->structValue->at("faultString")->stringValue);
+		ph7_context_throw_error(context, PH7_CTX_WARNING, errorString.c_str());
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+
+	ph7_result_null(context);
+	return PH7_OK;
+}
+
+int32_t hg_get_system(ph7_context* context, int32_t argc, ph7_value** argv)
+{
+	if(argc != 1)
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Wrong parameter count.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_string(argv[0]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "First parameter is no string.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	int32_t length = 0;
+	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+	for(int32_t i = 0; i < argc; i++)
+	{
+		std::shared_ptr<BaseLib::RPC::RPCVariable> parameter = PH7VariableConverter::getRPCVariable(argv[i]);
+		if(parameter) parameters->arrayValue->push_back(parameter);
+	}
+	std::shared_ptr<BaseLib::RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod("getSystemVariable", parameters);
+	if(result->errorStruct)
+	{
+		std::string errorString("RPC error (Code " + std::to_string(result->structValue->at("faultCode")->integerValue) + "): " + result->structValue->at("faultString")->stringValue);
+		ph7_context_throw_error(context, PH7_CTX_WARNING, errorString.c_str());
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+
+	ph7_value* ph7Result = PH7VariableConverter::getPH7Variable(context, result);
+	if(ph7Result) ph7_result_value(context, ph7Result);
+	return PH7_OK;
+}
+
+int32_t hg_set_meta(ph7_context* context, int32_t argc, ph7_value** argv)
+{
+	if(argc != 3)
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Wrong parameter count.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_int(argv[0]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "First parameter is no integer.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_string(argv[1]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Second parameter is no string.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	int32_t length = 0;
+	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+	for(int32_t i = 0; i < argc; i++)
+	{
+		std::shared_ptr<BaseLib::RPC::RPCVariable> parameter = PH7VariableConverter::getRPCVariable(argv[i]);
+		if(parameter) parameters->arrayValue->push_back(parameter);
+	}
+	std::shared_ptr<BaseLib::RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod("setMetadata", parameters);
+	if(result->errorStruct)
+	{
+		std::string errorString("RPC error (Code " + std::to_string(result->structValue->at("faultCode")->integerValue) + "): " + result->structValue->at("faultString")->stringValue);
+		ph7_context_throw_error(context, PH7_CTX_WARNING, errorString.c_str());
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+
+	ph7_result_null(context);
+	return PH7_OK;
+}
+
+int32_t hg_get_meta(ph7_context* context, int32_t argc, ph7_value** argv)
+{
+	if(argc != 2)
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Wrong parameter count.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_int(argv[0]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "First parameter is no integer.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_string(argv[1]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Second parameter is no string.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	int32_t length = 0;
+	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+	for(int32_t i = 0; i < argc; i++)
+	{
+		std::shared_ptr<BaseLib::RPC::RPCVariable> parameter = PH7VariableConverter::getRPCVariable(argv[i]);
+		if(parameter) parameters->arrayValue->push_back(parameter);
+	}
+	std::shared_ptr<BaseLib::RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod("getMetadata", parameters);
+	if(result->errorStruct)
+	{
+		std::string errorString("RPC error (Code " + std::to_string(result->structValue->at("faultCode")->integerValue) + "): " + result->structValue->at("faultString")->stringValue);
+		ph7_context_throw_error(context, PH7_CTX_WARNING, errorString.c_str());
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+
+	ph7_value* ph7Result = PH7VariableConverter::getPH7Variable(context, result);
+	if(ph7Result) ph7_result_value(context, ph7Result);
+	return PH7_OK;
+}
+
+int32_t hg_set_value(ph7_context* context, int32_t argc, ph7_value** argv)
+{
+	if(argc != 4)
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Wrong parameter count.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_int(argv[0]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "First parameter is no integer.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_int(argv[1]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Second parameter is no integer.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_string(argv[2]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Third parameter is no string.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	int32_t length = 0;
+	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+	for(int32_t i = 0; i < argc; i++)
+	{
+		std::shared_ptr<BaseLib::RPC::RPCVariable> parameter = PH7VariableConverter::getRPCVariable(argv[i]);
+		if(parameter) parameters->arrayValue->push_back(parameter);
+	}
+	std::shared_ptr<BaseLib::RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod("setValue", parameters);
+	if(result->errorStruct)
+	{
+		std::string errorString("RPC error (Code " + std::to_string(result->structValue->at("faultCode")->integerValue) + "): " + result->structValue->at("faultString")->stringValue);
+		ph7_context_throw_error(context, PH7_CTX_WARNING, errorString.c_str());
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+
+	ph7_result_null(context);
+	return PH7_OK;
+}
+
+int32_t hg_get_value(ph7_context* context, int32_t argc, ph7_value** argv)
+{
+	if(argc != 3)
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Wrong parameter count.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_int(argv[0]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "First parameter is no integer.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_int(argv[1]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Second parameter is no integer.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_string(argv[2]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Third parameter is no string.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	int32_t length = 0;
+	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+	for(int32_t i = 0; i < argc; i++)
+	{
+		std::shared_ptr<BaseLib::RPC::RPCVariable> parameter = PH7VariableConverter::getRPCVariable(argv[i]);
+		if(parameter) parameters->arrayValue->push_back(parameter);
+	}
+	std::shared_ptr<BaseLib::RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod("getValue", parameters);
+	if(result->errorStruct)
+	{
+		std::string errorString("RPC error (Code " + std::to_string(result->structValue->at("faultCode")->integerValue) + "): " + result->structValue->at("faultString")->stringValue);
+		ph7_context_throw_error(context, PH7_CTX_WARNING, errorString.c_str());
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+
+	ph7_value* ph7Result = PH7VariableConverter::getPH7Variable(context, result);
+	if(ph7Result) ph7_result_value(context, ph7Result);
+	return PH7_OK;
+}
+
+int32_t hg_invoke(ph7_context* context, int32_t argc, ph7_value** argv)
+{
+	if(argc == 0)
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Missing method name.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_string(argv[0]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "First parameter is no string.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	int32_t length = 0;
+	const char* pMethodName = ph7_value_to_string(argv[0], &length);
+	if(length <= 0)
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Missing method name.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	std::string methodName(pMethodName, pMethodName + length);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+	for(int32_t i = 1; i < argc; i++)
+	{
+		std::shared_ptr<BaseLib::RPC::RPCVariable> parameter = PH7VariableConverter::getRPCVariable(argv[i]);
+		if(parameter) parameters->arrayValue->push_back(parameter);
+	}
+	std::shared_ptr<BaseLib::RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod(methodName, parameters);
+	if(result->errorStruct)
+	{
+		std::string errorString("RPC error (Code " + std::to_string(result->structValue->at("faultCode")->integerValue) + "): " + result->structValue->at("faultString")->stringValue);
+		ph7_context_throw_error(context, PH7_CTX_WARNING, errorString.c_str());
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+
+	ph7_value* ph7Result = PH7VariableConverter::getPH7Variable(context, result);
+	if(ph7Result) ph7_result_value(context, ph7Result);
+	return PH7_OK;
+}
 
 ScriptEngine::ScriptEngine()
 {
@@ -137,6 +431,57 @@ ph7_vm* ScriptEngine::addProgram(std::string path)
 			}
 			return nullptr;
 		}
+
+		result = ph7_create_function(compiledProgram, "hg_invoke", hg_invoke, 0);
+		if(result != PH7_OK)
+		{
+			GD::out.printError("Error adding functions to script \"" + path + "\".");
+			ph7_vm_release(compiledProgram);
+			return nullptr;
+		}
+		result = ph7_create_function(compiledProgram, "hg_set_meta", hg_set_meta, 0);
+		if(result != PH7_OK)
+		{
+			GD::out.printError("Error adding functions to script \"" + path + "\".");
+			ph7_vm_release(compiledProgram);
+			return nullptr;
+		}
+		result = ph7_create_function(compiledProgram, "hg_get_meta", hg_get_meta, 0);
+		if(result != PH7_OK)
+		{
+			GD::out.printError("Error adding functions to script \"" + path + "\".");
+			ph7_vm_release(compiledProgram);
+			return nullptr;
+		}
+		result = ph7_create_function(compiledProgram, "hg_set_system", hg_set_system, 0);
+		if(result != PH7_OK)
+		{
+			GD::out.printError("Error adding functions to script \"" + path + "\".");
+			ph7_vm_release(compiledProgram);
+			return nullptr;
+		}
+		result = ph7_create_function(compiledProgram, "hg_get_system", hg_get_system, 0);
+		if(result != PH7_OK)
+		{
+			GD::out.printError("Error adding functions to script \"" + path + "\".");
+			ph7_vm_release(compiledProgram);
+			return nullptr;
+		}
+		result = ph7_create_function(compiledProgram, "hg_set_value", hg_set_value, 0);
+		if(result != PH7_OK)
+		{
+			GD::out.printError("Error adding functions to script \"" + path + "\".");
+			ph7_vm_release(compiledProgram);
+			return nullptr;
+		}
+		result = ph7_create_function(compiledProgram, "hg_get_value", hg_get_value, 0);
+		if(result != PH7_OK)
+		{
+			GD::out.printError("Error adding functions to script \"" + path + "\".");
+			ph7_vm_release(compiledProgram);
+			return nullptr;
+		}
+
 		result = ph7_vm_config(compiledProgram, PH7_VM_CONFIG_OUTPUT, logScriptOutput, 0);
 		if(result != PH7_OK)
 		{
@@ -144,6 +489,23 @@ ph7_vm* ScriptEngine::addProgram(std::string path)
 			ph7_vm_release(compiledProgram);
 			return nullptr;
 		}
+
+		result = ph7_vm_config(compiledProgram, PH7_VM_CONFIG_ERR_LOG_HANDLER, logScriptError);
+		if(result != PH7_OK)
+		{
+			GD::out.printError("Error while installing the VM error consumer callback for script \"" + path + "\".");
+			ph7_vm_release(compiledProgram);
+			return nullptr;
+		}
+
+		result = ph7_vm_config(compiledProgram, PH7_VM_CONFIG_ERR_REPORT);
+		if(result != PH7_OK)
+		{
+			GD::out.printError("Error enabling VM error reporting for script \"" + path + "\".");
+			ph7_vm_release(compiledProgram);
+			return nullptr;
+		}
+
 		_programsMutex.lock();
 		if(_programs.find(path) != _programs.end())
 		{
@@ -279,26 +641,60 @@ bool ScriptEngine::isValid(const std::string& path, ph7_vm* compiledProgram)
 	return false;
 }
 
-void ScriptEngine::execute(std::string path)
+int32_t ScriptEngine::execute(const std::string& path, const std::string& arguments)
 {
 	try
 	{
 		ph7_vm* compiledProgram = getProgram(path);
 		if(!compiledProgram) compiledProgram = addProgram(path);
-		if(!compiledProgram) return;
+		if(!compiledProgram) return 1;
 		_executeMutex.lock();
 		if(_disposing)
 		{
 			_executeMutex.unlock();
-			return;
+			return 1;
 		}
 		if(!isValid(path, compiledProgram)) //Check if compiledProgram is valid within mutex
 		{
 			GD::out.printError("Error: Script changed during execution: " + path);
 			_executeMutex.unlock();
-			return;
+			return 1;
 		}
-		if(ph7_vm_exec(compiledProgram, 0) != PH7_OK)
+
+		std::vector<std::string> stringArgv = getArgs(path, arguments);
+		ph7_value* argument = ph7_new_scalar(compiledProgram);
+		ph7_value* argv = ph7_new_array(compiledProgram);
+		for(std::vector<std::string>::iterator i = stringArgv.begin(); i != stringArgv.end(); i++)
+		{
+			if(ph7_value_string(argument, (*i).c_str(), -1) != PH7_OK)
+			{
+				GD::out.printError("Error setting argv for script \"" + path + "\".");
+				ph7_release_value(compiledProgram, argument);
+				ph7_release_value(compiledProgram, argv);
+				_executeMutex.unlock();
+				return 1;
+			}
+			if(ph7_array_add_elem(argv, 0, argument) != PH7_OK)
+			{
+				GD::out.printError("Error setting argv for script \"" + path + "\".");
+				ph7_release_value(compiledProgram, argument);
+				ph7_release_value(compiledProgram, argv);
+				_executeMutex.unlock();
+				return 1;
+			}
+			ph7_value_reset_string_cursor(argument);
+		}
+		if(ph7_vm_config(compiledProgram, PH7_VM_CONFIG_CREATE_SUPER, "argv", argv) != PH7_OK)
+		{
+			GD::out.printError("Error setting argv for script \"" + path + "\".");
+			_executeMutex.unlock();
+			return 1;
+		}
+		ph7_release_value(compiledProgram, argument);
+		ph7_release_value(compiledProgram, argv);
+
+		int32_t exitStatus = 0;
+		if(ph7_vm_exec(compiledProgram, &exitStatus) != PH7_OK)
 		{
 			GD::out.printError("Error executing script \"" + path + "\".");
 		}
@@ -306,6 +702,8 @@ void ScriptEngine::execute(std::string path)
 		{
 			GD::out.printError("Error resetting script \"" + path + "\".");
 		}
+		_executeMutex.unlock();
+		return exitStatus;
 	}
 	catch(const std::exception& ex)
 	{
@@ -320,4 +718,20 @@ void ScriptEngine::execute(std::string path)
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_executeMutex.unlock();
+	return 1;
+}
+
+std::vector<std::string> ScriptEngine::getArgs(const std::string& path, const std::string& args)
+{
+	std::vector<std::string> argv;
+	if(!path.empty() && path.back() != '/') argv.push_back(path.substr(path.find_last_of('/') + 1));
+	else argv.push_back(path);
+	wordexp_t p;
+	wordexp(args.c_str(), &p, 0);
+	for (size_t i = 0; i < p.we_wordc; i++)
+	{
+		argv.push_back(std::string(p.we_wordv[i]));
+	}
+	wordfree(&p);
+	return argv;
 }

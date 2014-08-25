@@ -94,6 +94,7 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
+	$(OBJDIR)/PH7VariableConverter.o \
 	$(OBJDIR)/ScriptEngine.o \
 	$(OBJDIR)/ph7.o \
 
@@ -160,6 +161,9 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
+$(OBJDIR)/PH7VariableConverter.o: Libraries/ScriptEngine/PH7VariableConverter.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/ScriptEngine.o: Libraries/ScriptEngine/ScriptEngine.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"

@@ -46,6 +46,7 @@ public:
 	virtual ~Settings() {}
 	void init(BaseLib::Obj* baseLib);
 	void load(std::string filename);
+	bool changed();
 
 	std::string certPath() { return _certPath; }
 	std::string keyPath() { return _keyPath;  }
@@ -83,6 +84,11 @@ public:
 	std::string gpioPath() { return _gpioPath; }
 private:
 	BaseLib::Obj* _bl = nullptr;
+	std::string _path;
+	int32_t _lastModified = -1;
+	int32_t _clientSettingsLastModified = -1;
+	int32_t _serverSettingsLastModified = -1;
+
 	std::string _certPath;
 	std::string _keyPath;
 	bool _loadDHParamsFromFile = true;

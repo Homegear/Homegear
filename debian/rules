@@ -26,11 +26,8 @@ override_dh_auto_install:
 	cp $(CURDIR)/Miscellaneous/rpcclients.conf $(CURDIR)/debian/homegear/etc/homegear
 	cp $(CURDIR)/Miscellaneous/rpcservers.conf $(CURDIR)/debian/homegear/etc/homegear
 	cp $(CURDIR)/Miscellaneous/physicalinterfaces.conf $(CURDIR)/debian/homegear/etc/homegear
-	cp $(CURDIR)/Miscellaneous/GetDeviceFiles.sh $(CURDIR)/debian/homegear/etc/homegear
-	cp $(CURDIR)/Miscellaneous/DeviceTypePatch.patch $(CURDIR)/debian/homegear/etc/homegear
 	chmod 755 $(CURDIR)/debian/homegear/etc/homegear
 	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/*
-	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/GetDeviceFiles.sh
 	mkdir -p $(CURDIR)/debian/homegear/etc/homegear/devices/2
 	mkdir -p $(CURDIR)/debian/homegear/etc/homegear/devices/4
 	cp $(CURDIR)/Miscellaneous/Device\ Description\ Files/INSTEON/* $(CURDIR)/debian/homegear/etc/homegear/devices/2
@@ -63,5 +60,11 @@ override_dh_auto_install:
 	cp $(CURDIR)/lib/Modules/Release/*.so $(CURDIR)/debian/homegear/var/lib/homegear/modules
 	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear/modules
 	chmod -R 550 $(CURDIR)/debian/homegear/var/lib/homegear/modules
+	cp $(CURDIR)/Miscellaneous/GetDeviceFiles.sh $(CURDIR)/debian/homegear/var/lib/homegear
+	chown root:root $(CURDIR)/debian/homegear/var/lib/homegear/GetDeviceFiles.sh
+	chmod 755 $(CURDIR)/debian/homegear/var/lib/homegear/GetDeviceFiles.sh
+	cp $(CURDIR)/Miscellaneous/DeviceTypePatch.patch $(CURDIR)/debian/homegear/var/lib/homegear
+	chown root:root $(CURDIR)/debian/homegear/var/lib/homegear/DeviceTypePatch.patch
+	chmod 644 $(CURDIR)/debian/homegear/var/lib/homegear/DeviceTypePatch.patch
 %:
 	dh $@

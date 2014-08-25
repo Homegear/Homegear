@@ -106,13 +106,14 @@ public:
 	static void destroy();
 	void loadModules();
 	void load();
-	void saveAndDispose(bool full, bool crash = false);
+	void saveAndDispose(bool full);
 	bool familySelected() { return (bool)_currentFamily; }
 	std::string handleCLICommand(std::string& command);
 	bool familyAvailable(BaseLib::Systems::DeviceFamilies family);
 
 	std::shared_ptr<BaseLib::RPC::RPCVariable> listFamilies();
 private:
+	bool _disposed = false;
 	std::shared_ptr<BaseLib::RPC::RPCVariable> _rpcCache;
 
 	std::map<std::string, std::unique_ptr<ModuleLoader>> moduleLoaders;

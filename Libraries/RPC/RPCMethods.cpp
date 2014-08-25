@@ -1776,6 +1776,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCInit::invoke(std::shared_ptr<std::
 {
 	try
 	{
+		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Method is disposing.");
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
 				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString }),
 				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcInteger })
@@ -2295,57 +2296,99 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCRemoveLink::invoke(std::shared_ptr
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+RPCRunScript::~RPCRunScript()
+{
+	_disposing = true;
+	_runScriptThreadMutex.lock();
+	if(_runScriptThread.joinable()) _runScriptThread.join();
+	_runScriptThreadMutex.unlock();
+}
+
 std::shared_ptr<BaseLib::RPC::RPCVariable> RPCRunScript::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
 {
 	try
 	{
+		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Method is disposing.");
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
 			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString }),
 			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcBoolean }),
 			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString }),
-			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcBoolean })
+			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcBoolean }),
+			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcBoolean, BaseLib::RPC::RPCVariableType::rpcString }),
+			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcBoolean, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcBoolean }),
+			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcBoolean, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString }),
+			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcBoolean, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcBoolean })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
+
+		bool internalEngine = false;
+		int32_t offset = 0;
+		if(parameters->at(0)->type == BaseLib::RPC::RPCVariableType::rpcBoolean)
+		{
+			internalEngine = parameters->at(0)->booleanValue;
+			offset = 1;
+		}
 
 		bool wait = false;
 		std::string filename;
 		std::string arguments;
 
-		filename = parameters->at(0)->stringValue;
+		filename = parameters->at(offset)->stringValue;
 
-		if(parameters->size() == 2)
+		if(parameters->size() == offset + 2)
 		{
-			if(parameters->at(1)->type == BaseLib::RPC::RPCVariableType::rpcBoolean) wait = parameters->at(1)->booleanValue;
-			else arguments = parameters->at(1)->stringValue;
+			if(parameters->at(offset + 1)->type == BaseLib::RPC::RPCVariableType::rpcBoolean) wait = parameters->at(offset + 1)->booleanValue;
+			else arguments = parameters->at(offset + 1)->stringValue;
 		}
-		if(parameters->size() == 3)
+		if(parameters->size() == offset + 3)
 		{
-			arguments = parameters->at(1)->stringValue;
-			wait = parameters->at(2)->booleanValue;
+			arguments = parameters->at(offset + 1)->stringValue;
+			wait = parameters->at(offset + 2)->booleanValue;
 		}
 
 		std::string path = GD::bl->settings.scriptPath() + filename;
-		std::string command = path + " " + arguments;
-		if(!wait) command += "&";
 
-		struct stat statStruct;
-		if(stat(path.c_str(), &statStruct) < 0) return BaseLib::RPC::RPCVariable::createError(-32400, "Could not execute script: " + std::string(strerror(errno)));
-		int32_t uid = getuid();
-		int32_t gid = getgid();
-		if((statStruct.st_mode & S_IXOTH) == 0)
+		int32_t exitCode = 0;
+		if(internalEngine)
 		{
-			if(statStruct.st_gid != gid || (statStruct.st_gid == gid && (statStruct.st_mode & S_IXGRP) == 0))
+			if(wait) exitCode = GD::scriptEngine.execute(path, arguments);
+			else
 			{
-				if(statStruct.st_uid != uid || (statStruct.st_uid == uid && (statStruct.st_mode & S_IXUSR) == 0)) return BaseLib::RPC::RPCVariable::createError(-32400, "Could not execute script. No permission or executable bit is not set.");
+				_runScriptThreadMutex.lock();
+				if(_disposing)
+				{
+					_runScriptThreadMutex.unlock();
+					return BaseLib::RPC::RPCVariable::createError(-32500, "Method is disposing.");
+				}
+				if(_runScriptThread.joinable()) _runScriptThread.join();
+				_runScriptThread = std::thread(&ScriptEngine::execute, &GD::scriptEngine, path, arguments);
+				_runScriptThreadMutex.unlock();
 			}
 		}
-		if((statStruct.st_mode & (S_IXGRP | S_IXUSR)) == 0) //At least in Debian it is not possible to execute scripts, when the execution bit is only set for "other".
-			return BaseLib::RPC::RPCVariable::createError(-32400, "Could not execute script. Executable bit is not set for user or group.");
-		if((statStruct.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0) return BaseLib::RPC::RPCVariable::createError(-32400, "Could not execute script. The file mode is not set to executable.");
-		int32_t exitCode = std::system(command.c_str());
-		int32_t signal = WIFSIGNALED(exitCode);
-		if(signal) return BaseLib::RPC::RPCVariable::createError(-32400, "Script exited with signal: " + std::to_string(signal));
-		exitCode = WEXITSTATUS(exitCode);
+		else
+		{
+			std::string command = path + " " + arguments;
+			if(!wait) command += "&";
+
+			struct stat statStruct;
+			if(stat(path.c_str(), &statStruct) < 0) return BaseLib::RPC::RPCVariable::createError(-32400, "Could not execute script: " + std::string(strerror(errno)));
+			int32_t uid = getuid();
+			int32_t gid = getgid();
+			if((statStruct.st_mode & S_IXOTH) == 0)
+			{
+				if(statStruct.st_gid != gid || (statStruct.st_gid == gid && (statStruct.st_mode & S_IXGRP) == 0))
+				{
+					if(statStruct.st_uid != uid || (statStruct.st_uid == uid && (statStruct.st_mode & S_IXUSR) == 0)) return BaseLib::RPC::RPCVariable::createError(-32400, "Could not execute script. No permission or executable bit is not set.");
+				}
+			}
+			if((statStruct.st_mode & (S_IXGRP | S_IXUSR)) == 0) //At least in Debian it is not possible to execute scripts, when the execution bit is only set for "other".
+				return BaseLib::RPC::RPCVariable::createError(-32400, "Could not execute script. Executable bit is not set for user or group.");
+			if((statStruct.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0) return BaseLib::RPC::RPCVariable::createError(-32400, "Could not execute script. The file mode is not set to executable.");
+			exitCode = std::system(command.c_str());
+			int32_t signal = WIFSIGNALED(exitCode);
+			if(signal) return BaseLib::RPC::RPCVariable::createError(-32400, "Script exited with signal: " + std::to_string(signal));
+			exitCode = WEXITSTATUS(exitCode);
+		}
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(exitCode));
 	}
 	catch(const std::exception& ex)

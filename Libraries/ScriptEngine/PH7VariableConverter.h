@@ -27,58 +27,23 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef SCRIPTENGINE_H_
-#define SCRIPTENGINE_H_
+#ifndef PH7VARIABLECONVERTER_H_
+#define PH7VARIABLECONVERTER_H_
 
 #include "../../Modules/Base/BaseLib.h"
-#include "PH7VariableConverter.h"
-
-#include <mutex>
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <wordexp.h>
 #include "ph7.h"
 
-class ScriptEngine
+class PH7VariableConverter
 {
 public:
-	ScriptEngine();
-	virtual ~ScriptEngine();
-	void dispose();
-	
-	int32_t execute(const std::string& path, const std::string& arguments);
-	void clearPrograms();
+	PH7VariableConverter();
+	virtual ~PH7VariableConverter();
+
+	static std::shared_ptr<BaseLib::RPC::RPCVariable> getRPCVariable(ph7_value* value);
+	static ph7_value* getPH7Variable(ph7_context* context, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
 protected:
-	class ScriptInfo
-	{
-	public:
-		ScriptInfo() {}
-		virtual ~ScriptInfo()
-		{
-			if(compiledProgram)
-			{
-				ph7_vm_release(compiledProgram);
-				compiledProgram = nullptr;
-			}
-		}
-
-		ph7_vm* compiledProgram = nullptr;
-		int32_t lastModified = 0;
-	};
-
-	bool _disposing = false;
-	ph7 *_engine = nullptr;
-
-	std::mutex _programsMutex;
-	std::map<std::string, ScriptInfo> _programs;
-	std::mutex _executeMutex;
-
-	ph7_vm* addProgram(std::string path);
-	ph7_vm* getProgram(std::string path);
-	bool isValid(const std::string& path, ph7_vm* compiledProgram);
-	void removeProgram(std::string path);
-	void printError(int32_t code);
-	std::vector<std::string> getArgs(const std::string& path, const std::string& args);
 };
 #endif
