@@ -11,6 +11,8 @@ case "$1" in
 		if [ "$DELETE" = "y" ]; then
 			rm -Rf /etc/homegear/devices/*
 		fi
+		rm -f /var/lib/homegear/GetDeviceFiles.sh
+		rm -f /var/lib/homegear/DeviceTypePatch.patch
     	rm -f /var/lib/homegear/firmware/GetFirmwareUpdates.sh
     	rm -f /var/lib/homegear/modules/mod_*.so
         ;;

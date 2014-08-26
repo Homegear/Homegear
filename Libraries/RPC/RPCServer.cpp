@@ -679,8 +679,8 @@ void RPCServer::removeClient(int32_t clientID)
 		_stateMutex.lock();
 		if(_clients.find(clientID) != _clients.end())
 		{
-			_clients.at(clientID)->readThread.detach();
-			_clients.erase(clientID);
+			std::shared_ptr<Client> client = _clients.at(clientID);
+			if(client->readThread.joinable()) client->readThread.detach();
 		}
 	}
 	catch(const std::exception& ex)
