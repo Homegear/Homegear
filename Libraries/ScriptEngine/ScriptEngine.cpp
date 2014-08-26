@@ -412,6 +412,7 @@ ph7_vm* ScriptEngine::addProgram(std::string path)
 		catch(BaseLib::Exception& ex)
 		{
 			GD::bl->out.printError("Error in script engine: Script \"" + path + "\" not found.");
+			return nullptr;
 		}
 		if(content.empty())
 		{

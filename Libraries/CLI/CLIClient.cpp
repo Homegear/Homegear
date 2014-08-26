@@ -96,7 +96,7 @@ void Client::ping()
     }
 }
 
-void Client::start()
+void Client::start(std::string command)
 {
 	try
 	{
@@ -148,40 +148,62 @@ void Client::start()
 		char* sendBuffer;
 		char receiveBuffer[1025];
 		uint32_t bytes;
-		while((sendBuffer = readline("> ")) != NULL)
+		while(!command.empty() || (sendBuffer = readline("> ")) != NULL)
 		{
-			if(_closed) break;
-			bytes = strlen(sendBuffer);
-			if(sendBuffer[0] == '\n' || sendBuffer[0] == 0) continue;
-			if(strncmp(sendBuffer, "quit", 4) == 0 || strncmp(sendBuffer, "exit", 4) == 0 || strncmp(sendBuffer, "moin", 4) == 0)
+			if(command.empty())
 			{
-				_closed = true;
-				//If we close the socket, the socket file gets deleted. We don't want that
-				//GD::bl->fileDescriptorManager.close(_fileDescriptor);
-				free(sendBuffer);
-				return;
-			}
-			_sendMutex.lock();
-			if(_closed) break;
-			if(send(_fileDescriptor->descriptor, sendBuffer, bytes, MSG_NOSIGNAL) == -1)
-			{
-				_sendMutex.unlock();
-				GD::out.printError("Error sending to socket.");
-				//If we close the socket, the socket file gets deleted. We don't want that
-				//GD::bl->fileDescriptorManager.close(_fileDescriptor);
-				free(sendBuffer);
-				return;
-			}
-			currentCommand = std::string(sendBuffer);
-			if(currentCommand != lastCommand)
-			{
-				lastCommand = currentCommand;
-				add_history(sendBuffer); //Sets sendBuffer to 0
+				if(_closed) break;
+				bytes = strlen(sendBuffer);
+				if(sendBuffer[0] == '\n' || sendBuffer[0] == 0) continue;
+				if(strncmp(sendBuffer, "quit", 4) == 0 || strncmp(sendBuffer, "exit", 4) == 0 || strncmp(sendBuffer, "moin", 4) == 0)
+				{
+					_closed = true;
+					//If we close the socket, the socket file gets deleted. We don't want that
+					//GD::bl->fileDescriptorManager.close(_fileDescriptor);
+					free(sendBuffer);
+					return;
+				}
+				_sendMutex.lock();
+				if(_closed)
+				{
+					_sendMutex.unlock();
+					break;
+				}
+				if(send(_fileDescriptor->descriptor, sendBuffer, bytes, MSG_NOSIGNAL) == -1)
+				{
+					_sendMutex.unlock();
+					GD::out.printError("Error sending to socket.");
+					//If we close the socket, the socket file gets deleted. We don't want that
+					//GD::bl->fileDescriptorManager.close(_fileDescriptor);
+					free(sendBuffer);
+					return;
+				}
+				currentCommand = std::string(sendBuffer);
+				if(currentCommand != lastCommand)
+				{
+					lastCommand = currentCommand;
+					add_history(sendBuffer); //Sets sendBuffer to 0
+				}
+				else
+				{
+					free(sendBuffer);
+					sendBuffer = 0;
+				}
 			}
 			else
 			{
-				free(sendBuffer);
-				sendBuffer = 0;
+				_sendMutex.lock();
+				if(_closed)
+				{
+					_sendMutex.unlock();
+					break;
+				}
+				if(send(_fileDescriptor->descriptor, command.c_str(), command.size(), MSG_NOSIGNAL) == -1)
+				{
+					_sendMutex.unlock();
+					GD::out.printError("Error sending to socket.");
+					return;
+				}
 			}
 
 			while(true)
@@ -190,7 +212,15 @@ void Client::start()
 				{
 					receiveBuffer[bytes] = 0;
 					std::cout << receiveBuffer;
-					if(bytes < 1024 || (bytes == 1024 && receiveBuffer[bytes - 1] == 0)) break;
+					if(bytes < 1024 || (bytes == 1024 && receiveBuffer[bytes - 1] == 0))
+					{
+						if(!command.empty())
+						{
+							_sendMutex.unlock();
+							return;
+						}
+						break;
+					}
 				}
 				else
 				{

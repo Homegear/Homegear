@@ -644,6 +644,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "debuglevel\t\tChanges the debug level" << std::endl;
+			stringStream << "runscript\t\tExecutes a script with the internal PHP engine" << std::endl;
 			stringStream << "users [COMMAND]\t\tExecute user commands. Type \"users help\" for more information." << std::endl;
 			stringStream << "families [COMMAND]\tExecute device family commands. Type \"families help\" for more information." << std::endl;
 			return stringStream.str();
@@ -672,7 +673,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			}
 			if(index == 1)
 			{
-				stringStream << "Description: This command temporarily changes the current debug level." << std::endl;
+				stringStream << "Description: This command changes the current debug level temporarily until Homegear is restarted." << std::endl;
 				stringStream << "Usage: debuglevel DEBUGLEVEL" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
 				stringStream << "  DEBUGLEVEL:\tThe debug level between 0 and 10." << std::endl;
@@ -681,6 +682,46 @@ std::string Server::handleGlobalCommand(std::string& command)
 
 			GD::bl->debugLevel = debugLevel;
 			stringStream << "Debug level set to " << debugLevel << "." << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 9, "runscript") == 0)
+		{
+			std::string path;
+
+			std::stringstream stream(command);
+			std::string element;
+			std::stringstream arguments;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index == 0)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1)
+				{
+					if(element == "help" || element.empty()) break;
+					path = GD::bl->settings.scriptPath() + element;
+				}
+				else
+				{
+					arguments << element << " ";
+				}
+				index++;
+			}
+			if(index < 2)
+			{
+				stringStream << "Description: This command executes a script in the Homegear script folder using the internal PHP engine." << std::endl;
+				stringStream << "Usage: runscript PATH [ARGUMENTS]" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  PATH:\t\tPath relative to the Homegear scripts folder." << std::endl;
+				stringStream << "  ARGUMENTS:\tParameters passed to the script." << std::endl;
+				return stringStream.str();
+			}
+
+			int32_t exitCode = GD::scriptEngine.execute(path, arguments.str());
+			stringStream << "Script executed. Exit code: " << std::dec << exitCode << std::endl;
 			return stringStream.str();
 		}
 		return "";

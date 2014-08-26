@@ -53,7 +53,7 @@ public:
 	Client();
 	virtual ~Client();
 
-	void start();
+	void start(std::string command = "");
 private:
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
 	bool _stopPingThread = false;

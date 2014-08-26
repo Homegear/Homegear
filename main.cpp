@@ -230,6 +230,7 @@ void printHelp()
 	std::cout << "-p <pid path>\t\tSpecify path to process id file" << std::endl;
 	std::cout << "-s <user> <group>\tSet GPIO settings and necessary permissions for all defined physical devices" << std::endl;
 	std::cout << "-r\t\t\tConnect to Homegear on this machine" << std::endl;
+	std::cout << "-e <command>\t\tExecute CLI command" << std::endl;
 	std::cout << "-v\t\t\tPrint program version" << std::endl;
 }
 
@@ -361,6 +362,29 @@ int main(int argc, char* argv[])
     		else if(arg == "-r")
     		{
     			GD::cliClient.start();
+    			exit(0);
+    		}
+    		else if(arg == "-e")
+    		{
+    			std::stringstream command;
+    			if(i + 1 < argc)
+    			{
+    				command << std::string(argv[i + 1]);
+    			}
+    			else
+    			{
+    				printHelp();
+    				exit(1);
+    			}
+
+    			for(int32_t j = i + 2; j < argc; j++)
+    			{
+    				std::string element(argv[j]);
+    				if(element.find(' ') != std::string::npos) command << " \"" << element << "\"";
+    				else command << " " << argv[j];
+    			}
+
+    			GD::cliClient.start(command.str());
     			exit(0);
     		}
     		else if(arg == "-v")
