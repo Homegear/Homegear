@@ -34,13 +34,10 @@ solution "homegear"
    configurations { "Debug", "Release", "Profiling" }
  
    configuration { "linux", "gmake" }
-      buildoptions { "-std=c++11" }
       --GCRYPT_NO_DEPRECATED only works after modifying the header file. See: http://lists.gnupg.org/pipermail/gcrypt-devel/2011-September/001844.html
       defines { "FORTIFY_SOURCE=2", "GCRYPT_NO_DEPRECATED", "PH7_ENABLE_THREADS" }
 
    configuration { "rpi", "gmake" }
-      buildoptions { "-std=c++11" }
-      linkoptions { "-l crypto" }
       includedirs { "./ARM\ headers" }
       libdirs { "./ARM\ libraries" }
 
@@ -61,7 +58,7 @@ solution "homegear"
         "./Modules/Base/Threads/*.h", "./Modules/Base/Threads/*.cpp",
         "./Modules/Base/Settings/*.h", "./Modules/Base/Settings/*.cpp"
       }
-      buildoptions { "-fPIC" }
+      buildoptions { "-std=c++11", "-fPIC" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -77,7 +74,7 @@ solution "homegear"
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols" }
          targetdir "./lib/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
+         buildoptions { "-pg" }
          linkoptions { "-pg" }
 
    project "homematicbidcos"
@@ -87,6 +84,7 @@ solution "homegear"
       files { "./Modules/HomeMaticBidCoS/Devices/*.h", "./Modules/HomeMaticBidCoS/Devices/*.cpp" }
       files { "./Modules/HomeMaticBidCoS/PhysicalInterfaces/*.h", "./Modules/HomeMaticBidCoS/PhysicalInterfaces/*.cpp" }
       linkoptions { "-l pthread", "-l base" }
+      buildoptions { "-std=c++11" }
 	   
       configuration "Debug"
          defines { "DEBUG" }
@@ -105,7 +103,7 @@ solution "homegear"
          flags { "Optimize", "Symbols" }
          libdirs { "./lib/Profiling" }
          targetdir "./lib/Modules/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
+         buildoptions { "-pg" }
          linkoptions { "-pg" }
 
    project "homematicwired"
@@ -115,6 +113,7 @@ solution "homegear"
       files { "./Modules/HomeMaticWired/Devices/*.h", "./Modules/HomeMaticWired/Devices/*.cpp" }
       files { "./Modules/HomeMaticWired/PhysicalInterfaces/*.h", "./Modules/HomeMaticWired/PhysicalInterfaces/*.cpp" }
       linkoptions { "-l pthread", "-l base" }
+      buildoptions { "-std=c++11" }
 	   
       configuration "Debug"
          defines { "DEBUG" }
@@ -133,7 +132,7 @@ solution "homegear"
          flags { "Optimize", "Symbols" }
          libdirs { "./lib/Profiling" }
          targetdir "./lib/Modules/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
+         buildoptions { "-pg" }
          linkoptions { "-pg" }
 
    project "max"
@@ -143,6 +142,7 @@ solution "homegear"
       files { "./Modules/MAX/LogicalDevices/*.h", "./Modules/MAX/LogicalDevices/*.cpp" }
       files { "./Modules/MAX/PhysicalInterfaces/*.h", "./Modules/MAX/PhysicalInterfaces/*.cpp" }
       linkoptions { "-l pthread", "-l base" }
+      buildoptions { "-std=c++11" }
       
       configuration "Debug"
          defines { "DEBUG" }
@@ -161,7 +161,7 @@ solution "homegear"
          flags { "Optimize", "Symbols" }
          libdirs { "./lib/Profiling" }
          targetdir "./lib/Modules/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
+         buildoptions { "-pg" }
          linkoptions { "-pg" }
 
    project "insteon"
@@ -171,6 +171,7 @@ solution "homegear"
       files { "./Modules/Insteon/LogicalDevices/*.h", "./Modules/Insteon/LogicalDevices/*.cpp" }
       files { "./Modules/Insteon/PhysicalInterfaces/*.h", "./Modules/Insteon/PhysicalInterfaces/*.cpp" }
       linkoptions { "-l base" }
+      buildoptions { "-std=c++11" }
 	   
       configuration "Debug"
          defines { "DEBUG" }
@@ -189,13 +190,14 @@ solution "homegear"
          flags { "Optimize", "Symbols" }
          libdirs { "./lib/Profiling" }
          targetdir "./lib/Modules/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
+         buildoptions { "-pg" }
          linkoptions { "-pg" }
 
    project "user"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/User/*.h", "./Libraries/User/*.cpp" }
+      buildoptions { "-std=c++11" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -211,13 +213,14 @@ solution "homegear"
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols" }
          targetdir "./lib/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
+         buildoptions { "-pg" }
          linkoptions { "-pg" }
    
    project "rpc"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/RPC/*.h", "./Libraries/RPC/*.cpp" }
+      buildoptions { "-std=c++11" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -233,13 +236,14 @@ solution "homegear"
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols" }
          targetdir "./lib/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
+         buildoptions { "-pg" }
          linkoptions { "-pg" }
 		 
    project "cli"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/CLI/*.h", "./Libraries/CLI/*.cpp" }
+      buildoptions { "-std=c++11" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -255,13 +259,14 @@ solution "homegear"
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols" }
          targetdir "./lib/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
+         buildoptions { "-pg" }
          linkoptions { "-pg" }
 		 
    project "events"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/Events/*.h", "./Libraries/Events/*.cpp" }
+      buildoptions { "-std=c++11" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -277,13 +282,14 @@ solution "homegear"
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols" }
          targetdir "./lib/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
+         buildoptions { "-pg" }
          linkoptions { "-pg" }
    
    project "database"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/Database/*.h", "./Libraries/Database/*.cpp" }
+      buildoptions { "-std=c++11" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -299,13 +305,36 @@ solution "homegear"
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols" }
          targetdir "./lib/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
+         buildoptions { "-pg" }
          linkoptions { "-pg" }
-         
+   
+   project "ph7"
+      kind "StaticLib"
+      language "C"
+      files { "./Libraries/ScriptEngine/ph7.h", "./Libraries/ScriptEngine/ph7.c" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-pg" }
+         linkoptions { "-pg" }
+   
    project "scriptengine"
       kind "StaticLib"
       language "C++"
-      files { "./Libraries/ScriptEngine/*.h", "./Libraries/ScriptEngine/*.cpp", "./Libraries/ScriptEngine/*.c" }
+      files { "./Libraries/ScriptEngine/*.h", "./Libraries/ScriptEngine/*.cpp" }
+      buildoptions { "-std=c++11" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -321,13 +350,14 @@ solution "homegear"
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols" }
          targetdir "./lib/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
+         buildoptions { "-pg" }
          linkoptions { "-pg" }
 		 
    project "gd"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/GD/*.h", "./Libraries/GD/*.cpp" }
+      buildoptions { "-std=c++11" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -343,7 +373,7 @@ solution "homegear"
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols" }
          targetdir "./lib/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
+         buildoptions { "-pg" }
          linkoptions { "-pg" }
    
    project "homegear"
@@ -351,7 +381,8 @@ solution "homegear"
       language "C++"
       files { "*.h", "*.cpp" }
 	  files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
-      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l sqlite3", "-l readline", "-l gpg-error", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l scriptengine", "-l base" }
+      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l sqlite3", "-l readline", "-l gpg-error", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l scriptengine", "-l ph7", "-l base" }
+      buildoptions { "-std=c++11" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -370,5 +401,5 @@ solution "homegear"
          flags { "Optimize", "Symbols" }
 		 libdirs { "./lib/Profiling" }
          targetdir "bin/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
+         buildoptions { "-pg" }
          linkoptions { "-pg" }

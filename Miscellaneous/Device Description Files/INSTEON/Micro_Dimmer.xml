@@ -109,7 +109,7 @@
 						<option id="10 seconds" index="0x18"/>
 						<option id="5 seconds" index="0x1A"/>
 						<option id="2 seconds" index="0x1B"/>
-						<option id="0.5 seconds" index="0x1C"/>
+						<option id="0.5 seconds" index="0x1C" default="true"/>
 						<option id="Instant" index="0x1F"/>
 					</logical>
 					<physical type="integer" interface="command" value_id="RAMP_RATE" id="RAMP_RATE">

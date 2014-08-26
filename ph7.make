@@ -28,19 +28,19 @@ ifndef RESCOMP
 endif
 
 ifeq ($(config),debug)
-  OBJDIR     = obj/Debug/homegear
-  TARGETDIR  = bin/Debug
-  TARGET     = $(TARGETDIR)/homegear
+  OBJDIR     = obj/Debug/ph7
+  TARGETDIR  = lib/Debug
+  TARGET     = $(TARGETDIR)/libph7.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -g
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Debug -l rpc -l dl -l pthread -l sqlite3 -l readline -l gpg-error -l gcrypt -l gnutls -l user -l cli -l events -l gd -l database -l scriptengine -l ph7 -l base
+  LDFLAGS   += 
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -50,19 +50,19 @@ ifeq ($(config),debug)
 endif
 
 ifeq ($(config),release)
-  OBJDIR     = obj/Release/homegear
-  TARGETDIR  = bin/Release
-  TARGET     = $(TARGETDIR)/homegear
+  OBJDIR     = obj/Release/ph7
+  TARGETDIR  = lib/Release
+  TARGET     = $(TARGETDIR)/libph7.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Release -s -l rpc -l dl -l pthread -l sqlite3 -l readline -l gpg-error -l gcrypt -l gnutls -l user -l cli -l events -l gd -l database -l scriptengine -l ph7 -l base
+  LDFLAGS   += -s
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -72,19 +72,19 @@ ifeq ($(config),release)
 endif
 
 ifeq ($(config),profiling)
-  OBJDIR     = obj/Profiling/homegear
-  TARGETDIR  = bin/Profiling
-  TARGET     = $(TARGETDIR)/homegear
+  OBJDIR     = obj/Profiling/ph7
+  TARGETDIR  = lib/Profiling
+  TARGET     = $(TARGETDIR)/libph7.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Profiling -l rpc -l dl -l pthread -l sqlite3 -l readline -l gpg-error -l gcrypt -l gnutls -l user -l cli -l events -l gd -l database -l scriptengine -l ph7 -l base -pg
+  LDFLAGS   += -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -94,11 +94,7 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/AESTest.o \
-	$(OBJDIR)/main.o \
-	$(OBJDIR)/FamilyController.o \
-	$(OBJDIR)/PhysicalInterfaces.o \
-	$(OBJDIR)/DatabaseController.o \
+	$(OBJDIR)/ph7.o \
 
 RESOURCES := \
 
@@ -116,7 +112,7 @@ all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
 	@:
 
 $(TARGET): $(GCH) $(OBJECTS) $(LDDEPS) $(RESOURCES)
-	@echo Linking homegear
+	@echo Linking ph7
 	$(SILENT) $(LINKCMD)
 	$(POSTBUILDCMDS)
 
@@ -137,7 +133,7 @@ else
 endif
 
 clean:
-	@echo Cleaning homegear
+	@echo Cleaning ph7
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) rm -f  $(TARGET)
 	$(SILENT) rm -rf $(OBJDIR)
@@ -160,23 +156,11 @@ ifeq (posix,$(SHELLTYPE))
 else
 	$(SILENT) xcopy /D /Y /Q "$(subst /,\,$<)" "$(subst /,\,$(OBJDIR))" 1>nul
 endif
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/AESTest.o: AESTest.cpp
+$(OBJDIR)/ph7.o: Libraries/ScriptEngine/ph7.c
 	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/main.o: main.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/FamilyController.o: Libraries/Systems/FamilyController.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PhysicalInterfaces.o: Libraries/Systems/PhysicalInterfaces.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/DatabaseController.o: Libraries/Systems/DatabaseController.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 
 -include $(OBJECTS:%.o=%.d)

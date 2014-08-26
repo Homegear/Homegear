@@ -96,7 +96,6 @@ endif
 OBJECTS := \
 	$(OBJDIR)/PH7VariableConverter.o \
 	$(OBJDIR)/ScriptEngine.o \
-	$(OBJDIR)/ph7.o \
 
 RESOURCES := \
 
@@ -167,8 +166,5 @@ $(OBJDIR)/PH7VariableConverter.o: Libraries/ScriptEngine/PH7VariableConverter.cp
 $(OBJDIR)/ScriptEngine.o: Libraries/ScriptEngine/ScriptEngine.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/ph7.o: Libraries/ScriptEngine/ph7.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 
 -include $(OBJECTS:%.o=%.d)
