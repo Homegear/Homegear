@@ -36,6 +36,18 @@ rm $FIRMWAREDIR/info
 echo "23" > $SCRIPTDIR/0000.00000022.version
 [ $? -ne 0 ] && exit 1
 
+wget -P $FIRMWAREDIR http://www.eq-3.de/Downloads/Software/Firmware/HM-ES-PMSw1-Pl_update_V1_6_001_140417.tgz
+[ $? -ne 0 ] && exit 1
+tar -zxf $FIRMWAREDIR/HM-ES-PMSw1-Pl_update_V1_6_001_140417.tgz -C $FIRMWAREDIR
+[ $? -ne 0 ] && exit 1
+mv $FIRMWAREDIR/HM-ES-PMSw1-Pl_update_V1_6_001_140417.eq3 $SCRIPTDIR/0000.000000AC.fw
+[ $? -ne 0 ] && exit 1
+rm $FIRMWAREDIR/HM-ES-PMSw1-Pl_update_V1_6_001_140417.tgz
+rm $FIRMWAREDIR/changelog.txt
+rm $FIRMWAREDIR/info
+echo "16" > $SCRIPTDIR/0000.000000AC.version
+[ $? -ne 0 ] && exit 1
+
 mv $FIRMWAREDIR/hm-cc-rt-dn_update.eq3 $SCRIPTDIR/0000.00000095.fw
 [ $? -ne 0 ] && exit 1
 echo "13" > $SCRIPTDIR/0000.00000095.version
