@@ -50,15 +50,18 @@
 
 #include <gcrypt.h>
 
-//Test
-#include "Libraries/ScriptEngine/ScriptEngine.h"
-//Test end
-
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 bool _startAsDaemon = false;
 bool _startUpComplete = false;
 bool _disposing = false;
+
+void exitHomegear(int exitCode)
+{
+	GD::physicalInterfaces.dispose();
+    GD::familyController.dispose();
+    exit(exitCode);
+}
 
 void startRPCServers()
 {
@@ -75,7 +78,7 @@ void startRPCServers()
 	if(GD::rpcServers.size() == 0)
 	{
 		GD::out.printCritical("Critical: No RPC servers are running. Terminating Homegear.");
-		exit(1);
+		exitHomegear(1);
 	}
 }
 
@@ -242,11 +245,11 @@ void startDaemon()
 		pid = fork();
 		if(pid < 0)
 		{
-			exit(1);
+			exitHomegear(1);
 		}
 		if(pid > 0)
 		{
-			exit(0);
+			exitHomegear(0);
 		}
 		//Set process permission
 		umask(S_IWGRP | S_IWOTH);
@@ -254,13 +257,13 @@ void startDaemon()
 		sid = setsid();
 		if(sid < 0)
 		{
-			exit(1);
+			exitHomegear(1);
 		}
 		//Set root directory as working directory (always available)
 		if((chdir(GD::bl->settings.logfilePath().c_str())) < 0)
 		{
 			GD::out.printError("Could not change working directory to " + GD::bl->settings.logfilePath() + ".");
-			exit(1);
+			exitHomegear(1);
 		}
 
 		close(STDIN_FILENO);
@@ -539,17 +542,17 @@ int main(int argc, char* argv[])
 		//End init gcrypt
 
 		GD::familyController.loadModules();
-		if(GD::deviceFamilies.empty()) exit(1);
+		if(GD::deviceFamilies.empty()) exitHomegear(1);
 
 		GD::db.init();
     	GD::db.open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".bak");
-    	if(!GD::db.isOpen()) exit(1);
+    	if(!GD::db.isOpen()) exitHomegear(1);
 
     	GD::physicalInterfaces.load(GD::bl->settings.physicalInterfaceSettingsPath());
         if(GD::physicalInterfaces.count() == 0)
         {
         	GD::out.printCritical("Critical: No physical device could be initialized... Exiting...");
-        	exit(1);
+        	exitHomegear(1);
         }
         GD::out.printInfo("Initializing database...");
         GD::db.convertDatabase();
@@ -559,11 +562,11 @@ int main(int argc, char* argv[])
         if(!GD::physicalInterfaces.isOpen())
         {
         	GD::out.printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
-        	exit(1);
+        	exitHomegear(1);
         }
         GD::out.printInfo("Initializing family controller...");
         GD::familyController.init();
-        if(GD::deviceFamilies.empty()) exit(1);
+        if(GD::deviceFamilies.empty()) exitHomegear(1);
         GD::out.printInfo("Loading devices...");
         GD::familyController.load(); //Don't load before database is open!
 
