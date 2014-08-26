@@ -680,6 +680,7 @@ void RPCServer::removeClient(int32_t clientID)
 		if(_clients.find(clientID) != _clients.end())
 		{
 			std::shared_ptr<Client> client = _clients.at(clientID);
+			_clients.erase(clientID);
 			if(client->readThread.joinable()) client->readThread.detach();
 		}
 	}
