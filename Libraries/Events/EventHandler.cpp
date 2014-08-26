@@ -1091,7 +1091,6 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 		for(std::vector<std::shared_ptr<Event>>::iterator i = triggeredEvents.begin(); i !=  triggeredEvents.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::RPC::RPCVariable> result;
-			(*i)->lastValue = value;
 			if(((int32_t)(*i)->trigger) < 8)
 			{
 				//Comparison with previous value
@@ -1214,6 +1213,8 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 					}
 				}
 			}
+			(*i)->lastValue = value;
+
 			postTriggerTasks(*i, result, currentTime);
 
 			GD::rpcClient.broadcastUpdateEvent((*i)->name, (int32_t)(*i)->type, (*i)->peerID, (*i)->peerChannel, (*i)->variable);
