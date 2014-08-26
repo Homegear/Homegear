@@ -1200,7 +1200,7 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 				while(waitIndex < 100) //Wait, wait, wait. The WOR preamble alone needs 360ms with the CUL! And AES handshakes need time, too.
 				{
 					receivedPacket = _receivedPackets.get(peer->getAddress());
-					if(receivedPacket && receivedPacket->timeReceived() > time && receivedPacket->payload()->size() >= 1 && receivedPacket->payload()->at(0) == 0 && receivedPacket->destinationAddress() == _address && receivedPacket->controlByte() == 0x80 && receivedPacket->messageType() == 2)
+					if(receivedPacket && receivedPacket->timeReceived() > time && receivedPacket->payload()->size() >= 1 && receivedPacket->destinationAddress() == _address && receivedPacket->messageType() == 2)
 					{
 						GD::out.printInfo("Info: Enter bootloader packet was accepted by peer.");
 						responseReceived = true;
