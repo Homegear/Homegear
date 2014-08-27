@@ -105,7 +105,6 @@ void InsteonPacket::import(std::vector<char>& packet)
 		_flags = (InsteonPacketFlags)(packet[6] >> 5);
 		_hopsLeft = (packet[6] >> 2) & 3;
 		_hopsMax = packet[6] & 3;
-		bool extended = packet[6] & 16;
 		_senderAddress = (packet[0] << 16) + (packet[1] << 8) + packet[2];
 		_destinationAddress = (packet[3] << 16) + (packet[4] << 8) + packet[5];
 		_payload.clear();
@@ -148,7 +147,6 @@ void InsteonPacket::import(std::vector<uint8_t>& packet)
 		_flags = (InsteonPacketFlags)(packet[6] >> 5);
 		_hopsLeft = (packet[6] >> 2) & 3;
 		_hopsMax = packet[6] & 3;
-		bool extended = packet[6] & 16;
 		_senderAddress = (packet[0] << 16) + (packet[1] << 8) + packet[2];
 		_destinationAddress = (packet[3] << 16) + (packet[4] << 8) + packet[5];
 		_payload.clear();

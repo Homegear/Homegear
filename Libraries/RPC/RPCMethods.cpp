@@ -380,13 +380,13 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCAddLink::invoke(std::shared_ptr<st
 		}
 
 		std::string name;
-		if(parameters->size() > nameIndex)
+		if((signed)parameters->size() > nameIndex)
 		{
 			if(parameters->at(nameIndex)->stringValue.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "Name has more than 250 characters.");
 			name = parameters->at(nameIndex)->stringValue;
 		}
 		std::string description;
-		if(parameters->size() > nameIndex + 1)
+		if((signed)parameters->size() > nameIndex + 1)
 		{
 			if(parameters->at(nameIndex + 1)->stringValue.size() > 1000) return BaseLib::RPC::RPCVariable::createError(-32602, "Description has more than 1000 characters.");
 			description = parameters->at(nameIndex + 1)->stringValue;
@@ -1570,6 +1570,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetServiceMessages::invoke(std::sh
 			std::vector<BaseLib::RPC::RPCVariableType>(),
 			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcBoolean })
 		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
 
 		bool id = false;
 		if(parameters->size() == 1) id = parameters->at(0)->booleanValue;
@@ -2335,12 +2336,12 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCRunScript::invoke(std::shared_ptr<
 
 		filename = parameters->at(offset)->stringValue;
 
-		if(parameters->size() == offset + 2)
+		if((signed)parameters->size() == offset + 2)
 		{
 			if(parameters->at(offset + 1)->type == BaseLib::RPC::RPCVariableType::rpcBoolean) wait = parameters->at(offset + 1)->booleanValue;
 			else arguments = parameters->at(offset + 1)->stringValue;
 		}
-		if(parameters->size() == offset + 3)
+		if((signed)parameters->size() == offset + 3)
 		{
 			arguments = parameters->at(offset + 1)->stringValue;
 			wait = parameters->at(offset + 2)->booleanValue;
@@ -2372,8 +2373,8 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCRunScript::invoke(std::shared_ptr<
 
 			struct stat statStruct;
 			if(stat(path.c_str(), &statStruct) < 0) return BaseLib::RPC::RPCVariable::createError(-32400, "Could not execute script: " + std::string(strerror(errno)));
-			int32_t uid = getuid();
-			int32_t gid = getgid();
+			uint32_t uid = getuid();
+			uint32_t gid = getgid();
 			if((statStruct.st_mode & S_IXOTH) == 0)
 			{
 				if(statStruct.st_gid != gid || (statStruct.st_gid == gid && (statStruct.st_mode & S_IXGRP) == 0))
@@ -2590,13 +2591,13 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetLinkInfo::invoke(std::shared_pt
 		}
 
 		std::string name;
-		if(parameters->size() > nameIndex)
+		if((signed)parameters->size() > nameIndex)
 		{
 			if(parameters->at(nameIndex)->stringValue.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "Name has more than 250 characters.");
 			name = parameters->at(nameIndex)->stringValue;
 		}
 		std::string description;
-		if(parameters->size() > nameIndex + 1)
+		if((signed)parameters->size() > nameIndex + 1)
 		{
 			if(parameters->at(nameIndex + 1)->stringValue.size() > 1000) return BaseLib::RPC::RPCVariable::createError(-32602, "Description has more than 1000 characters.");
 			description = parameters->at(nameIndex + 1)->stringValue;

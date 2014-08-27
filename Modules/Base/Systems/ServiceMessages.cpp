@@ -453,7 +453,7 @@ void ServiceMessages::checkUnreach(int32_t cyclicTimeout, uint32_t lastPacketRec
 	try
 	{
 		uint32_t time = HelperFunctions::getTimeSeconds();
-		if(cyclicTimeout > 0 && (time - lastPacketReceived) > cyclicTimeout && !_unreach)
+		if(cyclicTimeout > 0 && (time - lastPacketReceived) > (unsigned)cyclicTimeout && !_unreach)
 		{
 			_unreach = true;
 			_stickyUnreach = true;

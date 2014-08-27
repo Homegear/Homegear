@@ -35,6 +35,9 @@
 
 namespace BaseLib
 {
+/**
+ * Base class for all exceptions defined in Homegear
+ */
 class Exception : std::exception
 {
     public:

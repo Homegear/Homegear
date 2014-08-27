@@ -379,7 +379,6 @@ bool HM_SD::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Sys
 				std::string lengthHex = stringstream.str();
 				std::string packetString(lengthHex + packetHex.substr(2, 2) + i->response);
 				packet->import(packetString, false);
-				std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
 				GD::out.printMessage("Captured: " + packetHex + " Responding with: " + packet->hexString());
 				_physicalInterface->sendPacket(packet);
 			}

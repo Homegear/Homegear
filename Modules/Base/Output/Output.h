@@ -143,7 +143,7 @@ public:
 	/**
 	 * Prints an error message (debug level < 2).
 	 *
-	 * @see printError()
+	 * @see printCritical()
 	 * @see printWarning()
 	 * @see printInfo()
 	 * @see printDebug()
@@ -155,8 +155,8 @@ public:
 	/**
 	 * Prints a warning message (debug level < 3).
 	 *
+	 * @see printCritical()
 	 * @see printError()
-	 * @see printWarning()
 	 * @see printInfo()
 	 * @see printDebug()
 	 * @see printMessage()
@@ -167,9 +167,9 @@ public:
 	/**
 	 * Prints a info message (debug level < 4).
 	 *
+	 * @see printCritical()
 	 * @see printError()
 	 * @see printWarning()
-	 * @see printInfo()
 	 * @see printDebug()
 	 * @see printMessage()
 	 * @param message The message.
@@ -179,10 +179,10 @@ public:
 	/**
 	 * Prints a debug message (debug level < 5).
 	 *
+	 * @see printCritical()
 	 * @see printError()
 	 * @see printWarning()
 	 * @see printInfo()
-	 * @see printDebug()
 	 * @see printMessage()
 	 * @param message The message.
 	 * @param minDebugLevel The minimal debug level (default 5).
@@ -192,11 +192,11 @@ public:
 	/**
 	 * Prints a message regardless of the current debug level.
 	 *
+	 * @see printCritical()
 	 * @see printError()
 	 * @see printWarning()
 	 * @see printInfo()
 	 * @see printDebug()
-	 * @see printMessage()
 	 * @param message The message.
 	 * @param minDebugLevel The minimal debug level (default 0).
 	 */

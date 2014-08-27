@@ -144,7 +144,7 @@ std::shared_ptr<InsteonDevice> Insteon::getDevice(uint32_t address)
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<BaseLib::Systems::LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
-			if((*i)->getAddress() == address)
+			if((uint32_t)(*i)->getAddress() == address)
 			{
 				std::shared_ptr<InsteonDevice> device(std::dynamic_pointer_cast<InsteonDevice>(*i));
 				if(!device) continue;

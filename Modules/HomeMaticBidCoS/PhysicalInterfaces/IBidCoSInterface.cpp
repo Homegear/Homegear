@@ -41,7 +41,7 @@ std::vector<char> IBidCoSInterface::PeerInfo::getAESChannelMap()
 		for(std::map<int32_t, bool>::iterator i = aesChannels.begin(); i != aesChannels.end(); ++i)
 		{
 			int32_t byte = i->first / 8;
-			if(map.size() < (byte + 1)) map.resize(byte + 1, 0);
+			if((signed)map.size() < (byte + 1)) map.resize(byte + 1, 0);
 			if(i->second) map.at(byte) |= (1 << (i->first % 8));
 		}
 		std::reverse(map.begin(), map.end());

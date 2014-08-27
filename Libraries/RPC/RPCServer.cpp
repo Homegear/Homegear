@@ -190,7 +190,6 @@ void RPCServer::stop()
 			i++;
 			if(i == 299) GD::out.printError("Error: " + std::to_string(_clients.size()) + " RPC clients are still connected to RPC server.");
 		}
-		int32_t result = 0;
 		if(_x509Cred)
 		{
 			gnutls_certificate_free_credentials(_x509Cred);
@@ -310,7 +309,7 @@ void RPCServer::mainThread()
 				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = getClientSocketDescriptor();
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor < 0) continue;
 				_stateMutex.lock();
-				if(_clients.size() >= _maxConnections)
+				if(_clients.size() >= (unsigned)_maxConnections)
 				{
 					_stateMutex.unlock();
 					_out.printError("Error: Client connection rejected, because there are too many clients connected to me.");
@@ -755,7 +754,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				if(buffer[3] & 0x40)
 				{
 					GD::bl->hf.memcpyBigEndian((char*)&headerSize, buffer + 4, 4);
-					if(bytesRead < headerSize + 12)
+					if(bytesRead < (signed)headerSize + 12)
 					{
 						_out.printError("Error: Binary rpc packet has invalid header size.");
 						continue;
@@ -782,7 +781,6 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				if(_settings->authType == ServerSettings::Settings::AuthType::basic)
 				{
 					if(!client->auth.initialized()) client->auth = Auth(client->socket, _settings->validUsers);
-					bool authFailed = false;
 					try
 					{
 						if(!client->auth.basicServer(header))
@@ -798,7 +796,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						break;
 					}
 				}
-				if(dataSize > bytesRead - 8) packetLength = bytesRead - 8;
+				if(dataSize > (unsigned)bytesRead - 8) packetLength = bytesRead - 8;
 				else
 				{
 					packetLength = 0;
@@ -831,7 +829,6 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				if(_settings->authType == ServerSettings::Settings::AuthType::basic)
 				{
 					if(!client->auth.initialized()) client->auth = Auth(client->socket, _settings->validUsers);
-					bool authFailed = false;
 					try
 					{
 						if(!client->auth.basicServer(http))

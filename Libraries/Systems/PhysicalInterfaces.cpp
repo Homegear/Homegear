@@ -55,7 +55,6 @@ void PhysicalInterfaces::load(std::string filename)
 	try
 	{
 		reset();
-		int32_t index = 0;
 		char input[1024];
 		FILE *fin;
 		int32_t len, ptr;

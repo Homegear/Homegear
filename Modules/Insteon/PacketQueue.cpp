@@ -288,7 +288,7 @@ void PacketQueue::resend(uint32_t threadId)
 		i = 0;
 		keepAlive();
 		sleepingTime = std::chrono::milliseconds(100);
-		while(!_stopResendThread && i < (_resendSleepingTime / 100))
+		while(!_stopResendThread && i < ((signed)_resendSleepingTime / 100))
 		{
 			std::this_thread::sleep_for(sleepingTime);
 			i++;
@@ -345,7 +345,7 @@ void PacketQueue::resend(uint32_t threadId)
 			}
 			else _queueMutex.unlock(); //Has to be unlocked before startResendThread
 			if(_stopResendThread) return;
-			if(_resendCounter < (retries - 2)) //This actually means that the message will be sent three times all together if there is no response
+			if(_resendCounter < ((signed)retries - 2)) //This actually means that the message will be sent three times all together if there is no response
 			{
 				_resendCounter++;
 				_startResendThreadMutex.lock();
@@ -804,7 +804,6 @@ void PacketQueue::startResendThread(bool force)
 			return;
 		}
 		int32_t destinationAddress = 0;
-		bool burst = false;
 		if(_queue.front().getPacket())
 		{
 			destinationAddress = _queue.front().getPacket()->destinationAddress();
@@ -814,7 +813,6 @@ void PacketQueue::startResendThread(bool force)
 		if(destinationAddress != 0 || force) //Resend when no response?
 		{
 			stopResendThread();
-			if(peer && (peer->getRXModes() & Device::RXModes::burst)) burst = true;
 			_resendThread = std::thread(&PacketQueue::resend, this, _resendThreadId++);
 			BaseLib::Threads::setThreadPriority(GD::bl, _resendThread.native_handle(), GD::bl->settings.packetQueueThreadPriority(), GD::bl->settings.packetQueueThreadPolicy());
 		}

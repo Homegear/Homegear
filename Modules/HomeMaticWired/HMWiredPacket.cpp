@@ -62,7 +62,7 @@ void CRC16::initCRCTable()
 uint16_t CRC16::calculate(std::vector<uint8_t>& data)
 {
 	uint16_t crc = 0xf1e2;
-	for(int32_t i = 0; i < data.size(); i++)
+	for(uint32_t i = 0; i < data.size(); i++)
 	{
 		crc = (crc << 8) ^ _crcTable[((crc >> 8) & 0xff) ^ data[i]];
 	}
@@ -183,7 +183,7 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet, bool removeEscapes)
 			if(packet.size() > 9)
 			{
 				_length = packet[10]; //Frame length
-				if(packet.size() != _length + 11 && packet.size() != _length + 9)
+				if((signed)packet.size() != _length + 11 && (signed)packet.size() != _length + 9)
 				{
 					reset();
 					GD::out.printError("HomeMatic Wired packet has invalid length: " + BaseLib::HelperFunctions::getHexString(packet));
@@ -203,7 +203,7 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet, bool removeEscapes)
 				if(_length >= 2)
 				{
 					if(_packet.size() > 13)  _payload.insert(_payload.end(), packet.begin() + 11, packet.end() - 2);
-					if(packet.size() == _length + 11)
+					if((signed)packet.size() == _length + 11)
 					{
 						_checksum = (packet.at(packet.size() - 2) << 8) + packet.at(packet.size() - 1);
 						packet.erase(packet.end() - 2, packet.end());
@@ -237,7 +237,7 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet, bool removeEscapes)
 				_length = packet[6];
 				if(_length == 2)
 				{
-					if(packet.size() == _length + 7)
+					if((signed)packet.size() == _length + 7)
 					{
 						_checksum = (packet.at(packet.size() - 2) << 8) + packet.at(packet.size() - 1);
 						packet.erase(packet.end() - 2, packet.end());
@@ -273,7 +273,7 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet, bool removeEscapes)
 			if(_length >= 2)
 			{
 				if(_packet.size() > 6)  _payload.insert(_payload.end(), packet.begin() + 4, packet.end() - 2);
-				if(packet.size() == _length + 4)
+				if((signed)packet.size() == _length + 4)
 				{
 					_checksum = (packet.at(packet.size() - 2) << 8) + packet.at(packet.size() - 1);
 					packet.erase(packet.end() - 2, packet.end());

@@ -144,7 +144,7 @@ public:
 	//End features
 
 	//In table peers:
-	virtual int32_t getParentID() { return _parentID; }
+	virtual uint32_t getParentID() { return _parentID; }
 	virtual int32_t getAddress() { return _address; }
 	virtual uint64_t getID() { return _peerID; }
 	virtual void setID(uint64_t id);

@@ -82,9 +82,9 @@ class InsteonMessage
         bool typeIsEqual(int32_t messageType, int32_t messageSubtype, InsteonPacketFlags flags, std::vector<std::pair<uint32_t, int32_t>>* subtypes);
     protected:
         MessageDirection _direction = DIRECTIONIN;
-        InsteonPacketFlags _messageFlags;
         int32_t _messageType = -1;
         int32_t _messageSubtype = -1;
+        InsteonPacketFlags _messageFlags;
         InsteonDevice* _device = nullptr;
         int32_t _access = 0;
         int32_t _accessPairing = 0;

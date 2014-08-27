@@ -473,7 +473,7 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 				GD::out.printDebug("Next duty cycle: " + std::to_string(nextDutyCycleEvent / 1000) + " (in " + std::to_string(cycleTime / 1000) + " ms) with message counter 0x" + BaseLib::HelperFunctions::getHexString(_messageCounter[1]));
 
 				std::chrono::milliseconds sleepingTime(250);
-				while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 80)
+				while(!_stopDutyCycleThread && _dutyCycleCounter < (signed)cycleLength - 80)
 				{
 					std::this_thread::sleep_for(sleepingTime);
 					_dutyCycleCounter += 1;
@@ -486,7 +486,7 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 					_sendDutyCyclePacketThread = std::thread(&HM_CC_TC::sendDutyCycleBroadcast, this);
 				}
 
-				while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 40)
+				while(!_stopDutyCycleThread && _dutyCycleCounter < (signed)cycleLength - 40)
 				{
 					std::this_thread::sleep_for(sleepingTime);
 					_dutyCycleCounter += 1;

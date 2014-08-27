@@ -65,7 +65,7 @@ void exitHomegear(int exitCode)
 
 void startRPCServers()
 {
-	for(uint32_t i = 0; i < GD::serverSettings.count(); i++)
+	for(int32_t i = 0; i < GD::serverSettings.count(); i++)
 	{
 		std::shared_ptr<RPC::ServerSettings::Settings> settings = GD::serverSettings.get(i);
 		std::string info = "Starting XML RPC server " + settings->name + " listening on " + settings->interface + ":" + std::to_string(settings->port);
@@ -592,7 +592,6 @@ int main(int argc, char* argv[])
 
 		char* inputBuffer;
         std::string input;
-        uint32_t bytes;
         if(_startAsDaemon)
         	while(true) std::this_thread::sleep_for(std::chrono::milliseconds(2000));
         else
@@ -600,7 +599,6 @@ int main(int argc, char* argv[])
 			while((inputBuffer = readline("")) != NULL)
 			{
 				input = std::string(inputBuffer);
-				bytes = strlen(inputBuffer);
 				if(inputBuffer[0] == '\n' || inputBuffer[0] == 0) continue;
 				if(strncmp(inputBuffer, "quit", 4) == 0 || strncmp(inputBuffer, "exit", 4) == 0 || strncmp(inputBuffer, "moin", 4) == 0) break;
 

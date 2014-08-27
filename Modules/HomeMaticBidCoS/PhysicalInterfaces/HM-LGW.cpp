@@ -1916,7 +1916,7 @@ void HM_LGW::listen()
 							break;
 						}
 					}
-				} while(receivedBytes == bufferMax);
+				} while(receivedBytes == (unsigned)bufferMax);
 			}
 			catch(BaseLib::SocketTimeOutException& ex)
 			{
@@ -2015,7 +2015,7 @@ void HM_LGW::listenKeepAlive()
 							break;
 						}
 					}
-				} while(receivedBytes == bufferMax);
+				} while(receivedBytes == (unsigned)bufferMax);
 			}
 			catch(BaseLib::SocketTimeOutException& ex)
 			{
@@ -2074,14 +2074,14 @@ bool HM_LGW::aesKeyExchange(std::vector<uint8_t>& data)
 			_out.printDebug(std::string("Debug: AES key exchange packet received on port " + _settings->port + ": " + temp));
 		}
 		int32_t startPos = hex.find('\n');
-		if(startPos == std::string::npos)
+		if(startPos == (signed)std::string::npos)
 		{
 			_out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
 			return false;
 		}
 		startPos += 5;
 		int32_t length = hex.find('\n', startPos);
-		if(length == std::string::npos)
+		if(length == (signed)std::string::npos)
 		{
 			_out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
 			return false;
@@ -2191,14 +2191,14 @@ bool HM_LGW::aesKeyExchangeKeepAlive(std::vector<uint8_t>& data)
 			_out.printDebug(std::string("Debug: AES key exchange packet received on port " + _settings->portKeepAlive + ": " + temp));
 		}
 		int32_t startPos = hex.find('\n');
-		if(startPos == std::string::npos)
+		if(startPos == (signed)std::string::npos)
 		{
 			_out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
 			return false;
 		}
 		startPos += 5;
 		int32_t length = hex.find('\n', startPos);
-		if(length == std::string::npos)
+		if(length == (signed)std::string::npos)
 		{
 			_out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
 			return false;

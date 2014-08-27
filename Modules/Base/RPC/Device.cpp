@@ -288,9 +288,9 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 				uint32_t bits = std::lround(std::floor(valueSize)) * 8;
 				bits += std::lround(valueSize * 10) % 10;
 				if(value->floatValue < 0) value->floatValue = 0;
-				uint32_t maxNumber = (1 << bits) - 1;
+				int32_t maxNumber = (1 << bits) - 1;
 				int32_t factorIndex = 0;
-				while(factorIndex < factors.size() && (value->floatValue / factors.at(factorIndex)) > maxNumber) factorIndex++;
+				while(factorIndex < (signed)factors.size() && (value->floatValue / factors.at(factorIndex)) > maxNumber) factorIndex++;
 
 				value->integerValue = (factorIndex << bits) | std::lround(value->floatValue / factors.at(factorIndex));
 			}
@@ -555,7 +555,7 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint
 			if(isSigned && !value.empty() && value.size() <= 4)
 			{
 				int32_t byteIndex = value.size() - std::lround(std::ceil(physicalParameter->size));
-				if(byteIndex >= 0 && byteIndex < value.size())
+				if(byteIndex >= 0 && byteIndex < (signed)value.size())
 				{
 					int32_t bitSize = std::lround(physicalParameter->size * 10) % 10;
 					int32_t signPosition = 0;
@@ -666,7 +666,7 @@ std::vector<uint8_t> Parameter::convertToPacket(const std::shared_ptr<RPCVariabl
 			{
 				data.insert(data.end(), variable->stringValue.begin(), variable->stringValue.end());
 			}
-			if(data.size() < std::lround(physicalParameter->size)) data.push_back(0); //0 termination. Otherwise parts of old string will still be visible
+			if((signed)data.size() < std::lround(physicalParameter->size)) data.push_back(0); //0 termination. Otherwise parts of old string will still be visible
 		}
 		else if(!conversion.empty() && conversion.at(0)->type == ParameterConversion::Type::cfm)
 		{
@@ -959,7 +959,7 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
 			data.push_back(value << (std::lround(i * 10) % 10));
 		}
 		//Adjust data size. See for example ENDTIME_SATURDAY_1 and TEMPERATURE_SATURDAY_1 of HM-CC-RT-DN
-		if((int32_t)physicalParameter->size > data.size())
+		if((int32_t)physicalParameter->size > (signed)data.size())
 		{
 			uint32_t bytesMissing = (int32_t)physicalParameter->size - data.size();
 			std::vector<uint8_t> oldData = data;
@@ -989,7 +989,7 @@ bool DeviceType::matches(Systems::LogicalDeviceType deviceType, uint32_t firmwar
 		if((device && deviceType.family() != device->family)) return false;
 		if(firmware != -1 && typeID != -1)
 		{
-			if(deviceType.type() == typeID && checkFirmwareVersion(firmwareVersion)) return true;
+			if((signed)deviceType.type() == typeID && checkFirmwareVersion(firmwareVersion)) return true;
 		}
 		else
 		{
@@ -999,10 +999,10 @@ bool DeviceType::matches(Systems::LogicalDeviceType deviceType, uint32_t firmwar
 			{
 				//When the device type is not at index 10 of the pairing packet, the device is not supported
 				//The "priority" attribute is ignored, for the standard devices "priority" seems not important
-				if(i->index == 10.0) { if(i->constValue != deviceType.type()) match = false; }
+				if(i->index == 10.0) { if(i->constValue != (signed)deviceType.type()) match = false; }
 				else if(i->index == 9.0) { if(!i->checkCondition(firmwareVersion)) match = false; }
-				else if(i->index == 0) { if((deviceType.type() >> 8) != i->constValue) match = false; }
-				else if(i->index == 1.0) { if((deviceType.type() & 0xFF) != i->constValue) match = false; }
+				else if(i->index == 0) { if(((signed)deviceType.type() >> 8) != i->constValue) match = false; }
+				else if(i->index == 1.0) { if(((signed)deviceType.type() & 0xFF) != i->constValue) match = false; }
 				else if(i->index == 2.0) { if(!i->checkCondition(firmwareVersion)) match = false; }
 				else match = false; //Unknown index
 			}

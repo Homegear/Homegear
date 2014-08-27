@@ -60,7 +60,6 @@ int32_t hg_set_system(ph7_context* context, int32_t argc, ph7_value** argv)
 		ph7_result_bool(context, 0);
 		return PH7_OK;
 	}
-	int32_t length = 0;
 	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 	for(int32_t i = 0; i < argc; i++)
 	{
@@ -94,7 +93,6 @@ int32_t hg_get_system(ph7_context* context, int32_t argc, ph7_value** argv)
 		ph7_result_bool(context, 0);
 		return PH7_OK;
 	}
-	int32_t length = 0;
 	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 	for(int32_t i = 0; i < argc; i++)
 	{
@@ -135,7 +133,6 @@ int32_t hg_set_meta(ph7_context* context, int32_t argc, ph7_value** argv)
 		ph7_result_bool(context, 0);
 		return PH7_OK;
 	}
-	int32_t length = 0;
 	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 	for(int32_t i = 0; i < argc; i++)
 	{
@@ -175,7 +172,6 @@ int32_t hg_get_meta(ph7_context* context, int32_t argc, ph7_value** argv)
 		ph7_result_bool(context, 0);
 		return PH7_OK;
 	}
-	int32_t length = 0;
 	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 	for(int32_t i = 0; i < argc; i++)
 	{
@@ -222,7 +218,6 @@ int32_t hg_set_value(ph7_context* context, int32_t argc, ph7_value** argv)
 		ph7_result_bool(context, 0);
 		return PH7_OK;
 	}
-	int32_t length = 0;
 	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 	for(int32_t i = 0; i < argc; i++)
 	{
@@ -268,7 +263,6 @@ int32_t hg_get_value(ph7_context* context, int32_t argc, ph7_value** argv)
 		ph7_result_bool(context, 0);
 		return PH7_OK;
 	}
-	int32_t length = 0;
 	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 	for(int32_t i = 0; i < argc; i++)
 	{

@@ -1284,8 +1284,6 @@ bool HMWiredPeer::load(BaseLib::Systems::LogicalDevice* device)
 			return false;
 		}
 		std::string entry;
-		uint32_t pos = 0;
-		uint32_t dataSize;
 		loadConfig();
 		initializeCentralConfig();
 		return true;
@@ -1519,7 +1517,7 @@ void HMWiredPeer::restoreLinks()
 				bool channelFound = false;
 				for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator j = remotePeer->rpcDevice->channels.begin(); j != remotePeer->rpcDevice->channels.end(); ++j)
 				{
-					if(j->first + j->second->physicalIndexOffset == tempPeerChannel)
+					if((signed)j->first + j->second->physicalIndexOffset == tempPeerChannel)
 					{
 						channelFound = true;
 						basicPeer->channel = tempPeerChannel - j->second->physicalIndexOffset;
@@ -1718,7 +1716,7 @@ void HMWiredPeer::getValuesFromPacket(std::shared_ptr<HMWiredPacket> packet, std
 							endChannel = (rpcDevice->channels.end()--)->first;
 						}
 						else endChannel = startChannel;
-						for(uint32_t l = startChannel; l <= endChannel; l++)
+						for(int32_t l = startChannel; l <= endChannel; l++)
 						{
 							if(rpcDevice->channels.find(l) == rpcDevice->channels.end()) continue;
 							std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = getParameterSet(l, currentFrameValues.parameterSetType);
@@ -1854,13 +1852,11 @@ void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
 			if(!a->frameID.empty()) frame = rpcDevice->framesByID.at(a->frameID);
 
 			std::vector<FrameValues> sentFrameValues;
-			bool pushPendingQueues = false;
 			if(packet->type() == HMWiredPacketType::ackMessage) //ACK packet: Check if all values were set correctly. If not set value again
 			{
 				sentPacket = central->getSentPacket(_address);
 				if(sentPacket && sentPacket->messageType() > 0 && !sentPacket->payload()->empty())
 				{
-					BaseLib::RPC::ParameterSet::Type::Enum sentParameterSetType;
 					getValuesFromPacket(sentPacket, sentFrameValues);
 				}
 			}

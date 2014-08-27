@@ -362,8 +362,8 @@ void TICC1100::setupDevice()
 		if(ioctl(_fileDescriptor->descriptor, SPI_IOC_WR_BITS_PER_WORD, &bits)) throw(BaseLib::Exception("Couldn't set bits per word on device " + _settings->device));
 		if(ioctl(_fileDescriptor->descriptor, SPI_IOC_RD_BITS_PER_WORD, &bits)) throw(BaseLib::Exception("Couldn't get bits per word off device " + _settings->device));
 
-		if(ioctl(_fileDescriptor->descriptor, SPI_IOC_WR_MAX_SPEED_HZ, &bits)) throw(BaseLib::Exception("Couldn't set speed on device " + _settings->device));
-		if(ioctl(_fileDescriptor->descriptor, SPI_IOC_RD_MAX_SPEED_HZ, &bits)) throw(BaseLib::Exception("Couldn't get speed off device " + _settings->device));
+		if(ioctl(_fileDescriptor->descriptor, SPI_IOC_WR_MAX_SPEED_HZ, &speed)) throw(BaseLib::Exception("Couldn't set speed on device " + _settings->device));
+		if(ioctl(_fileDescriptor->descriptor, SPI_IOC_RD_MAX_SPEED_HZ, &speed)) throw(BaseLib::Exception("Couldn't get speed off device " + _settings->device));
 	}
 	catch(const std::exception& ex)
     {

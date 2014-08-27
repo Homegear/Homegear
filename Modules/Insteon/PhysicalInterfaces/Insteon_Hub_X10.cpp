@@ -499,7 +499,7 @@ void InsteonHubX10::send(const std::vector<char>& data, bool printPacket)
     		return;
     	}
     	if(_bl->debugLevel >= 5) _out.printDebug("Debug: Sending (Port " + _settings->port + "): " + _bl->hf.getHexString(data));
-    	int32_t written = _socket->proofwrite(data);
+    	_socket->proofwrite(data);
     }
     catch(BaseLib::SocketOperationException& ex)
     {
@@ -792,7 +792,7 @@ void InsteonHubX10::listen()
 							break;
 						}
 					}
-				} while(receivedBytes == bufferMax);
+				} while(receivedBytes == (unsigned)bufferMax);
 			}
 			catch(BaseLib::SocketTimeOutException& ex)
 			{
@@ -854,17 +854,17 @@ bool InsteonHubX10::processData(std::vector<uint8_t>& data)
 	{
 		if(data.empty()) return true;
 
-		for(int32_t i = 0; i < data.size();)
+		for(int32_t i = 0; i < (signed)data.size();)
 		{
 			if(data.at(i) == 0x15)
 			{
 				std::vector<uint8_t> packetBytes(&data.at(i), &data.at(i) + 1);
 				processPacket(packetBytes);
-				if(i + 1 < data.size() && data.at(i + 1) == 0x15) i += 2;
+				if(i + 1 < (signed)data.size() && data.at(i + 1) == 0x15) i += 2;
 				else i += 1;
 				continue;
 			}
-			if(i + 1 >= data.size())
+			if(i + 1 >= (signed)data.size())
 			{
 				if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Too small packet received: " + BaseLib::HelperFunctions::getHexString(data));
 				std::vector<uint8_t> data2(&data.at(i), &data.at(0) + data.size());
@@ -881,8 +881,8 @@ bool InsteonHubX10::processData(std::vector<uint8_t>& data)
 					type = data.at(i);
 					length = _lengthLookup[type];
 					//0x62 can be 9 or 23 bytes long
-					if(type == 0x62 && i + 5 <= data.size() && (data.at(i + 5) & 16) == 0) length = 9;
-					if(i + length - 1 > data.size() || (i + length - 1 < data.size() && data.at(i + length - 1) != 0x02))
+					if(type == 0x62 && i + 5 <= (signed)data.size() && (data.at(i + 5) & 16) == 0) length = 9;
+					if(i + length - 1 > (signed)data.size() || (i + length - 1 < (signed)data.size() && data.at(i + length - 1) != 0x02))
 					{
 						_out.printError("Error: Unknown packet received from Insteon Hub. Discarding whole buffer. Buffer is: " + BaseLib::HelperFunctions::getHexString(data));
 						return true;
@@ -906,10 +906,10 @@ bool InsteonHubX10::processData(std::vector<uint8_t>& data)
 			{
 				length = _lengthLookup[type];
 				//0x62 can be 9 or 23 bytes long
-				if(type == 0x62 && i + 5 <= data.size() && (data.at(i + 5) & 16) == 0) length = 9;
+				if(type == 0x62 && i + 5 <= (signed)data.size() && (data.at(i + 5) & 16) == 0) length = 9;
 			}
 
-			if(i + length > data.size())
+			if(i + length > (signed)data.size())
 			{
 				_out.printDebug("Debug: Length (" + std::to_string(length) + ") is larger than buffer. Waiting for next receive. Buffer is: " + BaseLib::HelperFunctions::getHexString(data));
 				std::vector<uint8_t> data2(&data.at(i), &data.at(0) + data.size());

@@ -989,6 +989,12 @@ uint64_t DatabaseController::saveDeviceVariable(BaseLib::Database::DataRow data)
 			case BaseLib::Database::DataColumn::DataType::BLOB:
 				result = db.executeWriteCommand("UPDATE deviceVariables SET binaryValue=? WHERE variableID=?", data);
 				break;
+			case BaseLib::Database::DataColumn::DataType::NODATA:
+				GD::out.printError("Error: Tried to store data of type NODATA in variable table.");
+				break;
+			case BaseLib::Database::DataColumn::DataType::FLOAT:
+				GD::out.printError("Error: Tried to store data of type FLOAT in variable table.");
+				break;
 			}
 		}
 		else
@@ -1200,6 +1206,12 @@ uint64_t DatabaseController::savePeerVariable(uint64_t peerID, BaseLib::Database
 			case BaseLib::Database::DataColumn::DataType::BLOB:
 				result = db.executeWriteCommand("UPDATE peerVariables SET binaryValue=? WHERE variableID=?", data);
 				break;
+			case BaseLib::Database::DataColumn::DataType::NODATA:
+				GD::out.printError("Error: Tried to store data of type NODATA in peer variable table.");
+				break;
+			case BaseLib::Database::DataColumn::DataType::FLOAT:
+				GD::out.printError("Error: Tried to store data of type FLOAT in peer variable table.");
+				break;
 			}
 		}
 		else
@@ -1363,6 +1375,12 @@ uint64_t DatabaseController::saveServiceMessage(uint64_t peerID, BaseLib::Databa
 				break;
 			case BaseLib::Database::DataColumn::DataType::BLOB:
 				result = db.executeWriteCommand("UPDATE serviceMessages SET binaryValue=? WHERE variableID=?", data);
+				break;
+			case BaseLib::Database::DataColumn::DataType::NODATA:
+				GD::out.printError("Error: Tried to store data of type NODATA in service message table.");
+				break;
+			case BaseLib::Database::DataColumn::DataType::FLOAT:
+				GD::out.printError("Error: Tried to store data of type FLOAT in service message table.");
 				break;
 			}
 		}

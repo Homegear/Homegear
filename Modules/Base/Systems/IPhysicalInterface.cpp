@@ -263,7 +263,7 @@ void IPhysicalInterface::getGPIOPath(uint32_t index)
 					try
 					{
 						int32_t pos = dirName.find_last_of('/');
-						if(pos == std::string::npos || pos >= dirName.length()) continue;
+						if(pos == (signed)std::string::npos || pos >= (signed)dirName.length()) continue;
 						std::string subdirName = dirName.substr(pos + 1);
 						if(subdirName.compare(0, 4, "gpio") != 0) continue;
 						std::string number(std::to_string(_settings->gpio[index].number));

@@ -40,7 +40,7 @@ COC::COC(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) 
 	_out.setPrefix(GD::out.getPrefix() + "COC \"" + settings->id + "\": ");
 
 	stackPrefix = "";
-	for(int32_t i = 1; i < settings->stackPosition; i++)
+	for(uint32_t i = 1; i < settings->stackPosition; i++)
 	{
 		stackPrefix.push_back('*');
 	}

@@ -41,7 +41,6 @@ HTTP::HTTP()
 void HTTP::process(char* buffer, int32_t bufferLength)
 {
 	if(bufferLength <= 0 || _finished) return;
-	uint32_t position = 0;
 	if(!_header.parsed) processHeader(&buffer, bufferLength);
 	_dataProcessed = true;
 	if(_header.transferEncoding & TransferEncoding::Enum::chunked) processChunkedContent(buffer, bufferLength); else processContent(buffer, bufferLength);
@@ -112,9 +111,9 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 		std::string s(value, valueSize);
 		s = s.substr(0, s.find(';'));
 		int32_t pos = 0;
-		while ((pos = s.find(',')) != std::string::npos || !s.empty())
+		while ((pos = s.find(',')) != (signed)std::string::npos || !s.empty())
 		{
-		    std::string te = (pos == std::string::npos) ? s : s.substr(0, pos);
+		    std::string te = (pos == (signed)std::string::npos) ? s : s.substr(0, pos);
 		    BaseLib::HelperFunctions::trim(BaseLib::HelperFunctions::toLower(te));
 		    if(te == "chunked") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::chunked);
 			else if(te == "compress") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::compress);
@@ -122,7 +121,7 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 			else if(te == "gzip") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::gzip);
 			else if(te == "identity") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::identity);
 			else throw HTTPException("Unknown value for HTTP header \"Transfer-Encoding\": " + std::string(value, valueSize));
-		    if(pos == std::string::npos) s.clear(); else s.erase(0, pos + 1);
+		    if(pos == (signed)std::string::npos) s.clear(); else s.erase(0, pos + 1);
 		}
 	}
 	else if(!strnaicmp(name, "connection", nameSize))
@@ -130,15 +129,15 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 		std::string s(value, valueSize);
 		s = s.substr(0, s.find(';'));
 		int32_t pos = 0;
-		while ((pos = s.find(',')) != std::string::npos || !s.empty())
+		while ((pos = s.find(',')) != (signed)std::string::npos || !s.empty())
 		{
-			std::string c = (pos == std::string::npos) ? s : s.substr(0, pos);
+			std::string c = (pos == (signed)std::string::npos) ? s : s.substr(0, pos);
 			BaseLib::HelperFunctions::trim(BaseLib::HelperFunctions::toLower(c));
 			if(c == "keep-alive") _header.connection = Connection::Enum::keepAlive;
 			else if(c == "close") _header.connection = Connection::Enum::close;
 			else if(c == "te") {} //ignore
 			else throw HTTPException("Unknown value for HTTP header \"Connection\": " + std::string(value, valueSize));
-			if(pos == std::string::npos) s.clear(); else s.erase(0, pos + 1);
+			if(pos == (signed)std::string::npos) s.clear(); else s.erase(0, pos + 1);
 		}
 	}
 	else if(!strnaicmp(name, "authorization", nameSize)) _header.authorization = std::string(value, valueSize);
@@ -195,9 +194,9 @@ void HTTP::processChunkedContent(char* buffer, int32_t bufferLength)
 			}
 			if(bufferLength <= 0) break;
 			int32_t sizeToInsert = bufferLength;
-			if(_chunk->size() + sizeToInsert > _chunkSize) sizeToInsert -= (_chunk->size() + sizeToInsert) - _chunkSize;
+			if((signed)_chunk->size() + sizeToInsert > _chunkSize) sizeToInsert -= (_chunk->size() + sizeToInsert) - _chunkSize;
 			_chunk->insert(_chunk->end(), buffer, buffer + sizeToInsert);
-			if(_chunk->size() == _chunkSize)
+			if((signed)_chunk->size() == _chunkSize)
 			{
 				_content->insert(_content->end(), _chunk->begin(), _chunk->end());
 				_chunk.reset(new std::vector<char>());

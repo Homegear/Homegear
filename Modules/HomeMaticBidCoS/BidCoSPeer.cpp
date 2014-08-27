@@ -380,7 +380,6 @@ void BidCoSPeer::worker()
 	if(!_centralFeatures || _disposing) return;
 	std::vector<uint32_t> positionsToDelete;
 	std::vector<std::shared_ptr<VariableToReset>> variablesToReset;
-	int32_t wakeUpIndex = 0;
 	int32_t index;
 	int64_t time;
 	try
@@ -1415,8 +1414,6 @@ bool BidCoSPeer::load(BaseLib::Systems::LogicalDevice* device)
 			return false;
 		}
 		std::string entry;
-		uint32_t pos = 0;
-		uint32_t dataSize;
 		loadConfig();
 		initializeCentralConfig();
 
@@ -1480,13 +1477,13 @@ void BidCoSPeer::checkAESKey(bool onlyPushing)
 	{
 		if(!rpcDevice || !rpcDevice->supportsAES || !_centralFeatures) return;
 		if(!aesEnabled()) return;
-		if(_aesKeyIndex == _physicalInterface->getCurrentRFKeyIndex())
+		if(_aesKeyIndex == (signed)_physicalInterface->getCurrentRFKeyIndex())
 		{
 			GD::out.printDebug("Debug: AES key of peer " + std::to_string(_peerID) + " is current.");
 			return;
 		}
 		GD::out.printDebug("Info: Updating AES key of peer " + std::to_string(_peerID) + ".");
-		if(_aesKeyIndex > _physicalInterface->getCurrentRFKeyIndex())
+		if(_aesKeyIndex > (signed)_physicalInterface->getCurrentRFKeyIndex())
 		{
 			GD::out.printError("Error: Can't update AES key of peer " + std::to_string(_peerID) + ". Peer's AES key index is larger than the key index defined in physicalinterfaces.conf.");
 			return;
@@ -1502,7 +1499,6 @@ void BidCoSPeer::checkAESKey(bool onlyPushing)
 		queue->noSending = true;
 		std::vector<uint8_t> payload;
 		std::shared_ptr<HomeMaticCentral> central = std::dynamic_pointer_cast<HomeMaticCentral>(getCentral());
-		bool firstPacket = true;
 
 		payload.push_back(1);
 		payload.push_back(_aesKeyIndex * 2);
@@ -1893,7 +1889,7 @@ void BidCoSPeer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::
 							endChannel = (rpcDevice->channels.end()--)->first;
 						}
 						else endChannel = startChannel;
-						for(uint32_t l = startChannel; l <= endChannel; l++)
+						for(int32_t l = startChannel; l <= endChannel; l++)
 						{
 							if(rpcDevice->channels.find(l) == rpcDevice->channels.end()) continue;
 							if(rpcDevice->channels.at(l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(l)->parameterSets.end()) continue;
@@ -2107,13 +2103,11 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			if(!a->frameID.empty()) frame = rpcDevice->framesByID.at(a->frameID);
 
 			std::vector<FrameValues> sentFrameValues;
-			bool pushPendingQueues = false;
 			if(packet->messageType() == 0x02) //ACK packet: Check if all values were set correctly. If not set value again
 			{
 				sentPacket = central->getSentPacket(_address);
 				if(sentPacket && sentPacket->messageType() > 0 && !sentPacket->payload()->empty())
 				{
-					BaseLib::RPC::ParameterSet::Type::Enum sentParameterSetType;
 					getValuesFromPacket(sentPacket, sentFrameValues);
 				}
 			}
@@ -2882,7 +2876,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setInterface(std::string 
 			{
 				return BaseLib::RPC::RPCVariable::createError(-100, "Can't set physical interface, because AES is enabled for this peer and the new physical interface doesn't support AES. Please disable AES first.");
 			}
-			else if(_aesKeyIndex != _physicalInterface->currentRFKeyIndex())
+			else if(_aesKeyIndex != (signed)_physicalInterface->currentRFKeyIndex())
 			{
 				return BaseLib::RPC::RPCVariable::createError(-101, "Can't set physical interface, because the peer's AES key needs to be updated to the current one first. Please make sure, there are no pending configuration packets, before executing this method.");
 			}

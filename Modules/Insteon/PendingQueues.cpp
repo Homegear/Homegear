@@ -74,7 +74,6 @@ void PendingQueues::unserialize(std::shared_ptr<std::vector<char>> serializedDat
 		BaseLib::BinaryDecoder decoder(GD::bl);
 		uint32_t position = 0;
 		_queuesMutex.lock();
-		uint32_t pos = 0;
 		uint32_t pendingQueuesSize = decoder.decodeInteger(serializedData, position);
 		for(uint32_t i = 0; i < pendingQueuesSize; i++)
 		{

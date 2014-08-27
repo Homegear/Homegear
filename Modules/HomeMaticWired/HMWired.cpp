@@ -141,7 +141,7 @@ std::shared_ptr<HMWiredDevice> HMWired::getDevice(uint32_t address)
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<BaseLib::Systems::LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
-			if((*i)->getAddress() == address)
+			if((uint32_t)(*i)->getAddress() == address)
 			{
 				std::shared_ptr<HMWiredDevice> device(std::dynamic_pointer_cast<HMWiredDevice>(*i));
 				if(!device) continue;

@@ -241,7 +241,7 @@ void HM_LC_SWX_FM::handleStateChangeRemote(int32_t messageCounter, std::shared_p
 	{
 		if(packet->payload()->empty()) return;
 		int32_t channel = packet->payload()->at(0) & 0x3F;
-		if(channel > _channelCount) return;
+		if(channel > (signed)_channelCount) return;
 		std::shared_ptr<HomeMaticCentral> central = std::dynamic_pointer_cast<HomeMaticCentral>(getCentral());
 		std::shared_ptr<BidCoSPeer> peer(central->getPeer(packet->senderAddress()));
 		//Check if channel is paired to me
@@ -283,7 +283,7 @@ void HM_LC_SWX_FM::handleStateChangeMotionDetector(int32_t messageCounter, std::
 	{
 		if(packet->payload()->empty()) return;
 		int32_t channel = packet->payload()->at(0) & 0x3F;
-		if(channel > _channelCount) return;
+		if(channel > (signed)_channelCount) return;
 		std::shared_ptr<HomeMaticCentral> central = std::dynamic_pointer_cast<HomeMaticCentral>(getCentral());
 		std::shared_ptr<BidCoSPeer> peer(central->getPeer(packet->senderAddress()));
 		//Check if channel is paired to me

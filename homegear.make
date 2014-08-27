@@ -34,7 +34,7 @@ ifeq ($(config),debug)
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
   LDFLAGS   += -Llib/Debug -l rpc -l dl -l pthread -l sqlite3 -l readline -l gpg-error -l gcrypt -l gnutls -l user -l cli -l events -l gd -l database -l scriptengine -l ph7 -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
@@ -56,7 +56,7 @@ ifeq ($(config),release)
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
   LDFLAGS   += -Llib/Release -s -l rpc -l dl -l pthread -l sqlite3 -l readline -l gpg-error -l gcrypt -l gnutls -l user -l cli -l events -l gd -l database -l scriptengine -l ph7 -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
@@ -78,7 +78,7 @@ ifeq ($(config),profiling)
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
   LDFLAGS   += -Llib/Profiling -l rpc -l dl -l pthread -l sqlite3 -l readline -l gpg-error -l gcrypt -l gnutls -l user -l cli -l events -l gd -l database -l scriptengine -l ph7 -l base -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
@@ -96,10 +96,6 @@ endif
 OBJECTS := \
 	$(OBJDIR)/AESTest.o \
 	$(OBJDIR)/main.o \
-	$(OBJDIR)/bool_array.o \
-	$(OBJDIR)/debug_new.o \
-	$(OBJDIR)/mem_pool_base.o \
-	$(OBJDIR)/static_mem_pool.o \
 	$(OBJDIR)/FamilyController.o \
 	$(OBJDIR)/PhysicalInterfaces.o \
 	$(OBJDIR)/DatabaseController.o \
@@ -171,18 +167,6 @@ $(OBJDIR)/AESTest.o: AESTest.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/main.o: main.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/bool_array.o: nvwa/bool_array.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/debug_new.o: nvwa/debug_new.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/mem_pool_base.o: nvwa/mem_pool_base.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/static_mem_pool.o: nvwa/static_mem_pool.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/FamilyController.o: Libraries/Systems/FamilyController.cpp

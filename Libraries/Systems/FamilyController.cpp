@@ -537,7 +537,6 @@ std::string FamilyController::handleCLICommand(std::string& command)
 			std::stringstream stream(command);
 			std::string element;
 			int32_t index = 0;
-			bool central = false;
 			while(std::getline(stream, element, ' '))
 			{
 				if(index < 2)

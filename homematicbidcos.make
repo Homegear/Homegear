@@ -34,7 +34,7 @@ ifeq ($(config),debug)
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -fPIC -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -fPIC -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
   LDFLAGS   += -Llib/Debug -shared -l pthread -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
@@ -56,7 +56,7 @@ ifeq ($(config),release)
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -fPIC -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -fPIC -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
   LDFLAGS   += -Llib/Release -s -shared -l pthread -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
@@ -78,7 +78,7 @@ ifeq ($(config),profiling)
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -fPIC -std=c++11 -pg
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -fPIC -Wall -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
   LDFLAGS   += -Llib/Profiling -shared -l pthread -l base -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 

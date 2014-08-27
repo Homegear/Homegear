@@ -307,12 +307,8 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 	{
 		int32_t bufferMax = 1024;
 		char buffer[bufferMax + 1];
-		int32_t lineBufferMax = 128;
-		char lineBuffer[lineBufferMax];
 		std::shared_ptr<std::vector<char>> packet(new std::vector<char>());
-		uint32_t packetLength = 0;
 		int32_t bytesRead;
-		uint32_t dataSize = 0;
 		GD::out.printDebug("Listening for incoming commands from client number " + std::to_string(clientData->fileDescriptor->id) + ".");
 		while(!_stopServer)
 		{

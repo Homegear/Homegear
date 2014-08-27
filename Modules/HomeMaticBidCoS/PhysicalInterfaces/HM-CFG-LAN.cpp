@@ -768,7 +768,7 @@ void HM_CFG_LAN::listen()
 							break;
 						}
 					}
-				} while(receivedBytes == bufferMax);
+				} while(receivedBytes == (unsigned)bufferMax);
 			}
 			catch(BaseLib::SocketTimeOutException& ex)
 			{

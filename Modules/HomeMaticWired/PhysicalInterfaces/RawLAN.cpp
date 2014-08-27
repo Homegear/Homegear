@@ -111,7 +111,7 @@ void RawLAN::send(std::vector<char>& packet, bool printPacket)
     	_sendMutex.lock();
     	_lastPacketSent = BaseLib::HelperFunctions::getTime(); //Sending takes some time, so we set _lastPacketSent two times
     	if(_bl->debugLevel > 3 && printPacket) GD::out.printInfo("Info: Sending: " + BaseLib::HelperFunctions::getHexString(packet));
-    	int32_t written = _socket->proofwrite(packet);
+    	_socket->proofwrite(packet);
     	_lastPacketSent = BaseLib::HelperFunctions::getTime();
     }
     catch(BaseLib::SocketOperationException& ex)
@@ -238,7 +238,7 @@ void RawLAN::listen()
 				continue;
 			}
         	if(receivedBytes == 0) continue;
-        	if(receivedBytes == bufferMax)
+        	if(receivedBytes == (unsigned)bufferMax)
         	{
         		GD::out.printError("Could not read from raw RS485 LAN device: Too much data.");
         		continue;

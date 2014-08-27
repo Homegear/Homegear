@@ -54,82 +54,247 @@ namespace BaseLib
 {
 class Obj;
 
+/**
+ * This class provides functions to make your life easier.
+ */
 class HelperFunctions
 {
 public:
+	/**
+	 * Constructor.
+	 * It does nothing. You need to call init() to initialize the object.
+	 */
 	HelperFunctions();
+
+	/**
+	 * Destructor.
+	 * Does nothing.
+	 */
 	virtual ~HelperFunctions();
 
+	/**
+	 * Initialized the object.
+	 *
+	 * @param baseLib Pointer to the common base library object.
+	 */
 	void init(Obj* baseLib);
 
+	/**
+	 * Checks if a file exists.
+	 *
+	 * @param filename The path to the file.
+	 * @return Returns true when the file exists, or false if the file couldn't be accessed.
+	 */
 	static bool fileExists(std::string filename);
+
+	/**
+	 * Reads a file and returns the content as a string.
+	 *
+	 * @param filename The path to the file to read.
+	 * @return Returns the content of the file as a string.
+	 */
 	static std::string getFileContent(std::string filename);
+
+	/**
+	 * Reads a file and returns the content as a signed binary array.
+	 *
+	 * @param filename The path to the file to read.
+	 * @return Returns the content of the file as a char array.
+	 */
 	static std::vector<char> getBinaryFileContent(std::string filename);
+
+	/**
+	 * Reads a file and returns the content as an unsigned binary array.
+	 *
+	 * @param filename The path to the file to read.
+	 * @return Returns the content of the file as an unsigned char array.
+	 */
 	static std::vector<uint8_t> getUBinaryFileContent(std::string filename);
+
+	/**
+	 * Returns an array of all files within a path.
+	 *
+	 * @param path The path to get all files for.
+	 * @return Returns an array of all file names within path.
+	 */
 	std::vector<std::string> getFiles(std::string path);
 
+	/**
+	 * Gets the current unix time stamp in milliseconds.
+	 *
+	 * @see getTimeSeconds()
+	 * @return The current unix time stamp in milliseconds.
+	 */
 	static int64_t getTime();
+
+	/**
+	 * Gets the current unix time stamp in seconds.
+	 *
+	 * @see getTime()
+	 * @return The current unix time stamp in seconds.
+	 */
 	static int32_t getTimeSeconds();
+
+	/**
+	 * Gets the last modified time of a file.
+	 *
+	 * @param filename The file to get the last modified time for.
+	 * @return The unix time stamp of the last modified time.
+	 */
 	static int32_t getFileLastModifiedTime(const std::string& filename);
+
+	/**
+	 * Gets the current time as a string like "08/27/14 14:13:53.471".
+	 *
+	 * @param time The unix time stamp in milliseconds to get the time string for.
+	 * @return Returns a time string like "08/27/14 14:13:53.471".
+	 */
 	static std::string getTimeString(int64_t time = 0);
 
+	/**
+	 * Left trims a string.
+	 *
+	 * @see rtrim()
+	 * @see trim()
+	 * @param[in,out] s The string to left trim.
+	 * @return Returns a reference to the left trimmed string.
+	 */
 	static inline std::string &ltrim(std::string &s)
 	{
 			s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
 			return s;
 	}
 
+	/**
+	 * Right trims a string.
+	 *
+	 * @see ltrim()
+	 * @see trim()
+	 * @param[in,out] s The string to right trim.
+	 * @return Returns a reference the right trimmed string.
+	 */
 	static inline std::string &rtrim(std::string &s)
 	{
 			s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
 			return s;
 	}
 
+	/**
+	 * Trims a string.
+	 *
+	 * @see ltrim()
+	 * @see rtrim()
+	 * @param[in,out] s The string to trim.
+	 * @return Returns a reference the trimmed string.
+	 */
 	static inline std::string& trim(std::string& s)
 	{
 			return ltrim(rtrim(s));
 	}
 
+	/**
+	 * Converts all characters of a string to lower case.
+	 *
+	 * @see toUpper()
+	 * @param[in,out] s The string to convert all characters to lower case for.
+	 * @return Returns a reference the lower case string.
+	 */
 	static inline std::string& toLower (std::string& s)
 	{
 		std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 		return s;
 	}
 
+	/**
+	 * Converts all characters of a string to upper case.
+	 *
+	 * @see toLower()
+	 * @param[in,out] s The string to convert all characters to upper case for.
+	 * @return Returns a reference the upper case string.
+	 */
 	static inline std::string& toUpper (std::string& s)
 	{
 		std::transform(s.begin(), s.end(), s.begin(), ::toupper);
 		return s;
 	}
 
+	/**
+	 * Replaces substrings within a string.
+	 *
+	 * @param[in,out] haystack The string to search the substring in.
+	 * @param search The substring to search.
+	 * @param replace The substring to replace "search" with.
+	 * @return Returns a reference to the modified string.
+	 */
 	static inline std::string& stringReplace(std::string& haystack, std::string search, std::string replace)
 	{
 		int32_t pos = 0;
 		while(true)
 		{
 			 pos = haystack.find(search, pos);
-			 if (pos == std::string::npos) break;
+			 if (pos == (signed)std::string::npos) break;
 			 haystack.replace(pos, search.size(), replace);
 			 pos += search.size();
 		}
 		return haystack;
 	}
 
+	/**
+	 * Splits a string at the last occurrence of a delimiter.
+	 *
+	 * @see splitAll()
+	 * @param string The string to split.
+	 * @param delimiter The delimiter to split the string at.
+	 * @return Returns a pair with the two parts.
+	 */
 	static std::pair<std::string, std::string> split(std::string string, char delimiter);
-	static std::vector<std::string> splitAll(std::string, char delimiter);
 
-	static inline double getDouble(std::string &s)
+	/**
+	 * Splits a string at all occurrences of a delimiter.
+	 *
+	 * @see split()
+	 * @param string The string to split.
+	 * @param delimiter The delimiter to split the string at.
+	 * @return Returns an array with all split parts.
+	 */
+	static std::vector<std::string> splitAll(std::string string, char delimiter);
+
+	/**
+	 * Converts a string to double.
+	 *
+	 * @see getNumber()
+	 * @see getUnsignedNumber()
+	 * @param s The string to convert to double.
+	 * @return Returns the number or "0" if the conversion was not successful.
+	 */
+	static inline double getDouble(const std::string& s)
 	{
 		double number = 0;
 		try { number = std::stod(s); } catch(...) {}
 		return number;
 	}
 
+	/**
+	 * Checks if a character is not alphanumeric ('_' and '-' are also regarded alphanumeric).
+	 *
+	 * @see isAlphaNumeric()
+	 * @see isNumber()
+	 * @param c The character to check.
+	 * @return Returns false if the character is alphanumeric, '_' or '-', otherwise true.
+	 */
 	static inline bool isNotAlphaNumeric(char c)
 	{
 		return !(isalpha(c) || isdigit(c) || (c == '_') || (c == '-'));
 	}
 
+	/**
+	 * Checks if a string is alphanumeric ('_' and '-' are also regarded alphanumeric).
+	 *
+	 * @see isNotAlphaNumeric()
+	 * @see isNumber()
+	 * @param s The string to check.
+	 * @return Returns true if the string is alphanumeric, or contains '_' or '-', otherwise false.
+	 */
 	static bool isAlphaNumeric(std::string& s)
 	{
 		return find_if
@@ -140,6 +305,14 @@ public:
 		) == s.end();
 	}
 
+	/**
+	 * Checks if a string is a number.
+	 *
+	 * @see isAlphaNumeric()
+	 * @see isNotAlphaNumeric()
+	 * @param s The string to check.
+	 * @return Returns true if the string is a decimal or hexadecimal number, otherwise false.
+	 */
 	static bool isNumber(std::string& s)
 	{
 		int32_t xpos = s.find('x');
@@ -148,6 +321,15 @@ public:
 		return true;
 	}
 
+	/**
+	 * Converts a string (decimal or hexadecimal) to an integer.
+	 *
+	 * @see getDouble()
+	 * @see getUnsignedNumber()
+	 * @param s The string to convert.
+	 * @param isHex Set to true, if the string is hexadecimal (default false).\ If the string is prefixed with "0x", it is automatically detected as hexadecimal.
+	 * @return Returns the integer or "0" on error.
+	 */
 	static int32_t getNumber(std::string& s, bool isHex = false)
 	{
 		int32_t xpos = s.find('x');
@@ -157,12 +339,29 @@ public:
 		return number;
 	}
 
+	/**
+	 * Converts a hexadecimal character to an integer.
+	 *
+	 * @see getDouble()
+	 * @see getUnsignedNumber()
+	 * @param hexChar The hexadecimal character.
+	 * @return Returns the integer or "0" on error.
+	 */
 	int32_t getNumber(char hexChar)
 	{
 		if(_hexMap.find(hexChar) == _hexMap.end()) return 0;
 		return _hexMap.at(hexChar);
 	}
 
+	/**
+	 * Converts a string (decimal or hexadecimal) to an unsigned integer.
+	 *
+	 * @see getDouble()
+	 * @see getNumber()
+	 * @param s The string to convert.
+	 * @param isHex Set to true, if the string is hexadecimal (default false).\ If the string is prefixed with "0x", it is automatically detected as hexadecimal.
+	 * @return Returns the unsigned integer or "0" on error.
+	 */
 	static uint32_t getUnsignedNumber(std::string &s, bool isHex = false)
 	{
 		int32_t xpos = s.find('x');
@@ -172,36 +371,204 @@ public:
 		return number;
 	}
 
+	/**
+	 * Returns the endianess of the system.
+	 *
+	 * @return Returns true if the system is big endian, otherwise false.
+	 */
 	bool getBigEndian() { return _isBigEndian; }
 
+	/**
+	 * Copys a file.
+	 *
+	 * @param source The path to the file.
+	 * @param target The destination path to copy the file to.
+	 */
 	void copyFile(std::string source, std::string dest);
+
+	/**
+	 * Generates a random integer.
+	 *
+	 * @param min The minimal value of the random integer.
+	 * @param max The maximum value of the random integer.
+	 * @return Returns a random integer between (and including) min and max.
+	 */
 	static int32_t getRandomNumber(int32_t min, int32_t max);
 
-	void memcpyBigEndian(char* to, char* from, const uint32_t& length);
-	void memcpyBigEndian(uint8_t* to, uint8_t* from, const uint32_t& length);
-	void memcpyBigEndian(int32_t& to, std::vector<uint8_t>& from);
-	void memcpyBigEndian(std::vector<uint8_t>& to, int32_t& from);
+	/**
+	 * Copies binary values from one memory location to another reversing the byte order when the system is little endian.
+	 *
+	 * @param[out] to The destination array. No memory is allocated, so make sure, the array is large enough.
+	 * @param[in] from The source array.
+	 * @param length The number of bytes to copy.
+	 */
+	void memcpyBigEndian(char* to, const char* from, const uint32_t& length);
+
+	/**
+	 * Copies binary values from one memory location to another reversing byte order when the system is little endian.
+	 *
+	 * @param[out] to The destination array. No memory is allocated, so make sure, the array is large enough.
+	 * @param[in] from The source array.
+	 * @param length The number of bytes to copy.
+	 */
+	void memcpyBigEndian(uint8_t* to, const uint8_t* from, const uint32_t& length);
+
+	/**
+	 * Copies binary values from a vector to an integer reversing the byte order when the system is little endian.
+	 *
+	 * @param[out] to The destination integer.
+	 * @param[in] from The source array.\ A length less than 4 bytes is allowed.
+	 */
+	void memcpyBigEndian(int32_t& to, const std::vector<uint8_t>& from);
+
+	/**
+	 * Copies binary values from an integer to a vector reversing the byte order when the system is little endian.
+	 *
+	 * @param[out] to The destination array.
+	 * @param[in] from The source integer.
+	 */
+	void memcpyBigEndian(std::vector<uint8_t>& to, const int32_t& from);
+
+	/**
+	 * Converts a byte array to a hex string.
+	 *
+	 * @param data The byte array to convert.
+	 * @return Returns the hex string of the byte array.
+	 */
 	static std::string getHexString(const std::vector<char>& data);
+
+	/**
+	 * Converts a byte array to a hex string.
+	 *
+	 * @param data The byte array to convert.
+	 * @return Returns the hex string of the byte array.
+	 */
 	static std::string getHexString(const std::vector<uint8_t>& data);
+
+	/**
+	 * Converts an integer to a hex string.
+	 *
+	 * @param number The integer to convert.
+	 * @param width The minimal width of the hex string (default -1).\ If the hex string is smaller, it is prefixed with zeros.
+	 * @return Returns the hex string of the integer.
+	 */
 	static std::string getHexString(int32_t number, int32_t width = -1);
+
+	/**
+	 * Converts a nibble to a hex character.
+	 *
+	 * @param nibble The nibble to convert.
+	 * @return Returns the hex character of the nibble.
+	 */
 	char getHexChar(int32_t nibble);
+
+	/**
+	 * Converts a hex string to a char vector.
+	 *
+	 * @param hexString The string to convert.
+	 * @return Returns a vector of type char.
+	 */
 	std::vector<char> getBinary(std::string hexString);
+
+	/**
+	 * Converts a hex string to an unsigned char vector.
+	 *
+	 * @see getUBinary()
+	 * @param hexString The string to convert.
+	 * @return Returns a vector of type unsigned char.
+	 */
 	std::vector<uint8_t> getUBinary(std::string hexString);
+
+	/**
+	 * Converts a hex string to an unsigned char vector.
+	 *
+	 * @see getBinary()
+	 * @param hexString The string to convert.
+	 * @param size The maximum number of characters to convert.
+	 * @param binary The unsigned char vector to append the converted bytes to.\ Already existing elements will not be cleared.
+	 * @return Returns a reference to "binary".
+	 */
 	std::vector<uint8_t>& getUBinary(std::string hexString, uint32_t size, std::vector<uint8_t>& binary);
+
+	/**
+	 * Converts an unsigned char vector filled with ASCII characters to an unsigned char vector.
+	 *
+	 * @see getBinary()
+	 * @param hexData The vector with ASCII characters to convert.
+	 * @return Returns a vector of type unsigned char.
+	 */
 	std::vector<uint8_t> getUBinary(std::vector<uint8_t>& hexData);
+
+	/**
+	 * Gets the UID of a user.
+	 *
+	 * @param username The name of the user to get the UID for.
+	 * @return Returns the user ID or "-1" on error.
+	 */
 	int32_t userID(std::string username);
+
+	/**
+	 * Gets the GID of a group.
+	 *
+	 * @param groupname The name of the group to get the GID for.
+	 * @return Returns the group ID or "-1" on error.
+	 */
 	int32_t groupID(std::string groupname);
+
+	/**
+	 * Gets the error message to a GCRYPT error code.
+	 *
+	 * @param errorCode The GCRYPT error code.
+	 * @return Returns the error message for the provided error code.
+	 */
 	std::string getGCRYPTError(int32_t errorCode);
+
+	/**
+	 * Converts GNUTLS certificate verification error codes to human readable error messages.
+	 *
+	 * @param errorCode The GNUTLS certificate verification error code.
+	 * @return Returns the error message for the provided error code.
+	 */
 	static std::string getGNUTLSCertVerificationError(uint32_t errorCode);
 private:
+	/**
+	 * Pointer to the common base library object.
+	 */
 	BaseLib::Obj* _bl = nullptr;
+
+	/**
+	 * The result of checkEndianness() is stored in this variable.\ This is done through calling "init".
+	 */
 	bool _isBigEndian;
+
+	/**
+	 * Map to faster convert hexadecimal numbers.
+	 */
 	std::map<char, int32_t> _hexMap;
+
+	/**
+	 * Map to faster convert hexadecimal numbers.
+	 */
 	int32_t _asciiToBinaryTable[23];
+
+	/**
+	 * Map to faster convert hexadecimal numbers.
+	 */
 	char _binaryToASCIITable[16];
+
+	/**
+	 * Buffer to store GCRYPT error messages in.\ Needed for thread safety.
+	 */
 	char _gcryptBuffer[1024];
+
+	/**
+	 * Mutex to protect _gcryptBuffer.\ Needed for thread safety.
+	 */
 	std::mutex _gcryptBufferMutex;
 
+	/**
+	 * Checks if the system is little or big endian.
+	 */
 	void checkEndianness();
 };
 }

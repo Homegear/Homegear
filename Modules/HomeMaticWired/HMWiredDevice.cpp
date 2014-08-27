@@ -748,7 +748,6 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(std::vector<uint8_t>& 
 	std::shared_ptr<HMWiredPeer> peer = getPeer(destinationAddress);
 	try
 	{
-		uint8_t messageCounter = 0;
 		if(peer) peer->ignorePackets = true;
 		std::shared_ptr<HMWiredPacket> request(new HMWiredPacket(HMWiredPacketType::iMessage, _address, destinationAddress, synchronizationBit, getMessageCounter(destinationAddress), 0, 0, payload));
 		std::shared_ptr<HMWiredPacket> response = sendPacket(request, true);

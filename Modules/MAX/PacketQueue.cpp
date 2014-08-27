@@ -377,7 +377,7 @@ void PacketQueue::resend(uint32_t threadId, bool burst)
 			}
 			else _queueMutex.unlock(); //Has to be unlocked before startResendThread
 			if(_stopResendThread) return;
-			if(_resendCounter < (retries - 2)) //This actually means that the message will be sent three times all together if there is no response
+			if(_resendCounter < ((signed)retries - 2)) //This actually means that the message will be sent three times all together if there is no response
 			{
 				_resendCounter++;
 				_startResendThreadMutex.lock();

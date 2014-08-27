@@ -1076,7 +1076,7 @@ void HomeMaticDevice::sendPacketMultipleTimes(std::shared_ptr<IBidCoSInterface> 
 		if(physicalInterface->autoResend() && (packet->controlByte() & 0x20) && delay < 700) delay = 700;
 		std::shared_ptr<BidCoSPeer> peer = getPeer(peerAddress);
 		if(!peer) return;
-		for(uint32_t i = 0; i < count; i++)
+		for(int32_t i = 0; i < count; i++)
 		{
 			_sentPackets.set(packet->destinationAddress(), packet);
 			int64_t start = BaseLib::HelperFunctions::getTime();

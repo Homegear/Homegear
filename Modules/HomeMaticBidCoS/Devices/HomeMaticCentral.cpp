@@ -1163,12 +1163,12 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 		std::vector<uint8_t> currentBlock;
 		std::vector<std::vector<uint8_t>> blocks;
 		int32_t pos = 0;
-		while(pos + 1 < firmware.size())
+		while(pos + 1 < (signed)firmware.size())
 		{
 			int32_t blockSize = (firmware.at(pos) << 8) + firmware.at(pos + 1);
 			GD::out.printDebug("Debug: Current block size is: " + std::to_string(blockSize) + " bytes.");
 			pos += 2;
-			if(pos + blockSize > firmware.size() || blockSize > 1024)
+			if(pos + blockSize > (signed)firmware.size() || blockSize > 1024)
 			{
 				_bl->deviceUpdateInfo.results[id].first = 5;
 				_bl->deviceUpdateInfo.results[id].second = "Firmware file has wrong format.";
@@ -1228,7 +1228,6 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 		{
 			int64_t time = BaseLib::HelperFunctions::getTime();
 			bool requestReceived = false;
-			int32_t maxWaitIndex = manual ? 1000 : 100;
 			while(waitIndex < 1000)
 			{
 				receivedPacket = _receivedPackets.get(peer->getAddress());
@@ -1313,7 +1312,7 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 			{
 				int32_t pos = 0;
 				std::vector<uint8_t> payload;
-				while(pos < i->size())
+				while(pos < (signed)i->size())
 				{
 					payload.clear();
 					if(pos == 0)
@@ -1331,7 +1330,7 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 						payload.insert(payload.end(), i->begin() + pos, i->begin() + pos + (i->size() - pos));
 						pos += (i->size() - pos);
 					}
-					uint8_t controlByte = (pos < i->size()) ? 0 : 0x20;
+					uint8_t controlByte = (pos < (signed)i->size()) ? 0 : 0x20;
 					std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, controlByte, 0xCA, 0, peer->getAddress(), payload, true));
 					physicalInterface->sendPacket(packet);
 					std::this_thread::sleep_for(std::chrono::milliseconds(55));
@@ -2460,7 +2459,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 				else
 				{
 					int32_t length = multiPacket ? packet->payload()->size() : packet->payload()->size() - 2;
-					for(uint32_t i = 1; i < length; i += 2)
+					for(int32_t i = 1; i < length; i += 2)
 					{
 						int32_t index = packet->payload()->at(i);
 						std::vector<std::shared_ptr<BaseLib::RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->parameterSets[type]->getIndices(index, index, list);

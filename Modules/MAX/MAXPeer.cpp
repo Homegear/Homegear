@@ -193,8 +193,6 @@ void MAXPeer::worker()
 {
 	if(!_centralFeatures || _disposing) return;
 	std::vector<uint32_t> positionsToDelete;
-	int32_t wakeUpIndex = 0;
-	int32_t index;
 	int64_t time;
 	try
 	{
@@ -518,8 +516,6 @@ bool MAXPeer::load(BaseLib::Systems::LogicalDevice* device)
 			return false;
 		}
 		std::string entry;
-		uint32_t pos = 0;
-		uint32_t dataSize;
 		loadConfig();
 		initializeCentralConfig();
 		return true;
@@ -745,7 +741,7 @@ void MAXPeer::getValuesFromPacket(std::shared_ptr<MAXPacket> packet, std::vector
 							int32_t bitIndex = j->index2Offset % 8;
 							if(data2.size() == 1)
 							{
-								if(byteIndex < data.size())
+								if(byteIndex < (signed)data.size())
 								{
 									data.at(byteIndex) |= (data2.at(0) << bitIndex);
 								}
@@ -791,7 +787,7 @@ void MAXPeer::getValuesFromPacket(std::shared_ptr<MAXPacket> packet, std::vector
 							endChannel = (rpcDevice->channels.end()--)->first;
 						}
 						else endChannel = startChannel;
-						for(uint32_t l = startChannel; l <= endChannel; l++)
+						for(int32_t l = startChannel; l <= endChannel; l++)
 						{
 							if(rpcDevice->channels.find(l) == rpcDevice->channels.end()) continue;
 							if(rpcDevice->channels.at(l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(l)->parameterSets.end()) continue;
@@ -885,13 +881,11 @@ void MAXPeer::packetReceived(std::shared_ptr<MAXPacket> packet)
 			if(!a->frameID.empty()) frame = rpcDevice->framesByID.at(a->frameID);
 
 			std::vector<FrameValues> sentFrameValues;
-			bool pushPendingQueues = false;
 			if(packet->messageType() == 0x02) //ACK packet: Check if all values were set correctly. If not set value again
 			{
 				sentPacket = central->getSentPacket(_address);
 				if(sentPacket && sentPacket->messageType() > 0 && !sentPacket->payload()->empty())
 				{
-					BaseLib::RPC::ParameterSet::Type::Enum sentParameterSetType;
 					getValuesFromPacket(sentPacket, sentFrameValues);
 				}
 			}

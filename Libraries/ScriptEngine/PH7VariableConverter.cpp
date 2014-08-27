@@ -41,8 +41,8 @@ int32_t arrayWalkCallback(ph7_value* key, ph7_value* value, void* userData)
 		int32_t keyInt = ph7_value_to_int(key);
 		if(rpcArray->type == BaseLib::RPC::RPCVariableType::rpcVoid) rpcArray->type = BaseLib::RPC::RPCVariableType::rpcArray;
 		//In case keyInt skips values
-		while(rpcArray->arrayValue->size() < keyInt) rpcArray->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable()));
-		if(keyInt < rpcArray->arrayValue->size()) rpcArray->arrayValue->at(keyInt) = element;
+		while((signed)rpcArray->arrayValue->size() < keyInt) rpcArray->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable()));
+		if(keyInt < (signed)rpcArray->arrayValue->size()) rpcArray->arrayValue->at(keyInt) = element;
 		else rpcArray->arrayValue->push_back(element);
 	}
 	else if(ph7_value_is_string(key))

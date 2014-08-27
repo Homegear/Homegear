@@ -1077,17 +1077,14 @@ std::shared_ptr<RPC::RPCVariable> Peer::getAllValues(bool returnWriteOnly)
 				element->structValue->insert(RPC::RPCStructElement("WRITEABLE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(((*j)->operations & 2) == 2))));
 				if((*j)->logicalParameter->type == RPC::LogicalParameter::Type::typeBoolean)
 				{
-					RPC::LogicalParameterBoolean* parameter = (RPC::LogicalParameterBoolean*)(*j)->logicalParameter.get();
 					element->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("BOOL")))));
 				}
 				else if((*j)->logicalParameter->type == RPC::LogicalParameter::Type::typeString)
 				{
-					RPC::LogicalParameterString* parameter = (RPC::LogicalParameterString*)(*j)->logicalParameter.get();
 					element->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("STRING")))));
 				}
 				else if((*j)->logicalParameter->type == RPC::LogicalParameter::Type::typeAction)
 				{
-					RPC::LogicalParameterAction* parameter = (RPC::LogicalParameterAction*)(*j)->logicalParameter.get();
 					element->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("ACTION")))));
 				}
 				else if((*j)->logicalParameter->type == RPC::LogicalParameter::Type::typeInteger)

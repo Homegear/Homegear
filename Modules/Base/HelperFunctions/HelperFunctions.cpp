@@ -250,7 +250,7 @@ int32_t HelperFunctions::getRandomNumber(int32_t min, int32_t max)
 	return distribution(generator);
 }
 
-void HelperFunctions::memcpyBigEndian(char* to, char* from, const uint32_t& length)
+void HelperFunctions::memcpyBigEndian(char* to, const char* from, const uint32_t& length)
 {
 	try
 	{
@@ -278,7 +278,7 @@ void HelperFunctions::memcpyBigEndian(char* to, char* from, const uint32_t& leng
     }
 }
 
-void HelperFunctions::memcpyBigEndian(uint8_t* to, uint8_t* from, const uint32_t& length)
+void HelperFunctions::memcpyBigEndian(uint8_t* to, const uint8_t* from, const uint32_t& length)
 {
 	try
 	{
@@ -298,7 +298,7 @@ void HelperFunctions::memcpyBigEndian(uint8_t* to, uint8_t* from, const uint32_t
     }
 }
 
-void HelperFunctions::memcpyBigEndian(int32_t& to, std::vector<uint8_t>& from)
+void HelperFunctions::memcpyBigEndian(int32_t& to, const std::vector<uint8_t>& from)
 {
 	try
 	{
@@ -323,7 +323,7 @@ void HelperFunctions::memcpyBigEndian(int32_t& to, std::vector<uint8_t>& from)
     }
 }
 
-void HelperFunctions::memcpyBigEndian(std::vector<uint8_t>& to, int32_t& from)
+void HelperFunctions::memcpyBigEndian(std::vector<uint8_t>& to, const int32_t& from)
 {
 	try
 	{
@@ -462,7 +462,7 @@ std::vector<uint8_t>& HelperFunctions::getUBinary(std::string hexString, uint32_
 	if(size > hexString.size()) size = hexString.size();
 	if(size % 2 != 0) size -= 1;
 	if(size < 1) return binary;
-    for (int32_t i = 0; i < size; i += 2)
+    for (uint32_t i = 0; i < size; i += 2)
     {
         uint8_t byte = 0;
         if(isxdigit(hexString[i])) byte = (_asciiToBinaryTable[std::toupper(hexString[i]) - '0'] << 4);

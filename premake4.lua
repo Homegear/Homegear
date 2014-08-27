@@ -58,7 +58,7 @@ solution "homegear"
         "./Modules/Base/Threads/*.h", "./Modules/Base/Threads/*.cpp",
         "./Modules/Base/Settings/*.h", "./Modules/Base/Settings/*.cpp"
       }
-      buildoptions { "-std=c++11", "-fPIC" }
+      buildoptions { "-Wall", "-std=c++11", "-fPIC" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -84,7 +84,7 @@ solution "homegear"
       files { "./Modules/HomeMaticBidCoS/Devices/*.h", "./Modules/HomeMaticBidCoS/Devices/*.cpp" }
       files { "./Modules/HomeMaticBidCoS/PhysicalInterfaces/*.h", "./Modules/HomeMaticBidCoS/PhysicalInterfaces/*.cpp" }
       linkoptions { "-l pthread", "-l base" }
-      buildoptions { "-std=c++11" }
+      buildoptions { "-Wall", "-std=c++11" }
 	   
       configuration "Debug"
          defines { "DEBUG" }
@@ -113,7 +113,7 @@ solution "homegear"
       files { "./Modules/HomeMaticWired/Devices/*.h", "./Modules/HomeMaticWired/Devices/*.cpp" }
       files { "./Modules/HomeMaticWired/PhysicalInterfaces/*.h", "./Modules/HomeMaticWired/PhysicalInterfaces/*.cpp" }
       linkoptions { "-l pthread", "-l base" }
-      buildoptions { "-std=c++11" }
+      buildoptions { "-Wall", "-std=c++11" }
 	   
       configuration "Debug"
          defines { "DEBUG" }
@@ -142,7 +142,7 @@ solution "homegear"
       files { "./Modules/MAX/LogicalDevices/*.h", "./Modules/MAX/LogicalDevices/*.cpp" }
       files { "./Modules/MAX/PhysicalInterfaces/*.h", "./Modules/MAX/PhysicalInterfaces/*.cpp" }
       linkoptions { "-l pthread", "-l base" }
-      buildoptions { "-std=c++11" }
+      buildoptions { "-Wall", "-std=c++11" }
       
       configuration "Debug"
          defines { "DEBUG" }
@@ -171,7 +171,7 @@ solution "homegear"
       files { "./Modules/Insteon/LogicalDevices/*.h", "./Modules/Insteon/LogicalDevices/*.cpp" }
       files { "./Modules/Insteon/PhysicalInterfaces/*.h", "./Modules/Insteon/PhysicalInterfaces/*.cpp" }
       linkoptions { "-l base" }
-      buildoptions { "-std=c++11" }
+      buildoptions { "-Wall", "-std=c++11" }
 	   
       configuration "Debug"
          defines { "DEBUG" }
@@ -197,7 +197,7 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/User/*.h", "./Libraries/User/*.cpp" }
-      buildoptions { "-std=c++11" }
+      buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -220,7 +220,7 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/RPC/*.h", "./Libraries/RPC/*.cpp" }
-      buildoptions { "-std=c++11" }
+      buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -243,7 +243,7 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/CLI/*.h", "./Libraries/CLI/*.cpp" }
-      buildoptions { "-std=c++11" }
+      buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -266,7 +266,7 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/Events/*.h", "./Libraries/Events/*.cpp" }
-      buildoptions { "-std=c++11" }
+      buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -289,7 +289,7 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/Database/*.h", "./Libraries/Database/*.cpp" }
-      buildoptions { "-std=c++11" }
+      buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -312,6 +312,7 @@ solution "homegear"
       kind "StaticLib"
       language "C"
       files { "./Libraries/ScriptEngine/ph7.h", "./Libraries/ScriptEngine/ph7.c" }
+      buildoptions { "-Wall" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -334,7 +335,7 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/ScriptEngine/*.h", "./Libraries/ScriptEngine/*.cpp" }
-      buildoptions { "-std=c++11" }
+      buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -357,7 +358,7 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/GD/*.h", "./Libraries/GD/*.cpp" }
-      buildoptions { "-std=c++11" }
+      buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -382,7 +383,7 @@ solution "homegear"
       files { "*.h", "*.cpp" }
 	  files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
       linkoptions { "-l rpc", "-l dl", "-l pthread", "-l sqlite3", "-l readline", "-l gpg-error", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l scriptengine", "-l ph7", "-l base" }
-      buildoptions { "-std=c++11" }
+      buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
          defines { "DEBUG" }

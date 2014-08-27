@@ -740,7 +740,7 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 			}
 			hex = line.substr(3, 4);
 			int32_t address = BaseLib::HelperFunctions::getNumber(hex, true);
-			if(address != currentAddress || (11 + bytes * 2) > line.size())
+			if(address != currentAddress || (11 + bytes * 2) > (signed)line.size())
 			{
 				_bl->deviceUpdateInfo.results[id].first = 5;
 				_bl->deviceUpdateInfo.results[id].second = "Firmware file has wrong format.";
@@ -821,10 +821,10 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 		}
 
 		std::vector<uint8_t> data;
-		for(int32_t i = 0; i < firmware.size(); i += packetSize)
+		for(int32_t i = 0; i < (signed)firmware.size(); i += packetSize)
 		{
 			_bl->deviceUpdateInfo.currentDeviceProgress = (i * 100) / firmware.size();
-			int32_t currentPacketSize = (i + packetSize < firmware.size()) ? packetSize : firmware.size() - i;
+			int32_t currentPacketSize = (i + packetSize < (signed)firmware.size()) ? packetSize : firmware.size() - i;
 			data.clear();
 			data.push_back(0x77); //Type
 			data.push_back(i >> 8); //Address
@@ -1248,8 +1248,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::deleteDevice(uint64_t
 		if(!peer) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 		uint64_t id = peer->getID();
 
-		bool defer = flags & 0x04;
-		bool force = flags & 0x02;
 		//Reset
 		if(flags & 0x01) peer->reset();
 		deletePeer(id);
@@ -1514,7 +1512,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::searchDevices()
 		while(true)
 		{
 			std::vector<uint8_t> payload;
-			if(packet.second && packet.second->addressMask() == addressMask && packet.second->destinationAddress() == address)
+			if(packet.second && packet.second->addressMask() == addressMask && (uint32_t)packet.second->destinationAddress() == address)
 			{
 				if(packet.first < 3) packet.first++;
 				else
