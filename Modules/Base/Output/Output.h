@@ -86,23 +86,131 @@ public:
 	 */
 	void setPrefix(std::string prefix) { _prefix = prefix; }
 
+	/**
+	 * Prints the policy and priority of the thread executing this method.
+	 */
 	void printThreadPriority();
 
+	/**
+	 * Returns a time string like "08/27/14 14:13:53.471".
+	 * @return Returns a time string like "08/27/14 14:13:53.471".
+	 */
 	std::string getTimeString(int64_t time = 0);
 
+	/**
+	 * Prints the provided binary data as a hexadecimal string.
+	 *
+	 * @param data The binary data to print.
+	 */
 	void printBinary(std::vector<unsigned char>& data);
+
+	/**
+	 * Prints the provided binary data as a hexadecimal string.
+	 *
+	 * @param data The binary data to print.
+	 */
 	void printBinary(std::shared_ptr<std::vector<char>> data);
+
+	/**
+	 * Prints the provided binary data as a hexadecimal string.
+	 *
+	 * @param data The binary data to print.
+	 */
 	void printBinary(std::vector<char>& data);
+
+	/**
+	 * Prints an error message with filename, line number and function name.
+	 *
+	 * @param file The name of the file where the error occured.
+	 * @param line The line number where the error occured.
+	 * @param function The function name where the error occured.
+	 * @param what The error message.
+	 */
 	void printEx(std::string file, uint32_t line, std::string function, std::string what = "");
+
+	/**
+	 * Prints a critical error message (debug level < 1).
+	 *
+	 * @see printError()
+	 * @see printWarning()
+	 * @see printInfo()
+	 * @see printDebug()
+	 * @see printMessage()
+	 * @param errorString The error message.
+	 */
 	void printCritical(std::string errorString);
+
+	/**
+	 * Prints an error message (debug level < 2).
+	 *
+	 * @see printError()
+	 * @see printWarning()
+	 * @see printInfo()
+	 * @see printDebug()
+	 * @see printMessage()
+	 * @param errorString The error message.
+	 */
 	void printError(std::string errorString);
+
+	/**
+	 * Prints a warning message (debug level < 3).
+	 *
+	 * @see printError()
+	 * @see printWarning()
+	 * @see printInfo()
+	 * @see printDebug()
+	 * @see printMessage()
+	 * @param errorString The warning message.
+	 */
 	void printWarning(std::string errorString);
+
+	/**
+	 * Prints a info message (debug level < 4).
+	 *
+	 * @see printError()
+	 * @see printWarning()
+	 * @see printInfo()
+	 * @see printDebug()
+	 * @see printMessage()
+	 * @param message The message.
+	 */
 	void printInfo(std::string message);
+
+	/**
+	 * Prints a debug message (debug level < 5).
+	 *
+	 * @see printError()
+	 * @see printWarning()
+	 * @see printInfo()
+	 * @see printDebug()
+	 * @see printMessage()
+	 * @param message The message.
+	 * @param minDebugLevel The minimal debug level (default 5).
+	 */
 	void printDebug(std::string message, int32_t minDebugLevel = 5);
+
+	/**
+	 * Prints a message regardless of the current debug level.
+	 *
+	 * @see printError()
+	 * @see printWarning()
+	 * @see printInfo()
+	 * @see printDebug()
+	 * @see printMessage()
+	 * @param message The message.
+	 * @param minDebugLevel The minimal debug level (default 0).
+	 */
 	void printMessage(std::string message, int32_t minDebugLevel = 0);
 private:
+
+	/**
+	 * Pointer to the common base library object.
+	 */
 	BaseLib::Obj* _bl = nullptr;
-	const int32_t _defaultDebugLevel = 4;
+
+	/**
+	 * A prefix put before all messages.
+	 */
 	std::string _prefix;
 };
 }

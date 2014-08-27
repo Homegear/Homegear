@@ -22,22 +22,66 @@
 namespace BaseLib
 {
 
+/**
+ * This is the base library main class.
+ * It is used to share objects and data between all modules and the main program.
+ */
 class Obj
 {
 public:
+	/**
+	 * The current debug level for logging.
+	 */
 	int32_t debugLevel;
+
+	/**
+	 * The path of the main executable.
+	 */
 	std::string executablePath;
+
+	/**
+	 * The FileDescriptorManager object where all file or socket descriptors should be registered.
+	 * This should be done to avoid errors as it can happen, that a closed file descriptor is reopened and suddenly valid again without the object using the old descriptor noticing it.
+	 */
 	FileDescriptorManager fileDescriptorManager;
+
+	/**
+	 * The serial device manager can be used to access one serial device across multiple modules.
+	 */
 	SerialDeviceManager serialDeviceManager;
+
+	/**
+	 * The main.conf settings.
+	 */
 	Settings settings;
+
+	/**
+	 * Object to store information about running updates and to only allow one update at a time.
+	 */
 	Systems::UpdateInfo deviceUpdateInfo;
+
+	/**
+	 * Functions to ease your life for a lot of standard operations.
+	 */
 	HelperFunctions hf;
+
+	/**
+	 * The main output object to print text to the standard and error output.
+	 */
 	Output out;
 
+	/**
+	 * Main constructor.
+	 *
+	 * @param exePath The path to the main executable.
+	 */
 	Obj(std::string exePath);
+
+	/**
+	 * Destructor.
+	 */
 	virtual ~Obj();
 private:
-	//Non public constructor
 };
 }
 #endif
