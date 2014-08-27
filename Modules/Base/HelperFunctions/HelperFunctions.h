@@ -146,7 +146,7 @@ public:
 	/**
 	 * Gets the current time as a string like "08/27/14 14:13:53.471".
 	 *
-	 * @param time The unix time stamp in milliseconds to get the time string for.
+	 * @param time The unix time stamp in milliseconds to get the time string for. If "0" the current time is returned.
 	 * @return Returns a time string like "08/27/14 14:13:53.471".
 	 */
 	static std::string getTimeString(int64_t time = 0);
@@ -171,7 +171,7 @@ public:
 	 * @see ltrim()
 	 * @see trim()
 	 * @param[in,out] s The string to right trim.
-	 * @return Returns a reference the right trimmed string.
+	 * @return Returns a reference to the right trimmed string.
 	 */
 	static inline std::string &rtrim(std::string &s)
 	{
@@ -185,7 +185,7 @@ public:
 	 * @see ltrim()
 	 * @see rtrim()
 	 * @param[in,out] s The string to trim.
-	 * @return Returns a reference the trimmed string.
+	 * @return Returns a reference to the trimmed string.
 	 */
 	static inline std::string& trim(std::string& s)
 	{
@@ -197,7 +197,7 @@ public:
 	 *
 	 * @see toUpper()
 	 * @param[in,out] s The string to convert all characters to lower case for.
-	 * @return Returns a reference the lower case string.
+	 * @return Returns a reference to the lower case string.
 	 */
 	static inline std::string& toLower (std::string& s)
 	{
@@ -210,7 +210,7 @@ public:
 	 *
 	 * @see toLower()
 	 * @param[in,out] s The string to convert all characters to upper case for.
-	 * @return Returns a reference the upper case string.
+	 * @return Returns a reference to the upper case string.
 	 */
 	static inline std::string& toUpper (std::string& s)
 	{
@@ -327,7 +327,7 @@ public:
 	 * @see getDouble()
 	 * @see getUnsignedNumber()
 	 * @param s The string to convert.
-	 * @param isHex Set to true, if the string is hexadecimal (default false).\ If the string is prefixed with "0x", it is automatically detected as hexadecimal.
+	 * @param isHex Set this parameter to "true", if the string is hexadecimal (default false). If the string is prefixed with "0x", it is automatically detected as hexadecimal.
 	 * @return Returns the integer or "0" on error.
 	 */
 	static int32_t getNumber(std::string& s, bool isHex = false)
@@ -359,7 +359,7 @@ public:
 	 * @see getDouble()
 	 * @see getNumber()
 	 * @param s The string to convert.
-	 * @param isHex Set to true, if the string is hexadecimal (default false).\ If the string is prefixed with "0x", it is automatically detected as hexadecimal.
+	 * @param isHex Set this parameter to "true", if the string is hexadecimal (default false). If the string is prefixed with "0x", it is automatically detected as hexadecimal.
 	 * @return Returns the unsigned integer or "0" on error.
 	 */
 	static uint32_t getUnsignedNumber(std::string &s, bool isHex = false)
@@ -417,7 +417,7 @@ public:
 	 * Copies binary values from a vector to an integer reversing the byte order when the system is little endian.
 	 *
 	 * @param[out] to The destination integer.
-	 * @param[in] from The source array.\ A length less than 4 bytes is allowed.
+	 * @param[in] from The source array. A length less than 4 bytes is allowed.
 	 */
 	void memcpyBigEndian(int32_t& to, const std::vector<uint8_t>& from);
 
@@ -449,7 +449,7 @@ public:
 	 * Converts an integer to a hex string.
 	 *
 	 * @param number The integer to convert.
-	 * @param width The minimal width of the hex string (default -1).\ If the hex string is smaller, it is prefixed with zeros.
+	 * @param width The minimal width of the hex string (default -1). If the hex string is smaller, it is prefixed with zeros.
 	 * @return Returns the hex string of the integer.
 	 */
 	static std::string getHexString(int32_t number, int32_t width = -1);
@@ -485,7 +485,7 @@ public:
 	 * @see getBinary()
 	 * @param hexString The string to convert.
 	 * @param size The maximum number of characters to convert.
-	 * @param binary The unsigned char vector to append the converted bytes to.\ Already existing elements will not be cleared.
+	 * @param binary The unsigned char vector to append the converted bytes to. Already existing elements will not be cleared.
 	 * @return Returns a reference to "binary".
 	 */
 	std::vector<uint8_t>& getUBinary(std::string hexString, uint32_t size, std::vector<uint8_t>& binary);
@@ -537,7 +537,7 @@ private:
 	BaseLib::Obj* _bl = nullptr;
 
 	/**
-	 * The result of checkEndianness() is stored in this variable.\ This is done through calling "init".
+	 * The result of checkEndianness() is stored in this variable. This is done through calling "init".
 	 */
 	bool _isBigEndian;
 
@@ -557,12 +557,12 @@ private:
 	char _binaryToASCIITable[16];
 
 	/**
-	 * Buffer to store GCRYPT error messages in.\ Needed for thread safety.
+	 * Buffer to store GCRYPT error messages in. Needed for thread safety.
 	 */
 	char _gcryptBuffer[1024];
 
 	/**
-	 * Mutex to protect _gcryptBuffer.\ Needed for thread safety.
+	 * Mutex to protect _gcryptBuffer. Needed for thread safety.
 	 */
 	std::mutex _gcryptBufferMutex;
 
