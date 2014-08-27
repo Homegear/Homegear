@@ -96,6 +96,10 @@ endif
 OBJECTS := \
 	$(OBJDIR)/AESTest.o \
 	$(OBJDIR)/main.o \
+	$(OBJDIR)/bool_array.o \
+	$(OBJDIR)/debug_new.o \
+	$(OBJDIR)/mem_pool_base.o \
+	$(OBJDIR)/static_mem_pool.o \
 	$(OBJDIR)/FamilyController.o \
 	$(OBJDIR)/PhysicalInterfaces.o \
 	$(OBJDIR)/DatabaseController.o \
@@ -167,6 +171,18 @@ $(OBJDIR)/AESTest.o: AESTest.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/main.o: main.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/bool_array.o: nvwa/bool_array.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/debug_new.o: nvwa/debug_new.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/mem_pool_base.o: nvwa/mem_pool_base.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/static_mem_pool.o: nvwa/static_mem_pool.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/FamilyController.o: Libraries/Systems/FamilyController.cpp

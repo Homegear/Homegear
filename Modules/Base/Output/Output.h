@@ -46,15 +46,44 @@ namespace BaseLib
 {
 class Obj;
 
+/**
+ * Class to print output of different kinds to the standard and error output.
+ * The output is automatically prefixed with the date and filtered according to the current debug level.
+ */
 class Output
 {
 public:
+	/**
+	 * The main constructor.
+	 * The constructor does nothing. You need to call "init" after creating the object.
+	 */
 	Output() {}
+
+	/**
+	 * The destructor.
+	 * It does nothing.
+	 */
 	virtual ~Output();
 
+	/**
+	 * Initializes the object.
+	 * Not calling this method might cause segmentation faults as the base library pointer is unset.
+	 * @param baseLib A pointer to the common base library object.
+	 */
 	void init(Obj* baseLib);
 
+	/**
+	 * Returns the prefix previously defined with setPrefix.
+	 * @see setPrefix()
+	 * @return Returns the prefix previously defined with setPrefix.
+	 */
 	std::string getPrefix() { return _prefix; }
+
+	/**
+	 * Sets a string, which will be used to prefix all output.
+	 * @see getPrefix()
+	 * @param prefix The new prefix.
+	 */
 	void setPrefix(std::string prefix) { _prefix = prefix; }
 
 	void printThreadPriority();
