@@ -7,9 +7,10 @@ case "$1" in
 
     upgrade|abort-upgrade)
     	service homegear stop
-		read -p "Do you want to update your device description files? All old device description files in \"/etc/homegear/devices\" will be deleted (y/n): " DELETE
+		read -p "Do you want to update your device description files? All old device description files in \"/etc/homegear/devices/0\" and \"/etc/homegear/devices/1\" will be deleted (y/n): " DELETE
 		if [ "$DELETE" = "y" ]; then
-			rm -Rf /etc/homegear/devices/*
+			rm -Rf /etc/homegear/devices/0/*
+			rm -Rf /etc/homegear/devices/1/*
 		fi
 		rm -f /var/lib/homegear/GetDeviceFiles.sh
 		rm -f /var/lib/homegear/DeviceTypePatch.patch
