@@ -84,7 +84,7 @@ class InsteonMessage
         MessageDirection _direction = DIRECTIONIN;
         int32_t _messageType = -1;
         int32_t _messageSubtype = -1;
-        InsteonPacketFlags _messageFlags;
+        InsteonPacketFlags _messageFlags = InsteonPacketFlags::Direct;
         InsteonDevice* _device = nullptr;
         int32_t _access = 0;
         int32_t _accessPairing = 0;

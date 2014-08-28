@@ -59,8 +59,8 @@ private:
 	BaseLib::Obj* _bl = nullptr;
 	std::unique_ptr<BinaryEncoder> _encoder;
 	char _packetStartRequest[4];
-	char _packetStartResponse[4];
-	char _packetStartError[4];
+	char _packetStartResponse[5];
+	char _packetStartError[5];
 
 	uint32_t encodeHeader(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCHeader>& header);
 	void encodeVariable(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable);

@@ -94,7 +94,7 @@ void Threads::setThreadPriority(BaseLib::Obj* baseLib, pthread_t thread, int32_t
     {
 		baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

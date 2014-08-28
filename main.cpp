@@ -460,15 +460,22 @@ int main(int argc, char* argv[])
 			if(!GD::pidfilePath.empty())
 			{
 				int32_t pidfile = open(GD::pidfilePath.c_str(), O_CREAT | O_RDWR, 0666);
-				int32_t rc = flock(pidfile, LOCK_EX | LOCK_NB);
-				if(rc && errno == EWOULDBLOCK)
+				if(pidfile < 0)
 				{
-					GD::out.printError("Error: Homegear is already running - Can't lock PID file.");
+					GD::out.printError("Error: Cannot create pid file \"" + GD::pidfilePath + "\".");
 				}
-				std::string pid(std::to_string(getpid()));
-				int32_t bytesWritten = write(pidfile, pid.c_str(), pid.size());
-				if(bytesWritten <= 0) GD::out.printError("Error writing to PID file: " + std::string(strerror(errno)));
-				close(pidfile);
+				else
+				{
+					int32_t rc = flock(pidfile, LOCK_EX | LOCK_NB);
+					if(rc && errno == EWOULDBLOCK)
+					{
+						GD::out.printError("Error: Homegear is already running - Can't lock PID file.");
+					}
+					std::string pid(std::to_string(getpid()));
+					int32_t bytesWritten = write(pidfile, pid.c_str(), pid.size());
+					if(bytesWritten <= 0) GD::out.printError("Error writing to PID file: " + std::string(strerror(errno)));
+					close(pidfile);
+				}
 			}
 		}
 		catch(const std::exception& ex)

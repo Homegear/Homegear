@@ -79,7 +79,7 @@ void Output::printThreadPriority()
     {
     	printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -107,7 +107,7 @@ void Output::printBinary(std::vector<unsigned char>& data)
     {
     	printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -135,7 +135,7 @@ void Output::printBinary(std::shared_ptr<std::vector<char>> data)
     {
     	printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -163,7 +163,7 @@ void Output::printBinary(std::vector<char>& data)
     {
     	printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

@@ -192,7 +192,7 @@ std::vector<std::string> HelperFunctions::getFiles(std::string path)
 				{
 					_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				}
-				catch(Exception& ex)
+				catch(const Exception& ex)
 				{
 					_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				}
@@ -202,6 +202,7 @@ std::vector<std::string> HelperFunctions::getFiles(std::string path)
 				}
 			}
 		}
+		closedir(directory);
 	}
 	else throw(Exception("Could not open directory."));
 	return files;
@@ -268,7 +269,7 @@ void HelperFunctions::memcpyBigEndian(char* to, const char* from, const uint32_t
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -288,7 +289,7 @@ void HelperFunctions::memcpyBigEndian(uint8_t* to, const uint8_t* from, const ui
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -313,7 +314,7 @@ void HelperFunctions::memcpyBigEndian(int32_t& to, const std::vector<uint8_t>& f
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -341,7 +342,7 @@ void HelperFunctions::memcpyBigEndian(std::vector<uint8_t>& to, const int32_t& f
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -382,7 +383,7 @@ char HelperFunctions::getHexChar(int32_t nibble)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -490,7 +491,7 @@ void HelperFunctions::copyFile(std::string source, std::string dest)
 {
 	try
 	{
-		int in_fd = open(source.c_str(), O_RDONLY);
+		int32_t in_fd = open(source.c_str(), O_RDONLY);
 		if(in_fd == -1)
 		{
 			_bl->out.printError("Error copying file " + source + ": " + strerror(errno));
@@ -499,34 +500,42 @@ void HelperFunctions::copyFile(std::string source, std::string dest)
 
 		unlink(dest.c_str());
 
-		int out_fd = open(dest.c_str(), O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP);
+		int32_t out_fd = open(dest.c_str(), O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP);
 		if(out_fd == -1)
 		{
+			close(in_fd);
 			_bl->out.printError("Error copying file " + source + ": " + strerror(errno));
 			return;
 		}
 		char buf[8192];
 
-		while (1) {
+		while (true)
+		{
 			ssize_t result = read(in_fd, &buf[0], sizeof(buf));
 			if (!result) break;
 			if(result == -1)
 			{
+				close(in_fd);
+				close(out_fd);
 				_bl->out.printError("Error reading file " + source + ": " + strerror(errno));
 				return;
 			}
 			if(write(out_fd, &buf[0], result) != result)
 			{
+				close(in_fd);
+				close(out_fd);
 				_bl->out.printError("Error writing file " + dest + ": " + strerror(errno));
 				return;
 			}
 		}
+		close(in_fd);
+		close(out_fd);
 	}
 	catch(const std::exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

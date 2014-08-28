@@ -57,7 +57,7 @@ void Devices::load()
 		{
 			files = _bl->hf.getFiles(deviceDir);
 		}
-		catch(Exception& ex)
+		catch(const Exception& ex)
 		{
 			_bl->out.printError("Could not read device description files in directory: \"" + path + "\": " + ex.what());
 			return;
@@ -84,7 +84,7 @@ void Devices::load()
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -132,7 +132,7 @@ std::shared_ptr<Device> Devices::find(Systems::LogicalDeviceType deviceType, uin
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -180,7 +180,7 @@ std::shared_ptr<Device> Devices::find(Systems::LogicalDeviceType deviceType, uin
     {
      _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
      _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -225,7 +225,7 @@ std::shared_ptr<Device> Devices::find(Systems::DeviceFamilies family, std::strin
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -270,7 +270,7 @@ std::shared_ptr<Device> Devices::find(Systems::DeviceFamilies family, std::share
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

@@ -40,12 +40,13 @@ RPCEncoder::RPCEncoder(BaseLib::Obj* baseLib)
 	_bl = baseLib;
 	_encoder = std::unique_ptr<BinaryEncoder>(new BinaryEncoder(baseLib));
 
-	strncpy(&_packetStartRequest[0], "Bin", 3);
-	_packetStartRequest[3] = 0;
-	strncpy(&_packetStartResponse[0], "Bin", 3);
+	strncpy(&_packetStartRequest[0], "Bin", 4);
+	strncpy(&_packetStartResponse[0], "Bin", 4);
 	_packetStartResponse[3] = 1;
-	strncpy(&_packetStartError[0], "Bin", 3);
+	_packetStartResponse[4] = 0;
+	strncpy(&_packetStartError[0], "Bin", 4);
 	_packetStartError[3] = 0xFF;
+	_packetStartError[4] = 0;
 }
 
 std::shared_ptr<std::vector<char>> RPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters, std::shared_ptr<RPCHeader> header)
@@ -81,7 +82,7 @@ std::shared_ptr<std::vector<char>> RPCEncoder::encodeRequest(std::string methodN
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -113,7 +114,7 @@ std::shared_ptr<std::vector<char>> RPCEncoder::encodeResponse(std::shared_ptr<RP
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -199,7 +200,7 @@ void RPCEncoder::encodeVariable(std::shared_ptr<std::vector<char>>& packet, std:
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -227,7 +228,7 @@ void RPCEncoder::encodeStruct(std::shared_ptr<std::vector<char>>& packet, std::s
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -252,7 +253,7 @@ void RPCEncoder::encodeArray(std::shared_ptr<std::vector<char>>& packet, std::sh
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -284,7 +285,7 @@ void RPCEncoder::encodeFloat(std::shared_ptr<std::vector<char>>& packet, std::sh
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -316,7 +317,7 @@ void RPCEncoder::encodeString(std::shared_ptr<std::vector<char>>& packet, std::s
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -342,7 +343,7 @@ void RPCEncoder::encodeBase64(std::shared_ptr<std::vector<char>>& packet, std::s
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

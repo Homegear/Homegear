@@ -111,7 +111,7 @@ void SQLite3::openDatabase(std::string databasePath, bool databaseSynchronous, b
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -156,7 +156,7 @@ void SQLite3::closeDatabase()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -286,7 +286,7 @@ uint32_t SQLite3::executeWriteCommand(std::string command, DataRow& dataToEscape
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -321,7 +321,7 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command, DataRow&
 		{
 			getDataRows(statement, dataRows);
 		}
-		catch(Exception& ex)
+		catch(const Exception& ex)
 		{
 			if(command.compare(0, 7, "RELEASE") == 0)
 			{
@@ -343,7 +343,7 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command, DataRow&
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -379,7 +379,7 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command)
 		{
 			getDataRows(statement, dataRows);
 		}
-		catch(Exception& ex)
+		catch(const Exception& ex)
 		{
 			if(command.compare(0, 7, "RELEASE") == 0)
 			{
@@ -401,7 +401,7 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -508,7 +508,7 @@ void SQLite3::benchmark2()
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -578,7 +578,7 @@ void SQLite3::benchmark3()
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -648,7 +648,7 @@ void SQLite3::benchmark4()
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

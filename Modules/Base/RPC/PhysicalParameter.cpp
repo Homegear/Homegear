@@ -61,7 +61,7 @@ SetRequestEx::SetRequestEx(Obj* baseLib, xml_node<char>* node)
     {
     	baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -261,7 +261,7 @@ PhysicalParameter::PhysicalParameter(BaseLib::Obj* baseLib, xml_node<>* node) : 
     {
     	baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

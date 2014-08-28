@@ -106,7 +106,7 @@ protected:
 	int32_t _threadCounter = 0;
 	std::thread _listenThread;
 	std::thread _callbackThread;
-	bool _stopCallbackThread;
+	bool _stopCallbackThread = false;
 	std::string _lockfile;
 	std::mutex _sendMutex;
 	bool _stopped = false;

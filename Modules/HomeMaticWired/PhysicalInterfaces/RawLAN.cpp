@@ -114,7 +114,7 @@ void RawLAN::send(std::vector<char>& packet, bool printPacket)
     	_socket->proofwrite(packet);
     	_lastPacketSent = BaseLib::HelperFunctions::getTime();
     }
-    catch(BaseLib::SocketOperationException& ex)
+    catch(const BaseLib::SocketOperationException& ex)
     {
     	GD::out.printError(ex.what());
     }
@@ -208,7 +208,7 @@ void RawLAN::listen()
 			{
 				receivedBytes = _socket->proofread(&buffer[0], bufferMax);
 			}
-			catch(BaseLib::SocketTimeOutException& ex)
+			catch(const BaseLib::SocketTimeOutException& ex)
 			{
 				if(!data.empty())
 				{
@@ -225,13 +225,13 @@ void RawLAN::listen()
 				}
 				continue;
 			}
-			catch(BaseLib::SocketClosedException& ex)
+			catch(const BaseLib::SocketClosedException& ex)
 			{
 				GD::out.printWarning("Warning: " + ex.what());
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
-			catch(BaseLib::SocketOperationException& ex)
+			catch(const BaseLib::SocketOperationException& ex)
 			{
 				GD::out.printError("Error: " + ex.what());
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));

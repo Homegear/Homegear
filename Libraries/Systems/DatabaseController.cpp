@@ -970,7 +970,7 @@ uint64_t DatabaseController::saveDeviceVariable(BaseLib::Database::DataRow data)
 {
 	try
 	{
-		uint64_t result;
+		uint64_t result = 0;
 		if(data.size() == 2)
 		{
 			if(data.at(1)->intValue == 0)
@@ -1186,7 +1186,7 @@ uint64_t DatabaseController::savePeerVariable(uint64_t peerID, BaseLib::Database
 	try
 	{
 		createSavepoint("peerVariable" + std::to_string(peerID));
-		uint64_t result;
+		uint64_t result = 0;
 		if(data.size() == 2)
 		{
 			if(data.at(1)->intValue == 0)
@@ -1356,7 +1356,7 @@ uint64_t DatabaseController::saveServiceMessage(uint64_t peerID, BaseLib::Databa
 	try
 	{
 		createSavepoint("serviceMessage" + std::to_string(peerID));
-		uint64_t result;
+		uint64_t result = 0;
 		if(data.size() == 2)
 		{
 			if(data.at(1)->intValue == 0)

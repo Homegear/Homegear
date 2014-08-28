@@ -468,7 +468,7 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 		{
 			try
 			{
-				cycleTime = cycleLength * 250000;
+				cycleTime = (int64_t)cycleLength * 250000;
 				nextDutyCycleEvent += cycleTime + _dutyCycleTimeOffset; //Add offset every cycle. This is very important! Without it, 20% of the packets are sent too early.
 				GD::out.printDebug("Next duty cycle: " + std::to_string(nextDutyCycleEvent / 1000) + " (in " + std::to_string(cycleTime / 1000) + " ms) with message counter 0x" + BaseLib::HelperFunctions::getHexString(_messageCounter[1]));
 

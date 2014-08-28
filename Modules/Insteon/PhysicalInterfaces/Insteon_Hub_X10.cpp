@@ -501,7 +501,7 @@ void InsteonHubX10::send(const std::vector<char>& data, bool printPacket)
     	if(_bl->debugLevel >= 5) _out.printDebug("Debug: Sending (Port " + _settings->port + "): " + _bl->hf.getHexString(data));
     	_socket->proofwrite(data);
     }
-    catch(BaseLib::SocketOperationException& ex)
+    catch(const BaseLib::SocketOperationException& ex)
     {
     	_out.printError(ex.what());
     }
@@ -794,21 +794,21 @@ void InsteonHubX10::listen()
 					}
 				} while(receivedBytes == (unsigned)bufferMax);
 			}
-			catch(BaseLib::SocketTimeOutException& ex)
+			catch(const BaseLib::SocketTimeOutException& ex)
 			{
 				if(data.empty()) //When receivedBytes is exactly 2048 bytes long, proofread will be called again, time out and the packet is received with a delay of 5 seconds. It doesn't matter as packets this big are only received at start up.
 				{
 					continue;
 				}
 			}
-			catch(BaseLib::SocketClosedException& ex)
+			catch(const BaseLib::SocketClosedException& ex)
 			{
 				_stopped = true;
 				_out.printWarning("Warning: " + ex.what());
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
-			catch(BaseLib::SocketOperationException& ex)
+			catch(const BaseLib::SocketOperationException& ex)
 			{
 				_stopped = true;
 				_out.printError("Error: " + ex.what());

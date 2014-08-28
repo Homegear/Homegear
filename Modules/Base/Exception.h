@@ -30,7 +30,6 @@
 #ifndef EXCEPTION_H
 #define EXCEPTION_H
 
-#include <exception>
 #include <string>
 
 namespace BaseLib
@@ -38,12 +37,12 @@ namespace BaseLib
 /**
  * Base class for all exceptions defined in Homegear
  */
-class Exception : std::exception
+class Exception
 {
     public:
         Exception(std::string message) {  _message = message; }
 
-        virtual std::string what() { return _message; }
+        const std::string what() const { return _message; }
     protected:
         std::string _message;
 };

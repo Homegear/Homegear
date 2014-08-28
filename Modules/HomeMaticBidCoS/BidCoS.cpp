@@ -498,7 +498,7 @@ std::string BidCoS::handleCLICommand(std::string& command)
 		}
 		else if(command.compare(0, 14, "devices remove") == 0)
 		{
-			uint64_t id;
+			uint64_t id = 0;
 
 			std::stringstream stream(command);
 			std::string element;

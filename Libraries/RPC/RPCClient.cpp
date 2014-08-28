@@ -350,7 +350,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 				server->socket->open();
 			}
 		}
-		catch(BaseLib::SocketOperationException& ex)
+		catch(const BaseLib::SocketOperationException& ex)
 		{
 			GD::out.printError(ex.what() + " Removing server. Server has to send \"init\" again.");
 			server->removed = true;
@@ -416,7 +416,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			_sendCounter--;
 			return std::shared_ptr<std::vector<char>>();
 		}
-		catch(BaseLib::SocketOperationException& ex)
+		catch(const BaseLib::SocketOperationException& ex)
 		{
 			GD::out.printError("Error: Could not send data to XML RPC server " + server->hostname + " on port " + server->address.second + ": " + ex.what() + ". Giving up.");
 			server->socket->close();
@@ -443,7 +443,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 				//Some clients send only one byte in the first packet
 				if(packetLength == 0 && receivedBytes == 1) receivedBytes += server->socket->proofread(&buffer[1], bufferMax - 1);
 			}
-			catch(BaseLib::SocketTimeOutException& ex)
+			catch(const BaseLib::SocketTimeOutException& ex)
 			{
 				GD::out.printInfo("Info: Reading from XML RPC server timed out. Server: " + server->hostname + " Port: " + server->address.second);
 				timedout = true;
@@ -451,14 +451,14 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
-			catch(BaseLib::SocketClosedException& ex)
+			catch(const BaseLib::SocketClosedException& ex)
 			{
 				GD::out.printWarning("Warning: " + ex.what());
 				if(!server->keepAlive) server->socket->close();
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
-			catch(BaseLib::SocketOperationException& ex)
+			catch(const BaseLib::SocketOperationException& ex)
 			{
 				GD::out.printError(ex.what());
 				if(!server->keepAlive) server->socket->close();

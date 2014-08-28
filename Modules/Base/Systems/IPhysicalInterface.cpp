@@ -91,7 +91,7 @@ void IPhysicalInterface::raisePacketReceived(std::shared_ptr<Packet> packet, boo
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -136,7 +136,7 @@ void IPhysicalInterface::raisePacketReceivedThread(uint32_t threadID, std::share
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -162,7 +162,7 @@ void IPhysicalInterface::removePacketReceivedThread(uint32_t threadID)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -197,7 +197,7 @@ void IPhysicalInterface::setDevicePermission(int32_t userID, int32_t groupID)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -225,7 +225,7 @@ void IPhysicalInterface::openGPIO(uint32_t index, bool readOnly)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -275,6 +275,7 @@ void IPhysicalInterface::getGPIOPath(uint32_t index)
 							_bl->out.printDebug("Debug: GPIO path for GPIO with index " + std::to_string(index) + " and device " + _settings->type + " set to \"" + dirName + "\".");
 							if(dirName.back() != '/') dirName.push_back('/');
 							_settings->gpio[index].path = dirName;
+							closedir(directory);
 							return;
 						}
 					}
@@ -282,7 +283,7 @@ void IPhysicalInterface::getGPIOPath(uint32_t index)
 					{
 						_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 					}
-					catch(Exception& ex)
+					catch(const Exception& ex)
 					{
 						_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 					}
@@ -292,6 +293,7 @@ void IPhysicalInterface::getGPIOPath(uint32_t index)
 					}
 				}
 			}
+			closedir(directory);
 		}
 		else throw(Exception("Could not open directory \"" + _bl->settings.gpioPath() + "\"."));
 	}
@@ -299,7 +301,7 @@ void IPhysicalInterface::getGPIOPath(uint32_t index)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -322,7 +324,7 @@ void IPhysicalInterface::closeGPIO(uint32_t index)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -353,7 +355,7 @@ bool IPhysicalInterface::getGPIO(uint32_t index)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -384,7 +386,7 @@ void IPhysicalInterface::setGPIO(uint32_t index, bool value)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -421,7 +423,7 @@ void IPhysicalInterface::setGPIOPermission(uint32_t index, int32_t userID, int32
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -441,7 +443,7 @@ bool IPhysicalInterface::gpioDefined(uint32_t index)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -462,7 +464,7 @@ bool IPhysicalInterface::gpioOpen(uint32_t index)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -514,7 +516,7 @@ void IPhysicalInterface::exportGPIO(uint32_t index)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -549,7 +551,7 @@ void IPhysicalInterface::setGPIODirection(uint32_t index, GPIODirection::Enum di
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -584,7 +586,7 @@ void IPhysicalInterface::setGPIOEdge(uint32_t index, GPIOEdge::Enum edge)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

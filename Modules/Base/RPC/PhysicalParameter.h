@@ -55,7 +55,7 @@ class PhysicalParameterEvent
 public:
 	std::string frame;
 	bool dominoEvent = false;
-	int32_t dominoEventValue;
+	int32_t dominoEventValue = 0;
 	std::string dominoEventDelayID;
 
 	PhysicalParameterEvent() {}
@@ -69,7 +69,7 @@ public:
 	{
 		enum Enum { none, addition, substraction };
 	};
-	Operation::Enum operation;
+	Operation::Enum operation = Operation::none;
 	double index = 0;
 	double step = 0;
 

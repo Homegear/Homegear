@@ -274,8 +274,7 @@ std::shared_ptr<RPCVariable> RPCVariable::fromString(std::string value, RPCVaria
 		variable->stringValue = value;
 		return variable;
 	}
-	else return createError(-1, "Type not supported.");
-    return std::shared_ptr<RPCVariable>();
+	return createError(-1, "Type not supported.");
 }
 
 std::string RPCVariable::getTypeString(RPCVariableType type)

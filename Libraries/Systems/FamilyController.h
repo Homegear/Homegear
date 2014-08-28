@@ -117,7 +117,7 @@ private:
 	std::shared_ptr<BaseLib::RPC::RPCVariable> _rpcCache;
 
 	std::map<std::string, std::unique_ptr<ModuleLoader>> moduleLoaders;
-	BaseLib::Systems::DeviceFamily* _currentFamily;
+	BaseLib::Systems::DeviceFamily* _currentFamily = nullptr;
 };
 
 #endif

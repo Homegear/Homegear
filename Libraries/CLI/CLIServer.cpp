@@ -276,14 +276,18 @@ void Server::getFileDescriptor(bool deleteOldSocket)
 			GD::out.printCritical("Critical: Socket path is too long.");
 			return;
 		}
-		strncpy(serverAddress.sun_path, GD::socketPath.c_str(), 108);
+		strncpy(serverAddress.sun_path, GD::socketPath.c_str(), 107);
+		serverAddress.sun_path[107] = 0; //Just to make sure the string is null terminated.
 		bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*)&serverAddress, strlen(serverAddress.sun_path) + sizeof(serverAddress.sun_family)) != -1);
 		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
 		{
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 			throw BaseLib::Exception("Error: CLI server could not start listening. Error: " + std::string(strerror(errno)));
 		}
-		chmod(GD::socketPath.c_str(), S_IRWXU | S_IRGRP | S_IXGRP);
+		if(chmod(GD::socketPath.c_str(), S_IRWXU | S_IRGRP | S_IXGRP) == -1)
+		{
+			GD::out.printError("Error: chmod failed on unix socket \"" + GD::socketPath + "\".");
+		}
 		return;
     }
     catch(const std::exception& ex)
@@ -421,7 +425,7 @@ std::string Server::handleUserCommand(std::string& command)
 			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(30) << "Name" << std::endl;
 			for(BaseLib::Database::DataTable::const_iterator i = rows->begin(); i != rows->end(); ++i)
 			{
-				if(!i->second.size() == 2 || !i->second.at(0) || !i->second.at(1)) continue;
+				if(i->second.size() < 2 || !i->second.at(0) || !i->second.at(1)) continue;
 				stringStream << std::setw(6) << i->second.at(0)->intValue << std::setw(30) << i->second.at(1)->textValue << std::endl;
 			}
 

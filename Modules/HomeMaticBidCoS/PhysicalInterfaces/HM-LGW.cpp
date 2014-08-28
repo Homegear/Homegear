@@ -963,7 +963,7 @@ void HM_LGW::send(const std::vector<char>& data, bool raw)
     	 _sendMutex.unlock();
     	 return;
     }
-    catch(BaseLib::SocketOperationException& ex)
+    catch(const BaseLib::SocketOperationException& ex)
     {
     	_out.printError(ex.what());
     }
@@ -1005,7 +1005,7 @@ void HM_LGW::sendKeepAlive(std::vector<char>& data, bool raw)
     	 _sendMutexKeepAlive.unlock();
     	 return;
     }
-    catch(BaseLib::SocketOperationException& ex)
+    catch(const BaseLib::SocketOperationException& ex)
     {
     	_out.printError(ex.what());
     }
@@ -1193,7 +1193,7 @@ void HM_LGW::doInit()
 		getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
-			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			if(responsePacket.size() >= 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 			_stopped = true;
 			return;
 		}
@@ -1211,7 +1211,7 @@ void HM_LGW::doInit()
 		getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
-			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			if(responsePacket.size() >= 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 			_stopped = true;
 			return;
 		}
@@ -1231,7 +1231,7 @@ void HM_LGW::doInit()
 			getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 			{
-				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+				if(responsePacket.size() >= 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 				_stopped = true;
 				return;
 			}
@@ -1250,7 +1250,7 @@ void HM_LGW::doInit()
 		getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
-			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			if(responsePacket.size() >= 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 			_stopped = true;
 			return;
 		}
@@ -1270,7 +1270,7 @@ void HM_LGW::doInit()
 			getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 			{
-				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+				if(responsePacket.size() >= 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 				_stopped = true;
 				return;
 			}
@@ -1288,7 +1288,7 @@ void HM_LGW::doInit()
 			getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 			{
-				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+				if(responsePacket.size() >= 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 				_stopped = true;
 				return;
 			}
@@ -1315,7 +1315,7 @@ void HM_LGW::doInit()
 		getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
-			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			if(responsePacket.size() >= 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 			_stopped = true;
 			return;
 		}
@@ -1335,7 +1335,7 @@ void HM_LGW::doInit()
 			getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 			{
-				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+				if(responsePacket.size() >= 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 				_stopped = true;
 				return;
 			}
@@ -1363,7 +1363,7 @@ void HM_LGW::doInit()
 		getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
-			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			if(responsePacket.size() >= 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 			_stopped = true;
 			return;
 		}
@@ -1385,7 +1385,7 @@ void HM_LGW::doInit()
 			getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
 			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 			{
-				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+				if(responsePacket.size() >= 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 				_stopped = true;
 				return;
 			}
@@ -1406,7 +1406,7 @@ void HM_LGW::doInit()
 		getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
-			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			if(responsePacket.size() >= 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 			_stopped = true;
 			return;
 		}
@@ -1426,7 +1426,7 @@ void HM_LGW::doInit()
 			getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 			{
-				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+				if(responsePacket.size() >= 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 				_stopped = true;
 				return;
 			}
@@ -1444,7 +1444,7 @@ void HM_LGW::doInit()
 			getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 			{
-				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+				if(responsePacket.size() >= 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 				_stopped = true;
 				return;
 			}
@@ -1918,21 +1918,21 @@ void HM_LGW::listen()
 					}
 				} while(receivedBytes == (unsigned)bufferMax);
 			}
-			catch(BaseLib::SocketTimeOutException& ex)
+			catch(const BaseLib::SocketTimeOutException& ex)
 			{
 				if(data.empty()) //When receivedBytes is exactly 2048 bytes long, proofread will be called again, time out and the packet is received with a delay of 5 seconds. It doesn't matter as packets this big are only received at start up.
 				{
 					continue;
 				}
 			}
-			catch(BaseLib::SocketClosedException& ex)
+			catch(const BaseLib::SocketClosedException& ex)
 			{
 				_stopped = true;
 				_out.printWarning("Warning: " + ex.what());
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
-			catch(BaseLib::SocketOperationException& ex)
+			catch(const BaseLib::SocketOperationException& ex)
 			{
 				_stopped = true;
 				_out.printError("Error: " + ex.what());
@@ -2017,7 +2017,7 @@ void HM_LGW::listenKeepAlive()
 					}
 				} while(receivedBytes == (unsigned)bufferMax);
 			}
-			catch(BaseLib::SocketTimeOutException& ex)
+			catch(const BaseLib::SocketTimeOutException& ex)
 			{
 				if(data.empty())
 				{
@@ -2025,13 +2025,13 @@ void HM_LGW::listenKeepAlive()
 					continue;
 				}
 			}
-			catch(BaseLib::SocketClosedException& ex)
+			catch(const BaseLib::SocketClosedException& ex)
 			{
 				_stopped = true;
 				_out.printWarning("Warning: " + ex.what());
 				continue;
 			}
-			catch(BaseLib::SocketOperationException& ex)
+			catch(const BaseLib::SocketOperationException& ex)
 			{
 				_stopped = true;
 				_out.printError("Error: " + ex.what());

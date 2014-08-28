@@ -456,7 +456,7 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 		}
 		else if(command.compare(0, 12, "peers remove") == 0)
 		{
-			uint64_t peerID;
+			uint64_t peerID = 0;
 
 			std::stringstream stream(command);
 			std::string element;
@@ -496,7 +496,7 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 		}
 		else if(command.compare(0, 12, "peers unpair") == 0)
 		{
-			uint64_t peerID;
+			uint64_t peerID = 0;
 
 			std::stringstream stream(command);
 			std::string element;
@@ -1750,7 +1750,7 @@ void InsteonCentral::pairingModeTimer(int32_t duration, bool debugOutput)
 		_timeLeftInPairingMode = duration;
 		int64_t startTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		int64_t timePassed = 0;
-		while(timePassed < (duration * 1000) && !_stopPairingModeThread && !_abortPairingModeThread)
+		while(timePassed < ((int64_t)duration * 1000) && !_stopPairingModeThread && !_abortPairingModeThread)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(250));
 			timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - startTime;

@@ -71,7 +71,7 @@ std::shared_ptr<FileDescriptor> FileDescriptorManager::add(int32_t fileDescripto
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(Exception& ex)
+	catch(const Exception& ex)
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -100,7 +100,7 @@ void FileDescriptorManager::remove(std::shared_ptr<FileDescriptor> descriptor)
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(Exception& ex)
+	catch(const Exception& ex)
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -131,7 +131,7 @@ void FileDescriptorManager::close(std::shared_ptr<FileDescriptor> descriptor)
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(Exception& ex)
+	catch(const Exception& ex)
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -164,7 +164,7 @@ void FileDescriptorManager::shutdown(std::shared_ptr<FileDescriptor> descriptor)
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(Exception& ex)
+	catch(const Exception& ex)
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -200,7 +200,7 @@ std::shared_ptr<FileDescriptor> FileDescriptorManager::get(int32_t fileDescripto
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(Exception& ex)
+	catch(const Exception& ex)
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -227,7 +227,7 @@ bool FileDescriptorManager::isValid(int32_t fileDescriptor, int32_t id)
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(Exception& ex)
+	catch(const Exception& ex)
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -254,7 +254,7 @@ bool FileDescriptorManager::isValid(std::shared_ptr<FileDescriptor> descriptor)
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(Exception& ex)
+	catch(const Exception& ex)
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}

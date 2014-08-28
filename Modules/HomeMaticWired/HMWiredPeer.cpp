@@ -630,6 +630,11 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 			if(indexBits + bitSize > 8) //Spread over two bytes
 			{
 				uint32_t missingBits = (indexBits + bitSize) - 8;
+				if(missingBits > 8)
+				{
+					GD::out.printError("Error: missingBits in function setConfigParameter is out of bounds.");
+					return changedBlocks;
+				}
 				intByteIndex++;
 				if(intByteIndex >= 0x10)
 				{
@@ -954,6 +959,11 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 					intByteIndex = 0;
 				}
 				uint32_t missingBits = (indexBits + bitSize) - 8;
+				if(missingBits > 8)
+				{
+					GD::out.printError("Error: missingBits is out of bounds.");
+					return result;
+				}
 				result.at(0) |= (((configBlock->at(intByteIndex) & _bitmask[missingBits])) << (bitSize - missingBits));
 			}
 			else result.push_back((configBlock->at(intByteIndex) >> indexBits) & _bitmask[bitSize]);
@@ -1976,7 +1986,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getParamset(int32_t chan
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel.");
 		if(type == BaseLib::RPC::ParameterSet::Type::none) type = BaseLib::RPC::ParameterSet::Type::link;
 		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels[channel];
-		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcChannel->parameterSets.end()) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set.");
+		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end()) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set.");
 		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = getParameterSet(channel, type);
 		if(!parameterSet) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set.");
 		std::shared_ptr<BaseLib::RPC::RPCVariable> variables(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));

@@ -59,7 +59,7 @@ class SQLite3
         void benchmark4();
     protected:
     private:
-        sqlite3* _database;
+        sqlite3* _database = nullptr;
         std::mutex _databaseMutex;
 
         void openDatabase(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal);

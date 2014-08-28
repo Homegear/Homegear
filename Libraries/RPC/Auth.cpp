@@ -78,7 +78,7 @@ void Auth::sendBasicUnauthorized(bool binary)
 		{
 			_socket->proofwrite(_basicUnauthBinaryHeader);
 		}
-		catch(BaseLib::SocketOperationException& ex)
+		catch(const BaseLib::SocketOperationException& ex)
 		{
 			throw AuthException("Authorization failed because of socket exception: " + ex.what());
 		}
@@ -100,7 +100,7 @@ void Auth::sendBasicUnauthorized(bool binary)
 		{
 			_socket->proofwrite(_basicUnauthHTTPHeader);
 		}
-		catch(BaseLib::SocketOperationException& ex)
+		catch(const BaseLib::SocketOperationException& ex)
 		{
 			throw AuthException("Authorization failed because of socket exception: " + ex.what());
 		}
@@ -170,7 +170,7 @@ bool Auth::basicServer(HTTP& httpPacket)
 				throw AuthException("Authorization failed because of HTTP exception: " + ex.what());
 			}
 		}
-		catch(BaseLib::SocketOperationException& ex)
+		catch(const BaseLib::SocketOperationException& ex)
 		{
 			throw AuthException("Authorization failed because of socket exception: " + ex.what());
 		}

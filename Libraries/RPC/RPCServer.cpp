@@ -426,7 +426,7 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 		{
 			_out.printWarning("Warning: " + ex.what());
 		}
-		catch(BaseLib::SocketOperationException& ex)
+		catch(const BaseLib::SocketOperationException& ex)
 		{
 			_out.printError("Error: " + ex.what());
 			error = true;
@@ -718,19 +718,20 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			try
 			{
 				bytesRead = client->socket->proofread(buffer, bufferMax);
+				buffer[bufferMax] = 0; //Even though it shouldn't matter, make sure there is a null termination.
 				//Some clients send only one byte in the first packet
 				if(packetLength == 0 && bytesRead == 1) bytesRead += client->socket->proofread(&buffer[1], bufferMax - 1);
 			}
-			catch(BaseLib::SocketTimeOutException& ex)
+			catch(const BaseLib::SocketTimeOutException& ex)
 			{
 				continue;
 			}
-			catch(BaseLib::SocketClosedException& ex)
+			catch(const BaseLib::SocketClosedException& ex)
 			{
 				_out.printInfo("Info: " + ex.what());
 				break;
 			}
-			catch(BaseLib::SocketOperationException& ex)
+			catch(const BaseLib::SocketOperationException& ex)
 			{
 				_out.printError(ex.what());
 				break;
@@ -847,7 +848,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			}
 			else if(packetLength > 0 || http.dataProcessed())
 			{
-				if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::binaryRequest)
+				if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::binaryResponse)
 				{
 					if(packetLength + bytesRead > dataSize)
 					{

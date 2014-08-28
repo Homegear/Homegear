@@ -539,7 +539,7 @@ private:
 	/**
 	 * The result of checkEndianness() is stored in this variable. This is done through calling "init".
 	 */
-	bool _isBigEndian;
+	bool _isBigEndian = true;
 
 	/**
 	 * Map to faster convert hexadecimal numbers.

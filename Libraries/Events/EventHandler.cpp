@@ -825,9 +825,14 @@ void EventHandler::removeTimedEvent(uint32_t id)
 		{
 			if(i->second->id == id)
 			{
-				_timedEvents.erase(i);
+				std::string name = i->second->name;
+				int32_t type = (int32_t)i->second->type;
+				uint64_t peerID = i->second->peerID;
+				int32_t peerChannel = i->second->peerChannel;
+				std::string variable = i->second->variable;
+				_timedEvents.erase(i); //erase invalidates the iterator.
 				_eventsMutex.unlock();
-				GD::rpcClient.broadcastDeleteEvent(i->second->name, (int32_t)i->second->type, i->second->peerID, i->second->peerChannel, i->second->variable);
+				GD::rpcClient.broadcastDeleteEvent(name, type, peerID, peerChannel, variable);
 				return;
 			}
 		}

@@ -237,7 +237,7 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -313,8 +313,8 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 		}
 		else if(type == Type::Enum::integerTinyFloat)
 		{
-			int64_t maxMantissa = ((1 << mantissaSize) - 1);
-			int64_t maxExponent = ((1 << exponentSize) - 1);
+			int64_t maxMantissa = (((int64_t)1 << mantissaSize) - 1);
+			int64_t maxExponent = (((int64_t)1 << exponentSize) - 1);
 			int64_t mantissa = value->integerValue;
 			int64_t exponent = 0;
 			if(maxMantissa > 0)
@@ -344,7 +344,7 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -465,7 +465,7 @@ bool Parameter::checkCondition(int32_t value)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -495,7 +495,7 @@ std::vector<uint8_t> Parameter::reverseData(const std::vector<uint8_t>& data)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -579,7 +579,7 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -631,7 +631,7 @@ std::vector<uint8_t> Parameter::convertToPacket(std::string value)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -786,7 +786,7 @@ std::vector<uint8_t> Parameter::convertToPacket(const std::shared_ptr<RPCVariabl
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -972,7 +972,7 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1013,7 +1013,7 @@ bool DeviceType::matches(Systems::LogicalDeviceType deviceType, uint32_t firmwar
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(Exception& ex)
+	catch(const Exception& ex)
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -1035,7 +1035,7 @@ bool DeviceType::matches(Systems::DeviceFamilies family, std::string typeID)
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(Exception& ex)
+	catch(const Exception& ex)
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -1064,7 +1064,7 @@ bool DeviceType::matches(Systems::DeviceFamilies family, std::shared_ptr<Systems
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(Exception& ex)
+	catch(const Exception& ex)
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -1105,7 +1105,7 @@ bool DeviceType::checkFirmwareVersion(int32_t version)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1195,7 +1195,7 @@ std::vector<std::shared_ptr<Parameter>> ParameterSet::getIndices(uint32_t startI
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1221,7 +1221,7 @@ std::vector<std::shared_ptr<Parameter>> ParameterSet::getList(int32_t list)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1245,7 +1245,7 @@ std::shared_ptr<Parameter> ParameterSet::getIndex(double index)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1294,7 +1294,7 @@ std::shared_ptr<Parameter> ParameterSet::getParameter(std::string id)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1467,16 +1467,38 @@ std::shared_ptr<RPCVariable> EnforceLink::getValue(LogicalParameter::Type::Enum 
 {
 	try
 	{
-		RPCVariableType rpcType = (RPCVariableType)type;
-		if(type == LogicalParameter::Type::Enum::typeEnum) rpcType = RPCVariableType::rpcInteger;
-		else if(type == LogicalParameter::Type::Enum::typeAction) rpcType = RPCVariableType::rpcBoolean;
+		RPCVariableType rpcType = RPCVariableType::rpcVoid;
+		switch(type)
+		{
+		case LogicalParameter::Type::Enum::typeEnum:
+			rpcType = RPCVariableType::rpcInteger;
+			break;
+		case LogicalParameter::Type::Enum::typeAction:
+			rpcType = RPCVariableType::rpcBoolean;
+			break;
+		case LogicalParameter::Type::Enum::typeBoolean:
+			rpcType = RPCVariableType::rpcBoolean;
+			break;
+		case LogicalParameter::Type::Enum::typeFloat:
+			rpcType = RPCVariableType::rpcFloat;
+			break;
+		case LogicalParameter::Type::Enum::typeInteger:
+			rpcType = RPCVariableType::rpcInteger;
+			break;
+		case LogicalParameter::Type::Enum::typeString:
+			rpcType = RPCVariableType::rpcString;
+			break;
+		case LogicalParameter::Type::Enum::none:
+			rpcType = RPCVariableType::rpcString;
+			break;
+		}
 		return RPCVariable::fromString(value, rpcType);
 	}
 	catch(const std::exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1712,7 +1734,7 @@ Device::Device(BaseLib::Obj* baseLib, Systems::DeviceFamilies deviceFamily, std:
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1752,7 +1774,7 @@ void Device::load(std::string xmlFilename)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1993,7 +2015,7 @@ void Device::parseXML(xml_node<>* node)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2019,7 +2041,7 @@ int32_t Device::getCountFromSysinfo(std::shared_ptr<Systems::Packet> packet)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2056,7 +2078,7 @@ void Device::setCountFromSysinfo(int32_t countFromSysinfo)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2079,7 +2101,7 @@ std::shared_ptr<DeviceType> Device::getType(Systems::LogicalDeviceType deviceTyp
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

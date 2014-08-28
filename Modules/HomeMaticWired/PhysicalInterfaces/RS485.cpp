@@ -441,7 +441,10 @@ void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 		if(!_settings->oneWay)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
-			_sendingMutex.try_lock_for(std::chrono::milliseconds(200));
+			if(!_sendingMutex.try_lock_for(std::chrono::milliseconds(200)) && GD::bl->debugLevel >= 5)
+			{
+				GD::out.printDebug("Debug: Could not get sendMutex lock.");
+			}
 			if(_receivedSentPacket.empty()) GD::out.printWarning("Error sending HomeMatic Wired packet: No sending detected.");
 			else if(_receivedSentPacket != packet) GD::out.printWarning("Error sending HomeMatic Wired packet: Collision (received packet was: " + BaseLib::HelperFunctions::getHexString(_receivedSentPacket) + ")");
 			_sendingMutex.unlock();

@@ -118,7 +118,8 @@ void Client::start(std::string command)
 				GD::out.printCritical("Critical: Socket path is too long.");
 				return;
 			}
-			strncpy(remoteAddress.sun_path, GD::socketPath.c_str(), 108);
+			strncpy(remoteAddress.sun_path, GD::socketPath.c_str(), 107);
+			remoteAddress.sun_path[107] = 0; //Just to make sure it is null terminated.
 			if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + sizeof(remoteAddress.sun_family)) == -1)
 			{
 				GD::bl->fileDescriptorManager.shutdown(_fileDescriptor);
@@ -147,7 +148,7 @@ void Client::start(std::string command)
 		std::string currentCommand;
 		char* sendBuffer;
 		char receiveBuffer[1025];
-		uint32_t bytes;
+		int32_t bytes = 0;
 		while(!command.empty() || (sendBuffer = readline("> ")) != NULL)
 		{
 			if(command.empty())
@@ -208,7 +209,8 @@ void Client::start(std::string command)
 
 			while(true)
 			{
-				if((bytes = recv(_fileDescriptor->descriptor, receiveBuffer, 1024, 0)) > 0)
+				bytes = recv(_fileDescriptor->descriptor, receiveBuffer, 1024, 0);
+				if(bytes > 0)
 				{
 					receiveBuffer[bytes] = 0;
 					std::cout << receiveBuffer;

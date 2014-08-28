@@ -50,6 +50,7 @@ ModuleLoader::ModuleLoader(std::string name, std::string path)
 		if(!getFactory)
 		{
 			GD::out.printCritical("Critical: Could not open module \"" + path + "\". Symbol \"getFactory\" not found.");
+			dlclose(moduleHandle);
 			return;
 		}
 

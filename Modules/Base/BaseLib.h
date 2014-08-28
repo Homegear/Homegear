@@ -32,7 +32,7 @@ public:
 	/**
 	 * The current debug level for logging.
 	 */
-	int32_t debugLevel;
+	int32_t debugLevel = 3;
 
 	/**
 	 * The path of the main executable.

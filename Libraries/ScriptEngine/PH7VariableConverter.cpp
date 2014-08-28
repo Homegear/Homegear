@@ -136,9 +136,11 @@ ph7_value* PH7VariableConverter::getPH7Variable(ph7_context* context, std::share
 		if(value->type == BaseLib::RPC::RPCVariableType::rpcArray)
 		{
 			ph7_value* pArray = ph7_context_new_array(context);
+			if(!pArray) return nullptr;
 			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = value->arrayValue->begin(); i != value->arrayValue->end(); ++i)
 			{
 				ph7_value* pValue = getPH7Variable(context, *i);
+				if(!pValue) return nullptr;
 				if(pValue) ph7_array_add_elem(pArray, 0, pValue);
 			}
 			return pArray;
@@ -146,17 +148,21 @@ ph7_value* PH7VariableConverter::getPH7Variable(ph7_context* context, std::share
 		else if(value->type == BaseLib::RPC::RPCVariableType::rpcStruct)
 		{
 			ph7_value* pStruct = ph7_context_new_array(context);
+			if(!pStruct) return nullptr;
 			for(std::map<std::string, std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = value->structValue->begin(); i != value->structValue->end(); ++i)
 			{
 				ph7_value* pKey = ph7_context_new_scalar(context);
+				if(!pKey) return nullptr;
 				ph7_value_string(pKey, i->first.c_str(), -1);
 				ph7_value* pValue = getPH7Variable(context, i->second);
+				if(!pValue) return nullptr;
 				if(pValue) ph7_array_add_elem(pStruct, pKey, pValue);
 			}
 			return pStruct;
 		}
 
 		ph7_value* pValue = ph7_context_new_scalar(context);
+		if(!pValue) return nullptr;
 		if(value->type == BaseLib::RPC::RPCVariableType::rpcVoid)
 		{
 			ph7_value_null(pValue);

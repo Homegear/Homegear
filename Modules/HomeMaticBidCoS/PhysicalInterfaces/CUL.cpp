@@ -294,7 +294,7 @@ std::string CUL::readFromDevice()
 		}
 		std::string packet;
 		int32_t i;
-		char localBuffer[1];
+		char localBuffer[1] = "";
 		fd_set readFileDescriptor;
 		FD_ZERO(&readFileDescriptor);
 		FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);

@@ -208,7 +208,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 		}
 		else if(command.compare(0, 12, "peers unpair") == 0)
 		{
-			uint64_t peerID;
+			uint64_t peerID = 0;
 
 			std::stringstream stream(command);
 			std::string element;
@@ -248,7 +248,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 		}
 		else if(command.compare(0, 11, "peers reset") == 0)
 		{
-			uint64_t peerID;
+			uint64_t peerID = 0;
 
 			std::stringstream stream(command);
 			std::string element;
@@ -1037,7 +1037,12 @@ bool HMWiredCentral::peerInit(std::shared_ptr<HMWiredPeer> peer)
 			}
 		}
 
-		writeEEPROM(address, 0, peer->binaryConfig[0].data);
+		if(!writeEEPROM(address, 0, peer->binaryConfig[0].data))
+		{
+			GD::out.printError("Error: Could not pair device with address 0x" + BaseLib::HelperFunctions::getHexString(address, 8) + ".");
+			peer->deleteFromDatabase();
+			return false;
+		}
 
 		//Read all config
 		std::vector<uint8_t> command({0x45, 0, 0, 0x10, 0x40}); //Request used EEPROM blocks; start address 0x0000, block size 0x10, blocks 0x40
