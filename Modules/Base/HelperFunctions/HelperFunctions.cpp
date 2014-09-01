@@ -610,4 +610,12 @@ std::string HelperFunctions::getGCRYPTError(int32_t errorCode)
 	return result;
 }
 
+bool HelperFunctions::isShortCLICommand(const std::string& command)
+{
+	int32_t spaceIndex = command.find(' ');
+	if(spaceIndex < 0 && command.size() < 4) return true;
+	else if(spaceIndex > 0 && spaceIndex < 4) return true;
+	return false;
+}
+
 }

@@ -373,28 +373,28 @@ std::string BidCoS::handleCLICommand(std::string& command)
 	try
 	{
 		std::ostringstream stringStream;
-		if(command == "unselect" && _currentDevice && !_currentDevice->peerSelected())
+		if((command == "unselect" || command == "u") && _currentDevice && !_currentDevice->peerSelected())
 		{
 			_currentDevice.reset();
 			return "Device unselected.\n";
 		}
-		else if(command.compare(0, 7, "devices") != 0 && _currentDevice)
+		else if((command.compare(0, 7, "devices") != 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'd')) && _currentDevice)
 		{
 			if(!_currentDevice) return "No device selected.\n";
 			return _currentDevice->handleCLICommand(command);
 		}
-		else if(command == "devices help" || command == "help")
+		else if(command == "devices help" || command == "dh" || command == "help" || command == "h")
 		{
-			stringStream << "List of commands:" << std::endl << std::endl;
+			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "devices list\t\tList all HomeMatic BidCoS devices" << std::endl;
-			stringStream << "devices create\t\tCreate a virtual HomeMatic BidCoS device" << std::endl;
-			stringStream << "devices remove\t\tRemove a virtual HomeMatic BidCoS device" << std::endl;
-			stringStream << "devices select\t\tSelect a virtual HomeMatic BidCoS device" << std::endl;
-			stringStream << "unselect\t\tUnselect this device family" << std::endl;
+			stringStream << "devices list (dl)\tList all HomeMatic BidCoS devices" << std::endl;
+			stringStream << "devices create (dc)\tCreate a virtual HomeMatic BidCoS device" << std::endl;
+			stringStream << "devices remove (dr)\tRemove a virtual HomeMatic BidCoS device" << std::endl;
+			stringStream << "devices select (ds)\tSelect a virtual HomeMatic BidCoS device" << std::endl;
+			stringStream << "unselect (u)\t\tUnselect this device family" << std::endl;
 			return stringStream.str();
 		}
-		else if(command == "devices list")
+		else if(command == "devices list" || command == "dl")
 		{
 			std::string bar(" │ ");
 			const int32_t idWidth = 8;
@@ -422,7 +422,7 @@ std::string BidCoS::handleCLICommand(std::string& command)
 			stringStream << "─────────┴─────────┴───────────────┴─────────" << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 14, "devices create") == 0)
+		else if(command.compare(0, 14, "devices create") == 0 || command.compare(0, 2, "dc") == 0)
 		{
 			int32_t address;
 			uint32_t deviceType;
@@ -430,29 +430,30 @@ std::string BidCoS::handleCLICommand(std::string& command)
 
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 'c') ? 0 : 1;
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
 					address = BaseLib::HelperFunctions::getNumber(element, true);
 					if(address == 0) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 4 bytes. A value of \"0\" is not allowed.\n";
 				}
-				else if(index == 3)
+				else if(index == 2 + offset)
 				{
 					serialNumber = element;
 					if(serialNumber.size() > 10) return "Serial number too long.\n";
 				}
-				else if(index == 4) deviceType = BaseLib::HelperFunctions::getNumber(element, true);
+				else if(index == 3 + offset) deviceType = BaseLib::HelperFunctions::getNumber(element, true);
 				index++;
 			}
-			if(index < 5)
+			if(index < 4 + offset)
 			{
 				stringStream << "Description: This command creates a new virtual device." << std::endl;
 				stringStream << "Usage: devices create ADDRESS SERIALNUMBER DEVICETYPE" << std::endl << std::endl;
@@ -496,21 +497,22 @@ std::string BidCoS::handleCLICommand(std::string& command)
 			}
 			return stringStream.str();
 		}
-		else if(command.compare(0, 14, "devices remove") == 0)
+		else if(command.compare(0, 14, "devices remove") == 0 || command.compare(0, 2, "dr") == 0)
 		{
 			uint64_t id = 0;
 
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 'r') ? 0 : 1;
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
 					id = BaseLib::HelperFunctions::getNumber(element, false);
@@ -518,7 +520,7 @@ std::string BidCoS::handleCLICommand(std::string& command)
 				}
 				index++;
 			}
-			if(index == 2)
+			if(index == 1 + offset)
 			{
 				stringStream << "Description: This command removes a virtual device." << std::endl;
 				stringStream << "Usage: devices remove DEVICEID" << std::endl << std::endl;
@@ -537,25 +539,26 @@ std::string BidCoS::handleCLICommand(std::string& command)
 			else stringStream << "Device not found." << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 14, "devices select") == 0)
+		else if(command.compare(0, 14, "devices select") == 0 || command.compare(0, 2, "ds") == 0)
 		{
 			uint64_t id = 0;
 
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 's') ? 0 : 1;
 			int32_t index = 0;
 			bool central = false;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
-					if(element == "central") central = true;
+					if(element == "central" || element == "c") central = true;
 					else
 					{
 						id = BaseLib::HelperFunctions::getNumber(element, false);
@@ -564,7 +567,7 @@ std::string BidCoS::handleCLICommand(std::string& command)
 				}
 				index++;
 			}
-			if(index == 2)
+			if(index == 1 + offset)
 			{
 				stringStream << "Description: This command selects a virtual device." << std::endl;
 				stringStream << "Usage: devices select DEVICEID" << std::endl << std::endl;

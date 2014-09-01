@@ -530,6 +530,14 @@ public:
 	 * @return Returns the error message for the provided error code.
 	 */
 	static std::string getGNUTLSCertVerificationError(uint32_t errorCode);
+
+	/**
+	 * Checks if a command is a short CLI command.
+	 *
+	 * @param command The CLI command.
+	 * @return Returns "true" when the command is a short command, otherwise "false"
+	 */
+	static bool isShortCLICommand(const std::string& command);
 private:
 	/**
 	 * Pointer to the common base library object.

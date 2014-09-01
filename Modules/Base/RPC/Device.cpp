@@ -381,6 +381,7 @@ ParameterConversion::ParameterConversion(BaseLib::Obj* baseLib, xml_node<>* node
 			else if(attributeValue == "rc19display") type = Type::Enum::none; //ignore, no conversion necessary
 			else if(attributeValue == "blind_test") type = Type::Enum::blindTest;
 			else if(attributeValue == "cfm") type = Type::Enum::cfm; //Used in "SUBMIT" of HM-OU-CFM-Pl
+			else if(attributeValue == "ccrtdn_party") type = Type::Enum::ccrtdnParty; //Used in "SUBMIT" of HM-CC-RT-DN
 			else _bl->out.printWarning("Warning: Unknown type for \"conversion\": " + attributeValue);
 		}
 		else if(attributeName == "factor") factor = HelperFunctions::getDouble(attributeValue);
@@ -704,6 +705,38 @@ std::vector<uint8_t> Parameter::convertToPacket(const std::shared_ptr<RPCVariabl
 				else data.at(i - 1) = HelperFunctions::getNumber(element);
 			}
 			if(physicalParameter->endian == PhysicalParameter::Endian::Enum::little) data = reverseData(data);
+			return data;
+		}
+		else if(!conversion.empty() && conversion.at(0)->type == ParameterConversion::Type::ccrtdnParty)
+		{
+			//Cannot currently easily be handled by ParameterConversion::toPacket
+			data.resize(8, 0);
+			if(variable->stringValue.empty()) return data;
+			std::istringstream stringStream(variable->stringValue);
+			std::string element;
+
+			//"TEMP,START_TIME,DAY,MONTH,YEAR,END_TIME,DAY,MONTH,YEAR"
+			for(uint32_t i = 0; std::getline(stringStream, element, ',') && i < 9; i++)
+			{
+				//Temperature
+				if(i == 0) data.at(0) = std::lround(2 * HelperFunctions::getDouble(element));
+				//Start time
+				else if(i == 1) data.at(1) = HelperFunctions::getNumber(element) / 30;
+				//Start day
+				else if(i == 2) data.at(2) = HelperFunctions::getNumber(element);
+				//Start month
+				else if(i == 3) data.at(7) = HelperFunctions::getNumber(element) << 4;
+				//Start year
+				else if(i == 4) data.at(3) = HelperFunctions::getNumber(element);
+				//End time
+				else if(i == 5) data.at(4) = HelperFunctions::getNumber(element) / 30;
+				//End day
+				else if(i == 6) data.at(5) = HelperFunctions::getNumber(element);
+				//End month
+				else if(i == 7) data.at(7) |= HelperFunctions::getNumber(element);
+				//End year
+				else if(i == 8) data.at(6) = HelperFunctions::getNumber(element);
+			}
 			return data;
 		}
 		else

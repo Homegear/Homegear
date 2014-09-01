@@ -284,7 +284,7 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 		//so we need to unlock first
 		if(_queues.empty()) _stopWorkerThread = true;
 		_queueMutex.unlock();
-		if(setUnreach) peer->serviceMessages->setUnreach(true);
+		if(setUnreach) peer->serviceMessages->setUnreach(true, true);
 	}
 	catch(const std::exception& ex)
     {

@@ -571,13 +571,13 @@ void ServiceMessages::setConfigPending(bool value)
     }
 }
 
-void ServiceMessages::setUnreach(bool value)
+void ServiceMessages::setUnreach(bool value, bool requeue)
 {
 	try
 	{
 		if(value != _unreach)
 		{
-			if(value == true && _unreachResendCounter < 3)
+			if(value == true && requeue && _unreachResendCounter < 3)
 			{
 				raiseEnqueuePendingQueues();
 				_unreachResendCounter++;

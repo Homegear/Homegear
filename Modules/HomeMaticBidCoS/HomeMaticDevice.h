@@ -104,6 +104,7 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice, public BidCoSQue
         virtual std::string handleCLICommand(std::string command);
         virtual void sendPacket(std::shared_ptr<IBidCoSInterface> physicalInterface, std::shared_ptr<BidCoSPacket> packet, bool stealthy = false);
         virtual void sendPacketMultipleTimes(std::shared_ptr<IBidCoSInterface> physicalInterface, std::shared_ptr<BidCoSPacket> packet, int32_t peerAddress, int32_t count, int32_t delay, bool useCentralMessageCounter = false, bool isThread = false);
+        std::shared_ptr<BidCoSPacket> getReceivedPacket(int32_t address) { return _receivedPackets.get(address); }
         std::shared_ptr<BidCoSPacket> getSentPacket(int32_t address) { return _sentPackets.get(address); }
 
         virtual void handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet) {}

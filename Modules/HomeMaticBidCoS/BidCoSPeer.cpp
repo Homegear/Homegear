@@ -239,6 +239,9 @@ BidCoSPeer::~BidCoSPeer()
 	try
 	{
 		dispose();
+		_pingThreadMutex.lock();
+		if(_pingThread.joinable()) _pingThread.join();
+		_pingThreadMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
@@ -434,11 +437,44 @@ void BidCoSPeer::worker()
 			{
 				if(time - _lastPing > 600000 && ((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst)))
 				{
-					_lastPing = time;
-					ping(); //Ping every 10 minutes
+					_pingThreadMutex.lock();
+					if(!_disposing && !deleting && _lastPing < time) //Check that _lastPing wasn't set in putParamset after locking the mutex
+					{
+						_lastPing = time; //Set here to avoid race condition between worker thread and ping thread
+						if(_pingThread.joinable()) _pingThread.join();
+						_pingThread = std::thread(&BidCoSPeer::pingThread, this);
+					}
+					_pingThreadMutex.unlock();
 				}
 			}
-			else _lastPing = time; //Set _lastUnreachCheck, so there is a delay of 10 minutes before the first ping.
+			else
+			{
+				if(_centralFeatures && configCentral[0].find("POLLING") != configCentral[0].end() && configCentral[0].at("POLLING").data.size() > 0 && configCentral[0].at("POLLING").data.at(0) > 0 && configCentral[0].find("POLLING_INTERVAL") != configCentral[0].end())
+				{
+					//Polling is enabled
+					BaseLib::Systems::RPCConfigurationParameter* parameter = &configCentral[0]["POLLING_INTERVAL"];
+					int32_t data = 0;
+					_bl->hf.memcpyBigEndian(data, parameter->data); //Shortcut to save resources. The normal way would be to call "convertFromPacket".
+					int64_t pollingInterval = data * 60000;
+					if(pollingInterval < 600000) pollingInterval = 600000;
+					if(time - _lastPing >= pollingInterval && ((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst)))
+					{
+						int64_t timeSinceLastPacket = time - ((int64_t)_lastPacketReceived * 1000);
+						if(timeSinceLastPacket > 0 && timeSinceLastPacket >= pollingInterval)
+						{
+							_pingThreadMutex.lock();
+							if(!_disposing && !deleting && _lastPing < time) //Check that _lastPing wasn't set in putParamset after locking the mutex
+							{
+								_lastPing = time; //Set here to avoid race condition between worker thread and ping thread
+								if(_pingThread.joinable()) _pingThread.join();
+								_pingThread = std::thread(&BidCoSPeer::pingThread, this);
+							}
+							_pingThreadMutex.unlock();
+						}
+					}
+				}
+				else _lastPing = time; //Set _lastPing, so there is a delay of 10 minutes after the device is unreachable before the first ping.
+			}
 		}
 		if(serviceMessages->getConfigPending())
 		{
@@ -693,17 +729,38 @@ std::string BidCoSPeer::handleCLICommand(std::string command)
     return "Error executing command. See log file for more details.\n";
 }
 
-void BidCoSPeer::ping()
+bool BidCoSPeer::ping(int32_t packetCount, bool waitForResponse)
 {
 	try
 	{
 		std::shared_ptr<HomeMaticCentral> central = std::dynamic_pointer_cast<HomeMaticCentral>(getCentral());
-		if(!central) return;
+		if(!central) return false;
+		uint32_t time = BaseLib::HelperFunctions::getTimeSeconds();
+		_lastPing = (int64_t)time * 1000;
 		std::vector<uint8_t> payload;
 		payload.push_back(0x00);
 		payload.push_back(0x06);
 		std::shared_ptr<BidCoSPacket> ping(new BidCoSPacket(_messageCounter++, 0xA0, 0x01, central->getAddress(), _address, payload));
-		central->sendPacket(getPhysicalInterface(), ping);
+		if(getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst) ping->setControlByte(0xB0);
+		for(int32_t i = 0; i < packetCount; i++)
+		{
+			central->sendPacket(getPhysicalInterface(), ping);
+			int32_t waitIndex = 0;
+			std::shared_ptr<BidCoSPacket> receivedPacket;
+			bool responseReceived = false;
+			while(waitIndex < 5)
+			{
+				if(_lastPacketReceived >= time)
+				{
+					responseReceived = true;
+					break;
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(200));
+				waitIndex++;
+			}
+			if(responseReceived) return true;
+		}
+		return false;
 	}
 	catch(const std::exception& ex)
     {
@@ -717,6 +774,13 @@ void BidCoSPeer::ping()
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    return false;
+}
+
+void BidCoSPeer::pingThread()
+{
+	if(ping(3, true)) serviceMessages->endUnreach();
+	else serviceMessages->setUnreach(true, false);
 }
 
 void BidCoSPeer::addPeer(int32_t channel, std::shared_ptr<BaseLib::Systems::BasicPeer> peer)
@@ -2367,6 +2431,11 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 		if(type == BaseLib::RPC::ParameterSet::Type::none) type = BaseLib::RPC::ParameterSet::Type::link;
 		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set.");
 		if(variables->structValue->empty()) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+
+		_pingThreadMutex.lock();
+		_lastPing = BaseLib::HelperFunctions::getTime(); //No ping now
+		if(_pingThread.joinable()) _pingThread.join();
+		_pingThreadMutex.unlock();
 
 		if(type == BaseLib::RPC::ParameterSet::Type::Enum::master)
 		{

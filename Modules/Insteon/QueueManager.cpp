@@ -320,7 +320,7 @@ void QueueManager::resetQueue(int32_t address, std::string interfaceID, uint32_t
 		//so we need to unlock first
 		if(_queues.empty()) _stopWorkerThread = true;
 		_queueMutex.unlock();
-		if(setUnreach) peer->serviceMessages->setUnreach(true);
+		if(setUnreach) peer->serviceMessages->setUnreach(true, true);
 	}
 	catch(const std::exception& ex)
     {

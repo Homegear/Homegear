@@ -1154,6 +1154,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::addLink(uint64_t senderID
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			waitIndex++;
 		}
+		if(!_queueManager.get(sender->getAddress())) sender->serviceMessages->setConfigPending(false);
 
 		pendingQueue.reset(new PacketQueue(receiver->getPhysicalInterface(), PacketQueueType::CONFIG));
 		pendingQueue->noSending = true;
@@ -1188,6 +1189,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::addLink(uint64_t senderID
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			waitIndex++;
 		}
+		if(!_queueManager.get(receiver->getAddress())) receiver->serviceMessages->setConfigPending(false);
 
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
@@ -1371,11 +1373,12 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::putParamset(std::string s
 		std::shared_ptr<BaseLib::RPC::RPCVariable> result = peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
 		if(result->errorStruct) return result;
 		int32_t waitIndex = 0;
-		while(_queueManager.get(peer->getAddress()) && waitIndex < 40)
+		while(_queueManager.get(peer->getAddress()) && waitIndex < 50)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			waitIndex++;
 		}
+		if(!_queueManager.get(peer->getAddress())) peer->serviceMessages->setConfigPending(false);
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -1402,11 +1405,12 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::putParamset(uint64_t peer
 		std::shared_ptr<BaseLib::RPC::RPCVariable> result = peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
 		if(result->errorStruct) return result;
 		int32_t waitIndex = 0;
-		while(_queueManager.get(peer->getAddress()) && waitIndex < 40)
+		while(_queueManager.get(peer->getAddress()) && waitIndex < 50)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			waitIndex++;
 		}
+		if(!_queueManager.get(peer->getAddress())) peer->serviceMessages->setConfigPending(false);
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -1504,6 +1508,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::removeLink(uint64_t sende
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			waitIndex++;
 		}
+		if(!_queueManager.get(sender->getAddress())) sender->serviceMessages->setConfigPending(false);
 
 		pendingQueue.reset(new PacketQueue(receiver->getPhysicalInterface(), PacketQueueType::CONFIG));
 		pendingQueue->noSending = true;
@@ -1537,6 +1542,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::removeLink(uint64_t sende
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			waitIndex++;
 		}
+		if(!_queueManager.get(receiver->getAddress())) receiver->serviceMessages->setConfigPending(false);
 
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}

@@ -87,7 +87,7 @@ public:
 	virtual void resetConfigPendingSetTime();
 	virtual int64_t getConfigPendingSetTime() { return _configPendingSetTime; }
 
-	virtual void setUnreach(bool value);
+	virtual void setUnreach(bool value, bool requeue);
 	virtual bool getUnreach() { return _unreach; }
 	virtual void checkUnreach(int32_t cyclicTimeout, uint32_t lastPacketReceived);
     virtual void endUnreach();

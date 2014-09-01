@@ -179,15 +179,54 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         virtual bool firmwareUpdateAvailable();
         std::string printConfig();
         virtual IBidCoSInterface::PeerInfo getPeerInfo();
-        virtual void ping();
+
+        /**
+		 * This method polls a peer to check if it is reachable.
+		 *
+		 * @param packetCount The maximum number of ping packets to send if there is no response.
+		 * @param waitForResponse Wait for the response packet.
+		 * @see _lastPing
+		 * @return Returns true, when the execution was successful. If "waitForResponse" is true, then true is returned when the device sent a response packet and false when there was no response.
+		 */
+        virtual bool ping(int32_t packetCount, bool waitForResponse);
 
         //RPC methods
+        /**
+         * {@inheritDoc}
+         */
         virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceDescription(int32_t channel, std::map<std::string, bool> fields);
+
+        /**
+         * {@inheritDoc}
+         */
         virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceInfo(std::map<std::string, bool> fields);
+
+        /**
+         * {@inheritDoc}
+         */
         virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
+
+        /**
+         * {@inheritDoc}
+         */
         virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
+
+        /**
+         * {@inheritDoc}
+         */
         virtual std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool onlyPushing = false);
-        std::shared_ptr<BaseLib::RPC::RPCVariable> setInterface(std::string interfaceID);
+
+        /**
+         * Sets the physical interface for this peer.
+         * @see IBidCoSInterface
+         * @param interfaceID The id of the physical interface as defined in physicalinterfaces.conf
+         * @return Returns "RPC void" on success, RPC error "-5" when the interface is unknown, RPC error "-103" to "-100" on AES errors. See the RPC reference for more information.
+         */
+        virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setInterface(std::string interfaceID);
+
+        /**
+         * {@inheritDoc}
+         */
         virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
         //End RPC methods
     protected:
@@ -209,7 +248,29 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		bool _valuePending = false;
 		//End
 
+		/**
+		 * The timestamp of the last ping (successful and unsuccessful) is stored in this variable.
+		 * @see _pingThread
+		 * @see pingThread()
+		 * @see _pingThreadMutex
+		 */
 		int64_t _lastPing = 0;
+
+		/**
+		 * Protects _pingThread
+		 * @see _pingThread
+		 * @see pingThread()
+		 * @see _lastPing
+		 */
+		std::mutex _pingThreadMutex;
+
+		/**
+		 * Stores the pingThread thread object.
+		 * @see pingThread()
+		 * @see _pingThreadMutex
+		 * @see _lastPing
+		 */
+		std::thread _pingThread;
 
 		virtual void setPhysicalInterface(std::shared_ptr<IBidCoSInterface> interface);
 
@@ -221,6 +282,15 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		virtual std::shared_ptr<BaseLib::Systems::LogicalDevice> getDevice(int32_t address);
 
 		virtual std::shared_ptr<BaseLib::RPC::ParameterSet> getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type);
+
+		/**
+		 * Executes the method "ping" and sets the ServiceMessage "UNREACH" depending on the result.
+		 * @see ping()
+		 * @see _pingThreadMutex
+		 * @see _pingThread
+		 * @see _lastPing
+		 */
+		virtual void pingThread();
 };
 }
 #endif // BIDCOSPEER_H

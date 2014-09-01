@@ -381,7 +381,7 @@ std::string Server::handleUserCommand(std::string& command)
 	try
 	{
 		std::ostringstream stringStream;
-		if(command.compare(0, 10, "users help") == 0)
+		if(command.compare(0, 10, "users help") == 0 || command.compare(0, 2, "uh") == 0)
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
@@ -391,7 +391,7 @@ std::string Server::handleUserCommand(std::string& command)
 			stringStream << "users delete\t\tDelete an existing user." << std::endl;
 			return stringStream.str();
 		}
-		if(command.compare(0, 10, "users list") == 0)
+		if(command.compare(0, 10, "users list") == 0 || command.compare(0, 2, "ul") == 0)
 		{
 			std::stringstream stream(command);
 			std::string element;
@@ -431,7 +431,7 @@ std::string Server::handleUserCommand(std::string& command)
 
 			return stringStream.str();
 		}
-		else if(command.compare(0, 12, "users create") == 0)
+		else if(command.compare(0, 12, "users create") == 0 || command.compare(0, 2, "uc") == 0)
 		{
 			std::string userName;
 			std::string password;
@@ -501,7 +501,7 @@ std::string Server::handleUserCommand(std::string& command)
 
 			return stringStream.str();
 		}
-		else if(command.compare(0, 12, "users update") == 0)
+		else if(command.compare(0, 12, "users update") == 0 || command.compare(0, 2, "uu") == 0)
 		{
 			std::string userName;
 			std::string password;
@@ -571,7 +571,7 @@ std::string Server::handleUserCommand(std::string& command)
 
 			return stringStream.str();
 		}
-		else if(command.compare(0, 12, "users delete") == 0)
+		else if(command.compare(0, 12, "users delete") == 0 || command.compare(0, 2, "ud") == 0)
 		{
 			std::string userName;
 
@@ -639,7 +639,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 	try
 	{
 		std::ostringstream stringStream;
-		if(command == "help" && !GD::familyController.familySelected())
+		if((command == "help" || command == "h") && !GD::familyController.familySelected())
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
@@ -649,7 +649,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "families [COMMAND]\tExecute device family commands. Type \"families help\" for more information." << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 10, "debuglevel") == 0)
+		else if(command.compare(0, 10, "debuglevel") == 0 || (command.compare(0, 2, "dl") == 0 && !GD::familyController.familySelected()))
 		{
 			int32_t debugLevel;
 
@@ -684,7 +684,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "Debug level set to " << debugLevel << "." << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 9, "runscript") == 0)
+		else if(command.compare(0, 9, "runscript") == 0 || command.compare(0, 2, "rs") == 0)
 		{
 			std::string path;
 
@@ -749,7 +749,7 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
 		std::string response = handleGlobalCommand(command);
 		if(response.empty())
 		{
-			if(command.compare(0, 5, "users") == 0) response = handleUserCommand(command);
+			if(command.compare(0, 5, "users") == 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'u')) response = handleUserCommand(command);
 			else response = GD::familyController.handleCLICommand(command);
 		}
 		response.push_back(0);

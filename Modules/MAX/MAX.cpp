@@ -323,17 +323,17 @@ std::string MAX::handleCLICommand(std::string& command)
 	try
 	{
 		std::ostringstream stringStream;
-		if(command == "unselect" && _currentDevice && !_currentDevice->peerSelected())
+		if((command == "unselect" || command == "u") && _currentDevice && !_currentDevice->peerSelected())
 		{
 			_currentDevice.reset();
 			return "Device unselected.\n";
 		}
-		else if(command.compare(0, 7, "devices") != 0 && _currentDevice)
+		else if((command.compare(0, 7, "devices") != 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'd')) && _currentDevice)
 		{
 			if(!_currentDevice) return "No device selected.\n";
 			return _currentDevice->handleCLICommand(command);
 		}
-		else if(command == "devices help" || command == "help")
+		else if(command == "devices help" || command == "dh" || command == "help")
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
@@ -344,7 +344,7 @@ std::string MAX::handleCLICommand(std::string& command)
 			stringStream << "unselect\t\tUnselect this device family" << std::endl;
 			return stringStream.str();
 		}
-		else if(command == "devices list")
+		else if(command == "devices list" || command == "dl")
 		{
 			std::string bar(" │ ");
 			const int32_t idWidth = 8;
@@ -372,7 +372,7 @@ std::string MAX::handleCLICommand(std::string& command)
 			stringStream << "─────────┴─────────┴───────────────┴─────────" << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 14, "devices create") == 0)
+		else if(command.compare(0, 14, "devices create") == 0 || command.compare(0, 2, "dc") == 0)
 		{
 			int32_t address;
 			uint32_t deviceType;
@@ -436,7 +436,7 @@ std::string MAX::handleCLICommand(std::string& command)
 			}
 			return stringStream.str();
 		}
-		else if(command.compare(0, 14, "devices remove") == 0)
+		else if(command.compare(0, 14, "devices remove") == 0 || command.compare(0, 2, "dr") == 0)
 		{
 			uint64_t id = 0;
 
@@ -477,7 +477,7 @@ std::string MAX::handleCLICommand(std::string& command)
 			else stringStream << "Device not found." << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 14, "devices select") == 0)
+		else if(command.compare(0, 14, "devices select") == 0 || command.compare(0, 2, "ds") == 0)
 		{
 			uint64_t id = 0;
 

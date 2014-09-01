@@ -494,20 +494,20 @@ std::string FamilyController::handleCLICommand(std::string& command)
 			_currentFamily = nullptr;
 			return "Device family unselected.\n";
 		}
-		else if(command.compare(0, 8, "families") != 0 && _currentFamily)
+		else if((command.compare(0, 8, "families") || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'f')) && _currentFamily)
 		{
 			if(!_currentFamily) return "No device family selected.\n";
 			return _currentFamily->handleCLICommand(command);
 		}
-		else if(command == "families help")
+		else if(command == "families help" || command == "fh")
 		{
-			stringStream << "List of commands:" << std::endl << std::endl;
+			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "families list\t\tList all available device families" << std::endl;
-			stringStream << "families select\t\tSelect a device family" << std::endl;
+			stringStream << "families list (fl)\tList all available device families" << std::endl;
+			stringStream << "families select (fs)\tSelect a device family" << std::endl;
 			return stringStream.str();
 		}
-		else if(command == "families list")
+		else if(command == "families list" || command == "fl")
 		{
 			std::string bar(" │ ");
 			const int32_t idWidth = 5;
@@ -531,21 +531,22 @@ std::string FamilyController::handleCLICommand(std::string& command)
 			stringStream << "──────┴───────────────────────────────" << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 15, "families select") == 0)
+		else if(command.compare(0, 15, "families select") == 0 || command.compare(0, 2, "fs") == 0)
 		{
 			BaseLib::Systems::DeviceFamilies family = BaseLib::Systems::DeviceFamilies::none;
 
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 's') ? 0 : 1;
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
 					family = (BaseLib::Systems::DeviceFamilies)BaseLib::HelperFunctions::getNumber(element, false);
@@ -553,7 +554,7 @@ std::string FamilyController::handleCLICommand(std::string& command)
 				}
 				index++;
 			}
-			if(index == 2)
+			if(index == 1 + offset)
 			{
 				stringStream << "Description: This command selects a device family." << std::endl;
 				stringStream << "Usage: families select FAMILYID" << std::endl << std::endl;
