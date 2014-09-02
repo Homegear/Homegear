@@ -655,7 +655,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 		}
 		else if(command.compare(0, 10, "debuglevel") == 0 || (command.compare(0, 2, "dl") == 0 && !GD::familyController.familySelected()))
 		{
-			int32_t debugLevel;
+			int32_t debugLevel = 3;
 
 			std::stringstream stream(command);
 			std::string element;

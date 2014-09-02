@@ -476,7 +476,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 		}
 		else if(command.compare(0, 9, "peers add") == 0 || command.compare(0, 2, "pa") == 0)
 		{
-			uint32_t deviceType;
+			uint32_t deviceType = (uint32_t)DeviceType::none;
 			int32_t peerAddress = 0;
 			std::string serialNumber;
 			int32_t firmwareVersion = 0;
@@ -665,7 +665,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 		}
 		else if(command.compare(0, 11, "peers reset") == 0 || command.compare(0, 3, "prs") == 0)
 		{
-			uint64_t peerID;
+			uint64_t peerID = 0;
 
 			std::stringstream stream(command);
 			std::string element;

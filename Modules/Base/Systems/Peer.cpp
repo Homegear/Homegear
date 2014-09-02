@@ -965,7 +965,7 @@ void Peer::loadConfig()
 					continue;
 				}
 
-				RPCConfigurationParameter* parameter;
+				RPCConfigurationParameter* parameter = nullptr;
 				if(parameterSetType == RPC::ParameterSet::Type::Enum::master) parameter = &configCentral[channel][*parameterName];
 				else if(parameterSetType == RPC::ParameterSet::Type::Enum::values) parameter = &valuesCentral[channel][*parameterName];
 				else if(parameterSetType == RPC::ParameterSet::Type::Enum::link) parameter = &linksCentral[channel][remoteAddress][remoteChannel][*parameterName];

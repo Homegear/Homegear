@@ -411,8 +411,8 @@ std::string HMWired_SD::handleCLICommand(std::string command)
 		}
 		else if(command.compare(0, 11, "filters add") == 0)
 		{
-			int32_t filterType;
-			int32_t filterValue;
+			int32_t filterType = -1;
+			int32_t filterValue = -1;
 
 			std::stringstream stream(command);
 			std::string element;
@@ -454,8 +454,8 @@ std::string HMWired_SD::handleCLICommand(std::string command)
 		}
 		else if(command.compare(0, 14, "filters remove") == 0)
 		{
-			int32_t filterType;
-			int32_t filterValue;
+			int32_t filterType = -1;
+			int32_t filterValue = -1;
 
 			std::stringstream stream(command);
 			std::string element;

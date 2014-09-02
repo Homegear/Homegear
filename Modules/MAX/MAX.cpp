@@ -373,8 +373,8 @@ std::string MAX::handleCLICommand(std::string& command)
 		}
 		else if(command.compare(0, 14, "devices create") == 0 || command.compare(0, 2, "dc") == 0)
 		{
-			int32_t address;
-			uint32_t deviceType;
+			int32_t address = -1;
+			uint32_t deviceType = (uint32_t)DeviceType::none;
 			std::string serialNumber;
 
 			std::stringstream stream(command);

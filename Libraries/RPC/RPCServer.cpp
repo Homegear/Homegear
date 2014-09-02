@@ -709,7 +709,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 		uint32_t packetLength = 0;
 		int32_t bytesRead;
 		uint32_t dataSize = 0;
-		PacketType::Enum packetType;
+		PacketType::Enum packetType = PacketType::binaryRequest;
 		HTTP http;
 
 		_out.printDebug("Listening for incoming packets from client number " + std::to_string(client->socketDescriptor->id) + ".");
