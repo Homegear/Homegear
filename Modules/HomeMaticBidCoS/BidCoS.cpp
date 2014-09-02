@@ -378,9 +378,8 @@ std::string BidCoS::handleCLICommand(std::string& command)
 			_currentDevice.reset();
 			return "Device unselected.\n";
 		}
-		else if((command.compare(0, 7, "devices") != 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'd')) && _currentDevice)
+		else if((command.compare(0, 7, "devices") != 0 || BaseLib::HelperFunctions::isShortCLICommand(command)) && _currentDevice)
 		{
-			if(!_currentDevice) return "No device selected.\n";
 			return _currentDevice->handleCLICommand(command);
 		}
 		else if(command == "devices help" || command == "dh" || command == "help" || command == "h")

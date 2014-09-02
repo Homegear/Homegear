@@ -369,7 +369,7 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 		std::ostringstream stringStream;
 		if(_currentPeer)
 		{
-			if(command == "unselect")
+			if(command == "unselect" || command == "u")
 			{
 				_currentPeer.reset();
 				return "Peer unselected.\n";
@@ -377,34 +377,35 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 			if(!_currentPeer) return "No peer selected.\n";
 			return _currentPeer->handleCLICommand(command);
 		}
-		if(command == "help")
+		if(command == "help" || command == "h")
 		{
-			stringStream << "List of commands:" << std::endl << std::endl;
+			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "pairing on\t\tEnables pairing mode" << std::endl;
-			stringStream << "pairing off\t\tDisables pairing mode" << std::endl;
-			stringStream << "peers list\t\tList all peers" << std::endl;
-			stringStream << "peers remove\t\tRemove a peer (without unpairing)" << std::endl;
-			stringStream << "peers select\t\tSelect a peer" << std::endl;
-			stringStream << "peers unpair\t\tUnpair a peer" << std::endl;
-			stringStream << "unselect\t\tUnselect this device" << std::endl;
+			stringStream << "pairing on (pon)\tEnables pairing mode" << std::endl;
+			stringStream << "pairing off (pof)\tDisables pairing mode" << std::endl;
+			stringStream << "peers list (pl)\t\tList all peers" << std::endl;
+			stringStream << "peers remove (prm)\tRemove a peer (without unpairing)" << std::endl;
+			stringStream << "peers select (ps)\tSelect a peer" << std::endl;
+			stringStream << "peers unpair (pup)\tUnpair a peer" << std::endl;
+			stringStream << "unselect (u)\t\tUnselect this device" << std::endl;
 			return stringStream.str();
 		}
-		if(command.compare(0, 10, "pairing on") == 0)
+		if(command.compare(0, 10, "pairing on") == 0 || command.compare(0, 3, "pon") == 0)
 		{
 			int32_t duration = 60;
 
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 'o') ? 0 : 1;
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1 + offset)
 				{
 					if(element == "help")
 					{
@@ -424,19 +425,20 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 			stringStream << "Pairing mode enabled." << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 11, "pairing off") == 0)
+		else if(command.compare(0, 11, "pairing off") == 0 || command.compare(0, 3, "pof") == 0)
 		{
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 'o') ? 0 : 1;
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1 + offset)
 				{
 					if(element == "help")
 					{
@@ -454,21 +456,22 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 			stringStream << "Pairing mode disabled." << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 12, "peers remove") == 0)
+		else if(command.compare(0, 12, "peers remove") == 0 || command.compare(0, 3, "prm") == 0)
 		{
 			uint64_t peerID = 0;
 
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 'r') ? 0 : 1;
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
 					peerID = BaseLib::HelperFunctions::getNumber(element, false);
@@ -476,7 +479,7 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 				}
 				index++;
 			}
-			if(index == 2)
+			if(index == 1 + offset)
 			{
 				stringStream << "Description: This command removes a peer without trying to unpair it first." << std::endl;
 				stringStream << "Usage: peers remove PEERID" << std::endl << std::endl;
@@ -494,21 +497,22 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 			}
 			return stringStream.str();
 		}
-		else if(command.compare(0, 12, "peers unpair") == 0)
+		else if(command.compare(0, 12, "peers unpair") == 0 || command.compare(0, 3, "pup") == 0)
 		{
 			uint64_t peerID = 0;
 
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 'u') ? 0 : 1;
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
 					peerID = BaseLib::HelperFunctions::getNumber(element, false);
@@ -516,7 +520,7 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 				}
 				index++;
 			}
-			if(index == 2)
+			if(index == 1 + offset)
 			{
 				stringStream << "Description: This command unpairs a peer." << std::endl;
 				stringStream << "Usage: peers unpair PEERID" << std::endl << std::endl;
@@ -534,7 +538,7 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 			}
 			return stringStream.str();
 		}
-		else if(command.compare(0, 10, "peers list") == 0)
+		else if(command.compare(0, 10, "peers list") == 0 || command.compare(0, 2, "pl") == 0)
 		{
 			try
 			{
@@ -543,15 +547,16 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 
 				std::stringstream stream(command);
 				std::string element;
+				int32_t offset = (command.at(1) == 'l') ? 0 : 1;
 				int32_t index = 0;
 				while(std::getline(stream, element, ' '))
 				{
-					if(index < 2)
+					if(index < 1 + offset)
 					{
 						index++;
 						continue;
 					}
-					else if(index == 2)
+					else if(index == 1 + offset)
 					{
 						if(element == "help")
 						{
@@ -560,7 +565,7 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 						}
 						filterType = BaseLib::HelperFunctions::toLower(element);
 					}
-					else if(index == 3) filterValue = element;
+					else if(index == 2 + offset) filterValue = element;
 					index++;
 				}
 				if(index == -1)
@@ -696,21 +701,22 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 		}
-		else if(command.compare(0, 12, "peers select") == 0)
+		else if(command.compare(0, 12, "peers select") == 0 || command.compare(0, 2, "ps") == 0)
 		{
 			uint64_t id;
 
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 's') ? 0 : 1;
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
 					id = BaseLib::HelperFunctions::getNumber(element, false);
@@ -718,7 +724,7 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 				}
 				index++;
 			}
-			if(index == 2)
+			if(index == 1 + offset)
 			{
 				stringStream << "Description: This command selects a peer." << std::endl;
 				stringStream << "Usage: peers select PEERID" << std::endl << std::endl;

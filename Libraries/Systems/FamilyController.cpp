@@ -163,6 +163,11 @@ void FamilyController::onDeletePeerParameter(uint64_t peerID, BaseLib::Database:
 	GD::db.deletePeerParameter(peerID, data);
 }
 
+bool FamilyController::onSetPeerID(uint64_t oldPeerID, uint64_t newPeerID)
+{
+	return GD::db.setPeerID(oldPeerID, newPeerID);
+}
+
 std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetServiceMessages(uint64_t peerID)
 {
 	return GD::db.getServiceMessages(peerID);
@@ -489,14 +494,13 @@ std::string FamilyController::handleCLICommand(std::string& command)
 	try
 	{
 		std::ostringstream stringStream;
-		if(command == "unselect" && _currentFamily && !_currentFamily->deviceSelected())
+		if((command == "unselect" || command == "u") && _currentFamily && !_currentFamily->deviceSelected())
 		{
 			_currentFamily = nullptr;
 			return "Device family unselected.\n";
 		}
-		else if((command.compare(0, 8, "families") || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'f')) && _currentFamily)
+		else if((command.compare(0, 8, "families") || BaseLib::HelperFunctions::isShortCLICommand(command)) && _currentFamily)
 		{
-			if(!_currentFamily) return "No device family selected.\n";
 			return _currentFamily->handleCLICommand(command);
 		}
 		else if(command == "families help" || command == "fh")

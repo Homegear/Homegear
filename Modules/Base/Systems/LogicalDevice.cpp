@@ -119,6 +119,12 @@ void LogicalDevice::raiseDeletePeerParameter(uint64_t peerID, Database::DataRow 
 	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onDeletePeerParameter(peerID, data);
 }
 
+bool LogicalDevice::raiseSetPeerID(uint64_t oldPeerID, uint64_t newPeerID)
+{
+	if(!_eventHandler) return false;
+	return ((IDeviceEventSink*)_eventHandler)->onSetPeerID(oldPeerID, newPeerID);
+}
+
 std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetServiceMessages(uint64_t peerID)
 {
 	if(!_eventHandler) return std::shared_ptr<Database::DataTable>();
@@ -240,6 +246,11 @@ std::shared_ptr<BaseLib::Database::DataTable> LogicalDevice::onGetPeerVariables(
 void LogicalDevice::onDeletePeerParameter(uint64_t peerID, Database::DataRow data)
 {
 	raiseDeletePeerParameter(peerID, data);
+}
+
+bool LogicalDevice::onSetPeerID(uint64_t oldPeerID, uint64_t newPeerID)
+{
+	return raiseSetPeerID(oldPeerID, newPeerID);
 }
 
 std::shared_ptr<BaseLib::Database::DataTable> LogicalDevice::onGetServiceMessages(uint64_t peerID)
@@ -381,6 +392,31 @@ std::shared_ptr<Peer> LogicalDevice::getPeer(std::string serialNumber)
     }
     _peersMutex.unlock();
     return std::shared_ptr<Peer>();
+}
+
+void LogicalDevice::setPeerID(uint64_t oldPeerID, uint64_t newPeerID)
+{
+	try
+	{
+		std::shared_ptr<Peer> peer = getPeer(oldPeerID);
+		if(!peer) return;
+		_peersMutex.lock();
+		if(_peersByID.find(oldPeerID) != _peersByID.end()) _peersByID.erase(oldPeerID);
+		_peersByID[newPeerID] = peer;
+	}
+    catch(const std::exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peersMutex.unlock();
 }
 
 DeviceFamilies LogicalDevice::deviceFamily()

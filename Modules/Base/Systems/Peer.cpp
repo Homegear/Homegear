@@ -158,6 +158,12 @@ void Peer::raiseDeletePeerParameter(Database::DataRow data)
 	if(_eventHandler) ((IPeerEventSink*)_eventHandler)->onDeletePeerParameter(_peerID, data);
 }
 
+bool Peer::raiseSetPeerID(uint64_t newPeerID)
+{
+	if(!_eventHandler) return false;
+	return ((IPeerEventSink*)_eventHandler)->onSetPeerID(_peerID, newPeerID);
+}
+
 std::shared_ptr<Database::DataTable> Peer::raiseGetServiceMessages()
 {
 	if(!_eventHandler) return std::shared_ptr<Database::DataTable>();
@@ -2003,6 +2009,31 @@ std::shared_ptr<RPC::RPCVariable> Peer::setLinkInfo(int32_t senderChannel, uint6
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> Peer::setId(uint64_t newPeerId)
+{
+	try
+	{
+		if(newPeerId == 0 || newPeerId >= 0x40000000) return RPC::RPCVariable::createError(-100, "New peer ID is invalid.");
+		if(!raiseSetPeerID(newPeerId)) return RPC::RPCVariable::createError(-101, "New peer ID is already in use.");
+		_peerID = newPeerId;
+		if(serviceMessages) serviceMessages->setPeerID(newPeerId);
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error. See error log for more details.");
 }
 
 std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value)

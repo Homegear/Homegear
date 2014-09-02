@@ -581,7 +581,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			}
 			return stringStream.str();
 		}
-		else if(command.compare(0, 12, "peers remove") == 0 || command.compare(0, 2, "prm") == 0)
+		else if(command.compare(0, 12, "peers remove") == 0 || command.compare(0, 3, "prm") == 0)
 		{
 			uint64_t peerID = 0;
 
@@ -622,7 +622,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			}
 			return stringStream.str();
 		}
-		else if(command.compare(0, 12, "peers unpair") == 0 || command.compare(0, 2, "pup") == 0)
+		else if(command.compare(0, 12, "peers unpair") == 0 || command.compare(0, 3, "pup") == 0)
 		{
 			uint64_t peerID = 0;
 
@@ -663,7 +663,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			}
 			return stringStream.str();
 		}
-		else if(command.compare(0, 11, "peers reset") == 0 || command.compare(0, 2, "prs") == 0)
+		else if(command.compare(0, 11, "peers reset") == 0 || command.compare(0, 3, "prs") == 0)
 		{
 			uint64_t peerID;
 
@@ -704,7 +704,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			}
 			return stringStream.str();
 		}
-		else if(command.compare(0, 12, "peers update") == 0 || command.compare(0, 2, "pud") == 0)
+		else if(command.compare(0, 12, "peers update") == 0 || command.compare(0, 3, "pud") == 0)
 		{
 			uint64_t peerID;
 			bool all = false;

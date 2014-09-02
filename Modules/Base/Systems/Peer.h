@@ -112,6 +112,7 @@ public:
 			virtual std::shared_ptr<Database::DataTable> onGetPeerParameters(uint64_t peerID) = 0;
 			virtual std::shared_ptr<Database::DataTable> onGetPeerVariables(uint64_t peerID) = 0;
 			virtual void onDeletePeerParameter(uint64_t peerID, Database::DataRow data) = 0;
+			virtual bool onSetPeerID(uint64_t oldPeerID, uint64_t newPeerID) = 0;
 
 			//Service messages
 			virtual std::shared_ptr<Database::DataTable> onGetServiceMessages(uint64_t peerID) = 0;
@@ -213,6 +214,14 @@ public:
     virtual std::shared_ptr<RPC::RPCVariable> getServiceMessages(bool returnID);
     virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
     virtual std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool onlyPushing = false) = 0;
+
+    /**
+     * RPC function to change the ID of the peer.
+     *
+     * @param newPeerID The new ID of the peer.
+     * @return Returns "RPC void" on success or RPC error "-100" when the new peer ID is invalid and error "-101" when the new peer ID is already in use.
+     */
+    virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setId(uint64_t newPeerID);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
     //End RPC methods
 protected:
@@ -258,6 +267,7 @@ protected:
 		virtual std::shared_ptr<Database::DataTable> raiseGetPeerParameters();
 		virtual std::shared_ptr<Database::DataTable> raiseGetPeerVariables();
 		virtual void raiseDeletePeerParameter(Database::DataRow data);
+		virtual bool raiseSetPeerID(uint64_t newPeerID);
 
 		//Service messages
 		virtual std::shared_ptr<Database::DataTable> raiseGetServiceMessages();

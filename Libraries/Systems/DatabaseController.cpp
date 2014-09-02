@@ -1324,6 +1324,36 @@ void DatabaseController::deletePeerParameter(uint64_t peerID, BaseLib::Database:
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
+
+bool DatabaseController::setPeerID(uint64_t oldPeerID, uint64_t newPeerID)
+{
+	try
+	{
+		BaseLib::Database::DataRow data;
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(newPeerID)));
+		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT 1 FROM peers WHERE peerID=?", data);
+		if(!result->empty()) return false;
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(oldPeerID)));
+		db.executeWriteCommand("UPDATE peers SET peerID=? WHERE peerID=?", data);
+		db.executeWriteCommand("UPDATE parameters SET peerID=? WHERE peerID=?", data);
+		db.executeWriteCommand("UPDATE peerVariables SET peerID=? WHERE peerID=?", data);
+		db.executeWriteCommand("UPDATE serviceMessages SET peerID=? WHERE peerID=?", data);
+		return true;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return false;
+}
 //End peer
 
 //Service messages

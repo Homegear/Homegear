@@ -83,6 +83,7 @@ public:
 		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetPeerParameters(uint64_t peerID);
 		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetPeerVariables(uint64_t peerID);
 		virtual void onDeletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow data);
+		virtual bool onSetPeerID(uint64_t oldPeerID, uint64_t newPeerID);
 
 		//Service messages
 		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetServiceMessages(uint64_t peerID);

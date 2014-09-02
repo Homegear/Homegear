@@ -154,7 +154,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 		std::ostringstream stringStream;
 		if(_currentPeer)
 		{
-			if(command == "unselect")
+			if(command == "unselect" || command == "u")
 			{
 				_currentPeer.reset();
 				return "Peer unselected.\n";
@@ -162,32 +162,33 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			if(!_currentPeer) return "No peer selected.\n";
 			return _currentPeer->handleCLICommand(command);
 		}
-		if(command == "help")
+		if(command == "help" || command == "h")
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "peers list\t\tList all peers" << std::endl;
-			stringStream << "peers reset\t\tUnpair a peer and reset it to factory defaults" << std::endl;
-			stringStream << "peers select\t\tSelect a peer" << std::endl;
-			stringStream << "peers unpair\t\tUnpair a peer" << std::endl;
-			stringStream << "peers update\t\tUpdates a peer to the newest firmware version" << std::endl;
-			stringStream << "search\t\t\tSearches for new devices on the bus" << std::endl;
-			stringStream << "unselect\t\tUnselect this device" << std::endl;
+			stringStream << "peers list (pl)\t\tList all peers" << std::endl;
+			stringStream << "peers reset (pr)\tUnpair a peer and reset it to factory defaults" << std::endl;
+			stringStream << "peers select (ps)\tSelect a peer" << std::endl;
+			stringStream << "peers unpair (pup)\tUnpair a peer" << std::endl;
+			stringStream << "peers update (pud)\tUpdates a peer to the newest firmware version" << std::endl;
+			stringStream << "search (sp)\t\tSearches for new devices on the bus" << std::endl;
+			stringStream << "unselect (u)\t\tUnselect this device" << std::endl;
 			return stringStream.str();
 		}
-		if(command.compare(0, 6, "search") == 0)
+		if(command.compare(0, 6, "search") == 0 || command.compare(0, 2, "sp") == 0)
 		{
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 'p') ? 0 : 1;
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1 + offset)
 				{
 					if(element == "help")
 					{
@@ -206,21 +207,22 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			else stringStream << "Search completed successfully." << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 12, "peers unpair") == 0)
+		else if(command.compare(0, 12, "peers unpair") == 0 || command.compare(0, 3, "pup") == 0)
 		{
 			uint64_t peerID = 0;
 
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 'u') ? 0 : 1;
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
 					peerID = BaseLib::HelperFunctions::getNumber(element, false);
@@ -228,7 +230,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				}
 				index++;
 			}
-			if(index == 2)
+			if(index == 1 + offset)
 			{
 				stringStream << "Description: This command unpairs a peer." << std::endl;
 				stringStream << "Usage: peers unpair PEERID" << std::endl << std::endl;
@@ -246,21 +248,22 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			}
 			return stringStream.str();
 		}
-		else if(command.compare(0, 11, "peers reset") == 0)
+		else if(command.compare(0, 11, "peers reset") == 0 || command.compare(0, 3, "prs") == 0)
 		{
 			uint64_t peerID = 0;
 
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 'r') ? 0 : 1;
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
 					peerID = BaseLib::HelperFunctions::getNumber(element, false);
@@ -268,7 +271,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				}
 				index++;
 			}
-			if(index == 2)
+			if(index == 1 + offset)
 			{
 				stringStream << "Description: This command resets and unpairs a peer." << std::endl;
 				stringStream << "Usage: peers reset PEERID" << std::endl << std::endl;
@@ -288,7 +291,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			}
 			return stringStream.str();
 		}
-		else if(command.compare(0, 10, "peers list") == 0)
+		else if(command.compare(0, 10, "peers list") == 0 || command.compare(0, 2, "pl") == 0)
 		{
 			try
 			{
@@ -297,15 +300,16 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 
 				std::stringstream stream(command);
 				std::string element;
+				int32_t offset = (command.at(1) == 'l') ? 0 : 1;
 				int32_t index = 0;
 				while(std::getline(stream, element, ' '))
 				{
-					if(index < 2)
+					if(index < 1 + offset)
 					{
 						index++;
 						continue;
 					}
-					else if(index == 2)
+					else if(index == 1 + offset)
 					{
 						if(element == "help")
 						{
@@ -314,7 +318,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 						}
 						filterType = BaseLib::HelperFunctions::toLower(element);
 					}
-					else if(index == 3) filterValue = element;
+					else if(index == 2 + offset) filterValue = element;
 					index++;
 				}
 				if(index == -1)
@@ -453,22 +457,23 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 		}
-		else if(command.compare(0, 12, "peers update") == 0)
+		else if(command.compare(0, 12, "peers update") == 0 || command.compare(0, 3, "pud") == 0)
 		{
 			uint64_t peerID;
 			bool all = false;
 
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 'u') ? 0 : 1;
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
 					else if(element == "all") all = true;
@@ -480,7 +485,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				}
 				index++;
 			}
-			if(index == 2)
+			if(index == 1 + offset)
 			{
 				stringStream << "Description: This command updates one or all peers to the newest firmware version available in \"" << _bl->settings.firmwarePath() << "\"." << std::endl;
 				stringStream << "Usage: peers update PEERID" << std::endl;
@@ -524,21 +529,22 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			else stringStream << "Started firmware update(s)... This might take a long time. Use the RPC function \"getUpdateProgress\" or see the log for details." << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 12, "peers select") == 0)
+		else if(command.compare(0, 12, "peers select") == 0 || command.compare(0, 2, "ps") == 0)
 		{
 			uint64_t id;
 
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 's') ? 0 : 1;
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
 					id = BaseLib::HelperFunctions::getNumber(element, false);
@@ -546,7 +552,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				}
 				index++;
 			}
-			if(index == 2)
+			if(index == 1 + offset)
 			{
 				stringStream << "Description: This command selects a peer." << std::endl;
 				stringStream << "Usage: peers select PEERID" << std::endl << std::endl;

@@ -691,6 +691,33 @@ std::shared_ptr<RPC::RPCVariable> Central::listDevices(bool channels, std::map<s
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> Central::setId(uint64_t oldPeerID, uint64_t newPeerID)
+{
+	try
+	{
+		if(oldPeerID == 0 || oldPeerID >= 0x40000000) return RPC::RPCVariable::createError(-100, "The current peer ID is invalid.");
+		std::shared_ptr<Peer> peer(_me->getPeer(oldPeerID));
+		if(!peer) return RPC::RPCVariable::createError(-2, "Peer not found.");
+		std::shared_ptr<RPC::RPCVariable> result = peer->setId(newPeerID);
+		if(result->errorStruct) return result;
+		_me->setPeerID(oldPeerID, newPeerID);
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+	{
+		_baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::RPCVariable> Central::setLinkInfo(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description)
 {
 	try

@@ -383,28 +383,29 @@ std::string Server::handleUserCommand(std::string& command)
 		std::ostringstream stringStream;
 		if(command.compare(0, 10, "users help") == 0 || command.compare(0, 2, "uh") == 0)
 		{
-			stringStream << "List of commands:" << std::endl << std::endl;
+			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "users list\t\tLists all users." << std::endl;
-			stringStream << "users create\t\tCreate a new user." << std::endl;
-			stringStream << "users update\t\tChange the password of an existing user." << std::endl;
-			stringStream << "users delete\t\tDelete an existing user." << std::endl;
+			stringStream << "users list (ul)\t\tLists all users." << std::endl;
+			stringStream << "users create (uc)\tCreate a new user." << std::endl;
+			stringStream << "users update (uu)\tChange the password of an existing user." << std::endl;
+			stringStream << "users delete (ud)\tDelete an existing user." << std::endl;
 			return stringStream.str();
 		}
 		if(command.compare(0, 10, "users list") == 0 || command.compare(0, 2, "ul") == 0)
 		{
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 'l') ? 0 : 1;
 			int32_t index = 0;
 			bool printHelp = false;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2 && element == "help") printHelp = true;
+				else if(index == 1 + offset && element == "help") printHelp = true;
 				else
 				{
 					printHelp = true;
@@ -438,15 +439,16 @@ std::string Server::handleUserCommand(std::string& command)
 
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 'c') ? 0 : 1;
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
 					else
@@ -459,7 +461,7 @@ std::string Server::handleUserCommand(std::string& command)
 						}
 					}
 				}
-				else if(index == 3)
+				else if(index == 2 + offset)
 				{
 					password = BaseLib::HelperFunctions::trim(element);
 
@@ -477,7 +479,7 @@ std::string Server::handleUserCommand(std::string& command)
 				}
 				index++;
 			}
-			if(index < 4)
+			if(index < 3 + offset)
 			{
 				stringStream << "Description: This command creates a new user." << std::endl;
 				stringStream << "Usage: users create USERNAME \"PASSWORD\"" << std::endl << std::endl;
@@ -508,15 +510,16 @@ std::string Server::handleUserCommand(std::string& command)
 
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 'u') ? 0 : 1;
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
 					else
@@ -529,7 +532,7 @@ std::string Server::handleUserCommand(std::string& command)
 						}
 					}
 				}
-				else if(index == 3)
+				else if(index == 2 + offset)
 				{
 					password = BaseLib::HelperFunctions::trim(element);
 
@@ -547,7 +550,7 @@ std::string Server::handleUserCommand(std::string& command)
 				}
 				index++;
 			}
-			if(index < 4)
+			if(index < 3 + offset)
 			{
 				stringStream << "Description: This command sets a new password for an existing user." << std::endl;
 				stringStream << "Usage: users update USERNAME \"PASSWORD\"" << std::endl << std::endl;
@@ -577,15 +580,16 @@ std::string Server::handleUserCommand(std::string& command)
 
 			std::stringstream stream(command);
 			std::string element;
+			int32_t offset = (command.at(1) == 'd') ? 0 : 1;
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1 + offset)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
 					else
@@ -600,7 +604,7 @@ std::string Server::handleUserCommand(std::string& command)
 				}
 				index++;
 			}
-			if(index == 2)
+			if(index == 1 + offset)
 			{
 				stringStream << "Description: This command deletes an existing user." << std::endl;
 				stringStream << "Usage: users delete USERNAME" << std::endl << std::endl;
@@ -641,10 +645,10 @@ std::string Server::handleGlobalCommand(std::string& command)
 		std::ostringstream stringStream;
 		if((command == "help" || command == "h") && !GD::familyController.familySelected())
 		{
-			stringStream << "List of commands:" << std::endl << std::endl;
+			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "debuglevel\t\tChanges the debug level" << std::endl;
-			stringStream << "runscript\t\tExecutes a script with the internal PHP engine" << std::endl;
+			stringStream << "debuglevel (dl)\t\tChanges the debug level" << std::endl;
+			stringStream << "runscript (rs)\t\tExecutes a script with the internal PHP engine" << std::endl;
 			stringStream << "users [COMMAND]\t\tExecute user commands. Type \"users help\" for more information." << std::endl;
 			stringStream << "families [COMMAND]\tExecute device family commands. Type \"families help\" for more information." << std::endl;
 			return stringStream.str();
@@ -749,7 +753,7 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
 		std::string response = handleGlobalCommand(command);
 		if(response.empty())
 		{
-			if(command.compare(0, 5, "users") == 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'u')) response = handleUserCommand(command);
+			if(command.compare(0, 5, "users") == 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'u' && !GD::familyController.familySelected())) response = handleUserCommand(command);
 			else response = GD::familyController.handleCLICommand(command);
 		}
 		response.push_back(0);

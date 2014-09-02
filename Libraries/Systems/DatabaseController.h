@@ -99,6 +99,15 @@ public:
 	virtual std::shared_ptr<BaseLib::Database::DataTable> getPeerParameters(uint64_t peerID);
 	virtual std::shared_ptr<BaseLib::Database::DataTable> getPeerVariables(uint64_t peerID);
 	virtual void deletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow data);
+
+	/**
+	 * Changes the ID of a peer.
+	 *
+	 * @param oldPeerID The old ID of the peer.
+	 * @param newPeerID The new ID of the peer.
+	 * @return Returns "true" on success or "false" when the new ID is already in use.
+	 */
+	virtual bool setPeerID(uint64_t oldPeerID, uint64_t newPeerID);
 	//End Peer
 
 	//Service messages

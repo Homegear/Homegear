@@ -102,6 +102,12 @@ void DeviceFamily::raiseDeletePeerParameter(uint64_t peerID, Database::DataRow d
 	return ((IFamilyEventSink*)_eventHandler)->onDeletePeerParameter(peerID, data);
 }
 
+bool DeviceFamily::raiseSetPeerID(uint64_t oldPeerID, uint64_t newPeerID)
+{
+	if(!_eventHandler) return false;
+	return ((IFamilyEventSink*)_eventHandler)->onSetPeerID(oldPeerID, newPeerID);
+}
+
 std::shared_ptr<Database::DataTable> DeviceFamily::raiseGetServiceMessages(uint64_t peerID)
 {
 	if(!_eventHandler) return std::shared_ptr<Database::DataTable>();
@@ -234,6 +240,11 @@ std::shared_ptr<BaseLib::Database::DataTable> DeviceFamily::onGetPeerVariables(u
 void DeviceFamily::onDeletePeerParameter(uint64_t peerID, Database::DataRow data)
 {
 	raiseDeletePeerParameter(peerID, data);
+}
+
+bool DeviceFamily::onSetPeerID(uint64_t oldPeerID, uint64_t newPeerID)
+{
+	return raiseSetPeerID(oldPeerID, newPeerID);
 }
 
 std::shared_ptr<BaseLib::Database::DataTable> DeviceFamily::onGetServiceMessages(uint64_t peerID)

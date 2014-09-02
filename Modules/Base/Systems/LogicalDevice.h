@@ -81,6 +81,7 @@ public:
 			virtual std::shared_ptr<Database::DataTable> onGetPeerParameters(uint64_t peerID) = 0;
 			virtual std::shared_ptr<Database::DataTable> onGetPeerVariables(uint64_t peerID) = 0;
 			virtual void onDeletePeerParameter(uint64_t peerID, Database::DataRow data) = 0;
+			virtual bool onSetPeerID(uint64_t oldPeerID, uint64_t newPeerID) = 0;
 
 			//Service messages
 			virtual std::shared_ptr<Database::DataTable> onGetServiceMessages(uint64_t peerID) = 0;
@@ -114,6 +115,7 @@ public:
     std::shared_ptr<Peer> getPeer(uint64_t id);
     std::shared_ptr<Peer> getPeer(std::string serialNumber);
 	virtual bool peerSelected() { return false; }
+	virtual void setPeerID(uint64_t oldPeerID, uint64_t newPeerID);
 	virtual void deletePeersFromDatabase();
 	virtual void load();
 	virtual void loadVariables() = 0;
@@ -167,6 +169,7 @@ protected:
 		virtual std::shared_ptr<Database::DataTable> raiseGetPeerParameters(uint64_t peerID);
 		virtual std::shared_ptr<Database::DataTable> raiseGetPeerVariables(uint64_t peerID);
 		virtual void raiseDeletePeerParameter(uint64_t peerID, Database::DataRow data);
+		virtual bool raiseSetPeerID(uint64_t oldPeerID, uint64_t newPeerID);
 
 		//Service messages
 		virtual std::shared_ptr<Database::DataTable> raiseGetServiceMessages(uint64_t peerID);
@@ -202,6 +205,7 @@ protected:
 		virtual std::shared_ptr<Database::DataTable> onGetPeerParameters(uint64_t peerID);
 		virtual std::shared_ptr<Database::DataTable> onGetPeerVariables(uint64_t peerID);
 		virtual void onDeletePeerParameter(uint64_t peerID, Database::DataRow data);
+		virtual bool onSetPeerID(uint64_t oldPeerID, uint64_t newPeerID);
 
 		//Service messages
 		virtual std::shared_ptr<Database::DataTable> onGetServiceMessages(uint64_t peerID);
