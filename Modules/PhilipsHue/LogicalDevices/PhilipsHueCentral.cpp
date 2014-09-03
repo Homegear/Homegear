@@ -338,12 +338,14 @@ std::string PhilipsHueCentral::handleCLICommand(std::string command)
 					std::string idString = (currentID > 999999) ? "0x" + BaseLib::HelperFunctions::getHexString(currentID, 8) : std::to_string(currentID);
 					stringStream << std::setw(idWidth) << std::setfill(' ') << idString << bar;
 					std::string name = i->second->getName();
-					if(name.size() > (unsigned)nameWidth)
+					size_t nameSize = BaseLib::HelperFunctions::utf8StringSize(name);
+					if(nameSize > (unsigned)nameWidth)
 					{
-						name.resize(nameWidth - 3);
+						name = BaseLib::HelperFunctions::utf8Substring(name, 0, nameWidth - 3);
 						name += "...";
 					}
-					stringStream << std::setw(nameWidth) << name << bar
+					else name.resize(nameWidth + (name.size() - nameSize), ' ');
+					stringStream << name << bar
 						<< std::setw(addressWidth) << BaseLib::HelperFunctions::getHexString(i->second->getAddress(), 6) << bar
 						<< std::setw(serialWidth) << i->second->getSerialNumber() << bar
 						<< std::setw(typeWidth1) << BaseLib::HelperFunctions::getHexString(i->second->getDeviceType().type(), 4) << bar;
@@ -648,8 +650,70 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> PhilipsHueCentral::searchDevices()
 	try
 	{
 		std::vector<std::shared_ptr<PhilipsHuePacket>> peerInfo = GD::physicalInterface->getPeerInfo();
+		_peerInitMutex.lock();
+		std::vector<std::shared_ptr<PhilipsHuePeer>> newPeers;
+		for(std::vector<std::shared_ptr<PhilipsHuePacket>>::iterator i = peerInfo.begin(); i != peerInfo.end(); ++i)
+		{
+			std::shared_ptr<Json::Value> info = (*i)->getJson();
+			if(!info->isMember("modelid") || !info->isMember("swversion")) continue;
+			DeviceType type = deviceTypeFromString(info->operator []("modelid").asString());
 
-		//return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)newPeers.size()));
+			std::shared_ptr<PhilipsHuePeer> peer = getPeer((*i)->senderAddress());
+			if(peer)
+			{
+				if((DeviceType)peer->getDeviceType().type() == type) continue;
+				deletePeer(peer->getID());
+				peer.reset();
+			}
+			std::string swversion = info->operator []("swversion").asString();
+			LogicalDeviceType deviceType(BaseLib::Systems::DeviceFamilies::PhilipsHue, (uint32_t)type);
+
+			peer = createPeer((*i)->senderAddress(), BaseLib::HelperFunctions::getNumber(swversion), deviceType, std::to_string((*i)->senderAddress()), true);
+			if(!peer)
+			{
+				GD::out.printError("Error: Could not pair device with address " + BaseLib::HelperFunctions::getHexString((*i)->senderAddress(), 6) + ". No matching XML file was found.");
+				continue;
+			}
+
+			_peersMutex.lock();
+			try
+			{
+				_peers[peer->getAddress()] = peer;
+				if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
+				_peersByID[peer->getID()] = peer;
+			}
+			catch(const std::exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			_peersMutex.unlock();
+			newPeers.push_back(peer);
+		}
+		_peerInitMutex.unlock();
+
+		if(newPeers.size() > 0)
+		{
+			std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+			for(std::vector<std::shared_ptr<PhilipsHuePeer>>::iterator i = newPeers.begin(); i != newPeers.end(); ++i)
+			{
+				std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescriptions(true, std::map<std::string, bool>());
+				if(!descriptions) continue;
+				for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
+				{
+					deviceDescriptions->arrayValue->push_back(*j);
+				}
+			}
+			raiseRPCNewDevices(deviceDescriptions);
+		}
+		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)newPeers.size()));
 	}
 	catch(const std::exception& ex)
 	{
@@ -663,6 +727,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> PhilipsHueCentral::searchDevices()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	_peerInitMutex.unlock();
 	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 //End RPC functions

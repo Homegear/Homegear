@@ -418,4 +418,26 @@ void PhilipsHueDevice::sendPacket(std::shared_ptr<PhilipsHuePacket> packet)
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
+
+DeviceType PhilipsHueDevice::deviceTypeFromString(std::string deviceType)
+{
+	try
+	{
+		if(deviceType == "LCT001") return DeviceType::LCT001;
+		else return DeviceType::LCT001; //default
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return DeviceType::none;
+}
 }

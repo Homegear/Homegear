@@ -56,6 +56,18 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceInfo(uint64_t id, std::map<std::string, bool> fields);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> searchDevices();
 protected:
+	std::mutex _peerInitMutex;
+
+	/**
+	 * Creates a new peer. The method does not add the peer to the peer arrays.
+	 *
+	 * @param address The RF address of the peer.
+	 * @param firmwareVersion The firmware version.
+	 * @param deviceType The device type.
+	 * @param serialNumber The serial number.
+	 * @param save (default true) Set to "true" to save the peer in the database.
+	 * @return Returns a pointer to the newly created peer on success. If the creation was not successful, a nullptr is returned.
+	 */
 	std::shared_ptr<PhilipsHuePeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
 	void deletePeer(uint64_t id);
 };

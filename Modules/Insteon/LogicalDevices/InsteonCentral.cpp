@@ -671,12 +671,14 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 
 					stringStream << std::setw(idWidth) << std::setfill(' ') << std::to_string(i->second->getID()) << bar;
 					std::string name = i->second->getName();
-					if(name.size() > (unsigned)nameWidth)
+					size_t nameSize = BaseLib::HelperFunctions::utf8StringSize(name);
+					if(nameSize > (unsigned)nameWidth)
 					{
-						name.resize(nameWidth - 3);
+						name = BaseLib::HelperFunctions::utf8Substring(name, 0, nameWidth - 3);
 						name += "...";
 					}
-					stringStream << std::setw(nameWidth) << name << bar
+					else name.resize(nameWidth + (name.size() - nameSize), ' ');
+					stringStream << name << bar
 						<< std::setw(addressWidth) << BaseLib::HelperFunctions::getHexString(i->second->getAddress(), 6) << bar
 						<< std::setw(serialWidth) << i->second->getSerialNumber() << bar
 						<< std::setw(typeWidth1) << BaseLib::HelperFunctions::getHexString(i->second->getDeviceType().type(), 4) << bar;

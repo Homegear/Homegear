@@ -80,6 +80,7 @@ class PhilipsHueDevice : public BaseLib::Systems::LogicalDevice
         virtual void savePeers(bool full);
 
         virtual void sendPacket(std::shared_ptr<PhilipsHuePacket> packet);
+        DeviceType deviceTypeFromString(std::string deviceType);
     protected:
         //In table variables
         int32_t _firmwareVersion = 0;

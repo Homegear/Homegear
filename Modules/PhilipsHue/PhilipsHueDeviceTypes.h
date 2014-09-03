@@ -27,8 +27,8 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef PhilipsHueDEVICETYPES_H_
-#define PhilipsHueDEVICETYPES_H_
+#ifndef PHILIPSHUEDEVICETYPES_H_
+#define PHILIPSHUEDEVICETYPES_H_
 
 #include <stdint.h>
 
@@ -38,7 +38,8 @@ namespace PhilipsHue
 	{
 		none = 					0xFFFFFFFF,
 		HMRCV50 = 				0x0000,
-		CENTRAL = 				0xFFFFFFFD
+		CENTRAL = 				0xFFFFFFFD,
+		LCT001 =				0x0001
 	};
 }
 #endif

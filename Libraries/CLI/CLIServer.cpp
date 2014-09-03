@@ -385,7 +385,7 @@ std::string Server::handleUserCommand(std::string& command)
 		{
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "users list (ls)\t\tLists all users." << std::endl;
+			stringStream << "users list (ul)\t\tLists all users." << std::endl;
 			stringStream << "users create (uc)\tCreate a new user." << std::endl;
 			stringStream << "users update (uu)\tChange the password of an existing user." << std::endl;
 			stringStream << "users delete (ud)\tDelete an existing user." << std::endl;

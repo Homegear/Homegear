@@ -219,6 +219,51 @@ public:
 	}
 
 	/**
+	 * Returns the size of a UTF-8 string. This method is needed, because std::string::size() and std::string::length() return the size in bytes.
+	 *
+	 * @param s The string to get the size for.
+	 * @return Returns the size of the UTF-8 encoded string.
+	 */
+	static inline size_t utf8StringSize(const std::string& s)
+	{
+		if(s.empty()) return 0;
+		const char* pS = s.c_str();
+		size_t len = 0;
+		while (*pS) len += (*pS++ & 0xc0) != 0x80;
+		return len;
+	}
+
+	/**
+	 * Returns a UTF-8 substring. This method is needed, because std::string::substr() counts bytes and not characters.
+	 *
+	 * @param s The string to get the substring from.
+	 * @param start The start position of the substring.
+	 * @param length The substring size.
+	 * @return Returns the substring of the UTF-8 encoded string.
+	 */
+	static std::string utf8Substring(const std::string& s, uint32_t start, uint32_t length)
+	{
+		//From http://www.zedwood.com/article/cpp-utf-8-mb_substr-function
+		if(length == 0) return "";
+		uint32_t c, i, ix, q, min = std::string::npos, max = std::string::npos;
+		for (q = 0, i = 0, ix = s.length(); i < ix; i++, q++)
+		{
+			if(q == start) min = i;
+			if(q <= start + length || length == std::string::npos) max = i;
+
+			c = (unsigned char)s[i];
+			if      (c >= 0   && c <= 127) i += 0;
+			else if ((c & 0xE0) == 0xC0) i += 1;
+			else if ((c & 0xF0) == 0xE0) i += 2;
+			else if ((c & 0xF8) == 0xF0) i += 3;
+			else return ""; //invalid utf8
+		}
+		if (q <= start + length || length == std::string::npos) max = i;
+		if (min == std::string::npos || max == std::string::npos) return "";
+		return s.substr(min, max);
+	}
+
+	/**
 	 * Replaces substrings within a string.
 	 *
 	 * @param[in,out] haystack The string to search the substring in.
