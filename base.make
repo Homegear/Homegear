@@ -119,13 +119,16 @@ OBJECTS := \
 	$(OBJDIR)/RPCHeader.o \
 	$(OBJDIR)/RPCEncoder.o \
 	$(OBJDIR)/RPCDecoder.o \
+	$(OBJDIR)/HTTP.o \
 	$(OBJDIR)/BinaryDecoder.o \
 	$(OBJDIR)/XMLRPCDecoder.o \
 	$(OBJDIR)/BinaryEncoder.o \
 	$(OBJDIR)/SocketOperations.o \
+	$(OBJDIR)/HTTPClient.o \
 	$(OBJDIR)/SerialReaderWriter.o \
 	$(OBJDIR)/Threads.o \
 	$(OBJDIR)/Settings.o \
+	$(OBJDIR)/jsoncpp.o \
 
 RESOURCES := \
 
@@ -265,6 +268,9 @@ $(OBJDIR)/RPCEncoder.o: Modules/Base/Encoding/RPCEncoder.cpp
 $(OBJDIR)/RPCDecoder.o: Modules/Base/Encoding/RPCDecoder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HTTP.o: Modules/Base/Encoding/HTTP.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/BinaryDecoder.o: Modules/Base/Encoding/BinaryDecoder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
@@ -277,6 +283,9 @@ $(OBJDIR)/BinaryEncoder.o: Modules/Base/Encoding/BinaryEncoder.cpp
 $(OBJDIR)/SocketOperations.o: Modules/Base/Sockets/SocketOperations.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HTTPClient.o: Modules/Base/Sockets/HTTPClient.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/SerialReaderWriter.o: Modules/Base/Sockets/SerialReaderWriter.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
@@ -284,6 +293,9 @@ $(OBJDIR)/Threads.o: Modules/Base/Threads/Threads.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Settings.o: Modules/Base/Settings/Settings.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/jsoncpp.o: Modules/Base/JSON/jsoncpp.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

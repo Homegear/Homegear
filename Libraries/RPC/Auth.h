@@ -30,7 +30,6 @@
 #ifndef AUTH_H_
 #define AUTH_H_
 
-#include "HTTP.h"
 #include "../../Modules/Base/BaseLib.h"
 #include "Base64.h"
 #include "../User/User.h"
@@ -59,7 +58,7 @@ public:
 	bool initialized() { return _initialized; }
 	std::pair<std::string, std::string> basicClient();
 	bool basicServer(std::shared_ptr<BaseLib::RPC::RPCHeader>& binaryHeader);
-	bool basicServer(HTTP& httpPacket);
+	bool basicServer(BaseLib::HTTP& httpPacket);
 protected:
 	bool _initialized = false;
 	std::string _hostname;
@@ -71,7 +70,7 @@ protected:
 	std::string _userName;
 	std::string _password;
 	std::pair<std::string, std::string> _basicAuthString;
-	HTTP _http;
+	BaseLib::HTTP _http;
 	std::shared_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
 
 	void sendBasicUnauthorized(bool binary);

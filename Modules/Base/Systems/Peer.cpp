@@ -1984,6 +1984,56 @@ std::shared_ptr<RPC::RPCVariable> Peer::getValue(uint32_t channel, std::string v
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> Peer::rssiInfo()
+{
+	try
+	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
+		if(!wireless()) return RPC::RPCVariable::createError(-100, "Peer is not a wireless peer.");
+		if(valuesCentral.find(0) == valuesCentral.end() || valuesCentral.at(0).find("RSSI_DEVICE") == valuesCentral.at(0).end() || !valuesCentral.at(0).at("RSSI_DEVICE").rpcParameter)
+		{
+			return RPC::RPCVariable::createError(-101, "Peer has no rssi information.");
+		}
+		std::shared_ptr<RPC::RPCVariable> response(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+		std::shared_ptr<RPC::RPCVariable> rpcArray(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+
+		std::shared_ptr<RPC::RPCVariable> element;
+		if(valuesCentral.at(0).find("RSSI_PEER") != valuesCentral.at(0).end() && valuesCentral.at(0).at("RSSI_PEER").rpcParameter)
+		{
+			element = valuesCentral.at(0).at("RSSI_PEER").rpcParameter->convertFromPacket(valuesCentral.at(0).at("RSSI_PEER").data);
+			if(element->integerValue == 0) element->integerValue = 65536;
+			rpcArray->arrayValue->push_back(element);
+		}
+		else
+		{
+			element = std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(65536));
+			rpcArray->arrayValue->push_back(element);
+		}
+
+		element = valuesCentral.at(0).at("RSSI_DEVICE").rpcParameter->convertFromPacket(valuesCentral.at(0).at("RSSI_DEVICE").data);
+		if(element->integerValue == 0) element->integerValue = 65536;
+		rpcArray->arrayValue->push_back(element);
+
+		std::shared_ptr<Central> central = getCentral();
+		if(!central) return RPC::RPCVariable::createError(-32500, "Central is nullptr.");
+		response->structValue->insert(RPC::RPCStructElement(central->logicalDevice()->getSerialNumber(), rpcArray));
+		return response;
+	}
+	catch(const std::exception& ex)
+	{
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::RPCVariable> Peer::setLinkInfo(int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description)
 {
 	try

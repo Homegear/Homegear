@@ -56,7 +56,8 @@ solution "homegear"
         "./Modules/Base/Database/*.h", "./Modules/Base/Database/*.cpp",
         "./Modules/Base/Sockets/*.h", "./Modules/Base/Sockets/*.cpp",
         "./Modules/Base/Threads/*.h", "./Modules/Base/Threads/*.cpp",
-        "./Modules/Base/Settings/*.h", "./Modules/Base/Settings/*.cpp"
+        "./Modules/Base/Settings/*.h", "./Modules/Base/Settings/*.cpp",
+        "./Modules/Base/JSON/*.h", "./Modules/Base/JSON/json/*.h", "./Modules/Base/JSON/*.cpp"
       }
       buildoptions { "-Wall", "-std=c++11", "-fPIC" }
  
@@ -170,6 +171,35 @@ solution "homegear"
       files { "./Modules/Insteon/*.h", "./Modules/Insteon/*.cpp" }
       files { "./Modules/Insteon/LogicalDevices/*.h", "./Modules/Insteon/LogicalDevices/*.cpp" }
       files { "./Modules/Insteon/PhysicalInterfaces/*.h", "./Modules/Insteon/PhysicalInterfaces/*.cpp" }
+      linkoptions { "-l base" }
+      buildoptions { "-Wall", "-std=c++11" }
+	   
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         libdirs { "./lib/Debug" }
+         targetdir "./lib/Modules/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         libdirs { "./lib/Release" }
+         targetdir "./lib/Modules/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         libdirs { "./lib/Profiling" }
+         targetdir "./lib/Modules/Profiling"
+         buildoptions { "-pg" }
+         linkoptions { "-pg" }
+
+   project "philipshue"
+      kind "SharedLib"
+      language "C++"
+      files { "./Modules/PhilipsHue/*.h", "./Modules/PhilipsHue/*.cpp" }
+      files { "./Modules/PhilipsHue/LogicalDevices/*.h", "./Modules/PhilipsHue/LogicalDevices/*.cpp" }
+      files { "./Modules/PhilipsHue/PhysicalInterfaces/*.h", "./Modules/PhilipsHue/PhysicalInterfaces/*.cpp" }
       linkoptions { "-l base" }
       buildoptions { "-Wall", "-std=c++11" }
 	   

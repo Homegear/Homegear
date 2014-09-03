@@ -691,6 +691,42 @@ std::shared_ptr<RPC::RPCVariable> Central::listDevices(bool channels, std::map<s
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> Central::rssiInfo()
+{
+	try
+	{
+		std::shared_ptr<RPC::RPCVariable> response(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+
+		std::vector<std::shared_ptr<Peer>> peers;
+		//Copy all peers first, because rssiInfo takes very long and we don't want to lock _peersMutex too long
+		_me->getPeers(peers);
+
+		for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+		{
+			//rssiInfo really needs a lot of resources, so wait a little bit after each device
+			std::this_thread::sleep_for(std::chrono::milliseconds(3));
+			std::shared_ptr<RPC::RPCVariable> element = (*i)->rssiInfo();
+			if(!element || element->errorStruct) continue;
+			response->structValue->insert(RPC::RPCStructElement((*i)->getSerialNumber(), element));
+		}
+
+		return response;
+	}
+	catch(const std::exception& ex)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::RPCVariable> Central::setId(uint64_t oldPeerID, uint64_t newPeerID)
 {
 	try

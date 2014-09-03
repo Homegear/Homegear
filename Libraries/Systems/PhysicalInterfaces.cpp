@@ -97,6 +97,7 @@ void PhysicalInterfaces::load(std::string filename)
 						else if(name == "insteon") settings->family = BaseLib::Systems::DeviceFamilies::INSTEON;
 						else if(name == "fs20") settings->family = BaseLib::Systems::DeviceFamilies::FS20;
 						else if(name == "max") settings->family = BaseLib::Systems::DeviceFamilies::MAX;
+						else if(name == "philipshue") settings->family = BaseLib::Systems::DeviceFamilies::PhilipsHue;
 						if(GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end()) GD::out.printDebug("Debug: Reading config for physical device family " + GD::deviceFamilies.at(settings->family)->getName());
 						else GD::out.printError("Error in physicalinterfaces.conf: No module found for device family: " + name);
 						break;

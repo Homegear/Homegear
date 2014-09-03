@@ -89,6 +89,7 @@ void Server::registerMethods()
 		_server->registerMethod("putParamset", std::shared_ptr<RPCMethod>(new RPCPutParamset()));
 		_server->registerMethod("removeEvent", std::shared_ptr<RPCMethod>(new RPCRemoveEvent()));
 		_server->registerMethod("removeLink", std::shared_ptr<RPCMethod>(new RPCRemoveLink()));
+		_server->registerMethod("rssiInfo", std::shared_ptr<RPCMethod>(new RPCRssiInfo()));
 		_server->registerMethod("runScript", std::shared_ptr<RPCMethod>(new RPCRunScript()));
 		_server->registerMethod("searchDevices", std::shared_ptr<RPCMethod>(new RPCSearchDevices()));
 		_server->registerMethod("setId", std::shared_ptr<RPCMethod>(new RPCSetId()));

@@ -276,6 +276,7 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 		}
 		else if(type == Type::Enum::booleanInteger)
 		{
+			if(value->stringValue.size() > 0 && value->stringValue == "true") value->booleanValue = true;
 			if(invert) value->booleanValue = !value->booleanValue;
 			if(valueTrue == 0 && valueFalse == 0) value->integerValue = (int32_t)value->booleanValue;
 			else if(value->booleanValue) value->integerValue = valueTrue;
@@ -785,7 +786,11 @@ std::vector<uint8_t> Parameter::convertToPacket(const std::shared_ptr<RPCVariabl
 			}
 			if(conversion.empty())
 			{
-				if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean) variable->integerValue = (int32_t)variable->booleanValue;
+				if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean)
+				{
+					if(variable->stringValue.size() > 0 && variable->stringValue == "true") variable->integerValue = 1;
+					else variable->integerValue = (int32_t)variable->booleanValue;
+				}
 			}
 			else
 			{

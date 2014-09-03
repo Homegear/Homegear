@@ -525,16 +525,17 @@ void InsteonHubX10::doInit()
 	try
 	{
 		int32_t i = 0;
-		while(!_stopCallbackThread && !GD::family->getCentral() && i < 30)
+		while(!_stopCallbackThread && !GD::family->getCentral() && i < 600)
 		{
 			_out.printDebug("Debug: Waiting for central to load.");
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			i++;
 		}
 		if(_stopCallbackThread) return;
 		if(!GD::family->getCentral())
 		{
 			_stopCallbackThread = true;
+			_stopped = true;
 			_out.printError("Error: Could not get central address. Stopping listening.");
 			return;
 		}

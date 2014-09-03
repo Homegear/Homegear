@@ -722,7 +722,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetAllValues::invoke(std::shared_p
 			if(!central) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
 			std::shared_ptr<BaseLib::RPC::RPCVariable> result = central->getAllValues(peerID, returnWriteOnly);
-			if(result->errorStruct)
+			if(result && result->errorStruct)
 			{
 				GD::out.printWarning("Warning: Error calling method \"listDevices\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
 				continue;
@@ -862,7 +862,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetDeviceInfo::invoke(std::shared_
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(3));
 				std::shared_ptr<BaseLib::RPC::RPCVariable> result = central->getDeviceInfo(peerID, fields);
-				if(result->errorStruct)
+				if(result && result->errorStruct)
 				{
 					GD::out.printWarning("Warning: Error calling method \"listDevices\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
 					continue;
@@ -1248,7 +1248,19 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetMetadata::invoke(std::shared_pt
 
 		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
 
-		return GD::db.getMetadata(peer->getID(), peer->getSerialNumber(), parameters->at(1)->stringValue);
+		if(parameters->at(1)->stringValue == "NAME")
+		{
+			std::string peerName = peer->getName();
+			if(peerName.size() > 0) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(peerName));
+			std::shared_ptr<BaseLib::RPC::RPCVariable> rpcName = GD::db.getMetadata(peer->getID(), peer->getSerialNumber(), parameters->at(1)->stringValue);
+			if(peerName.size() == 0 && !rpcName->errorStruct)
+			{
+				peer->setName(rpcName->stringValue);
+				GD::db.deleteMetadata(peer->getID(), peer->getSerialNumber(), parameters->at(1)->stringValue);
+			}
+			return rpcName;
+		}
+		else return GD::db.getMetadata(peer->getID(), peer->getSerialNumber(), parameters->at(1)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -1547,7 +1559,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetPeerId::invoke(std::shared_ptr<
 				std::shared_ptr<BaseLib::RPC::RPCVariable> result;
 				if(useSerialNumber) result = central->getPeerID(serialNumber);
 				else result = central->getPeerID(parameters->at(0)->integerValue);
-				if(!result->errorStruct) ids->arrayValue->push_back(result);
+				if(result && !result->errorStruct) ids->arrayValue->push_back(result);
 			}
 		}
 
@@ -1940,7 +1952,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCListDevices::invoke(std::shared_pt
 			if(!central) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
 			std::shared_ptr<BaseLib::RPC::RPCVariable> result = central->listDevices(channels, fields);
-			if(result->errorStruct)
+			if(result && result->errorStruct)
 			{
 				GD::out.printWarning("Warning: Error calling method \"listDevices\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
 				continue;
@@ -2304,6 +2316,44 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCRemoveLink::invoke(std::shared_ptr
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<BaseLib::RPC::RPCVariable> RPCRssiInfo::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
+{
+	try
+	{
+		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
+
+		std::shared_ptr<BaseLib::RPC::RPCVariable> response(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
+			if(!central) continue;
+			std::this_thread::sleep_for(std::chrono::milliseconds(3));
+			std::shared_ptr<BaseLib::RPC::RPCVariable> result = central->rssiInfo();
+			if(result && result->errorStruct)
+			{
+				GD::out.printWarning("Warning: Error calling method \"rssiInfo\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
+				continue;
+			}
+			if(result && !result->structValue->empty()) response->structValue->insert(result->structValue->begin(), result->structValue->end());
+		}
+
+		return response;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 RPCRunScript::~RPCRunScript()
 {
 	_disposing = true;
@@ -2504,6 +2554,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetInstallMode::invoke(std::shared
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
 			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcBoolean }),
 			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcBoolean, BaseLib::RPC::RPCVariableType::rpcInteger }),
+			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcBoolean, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger }),
 			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcBoolean }),
 			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcBoolean, BaseLib::RPC::RPCVariableType::rpcInteger })
 		}));
@@ -2514,7 +2565,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetInstallMode::invoke(std::shared
 		else if(parameters->size() == 2) enableIndex = 1;
 		int32_t familyIDIndex = (parameters->at(0)->type == BaseLib::RPC::RPCVariableType::rpcInteger) ? 0 : -1;
 		int32_t timeIndex = -1;
-		if(parameters->size() == 2 && parameters->at(1)->type == BaseLib::RPC::RPCVariableType::rpcInteger) timeIndex = 1;
+		if(parameters->size() >= 2 && parameters->at(1)->type == BaseLib::RPC::RPCVariableType::rpcInteger) timeIndex = 1;
 		else if(parameters->size() == 3) timeIndex = 2;
 
 		bool enable = (enableIndex > -1) ? parameters->at(enableIndex)->booleanValue : false;
@@ -2720,6 +2771,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetMetadata::invoke(std::shared_pt
 
 		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
 
+		if(parameters->at(1)->stringValue == "NAME") peer->setName(parameters->at(2)->stringValue);
 		return GD::db.setMetadata(peer->getID(), peer->getSerialNumber(), parameters->at(1)->stringValue, parameters->at(2));
 	}
 	catch(const std::exception& ex)

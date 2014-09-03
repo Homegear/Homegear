@@ -142,12 +142,25 @@ int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 	int32_t nfds = _socketDescriptor->descriptor + 1;
 	FD_SET(_socketDescriptor->descriptor, &readFileDescriptor);
 	_bl->fileDescriptorManager.unlock();
-	if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed.");
+	if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (1).");
 	int32_t bytesRead = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
 	if(bytesRead == 0) throw SocketTimeOutException("Reading from socket timed out.");
-	if(bytesRead != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed.");
-	bytesRead = _socketDescriptor->tlsSession ? gnutls_record_recv(_socketDescriptor->tlsSession, buffer, bufferSize) : read(_socketDescriptor->descriptor, buffer, bufferSize);
-	if(bytesRead <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed.");
+	if(bytesRead != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (2).");
+	if(_socketDescriptor->tlsSession)
+	{
+		do
+		{
+			bytesRead = gnutls_record_recv(_socketDescriptor->tlsSession, buffer, bufferSize);
+		} while(bytesRead == GNUTLS_E_INTERRUPTED || bytesRead == GNUTLS_E_AGAIN);
+	}
+	else
+	{
+		do
+		{
+			bytesRead = read(_socketDescriptor->descriptor, buffer, bufferSize);
+		} while(bytesRead < 0 && errno == EAGAIN);
+	}
+	if(bytesRead <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (3).");
 	return bytesRead;
 }
 
@@ -165,7 +178,7 @@ int32_t SocketOperations::proofwrite(const std::vector<char>& data)
 	if(!_socketDescriptor) throw SocketOperationException("Socket descriptor is nullptr.");
 	if(!connected()) autoConnect();
 	if(data.empty()) return 0;
-	if(data.size() > 104857600) throw SocketDataLimitException("Data size is larger than 100MB.");
+	if(data.size() > 10485760) throw SocketDataLimitException("Data size is larger than 10 MiB.");
 	_bl->out.printDebug("Debug: ... data size is " + std::to_string(data.size()), 6);
 
 	int32_t bytesSentSoFar = 0;
@@ -180,10 +193,52 @@ int32_t SocketOperations::proofwrite(const std::vector<char>& data)
 		int32_t nfds = _socketDescriptor->descriptor + 1;
 		FD_SET(_socketDescriptor->descriptor, &writeFileDescriptor);
 		_bl->fileDescriptorManager.unlock();
-		if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed.");
+		if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (4).");
 		int32_t readyFds = select(nfds, NULL, &writeFileDescriptor, NULL, &timeout);
 		if(readyFds == 0) throw SocketTimeOutException("Writing to socket timed out.");
-		if(readyFds != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed.");
+		if(readyFds != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (5).");
+
+		int32_t bytesToSend = data.size() - bytesSentSoFar;
+		int32_t bytesSentInStep = _socketDescriptor->tlsSession ? gnutls_record_send(_socketDescriptor->tlsSession, &data.at(bytesSentSoFar), bytesToSend) : send(_socketDescriptor->descriptor, &data.at(bytesSentSoFar), bytesToSend, MSG_NOSIGNAL);
+		if(bytesSentInStep <= 0)
+		{
+			_bl->out.printDebug("Debug: ... exception at " + std::to_string(bytesSentSoFar) + " error is " + strerror(errno));
+			close();
+			if(_socketDescriptor->tlsSession) throw SocketOperationException(gnutls_strerror(bytesSentInStep));
+			else throw SocketOperationException(strerror(errno));
+		}
+		bytesSentSoFar += bytesSentInStep;
+	}
+	_bl->out.printDebug("Debug: ... sent " + std::to_string(bytesSentSoFar), 6);
+	return bytesSentSoFar;
+}
+
+int32_t SocketOperations::proofwrite(const std::string& data)
+{
+
+	_bl->out.printDebug("Debug: Calling proofwrite ...", 6);
+	if(!_socketDescriptor) throw SocketOperationException("Socket descriptor is nullptr.");
+	if(!connected()) autoConnect();
+	if(data.empty()) return 0;
+	if(data.size() > 10485760) throw SocketDataLimitException("Data size is larger than 10 MiB.");
+	_bl->out.printDebug("Debug: ... data size is " + std::to_string(data.size()), 6);
+
+	int32_t bytesSentSoFar = 0;
+	while (bytesSentSoFar < (signed)data.size())
+	{
+		timeval timeout;
+		timeout.tv_sec = 5;
+		timeout.tv_usec = 0;
+		fd_set writeFileDescriptor;
+		FD_ZERO(&writeFileDescriptor);
+		_bl->fileDescriptorManager.lock();
+		int32_t nfds = _socketDescriptor->descriptor + 1;
+		FD_SET(_socketDescriptor->descriptor, &writeFileDescriptor);
+		_bl->fileDescriptorManager.unlock();
+		if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (6).");
+		int32_t readyFds = select(nfds, NULL, &writeFileDescriptor, NULL, &timeout);
+		if(readyFds == 0) throw SocketTimeOutException("Writing to socket timed out.");
+		if(readyFds != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (7).");
 
 		int32_t bytesToSend = data.size() - bytesSentSoFar;
 		int32_t bytesSentInStep = _socketDescriptor->tlsSession ? gnutls_record_send(_socketDescriptor->tlsSession, &data.at(bytesSentSoFar), bytesToSend) : send(_socketDescriptor->descriptor, &data.at(bytesSentSoFar), bytesToSend, MSG_NOSIGNAL);
@@ -331,7 +386,7 @@ bool SocketOperations::waitForSocket()
 	int32_t nfds = _socketDescriptor->descriptor + 1;
 	FD_SET(_socketDescriptor->descriptor, &readFileDescriptor);
 	_bl->fileDescriptorManager.unlock();
-	if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed.");
+	if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (8).");
 	int32_t bytesRead = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
 	if(bytesRead != 1) return false;
 	return true;

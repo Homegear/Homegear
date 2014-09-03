@@ -507,11 +507,11 @@ std::string FamilyController::handleCLICommand(std::string& command)
 		{
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "families list (fl)\tList all available device families" << std::endl;
+			stringStream << "families list (ls)\tList all available device families" << std::endl;
 			stringStream << "families select (fs)\tSelect a device family" << std::endl;
 			return stringStream.str();
 		}
-		else if(command == "families list" || command == "fl")
+		else if(command == "families list" || command == "fl" || (command == "ls" && !_currentFamily))
 		{
 			std::string bar(" │ ");
 			const int32_t idWidth = 5;

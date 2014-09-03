@@ -332,14 +332,14 @@ std::string Insteon::handleCLICommand(std::string& command)
 		{
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "devices list (dl)\tList all Insteon devices" << std::endl;
+			stringStream << "devices list (ls)\tList all Insteon devices" << std::endl;
 			stringStream << "devices create (dc)\tCreate a virtual Insteon device" << std::endl;
 			stringStream << "devices remove (dr)\tRemove a virtual Insteon device" << std::endl;
 			stringStream << "devices select (ds)\tSelect a virtual Insteon device" << std::endl;
 			stringStream << "unselect (u)\t\tUnselect this device family" << std::endl;
 			return stringStream.str();
 		}
-		else if(command == "devices list" || command == "dl")
+		else if(command == "devices list" || command == "dl" || (command == "ls" && !_currentDevice))
 		{
 			std::string bar(" │ ");
 			const int32_t idWidth = 8;

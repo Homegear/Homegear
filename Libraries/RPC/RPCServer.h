@@ -30,7 +30,6 @@
 #ifndef RPCSERVER_H_
 #define RPCSERVER_H_
 
-#include "HTTP.h"
 #include "../../Modules/Base/BaseLib.h"
 #include "RPCMethod.h"
 #include "Auth.h"

@@ -214,6 +214,7 @@ public:
     virtual std::shared_ptr<RPC::RPCVariable> getServiceMessages(bool returnID);
     virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
     virtual std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool onlyPushing = false) = 0;
+    virtual std::shared_ptr<BaseLib::RPC::RPCVariable> rssiInfo();
 
     /**
      * RPC function to change the ID of the peer.

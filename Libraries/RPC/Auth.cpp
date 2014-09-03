@@ -135,7 +135,7 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::RPC::RPCHeader>& binaryHeader)
 	return false;
 }
 
-bool Auth::basicServer(HTTP& httpPacket)
+bool Auth::basicServer(BaseLib::HTTP& httpPacket)
 {
 	if(!_initialized) throw AuthException("Not initialized.");
 	_http.reset();
@@ -165,7 +165,7 @@ bool Auth::basicServer(HTTP& httpPacket)
 			{
 				_http.process(buffer, bufferLength);
 			}
-			catch(HTTPException& ex)
+			catch(BaseLib::HTTPException& ex)
 			{
 				throw AuthException("Authorization failed because of HTTP exception: " + ex.what());
 			}

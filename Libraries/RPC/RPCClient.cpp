@@ -386,7 +386,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			}
 			else
 			{
-				std::string header = "POST " + server->path + " HTTP/1.1\r\nUser_Agent: Homegear " + std::string(VERSION) + "\r\nHost: " + server->hostname + ":" + server->address.second + "\r\nContent-Type: text/xml\r\nContent-Length: " + std::to_string(data->size()) + "\r\nConnection: " + (server->keepAlive ? "Keep-Alive" : "close") + "\r\nTE: chunked\r\n";
+				std::string header = "POST " + server->path + " HTTP/1.1\r\nUser-Agent: Homegear " + std::string(VERSION) + "\r\nHost: " + server->hostname + ":" + server->address.second + "\r\nContent-Type: text/xml\r\nContent-Length: " + std::to_string(data->size()) + "\r\nConnection: " + (server->keepAlive ? "Keep-Alive" : "close") + "\r\n";
 				if(server->settings && server->settings->authType == ClientSettings::Settings::AuthType::basic)
 				{
 					GD::out.printDebug("Using Basic Access Authentication.");
@@ -428,11 +428,16 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 
 		int32_t bufferMax = 2048;
 		char buffer[bufferMax + 1];
-		HTTP http;
+		BaseLib::HTTP http;
 		uint32_t packetLength = 0;
 		uint32_t dataSize = 0;
 		std::shared_ptr<std::vector<char>> packet;
 		if(server->binary) packet.reset(new std::vector<char>());
+		//Enable chunked packets for HomeMatic Manager. Necessary, because HTTP header does not contain transfer-encoding.
+		if(server->id.size() > 3 && server->id.compare(0, 3, "hmm") == 0)
+		{
+			http.getHeader()->transferEncoding = BaseLib::HTTP::TransferEncoding::chunked;
+		}
 
 		while(!http.isFinished()) //This is equal to while(true) for binary packets
 		{
@@ -441,7 +446,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 				receivedBytes = server->socket->proofread(buffer, bufferMax);
 
 				//Some clients send only one byte in the first packet
-				if(packetLength == 0 && receivedBytes == 1) receivedBytes += server->socket->proofread(&buffer[1], bufferMax - 1);
+				if(packetLength == 0 && receivedBytes == 1 && !http.headerIsFinished()) receivedBytes += server->socket->proofread(&buffer[1], bufferMax - 1);
 			}
 			catch(const BaseLib::SocketTimeOutException& ex)
 			{
@@ -497,9 +502,9 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 						_sendCounter--;
 						return std::shared_ptr<std::vector<char>>();
 					}
-					if(dataSize > 104857600)
+					if(dataSize > 10485760)
 					{
-						GD::out.printError("Error: RPC client received packet with data larger than 100 MiB.");
+						GD::out.printError("Error: RPC client received packet with data larger than 10 MiB.");
 						if(!server->keepAlive) server->socket->close();
 						_sendCounter--;
 						return std::shared_ptr<std::vector<char>>();
@@ -527,7 +532,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			}
 			else
 			{
-				if(!strncmp(buffer, "401", 3) || !strncmp(&buffer[9], "401", 3)) //"401 Unauthorized" or "HTTP/1.X 401 Unauthorized"
+				if(!http.headerIsFinished() && (!strncmp(buffer, "401", 3) || !strncmp(&buffer[9], "401", 3))) //"401 Unauthorized" or "HTTP/1.X 401 Unauthorized"
 				{
 					GD::out.printError("Error: Authentication failed. Server " + server->hostname + ", port " + server->address.second + ". Check user name and password in rpcclients.conf.");
 					if(!server->keepAlive) server->socket->close();
@@ -539,14 +544,14 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 				{
 					http.process(buffer, receivedBytes);
 				}
-				catch(HTTPException& ex)
+				catch(BaseLib::HTTPException& ex)
 				{
 					GD::out.printError("XML RPC Client: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, receivedBytes));
 					if(!server->keepAlive) server->socket->close();
 					_sendCounter--;
 					return std::shared_ptr<std::vector<char>>();
 				}
-				if(http.getContentSize() > 104857600 || http.getHeader()->contentLength > 104857600)
+				if(http.getContentSize() > 10485760 || http.getHeader()->contentLength > 10485760)
 				{
 					GD::out.printError("Error: Packet with data larger than 100 MiB received.");
 					if(!server->keepAlive) server->socket->close();
@@ -564,7 +569,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		_sendCounter--;
 		if(server->binary) return packet;
 		else if(http.isFinished()) return http.getContent();
-		else return std::shared_ptr<std::vector<char>>();;
+		else return std::shared_ptr<std::vector<char>>();
     }
     catch(const std::exception& ex)
     {
@@ -582,4 +587,4 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
     _sendCounter--;
     return std::shared_ptr<std::vector<char>>();
 }
-} /* namespace RPC */
+}

@@ -159,16 +159,16 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				_currentPeer.reset();
 				return "Peer unselected.\n";
 			}
-			if(!_currentPeer) return "No peer selected.\n";
 			return _currentPeer->handleCLICommand(command);
 		}
 		if(command == "help" || command == "h")
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "peers list (pl)\t\tList all peers" << std::endl;
+			stringStream << "peers list (ls)\t\tList all peers" << std::endl;
 			stringStream << "peers reset (pr)\tUnpair a peer and reset it to factory defaults" << std::endl;
 			stringStream << "peers select (ps)\tSelect a peer" << std::endl;
+			stringStream << "peers setname (pn)\tName a peer" << std::endl;
 			stringStream << "peers unpair (pup)\tUnpair a peer" << std::endl;
 			stringStream << "peers update (pud)\tUpdates a peer to the newest firmware version" << std::endl;
 			stringStream << "search (sp)\t\tSearches for new devices on the bus" << std::endl;
@@ -291,7 +291,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			}
 			return stringStream.str();
 		}
-		else if(command.compare(0, 10, "peers list") == 0 || command.compare(0, 2, "pl") == 0)
+		else if(command.compare(0, 10, "peers list") == 0 || command.compare(0, 2, "pl") == 0 || command.compare(0, 2, "ls") == 0)
 		{
 			try
 			{
@@ -300,7 +300,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 
 				std::stringstream stream(command);
 				std::string element;
-				int32_t offset = (command.at(1) == 'l') ? 0 : 1;
+				int32_t offset = (command.at(1) == 'l' || command.at(1) == 's') ? 0 : 1;
 				int32_t index = 0;
 				while(std::getline(stream, element, ' '))
 				{
@@ -318,7 +318,11 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 						}
 						filterType = BaseLib::HelperFunctions::toLower(element);
 					}
-					else if(index == 2 + offset) filterValue = element;
+					else if(index == 2 + offset)
+					{
+						filterValue = element;
+						if(filterType == "name") BaseLib::HelperFunctions::toLower(filterValue);
+					}
 					index++;
 				}
 				if(index == -1)
@@ -335,6 +339,8 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 					stringStream << "      FILTERVALUE: The 4 byte address of the peer to filter (e. g. 001DA44D)." << std::endl;
 					stringStream << "  SERIAL: Filter by serial number." << std::endl;
 					stringStream << "      FILTERVALUE: The serial number of the peer to filter (e. g. JEQ0554309)." << std::endl;
+					stringStream << "  NAME: Filter by name." << std::endl;
+					stringStream << "      FILTERVALUE: The part of the name to search for (e. g. \"1st floor\")." << std::endl;
 					stringStream << "  TYPE: Filter by device type." << std::endl;
 					stringStream << "      FILTERVALUE: The 2 byte device type in hexadecimal format." << std::endl;
 					stringStream << "  UNREACH: List all unreachable peers." << std::endl;
@@ -350,16 +356,20 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				bool firmwareUpdates = false;
 				std::string bar(" │ ");
 				const int32_t idWidth = 8;
+				const int32_t nameWidth = 25;
 				const int32_t addressWidth = 8;
 				const int32_t serialWidth = 13;
 				const int32_t typeWidth1 = 4;
 				const int32_t typeWidth2 = 25;
 				const int32_t firmwareWidth = 8;
 				const int32_t unreachWidth = 7;
+				std::string nameHeader("Name");
+				nameHeader.resize(nameWidth, ' ');
 				std::string typeStringHeader("Type String");
 				typeStringHeader.resize(typeWidth2, ' ');
 				stringStream << std::setfill(' ')
 					<< std::setw(idWidth) << "ID" << bar
+					<< nameHeader << bar
 					<< std::setw(addressWidth) << "Address" << bar
 					<< std::setw(serialWidth) << "Serial Number" << bar
 					<< std::setw(typeWidth1) << "Type" << bar
@@ -367,9 +377,10 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 					<< std::setw(firmwareWidth) << "Firmware" << bar
 					<< std::setw(unreachWidth) << "Unreach"
 					<< std::endl;
-				stringStream << "─────────┼──────────┼───────────────┼──────┼───────────────────────────┼──────────┼────────" << std::endl;
+				stringStream << "─────────┼───────────────────────────┼──────────┼───────────────┼──────┼───────────────────────────┼──────────┼────────" << std::endl;
 				stringStream << std::setfill(' ')
 					<< std::setw(idWidth) << " " << bar
+					<< std::setw(nameWidth) << " " << bar
 					<< std::setw(addressWidth) << " " << bar
 					<< std::setw(serialWidth) << " " << bar
 					<< std::setw(typeWidth1) << " " << bar
@@ -384,6 +395,11 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 					{
 						uint64_t id = BaseLib::HelperFunctions::getNumber(filterValue, true);
 						if(i->second->getID() != id) continue;
+					}
+					else if(filterType == "name")
+					{
+						std::string name = i->second->getName();
+						if((signed)BaseLib::HelperFunctions::toLower(name).find(filterValue) == (signed)std::string::npos) continue;
 					}
 					else if(filterType == "address")
 					{
@@ -407,8 +423,14 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 						}
 					}
 
-					stringStream
-						<< std::setw(idWidth) << std::setfill(' ') << std::to_string(i->second->getID()) << bar
+					stringStream << std::setw(idWidth) << std::setfill(' ') << std::to_string(i->second->getID()) << bar;
+					std::string name = i->second->getName();
+					if(name.size() > (unsigned)nameWidth)
+					{
+						name.resize(nameWidth - 3);
+						name += "...";
+					}
+					stringStream << std::setw(nameWidth) << name << bar
 						<< std::setw(addressWidth) << BaseLib::HelperFunctions::getHexString(i->second->getAddress(), 8) << bar
 						<< std::setw(serialWidth) << i->second->getSerialNumber() << bar
 						<< std::setw(typeWidth1) << BaseLib::HelperFunctions::getHexString(i->second->getDeviceType().type(), 4) << bar;
@@ -417,8 +439,12 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 						std::shared_ptr<BaseLib::RPC::DeviceType> type = i->second->rpcDevice->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
 						std::string typeID;
 						if(type) typeID = type->id;
-						typeID.resize(typeWidth2, ' ');
-						stringStream << typeID  << bar;
+						if(typeID.size() > (unsigned)typeWidth2)
+						{
+							typeID.resize(typeWidth2 - 3);
+							typeID += "...";
+						}
+						stringStream << std::setw(typeWidth2) << typeID << bar;
 					}
 					else stringStream << std::setw(typeWidth2) << " " << bar;
 					if(i->second->getFirmwareVersion() == 0) stringStream << std::setfill(' ') << std::setw(firmwareWidth) << "?" << bar;
@@ -436,7 +462,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 					stringStream << std::endl << std::dec;
 				}
 				_peersMutex.unlock();
-				stringStream << "─────────┴──────────┴───────────────┴──────┴───────────────────────────┴──────────┴────────" << std::endl;
+				stringStream << "─────────┴───────────────────────────┴──────────┴───────────────┴──────┴───────────────────────────┴──────────┴────────" << std::endl;
 				if(firmwareUpdates) stringStream << std::endl << "*: Firmware update available." << std::endl;
 
 				return stringStream.str();
@@ -456,6 +482,54 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				_peersMutex.unlock();
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
+		}
+		else if(command.compare(0, 13, "peers setname") == 0 || command.compare(0, 2, "pn") == 0)
+		{
+			uint64_t peerID = 0;
+			std::string name;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t offset = (command.at(1) == 'n') ? 0 : 1;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 1 + offset)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1 + offset)
+				{
+					if(element == "help") break;
+					else
+					{
+						peerID = BaseLib::HelperFunctions::getNumber(element, false);
+						if(peerID == 0) return "Invalid id.\n";
+					}
+				}
+				else if(index == 2 + offset) name = element;
+				else name += ' ' + element;
+				index++;
+			}
+			if(index == 1 + offset)
+			{
+				stringStream << "Description: This command sets or changes the name of a peer to identify it more easily." << std::endl;
+				stringStream << "Usage: peers setname PEERID NAME" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  PEERID:\tThe id of the peer to set the name for. Example: 513" << std::endl;
+				stringStream << "  NAME:\tThe name to set. Example: \"1st floor light switch\"." << std::endl;
+				return stringStream.str();
+			}
+
+			if(!peerExists(peerID)) stringStream << "This peer is not paired to this central." << std::endl;
+			else
+			{
+				std::shared_ptr<HMWiredPeer> peer = getPeer(peerID);
+				peer->setName(name);
+				stringStream << "Name set to \"" << name << "\"." << std::endl;
+			}
+			return stringStream.str();
 		}
 		else if(command.compare(0, 12, "peers update") == 0 || command.compare(0, 3, "pud") == 0)
 		{

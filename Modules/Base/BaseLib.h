@@ -6,18 +6,21 @@
 #include "Encoding/XMLRPCEncoder.h"
 #include "Encoding/RPCDecoder.h"
 #include "Encoding/RPCEncoder.h"
+#include "Encoding/HTTP.h"
 #include "Managers/SerialDeviceManager.h"
 #include "Managers/FileDescriptorManager.h"
 #include "HelperFunctions/HelperFunctions.h"
 #include "Output/Output.h"
 #include "RPC/Devices.h"
 #include "Settings/Settings.h"
+#include "Sockets/HTTPClient.h"
 #include "Sockets/SocketOperations.h"
 #include "Systems/DeviceFamily.h"
 #include "Systems/Peer.h"
 #include "Systems/SystemFactory.h"
 #include "Systems/UpdateInfo.h"
 #include "Threads/Threads.h"
+#include "JSON/json/json.h"
 
 namespace BaseLib
 {

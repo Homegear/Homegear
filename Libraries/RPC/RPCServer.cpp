@@ -710,7 +710,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 		int32_t bytesRead;
 		uint32_t dataSize = 0;
 		PacketType::Enum packetType = PacketType::binaryRequest;
-		HTTP http;
+		BaseLib::HTTP http;
 
 		_out.printDebug("Listening for incoming packets from client number " + std::to_string(client->socketDescriptor->id) + ".");
 		while(!_stopServer)
@@ -771,9 +771,9 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					_out.printError("Error: Binary rpc packet with header larger than 1 KiB received.");
 					continue;
 				}
-				if(dataSize > 104857600)
+				if(dataSize > 10485760)
 				{
-					_out.printError("Error: Packet with data larger than 100 MiB received.");
+					_out.printError("Error: Packet with data larger than 10 MiB received.");
 					continue;
 				}
 				packet.reset(new std::vector<char>());
@@ -816,14 +816,14 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					http.reset();
 					http.process(buffer, bytesRead);
 				}
-				catch(HTTPException& ex)
+				catch(BaseLib::HTTPException& ex)
 				{
 					_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
 				}
 
-				if(http.getHeader()->contentLength > 104857600)
+				if(http.getHeader()->contentLength > 10485760)
 				{
-					_out.printError("Error: Packet with data larger than 100 MiB received.");
+					_out.printError("Error: Packet with data larger than 10 MiB received.");
 					continue;
 				}
 
@@ -871,15 +871,15 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					{
 						http.process(buffer, bytesRead);
 					}
-					catch(HTTPException& ex)
+					catch(BaseLib::HTTPException& ex)
 					{
 						_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
 					}
 
-					if(http.getContentSize() > 104857600)
+					if(http.getContentSize() > 10485760)
 					{
 						http.reset();
-						_out.printError("Error: Packet with data larger than 100 MiB received.");
+						_out.printError("Error: Packet with data larger than 10 MiB received.");
 					}
 				}
 			}
@@ -890,7 +890,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			}
 			if(http.isFinished())
 			{
-				packetReceived(client, http.getContent(), packetType, http.getHeader()->connection == HTTP::Connection::Enum::keepAlive);
+				packetReceived(client, http.getContent(), packetType, http.getHeader()->connection == BaseLib::HTTP::Connection::Enum::keepAlive);
 				packetLength = 0;
 				http.reset();
 			}

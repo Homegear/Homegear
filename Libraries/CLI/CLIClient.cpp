@@ -144,12 +144,13 @@ void Client::start(std::string command)
 
 		rl_bind_key('\t', rl_abort); //no autocompletion
 
+		std::string level = "";
 		std::string lastCommand;
 		std::string currentCommand;
 		char* sendBuffer;
 		char receiveBuffer[1025];
 		int32_t bytes = 0;
-		while(!command.empty() || (sendBuffer = readline("> ")) != NULL)
+		while(!command.empty() || (sendBuffer = readline((level + "> ").c_str())) != NULL)
 		{
 			if(command.empty())
 			{
@@ -213,7 +214,44 @@ void Client::start(std::string command)
 				if(bytes > 0)
 				{
 					receiveBuffer[bytes] = 0;
-					std::cout << receiveBuffer;
+					std::string response(receiveBuffer);
+					if(response.size() > 15)
+					{
+						if(response.compare(7, 6, "family") == 0)
+						{
+							if((signed)response.find("unselected") != (signed)std::string::npos)
+							{
+								level = "";
+							}
+							else if((signed)response.find("selected") != (signed)std::string::npos)
+							{
+								level = "(Family)";
+							}
+						}
+						else if(response.compare(0, 6, "Device") == 0)
+						{
+							if((signed)response.find("unselected") != (signed)std::string::npos)
+							{
+								level = "(Family)";
+							}
+							else if((signed)response.find("selected") != (signed)std::string::npos)
+							{
+								level = "(Device)";
+							}
+						}
+						else if(response.compare(0,4, "Peer") == 0)
+						{
+							if((signed)response.find("unselected") != (signed)std::string::npos)
+							{
+								level = "(Device)";
+							}
+							else if((signed)response.find("selected") != (signed)std::string::npos)
+							{
+								level = "(Peer)";
+							}
+						}
+					}
+					std::cout << response;
 					if(bytes < 1024 || (bytes == 1024 && receiveBuffer[bytes - 1] == 0))
 					{
 						if(!command.empty())

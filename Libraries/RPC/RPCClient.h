@@ -32,7 +32,6 @@
 
 #include "ClientSettings.h"
 #include "../../Modules/Base/BaseLib.h"
-#include "HTTP.h"
 #include "Auth.h"
 
 #include <iostream>

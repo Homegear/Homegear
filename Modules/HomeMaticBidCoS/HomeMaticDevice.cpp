@@ -577,8 +577,6 @@ void HomeMaticDevice::loadPeers()
 {
 	try
 	{
-		//Check for GD::devices for non unique access
-		//Change peers identifier for device to id
 		std::shared_ptr<BaseLib::Database::DataTable> rows = raiseGetPeers();
 		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{

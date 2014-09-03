@@ -1032,10 +1032,10 @@ void HM_LGW::doInit()
 		_packetIndex = 0;
 
 		int32_t i = 0;
-		while(!_stopCallbackThread && !GD::family->getCentral() && i < 30)
+		while(!_stopCallbackThread && !GD::family->getCentral() && i < 600)
 		{
 			_out.printDebug("Debug: Waiting for central to load.");
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			i++;
 		}
 		if(_stopCallbackThread) return;
