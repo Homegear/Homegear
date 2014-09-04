@@ -524,14 +524,6 @@ void InsteonHubX10::doInit()
 {
 	try
 	{
-		int32_t i = 0;
-		while(!_stopCallbackThread && !GD::family->getCentral() && i < 600)
-		{
-			_out.printDebug("Debug: Waiting for central to load.");
-			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-			i++;
-		}
-		if(_stopCallbackThread) return;
 		if(!GD::family->getCentral())
 		{
 			_stopCallbackThread = true;

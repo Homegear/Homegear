@@ -502,13 +502,6 @@ void HM_CFG_LAN::createInitCommandQueue()
 		_initComplete = false;
 		_initCommandQueue.clear();
 
-		int32_t i = 0;
-		while(!GD::family->getCentral() && i < 600)
-		{
-			_out.printDebug("Debug: Waiting for central to load.");
-			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-			i++;
-		}
 		if(!GD::family->getCentral())
 		{
 			_stopCallbackThread = true;

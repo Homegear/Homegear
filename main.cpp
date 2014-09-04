@@ -564,6 +564,12 @@ int main(int argc, char* argv[])
         GD::out.printInfo("Initializing database...");
         GD::db.convertDatabase();
         GD::db.initializeDatabase();
+        GD::out.printInfo("Initializing family controller...");
+        GD::familyController.init();
+        if(GD::deviceFamilies.empty()) exitHomegear(1);
+        GD::out.printInfo("Loading devices...");
+        GD::familyController.load(); //Don't load before database is open!
+
         GD::out.printInfo("Start listening for packets...");
         GD::physicalInterfaces.startListening();
         if(!GD::physicalInterfaces.isOpen())
@@ -571,11 +577,6 @@ int main(int argc, char* argv[])
         	GD::out.printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
         	exitHomegear(1);
         }
-        GD::out.printInfo("Initializing family controller...");
-        GD::familyController.init();
-        if(GD::deviceFamilies.empty()) exitHomegear(1);
-        GD::out.printInfo("Loading devices...");
-        GD::familyController.load(); //Don't load before database is open!
 
         GD::out.printInfo("Initializing RPC client...");
         GD::rpcClient.init();

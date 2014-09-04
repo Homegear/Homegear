@@ -363,12 +363,7 @@ std::string PhilipsHueCentral::handleCLICommand(std::string command)
 					}
 					else stringStream << std::setw(typeWidth2) << " " << bar;
 					if(i->second->getFirmwareVersion() == 0) stringStream << std::setfill(' ') << std::setw(firmwareWidth) << "?" << bar;
-					else if(i->second->firmwareUpdateAvailable())
-					{
-						stringStream << std::setfill(' ') << std::setw(firmwareWidth) << ("*" + BaseLib::HelperFunctions::getHexString(i->second->getFirmwareVersion() >> 4) + "." + BaseLib::HelperFunctions::getHexString(i->second->getFirmwareVersion() & 0x0F)) << bar;
-						firmwareUpdates = true;
-					}
-					else stringStream << std::setfill(' ') << std::setw(firmwareWidth) << (BaseLib::HelperFunctions::getHexString(i->second->getFirmwareVersion() >> 4) + "." + BaseLib::HelperFunctions::getHexString(i->second->getFirmwareVersion() & 0x0F)) << bar;
+					else stringStream << std::setfill(' ') << std::setw(firmwareWidth) << std::dec << (uint32_t)i->second->getFirmwareVersion() << bar;
 					if(i->second->serviceMessages)
 					{
 						std::string configPending(i->second->serviceMessages->getConfigPending() ? "Yes" : "No");
@@ -487,6 +482,38 @@ std::string PhilipsHueCentral::handleCLICommand(std::string command)
 				stringStream << "Peer with id " << std::hex << std::to_string(id) << " and device type 0x" << (int32_t)_currentPeer->getDeviceType().type() << " selected." << std::dec << std::endl;
 				stringStream << "For information about the peer's commands type: \"help\"" << std::endl;
 			}
+			return stringStream.str();
+		}
+		else if(command.compare(0, 6, "search") == 0 || command.compare(0, 2, "sp") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t offset = (command.at(1) == 'p') ? 0 : 1;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 1 + offset)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1 + offset)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command searches for new devices." << std::endl;
+						stringStream << "Usage: search" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			std::shared_ptr<BaseLib::RPC::RPCVariable> result = searchDevices();
+			if(result->errorStruct) stringStream << "Error: " << result->structValue->at("faultString")->stringValue << std::endl;
+			else stringStream << "Search completed successfully." << std::endl;
 			return stringStream.str();
 		}
 		else return "Unknown command.\n";

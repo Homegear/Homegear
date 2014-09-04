@@ -309,6 +309,12 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 {
 	try
 	{
+		std::string unselect = "unselect";
+		GD::familyController.handleCLICommand(unselect);
+		GD::familyController.handleCLICommand(unselect);
+		GD::familyController.handleCLICommand(unselect);
+		GD::familyController.handleCLICommand(unselect);
+
 		int32_t bufferMax = 1024;
 		char buffer[bufferMax + 1];
 		std::shared_ptr<std::vector<char>> packet(new std::vector<char>());

@@ -645,7 +645,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetAllMetadata::invoke(std::shared
 
 		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
 
-		return GD::db.getAllMetadata(peer->getID(), peer->getSerialNumber());
+		std::string peerName = peer->getName();
+		std::shared_ptr<BaseLib::RPC::RPCVariable> metadata = GD::db.getAllMetadata(peer->getID(), peer->getSerialNumber());
+		if(!peerName.empty())
+		{
+			if(metadata->structValue->find("NAME") != metadata->structValue->end()) metadata->structValue->at("NAME")->stringValue = peerName;
+			else metadata->structValue->insert(BaseLib::RPC::RPCStructElement("NAME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(peerName))));
+		}
+		return metadata;
 	}
 	catch(const std::exception& ex)
     {
@@ -2771,7 +2778,11 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetMetadata::invoke(std::shared_pt
 
 		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
 
-		if(parameters->at(1)->stringValue == "NAME") peer->setName(parameters->at(2)->stringValue);
+		if(parameters->at(1)->stringValue == "NAME")
+		{
+			peer->setName(parameters->at(2)->stringValue);
+			return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		}
 		return GD::db.setMetadata(peer->getID(), peer->getSerialNumber(), parameters->at(1)->stringValue, parameters->at(2));
 	}
 	catch(const std::exception& ex)
