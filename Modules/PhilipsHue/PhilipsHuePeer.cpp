@@ -358,7 +358,6 @@ void PhilipsHuePeer::packetReceived(std::shared_ptr<PhilipsHuePacket> packet)
 		std::shared_ptr<PhilipsHueCentral> central = std::dynamic_pointer_cast<PhilipsHueCentral>(getCentral());
 		if(!central) return;
 		setLastPacketReceived();
-		serviceMessages->endUnreach();
 		std::vector<FrameValues> frameValues;
 		getValuesFromPacket(packet, frameValues);
 		std::map<uint32_t, std::shared_ptr<std::vector<std::string>>> valueKeys;
@@ -393,11 +392,16 @@ void PhilipsHuePeer::packetReceived(std::shared_ptr<PhilipsHuePacket> packet)
 					{
 						if(parameter->rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::Enum::typeEnum)
 						{
-							serviceMessages->set(i->first, i->second.value.at(0), *j);
+							serviceMessages->set(i->first, i->second.value.at(i->second.value.size() - 1), *j);
 						}
 						else if(parameter->rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::Enum::typeBoolean)
 						{
-							serviceMessages->set(i->first, (bool)i->second.value.at(0));
+							if(parameter->rpcParameter->id == "REACHABLE")
+							{
+								bool value = !((bool)i->second.value.at(i->second.value.size() - 1));
+								serviceMessages->setUnreach(value, false);
+							}
+							else serviceMessages->set(i->first, (bool)i->second.value.at(i->second.value.size() - 1));
 						}
 					}
 

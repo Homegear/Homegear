@@ -220,7 +220,7 @@ void Peer::onSaveParameter(std::string name, uint32_t channel, std::vector<uint8
 		}
 		if(valuesCentral.at(channel).find(name) == valuesCentral.at(channel).end())
 		{
-			_bl->out.printWarning("Warning: Could not set parameter " + name + " on channel " + std::to_string(channel) + " for peer " + std::to_string(_peerID) + ". Parameter does not exist.");
+			if(_bl->debugLevel >= 5) _bl->out.printDebug("Debug: Could not set parameter " + name + " on channel " + std::to_string(channel) + " for peer " + std::to_string(_peerID) + ". Parameter does not exist.");
 			return;
 		}
 		RPCConfigurationParameter* parameter = &valuesCentral.at(channel).at(name);

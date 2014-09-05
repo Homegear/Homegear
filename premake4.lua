@@ -202,7 +202,7 @@ solution "homegear"
       files { "./Modules/PhilipsHue/PhysicalInterfaces/*.h", "./Modules/PhilipsHue/PhysicalInterfaces/*.cpp" }
       linkoptions { "-l base" }
       buildoptions { "-Wall", "-std=c++11" }
-	   
+	  
       configuration "Debug"
          defines { "DEBUG" }
          flags { "Symbols" }

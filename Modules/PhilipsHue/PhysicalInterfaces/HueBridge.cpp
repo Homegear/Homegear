@@ -82,102 +82,58 @@ void HueBridge::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		}
 		_lastAction = BaseLib::HelperFunctions::getTime();
 
-		/*if(!_initComplete)
-    	{
-    		_out.printWarning("Warning: !!!Not!!! sending (Port " + _settings->port + "), because the init sequence is not completed: " + packet->hexString());
-    		_sendMutex.unlock();
-    		return;
-    	}
+		std::shared_ptr<PhilipsHuePacket> huePacket(std::dynamic_pointer_cast<PhilipsHuePacket>(packet));
+		if(!huePacket) return;
 
-		std::shared_ptr<BidCoSPacket> bidCoSPacket(std::dynamic_pointer_cast<BidCoSPacket>(packet));
-		if(!bidCoSPacket) return;
-		if(bidCoSPacket->messageType() == 0x02 && packet->senderAddress() == _myAddress && bidCoSPacket->controlByte() == 0x80 && bidCoSPacket->payload()->size() == 1 && bidCoSPacket->payload()->at(0) == 0)
-		{
-			_out.printDebug("Debug: Ignoring ACK packet.", 6);
-			_lastPacketSent = BaseLib::HelperFunctions::getTime();
-			return;
-		}
-		if((bidCoSPacket->controlByte() & 0x01) && packet->senderAddress() == _myAddress && (bidCoSPacket->payload()->empty() || (bidCoSPacket->payload()->size() == 1 && bidCoSPacket->payload()->at(0) == 0)))
-		{
-			_out.printDebug("Debug: Ignoring wake up packet.", 6);
-			_lastPacketSent = BaseLib::HelperFunctions::getTime();
-			return;
-		}
+		std::shared_ptr<Json::Value> jsonRequest = huePacket->getJson();
+		if(!jsonRequest) return;
 
-		std::vector<char> packetBytes = bidCoSPacket->byteArraySigned();
-		//Allow sender address 0 for firmware updates
-		if(bidCoSPacket->senderAddress() != 0 && bidCoSPacket->senderAddress() != _myAddress)
+		Json::FastWriter writer;
+		std::string data = writer.write(*jsonRequest);
+    	std::string header = "PUT /api/homegear" + _settings->id + "/lights/" + std::to_string(packet->destinationAddress()) + "/state HTTP/1.1\r\nUser-Agent: Homegear\r\nHost: " + _hostname + ":" + std::to_string(_port) + "\r\nContent-Type: application/json\r\nContent-Length: " + std::to_string(data.size()) + "\r\nConnection: Keep-Alive\r\n\r\n";
+    	data.insert(data.begin(), header.begin(), header.end());
+		data.push_back('\r');
+		data.push_back('\n');
+    	std::string response;
+
+    	_client->sendRequest(data, response);
+
+    	Json::Value json;
+		if(!getJson(response, json)) return;
+
+		if(json.isMember("error"))
 		{
-			_out.printError("Error: Can't send packet, because sender address is not mine: " + _bl->hf.getHexString(packetBytes));
-			return;
-		}
-		if(!_initComplete)
-		{
-			_out.printWarning(std::string("Warning: !!!Not!!! sending packet, because init sequence is not complete: ") + _bl->hf.getHexString(packetBytes));
-			return;
+			json = json["error"];
+			if(json.isMember("description")) _out.printError("Error: " + json["description"].asString());
+			else _out.printError("Unknown error sending packet. Response was: " + response);
 		}
 
-		if(_bl->debugLevel >= 4) _out.printInfo("Info: Sending (" + _settings->id + "): " + _bl->hf.getHexString(packetBytes));
+		std::string getData = "GET /api/homegear" + _settings->id + "/lights/" + std::to_string(packet->destinationAddress()) + " HTTP/1.1\r\nUser-Agent: Homegear\r\nHost: " + _hostname + ":" + std::to_string(_port) + "\r\nConnection: Keep-Alive\r\n\r\n";
+		_client->sendRequest(getData, response);
 
-		for(int32_t j = 0; j < 40; j++)
+		if(!getJson(response, json)) return;
+		if(json.isMember("error"))
 		{
-			std::vector<uint8_t> responsePacket;
-			std::vector<char> requestPacket;
-			std::vector<char> payload{ 1, 2, 0, 0 };
-			payload.insert(payload.end(), packetBytes.begin() + 1, packetBytes.end());
-			buildPacket(requestPacket, payload);
-			_packetIndex++;
-			getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
-			if(responsePacket.size() == 9  && responsePacket.at(6) == 8)
+			json = json["error"];
+			if(json.isMember("type") && json["type"].asInt() == 1)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(50));
-				//Resend
-				continue;
+				createUser();
 			}
-			else if(responsePacket.size() >= 9  && responsePacket.at(6) != 4)
+			else
 			{
-				//I assume byte 7 with i. e. 0x02 is the message type
-				if(responsePacket.at(6) == 0x0D)
-				{
-					//0x0D is returned, when there is no response to the A003 packet and if the 8002
-					//packet doesn't match
-					//Example: FD000501BC040D025E14
-					_out.printWarning("Warning: AES handshake failed for packet: " + _bl->hf.getHexString(packetBytes));
-					return;
-				}
-				else if(responsePacket.at(6) == 0x03)
-				{
-					//Example: FD001001B3040302391A8002282BE6FD26EF00C54D
-					_out.printDebug("Debug: Packet was sent successfully: " + _bl->hf.getHexString(packetBytes));
-				}
-				else if(responsePacket.at(6) == 0x0C)
-				{
-					//Example: FD00140168040C0228128002282BE6FD26EF00938ABE1C163D
-					_out.printDebug("Debug: Packet was sent successfully and AES handshake was successful: " + _bl->hf.getHexString(packetBytes));
-				}
-				if(responsePacket.size() == 9)
-				{
-					_out.printDebug("Debug: Packet was sent successfully: " + _bl->hf.getHexString(packetBytes));
-					break;
-				}
-				parsePacket(responsePacket);
-				break;
+				if(json.isMember("description")) _out.printError("Error: " + json["description"].asString());
+				else _out.printError("Unknown error during polling. Response was: " + response);
 			}
-			else if(responsePacket.size() == 9  && responsePacket.at(6) == 4)
-			{
-				//The gateway tries to send the packet three times, when there is no response
-				//NACK (0404) is returned
-				//NACK is sometimes also returned when the AES handshake wasn't successful (i. e.
-				//the handshake after sending a wake up packet)
-				_out.printInfo("Info: No answer to packet " + _bl->hf.getHexString(packetBytes));
-				return;
-			}
-			if(j == 2)
-			{
-				_out.printInfo("Info: No response from HM-LGW to packet " + _bl->hf.getHexString(packetBytes));
-				return;
-			}
-		}*/
+			return;
+		}
+
+		if(json.isMember("state"))
+		{
+			std::shared_ptr<Json::Value> packetJson(new Json::Value());
+			*packetJson = json;
+			std::shared_ptr<PhilipsHuePacket> packet(new PhilipsHuePacket(huePacket->destinationAddress(), 0, 1, packetJson, BaseLib::HelperFunctions::getTime()));
+			raisePacketReceived(packet);
+		}
 
 		_lastPacketSent = BaseLib::HelperFunctions::getTime();
 	}
