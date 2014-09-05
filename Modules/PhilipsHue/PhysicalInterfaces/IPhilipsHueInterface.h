@@ -41,6 +41,7 @@ public:
 	IPhilipsHueInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
 	virtual ~IPhilipsHueInterface();
 
+	virtual void searchLights() = 0;
 	virtual std::vector<std::shared_ptr<PhilipsHuePacket>> getPeerInfo() = 0;
 protected:
 	BaseLib::Output _out;

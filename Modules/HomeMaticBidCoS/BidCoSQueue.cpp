@@ -143,41 +143,41 @@ void BidCoSQueue::unserialize(std::shared_ptr<std::vector<char>> serializedData,
 	{
 		BaseLib::BinaryDecoder decoder(GD::bl);
 		_queueMutex.lock();
-		_queueType = (BidCoSQueueType)decoder.decodeByte(serializedData, position);
-		uint32_t queueSize = decoder.decodeInteger(serializedData, position);
+		_queueType = (BidCoSQueueType)decoder.decodeByte(*serializedData, position);
+		uint32_t queueSize = decoder.decodeInteger(*serializedData, position);
 		for(uint32_t i = 0; i < queueSize; i++)
 		{
 			_queue.push_back(BidCoSQueueEntry());
 			BidCoSQueueEntry* entry = &_queue.back();
-			entry->setType((QueueEntryType)decoder.decodeByte(serializedData, position));
-			entry->stealthy = decoder.decodeBoolean(serializedData, position);
-			entry->forceResend = decoder.decodeBoolean(serializedData, position);
-			int32_t packetExists = decoder.decodeBoolean(serializedData, position);
+			entry->setType((QueueEntryType)decoder.decodeByte(*serializedData, position));
+			entry->stealthy = decoder.decodeBoolean(*serializedData, position);
+			entry->forceResend = decoder.decodeBoolean(*serializedData, position);
+			int32_t packetExists = decoder.decodeBoolean(*serializedData, position);
 			if(packetExists)
 			{
 				std::vector<uint8_t> packetData;
-				uint32_t dataSize = decoder.decodeByte(serializedData, position);
+				uint32_t dataSize = decoder.decodeByte(*serializedData, position);
 				if(position + dataSize <= serializedData->size()) packetData.insert(packetData.end(), serializedData->begin() + position, serializedData->begin() + position + dataSize);
 				position += dataSize;
 				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(packetData, false));
 				entry->setPacket(packet, false);
 			}
-			int32_t messageExists = decoder.decodeBoolean(serializedData, position);
+			int32_t messageExists = decoder.decodeBoolean(*serializedData, position);
 			if(messageExists)
 			{
-				int32_t direction = decoder.decodeByte(serializedData, position);
-				int32_t messageType = decoder.decodeByte(serializedData, position);
-				uint32_t subtypeSize = decoder.decodeByte(serializedData, position);
+				int32_t direction = decoder.decodeByte(*serializedData, position);
+				int32_t messageType = decoder.decodeByte(*serializedData, position);
+				uint32_t subtypeSize = decoder.decodeByte(*serializedData, position);
 				std::vector<std::pair<uint32_t, int32_t>> subtypes;
 				for(uint32_t j = 0; j < subtypeSize; j++)
 				{
-					subtypes.push_back(std::pair<uint32_t, int32_t>(decoder.decodeByte(serializedData, position), decoder.decodeByte(serializedData, position)));
+					subtypes.push_back(std::pair<uint32_t, int32_t>(decoder.decodeByte(*serializedData, position), decoder.decodeByte(*serializedData, position)));
 				}
 				entry->setMessage(device->getMessages()->find(direction, messageType, subtypes), false);
 			}
-			parameterName = decoder.decodeString(serializedData, position);
-			channel = decoder.decodeInteger(serializedData, position);
-			std::string physicalInterfaceID = decoder.decodeString(serializedData, position);
+			parameterName = decoder.decodeString(*serializedData, position);
+			channel = decoder.decodeInteger(*serializedData, position);
+			std::string physicalInterfaceID = decoder.decodeString(*serializedData, position);
 			if(GD::physicalInterfaces.find(physicalInterfaceID) != GD::physicalInterfaces.end()) _physicalInterface = GD::physicalInterfaces.at(physicalInterfaceID);
 			else _physicalInterface = GD::defaultPhysicalInterface;
 		}

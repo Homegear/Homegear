@@ -34,8 +34,75 @@ namespace BaseLib
 {
 namespace RPC
 {
+RPCVariable::RPCVariable(const Json::Value& json) : RPCVariable()
+{
+	parseJson(json);
+}
+
+RPCVariable::RPCVariable(const std::shared_ptr<Json::Value> json) : RPCVariable()
+{
+	parseJson(*json);
+}
+
 RPCVariable::~RPCVariable()
 {
+}
+
+void RPCVariable::parseJson(const Json::Value& json)
+{
+	switch(json.type())
+	{
+	case Json::ValueType::booleanValue:
+		type = RPCVariableType::rpcBoolean;
+		booleanValue = json.asBool();
+		break;
+	case Json::ValueType::intValue:
+		type = RPCVariableType::rpcInteger;
+		integerValue = json.asInt();
+		break;
+	case Json::ValueType::nullValue:
+		type = RPCVariableType::rpcVoid;
+		break;
+	case Json::ValueType::realValue:
+		type = RPCVariableType::rpcFloat;
+		floatValue = json.asDouble();
+		break;
+	case Json::ValueType::stringValue:
+		type = RPCVariableType::rpcString;
+		stringValue = json.asString();
+		break;
+	case Json::ValueType::uintValue:
+		type = RPCVariableType::rpcInteger;
+		integerValue = json.asInt();
+		break;
+	case Json::ValueType::arrayValue:
+		parseJsonArray(json);
+		break;
+	case Json::ValueType::objectValue:
+		parseJsonObject(json);
+		break;
+	}
+}
+
+void RPCVariable::parseJsonArray(const Json::Value& json)
+{
+	type = RPCVariableType::rpcArray;
+	if(!json) return;
+	for(Json::ValueIterator i = json.begin(); i != json.end(); ++i)
+	{
+		arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(*i)));
+	}
+}
+
+void RPCVariable::parseJsonObject(const Json::Value& json)
+{
+	type = RPCVariableType::rpcStruct;
+	if(!json) return;
+	std::vector<std::string> memberNames = json.getMemberNames();
+	for(std::vector<std::string>::iterator i = memberNames.begin(); i != memberNames.end(); ++i)
+	{
+		structValue->insert(RPCStructElement(*i, std::shared_ptr<RPCVariable>(new RPCVariable(json[*i]))));
+	}
 }
 
 std::shared_ptr<RPCVariable> RPCVariable::createError(int32_t faultCode, std::string faultString)
@@ -287,8 +354,8 @@ std::string RPCVariable::getTypeString(RPCVariableType type)
 		return "base64";
 	case RPCVariableType::rpcBoolean:
 		return "boolean";
-	case RPCVariableType::rpcDate:
-		return "dateTime.iso8601";
+	//case RPCVariableType::rpcDate:
+	//	return "dateTime.iso8601";
 	case RPCVariableType::rpcFloat:
 		return "double";
 	case RPCVariableType::rpcInteger:
@@ -303,6 +370,50 @@ std::string RPCVariable::getTypeString(RPCVariableType type)
 		return "valuetype";
 	}
 	return "string";
+}
+
+std::shared_ptr<Json::Value> RPCVariable::toJson()
+{
+	std::shared_ptr<Json::Value> json;
+	switch(type)
+	{
+	case RPCVariableType::rpcArray:
+		json.reset(new Json::Value(Json::ValueType::arrayValue));
+		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = arrayValue->begin(); i != arrayValue->end(); ++i)
+		{
+			json->append(*(*i)->toJson());
+		}
+		break;
+	case RPCVariableType::rpcStruct:
+		json.reset(new Json::Value(Json::ValueType::objectValue));
+		for(std::map<std::string, std::shared_ptr<RPCVariable>>::iterator i = structValue->begin(); i != structValue->end(); ++i)
+		{
+			json->operator [](i->first) = *i->second->toJson();
+		}
+		break;
+	case RPCVariableType::rpcBase64:
+		json.reset(new Json::Value(stringValue));
+		break;
+	case RPCVariableType::rpcString:
+		json.reset(new Json::Value(stringValue));
+		break;
+	case RPCVariableType::rpcBoolean:
+		json.reset(new Json::Value(booleanValue));
+		break;
+	case RPCVariableType::rpcFloat:
+		json.reset(new Json::Value(floatValue));
+		break;
+	case RPCVariableType::rpcInteger:
+		json.reset(new Json::Value(integerValue));
+		break;
+	case RPCVariableType::rpcVoid:
+		json.reset(new Json::Value(Json::ValueType::nullValue));
+		break;
+	case RPCVariableType::rpcVariant:
+		json.reset(new Json::Value(Json::ValueType::nullValue));
+		break;
+	}
+	return json;
 }
 
 }

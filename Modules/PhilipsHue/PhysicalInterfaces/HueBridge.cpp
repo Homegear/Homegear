@@ -259,7 +259,7 @@ void HueBridge::createUser()
     	_client->sendRequest(data, response);
 
     	Json::Value json;
-		if(!getJson(response, json)) return;;
+		if(!getJson(response, json)) return;
 
 		if(json.isMember("error"))
 		{
@@ -271,6 +271,39 @@ void HueBridge::createUser()
 				if(json.isMember("description")) _out.printError("Error: " + json["description"].asString());
 				else _out.printError("Unknown error during user creation. Response was: " + response);
 			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HueBridge::searchLights()
+{
+	try
+    {
+    	std::string header = "POST /api/homegear" + _settings->id + "/lights HTTP/1.1\r\nUser-Agent: Homegear\r\nHost: " + _hostname + ":" + std::to_string(_port) + "\r\nContent-Type: application/json\r\nContent-Length: 0\r\nConnection: Keep-Alive\r\n\r\n";
+    	std::string response;
+
+    	_client->sendRequest(header, response);
+
+    	Json::Value json;
+		if(!getJson(response, json)) return;
+
+		if(json.isMember("error"))
+		{
+			json = json["error"];
+			if(json.isMember("description")) _out.printError("Error: " + json["description"].asString());
+			else _out.printError("Unknown error during user creation. Response was: " + response);
 		}
 	}
 	catch(const std::exception& ex)
@@ -314,7 +347,7 @@ std::vector<std::shared_ptr<PhilipsHuePacket>> HueBridge::getPeerInfo()
 			{
 				std::shared_ptr<Json::Value> packetJson(new Json::Value());
 				*packetJson = json[*i];
-				std::shared_ptr<PhilipsHuePacket> packet(new PhilipsHuePacket(BaseLib::HelperFunctions::getNumber(*i), packetJson, BaseLib::HelperFunctions::getTime()));
+				std::shared_ptr<PhilipsHuePacket> packet(new PhilipsHuePacket(BaseLib::HelperFunctions::getNumber(*i), 0, 1, packetJson, BaseLib::HelperFunctions::getTime()));
 				peers.push_back(packet);
 			}
 		}
@@ -384,7 +417,7 @@ void HueBridge::listen()
         {
 			try
 			{
-				for(int32_t i = 0; i < 15; i++)
+				for(int32_t i = 0; i < 60; i++)
 				{
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					if(_stopCallbackThread) return;
@@ -424,7 +457,7 @@ void HueBridge::listen()
 				{
 					std::shared_ptr<Json::Value> packetJson(new Json::Value());
 					*packetJson = json[*i];
-					std::shared_ptr<PhilipsHuePacket> packet(new PhilipsHuePacket(BaseLib::HelperFunctions::getNumber(*i), packetJson, BaseLib::HelperFunctions::getTime()));
+					std::shared_ptr<PhilipsHuePacket> packet(new PhilipsHuePacket(BaseLib::HelperFunctions::getNumber(*i), 0, 1, packetJson, BaseLib::HelperFunctions::getTime()));
 					raisePacketReceived(packet);
 				}
 			}

@@ -40,12 +40,12 @@ XMLRPCDecoder::XMLRPCDecoder(BaseLib::Obj* baseLib)
 	_bl = baseLib;
 }
 
-std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> XMLRPCDecoder::decodeRequest(std::shared_ptr<std::vector<char>> packet, std::string& methodName)
+std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> XMLRPCDecoder::decodeRequest(std::vector<char>& packet, std::string& methodName)
 {
 	xml_document<> doc;
 	try
 	{
-		doc.parse<0>(&packet->at(0));
+		doc.parse<0>(&packet.at(0));
 		xml_node<>* node = doc.first_node();
 		if(node == nullptr || std::string(doc.first_node()->name()) != "methodCall")
 		{
@@ -108,7 +108,7 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(std::string& packet)
 	xml_document<> doc;
 	try
 	{
-		doc.parse<0>((char*)packet.c_str());
+		doc.parse<0>(&packet.at(0));
 		std::shared_ptr<RPCVariable> response = decodeResponse(&doc);
 		doc.clear();
 		return response;
@@ -133,26 +133,25 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(std::string& packet)
     return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed."));
 }
 
-std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(std::shared_ptr<std::vector<char>> packet)
+std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(std::vector<char>& packet)
 {
 	xml_document<> doc;
 	try
 	{
-		if(!packet) return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32500, "packet is nullptr."));
 		int32_t startPos = 0;
-		if(packet->front() != '<')
+		if(packet.front() != '<')
 		{
-			for(int32_t i = 0; i < (signed)packet->size(); i++)
+			for(int32_t i = 0; i < (signed)packet.size(); i++)
 			{
-				if(packet->operator [](i) == '<')
+				if(packet[i] == '<')
 				{
 					startPos = i;
 					break;
 				}
 			}
 		}
-		if(startPos >= (signed)packet->size()) return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: Could not find \"<\"."));
-		doc.parse<0>(&packet->at(startPos));
+		if(startPos >= (signed)packet.size()) return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: Could not find \"<\"."));
+		doc.parse<0>(&packet.at(startPos));
 		std::shared_ptr<RPCVariable> response = decodeResponse(&doc);
 		doc.clear();
 		return response;

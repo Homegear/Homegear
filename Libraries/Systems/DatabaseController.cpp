@@ -305,7 +305,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getAllMetadata(ui
 		for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
 		{
 			if(i->second.size() < 2) continue;
-			std::shared_ptr<BaseLib::RPC::RPCVariable> metadata = _rpcDecoder->decodeResponse(i->second.at(1)->binaryValue);
+			std::shared_ptr<BaseLib::RPC::RPCVariable> metadata = _rpcDecoder->decodeResponse(*i->second.at(1)->binaryValue);
 			metadataStruct->structValue->insert(BaseLib::RPC::RPCStructElement(i->second.at(0)->textValue, metadata));
 			//TODO: Delete this compatibility block in version 0.6.0
 			if(idIsSerial)
@@ -356,7 +356,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getMetadata(uint6
 			if(rows->empty() || rows->at(0).empty()) return BaseLib::RPC::RPCVariable::createError(-1, "No metadata found.");
 		}
 
-		std::shared_ptr<BaseLib::RPC::RPCVariable> metadata = _rpcDecoder->decodeResponse(rows->at(0).at(0)->binaryValue);
+		std::shared_ptr<BaseLib::RPC::RPCVariable> metadata = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
 		return metadata;
 	}
 	catch(const std::exception& ex)
@@ -399,12 +399,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::setMetadata(uint6
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(dataID)));
 		db.executeCommand("DELETE FROM metadata WHERE objectID=? AND dataID=?", data);
 
-		std::shared_ptr<std::vector<char>> value = _rpcEncoder->encodeResponse(metadata);
-		if(!value)
-		{
-			return BaseLib::RPC::RPCVariable::createError(-32700, "Could not encode data.");
-		}
-		if(value->size() > 1000)
+		std::vector<char> value;
+		_rpcEncoder->encodeResponse(metadata, value);
+		if(value.size() > 1000)
 		{
 			return BaseLib::RPC::RPCVariable::createError(-32602, "Data is larger than 1000 bytes.");
 		}
@@ -493,7 +490,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getAllSystemVaria
 		for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
 		{
 			if(i->second.size() < 2) continue;
-			std::shared_ptr<BaseLib::RPC::RPCVariable> value = _rpcDecoder->decodeResponse(i->second.at(1)->binaryValue);
+			std::shared_ptr<BaseLib::RPC::RPCVariable> value = _rpcDecoder->decodeResponse(*i->second.at(1)->binaryValue);
 			systemVariableStruct->structValue->insert(BaseLib::RPC::RPCStructElement(i->second.at(0)->textValue, value));
 		}
 
@@ -529,7 +526,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getSystemVariable
 			return BaseLib::RPC::RPCVariable::createError(-1, "System variable not found.");
 		}
 
-		std::shared_ptr<BaseLib::RPC::RPCVariable> value = _rpcDecoder->decodeResponse(rows->at(0).at(0)->binaryValue);
+		std::shared_ptr<BaseLib::RPC::RPCVariable> value = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
 		return value;
 	}
 	catch(const std::exception& ex)
@@ -571,12 +568,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::setSystemVariable
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableID)));
 		db.executeCommand("DELETE FROM systemVariables WHERE variableID=?", data);
 
-		std::shared_ptr<std::vector<char>> encodedValue = _rpcEncoder->encodeResponse(value);
-		if(!encodedValue)
-		{
-			return BaseLib::RPC::RPCVariable::createError(-32700, "Could not encode data.");
-		}
-		if(encodedValue->size() > 1000)
+		std::vector<char> encodedValue;
+		_rpcEncoder->encodeResponse(value, encodedValue);
+		if(encodedValue.size() > 1000)
 		{
 			return BaseLib::RPC::RPCVariable::createError(-32602, "Data is larger than 1000 bytes.");
 		}

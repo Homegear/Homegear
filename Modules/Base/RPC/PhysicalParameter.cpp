@@ -187,12 +187,12 @@ PhysicalParameter::PhysicalParameter(BaseLib::Obj* baseLib, xml_node<>* node) : 
 				if(!attr) continue;
 				std::shared_ptr<PhysicalParameterEvent> event(new PhysicalParameterEvent());
 				event->frame = std::string(attr->value());
-				if(type == Type::Enum::typeInteger)
+				for(xml_node<>* eventNode = physicalNode->first_node(); eventNode; eventNode = eventNode->next_sibling())
 				{
-					for(xml_node<>* eventNode = physicalNode->first_node(); eventNode; eventNode = eventNode->next_sibling())
+					std::string eventNodeName(eventNode->name());
+					if(eventNodeName == "domino_event")
 					{
-						std::string eventNodeName(eventNode->name());
-						if(eventNodeName == "domino_event")
+						if(type == Type::Enum::typeInteger)
 						{
 							xml_attribute<>* attr1 = eventNode->first_attribute("value");
 							xml_attribute<>* attr2 = eventNode->first_attribute("delay_id");
@@ -202,10 +202,10 @@ PhysicalParameter::PhysicalParameter(BaseLib::Obj* baseLib, xml_node<>* node) : 
 							event->dominoEventValue = baseLib->hf.getNumber(eventValue);
 							event->dominoEventDelayID = std::string(attr2->value());
 						}
-						else baseLib->out.printWarning("Warning: Unknown node for \"physical\\event\": " + eventNodeName);
+						else baseLib->out.printWarning("Warning: domino_event is only supported for physical type integer.");
 					}
+					else baseLib->out.printWarning("Warning: Unknown node for \"physical\\event\": " + eventNodeName);
 				}
-				else baseLib->out.printWarning("Warning: domino_event is only supported for physical type integer.");
 				eventFrames.push_back(event);
 			}
 			else if(nodeName == "setEx")

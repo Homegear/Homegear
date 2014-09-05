@@ -30,6 +30,8 @@
 #ifndef RPCVARIABLE_H_
 #define RPCVARIABLE_H_
 
+#include "../JSON/json/json.h"
+
 #include <vector>
 #include <string>
 #include <memory>
@@ -50,7 +52,7 @@ enum class RPCVariableType
 	rpcFloat = 0x04,
 	rpcArray = 0x100,
 	rpcStruct = 0x101,
-	rpcDate = 0x10,
+	//rpcDate = 0x10,
 	rpcBase64 = 0x11,
 	rpcVariant = 0x1111
 };
@@ -67,13 +69,15 @@ public:
 	std::shared_ptr<std::map<std::string, std::shared_ptr<RPCVariable>>> structValue;
 
 	RPCVariable() { type = RPCVariableType::rpcVoid; arrayValue = std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>(new std::vector<std::shared_ptr<RPCVariable>>()); structValue = std::shared_ptr<std::map<std::string, std::shared_ptr<RPCVariable>>>(new std::map<std::string, std::shared_ptr<RPCVariable>>()); }
-	RPCVariable(RPCVariableType variableType) : RPCVariable() { type = variableType; }
+	RPCVariable(RPCVariableType variableType) : RPCVariable() { type = variableType; if(type == RPCVariableType::rpcVariant) type = RPCVariableType::rpcVoid; }
 	RPCVariable(uint8_t integer) : RPCVariable() { type = RPCVariableType::rpcInteger; integerValue = (int32_t)integer; }
 	RPCVariable(int32_t integer) : RPCVariable() { type = RPCVariableType::rpcInteger; integerValue = integer; }
 	RPCVariable(uint32_t integer) : RPCVariable() { type = RPCVariableType::rpcInteger; integerValue = (int32_t)integer; }
 	RPCVariable(std::string string) : RPCVariable() { type = RPCVariableType::rpcString; stringValue = string; }
 	RPCVariable(bool boolean) : RPCVariable() { type = RPCVariableType::rpcBoolean; booleanValue = boolean; }
 	RPCVariable(double floatVal) : RPCVariable() { type = RPCVariableType::rpcFloat; floatValue = floatVal; }
+	RPCVariable(const std::shared_ptr<Json::Value> json);
+	RPCVariable(const Json::Value& json);
 	virtual ~RPCVariable();
 	static std::shared_ptr<RPCVariable> createError(int32_t faultCode, std::string faultString);
 	void print();
@@ -85,10 +89,16 @@ public:
 	bool operator>(const RPCVariable& rhs);
 	bool operator>=(const RPCVariable& rhs);
 	bool operator!=(const RPCVariable& rhs);
+
+	std::shared_ptr<Json::Value> toJson();
 private:
 	void print(std::shared_ptr<RPCVariable>, std::string indent);
 	void printStruct(std::shared_ptr<std::map<std::string, std::shared_ptr<RPCVariable>>> rpcStruct, std::string indent);
 	void printArray(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> rpcArray, std::string indent);
+
+	void parseJson(const Json::Value& json);
+	void parseJsonObject(const Json::Value& json);
+	void parseJsonArray(const Json::Value& json);
 };
 
 typedef std::pair<std::string, std::shared_ptr<RPCVariable>> RPCStructElement;

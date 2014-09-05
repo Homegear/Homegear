@@ -212,12 +212,12 @@ void HM_SD::unserializeFilters(std::shared_ptr<std::vector<char>> serializedData
 	{
 		BaseLib::BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
-		uint32_t filtersSize = decoder.decodeInteger(serializedData, position);
+		uint32_t filtersSize = decoder.decodeInteger(*serializedData, position);
 		for(uint32_t i = 0; i < filtersSize; i++)
 		{
 			HM_SD_Filter filter;
-			filter.filterType = (FilterType)decoder.decodeByte(serializedData, position);
-			filter.filterValue = decoder.decodeInteger(serializedData, position);
+			filter.filterType = (FilterType)decoder.decodeByte(*serializedData, position);
+			filter.filterValue = decoder.decodeInteger(*serializedData, position);
 			_filters.push_back(filter);
 		}
 	}
@@ -268,13 +268,13 @@ void HM_SD::unserializeResponsesToOverwrite(std::shared_ptr<std::vector<char>> s
 	{
 		BaseLib::BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
-		uint32_t responsesToOverwriteSize = decoder.decodeInteger(serializedData, position);
+		uint32_t responsesToOverwriteSize = decoder.decodeInteger(*serializedData, position);
 		for(uint32_t i = 0; i < responsesToOverwriteSize; i++)
 		{
 			HM_SD_OverwriteResponse responseToOverwrite;
-			responseToOverwrite.packetPartToCapture = decoder.decodeString(serializedData, position);
-			responseToOverwrite.response = decoder.decodeString(serializedData, position);
-			responseToOverwrite.sendAfter = decoder.decodeInteger(serializedData, position);
+			responseToOverwrite.packetPartToCapture = decoder.decodeString(*serializedData, position);
+			responseToOverwrite.response = decoder.decodeString(*serializedData, position);
+			responseToOverwrite.sendAfter = decoder.decodeInteger(*serializedData, position);
 			_responsesToOverwrite.push_back(responseToOverwrite);
 		}
 	}

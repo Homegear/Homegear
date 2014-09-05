@@ -334,7 +334,9 @@ LogicalParameterAction::LogicalParameterAction(BaseLib::Obj* baseLib, xml_node<>
 		for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 		{
 			std::string attributeName(attr->name());
-			if(attributeName != "type") _bl->out.printWarning("Warning: Unknown attribute for \"logical\" with type boolean: " + attributeName);
+			std::string attributeValue(attr->value());
+			if(attributeName == "unit") unit = attributeValue;
+			else if(attributeName != "type") _bl->out.printWarning("Warning: Unknown attribute for \"logical\" with type boolean: " + attributeName);
 		}
 	}
     catch(const std::exception& ex)

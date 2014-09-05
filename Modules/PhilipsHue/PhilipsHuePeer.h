@@ -42,6 +42,22 @@ namespace PhilipsHue
 class PhilipsHueCentral;
 class PhilipsHueDevice;
 
+class FrameValue
+{
+public:
+	std::list<uint32_t> channels;
+	std::vector<uint8_t> value;
+};
+
+class FrameValues
+{
+public:
+	std::string frameID;
+	std::list<uint32_t> paramsetChannels;
+	BaseLib::RPC::ParameterSet::Type::Enum parameterSetType;
+	std::map<std::string, FrameValue> values;
+};
+
 class PhilipsHuePeer : public BaseLib::Systems::Peer
 {
 public:
@@ -68,14 +84,38 @@ public:
 	void packetReceived(std::shared_ptr<PhilipsHuePacket> packet);
 
 	//RPC methods
+	/**
+	 * {@inheritDoc}
+	 */
+    virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceInfo(std::map<std::string, bool> fields);
+
+    /**
+	 * {@inheritDoc}
+	 */
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
+
+	/**
+	 * {@inheritDoc}
+	 */
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
+
+	/**
+	 * {@inheritDoc}
+	 */
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool onlyPushing = false);
+
+	/**
+	 * {@inheritDoc}
+	 */
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
 	//End RPC methods
 protected:
+	std::shared_ptr<BaseLib::RPC::RPCEncoder> _binaryEncoder;
+	std::shared_ptr<BaseLib::RPC::RPCDecoder> _binaryDecoder;
+
 	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 	virtual std::shared_ptr<BaseLib::Systems::LogicalDevice> getDevice(int32_t address);
+	void getValuesFromPacket(std::shared_ptr<PhilipsHuePacket> packet, std::vector<FrameValues>& frameValue);
 
 	virtual std::shared_ptr<BaseLib::RPC::ParameterSet> getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type);
 };

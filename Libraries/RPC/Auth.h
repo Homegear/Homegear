@@ -64,8 +64,8 @@ protected:
 	std::string _hostname;
 	std::shared_ptr<BaseLib::SocketOperations> _socket;
 	std::string _basicAuthHTTPHeader;
-	std::shared_ptr<std::vector<char>> _basicUnauthBinaryHeader;
-	std::shared_ptr<std::vector<char>> _basicUnauthHTTPHeader;
+	std::vector<char> _basicUnauthBinaryHeader;
+	std::vector<char> _basicUnauthHTTPHeader;
 	std::vector<std::string> _validUsers;
 	std::string _userName;
 	std::string _password;
@@ -76,5 +76,5 @@ protected:
 	void sendBasicUnauthorized(bool binary);
 };
 
-} /* namespace RPC */
-#endif /* AUTH_H_ */
+}
+#endif

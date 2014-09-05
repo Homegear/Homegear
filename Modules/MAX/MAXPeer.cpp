@@ -129,66 +129,6 @@ MAXPeer::~MAXPeer()
 	dispose();
 }
 
-void MAXPeer::initializeCentralConfig()
-{
-	try
-	{
-		if(!rpcDevice)
-		{
-			GD::out.printWarning("Warning: Tried to initialize peer's central config without rpcDevice being set.");
-			return;
-		}
-		raiseCreateSavepoint("maxPeerConfig" + std::to_string(_peerID));
-		BaseLib::Systems::RPCConfigurationParameter parameter;
-		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
-		{
-			if(i->second->parameterSets.find(BaseLib::RPC::ParameterSet::Type::master) != i->second->parameterSets.end() && i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::master])
-			{
-				std::shared_ptr<BaseLib::RPC::ParameterSet> masterSet = i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::master];
-				for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator j = masterSet->parameters.begin(); j != masterSet->parameters.end(); ++j)
-				{
-					if(!(*j)->id.empty() && configCentral[i->first].find((*j)->id) == configCentral[i->first].end())
-					{
-						parameter = BaseLib::Systems::RPCConfigurationParameter();
-						parameter.rpcParameter = *j;
-						parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
-						configCentral[i->first][(*j)->id] = parameter;
-						saveParameter(0, BaseLib::RPC::ParameterSet::Type::master, i->first, (*j)->id, parameter.data);
-					}
-				}
-			}
-			if(i->second->parameterSets.find(BaseLib::RPC::ParameterSet::Type::values) != i->second->parameterSets.end() && i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::values])
-			{
-				std::shared_ptr<BaseLib::RPC::ParameterSet> valueSet = i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::values];
-				for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator j = valueSet->parameters.begin(); j != valueSet->parameters.end(); ++j)
-				{
-					if(!(*j)->id.empty() && valuesCentral[i->first].find((*j)->id) == valuesCentral[i->first].end())
-					{
-						parameter = BaseLib::Systems::RPCConfigurationParameter();
-						parameter.rpcParameter = *j;
-						parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
-						valuesCentral[i->first][(*j)->id] = parameter;
-						saveParameter(0, BaseLib::RPC::ParameterSet::Type::values, i->first, (*j)->id, parameter.data);
-					}
-				}
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    raiseReleaseSavepoint("maxPeerConfig" + std::to_string(_peerID));
-}
-
 void MAXPeer::worker()
 {
 	if(!_centralFeatures || _disposing) return;
@@ -518,6 +458,10 @@ bool MAXPeer::load(BaseLib::Systems::LogicalDevice* device)
 		std::string entry;
 		loadConfig();
 		initializeCentralConfig();
+
+		serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_bl, _peerID, _serialNumber, this));
+		serviceMessages->load();
+
 		return true;
 	}
 	catch(const std::exception& ex)
@@ -651,24 +595,24 @@ void MAXPeer::unserializePeers(std::shared_ptr<std::vector<char>> serializedData
 	{
 		BaseLib::BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
-		uint32_t peersSize = decoder.decodeInteger(serializedData, position);
+		uint32_t peersSize = decoder.decodeInteger(*serializedData, position);
 		for(uint32_t i = 0; i < peersSize; i++)
 		{
-			uint32_t channel = decoder.decodeInteger(serializedData, position);
-			uint32_t peerCount = decoder.decodeInteger(serializedData, position);
+			uint32_t channel = decoder.decodeInteger(*serializedData, position);
+			uint32_t peerCount = decoder.decodeInteger(*serializedData, position);
 			for(uint32_t j = 0; j < peerCount; j++)
 			{
 				std::shared_ptr<BaseLib::Systems::BasicPeer> basicPeer(new BaseLib::Systems::BasicPeer());
-				basicPeer->isSender = decoder.decodeBoolean(serializedData, position);
-				basicPeer->id = decoder.decodeInteger(serializedData, position);
-				basicPeer->address = decoder.decodeInteger(serializedData, position);
-				basicPeer->channel = decoder.decodeInteger(serializedData, position);
-				basicPeer->serialNumber = decoder.decodeString(serializedData, position);
-				basicPeer->hidden = decoder.decodeBoolean(serializedData, position);
+				basicPeer->isSender = decoder.decodeBoolean(*serializedData, position);
+				basicPeer->id = decoder.decodeInteger(*serializedData, position);
+				basicPeer->address = decoder.decodeInteger(*serializedData, position);
+				basicPeer->channel = decoder.decodeInteger(*serializedData, position);
+				basicPeer->serialNumber = decoder.decodeString(*serializedData, position);
+				basicPeer->hidden = decoder.decodeBoolean(*serializedData, position);
 				_peers[channel].push_back(basicPeer);
-				basicPeer->linkName = decoder.decodeString(serializedData, position);
-				basicPeer->linkDescription = decoder.decodeString(serializedData, position);
-				uint32_t dataSize = decoder.decodeInteger(serializedData, position);
+				basicPeer->linkName = decoder.decodeString(*serializedData, position);
+				basicPeer->linkDescription = decoder.decodeString(*serializedData, position);
+				uint32_t dataSize = decoder.decodeInteger(*serializedData, position);
 				if(position + dataSize <= serializedData->size()) basicPeer->data.insert(basicPeer->data.end(), serializedData->begin() + position, serializedData->begin() + position + dataSize);
 				position += dataSize;
 			}
@@ -1113,7 +1057,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXPeer::putParamset(int32_t channel,
 				if(configCentral[channel].find(i->first) == configCentral[channel].end()) continue;
 				BaseLib::Systems::RPCConfigurationParameter* parameter = &configCentral[channel][i->first];
 				if(!parameter->rpcParameter) continue;
-				value = parameter->rpcParameter->convertToPacket(i->second);
+				parameter->rpcParameter->convertToPacket(i->second, value);
 				std::vector<uint8_t> shiftedValue = value;
 				parameter->rpcParameter->adjustBitPosition(shiftedValue);
 				int32_t intIndex = (int32_t)parameter->rpcParameter->physicalParameter->index;
@@ -1191,7 +1135,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXPeer::putParamset(int32_t channel,
 				setValue(channel, i->first, i->second);
 			}
 		}
-		else if(type == ParameterSet::Type::values)
+		else
 		{
 			return BaseLib::RPC::RPCVariable::createError(-3, "Parameter set type is not supported.");
 		}
@@ -1333,7 +1277,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXPeer::setValue(uint32_t channel, s
 		}
 		if(rpcParameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::Enum::store)
 		{
-			parameter->data = rpcParameter->convertToPacket(value);
+			rpcParameter->convertToPacket(value, parameter->data);
 			saveParameter(parameter->databaseID, parameter->data);
 			if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
 			return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
@@ -1369,10 +1313,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXPeer::setValue(uint32_t channel, s
 		if(setRequest.empty()) return BaseLib::RPC::RPCVariable::createError(-6, "parameter is read only");
 		if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return BaseLib::RPC::RPCVariable::createError(-6, "No frame was found for parameter " + valueKey);
 		std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
-		std::vector<uint8_t> data = rpcParameter->convertToPacket(value);
-		parameter->data = data;
-		saveParameter(parameter->databaseID, data);
-		if(_bl->debugLevel > 4) GD::out.printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(data) + ".");
+		rpcParameter->convertToPacket(value, parameter->data);
+		saveParameter(parameter->databaseID, parameter->data);
+		if(_bl->debugLevel > 4) GD::out.printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(parameter->data) + ".");
 
 		std::shared_ptr<MAXCentral> central = std::dynamic_pointer_cast<MAXCentral>(getCentral());
 		std::shared_ptr<PacketQueue> queue(new PacketQueue(_physicalInterface, PacketQueueType::PEER));
@@ -1446,7 +1389,8 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXPeer::setValue(uint32_t channel, s
 			{
 				if(valuesCentral.at(channel).find(*j) == valuesCentral.at(channel).end()) continue;
 				std::shared_ptr<BaseLib::RPC::RPCVariable> logicalDefaultValue = valuesCentral.at(channel).at(*j).rpcParameter->logicalParameter->getDefaultValue();
-				std::vector<uint8_t> defaultValue = valuesCentral.at(channel).at(*j).rpcParameter->convertToPacket(logicalDefaultValue);
+				std::vector<uint8_t> defaultValue;
+				valuesCentral.at(channel).at(*j).rpcParameter->convertToPacket(logicalDefaultValue, defaultValue);
 				if(defaultValue != valuesCentral.at(channel).at(*j).data)
 				{
 					BaseLib::Systems::RPCConfigurationParameter* tempParam = &valuesCentral.at(channel).at(*j);

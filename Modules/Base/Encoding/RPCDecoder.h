@@ -52,18 +52,25 @@ public:
 	RPCDecoder(BaseLib::Obj* baseLib);
 	virtual ~RPCDecoder() {}
 
-	virtual std::shared_ptr<RPCHeader> decodeHeader(std::shared_ptr<std::vector<char>> packet);
-	virtual std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> decodeRequest(std::shared_ptr<std::vector<char>> packet, std::string& methodName);
-	virtual std::shared_ptr<RPCVariable> decodeResponse(std::shared_ptr<std::vector<char>> packet, uint32_t offset = 0);
+	virtual std::shared_ptr<RPCHeader> decodeHeader(std::vector<char>& packet);
+	virtual std::shared_ptr<RPCHeader> decodeHeader(std::vector<uint8_t>& packet);
+	virtual std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> decodeRequest(std::vector<char>& packet, std::string& methodName);
+	virtual std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> decodeRequest(std::vector<uint8_t>& packet, std::string& methodName);
+	virtual std::shared_ptr<RPCVariable> decodeResponse(std::vector<char>& packet, uint32_t offset = 0);
+	virtual std::shared_ptr<RPCVariable> decodeResponse(std::vector<uint8_t>& packet, uint32_t offset = 0);
 private:
 	BaseLib::Obj* _bl = nullptr;
 	std::unique_ptr<BinaryDecoder> _decoder;
 
-	std::shared_ptr<RPCVariable> decodeParameter(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);
-	RPCVariableType decodeType(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);
-	std::shared_ptr<RPCArray> decodeArray(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);
-	std::shared_ptr<RPCStruct> decodeStruct(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);
+	std::shared_ptr<RPCVariable> decodeParameter(std::vector<char>& packet, uint32_t& position);
+	std::shared_ptr<RPCVariable> decodeParameter(std::vector<uint8_t>& packet, uint32_t& position);
+	RPCVariableType decodeType(std::vector<char>& packet, uint32_t& position);
+	RPCVariableType decodeType(std::vector<uint8_t>& packet, uint32_t& position);
+	std::shared_ptr<RPCArray> decodeArray(std::vector<char>& packet, uint32_t& position);
+	std::shared_ptr<RPCArray> decodeArray(std::vector<uint8_t>& packet, uint32_t& position);
+	std::shared_ptr<RPCStruct> decodeStruct(std::vector<char>& packet, uint32_t& position);
+	std::shared_ptr<RPCStruct> decodeStruct(std::vector<uint8_t>& packet, uint32_t& position);
 };
 }
 }
-#endif /* RPCDECODER_H_ */
+#endif

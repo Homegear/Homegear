@@ -134,7 +134,6 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 
         void worker();
         virtual std::string handleCLICommand(std::string command);
-        void initializeCentralConfig();
         void initializeLinkConfig(int32_t channel, int32_t address, int32_t remoteChannel, bool useConfigFunction);
         void applyConfigFunction(int32_t channel, int32_t address, int32_t remoteChannel);
         virtual bool load(BaseLib::Systems::LogicalDevice* device);
@@ -291,6 +290,11 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		 * @see _lastPing
 		 */
 		virtual void pingThread();
+
+		/**
+		 * {@inheritDoc}
+		 */
+		virtual void setDefaultValue(BaseLib::Systems::RPCConfigurationParameter* parameter);
 };
 }
 #endif // BIDCOSPEER_H

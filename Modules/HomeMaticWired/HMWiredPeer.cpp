@@ -90,50 +90,6 @@ HMWiredPeer::~HMWiredPeer()
 
 }
 
-void HMWiredPeer::initializeCentralConfig()
-{
-	try
-	{
-		if(!rpcDevice)
-		{
-			GD::out.printWarning("Warning: Tried to initialize HomeMatic Wired peer's central config without rpcDevice being set.");
-			return;
-		}
-		raiseCreateSavepoint("hmWiredPeerConfig" + std::to_string(_peerID));
-		BaseLib::Systems::RPCConfigurationParameter parameter;
-		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
-		{
-			if(i->second->parameterSets.find(BaseLib::RPC::ParameterSet::Type::values) != i->second->parameterSets.end() && i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::values])
-			{
-				std::shared_ptr<BaseLib::RPC::ParameterSet> valueSet = i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::values];
-				for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator j = valueSet->parameters.begin(); j != valueSet->parameters.end(); ++j)
-				{
-					if(!(*j)->id.empty() && valuesCentral[i->first].find((*j)->id) == valuesCentral[i->first].end())
-					{
-						parameter = BaseLib::Systems::RPCConfigurationParameter();
-						parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
-						saveParameter(0, BaseLib::RPC::ParameterSet::Type::values, i->first, (*j)->id, parameter.data);
-						valuesCentral[i->first][(*j)->id] = parameter;
-					}
-				}
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    raiseReleaseSavepoint("hmWiredPeerConfig" + std::to_string(_peerID));
-}
-
 void HMWiredPeer::initializeLinkConfig(int32_t channel, std::shared_ptr<BaseLib::Systems::BasicPeer> peer)
 {
 	try
@@ -1296,6 +1252,10 @@ bool HMWiredPeer::load(BaseLib::Systems::LogicalDevice* device)
 		std::string entry;
 		loadConfig();
 		initializeCentralConfig();
+
+		serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_bl, _peerID, _serialNumber, this));
+		serviceMessages->load();
+
 		return true;
 	}
 	catch(const std::exception& ex)
@@ -1406,26 +1366,26 @@ void HMWiredPeer::unserializePeers(std::shared_ptr<std::vector<char>> serialized
 	{
 		BaseLib::BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
-		uint32_t peersSize = decoder.decodeInteger(serializedData, position);
+		uint32_t peersSize = decoder.decodeInteger(*serializedData, position);
 		for(uint32_t i = 0; i < peersSize; i++)
 		{
-			uint32_t channel = decoder.decodeInteger(serializedData, position);
-			uint32_t peerCount = decoder.decodeInteger(serializedData, position);
+			uint32_t channel = decoder.decodeInteger(*serializedData, position);
+			uint32_t peerCount = decoder.decodeInteger(*serializedData, position);
 			for(uint32_t j = 0; j < peerCount; j++)
 			{
 				std::shared_ptr<BaseLib::Systems::BasicPeer> basicPeer(new BaseLib::Systems::BasicPeer());
-				basicPeer->isSender = decoder.decodeBoolean(serializedData, position);
-				basicPeer->id = decoder.decodeInteger(serializedData, position);
-				basicPeer->address = decoder.decodeInteger(serializedData, position);
-				basicPeer->channel = decoder.decodeInteger(serializedData, position);
-				basicPeer->physicalIndexOffset = decoder.decodeInteger(serializedData, position);
-				basicPeer->serialNumber = decoder.decodeString(serializedData, position);
-				basicPeer->hidden = decoder.decodeBoolean(serializedData, position);
+				basicPeer->isSender = decoder.decodeBoolean(*serializedData, position);
+				basicPeer->id = decoder.decodeInteger(*serializedData, position);
+				basicPeer->address = decoder.decodeInteger(*serializedData, position);
+				basicPeer->channel = decoder.decodeInteger(*serializedData, position);
+				basicPeer->physicalIndexOffset = decoder.decodeInteger(*serializedData, position);
+				basicPeer->serialNumber = decoder.decodeString(*serializedData, position);
+				basicPeer->hidden = decoder.decodeBoolean(*serializedData, position);
 				_peers[channel].push_back(basicPeer);
-				basicPeer->linkName = decoder.decodeString(serializedData, position);
-				basicPeer->linkDescription = decoder.decodeString(serializedData, position);
-				basicPeer->configEEPROMAddress = decoder.decodeInteger(serializedData, position);
-				uint32_t dataSize = decoder.decodeInteger(serializedData, position);
+				basicPeer->linkName = decoder.decodeString(*serializedData, position);
+				basicPeer->linkDescription = decoder.decodeString(*serializedData, position);
+				basicPeer->configEEPROMAddress = decoder.decodeInteger(*serializedData, position);
+				uint32_t dataSize = decoder.decodeInteger(*serializedData, position);
 				if(position + dataSize <= serializedData->size()) basicPeer->data.insert(basicPeer->data.end(), serializedData->begin() + position, serializedData->begin() + position + dataSize);
 				position += dataSize;
 			}
@@ -2114,7 +2074,8 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::putParamset(int32_t chan
 				if(i->first.empty() || !i->second) continue;
 				std::shared_ptr<BaseLib::RPC::Parameter> currentParameter = parameterSet->getParameter(i->first);
 				if(!currentParameter) continue;
-				std::vector<uint8_t> value = currentParameter->convertToPacket(i->second);
+				std::vector<uint8_t> value;
+				currentParameter->convertToPacket(i->second, value);
 				std::vector<int32_t> result = setMasterConfigParameter(channel, parameterSet, currentParameter, value);
 				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(value) + ".");
 				//Only send to device when parameter is of type eeprom
@@ -2144,7 +2105,8 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::putParamset(int32_t chan
 				std::shared_ptr<BaseLib::RPC::Parameter> currentParameter = parameterSet->getParameter(i->first);
 				if(!currentParameter) continue;
 				if(currentParameter->physicalParameter->address.operation == BaseLib::RPC::PhysicalParameterAddress::Operation::Enum::none) continue;
-				std::vector<uint8_t> value = currentParameter->convertToPacket(i->second);
+				std::vector<uint8_t> value;
+				currentParameter->convertToPacket(i->second, value);
 				std::vector<int32_t> result = setConfigParameter(remotePeer->configEEPROMAddress + currentParameter->physicalParameter->address.index, currentParameter->physicalParameter->size, value);
 				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(value) + ".");
 				//Only send to device when parameter is of type eeprom
@@ -2210,7 +2172,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channe
 		}
 		if(rpcParameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::Enum::store)
 		{
-			parameter->data = rpcParameter->convertToPacket(value);
+			rpcParameter->convertToPacket(value, parameter->data);
 			saveParameter(parameter->databaseID, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
 			if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
 			return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
@@ -2247,7 +2209,8 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channe
 		if(setRequest.empty()) return BaseLib::RPC::RPCVariable::createError(-6, "parameter is read only");
 		if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return BaseLib::RPC::RPCVariable::createError(-6, "No frame was found for parameter " + valueKey);
 		std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
-		std::vector<uint8_t> data = rpcParameter->convertToPacket(value);
+		std::vector<uint8_t> data;
+		rpcParameter->convertToPacket(value, data);
 		parameter->data = data;
 		saveParameter(parameter->databaseID, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, data);
 		if(_bl->debugLevel > 4) GD::out.printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(data) + ".");
@@ -2314,7 +2277,8 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channe
 				std::shared_ptr<BaseLib::RPC::Parameter> currentParameter = parameterSet->getParameter(*j);
 				if(!currentParameter) continue;
 				std::shared_ptr<BaseLib::RPC::RPCVariable> logicalDefaultValue = currentParameter->logicalParameter->getDefaultValue();
-				std::vector<uint8_t> defaultValue = currentParameter->convertToPacket(logicalDefaultValue);
+				std::vector<uint8_t> defaultValue;
+				currentParameter->convertToPacket(logicalDefaultValue, defaultValue);
 				if(defaultValue != valuesCentral.at(channel).at(*j).data)
 				{
 					BaseLib::Systems::RPCConfigurationParameter* tempParam = &valuesCentral.at(channel).at(*j);

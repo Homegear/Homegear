@@ -37,9 +37,11 @@ PhilipsHuePacket::PhilipsHuePacket()
 
 }
 
-PhilipsHuePacket::PhilipsHuePacket(int32_t senderAddress, std::shared_ptr<Json::Value> json, int64_t timeReceived)
+PhilipsHuePacket::PhilipsHuePacket(int32_t senderAddress, int32_t destinationAddress, uint8_t messageType, std::shared_ptr<Json::Value> json, int64_t timeReceived)
 {
 	_senderAddress = senderAddress;
+	_destinationAddress = destinationAddress;
+	_messageType = messageType;
     _json = json;
 }
 

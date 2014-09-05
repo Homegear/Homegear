@@ -51,8 +51,8 @@ public:
 	XMLRPCDecoder(BaseLib::Obj* baseLib);
 	virtual ~XMLRPCDecoder() {}
 
-	virtual std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> decodeRequest(std::shared_ptr<std::vector<char>> packet, std::string& methodName);
-	virtual std::shared_ptr<RPCVariable> decodeResponse(std::shared_ptr<std::vector<char>> packet);
+	virtual std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> decodeRequest(std::vector<char>& packet, std::string& methodName);
+	virtual std::shared_ptr<RPCVariable> decodeResponse(std::vector<char>& packet);
 	virtual std::shared_ptr<RPCVariable> decodeResponse(std::string& packet);
 private:
 	BaseLib::Obj* _bl = nullptr;

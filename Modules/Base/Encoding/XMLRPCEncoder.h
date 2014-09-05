@@ -54,9 +54,9 @@ public:
 	XMLRPCEncoder(BaseLib::Obj* baseLib);
 	virtual ~XMLRPCEncoder() {}
 
-	virtual std::shared_ptr<std::vector<char>> encodeResponse(std::shared_ptr<RPCVariable> variable);
-	virtual std::shared_ptr<std::vector<char>> encodeRequest(std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
-	virtual std::shared_ptr<std::vector<char>> encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters);
+	virtual void encodeResponse(std::shared_ptr<RPCVariable> variable, std::vector<char>& encodedData);
+	virtual void encodeRequest(std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, std::vector<char>& encodedData);
+	virtual void encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters, std::vector<char>& encodedData);
 private:
 	BaseLib::Obj* _bl = nullptr;
 
@@ -66,5 +66,5 @@ private:
 };
 
 }
-} /* namespace RPC */
-#endif /* XMLRPCENCODER_H_ */
+}
+#endif

@@ -224,6 +224,7 @@ void Peer::onSaveParameter(std::string name, uint32_t channel, std::vector<uint8
 			return;
 		}
 		RPCConfigurationParameter* parameter = &valuesCentral.at(channel).at(name);
+		if(parameter->data == data) return;
 		parameter->data = data;
 		saveParameter(parameter->databaseID, RPC::ParameterSet::Type::Enum::values, channel, name, parameter->data);
 	}
@@ -459,6 +460,87 @@ void Peer::deleteFromDatabase()
     }
 }
 
+void Peer::initializeCentralConfig()
+{
+	try
+	{
+		if(!rpcDevice)
+		{
+			_bl->out.printWarning("Warning: Tried to initialize peer's central config without rpcDevice being set.");
+			return;
+		}
+		raiseCreateSavepoint("PeerConfig" + std::to_string(_peerID));
+		BaseLib::Systems::RPCConfigurationParameter parameter;
+		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+		{
+			if(i->second->parameterSets.find(BaseLib::RPC::ParameterSet::Type::master) != i->second->parameterSets.end() && i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::master])
+			{
+				std::shared_ptr<BaseLib::RPC::ParameterSet> masterSet = i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::master];
+				for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator j = masterSet->parameters.begin(); j != masterSet->parameters.end(); ++j)
+				{
+					if(!(*j)->id.empty() && configCentral[i->first].find((*j)->id) == configCentral[i->first].end())
+					{
+						parameter = BaseLib::Systems::RPCConfigurationParameter();
+						parameter.rpcParameter = *j;
+						setDefaultValue(&parameter);
+						configCentral[i->first][(*j)->id] = parameter;
+						saveParameter(0, BaseLib::RPC::ParameterSet::Type::master, i->first, (*j)->id, parameter.data);
+					}
+				}
+			}
+			if(i->second->parameterSets.find(BaseLib::RPC::ParameterSet::Type::values) != i->second->parameterSets.end() && i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::values])
+			{
+				std::shared_ptr<BaseLib::RPC::ParameterSet> valueSet = i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::values];
+				for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator j = valueSet->parameters.begin(); j != valueSet->parameters.end(); ++j)
+				{
+					if(!(*j)->id.empty() && valuesCentral[i->first].find((*j)->id) == valuesCentral[i->first].end())
+					{
+						parameter = BaseLib::Systems::RPCConfigurationParameter();
+						parameter.rpcParameter = *j;
+						setDefaultValue(&parameter);
+						valuesCentral[i->first][(*j)->id] = parameter;
+						saveParameter(0, BaseLib::RPC::ParameterSet::Type::values, i->first, (*j)->id, parameter.data);
+					}
+				}
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    raiseReleaseSavepoint("PeerConfig" + std::to_string(_peerID));
+}
+
+void Peer::setDefaultValue(RPCConfigurationParameter* parameter)
+{
+	try
+	{
+		//parameter cannot be nullptr at this point.
+		parameter->rpcParameter->convertToPacket(parameter->rpcParameter->logicalParameter->getDefaultValue(), parameter->data);
+	}
+	catch(const std::exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void Peer::save(bool savePeer, bool variables, bool centralConfig)
 {
 	try
@@ -632,8 +714,6 @@ void Peer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::shared_pt
 				break;
 			}
 		}
-		serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_bl, _peerID, _serialNumber, this));
-		serviceMessages->load();
 	}
 	catch(const std::exception& ex)
     {

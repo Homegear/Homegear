@@ -82,71 +82,31 @@ std::shared_ptr<BaseLib::Systems::LogicalDevice> BidCoSPeer::getDevice(int32_t a
 	return std::shared_ptr<BaseLib::Systems::LogicalDevice>();
 }
 
-void BidCoSPeer::initializeCentralConfig()
+void BidCoSPeer::setDefaultValue(BaseLib::Systems::RPCConfigurationParameter* parameter)
 {
 	try
 	{
-		if(!rpcDevice)
+		if(parameter->rpcParameter->id == "AES_ACTIVE" && !_physicalInterface->aesSupported())
 		{
-			GD::out.printWarning("Warning: Tried to initialize HomeMatic BidCoS peer's central config without xmlrpcDevice being set.");
-			return;
+			parameter->data.push_back(0);
 		}
-		raiseCreateSavepoint("bidCoSPeerConfig" + std::to_string(_peerID));
-		BaseLib::Systems::RPCConfigurationParameter parameter;
-		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+		else
 		{
-			if(i->second->parameterSets.find(BaseLib::RPC::ParameterSet::Type::master) != i->second->parameterSets.end() && i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::master])
-			{
-				std::shared_ptr<BaseLib::RPC::ParameterSet> masterSet = i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::master];
-				for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator j = masterSet->parameters.begin(); j != masterSet->parameters.end(); ++j)
-				{
-					if(!(*j)->id.empty() && configCentral[i->first].find((*j)->id) == configCentral[i->first].end())
-					{
-						parameter = BaseLib::Systems::RPCConfigurationParameter();
-						parameter.rpcParameter = *j;
-						if((*j)->id == "AES_ACTIVE" && !_physicalInterface->aesSupported())
-						{
-							parameter.data.push_back(0);
-						}
-						else
-						{
-							parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
-						}
-						configCentral[i->first][(*j)->id] = parameter;
-						saveParameter(0, BaseLib::RPC::ParameterSet::Type::master, i->first, (*j)->id, parameter.data);
-					}
-				}
-			}
-			if(i->second->parameterSets.find(BaseLib::RPC::ParameterSet::Type::values) != i->second->parameterSets.end() && i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::values])
-			{
-				std::shared_ptr<BaseLib::RPC::ParameterSet> valueSet = i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::values];
-				for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator j = valueSet->parameters.begin(); j != valueSet->parameters.end(); ++j)
-				{
-					if(!(*j)->id.empty() && valuesCentral[i->first].find((*j)->id) == valuesCentral[i->first].end())
-					{
-						parameter = BaseLib::Systems::RPCConfigurationParameter();
-						parameter.rpcParameter = *j;
-						parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
-						valuesCentral[i->first][(*j)->id] = parameter;
-						saveParameter(0, BaseLib::RPC::ParameterSet::Type::values, i->first, (*j)->id, parameter.data);
-					}
-				}
-			}
+			parameter->rpcParameter->convertToPacket(parameter->rpcParameter->logicalParameter->getDefaultValue(), parameter->data);
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    raiseReleaseSavepoint("bidCoSPeerConfig" + std::to_string(_peerID));
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void BidCoSPeer::initializeLinkConfig(int32_t channel, int32_t remoteAddress, int32_t remoteChannel, bool useConfigFunction)
@@ -166,7 +126,7 @@ void BidCoSPeer::initializeLinkConfig(int32_t channel, int32_t remoteAddress, in
 			{
 				parameter = BaseLib::Systems::RPCConfigurationParameter();
 				parameter.rpcParameter = *j;
-				parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
+				(*j)->convertToPacket((*j)->logicalParameter->getDefaultValue(), parameter.data);
 				linkConfig->insert(std::pair<std::string, BaseLib::Systems::RPCConfigurationParameter>((*j)->id, parameter));
 				saveParameter(0, BaseLib::RPC::ParameterSet::Type::link, channel, (*j)->id, parameter.data, remoteAddress, remoteChannel);
 			}
@@ -216,7 +176,7 @@ void BidCoSPeer::applyConfigFunction(int32_t channel, int32_t peerAddress, int32
 		{
 			BaseLib::Systems::RPCConfigurationParameter* parameter = &linksCentral[channel][peerAddress][remoteChannel][j->first];
 			if(!parameter->rpcParameter) continue;
-			parameter->data = parameter->rpcParameter->convertToPacket(j->second);
+			parameter->rpcParameter->convertToPacket(j->second, parameter->data);
 			saveParameter(parameter->databaseID, parameter->data);
 		}
 	}
@@ -1038,22 +998,22 @@ void BidCoSPeer::unserializePeers(std::shared_ptr<std::vector<char>> serializedD
 	{
 		BaseLib::BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
-		uint32_t peersSize = decoder.decodeInteger(serializedData, position);
+		uint32_t peersSize = decoder.decodeInteger(*serializedData, position);
 		for(uint32_t i = 0; i < peersSize; i++)
 		{
-			uint32_t channel = decoder.decodeInteger(serializedData, position);
-			uint32_t peerCount = decoder.decodeInteger(serializedData, position);
+			uint32_t channel = decoder.decodeInteger(*serializedData, position);
+			uint32_t peerCount = decoder.decodeInteger(*serializedData, position);
 			for(uint32_t j = 0; j < peerCount; j++)
 			{
 				std::shared_ptr<BaseLib::Systems::BasicPeer> basicPeer(new BaseLib::Systems::BasicPeer());
-				basicPeer->address = decoder.decodeInteger(serializedData, position);
-				basicPeer->channel = decoder.decodeInteger(serializedData, position);
-				basicPeer->serialNumber = decoder.decodeString(serializedData, position);
-				basicPeer->hidden = decoder.decodeBoolean(serializedData, position);
+				basicPeer->address = decoder.decodeInteger(*serializedData, position);
+				basicPeer->channel = decoder.decodeInteger(*serializedData, position);
+				basicPeer->serialNumber = decoder.decodeString(*serializedData, position);
+				basicPeer->hidden = decoder.decodeBoolean(*serializedData, position);
 				_peers[channel].push_back(basicPeer);
-				basicPeer->linkName = decoder.decodeString(serializedData, position);
-				basicPeer->linkDescription = decoder.decodeString(serializedData, position);
-				uint32_t dataSize = decoder.decodeInteger(serializedData, position);
+				basicPeer->linkName = decoder.decodeString(*serializedData, position);
+				basicPeer->linkDescription = decoder.decodeString(*serializedData, position);
+				uint32_t dataSize = decoder.decodeInteger(*serializedData, position);
 				if(position + dataSize <= serializedData->size()) basicPeer->data.insert(basicPeer->data.end(), serializedData->begin() + position, serializedData->begin() + position + dataSize);
 				position += dataSize;
 			}
@@ -1106,11 +1066,11 @@ void BidCoSPeer::unserializeNonCentralConfig(std::shared_ptr<std::vector<char>> 
 		config.clear();
 		BaseLib::BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
-		uint32_t configSize = decoder.decodeInteger(serializedData, position);
+		uint32_t configSize = decoder.decodeInteger(*serializedData, position);
 		for(uint32_t i = 0; i < configSize; i++)
 		{
-			int32_t index = decoder.decodeInteger(serializedData, position);
-			config[index] = decoder.decodeInteger(serializedData, position);
+			int32_t index = decoder.decodeInteger(*serializedData, position);
+			config[index] = decoder.decodeInteger(*serializedData, position);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1168,17 +1128,17 @@ void BidCoSPeer::unserializeVariablesToReset(std::shared_ptr<std::vector<char>> 
 		_variablesToResetMutex.unlock();
 		BaseLib::BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
-		uint32_t variablesToResetSize = decoder.decodeInteger(serializedData, position);
+		uint32_t variablesToResetSize = decoder.decodeInteger(*serializedData, position);
 		for(uint32_t i = 0; i < variablesToResetSize; i++)
 		{
 			std::shared_ptr<VariableToReset> variable(new VariableToReset());
-			variable->channel = decoder.decodeInteger(serializedData, position);
-			variable->key = decoder.decodeString(serializedData, position);
-			uint32_t dataSize = decoder.decodeInteger(serializedData, position);
+			variable->channel = decoder.decodeInteger(*serializedData, position);
+			variable->key = decoder.decodeString(*serializedData, position);
+			uint32_t dataSize = decoder.decodeInteger(*serializedData, position);
 			if(position + dataSize <= serializedData->size()) variable->data.insert(variable->data.end(), serializedData->begin() + position, serializedData->begin() + position + dataSize);
 			position += dataSize;
-			variable->resetTime = ((int64_t)decoder.decodeInteger(serializedData, position)) * 1000;
-			variable->isDominoEvent = decoder.decodeBoolean(serializedData, position);
+			variable->resetTime = ((int64_t)decoder.decodeInteger(*serializedData, position)) * 1000;
+			variable->isDominoEvent = decoder.decodeBoolean(*serializedData, position);
 			try
 			{
 				_variablesToResetMutex.lock();
@@ -1488,6 +1448,9 @@ bool BidCoSPeer::load(BaseLib::Systems::LogicalDevice* device)
 				initializeLinkConfig(i->first, (*j)->address, (*j)->channel, false);
 			}
 		}
+
+		serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_bl, _peerID, _serialNumber, this));
+		serviceMessages->load();
 
 		checkAESKey();
 
@@ -2236,7 +2199,7 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 						if(rpcParameter)
 						{
 							BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[*i]["SENDERADDRESS"];
-							parameter->data = rpcParameter->convertToPacket(senderPeer->getSerialNumber() + ":" + std::to_string(*i));
+							rpcParameter->convertToPacket(senderPeer->getSerialNumber() + ":" + std::to_string(*i), parameter->data);
 							saveParameter(parameter->databaseID, parameter->data);
 							valueKeys[*i]->push_back("SENDERADDRESS");
 							rpcValues[*i]->push_back(rpcParameter->convertFromPacket(parameter->data, true));
@@ -2467,7 +2430,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 						}
 					}
 				}
-				value = parameter->rpcParameter->convertToPacket(i->second);
+				parameter->rpcParameter->convertToPacket(i->second, value);
 				std::vector<uint8_t> shiftedValue = value;
 				parameter->rpcParameter->adjustBitPosition(shiftedValue);
 				int32_t intIndex = (int32_t)parameter->rpcParameter->physicalParameter->index;
@@ -2605,7 +2568,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 				if(linksCentral[channel][remotePeer->address][remotePeer->channel].find(i->first) == linksCentral[channel][remotePeer->address][remotePeer->channel].end()) continue;
 				BaseLib::Systems::RPCConfigurationParameter* parameter = &linksCentral[channel][remotePeer->address][remotePeer->channel][i->first];
 				if(!parameter->rpcParameter) continue;
-				value = parameter->rpcParameter->convertToPacket(i->second);
+				parameter->rpcParameter->convertToPacket(i->second, value);
 				std::vector<uint8_t> shiftedValue = value;
 				parameter->rpcParameter->adjustBitPosition(shiftedValue);
 				int32_t intIndex = (int32_t)parameter->rpcParameter->physicalParameter->index;
@@ -2819,7 +2782,7 @@ bool BidCoSPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::s
 				std::shared_ptr<BaseLib::RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
 				if(!rpcParameter) return false;
 				BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
-				parameter->data = rpcParameter->convertToPacket(value);
+				rpcParameter->convertToPacket(value, parameter->data);
 				saveParameter(parameter->databaseID, parameter->data);
 				GD::out.printInfo("Info: Setting valve state of HM-CC-VD with id " + std::to_string(_peerID) + " to " + std::to_string(value->integerValue / 2) + "%.");
 				return true;
@@ -2832,7 +2795,7 @@ bool BidCoSPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::s
 				std::shared_ptr<BaseLib::RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
 				if(!rpcParameter) return false;
 				BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
-				parameter->data = rpcParameter->convertToPacket(value);
+				rpcParameter->convertToPacket(value, parameter->data);
 				saveParameter(parameter->databaseID, parameter->data);
 
 				std::shared_ptr<HomeMaticCentral> central = std::dynamic_pointer_cast<HomeMaticCentral>(getCentral());
@@ -2860,7 +2823,7 @@ bool BidCoSPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::s
 				std::shared_ptr<BaseLib::RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
 				if(!rpcParameter) return false;
 				BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
-				parameter->data = rpcParameter->convertToPacket(value);
+				rpcParameter->convertToPacket(value, parameter->data);
 				saveParameter(parameter->databaseID, parameter->data);
 
 				std::shared_ptr<HomeMaticCentral> central = std::dynamic_pointer_cast<HomeMaticCentral>(getCentral());
@@ -3001,7 +2964,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel
 		}
 		if(rpcParameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::Enum::store)
 		{
-			parameter->data = rpcParameter->convertToPacket(value);
+			rpcParameter->convertToPacket(value, parameter->data);
 			saveParameter(parameter->databaseID, parameter->data);
 			if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
 			return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
@@ -3037,10 +3000,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel
 		if(setRequest.empty()) return BaseLib::RPC::RPCVariable::createError(-6, "parameter is read only");
 		if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return BaseLib::RPC::RPCVariable::createError(-6, "No frame was found for parameter " + valueKey);
 		std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
-		std::vector<uint8_t> data = rpcParameter->convertToPacket(value);
-		parameter->data = data;
-		saveParameter(parameter->databaseID, data);
-		if(_bl->debugLevel > 4) GD::out.printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(data) + ".");
+		rpcParameter->convertToPacket(value, parameter->data);
+		saveParameter(parameter->databaseID, parameter->data);
+		if(_bl->debugLevel > 4) GD::out.printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(parameter->data) + ".");
 
 		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(_physicalInterface, BidCoSQueueType::PEER));
 		queue->noSending = true;
@@ -3138,7 +3100,8 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel
 			{
 				if(valuesCentral.at(channel).find(*j) == valuesCentral.at(channel).end()) continue;
 				std::shared_ptr<BaseLib::RPC::RPCVariable> logicalDefaultValue = valuesCentral.at(channel).at(*j).rpcParameter->logicalParameter->getDefaultValue();
-				std::vector<uint8_t> defaultValue = valuesCentral.at(channel).at(*j).rpcParameter->convertToPacket(logicalDefaultValue);
+				std::vector<uint8_t> defaultValue;
+				valuesCentral.at(channel).at(*j).rpcParameter->convertToPacket(logicalDefaultValue, defaultValue);
 				if(defaultValue != valuesCentral.at(channel).at(*j).data)
 				{
 					BaseLib::Systems::RPCConfigurationParameter* tempParam = &valuesCentral.at(channel).at(*j);

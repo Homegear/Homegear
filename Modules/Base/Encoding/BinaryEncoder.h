@@ -47,18 +47,18 @@ public:
 	BinaryEncoder(BaseLib::Obj* baseLib);
 	virtual ~BinaryEncoder() {}
 
-	virtual void encodeInteger(std::shared_ptr<std::vector<char>>& encodedData, int32_t integer);
+	virtual void encodeInteger(std::vector<char>& encodedData, int32_t integer);
 	virtual void encodeInteger(std::vector<uint8_t>& encodedData, int32_t integer);
-	virtual void encodeByte(std::shared_ptr<std::vector<char>>& encodedData, uint8_t byte);
+	virtual void encodeByte(std::vector<char>& encodedData, uint8_t byte);
 	virtual void encodeByte(std::vector<uint8_t>& encodedData, uint8_t byte);
-	virtual void encodeString(std::shared_ptr<std::vector<char>>& packet, std::string& string);
+	virtual void encodeString(std::vector<char>& packet, std::string& string);
 	virtual void encodeString(std::vector<uint8_t>& encodedData, std::string& string);
-	virtual void encodeBoolean(std::shared_ptr<std::vector<char>>& encodedData, bool boolean);
+	virtual void encodeBoolean(std::vector<char>& encodedData, bool boolean);
 	virtual void encodeBoolean(std::vector<uint8_t>& encodedData, bool boolean);
-	virtual void encodeFloat(std::shared_ptr<std::vector<char>>& encodedData, double floatValue);
+	virtual void encodeFloat(std::vector<char>& encodedData, double floatValue);
 	virtual void encodeFloat(std::vector<uint8_t>& encodedData, double floatValue);
 protected:
 	BaseLib::Obj* _bl = nullptr;
 };
 }
-#endif /* BINARYENCODER_H_ */
+#endif

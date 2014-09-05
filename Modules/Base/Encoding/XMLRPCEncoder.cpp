@@ -40,9 +40,8 @@ XMLRPCEncoder::XMLRPCEncoder(BaseLib::Obj* baseLib)
 	_bl = baseLib;
 }
 
-std::shared_ptr<std::vector<char>> XMLRPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters)
+void XMLRPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters, std::vector<char>& encodedData)
 {
-	std::shared_ptr<std::vector<char>> xml(new std::vector<char>());
 	xml_document<> doc;
 	try
 	{
@@ -61,10 +60,9 @@ std::shared_ptr<std::vector<char>> XMLRPCEncoder::encodeRequest(std::string meth
 		}
 
 		std::string temp("<?xml version=\"1.0\"?>\n");
-		xml->insert(xml->end(), temp.begin(), temp.end());
-		print(std::back_inserter(*xml), doc, 1);
+		encodedData.insert(encodedData.end(), temp.begin(), temp.end());
+		print(std::back_inserter(encodedData), doc, 1);
 		doc.clear();
-		return xml;
 	}
 	catch(const std::exception& ex)
     {
@@ -79,13 +77,11 @@ std::shared_ptr<std::vector<char>> XMLRPCEncoder::encodeRequest(std::string meth
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     doc.clear();
-    return xml;
 }
 
-std::shared_ptr<std::vector<char>> XMLRPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+void XMLRPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, std::vector<char>& encodedData)
 {
 	xml_document<> doc;
-	std::shared_ptr<std::vector<char>> xml(new std::vector<char>());
 	try
 	{
 		xml_node<> *node = doc.allocate_node(node_element, "methodCall");
@@ -102,10 +98,9 @@ std::shared_ptr<std::vector<char>> XMLRPCEncoder::encodeRequest(std::string meth
 			encodeVariable(&doc, paramNode, *i);
 		}
 		std::string temp("<?xml version=\"1.0\"?>\n");
-		xml->insert(xml->end(), temp.begin(), temp.end());
-		print(std::back_inserter(*xml), doc, 1);
+		encodedData.insert(encodedData.end(), temp.begin(), temp.end());
+		print(std::back_inserter(encodedData), doc, 1);
 		doc.clear();
-		return xml;
 	}
 	catch(const std::exception& ex)
     {
@@ -120,12 +115,10 @@ std::shared_ptr<std::vector<char>> XMLRPCEncoder::encodeRequest(std::string meth
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     doc.clear();
-    return xml;
 }
 
-std::shared_ptr<std::vector<char>> XMLRPCEncoder::encodeResponse(std::shared_ptr<RPCVariable> variable)
+void XMLRPCEncoder::encodeResponse(std::shared_ptr<RPCVariable> variable, std::vector<char>& encodedData)
 {
-	std::shared_ptr<std::vector<char>> xml(new std::vector<char>());
 	xml_document<> doc;
 	try
 	{
@@ -145,9 +138,8 @@ std::shared_ptr<std::vector<char>> XMLRPCEncoder::encodeResponse(std::shared_ptr
 			paramsNode->append_node(paramNode);
 			encodeVariable(&doc, paramNode, variable);
 		}
-		print(std::back_inserter(*xml), doc, 1);
+		print(std::back_inserter(encodedData), doc, 1);
 		doc.clear();
-		return xml;
 	}
 	catch(const std::exception& ex)
     {
@@ -162,7 +154,6 @@ std::shared_ptr<std::vector<char>> XMLRPCEncoder::encodeResponse(std::shared_ptr
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     doc.clear();
-    return xml;
 }
 
 void XMLRPCEncoder::encodeVariable(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable)

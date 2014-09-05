@@ -38,13 +38,13 @@ BinaryEncoder::BinaryEncoder(BaseLib::Obj* baseLib)
 	_bl = baseLib;
 }
 
-void BinaryEncoder::encodeInteger(std::shared_ptr<std::vector<char>>& encodedData, int32_t integer)
+void BinaryEncoder::encodeInteger(std::vector<char>& encodedData, int32_t integer)
 {
 	try
 	{
 		char result[4];
 		_bl->hf.memcpyBigEndian(result, (char*)&integer, 4);
-		encodedData->insert(encodedData->end(), result, result + 4);
+		encodedData.insert(encodedData.end(), result, result + 4);
 	}
 	catch(const std::exception& ex)
     {
@@ -82,11 +82,11 @@ void BinaryEncoder::encodeInteger(std::vector<uint8_t>& encodedData, int32_t int
     }
 }
 
-void BinaryEncoder::encodeByte(std::shared_ptr<std::vector<char>>& encodedData, uint8_t byte)
+void BinaryEncoder::encodeByte(std::vector<char>& encodedData, uint8_t byte)
 {
 	try
 	{
-		encodedData->push_back(byte);
+		encodedData.push_back(byte);
 	}
 	catch(const std::exception& ex)
     {
@@ -122,12 +122,12 @@ void BinaryEncoder::encodeByte(std::vector<uint8_t>& encodedData, uint8_t byte)
     }
 }
 
-void BinaryEncoder::encodeString(std::shared_ptr<std::vector<char>>& encodedData, std::string& string)
+void BinaryEncoder::encodeString(std::vector<char>& encodedData, std::string& string)
 {
 	try
 	{
 		encodeInteger(encodedData, string.size());
-		if(string.size() > 0) encodedData->insert(encodedData->end(), string.begin(), string.end());
+		if(string.size() > 0) encodedData.insert(encodedData.end(), string.begin(), string.end());
 	}
 	catch(const std::exception& ex)
     {
@@ -164,11 +164,11 @@ void BinaryEncoder::encodeString(std::vector<uint8_t>& encodedData, std::string&
     }
 }
 
-void BinaryEncoder::encodeBoolean(std::shared_ptr<std::vector<char>>& encodedData, bool boolean)
+void BinaryEncoder::encodeBoolean(std::vector<char>& encodedData, bool boolean)
 {
 	try
 	{
-		encodedData->push_back((char)boolean);
+		encodedData.push_back((char)boolean);
 	}
 	catch(const std::exception& ex)
     {
@@ -204,7 +204,7 @@ void BinaryEncoder::encodeBoolean(std::vector<uint8_t>& encodedData, bool boolea
     }
 }
 
-void BinaryEncoder::encodeFloat(std::shared_ptr<std::vector<char>>& encodedData, double floatValue)
+void BinaryEncoder::encodeFloat(std::vector<char>& encodedData, double floatValue)
 {
 	try
 	{
@@ -228,7 +228,7 @@ void BinaryEncoder::encodeFloat(std::shared_ptr<std::vector<char>>& encodedData,
 		char data[8];
 		_bl->hf.memcpyBigEndian(data, (char*)&mantissa, 4);
 		_bl->hf.memcpyBigEndian(data + 4, (char*)&exponent, 4);
-		encodedData->insert(encodedData->end(), data, data + 8);
+		encodedData.insert(encodedData.end(), data, data + 8);
 	}
 	catch(const std::exception& ex)
     {

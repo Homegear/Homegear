@@ -185,12 +185,12 @@ void MAXSpyDevice::unserializeFilters(std::shared_ptr<std::vector<char>> seriali
 	{
 		BaseLib::BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
-		uint32_t filtersSize = decoder.decodeInteger(serializedData, position);
+		uint32_t filtersSize = decoder.decodeInteger(*serializedData, position);
 		for(uint32_t i = 0; i < filtersSize; i++)
 		{
 			MAXSpyDevice_Filter filter;
-			filter.filterType = (FilterType)decoder.decodeByte(serializedData, position);
-			filter.filterValue = decoder.decodeInteger(serializedData, position);
+			filter.filterType = (FilterType)decoder.decodeByte(*serializedData, position);
+			filter.filterValue = decoder.decodeInteger(*serializedData, position);
 			_filters.push_back(filter);
 		}
 	}

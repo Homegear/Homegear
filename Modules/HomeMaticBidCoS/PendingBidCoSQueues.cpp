@@ -82,22 +82,22 @@ void PendingBidCoSQueues::unserialize(std::shared_ptr<std::vector<char>> seriali
 		BaseLib::BinaryDecoder decoder(GD::bl);
 		uint32_t position = 0;
 		_queuesMutex.lock();
-		uint32_t pendingQueuesSize = decoder.decodeInteger(serializedData, position);
+		uint32_t pendingQueuesSize = decoder.decodeInteger(*serializedData, position);
 		for(uint32_t i = 0; i < pendingQueuesSize; i++)
 		{
-			uint32_t queueLength = decoder.decodeInteger(serializedData, position);
+			uint32_t queueLength = decoder.decodeInteger(*serializedData, position);
 			std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue());
 			queue->unserialize(serializedData, device, position);
 			position += queueLength;
 			queue->noSending = true;
-			bool hasCallbackFunction = decoder.decodeBoolean(serializedData, position);
+			bool hasCallbackFunction = decoder.decodeBoolean(*serializedData, position);
 			if(hasCallbackFunction)
 			{
 				std::shared_ptr<CallbackFunctionParameter> parameters(new CallbackFunctionParameter());
-				parameters->integers.push_back(decoder.decodeInteger(serializedData, position));
-				parameters->strings.push_back(decoder.decodeString(serializedData, position));
-				parameters->integers.push_back(decoder.decodeInteger(serializedData, position));
-				parameters->integers.push_back(decoder.decodeInteger(serializedData, position) * 1000);
+				parameters->integers.push_back(decoder.decodeInteger(*serializedData, position));
+				parameters->strings.push_back(decoder.decodeString(*serializedData, position));
+				parameters->integers.push_back(decoder.decodeInteger(*serializedData, position));
+				parameters->integers.push_back(decoder.decodeInteger(*serializedData, position) * 1000);
 				queue->callbackParameter = parameters;
 				queue->queueEmptyCallback = delegate<void (std::shared_ptr<CallbackFunctionParameter>)>::from_method<BidCoSPeer, &BidCoSPeer::addVariableToResetCallback>(peer);
 			}

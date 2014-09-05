@@ -75,7 +75,6 @@ public:
 	bool ignorePackets = false;
 
 	virtual std::string handleCLICommand(std::string command);
-	void initializeCentralConfig();
 	void initializeLinkConfig(int32_t channel, std::shared_ptr<BaseLib::Systems::BasicPeer> peer);
 	std::vector<int32_t> setConfigParameter(double index, double size, std::vector<uint8_t>& binaryValue);
 	std::vector<int32_t> setMasterConfigParameter(int32_t channelIndex, double index, double step, double size, std::vector<uint8_t>& binaryValue);

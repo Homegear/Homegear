@@ -191,6 +191,14 @@ public:
     virtual void deleteFromDatabase();
     virtual void savePeers() = 0;
 
+    /*
+     * Initializes the MASTER and VALUES config parameter sets by inserting all missing RPC parameters into configCentral and valuesCentral and creating the database entries. If a parameter does not exist yet, it is initialized with the default value defined in the device's XML file.
+     *
+     * @see configCentral
+     * @see valuesCentral
+     */
+    virtual void initializeCentralConfig();
+
     virtual std::shared_ptr<BasicPeer> getPeer(int32_t channel, int32_t address, int32_t remoteChannel = -1);
 	virtual std::shared_ptr<BasicPeer> getPeer(int32_t channel, uint64_t id, int32_t remoteChannel = -1);
 	virtual std::shared_ptr<BasicPeer> getPeer(int32_t channel, std::string serialNumber, int32_t remoteChannel = -1);
@@ -293,6 +301,14 @@ protected:
 	//End ServiceMessages event handling
 
 	virtual std::shared_ptr<RPC::ParameterSet> getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type) = 0;
+
+	/**
+	 * Overridable hook in initializeCentralConfig to set a custom default value. See BidCoSPeer for an implementation example. There it is used to conditionally set "AES_ACTIVE", depending on whether the physical interface supports it.
+	 *
+	 * @param parameter The parameter to set the default value for.
+	 * @see initializeCentralConfig
+	 */
+	virtual void setDefaultValue(RPCConfigurationParameter* parameter);
 };
 
 }

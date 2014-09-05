@@ -777,11 +777,11 @@ void HomeMaticDevice::unserializeMessageCounters(std::shared_ptr<std::vector<cha
 	{
 		BaseLib::BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
-		uint32_t messageCounterSize = decoder.decodeInteger(serializedData, position);
+		uint32_t messageCounterSize = decoder.decodeInteger(*serializedData, position);
 		for(uint32_t i = 0; i < messageCounterSize; i++)
 		{
-			int32_t index = decoder.decodeInteger(serializedData, position);
-			_messageCounter[index] = decoder.decodeByte(serializedData, position);
+			int32_t index = decoder.decodeInteger(*serializedData, position);
+			_messageCounter[index] = decoder.decodeByte(*serializedData, position);
 		}
 	}
 	catch(const std::exception& ex)
@@ -840,19 +840,19 @@ void HomeMaticDevice::unserializeConfig(std::shared_ptr<std::vector<char>> seria
 	{
 		BaseLib::BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
-		uint32_t configSize = decoder.decodeInteger(serializedData, position);
+		uint32_t configSize = decoder.decodeInteger(*serializedData, position);
 		for(uint32_t i = 0; i < configSize; i++)
 		{
-			int32_t channel = decoder.decodeInteger(serializedData, position);
-			uint32_t listCount = decoder.decodeInteger(serializedData, position);
+			int32_t channel = decoder.decodeInteger(*serializedData, position);
+			uint32_t listCount = decoder.decodeInteger(*serializedData, position);
 			for(uint32_t j = 0; j < listCount; j++)
 			{
-				int32_t listIndex = decoder.decodeInteger(serializedData, position);
-				uint32_t listSize = decoder.decodeInteger(serializedData, position);
+				int32_t listIndex = decoder.decodeInteger(*serializedData, position);
+				uint32_t listSize = decoder.decodeInteger(*serializedData, position);
 				for(uint32_t k = 0; k < listSize; k++)
 				{
-					int32_t parameterIndex = decoder.decodeInteger(serializedData, position);
-					_config[channel][listIndex][parameterIndex] = decoder.decodeInteger(serializedData, position);
+					int32_t parameterIndex = decoder.decodeInteger(*serializedData, position);
+					_config[channel][listIndex][parameterIndex] = decoder.decodeInteger(*serializedData, position);
 				}
 			}
 		}

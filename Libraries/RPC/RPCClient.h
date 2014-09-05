@@ -97,7 +97,7 @@ protected:
 	std::unique_ptr<BaseLib::RPC::XMLRPCEncoder> _xmlRpcEncoder;
 	int32_t _sendCounter = 0;
 
-	std::shared_ptr<std::vector<char>> sendRequest(std::shared_ptr<RemoteRPCServer> server, std::shared_ptr<std::vector<char>> data, bool insertHeader, bool& timedout);
+	void sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector<char>& data, std::vector<char>& responseData, bool insertHeader, bool& timedout);
 	std::string getIPAddress(std::string address);
 };
 

@@ -41,14 +41,18 @@ class PhilipsHuePacket : public BaseLib::Systems::Packet
     public:
         //Properties
         PhilipsHuePacket();
-        PhilipsHuePacket(int32_t senderAddress, std::shared_ptr<Json::Value> json, int64_t timeReceived = 0);
+        PhilipsHuePacket(int32_t senderAddress, int32_t destinationAddress, uint8_t messageType, std::shared_ptr<Json::Value> json, int64_t timeReceived = 0);
         virtual ~PhilipsHuePacket();
+
+        uint8_t messageType() { return _messageType; }
+        void setMessageType(uint8_t type) { _messageType = type; }
 
         virtual std::shared_ptr<Json::Value> getJson() { return _json; }
         virtual void setJson(std::shared_ptr<Json::Value> value) { _json = value; }
         virtual std::string getString();
     protected:
         std::shared_ptr<Json::Value> _json;
+        uint8_t _messageType = 0;
 };
 
 }

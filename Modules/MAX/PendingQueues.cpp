@@ -74,10 +74,10 @@ void PendingQueues::unserialize(std::shared_ptr<std::vector<char>> serializedDat
 		BaseLib::BinaryDecoder decoder(GD::bl);
 		uint32_t position = 0;
 		_queuesMutex.lock();
-		uint32_t pendingQueuesSize = decoder.decodeInteger(serializedData, position);
+		uint32_t pendingQueuesSize = decoder.decodeInteger(*serializedData, position);
 		for(uint32_t i = 0; i < pendingQueuesSize; i++)
 		{
-			uint32_t queueLength = decoder.decodeInteger(serializedData, position);
+			uint32_t queueLength = decoder.decodeInteger(*serializedData, position);
 			std::shared_ptr<PacketQueue> queue(new PacketQueue());
 			queue->unserialize(serializedData, device, position);
 			position += queueLength;

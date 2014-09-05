@@ -83,7 +83,6 @@ public:
 
 	virtual void worker();
 	virtual std::string handleCLICommand(std::string command);
-	void initializeCentralConfig();
 
 	virtual bool load(BaseLib::Systems::LogicalDevice* device);
 	virtual void save(bool savePeer, bool saveVariables, bool saveCentralConfig);

@@ -1114,7 +1114,8 @@ bool HMWiredCentral::peerInit(std::shared_ptr<HMWiredPeer> peer)
 		{
 			if((*j)->logicalParameter->enforce)
 			{
-				std::vector<uint8_t> enforceValue = (*j)->convertToPacket((*j)->logicalParameter->getEnforceValue());
+				std::vector<uint8_t> enforceValue;
+				(*j)->convertToPacket((*j)->logicalParameter->getEnforceValue(), enforceValue);
 				peer->setConfigParameter((*j)->physicalParameter->address.index, (*j)->physicalParameter->size, enforceValue);
 			}
 		}

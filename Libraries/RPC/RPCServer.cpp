@@ -410,13 +410,13 @@ bool RPCServer::clientValid(std::shared_ptr<Client>& client)
     return false;
 }
 
-void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::shared_ptr<std::vector<char>> data, bool keepAlive)
+void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::vector<char>& data, bool keepAlive)
 {
 	try
 	{
 		if(_stopped) return;
 		if(!clientValid(client)) return;
-		if(!data || data->empty()) return;
+		if(data.empty()) return;
 		bool error = false;
 		try
 		{
@@ -447,7 +447,7 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
     }
 }
 
-void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive)
+void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
 {
 	try
 	{
@@ -488,23 +488,23 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 	try
 	{
 		if(_stopped) return;
-		std::shared_ptr<std::vector<char>> data;
+		std::vector<char> data;
 		if(responseType == PacketType::Enum::xmlResponse)
 		{
-			data = _xmlRpcEncoder->encodeResponse(variable);
-			std::string header = getHttpResponseHeader(data->size());
-			data->push_back('\r');
-			data->push_back('\n');
-			data->insert(data->begin(), header.begin(), header.end());
+			_xmlRpcEncoder->encodeResponse(variable, data);
+			std::string header = getHttpResponseHeader(data.size());
+			data.push_back('\r');
+			data.push_back('\n');
+			data.insert(data.begin(), header.begin(), header.end());
 			if(GD::bl->debugLevel >= 5)
 			{
-				_out.printDebug("Response packet: " + std::string(&data->at(0), data->size()));
+				_out.printDebug("Response packet: " + std::string(&data.at(0), data.size()));
 			}
 			sendRPCResponseToClient(client, data, keepAlive);
 		}
 		else if(responseType == PacketType::Enum::binaryResponse)
 		{
-			data = _rpcEncoder->encodeResponse(variable);
+			_rpcEncoder->encodeResponse(variable, data);
 			if(GD::bl->debugLevel >= 5)
 			{
 				_out.printDebug("Response binary:");
@@ -621,7 +621,7 @@ std::string RPCServer::getHttpResponseHeader(uint32_t contentLength)
 	return header;
 }
 
-void RPCServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive)
+void RPCServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
 {
 	try
 	{
@@ -650,7 +650,7 @@ void RPCServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::shared_p
     }
 }
 
-void RPCServer::packetReceived(std::shared_ptr<Client> client, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive)
+void RPCServer::packetReceived(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
 {
 	try
 	{
@@ -705,7 +705,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 		if(!client) return;
 		int32_t bufferMax = 1024;
 		char buffer[bufferMax + 1];
-		std::shared_ptr<std::vector<char>> packet(new std::vector<char>());
+		std::vector<char> packet;
 		uint32_t packetLength = 0;
 		int32_t bytesRead;
 		uint32_t dataSize = 0;
@@ -776,8 +776,8 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					_out.printError("Error: Packet with data larger than 10 MiB received.");
 					continue;
 				}
-				packet.reset(new std::vector<char>());
-				packet->insert(packet->end(), buffer, buffer + bytesRead);
+				packet.clear();
+				packet.insert(packet.end(), buffer, buffer + bytesRead);
 				std::shared_ptr<BaseLib::RPC::RPCHeader> header = _rpcDecoder->decodeHeader(packet);
 				if(_settings->authType == ServerSettings::Settings::AuthType::basic)
 				{
@@ -856,11 +856,11 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						packetLength = 0;
 						continue;
 					}
-					packet->insert(packet->end(), buffer, buffer + bytesRead);
+					packet.insert(packet.end(), buffer, buffer + bytesRead);
 					packetLength += bytesRead;
 					if(packetLength == dataSize)
 					{
-						packet->push_back('\0');
+						packet.push_back('\0');
 						packetReceived(client, packet, packetType, true);
 						packetLength = 0;
 					}
@@ -890,7 +890,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			}
 			if(http.isFinished())
 			{
-				packetReceived(client, http.getContent(), packetType, http.getHeader()->connection == BaseLib::HTTP::Connection::Enum::keepAlive);
+				packetReceived(client, *http.getContent(), packetType, http.getHeader()->connection == BaseLib::HTTP::Connection::Enum::keepAlive);
 				packetLength = 0;
 				http.reset();
 			}

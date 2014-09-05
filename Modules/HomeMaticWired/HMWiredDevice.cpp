@@ -563,11 +563,11 @@ void HMWiredDevice::unserializeMessageCounters(std::shared_ptr<std::vector<char>
 	{
 		BaseLib::BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
-		uint32_t messageCounterSize = decoder.decodeInteger(serializedData, position);
+		uint32_t messageCounterSize = decoder.decodeInteger(*serializedData, position);
 		for(uint32_t i = 0; i < messageCounterSize; i++)
 		{
-			int32_t index = decoder.decodeInteger(serializedData, position);
-			_messageCounter[index] = decoder.decodeByte(serializedData, position);
+			int32_t index = decoder.decodeInteger(*serializedData, position);
+			_messageCounter[index] = decoder.decodeByte(*serializedData, position);
 		}
 	}
 	catch(const std::exception& ex)

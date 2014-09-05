@@ -618,6 +618,59 @@ bool PhilipsHueCentral::knowsDevice(uint64_t id)
 }
 
 //RPC functions
+std::shared_ptr<BaseLib::RPC::RPCVariable> PhilipsHueCentral::deleteDevice(std::string serialNumber, int32_t flags)
+{
+	try
+	{
+		if(serialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+		if(serialNumber[0] == '*') return BaseLib::RPC::RPCVariable::createError(-2, "Cannot delete virtual device.");
+		std::shared_ptr<PhilipsHuePeer> peer = getPeer(serialNumber);
+		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+		return deleteDevice(peer->getID(), flags);
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> PhilipsHueCentral::deleteDevice(uint64_t peerID, int32_t flags)
+{
+	try
+	{
+		if(peerID == 0) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+		if(peerID >= 0x40000000) return BaseLib::RPC::RPCVariable::createError(-2, "Cannot delete virtual device.");
+		std::shared_ptr<PhilipsHuePeer> peer = getPeer(peerID);
+		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+
+		deletePeer(peer->getID());
+
+		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<BaseLib::RPC::RPCVariable> PhilipsHueCentral::getDeviceInfo(uint64_t id, std::map<std::string, bool> fields)
 {
 	try
@@ -672,10 +725,69 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> PhilipsHueCentral::getDeviceInfo(uint
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<BaseLib::RPC::RPCVariable> PhilipsHueCentral::putParamset(std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> paramset)
+{
+	try
+	{
+		std::shared_ptr<PhilipsHuePeer> peer(getPeer(serialNumber));
+		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+		uint64_t remoteID = 0;
+		if(!remoteSerialNumber.empty())
+		{
+			std::shared_ptr<PhilipsHuePeer> remotePeer(getPeer(remoteSerialNumber));
+			if(!remotePeer)
+			{
+				if(remoteSerialNumber != _serialNumber) return BaseLib::RPC::RPCVariable::createError(-3, "Remote peer is unknown.");
+			}
+			else remoteID = remotePeer->getID();
+		}
+		std::shared_ptr<BaseLib::RPC::RPCVariable> result = peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
+		return result;
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> PhilipsHueCentral::putParamset(uint64_t peerID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> paramset)
+{
+	try
+	{
+		std::shared_ptr<PhilipsHuePeer> peer(getPeer(peerID));
+		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+		std::shared_ptr<BaseLib::RPC::RPCVariable> result = peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
+		return result;
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<BaseLib::RPC::RPCVariable> PhilipsHueCentral::searchDevices()
 {
 	try
 	{
+		GD::physicalInterface->searchLights();
 		std::vector<std::shared_ptr<PhilipsHuePacket>> peerInfo = GD::physicalInterface->getPeerInfo();
 		_peerInitMutex.lock();
 		std::vector<std::shared_ptr<PhilipsHuePeer>> newPeers;
@@ -701,6 +813,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> PhilipsHueCentral::searchDevices()
 				GD::out.printError("Error: Could not pair device with address " + BaseLib::HelperFunctions::getHexString((*i)->senderAddress(), 6) + ". No matching XML file was found.");
 				continue;
 			}
+
+			peer->initializeCentralConfig();
+			if(info->isMember("name")) peer->setName(info->operator []("name").asString());
 
 			_peersMutex.lock();
 			try

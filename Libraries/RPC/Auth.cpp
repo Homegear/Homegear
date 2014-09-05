@@ -69,10 +69,10 @@ void Auth::sendBasicUnauthorized(bool binary)
 {
 	if(binary)
 	{
-		if(!_basicUnauthBinaryHeader || _basicUnauthBinaryHeader->empty())
+		if(_basicUnauthBinaryHeader.empty())
 		{
 			std::shared_ptr<BaseLib::RPC::RPCVariable> error = BaseLib::RPC::RPCVariable::createError(-32603, "Unauthorized");
-			_basicUnauthBinaryHeader = _rpcEncoder->encodeResponse(error);
+			_rpcEncoder->encodeResponse(error, _basicUnauthBinaryHeader);
 		}
 		try
 		{
@@ -85,7 +85,7 @@ void Auth::sendBasicUnauthorized(bool binary)
 	}
 	else
 	{
-		if(!_basicUnauthHTTPHeader || _basicUnauthHTTPHeader->empty())
+		if(_basicUnauthHTTPHeader.empty())
 		{
 			std::string header;
 			header.append("HTTP/1.1 401 Unauthorized\r\n");
@@ -93,8 +93,7 @@ void Auth::sendBasicUnauthorized(bool binary)
 			std::string content("<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\"><html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\"><title>Unauthorized</title></head><body>Unauthorized</body></html>");
 			header.append("Content-Length: " + std::to_string(content.size()) + "\r\n\r\n");
 			header.append(content);
-			_basicUnauthHTTPHeader.reset(new std::vector<char>);
-			_basicUnauthHTTPHeader->insert(_basicUnauthHTTPHeader->begin(), header.begin(), header.end());
+			_basicUnauthHTTPHeader.insert(_basicUnauthHTTPHeader.begin(), header.begin(), header.end());
 		}
 		try
 		{

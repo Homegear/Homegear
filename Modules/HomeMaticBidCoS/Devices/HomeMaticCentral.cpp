@@ -3571,7 +3571,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::deleteDevice(uint64
 	try
 	{
 		if(peerID == 0) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
-		if(peerID & 0x80000000) return BaseLib::RPC::RPCVariable::createError(-2, "Cannot delete virtual device.");
+		if(peerID >= 0x40000000) return BaseLib::RPC::RPCVariable::createError(-2, "Cannot delete virtual device.");
 		std::shared_ptr<BidCoSPeer> peer = getPeer(peerID);
 		if(!peer) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 		uint64_t id = peer->getID();

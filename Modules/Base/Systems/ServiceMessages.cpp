@@ -126,6 +126,15 @@ void ServiceMessages::load()
 				_errorMutex.unlock();
 			}
 		}
+		//Synchronize service message data with peer parameters:
+		std::vector<uint8_t> data = { (uint8_t)_unreach };
+		raiseSaveParameter("UNREACH", 0, data);
+		data = { (uint8_t)_stickyUnreach };
+		raiseSaveParameter("STICKY_UNREACH", 0, data);
+		data = { (uint8_t)_configPending };
+		raiseSaveParameter("CONFIG_PENDING", 0, data);
+		data = { (uint8_t)_lowbat };
+		raiseSaveParameter("LOWBAT", 0, data);
 	}
 	catch(const std::exception& ex)
     {

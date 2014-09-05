@@ -45,6 +45,8 @@
 #include "../Systems/DeviceTypes.h"
 #include "LogicalParameter.h"
 #include "PhysicalParameter.h"
+#include "../Encoding/RPCEncoder.h"
+#include "../Encoding/RPCDecoder.h"
 
 using namespace rapidxml;
 
@@ -56,6 +58,7 @@ class Obj;
 namespace RPC
 {
 
+class Parameter;
 class ParameterSet;
 class Device;
 class RPCVariable;
@@ -86,7 +89,7 @@ class ParameterConversion
 public:
 	struct Type
 	{
-		enum Enum { none, toggle, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap, floatConfigTime, optionInteger, integerTinyFloat, stringUnsignedInteger, blindTest, cfm, ccrtdnParty };
+		enum Enum { none, toggle, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap, floatConfigTime, optionInteger, integerTinyFloat, stringUnsignedInteger, blindTest, cfm, ccrtdnParty, optionString, stringJsonArrayFloat, rpcBinary };
 	};
 	Type::Enum type = Type::Enum::none;
 	std::unordered_map<int32_t, int32_t> integerValueMapDevice;
@@ -111,13 +114,14 @@ public:
 	bool fromDevice = true;
 	bool toDevice = true;
 
-	ParameterConversion(BaseLib::Obj* baseLib);
-	ParameterConversion(BaseLib::Obj* baseLib, xml_node<>* node);
+	ParameterConversion(BaseLib::Obj* baseLib, Parameter* parameter);
+	ParameterConversion(BaseLib::Obj* baseLib, Parameter* parameter, xml_node<>* node);
 	virtual ~ParameterConversion() {}
 	virtual void fromPacket(std::shared_ptr<RPCVariable> value);
 	virtual void toPacket(std::shared_ptr<RPCVariable> value);
 protected:
 	BaseLib::Obj* _bl = nullptr;
+	Parameter* _parameter = nullptr;
 };
 
 class Parameter
@@ -162,18 +166,51 @@ public:
 	bool loopback = false;
 	bool hasDominoEvents = false;
 	int32_t mask = -1;
+	std::string field;
+	std::string subfield;
 
 	Parameter(BaseLib::Obj* baseLib);
 	Parameter(BaseLib::Obj* baseLib, xml_node<>* node, bool checkForID = false);
 	virtual ~Parameter() {}
 	virtual bool checkCondition(int32_t value);
-	virtual std::shared_ptr<RPC::RPCVariable> convertFromPacket(const std::vector<uint8_t>& data, bool isEvent = false);
-	virtual std::vector<uint8_t> convertToPacket(const std::shared_ptr<RPC::RPCVariable> value);
-	virtual std::vector<uint8_t> convertToPacket(std::string value);
-	virtual std::vector<uint8_t> reverseData(const std::vector<uint8_t>& data);
+
+	/**
+	 * Converts binary data of a packet received by a physical interface to a RPC variable.
+	 *
+	 * @param[in] data The data to convert. It is not modified, even though there is no "const".
+	 * @param isEvent (default false) Set to "true" if packet is an event packet. Necessary to set value of "Action" correctly.
+	 * @return Returns the RPC variable.
+	 */
+	virtual std::shared_ptr<RPC::RPCVariable> convertFromPacket(std::vector<uint8_t>& data, bool isEvent = false);
+
+	/**
+	 * Converts a RPC variable to binary data to send it over a physical interface.
+	 *
+	 * @param[in] value The value to convert.
+	 * @param[out] convertedValue The converted binary data.
+	 */
+	virtual void convertToPacket(const std::shared_ptr<RPC::RPCVariable> value, std::vector<uint8_t>& convertedValue);
+
+	/**
+	 * Tries to convert a string value to a binary data to send it over a physical interface.
+	 *
+	 * @param[in] value The value to convert.
+	 * @param[out] The converted binary data.
+	 */
+	virtual void convertToPacket(std::string value, std::vector<uint8_t>& convertedValue);
+
+	/**
+	 * Reverses a binary array.
+	 *
+	 * @param[in] data The array to reverse.
+	 * @param[out] reversedData The reversed array.
+	 */
+	virtual void reverseData(const std::vector<uint8_t>& data, std::vector<uint8_t>& reversedData);
 	virtual void adjustBitPosition(std::vector<uint8_t>& data);
 protected:
 	BaseLib::Obj* _bl = nullptr;
+	std::shared_ptr<RPCDecoder> _binaryDecoder;
+	std::shared_ptr<RPCEncoder> _binaryEncoder;
 };
 
 class DeviceType

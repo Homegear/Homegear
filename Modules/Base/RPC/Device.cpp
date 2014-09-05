@@ -232,6 +232,43 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 		{
 			value->integerValue = HelperFunctions::getNumber(stringValue);
 		}
+		else if(type == Type::Enum::stringJsonArrayFloat)
+		{
+			if(_parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeString)
+			{
+				if(value->arrayValue->size() > 0) value->stringValue = std::to_string(value->arrayValue->at(0)->floatValue);
+				if(value->arrayValue->size() > 1)
+				{
+					for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = value->arrayValue->begin() + 1; i != value->arrayValue->end(); ++i)
+					{
+						value->stringValue += ';' + std::to_string((*i)->floatValue);
+					}
+				}
+				value->arrayValue->clear();
+				value->type = RPCVariableType::rpcString;
+			}
+			else _bl->out.printWarning("Warning: Only strings can be created from Json arrays.");
+		}
+		else if(type == Type::Enum::optionString)
+		{
+			LogicalParameterEnum* logicalEnum = (LogicalParameterEnum*)_parameter->logicalParameter.get();
+			value->integerValue = -1;
+			for(std::vector<ParameterOption>::iterator i = logicalEnum->options.begin(); i != logicalEnum->options.end(); ++i)
+			{
+				if(i->id == value->stringValue)
+				{
+					value->integerValue = i->index;
+					break;
+				}
+			}
+			if(value->integerValue < 0)
+			{
+				_bl->out.printWarning("Warning: Cannot convert json string to enum, because no matching element could be found.");
+				value->integerValue = 0;
+			}
+			value->stringValue = "";
+			value->type = RPCVariableType::rpcInteger;
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -252,19 +289,17 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 	try
 	{
 		if(!value) return;
-		if(type == Type::Enum::none)
-		{
-			if(value->type == RPCVariableType::rpcBoolean) value->integerValue = (int32_t)value->booleanValue;
-		}
-		else if(type == Type::Enum::floatIntegerScale)
+		if(type == Type::Enum::floatIntegerScale)
 		{
 			value->integerValue = std::lround((value->floatValue + offset) * factor);
+			value->type = RPCVariableType::rpcInteger;
 		}
 		else if(type == Type::Enum::integerIntegerScale)
 		{
 			if(mul > 0) value->integerValue *= mul;
 			//mul and div can be set, so no else if
 			if(div > 0) value->integerValue /= div;
+			value->type = RPCVariableType::rpcInteger;
 		}
 		else if(type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger)
 		{
@@ -273,6 +308,7 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 			{
 				value->integerValue = integerValueMapParameter[value->integerValue];
 			}
+			value->type = RPCVariableType::rpcInteger;
 		}
 		else if(type == Type::Enum::booleanInteger)
 		{
@@ -281,6 +317,7 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 			if(valueTrue == 0 && valueFalse == 0) value->integerValue = (int32_t)value->booleanValue;
 			else if(value->booleanValue) value->integerValue = valueTrue;
 			else value->integerValue = valueFalse;
+			value->type = RPCVariableType::rpcInteger;
 		}
 		else if(type == Type::Enum::floatConfigTime)
 		{
@@ -311,6 +348,7 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 
 				value->integerValue = ((factorIndex << 5) | std::lround(value->floatValue / factor)) & 0xFF;
 			}
+			value->type = RPCVariableType::rpcInteger;
 		}
 		else if(type == Type::Enum::integerTinyFloat)
 		{
@@ -330,16 +368,46 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 			if(exponent > maxExponent) exponent = maxExponent;
 			exponent = exponent << exponentStart;
 			value->integerValue = (mantissa << mantissaStart) | exponent;
+			value->type = RPCVariableType::rpcInteger;
 		}
 		else if(type == Type::Enum::stringUnsignedInteger)
 		{
 			value->integerValue = HelperFunctions::getUnsignedNumber(value->stringValue);
+			value->type = RPCVariableType::rpcInteger;
 		}
 		else if(type == Type::Enum::blindTest)
 		{
 			value->integerValue = HelperFunctions::getNumber(stringValue);
+			value->type = RPCVariableType::rpcInteger;
 		}
-		value->type = RPCVariableType::rpcInteger;
+		else if(type == Type::Enum::optionString)
+		{
+			if(_parameter->logicalParameter->type == LogicalParameter::Type::typeEnum)
+			{
+				LogicalParameterEnum* logicalEnum = (LogicalParameterEnum*)_parameter->logicalParameter.get();
+				if(value->integerValue >= 0 && value->integerValue < (signed)logicalEnum->options.size())
+				{
+					value->stringValue = logicalEnum->options.at(value->integerValue).id;
+				}
+				else _bl->out.printWarning("Warning: Cannot convert variable, because enum index is not valid.");
+				value->type = RPCVariableType::rpcString;
+				value->integerValue = 0;
+			}
+		}
+		else if(type == Type::Enum::stringJsonArrayFloat)
+		{
+			if(_parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeString)
+			{
+				std::vector<std::string> arrayElements = HelperFunctions::splitAll(value->stringValue, ';');
+				for(std::vector<std::string>::iterator i = arrayElements.begin(); i != arrayElements.end(); ++i)
+				{
+					value->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(HelperFunctions::getDouble(*i))));
+				}
+				value->type = RPCVariableType::rpcArray;
+				value->stringValue = "";
+			}
+			else _bl->out.printWarning("Warning: Only strings can be converted to Json arrays.");
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -355,12 +423,13 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
     }
 }
 
-ParameterConversion::ParameterConversion(BaseLib::Obj* baseLib)
+ParameterConversion::ParameterConversion(BaseLib::Obj* baseLib, Parameter* parameter)
 {
 	_bl = baseLib;
+	_parameter = parameter;
 }
 
-ParameterConversion::ParameterConversion(BaseLib::Obj* baseLib, xml_node<>* node) : ParameterConversion(baseLib)
+ParameterConversion::ParameterConversion(BaseLib::Obj* baseLib, Parameter* parameter, xml_node<>* node) : ParameterConversion(baseLib, parameter)
 {
 	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 	{
@@ -383,6 +452,9 @@ ParameterConversion::ParameterConversion(BaseLib::Obj* baseLib, xml_node<>* node
 			else if(attributeValue == "blind_test") type = Type::Enum::blindTest;
 			else if(attributeValue == "cfm") type = Type::Enum::cfm; //Used in "SUBMIT" of HM-OU-CFM-Pl
 			else if(attributeValue == "ccrtdn_party") type = Type::Enum::ccrtdnParty; //Used in "SUBMIT" of HM-CC-RT-DN
+			else if(attributeValue == "rpc_binary") type = Type::Enum::rpcBinary;
+			else if(attributeValue == "option_string") type = Type::Enum::optionString;
+			else if(attributeValue == "string_json_array_float") type = Type::Enum::stringJsonArrayFloat;
 			else _bl->out.printWarning("Warning: Unknown type for \"conversion\": " + attributeValue);
 		}
 		else if(attributeName == "factor") factor = HelperFunctions::getDouble(attributeValue);
@@ -478,11 +550,11 @@ bool Parameter::checkCondition(int32_t value)
 	return false;
 }
 
-std::vector<uint8_t> Parameter::reverseData(const std::vector<uint8_t>& data)
+void Parameter::reverseData(const std::vector<uint8_t>& data, std::vector<uint8_t>& reversedData)
 {
-	std::vector<uint8_t> reversedData;
 	try
 	{
+		reversedData.clear();
 		int32_t size = std::lround(std::ceil(physicalParameter->size));
 		if(size == 0) size = 1;
 		int32_t j = data.size() - 1;
@@ -505,34 +577,38 @@ std::vector<uint8_t> Parameter::reverseData(const std::vector<uint8_t>& data)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return reversedData;
 }
 
-std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint8_t>& data, bool isEvent)
+std::shared_ptr<RPCVariable> Parameter::convertFromPacket(std::vector<uint8_t>& data, bool isEvent)
 {
 	try
 	{
-		std::vector<uint8_t> value;
-		if(physicalParameter->endian == PhysicalParameter::Endian::Enum::little) value = reverseData(data);
-		else value = data;
+		std::vector<uint8_t> reversedData;
+		std::vector<uint8_t>* value = nullptr;
+		if(physicalParameter->endian == PhysicalParameter::Endian::Enum::little)
+		{
+			value = &reversedData;
+			reverseData(data, *value);
+		}
+		else value = &data;
 		if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum && conversion.empty())
 		{
 			int32_t integerValue = 0;
-			_bl->hf.memcpyBigEndian(integerValue, value);
+			_bl->hf.memcpyBigEndian(integerValue, *value);
 			return std::shared_ptr<RPCVariable>(new RPCVariable(integerValue));
 		}
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean && conversion.empty())
 		{
 			int32_t integerValue = 0;
-			_bl->hf.memcpyBigEndian(integerValue, value);
+			_bl->hf.memcpyBigEndian(integerValue, *value);
 			return std::shared_ptr<RPC::RPCVariable>(new RPCVariable((bool)integerValue));
 		}
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString && conversion.empty())
 		{
-			if(!value.empty() && value.at(0) != 0)
+			if(!value->empty() && value->at(0) != 0)
 			{
-				int32_t size = value.back() == 0 ? value.size() - 1 : value.size();
-				std::string string(&value.at(0), &value.at(0) + size);
+				int32_t size = value->back() == 0 ? value->size() - 1 : value->size();
+				std::string string(&value->at(0), &value->at(0) + size);
 				return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(string));
 			}
 			return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcString));
@@ -545,34 +621,51 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint
 		else if(id == "RSSI_DEVICE")
 		{
 			int32_t integerValue;
-			_bl->hf.memcpyBigEndian(integerValue, value);
+			_bl->hf.memcpyBigEndian(integerValue, *value);
 			std::shared_ptr<RPCVariable> variable(new RPCVariable(integerValue * -1));
 			return variable;
 		}
 		else
 		{
-			int32_t integerValue;
-			_bl->hf.memcpyBigEndian(integerValue, value);
-			std::shared_ptr<RPCVariable> variable(new RPCVariable(integerValue));
-			if(isSigned && !value.empty() && value.size() <= 4)
+			std::shared_ptr<RPCVariable> variable;
+			if(value->size() <= 4)
 			{
-				int32_t byteIndex = value.size() - std::lround(std::ceil(physicalParameter->size));
-				if(byteIndex >= 0 && byteIndex < (signed)value.size())
+				int32_t integerValue;
+				_bl->hf.memcpyBigEndian(integerValue, *value);
+				variable.reset(new RPCVariable(integerValue));
+				if(isSigned && !value->empty() && value->size() <= 4)
 				{
-					int32_t bitSize = std::lround(physicalParameter->size * 10) % 10;
-					int32_t signPosition = 0;
-					if(bitSize == 0) signPosition = 7;
-					else signPosition = bitSize - 1;
-					if(value.at(byteIndex) & (1 << signPosition))
+					int32_t byteIndex = value->size() - std::lround(std::ceil(physicalParameter->size));
+					if(byteIndex >= 0 && byteIndex < (signed)value->size())
 					{
-						int32_t bits = (std::lround(std::floor(physicalParameter->size)) * 8) + bitSize;
-						variable->integerValue -= (1 << bits);
+						int32_t bitSize = std::lround(physicalParameter->size * 10) % 10;
+						int32_t signPosition = 0;
+						if(bitSize == 0) signPosition = 7;
+						else signPosition = bitSize - 1;
+						if(value->at(byteIndex) & (1 << signPosition))
+						{
+							int32_t bits = (std::lround(std::floor(physicalParameter->size)) * 8) + bitSize;
+							variable->integerValue -= (1 << bits);
+						}
 					}
 				}
 			}
 			for(std::vector<std::shared_ptr<ParameterConversion>>::reverse_iterator i = conversion.rbegin(); i != conversion.rend(); ++i)
 			{
-				(*i)->fromPacket(variable);
+				if((*i)->type == ParameterConversion::Type::Enum::rpcBinary)
+				{
+					if(!_binaryDecoder) _binaryDecoder = std::shared_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(_bl));
+					variable = _binaryDecoder->decodeResponse(*value);
+				}
+				else
+				{
+					(*i)->fromPacket(variable);
+				}
+			}
+			if(!variable)
+			{
+				_bl->out.printError("Error converting value: Variable is nullptr.");
+				variable.reset(new RPCVariable(RPCVariableType::rpcInteger));
 			}
 			return variable;
 		}
@@ -592,15 +685,15 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint
     return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcInteger));
 }
 
-std::vector<uint8_t> Parameter::convertToPacket(std::string value)
+void Parameter::convertToPacket(std::string value, std::vector<uint8_t>& convertedValue)
 {
 	try
 	{
-		std::shared_ptr<RPCVariable> convertedValue;
-		if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger) convertedValue.reset(new RPCVariable(HelperFunctions::getNumber(value)));
+		std::shared_ptr<RPCVariable> rpcValue;
+		if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger) rpcValue.reset(new RPCVariable(HelperFunctions::getNumber(value)));
 		if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum)
 		{
-			if(HelperFunctions::isNumber(value)) convertedValue.reset(new RPCVariable(HelperFunctions::getNumber(value)));
+			if(HelperFunctions::isNumber(value)) rpcValue.reset(new RPCVariable(HelperFunctions::getNumber(value)));
 			else //value is id of enum element
 			{
 				LogicalParameterEnum* parameter = (LogicalParameterEnum*)logicalParameter.get();
@@ -608,26 +701,26 @@ std::vector<uint8_t> Parameter::convertToPacket(std::string value)
 				{
 					if(i->id == value)
 					{
-						convertedValue.reset(new RPCVariable(i->index));
+						rpcValue.reset(new RPCVariable(i->index));
 						break;
 					}
 				}
-				if(!convertedValue) convertedValue.reset(new RPCVariable(0));
+				if(!rpcValue) rpcValue.reset(new RPCVariable(0));
 			}
 		}
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean || logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 		{
-			convertedValue.reset(new RPCVariable(false));
-			if(HelperFunctions::toLower(value) == "true") convertedValue->booleanValue = true;
+			rpcValue.reset(new RPCVariable(false));
+			if(HelperFunctions::toLower(value) == "true") rpcValue->booleanValue = true;
 		}
-		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat) convertedValue.reset(new RPCVariable(HelperFunctions::getDouble(value)));
-		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString) convertedValue.reset(new RPCVariable(value));
-		if(!convertedValue)
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat) rpcValue.reset(new RPCVariable(HelperFunctions::getDouble(value)));
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString) rpcValue.reset(new RPCVariable(value));
+		if(!rpcValue)
 		{
 			_bl->out.printWarning("Warning: Could not convert parameter " + id + " from String.");
-			return std::vector<uint8_t>();
+			return;
 		}
-		return convertToPacket(convertedValue);
+		return convertToPacket(rpcValue, convertedValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -641,15 +734,14 @@ std::vector<uint8_t> Parameter::convertToPacket(std::string value)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::vector<uint8_t>();
 }
 
-std::vector<uint8_t> Parameter::convertToPacket(const std::shared_ptr<RPCVariable> value)
+void Parameter::convertToPacket(const std::shared_ptr<RPCVariable> value, std::vector<uint8_t>& convertedValue)
 {
-	std::vector<uint8_t> data;
 	try
 	{
-		if(!value) return data;
+		convertedValue.clear();
+		if(!value) return;
 		std::shared_ptr<RPCVariable> variable(new RPC::RPCVariable());
 		*variable = *value;
 		if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum && conversion.empty())
@@ -666,15 +758,15 @@ std::vector<uint8_t> Parameter::convertToPacket(const std::shared_ptr<RPCVariabl
 		{
 			if(variable->stringValue.size() > 0)
 			{
-				data.insert(data.end(), variable->stringValue.begin(), variable->stringValue.end());
+				convertedValue.insert(convertedValue.end(), variable->stringValue.begin(), variable->stringValue.end());
 			}
-			if((signed)data.size() < std::lround(physicalParameter->size)) data.push_back(0); //0 termination. Otherwise parts of old string will still be visible
+			if((signed)convertedValue.size() < std::lround(physicalParameter->size)) convertedValue.push_back(0); //0 termination. Otherwise parts of old string will still be visible
 		}
 		else if(!conversion.empty() && conversion.at(0)->type == ParameterConversion::Type::cfm)
 		{
 			//Cannot currently easily be handled by ParameterConversion::toPacket
-			data.resize(14, 0);
-			if(variable->stringValue.empty() || variable->stringValue == "0") return data;
+			convertedValue.resize(14, 0);
+			if(variable->stringValue.empty() || variable->stringValue == "0") return;
 			std::istringstream stringStream(variable->stringValue);
 			std::string element;
 
@@ -682,37 +774,43 @@ std::vector<uint8_t> Parameter::convertToPacket(const std::shared_ptr<RPCVariabl
 			{
 				if(i == 0)
 				{
-					data.at(0) = std::lround(200 * HelperFunctions::getDouble(element));
+					convertedValue.at(0) = std::lround(200 * HelperFunctions::getDouble(element));
 				}
 				else if(i == 1)
 				{
-					data.at(1) = HelperFunctions::getNumber(element);
+					convertedValue.at(1) = HelperFunctions::getNumber(element);
 				}
 				else if(i == 2)
 				{
 					variable->integerValue = std::lround(HelperFunctions::getDouble(element) * 10);
-					ParameterConversion conversion(_bl);
+					ParameterConversion conversion(_bl, this);
 					conversion.type = ParameterConversion::Type::integerTinyFloat;
 					conversion.toPacket(variable);
 					std::vector<uint8_t> time;
 					_bl->hf.memcpyBigEndian(time, variable->integerValue);
-					if(time.size() == 1) data.at(13) = time.at(0);
+					if(time.size() == 1) convertedValue.at(13) = time.at(0);
 					else
 					{
-						data.at(12) = time.at(0);
-						data.at(13) = time.at(1);
+						convertedValue.at(12) = time.at(0);
+						convertedValue.at(13) = time.at(1);
 					}
 				}
-				else data.at(i - 1) = HelperFunctions::getNumber(element);
+				else convertedValue.at(i - 1) = HelperFunctions::getNumber(element);
 			}
-			if(physicalParameter->endian == PhysicalParameter::Endian::Enum::little) data = reverseData(data);
-			return data;
+			if(physicalParameter->endian == PhysicalParameter::Endian::Enum::little)
+			{
+				std::vector<uint8_t> reversedData;
+				reverseData(convertedValue, reversedData);
+				convertedValue = reversedData;
+				return;
+			}
+			return;
 		}
 		else if(!conversion.empty() && conversion.at(0)->type == ParameterConversion::Type::ccrtdnParty)
 		{
 			//Cannot currently easily be handled by ParameterConversion::toPacket
-			data.resize(8, 0);
-			if(variable->stringValue.empty()) return data;
+			convertedValue.resize(8, 0);
+			if(variable->stringValue.empty()) return;
 			std::istringstream stringStream(variable->stringValue);
 			std::string element;
 
@@ -720,25 +818,25 @@ std::vector<uint8_t> Parameter::convertToPacket(const std::shared_ptr<RPCVariabl
 			for(uint32_t i = 0; std::getline(stringStream, element, ',') && i < 9; i++)
 			{
 				//Temperature
-				if(i == 0) data.at(0) = std::lround(2 * HelperFunctions::getDouble(element));
+				if(i == 0) convertedValue.at(0) = std::lround(2 * HelperFunctions::getDouble(element));
 				//Start time
-				else if(i == 1) data.at(1) = HelperFunctions::getNumber(element) / 30;
+				else if(i == 1) convertedValue.at(1) = HelperFunctions::getNumber(element) / 30;
 				//Start day
-				else if(i == 2) data.at(2) = HelperFunctions::getNumber(element);
+				else if(i == 2) convertedValue.at(2) = HelperFunctions::getNumber(element);
 				//Start month
-				else if(i == 3) data.at(7) = HelperFunctions::getNumber(element) << 4;
+				else if(i == 3) convertedValue.at(7) = HelperFunctions::getNumber(element) << 4;
 				//Start year
-				else if(i == 4) data.at(3) = HelperFunctions::getNumber(element);
+				else if(i == 4) convertedValue.at(3) = HelperFunctions::getNumber(element);
 				//End time
-				else if(i == 5) data.at(4) = HelperFunctions::getNumber(element) / 30;
+				else if(i == 5) convertedValue.at(4) = HelperFunctions::getNumber(element) / 30;
 				//End day
-				else if(i == 6) data.at(5) = HelperFunctions::getNumber(element);
+				else if(i == 6) convertedValue.at(5) = HelperFunctions::getNumber(element);
 				//End month
-				else if(i == 7) data.at(7) |= HelperFunctions::getNumber(element);
+				else if(i == 7) convertedValue.at(7) |= HelperFunctions::getNumber(element);
 				//End year
-				else if(i == 8) data.at(6) = HelperFunctions::getNumber(element);
+				else if(i == 8) convertedValue.at(6) = HelperFunctions::getNumber(element);
 			}
-			return data;
+			return;
 		}
 		else
 		{
@@ -796,7 +894,13 @@ std::vector<uint8_t> Parameter::convertToPacket(const std::shared_ptr<RPCVariabl
 			{
 				for(std::vector<std::shared_ptr<ParameterConversion>>::iterator i = conversion.begin(); i != conversion.end(); ++i)
 				{
-					(*i)->toPacket(variable);
+					if((*i)->type == ParameterConversion::Type::Enum::rpcBinary)
+					{
+						if(!_binaryEncoder) _binaryEncoder = std::shared_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(_bl));
+						_binaryEncoder->encodeResponse(variable, convertedValue); //No more conversions after this point.
+						return;
+					}
+					else (*i)->toPacket(variable);
 				}
 			}
 		}
@@ -815,10 +919,15 @@ std::vector<uint8_t> Parameter::convertToPacket(const std::shared_ptr<RPCVariabl
 				int32_t valueMask = 0xFFFFFFFF >> (((4 - byteSize) * 8) - bitSize);
 				variable->integerValue &= valueMask;
 			}
-			_bl->hf.memcpyBigEndian(data, variable->integerValue);
+			_bl->hf.memcpyBigEndian(convertedValue, variable->integerValue);
 		}
 
-		if(physicalParameter->endian == PhysicalParameter::Endian::Enum::little) data = reverseData(data);
+		if(physicalParameter->endian == PhysicalParameter::Endian::Enum::little)
+		{
+			std::vector<uint8_t> reversedData;
+			reverseData(convertedValue, reversedData);
+			convertedValue = reversedData;
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -832,7 +941,6 @@ std::vector<uint8_t> Parameter::convertToPacket(const std::shared_ptr<RPCVariabl
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-	return data;
 }
 
 Parameter::Parameter(BaseLib::Obj* baseLib)
@@ -925,6 +1033,8 @@ Parameter::Parameter(BaseLib::Obj* baseLib, xml_node<>* node, bool checkForID) :
 			}
 		}
 		else if(attributeName == "mask") mask = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "field") field = attributeValue;
+		else if(attributeName == "subfield") subfield = attributeValue;
 		else _bl->out.printWarning("Warning: Unknown attribute for \"parameter\": " + attributeName);
 	}
 	if(checkForID && id.empty()) _bl->out.printError("Error: Parameter has no id. Index: " + std::to_string(index));
@@ -950,7 +1060,7 @@ Parameter::Parameter(BaseLib::Obj* baseLib, xml_node<>* node, bool checkForID) :
 		}
 		else if(nodeName == "conversion")
 		{
-			std::shared_ptr<ParameterConversion> parameterConversion(new ParameterConversion(baseLib, parameterNode));
+			std::shared_ptr<ParameterConversion> parameterConversion(new ParameterConversion(baseLib, this, parameterNode));
 			if(parameterConversion && parameterConversion->type != ParameterConversion::Type::Enum::none) conversion.push_back(parameterConversion);
 		}
 		else if(nodeName == "description")
@@ -1755,7 +1865,7 @@ Device::Device(BaseLib::Obj* baseLib, Systems::DeviceFamilies deviceFamily, std:
 			parameter->id = "AES_ACTIVE";
 			parameter->uiFlags = Parameter::UIFlags::Enum::internal;
 			parameter->conversion.clear();
-			parameter->conversion.push_back(std::shared_ptr<ParameterConversion>(new ParameterConversion(baseLib)));
+			parameter->conversion.push_back(std::shared_ptr<ParameterConversion>(new ParameterConversion(baseLib, parameter.get())));
 			parameter->conversion.back()->type = ParameterConversion::Type::Enum::booleanInteger;
 			std::shared_ptr<LogicalParameterBoolean> logicalParameter(new LogicalParameterBoolean(baseLib));
 			logicalParameter->defaultValueExists = true;

@@ -209,11 +209,11 @@ void HM_LC_SWX_FM::unserializeStates(std::shared_ptr<std::vector<char>> serializ
 	{
 		BaseLib::BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
-		uint32_t stateSize = decoder.decodeInteger(serializedData, position);
+		uint32_t stateSize = decoder.decodeInteger(*serializedData, position);
 		for(uint32_t i = 0; i < stateSize; i++)
 		{
-			uint32_t channel = decoder.decodeInteger(serializedData, position);
-			_states[channel] = decoder.decodeBoolean(serializedData, position);
+			uint32_t channel = decoder.decodeInteger(*serializedData, position);
+			_states[channel] = decoder.decodeBoolean(*serializedData, position);
 		}
 	}
 	catch(const std::exception& ex)
