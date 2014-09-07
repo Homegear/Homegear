@@ -39,7 +39,12 @@ namespace PhilipsHue
 		none = 					0xFFFFFFFF,
 		HMRCV50 = 				0x0000,
 		CENTRAL = 				0xFFFFFFFD,
-		LCT001 =				0x0001
+		LCT001 =				0x0001,
+		LLC001 =				0x0101,
+		LLC006 =				0x0106,
+		LLC007 =				0x0107,
+		LLC011 =				0x0111,
+		LST001 =				0x0201
 	};
 }
 #endif

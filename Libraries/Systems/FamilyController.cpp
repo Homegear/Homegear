@@ -553,7 +553,7 @@ std::string FamilyController::handleCLICommand(std::string& command)
 				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
-					family = (BaseLib::Systems::DeviceFamilies)BaseLib::HelperFunctions::getNumber(element, false);
+					family = (BaseLib::Systems::DeviceFamilies)BaseLib::Math::getNumber(element, false);
 					if(family == BaseLib::Systems::DeviceFamilies::none) return "Invalid family id.\n";
 				}
 				index++;

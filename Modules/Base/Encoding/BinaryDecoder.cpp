@@ -49,7 +49,7 @@ int32_t BinaryDecoder::decodeInteger(std::vector<char>& encodedData, uint32_t& p
 			//IP-Symcon encodes integers as string => Difficult to interpret. This works for numbers up to 3 digits:
 			std::string string(&encodedData.at(position), &encodedData.at(encodedData.size() - 1) + 1);
 			position = encodedData.size();
-			integer = _bl->hf.getNumber(string);
+			integer = Math::getNumber(string);
 			return integer;
 		}
 		_bl->hf.memcpyBigEndian((char*)&integer, &encodedData.at(position), 4);
@@ -81,7 +81,7 @@ int32_t BinaryDecoder::decodeInteger(std::vector<uint8_t>& encodedData, uint32_t
 			//IP-Symcon encodes integers as string => Difficult to interpret. This works for numbers up to 3 digits:
 			std::string string(&encodedData.at(position), &encodedData.at(encodedData.size() - 1) + 1);
 			position = encodedData.size();
-			integer = _bl->hf.getNumber(string);
+			integer = Math::getNumber(string);
 			return integer;
 		}
 		_bl->hf.memcpyBigEndian((char*)&integer, (char*)&encodedData.at(position), 4);

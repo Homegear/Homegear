@@ -153,7 +153,7 @@ void PhysicalInterfaces::load(std::string filename)
 				}
 				else if(name == "responsedelay")
 				{
-					settings->responseDelay = BaseLib::HelperFunctions::getNumber(value);
+					settings->responseDelay = BaseLib::Math::getNumber(value);
 					if(settings->responseDelay > 10000) settings->responseDelay = 10000;
 					GD::out.printDebug("Debug: responseDelay of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->responseDelay));
 				}
@@ -165,19 +165,19 @@ void PhysicalInterfaces::load(std::string filename)
 				}
 				else if(name == "enablerxvalue")
 				{
-					int32_t number = BaseLib::HelperFunctions::getNumber(value);
+					int32_t number = BaseLib::Math::getNumber(value);
 					settings->enableRXValue = number;
 					GD::out.printDebug("Debug: enableRXValue of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->enableRXValue));
 				}
 				else if(name == "enabletxvalue")
 				{
-					int32_t number = BaseLib::HelperFunctions::getNumber(value);
+					int32_t number = BaseLib::Math::getNumber(value);
 					settings->enableTXValue = number;
 					GD::out.printDebug("Debug: enableTXValue of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->enableTXValue));
 				}
 				else if(name == "gpio1")
 				{
-					int32_t number = BaseLib::HelperFunctions::getNumber(value);
+					int32_t number = BaseLib::Math::getNumber(value);
 					if(number > 0)
 					{
 						settings->gpio[1].number = number;
@@ -186,7 +186,7 @@ void PhysicalInterfaces::load(std::string filename)
 				}
 				else if(name == "gpio2")
 				{
-					int32_t number = BaseLib::HelperFunctions::getNumber(value);
+					int32_t number = BaseLib::Math::getNumber(value);
 					if(number > 0)
 					{
 						settings->gpio[2].number = number;
@@ -195,7 +195,7 @@ void PhysicalInterfaces::load(std::string filename)
 				}
 				else if(name == "gpio3")
 				{
-					int32_t number = BaseLib::HelperFunctions::getNumber(value);
+					int32_t number = BaseLib::Math::getNumber(value);
 					if(number > 0)
 					{
 						settings->gpio[3].number = number;
@@ -204,7 +204,7 @@ void PhysicalInterfaces::load(std::string filename)
 				}
 				else if(name == "stackposition")
 				{
-					int32_t number = BaseLib::HelperFunctions::getNumber(value);
+					int32_t number = BaseLib::Math::getNumber(value);
 					if(number > 0)
 					{
 						settings->stackPosition = number;
@@ -238,7 +238,7 @@ void PhysicalInterfaces::load(std::string filename)
 				}
 				else if(name == "currentrfkeyindex")
 				{
-					settings->currentRFKeyIndex = BaseLib::HelperFunctions::getNumber(value);
+					settings->currentRFKeyIndex = BaseLib::Math::getNumber(value);
 					GD::out.printDebug("Debug: CurrentRFKeyIndex of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->currentRFKeyIndex));
 				}
 				else if(name == "lankey")
@@ -265,7 +265,7 @@ void PhysicalInterfaces::load(std::string filename)
 				}
 				else if(name == "listenthreadpriority")
 				{
-					settings->listenThreadPriority = BaseLib::HelperFunctions::getNumber(value);
+					settings->listenThreadPriority = BaseLib::Math::getNumber(value);
 					if(settings->listenThreadPriority > 99) settings->listenThreadPriority = 99;
 					if(settings->listenThreadPriority < 0) settings->listenThreadPriority = 0;
 					GD::out.printDebug("Debug: ListenThreadPriority of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->listenThreadPriority));

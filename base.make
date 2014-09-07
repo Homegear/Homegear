@@ -96,7 +96,9 @@ endif
 OBJECTS := \
 	$(OBJDIR)/BaseLib.o \
 	$(OBJDIR)/IEvents.o \
+	$(OBJDIR)/Color.o \
 	$(OBJDIR)/HelperFunctions.o \
+	$(OBJDIR)/Math.o \
 	$(OBJDIR)/Output.o \
 	$(OBJDIR)/LogicalParameter.o \
 	$(OBJDIR)/PhysicalParameter.o \
@@ -199,7 +201,13 @@ $(OBJDIR)/BaseLib.o: Modules/Base/BaseLib.cpp
 $(OBJDIR)/IEvents.o: Modules/Base/IEvents.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Color.o: Modules/Base/HelperFunctions/Color.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HelperFunctions.o: Modules/Base/HelperFunctions/HelperFunctions.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Math.o: Modules/Base/HelperFunctions/Math.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Output.o: Modules/Base/Output/Output.cpp

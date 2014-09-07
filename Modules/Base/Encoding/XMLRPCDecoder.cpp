@@ -257,7 +257,7 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeParameter(xml_node<>* valueNod
 		}
 		else if(type == "i4" || type == "int")
 		{
-			return std::shared_ptr<RPCVariable>(new RPCVariable(HelperFunctions::getNumber(value)));
+			return std::shared_ptr<RPCVariable>(new RPCVariable(Math::getNumber(value)));
 		}
 		else if(type == "double")
 		{

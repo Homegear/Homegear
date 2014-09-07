@@ -95,33 +95,33 @@ DeviceFrame::DeviceFrame(BaseLib::Obj* baseLib, xml_node<>* node) : DeviceFrame(
 		else if(attributeName == "type")
 		{
 			if(attributeValue.size() == 2 && attributeValue.at(0) == '#') type = (uint32_t)attributeValue.at(1);
-			else type = HelperFunctions::getNumber(attributeValue);
+			else type = Math::getNumber(attributeValue);
 		}
-		else if(attributeName == "subtype") subtype = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "subtype") subtype = Math::getNumber(attributeValue);
 		else if(attributeName == "subtype_index") subtypeIndex = std::stoll(attributeValue);
-		else if(attributeName == "response_type") responseType = HelperFunctions::getNumber(attributeValue);
-		else if(attributeName == "response_subtype") responseSubtype = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "response_type") responseType = Math::getNumber(attributeValue);
+		else if(attributeName == "response_subtype") responseSubtype = Math::getNumber(attributeValue);
 		else if(attributeName == "channel_field")
 		{
 			if(channelField == -1) //Might already be set by receiver_channel_field. We don't need both
 			{
 				std::pair<std::string, std::string> splitString = HelperFunctions::split(attributeValue, ':');
-				channelField = HelperFunctions::getNumber(splitString.first);
-				if(!splitString.second.empty()) channelFieldSize = HelperFunctions::getDouble(splitString.second);
+				channelField = Math::getNumber(splitString.first);
+				if(!splitString.second.empty()) channelFieldSize = Math::getDouble(splitString.second);
 			}
 		}
 		else if(attributeName == "receiver_channel_field")
 		{
 			std::pair<std::string, std::string> splitString = HelperFunctions::split(attributeValue, ':');
-			channelField = HelperFunctions::getNumber(splitString.first);
-			if(!splitString.second.empty()) channelFieldSize = HelperFunctions::getDouble(splitString.second);
+			channelField = Math::getNumber(splitString.first);
+			if(!splitString.second.empty()) channelFieldSize = Math::getDouble(splitString.second);
 		}
 		else if(attributeName == "fixed_channel")
 		{
 			if(attributeValue == "*") fixedChannel = -2;
-			else fixedChannel = HelperFunctions::getNumber(attributeValue);
+			else fixedChannel = Math::getNumber(attributeValue);
 		}
-		else if(attributeName == "size") size = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "size") size = Math::getNumber(attributeValue);
 		else if(attributeName == "double_send") { if(attributeValue == "true") doubleSend = true; }
 		else _bl->out.printWarning("Warning: Unknown attribute for \"frame\": " + attributeName);
 	}
@@ -230,7 +230,7 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 		}
 		else if(type == Type::Enum::blindTest)
 		{
-			value->integerValue = HelperFunctions::getNumber(stringValue);
+			value->integerValue = Math::getNumber(stringValue);
 		}
 		else if(type == Type::Enum::stringJsonArrayFloat)
 		{
@@ -372,12 +372,12 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 		}
 		else if(type == Type::Enum::stringUnsignedInteger)
 		{
-			value->integerValue = HelperFunctions::getUnsignedNumber(value->stringValue);
+			value->integerValue = Math::getUnsignedNumber(value->stringValue);
 			value->type = RPCVariableType::rpcInteger;
 		}
 		else if(type == Type::Enum::blindTest)
 		{
-			value->integerValue = HelperFunctions::getNumber(stringValue);
+			value->integerValue = Math::getNumber(stringValue);
 			value->type = RPCVariableType::rpcInteger;
 		}
 		else if(type == Type::Enum::optionString)
@@ -401,7 +401,7 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 				std::vector<std::string> arrayElements = HelperFunctions::splitAll(value->stringValue, ';');
 				for(std::vector<std::string>::iterator i = arrayElements.begin(); i != arrayElements.end(); ++i)
 				{
-					value->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(HelperFunctions::getDouble(*i))));
+					value->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(Math::getDouble(*i))));
 				}
 				value->type = RPCVariableType::rpcArray;
 				value->stringValue = "";
@@ -457,30 +457,30 @@ ParameterConversion::ParameterConversion(BaseLib::Obj* baseLib, Parameter* param
 			else if(attributeValue == "string_json_array_float") type = Type::Enum::stringJsonArrayFloat;
 			else _bl->out.printWarning("Warning: Unknown type for \"conversion\": " + attributeValue);
 		}
-		else if(attributeName == "factor") factor = HelperFunctions::getDouble(attributeValue);
+		else if(attributeName == "factor") factor = Math::getDouble(attributeValue);
 		else if(attributeName == "factors")
 		{
 			std::stringstream stream(attributeValue);
 			std::string element;
 			factors.clear();
-			while(std::getline(stream, element, ',')) factors.push_back(HelperFunctions::getDouble(element));
+			while(std::getline(stream, element, ',')) factors.push_back(Math::getDouble(element));
 		}
-		else if(attributeName == "value_size") valueSize = HelperFunctions::getDouble(attributeValue);
-		else if(attributeName == "threshold") threshold = HelperFunctions::getNumber(attributeValue);
-		else if(attributeName == "false") valueFalse = HelperFunctions::getNumber(attributeValue);
-		else if(attributeName == "true") valueTrue = HelperFunctions::getNumber(attributeValue);
-		else if(attributeName == "div") div = HelperFunctions::getNumber(attributeValue);
-		else if(attributeName == "mul") mul = HelperFunctions::getNumber(attributeValue);
-		else if(attributeName == "offset") offset = HelperFunctions::getDouble(attributeValue);
+		else if(attributeName == "value_size") valueSize = Math::getDouble(attributeValue);
+		else if(attributeName == "threshold") threshold = Math::getNumber(attributeValue);
+		else if(attributeName == "false") valueFalse = Math::getNumber(attributeValue);
+		else if(attributeName == "true") valueTrue = Math::getNumber(attributeValue);
+		else if(attributeName == "div") div = Math::getNumber(attributeValue);
+		else if(attributeName == "mul") mul = Math::getNumber(attributeValue);
+		else if(attributeName == "offset") offset = Math::getDouble(attributeValue);
 		else if(attributeName == "value") stringValue = attributeValue;
-		else if(attributeName == "mantissa_start") mantissaStart = HelperFunctions::getNumber(attributeValue);
-		else if(attributeName == "mantissa_size") mantissaSize = HelperFunctions::getNumber(attributeValue);
-		else if(attributeName == "exponent_start") exponentStart = HelperFunctions::getNumber(attributeValue);
-		else if(attributeName == "exponent_size") exponentSize = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "mantissa_start") mantissaStart = Math::getNumber(attributeValue);
+		else if(attributeName == "mantissa_size") mantissaSize = Math::getNumber(attributeValue);
+		else if(attributeName == "exponent_start") exponentStart = Math::getNumber(attributeValue);
+		else if(attributeName == "exponent_size") exponentSize = Math::getNumber(attributeValue);
 		else if(attributeName == "sim_counter") {}
 		else if(attributeName == "counter_size") {}
-		else if(attributeName == "on") on = HelperFunctions::getNumber(attributeValue);
-		else if(attributeName == "off") off = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "on") on = Math::getNumber(attributeValue);
+		else if(attributeName == "off") off = Math::getNumber(attributeValue);
 		else if(attributeName == "invert") { if(attributeValue == "true") invert = true; }
 		else _bl->out.printWarning("Warning: Unknown attribute for \"conversion\": " + attributeName);
 	}
@@ -495,8 +495,8 @@ ParameterConversion::ParameterConversion(BaseLib::Obj* baseLib, Parameter* param
 			{
 				std::string valueMapAttributeName(valueMapAttr->name());
 				std::string valueMapAttributeValue(valueMapAttr->value());
-				if(valueMapAttributeName == "device_value") deviceValue = HelperFunctions::getNumber(valueMapAttributeValue);
-				else if(valueMapAttributeName == "parameter_value") parameterValue = HelperFunctions::getNumber(valueMapAttributeValue);
+				if(valueMapAttributeName == "device_value") deviceValue = Math::getNumber(valueMapAttributeValue);
+				else if(valueMapAttributeName == "parameter_value") parameterValue = Math::getNumber(valueMapAttributeValue);
 				else if(valueMapAttributeName == "from_device") { if(valueMapAttributeValue == "false") fromDevice = false; }
 				else if(valueMapAttributeName == "to_device") { if(valueMapAttributeValue == "false") toDevice = false; }
 				else if(valueMapAttributeName == "mask") {} //ignore, not needed
@@ -690,10 +690,10 @@ void Parameter::convertToPacket(std::string value, std::vector<uint8_t>& convert
 	try
 	{
 		std::shared_ptr<RPCVariable> rpcValue;
-		if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger) rpcValue.reset(new RPCVariable(HelperFunctions::getNumber(value)));
+		if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger) rpcValue.reset(new RPCVariable(Math::getNumber(value)));
 		if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum)
 		{
-			if(HelperFunctions::isNumber(value)) rpcValue.reset(new RPCVariable(HelperFunctions::getNumber(value)));
+			if(Math::isNumber(value)) rpcValue.reset(new RPCVariable(Math::getNumber(value)));
 			else //value is id of enum element
 			{
 				LogicalParameterEnum* parameter = (LogicalParameterEnum*)logicalParameter.get();
@@ -713,7 +713,7 @@ void Parameter::convertToPacket(std::string value, std::vector<uint8_t>& convert
 			rpcValue.reset(new RPCVariable(false));
 			if(HelperFunctions::toLower(value) == "true") rpcValue->booleanValue = true;
 		}
-		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat) rpcValue.reset(new RPCVariable(HelperFunctions::getDouble(value)));
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat) rpcValue.reset(new RPCVariable(Math::getDouble(value)));
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString) rpcValue.reset(new RPCVariable(value));
 		if(!rpcValue)
 		{
@@ -774,15 +774,15 @@ void Parameter::convertToPacket(const std::shared_ptr<RPCVariable> value, std::v
 			{
 				if(i == 0)
 				{
-					convertedValue.at(0) = std::lround(200 * HelperFunctions::getDouble(element));
+					convertedValue.at(0) = std::lround(200 * Math::getDouble(element));
 				}
 				else if(i == 1)
 				{
-					convertedValue.at(1) = HelperFunctions::getNumber(element);
+					convertedValue.at(1) = Math::getNumber(element);
 				}
 				else if(i == 2)
 				{
-					variable->integerValue = std::lround(HelperFunctions::getDouble(element) * 10);
+					variable->integerValue = std::lround(Math::getDouble(element) * 10);
 					ParameterConversion conversion(_bl, this);
 					conversion.type = ParameterConversion::Type::integerTinyFloat;
 					conversion.toPacket(variable);
@@ -795,7 +795,7 @@ void Parameter::convertToPacket(const std::shared_ptr<RPCVariable> value, std::v
 						convertedValue.at(13) = time.at(1);
 					}
 				}
-				else convertedValue.at(i - 1) = HelperFunctions::getNumber(element);
+				else convertedValue.at(i - 1) = Math::getNumber(element);
 			}
 			if(physicalParameter->endian == PhysicalParameter::Endian::Enum::little)
 			{
@@ -818,23 +818,23 @@ void Parameter::convertToPacket(const std::shared_ptr<RPCVariable> value, std::v
 			for(uint32_t i = 0; std::getline(stringStream, element, ',') && i < 9; i++)
 			{
 				//Temperature
-				if(i == 0) convertedValue.at(0) = std::lround(2 * HelperFunctions::getDouble(element));
+				if(i == 0) convertedValue.at(0) = std::lround(2 * Math::getDouble(element));
 				//Start time
-				else if(i == 1) convertedValue.at(1) = HelperFunctions::getNumber(element) / 30;
+				else if(i == 1) convertedValue.at(1) = Math::getNumber(element) / 30;
 				//Start day
-				else if(i == 2) convertedValue.at(2) = HelperFunctions::getNumber(element);
+				else if(i == 2) convertedValue.at(2) = Math::getNumber(element);
 				//Start month
-				else if(i == 3) convertedValue.at(7) = HelperFunctions::getNumber(element) << 4;
+				else if(i == 3) convertedValue.at(7) = Math::getNumber(element) << 4;
 				//Start year
-				else if(i == 4) convertedValue.at(3) = HelperFunctions::getNumber(element);
+				else if(i == 4) convertedValue.at(3) = Math::getNumber(element);
 				//End time
-				else if(i == 5) convertedValue.at(4) = HelperFunctions::getNumber(element) / 30;
+				else if(i == 5) convertedValue.at(4) = Math::getNumber(element) / 30;
 				//End day
-				else if(i == 6) convertedValue.at(5) = HelperFunctions::getNumber(element);
+				else if(i == 6) convertedValue.at(5) = Math::getNumber(element);
 				//End month
-				else if(i == 7) convertedValue.at(7) |= HelperFunctions::getNumber(element);
+				else if(i == 7) convertedValue.at(7) |= Math::getNumber(element);
 				//End year
-				else if(i == 8) convertedValue.at(6) = HelperFunctions::getNumber(element);
+				else if(i == 8) convertedValue.at(6) = Math::getNumber(element);
 			}
 			return;
 		}
@@ -960,7 +960,7 @@ Parameter::Parameter(BaseLib::Obj* baseLib, xml_node<>* node, bool checkForID) :
 		else if(attributeName == "size") size = std::stod(attributeValue);
 		else if(attributeName == "index2") index2 = std::stod(attributeValue);
 		else if(attributeName == "size2") size2 = std::stod(attributeValue);
-		else if(attributeName == "index2_offset") index2Offset = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "index2_offset") index2Offset = Math::getNumber(attributeValue);
 		else if(attributeName == "signed") { if(attributeValue == "true") isSigned = true; }
 		else if(attributeName == "cond_op")
 		{
@@ -972,7 +972,7 @@ Parameter::Parameter(BaseLib::Obj* baseLib, xml_node<>* node, bool checkForID) :
 			else if(attributeValue == "le") booleanOperator = BooleanOperator::Enum::le;
 			else _bl->out.printWarning("Warning: Unknown attribute value for \"cond_op\" in node \"parameter\": " + attributeValue);
 		}
-		else if(attributeName == "const_value") constValue = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "const_value") constValue = Math::getNumber(attributeValue);
 		else if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "param") param = attributeValue;
 		else if(attributeName == "PARAM") additionalParameter = attributeValue;
@@ -1000,7 +1000,7 @@ Parameter::Parameter(BaseLib::Obj* baseLib, xml_node<>* node, bool checkForID) :
 				continue;
 			}
 			omitIfSet = true;
-			omitIf = HelperFunctions::getNumber(attributeValue);
+			omitIf = Math::getNumber(attributeValue);
 		}
 		else if(attributeName == "operations")
 		{
@@ -1032,7 +1032,7 @@ Parameter::Parameter(BaseLib::Obj* baseLib, xml_node<>* node, bool checkForID) :
 				else _bl->out.printWarning("Warning: Unknown ui flag for \"parameter\": " + attributeValue);
 			}
 		}
-		else if(attributeName == "mask") mask = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "mask") mask = Math::getNumber(attributeValue);
 		else if(attributeName == "field") field = attributeValue;
 		else if(attributeName == "subfield") subfield = attributeValue;
 		else _bl->out.printWarning("Warning: Unknown attribute for \"parameter\": " + attributeName);
@@ -1277,7 +1277,7 @@ DeviceType::DeviceType(BaseLib::Obj* baseLib, xml_node<>* typeNode) : DeviceType
 		std::string attributeValue(attr->value());
 		if(attributeName == "name") name = attributeValue;
 		else if(attributeName == "id") id = attributeValue;
-		else if(attributeName == "priority") priority = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "priority") priority = Math::getNumber(attributeValue);
 		else if(attributeName == "updatable") { if(attributeValue == "true") updatable = true; }
 		else _bl->out.printWarning("Warning: Unknown attribute for \"type\": " + attributeName);
 	}
@@ -1290,7 +1290,7 @@ DeviceType::DeviceType(BaseLib::Obj* baseLib, xml_node<>* typeNode) : DeviceType
 	if(typeIDNode)
 	{
 		std::string value(typeIDNode->value());
-		if(!value.empty()) typeID = HelperFunctions::getNumber(value);
+		if(!value.empty()) typeID = Math::getNumber(value);
 	}
 	xml_node<>* firmwareNode = typeNode->first_node("firmware");
 	if(firmwareNode)
@@ -1312,7 +1312,7 @@ DeviceType::DeviceType(BaseLib::Obj* baseLib, xml_node<>* typeNode) : DeviceType
 			else _bl->out.printWarning("Warning: Unknown attribute for \"firmware\": " + attributeName);
 		}
 		std::string value(firmwareNode->value());
-		if(!value.empty()) firmware = HelperFunctions::getNumber(value);
+		if(!value.empty()) firmware = Math::getNumber(value);
 	}
 }
 
@@ -1466,12 +1466,12 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 			type = typeFromString(attributeValue);
 			if(type == Type::Enum::none) _bl->out.printWarning("Warning: Unknown parameter set type: " + attributeValue);
 		}
-		else if(attributeName == "address_start") addressStart = HelperFunctions::getNumber(attributeValue);
-		else if(attributeName == "address_step") addressStep = HelperFunctions::getNumber(attributeValue);
-		else if(attributeName == "count") count = HelperFunctions::getNumber(attributeValue);
-		else if(attributeName == "channel_offset") channelOffset = HelperFunctions::getNumber(attributeValue);
-		else if(attributeName == "peer_address_offset") peerAddressOffset = HelperFunctions::getNumber(attributeValue);
-		else if(attributeName == "peer_channel_offset") peerChannelOffset = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "address_start") addressStart = Math::getNumber(attributeValue);
+		else if(attributeName == "address_step") addressStep = Math::getNumber(attributeValue);
+		else if(attributeName == "count") count = Math::getNumber(attributeValue);
+		else if(attributeName == "channel_offset") channelOffset = Math::getNumber(attributeValue);
+		else if(attributeName == "peer_address_offset") peerAddressOffset = Math::getNumber(attributeValue);
+		else if(attributeName == "peer_channel_offset") peerChannelOffset = Math::getNumber(attributeValue);
 		else if(attributeName == "link") {} //Ignored
 		else _bl->out.printWarning("Warning: Unknown attribute for \"paramset\": " + attributeName);
 	}
@@ -1545,7 +1545,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 		if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeInteger)
 		{
 			LogicalParameterInteger* logicalParameter = (LogicalParameterInteger*)parameter->logicalParameter.get();
-			logicalParameter->enforceValue = HelperFunctions::getNumber(i->second);
+			logicalParameter->enforceValue = Math::getNumber(i->second);
 		}
 		else if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean)
 		{
@@ -1555,7 +1555,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 		else if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeFloat)
 		{
 			LogicalParameterFloat* logicalParameter = (LogicalParameterFloat*)parameter->logicalParameter.get();
-			logicalParameter->enforceValue = HelperFunctions::getDouble(i->second);
+			logicalParameter->enforceValue = Math::getDouble(i->second);
 		}
 		else if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 		{
@@ -1565,7 +1565,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 		else if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeEnum)
 		{
 			LogicalParameterEnum* logicalParameter = (LogicalParameterEnum*)parameter->logicalParameter.get();
-			logicalParameter->enforceValue = HelperFunctions::getNumber(i->second);
+			logicalParameter->enforceValue = Math::getNumber(i->second);
 		}
 		else if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeString)
 		{
@@ -1670,10 +1670,10 @@ DeviceChannel::DeviceChannel(BaseLib::Obj* baseLib, xml_node<>* node, uint32_t& 
 		std::string attributeValue(attr->value());
 		if(attributeName == "index")
 		{
-			startIndex = HelperFunctions::getNumber(attributeValue);
+			startIndex = Math::getNumber(attributeValue);
 			index = startIndex;
 		}
-		else if(attributeName == "physical_index_offset") physicalIndexOffset = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "physical_index_offset") physicalIndexOffset = Math::getNumber(attributeValue);
 		else if(attributeName == "ui_flags")
 		{
 			if(attributeValue == "visible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::visible);
@@ -1691,7 +1691,7 @@ DeviceChannel::DeviceChannel(BaseLib::Obj* baseLib, xml_node<>* node, uint32_t& 
 		else if(attributeName == "type") type = attributeValue;
 		else if(attributeName == "hidden") { if(attributeValue == "true") hidden = true; }
 		else if(attributeName == "autoregister") { if(attributeValue == "true") autoregister = true; }
-		else if(attributeName == "count") count = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "count") count = Math::getNumber(attributeValue);
 		else if(attributeName == "has_team") { if(attributeValue == "true") hasTeam = true; }
 		else if(attributeName == "aes_default") { if(attributeValue == "true") aesDefault = true; }
 		else if(attributeName == "aes_always") { if(attributeValue == "true") aesDefault = true; }
@@ -1714,7 +1714,7 @@ DeviceChannel::DeviceChannel(BaseLib::Obj* baseLib, xml_node<>* node, uint32_t& 
 			std::pair<std::string, std::string> splitValue = HelperFunctions::split(attributeValue, ':');
 			if(!splitValue.first.empty())
 			{
-				countFromSysinfo = HelperFunctions::getDouble(splitValue.first);
+				countFromSysinfo = Math::getDouble(splitValue.first);
 				if(countFromSysinfo < 9)
 				{
 					_bl->out.printError("Error: count_from_sysinfo has to be >= 9.");
@@ -1723,7 +1723,7 @@ DeviceChannel::DeviceChannel(BaseLib::Obj* baseLib, xml_node<>* node, uint32_t& 
 			}
 			if(!splitValue.second.empty())
 			{
-				countFromSysinfoSize = HelperFunctions::getDouble(splitValue.second);
+				countFromSysinfoSize = Math::getDouble(splitValue.second);
 				if(countFromSysinfoSize > 1)
 				{
 					_bl->out.printError("Error: The size of count_from_sysinfo has to be <= 1.");
@@ -1941,7 +1941,7 @@ void Device::parseXML(xml_node<>* node)
 		{
 			std::string attributeName(attr->name());
 			std::string attributeValue(attr->value());
-			if(attributeName == "version") version = HelperFunctions::getNumber(attributeValue);
+			if(attributeName == "version") version = Math::getNumber(attributeValue);
 			else if(attributeName == "rx_modes")
 			{
 				std::stringstream stream(attributeValue);
@@ -1966,7 +1966,7 @@ void Device::parseXML(xml_node<>* node)
 			}
 			else if(attributeName == "eep_size")
 			{
-				eepSize = HelperFunctions::getNumber(attributeValue);
+				eepSize = Math::getNumber(attributeValue);
 			}
 			else if(attributeName == "rx_default") {} //not needed
 			else if(attributeName == "ui_flags")
@@ -1976,7 +1976,7 @@ void Device::parseXML(xml_node<>* node)
 				else if(attributeValue == "dontdelete") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::dontdelete);
 				else _bl->out.printWarning("Warning: Unknown ui flag for \"channel\": " + attributeValue);
 			}
-			else if(attributeName == "cyclic_timeout") cyclicTimeout = HelperFunctions::getNumber(attributeValue);
+			else if(attributeName == "cyclic_timeout") cyclicTimeout = Math::getNumber(attributeValue);
 			else if(attributeName == "supports_aes") { if(attributeValue == "true") supportsAES = true; }
 			else if(attributeName == "peering_sysinfo_expect_channel") { if(attributeValue == "false") peeringSysinfoExpectChannel = false; }
 			else if(attributeName == "needs_time") { if(attributeValue == "true") needsTime = true; }

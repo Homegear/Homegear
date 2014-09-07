@@ -415,7 +415,7 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 						stringStream << "  DURATION:\tOptional duration in seconds to stay in pairing mode." << std::endl;
 						return stringStream.str();
 					}
-					duration = BaseLib::HelperFunctions::getNumber(element, false);
+					duration = BaseLib::Math::getNumber(element, false);
 					if(duration < 5 || duration > 3600) return "Invalid duration. Duration has to be greater than 5 and less than 3600.\n";
 				}
 				index++;
@@ -474,7 +474,7 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
-					peerID = BaseLib::HelperFunctions::getNumber(element, false);
+					peerID = BaseLib::Math::getNumber(element, false);
 					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -515,7 +515,7 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
-					peerID = BaseLib::HelperFunctions::getNumber(element, false);
+					peerID = BaseLib::Math::getNumber(element, false);
 					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -639,7 +639,7 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 				{
 					if(filterType == "id")
 					{
-						uint64_t id = BaseLib::HelperFunctions::getNumber(filterValue, true);
+						uint64_t id = BaseLib::Math::getNumber(filterValue, true);
 						if(i->second->getID() != id) continue;
 					}
 					else if(filterType == "name")
@@ -649,7 +649,7 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 					}
 					else if(filterType == "address")
 					{
-						int32_t address = BaseLib::HelperFunctions::getNumber(filterValue, true);
+						int32_t address = BaseLib::Math::getNumber(filterValue, true);
 						if(i->second->getAddress() != address) continue;
 					}
 					else if(filterType == "serial")
@@ -658,7 +658,7 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 					}
 					else if(filterType == "type")
 					{
-						int32_t deviceType = BaseLib::HelperFunctions::getNumber(filterValue, true);
+						int32_t deviceType = BaseLib::Math::getNumber(filterValue, true);
 						if((int32_t)i->second->getDeviceType().type() != deviceType) continue;
 					}
 					else if(filterType == "unreach")
@@ -750,7 +750,7 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 					if(element == "help") break;
 					else
 					{
-						peerID = BaseLib::HelperFunctions::getNumber(element, false);
+						peerID = BaseLib::Math::getNumber(element, false);
 						if(peerID == 0) return "Invalid id.\n";
 					}
 				}
@@ -795,7 +795,7 @@ std::string InsteonCentral::handleCLICommand(std::string command)
 				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
-					id = BaseLib::HelperFunctions::getNumber(element, false);
+					id = BaseLib::Math::getNumber(element, false);
 					if(id == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -1575,7 +1575,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonCentral::addDevice(std::string
 	try
 	{
 		if(serialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Serial number is empty.");
-		if(serialNumber.size() != 6  || !BaseLib::HelperFunctions::isNumber(serialNumber)) return BaseLib::RPC::RPCVariable::createError(-2, "Serial number length is not 6 or provided serial number is not a number.");
+		if(serialNumber.size() != 6  || !BaseLib::Math::isNumber(serialNumber)) return BaseLib::RPC::RPCVariable::createError(-2, "Serial number length is not 6 or provided serial number is not a number.");
 
 		_stopPairingModeThread = true;
 		BaseLib::HelperFunctions::toUpper(serialNumber);
@@ -1583,7 +1583,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> InsteonCentral::addDevice(std::string
 		std::shared_ptr<InsteonPeer> peer(getPeer(serialNumber));
 		if(peer) return peer->getDeviceDescription(-1, std::map<std::string, bool>());
 
-		int32_t address = BaseLib::HelperFunctions::getNumber(serialNumber, true);
+		int32_t address = BaseLib::Math::getNumber(serialNumber, true);
 		for(std::map<std::string, std::shared_ptr<IInsteonInterface>>::iterator i = GD::physicalInterfaces.begin(); i != GD::physicalInterfaces.end(); i++)
 		{
 			createPairingQueue(address, i->first, nullptr);

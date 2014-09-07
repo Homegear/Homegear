@@ -157,7 +157,7 @@ void Settings::load(std::string filename)
 				}
 				else if(name == "debuglevel")
 				{
-					_debugLevel = HelperFunctions::getNumber(value);
+					_debugLevel = Math::getNumber(value);
 					if(_debugLevel < 0) _debugLevel = 3;
 					_bl->debugLevel = _debugLevel;
 					_bl->out.printDebug("Debug: debugLevel set to " + std::to_string(_debugLevel));
@@ -197,13 +197,13 @@ void Settings::load(std::string filename)
 				}
 				else if(name == "workerthreadwindow")
 				{
-					_workerThreadWindow = HelperFunctions::getNumber(value);
+					_workerThreadWindow = Math::getNumber(value);
 					if(_workerThreadWindow > 3600000) _workerThreadWindow = 3600000;
 					_bl->out.printDebug("Debug: workerThreadWindow set to " + std::to_string(_workerThreadWindow));
 				}
 				else if(name == "rpcserverthreadpriority")
 				{
-					_rpcServerThreadPriority = HelperFunctions::getNumber(value);
+					_rpcServerThreadPriority = Math::getNumber(value);
 					if(_rpcServerThreadPriority > 99) _rpcServerThreadPriority = 99;
 					if(_rpcServerThreadPriority < 0) _rpcServerThreadPriority = 0;
 					_bl->out.printDebug("Debug: rpcServerThreadPriority set to " + std::to_string(_rpcServerThreadPriority));
@@ -216,7 +216,7 @@ void Settings::load(std::string filename)
 				}
 				else if(name == "rpcclientthreadpriority")
 				{
-					_rpcClientThreadPriority = HelperFunctions::getNumber(value);
+					_rpcClientThreadPriority = Math::getNumber(value);
 					if(_rpcClientThreadPriority > 99) _rpcClientThreadPriority = 99;
 					if(_rpcClientThreadPriority < 0) _rpcClientThreadPriority = 0;
 					_bl->out.printDebug("Debug: rpcClientThreadPriority set to " + std::to_string(_rpcClientThreadPriority));
@@ -229,7 +229,7 @@ void Settings::load(std::string filename)
 				}
 				else if(name == "workerthreadpriority")
 				{
-					_workerThreadPriority = HelperFunctions::getNumber(value);
+					_workerThreadPriority = Math::getNumber(value);
 					if(_workerThreadPriority > 99) _workerThreadPriority = 99;
 					if(_workerThreadPriority < 0) _workerThreadPriority = 0;
 					_bl->out.printDebug("Debug: workerThreadPriority set to " + std::to_string(_workerThreadPriority));
@@ -242,7 +242,7 @@ void Settings::load(std::string filename)
 				}
 				else if(name == "packetqueuethreadpriority")
 				{
-					_packetQueueThreadPriority = HelperFunctions::getNumber(value);
+					_packetQueueThreadPriority = Math::getNumber(value);
 					if(_packetQueueThreadPriority > 99) _packetQueueThreadPriority = 99;
 					if(_packetQueueThreadPriority < 0) _packetQueueThreadPriority = 0;
 					_bl->out.printDebug("Debug: physicalInterfaceThreadPriority set to " + std::to_string(_packetQueueThreadPriority));
@@ -255,7 +255,7 @@ void Settings::load(std::string filename)
 				}
 				else if(name == "packetreceivedthreadpriority")
 				{
-					_packetReceivedThreadPriority = HelperFunctions::getNumber(value);
+					_packetReceivedThreadPriority = Math::getNumber(value);
 					if(_packetReceivedThreadPriority > 99) _packetReceivedThreadPriority = 99;
 					if(_packetReceivedThreadPriority < 0) _packetReceivedThreadPriority = 0;
 					_bl->out.printDebug("Debug: packetReceivedThreadPriority set to " + std::to_string(_packetReceivedThreadPriority));
@@ -268,7 +268,7 @@ void Settings::load(std::string filename)
 				}
 				else if(name == "eventtriggerthreadpriority")
 				{
-					_eventTriggerThreadPriority = HelperFunctions::getNumber(value);
+					_eventTriggerThreadPriority = Math::getNumber(value);
 					if(_eventTriggerThreadPriority > 99) _eventTriggerThreadPriority = 99;
 					if(_eventTriggerThreadPriority < 0) _eventTriggerThreadPriority = 0;
 					_bl->out.printDebug("Debug: eventTriggerThreadPriority set to " + std::to_string(_eventTriggerThreadPriority));

@@ -632,10 +632,10 @@ std::string HM_SD::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					filterType = BaseLib::HelperFunctions::getNumber(element, true);
+					filterType = BaseLib::Math::getNumber(element, true);
 					if(filterType != 0 && filterType != 1 && filterType != 3) return "Invalid filter type.\n";
 				}
-				else if(index == 3) filterValue = BaseLib::HelperFunctions::getNumber(element, true);
+				else if(index == 3) filterValue = BaseLib::Math::getNumber(element, true);
 				index++;
 			}
 			if(index < 4)
@@ -677,10 +677,10 @@ std::string HM_SD::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					filterType = BaseLib::HelperFunctions::getNumber(element, true);
+					filterType = BaseLib::Math::getNumber(element, true);
 					if(filterType != 0 && filterType != 1 && filterType != 3) return "Invalid filter type.\n";
 				}
-				else if(index == 3) filterValue = BaseLib::HelperFunctions::getNumber(element, true);
+				else if(index == 3) filterValue = BaseLib::Math::getNumber(element, true);
 				index++;
 			}
 			if(index < 4)
@@ -760,7 +760,7 @@ std::string HM_SD::handleCLICommand(std::string command)
 				else if(index == 3) response = element;
 				else if(index == 4)
 				{
-					sendAfter = BaseLib::HelperFunctions::getNumber(element);
+					sendAfter = BaseLib::Math::getNumber(element);
 					if(sendAfter < 5) stringStream << "Invalid value for SENDAFTER. SENDAFTER needs to be longer than 5 ms." << std::endl;
 				}
 				index++;

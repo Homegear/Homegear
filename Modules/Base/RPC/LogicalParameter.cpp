@@ -43,7 +43,7 @@ ParameterOption::ParameterOption(BaseLib::Obj* baseLib, xml_node<>* node)
 		std::string attributeValue(attr->value());
 		if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "default" && attributeValue == "true") isDefault = true;
-		else if(attributeName == "index") index = baseLib->hf.getNumber(attributeValue);
+		else if(attributeName == "index") index = Math::getNumber(attributeValue);
 		else baseLib->out.printWarning("Warning: Unknown attribute for \"option\": " + attributeName);
 	}
 }
@@ -152,11 +152,11 @@ LogicalParameterInteger::LogicalParameterInteger(BaseLib::Obj* baseLib, xml_node
 			std::string attributeName(attr->name());
 			std::string attributeValue(attr->value());
 			if(attributeName == "type") {}
-			else if(attributeName == "min") min = _bl->hf.getNumber(attributeValue);
-			else if(attributeName == "max") max = _bl->hf.getNumber(attributeValue);
+			else if(attributeName == "min") min = Math::getNumber(attributeValue);
+			else if(attributeName == "max") max = Math::getNumber(attributeValue);
 			else if(attributeName == "default")
 			{
-				defaultValue = _bl->hf.getNumber(attributeValue);
+				defaultValue = Math::getNumber(attributeValue);
 				defaultValueExists = true;
 			}
 			else if(attributeName == "unit") unit = attributeValue;
@@ -173,7 +173,7 @@ LogicalParameterInteger::LogicalParameterInteger(BaseLib::Obj* baseLib, xml_node
 				attr2 = logicalNode->first_attribute("value");
 				if(!attr1 || !attr2) continue;
 				std::string valueString(attr2->value());
-				specialValues[attr1->value()] = _bl->hf.getNumber(valueString);
+				specialValues[attr1->value()] = Math::getNumber(valueString);
 			}
 			else _bl->out.printWarning("Warning: Unknown node in \"logical\" with type integer: " + nodeName);
 		}
@@ -206,11 +206,11 @@ LogicalParameterFloat::LogicalParameterFloat(BaseLib::Obj* baseLib, xml_node<>* 
 			std::string attributeName(attr->name());
 			std::string attributeValue(attr->value());
 			if(attributeName == "type") {}
-			else if(attributeName == "min") min = _bl->hf.getDouble(attributeValue);
-			else if(attributeName == "max") max = _bl->hf.getDouble(attributeValue);
+			else if(attributeName == "min") min = Math::getDouble(attributeValue);
+			else if(attributeName == "max") max = Math::getDouble(attributeValue);
 			else if(attributeName == "default")
 			{
-				defaultValue = _bl->hf.getDouble(attributeValue);
+				defaultValue = Math::getDouble(attributeValue);
 				defaultValueExists = true;
 			}
 			else if(attributeName == "unit") unit = attributeValue;
@@ -227,7 +227,7 @@ LogicalParameterFloat::LogicalParameterFloat(BaseLib::Obj* baseLib, xml_node<>* 
 				attr2 = logicalNode->first_attribute("value");
 				if(!attr1 || !attr2) continue;
 				std::string valueString(attr2->value());
-				specialValues[attr1->value()] = _bl->hf.getDouble(valueString);
+				specialValues[attr1->value()] = Math::getDouble(valueString);
 			}
 			else _bl->out.printWarning("Warning: Unknown node in \"logical\" with type float: " + nodeName);
 		}

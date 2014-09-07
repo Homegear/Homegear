@@ -1824,7 +1824,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCInit::invoke(std::shared_ptr<std::
 			server.second = server.second.substr(0, pos);
 			GD::out.printDebug("Debug: Server port set to: " + server.second);
 		}
-		server.second = std::to_string(BaseLib::HelperFunctions::getNumber(server.second));
+		server.second = std::to_string(BaseLib::Math::getNumber(server.second));
 		if(server.second.empty() || server.second == "0") return BaseLib::RPC::RPCVariable::createError(-32602, "Port number is invalid.");
 
 		if(parameters->at(1)->stringValue.empty())

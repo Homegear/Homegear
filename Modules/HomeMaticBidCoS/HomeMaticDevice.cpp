@@ -515,7 +515,7 @@ std::string HomeMaticDevice::handleCLICommand(std::string command)
 						stringStream << "  DURATION:\tOptional duration in seconds to stay in pairing mode." << std::endl;
 						return stringStream.str();
 					}
-					duration = BaseLib::HelperFunctions::getNumber(element, true);
+					duration = BaseLib::Math::getNumber(element, true);
 					if(duration < 5 || duration > 3600) return "Invalid duration. Duration has to be greater than 5 and less than 3600.\n";
 				}
 				index++;

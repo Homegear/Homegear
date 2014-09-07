@@ -433,7 +433,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 						stringStream << "  DURATION:\tOptional duration in seconds to stay in pairing mode." << std::endl;
 						return stringStream.str();
 					}
-					duration = BaseLib::HelperFunctions::getNumber(element, false);
+					duration = BaseLib::Math::getNumber(element, false);
 					if(duration < 5 || duration > 3600) return "Invalid duration. Duration has to be greater than 5 and less than 3600.\n";
 				}
 				index++;
@@ -509,14 +509,14 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 					}
 					else
 					{
-						int32_t temp = BaseLib::HelperFunctions::getNumber(element, true);
+						int32_t temp = BaseLib::Math::getNumber(element, true);
 						if(temp == 0) return "Invalid device type. Device type has to be provided in hexadecimal format.\n";
 						deviceType = temp;
 					}
 				}
 				else if(index == 2 + offset)
 				{
-					peerAddress = BaseLib::HelperFunctions::getNumber(element, true);
+					peerAddress = BaseLib::Math::getNumber(element, true);
 					if(peerAddress == 0 || peerAddress != (peerAddress & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
 				}
 				else if(index == 3 + offset)
@@ -526,7 +526,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				}
 				else if(index == 4 + offset)
 				{
-					firmwareVersion = BaseLib::HelperFunctions::getNumber(element, true);
+					firmwareVersion = BaseLib::Math::getNumber(element, true);
 					if(firmwareVersion == 0) return "Invalid firmware version. The firmware version has to be passed in hexadecimal format.\n";
 				}
 				index++;
@@ -599,7 +599,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
-					peerID = BaseLib::HelperFunctions::getNumber(element, false);
+					peerID = BaseLib::Math::getNumber(element, false);
 					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -640,7 +640,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
-					peerID = BaseLib::HelperFunctions::getNumber(element);
+					peerID = BaseLib::Math::getNumber(element);
 					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -681,7 +681,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
-					peerID = BaseLib::HelperFunctions::getNumber(element);
+					peerID = BaseLib::Math::getNumber(element);
 					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -725,7 +725,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 					if(element == "help") break;
 					else
 					{
-						peerID = BaseLib::HelperFunctions::getNumber(element, false);
+						peerID = BaseLib::Math::getNumber(element, false);
 						if(peerID == 0) return "Invalid id.\n";
 					}
 				}
@@ -775,13 +775,13 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 					else if(element == "all") all = true;
 					else
 					{
-						peerID = BaseLib::HelperFunctions::getNumber(element, false);
+						peerID = BaseLib::Math::getNumber(element, false);
 						if(peerID == 0) return "Invalid id.\n";
 					}
 				}
 				else if(index == 2 + offset)
 				{
-					manually = BaseLib::HelperFunctions::getNumber(element, false);
+					manually = BaseLib::Math::getNumber(element, false);
 				}
 				index++;
 			}
@@ -940,7 +940,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 					std::shared_ptr<BidCoSPeer> peer(std::dynamic_pointer_cast<BidCoSPeer>(i->second));
 					if(filterType == "id")
 					{
-						uint64_t id = BaseLib::HelperFunctions::getNumber(filterValue, true);
+						uint64_t id = BaseLib::Math::getNumber(filterValue, true);
 						if(i->second->getID() != id) continue;
 					}
 					else if(filterType == "name")
@@ -950,7 +950,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 					}
 					else if(filterType == "address")
 					{
-						int32_t address = BaseLib::HelperFunctions::getNumber(filterValue, true);
+						int32_t address = BaseLib::Math::getNumber(filterValue, true);
 						if(i->second->getAddress() != address) continue;
 					}
 					else if(filterType == "serial")
@@ -959,7 +959,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 					}
 					else if(filterType == "type")
 					{
-						int32_t deviceType = BaseLib::HelperFunctions::getNumber(filterValue, true);
+						int32_t deviceType = BaseLib::Math::getNumber(filterValue, true);
 						if((int32_t)i->second->getDeviceType().type() != deviceType) continue;
 					}
 					else if(filterType == "configpending")
@@ -1061,7 +1061,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
-					peerID = BaseLib::HelperFunctions::getNumber(element, false);
+					peerID = BaseLib::Math::getNumber(element, false);
 					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -1588,7 +1588,7 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<BidCoSPeer> pee
 			int32_t hmcctcAddress = getUniqueAddress((0x39 << 16) + (peer->getAddress() & 0xFF00) + (peer->getAddress() & 0xFF));
 			if(peer->hasPeers(1) && !peer->getPeer(1, hmcctcAddress)) return; //Already linked to a HM-CC-TC
 			std::string temp = peer->getSerialNumber().substr(3);
-			std::string serialNumber = getUniqueSerialNumber("VCD", BaseLib::HelperFunctions::getNumber(temp));
+			std::string serialNumber = getUniqueSerialNumber("VCD", BaseLib::Math::getNumber(temp));
 			GD::family->add(std::shared_ptr<LogicalDevice>(new HM_CC_TC(0, serialNumber, hmcctcAddress, (IDeviceEventSink*)getEventHandler())));
 			tc = getDevice(hmcctcAddress);
 			tc->addPeer(peer);

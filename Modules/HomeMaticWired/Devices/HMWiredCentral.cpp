@@ -225,7 +225,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
-					peerID = BaseLib::HelperFunctions::getNumber(element, false);
+					peerID = BaseLib::Math::getNumber(element, false);
 					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -266,7 +266,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
-					peerID = BaseLib::HelperFunctions::getNumber(element, false);
+					peerID = BaseLib::Math::getNumber(element, false);
 					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -393,7 +393,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				{
 					if(filterType == "id")
 					{
-						uint64_t id = BaseLib::HelperFunctions::getNumber(filterValue, true);
+						uint64_t id = BaseLib::Math::getNumber(filterValue, true);
 						if(i->second->getID() != id) continue;
 					}
 					else if(filterType == "name")
@@ -403,7 +403,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 					}
 					else if(filterType == "address")
 					{
-						int32_t address = BaseLib::HelperFunctions::getNumber(filterValue, true);
+						int32_t address = BaseLib::Math::getNumber(filterValue, true);
 						if(i->second->getAddress() != address) continue;
 					}
 					else if(filterType == "serial")
@@ -412,7 +412,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 					}
 					else if(filterType == "type")
 					{
-						int32_t deviceType = BaseLib::HelperFunctions::getNumber(filterValue, true);
+						int32_t deviceType = BaseLib::Math::getNumber(filterValue, true);
 						if((int32_t)i->second->getDeviceType().type() != deviceType) continue;
 					}
 					else if(filterType == "unreach")
@@ -506,7 +506,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 					if(element == "help") break;
 					else
 					{
-						peerID = BaseLib::HelperFunctions::getNumber(element, false);
+						peerID = BaseLib::Math::getNumber(element, false);
 						if(peerID == 0) return "Invalid id.\n";
 					}
 				}
@@ -555,7 +555,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 					else if(element == "all") all = true;
 					else
 					{
-						peerID = BaseLib::HelperFunctions::getNumber(element, false);
+						peerID = BaseLib::Math::getNumber(element, false);
 						if(peerID == 0) return "Invalid id.\n";
 					}
 				}
@@ -623,7 +623,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
-					id = BaseLib::HelperFunctions::getNumber(element, false);
+					id = BaseLib::Math::getNumber(element, false);
 					if(id == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -807,9 +807,9 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 				return;
 			}
 			std::string hex = line.substr(1, 2);
-			int32_t bytes = BaseLib::HelperFunctions::getNumber(hex, true);
+			int32_t bytes = BaseLib::Math::getNumber(hex, true);
 			hex = line.substr(7, 2);
-			int32_t recordType = BaseLib::HelperFunctions::getNumber(hex, true);
+			int32_t recordType = BaseLib::Math::getNumber(hex, true);
 			if(recordType == 1) break; //End of file
 			if(recordType != 0)
 			{
@@ -821,7 +821,7 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 				return;
 			}
 			hex = line.substr(3, 4);
-			int32_t address = BaseLib::HelperFunctions::getNumber(hex, true);
+			int32_t address = BaseLib::Math::getNumber(hex, true);
 			if(address != currentAddress || (11 + bytes * 2) > (signed)line.size())
 			{
 				_bl->deviceUpdateInfo.results[id].first = 5;
@@ -834,7 +834,7 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 			currentAddress += bytes;
 			std::vector<uint8_t> data = _bl->hf.getUBinary(line.substr(9, bytes * 2));
 			hex = line.substr(9 + bytes * 2, 2);
-			int32_t checkSum = BaseLib::HelperFunctions::getNumber(hex, true);
+			int32_t checkSum = BaseLib::Math::getNumber(hex, true);
 			int32_t calculatedCheckSum = bytes + (address >> 8) + (address & 0xFF) + recordType;
 			for(std::vector<uint8_t>::iterator i = data.begin(); i != data.end(); ++i)
 			{

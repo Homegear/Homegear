@@ -166,7 +166,7 @@ std::string PhilipsHueCentral::handleCLICommand(std::string command)
 				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
-					peerID = BaseLib::HelperFunctions::getNumber(element, false);
+					peerID = BaseLib::Math::getNumber(element, false);
 					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -297,7 +297,7 @@ std::string PhilipsHueCentral::handleCLICommand(std::string command)
 					std::shared_ptr<PhilipsHuePeer> peer(std::dynamic_pointer_cast<PhilipsHuePeer>(i->second));
 					if(filterType == "id")
 					{
-						uint64_t id = BaseLib::HelperFunctions::getNumber(filterValue, true);
+						uint64_t id = BaseLib::Math::getNumber(filterValue, true);
 						if(i->second->getID() != id) continue;
 					}
 					else if(filterType == "name")
@@ -307,7 +307,7 @@ std::string PhilipsHueCentral::handleCLICommand(std::string command)
 					}
 					else if(filterType == "address")
 					{
-						int32_t address = BaseLib::HelperFunctions::getNumber(filterValue, true);
+						int32_t address = BaseLib::Math::getNumber(filterValue, true);
 						if(i->second->getAddress() != address) continue;
 					}
 					else if(filterType == "serial")
@@ -316,7 +316,7 @@ std::string PhilipsHueCentral::handleCLICommand(std::string command)
 					}
 					else if(filterType == "type")
 					{
-						int32_t deviceType = BaseLib::HelperFunctions::getNumber(filterValue, true);
+						int32_t deviceType = BaseLib::Math::getNumber(filterValue, true);
 						if((int32_t)i->second->getDeviceType().type() != deviceType) continue;
 					}
 					else if(filterType == "configpending")
@@ -416,7 +416,7 @@ std::string PhilipsHueCentral::handleCLICommand(std::string command)
 					if(element == "help") break;
 					else
 					{
-						peerID = BaseLib::HelperFunctions::getNumber(element, false);
+						peerID = BaseLib::Math::getNumber(element, false);
 						if(peerID == 0) return "Invalid id.\n";
 					}
 				}
@@ -461,7 +461,7 @@ std::string PhilipsHueCentral::handleCLICommand(std::string command)
 				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
-					id = BaseLib::HelperFunctions::getNumber(element, false);
+					id = BaseLib::Math::getNumber(element, false);
 					if(id == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -807,7 +807,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> PhilipsHueCentral::searchDevices()
 			std::string swversion = info->operator []("swversion").asString();
 			LogicalDeviceType deviceType(BaseLib::Systems::DeviceFamilies::PhilipsHue, (uint32_t)type);
 
-			peer = createPeer((*i)->senderAddress(), BaseLib::HelperFunctions::getNumber(swversion), deviceType, std::to_string((*i)->senderAddress()), true);
+			peer = createPeer((*i)->senderAddress(), BaseLib::Math::getNumber(swversion), deviceType, std::to_string((*i)->senderAddress()), true);
 			if(!peer)
 			{
 				GD::out.printError("Error: Could not pair device with address " + BaseLib::HelperFunctions::getHexString((*i)->senderAddress(), 6) + ". No matching XML file was found.");

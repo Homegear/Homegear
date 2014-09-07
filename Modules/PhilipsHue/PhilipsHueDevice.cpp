@@ -424,7 +424,12 @@ DeviceType PhilipsHueDevice::deviceTypeFromString(std::string deviceType)
 	try
 	{
 		if(deviceType == "LCT001") return DeviceType::LCT001;
-		else return DeviceType::LCT001; //default
+		else if(deviceType == "LLC001") return DeviceType::LLC001;
+		else if(deviceType == "LLC006") return DeviceType::LLC006;
+		else if(deviceType == "LLC007") return DeviceType::LLC007;
+		else if(deviceType == "LLC011") return DeviceType::LLC011;
+		else if(deviceType == "LST001") return DeviceType::LST001;
+		else return DeviceType::LLC001; //default
 	}
 	catch(const std::exception& ex)
     {

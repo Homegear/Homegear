@@ -113,7 +113,7 @@ void ServerSettings::load(std::string filename)
 				}
 				else if(name == "port")
 				{
-					settings->port = BaseLib::HelperFunctions::getNumber(value);
+					settings->port = BaseLib::Math::getNumber(value);
 					GD::out.printDebug("Debug: port of RPC server " + settings->name + " set to " + std::to_string(settings->port));
 				}
 				else if(name == "ssl")
@@ -141,7 +141,7 @@ void ServerSettings::load(std::string filename)
 				}
 				else if(name == "diffiehellmankeysize")
 				{
-					settings->diffieHellmanKeySize = BaseLib::HelperFunctions::getNumber(value);
+					settings->diffieHellmanKeySize = BaseLib::Math::getNumber(value);
 					if(settings->diffieHellmanKeySize < 128) settings->diffieHellmanKeySize = 128;
 					if(settings->diffieHellmanKeySize < 1024) GD::out.printWarning("Diffie-Hellman key size of server " + settings->name + " is smaller than 1024 bit.");
 					GD::out.printDebug("Debug: diffieHellmanKeySize of RPC server " + settings->name + " set to " + std::to_string(settings->diffieHellmanKeySize));

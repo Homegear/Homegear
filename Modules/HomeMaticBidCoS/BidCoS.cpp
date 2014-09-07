@@ -441,7 +441,7 @@ std::string BidCoS::handleCLICommand(std::string& command)
 				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
-					address = BaseLib::HelperFunctions::getNumber(element, true);
+					address = BaseLib::Math::getNumber(element, true);
 					if(address == 0) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 4 bytes. A value of \"0\" is not allowed.\n";
 				}
 				else if(index == 2 + offset)
@@ -449,7 +449,7 @@ std::string BidCoS::handleCLICommand(std::string& command)
 					serialNumber = element;
 					if(serialNumber.size() > 10) return "Serial number too long.\n";
 				}
-				else if(index == 3 + offset) deviceType = BaseLib::HelperFunctions::getNumber(element, true);
+				else if(index == 3 + offset) deviceType = BaseLib::Math::getNumber(element, true);
 				index++;
 			}
 			if(index < 4 + offset)
@@ -514,7 +514,7 @@ std::string BidCoS::handleCLICommand(std::string& command)
 				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
-					id = BaseLib::HelperFunctions::getNumber(element, false);
+					id = BaseLib::Math::getNumber(element, false);
 					if(id == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -560,7 +560,7 @@ std::string BidCoS::handleCLICommand(std::string& command)
 					if(element == "central" || element == "c") central = true;
 					else
 					{
-						id = BaseLib::HelperFunctions::getNumber(element, false);
+						id = BaseLib::Math::getNumber(element, false);
 						if(id == 0) return "Invalid id.\n";
 					}
 				}

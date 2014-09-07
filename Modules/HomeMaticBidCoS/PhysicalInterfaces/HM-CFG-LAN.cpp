@@ -963,7 +963,7 @@ void HM_CFG_LAN::processInit(std::string& packet)
 			_out.printError("Error: First packet from HM-CFG-LAN does not start with \"HHM-LAN-IF\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening. Packet was: " + packet);
 			return;
 		}
-		_startUpTime = BaseLib::HelperFunctions::getTime() - (int64_t)BaseLib::HelperFunctions::getNumber(parts.at(5), true);
+		_startUpTime = BaseLib::HelperFunctions::getTime() - (int64_t)BaseLib::Math::getNumber(parts.at(5), true);
 		send(_initCommandQueue.front(), false);
 		_initCommandQueue.pop_front();
 		send(_initCommandQueue.front(), false);
@@ -1001,7 +1001,7 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 			*/
 
 			_lastKeepAliveResponse = BaseLib::HelperFunctions::getTimeSeconds();
-			_startUpTime = BaseLib::HelperFunctions::getTime() - (int64_t)BaseLib::HelperFunctions::getNumber(parts.at(5), true);
+			_startUpTime = BaseLib::HelperFunctions::getTime() - (int64_t)BaseLib::Math::getNumber(parts.at(5), true);
 		}
 		else if(packet.at(0) == 'E' || packet.at(0) == 'R')
 		{
@@ -1019,7 +1019,7 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 			4		BidCoS packet
 			*/
 
-			int32_t tempNumber = BaseLib::HelperFunctions::getNumber(parts.at(1), true);
+			int32_t tempNumber = BaseLib::Math::getNumber(parts.at(1), true);
 
 			/*
 			00: Not set
@@ -1049,7 +1049,7 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
         	{
 				std::vector<uint8_t> binaryPacket({ (uint8_t)(parts.at(5).size() / 2) });
 				_bl->hf.getUBinary(parts.at(5), parts.at(5).size() - 1, binaryPacket);
-				int32_t rssi = BaseLib::HelperFunctions::getNumber(parts.at(4), true);
+				int32_t rssi = BaseLib::Math::getNumber(parts.at(4), true);
 				//Convert to TI CC1101 format
 				if(rssi <= -75) rssi = ((rssi + 74) * 2) + 256;
 				else rssi = (rssi + 74) * 2;

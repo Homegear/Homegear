@@ -333,8 +333,8 @@ std::shared_ptr<RPCVariable> RPCVariable::fromString(std::string value, RPCVaria
 		else return std::shared_ptr<RPCVariable>(new RPCVariable(false));
 	}
 	else if(type == RPCVariableType::rpcString) return std::shared_ptr<RPCVariable>(new RPCVariable(value));
-	else if(type == RPCVariableType::rpcInteger) return std::shared_ptr<RPCVariable>(new RPCVariable(HelperFunctions::getNumber(value)));
-	else if(type == RPCVariableType::rpcFloat) return std::shared_ptr<RPCVariable>(new RPCVariable(HelperFunctions::getDouble(value)));
+	else if(type == RPCVariableType::rpcInteger) return std::shared_ptr<RPCVariable>(new RPCVariable(Math::getNumber(value)));
+	else if(type == RPCVariableType::rpcFloat) return std::shared_ptr<RPCVariable>(new RPCVariable(Math::getDouble(value)));
 	else if(type == RPCVariableType::rpcBase64)
 	{
 		std::shared_ptr<RPCVariable> variable(new RPCVariable(RPCVariableType::rpcBase64));

@@ -1067,7 +1067,7 @@ void HM_LGW::doInit()
 			_out.printError("Error: First packet does not start with \"S\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening.");
 			return;
 		}
-		uint8_t packetIndex = (_bl->hf.getNumber(parts.at(0).at(1)) << 4) + _bl->hf.getNumber(parts.at(0).at(2));
+		uint8_t packetIndex = (_math.getNumber(parts.at(0).at(1)) << 4) + _math.getNumber(parts.at(0).at(2));
 		std::vector<char> response = { '>', _bl->hf.getHexChar(packetIndex >> 4), _bl->hf.getHexChar(packetIndex & 0xF), ',', '0', '0', '0', '0', '\r', '\n' };
 		send(response, false);
 
@@ -2086,7 +2086,7 @@ bool HM_LGW::aesKeyExchange(std::vector<uint8_t>& data)
 		}
 		if(data.at(startPos - 4) == 'V' && data.at(startPos - 1) == ',')
 		{
-			uint8_t packetIndex = (_bl->hf.getNumber(data.at(startPos - 3)) << 4) + _bl->hf.getNumber(data.at(startPos - 2));
+			uint8_t packetIndex = (_math.getNumber(data.at(startPos - 3)) << 4) + _math.getNumber(data.at(startPos - 2));
 			packetIndex++;
 			if(length != 32)
 			{
@@ -2203,7 +2203,7 @@ bool HM_LGW::aesKeyExchangeKeepAlive(std::vector<uint8_t>& data)
 		}
 		if(data.at(startPos - 4) == 'V' && data.at(startPos - 1) == ',')
 		{
-			_packetIndexKeepAlive = (_bl->hf.getNumber(data.at(startPos - 3)) << 4) + _bl->hf.getNumber(data.at(startPos - 2));
+			_packetIndexKeepAlive = (_math.getNumber(data.at(startPos - 3)) << 4) + _math.getNumber(data.at(startPos - 2));
 			_packetIndexKeepAlive++;
 			if(length != 32)
 			{
@@ -2629,7 +2629,7 @@ void HM_LGW::parsePacketKeepAlive(std::string& packet)
 		{
 			if(_bl->debugLevel >= 5) _out.printDebug("Debug: Keep alive response received on port " + _settings->portKeepAlive + ".");
 			std::string index = packet.substr(2, 2);
-			if(_bl->hf.getNumber(index, true) == _packetIndexKeepAlive)
+			if(BaseLib::Math::getNumber(index, true) == _packetIndexKeepAlive)
 			{
 				_lastKeepAliveResponse2 = BaseLib::HelperFunctions::getTimeSeconds();
 				_packetIndexKeepAlive++;

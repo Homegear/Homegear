@@ -2190,7 +2190,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 			{
 				std::shared_ptr<RPC::RPCVariable> currentValue = rpcParameter->convertFromPacket(parameter->data);
 				std::string numberPart = value->stringValue.substr(2);
-				double factor = _bl->hf.getDouble(numberPart);
+				double factor = Math::getDouble(numberPart);
 				if(factor == 0) return RPC::RPCVariable::createError(-1, "Factor is \"0\" or no valid number.");
 				_bl->out.printError(std::to_string(currentValue->floatValue));
 				if(value->stringValue.at(0) == '+') value->floatValue = currentValue->floatValue + factor;
@@ -2203,7 +2203,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 			{
 				std::shared_ptr<RPC::RPCVariable> currentValue = rpcParameter->convertFromPacket(parameter->data);
 				std::string numberPart = value->stringValue.substr(2);
-				int32_t factor = _bl->hf.getNumber(numberPart);
+				int32_t factor = Math::getNumber(numberPart);
 				if(factor == 0) return RPC::RPCVariable::createError(-1, "Factor is \"0\" or no valid number.");
 				if(value->stringValue.at(0) == '+') value->integerValue = currentValue->integerValue + factor;
 				else if(value->stringValue.at(0) == '-') value->integerValue = currentValue->integerValue - factor;

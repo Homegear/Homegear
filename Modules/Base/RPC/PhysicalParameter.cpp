@@ -52,7 +52,7 @@ SetRequestEx::SetRequestEx(Obj* baseLib, xml_node<char>* node)
 				else if(attributeValue == "le") conditionOperator = BooleanOperator::Enum::le;
 				else baseLib->out.printWarning("Warning: Unknown attribute value for \"cond\" in node \"setEx\": " + attributeValue);
 			}
-			else if(attributeName == "value") value = baseLib->hf.getNumber(attributeValue);
+			else if(attributeName == "value") value = Math::getNumber(attributeValue);
 			else if(attributeName == "packet") frame = attributeValue;
 			else baseLib->out.printWarning("Warning: Unknown attribute for \"setEx\": " + attributeName);
 		}
@@ -127,17 +127,17 @@ PhysicalParameter::PhysicalParameter(BaseLib::Obj* baseLib, xml_node<>* node) : 
 			}
 			else if(attributeName == "value_id") valueID = attributeValue;
 			else if(attributeName == "no_init") { if(attributeValue == "true") noInit = true; }
-			else if(attributeName == "list") list = baseLib->hf.getNumber(attributeValue);
+			else if(attributeName == "list") list = Math::getNumber(attributeValue);
 			else if(attributeName == "index")
 			{
 				std::pair<std::string, std::string> splitValue = baseLib->hf.split(attributeValue, '.');
 				index = 0;
 				if(!splitValue.second.empty())
 				{
-					index += baseLib->hf.getNumber(splitValue.second);
+					index += Math::getNumber(splitValue.second);
 					index /= 10;
 				}
-				index += baseLib->hf.getNumber(splitValue.first);
+				index += Math::getNumber(splitValue.first);
 			}
 			else if(attributeName == "size")
 			{
@@ -145,18 +145,18 @@ PhysicalParameter::PhysicalParameter(BaseLib::Obj* baseLib, xml_node<>* node) : 
 				size = 0;
 				if(!splitValue.second.empty())
 				{
-					size += baseLib->hf.getNumber(splitValue.second);
+					size += Math::getNumber(splitValue.second);
 					size /= 10;
 				}
-				size += baseLib->hf.getNumber(splitValue.first);
+				size += Math::getNumber(splitValue.first);
 				sizeDefined = true;
 			}
-			else if(attributeName == "read_size") readSize = baseLib->hf.getNumber(attributeValue);
+			else if(attributeName == "read_size") readSize = Math::getNumber(attributeValue);
 			else if(attributeName == "counter") counter = attributeValue;
 			else if(attributeName == "volatile") { if(attributeValue == "true") isVolatile = true; }
 			else if(attributeName == "id") { id = attributeValue; }
 			else if(attributeName == "save_on_change") {} //not necessary, all values are saved on change
-			else if(attributeName == "mask") mask = baseLib->hf.getNumber(attributeValue);
+			else if(attributeName == "mask") mask = Math::getNumber(attributeValue);
 			else if(attributeName == "read_size") {} //not necessary, because size can be determined through index
 			else baseLib->out.printWarning("Warning: Unknown attribute for \"physical\": " + attributeName);
 		}
@@ -199,7 +199,7 @@ PhysicalParameter::PhysicalParameter(BaseLib::Obj* baseLib, xml_node<>* node) : 
 							if(!attr1 || !attr2) continue;
 							event->dominoEvent = true;
 							std::string eventValue = std::string(attr1->value());
-							event->dominoEventValue = baseLib->hf.getNumber(eventValue);
+							event->dominoEventValue = Math::getNumber(eventValue);
 							event->dominoEventDelayID = std::string(attr2->value());
 						}
 						else baseLib->out.printWarning("Warning: domino_event is only supported for physical type integer.");
@@ -235,16 +235,16 @@ PhysicalParameter::PhysicalParameter(BaseLib::Obj* baseLib, xml_node<>* node) : 
 						address.index = 0;
 						if(!splitValue.second.empty())
 						{
-							address.index += baseLib->hf.getNumber(splitValue.second);
+							address.index += Math::getNumber(splitValue.second);
 							address.index /= 10;
 						}
-						address.index += baseLib->hf.getNumber(splitValue.first);
+						address.index += Math::getNumber(splitValue.first);
 						if(std::lround(address.index * 10) % 10 >= 8) address.index += 0.2; //e. g. 15.9 => 16.1
 						index = address.index;
 					}
 					else if(attributeName == "step")
 					{
-						address.step = baseLib->hf.getDouble(attributeValue);
+						address.step = Math::getDouble(attributeValue);
 					}
 					else baseLib->out.printWarning("Warning: Unknown attribute for \"address\": " + attributeName);
 				}

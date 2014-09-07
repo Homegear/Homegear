@@ -676,7 +676,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 				else if(index == 1)
 				{
 					if(element == "help") break;
-					debugLevel = BaseLib::HelperFunctions::getNumber(element);
+					debugLevel = BaseLib::Math::getNumber(element);
 					if(debugLevel < 0 || debugLevel > 10) return "Invalid debug level. Please provide a debug level between 0 and 10.\n";
 				}
 				index++;

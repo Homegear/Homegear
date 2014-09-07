@@ -779,21 +779,24 @@ void InsteonPeer::packetReceived(std::shared_ptr<InsteonPacket> packet)
 					saveParameter(parameter->databaseID, parameter->data);
 					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: " + i->first + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + ".");
 
-					 //Process service messages
-					if(parameter->rpcParameter && (parameter->rpcParameter->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
+					if(parameter->rpcParameter)
 					{
-						if(parameter->rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::Enum::typeEnum)
+						//Process service messages
+						if((parameter->rpcParameter->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
 						{
-							serviceMessages->set(i->first, i->second.value.at(0), *j);
+							if(parameter->rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::Enum::typeEnum)
+							{
+								serviceMessages->set(i->first, i->second.value.at(0), *j);
+							}
+							else if(parameter->rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::Enum::typeBoolean)
+							{
+								serviceMessages->set(i->first, (bool)i->second.value.at(0));
+							}
 						}
-						else if(parameter->rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::Enum::typeBoolean)
-						{
-							serviceMessages->set(i->first, (bool)i->second.value.at(0));
-						}
-					}
 
-					valueKeys[*j]->push_back(i->first);
-					rpcValues[*j]->push_back(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first)->convertFromPacket(i->second.value, true));
+						valueKeys[*j]->push_back(i->first);
+						rpcValues[*j]->push_back(parameter->rpcParameter->convertFromPacket(i->second.value, true));
+					}
 				}
 			}
 		}

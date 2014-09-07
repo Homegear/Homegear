@@ -46,7 +46,7 @@ HueBridge::HueBridge(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings
 	}
 	if(settings->host.empty()) _out.printCritical("Critical: Error initializing. Hostname is not defined in settings file.");
 	_hostname = settings->host;
-	_port = BaseLib::HelperFunctions::getNumber(settings->port);
+	_port = BaseLib::Math::getNumber(settings->port);
 	if(_port < 1 || _port > 65535) _port = 80;
 }
 
@@ -261,6 +261,19 @@ void HueBridge::searchLights()
 			if(json.isMember("description")) _out.printError("Error: " + json["description"].asString());
 			else _out.printError("Unknown error during user creation. Response was: " + response);
 		}
+
+		header = "GET /api/homegear" + _settings->id + "/lights/new HTTP/1.1\r\nUser-Agent: Homegear\r\nHost: " + _hostname + ":" + std::to_string(_port) + "\r\nConnection: Keep-Alive\r\n\r\n";
+
+    	_client->sendRequest(header, response);
+
+		if(!getJson(response, json)) return;
+
+		if(json.isMember("error"))
+		{
+			json = json["error"];
+			if(json.isMember("description")) _out.printError("Error: " + json["description"].asString());
+			else _out.printError("Unknown error during user creation. Response was: " + response);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -303,7 +316,7 @@ std::vector<std::shared_ptr<PhilipsHuePacket>> HueBridge::getPeerInfo()
 			{
 				std::shared_ptr<Json::Value> packetJson(new Json::Value());
 				*packetJson = json[*i];
-				std::shared_ptr<PhilipsHuePacket> packet(new PhilipsHuePacket(BaseLib::HelperFunctions::getNumber(*i), 0, 1, packetJson, BaseLib::HelperFunctions::getTime()));
+				std::shared_ptr<PhilipsHuePacket> packet(new PhilipsHuePacket(BaseLib::Math::getNumber(*i), 0, 1, packetJson, BaseLib::HelperFunctions::getTime()));
 				peers.push_back(packet);
 			}
 		}
@@ -373,7 +386,7 @@ void HueBridge::listen()
         {
 			try
 			{
-				for(int32_t i = 0; i < 60; i++)
+				for(int32_t i = 0; i < 30; i++)
 				{
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					if(_stopCallbackThread) return;
@@ -413,7 +426,7 @@ void HueBridge::listen()
 				{
 					std::shared_ptr<Json::Value> packetJson(new Json::Value());
 					*packetJson = json[*i];
-					std::shared_ptr<PhilipsHuePacket> packet(new PhilipsHuePacket(BaseLib::HelperFunctions::getNumber(*i), 0, 1, packetJson, BaseLib::HelperFunctions::getTime()));
+					std::shared_ptr<PhilipsHuePacket> packet(new PhilipsHuePacket(BaseLib::Math::getNumber(*i), 0, 1, packetJson, BaseLib::HelperFunctions::getTime()));
 					raisePacketReceived(packet);
 				}
 			}

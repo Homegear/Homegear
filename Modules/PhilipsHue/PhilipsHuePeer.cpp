@@ -362,6 +362,7 @@ void PhilipsHuePeer::packetReceived(std::shared_ptr<PhilipsHuePacket> packet)
 		getValuesFromPacket(packet, frameValues);
 		std::map<uint32_t, std::shared_ptr<std::vector<std::string>>> valueKeys;
 		std::map<uint32_t, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>>> rpcValues;
+
 		//Loop through all matching frames
 		for(std::vector<FrameValues>::iterator a = frameValues.begin(); a != frameValues.end(); ++a)
 		{
@@ -387,26 +388,29 @@ void PhilipsHuePeer::packetReceived(std::shared_ptr<PhilipsHuePacket> packet)
 					saveParameter(parameter->databaseID, parameter->data);
 					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: " + i->first + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + ".");
 
-					 //Process service messages
-					if(parameter->rpcParameter && (parameter->rpcParameter->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
+					if(parameter->rpcParameter)
 					{
-						if(parameter->rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::Enum::typeEnum)
+						//Process service messages
+						if((parameter->rpcParameter->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
 						{
-							serviceMessages->set(i->first, i->second.value.at(i->second.value.size() - 1), *j);
-						}
-						else if(parameter->rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::Enum::typeBoolean)
-						{
-							if(parameter->rpcParameter->id == "REACHABLE")
+							if(parameter->rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::Enum::typeEnum)
 							{
-								bool value = !((bool)i->second.value.at(i->second.value.size() - 1));
-								serviceMessages->setUnreach(value, false);
+								serviceMessages->set(i->first, i->second.value.at(i->second.value.size() - 1), *j);
 							}
-							else serviceMessages->set(i->first, (bool)i->second.value.at(i->second.value.size() - 1));
+							else if(parameter->rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::Enum::typeBoolean)
+							{
+								if(parameter->rpcParameter->id == "REACHABLE")
+								{
+									bool value = !((bool)i->second.value.at(i->second.value.size() - 1));
+									serviceMessages->setUnreach(value, false);
+								}
+								else serviceMessages->set(i->first, (bool)i->second.value.at(i->second.value.size() - 1));
+							}
 						}
-					}
 
-					valueKeys[*j]->push_back(i->first);
-					rpcValues[*j]->push_back(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first)->convertFromPacket(i->second.value, true));
+						valueKeys[*j]->push_back(i->first);
+						rpcValues[*j]->push_back(parameter->rpcParameter->convertFromPacket(i->second.value, true));
+					}
 				}
 			}
 		}
@@ -416,6 +420,32 @@ void PhilipsHuePeer::packetReceived(std::shared_ptr<PhilipsHuePacket> packet)
 			for(std::map<uint32_t, std::shared_ptr<std::vector<std::string>>>::const_iterator j = valueKeys.begin(); j != valueKeys.end(); ++j)
 			{
 				if(j->second->empty()) continue;
+
+				for(std::vector<std::string>::iterator i = j->second->begin(); i != j->second->end(); ++i)
+				{
+					if(*i == "XY" || *i == "BRIGHTNESS") //Calculate RGB
+					{
+						uint8_t brightness = _binaryDecoder->decodeResponse(valuesCentral.at(j->first).at("BRIGHTNESS").data)->integerValue;
+						std::shared_ptr<BaseLib::RPC::RPCVariable> rpcXY = _binaryDecoder->decodeResponse(valuesCentral.at(j->first).at("XY").data);
+						if(rpcXY->arrayValue->size() == 2)
+						{
+							BaseLib::Math::Point2D xy(rpcXY->arrayValue->at(0)->floatValue, rpcXY->arrayValue->at(1)->floatValue);
+
+							std::string rgb;
+							getRGB(xy, brightness, rgb);
+
+							std::shared_ptr<BaseLib::RPC::RPCVariable> rpcRGB(new BaseLib::RPC::RPCVariable(rgb));
+							RPCConfigurationParameter* rgbParameter = &valuesCentral.at(j->first).at("RGB");
+							_binaryEncoder->encodeResponse(rpcRGB, rgbParameter->data);
+							saveParameter(rgbParameter->databaseID, rgbParameter->data);
+
+							j->second->push_back("RGB");
+							rpcValues[j->first]->push_back(rgbParameter->rpcParameter->convertFromPacket(rgbParameter->data, true));
+						}
+						break;
+					}
+				}
+
 				std::string address(_serialNumber + ":" + std::to_string(j->first));
 				raiseEvent(_peerID, j->first, j->second, rpcValues.at(j->first));
 				raiseRPCEvent(_peerID, j->first, address, j->second, rpcValues.at(j->first));
@@ -455,6 +485,108 @@ std::string PhilipsHuePeer::getFirmwareVersionString(int32_t firmwareVersion)
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return "";
+}
+
+void PhilipsHuePeer::initializeConversionMatrix()
+{
+	try
+	{
+		if(_rgbGamut.getA().x == 0)
+		{
+			if(_deviceType.type() == (uint32_t)DeviceType::LCT001)
+			{
+				_rgbGamut.setA(BaseLib::Math::Point2D(0.675, 0.322));
+				_rgbGamut.setB(BaseLib::Math::Point2D(0.4091, 0.518));
+				_rgbGamut.setC(BaseLib::Math::Point2D(0.167, 0.04));
+			}
+			else
+			{
+				_rgbGamut.setA(BaseLib::Math::Point2D(0.704, 0.296));
+				_rgbGamut.setB(BaseLib::Math::Point2D(0.2151, 0.7106));
+				_rgbGamut.setC(BaseLib::Math::Point2D(0.138, 0.08));
+			}
+
+			BaseLib::Color::getConversionMatrix(_rgbGamut, _rgbXyzConversionMatrix, _xyzRgbConversionMatrix);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void PhilipsHuePeer::getXY(const std::string& rgb, BaseLib::Math::Point2D& xy, uint8_t& brightness)
+{
+	try
+	{
+		initializeConversionMatrix();
+
+		BaseLib::Color::RGB cRGB(rgb);
+		BaseLib::Color::NormalizedRGB nRGB(cRGB);
+
+		double nBrightness = 0;
+		BaseLib::Color::rgbToCie1931Xy(nRGB, _rgbXyzConversionMatrix, _gamma, xy, nBrightness);
+		brightness = (cRGB.opacityDefined()) ? cRGB.getOpacity() : std::lround(nBrightness * 100) + 155;
+
+		BaseLib::Math::Point2D closestPoint;
+		_rgbGamut.distance(xy, &closestPoint);
+		xy.x = closestPoint.x;
+		xy.y = closestPoint.y;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void PhilipsHuePeer::getRGB(const BaseLib::Math::Point2D& xy, const uint8_t& brightness, std::string& rgb)
+{
+	try
+	{
+		initializeConversionMatrix();
+
+		BaseLib::Math::Point2D closestPoint;
+		_rgbGamut.distance(xy, &closestPoint);
+		BaseLib::Math::Point2D xy2;
+		xy2.x = closestPoint.x;
+		xy2.y = closestPoint.y;
+
+		double nBrightness = (double)brightness / 255;
+
+		BaseLib::Color::NormalizedRGB nRGB;
+		BaseLib::Color::cie1931XyToRgb(xy2, nBrightness, _xyzRgbConversionMatrix, _gamma, nRGB);
+
+		BaseLib::Color::RGB cRGB(nRGB);
+		rgb = std::string("#") + BaseLib::HelperFunctions::getHexString(cRGB.getRed(), 2) + BaseLib::HelperFunctions::getHexString(cRGB.getGreen(), 2) + BaseLib::HelperFunctions::getHexString(cRGB.getBlue(), 2);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 //RPC Methods
@@ -621,6 +753,29 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> PhilipsHuePeer::setValue(uint32_t cha
 		BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
 		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
+
+		if(valueKey == "RGB") //Special case, because it sets two parameters (XY and BRIGHTNESS)
+		{
+			BaseLib::Math::Point2D xy;
+			uint8_t brightness;
+			getXY(value->stringValue, xy, brightness);
+
+			std::shared_ptr<BaseLib::RPC::RPCVariable> result = setValue(channel, "XY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(xy.toString())));
+			if(result->errorStruct) return result;
+			if(brightness < 10) result = setValue(channel, "STATE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(false)));
+			else result = setValue(channel, "BRIGHTNESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)brightness)));
+			if(result->errorStruct) return result;
+
+			//Convert back, because the value might be different than the passed one.
+			getRGB(xy, brightness, value->stringValue);
+			_binaryEncoder->encodeResponse(value, parameter->data);
+			saveParameter(parameter->databaseID, parameter->data);
+			valueKeys->push_back(valueKey);
+			values->push_back(value);
+			if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+			return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		}
+
 		if((rpcParameter->operations & BaseLib::RPC::Parameter::Operations::read) || (rpcParameter->operations & BaseLib::RPC::Parameter::Operations::event))
 		{
 			valueKeys->push_back(valueKey);

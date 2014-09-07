@@ -432,10 +432,10 @@ std::string MAXSpyDevice::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					filterType = BaseLib::HelperFunctions::getNumber(element, true);
+					filterType = BaseLib::Math::getNumber(element, true);
 					if(filterType != 0 && filterType != 1 && filterType != 3) return "Invalid filter type.\n";
 				}
-				else if(index == 3) filterValue = BaseLib::HelperFunctions::getNumber(element, true);
+				else if(index == 3) filterValue = BaseLib::Math::getNumber(element, true);
 				index++;
 			}
 			if(index < 4)
@@ -475,10 +475,10 @@ std::string MAXSpyDevice::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					filterType = BaseLib::HelperFunctions::getNumber(element, true);
+					filterType = BaseLib::Math::getNumber(element, true);
 					if(filterType != 0 && filterType != 1 && filterType != 3) return "Invalid filter type.\n";
 				}
-				else if(index == 3) filterValue = BaseLib::HelperFunctions::getNumber(element, true);
+				else if(index == 3) filterValue = BaseLib::Math::getNumber(element, true);
 				index++;
 			}
 			if(index < 4)

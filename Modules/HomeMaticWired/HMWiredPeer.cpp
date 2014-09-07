@@ -1565,7 +1565,7 @@ int32_t HMWiredPeer::getNewFirmwareVersion()
 		std::string versionFile(_bl->settings.firmwarePath() + filenamePrefix + ".version");
 		if(!BaseLib::HelperFunctions::fileExists(versionFile)) return 0;
 		std::string versionHex = BaseLib::HelperFunctions::getFileContent(versionFile);
-		return BaseLib::HelperFunctions::getNumber(versionHex, true);
+		return BaseLib::Math::getNumber(versionHex, true);
 	}
 	catch(const std::exception& ex)
     {

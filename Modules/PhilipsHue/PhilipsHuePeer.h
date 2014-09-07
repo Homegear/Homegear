@@ -113,11 +113,20 @@ protected:
 	std::shared_ptr<BaseLib::RPC::RPCEncoder> _binaryEncoder;
 	std::shared_ptr<BaseLib::RPC::RPCDecoder> _binaryDecoder;
 
+	BaseLib::Math::Triangle _rgbGamut;
+	double _gamma = 2.2;
+	BaseLib::Math::Matrix3x3 _rgbXyzConversionMatrix;
+	BaseLib::Math::Matrix3x3 _xyzRgbConversionMatrix;
+
 	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 	virtual std::shared_ptr<BaseLib::Systems::LogicalDevice> getDevice(int32_t address);
 	void getValuesFromPacket(std::shared_ptr<PhilipsHuePacket> packet, std::vector<FrameValues>& frameValue);
 
 	virtual std::shared_ptr<BaseLib::RPC::ParameterSet> getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type);
+
+	void initializeConversionMatrix();
+	void getXY(const std::string& rgb, BaseLib::Math::Point2D& xy, uint8_t& brightness);
+	void getRGB(const BaseLib::Math::Point2D& xy, const uint8_t& brightness, std::string& rgb);
 };
 
 }

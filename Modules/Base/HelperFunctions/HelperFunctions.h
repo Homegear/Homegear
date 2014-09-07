@@ -305,25 +305,9 @@ public:
 	static std::vector<std::string> splitAll(std::string string, char delimiter);
 
 	/**
-	 * Converts a string to double.
-	 *
-	 * @see getNumber()
-	 * @see getUnsignedNumber()
-	 * @param s The string to convert to double.
-	 * @return Returns the number or "0" if the conversion was not successful.
-	 */
-	static inline double getDouble(const std::string& s)
-	{
-		double number = 0;
-		try { number = std::stod(s); } catch(...) {}
-		return number;
-	}
-
-	/**
 	 * Checks if a character is not alphanumeric ('_' and '-' are also regarded alphanumeric).
 	 *
 	 * @see isAlphaNumeric()
-	 * @see isNumber()
 	 * @param c The character to check.
 	 * @return Returns false if the character is alphanumeric, '_' or '-', otherwise true.
 	 */
@@ -336,7 +320,6 @@ public:
 	 * Checks if a string is alphanumeric ('_' and '-' are also regarded alphanumeric).
 	 *
 	 * @see isNotAlphaNumeric()
-	 * @see isNumber()
 	 * @param s The string to check.
 	 * @return Returns true if the string is alphanumeric, or contains '_' or '-', otherwise false.
 	 */
@@ -348,72 +331,6 @@ public:
 			s.end(),
 			[](const char c){ return !(isalpha(c) || isdigit(c) || (c == '_') || (c == '-')); }
 		) == s.end();
-	}
-
-	/**
-	 * Checks if a string is a number.
-	 *
-	 * @see isAlphaNumeric()
-	 * @see isNotAlphaNumeric()
-	 * @param s The string to check.
-	 * @return Returns true if the string is a decimal or hexadecimal number, otherwise false.
-	 */
-	static bool isNumber(std::string& s)
-	{
-		int32_t xpos = s.find('x');
-		if(xpos == -1) try { std::stoll(s, 0, 10); } catch(...) { return false; }
-		else try { std::stoll(s, 0, 16); } catch(...) { return false; }
-		return true;
-	}
-
-	/**
-	 * Converts a string (decimal or hexadecimal) to an integer.
-	 *
-	 * @see getDouble()
-	 * @see getUnsignedNumber()
-	 * @param s The string to convert.
-	 * @param isHex Set this parameter to "true", if the string is hexadecimal (default false). If the string is prefixed with "0x", it is automatically detected as hexadecimal.
-	 * @return Returns the integer or "0" on error.
-	 */
-	static int32_t getNumber(std::string& s, bool isHex = false)
-	{
-		int32_t xpos = s.find('x');
-		int32_t number = 0;
-		if(xpos == -1 && !isHex) try { number = std::stoll(s, 0, 10); } catch(...) {}
-		else try { number = std::stoll(s, 0, 16); } catch(...) {}
-		return number;
-	}
-
-	/**
-	 * Converts a hexadecimal character to an integer.
-	 *
-	 * @see getDouble()
-	 * @see getUnsignedNumber()
-	 * @param hexChar The hexadecimal character.
-	 * @return Returns the integer or "0" on error.
-	 */
-	int32_t getNumber(char hexChar)
-	{
-		if(_hexMap.find(hexChar) == _hexMap.end()) return 0;
-		return _hexMap.at(hexChar);
-	}
-
-	/**
-	 * Converts a string (decimal or hexadecimal) to an unsigned integer.
-	 *
-	 * @see getDouble()
-	 * @see getNumber()
-	 * @param s The string to convert.
-	 * @param isHex Set this parameter to "true", if the string is hexadecimal (default false). If the string is prefixed with "0x", it is automatically detected as hexadecimal.
-	 * @return Returns the unsigned integer or "0" on error.
-	 */
-	static uint32_t getUnsignedNumber(std::string &s, bool isHex = false)
-	{
-		int32_t xpos = s.find('x');
-		uint32_t number = 0;
-		if(xpos == -1 && !isHex) try { number = std::stoull(s, 0, 10); } catch(...) {}
-		else try { number = std::stoull(s, 0, 16); } catch(...) {}
-		return number;
 	}
 
 	/**
@@ -597,11 +514,6 @@ private:
 	/**
 	 * Map to faster convert hexadecimal numbers.
 	 */
-	std::map<char, int32_t> _hexMap;
-
-	/**
-	 * Map to faster convert hexadecimal numbers.
-	 */
 	int32_t _asciiToBinaryTable[23];
 
 	/**
@@ -625,4 +537,4 @@ private:
 	void checkEndianness();
 };
 }
-#endif /* HELPERFUNCTIONS_H_ */
+#endif

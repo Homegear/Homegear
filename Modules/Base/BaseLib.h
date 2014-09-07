@@ -10,6 +10,8 @@
 #include "Managers/SerialDeviceManager.h"
 #include "Managers/FileDescriptorManager.h"
 #include "HelperFunctions/HelperFunctions.h"
+#include "HelperFunctions/Color.h"
+#include "HelperFunctions/Math.h"
 #include "Output/Output.h"
 #include "RPC/Devices.h"
 #include "Settings/Settings.h"

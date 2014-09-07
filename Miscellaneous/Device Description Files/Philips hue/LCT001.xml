@@ -34,8 +34,8 @@
 				</parameter>
 			</parameters>
 		</channel>
-		<channel index="1" type="SWITCH">
-			<parameters type="VALUES" id="switch_valueset">
+		<channel index="1" type="LIGHT">
+			<parameters type="VALUES" id="light_valueset">
 				<parameter id="STATE" operations="read,write,event">
 					<logical type="boolean"/>
 					<physical interface="command" value_id="STATE" id="STATE">

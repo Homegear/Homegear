@@ -609,6 +609,21 @@ int main(int argc, char* argv[])
 				input = std::string(inputBuffer);
 				if(inputBuffer[0] == '\n' || inputBuffer[0] == 0) continue;
 				if(strncmp(inputBuffer, "quit", 4) == 0 || strncmp(inputBuffer, "exit", 4) == 0 || strncmp(inputBuffer, "moin", 4) == 0) break;
+				else if(strncmp(inputBuffer, "test", 4) == 0)
+				{
+					BaseLib::Math::Matrix3x3 conversionMatrix;
+					BaseLib::Math::Matrix3x3 inversedConversionMatrix;
+
+					BaseLib::Math::Triangle colorGamut;
+					colorGamut.setA(BaseLib::Math::Point2D(0.704, 0.296));
+					colorGamut.setB(BaseLib::Math::Point2D(0.4091, 0.518));
+					colorGamut.setC(BaseLib::Math::Point2D(0.138, 0.08));
+					BaseLib::Color::getConversionMatrix(colorGamut, conversionMatrix, inversedConversionMatrix);
+					std::cout << conversionMatrix.toString() << std::endl << inversedConversionMatrix.toString() << std::endl;
+
+					BaseLib::Math::Point2D p(0.3127, 0.3290);
+					std::cout << colorGamut.distance(p) << std::endl;
+				}
 
 				add_history(inputBuffer); //Sets inputBuffer to 0
 

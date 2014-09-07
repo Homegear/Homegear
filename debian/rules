@@ -28,15 +28,23 @@ override_dh_auto_install:
 	cp $(CURDIR)/Miscellaneous/physicalinterfaces.conf $(CURDIR)/debian/homegear/etc/homegear
 	chmod 755 $(CURDIR)/debian/homegear/etc/homegear
 	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/*
+	
 	mkdir -p $(CURDIR)/debian/homegear/etc/homegear/devices/2
-	mkdir -p $(CURDIR)/debian/homegear/etc/homegear/devices/4
 	cp $(CURDIR)/Miscellaneous/Device\ Description\ Files/INSTEON/* $(CURDIR)/debian/homegear/etc/homegear/devices/2
-	cp $(CURDIR)/Miscellaneous/Device\ Description\ Files/MAX/* $(CURDIR)/debian/homegear/etc/homegear/devices/4
 	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/devices
 	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/devices/2
 	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/devices/2/*
+	
+	mkdir -p $(CURDIR)/debian/homegear/etc/homegear/devices/4
+	cp $(CURDIR)/Miscellaneous/Device\ Description\ Files/MAX/* $(CURDIR)/debian/homegear/etc/homegear/devices/4
 	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/devices/4
 	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/devices/4/*
+	
+	mkdir -p $(CURDIR)/debian/homegear/etc/homegear/devices/5
+	cp $(CURDIR)/Miscellaneous/Device\ Description\ Files/Philips\ hue/* $(CURDIR)/debian/homegear/etc/homegear/devices/5
+	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/devices/5
+	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/devices/5/*
+	
 	chown -R root:root $(CURDIR)/debian/homegear/etc/homegear
 	mkdir -p $(CURDIR)/debian/homegear/etc/init.d
 	cp $(CURDIR)/Miscellaneous/homegear $(CURDIR)/debian/homegear/etc/init.d
