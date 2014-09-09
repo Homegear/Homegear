@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <device version="1">
 	<types>
-		<type name="Philips hue A19" id="LCT001">
-			<type_id>0x0001</type_id>
+		<type name="Philips LightStrip" id="LST001">
+			<type_id>0x0201</type_id>
 			<firmware cond_op="GE">0x10</firmware>
 		</type>
 	</types>

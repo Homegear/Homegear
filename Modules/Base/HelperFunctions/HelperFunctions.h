@@ -245,7 +245,7 @@ public:
 	{
 		//From http://www.zedwood.com/article/cpp-utf-8-mb_substr-function
 		if(length == 0) return "";
-		uint32_t c, i, ix, q, min = std::string::npos, max = std::string::npos;
+		uint32_t c, i, ix, q, min = (unsigned)std::string::npos, max = (unsigned)std::string::npos;
 		for (q = 0, i = 0, ix = s.length(); i < ix; i++, q++)
 		{
 			if(q == start) min = i;

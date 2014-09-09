@@ -1,8 +1,20 @@
 <?xml version="1.0"?>
 <device version="1">
 	<types>
-		<type name="Philips hue A19" id="LCT001">
-			<type_id>0x0001</type_id>
+		<type name="Philips LivingColors" id="LLC001">
+			<type_id>0x0101</type_id>
+			<firmware cond_op="GE">0x10</firmware>
+		</type>
+		<type name="Philips LivingColors" id="LLC006">
+			<type_id>0x0106</type_id>
+			<firmware cond_op="GE">0x10</firmware>
+		</type>
+		<type name="Philips LivingColors" id="LLC007">
+			<type_id>0x0107</type_id>
+			<firmware cond_op="GE">0x10</firmware>
+		</type>
+		<type name="Philips LivingColors Bloom" id="LLC011">
+			<type_id>0x0111</type_id>
 			<firmware cond_op="GE">0x10</firmware>
 		</type>
 	</types>
