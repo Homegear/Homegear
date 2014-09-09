@@ -78,7 +78,6 @@ solution "homegear"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
 
---[[
    project "homematicbidcos"
       kind "SharedLib"
       language "C++"
@@ -107,7 +106,6 @@ solution "homegear"
          targetdir "./lib/Modules/Profiling"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
---]]
 
    project "homematicwired"
       kind "SharedLib"
@@ -138,7 +136,6 @@ solution "homegear"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
 
---[[
    project "max"
       kind "SharedLib"
       language "C++"
@@ -225,7 +222,6 @@ solution "homegear"
          targetdir "./lib/Modules/Profiling"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
---]]
 
    project "user"
       kind "StaticLib"
