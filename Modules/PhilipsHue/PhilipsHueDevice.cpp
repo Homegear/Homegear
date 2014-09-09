@@ -403,6 +403,19 @@ void PhilipsHueDevice::sendPacket(std::shared_ptr<PhilipsHuePacket> packet)
 	try
 	{
 		if(!packet) return;
+		uint32_t responseDelay = GD::physicalInterface->responseDelay();
+		std::shared_ptr<PhilipsHuePacketInfo> packetInfo = _sentPackets.getInfo(packet->destinationAddress());
+		_sentPackets.set(packet->destinationAddress(), packet);
+		if(packetInfo)
+		{
+			int64_t timeDifference = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - packetInfo->time;
+			if(timeDifference < responseDelay)
+			{
+				packetInfo->time += responseDelay - timeDifference; //Set to sending time
+				std::this_thread::sleep_for(std::chrono::milliseconds(responseDelay - timeDifference));
+			}
+		}
+		_sentPackets.keepAlive(packet->destinationAddress());
 		GD::physicalInterface->sendPacket(packet);
 	}
 	catch(const std::exception& ex)

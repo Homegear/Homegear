@@ -32,6 +32,7 @@
 
 #include "Math.h"
 
+#include <cmath>
 #include <string>
 
 namespace BaseLib
@@ -41,6 +42,7 @@ class Color
 {
 public:
 	class NormalizedRGB;
+	class HSV;
 
 	/**
 	 * Class defining a RGB color with intensity values for each color between 0 and 255.
@@ -104,6 +106,8 @@ public:
 		 */
 		void setBlue(double value) { _blue = value * 255; }
 		void setBlue(uint8_t value) { _blue = value; }
+
+		std::string toString();
 	protected:
 		bool _opacityDefined = false;
 		uint8_t _opacity = 255;
@@ -165,10 +169,39 @@ public:
 		 */
 		void setBlue(uint8_t value) { _blue = ((double)value) / 255; }
 		void setBlue(double value) { _blue = value; if(_blue < 0) { _blue = 0; } else if(_blue > 1) { _blue = 1; } }
+
+		/**
+		 * Converts this RGB color to HSV/HSB (Hue/Saturation/Value or Hue/Saturation/Brightness).
+		 */
+		HSV toHSV();
 	protected:
 		double _red = 0;
 		double _green = 0;
 		double _blue = 0;
+	};
+
+	/**
+	 * Class defining a HSV color.
+	 */
+	class HSV
+	{
+	public:
+		HSV() {}
+		HSV(double hue, double saturation, double brightness) { setHue(hue); setSaturation(saturation); setBrightness(brightness); }
+		virtual ~HSV() {}
+
+		double getHue() const { return _hue; }
+		void setHue(double value) { _hue = value; if(_hue < 0) { _hue = 0; } else { _hue = std::fmod(_hue, 360.0); } }
+		double getSaturation() const { return _saturation; }
+		void setSaturation(double value) { _saturation = value; if(_saturation < 0) { _saturation = 0; } else if(_saturation > 1) { _saturation = 1; } }
+		double getBrightness() const { return _brightness; }
+		void setBrightness(double value) { _brightness = value; if(_brightness < 0) { _brightness = 0; } else if(_brightness > 1) { _brightness = 1; } }
+
+		RGB toRGB();
+	protected:
+		double _hue = 0;
+		double _saturation = 0;
+		double _brightness = 0;
 	};
 
 	/**
@@ -222,7 +255,6 @@ protected:
 	 */
 	Color();
 };
-
 
 }
 

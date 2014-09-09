@@ -97,6 +97,7 @@ OBJECTS := \
 	$(OBJDIR)/PhilipsHuePeer.o \
 	$(OBJDIR)/GD.o \
 	$(OBJDIR)/PhilipsHueDevice.o \
+	$(OBJDIR)/PacketManager.o \
 	$(OBJDIR)/PhilipsHue.o \
 	$(OBJDIR)/PhilipsHuePacket.o \
 	$(OBJDIR)/Factory.o \
@@ -174,6 +175,9 @@ $(OBJDIR)/GD.o: Modules/PhilipsHue/GD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PhilipsHueDevice.o: Modules/PhilipsHue/PhilipsHueDevice.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/PacketManager.o: Modules/PhilipsHue/PacketManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PhilipsHue.o: Modules/PhilipsHue/PhilipsHue.cpp

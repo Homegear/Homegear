@@ -309,6 +309,20 @@ protected:
 	 * @see initializeCentralConfig
 	 */
 	virtual void setDefaultValue(RPCConfigurationParameter* parameter);
+
+	/**
+	 * Called by initializeCentralConfig().
+	 *
+	 * @see initializeCentralConfig()
+	 */
+	virtual void initializeMasterSet(int32_t channel, std::shared_ptr<BaseLib::RPC::ParameterSet> masterSet);
+
+	/**
+	 * Called by initializeCentralConfig().
+	 *
+	 * @see initializeCentralConfig()
+	 */
+	virtual void initializeValueSet(int32_t channel, std::shared_ptr<BaseLib::RPC::ParameterSet> valueSet);
 };
 
 }

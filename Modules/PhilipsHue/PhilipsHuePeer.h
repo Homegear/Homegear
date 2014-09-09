@@ -127,6 +127,10 @@ protected:
 	void initializeConversionMatrix();
 	void getXY(const std::string& rgb, BaseLib::Math::Point2D& xy, uint8_t& brightness);
 	void getRGB(const BaseLib::Math::Point2D& xy, const uint8_t& brightness, std::string& rgb);
+	double getHueFactor(const double& hue);
+	double getHueFactor(const int32_t& hue);
+
+	std::shared_ptr<BaseLib::RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value, bool noSending);
 };
 
 }

@@ -29,6 +29,7 @@
 
 #include "Color.h"
 #include "HelperFunctions.h"
+#include <iostream>
 
 namespace BaseLib
 {
@@ -105,6 +106,95 @@ Color::RGB::RGB(const std::string& rgbString)
 			}
 		}
 	}
+}
+
+std::string Color::RGB::toString()
+{
+	return std::string("#") + BaseLib::HelperFunctions::getHexString(_red, 2) + BaseLib::HelperFunctions::getHexString(_green, 2) + BaseLib::HelperFunctions::getHexString(_blue, 2);
+}
+
+Color::HSV Color::NormalizedRGB::toHSV()
+{
+	double hue;
+	double saturation;
+	double brightness;
+
+	double min = std::fmin(_blue, std::fmin(_red, _green));
+	double max = std::fmax(_blue, std::fmax(_red, _green));
+	brightness = max;
+
+	double delta = max - min;
+	if( max != 0 ) saturation = delta / max;
+	else
+	{
+		saturation = 0;
+		hue = 0; //undefined
+	}
+
+	if(_red == max)	hue = (_green - _blue) / delta;
+	else if(_green == max) hue = 2 + (_blue - _red) / delta;
+	else hue = 4 + (_red - _green) / delta;
+
+	hue *= 60;
+	if(hue < 0) hue += 360;
+
+	return HSV(hue, saturation, brightness);
+}
+
+Color::RGB Color::HSV::toRGB()
+{
+	uint8_t red = 0;
+	uint8_t green = 0;
+	uint8_t blue = 0;
+
+	if(_saturation == 0)
+	{
+		red = green = blue = _brightness * 255.0;
+		return RGB(red, green, blue);
+	}
+
+	double hue = _hue / 60;
+	int32_t i = std::lround(std::floor(hue));
+	double f = hue - i;
+	double p = _brightness * (1 - _saturation);
+	double q = _brightness * (1 - _saturation * f);
+	double t = _brightness * (1 - _saturation * (1 - f));
+
+	switch(i)
+	{
+		case 0:
+			red = _brightness * 255.0;
+			green = t * 255.0;
+			blue = p * 255.0;
+			break;
+		case 1:
+			red = q * 255.0;
+			green = _brightness * 255.0;
+			blue = p * 255.0;
+			break;
+		case 2:
+			red = p * 255.0;
+			green = _brightness * 255.0;
+			blue = t * 255.0;
+			break;
+		case 3:
+			red = p * 255.0;
+			green = q * 255.0;
+			blue = _brightness * 255.0;
+			break;
+		case 4:
+			red = t * 255.0;
+			green = p * 255.0;
+			blue = _brightness * 255.0;
+			break;
+		default:
+			red = _brightness * 255.0;
+			green = p * 255.0;
+			blue = q * 255.0;
+			break;
+	}
+
+	return RGB(red, green, blue);
 }
 
 Color::Color()

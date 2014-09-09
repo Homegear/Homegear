@@ -34,6 +34,7 @@
 #include "PhilipsHuePeer.h"
 #include "PhilipsHueDeviceTypes.h"
 #include "PhilipsHuePacket.h"
+#include "PacketManager.h"
 
 #include <string>
 #include <unordered_map>
@@ -85,6 +86,8 @@ class PhilipsHueDevice : public BaseLib::Systems::LogicalDevice
         //In table variables
         int32_t _firmwareVersion = 0;
         //End
+
+        PacketManager _sentPackets;
     private:
 };
 }

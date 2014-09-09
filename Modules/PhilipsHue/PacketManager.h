@@ -1,5 +1,3 @@
-#define VERSION "0.5.9"
-
 /* Copyright 2013-2014 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
@@ -28,3 +26,56 @@
  * version.  If you delete this exception statement from all source
  * files in the program, then also delete it here.
  */
+
+#ifndef PACKETMANAGER_H_
+#define PACKETMANAGER_H_
+
+#include "../Base/BaseLib.h"
+#include "PhilipsHuePacket.h"
+
+#include <iostream>
+#include <string>
+#include <chrono>
+#include <memory>
+#include <unordered_map>
+#include <thread>
+#include <mutex>
+
+namespace PhilipsHue
+{
+class PhilipsHuePacketInfo
+{
+public:
+	PhilipsHuePacketInfo();
+	virtual ~PhilipsHuePacketInfo() {}
+
+	uint32_t id = 0;
+	int64_t time;
+	std::shared_ptr<PhilipsHuePacket> packet;
+};
+
+class PacketManager
+{
+public:
+	PacketManager();
+	virtual ~PacketManager();
+
+	std::shared_ptr<PhilipsHuePacket> get(int32_t address);
+	std::shared_ptr<PhilipsHuePacketInfo> getInfo(int32_t address);
+	bool set(int32_t address, std::shared_ptr<PhilipsHuePacket>& packet, int64_t time = 0);
+	void deletePacket(int32_t address, uint32_t id);
+	void keepAlive(int32_t address);
+	void dispose(bool wait = true);
+protected:
+	bool _disposing = false;
+	bool _stopWorkerThread = false;
+    std::thread _workerThread;
+	uint32_t _id = 0;
+	std::unordered_map<int32_t, std::shared_ptr<PhilipsHuePacketInfo>> _packets;
+	std::mutex _packetMutex;
+
+	void worker();
+};
+
+}
+#endif

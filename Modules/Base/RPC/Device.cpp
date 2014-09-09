@@ -1853,6 +1853,7 @@ Device::Device(BaseLib::Obj* baseLib, Systems::DeviceFamilies deviceFamily, std:
 		channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
 
 		if(!supportsAES) return;
+		//For HomeMatic BidCoS: Set AES default value to "false", so a new AES key is set on pairing
 		for(std::map<uint32_t, std::shared_ptr<DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
 		{
 			if(!i->second || i->second->parameterSets.find(ParameterSet::Type::Enum::master) == i->second->parameterSets.end() || !i->second->parameterSets.at(ParameterSet::Type::Enum::master) || i->first == 0) continue;
@@ -1869,7 +1870,7 @@ Device::Device(BaseLib::Obj* baseLib, Systems::DeviceFamilies deviceFamily, std:
 			parameter->conversion.back()->type = ParameterConversion::Type::Enum::booleanInteger;
 			std::shared_ptr<LogicalParameterBoolean> logicalParameter(new LogicalParameterBoolean(baseLib));
 			logicalParameter->defaultValueExists = true;
-			logicalParameter->defaultValue = i->second->aesDefault;
+			logicalParameter->defaultValue = false;
 			parameter->logicalParameter = logicalParameter;
 			parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::config;
 			parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;

@@ -470,37 +470,29 @@ void Peer::initializeCentralConfig()
 			return;
 		}
 		raiseCreateSavepoint("PeerConfig" + std::to_string(_peerID));
-		BaseLib::Systems::RPCConfigurationParameter parameter;
 		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 		{
 			if(i->second->parameterSets.find(BaseLib::RPC::ParameterSet::Type::master) != i->second->parameterSets.end() && i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::master])
 			{
 				std::shared_ptr<BaseLib::RPC::ParameterSet> masterSet = i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::master];
-				for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator j = masterSet->parameters.begin(); j != masterSet->parameters.end(); ++j)
-				{
-					if(!(*j)->id.empty() && configCentral[i->first].find((*j)->id) == configCentral[i->first].end())
-					{
-						parameter = BaseLib::Systems::RPCConfigurationParameter();
-						parameter.rpcParameter = *j;
-						setDefaultValue(&parameter);
-						configCentral[i->first][(*j)->id] = parameter;
-						saveParameter(0, BaseLib::RPC::ParameterSet::Type::master, i->first, (*j)->id, parameter.data);
-					}
-				}
+				initializeMasterSet(i->first, masterSet);
 			}
 			if(i->second->parameterSets.find(BaseLib::RPC::ParameterSet::Type::values) != i->second->parameterSets.end() && i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::values])
 			{
 				std::shared_ptr<BaseLib::RPC::ParameterSet> valueSet = i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::values];
-				for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator j = valueSet->parameters.begin(); j != valueSet->parameters.end(); ++j)
+				initializeValueSet(i->first, valueSet);
+			}
+			if(i->second->subconfig)
+			{
+				if(i->second->subconfig->parameterSets.find(BaseLib::RPC::ParameterSet::Type::master) != i->second->subconfig->parameterSets.end() && i->second->subconfig->parameterSets[BaseLib::RPC::ParameterSet::Type::master])
 				{
-					if(!(*j)->id.empty() && valuesCentral[i->first].find((*j)->id) == valuesCentral[i->first].end())
-					{
-						parameter = BaseLib::Systems::RPCConfigurationParameter();
-						parameter.rpcParameter = *j;
-						setDefaultValue(&parameter);
-						valuesCentral[i->first][(*j)->id] = parameter;
-						saveParameter(0, BaseLib::RPC::ParameterSet::Type::values, i->first, (*j)->id, parameter.data);
-					}
+					std::shared_ptr<BaseLib::RPC::ParameterSet> masterSet = i->second->subconfig->parameterSets[BaseLib::RPC::ParameterSet::Type::master];
+					initializeMasterSet(i->first, masterSet);
+				}
+				if(i->second->subconfig->parameterSets.find(BaseLib::RPC::ParameterSet::Type::values) != i->second->subconfig->parameterSets.end() && i->second->subconfig->parameterSets[BaseLib::RPC::ParameterSet::Type::values])
+				{
+					std::shared_ptr<BaseLib::RPC::ParameterSet> valueSet = i->second->subconfig->parameterSets[BaseLib::RPC::ParameterSet::Type::values];
+					initializeValueSet(i->first, valueSet);
 				}
 			}
 		}
@@ -518,6 +510,68 @@ void Peer::initializeCentralConfig()
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     raiseReleaseSavepoint("PeerConfig" + std::to_string(_peerID));
+}
+
+void Peer::initializeMasterSet(int32_t channel, std::shared_ptr<BaseLib::RPC::ParameterSet> masterSet)
+{
+	try
+	{
+		BaseLib::Systems::RPCConfigurationParameter parameter;
+		for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator j = masterSet->parameters.begin(); j != masterSet->parameters.end(); ++j)
+		{
+			if(!(*j)->id.empty() && configCentral[channel].find((*j)->id) == configCentral[channel].end())
+			{
+				parameter = BaseLib::Systems::RPCConfigurationParameter();
+				parameter.rpcParameter = *j;
+				setDefaultValue(&parameter);
+				configCentral[channel][(*j)->id] = parameter;
+				saveParameter(0, BaseLib::RPC::ParameterSet::Type::master, channel, (*j)->id, parameter.data);
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void Peer::initializeValueSet(int32_t channel, std::shared_ptr<BaseLib::RPC::ParameterSet> valueSet)
+{
+	try
+	{
+		BaseLib::Systems::RPCConfigurationParameter parameter;
+		for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator j = valueSet->parameters.begin(); j != valueSet->parameters.end(); ++j)
+		{
+			if(!(*j)->id.empty() && valuesCentral[channel].find((*j)->id) == valuesCentral[channel].end())
+			{
+				parameter = BaseLib::Systems::RPCConfigurationParameter();
+				parameter.rpcParameter = *j;
+				setDefaultValue(&parameter);
+				valuesCentral[channel][(*j)->id] = parameter;
+				saveParameter(0, BaseLib::RPC::ParameterSet::Type::values, channel, (*j)->id, parameter.data);
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void Peer::setDefaultValue(RPCConfigurationParameter* parameter)
@@ -1059,6 +1113,10 @@ void Peer::loadConfig()
 				if(rpcDevice->channels.find(channel) != rpcDevice->channels.end() && rpcDevice->channels[channel] && rpcDevice->channels[channel]->parameterSets.find(parameterSetType) != rpcDevice->channels[channel]->parameterSets.end() && rpcDevice->channels[channel]->parameterSets[parameterSetType])
 				{
 					parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(*parameterName);
+					if(!parameter->rpcParameter && rpcDevice->channels[channel]->subconfig && rpcDevice->channels[channel]->subconfig->parameterSets.find(parameterSetType) != rpcDevice->channels[channel]->subconfig->parameterSets.end() && rpcDevice->channels[channel]->subconfig->parameterSets[parameterSetType])
+					{
+						parameter->rpcParameter = rpcDevice->channels[channel]->subconfig->parameterSets[parameterSetType]->getParameter(*parameterName);
+					}
 				}
 				if(!parameter->rpcParameter)
 				{
