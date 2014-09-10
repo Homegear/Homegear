@@ -221,6 +221,35 @@ chmod 755 scripts/firstStart.sh
 echo "sudo /scripts/firstStart.sh" >> home/pi/.bashrc
 #End first-start script
 
+#Bash profile
+echo "let upSeconds=\"\$(/usr/bin/cut -d. -f1 /proc/uptime)\"
+let secs=\$((\${upSeconds}%60))
+let mins=\$((\${upSeconds}/60%60))
+let hours=\$((\${upSeconds}/3600%24))
+let days=\$((\${upSeconds}/86400))
+UPTIME=\`printf \"%d days, %02dh %02dm %02ds\" \"\$days\" \"\$hours\" \"\$mins\" \"\$secs\"\`
+
+echo \"\$(tput setaf 4)\$(tput bold)
+                   dd
+                  dddd
+                dddddddd
+              dddddddddddd
+               dddddddddd                   \$(tput setaf 7)\`date +\"%A, %e %B %Y, %r\"\`\$(tput setaf 4)
+               dddddddddd                   \$(tput setaf 7)\`uname -srmo\`\$(tput setaf 4)
+               d\$(tput setaf 6).:dddd:.\$(tput setaf 4)d\$(tput setaf 6)
+    .:ool:,,:oddddddddddddo:,,:loo:.        \$(tput sgr0)Uptime.............: \${UPTIME}\$(tput setaf 6)\$(tput bold)
+    oddddddddddddddddddddddddddddddo        \$(tput sgr0)Homegear Version...: \$(homegear -v | head -1 | cut -d \" \" -f 3)\$(tput setaf 6)\$(tput bold)
+    .odddddddd| \$(tput setaf 7)Homegear\$(tput setaf 6) |ddddddddo.
+     lddddddddddddddddddddddddddddl
+    lddddddddddddddddddddddddddddddl
+  .:dddddddddddddc.''.cddddddddddddd:.
+:odddddddddddddo.      .odddddddddddddo:
+ddddddddddddddd,        ,ddddddddddddddd
+
+
+\$(tput sgr0)\"" > home/pi/.bash_profile
+#End bash profile
+
 echo "#!/bin/bash
 apt-get clean
 rm -f cleanup
