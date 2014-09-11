@@ -30,7 +30,7 @@
 #ifndef RS485_H
 #define RS485_H
 
-#include "../../Base/BaseLib.h"
+#include "IHMWiredInterface.h"
 
 #include <thread>
 #include <iostream>
@@ -50,7 +50,7 @@
 namespace HMWired
 {
 
-class RS485  : public BaseLib::Systems::IPhysicalInterface
+class RS485 : public IHMWiredInterface
 {
     public:
         RS485(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);

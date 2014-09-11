@@ -33,8 +33,11 @@
 namespace HMWired
 {
 
-RawLAN::RawLAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : BaseLib::Systems::IPhysicalInterface(GD::bl, settings)
+RawLAN::RawLAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IHMWiredInterface(settings)
 {
+	_out.init(GD::bl);
+	_out.setPrefix(_out.getPrefix() + "RS485 RawLAN \"" + settings->id + "\": ");
+
 	signal(SIGPIPE, SIG_IGN);
 	_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl));
 
@@ -57,15 +60,15 @@ RawLAN::~RawLAN()
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -75,13 +78,13 @@ void RawLAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 	{
 		if(!packet)
 		{
-			GD::out.printWarning("Warning: Packet was nullptr.");
+			_out.printWarning("Warning: Packet was nullptr.");
 			return;
 		}
 		_lastAction = BaseLib::HelperFunctions::getTime();
 		if(packet->payload()->size() > 132)
 		{
-			if(_bl->debugLevel >= 2) GD::out.printError("Tried to send packet with payload larger than 128 bytes. That is not supported.");
+			if(_bl->debugLevel >= 2) _out.printError("Tried to send packet with payload larger than 128 bytes. That is not supported.");
 			return;
 		}
 
@@ -92,15 +95,15 @@ void RawLAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 	}
 	catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -110,25 +113,25 @@ void RawLAN::send(std::vector<char>& packet, bool printPacket)
     {
     	_sendMutex.lock();
     	_lastPacketSent = BaseLib::HelperFunctions::getTime(); //Sending takes some time, so we set _lastPacketSent two times
-    	if(_bl->debugLevel > 3 && printPacket) GD::out.printInfo("Info: Sending: " + BaseLib::HelperFunctions::getHexString(packet));
+    	if(_bl->debugLevel > 3 && printPacket) _out.printInfo("Info: Sending: " + BaseLib::HelperFunctions::getHexString(packet));
     	_socket->proofwrite(packet);
     	_lastPacketSent = BaseLib::HelperFunctions::getTime();
     }
     catch(const BaseLib::SocketOperationException& ex)
     {
-    	GD::out.printError(ex.what());
+    	_out.printError(ex.what());
     }
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _sendMutex.unlock();
 }
@@ -139,24 +142,24 @@ void RawLAN::startListening()
 	{
 		stopListening();
 		_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->port, _settings->ssl, _settings->caFile, _settings->verifyCertificate));
-		GD::out.printDebug("Connecting to raw RS485 LAN device with Hostname " + _settings->host + " on port " + _settings->port + "...");
+		_out.printDebug("Connecting to raw RS485 LAN device with Hostname " + _settings->host + " on port " + _settings->port + "...");
 		//_socket->open();
-		//GD::out.printInfo("Connected to raw RS485 LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
+		//_out.printInfo("Connected to raw RS485 LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
 		_listenThread = std::thread(&RawLAN::listen, this);
 		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -176,15 +179,15 @@ void RawLAN::stopListening()
 	}
 	catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -214,7 +217,7 @@ void RawLAN::listen()
 				{
 					if(data.size() == 1 && data.at(0) != 0xF8)
 					{
-						GD::out.printDebug("Debug: Correcting wrong response to 0xF8: " + BaseLib::HelperFunctions::getHexString(data));
+						_out.printDebug("Debug: Correcting wrong response to 0xF8: " + BaseLib::HelperFunctions::getHexString(data));
 						data.at(0) = 0xF8;
 					}
 					std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(data, BaseLib::HelperFunctions::getTime(), true));
@@ -227,20 +230,20 @@ void RawLAN::listen()
 			}
 			catch(const BaseLib::SocketClosedException& ex)
 			{
-				GD::out.printWarning("Warning: " + ex.what());
+				_out.printWarning("Warning: " + ex.what());
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
 			catch(const BaseLib::SocketOperationException& ex)
 			{
-				GD::out.printError("Error: " + ex.what());
+				_out.printError("Error: " + ex.what());
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
         	if(receivedBytes == 0) continue;
         	if(receivedBytes == (unsigned)bufferMax)
         	{
-        		GD::out.printError("Could not read from raw RS485 LAN device: Too much data.");
+        		_out.printError("Could not read from raw RS485 LAN device: Too much data.");
         		continue;
         	}
 
@@ -248,7 +251,7 @@ void RawLAN::listen()
         	{
         		if(data.size() == 1 && data.at(0) != 0xF8)
 				{
-					GD::out.printDebug("Debug: Correcting wrong response to 0xF8: " + BaseLib::HelperFunctions::getHexString(data));
+					_out.printDebug("Debug: Correcting wrong response to 0xF8: " + BaseLib::HelperFunctions::getHexString(data));
 					data.at(0) = 0xF8;
 				}
         		std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(data, BaseLib::HelperFunctions::getTime(), true));
@@ -261,22 +264,22 @@ void RawLAN::listen()
         	data.insert(data.end(), &buffer.at(0), &buffer.at(0) + receivedBytes);
         	if(_bl->debugLevel >= 6)
         	{
-        		GD::out.printDebug("Debug: Packet received from RS485 raw LAN device. Data:");
-        		GD::out.printBinary(data);
+        		_out.printDebug("Debug: Packet received from RS485 raw LAN device. Data:");
+        		_out.printBinary(data);
         	}
         }
     }
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

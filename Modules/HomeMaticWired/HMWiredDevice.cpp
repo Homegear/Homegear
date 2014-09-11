@@ -423,17 +423,36 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 			{
 				//Communication might be in progress. Wait a little
 				if(_bl->debugLevel > 4 && (time - GD::physicalInterface->lastPacketSent() < 210 || time - GD::physicalInterface->lastPacketReceived() < 210)) GD::out.printDebug("Debug: HomeMatic Wired Device 0x" + BaseLib::HelperFunctions::getHexString(_deviceID) + ": Waiting for RS485 bus to become free... (Packet: " + packet->hexString() + ")");
-				while(time - GD::physicalInterface->lastPacketSent() < 210 || time - GD::physicalInterface->lastPacketReceived() < 210)
+				if(GD::physicalInterface->getFastSending())
 				{
-					std::this_thread::sleep_for(std::chrono::milliseconds(50));
-					time = BaseLib::HelperFunctions::getTime();
-					if(time - GD::physicalInterface->lastPacketSent() >= 210 && time - GD::physicalInterface->lastPacketReceived() >= 210)
+					while(time - GD::physicalInterface->lastPacketSent() < 55 || time - GD::physicalInterface->lastPacketReceived() < 55)
 					{
-						int32_t sleepingTime = BaseLib::HelperFunctions::getRandomNumber(0, 100);
-						if(_bl->debugLevel > 4) GD::out.printDebug("Debug: HomeMatic Wired Device 0x" + BaseLib::HelperFunctions::getHexString(_deviceID) + ": RS485 bus is free now. Waiting randomly for " + std::to_string(sleepingTime) + "ms... (Packet: " + packet->hexString() + ")");
-						//Sleep random time
-						std::this_thread::sleep_for(std::chrono::milliseconds(sleepingTime));
+						std::this_thread::sleep_for(std::chrono::milliseconds(10));
 						time = BaseLib::HelperFunctions::getTime();
+						if(time - GD::physicalInterface->lastPacketSent() >= 55 && time - GD::physicalInterface->lastPacketReceived() >= 55)
+						{
+							int32_t sleepingTime = BaseLib::HelperFunctions::getRandomNumber(0, 20);
+							if(_bl->debugLevel > 4) GD::out.printDebug("Debug: HomeMatic Wired Device 0x" + BaseLib::HelperFunctions::getHexString(_deviceID) + ": RS485 bus is free now. Waiting randomly for " + std::to_string(sleepingTime) + "ms... (Packet: " + packet->hexString() + ")");
+							//Sleep random time
+							std::this_thread::sleep_for(std::chrono::milliseconds(sleepingTime));
+							time = BaseLib::HelperFunctions::getTime();
+						}
+					}
+				}
+				else
+				{
+					while(time - GD::physicalInterface->lastPacketSent() < 210 || time - GD::physicalInterface->lastPacketReceived() < 210)
+					{
+						std::this_thread::sleep_for(std::chrono::milliseconds(50));
+						time = BaseLib::HelperFunctions::getTime();
+						if(time - GD::physicalInterface->lastPacketSent() >= 210 && time - GD::physicalInterface->lastPacketReceived() >= 210)
+						{
+							int32_t sleepingTime = BaseLib::HelperFunctions::getRandomNumber(0, 100);
+							if(_bl->debugLevel > 4) GD::out.printDebug("Debug: HomeMatic Wired Device 0x" + BaseLib::HelperFunctions::getHexString(_deviceID) + ": RS485 bus is free now. Waiting randomly for " + std::to_string(sleepingTime) + "ms... (Packet: " + packet->hexString() + ")");
+							//Sleep random time
+							std::this_thread::sleep_for(std::chrono::milliseconds(sleepingTime));
+							time = BaseLib::HelperFunctions::getTime();
+						}
 					}
 				}
 				if(_bl->debugLevel > 4) GD::out.printDebug("Debug: HomeMatic Wired Device 0x" + BaseLib::HelperFunctions::getHexString(_deviceID) + ": RS485 bus is still free... sending... (Packet: " + packet->hexString() + ")");
@@ -472,20 +491,42 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 		if(resend)
 		{
 			std::shared_ptr<HMWiredPacket> receivedPacket;
-			for(int32_t retries = 0; retries < 3; retries++)
+			if(GD::physicalInterface->getFastSending())
 			{
-				int64_t time = BaseLib::HelperFunctions::getTime();
-				std::chrono::milliseconds sleepingTime(5);
-				if(retries > 0) _sentPackets.keepAlive(packet->destinationAddress());
-				GD::physicalInterface->sendPacket(packet);
-				for(int32_t i = 0; i < 12; i++)
+				for(int32_t retries = 0; retries < 3; retries++)
 				{
-					if(i == 5) sleepingTime = std::chrono::milliseconds(25);
-					std::this_thread::sleep_for(sleepingTime);
-					receivedPacket = systemResponse ? _receivedPackets.get(0) : _receivedPackets.get(packet->destinationAddress());
-					if(receivedPacket && receivedPacket->timeReceived() >= time && receivedPacket->receiverMessageCounter() == packet->senderMessageCounter())
+					int64_t time = BaseLib::HelperFunctions::getTime();
+					std::chrono::milliseconds sleepingTime(5);
+					if(retries > 0) _sentPackets.keepAlive(packet->destinationAddress());
+					GD::physicalInterface->sendPacket(packet);
+					for(int32_t i = 0; i < 10; i++)
 					{
-						return receivedPacket;
+						std::this_thread::sleep_for(sleepingTime);
+						receivedPacket = systemResponse ? _receivedPackets.get(0) : _receivedPackets.get(packet->destinationAddress());
+						if(receivedPacket && receivedPacket->timeReceived() >= time && receivedPacket->receiverMessageCounter() == packet->senderMessageCounter())
+						{
+							return receivedPacket;
+						}
+					}
+				}
+			}
+			else
+			{
+				for(int32_t retries = 0; retries < 3; retries++)
+				{
+					int64_t time = BaseLib::HelperFunctions::getTime();
+					std::chrono::milliseconds sleepingTime(5);
+					if(retries > 0) _sentPackets.keepAlive(packet->destinationAddress());
+					GD::physicalInterface->sendPacket(packet);
+					for(int32_t i = 0; i < 12; i++)
+					{
+						if(i == 5) sleepingTime = std::chrono::milliseconds(25);
+						std::this_thread::sleep_for(sleepingTime);
+						receivedPacket = systemResponse ? _receivedPackets.get(0) : _receivedPackets.get(packet->destinationAddress());
+						if(receivedPacket && receivedPacket->timeReceived() >= time && receivedPacket->receiverMessageCounter() == packet->senderMessageCounter())
+						{
+							return receivedPacket;
+						}
 					}
 				}
 			}

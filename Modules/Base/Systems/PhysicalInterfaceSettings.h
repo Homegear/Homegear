@@ -75,6 +75,7 @@ public:
 	std::string caFile;
 	bool verifyCertificate = true;
 	bool oneWay = false;
+	bool fastSending = false;
 	int32_t enableRXValue = -1;
 	int32_t enableTXValue = -1;
 	int32_t listenThreadPriority = -1;

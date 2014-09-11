@@ -77,9 +77,9 @@ std::shared_ptr<BaseLib::Systems::IPhysicalInterface> HMWired::createPhysicalDev
 {
 	try
 	{
-		if(!settings) return std::shared_ptr<BaseLib::Systems::IPhysicalInterface>();
+		if(!settings) return std::shared_ptr<IHMWiredInterface>();
 		GD::out.printDebug("Debug: Creating physical device. Type defined in physicalinterfaces.conf is: " + settings->type);
-		GD::physicalInterface = std::shared_ptr<BaseLib::Systems::IPhysicalInterface>();
+		GD::physicalInterface = std::shared_ptr<IHMWiredInterface>();
 		if(!settings) return GD::physicalInterface;
 		if(settings->type == "rs485") GD::physicalInterface.reset(new RS485(settings));
 		else if(settings->type == "rawlan") GD::physicalInterface.reset(new RawLAN(settings));

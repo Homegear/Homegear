@@ -31,7 +31,7 @@
 #define RAWLAN_H
 
 #include "../HMWiredPacket.h"
-#include "../../Base/BaseLib.h"
+#include "IHMWiredInterface.h"
 
 #include <thread>
 #include <iostream>
@@ -51,7 +51,7 @@
 namespace HMWired
 {
 
-class RawLAN  : public BaseLib::Systems::IPhysicalInterface
+class RawLAN : public IHMWiredInterface
 {
     public:
         RawLAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);

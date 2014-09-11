@@ -492,9 +492,9 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 		if(responseType == PacketType::Enum::xmlResponse)
 		{
 			_xmlRpcEncoder->encodeResponse(variable, data);
-			std::string header = getHttpResponseHeader(data.size());
 			data.push_back('\r');
 			data.push_back('\n');
+			std::string header = getHttpResponseHeader(data.size(), !keepAlive);
 			data.insert(data.begin(), header.begin(), header.end());
 			if(GD::bl->debugLevel >= 5)
 			{
@@ -610,11 +610,12 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
     }
 }
 
-std::string RPCServer::getHttpResponseHeader(uint32_t contentLength)
+std::string RPCServer::getHttpResponseHeader(uint32_t contentLength, bool closeConnection)
 {
 	std::string header;
 	header.append("HTTP/1.1 200 OK\r\n");
-	header.append("Connection: close\r\n");
+	header.append("Connection: ");
+	header.append(closeConnection ? "close\r\n" : "Keep-Alive\r\n");
 	header.append("Content-Type: text/xml\r\n");
 	header.append("Content-Length: ").append(std::to_string(contentLength + 21)).append("\r\n\r\n");
 	header.append("<?xml version=\"1.0\"?>");

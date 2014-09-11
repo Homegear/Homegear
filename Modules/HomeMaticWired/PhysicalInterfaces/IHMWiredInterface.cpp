@@ -27,30 +27,19 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef GD_H_
-#define GD_H_
-
-#include "../Base/BaseLib.h"
-#include "HMWired.h"
-#include "PhysicalInterfaces/IHMWiredInterface.h"
+#include "IHMWiredInterface.h"
+#include "../GD.h"
 
 namespace HMWired
 {
 
-class GD
+IHMWiredInterface::IHMWiredInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IPhysicalInterface(GD::bl, settings)
 {
-public:
-	virtual ~GD();
+}
 
-	static BaseLib::Obj* bl;
-	static HMWired* family;
-	static std::shared_ptr<IHMWiredInterface> physicalInterface;
-	static BaseLib::RPC::Devices rpcDevices;
-	static BaseLib::Output out;
-private:
-	GD();
-};
+IHMWiredInterface::~IHMWiredInterface()
+{
 
 }
 
-#endif /* GD_H_ */
+}

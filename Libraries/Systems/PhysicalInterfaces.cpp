@@ -175,6 +175,12 @@ void PhysicalInterfaces::load(std::string filename)
 					settings->enableTXValue = number;
 					GD::out.printDebug("Debug: enableTXValue of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->enableTXValue));
 				}
+				else if(name == "fastsending")
+				{
+					BaseLib::HelperFunctions::toLower(value);
+					if(value == "true") settings->fastSending = true;
+					GD::out.printDebug("Debug: fastSending of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->fastSending));
+				}
 				else if(name == "gpio1")
 				{
 					int32_t number = BaseLib::Math::getNumber(value);
