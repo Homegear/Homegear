@@ -387,6 +387,8 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 			}
 			else
 			{
+				data.push_back('\r');
+				data.push_back('\n');
 				std::string header = "POST " + server->path + " HTTP/1.1\r\nUser-Agent: Homegear " + std::string(VERSION) + "\r\nHost: " + server->hostname + ":" + server->address.second + "\r\nContent-Type: text/xml\r\nContent-Length: " + std::to_string(data.size()) + "\r\nConnection: " + (server->keepAlive ? "Keep-Alive" : "close") + "\r\n";
 				if(server->settings && server->settings->authType == ClientSettings::Settings::AuthType::basic)
 				{
@@ -396,8 +398,7 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 				}
 				header += "\r\n";
 				data.insert(data.begin(), header.begin(), header.end());
-				data.push_back('\r');
-				data.push_back('\n');
+
 			}
 		}
 
