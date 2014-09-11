@@ -186,7 +186,7 @@ echo "#!/bin/bash
 sed -i '$ d' /home/pi/.bashrc >/dev/null
 echo \"************************************************************\"
 echo \"************************************************************\"
-echo \"************* Welcome to your homegear system! *************\"
+echo \"************* Welcome to your Homegear system! *************\"
 echo \"************************************************************\"
 echo \"************************************************************\"
 echo \"Downloading device description files...\"
@@ -234,7 +234,7 @@ echo \"\$(tput setaf 4)\$(tput bold)
                   dddd
                 dddddddd
               dddddddddddd
-               dddddddddd                   \$(tput setaf 7)\`date +\"%A, %e %B %Y, %r\"\`\$(tput setaf 4)
+               dddddddddd                   \$(tput setaf 7)Welcome to your Homegear system!\$(tput setaf 4)
                dddddddddd                   \$(tput setaf 7)\`uname -srmo\`\$(tput setaf 4)
                d\$(tput setaf 6).:dddd:.\$(tput setaf 4)d\$(tput setaf 6)
     .:ool:,,:oddddddddddddo:,,:loo:.        \$(tput sgr0)Uptime.............: \${UPTIME}\$(tput setaf 6)\$(tput bold)
@@ -247,7 +247,20 @@ echo \"\$(tput setaf 4)\$(tput bold)
 ddddddddddddddd,        ,ddddddddddddddd
 
 
-\$(tput sgr0)\"" > home/pi/.bash_profile
+\$(tput sgr0)\"
+
+# if running bash
+if [ -n \"\$BASH_VERSION\" ]; then
+    # include .bashrc if it exists
+    if [ -f \"\$HOME/.bashrc\" ]; then
+        . \"\$HOME/.bashrc\"
+    fi
+fi
+
+# set PATH so it includes user's private bin if it exists
+if [ -d \"\$HOME/bin\" ] ; then
+    PATH=\"\$HOME/bin:\$PATH\"
+fi" > home/pi/.bash_profile
 #End bash profile
 
 echo "#!/bin/bash

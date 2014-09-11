@@ -807,7 +807,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> PhilipsHueCentral::searchDevices()
 			std::string swversion = info->operator []("swversion").asString();
 			LogicalDeviceType deviceType(BaseLib::Systems::DeviceFamilies::PhilipsHue, (uint32_t)type);
 
-			peer = createPeer((*i)->senderAddress(), BaseLib::Math::getNumber(swversion), deviceType, std::to_string((*i)->senderAddress()), true);
+			peer = createPeer((*i)->senderAddress(), BaseLib::Math::getNumber(swversion), deviceType, std::string("HUE") +  std::to_string((*i)->senderAddress()), true);
 			if(!peer)
 			{
 				GD::out.printError("Error: Could not pair device with address " + BaseLib::HelperFunctions::getHexString((*i)->senderAddress(), 6) + ". No matching XML file was found.");

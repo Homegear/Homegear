@@ -359,7 +359,7 @@ std::vector<uint8_t> RS485::readFromDevice()
 				}
 				else if(packet.at(0) == 0xFE) { if(packet.size() > 3) length = packet.at(3); }
 				else if(packet.at(0) == 0xF8) break;
-				else if(_settings->oneWay) //USB devices sometimes receive nonsense instead of 0xF8
+				else //Devices sometimes receive nonsense instead of 0xF8
 				{
 					GD::out.printWarning("Warning: Correcting wrong response: " + BaseLib::HelperFunctions::getHexString(packet) + ". This is normal for RS485 USB modules when searching for new devices. When not searching, this shouldn't happen.");
 					packet.clear(); //Remove something like 0xF0F0

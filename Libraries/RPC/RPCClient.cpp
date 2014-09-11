@@ -263,15 +263,16 @@ std::string RPCClient::getIPAddress(std::string address)
 {
 	try
 	{
-		if(address.size() < 9)
+		if(address.size() < 10)
 		{
 			GD::out.printError("Error: Server's address too short: " + address);
 			return "";
 		}
-		if(address.substr(0, 7) == "http://") address = address.substr(7);
-		else if(address.substr(0, 8) == "https://") address = address.substr(8);
-		else if(address.substr(0, 9) == "binary://") address = address.substr(9);
-		else if(address.substr(0, 10) == "binarys://") address = address.substr(10);
+		if(address.compare(0, 7, "http://") == 0) address = address.substr(7);
+		else if(address.compare(0, 8, "https://") == 0) address = address.substr(8);
+		else if(address.compare(0, 9, "binary://") == 0) address = address.substr(9);
+		else if(address.size() > 10 && address.compare(0, 10, "binarys://") == 0) address = address.substr(10);
+		else if(address.size() > 13 && address.compare(0, 13, "xmlrpc_bin://") == 0) address = address.substr(13);
 		if(address.empty())
 		{
 			GD::out.printError("Error: Server's address is empty.");

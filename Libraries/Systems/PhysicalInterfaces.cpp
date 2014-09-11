@@ -69,7 +69,7 @@ void PhysicalInterfaces::load(std::string filename)
 		std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings(new BaseLib::Systems::PhysicalInterfaceSettings());
 		while (fgets(input, 1024, fin))
 		{
-			if(input[0] == '#') continue;
+			if(input[0] == '#' || input[0] == '-' || input[0] == '_') continue;
 			len = strlen(input);
 			if (len < 2) continue;
 			if (input[len-1] == '\n') input[len-1] = '\0';

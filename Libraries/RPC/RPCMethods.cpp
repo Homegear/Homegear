@@ -1840,7 +1840,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCInit::invoke(std::shared_ptr<std::
 				return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 			}
 			if(server.first.compare(0, 5, "https") == 0 || server.first.compare(0, 7, "binarys") == 0) eventServer->useSSL = true;
-			if(server.first.compare(0, 6, "binary") == 0 || server.first.compare(0, 7, "binarys") == 0) eventServer->binary = true;
+			if(server.first.compare(0, 6, "binary") == 0 ||
+			   server.first.compare(0, 7, "binarys") == 0 ||
+			   server.first.compare(0, 10, "xmlrpc_bin") == 0) eventServer->binary = true;
 			if(parameters->size() > 2)
 			{
 				if(parameters->at(2)->integerValue & 1) eventServer->keepAlive = true;
