@@ -40,9 +40,13 @@ public:
 	IHMWiredInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
 	virtual ~IHMWiredInterface();
 
+	void enableSearchMode() { _searchMode = true; }
+	void disableSearchMode() { _searchMode = false; }
 	bool getFastSending() { return _settings->fastSending; }
+	uint32_t getBusWaitingTime() { return _settings->waitForBus; }
 protected:
 	BaseLib::Output _out;
+	bool _searchMode = false;
 };
 
 }

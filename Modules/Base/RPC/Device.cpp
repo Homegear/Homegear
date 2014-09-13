@@ -989,7 +989,6 @@ Parameter::Parameter(BaseLib::Obj* baseLib, xml_node<>* node, bool checkForID) :
 			if(attributeValue == "integer") type = PhysicalParameter::Type::Enum::typeInteger;
 			else if(attributeValue == "boolean") type = PhysicalParameter::Type::Enum::typeBoolean;
 			else if(attributeValue == "string") type = PhysicalParameter::Type::Enum::typeString;
-			else if(attributeValue == "option") type = PhysicalParameter::Type::Enum::typeOption;
 			else _bl->out.printWarning("Warning: Unknown attribute value for \"type\" in node \"parameter\": " + attributeValue);
 		}
 		else if(attributeName == "omit_if")

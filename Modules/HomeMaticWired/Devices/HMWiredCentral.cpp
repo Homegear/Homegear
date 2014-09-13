@@ -1585,6 +1585,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::searchDevices()
 	try
 	{
 		lockBus();
+		GD::physicalInterface->enableSearchMode();
 		_pairing = true;
 
 		std::vector<int32_t> newDevices;
@@ -1690,6 +1691,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::searchDevices()
 		}
 
 		_pairing = false;
+		GD::physicalInterface->disableSearchMode();
 		unlockBus();
 
 		GD::out.printInfo("Info: Search completed. Found " + std::to_string(newDevices.size()) + " devices.");

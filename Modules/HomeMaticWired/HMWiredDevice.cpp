@@ -410,6 +410,7 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 	{
 		//First check if communication is in progress
 		int64_t time = BaseLib::HelperFunctions::getTime();
+		uint32_t busWaitingTime = GD::physicalInterface->getBusWaitingTime();
 		std::shared_ptr<HMWiredPacketInfo> rxPacketInfo;
 		std::shared_ptr<HMWiredPacketInfo> txPacketInfo = _sentPackets.getInfo(packet->destinationAddress());
 		int64_t timeDifference = 0;
@@ -425,13 +426,13 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 				if(_bl->debugLevel > 4 && (time - GD::physicalInterface->lastPacketSent() < 210 || time - GD::physicalInterface->lastPacketReceived() < 210)) GD::out.printDebug("Debug: HomeMatic Wired Device 0x" + BaseLib::HelperFunctions::getHexString(_deviceID) + ": Waiting for RS485 bus to become free... (Packet: " + packet->hexString() + ")");
 				if(GD::physicalInterface->getFastSending())
 				{
-					while(time - GD::physicalInterface->lastPacketSent() < 55 || time - GD::physicalInterface->lastPacketReceived() < 55)
+					while(time - GD::physicalInterface->lastPacketSent() < busWaitingTime || time - GD::physicalInterface->lastPacketReceived() < busWaitingTime)
 					{
-						std::this_thread::sleep_for(std::chrono::milliseconds(10));
+						std::this_thread::sleep_for(std::chrono::milliseconds(20));
 						time = BaseLib::HelperFunctions::getTime();
-						if(time - GD::physicalInterface->lastPacketSent() >= 55 && time - GD::physicalInterface->lastPacketReceived() >= 55)
+						if(time - GD::physicalInterface->lastPacketSent() >= busWaitingTime && time - GD::physicalInterface->lastPacketReceived() >= busWaitingTime)
 						{
-							int32_t sleepingTime = BaseLib::HelperFunctions::getRandomNumber(0, 20);
+							int32_t sleepingTime = BaseLib::HelperFunctions::getRandomNumber(0, busWaitingTime / 2);
 							if(_bl->debugLevel > 4) GD::out.printDebug("Debug: HomeMatic Wired Device 0x" + BaseLib::HelperFunctions::getHexString(_deviceID) + ": RS485 bus is free now. Waiting randomly for " + std::to_string(sleepingTime) + "ms... (Packet: " + packet->hexString() + ")");
 							//Sleep random time
 							std::this_thread::sleep_for(std::chrono::milliseconds(sleepingTime));
@@ -499,7 +500,7 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 					std::chrono::milliseconds sleepingTime(5);
 					if(retries > 0) _sentPackets.keepAlive(packet->destinationAddress());
 					GD::physicalInterface->sendPacket(packet);
-					for(int32_t i = 0; i < 10; i++)
+					for(int32_t i = 0; i < ((signed)busWaitingTime - 20) / 5; i++)
 					{
 						std::this_thread::sleep_for(sleepingTime);
 						receivedPacket = systemResponse ? _receivedPackets.get(0) : _receivedPackets.get(packet->destinationAddress());

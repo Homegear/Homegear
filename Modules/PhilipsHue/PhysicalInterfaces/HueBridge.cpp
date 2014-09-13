@@ -111,26 +111,27 @@ void HueBridge::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		std::string getData = "GET /api/homegear" + _settings->id + "/lights/" + std::to_string(packet->destinationAddress()) + " HTTP/1.1\r\nUser-Agent: Homegear\r\nHost: " + _hostname + ":" + std::to_string(_port) + "\r\nConnection: Keep-Alive\r\n\r\n";
 		_client->sendRequest(getData, response);
 
-		if(!getJson(response, json)) return;
-		if(json.isMember("error"))
+		Json::Value json2;
+		if(!getJson(response, json2)) return;
+		if(json2.isMember("error"))
 		{
-			json = json["error"];
-			if(json.isMember("type") && json["type"].asInt() == 1)
+			json2 = json2["error"];
+			if(json2.isMember("type") && json2["type"].asInt() == 1)
 			{
 				createUser();
 			}
 			else
 			{
-				if(json.isMember("description")) _out.printError("Error: " + json["description"].asString());
+				if(json2.isMember("description")) _out.printError("Error: " + json2["description"].asString());
 				else _out.printError("Unknown error during polling. Response was: " + response);
 			}
 			return;
 		}
 
-		if(json.isMember("state"))
+		if(json2.isMember("state"))
 		{
 			std::shared_ptr<Json::Value> packetJson(new Json::Value());
-			*packetJson = json;
+			*packetJson = json2;
 			std::shared_ptr<PhilipsHuePacket> packet(new PhilipsHuePacket(huePacket->destinationAddress(), 0, 1, packetJson, BaseLib::HelperFunctions::getTime()));
 			raisePacketReceived(packet);
 		}

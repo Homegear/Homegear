@@ -126,7 +126,7 @@ PhysicalParameter::PhysicalParameter(BaseLib::Obj* baseLib, xml_node<>* node) : 
 				else baseLib->out.printWarning("Warning: Unknown endianess for \"physical\": " + attributeValue);
 			}
 			else if(attributeName == "value_id") valueID = attributeValue;
-			else if(attributeName == "no_init") { if(attributeValue == "true") noInit = true; }
+			else if(attributeName == "no_init") {}
 			else if(attributeName == "list") list = Math::getNumber(attributeValue);
 			else if(attributeName == "index")
 			{
@@ -151,9 +151,9 @@ PhysicalParameter::PhysicalParameter(BaseLib::Obj* baseLib, xml_node<>* node) : 
 				size += Math::getNumber(splitValue.first);
 				sizeDefined = true;
 			}
-			else if(attributeName == "read_size") readSize = Math::getNumber(attributeValue);
-			else if(attributeName == "counter") counter = attributeValue;
-			else if(attributeName == "volatile") { if(attributeValue == "true") isVolatile = true; }
+			//else if(attributeName == "read_size") readSize = Math::getNumber(attributeValue);
+			else if(attributeName == "counter") {}
+			else if(attributeName == "volatile") {}
 			else if(attributeName == "id") { id = attributeValue; }
 			else if(attributeName == "save_on_change") {} //not necessary, all values are saved on change
 			else if(attributeName == "mask") mask = Math::getNumber(attributeValue);

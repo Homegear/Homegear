@@ -101,7 +101,7 @@ class PhysicalParameter
 public:
 	struct Type
 	{
-		enum Enum { none, typeBoolean, typeInteger, typeOption, typeString };
+		enum Enum { none, typeBoolean, typeInteger, typeString };
 	};
 	struct Interface
 	{
@@ -121,17 +121,17 @@ public:
 	bool sizeDefined = false;
 	double size = 1.0;
 	int32_t mask = -1;
-	int32_t readSize = -1;
+	//int32_t readSize = -1;
 	std::string valueID;
-	bool noInit = false;
+	//bool noInit = false;
 	std::string getRequest;
 	std::vector<std::shared_ptr<SetRequestEx>> setRequestsEx;
 	std::string setRequest;
 
-	std::string counter;
+	//std::string counter;
 	std::vector<std::shared_ptr<PhysicalParameterEvent>> eventFrames;
 	std::vector<std::string> resetAfterSend;
-	bool isVolatile = false;
+	//bool isVolatile = false;
 	std::string id;
 	PhysicalParameterAddress address;
 
