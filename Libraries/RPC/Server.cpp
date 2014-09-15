@@ -123,9 +123,9 @@ uint32_t Server::connectionCount()
 	if(_server) return _server->connectionCount(); else return 0;
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> Server::callMethod(std::string methodName, std::shared_ptr<BaseLib::RPC::RPCVariable> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> Server::callMethod(std::string methodName, std::shared_ptr<BaseLib::RPC::Variable> parameters)
 {
-	if(!_server) return BaseLib::RPC::RPCVariable::createError(-32500, "Server is nullptr.");
+	if(!_server) return BaseLib::RPC::Variable::createError(-32500, "Server is nullptr.");
 	return _server->callMethod(methodName, parameters);
 }
 

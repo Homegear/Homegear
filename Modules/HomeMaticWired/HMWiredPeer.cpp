@@ -135,12 +135,12 @@ void HMWiredPeer::initializeLinkConfig(int32_t channel, std::shared_ptr<BaseLib:
 
 		if(!peer->isSender) return; //Nothing more to do
 
-		std::shared_ptr<BaseLib::RPC::RPCVariable> variables(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+		std::shared_ptr<BaseLib::RPC::Variable> variables(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 		for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator i = parameterSet->parameters.begin(); i != parameterSet->parameters.end(); ++i)
 		{
 			variables->structValue->insert(BaseLib::RPC::RPCStructElement((*i)->id, (*i)->logicalParameter->getDefaultValue()));
 		}
-		std::shared_ptr<BaseLib::RPC::RPCVariable> result = putParamset(channel, BaseLib::RPC::ParameterSet::Type::Enum::link, peer->id, peer->channel, variables);
+		std::shared_ptr<BaseLib::RPC::Variable> result = putParamset(channel, BaseLib::RPC::ParameterSet::Type::Enum::link, peer->id, peer->channel, variables);
 		if(result->errorStruct) GD::out.printError("Error: " + result->structValue->at("faultString")->stringValue);
 	}
 	catch(const std::exception& ex)
@@ -1814,7 +1814,7 @@ void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
 		getValuesFromPacket(packet, frameValues);
 		std::shared_ptr<HMWiredPacket> sentPacket;
 		std::map<uint32_t, std::shared_ptr<std::vector<std::string>>> valueKeys;
-		std::map<uint32_t, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>>> rpcValues;
+		std::map<uint32_t, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>>> rpcValues;
 		//Loop through all matching frames
 		for(std::vector<FrameValues>::iterator a = frameValues.begin(); a != frameValues.end(); ++a)
 		{
@@ -1839,7 +1839,7 @@ void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
 					if(!valueKeys[*j] || !rpcValues[*j])
 					{
 						valueKeys[*j].reset(new std::vector<std::string>());
-						rpcValues[*j].reset(new std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
+						rpcValues[*j].reset(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>());
 					}
 					BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
 					if(rpcDevice->channels.find(*j) == rpcDevice->channels.end())
@@ -1910,14 +1910,14 @@ void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
     }
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getDeviceInfo(std::map<std::string, bool> fields)
+std::shared_ptr<BaseLib::RPC::Variable> HMWiredPeer::getDeviceInfo(std::map<std::string, bool> fields)
 {
 	try
 	{
-		std::shared_ptr<BaseLib::RPC::RPCVariable> info(Peer::getDeviceInfo(fields));
+		std::shared_ptr<BaseLib::RPC::Variable> info(Peer::getDeviceInfo(fields));
 		if(info->errorStruct) return info;
 
-		if(fields.empty() || fields.find("INTERFACE") != fields.end()) info->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(GD::physicalInterface->getID()))));
+		if(fields.empty() || fields.find("INTERFACE") != fields.end()) info->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(GD::physicalInterface->getID()))));
 
 		return info;
 	}
@@ -1933,23 +1933,23 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getDeviceInfo(std::map<s
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::shared_ptr<BaseLib::RPC::RPCVariable>();
+    return std::shared_ptr<BaseLib::RPC::Variable>();
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
+std::shared_ptr<BaseLib::RPC::Variable> HMWiredPeer::getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
 {
 	try
 	{
-		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
+		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
 		if(channel < 0) channel = 0;
 		if(remoteChannel < 0) remoteChannel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel.");
+		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
 		if(type == BaseLib::RPC::ParameterSet::Type::none) type = BaseLib::RPC::ParameterSet::Type::link;
 		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels[channel];
-		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end()) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set.");
+		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
 		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = getParameterSet(channel, type);
-		if(!parameterSet) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set.");
-		std::shared_ptr<BaseLib::RPC::RPCVariable> variables(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+		if(!parameterSet) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
+		std::shared_ptr<BaseLib::RPC::Variable> variables(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 
 		for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator i = parameterSet->parameters.begin(); i != parameterSet->parameters.end(); ++i)
 		{
@@ -1959,7 +1959,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getParamset(int32_t chan
 				GD::out.printDebug("Debug: Omitting parameter " + (*i)->id + " because of it's ui flag.");
 				continue;
 			}
-			std::shared_ptr<BaseLib::RPC::RPCVariable> element;
+			std::shared_ptr<BaseLib::RPC::Variable> element;
 			if(type == BaseLib::RPC::ParameterSet::Type::Enum::values)
 			{
 				if(!((*i)->operations & BaseLib::RPC::Parameter::Operations::read) && !((*i)->operations & BaseLib::RPC::Parameter::Operations::event)) continue;
@@ -1970,24 +1970,24 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getParamset(int32_t chan
 			else if(type == BaseLib::RPC::ParameterSet::Type::Enum::master)
 			{
 				std::vector<uint8_t> value = getMasterConfigParameter(channel, parameterSet, *i);
-				if(value.empty()) return BaseLib::RPC::RPCVariable::createError(-32500, "Could not read config parameter. See log for more details.");
+				if(value.empty()) return BaseLib::RPC::Variable::createError(-32500, "Could not read config parameter. See log for more details.");
 				element = (*i)->convertFromPacket(value);
 			}
 			else if(type == BaseLib::RPC::ParameterSet::Type::Enum::link)
 			{
 				std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer;
 				if(remoteID > 0) remotePeer = getPeer(channel, remoteID, remoteChannel);
-				if(!remotePeer) return BaseLib::RPC::RPCVariable::createError(-3, "Not paired to this peer.");
-				if(remotePeer->configEEPROMAddress == -1) return BaseLib::RPC::RPCVariable::createError(-3, "No parameter set eeprom address set.");
-				if(parameterSet->addressStart == -1 || parameterSet->addressStep == -1) return BaseLib::RPC::RPCVariable::createError(-3, "Storage type of link parameter set not supported.");
+				if(!remotePeer) return BaseLib::RPC::Variable::createError(-3, "Not paired to this peer.");
+				if(remotePeer->configEEPROMAddress == -1) return BaseLib::RPC::Variable::createError(-3, "No parameter set eeprom address set.");
+				if(parameterSet->addressStart == -1 || parameterSet->addressStep == -1) return BaseLib::RPC::Variable::createError(-3, "Storage type of link parameter set not supported.");
 
 				std::vector<uint8_t> value = getConfigParameter(remotePeer->configEEPROMAddress + (*i)->physicalParameter->address.index, (*i)->physicalParameter->size);
-				if(value.empty()) return BaseLib::RPC::RPCVariable::createError(-32500, "Could not read config parameter. See log for more details.");
+				if(value.empty()) return BaseLib::RPC::Variable::createError(-32500, "Could not read config parameter. See log for more details.");
 				element = (*i)->convertFromPacket(value);
 			}
 
 			if(!element) continue;
-			if(element->type == BaseLib::RPC::RPCVariableType::rpcVoid) continue;
+			if(element->type == BaseLib::RPC::VariableType::rpcVoid) continue;
 			variables->structValue->insert(BaseLib::RPC::RPCStructElement((*i)->id, element));
 		}
 		return variables;
@@ -2004,22 +2004,22 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getParamset(int32_t chan
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
+std::shared_ptr<BaseLib::RPC::Variable> HMWiredPeer::getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
 {
 	try
 	{
-		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
+		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
 		if(channel < 0) channel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel");
+		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel");
 		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels[channel];
-		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end()) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set");
+		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set");
 		if(type == BaseLib::RPC::ParameterSet::Type::link && remoteID > 0)
 		{
 			std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer = getPeer(channel, remoteID, remoteChannel);
-			if(!remotePeer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown remote peer.");
+			if(!remotePeer) return BaseLib::RPC::Variable::createError(-2, "Unknown remote peer.");
 		}
 
 		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet;
@@ -2029,7 +2029,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getParamsetDescription(i
 			GD::out.printDebug("Debug: Special parameter is " + std::to_string(value.at(0)));
 			if(value.at(0))
 			{
-				if(rpcChannel->subconfig->parameterSets.find(type) == rpcChannel->subconfig->parameterSets.end()) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set");
+				if(rpcChannel->subconfig->parameterSets.find(type) == rpcChannel->subconfig->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set");
 				parameterSet = rpcChannel->subconfig->parameterSets[type];
 			} else parameterSet = rpcChannel->parameterSets[type];
 		}
@@ -2049,22 +2049,22 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getParamsetDescription(i
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool onlyPushing)
+std::shared_ptr<BaseLib::RPC::Variable> HMWiredPeer::putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> variables, bool onlyPushing)
 {
 	try
 	{
-		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
-		if(!_centralFeatures) return BaseLib::RPC::RPCVariable::createError(-2, "Not a central peer.");
+		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
+		if(!_centralFeatures) return BaseLib::RPC::Variable::createError(-2, "Not a central peer.");
 		if(channel < 0) channel = 0;
 		if(remoteChannel < 0) remoteChannel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel.");
+		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
 		if(type == BaseLib::RPC::ParameterSet::Type::none) type = BaseLib::RPC::ParameterSet::Type::link;
 		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = getParameterSet(channel, type);
-		if(!parameterSet) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set.");
-		if(variables->structValue->empty()) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		if(!parameterSet) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
+		if(variables->structValue->empty()) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 
 		std::map<int32_t, bool> changedBlocks;
 		if(type == BaseLib::RPC::ParameterSet::Type::Enum::master)
@@ -2095,9 +2095,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::putParamset(int32_t chan
 		{
 			std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer;
 			if(remoteID > 0) remotePeer = getPeer(channel, remoteID, remoteChannel);
-			if(!remotePeer) return BaseLib::RPC::RPCVariable::createError(-3, "Not paired to this peer.");
-			if(remotePeer->configEEPROMAddress == -1) return BaseLib::RPC::RPCVariable::createError(-3, "No parameter set eeprom address set.");
-			if(parameterSet->addressStart == -1 || parameterSet->addressStep == -1) return BaseLib::RPC::RPCVariable::createError(-3, "Storage type of link parameter set not supported.");
+			if(!remotePeer) return BaseLib::RPC::Variable::createError(-3, "Not paired to this peer.");
+			if(remotePeer->configEEPROMAddress == -1) return BaseLib::RPC::Variable::createError(-3, "No parameter set eeprom address set.");
+			if(parameterSet->addressStart == -1 || parameterSet->addressStep == -1) return BaseLib::RPC::Variable::createError(-3, "Storage type of link parameter set not supported.");
 
 			for(BaseLib::RPC::RPCStruct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
@@ -2115,7 +2115,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::putParamset(int32_t chan
 			}
 		}
 
-		if(changedBlocks.empty()) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		if(changedBlocks.empty()) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 
 		std::shared_ptr<HMWiredCentral> central(std::dynamic_pointer_cast<HMWiredCentral>(getCentral()));
 		for(std::map<int32_t, bool>::iterator i = changedBlocks.begin(); i != changedBlocks.end(); ++i)
@@ -2123,12 +2123,12 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::putParamset(int32_t chan
 			if(!central->writeEEPROM(_address, i->first, binaryConfig[i->first].data))
 			{
 				GD::out.printError("Error: Could not write config to device's eeprom.");
-				return BaseLib::RPC::RPCVariable::createError(-32500, "Could not write config to device's eeprom.");
+				return BaseLib::RPC::Variable::createError(-32500, "Could not write config to device's eeprom.");
 			}
 		}
 		raiseRPCUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), 0);
 
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {
@@ -2142,29 +2142,29 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::putParamset(int32_t chan
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value)
+std::shared_ptr<BaseLib::RPC::Variable> HMWiredPeer::setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value)
 {
 	try
 	{
 		Peer::setValue(channel, valueKey, value);
-		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
-		if(!_centralFeatures) return BaseLib::RPC::RPCVariable::createError(-2, "Not a central peer.");
-		if(valueKey.empty()) return BaseLib::RPC::RPCVariable::createError(-5, "Value key is empty.");
-		if(channel == 0 && serviceMessages->set(valueKey, value->booleanValue)) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
-		if(valuesCentral.find(channel) == valuesCentral.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel.");
-		if(valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return BaseLib::RPC::RPCVariable::createError(-5, "Unknown parameter.");
+		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
+		if(!_centralFeatures) return BaseLib::RPC::Variable::createError(-2, "Not a central peer.");
+		if(valueKey.empty()) return BaseLib::RPC::Variable::createError(-5, "Value key is empty.");
+		if(channel == 0 && serviceMessages->set(valueKey, value->booleanValue)) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
+		if(valuesCentral.find(channel) == valuesCentral.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
+		if(valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return BaseLib::RPC::Variable::createError(-5, "Unknown parameter.");
 
 		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = getParameterSet(channel, BaseLib::RPC::ParameterSet::Type::Enum::values);
-		if(!parameterSet) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set.");
+		if(!parameterSet) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
 		std::shared_ptr<BaseLib::RPC::Parameter> rpcParameter = parameterSet->getParameter(valueKey);
-		if(!rpcParameter) return BaseLib::RPC::RPCVariable::createError(-5, "Unknown parameter.");
-		if(rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::typeAction && !value->booleanValue) return BaseLib::RPC::RPCVariable::createError(-5, "Parameter of type action cannot be set to \"false\".");
+		if(!rpcParameter) return BaseLib::RPC::Variable::createError(-5, "Unknown parameter.");
+		if(rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::typeAction && !value->booleanValue) return BaseLib::RPC::Variable::createError(-5, "Parameter of type action cannot be set to \"false\".");
 		BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
-		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
+		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>());
 		if((rpcParameter->operations & BaseLib::RPC::Parameter::Operations::read) || (rpcParameter->operations & BaseLib::RPC::Parameter::Operations::event))
 		{
 			valueKeys->push_back(valueKey);
@@ -2175,19 +2175,19 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channe
 			rpcParameter->convertToPacket(value, parameter->data);
 			saveParameter(parameter->databaseID, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
 			if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
-			return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		}
-		else if(rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::command) return BaseLib::RPC::RPCVariable::createError(-6, "Parameter is not settable.");
+		else if(rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::command) return BaseLib::RPC::Variable::createError(-6, "Parameter is not settable.");
 		if(!rpcParameter->conversion.empty() && rpcParameter->conversion.at(0)->type == BaseLib::RPC::ParameterConversion::Type::Enum::toggle)
 		{
 			//Handle toggle parameter
 			std::string toggleKey = rpcParameter->conversion.at(0)->stringValue;
-			if(toggleKey.empty()) return BaseLib::RPC::RPCVariable::createError(-6, "No toggle parameter specified (parameter attribute value is empty).");
-			if(valuesCentral[channel].find(toggleKey) == valuesCentral[channel].end()) return BaseLib::RPC::RPCVariable::createError(-5, "Toggle parameter not found.");
+			if(toggleKey.empty()) return BaseLib::RPC::Variable::createError(-6, "No toggle parameter specified (parameter attribute value is empty).");
+			if(valuesCentral[channel].find(toggleKey) == valuesCentral[channel].end()) return BaseLib::RPC::Variable::createError(-5, "Toggle parameter not found.");
 			BaseLib::Systems::RPCConfigurationParameter* toggleParam = &valuesCentral[channel][toggleKey];
 			std::shared_ptr<BaseLib::RPC::Parameter> toggleRPCParam = parameterSet->getParameter(toggleKey);
-			if(!toggleRPCParam) return BaseLib::RPC::RPCVariable::createError(-5, "Toggle parameter not found.");
-			std::shared_ptr<BaseLib::RPC::RPCVariable> toggleValue;
+			if(!toggleRPCParam) return BaseLib::RPC::Variable::createError(-5, "Toggle parameter not found.");
+			std::shared_ptr<BaseLib::RPC::Variable> toggleValue;
 			if(toggleRPCParam->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::Enum::typeBoolean)
 			{
 				toggleValue = toggleRPCParam->convertFromPacket(toggleParam->data);
@@ -2202,12 +2202,12 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channe
 				else temp.at(0) = toggleRPCParam->conversion.at(0)->off;
 				toggleValue = toggleRPCParam->convertFromPacket(temp);
 			}
-			else return BaseLib::RPC::RPCVariable::createError(-6, "Toggle parameter has to be of type boolean, float or integer.");
+			else return BaseLib::RPC::Variable::createError(-6, "Toggle parameter has to be of type boolean, float or integer.");
 			return setValue(channel, toggleKey, toggleValue);
 		}
 		std::string setRequest = rpcParameter->physicalParameter->setRequest;
-		if(setRequest.empty()) return BaseLib::RPC::RPCVariable::createError(-6, "parameter is read only");
-		if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return BaseLib::RPC::RPCVariable::createError(-6, "No frame was found for parameter " + valueKey);
+		if(setRequest.empty()) return BaseLib::RPC::Variable::createError(-6, "parameter is read only");
+		if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return BaseLib::RPC::Variable::createError(-6, "No frame was found for parameter " + valueKey);
 		std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
 		std::vector<uint8_t> data;
 		rpcParameter->convertToPacket(value, data);
@@ -2276,7 +2276,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channe
 				if(valuesCentral.at(channel).find(*j) == valuesCentral.at(channel).end()) continue;
 				std::shared_ptr<BaseLib::RPC::Parameter> currentParameter = parameterSet->getParameter(*j);
 				if(!currentParameter) continue;
-				std::shared_ptr<BaseLib::RPC::RPCVariable> logicalDefaultValue = currentParameter->logicalParameter->getDefaultValue();
+				std::shared_ptr<BaseLib::RPC::Variable> logicalDefaultValue = currentParameter->logicalParameter->getDefaultValue();
 				std::vector<uint8_t> defaultValue;
 				currentParameter->convertToPacket(logicalDefaultValue, defaultValue);
 				if(defaultValue != valuesCentral.at(channel).at(*j).data)
@@ -2299,12 +2299,12 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channe
 		if(!response)
 		{
 			GD::out.printWarning("Error: Error sending packet to peer " + std::to_string(_peerID) + ". Peer did not respond.");
-			return BaseLib::RPC::RPCVariable::createError(-32500, "Error sending packet to peer. Peer did not respond.");
+			return BaseLib::RPC::Variable::createError(-32500, "Error sending packet to peer. Peer did not respond.");
 		}
 		else
 		{
 			if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
-			return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		}
 	}
 	catch(const std::exception& ex)
@@ -2319,7 +2319,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channe
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error. See error log for more details.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. See error log for more details.");
 }
 
 } /* namespace HMWired */

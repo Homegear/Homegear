@@ -109,7 +109,7 @@ std::shared_ptr<RPCHeader> RPCDecoder::decodeHeader(std::vector<uint8_t>& packet
     return header;
 }
 
-std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> RPCDecoder::decodeRequest(std::vector<char>& packet, std::string& methodName)
+std::shared_ptr<std::vector<std::shared_ptr<Variable>>> RPCDecoder::decodeRequest(std::vector<char>& packet, std::string& methodName)
 {
 	try
 	{
@@ -119,7 +119,7 @@ std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> RPCDecoder::decodeReq
 		position = 8 + headerSize;
 		methodName = _decoder->decodeString(packet, position);
 		uint32_t parameterCount = _decoder->decodeInteger(packet, position);
-		std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters(new std::vector<std::shared_ptr<RPCVariable>>());
+		std::shared_ptr<std::vector<std::shared_ptr<Variable>>> parameters(new std::vector<std::shared_ptr<Variable>>());
 		if(parameterCount > 100)
 		{
 			_bl->out.printError("Parameter count of RPC request is larger than 100.");
@@ -143,10 +143,10 @@ std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> RPCDecoder::decodeReq
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>();
+    return std::shared_ptr<std::vector<std::shared_ptr<Variable>>>();
 }
 
-std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> RPCDecoder::decodeRequest(std::vector<uint8_t>& packet, std::string& methodName)
+std::shared_ptr<std::vector<std::shared_ptr<Variable>>> RPCDecoder::decodeRequest(std::vector<uint8_t>& packet, std::string& methodName)
 {
 	try
 	{
@@ -156,7 +156,7 @@ std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> RPCDecoder::decodeReq
 		position = 8 + headerSize;
 		methodName = _decoder->decodeString(packet, position);
 		uint32_t parameterCount = _decoder->decodeInteger(packet, position);
-		std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters(new std::vector<std::shared_ptr<RPCVariable>>());
+		std::shared_ptr<std::vector<std::shared_ptr<Variable>>> parameters(new std::vector<std::shared_ptr<Variable>>());
 		if(parameterCount > 100)
 		{
 			_bl->out.printError("Parameter count of RPC request is larger than 100.");
@@ -180,74 +180,74 @@ std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> RPCDecoder::decodeReq
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>();
+    return std::shared_ptr<std::vector<std::shared_ptr<Variable>>>();
 }
 
-std::shared_ptr<RPCVariable> RPCDecoder::decodeResponse(std::vector<char>& packet, uint32_t offset)
+std::shared_ptr<Variable> RPCDecoder::decodeResponse(std::vector<char>& packet, uint32_t offset)
 {
 	uint32_t position = offset + 8;
-	std::shared_ptr<RPCVariable> response = decodeParameter(packet, position);
+	std::shared_ptr<Variable> response = decodeParameter(packet, position);
 	if(packet.size() < 4) return response; //response is Void when packet is empty.
 	if(packet.at(3) == 0xFF)
 	{
 		response->errorStruct = true;
-		if(response->structValue->find("faultCode") == response->structValue->end()) response->structValue->insert(RPC::RPCStructElement("faultCode", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(-1))));
-		if(response->structValue->find("faultString") == response->structValue->end()) response->structValue->insert(RPC::RPCStructElement("faultString", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("undefined")))));
+		if(response->structValue->find("faultCode") == response->structValue->end()) response->structValue->insert(RPC::RPCStructElement("faultCode", std::shared_ptr<RPC::Variable>(new RPC::Variable(-1))));
+		if(response->structValue->find("faultString") == response->structValue->end()) response->structValue->insert(RPC::RPCStructElement("faultString", std::shared_ptr<RPC::Variable>(new RPC::Variable(std::string("undefined")))));
 	}
 	return response;
 }
 
-std::shared_ptr<RPCVariable> RPCDecoder::decodeResponse(std::vector<uint8_t>& packet, uint32_t offset)
+std::shared_ptr<Variable> RPCDecoder::decodeResponse(std::vector<uint8_t>& packet, uint32_t offset)
 {
 	uint32_t position = offset + 8;
-	std::shared_ptr<RPCVariable> response = decodeParameter(packet, position);
+	std::shared_ptr<Variable> response = decodeParameter(packet, position);
 	if(packet.size() < 4) return response; //response is Void when packet is empty.
 	if(packet.at(3) == 0xFF)
 	{
 		response->errorStruct = true;
-		if(response->structValue->find("faultCode") == response->structValue->end()) response->structValue->insert(RPC::RPCStructElement("faultCode", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(-1))));
-		if(response->structValue->find("faultString") == response->structValue->end()) response->structValue->insert(RPC::RPCStructElement("faultString", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("undefined")))));
+		if(response->structValue->find("faultCode") == response->structValue->end()) response->structValue->insert(RPC::RPCStructElement("faultCode", std::shared_ptr<RPC::Variable>(new RPC::Variable(-1))));
+		if(response->structValue->find("faultString") == response->structValue->end()) response->structValue->insert(RPC::RPCStructElement("faultString", std::shared_ptr<RPC::Variable>(new RPC::Variable(std::string("undefined")))));
 	}
 	return response;
 }
 
-RPCVariableType RPCDecoder::decodeType(std::vector<char>& packet, uint32_t& position)
+VariableType RPCDecoder::decodeType(std::vector<char>& packet, uint32_t& position)
 {
-	return (RPCVariableType)_decoder->decodeInteger(packet, position);
+	return (VariableType)_decoder->decodeInteger(packet, position);
 }
 
-RPCVariableType RPCDecoder::decodeType(std::vector<uint8_t>& packet, uint32_t& position)
+VariableType RPCDecoder::decodeType(std::vector<uint8_t>& packet, uint32_t& position)
 {
-	return (RPCVariableType)_decoder->decodeInteger(packet, position);
+	return (VariableType)_decoder->decodeInteger(packet, position);
 }
 
-std::shared_ptr<RPCVariable> RPCDecoder::decodeParameter(std::vector<char>& packet, uint32_t& position)
+std::shared_ptr<Variable> RPCDecoder::decodeParameter(std::vector<char>& packet, uint32_t& position)
 {
 	try
 	{
-		RPCVariableType type = decodeType(packet, position);
-		std::shared_ptr<RPCVariable> variable(new RPCVariable(type));
-		if(type == RPCVariableType::rpcString || type == RPCVariableType::rpcBase64)
+		VariableType type = decodeType(packet, position);
+		std::shared_ptr<Variable> variable(new Variable(type));
+		if(type == VariableType::rpcString || type == VariableType::rpcBase64)
 		{
 			variable->stringValue = _decoder->decodeString(packet, position);
 		}
-		else if(type == RPCVariableType::rpcInteger)
+		else if(type == VariableType::rpcInteger)
 		{
 			variable->integerValue = _decoder->decodeInteger(packet, position);
 		}
-		else if(type == RPCVariableType::rpcFloat)
+		else if(type == VariableType::rpcFloat)
 		{
 			variable->floatValue = _decoder->decodeFloat(packet, position);
 		}
-		else if(type == RPCVariableType::rpcBoolean)
+		else if(type == VariableType::rpcBoolean)
 		{
 			variable->booleanValue = _decoder->decodeBoolean(packet, position);
 		}
-		else if(type == RPCVariableType::rpcArray)
+		else if(type == VariableType::rpcArray)
 		{
 			variable->arrayValue = decodeArray(packet, position);
 		}
-		else if(type == RPCVariableType::rpcStruct)
+		else if(type == VariableType::rpcStruct)
 		{
 			variable->structValue = decodeStruct(packet, position);
 		}
@@ -265,36 +265,36 @@ std::shared_ptr<RPCVariable> RPCDecoder::decodeParameter(std::vector<char>& pack
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::shared_ptr<RPCVariable>();
+    return std::shared_ptr<Variable>();
 }
 
-std::shared_ptr<RPCVariable> RPCDecoder::decodeParameter(std::vector<uint8_t>& packet, uint32_t& position)
+std::shared_ptr<Variable> RPCDecoder::decodeParameter(std::vector<uint8_t>& packet, uint32_t& position)
 {
 	try
 	{
-		RPCVariableType type = decodeType(packet, position);
-		std::shared_ptr<RPCVariable> variable(new RPCVariable(type));
-		if(type == RPCVariableType::rpcString || type == RPCVariableType::rpcBase64)
+		VariableType type = decodeType(packet, position);
+		std::shared_ptr<Variable> variable(new Variable(type));
+		if(type == VariableType::rpcString || type == VariableType::rpcBase64)
 		{
 			variable->stringValue = _decoder->decodeString(packet, position);
 		}
-		else if(type == RPCVariableType::rpcInteger)
+		else if(type == VariableType::rpcInteger)
 		{
 			variable->integerValue = _decoder->decodeInteger(packet, position);
 		}
-		else if(type == RPCVariableType::rpcFloat)
+		else if(type == VariableType::rpcFloat)
 		{
 			variable->floatValue = _decoder->decodeFloat(packet, position);
 		}
-		else if(type == RPCVariableType::rpcBoolean)
+		else if(type == VariableType::rpcBoolean)
 		{
 			variable->booleanValue = _decoder->decodeBoolean(packet, position);
 		}
-		else if(type == RPCVariableType::rpcArray)
+		else if(type == VariableType::rpcArray)
 		{
 			variable->arrayValue = decodeArray(packet, position);
 		}
-		else if(type == RPCVariableType::rpcStruct)
+		else if(type == VariableType::rpcStruct)
 		{
 			variable->structValue = decodeStruct(packet, position);
 		}
@@ -312,7 +312,7 @@ std::shared_ptr<RPCVariable> RPCDecoder::decodeParameter(std::vector<uint8_t>& p
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::shared_ptr<RPCVariable>();
+    return std::shared_ptr<Variable>();
 }
 
 std::shared_ptr<RPCArray> RPCDecoder::decodeArray(std::vector<char>& packet, uint32_t& position)
@@ -320,7 +320,7 @@ std::shared_ptr<RPCArray> RPCDecoder::decodeArray(std::vector<char>& packet, uin
 	try
 	{
 		uint32_t arrayLength = _decoder->decodeInteger(packet, position);
-		std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> array(new std::vector<std::shared_ptr<RPCVariable>>());
+		std::shared_ptr<std::vector<std::shared_ptr<Variable>>> array(new std::vector<std::shared_ptr<Variable>>());
 		for(uint32_t i = 0; i < arrayLength; i++)
 		{
 			array->push_back(decodeParameter(packet, position));
@@ -339,7 +339,7 @@ std::shared_ptr<RPCArray> RPCDecoder::decodeArray(std::vector<char>& packet, uin
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>();
+    return std::shared_ptr<std::vector<std::shared_ptr<Variable>>>();
 }
 
 std::shared_ptr<RPCArray> RPCDecoder::decodeArray(std::vector<uint8_t>& packet, uint32_t& position)
@@ -347,7 +347,7 @@ std::shared_ptr<RPCArray> RPCDecoder::decodeArray(std::vector<uint8_t>& packet, 
 	try
 	{
 		uint32_t arrayLength = _decoder->decodeInteger(packet, position);
-		std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> array(new std::vector<std::shared_ptr<RPCVariable>>());
+		std::shared_ptr<std::vector<std::shared_ptr<Variable>>> array(new std::vector<std::shared_ptr<Variable>>());
 		for(uint32_t i = 0; i < arrayLength; i++)
 		{
 			array->push_back(decodeParameter(packet, position));
@@ -366,7 +366,7 @@ std::shared_ptr<RPCArray> RPCDecoder::decodeArray(std::vector<uint8_t>& packet, 
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>();
+    return std::shared_ptr<std::vector<std::shared_ptr<Variable>>>();
 }
 
 std::shared_ptr<RPCStruct> RPCDecoder::decodeStruct(std::vector<char>& packet, uint32_t& position)

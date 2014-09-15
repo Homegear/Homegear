@@ -550,11 +550,11 @@ void PhysicalInterfaces::setup(int32_t userID, int32_t groupID)
     }
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> PhysicalInterfaces::listInterfaces(int32_t familyID)
+std::shared_ptr<BaseLib::RPC::Variable> PhysicalInterfaces::listInterfaces(int32_t familyID)
 {
 	try
 	{
-		std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		std::shared_ptr<BaseLib::RPC::Variable> array(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>>::iterator i = _physicalInterfaces.begin(); i != _physicalInterfaces.end(); ++i)
 		{
@@ -564,16 +564,16 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> PhysicalInterfaces::listInterfaces(in
 				if(familyID > -1 && ((int32_t)i->first) != familyID) continue;
 				std::shared_ptr<BaseLib::Systems::Central> central = GD::deviceFamilies.at(i->first)->getCentral();
 				if(!central) continue;
-				std::shared_ptr<BaseLib::RPC::RPCVariable> interface(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+				std::shared_ptr<BaseLib::RPC::Variable> interface(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 
-				interface->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILYID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)i->first))));
-				interface->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(j->second->getID()))));
-				interface->structValue->insert(BaseLib::RPC::RPCStructElement("PHYSICALADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(central->physicalAddress()))));
-				interface->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(j->second->getType()))));
-				interface->structValue->insert(BaseLib::RPC::RPCStructElement("CONNECTED", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(j->second->isOpen()))));
-				interface->structValue->insert(BaseLib::RPC::RPCStructElement("DEFAULT", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(j->second->isDefault()))));
-				interface->structValue->insert(BaseLib::RPC::RPCStructElement("LASTPACKETSENT", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)(j->second->lastPacketSent() / 1000)))));
-				interface->structValue->insert(BaseLib::RPC::RPCStructElement("LASTPACKETRECEIVED", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)(j->second->lastPacketReceived() / 1000)))));
+				interface->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILYID", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)i->first))));
+				interface->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(j->second->getID()))));
+				interface->structValue->insert(BaseLib::RPC::RPCStructElement("PHYSICALADDRESS", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(central->physicalAddress()))));
+				interface->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(j->second->getType()))));
+				interface->structValue->insert(BaseLib::RPC::RPCStructElement("CONNECTED", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(j->second->isOpen()))));
+				interface->structValue->insert(BaseLib::RPC::RPCStructElement("DEFAULT", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(j->second->isDefault()))));
+				interface->structValue->insert(BaseLib::RPC::RPCStructElement("LASTPACKETSENT", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((uint32_t)(j->second->lastPacketSent() / 1000)))));
+				interface->structValue->insert(BaseLib::RPC::RPCStructElement("LASTPACKETRECEIVED", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((uint32_t)(j->second->lastPacketReceived() / 1000)))));
 				array->arrayValue->push_back(interface);
 			}
 		}
@@ -591,5 +591,5 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> PhysicalInterfaces::listInterfaces(in
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }

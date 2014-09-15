@@ -35,8 +35,8 @@
 
 #include "../Exception.h"
 #include "../Output/Output.h"
-#include "../RPC/RPCVariable.h"
-#include "rapidxml_print.hpp"
+#include "../RPC/Variable.h"
+#include "RapidXml/rapidxml_print.hpp"
 
 using namespace rapidxml;
 
@@ -54,15 +54,15 @@ public:
 	XMLRPCEncoder(BaseLib::Obj* baseLib);
 	virtual ~XMLRPCEncoder() {}
 
-	virtual void encodeResponse(std::shared_ptr<RPCVariable> variable, std::vector<char>& encodedData);
-	virtual void encodeRequest(std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, std::vector<char>& encodedData);
-	virtual void encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters, std::vector<char>& encodedData);
+	virtual void encodeResponse(std::shared_ptr<Variable> variable, std::vector<char>& encodedData);
+	virtual void encodeRequest(std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<Variable>>> parameters, std::vector<char>& encodedData);
+	virtual void encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<Variable>>> parameters, std::vector<char>& encodedData);
 private:
 	BaseLib::Obj* _bl = nullptr;
 
-	void encodeVariable(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable);
-	void encodeStruct(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable);
-	void encodeArray(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable);
+	void encodeVariable(xml_document<>* doc, xml_node<>* node, std::shared_ptr<Variable> variable);
+	void encodeStruct(xml_document<>* doc, xml_node<>* node, std::shared_ptr<Variable> variable);
+	void encodeArray(xml_document<>* doc, xml_node<>* node, std::shared_ptr<Variable> variable);
 };
 
 }

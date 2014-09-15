@@ -71,7 +71,7 @@ void Auth::sendBasicUnauthorized(bool binary)
 	{
 		if(_basicUnauthBinaryHeader.empty())
 		{
-			std::shared_ptr<BaseLib::RPC::RPCVariable> error = BaseLib::RPC::RPCVariable::createError(-32603, "Unauthorized");
+			std::shared_ptr<BaseLib::RPC::Variable> error = BaseLib::RPC::Variable::createError(-32603, "Unauthorized");
 			_rpcEncoder->encodeResponse(error, _basicUnauthBinaryHeader);
 		}
 		try

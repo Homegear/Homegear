@@ -91,11 +91,11 @@ public:
 		virtual void onDeleteServiceMessage(uint64_t databaseID);
 	//End database
 
-	virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
+	virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values);
 	virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint);
-	virtual void onRPCNewDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions);
-	virtual void onRPCDeleteDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> deviceAddresses, std::shared_ptr<BaseLib::RPC::RPCVariable> deviceInfo);
-	virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
+	virtual void onRPCNewDevices(std::shared_ptr<BaseLib::RPC::Variable> deviceDescriptions);
+	virtual void onRPCDeleteDevices(std::shared_ptr<BaseLib::RPC::Variable> deviceAddresses, std::shared_ptr<BaseLib::RPC::Variable> deviceInfo);
+	virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values);
 	//End Family event handling
 
 	FamilyController();
@@ -112,10 +112,10 @@ public:
 	std::string handleCLICommand(std::string& command);
 	bool familyAvailable(BaseLib::Systems::DeviceFamilies family);
 
-	std::shared_ptr<BaseLib::RPC::RPCVariable> listFamilies();
+	std::shared_ptr<BaseLib::RPC::Variable> listFamilies();
 private:
 	bool _disposed = false;
-	std::shared_ptr<BaseLib::RPC::RPCVariable> _rpcCache;
+	std::shared_ptr<BaseLib::RPC::Variable> _rpcCache;
 
 	std::map<std::string, std::unique_ptr<ModuleLoader>> moduleLoaders;
 	BaseLib::Systems::DeviceFamily* _currentFamily = nullptr;

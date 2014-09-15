@@ -36,7 +36,7 @@
 #include "PhysicalInterfaceSettings.h"
 #include "IPhysicalInterface.h"
 #include "DeviceFamilies.h"
-#include "../RPC/RPCVariable.h"
+#include "../RPC/Variable.h"
 
 #include <iostream>
 #include <string>
@@ -89,11 +89,11 @@ public:
 			virtual void onDeleteServiceMessage(uint64_t databaseID) = 0;
 		//End database
 
-		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) = 0;
+		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> values) = 0;
 		virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint) = 0;
-		virtual void onRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions) = 0;
-		virtual void onRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo) = 0;
-		virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values) = 0;
+		virtual void onRPCNewDevices(std::shared_ptr<RPC::Variable> deviceDescriptions) = 0;
+		virtual void onRPCDeleteDevices(std::shared_ptr<RPC::Variable> deviceAddresses, std::shared_ptr<RPC::Variable> deviceInfo) = 0;
+		virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values) = 0;
 	};
 	//End event handling
 
@@ -104,7 +104,7 @@ public:
 	virtual void dispose();
 
 	virtual DeviceFamilies getFamily() { return _family; }
-	virtual std::shared_ptr<RPC::RPCVariable> listBidcosInterfaces() { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid)); }
+	virtual std::shared_ptr<RPC::Variable> listBidcosInterfaces() { return std::shared_ptr<RPC::Variable>(new RPC::Variable(RPC::VariableType::rpcVoid)); }
 	virtual std::shared_ptr<Systems::IPhysicalInterface> createPhysicalDevice(std::shared_ptr<Systems::PhysicalInterfaceSettings> settings) { return std::shared_ptr<Systems::IPhysicalInterface>(); }
 	virtual void load() = 0;
 	virtual void save(bool full);
@@ -116,7 +116,7 @@ public:
 	virtual std::vector<std::shared_ptr<LogicalDevice>> getDevices();
 	virtual std::shared_ptr<Central> getCentral() = 0;
 	virtual std::string getName() = 0;
-	virtual std::shared_ptr<RPC::RPCVariable> getPairingMethods() = 0;
+	virtual std::shared_ptr<RPC::Variable> getPairingMethods() = 0;
 	virtual std::string handleCLICommand(std::string& command) = 0;
 	virtual bool deviceSelected() { return (bool)_currentDevice; }
 protected:
@@ -166,11 +166,11 @@ protected:
 		virtual void raiseDeleteServiceMessage(uint64_t id);
 	//End database
 
-	virtual void raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	virtual void raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> values);
 	virtual void raiseRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint);
-	virtual void raiseRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions);
-	virtual void raiseRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo);
-	virtual void raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
+	virtual void raiseRPCNewDevices(std::shared_ptr<RPC::Variable> deviceDescriptions);
+	virtual void raiseRPCDeleteDevices(std::shared_ptr<RPC::Variable> deviceAddresses, std::shared_ptr<RPC::Variable> deviceInfo);
+	virtual void raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values);
 	//End event handling
 
 	//Device event handling
@@ -205,11 +205,11 @@ protected:
 		virtual void onDeleteServiceMessage(uint64_t databaseID);
 	//End database
 
-	virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> values);
 	virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint);
-	virtual void onRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions);
-	virtual void onRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo);
-	virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
+	virtual void onRPCNewDevices(std::shared_ptr<RPC::Variable> deviceDescriptions);
+	virtual void onRPCDeleteDevices(std::shared_ptr<RPC::Variable> deviceAddresses, std::shared_ptr<RPC::Variable> deviceInfo);
+	virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values);
 	//End Device event handling
 };
 

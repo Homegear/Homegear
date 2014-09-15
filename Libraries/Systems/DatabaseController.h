@@ -52,17 +52,17 @@ public:
 	//End general
 
 	//Metadata
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setMetadata(uint64_t peerID, std::string serialNumber, std::string dataID, std::shared_ptr<BaseLib::RPC::RPCVariable> metadata);
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getMetadata(uint64_t peerID, std::string serialNumber, std::string dataID);
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getAllMetadata(uint64_t peerID, std::string serialNumber);
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> deleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID = "");
+	virtual std::shared_ptr<BaseLib::RPC::Variable> setMetadata(uint64_t peerID, std::string serialNumber, std::string dataID, std::shared_ptr<BaseLib::RPC::Variable> metadata);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> getMetadata(uint64_t peerID, std::string serialNumber, std::string dataID);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> getAllMetadata(uint64_t peerID, std::string serialNumber);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> deleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID = "");
 	//End metadata
 
 	//System variables
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setSystemVariable(std::string variableID, std::shared_ptr<BaseLib::RPC::RPCVariable> metadata);
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getSystemVariable(std::string variableID);
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getAllSystemVariables();
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> deleteSystemVariable(std::string variableID);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> setSystemVariable(std::string variableID, std::shared_ptr<BaseLib::RPC::Variable> metadata);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> getSystemVariable(std::string variableID);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> getAllSystemVariables();
+	virtual std::shared_ptr<BaseLib::RPC::Variable> deleteSystemVariable(std::string variableID);
 	//End system variables
 
 	//Users

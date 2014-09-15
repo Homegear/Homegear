@@ -48,6 +48,9 @@ HueBridge::HueBridge(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings
 	_hostname = settings->host;
 	_port = BaseLib::Math::getNumber(settings->port);
 	if(_port < 1 || _port > 65535) _port = 80;
+
+	_jsonEncoder.reset(new BaseLib::RPC::JsonEncoder(GD::bl));
+	_jsonDecoder.reset(new BaseLib::RPC::JsonDecoder(GD::bl));
 }
 
 HueBridge::~HueBridge()
@@ -85,11 +88,11 @@ void HueBridge::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		std::shared_ptr<PhilipsHuePacket> huePacket(std::dynamic_pointer_cast<PhilipsHuePacket>(packet));
 		if(!huePacket) return;
 
-		std::shared_ptr<Json::Value> jsonRequest = huePacket->getJson();
-		if(!jsonRequest) return;
+		std::shared_ptr<BaseLib::RPC::Variable> json = huePacket->getJson();
+		if(!json) return;
 
-		Json::FastWriter writer;
-		std::string data = writer.write(*jsonRequest);
+		std::string data;
+		_jsonEncoder->encode(json, data);
     	std::string header = "PUT /api/homegear" + _settings->id + "/lights/" + std::to_string(packet->destinationAddress()) + "/state HTTP/1.1\r\nUser-Agent: Homegear\r\nHost: " + _hostname + ":" + std::to_string(_port) + "\r\nContent-Type: application/json\r\nContent-Length: " + std::to_string(data.size()) + "\r\nConnection: Keep-Alive\r\n\r\n";
     	data.insert(data.begin(), header.begin(), header.end());
 		data.push_back('\r');
@@ -98,41 +101,39 @@ void HueBridge::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 
     	_client->sendRequest(data, response);
 
-    	Json::Value json;
-		if(!getJson(response, json)) return;
+    	json = getJson(response);
+		if(!json) return;
 
-		if(json.isMember("error"))
+		if(!json->arrayValue->empty() && json->arrayValue->at(0)->structValue->find("error") != json->arrayValue->at(0)->structValue->end())
 		{
-			json = json["error"];
-			if(json.isMember("description")) _out.printError("Error: " + json["description"].asString());
+			json = json->arrayValue->at(0)->structValue->at("error");
+			if(json->structValue->find("description") != json->structValue->end()) _out.printError("Error: " + json->structValue->at("description")->stringValue);
 			else _out.printError("Unknown error sending packet. Response was: " + response);
 		}
 
 		std::string getData = "GET /api/homegear" + _settings->id + "/lights/" + std::to_string(packet->destinationAddress()) + " HTTP/1.1\r\nUser-Agent: Homegear\r\nHost: " + _hostname + ":" + std::to_string(_port) + "\r\nConnection: Keep-Alive\r\n\r\n";
 		_client->sendRequest(getData, response);
 
-		Json::Value json2;
-		if(!getJson(response, json2)) return;
-		if(json2.isMember("error"))
+		json = getJson(response);
+		if(!json) return;
+		if(!json->arrayValue->empty() && json->arrayValue->at(0)->structValue->find("error") != json->arrayValue->at(0)->structValue->end())
 		{
-			json2 = json2["error"];
-			if(json2.isMember("type") && json2["type"].asInt() == 1)
+			json = json->arrayValue->at(0)->structValue->at("error");
+			if(json->structValue->find("type") != json->structValue->end() && json->structValue->at("type")->integerValue == 1)
 			{
 				createUser();
 			}
 			else
 			{
-				if(json2.isMember("description")) _out.printError("Error: " + json2["description"].asString());
+				if(json->structValue->find("description") != json->structValue->end()) _out.printError("Error: " + json->structValue->at("description")->stringValue);
 				else _out.printError("Unknown error during polling. Response was: " + response);
 			}
 			return;
 		}
 
-		if(json2.isMember("state"))
+		if(json->structValue->find("state") != json->structValue->end())
 		{
-			std::shared_ptr<Json::Value> packetJson(new Json::Value());
-			*packetJson = json2;
-			std::shared_ptr<PhilipsHuePacket> packet(new PhilipsHuePacket(huePacket->destinationAddress(), 0, 1, packetJson, BaseLib::HelperFunctions::getTime()));
+			std::shared_ptr<PhilipsHuePacket> packet(new PhilipsHuePacket(huePacket->destinationAddress(), 0, 1, json, BaseLib::HelperFunctions::getTime()));
 			raisePacketReceived(packet);
 		}
 
@@ -215,17 +216,17 @@ void HueBridge::createUser()
 
     	_client->sendRequest(data, response);
 
-    	Json::Value json;
-		if(!getJson(response, json)) return;
+    	std::shared_ptr<BaseLib::RPC::Variable> json = getJson(response);
+		if(!json) return;
 
-		if(json.isMember("error"))
+		if(!json->arrayValue->empty() && json->arrayValue->at(0)->structValue->find("error") != json->arrayValue->at(0)->structValue->end())
 		{
-			json = json["error"];
-			if(json.isMember("type") && json["type"].asInt() == 101) _out.printError("Please press the link button on your hue bridge to initialize the connection to Homegear.");
-			else if(json.isMember("type") && json["type"].asInt() == 7) _out.printError("Error: Please change the bridge's id in physicalinterfaces.conf to only contain alphanumerical characters and \"-\".");
+			json = json->arrayValue->at(0)->structValue->at("error");
+			if(json->structValue->find("type") != json->structValue->end() && json->structValue->at("type")->integerValue == 101) _out.printError("Please press the link button on your hue bridge to initialize the connection to Homegear.");
+			else if(json->structValue->find("type") != json->structValue->end() && json->structValue->at("type")->integerValue == 7) _out.printError("Error: Please change the bridge's id in physicalinterfaces.conf to only contain alphanumerical characters and \"-\".");
 			else
 			{
-				if(json.isMember("description")) _out.printError("Error: " + json["description"].asString());
+				if(json->structValue->find("description") != json->structValue->end()) _out.printError("Error: " + json->structValue->at("description")->stringValue);
 				else _out.printError("Unknown error during user creation. Response was: " + response);
 			}
 		}
@@ -253,13 +254,13 @@ void HueBridge::searchLights()
 
     	_client->sendRequest(header, response);
 
-    	Json::Value json;
-		if(!getJson(response, json)) return;
+    	std::shared_ptr<BaseLib::RPC::Variable> json = getJson(response);
+		if(!json) return;
 
-		if(json.isMember("error"))
+		if(!json->arrayValue->empty() && json->arrayValue->at(0)->structValue->find("error") != json->arrayValue->at(0)->structValue->end())
 		{
-			json = json["error"];
-			if(json.isMember("description")) _out.printError("Error: " + json["description"].asString());
+			json = json->arrayValue->at(0)->structValue->at("error");
+			if(json->structValue->find("description") != json->structValue->end()) _out.printError("Error: " + json->structValue->at("description")->stringValue);
 			else _out.printError("Unknown error during user creation. Response was: " + response);
 		}
 
@@ -267,12 +268,13 @@ void HueBridge::searchLights()
 
     	_client->sendRequest(header, response);
 
-		if(!getJson(response, json)) return;
+		json = getJson(response);
+		if(!json) return;
 
-		if(json.isMember("error"))
+		if(!json->arrayValue->empty() && json->arrayValue->at(0)->structValue->find("error") != json->arrayValue->at(0)->structValue->end())
 		{
-			json = json["error"];
-			if(json.isMember("description")) _out.printError("Error: " + json["description"].asString());
+			json = json->arrayValue->at(0)->structValue->at("error");
+			if(json->structValue->find("description") != json->structValue->end()) _out.printError("Error: " + json->structValue->at("description")->stringValue);
 			else _out.printError("Unknown error during user creation. Response was: " + response);
 		}
 	}
@@ -298,26 +300,25 @@ std::vector<std::shared_ptr<PhilipsHuePacket>> HueBridge::getPeerInfo()
 		std::string response;
 		_client->sendRequest(getAllData, response);
 
-		Json::Value json;
-		if(!getJson(response, json)) return std::vector<std::shared_ptr<PhilipsHuePacket>>();
+		std::shared_ptr<BaseLib::RPC::Variable> json = getJson(response);
+		if(!json) return std::vector<std::shared_ptr<PhilipsHuePacket>>();
 
-		if(json.isMember("error"))
+		if(!json->arrayValue->empty() && json->arrayValue->at(0)->structValue->find("error") != json->arrayValue->at(0)->structValue->end())
 		{
-			if(json.isMember("description")) _out.printError("Error: " + json["description"].asString());
+			json = json->arrayValue->at(0)->structValue->at("error");
+			if(json->structValue->find("description") != json->structValue->end()) _out.printError("Error: " + json->structValue->at("description")->stringValue);
 			else _out.printError("Unknown error during polling. Response was: " + response);
 			return std::vector<std::shared_ptr<PhilipsHuePacket>>();
 		}
 
 		std::vector<std::shared_ptr<PhilipsHuePacket>> peers;
-		if(json.isMember("lights"))
+		if(json->structValue->find("lights") != json->structValue->end())
 		{
-			json = json["lights"];
-			std::vector<std::string> memberNames = json.getMemberNames();
-			for(std::vector<std::string>::iterator i = memberNames.begin(); i != memberNames.end(); ++i)
+			json = json->structValue->at("lights");
+			for(std::map<std::string, std::shared_ptr<BaseLib::RPC::Variable>>::iterator i = json->structValue->begin(); i != json->structValue->end(); ++i)
 			{
-				std::shared_ptr<Json::Value> packetJson(new Json::Value());
-				*packetJson = json[*i];
-				std::shared_ptr<PhilipsHuePacket> packet(new PhilipsHuePacket(BaseLib::Math::getNumber(*i), 0, 1, packetJson, BaseLib::HelperFunctions::getTime()));
+				std::string address = i->first;
+				std::shared_ptr<PhilipsHuePacket> packet(new PhilipsHuePacket(BaseLib::Math::getNumber(address), 0, 1, i->second, BaseLib::HelperFunctions::getTime()));
 				peers.push_back(packet);
 			}
 		}
@@ -338,28 +339,15 @@ std::vector<std::shared_ptr<PhilipsHuePacket>> HueBridge::getPeerInfo()
     return std::vector<std::shared_ptr<PhilipsHuePacket>>();
 }
 
-bool HueBridge::getJson(std::string& jsonString, Json::Value& json)
+std::shared_ptr<BaseLib::RPC::Variable> HueBridge::getJson(std::string& jsonString)
 {
 	try
 	{
-		if(jsonString.size() < 4) return false;;
-		if(jsonString.front() == '[')
-		{
-			if(jsonString.at(jsonString.size() - 2) == ']') jsonString = jsonString.substr(1, jsonString.size() - 3);
-			else
-			{
-				int32_t endPos = jsonString.find_last_of(']');
-				if(endPos != (signed)std::string::npos) jsonString = jsonString.substr(1, endPos - 1);
-			}
-		}
-
-		std::istringstream inputStream(jsonString);
-		if(!_jsonReader.parse(inputStream, json, false))
-		{
-			_out.printError("Error parsing json. Data was: " + jsonString);
-			return false;
-		}
-		return true;
+		return _jsonDecoder->decode(jsonString);
+	}
+	catch(const BaseLib::RPC::JsonDecoderException& ex)
+	{
+		_out.printError("Error parsing json: " + ex.what() + ". Data was: " + jsonString);
 	}
     catch(const std::exception& ex)
     {
@@ -373,7 +361,7 @@ bool HueBridge::getJson(std::string& jsonString, Json::Value& json)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return false;
+    return std::shared_ptr<BaseLib::RPC::Variable>();
 }
 
 void HueBridge::listen()
@@ -401,33 +389,31 @@ void HueBridge::listen()
 				continue;
 			}
 
-			Json::Value json;
-			if(!getJson(response, json)) continue;
+			std::shared_ptr<BaseLib::RPC::Variable> json = getJson(response);
+			if(!json) return;
 
-			if(json.isMember("error"))
+			if(!json->arrayValue->empty() && json->arrayValue->at(0)->structValue->find("error") != json->arrayValue->at(0)->structValue->end())
 			{
-				json = json["error"];
-				if(json.isMember("type") && json["type"].asInt() == 1)
+				json = json->arrayValue->at(0)->structValue->at("error");
+				if(json->structValue->find("type") != json->structValue->end() && json->structValue->at("type")->integerValue == 1)
 				{
 					createUser();
 				}
 				else
 				{
-					if(json.isMember("description")) _out.printError("Error: " + json["description"].asString());
+					if(json->structValue->find("description") != json->structValue->end()) _out.printError("Error: " + json->structValue->at("description")->stringValue);
 					else _out.printError("Unknown error during polling. Response was: " + response);
 				}
 				continue;
 			}
 
-			if(json.isMember("lights"))
+			if(json->structValue->find("lights") != json->structValue->end())
 			{
-				json = json["lights"];
-				std::vector<std::string> memberNames = json.getMemberNames();
-				for(std::vector<std::string>::iterator i = memberNames.begin(); i != memberNames.end(); ++i)
+				json = json->structValue->at("lights");
+				for(std::map<std::string, std::shared_ptr<BaseLib::RPC::Variable>>::iterator i = json->structValue->begin(); i != json->structValue->end(); ++i)
 				{
-					std::shared_ptr<Json::Value> packetJson(new Json::Value());
-					*packetJson = json[*i];
-					std::shared_ptr<PhilipsHuePacket> packet(new PhilipsHuePacket(BaseLib::Math::getNumber(*i), 0, 1, packetJson, BaseLib::HelperFunctions::getTime()));
+					std::string address = i->first;
+					std::shared_ptr<PhilipsHuePacket> packet(new PhilipsHuePacket(BaseLib::Math::getNumber(address), 0, 1, i->second, BaseLib::HelperFunctions::getTime()));
 					raisePacketReceived(packet);
 				}
 			}

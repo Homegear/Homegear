@@ -88,7 +88,7 @@ RPCClient::~RPCClient()
     }
 }
 
-void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
+void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -107,7 +107,7 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 		if(GD::bl->debugLevel >= 5)
 		{
 			GD::out.printDebug("Parameters:");
-			for(std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+			for(std::list<std::shared_ptr<BaseLib::RPC::Variable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 			{
 				(*i)->print();
 			}
@@ -144,7 +144,7 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 			server->sendMutex.unlock();
 			return;
 		}
-		std::shared_ptr<BaseLib::RPC::RPCVariable> returnValue;
+		std::shared_ptr<BaseLib::RPC::Variable> returnValue;
 		if(server->binary) returnValue = _rpcDecoder->decodeResponse(responseData);
 		else returnValue = _xmlRpcDecoder->decodeResponse(responseData);
 
@@ -174,23 +174,23 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
     server->sendMutex.unlock();
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> RPCClient::invoke(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
-		if(methodName.empty()) return BaseLib::RPC::RPCVariable::createError(-32601, "Method name is empty");
-		if(!server) return BaseLib::RPC::RPCVariable::createError(-32500, "Could not send packet. Pointer to server is nullptr.");
+		if(methodName.empty()) return BaseLib::RPC::Variable::createError(-32601, "Method name is empty");
+		if(!server) return BaseLib::RPC::Variable::createError(-32500, "Could not send packet. Pointer to server is nullptr.");
 		server->sendMutex.lock();
 		if(server->removed)
 		{
 			server->sendMutex.unlock();
-			return BaseLib::RPC::RPCVariable::createError(-32300, "Server was removed and has to send \"init\" again.");;
+			return BaseLib::RPC::Variable::createError(-32300, "Server was removed and has to send \"init\" again.");;
 		}
 		GD::out.printInfo("Info: Calling XML RPC method " + methodName + " on server " + server->address.first + " and port " + server->address.second + ".");
 		if(GD::bl->debugLevel >= 5)
 		{
 			GD::out.printDebug("Parameters:");
-			for(std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+			for(std::list<std::shared_ptr<BaseLib::RPC::Variable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 			{
 				(*i)->print();
 			}
@@ -211,7 +211,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCClient::invoke(std::shared_ptr<Rem
 		{
 			server->sendMutex.unlock();
 			GD::rpcClient.removeServer(server->address);
-			return BaseLib::RPC::RPCVariable::createError(-32300, "Server was removed and has to send \"init\" again.");
+			return BaseLib::RPC::Variable::createError(-32300, "Server was removed and has to send \"init\" again.");
 		}
 		if(timedout)
 		{
@@ -219,14 +219,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCClient::invoke(std::shared_ptr<Rem
 			server->removed = true;
 			server->sendMutex.unlock();
 			GD::rpcClient.removeServer(server->address);
-			return BaseLib::RPC::RPCVariable::createError(-32300, "Request timed out.");
+			return BaseLib::RPC::Variable::createError(-32300, "Request timed out.");
 		}
 		if(responseData.empty())
 		{
 			server->sendMutex.unlock();
-			return BaseLib::RPC::RPCVariable::createError(-32700, "No response data.");
+			return BaseLib::RPC::Variable::createError(-32700, "No response data.");
 		}
-		std::shared_ptr<BaseLib::RPC::RPCVariable> returnValue;
+		std::shared_ptr<BaseLib::RPC::Variable> returnValue;
 		if(server->binary) returnValue = _rpcDecoder->decodeResponse(responseData);
 		else returnValue = _xmlRpcDecoder->decodeResponse(responseData);
 		if(returnValue->errorStruct) GD::out.printError("Error in RPC response from " + server->hostname + " on port " + server->address.second + ": faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
@@ -256,7 +256,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCClient::invoke(std::shared_ptr<Rem
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     server->sendMutex.unlock();
-    return BaseLib::RPC::RPCVariable::createError(-32700, "No response data.");
+    return BaseLib::RPC::Variable::createError(-32700, "No response data.");
 }
 
 std::string RPCClient::getIPAddress(std::string address)

@@ -42,8 +42,8 @@ public:
 	PH7VariableConverter();
 	virtual ~PH7VariableConverter();
 
-	static std::shared_ptr<BaseLib::RPC::RPCVariable> getRPCVariable(ph7_value* value);
-	static ph7_value* getPH7Variable(ph7_context* context, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
+	static std::shared_ptr<BaseLib::RPC::Variable> getVariable(ph7_value* value);
+	static ph7_value* getPH7Variable(ph7_context* context, std::shared_ptr<BaseLib::RPC::Variable> value);
 protected:
 };
 #endif

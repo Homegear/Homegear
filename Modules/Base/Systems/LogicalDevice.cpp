@@ -171,7 +171,7 @@ std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetDeviceVariables()
 	return ((IDeviceEventSink*)_eventHandler)->onGetDeviceVariables(_deviceID);
 }
 
-void LogicalDevice::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
+void LogicalDevice::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> values)
 {
 	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
 }
@@ -181,17 +181,17 @@ void LogicalDevice::raiseRPCUpdateDevice(uint64_t id, int32_t channel, std::stri
 	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onRPCUpdateDevice(id, channel, address, hint);
 }
 
-void LogicalDevice::raiseRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions)
+void LogicalDevice::raiseRPCNewDevices(std::shared_ptr<RPC::Variable> deviceDescriptions)
 {
 	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onRPCNewDevices(deviceDescriptions);
 }
 
-void LogicalDevice::raiseRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo)
+void LogicalDevice::raiseRPCDeleteDevices(std::shared_ptr<RPC::Variable> deviceAddresses, std::shared_ptr<RPC::Variable> deviceInfo)
 {
 	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onRPCDeleteDevices(deviceAddresses, deviceInfo);
 }
 
-void LogicalDevice::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
+void LogicalDevice::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values)
 {
 	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onEvent(peerID, channel, variables, values);
 }
@@ -268,7 +268,7 @@ void LogicalDevice::onDeleteServiceMessage(uint64_t databaseID)
 	raiseDeleteServiceMessage(databaseID);
 }
 
-void LogicalDevice::onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
+void LogicalDevice::onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> values)
 {
 	raiseRPCEvent(id, channel, deviceAddress, valueKeys, values);
 }
@@ -278,7 +278,7 @@ void LogicalDevice::onRPCUpdateDevice(uint64_t id, int32_t channel, std::string 
 	raiseRPCUpdateDevice(id, channel, address, hint);
 }
 
-void LogicalDevice::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
+void LogicalDevice::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values)
 {
 	raiseEvent(peerID, channel, variables, values);
 }

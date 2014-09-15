@@ -611,18 +611,15 @@ int main(int argc, char* argv[])
 				if(strncmp(inputBuffer, "quit", 4) == 0 || strncmp(inputBuffer, "exit", 4) == 0 || strncmp(inputBuffer, "moin", 4) == 0) break;
 				else if(strncmp(inputBuffer, "test", 4) == 0)
 				{
-					BaseLib::Math::Matrix3x3 conversionMatrix;
-					BaseLib::Math::Matrix3x3 inversedConversionMatrix;
-
-					BaseLib::Math::Triangle colorGamut;
-					colorGamut.setA(BaseLib::Math::Point2D(0.704, 0.296));
-					colorGamut.setB(BaseLib::Math::Point2D(0.4091, 0.518));
-					colorGamut.setC(BaseLib::Math::Point2D(0.138, 0.08));
-					BaseLib::Color::getConversionMatrix(colorGamut, conversionMatrix, inversedConversionMatrix);
-					std::cout << conversionMatrix.toString() << std::endl << inversedConversionMatrix.toString() << std::endl;
-
-					BaseLib::Math::Point2D p(0.3127, 0.3290);
-					std::cout << colorGamut.distance(p) << std::endl;
+					std::string json("{\"on\":true, \"off\":    false, \"bla\":null, \"blupp\":  [5.643,false , null ,true ],\"blupp2\":[ 5.643,false,null,true], \"sat\":255.63456, \"bri\":-255,\"hue\":10000, \"bli\":{\"a\": 2,\"b\":false}    ,     \"e\"  :   -34785326,\"f\":-0.547887237, \"g\":{},\"h\":[], \"i\" : {    }  , \"j\" : [    ] , \"k\": {} , \"l\": [] }");
+					BaseLib::RPC::JsonDecoder bla(GD::bl.get());
+					std::shared_ptr<BaseLib::RPC::Variable> var = bla.decode(json);
+					var->print();
+					BaseLib::RPC::JsonEncoder blupp(GD::bl.get());
+					std::string hmm;
+					blupp.encode(var, hmm);
+					std::cout << hmm << std::endl;
+					continue;
 				}
 
 				add_history(inputBuffer); //Sets inputBuffer to 0

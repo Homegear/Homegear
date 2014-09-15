@@ -198,7 +198,7 @@ bool MAXCentral::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib
 				GD::out.printWarning("Warning: Central address of packet to peer " + std::to_string(peer->getID()) + " was spoofed. Packet was: " + packet->hexString());
 				peer->serviceMessages->set("CENTRAL_ADDRESS_SPOOFED", 1, 0);
 				std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> { "CENTRAL_ADDRESS_SPOOFED" });
-				std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>> { std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)1)) });
+				std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>> { std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)1)) });
 				raiseRPCEvent(peer->getID(), 0, peer->getSerialNumber() + ":0", valueKeys, values);
 				return true;
 			}
@@ -288,19 +288,19 @@ void MAXCentral::deletePeer(uint64_t id)
 		std::shared_ptr<MAXPeer> peer(getPeer(id));
 		if(!peer) return;
 		peer->deleting = true;
-		std::shared_ptr<BaseLib::RPC::RPCVariable> deviceAddresses(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(peer->getSerialNumber())));
+		std::shared_ptr<BaseLib::RPC::Variable> deviceAddresses(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+		deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(peer->getSerialNumber())));
 		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 		{
-			deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(peer->getSerialNumber() + ":" + std::to_string(i->first))));
+			deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(peer->getSerialNumber() + ":" + std::to_string(i->first))));
 		}
-		std::shared_ptr<BaseLib::RPC::RPCVariable> deviceInfo(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)peer->getID()))));
-		std::shared_ptr<BaseLib::RPC::RPCVariable> channels(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		std::shared_ptr<BaseLib::RPC::Variable> deviceInfo(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
+		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)peer->getID()))));
+		std::shared_ptr<BaseLib::RPC::Variable> channels(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("CHANNELS", channels));
 		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 		{
-			channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(i->first)));
+			channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(i->first)));
 		}
 		raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
 		_peersMutex.lock();
@@ -996,7 +996,7 @@ void MAXCentral::handleAck(int32_t messageCounter, std::shared_ptr<MAXPacket> pa
 						_peersMutex.unlock();
 						GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 					}
-					std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+					std::shared_ptr<BaseLib::RPC::Variable> deviceDescriptions(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 					deviceDescriptions->arrayValue = queue->peer->getDeviceDescriptions(true, std::map<std::string, bool>());
 					raiseRPCNewDevices(deviceDescriptions);
 					GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(queue->peer->getAddress()) + ".");
@@ -1123,16 +1123,16 @@ void MAXCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<MA
 //End packet handlers
 
 //RPC functions
-std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::addLink(std::string senderSerialNumber, int32_t senderChannelIndex, std::string receiverSerialNumber, int32_t receiverChannelIndex, std::string name, std::string description)
+std::shared_ptr<BaseLib::RPC::Variable> MAXCentral::addLink(std::string senderSerialNumber, int32_t senderChannelIndex, std::string receiverSerialNumber, int32_t receiverChannelIndex, std::string name, std::string description)
 {
 	try
 	{
-		if(senderSerialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Given sender address is empty.");
-		if(receiverSerialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
+		if(senderSerialNumber.empty()) return BaseLib::RPC::Variable::createError(-2, "Given sender address is empty.");
+		if(receiverSerialNumber.empty()) return BaseLib::RPC::Variable::createError(-2, "Given receiver address is empty.");
 		std::shared_ptr<MAXPeer> sender = getPeer(senderSerialNumber);
 		std::shared_ptr<MAXPeer> receiver = getPeer(receiverSerialNumber);
-		if(!sender) return BaseLib::RPC::RPCVariable::createError(-2, "Sender device not found.");
-		if(!receiver) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		if(!sender) return BaseLib::RPC::Variable::createError(-2, "Sender device not found.");
+		if(!receiver) return BaseLib::RPC::Variable::createError(-2, "Receiver device not found.");
 		return addLink(sender->getID(), senderChannelIndex, receiver->getID(), receiverChannelIndex, name, description);
 	}
 	catch(const std::exception& ex)
@@ -1147,26 +1147,26 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::addLink(std::string sende
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::addLink(uint64_t senderID, int32_t senderChannelIndex, uint64_t receiverID, int32_t receiverChannelIndex, std::string name, std::string description)
+std::shared_ptr<BaseLib::RPC::Variable> MAXCentral::addLink(uint64_t senderID, int32_t senderChannelIndex, uint64_t receiverID, int32_t receiverChannelIndex, std::string name, std::string description)
 {
 	try
 	{
-		if(senderID == 0) return BaseLib::RPC::RPCVariable::createError(-2, "Sender id is not set.");
-		if(receiverID == 0) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver is not set.");
+		if(senderID == 0) return BaseLib::RPC::Variable::createError(-2, "Sender id is not set.");
+		if(receiverID == 0) return BaseLib::RPC::Variable::createError(-2, "Receiver is not set.");
 		std::shared_ptr<MAXPeer> sender = getPeer(senderID);
 		std::shared_ptr<MAXPeer> receiver = getPeer(receiverID);
-		if(!sender) return BaseLib::RPC::RPCVariable::createError(-2, "Sender device not found.");
-		if(!receiver) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		if(!sender) return BaseLib::RPC::Variable::createError(-2, "Sender device not found.");
+		if(!receiver) return BaseLib::RPC::Variable::createError(-2, "Receiver device not found.");
 		if(senderChannelIndex < 0) senderChannelIndex = 0;
 		if(receiverChannelIndex < 0) receiverChannelIndex = 0;
-		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Sender channel not found.");
-		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver channel not found.");
+		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Sender channel not found.");
+		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Receiver channel not found.");
 		std::shared_ptr<BaseLib::RPC::DeviceChannel> senderChannel = sender->rpcDevice->channels.at(senderChannelIndex);
 		std::shared_ptr<BaseLib::RPC::DeviceChannel> receiverChannel = receiver->rpcDevice->channels.at(receiverChannelIndex);
-		if(senderChannel->linkRoles->sourceNames.size() == 0 || receiverChannel->linkRoles->targetNames.size() == 0) return BaseLib::RPC::RPCVariable::createError(-6, "Link not supported.");
+		if(senderChannel->linkRoles->sourceNames.size() == 0 || receiverChannel->linkRoles->targetNames.size() == 0) return BaseLib::RPC::Variable::createError(-6, "Link not supported.");
 		bool validLink = false;
 		for(std::vector<std::string>::iterator i = senderChannel->linkRoles->sourceNames.begin(); i != senderChannel->linkRoles->sourceNames.end(); ++i)
 		{
@@ -1180,7 +1180,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::addLink(uint64_t senderID
 			}
 			if(validLink) break;
 		}
-		if(!validLink) return BaseLib::RPC::RPCVariable::createError(-6, "Link not supported.");
+		if(!validLink) return BaseLib::RPC::Variable::createError(-6, "Link not supported.");
 
 		std::shared_ptr<BaseLib::Systems::BasicPeer> senderPeer(new BaseLib::Systems::BasicPeer());
 		senderPeer->address = sender->getAddress();
@@ -1273,7 +1273,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::addLink(uint64_t senderID
 		}
 		if(!_queueManager.get(receiver->getAddress())) receiver->serviceMessages->setConfigPending(false);
 
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
 	{
@@ -1287,17 +1287,17 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::addLink(uint64_t senderID
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::deleteDevice(std::string serialNumber, int32_t flags)
+std::shared_ptr<BaseLib::RPC::Variable> MAXCentral::deleteDevice(std::string serialNumber, int32_t flags)
 {
 	try
 	{
-		if(serialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
-		if(serialNumber[0] == '*') return BaseLib::RPC::RPCVariable::createError(-2, "Cannot delete virtual device.");
+		if(serialNumber.empty()) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
+		if(serialNumber[0] == '*') return BaseLib::RPC::Variable::createError(-2, "Cannot delete virtual device.");
 		std::shared_ptr<MAXPeer> peer = getPeer(serialNumber);
-		if(!peer) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		if(!peer) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		return deleteDevice(peer->getID(), flags);
 	}
 	catch(const std::exception& ex)
@@ -1312,17 +1312,17 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::deleteDevice(std::string 
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::deleteDevice(uint64_t peerID, int32_t flags)
+std::shared_ptr<BaseLib::RPC::Variable> MAXCentral::deleteDevice(uint64_t peerID, int32_t flags)
 {
 	try
 	{
-		if(peerID == 0) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
-		if(peerID & 0x80000000) return BaseLib::RPC::RPCVariable::createError(-2, "Cannot delete virtual device.");
+		if(peerID == 0) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
+		if(peerID & 0x80000000) return BaseLib::RPC::Variable::createError(-2, "Cannot delete virtual device.");
 		std::shared_ptr<MAXPeer> peer = getPeer(peerID);
-		if(!peer) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		if(!peer) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		uint64_t id = peer->getID();
 
 		bool defer = flags & 0x04;
@@ -1342,9 +1342,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::deleteDevice(uint64_t pee
 			}
 		}
 
-		if(!defer && !force && peerExists(id)) return BaseLib::RPC::RPCVariable::createError(-1, "No answer from device.");
+		if(!defer && !force && peerExists(id)) return BaseLib::RPC::Variable::createError(-1, "No answer from device.");
 
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {
@@ -1358,23 +1358,23 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::deleteDevice(uint64_t pee
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::getDeviceInfo(uint64_t id, std::map<std::string, bool> fields)
+std::shared_ptr<BaseLib::RPC::Variable> MAXCentral::getDeviceInfo(uint64_t id, std::map<std::string, bool> fields)
 {
 	try
 	{
 		if(id > 0)
 		{
 			std::shared_ptr<MAXPeer> peer(getPeer(id));
-			if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+			if(!peer) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
 
 			return peer->getDeviceInfo(fields);
 		}
 		else
 		{
-			std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+			std::shared_ptr<BaseLib::RPC::Variable> array(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 
 			std::vector<std::shared_ptr<MAXPeer>> peers;
 			//Copy all peers first, because listDevices takes very long and we don't want to lock _peersMutex too long
@@ -1389,7 +1389,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::getDeviceInfo(uint64_t id
 			{
 				//listDevices really needs a lot of resources, so wait a little bit after each device
 				std::this_thread::sleep_for(std::chrono::milliseconds(3));
-				std::shared_ptr<BaseLib::RPC::RPCVariable> info = (*i)->getDeviceInfo(fields);
+				std::shared_ptr<BaseLib::RPC::Variable> info = (*i)->getDeviceInfo(fields);
 				if(!info) continue;
 				array->arrayValue->push_back(info);
 			}
@@ -1412,14 +1412,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::getDeviceInfo(uint64_t id
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
         _peersMutex.unlock();
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPCVariable> MAXCentral::getInstallMode()
+std::shared_ptr<Variable> MAXCentral::getInstallMode()
 {
 	try
 	{
-		return std::shared_ptr<RPCVariable>(new BaseLib::RPC::RPCVariable(_timeLeftInPairingMode));
+		return std::shared_ptr<Variable>(new BaseLib::RPC::Variable(_timeLeftInPairingMode));
 	}
 	catch(const std::exception& ex)
     {
@@ -1433,26 +1433,26 @@ std::shared_ptr<RPCVariable> MAXCentral::getInstallMode()
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::putParamset(std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> paramset)
+std::shared_ptr<BaseLib::RPC::Variable> MAXCentral::putParamset(std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset)
 {
 	try
 	{
 		std::shared_ptr<MAXPeer> peer(getPeer(serialNumber));
-		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+		if(!peer) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
 		uint64_t remoteID = 0;
 		if(!remoteSerialNumber.empty())
 		{
 			std::shared_ptr<MAXPeer> remotePeer(getPeer(remoteSerialNumber));
 			if(!remotePeer)
 			{
-				if(remoteSerialNumber != _serialNumber) return BaseLib::RPC::RPCVariable::createError(-3, "Remote peer is unknown.");
+				if(remoteSerialNumber != _serialNumber) return BaseLib::RPC::Variable::createError(-3, "Remote peer is unknown.");
 			}
 			else remoteID = remotePeer->getID();
 		}
-		std::shared_ptr<BaseLib::RPC::RPCVariable> result = peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
+		std::shared_ptr<BaseLib::RPC::Variable> result = peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
 		if(result->errorStruct) return result;
 		int32_t waitIndex = 0;
 		while(_queueManager.get(peer->getAddress()) && waitIndex < 50)
@@ -1475,16 +1475,16 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::putParamset(std::string s
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::putParamset(uint64_t peerID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> paramset)
+std::shared_ptr<BaseLib::RPC::Variable> MAXCentral::putParamset(uint64_t peerID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset)
 {
 	try
 	{
 		std::shared_ptr<MAXPeer> peer(getPeer(peerID));
-		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
-		std::shared_ptr<BaseLib::RPC::RPCVariable> result = peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
+		if(!peer) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
+		std::shared_ptr<BaseLib::RPC::Variable> result = peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
 		if(result->errorStruct) return result;
 		int32_t waitIndex = 0;
 		while(_queueManager.get(peer->getAddress()) && waitIndex < 50)
@@ -1507,19 +1507,19 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::putParamset(uint64_t peer
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::removeLink(std::string senderSerialNumber, int32_t senderChannelIndex, std::string receiverSerialNumber, int32_t receiverChannelIndex)
+std::shared_ptr<BaseLib::RPC::Variable> MAXCentral::removeLink(std::string senderSerialNumber, int32_t senderChannelIndex, std::string receiverSerialNumber, int32_t receiverChannelIndex)
 {
 	try
 	{
-		if(senderSerialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Given sender address is empty.");
-		if(receiverSerialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
+		if(senderSerialNumber.empty()) return BaseLib::RPC::Variable::createError(-2, "Given sender address is empty.");
+		if(receiverSerialNumber.empty()) return BaseLib::RPC::Variable::createError(-2, "Given receiver address is empty.");
 		std::shared_ptr<MAXPeer> sender = getPeer(senderSerialNumber);
 		std::shared_ptr<MAXPeer> receiver = getPeer(receiverSerialNumber);
-		if(!sender) return BaseLib::RPC::RPCVariable::createError(-2, "Sender device not found.");
-		if(!receiver) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		if(!sender) return BaseLib::RPC::Variable::createError(-2, "Sender device not found.");
+		if(!receiver) return BaseLib::RPC::Variable::createError(-2, "Receiver device not found.");
 		return removeLink(sender->getID(), senderChannelIndex, receiver->getID(), receiverChannelIndex);
 	}
 	catch(const std::exception& ex)
@@ -1534,26 +1534,26 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::removeLink(std::string se
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::removeLink(uint64_t senderID, int32_t senderChannelIndex, uint64_t receiverID, int32_t receiverChannelIndex)
+std::shared_ptr<BaseLib::RPC::Variable> MAXCentral::removeLink(uint64_t senderID, int32_t senderChannelIndex, uint64_t receiverID, int32_t receiverChannelIndex)
 {
 	try
 	{
-		if(senderID == 0) return BaseLib::RPC::RPCVariable::createError(-2, "Sender id is not set.");
-		if(receiverID == 0) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver id is not set.");
+		if(senderID == 0) return BaseLib::RPC::Variable::createError(-2, "Sender id is not set.");
+		if(receiverID == 0) return BaseLib::RPC::Variable::createError(-2, "Receiver id is not set.");
 		std::shared_ptr<MAXPeer> sender = getPeer(senderID);
 		std::shared_ptr<MAXPeer> receiver = getPeer(receiverID);
-		if(!sender) return BaseLib::RPC::RPCVariable::createError(-2, "Sender device not found.");
-		if(!receiver) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		if(!sender) return BaseLib::RPC::Variable::createError(-2, "Sender device not found.");
+		if(!receiver) return BaseLib::RPC::Variable::createError(-2, "Receiver device not found.");
 		if(senderChannelIndex < 0) senderChannelIndex = 0;
 		if(receiverChannelIndex < 0) receiverChannelIndex = 0;
 		std::string senderSerialNumber = sender->getSerialNumber();
 		std::string receiverSerialNumber = receiver->getSerialNumber();
-		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Sender channel not found.");
-		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver channel not found.");
-		if(!sender->getPeer(senderChannelIndex, receiver->getAddress()) && !receiver->getPeer(receiverChannelIndex, sender->getAddress())) return BaseLib::RPC::RPCVariable::createError(-6, "Devices are not paired to each other.");
+		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Sender channel not found.");
+		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Receiver channel not found.");
+		if(!sender->getPeer(senderChannelIndex, receiver->getAddress()) && !receiver->getPeer(receiverChannelIndex, sender->getAddress())) return BaseLib::RPC::Variable::createError(-6, "Devices are not paired to each other.");
 
 		sender->removePeer(senderChannelIndex, receiver->getID(), receiverChannelIndex);
 		receiver->removePeer(receiverChannelIndex, sender->getID(), senderChannelIndex);
@@ -1626,7 +1626,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::removeLink(uint64_t sende
 		}
 		if(!_queueManager.get(receiver->getAddress())) receiver->serviceMessages->setConfigPending(false);
 
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
 	{
@@ -1640,7 +1640,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::removeLink(uint64_t sende
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
 void MAXCentral::pairingModeTimer(int32_t duration, bool debugOutput)
@@ -1676,7 +1676,7 @@ void MAXCentral::pairingModeTimer(int32_t duration, bool debugOutput)
     }
 }
 
-std::shared_ptr<RPCVariable> MAXCentral::setInstallMode(bool on, uint32_t duration, bool debugOutput)
+std::shared_ptr<Variable> MAXCentral::setInstallMode(bool on, uint32_t duration, bool debugOutput)
 {
 	try
 	{
@@ -1684,7 +1684,7 @@ std::shared_ptr<RPCVariable> MAXCentral::setInstallMode(bool on, uint32_t durati
 		if(_disposing)
 		{
 			_pairingModeThreadMutex.unlock();
-			return BaseLib::RPC::RPCVariable::createError(-32500, "Central is disposing.");
+			return BaseLib::RPC::Variable::createError(-32500, "Central is disposing.");
 		}
 		_stopPairingModeThread = true;
 		if(_pairingModeThread.joinable()) _pairingModeThread.join();
@@ -1696,7 +1696,7 @@ std::shared_ptr<RPCVariable> MAXCentral::setInstallMode(bool on, uint32_t durati
 			_pairingModeThread = std::thread(&MAXCentral::pairingModeTimer, this, duration, debugOutput);
 		}
 		_pairingModeThreadMutex.unlock();
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {
@@ -1711,15 +1711,15 @@ std::shared_ptr<RPCVariable> MAXCentral::setInstallMode(bool on, uint32_t durati
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _pairingModeThreadMutex.unlock();
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::setInterface(uint64_t peerID, std::string interfaceID)
+std::shared_ptr<BaseLib::RPC::Variable> MAXCentral::setInterface(uint64_t peerID, std::string interfaceID)
 {
 	try
 	{
 		std::shared_ptr<MAXPeer> peer(getPeer(peerID));
-		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+		if(!peer) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
 		return peer->setInterface(interfaceID);
 	}
 	catch(const std::exception& ex)
@@ -1734,7 +1734,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::setInterface(uint64_t pee
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 //End RPC functions
 }

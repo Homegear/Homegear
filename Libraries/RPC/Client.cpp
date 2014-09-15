@@ -91,11 +91,16 @@ void Client::initServerMethods(std::pair<std::string, std::string> address)
     }
 }
 
-void Client::startInvokeBroadcastThread(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
+void Client::startInvokeBroadcastThread(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
 		_invokeBroadcastThreadsMutex.lock();
+		if(_invokeBroadcastThreads.size() > 50)
+		{
+			GD::out.printCritical("Critical: More than 50 RPC broadcast threads are running. Server processing is too slow for the amount of requests. Dropping packet.");
+			_invokeBroadcastThreadsMutex.unlock();
+		}
 		int32_t threadID = _currentInvokeBroadcastThreadID++;
 		std::shared_ptr<std::thread> t = std::shared_ptr<std::thread>(new std::thread(&Client::invokeBroadcastThread, this, threadID, server, methodName, parameters));
 		BaseLib::Threads::setThreadPriority(GD::bl.get(), t->native_handle(), GD::bl->settings.rpcClientThreadPriority(), GD::bl->settings.rpcClientThreadPolicy());
@@ -116,7 +121,7 @@ void Client::startInvokeBroadcastThread(std::shared_ptr<RemoteRPCServer> server,
     _invokeBroadcastThreadsMutex.unlock();
 }
 
-void Client::invokeBroadcastThread(uint32_t threadID, std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
+void Client::invokeBroadcastThread(uint32_t threadID, std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -163,12 +168,12 @@ void Client::removeBroadcastThread(uint32_t threadID)
     _invokeBroadcastThreadsMutex.unlock();
 }
 
-void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
+void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values)
 {
 	try
 	{
 		if(!valueKeys || !values || valueKeys->size() != values->size()) return;
-		std::string methodName("event"); //We can't just create the methods BaseLib::RPC::RPCVariable with new BaseLib::RPC::RPCVariable("methodName", "event") because "event" is not a string object. That's why we create the string object here.
+		std::string methodName("event"); //We can't just create the methods BaseLib::RPC::Variable with new BaseLib::RPC::Variable("methodName", "event") because "event" is not a string object. That's why we create the string object here.
 		std::vector<std::shared_ptr<RemoteRPCServer>> _serversToRemove;
 		_serversMutex.lock();
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
@@ -179,24 +184,24 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 				continue;
 			}
 			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && ((*server)->knownMethods.find("event") == (*server)->knownMethods.end() || (*server)->knownMethods.find("system.multicall") == (*server)->knownMethods.end()))) continue;
-			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
-			std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-			std::shared_ptr<BaseLib::RPC::RPCVariable> method;
+			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
+			std::shared_ptr<BaseLib::RPC::Variable> array(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+			std::shared_ptr<BaseLib::RPC::Variable> method;
 			for(uint32_t i = 0; i < valueKeys->size(); i++)
 			{
-				method.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+				method.reset(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 				array->arrayValue->push_back(method);
-				method->structValue->insert(BaseLib::RPC::RPCStructElement("methodName", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(methodName))));
-				std::shared_ptr<BaseLib::RPC::RPCVariable> params(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+				method->structValue->insert(BaseLib::RPC::RPCStructElement("methodName", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(methodName))));
+				std::shared_ptr<BaseLib::RPC::Variable> params(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 				method->structValue->insert(BaseLib::RPC::RPCStructElement("params", params));
-				params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*server)->id)));
+				params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
 				if((*server)->useID)
 				{
-					params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)id)));
-					params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(channel)));
+					params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)id)));
+					params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(channel)));
 				}
-				else params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(deviceAddress)));
-				params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(valueKeys->at(i))));
+				else params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(deviceAddress)));
+				params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(valueKeys->at(i))));
 				params->arrayValue->push_back(values->at(i));
 			}
 			parameters->push_back(array);
@@ -234,8 +239,8 @@ void Client::systemListMethods(std::pair<std::string, std::string> address)
 	{
 		std::shared_ptr<RemoteRPCServer> server = getServer(address);
 		if(!server) return;
-		std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>> { std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(server->id)) });
-		std::shared_ptr<BaseLib::RPC::RPCVariable> result = _client->invoke(server, "system.listMethods", parameters);
+		std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>> { std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(server->id)) });
+		std::shared_ptr<BaseLib::RPC::Variable> result = _client->invoke(server, "system.listMethods", parameters);
 		if(result->errorStruct)
 		{
 			if(server->removed) return;
@@ -243,11 +248,11 @@ void Client::systemListMethods(std::pair<std::string, std::string> address)
 			result->print();
 			return;
 		}
-		if(result->type != BaseLib::RPC::RPCVariableType::rpcArray) return;
+		if(result->type != BaseLib::RPC::VariableType::rpcArray) return;
 		server->knownMethods.clear();
-		for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = result->arrayValue->begin(); i != result->arrayValue->end(); ++i)
+		for(std::vector<std::shared_ptr<BaseLib::RPC::Variable>>::iterator i = result->arrayValue->begin(); i != result->arrayValue->end(); ++i)
 		{
-			if((*i)->type == BaseLib::RPC::RPCVariableType::rpcString)
+			if((*i)->type == BaseLib::RPC::VariableType::rpcString)
 			{
 				std::pair<std::string, bool> method;
 				if((*i)->stringValue.empty()) continue;
@@ -282,8 +287,8 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 		std::shared_ptr<RemoteRPCServer> server = getServer(address);
 		if(!server) return;
 		if(!server->knownMethods.empty() && server->knownMethods.find("listDevices") == server->knownMethods.end()) return;
-		std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>> { std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(server->id)) });
-		std::shared_ptr<BaseLib::RPC::RPCVariable> result = _client->invoke(server, "listDevices", parameters);
+		std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>> { std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(server->id)) });
+		std::shared_ptr<BaseLib::RPC::Variable> result = _client->invoke(server, "listDevices", parameters);
 		if(result->errorStruct)
 		{
 			if(server->removed) return;
@@ -291,11 +296,11 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 			result->print();
 			return;
 		}
-		if(result->type != BaseLib::RPC::RPCVariableType::rpcArray) return;
+		if(result->type != BaseLib::RPC::VariableType::rpcArray) return;
 		server->knownDevices->clear();
-		for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = result->arrayValue->begin(); i != result->arrayValue->end(); ++i)
+		for(std::vector<std::shared_ptr<BaseLib::RPC::Variable>>::iterator i = result->arrayValue->begin(); i != result->arrayValue->end(); ++i)
 		{
-			if((*i)->type == BaseLib::RPC::RPCVariableType::rpcStruct)
+			if((*i)->type == BaseLib::RPC::VariableType::rpcStruct)
 			{
 				uint64_t device = 0;
 				std::string serialNumber;
@@ -347,18 +352,18 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 		std::shared_ptr<RemoteRPCServer> server = getServer(address);
 		if(!server) return;
 		if(!server->knownMethods.empty() && server->knownMethods.find("newDevices") == server->knownMethods.end()) return;
-		std::shared_ptr<BaseLib::RPC::RPCVariable> devices(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		std::shared_ptr<BaseLib::RPC::Variable> devices(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<BaseLib::RPC::RPCVariable> result = central->listDevices(true, std::map<std::string, bool>(), server->knownDevices);
+			std::shared_ptr<BaseLib::RPC::Variable> result = central->listDevices(true, std::map<std::string, bool>(), server->knownDevices);
 			if(!result->arrayValue->empty()) devices->arrayValue->insert(devices->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
 		}
 		if(devices->arrayValue->empty()) return;
-		std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>{ std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(server->id)), devices });
-		std::shared_ptr<BaseLib::RPC::RPCVariable> result = _client->invoke(server, "newDevices", parameters);
+		std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>{ std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(server->id)), devices });
+		std::shared_ptr<BaseLib::RPC::Variable> result = _client->invoke(server, "newDevices", parameters);
 		if(result->errorStruct)
 		{
 			if(server->removed) return;
@@ -381,7 +386,7 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
     }
 }
 
-void Client::broadcastNewDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions)
+void Client::broadcastNewDevices(std::shared_ptr<BaseLib::RPC::Variable> deviceDescriptions)
 {
 	try
 	{
@@ -391,8 +396,8 @@ void Client::broadcastNewDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> devi
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
 			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("newDevices") == (*server)->knownMethods.end())) continue;
-			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*server)->id)));
+			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
 			parameters->push_back(deviceDescriptions);
 			startInvokeBroadcastThread((*server), "newDevices", parameters);
 		}
@@ -412,7 +417,7 @@ void Client::broadcastNewDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> devi
     _serversMutex.unlock();
 }
 
-void Client::broadcastNewEvent(std::shared_ptr<BaseLib::RPC::RPCVariable> eventDescription)
+void Client::broadcastNewEvent(std::shared_ptr<BaseLib::RPC::Variable> eventDescription)
 {
 	try
 	{
@@ -421,8 +426,8 @@ void Client::broadcastNewEvent(std::shared_ptr<BaseLib::RPC::RPCVariable> eventD
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
 			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("newEvent") == (*server)->knownMethods.end())) continue;
-			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*server)->id)));
+			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
 			parameters->push_back(eventDescription);
 			startInvokeBroadcastThread((*server), "newEvent", parameters);
 		}
@@ -442,7 +447,7 @@ void Client::broadcastNewEvent(std::shared_ptr<BaseLib::RPC::RPCVariable> eventD
     _serversMutex.unlock();
 }
 
-void Client::broadcastDeleteDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> deviceAddresses, std::shared_ptr<BaseLib::RPC::RPCVariable> deviceInfo)
+void Client::broadcastDeleteDevices(std::shared_ptr<BaseLib::RPC::Variable> deviceAddresses, std::shared_ptr<BaseLib::RPC::Variable> deviceInfo)
 {
 	try
 	{
@@ -451,8 +456,8 @@ void Client::broadcastDeleteDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> d
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
 			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("deleteDevices") == (*server)->knownMethods.end())) continue;
-			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*server)->id)));
+			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
 			if((*server)->useID) parameters->push_back(deviceInfo);
 			else parameters->push_back(deviceAddresses);
 			startInvokeBroadcastThread((*server), "deleteDevices", parameters);
@@ -485,13 +490,13 @@ void Client::broadcastDeleteEvent(std::string id, int32_t type, uint64_t peerID,
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
 			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("deleteEvent") == (*server)->knownMethods.end())) continue;
-			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*server)->id)));
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(id)));
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)type)));
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)peerID)));
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(channel)));
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(variable)));
+			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(id)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)type)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)peerID)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(channel)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(variable)));
 			startInvokeBroadcastThread((*server), "deleteEvent", parameters);
 		}
 	}
@@ -519,15 +524,15 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
 			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("updateDevice") == (*server)->knownMethods.end())) continue;
-			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*server)->id)));
+			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
 			if((*server)->useID)
 			{
-				parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)id)));
-				parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(channel)));
+				parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)id)));
+				parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(channel)));
 			}
-			else parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(address)));
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)hint)));
+			else parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(address)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)hint)));
 			startInvokeBroadcastThread((*server), "updateDevice", parameters);
 		}
 	}
@@ -555,13 +560,13 @@ void Client::broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID,
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
 			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("updateEvent") == (*server)->knownMethods.end())) continue;
-			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*server)->id)));
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(id)));
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)type)));
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)peerID)));
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)channel)));
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(variable)));
+			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(id)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)type)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)peerID)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)channel)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(variable)));
 			startInvokeBroadcastThread((*server), "updateEvent", parameters);
 		}
 	}
@@ -696,7 +701,7 @@ std::shared_ptr<RemoteRPCServer> Client::getServer(std::pair<std::string, std::s
     return std::shared_ptr<RemoteRPCServer>();
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> Client::listClientServers(std::string id)
+std::shared_ptr<BaseLib::RPC::Variable> Client::listClientServers(std::string id)
 {
 	try
 	{
@@ -708,27 +713,27 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> Client::listClientServers(std::string
 			servers->push_back(*i);
 		}
 		_serversMutex.unlock();
-		if(servers->empty()) return BaseLib::RPC::RPCVariable::createError(-32602, "Server is unknown.");
-		std::shared_ptr<BaseLib::RPC::RPCVariable> serverInfos(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		if(servers->empty()) return BaseLib::RPC::Variable::createError(-32602, "Server is unknown.");
+		std::shared_ptr<BaseLib::RPC::Variable> serverInfos(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = servers->begin(); i != servers->end(); ++i)
 		{
-			std::shared_ptr<BaseLib::RPC::RPCVariable> serverInfo(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE_ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->id))));
-			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("HOSTNAME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->hostname))));
-			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("PORT", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->address.second))));
-			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("PATH", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->path))));
-			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("SSL", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->useSSL))));
-			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("BINARY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->binary))));
-			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("KEEP_ALIVE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->keepAlive))));
-			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("USEID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->useID))));
+			std::shared_ptr<BaseLib::RPC::Variable> serverInfo(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE_ID", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*i)->id))));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("HOSTNAME", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*i)->hostname))));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("PORT", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*i)->address.second))));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("PATH", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*i)->path))));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("SSL", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*i)->useSSL))));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("BINARY", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*i)->binary))));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("KEEP_ALIVE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*i)->keepAlive))));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("USEID", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*i)->useID))));
 			if((*i)->settings)
 			{
-				serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("FORCESSL", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->settings->forceSSL))));
-				serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("AUTH_TYPE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)(*i)->settings->authType))));
-				serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("VERIFICATION_HOSTNAME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->settings->hostname))));
-				serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("VERIFY_CERTIFICATE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->settings->verifyCertificate))));
+				serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("FORCESSL", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*i)->settings->forceSSL))));
+				serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("AUTH_TYPE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((uint32_t)(*i)->settings->authType))));
+				serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("VERIFICATION_HOSTNAME", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*i)->settings->hostname))));
+				serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("VERIFY_CERTIFICATE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*i)->settings->verifyCertificate))));
 			}
-			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("LASTPACKETSENT", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->lastPacketSent))));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("LASTPACKETSENT", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*i)->lastPacketSent))));
 
 			serverInfos->arrayValue->push_back(serverInfo);
 		}
@@ -749,10 +754,10 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> Client::listClientServers(std::string
     	_serversMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> Client::clientServerInitialized(std::string id)
+std::shared_ptr<BaseLib::RPC::Variable> Client::clientServerInitialized(std::string id)
 {
 	try
 	{
@@ -765,11 +770,11 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> Client::clientServerInitialized(std::
 				_serversMutex.unlock();
 				if((*i)->removed) removeServer((*i)->address);
 				else initialized = true;
-				return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(initialized));
+				return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(initialized));
 			}
 		}
 		_serversMutex.unlock();
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(initialized));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(initialized));
 	}
 	catch(const std::exception& ex)
     {
@@ -784,7 +789,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> Client::clientServerInitialized(std::
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _serversMutex.unlock();
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
 }

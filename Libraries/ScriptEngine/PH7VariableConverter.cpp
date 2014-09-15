@@ -33,21 +33,21 @@
 int32_t arrayWalkCallback(ph7_value* key, ph7_value* value, void* userData)
 {
 	if(!userData) return PH7_ABORT;
-	BaseLib::RPC::RPCVariable* rpcArray = (BaseLib::RPC::RPCVariable*)userData;
+	BaseLib::RPC::Variable* rpcArray = (BaseLib::RPC::Variable*)userData;
 
-	std::shared_ptr<BaseLib::RPC::RPCVariable> element = PH7VariableConverter::getRPCVariable(value);
+	std::shared_ptr<BaseLib::RPC::Variable> element = PH7VariableConverter::getVariable(value);
 	if(ph7_value_is_int(key))
 	{
 		int32_t keyInt = ph7_value_to_int(key);
-		if(rpcArray->type == BaseLib::RPC::RPCVariableType::rpcVoid) rpcArray->type = BaseLib::RPC::RPCVariableType::rpcArray;
+		if(rpcArray->type == BaseLib::RPC::VariableType::rpcVoid) rpcArray->type = BaseLib::RPC::VariableType::rpcArray;
 		//In case keyInt skips values
-		while((signed)rpcArray->arrayValue->size() < keyInt) rpcArray->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable()));
+		while((signed)rpcArray->arrayValue->size() < keyInt) rpcArray->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable()));
 		if(keyInt < (signed)rpcArray->arrayValue->size()) rpcArray->arrayValue->at(keyInt) = element;
 		else rpcArray->arrayValue->push_back(element);
 	}
 	else if(ph7_value_is_string(key))
 	{
-		rpcArray->type = BaseLib::RPC::RPCVariableType::rpcStruct; //Always set to struct, when key is of type String
+		rpcArray->type = BaseLib::RPC::VariableType::rpcStruct; //Always set to struct, when key is of type String
 		int32_t length = 0;
 		const char* string = ph7_value_to_string(key, &length);
 		std::string keyString(string, string + length);
@@ -72,34 +72,34 @@ PH7VariableConverter::~PH7VariableConverter()
 {
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> PH7VariableConverter::getRPCVariable(ph7_value* value)
+std::shared_ptr<BaseLib::RPC::Variable> PH7VariableConverter::getVariable(ph7_value* value)
 {
 	try
 	{
-		std::shared_ptr<BaseLib::RPC::RPCVariable> variable;
+		std::shared_ptr<BaseLib::RPC::Variable> variable;
 		if(!value) return variable;
 		if(ph7_value_is_int(value))
 		{
-			variable.reset(new BaseLib::RPC::RPCVariable((int32_t)ph7_value_to_int(value)));
+			variable.reset(new BaseLib::RPC::Variable((int32_t)ph7_value_to_int(value)));
 		}
 		else if(ph7_value_is_float(value))
 		{
-			variable.reset(new BaseLib::RPC::RPCVariable(ph7_value_to_double(value)));
+			variable.reset(new BaseLib::RPC::Variable(ph7_value_to_double(value)));
 		}
 		else if(ph7_value_is_bool(value))
 		{
-			variable.reset(new BaseLib::RPC::RPCVariable((bool)ph7_value_to_bool(value)));
+			variable.reset(new BaseLib::RPC::Variable((bool)ph7_value_to_bool(value)));
 		}
 		else if(ph7_value_is_string(value))
 		{
 			int32_t length = 0;
 			const char* string = ph7_value_to_string(value, &length);
-			if(length > 0) variable.reset(new BaseLib::RPC::RPCVariable(std::string(string, string + length)));
-			else variable.reset(new BaseLib::RPC::RPCVariable(std::string("")));
+			if(length > 0) variable.reset(new BaseLib::RPC::Variable(std::string(string, string + length)));
+			else variable.reset(new BaseLib::RPC::Variable(std::string("")));
 		}
 		else if(ph7_value_is_array(value))
 		{
-			variable.reset(new BaseLib::RPC::RPCVariable());
+			variable.reset(new BaseLib::RPC::Variable());
 			if(ph7_array_walk(value, arrayWalkCallback, variable.get()) != PH7_OK)
 			{
 				GD::out.printWarning("Warning: Script engine: Could not convert array to RPC variable.");
@@ -107,7 +107,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> PH7VariableConverter::getRPCVariable(
 		}
 		else
 		{
-			variable.reset(new BaseLib::RPC::RPCVariable(std::string("")));
+			variable.reset(new BaseLib::RPC::Variable(std::string("")));
 		}
 
 		return variable;
@@ -124,20 +124,20 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> PH7VariableConverter::getRPCVariable(
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return std::shared_ptr<BaseLib::RPC::RPCVariable>();
+	return std::shared_ptr<BaseLib::RPC::Variable>();
 }
 
-ph7_value* PH7VariableConverter::getPH7Variable(ph7_context* context, std::shared_ptr<BaseLib::RPC::RPCVariable> value)
+ph7_value* PH7VariableConverter::getPH7Variable(ph7_context* context, std::shared_ptr<BaseLib::RPC::Variable> value)
 {
 	try
 	{
 		if(!value) return nullptr;
 
-		if(value->type == BaseLib::RPC::RPCVariableType::rpcArray)
+		if(value->type == BaseLib::RPC::VariableType::rpcArray)
 		{
 			ph7_value* pArray = ph7_context_new_array(context);
 			if(!pArray) return nullptr;
-			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = value->arrayValue->begin(); i != value->arrayValue->end(); ++i)
+			for(std::vector<std::shared_ptr<BaseLib::RPC::Variable>>::iterator i = value->arrayValue->begin(); i != value->arrayValue->end(); ++i)
 			{
 				ph7_value* pValue = getPH7Variable(context, *i);
 				if(!pValue) return nullptr;
@@ -145,11 +145,11 @@ ph7_value* PH7VariableConverter::getPH7Variable(ph7_context* context, std::share
 			}
 			return pArray;
 		}
-		else if(value->type == BaseLib::RPC::RPCVariableType::rpcStruct)
+		else if(value->type == BaseLib::RPC::VariableType::rpcStruct)
 		{
 			ph7_value* pStruct = ph7_context_new_array(context);
 			if(!pStruct) return nullptr;
-			for(std::map<std::string, std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = value->structValue->begin(); i != value->structValue->end(); ++i)
+			for(std::map<std::string, std::shared_ptr<BaseLib::RPC::Variable>>::iterator i = value->structValue->begin(); i != value->structValue->end(); ++i)
 			{
 				ph7_value* pKey = ph7_context_new_scalar(context);
 				if(!pKey) return nullptr;
@@ -163,23 +163,23 @@ ph7_value* PH7VariableConverter::getPH7Variable(ph7_context* context, std::share
 
 		ph7_value* pValue = ph7_context_new_scalar(context);
 		if(!pValue) return nullptr;
-		if(value->type == BaseLib::RPC::RPCVariableType::rpcVoid)
+		if(value->type == BaseLib::RPC::VariableType::rpcVoid)
 		{
 			ph7_value_null(pValue);
 		}
-		else if(value->type == BaseLib::RPC::RPCVariableType::rpcBoolean)
+		else if(value->type == BaseLib::RPC::VariableType::rpcBoolean)
 		{
 			ph7_value_bool(pValue, value->booleanValue);
 		}
-		else if(value->type == BaseLib::RPC::RPCVariableType::rpcInteger)
+		else if(value->type == BaseLib::RPC::VariableType::rpcInteger)
 		{
 			ph7_value_int(pValue, value->integerValue);
 		}
-		else if(value->type == BaseLib::RPC::RPCVariableType::rpcFloat)
+		else if(value->type == BaseLib::RPC::VariableType::rpcFloat)
 		{
 			ph7_value_double(pValue, value->floatValue);
 		}
-		else if(value->type == BaseLib::RPC::RPCVariableType::rpcString || value->type == BaseLib::RPC::RPCVariableType::rpcBase64)
+		else if(value->type == BaseLib::RPC::VariableType::rpcString || value->type == BaseLib::RPC::VariableType::rpcBase64)
 		{
 			ph7_value_string(pValue, value->stringValue.c_str(), -1);
 		}

@@ -102,8 +102,8 @@ OBJECTS := \
 	$(OBJDIR)/Output.o \
 	$(OBJDIR)/LogicalParameter.o \
 	$(OBJDIR)/PhysicalParameter.o \
-	$(OBJDIR)/RPCVariable.o \
 	$(OBJDIR)/Devices.o \
+	$(OBJDIR)/Variable.o \
 	$(OBJDIR)/Device.o \
 	$(OBJDIR)/ServiceMessages.o \
 	$(OBJDIR)/LogicalDevice.o \
@@ -119,10 +119,12 @@ OBJECTS := \
 	$(OBJDIR)/FileDescriptorManager.o \
 	$(OBJDIR)/XMLRPCEncoder.o \
 	$(OBJDIR)/RPCHeader.o \
+	$(OBJDIR)/JsonEncoder.o \
 	$(OBJDIR)/RPCEncoder.o \
 	$(OBJDIR)/RPCDecoder.o \
 	$(OBJDIR)/HTTP.o \
 	$(OBJDIR)/BinaryDecoder.o \
+	$(OBJDIR)/JsonDecoder.o \
 	$(OBJDIR)/XMLRPCDecoder.o \
 	$(OBJDIR)/BinaryEncoder.o \
 	$(OBJDIR)/SocketOperations.o \
@@ -130,7 +132,6 @@ OBJECTS := \
 	$(OBJDIR)/SerialReaderWriter.o \
 	$(OBJDIR)/Threads.o \
 	$(OBJDIR)/Settings.o \
-	$(OBJDIR)/jsoncpp.o \
 
 RESOURCES := \
 
@@ -219,10 +220,10 @@ $(OBJDIR)/LogicalParameter.o: Modules/Base/RPC/LogicalParameter.cpp
 $(OBJDIR)/PhysicalParameter.o: Modules/Base/RPC/PhysicalParameter.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCVariable.o: Modules/Base/RPC/RPCVariable.cpp
+$(OBJDIR)/Devices.o: Modules/Base/RPC/Devices.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Devices.o: Modules/Base/RPC/Devices.cpp
+$(OBJDIR)/Variable.o: Modules/Base/RPC/Variable.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Device.o: Modules/Base/RPC/Device.cpp
@@ -270,6 +271,9 @@ $(OBJDIR)/XMLRPCEncoder.o: Modules/Base/Encoding/XMLRPCEncoder.cpp
 $(OBJDIR)/RPCHeader.o: Modules/Base/Encoding/RPCHeader.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/JsonEncoder.o: Modules/Base/Encoding/JsonEncoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RPCEncoder.o: Modules/Base/Encoding/RPCEncoder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
@@ -280,6 +284,9 @@ $(OBJDIR)/HTTP.o: Modules/Base/Encoding/HTTP.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/BinaryDecoder.o: Modules/Base/Encoding/BinaryDecoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/JsonDecoder.o: Modules/Base/Encoding/JsonDecoder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/XMLRPCDecoder.o: Modules/Base/Encoding/XMLRPCDecoder.cpp
@@ -301,9 +308,6 @@ $(OBJDIR)/Threads.o: Modules/Base/Threads/Threads.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Settings.o: Modules/Base/Settings/Settings.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/jsoncpp.o: Modules/Base/JSON/jsoncpp.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

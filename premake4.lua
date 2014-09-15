@@ -52,12 +52,11 @@ solution "homegear"
         "./Modules/Base/RPC/*.h", "./Modules/Base/RPC/*.cpp",
         "./Modules/Base/Systems/*.h", "./Modules/Base/Systems/*.cpp",
         "./Modules/Base/Managers/*.h", "./Modules/Base/Managers/*.cpp",
-        "./Modules/Base/Encoding/*.h", "./Modules/Base/Encoding/*.cpp",
+        "./Modules/Base/Encoding/*.h", "./Modules/Base/Encoding/*.cpp", "./Modules/Base/Encoding/RapidXml/*.h", "./Modules/Base/Encoding/RapidJSON/*.h",
         "./Modules/Base/Database/*.h", "./Modules/Base/Database/*.cpp",
         "./Modules/Base/Sockets/*.h", "./Modules/Base/Sockets/*.cpp",
         "./Modules/Base/Threads/*.h", "./Modules/Base/Threads/*.cpp",
         "./Modules/Base/Settings/*.h", "./Modules/Base/Settings/*.cpp",
-        "./Modules/Base/JSON/*.h", "./Modules/Base/JSON/json/*.h", "./Modules/Base/JSON/*.cpp"
       }
       buildoptions { "-Wall", "-std=c++11", "-fPIC" }
  

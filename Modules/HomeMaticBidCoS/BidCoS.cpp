@@ -81,18 +81,18 @@ void BidCoS::dispose()
 
 std::shared_ptr<BaseLib::Systems::Central> BidCoS::getCentral() { return _central; }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoS::listBidcosInterfaces()
+std::shared_ptr<BaseLib::RPC::Variable> BidCoS::listBidcosInterfaces()
 {
 	try
 	{
-		if(!_central || !GD::defaultPhysicalInterface) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		std::shared_ptr<BaseLib::RPC::RPCVariable> interface(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+		if(!_central || !GD::defaultPhysicalInterface) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+		std::shared_ptr<BaseLib::RPC::Variable> array(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+		std::shared_ptr<BaseLib::RPC::Variable> interface(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 		array->arrayValue->push_back(interface);
-		interface->structValue->insert(BaseLib::RPC::RPCStructElement("ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_central->getSerialNumber()))));
-		interface->structValue->insert(BaseLib::RPC::RPCStructElement("DESCRIPTION", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("Homegear default BidCoS interface")))));
-		interface->structValue->insert(BaseLib::RPC::RPCStructElement("CONNECTED", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(GD::defaultPhysicalInterface->isOpen()))));
-		interface->structValue->insert(BaseLib::RPC::RPCStructElement("DEFAULT", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(true))));
+		interface->structValue->insert(BaseLib::RPC::RPCStructElement("ADDRESS", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(_central->getSerialNumber()))));
+		interface->structValue->insert(BaseLib::RPC::RPCStructElement("DESCRIPTION", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string("Homegear default BidCoS interface")))));
+		interface->structValue->insert(BaseLib::RPC::RPCStructElement("CONNECTED", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(GD::defaultPhysicalInterface->isOpen()))));
+		interface->structValue->insert(BaseLib::RPC::RPCStructElement("DEFAULT", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(true))));
 		return array;
 	}
 	catch(const std::exception& ex)
@@ -107,7 +107,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoS::listBidcosInterfaces()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
 std::shared_ptr<BaseLib::Systems::IPhysicalInterface> BidCoS::createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings)
@@ -602,14 +602,14 @@ std::string BidCoS::handleCLICommand(std::string& command)
     return "Error executing command. See log file for more details.\n";
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoS::getPairingMethods()
+std::shared_ptr<BaseLib::RPC::Variable> BidCoS::getPairingMethods()
 {
 	try
 	{
-		if(!_central) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		array->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("addDevice"))));
-		array->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("setInstallMode"))));
+		if(!_central) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+		std::shared_ptr<BaseLib::RPC::Variable> array(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+		array->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string("addDevice"))));
+		array->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string("setInstallMode"))));
 		return array;
 	}
 	catch(const std::exception& ex)
@@ -624,6 +624,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoS::getPairingMethods()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 } /* namespace BidCoS */

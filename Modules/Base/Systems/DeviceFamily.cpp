@@ -165,7 +165,7 @@ std::shared_ptr<Database::DataTable> DeviceFamily::raiseGetDeviceVariables(uint6
 	return ((IFamilyEventSink*)_eventHandler)->onGetDeviceVariables(deviceID);
 }
 
-void DeviceFamily::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
+void DeviceFamily::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> values)
 {
 	if(_eventHandler) ((IFamilyEventSink*)_eventHandler)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
 }
@@ -175,17 +175,17 @@ void DeviceFamily::raiseRPCUpdateDevice(uint64_t id, int32_t channel, std::strin
 	if(_eventHandler) ((IFamilyEventSink*)_eventHandler)->onRPCUpdateDevice(id, channel, address, hint);
 }
 
-void DeviceFamily::raiseRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions)
+void DeviceFamily::raiseRPCNewDevices(std::shared_ptr<RPC::Variable> deviceDescriptions)
 {
 	if(_eventHandler) ((IFamilyEventSink*)_eventHandler)->onRPCNewDevices(deviceDescriptions);
 }
 
-void DeviceFamily::raiseRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo)
+void DeviceFamily::raiseRPCDeleteDevices(std::shared_ptr<RPC::Variable> deviceAddresses, std::shared_ptr<RPC::Variable> deviceInfo)
 {
 	if(_eventHandler) ((IFamilyEventSink*)_eventHandler)->onRPCDeleteDevices(deviceAddresses, deviceInfo);
 }
 
-void DeviceFamily::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
+void DeviceFamily::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values)
 {
 	if(_eventHandler) ((IFamilyEventSink*)_eventHandler)->onEvent(peerID, channel, variables, values);
 }
@@ -287,7 +287,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DeviceFamily::onGetDeviceVariables
 	return raiseGetDeviceVariables(deviceID);
 }
 
-void DeviceFamily::onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
+void DeviceFamily::onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> values)
 {
 	raiseRPCEvent(id, channel, deviceAddress, valueKeys, values);
 }
@@ -297,17 +297,17 @@ void DeviceFamily::onRPCUpdateDevice(uint64_t id, int32_t channel, std::string a
 	raiseRPCUpdateDevice(id, channel, address, hint);
 }
 
-void DeviceFamily::onRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions)
+void DeviceFamily::onRPCNewDevices(std::shared_ptr<RPC::Variable> deviceDescriptions)
 {
 	raiseRPCNewDevices(deviceDescriptions);
 }
 
-void DeviceFamily::onRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo)
+void DeviceFamily::onRPCDeleteDevices(std::shared_ptr<RPC::Variable> deviceAddresses, std::shared_ptr<RPC::Variable> deviceInfo)
 {
 	raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
 }
 
-void DeviceFamily::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
+void DeviceFamily::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values)
 {
 	raiseEvent(peerID, channel, variables, values);
 }

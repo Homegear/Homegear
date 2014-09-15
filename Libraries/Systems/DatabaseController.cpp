@@ -282,7 +282,7 @@ void DatabaseController::releaseSavepoint(std::string name)
 //End general
 
 //Metadata
-std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getAllMetadata(uint64_t peerID, std::string serialNumber)
+std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::getAllMetadata(uint64_t peerID, std::string serialNumber)
 {
 	try
 	{
@@ -297,15 +297,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getAllMetadata(ui
 			data.clear();
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(serialNumber)));
 			rows = db.executeCommand("SELECT dataID, serializedObject FROM metadata WHERE objectID=?", data);
-			if(rows->empty()) return BaseLib::RPC::RPCVariable::createError(-1, "No metadata found.");
+			if(rows->empty()) return BaseLib::RPC::Variable::createError(-1, "No metadata found.");
 			idIsSerial = true;
 		}
 
-		std::shared_ptr<BaseLib::RPC::RPCVariable> metadataStruct(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+		std::shared_ptr<BaseLib::RPC::Variable> metadataStruct(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 		for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
 		{
 			if(i->second.size() < 2) continue;
-			std::shared_ptr<BaseLib::RPC::RPCVariable> metadata = _rpcDecoder->decodeResponse(*i->second.at(1)->binaryValue);
+			std::shared_ptr<BaseLib::RPC::Variable> metadata = _rpcDecoder->decodeResponse(*i->second.at(1)->binaryValue);
 			metadataStruct->structValue->insert(BaseLib::RPC::RPCStructElement(i->second.at(0)->textValue, metadata));
 			//TODO: Delete this compatibility block in version 0.6.0
 			if(idIsSerial)
@@ -332,14 +332,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getAllMetadata(ui
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getMetadata(uint64_t peerID, std::string serialNumber, std::string dataID)
+std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::getMetadata(uint64_t peerID, std::string serialNumber, std::string dataID)
 {
 	try
 	{
-		if(dataID.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "dataID has more than 250 characters.");
+		if(dataID.size() > 250) return BaseLib::RPC::Variable::createError(-32602, "dataID has more than 250 characters.");
 
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peerID))));
@@ -353,10 +353,10 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getMetadata(uint6
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(serialNumber)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(dataID)));
 			rows = db.executeCommand("SELECT serializedObject FROM metadata WHERE objectID=? AND dataID=?", data);
-			if(rows->empty() || rows->at(0).empty()) return BaseLib::RPC::RPCVariable::createError(-1, "No metadata found.");
+			if(rows->empty() || rows->at(0).empty()) return BaseLib::RPC::Variable::createError(-1, "No metadata found.");
 		}
 
-		std::shared_ptr<BaseLib::RPC::RPCVariable> metadata = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+		std::shared_ptr<BaseLib::RPC::Variable> metadata = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
 		return metadata;
 	}
 	catch(const std::exception& ex)
@@ -371,27 +371,27 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getMetadata(uint6
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::setMetadata(uint64_t peerID, std::string serialNumber, std::string dataID, std::shared_ptr<BaseLib::RPC::RPCVariable> metadata)
+std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::setMetadata(uint64_t peerID, std::string serialNumber, std::string dataID, std::shared_ptr<BaseLib::RPC::Variable> metadata)
 {
 	try
 	{
-		if(!metadata) return BaseLib::RPC::RPCVariable::createError(-32602, "Could not parse data.");
-		if(dataID.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "dataID has more than 250 characters.");
+		if(!metadata) return BaseLib::RPC::Variable::createError(-32602, "Could not parse data.");
+		if(dataID.size() > 250) return BaseLib::RPC::Variable::createError(-32602, "dataID has more than 250 characters.");
 		//Don't check for type here, so base64, string and future data types that use stringValue are handled
-		if(metadata->stringValue.size() > 1000) return BaseLib::RPC::RPCVariable::createError(-32602, "Data has more than 1000 characters.");
-		if(metadata->type != BaseLib::RPC::RPCVariableType::rpcBase64 && metadata->type != BaseLib::RPC::RPCVariableType::rpcString && metadata->type != BaseLib::RPC::RPCVariableType::rpcInteger && metadata->type != BaseLib::RPC::RPCVariableType::rpcFloat && metadata->type != BaseLib::RPC::RPCVariableType::rpcBoolean) return BaseLib::RPC::RPCVariable::createError(-32602, "Type " + BaseLib::RPC::RPCVariable::getTypeString(metadata->type) + " is currently not supported.");
+		if(metadata->stringValue.size() > 1000) return BaseLib::RPC::Variable::createError(-32602, "Data has more than 1000 characters.");
+		if(metadata->type != BaseLib::RPC::VariableType::rpcBase64 && metadata->type != BaseLib::RPC::VariableType::rpcString && metadata->type != BaseLib::RPC::VariableType::rpcInteger && metadata->type != BaseLib::RPC::VariableType::rpcFloat && metadata->type != BaseLib::RPC::VariableType::rpcBoolean) return BaseLib::RPC::Variable::createError(-32602, "Type " + BaseLib::RPC::Variable::getTypeString(metadata->type) + " is currently not supported.");
 
 		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT COUNT(*) FROM metadata");
 		if(rows->size() == 0 || rows->at(0).size() == 0)
 		{
-			return BaseLib::RPC::RPCVariable::createError(-32500, "Error counting metadata in database.");
+			return BaseLib::RPC::Variable::createError(-32500, "Error counting metadata in database.");
 		}
 		if(rows->at(0).at(0)->intValue > 1000000)
 		{
-			return BaseLib::RPC::RPCVariable::createError(-32500, "Reached limit of 1000000 metadata entries. Please delete metadata before adding new entries.");
+			return BaseLib::RPC::Variable::createError(-32500, "Reached limit of 1000000 metadata entries. Please delete metadata before adding new entries.");
 		}
 
 		BaseLib::Database::DataRow data;
@@ -403,17 +403,17 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::setMetadata(uint6
 		_rpcEncoder->encodeResponse(metadata, value);
 		if(value.size() > 1000)
 		{
-			return BaseLib::RPC::RPCVariable::createError(-32602, "Data is larger than 1000 bytes.");
+			return BaseLib::RPC::Variable::createError(-32602, "Data is larger than 1000 bytes.");
 		}
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
 
 		db.executeCommand("INSERT INTO metadata VALUES(?, ?, ?)", data);
 
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{dataID});
-		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>{metadata});
+		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>{metadata});
 		GD::rpcClient.broadcastEvent(peerID, -1, serialNumber, valueKeys, values);
 
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
 	{
@@ -427,14 +427,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::setMetadata(uint6
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::deleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID)
+std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::deleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID)
 {
 	try
 	{
-		if(dataID.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "dataID has more than 250 characters.");
+		if(dataID.size() > 250) return BaseLib::RPC::Variable::createError(-32602, "dataID has more than 250 characters.");
 
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peerID))));
@@ -453,14 +453,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::deleteMetadata(ui
 		db.executeCommand(command, data);
 
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{dataID});
-		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
-		std::shared_ptr<BaseLib::RPC::RPCVariable> value(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-		value->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(1))));
-		value->structValue->insert(BaseLib::RPC::RPCStructElement("CODE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(1))));
+		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>());
+		std::shared_ptr<BaseLib::RPC::Variable> value(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
+		value->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(1))));
+		value->structValue->insert(BaseLib::RPC::RPCStructElement("CODE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(1))));
 		values->push_back(value);
 		GD::rpcClient.broadcastEvent(peerID, -1, serialNumber, valueKeys, values);
 
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {
@@ -474,23 +474,23 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::deleteMetadata(ui
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 //End metadata
 
 //System variables
-std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getAllSystemVariables()
+std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::getAllSystemVariables()
 {
 	try
 	{
 		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT variableID, serializedObject FROM systemVariables");
 
-		std::shared_ptr<BaseLib::RPC::RPCVariable> systemVariableStruct(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+		std::shared_ptr<BaseLib::RPC::Variable> systemVariableStruct(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 		if(rows->empty()) return systemVariableStruct;
 		for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
 		{
 			if(i->second.size() < 2) continue;
-			std::shared_ptr<BaseLib::RPC::RPCVariable> value = _rpcDecoder->decodeResponse(*i->second.at(1)->binaryValue);
+			std::shared_ptr<BaseLib::RPC::Variable> value = _rpcDecoder->decodeResponse(*i->second.at(1)->binaryValue);
 			systemVariableStruct->structValue->insert(BaseLib::RPC::RPCStructElement(i->second.at(0)->textValue, value));
 		}
 
@@ -508,14 +508,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getAllSystemVaria
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getSystemVariable(std::string variableID)
+std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::getSystemVariable(std::string variableID)
 {
 	try
 	{
-		if(variableID.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "variableID has more than 250 characters.");
+		if(variableID.size() > 250) return BaseLib::RPC::Variable::createError(-32602, "variableID has more than 250 characters.");
 
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableID)));
@@ -523,10 +523,10 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getSystemVariable
 		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT serializedObject FROM systemVariables WHERE variableID=?", data);
 		if(rows->empty() || rows->at(0).empty())
 		{
-			return BaseLib::RPC::RPCVariable::createError(-1, "System variable not found.");
+			return BaseLib::RPC::Variable::createError(-1, "System variable not found.");
 		}
 
-		std::shared_ptr<BaseLib::RPC::RPCVariable> value = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+		std::shared_ptr<BaseLib::RPC::Variable> value = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
 		return value;
 	}
 	catch(const std::exception& ex)
@@ -541,27 +541,27 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getSystemVariable
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::setSystemVariable(std::string variableID, std::shared_ptr<BaseLib::RPC::RPCVariable> value)
+std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::setSystemVariable(std::string variableID, std::shared_ptr<BaseLib::RPC::Variable> value)
 {
 	try
 	{
-		if(!value) return BaseLib::RPC::RPCVariable::createError(-32602, "Could not parse data.");
-		if(variableID.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "variableID has more than 250 characters.");
+		if(!value) return BaseLib::RPC::Variable::createError(-32602, "Could not parse data.");
+		if(variableID.size() > 250) return BaseLib::RPC::Variable::createError(-32602, "variableID has more than 250 characters.");
 		//Don't check for type here, so base64, string and future data types that use stringValue are handled
-		if(value->stringValue.size() > 1000) return BaseLib::RPC::RPCVariable::createError(-32602, "Data has more than 1000 characters.");
-		if(value->type != BaseLib::RPC::RPCVariableType::rpcBase64 && value->type != BaseLib::RPC::RPCVariableType::rpcString && value->type != BaseLib::RPC::RPCVariableType::rpcInteger && value->type != BaseLib::RPC::RPCVariableType::rpcFloat && value->type != BaseLib::RPC::RPCVariableType::rpcBoolean) return BaseLib::RPC::RPCVariable::createError(-32602, "Type " + BaseLib::RPC::RPCVariable::getTypeString(value->type) + " is currently not supported.");
+		if(value->stringValue.size() > 1000) return BaseLib::RPC::Variable::createError(-32602, "Data has more than 1000 characters.");
+		if(value->type != BaseLib::RPC::VariableType::rpcBase64 && value->type != BaseLib::RPC::VariableType::rpcString && value->type != BaseLib::RPC::VariableType::rpcInteger && value->type != BaseLib::RPC::VariableType::rpcFloat && value->type != BaseLib::RPC::VariableType::rpcBoolean) return BaseLib::RPC::Variable::createError(-32602, "Type " + BaseLib::RPC::Variable::getTypeString(value->type) + " is currently not supported.");
 
 		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT COUNT(*) FROM systemVariables");
 		if(rows->size() == 0 || rows->at(0).size() == 0)
 		{
-			return BaseLib::RPC::RPCVariable::createError(-32500, "Error counting system variables in database.");
+			return BaseLib::RPC::Variable::createError(-32500, "Error counting system variables in database.");
 		}
 		if(rows->at(0).at(0)->intValue > 1000000)
 		{
-			return BaseLib::RPC::RPCVariable::createError(-32500, "Reached limit of 1000000 system variable entries. Please delete system variables before adding new ones.");
+			return BaseLib::RPC::Variable::createError(-32500, "Reached limit of 1000000 system variable entries. Please delete system variables before adding new ones.");
 		}
 
 		BaseLib::Database::DataRow data;
@@ -572,17 +572,17 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::setSystemVariable
 		_rpcEncoder->encodeResponse(value, encodedValue);
 		if(encodedValue.size() > 1000)
 		{
-			return BaseLib::RPC::RPCVariable::createError(-32602, "Data is larger than 1000 bytes.");
+			return BaseLib::RPC::Variable::createError(-32602, "Data is larger than 1000 bytes.");
 		}
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(encodedValue)));
 
 		db.executeCommand("INSERT INTO systemVariables VALUES(?, ?)", data);
 
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableID});
-		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>{value});
+		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>{value});
 		GD::rpcClient.broadcastEvent(0, -1, "", valueKeys, values);
 
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
 	{
@@ -596,14 +596,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::setSystemVariable
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::deleteSystemVariable(std::string variableID)
+std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::deleteSystemVariable(std::string variableID)
 {
 	try
 	{
-		if(variableID.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "variableID has more than 250 characters.");
+		if(variableID.size() > 250) return BaseLib::RPC::Variable::createError(-32602, "variableID has more than 250 characters.");
 
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableID)));
@@ -611,14 +611,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::deleteSystemVaria
 		db.executeCommand(command, data);
 
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableID});
-		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
-		std::shared_ptr<BaseLib::RPC::RPCVariable> value(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-		value->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(0))));
-		value->structValue->insert(BaseLib::RPC::RPCStructElement("CODE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(1))));
+		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>());
+		std::shared_ptr<BaseLib::RPC::Variable> value(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
+		value->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(0))));
+		value->structValue->insert(BaseLib::RPC::RPCStructElement("CODE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(1))));
 		values->push_back(value);
 		GD::rpcClient.broadcastEvent(0, -1, "", valueKeys, values);
 
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {
@@ -632,7 +632,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::deleteSystemVaria
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 //End system variables
 

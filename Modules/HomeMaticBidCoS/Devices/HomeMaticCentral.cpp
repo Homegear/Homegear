@@ -223,7 +223,7 @@ bool HomeMaticCentral::onPacketReceived(std::string& senderID, std::shared_ptr<B
 				GD::out.printWarning("Warning: Central address of packet to peer " + std::to_string(peer->getID()) + " was spoofed. Packet was: " + packet->hexString());
 				peer->serviceMessages->set("CENTRAL_ADDRESS_SPOOFED", 1, 0);
 				std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> { "CENTRAL_ADDRESS_SPOOFED" });
-				std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>> { std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)1)) });
+				std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>> { std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)1)) });
 				raiseRPCEvent(peer->getID(), 0, peer->getSerialNumber() + ":0", valueKeys, values);
 				return true;
 			}
@@ -797,7 +797,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				return stringStream.str();
 			}
 
-			std::shared_ptr<BaseLib::RPC::RPCVariable> result;
+			std::shared_ptr<BaseLib::RPC::Variable> result;
 			std::vector<uint64_t> ids;
 			if(all)
 			{
@@ -1682,11 +1682,11 @@ void HomeMaticCentral::addHomegearFeaturesRemote(std::shared_ptr<BidCoSPeer> pee
 			}
 		}
 
-		std::shared_ptr<BaseLib::RPC::RPCVariable> paramset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+		std::shared_ptr<BaseLib::RPC::Variable> paramset(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 		if(peer->getDeviceType().type() == (uint32_t)DeviceType::HMRC19 || peer->getDeviceType().type() == (uint32_t)DeviceType::HMRC19B || peer->getDeviceType().type() == (uint32_t)DeviceType::HMRC19SW)
 		{
-			paramset->structValue->insert(BaseLib::RPC::RPCStructElement("LCD_SYMBOL", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(2))));
-			paramset->structValue->insert(BaseLib::RPC::RPCStructElement("LCD_LEVEL_INTERP", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(1))));
+			paramset->structValue->insert(BaseLib::RPC::RPCStructElement("LCD_SYMBOL", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(2))));
+			paramset->structValue->insert(BaseLib::RPC::RPCStructElement("LCD_LEVEL_INTERP", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(1))));
 		}
 
 		std::vector<uint8_t> payload;
@@ -1901,19 +1901,19 @@ void HomeMaticCentral::deletePeer(uint64_t id)
 		std::shared_ptr<BidCoSPeer> peer(getPeer(id));
 		if(!peer || peer->isTeam()) return;
 		peer->deleting = true;
-		std::shared_ptr<BaseLib::RPC::RPCVariable> deviceAddresses(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(peer->getSerialNumber())));
+		std::shared_ptr<BaseLib::RPC::Variable> deviceAddresses(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+		deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(peer->getSerialNumber())));
 		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 		{
-			deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(peer->getSerialNumber() + ":" + std::to_string(i->first))));
+			deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(peer->getSerialNumber() + ":" + std::to_string(i->first))));
 		}
-		std::shared_ptr<BaseLib::RPC::RPCVariable> deviceInfo(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)peer->getID()))));
-		std::shared_ptr<BaseLib::RPC::RPCVariable> channels(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		std::shared_ptr<BaseLib::RPC::Variable> deviceInfo(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
+		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)peer->getID()))));
+		std::shared_ptr<BaseLib::RPC::Variable> channels(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("CHANNELS", channels));
 		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 		{
-			channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(i->first)));
+			channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(i->first)));
 		}
 		raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
 		if(peer->getPhysicalInterface()->needsPeers()) peer->getPhysicalInterface()->removePeer(peer->getAddress());
@@ -2455,8 +2455,8 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 			int32_t remoteAddress = (sentPacket->payload()->at(2) << 16) + (sentPacket->payload()->at(3) << 8) + sentPacket->payload()->at(4);
 			int32_t remoteChannel = (remoteAddress == 0) ? 0 : sentPacket->payload()->at(5);
 			BaseLib::RPC::ParameterSet::Type::Enum type = (remoteAddress != 0) ? BaseLib::RPC::ParameterSet::Type::link : BaseLib::RPC::ParameterSet::Type::master;
-			std::shared_ptr<BaseLib::RPC::RPCVariable> parametersToEnforce;
-			if(!peer->getPairingComplete()) parametersToEnforce.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+			std::shared_ptr<BaseLib::RPC::Variable> parametersToEnforce;
+			if(!peer->getPairingComplete()) parametersToEnforce.reset(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 			if((packet->controlByte() & 0x20) && (packet->payload()->at(0) == 3)) continuousData = true;
 			if(!continuousData && (packet->payload()->at(packet->payload()->size() - 2) != 0 || packet->payload()->at(packet->payload()->size() - 1) != 0)) multiPacket = true;
 			//Some devices have a payload size of 3
@@ -2668,7 +2668,7 @@ void HomeMaticCentral::resetTeam(std::shared_ptr<BidCoSPeer> peer, uint32_t chan
 		team->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), channel));
 		if(teamCreated)
 		{
-			std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+			std::shared_ptr<BaseLib::RPC::Variable> deviceDescriptions(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 			deviceDescriptions->arrayValue = team->getDeviceDescriptions(true, std::map<std::string, bool>());
 			raiseRPCNewDevices(deviceDescriptions);
 		}
@@ -2799,19 +2799,19 @@ void HomeMaticCentral::removePeerFromTeam(std::shared_ptr<BidCoSPeer> peer)
 			}
 			_peersMutex.unlock();
 
-			std::shared_ptr<BaseLib::RPC::RPCVariable> deviceAddresses(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-			deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(oldTeam->getSerialNumber())));
+			std::shared_ptr<BaseLib::RPC::Variable> deviceAddresses(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+			deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(oldTeam->getSerialNumber())));
 			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = oldTeam->rpcDevice->channels.begin(); i != oldTeam->rpcDevice->channels.end(); ++i)
 			{
-				deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(oldTeam->getSerialNumber() + ":" + std::to_string(i->first))));
+				deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(oldTeam->getSerialNumber() + ":" + std::to_string(i->first))));
 			}
-			std::shared_ptr<BaseLib::RPC::RPCVariable> deviceInfo(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-			deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)oldTeam->getID()))));
-			std::shared_ptr<BaseLib::RPC::RPCVariable> channels(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+			std::shared_ptr<BaseLib::RPC::Variable> deviceInfo(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
+			deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)oldTeam->getID()))));
+			std::shared_ptr<BaseLib::RPC::Variable> channels(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 			deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("CHANNELS", channels));
 			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = oldTeam->rpcDevice->channels.begin(); i != oldTeam->rpcDevice->channels.end(); ++i)
 			{
-				channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(i->first)));
+				channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(i->first)));
 			}
 			raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
 		}
@@ -2891,7 +2891,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 						GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 					}
 					if(queue->peer->getRXModes() & BaseLib::RPC::Device::RXModes::burst) queue->setWakeOnRadioBit();
-					std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+					std::shared_ptr<BaseLib::RPC::Variable> deviceDescriptions(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 					deviceDescriptions->arrayValue = queue->peer->getDeviceDescriptions(true, std::map<std::string, bool>());
 					raiseRPCNewDevices(deviceDescriptions);
 					GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(queue->peer->getAddress()) + ".");
@@ -2900,8 +2900,8 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 						if(queue->peer->getPhysicalInterface()->aesSupported() && i->second->aesDefault)
 						{
 							queue->peer->peerInfoPacketsEnabled = false;
-							std::shared_ptr<BaseLib::RPC::RPCVariable> variables(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-							variables->structValue->insert(BaseLib::RPC::RPCStructElement("AES_ACTIVE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(true))));
+							std::shared_ptr<BaseLib::RPC::Variable> variables(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
+							variables->structValue->insert(BaseLib::RPC::RPCStructElement("AES_ACTIVE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(true))));
 							queue->peer->putParamset(i->first, BaseLib::RPC::ParameterSet::Type::master, 0, -1, variables, true);
 							queue->peer->peerInfoPacketsEnabled = true;
 						}
@@ -3057,12 +3057,12 @@ bool HomeMaticCentral::knowsDevice(uint64_t id)
 	return false;
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::addDevice(std::string serialNumber)
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::addDevice(std::string serialNumber)
 {
 	try
 	{
-		if(serialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Serial number is empty.");
-		if(serialNumber.size() != 10) return BaseLib::RPC::RPCVariable::createError(-2, "Serial number length is not 10.");
+		if(serialNumber.empty()) return BaseLib::RPC::Variable::createError(-2, "Serial number is empty.");
+		if(serialNumber.size() != 10) return BaseLib::RPC::Variable::createError(-2, "Serial number length is not 10.");
 
 		bool oldPairingModeState = _pairing;
 		if(!_pairing) _pairing = true;
@@ -3090,7 +3090,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::addDevice(std::stri
 
 		if(!peer)
 		{
-			return BaseLib::RPC::RPCVariable::createError(-1, "No response from device.");
+			return BaseLib::RPC::Variable::createError(-1, "No response from device.");
 		}
 		else
 		{
@@ -3109,19 +3109,19 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::addDevice(std::stri
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSerialNumber, int32_t senderChannelIndex, std::string receiverSerialNumber, int32_t receiverChannelIndex, std::string name, std::string description)
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::addLink(std::string senderSerialNumber, int32_t senderChannelIndex, std::string receiverSerialNumber, int32_t receiverChannelIndex, std::string name, std::string description)
 {
 	try
 	{
-		if(senderSerialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Given sender address is empty.");
-		if(receiverSerialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
+		if(senderSerialNumber.empty()) return BaseLib::RPC::Variable::createError(-2, "Given sender address is empty.");
+		if(receiverSerialNumber.empty()) return BaseLib::RPC::Variable::createError(-2, "Given receiver address is empty.");
 		std::shared_ptr<BidCoSPeer> sender = getPeer(senderSerialNumber);
 		std::shared_ptr<BidCoSPeer> receiver = getPeer(receiverSerialNumber);
-		if(!sender) return BaseLib::RPC::RPCVariable::createError(-2, "Sender device not found.");
-		if(!receiver) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		if(!sender) return BaseLib::RPC::Variable::createError(-2, "Sender device not found.");
+		if(!receiver) return BaseLib::RPC::Variable::createError(-2, "Receiver device not found.");
 		return addLink(sender->getID(), senderChannelIndex, receiver->getID(), receiverChannelIndex, name, description);
 	}
 	catch(const std::exception& ex)
@@ -3136,26 +3136,26 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::addLink(std::string
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::addLink(uint64_t senderID, int32_t senderChannelIndex, uint64_t receiverID, int32_t receiverChannelIndex, std::string name, std::string description)
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::addLink(uint64_t senderID, int32_t senderChannelIndex, uint64_t receiverID, int32_t receiverChannelIndex, std::string name, std::string description)
 {
 	try
 	{
-		if(senderID == 0) return BaseLib::RPC::RPCVariable::createError(-2, "Sender id is not set.");
-		if(receiverID == 0) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver is not set.");
+		if(senderID == 0) return BaseLib::RPC::Variable::createError(-2, "Sender id is not set.");
+		if(receiverID == 0) return BaseLib::RPC::Variable::createError(-2, "Receiver is not set.");
 		std::shared_ptr<BidCoSPeer> sender = getPeer(senderID);
 		std::shared_ptr<BidCoSPeer> receiver = getPeer(receiverID);
-		if(!sender) return BaseLib::RPC::RPCVariable::createError(-2, "Sender device not found.");
-		if(!receiver) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		if(!sender) return BaseLib::RPC::Variable::createError(-2, "Sender device not found.");
+		if(!receiver) return BaseLib::RPC::Variable::createError(-2, "Receiver device not found.");
 		if(senderChannelIndex < 0) senderChannelIndex = 0;
 		if(receiverChannelIndex < 0) receiverChannelIndex = 0;
-		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Sender channel not found.");
-		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver channel not found.");
+		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Sender channel not found.");
+		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Receiver channel not found.");
 		std::shared_ptr<BaseLib::RPC::DeviceChannel> senderChannel = sender->rpcDevice->channels.at(senderChannelIndex);
 		std::shared_ptr<BaseLib::RPC::DeviceChannel> receiverChannel = receiver->rpcDevice->channels.at(receiverChannelIndex);
-		if(senderChannel->linkRoles->sourceNames.size() == 0 || receiverChannel->linkRoles->targetNames.size() == 0) return BaseLib::RPC::RPCVariable::createError(-6, "Link not supported.");
+		if(senderChannel->linkRoles->sourceNames.size() == 0 || receiverChannel->linkRoles->targetNames.size() == 0) return BaseLib::RPC::Variable::createError(-6, "Link not supported.");
 		bool validLink = false;
 		for(std::vector<std::string>::iterator i = senderChannel->linkRoles->sourceNames.begin(); i != senderChannel->linkRoles->sourceNames.end(); ++i)
 		{
@@ -3169,7 +3169,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::addLink(uint64_t se
 			}
 			if(validLink) break;
 		}
-		if(!validLink) return BaseLib::RPC::RPCVariable::createError(-6, "Link not supported.");
+		if(!validLink) return BaseLib::RPC::Variable::createError(-6, "Link not supported.");
 
 		std::shared_ptr<BaseLib::Systems::BasicPeer> senderPeer(new BaseLib::Systems::BasicPeer());
 		senderPeer->address = sender->getAddress();
@@ -3242,7 +3242,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::addLink(uint64_t se
 
 		if(senderChannel->parameterSets.find(BaseLib::RPC::ParameterSet::Type::Enum::link) != senderChannel->parameterSets.end())
 		{
-			std::shared_ptr<BaseLib::RPC::RPCVariable> paramset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+			std::shared_ptr<BaseLib::RPC::Variable> paramset(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 			std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>* linkConfig = &sender->linksCentral.at(senderChannelIndex).at(receiver->getAddress()).at(receiverChannelIndex);
 			for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator i = linkConfig->begin(); i != linkConfig->end(); ++i)
 			{
@@ -3254,7 +3254,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::addLink(uint64_t se
 			if(!receiverChannel->enforceLinks.empty())
 			{
 				std::shared_ptr<BaseLib::RPC::ParameterSet> linkset = senderChannel->parameterSets.at(BaseLib::RPC::ParameterSet::Type::Enum::link);
-				paramset.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+				paramset.reset(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 				for(std::vector<std::shared_ptr<BaseLib::RPC::EnforceLink>>::iterator i = receiverChannel->enforceLinks.begin(); i != receiverChannel->enforceLinks.end(); ++i)
 				{
 					std::shared_ptr<BaseLib::RPC::Parameter> parameter = linkset->getParameter((*i)->id);
@@ -3335,7 +3335,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::addLink(uint64_t se
 
 		if(receiverChannel->parameterSets.find(BaseLib::RPC::ParameterSet::Type::Enum::link) != receiverChannel->parameterSets.end())
 		{
-			std::shared_ptr<BaseLib::RPC::RPCVariable> paramset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+			std::shared_ptr<BaseLib::RPC::Variable> paramset(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 			std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>* linkConfig = &receiver->linksCentral.at(receiverChannelIndex).at(sender->getAddress()).at(senderChannelIndex);
 			for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator i = linkConfig->begin(); i != linkConfig->end(); ++i)
 			{
@@ -3347,7 +3347,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::addLink(uint64_t se
 			if(!senderChannel->enforceLinks.empty())
 			{
 				std::shared_ptr<BaseLib::RPC::ParameterSet> linkset = receiverChannel->parameterSets.at(BaseLib::RPC::ParameterSet::Type::Enum::link);
-				paramset.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+				paramset.reset(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 				for(std::vector<std::shared_ptr<BaseLib::RPC::EnforceLink>>::iterator i = senderChannel->enforceLinks.begin(); i != senderChannel->enforceLinks.end(); ++i)
 				{
 					std::shared_ptr<BaseLib::RPC::Parameter> parameter = linkset->getParameter((*i)->id);
@@ -3382,7 +3382,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::addLink(uint64_t se
 		}
 		else
 		{
-			return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		}
 	}
 	catch(const std::exception& ex)
@@ -3397,19 +3397,19 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::addLink(uint64_t se
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::removeLink(std::string senderSerialNumber, int32_t senderChannelIndex, std::string receiverSerialNumber, int32_t receiverChannelIndex)
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::removeLink(std::string senderSerialNumber, int32_t senderChannelIndex, std::string receiverSerialNumber, int32_t receiverChannelIndex)
 {
 	try
 	{
-		if(senderSerialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Given sender address is empty.");
-		if(receiverSerialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
+		if(senderSerialNumber.empty()) return BaseLib::RPC::Variable::createError(-2, "Given sender address is empty.");
+		if(receiverSerialNumber.empty()) return BaseLib::RPC::Variable::createError(-2, "Given receiver address is empty.");
 		std::shared_ptr<BidCoSPeer> sender = getPeer(senderSerialNumber);
 		std::shared_ptr<BidCoSPeer> receiver = getPeer(receiverSerialNumber);
-		if(!sender) return BaseLib::RPC::RPCVariable::createError(-2, "Sender device not found.");
-		if(!receiver) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		if(!sender) return BaseLib::RPC::Variable::createError(-2, "Sender device not found.");
+		if(!receiver) return BaseLib::RPC::Variable::createError(-2, "Receiver device not found.");
 		return removeLink(sender->getID(), senderChannelIndex, receiver->getID(), receiverChannelIndex);
 	}
 	catch(const std::exception& ex)
@@ -3424,26 +3424,26 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::removeLink(std::str
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::removeLink(uint64_t senderID, int32_t senderChannelIndex, uint64_t receiverID, int32_t receiverChannelIndex)
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::removeLink(uint64_t senderID, int32_t senderChannelIndex, uint64_t receiverID, int32_t receiverChannelIndex)
 {
 	try
 	{
-		if(senderID == 0) return BaseLib::RPC::RPCVariable::createError(-2, "Sender id is not set.");
-		if(receiverID == 0) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver id is not set.");
+		if(senderID == 0) return BaseLib::RPC::Variable::createError(-2, "Sender id is not set.");
+		if(receiverID == 0) return BaseLib::RPC::Variable::createError(-2, "Receiver id is not set.");
 		std::shared_ptr<BidCoSPeer> sender = getPeer(senderID);
 		std::shared_ptr<BidCoSPeer> receiver = getPeer(receiverID);
-		if(!sender) return BaseLib::RPC::RPCVariable::createError(-2, "Sender device not found.");
-		if(!receiver) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		if(!sender) return BaseLib::RPC::Variable::createError(-2, "Sender device not found.");
+		if(!receiver) return BaseLib::RPC::Variable::createError(-2, "Receiver device not found.");
 		if(senderChannelIndex < 0) senderChannelIndex = 0;
 		if(receiverChannelIndex < 0) receiverChannelIndex = 0;
 		std::string senderSerialNumber = sender->getSerialNumber();
 		std::string receiverSerialNumber = receiver->getSerialNumber();
-		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Sender channel not found.");
-		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver channel not found.");
-		if(!sender->getPeer(senderChannelIndex, receiver->getAddress()) && !receiver->getPeer(receiverChannelIndex, sender->getAddress())) return BaseLib::RPC::RPCVariable::createError(-6, "Devices are not paired to each other.");
+		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Sender channel not found.");
+		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Receiver channel not found.");
+		if(!sender->getPeer(senderChannelIndex, receiver->getAddress()) && !receiver->getPeer(receiverChannelIndex, sender->getAddress())) return BaseLib::RPC::Variable::createError(-6, "Devices are not paired to each other.");
 
 		sender->removePeer(senderChannelIndex, receiver->getAddress(), receiverChannelIndex);
 		receiver->removePeer(receiverChannelIndex, sender->getAddress(), senderChannelIndex);
@@ -3524,7 +3524,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::removeLink(uint64_t
 		}
 		if(!_bidCoSQueueManager.get(receiver->getAddress())) receiver->serviceMessages->setConfigPending(false);
 
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
 	{
@@ -3538,17 +3538,17 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::removeLink(uint64_t
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::deleteDevice(std::string serialNumber, int32_t flags)
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::deleteDevice(std::string serialNumber, int32_t flags)
 {
 	try
 	{
-		if(serialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
-		if(serialNumber[0] == '*') return BaseLib::RPC::RPCVariable::createError(-2, "Cannot delete virtual device.");
+		if(serialNumber.empty()) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
+		if(serialNumber[0] == '*') return BaseLib::RPC::Variable::createError(-2, "Cannot delete virtual device.");
 		std::shared_ptr<BidCoSPeer> peer = getPeer(serialNumber);
-		if(!peer) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		if(!peer) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		return deleteDevice(peer->getID(), flags);
 	}
 	catch(const std::exception& ex)
@@ -3563,17 +3563,17 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::deleteDevice(std::s
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::deleteDevice(uint64_t peerID, int32_t flags)
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::deleteDevice(uint64_t peerID, int32_t flags)
 {
 	try
 	{
-		if(peerID == 0) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
-		if(peerID >= 0x40000000) return BaseLib::RPC::RPCVariable::createError(-2, "Cannot delete virtual device.");
+		if(peerID == 0) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
+		if(peerID >= 0x40000000) return BaseLib::RPC::Variable::createError(-2, "Cannot delete virtual device.");
 		std::shared_ptr<BidCoSPeer> peer = getPeer(peerID);
-		if(!peer) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		if(!peer) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		uint64_t id = peer->getID();
 
 		bool defer = flags & 0x04;
@@ -3602,9 +3602,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::deleteDevice(uint64
 			}
 		}
 
-		if(!defer && !force && peerExists(id)) return BaseLib::RPC::RPCVariable::createError(-1, "No answer from device.");
+		if(!defer && !force && peerExists(id)) return BaseLib::RPC::Variable::createError(-1, "No answer from device.");
 
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {
@@ -3618,14 +3618,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::deleteDevice(uint64
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::listTeams()
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::listTeams()
 {
 	try
 	{
-		std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		std::shared_ptr<BaseLib::RPC::Variable> array(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 
 		std::vector<std::shared_ptr<BidCoSPeer>> peers;
 		//Copy all peers first, because listTeams takes very long and we don't want to lock _peersMutex too long
@@ -3642,9 +3642,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::listTeams()
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
 			std::string serialNumber = (*i)->getSerialNumber();
 			if(serialNumber.empty() || serialNumber.at(0) != '*') continue;
-			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescriptions(true, std::map<std::string, bool>());
+			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> descriptions = (*i)->getDeviceDescriptions(true, std::map<std::string, bool>());
 			if(!descriptions) continue;
-			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
+			for(std::vector<std::shared_ptr<BaseLib::RPC::Variable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
 			{
 				array->arrayValue->push_back(*j);
 			}
@@ -3664,20 +3664,20 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::listTeams()
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNumber, int32_t channel, std::string teamSerialNumber, int32_t teamChannel, bool force, bool burst)
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::setTeam(std::string serialNumber, int32_t channel, std::string teamSerialNumber, int32_t teamChannel, bool force, bool burst)
 {
 	try
 	{
 		std::shared_ptr<BidCoSPeer> peer(getPeer(serialNumber));
-		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+		if(!peer) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
 		uint64_t teamID = 0;
 		if(!teamSerialNumber.empty())
 		{
 			std::shared_ptr<BidCoSPeer> team(getPeer(teamSerialNumber));
-			if(!team) return BaseLib::RPC::RPCVariable::createError(-2, "Team does not exist.");
+			if(!team) return BaseLib::RPC::Variable::createError(-2, "Team does not exist.");
 			teamID = team->getID();
 		}
 		return setTeam(peer->getID(), channel, teamID, teamChannel, force, burst);
@@ -3694,19 +3694,19 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setTeam(std::string
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setTeam(uint64_t peerID, int32_t channel, uint64_t teamID, int32_t teamChannel, bool force, bool burst)
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::setTeam(uint64_t peerID, int32_t channel, uint64_t teamID, int32_t teamChannel, bool force, bool burst)
 {
 	try
 	{
 		if(channel < 0) channel = 0;
 		if(teamChannel < 0) teamChannel = 0;
 		std::shared_ptr<BidCoSPeer> peer(getPeer(peerID));
-		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
-		if(peer->rpcDevice->channels.find(channel) == peer->rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel.");
-		if(!peer->rpcDevice->channels[channel]->hasTeam) return BaseLib::RPC::RPCVariable::createError(-6, "Channel does not support teams.");
+		if(!peer) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
+		if(peer->rpcDevice->channels.find(channel) == peer->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
+		if(!peer->rpcDevice->channels[channel]->hasTeam) return BaseLib::RPC::Variable::createError(-6, "Channel does not support teams.");
 		int32_t oldTeamAddress = peer->getTeamRemoteAddress();
 		int32_t oldTeamChannel = peer->getTeamRemoteChannel();
 		if(oldTeamChannel < 0) oldTeamChannel = 0;
@@ -3715,7 +3715,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setTeam(uint64_t pe
 			if(!force && !peer->getTeamRemoteSerialNumber().empty() && peer->getTeamRemoteSerialNumber().substr(1) == peer->getSerialNumber() && peer->getTeamChannel() == channel)
 			{
 				//Team already is default
-				return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+				return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 			}
 			int32_t newChannel = -1;
 			//Get first channel which has a team
@@ -3727,21 +3727,21 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setTeam(uint64_t pe
 					break;
 				}
 			}
-			if(newChannel < 0) return BaseLib::RPC::RPCVariable::createError(-6, "There are no team channels for this device.");
+			if(newChannel < 0) return BaseLib::RPC::Variable::createError(-6, "There are no team channels for this device.");
 			resetTeam(peer, newChannel);
 		}
 		else //Set new team
 		{
 			//Don't create team if not existent!
 			std::shared_ptr<BidCoSPeer> team = getPeer(teamID);
-			if(!team) return BaseLib::RPC::RPCVariable::createError(-2, "Team does not exist.");
+			if(!team) return BaseLib::RPC::Variable::createError(-2, "Team does not exist.");
 			if(!force && !peer->getTeamRemoteSerialNumber().empty() && peer->getTeamRemoteSerialNumber() == team->getSerialNumber() && peer->getTeamChannel() == channel && peer->getTeamRemoteChannel() == teamChannel)
 			{
 				//Peer already is member of this team
-				return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+				return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 			}
-			if(team->rpcDevice->channels.find(teamChannel) == team->rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown team channel.");
-			if(team->rpcDevice->channels[teamChannel]->teamTag != peer->rpcDevice->channels[channel]->teamTag) return BaseLib::RPC::RPCVariable::createError(-6, "Peer channel is not compatible to team channel.");
+			if(team->rpcDevice->channels.find(teamChannel) == team->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown team channel.");
+			if(team->rpcDevice->channels[teamChannel]->teamTag != peer->rpcDevice->channels[channel]->teamTag) return BaseLib::RPC::Variable::createError(-6, "Peer channel is not compatible to team channel.");
 
 			addPeerToTeam(peer, channel, teamChannel, team->getSerialNumber());
 		}
@@ -3786,7 +3786,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setTeam(uint64_t pe
 		if((peer->getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (peer->getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst)) enqueuePendingQueues(peer->getAddress());
 		else GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 		raiseRPCUpdateDevice(peer->getID(), channel, peer->getSerialNumber() + ":" + std::to_string(channel), 2);
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {
@@ -3800,42 +3800,42 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setTeam(uint64_t pe
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-/*std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::getDeviceDescriptionCentral()
+/*std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::getDeviceDescriptionCentral()
 {
 	try
 	{
-		std::shared_ptr<BaseLib::RPC::RPCVariable> description(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+		std::shared_ptr<BaseLib::RPC::Variable> description(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 
-		description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_deviceID))));
-		description->structValue->insert(BaseLib::RPC::RPCStructElement("ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber))));
+		description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(_deviceID))));
+		description->structValue->insert(BaseLib::RPC::RPCStructElement("ADDRESS", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(_serialNumber))));
 
-		std::shared_ptr<BaseLib::RPC::RPCVariable> variable = std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		std::shared_ptr<BaseLib::RPC::Variable> variable = std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		description->structValue->insert(BaseLib::RPC::RPCStructElement("CHILDREN", variable));
 
-		description->structValue->insert(BaseLib::RPC::RPCStructElement("FIRMWARE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string(VERSION)))));
+		description->structValue->insert(BaseLib::RPC::RPCStructElement("FIRMWARE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string(VERSION)))));
 
 		int32_t uiFlags = (int32_t)BaseLib::RPC::Device::UIFlags::dontdelete | (int32_t)BaseLib::RPC::Device::UIFlags::visible;
-		description->structValue->insert(BaseLib::RPC::RPCStructElement("FLAGS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(uiFlags))));
+		description->structValue->insert(BaseLib::RPC::RPCStructElement("FLAGS", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(uiFlags))));
 
-		description->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber))));
+		description->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(_serialNumber))));
 
-		variable = std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		variable = std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		description->structValue->insert(BaseLib::RPC::RPCStructElement("PARAMSETS", variable));
-		variable->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("MASTER")))); //Always MASTER
+		variable->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string("MASTER")))); //Always MASTER
 
-		description->structValue->insert(BaseLib::RPC::RPCStructElement("PARENT", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("")))));
+		description->structValue->insert(BaseLib::RPC::RPCStructElement("PARENT", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string("")))));
 
-		description->structValue->insert(BaseLib::RPC::RPCStructElement("PHYSICAL_ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::to_string(_address)))));
-		description->structValue->insert(BaseLib::RPC::RPCStructElement("RF_ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::to_string(_address)))));
+		description->structValue->insert(BaseLib::RPC::RPCStructElement("PHYSICAL_ADDRESS", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::to_string(_address)))));
+		description->structValue->insert(BaseLib::RPC::RPCStructElement("RF_ADDRESS", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::to_string(_address)))));
 
-		description->structValue->insert(BaseLib::RPC::RPCStructElement("ROAMING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(0))));
+		description->structValue->insert(BaseLib::RPC::RPCStructElement("ROAMING", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(0))));
 
-		description->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("Homegear HomeMatic BidCoS Central")))));
+		description->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string("Homegear HomeMatic BidCoS Central")))));
 
-		description->structValue->insert(BaseLib::RPC::RPCStructElement("VERSION", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)10))));
+		description->structValue->insert(BaseLib::RPC::RPCStructElement("VERSION", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)10))));
 
 		return description;
 	}
@@ -3851,23 +3851,23 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setTeam(uint64_t pe
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }*/
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::getDeviceInfo(uint64_t id, std::map<std::string, bool> fields)
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::getDeviceInfo(uint64_t id, std::map<std::string, bool> fields)
 {
 	try
 	{
 		if(id > 0)
 		{
 			std::shared_ptr<BidCoSPeer> peer(getPeer(id));
-			if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+			if(!peer) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
 
 			return peer->getDeviceInfo(fields);
 		}
 		else
 		{
-			std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+			std::shared_ptr<BaseLib::RPC::Variable> array(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 
 			std::vector<std::shared_ptr<BidCoSPeer>> peers;
 			//Copy all peers first, because listDevices takes very long and we don't want to lock _peersMutex too long
@@ -3882,7 +3882,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::getDeviceInfo(uint6
 			{
 				//listDevices really needs a lot of resources, so wait a little bit after each device
 				std::this_thread::sleep_for(std::chrono::milliseconds(3));
-				std::shared_ptr<BaseLib::RPC::RPCVariable> info = (*i)->getDeviceInfo(fields);
+				std::shared_ptr<BaseLib::RPC::Variable> info = (*i)->getDeviceInfo(fields);
 				if(!info) continue;
 				array->arrayValue->push_back(info);
 			}
@@ -3905,14 +3905,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::getDeviceInfo(uint6
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
         _peersMutex.unlock();
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::getInstallMode()
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::getInstallMode()
 {
 	try
 	{
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_timeLeftInPairingMode));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(_timeLeftInPairingMode));
 	}
 	catch(const std::exception& ex)
     {
@@ -3926,7 +3926,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::getInstallMode()
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
 void HomeMaticCentral::pairingModeTimer(int32_t duration, bool debugOutput)
@@ -3962,23 +3962,23 @@ void HomeMaticCentral::pairingModeTimer(int32_t duration, bool debugOutput)
     }
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::putParamset(std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> paramset)
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::putParamset(std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset)
 {
 	try
 	{
 		std::shared_ptr<BidCoSPeer> peer(getPeer(serialNumber));
-		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+		if(!peer) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
 		uint64_t remoteID = 0;
 		if(!remoteSerialNumber.empty())
 		{
 			std::shared_ptr<BidCoSPeer> remotePeer(getPeer(remoteSerialNumber));
 			if(!remotePeer)
 			{
-				if(remoteSerialNumber != _serialNumber) return BaseLib::RPC::RPCVariable::createError(-3, "Remote peer is unknown.");
+				if(remoteSerialNumber != _serialNumber) return BaseLib::RPC::Variable::createError(-3, "Remote peer is unknown.");
 			}
 			else remoteID = remotePeer->getID();
 		}
-		std::shared_ptr<BaseLib::RPC::RPCVariable> result = peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
+		std::shared_ptr<BaseLib::RPC::Variable> result = peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
 		if(result->errorStruct) return result;
 		int32_t waitIndex = 0;
 		while(_bidCoSQueueManager.get(peer->getAddress()) && waitIndex < 50)
@@ -4001,16 +4001,16 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::putParamset(std::st
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::putParamset(uint64_t peerID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> paramset)
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::putParamset(uint64_t peerID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset)
 {
 	try
 	{
 		std::shared_ptr<BidCoSPeer> peer(getPeer(peerID));
-		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
-		std::shared_ptr<BaseLib::RPC::RPCVariable> result = peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
+		if(!peer) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
+		std::shared_ptr<BaseLib::RPC::Variable> result = peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
 		if(result->errorStruct) return result;
 		int32_t waitIndex = 0;
 		while(_bidCoSQueueManager.get(peer->getAddress()) && waitIndex < 50)
@@ -4033,10 +4033,10 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::putParamset(uint64_
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setInstallMode(bool on, uint32_t duration, bool debugOutput)
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::setInstallMode(bool on, uint32_t duration, bool debugOutput)
 {
 	try
 	{
@@ -4044,7 +4044,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setInstallMode(bool
 		if(_disposing)
 		{
 			_pairingModeThreadMutex.unlock();
-			return BaseLib::RPC::RPCVariable::createError(-32500, "Central is disposing.");
+			return BaseLib::RPC::Variable::createError(-32500, "Central is disposing.");
 		}
 		_stopPairingModeThread = true;
 		if(_pairingModeThread.joinable()) _pairingModeThread.join();
@@ -4056,7 +4056,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setInstallMode(bool
 			_pairingModeThread = std::thread(&HomeMaticCentral::pairingModeTimer, this, duration, debugOutput);
 		}
 		_pairingModeThreadMutex.unlock();
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {
@@ -4071,24 +4071,24 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setInstallMode(bool
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _pairingModeThreadMutex.unlock();
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::updateFirmware(std::vector<uint64_t> ids, bool manual)
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::updateFirmware(std::vector<uint64_t> ids, bool manual)
 {
 	try
 	{
-		if(_updateMode || _bl->deviceUpdateInfo.currentDevice > 0) return BaseLib::RPC::RPCVariable::createError(-32500, "Central is already already updating a device. Please wait until the current update is finished.");
+		if(_updateMode || _bl->deviceUpdateInfo.currentDevice > 0) return BaseLib::RPC::Variable::createError(-32500, "Central is already already updating a device. Please wait until the current update is finished.");
 		_updateFirmwareThreadMutex.lock();
 		if(_disposing)
 		{
 			_updateFirmwareThreadMutex.unlock();
-			return BaseLib::RPC::RPCVariable::createError(-32500, "Central is disposing.");
+			return BaseLib::RPC::Variable::createError(-32500, "Central is disposing.");
 		}
 		if(_updateFirmwareThread.joinable()) _updateFirmwareThread.join();
 		_updateFirmwareThread = std::thread(&HomeMaticCentral::updateFirmwares, this, ids, manual);
 		_updateFirmwareThreadMutex.unlock();
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {
@@ -4103,15 +4103,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::updateFirmware(std:
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _updateFirmwareThreadMutex.unlock();
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setInterface(uint64_t peerID, std::string interfaceID)
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::setInterface(uint64_t peerID, std::string interfaceID)
 {
 	try
 	{
 		std::shared_ptr<BidCoSPeer> peer(getPeer(peerID));
-		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+		if(!peer) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
 		return peer->setInterface(interfaceID);
 	}
 	catch(const std::exception& ex)
@@ -4126,6 +4126,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setInterface(uint64
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 }

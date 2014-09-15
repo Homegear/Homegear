@@ -27,41 +27,46 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef MAX_H_
-#define MAX_H_
+#ifndef JSONDECODER_H_
+#define JSONDECODER_H_
 
-#include "../Base/BaseLib.h"
+#include "../Exception.h"
+#include "../RPC/Variable.h"
 
-namespace MAX
+namespace BaseLib
 {
-class MAXDevice;
-class MAXCentral;
 
-class MAX : public BaseLib::Systems::DeviceFamily
+class Obj;
+
+namespace RPC
+{
+class JsonDecoderException : public BaseLib::Exception
 {
 public:
-	MAX(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
-	virtual ~MAX();
-	virtual bool init();
-	virtual void dispose();
-
-	virtual std::shared_ptr<BaseLib::Systems::IPhysicalInterface> createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
-	virtual void load();
-	virtual std::shared_ptr<MAXDevice> getDevice(uint32_t address);
-	virtual std::shared_ptr<MAXDevice> getDevice(std::string serialNumber);
-	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
-	virtual std::string handleCLICommand(std::string& command);
-	virtual std::string getName() { return "MAX!"; }
-	virtual std::shared_ptr<BaseLib::RPC::Variable> getPairingMethods();
-private:
-	std::shared_ptr<MAXCentral> _central;
-
-	void createCentral();
-	void createSpyDevice();
-	uint32_t getUniqueAddress(uint32_t seed);
-	std::string getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber);
+	JsonDecoderException(std::string message) : BaseLib::Exception(message) {}
 };
 
-}
+class JsonDecoder
+{
+public:
+	JsonDecoder(BaseLib::Obj* baseLib);
+	virtual ~JsonDecoder() {}
 
+	std::shared_ptr<Variable> decode(const std::string& json);
+private:
+	BaseLib::Obj* _bl = nullptr;
+
+	static inline bool posValid(const std::string& json, uint32_t& pos);
+	void skipWhitespace(const std::string& json, uint32_t& pos);
+	void decodeObject(const std::string& json, uint32_t& pos, std::shared_ptr<Variable>& variable);
+	void decodeArray(const std::string& json, uint32_t& pos, std::shared_ptr<Variable>& variable);
+	void decodeString(const std::string& json, uint32_t& pos, std::shared_ptr<Variable>& value);
+	void decodeString(const std::string& json, uint32_t& pos, std::string& s);
+	void decodeValue(const std::string& json, uint32_t& pos, std::shared_ptr<Variable>& value);
+	void decodeBoolean(const std::string& json, uint32_t& pos, std::shared_ptr<Variable>& value);
+	void decodeNull(const std::string& json, uint32_t& pos, std::shared_ptr<Variable>& value);
+	void decodeNumber(const std::string& json, uint32_t& pos, std::shared_ptr<Variable>& value);
+};
+}
+}
 #endif

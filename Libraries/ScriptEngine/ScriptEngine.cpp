@@ -60,13 +60,13 @@ int32_t hg_set_system(ph7_context* context, int32_t argc, ph7_value** argv)
 		ph7_result_bool(context, 0);
 		return PH7_OK;
 	}
-	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 	for(int32_t i = 0; i < argc; i++)
 	{
-		std::shared_ptr<BaseLib::RPC::RPCVariable> parameter = PH7VariableConverter::getRPCVariable(argv[i]);
+		std::shared_ptr<BaseLib::RPC::Variable> parameter = PH7VariableConverter::getVariable(argv[i]);
 		if(parameter) parameters->arrayValue->push_back(parameter);
 	}
-	std::shared_ptr<BaseLib::RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod("setSystemVariable", parameters);
+	std::shared_ptr<BaseLib::RPC::Variable> result = GD::rpcServers.begin()->second.callMethod("setSystemVariable", parameters);
 	if(result->errorStruct)
 	{
 		std::string errorString("RPC error (Code " + std::to_string(result->structValue->at("faultCode")->integerValue) + "): " + result->structValue->at("faultString")->stringValue);
@@ -93,13 +93,13 @@ int32_t hg_get_system(ph7_context* context, int32_t argc, ph7_value** argv)
 		ph7_result_bool(context, 0);
 		return PH7_OK;
 	}
-	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 	for(int32_t i = 0; i < argc; i++)
 	{
-		std::shared_ptr<BaseLib::RPC::RPCVariable> parameter = PH7VariableConverter::getRPCVariable(argv[i]);
+		std::shared_ptr<BaseLib::RPC::Variable> parameter = PH7VariableConverter::getVariable(argv[i]);
 		if(parameter) parameters->arrayValue->push_back(parameter);
 	}
-	std::shared_ptr<BaseLib::RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod("getSystemVariable", parameters);
+	std::shared_ptr<BaseLib::RPC::Variable> result = GD::rpcServers.begin()->second.callMethod("getSystemVariable", parameters);
 	if(result->errorStruct)
 	{
 		std::string errorString("RPC error (Code " + std::to_string(result->structValue->at("faultCode")->integerValue) + "): " + result->structValue->at("faultString")->stringValue);
@@ -133,13 +133,13 @@ int32_t hg_set_meta(ph7_context* context, int32_t argc, ph7_value** argv)
 		ph7_result_bool(context, 0);
 		return PH7_OK;
 	}
-	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 	for(int32_t i = 0; i < argc; i++)
 	{
-		std::shared_ptr<BaseLib::RPC::RPCVariable> parameter = PH7VariableConverter::getRPCVariable(argv[i]);
+		std::shared_ptr<BaseLib::RPC::Variable> parameter = PH7VariableConverter::getVariable(argv[i]);
 		if(parameter) parameters->arrayValue->push_back(parameter);
 	}
-	std::shared_ptr<BaseLib::RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod("setMetadata", parameters);
+	std::shared_ptr<BaseLib::RPC::Variable> result = GD::rpcServers.begin()->second.callMethod("setMetadata", parameters);
 	if(result->errorStruct)
 	{
 		std::string errorString("RPC error (Code " + std::to_string(result->structValue->at("faultCode")->integerValue) + "): " + result->structValue->at("faultString")->stringValue);
@@ -172,13 +172,13 @@ int32_t hg_get_meta(ph7_context* context, int32_t argc, ph7_value** argv)
 		ph7_result_bool(context, 0);
 		return PH7_OK;
 	}
-	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 	for(int32_t i = 0; i < argc; i++)
 	{
-		std::shared_ptr<BaseLib::RPC::RPCVariable> parameter = PH7VariableConverter::getRPCVariable(argv[i]);
+		std::shared_ptr<BaseLib::RPC::Variable> parameter = PH7VariableConverter::getVariable(argv[i]);
 		if(parameter) parameters->arrayValue->push_back(parameter);
 	}
-	std::shared_ptr<BaseLib::RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod("getMetadata", parameters);
+	std::shared_ptr<BaseLib::RPC::Variable> result = GD::rpcServers.begin()->second.callMethod("getMetadata", parameters);
 	if(result->errorStruct)
 	{
 		std::string errorString("RPC error (Code " + std::to_string(result->structValue->at("faultCode")->integerValue) + "): " + result->structValue->at("faultString")->stringValue);
@@ -218,13 +218,13 @@ int32_t hg_set_value(ph7_context* context, int32_t argc, ph7_value** argv)
 		ph7_result_bool(context, 0);
 		return PH7_OK;
 	}
-	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 	for(int32_t i = 0; i < argc; i++)
 	{
-		std::shared_ptr<BaseLib::RPC::RPCVariable> parameter = PH7VariableConverter::getRPCVariable(argv[i]);
+		std::shared_ptr<BaseLib::RPC::Variable> parameter = PH7VariableConverter::getVariable(argv[i]);
 		if(parameter) parameters->arrayValue->push_back(parameter);
 	}
-	std::shared_ptr<BaseLib::RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod("setValue", parameters);
+	std::shared_ptr<BaseLib::RPC::Variable> result = GD::rpcServers.begin()->second.callMethod("setValue", parameters);
 	if(result->errorStruct)
 	{
 		std::string errorString("RPC error (Code " + std::to_string(result->structValue->at("faultCode")->integerValue) + "): " + result->structValue->at("faultString")->stringValue);
@@ -263,13 +263,13 @@ int32_t hg_get_value(ph7_context* context, int32_t argc, ph7_value** argv)
 		ph7_result_bool(context, 0);
 		return PH7_OK;
 	}
-	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 	for(int32_t i = 0; i < argc; i++)
 	{
-		std::shared_ptr<BaseLib::RPC::RPCVariable> parameter = PH7VariableConverter::getRPCVariable(argv[i]);
+		std::shared_ptr<BaseLib::RPC::Variable> parameter = PH7VariableConverter::getVariable(argv[i]);
 		if(parameter) parameters->arrayValue->push_back(parameter);
 	}
-	std::shared_ptr<BaseLib::RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod("getValue", parameters);
+	std::shared_ptr<BaseLib::RPC::Variable> result = GD::rpcServers.begin()->second.callMethod("getValue", parameters);
 	if(result->errorStruct)
 	{
 		std::string errorString("RPC error (Code " + std::to_string(result->structValue->at("faultCode")->integerValue) + "): " + result->structValue->at("faultString")->stringValue);
@@ -306,13 +306,13 @@ int32_t hg_invoke(ph7_context* context, int32_t argc, ph7_value** argv)
 		return PH7_OK;
 	}
 	std::string methodName(pMethodName, pMethodName + length);
-	std::shared_ptr<BaseLib::RPC::RPCVariable> parameters(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 	for(int32_t i = 1; i < argc; i++)
 	{
-		std::shared_ptr<BaseLib::RPC::RPCVariable> parameter = PH7VariableConverter::getRPCVariable(argv[i]);
+		std::shared_ptr<BaseLib::RPC::Variable> parameter = PH7VariableConverter::getVariable(argv[i]);
 		if(parameter) parameters->arrayValue->push_back(parameter);
 	}
-	std::shared_ptr<BaseLib::RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod(methodName, parameters);
+	std::shared_ptr<BaseLib::RPC::Variable> result = GD::rpcServers.begin()->second.callMethod(methodName, parameters);
 	if(result->errorStruct)
 	{
 		std::string errorString("RPC error (Code " + std::to_string(result->structValue->at("faultCode")->integerValue) + "): " + result->structValue->at("faultString")->stringValue);

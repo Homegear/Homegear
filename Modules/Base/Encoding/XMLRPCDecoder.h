@@ -30,8 +30,8 @@
 #ifndef XMLRPCDECODER_H_
 #define XMLRPCDECODER_H_
 
-#include "../RPC/RPCVariable.h"
-#include "rapidxml.hpp"
+#include "../RPC/Variable.h"
+#include "RapidXml/rapidxml.hpp"
 
 #include <memory>
 #include <vector>
@@ -51,16 +51,16 @@ public:
 	XMLRPCDecoder(BaseLib::Obj* baseLib);
 	virtual ~XMLRPCDecoder() {}
 
-	virtual std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> decodeRequest(std::vector<char>& packet, std::string& methodName);
-	virtual std::shared_ptr<RPCVariable> decodeResponse(std::vector<char>& packet);
-	virtual std::shared_ptr<RPCVariable> decodeResponse(std::string& packet);
+	virtual std::shared_ptr<std::vector<std::shared_ptr<Variable>>> decodeRequest(std::vector<char>& packet, std::string& methodName);
+	virtual std::shared_ptr<Variable> decodeResponse(std::vector<char>& packet);
+	virtual std::shared_ptr<Variable> decodeResponse(std::string& packet);
 private:
 	BaseLib::Obj* _bl = nullptr;
 
-	std::shared_ptr<RPCVariable> decodeParameter(xml_node<>* valueNode);
-	std::shared_ptr<RPCVariable> decodeArray(xml_node<>* dataNode);
-	std::shared_ptr<RPCVariable> decodeStruct(xml_node<>* structNode);
-	std::shared_ptr<RPCVariable> decodeResponse(xml_document<>* doc);
+	std::shared_ptr<Variable> decodeParameter(xml_node<>* valueNode);
+	std::shared_ptr<Variable> decodeArray(xml_node<>* dataNode);
+	std::shared_ptr<Variable> decodeStruct(xml_node<>* structNode);
+	std::shared_ptr<Variable> decodeResponse(xml_document<>* doc);
 };
 
 } /* namespace RPC */

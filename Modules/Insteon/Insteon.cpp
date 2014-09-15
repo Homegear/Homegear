@@ -538,14 +538,14 @@ std::string Insteon::handleCLICommand(std::string& command)
     return "Error executing command. See log file for more details.\n";
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> Insteon::getPairingMethods()
+std::shared_ptr<BaseLib::RPC::Variable> Insteon::getPairingMethods()
 {
 	try
 	{
-		if(!_central) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		array->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("setInstallMode"))));
-		array->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("addDevice"))));
+		if(!_central) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+		std::shared_ptr<BaseLib::RPC::Variable> array(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+		array->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string("setInstallMode"))));
+		array->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string("addDevice"))));
 		return array;
 	}
 	catch(const std::exception& ex)
@@ -560,7 +560,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> Insteon::getPairingMethods()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
 }

@@ -45,7 +45,7 @@ public:
 	virtual bool init();
 	virtual void dispose();
 
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> listBidcosInterfaces();
+	virtual std::shared_ptr<BaseLib::RPC::Variable> listBidcosInterfaces();
 	virtual std::shared_ptr<BaseLib::Systems::IPhysicalInterface> createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
 	virtual void load();
 	virtual std::shared_ptr<HomeMaticDevice> getDevice(int32_t address);
@@ -53,7 +53,7 @@ public:
 	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 	virtual std::string handleCLICommand(std::string& command);
 	virtual std::string getName() { return "HomeMatic BidCoS"; }
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getPairingMethods();
+	virtual std::shared_ptr<BaseLib::RPC::Variable> getPairingMethods();
 private:
 	std::shared_ptr<HomeMaticCentral> _central;
 

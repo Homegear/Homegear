@@ -37,7 +37,7 @@ PhilipsHuePacket::PhilipsHuePacket()
 
 }
 
-PhilipsHuePacket::PhilipsHuePacket(int32_t senderAddress, int32_t destinationAddress, uint8_t messageType, std::shared_ptr<Json::Value> json, int64_t timeReceived)
+PhilipsHuePacket::PhilipsHuePacket(int32_t senderAddress, int32_t destinationAddress, uint8_t messageType, std::shared_ptr<BaseLib::RPC::Variable> json, int64_t timeReceived)
 {
 	_senderAddress = senderAddress;
 	_destinationAddress = destinationAddress;
@@ -47,29 +47,5 @@ PhilipsHuePacket::PhilipsHuePacket(int32_t senderAddress, int32_t destinationAdd
 
 PhilipsHuePacket::~PhilipsHuePacket()
 {
-}
-
-std::string PhilipsHuePacket::getString()
-{
-	try
-	{
-		if(!_json) return "";
-		Json::StyledWriter writer;
-		std::string jsonString = writer.write(*_json);
-		return jsonString;
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return "";
 }
 }

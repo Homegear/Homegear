@@ -30,7 +30,7 @@
 #ifndef SERVICEMESSAGES_H_
 #define SERVICEMESSAGES_H_
 
-#include "../RPC/RPCVariable.h"
+#include "../RPC/Variable.h"
 #include "../Encoding/BinaryEncoder.h"
 #include "../Encoding/BinaryDecoder.h"
 #include "../IEvents.h"
@@ -60,7 +60,7 @@ public:
 	public:
 		virtual void onConfigPending(bool configPending) = 0;
 
-		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) = 0;
+		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> values) = 0;
 		virtual void onSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data) = 0;
 		virtual std::shared_ptr<Database::DataTable> onGetServiceMessages() = 0;
 		virtual uint64_t onSaveServiceMessage(Database::DataRow data) = 0;
@@ -80,7 +80,7 @@ public:
 	virtual void save(int32_t channel, std::string id, uint8_t value);
 	virtual bool set(std::string id, bool value);
 	virtual void set(std::string id, uint8_t value, uint32_t channel);
-	virtual std::shared_ptr<RPC::RPCVariable> get(bool returnID);
+	virtual std::shared_ptr<RPC::Variable> get(bool returnID);
 
 	virtual void setConfigPending(bool value);
 	virtual bool getConfigPending() { return _configPending; }
@@ -110,7 +110,7 @@ protected:
 	//Event handling
 	virtual void raiseConfigPending(bool configPending);
 
-	virtual void raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	virtual void raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> values);
 	virtual void raiseSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data);
 	virtual std::shared_ptr<Database::DataTable> raiseGetServiceMessages();
 	virtual uint64_t raiseSaveServiceMessage(Database::DataRow data);

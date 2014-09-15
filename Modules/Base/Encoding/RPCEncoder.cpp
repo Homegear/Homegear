@@ -49,7 +49,7 @@ RPCEncoder::RPCEncoder(BaseLib::Obj* baseLib)
 	_packetStartError[4] = 0;
 }
 
-void RPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters, std::vector<char>& encodedData, std::shared_ptr<RPCHeader> header)
+void RPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<Variable>>> parameters, std::vector<char>& encodedData, std::shared_ptr<RPCHeader> header)
 {
 	//The "Bin", the type byte after that and the length itself are not part of the length
 	try
@@ -67,7 +67,7 @@ void RPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list
 		else _encoder->encodeInteger(encodedData, parameters->size());
 		if(parameters)
 		{
-			for(std::list<std::shared_ptr<RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+			for(std::list<std::shared_ptr<Variable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 			{
 				encodeVariable(encodedData, (*i));
 			}
@@ -92,7 +92,7 @@ void RPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list
     }
 }
 
-void RPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters, std::vector<uint8_t>& encodedData, std::shared_ptr<RPCHeader> header)
+void RPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<Variable>>> parameters, std::vector<uint8_t>& encodedData, std::shared_ptr<RPCHeader> header)
 {
 	//The "Bin", the type byte after that and the length itself are not part of the length
 	try
@@ -110,7 +110,7 @@ void RPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list
 		else _encoder->encodeInteger(encodedData, parameters->size());
 		if(parameters)
 		{
-			for(std::list<std::shared_ptr<RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+			for(std::list<std::shared_ptr<Variable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 			{
 				encodeVariable(encodedData, (*i));
 			}
@@ -135,13 +135,13 @@ void RPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list
     }
 }
 
-void RPCEncoder::encodeResponse(std::shared_ptr<RPCVariable> variable, std::vector<char>& encodedData)
+void RPCEncoder::encodeResponse(std::shared_ptr<Variable> variable, std::vector<char>& encodedData)
 {
 	//The "Bin", the type byte after that and the length itself are not part of the length
 	try
 	{
 		encodedData.clear();
-		if(!variable) variable.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+		if(!variable) variable.reset(new RPC::Variable(RPC::VariableType::rpcVoid));
 		if(variable->errorStruct) encodedData.insert(encodedData.begin(), _packetStartError, _packetStartError + 4);
 		else encodedData.insert(encodedData.begin(), _packetStartResponse, _packetStartResponse + 4);
 
@@ -166,13 +166,13 @@ void RPCEncoder::encodeResponse(std::shared_ptr<RPCVariable> variable, std::vect
     }
 }
 
-void RPCEncoder::encodeResponse(std::shared_ptr<RPCVariable> variable, std::vector<uint8_t>& encodedData)
+void RPCEncoder::encodeResponse(std::shared_ptr<Variable> variable, std::vector<uint8_t>& encodedData)
 {
 	//The "Bin", the type byte after that and the length itself are not part of the length
 	try
 	{
 		encodedData.clear();
-		if(!variable) variable.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+		if(!variable) variable.reset(new RPC::Variable(RPC::VariableType::rpcVoid));
 		if(variable->errorStruct) encodedData.insert(encodedData.begin(), _packetStartError, _packetStartError + 4);
 		else encodedData.insert(encodedData.begin(), _packetStartResponse, _packetStartResponse + 4);
 
@@ -265,40 +265,40 @@ uint32_t RPCEncoder::encodeHeader(std::vector<uint8_t>& packet, const RPCHeader&
 	return headerSize;
 }
 
-void RPCEncoder::encodeVariable(std::vector<char>& packet, std::shared_ptr<RPCVariable>& variable)
+void RPCEncoder::encodeVariable(std::vector<char>& packet, std::shared_ptr<Variable>& variable)
 {
 	try
 	{
-		if(!variable) variable.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
-		if(variable->type == RPCVariableType::rpcVoid)
+		if(!variable) variable.reset(new RPC::Variable(RPC::VariableType::rpcVoid));
+		if(variable->type == VariableType::rpcVoid)
 		{
 			encodeVoid(packet);
 		}
-		else if(variable->type == RPCVariableType::rpcInteger)
+		else if(variable->type == VariableType::rpcInteger)
 		{
 			encodeInteger(packet, variable);
 		}
-		else if(variable->type == RPCVariableType::rpcFloat)
+		else if(variable->type == VariableType::rpcFloat)
 		{
 			encodeFloat(packet, variable);
 		}
-		else if(variable->type == RPCVariableType::rpcBoolean)
+		else if(variable->type == VariableType::rpcBoolean)
 		{
 			encodeBoolean(packet, variable);
 		}
-		else if(variable->type == RPCVariableType::rpcString)
+		else if(variable->type == VariableType::rpcString)
 		{
 			encodeString(packet, variable);
 		}
-		else if(variable->type == RPCVariableType::rpcBase64)
+		else if(variable->type == VariableType::rpcBase64)
 		{
 			encodeBase64(packet, variable);
 		}
-		else if(variable->type == RPCVariableType::rpcStruct)
+		else if(variable->type == VariableType::rpcStruct)
 		{
 			encodeStruct(packet, variable);
 		}
-		else if(variable->type == RPCVariableType::rpcArray)
+		else if(variable->type == VariableType::rpcArray)
 		{
 			encodeArray(packet, variable);
 		}
@@ -317,40 +317,40 @@ void RPCEncoder::encodeVariable(std::vector<char>& packet, std::shared_ptr<RPCVa
     }
 }
 
-void RPCEncoder::encodeVariable(std::vector<uint8_t>& packet, std::shared_ptr<RPCVariable>& variable)
+void RPCEncoder::encodeVariable(std::vector<uint8_t>& packet, std::shared_ptr<Variable>& variable)
 {
 	try
 	{
-		if(!variable) variable.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
-		if(variable->type == RPCVariableType::rpcVoid)
+		if(!variable) variable.reset(new RPC::Variable(RPC::VariableType::rpcVoid));
+		if(variable->type == VariableType::rpcVoid)
 		{
 			encodeVoid(packet);
 		}
-		else if(variable->type == RPCVariableType::rpcInteger)
+		else if(variable->type == VariableType::rpcInteger)
 		{
 			encodeInteger(packet, variable);
 		}
-		else if(variable->type == RPCVariableType::rpcFloat)
+		else if(variable->type == VariableType::rpcFloat)
 		{
 			encodeFloat(packet, variable);
 		}
-		else if(variable->type == RPCVariableType::rpcBoolean)
+		else if(variable->type == VariableType::rpcBoolean)
 		{
 			encodeBoolean(packet, variable);
 		}
-		else if(variable->type == RPCVariableType::rpcString)
+		else if(variable->type == VariableType::rpcString)
 		{
 			encodeString(packet, variable);
 		}
-		else if(variable->type == RPCVariableType::rpcBase64)
+		else if(variable->type == VariableType::rpcBase64)
 		{
 			encodeBase64(packet, variable);
 		}
-		else if(variable->type == RPCVariableType::rpcStruct)
+		else if(variable->type == VariableType::rpcStruct)
 		{
 			encodeStruct(packet, variable);
 		}
-		else if(variable->type == RPCVariableType::rpcArray)
+		else if(variable->type == VariableType::rpcArray)
 		{
 			encodeArray(packet, variable);
 		}
@@ -369,17 +369,17 @@ void RPCEncoder::encodeVariable(std::vector<uint8_t>& packet, std::shared_ptr<RP
     }
 }
 
-void RPCEncoder::encodeStruct(std::vector<char>& packet, std::shared_ptr<RPCVariable>& variable)
+void RPCEncoder::encodeStruct(std::vector<char>& packet, std::shared_ptr<Variable>& variable)
 {
 	try
 	{
-		encodeType(packet, RPCVariableType::rpcStruct);
+		encodeType(packet, VariableType::rpcStruct);
 		_encoder->encodeInteger(packet, variable->structValue->size());
 		for(RPCStruct::iterator i = variable->structValue->begin(); i != variable->structValue->end(); ++i)
 		{
 			std::string name = i->first.empty() ? "UNDEFINED" : i->first;
 			_encoder->encodeString(packet, name);
-			if(!i->second) i->second.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+			if(!i->second) i->second.reset(new RPC::Variable(RPC::VariableType::rpcVoid));
 			encodeVariable(packet, i->second);
 		}
 	}
@@ -397,17 +397,17 @@ void RPCEncoder::encodeStruct(std::vector<char>& packet, std::shared_ptr<RPCVari
     }
 }
 
-void RPCEncoder::encodeStruct(std::vector<uint8_t>& packet, std::shared_ptr<RPCVariable>& variable)
+void RPCEncoder::encodeStruct(std::vector<uint8_t>& packet, std::shared_ptr<Variable>& variable)
 {
 	try
 	{
-		encodeType(packet, RPCVariableType::rpcStruct);
+		encodeType(packet, VariableType::rpcStruct);
 		_encoder->encodeInteger(packet, variable->structValue->size());
 		for(RPCStruct::iterator i = variable->structValue->begin(); i != variable->structValue->end(); ++i)
 		{
 			std::string name = i->first.empty() ? "UNDEFINED" : i->first;
 			_encoder->encodeString(packet, name);
-			if(!i->second) i->second.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+			if(!i->second) i->second.reset(new RPC::Variable(RPC::VariableType::rpcVoid));
 			encodeVariable(packet, i->second);
 		}
 	}
@@ -425,13 +425,13 @@ void RPCEncoder::encodeStruct(std::vector<uint8_t>& packet, std::shared_ptr<RPCV
     }
 }
 
-void RPCEncoder::encodeArray(std::vector<char>& packet, std::shared_ptr<RPCVariable>& variable)
+void RPCEncoder::encodeArray(std::vector<char>& packet, std::shared_ptr<Variable>& variable)
 {
 	try
 	{
-		encodeType(packet, RPCVariableType::rpcArray);
+		encodeType(packet, VariableType::rpcArray);
 		_encoder->encodeInteger(packet, variable->arrayValue->size());
-		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = variable->arrayValue->begin(); i != variable->arrayValue->end(); ++i)
+		for(std::vector<std::shared_ptr<Variable>>::iterator i = variable->arrayValue->begin(); i != variable->arrayValue->end(); ++i)
 		{
 			encodeVariable(packet, *i);
 		}
@@ -450,13 +450,13 @@ void RPCEncoder::encodeArray(std::vector<char>& packet, std::shared_ptr<RPCVaria
     }
 }
 
-void RPCEncoder::encodeArray(std::vector<uint8_t>& packet, std::shared_ptr<RPCVariable>& variable)
+void RPCEncoder::encodeArray(std::vector<uint8_t>& packet, std::shared_ptr<Variable>& variable)
 {
 	try
 	{
-		encodeType(packet, RPCVariableType::rpcArray);
+		encodeType(packet, VariableType::rpcArray);
 		_encoder->encodeInteger(packet, variable->arrayValue->size());
-		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = variable->arrayValue->begin(); i != variable->arrayValue->end(); ++i)
+		for(std::vector<std::shared_ptr<Variable>>::iterator i = variable->arrayValue->begin(); i != variable->arrayValue->end(); ++i)
 		{
 			encodeVariable(packet, *i);
 		}
@@ -475,33 +475,33 @@ void RPCEncoder::encodeArray(std::vector<uint8_t>& packet, std::shared_ptr<RPCVa
     }
 }
 
-void RPCEncoder::encodeType(std::vector<char>& packet, RPCVariableType type)
+void RPCEncoder::encodeType(std::vector<char>& packet, VariableType type)
 {
 	_encoder->encodeInteger(packet, (int32_t)type);
 }
 
-void RPCEncoder::encodeType(std::vector<uint8_t>& packet, RPCVariableType type)
+void RPCEncoder::encodeType(std::vector<uint8_t>& packet, VariableType type)
 {
 	_encoder->encodeInteger(packet, (int32_t)type);
 }
 
-void RPCEncoder::encodeInteger(std::vector<char>& packet, std::shared_ptr<RPCVariable>& variable)
+void RPCEncoder::encodeInteger(std::vector<char>& packet, std::shared_ptr<Variable>& variable)
 {
-	encodeType(packet, RPCVariableType::rpcInteger);
+	encodeType(packet, VariableType::rpcInteger);
 	_encoder->encodeInteger(packet, variable->integerValue);
 }
 
-void RPCEncoder::encodeInteger(std::vector<uint8_t>& packet, std::shared_ptr<RPCVariable>& variable)
+void RPCEncoder::encodeInteger(std::vector<uint8_t>& packet, std::shared_ptr<Variable>& variable)
 {
-	encodeType(packet, RPCVariableType::rpcInteger);
+	encodeType(packet, VariableType::rpcInteger);
 	_encoder->encodeInteger(packet, variable->integerValue);
 }
 
-void RPCEncoder::encodeFloat(std::vector<char>& packet, std::shared_ptr<RPCVariable>& variable)
+void RPCEncoder::encodeFloat(std::vector<char>& packet, std::shared_ptr<Variable>& variable)
 {
 	try
 	{
-		encodeType(packet, RPCVariableType::rpcFloat);
+		encodeType(packet, VariableType::rpcFloat);
 		_encoder->encodeFloat(packet, variable->floatValue);
 	}
 	catch(const std::exception& ex)
@@ -518,11 +518,11 @@ void RPCEncoder::encodeFloat(std::vector<char>& packet, std::shared_ptr<RPCVaria
     }
 }
 
-void RPCEncoder::encodeFloat(std::vector<uint8_t>& packet, std::shared_ptr<RPCVariable>& variable)
+void RPCEncoder::encodeFloat(std::vector<uint8_t>& packet, std::shared_ptr<Variable>& variable)
 {
 	try
 	{
-		encodeType(packet, RPCVariableType::rpcFloat);
+		encodeType(packet, VariableType::rpcFloat);
 		_encoder->encodeFloat(packet, variable->floatValue);
 	}
 	catch(const std::exception& ex)
@@ -539,23 +539,23 @@ void RPCEncoder::encodeFloat(std::vector<uint8_t>& packet, std::shared_ptr<RPCVa
     }
 }
 
-void RPCEncoder::encodeBoolean(std::vector<char>& packet, std::shared_ptr<RPCVariable>& variable)
+void RPCEncoder::encodeBoolean(std::vector<char>& packet, std::shared_ptr<Variable>& variable)
 {
-	encodeType(packet, RPCVariableType::rpcBoolean);
+	encodeType(packet, VariableType::rpcBoolean);
 	_encoder->encodeBoolean(packet, variable->booleanValue);
 }
 
-void RPCEncoder::encodeBoolean(std::vector<uint8_t>& packet, std::shared_ptr<RPCVariable>& variable)
+void RPCEncoder::encodeBoolean(std::vector<uint8_t>& packet, std::shared_ptr<Variable>& variable)
 {
-	encodeType(packet, RPCVariableType::rpcBoolean);
+	encodeType(packet, VariableType::rpcBoolean);
 	_encoder->encodeBoolean(packet, variable->booleanValue);
 }
 
-void RPCEncoder::encodeString(std::vector<char>& packet, std::shared_ptr<RPCVariable>& variable)
+void RPCEncoder::encodeString(std::vector<char>& packet, std::shared_ptr<Variable>& variable)
 {
 	try
 	{
-		encodeType(packet, RPCVariableType::rpcString);
+		encodeType(packet, VariableType::rpcString);
 		//We could call encodeRawString here, but then the string would have to be copied and that would cost time.
 		_encoder->encodeInteger(packet, variable->stringValue.size());
 		if(variable->stringValue.size() > 0)
@@ -577,11 +577,11 @@ void RPCEncoder::encodeString(std::vector<char>& packet, std::shared_ptr<RPCVari
     }
 }
 
-void RPCEncoder::encodeString(std::vector<uint8_t>& packet, std::shared_ptr<RPCVariable>& variable)
+void RPCEncoder::encodeString(std::vector<uint8_t>& packet, std::shared_ptr<Variable>& variable)
 {
 	try
 	{
-		encodeType(packet, RPCVariableType::rpcString);
+		encodeType(packet, VariableType::rpcString);
 		//We could call encodeRawString here, but then the string would have to be copied and that would cost time.
 		_encoder->encodeInteger(packet, variable->stringValue.size());
 		if(variable->stringValue.size() > 0)
@@ -603,11 +603,11 @@ void RPCEncoder::encodeString(std::vector<uint8_t>& packet, std::shared_ptr<RPCV
     }
 }
 
-void RPCEncoder::encodeBase64(std::vector<char>& packet, std::shared_ptr<RPCVariable>& variable)
+void RPCEncoder::encodeBase64(std::vector<char>& packet, std::shared_ptr<Variable>& variable)
 {
 	try
 	{
-		encodeType(packet, RPCVariableType::rpcBase64);
+		encodeType(packet, VariableType::rpcBase64);
 		//We could call encodeRawString here, but then the string would have to be copied and that would cost time.
 		_encoder->encodeInteger(packet, variable->stringValue.size());
 		if(variable->stringValue.size() > 0)
@@ -629,11 +629,11 @@ void RPCEncoder::encodeBase64(std::vector<char>& packet, std::shared_ptr<RPCVari
     }
 }
 
-void RPCEncoder::encodeBase64(std::vector<uint8_t>& packet, std::shared_ptr<RPCVariable>& variable)
+void RPCEncoder::encodeBase64(std::vector<uint8_t>& packet, std::shared_ptr<Variable>& variable)
 {
 	try
 	{
-		encodeType(packet, RPCVariableType::rpcBase64);
+		encodeType(packet, VariableType::rpcBase64);
 		//We could call encodeRawString here, but then the string would have to be copied and that would cost time.
 		_encoder->encodeInteger(packet, variable->stringValue.size());
 		if(variable->stringValue.size() > 0)
@@ -657,13 +657,13 @@ void RPCEncoder::encodeBase64(std::vector<uint8_t>& packet, std::shared_ptr<RPCV
 
 void RPCEncoder::encodeVoid(std::vector<char>& packet)
 {
-	std::shared_ptr<RPCVariable> string(new RPCVariable(RPCVariableType::rpcString));
+	std::shared_ptr<Variable> string(new Variable(VariableType::rpcString));
 	encodeString(packet, string);
 }
 
 void RPCEncoder::encodeVoid(std::vector<uint8_t>& packet)
 {
-	std::shared_ptr<RPCVariable> string(new RPCVariable(RPCVariableType::rpcString));
+	std::shared_ptr<Variable> string(new Variable(VariableType::rpcString));
 	encodeString(packet, string);
 }
 

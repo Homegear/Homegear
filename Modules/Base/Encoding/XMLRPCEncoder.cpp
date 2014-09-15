@@ -40,7 +40,7 @@ XMLRPCEncoder::XMLRPCEncoder(BaseLib::Obj* baseLib)
 	_bl = baseLib;
 }
 
-void XMLRPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters, std::vector<char>& encodedData)
+void XMLRPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<Variable>>> parameters, std::vector<char>& encodedData)
 {
 	xml_document<> doc;
 	try
@@ -52,7 +52,7 @@ void XMLRPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::l
 		xml_node<> *paramsNode = doc.allocate_node(node_element, "params");
 		node->append_node(paramsNode);
 
-		for(std::list<std::shared_ptr<RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+		for(std::list<std::shared_ptr<Variable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 		{
 			xml_node<> *paramNode = doc.allocate_node(node_element, "param");
 			paramsNode->append_node(paramNode);
@@ -79,7 +79,7 @@ void XMLRPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::l
     doc.clear();
 }
 
-void XMLRPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, std::vector<char>& encodedData)
+void XMLRPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<Variable>>> parameters, std::vector<char>& encodedData)
 {
 	xml_document<> doc;
 	try
@@ -91,7 +91,7 @@ void XMLRPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::v
 		xml_node<> *paramsNode = doc.allocate_node(node_element, "params");
 		node->append_node(paramsNode);
 
-		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+		for(std::vector<std::shared_ptr<Variable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 		{
 			xml_node<> *paramNode = doc.allocate_node(node_element, "param");
 			paramsNode->append_node(paramNode);
@@ -117,7 +117,7 @@ void XMLRPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::v
     doc.clear();
 }
 
-void XMLRPCEncoder::encodeResponse(std::shared_ptr<RPCVariable> variable, std::vector<char>& encodedData)
+void XMLRPCEncoder::encodeResponse(std::shared_ptr<Variable> variable, std::vector<char>& encodedData)
 {
 	xml_document<> doc;
 	try
@@ -156,32 +156,32 @@ void XMLRPCEncoder::encodeResponse(std::shared_ptr<RPCVariable> variable, std::v
     doc.clear();
 }
 
-void XMLRPCEncoder::encodeVariable(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable)
+void XMLRPCEncoder::encodeVariable(xml_document<>* doc, xml_node<>* node, std::shared_ptr<Variable> variable)
 {
 	try
 	{
 		xml_node<> *valueNode = doc->allocate_node(node_element, "value");
 		node->append_node(valueNode);
-		if(!variable || variable->type == RPCVariableType::rpcVoid)
+		if(!variable || variable->type == VariableType::rpcVoid)
 		{
 			//leave valueNode empty
 		}
-		else if(variable->type == RPCVariableType::rpcInteger)
+		else if(variable->type == VariableType::rpcInteger)
 		{
 			xml_node<> *valueNode2 = doc->allocate_node(node_element, "i4", doc->allocate_string(std::to_string(variable->integerValue).c_str()));
 			valueNode->append_node(valueNode2);
 		}
-		else if(variable->type == RPCVariableType::rpcFloat)
+		else if(variable->type == VariableType::rpcFloat)
 		{
 			xml_node<> *valueNode2 = doc->allocate_node(node_element, "double", doc->allocate_string(std::to_string(variable->floatValue).c_str()));
 			valueNode->append_node(valueNode2);
 		}
-		else if(variable->type == RPCVariableType::rpcBoolean)
+		else if(variable->type == VariableType::rpcBoolean)
 		{
 			xml_node<> *valueNode2 = doc->allocate_node(node_element, "boolean", doc->allocate_string(std::to_string(variable->booleanValue).c_str()));
 			valueNode->append_node(valueNode2);
 		}
-		else if(variable->type == RPCVariableType::rpcString)
+		else if(variable->type == VariableType::rpcString)
 		{
 			//Don't allocate string. It is unnecessary, because variable->stringvalue exists until the encoding is done.
 			//xml_node<> *valueNode2 = doc->allocate_node(node_element, "string", variable->stringValue.c_str());
@@ -189,17 +189,17 @@ void XMLRPCEncoder::encodeVariable(xml_document<>* doc, xml_node<>* node, std::s
 			//Some servers/clients don't understand strings in string tags - don't ask me why, so just print the value
 			valueNode->value(variable->stringValue.c_str());
 		}
-		else if(variable->type == RPCVariableType::rpcBase64)
+		else if(variable->type == VariableType::rpcBase64)
 		{
 			//Don't allocate string. It is unnecessary, because variable->stringvalue exists until the encoding is done.
 			xml_node<> *valueNode2 = doc->allocate_node(node_element, "base64", variable->stringValue.c_str());
 			valueNode->append_node(valueNode2);
 		}
-		else if(variable->type == RPCVariableType::rpcStruct)
+		else if(variable->type == VariableType::rpcStruct)
 		{
 			encodeStruct(doc, valueNode, variable);
 		}
-		else if(variable->type == RPCVariableType::rpcArray)
+		else if(variable->type == VariableType::rpcArray)
 		{
 			encodeArray(doc, valueNode, variable);
 		}
@@ -218,7 +218,7 @@ void XMLRPCEncoder::encodeVariable(xml_document<>* doc, xml_node<>* node, std::s
     }
 }
 
-void XMLRPCEncoder::encodeStruct(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable)
+void XMLRPCEncoder::encodeStruct(xml_document<>* doc, xml_node<>* node, std::shared_ptr<Variable> variable)
 {
 	try
 	{
@@ -249,7 +249,7 @@ void XMLRPCEncoder::encodeStruct(xml_document<>* doc, xml_node<>* node, std::sha
     }
 }
 
-void XMLRPCEncoder::encodeArray(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable)
+void XMLRPCEncoder::encodeArray(xml_document<>* doc, xml_node<>* node, std::shared_ptr<Variable> variable)
 {
 	try
 	{
@@ -259,7 +259,7 @@ void XMLRPCEncoder::encodeArray(xml_document<>* doc, xml_node<>* node, std::shar
 		xml_node<> *dataNode = doc->allocate_node(node_element, "data");
 		arrayNode->append_node(dataNode);
 
-		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = variable->arrayValue->begin(); i != variable->arrayValue->end(); ++i)
+		for(std::vector<std::shared_ptr<Variable>>::iterator i = variable->arrayValue->begin(); i != variable->arrayValue->end(); ++i)
 		{
 			encodeVariable(doc, dataNode, *i);
 		}

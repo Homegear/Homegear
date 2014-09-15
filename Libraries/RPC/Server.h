@@ -49,7 +49,7 @@ public:
 	void stop();
 	bool isRunning() { if(!_server) return false; return _server->isRunning(); }
 	uint32_t connectionCount();
-	std::shared_ptr<BaseLib::RPC::RPCVariable> callMethod(std::string methodName, std::shared_ptr<BaseLib::RPC::RPCVariable> parameters);
+	std::shared_ptr<BaseLib::RPC::Variable> callMethod(std::string methodName, std::shared_ptr<BaseLib::RPC::Variable> parameters);
 protected:
 	std::shared_ptr<RPCServer> _server;
 };

@@ -132,19 +132,19 @@ DeviceFrame::DeviceFrame(BaseLib::Obj* baseLib, xml_node<>* node) : DeviceFrame(
 	}
 }
 
-void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
+void ParameterConversion::fromPacket(std::shared_ptr<RPC::Variable> value)
 {
 	try
 	{
 		if(!value) return;
 		if(type == Type::Enum::floatIntegerScale)
 		{
-			value->type = RPCVariableType::rpcFloat;
+			value->type = VariableType::rpcFloat;
 			value->floatValue = ((double)value->integerValue / factor) - offset;
 		}
 		else if(type == Type::Enum::integerIntegerScale)
 		{
-			value->type = RPCVariableType::rpcInteger;
+			value->type = VariableType::rpcInteger;
 			if(div > 0) value->integerValue *= div;
 			if(mul > 0) value->integerValue /= mul;
 		}
@@ -154,7 +154,7 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 		}
 		else if(type == Type::Enum::booleanInteger)
 		{
-			value->type = RPCVariableType::rpcBoolean;
+			value->type = VariableType::rpcBoolean;
 			if(valueTrue == 0 && valueFalse == 0)
 			{
 				if(value->integerValue >= threshold) value->booleanValue = true;
@@ -169,7 +169,7 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 		}
 		else if(type == Type::Enum::floatConfigTime)
 		{
-			value->type = RPCVariableType::rpcFloat;
+			value->type = VariableType::rpcFloat;
 			if(value < 0)
 			{
 				value->floatValue = 0;
@@ -218,7 +218,7 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 		}
 		else if(type == Type::Enum::integerTinyFloat)
 		{
-			value->type = RPCVariableType::rpcInteger;
+			value->type = VariableType::rpcInteger;
 			int32_t mantissa = (value->integerValue >> mantissaStart) & ((1 << mantissaSize) - 1);
 			if(mantissaSize == 0) mantissa = 1;
 			int32_t exponent = (value->integerValue >> exponentStart) & ((1 << exponentSize) - 1);
@@ -239,13 +239,13 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 				if(value->arrayValue->size() > 0) value->stringValue = std::to_string(value->arrayValue->at(0)->floatValue);
 				if(value->arrayValue->size() > 1)
 				{
-					for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = value->arrayValue->begin() + 1; i != value->arrayValue->end(); ++i)
+					for(std::vector<std::shared_ptr<Variable>>::iterator i = value->arrayValue->begin() + 1; i != value->arrayValue->end(); ++i)
 					{
 						value->stringValue += ';' + std::to_string((*i)->floatValue);
 					}
 				}
 				value->arrayValue->clear();
-				value->type = RPCVariableType::rpcString;
+				value->type = VariableType::rpcString;
 			}
 			else _bl->out.printWarning("Warning: Only strings can be created from Json arrays.");
 		}
@@ -267,7 +267,7 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 				value->integerValue = 0;
 			}
 			value->stringValue = "";
-			value->type = RPCVariableType::rpcInteger;
+			value->type = VariableType::rpcInteger;
 		}
 	}
 	catch(const std::exception& ex)
@@ -284,7 +284,7 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
     }
 }
 
-void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
+void ParameterConversion::toPacket(std::shared_ptr<RPC::Variable> value)
 {
 	try
 	{
@@ -292,14 +292,14 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 		if(type == Type::Enum::floatIntegerScale)
 		{
 			value->integerValue = std::lround((value->floatValue + offset) * factor);
-			value->type = RPCVariableType::rpcInteger;
+			value->type = VariableType::rpcInteger;
 		}
 		else if(type == Type::Enum::integerIntegerScale)
 		{
 			if(mul > 0) value->integerValue *= mul;
 			//mul and div can be set, so no else if
 			if(div > 0) value->integerValue /= div;
-			value->type = RPCVariableType::rpcInteger;
+			value->type = VariableType::rpcInteger;
 		}
 		else if(type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger)
 		{
@@ -308,7 +308,7 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 			{
 				value->integerValue = integerValueMapParameter[value->integerValue];
 			}
-			value->type = RPCVariableType::rpcInteger;
+			value->type = VariableType::rpcInteger;
 		}
 		else if(type == Type::Enum::booleanInteger)
 		{
@@ -317,7 +317,7 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 			if(valueTrue == 0 && valueFalse == 0) value->integerValue = (int32_t)value->booleanValue;
 			else if(value->booleanValue) value->integerValue = valueTrue;
 			else value->integerValue = valueFalse;
-			value->type = RPCVariableType::rpcInteger;
+			value->type = VariableType::rpcInteger;
 		}
 		else if(type == Type::Enum::floatConfigTime)
 		{
@@ -348,7 +348,7 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 
 				value->integerValue = ((factorIndex << 5) | std::lround(value->floatValue / factor)) & 0xFF;
 			}
-			value->type = RPCVariableType::rpcInteger;
+			value->type = VariableType::rpcInteger;
 		}
 		else if(type == Type::Enum::integerTinyFloat)
 		{
@@ -368,17 +368,17 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 			if(exponent > maxExponent) exponent = maxExponent;
 			exponent = exponent << exponentStart;
 			value->integerValue = (mantissa << mantissaStart) | exponent;
-			value->type = RPCVariableType::rpcInteger;
+			value->type = VariableType::rpcInteger;
 		}
 		else if(type == Type::Enum::stringUnsignedInteger)
 		{
 			value->integerValue = Math::getUnsignedNumber(value->stringValue);
-			value->type = RPCVariableType::rpcInteger;
+			value->type = VariableType::rpcInteger;
 		}
 		else if(type == Type::Enum::blindTest)
 		{
 			value->integerValue = Math::getNumber(stringValue);
-			value->type = RPCVariableType::rpcInteger;
+			value->type = VariableType::rpcInteger;
 		}
 		else if(type == Type::Enum::optionString)
 		{
@@ -390,7 +390,7 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 					value->stringValue = logicalEnum->options.at(value->integerValue).id;
 				}
 				else _bl->out.printWarning("Warning: Cannot convert variable, because enum index is not valid.");
-				value->type = RPCVariableType::rpcString;
+				value->type = VariableType::rpcString;
 				value->integerValue = 0;
 			}
 		}
@@ -401,9 +401,9 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 				std::vector<std::string> arrayElements = HelperFunctions::splitAll(value->stringValue, ';');
 				for(std::vector<std::string>::iterator i = arrayElements.begin(); i != arrayElements.end(); ++i)
 				{
-					value->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(Math::getDouble(*i))));
+					value->arrayValue->push_back(std::shared_ptr<Variable>(new Variable(Math::getDouble(*i))));
 				}
-				value->type = RPCVariableType::rpcArray;
+				value->type = VariableType::rpcArray;
 				value->stringValue = "";
 			}
 			else _bl->out.printWarning("Warning: Only strings can be converted to Json arrays.");
@@ -579,7 +579,7 @@ void Parameter::reverseData(const std::vector<uint8_t>& data, std::vector<uint8_
     }
 }
 
-std::shared_ptr<RPCVariable> Parameter::convertFromPacket(std::vector<uint8_t>& data, bool isEvent)
+std::shared_ptr<Variable> Parameter::convertFromPacket(std::vector<uint8_t>& data, bool isEvent)
 {
 	try
 	{
@@ -595,13 +595,13 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(std::vector<uint8_t>& 
 		{
 			int32_t integerValue = 0;
 			_bl->hf.memcpyBigEndian(integerValue, *value);
-			return std::shared_ptr<RPCVariable>(new RPCVariable(integerValue));
+			return std::shared_ptr<Variable>(new Variable(integerValue));
 		}
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean && conversion.empty())
 		{
 			int32_t integerValue = 0;
 			_bl->hf.memcpyBigEndian(integerValue, *value);
-			return std::shared_ptr<RPC::RPCVariable>(new RPCVariable((bool)integerValue));
+			return std::shared_ptr<RPC::Variable>(new Variable((bool)integerValue));
 		}
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString && conversion.empty())
 		{
@@ -609,30 +609,30 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(std::vector<uint8_t>& 
 			{
 				int32_t size = value->back() == 0 ? value->size() - 1 : value->size();
 				std::string string(&value->at(0), &value->at(0) + size);
-				return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(string));
+				return std::shared_ptr<RPC::Variable>(new Variable(string));
 			}
-			return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcString));
+			return std::shared_ptr<RPC::Variable>(new Variable(VariableType::rpcString));
 		}
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 		{
-			if(isEvent) return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(true));
-			else return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(false));
+			if(isEvent) return std::shared_ptr<RPC::Variable>(new Variable(true));
+			else return std::shared_ptr<RPC::Variable>(new Variable(false));
 		}
 		else if(id == "RSSI_DEVICE")
 		{
 			int32_t integerValue;
 			_bl->hf.memcpyBigEndian(integerValue, *value);
-			std::shared_ptr<RPCVariable> variable(new RPCVariable(integerValue * -1));
+			std::shared_ptr<Variable> variable(new Variable(integerValue * -1));
 			return variable;
 		}
 		else
 		{
-			std::shared_ptr<RPCVariable> variable;
+			std::shared_ptr<Variable> variable;
 			if(value->size() <= 4)
 			{
 				int32_t integerValue;
 				_bl->hf.memcpyBigEndian(integerValue, *value);
-				variable.reset(new RPCVariable(integerValue));
+				variable.reset(new Variable(integerValue));
 				if(isSigned && !value->empty() && value->size() <= 4)
 				{
 					int32_t byteIndex = value->size() - std::lround(std::ceil(physicalParameter->size));
@@ -665,7 +665,7 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(std::vector<uint8_t>& 
 			if(!variable)
 			{
 				_bl->out.printError("Error converting value: Variable is nullptr.");
-				variable.reset(new RPCVariable(RPCVariableType::rpcInteger));
+				variable.reset(new Variable(VariableType::rpcInteger));
 			}
 			return variable;
 		}
@@ -682,18 +682,18 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(std::vector<uint8_t>& 
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcInteger));
+    return std::shared_ptr<RPC::Variable>(new Variable(VariableType::rpcInteger));
 }
 
 void Parameter::convertToPacket(std::string value, std::vector<uint8_t>& convertedValue)
 {
 	try
 	{
-		std::shared_ptr<RPCVariable> rpcValue;
-		if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger) rpcValue.reset(new RPCVariable(Math::getNumber(value)));
+		std::shared_ptr<Variable> rpcValue;
+		if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger) rpcValue.reset(new Variable(Math::getNumber(value)));
 		if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum)
 		{
-			if(Math::isNumber(value)) rpcValue.reset(new RPCVariable(Math::getNumber(value)));
+			if(Math::isNumber(value)) rpcValue.reset(new Variable(Math::getNumber(value)));
 			else //value is id of enum element
 			{
 				LogicalParameterEnum* parameter = (LogicalParameterEnum*)logicalParameter.get();
@@ -701,20 +701,20 @@ void Parameter::convertToPacket(std::string value, std::vector<uint8_t>& convert
 				{
 					if(i->id == value)
 					{
-						rpcValue.reset(new RPCVariable(i->index));
+						rpcValue.reset(new Variable(i->index));
 						break;
 					}
 				}
-				if(!rpcValue) rpcValue.reset(new RPCVariable(0));
+				if(!rpcValue) rpcValue.reset(new Variable(0));
 			}
 		}
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean || logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 		{
-			rpcValue.reset(new RPCVariable(false));
+			rpcValue.reset(new Variable(false));
 			if(HelperFunctions::toLower(value) == "true") rpcValue->booleanValue = true;
 		}
-		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat) rpcValue.reset(new RPCVariable(Math::getDouble(value)));
-		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString) rpcValue.reset(new RPCVariable(value));
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat) rpcValue.reset(new Variable(Math::getDouble(value)));
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString) rpcValue.reset(new Variable(value));
 		if(!rpcValue)
 		{
 			_bl->out.printWarning("Warning: Could not convert parameter " + id + " from String.");
@@ -736,13 +736,13 @@ void Parameter::convertToPacket(std::string value, std::vector<uint8_t>& convert
     }
 }
 
-void Parameter::convertToPacket(const std::shared_ptr<RPCVariable> value, std::vector<uint8_t>& convertedValue)
+void Parameter::convertToPacket(const std::shared_ptr<Variable> value, std::vector<uint8_t>& convertedValue)
 {
 	try
 	{
 		convertedValue.clear();
 		if(!value) return;
-		std::shared_ptr<RPCVariable> variable(new RPC::RPCVariable());
+		std::shared_ptr<Variable> variable(new RPC::Variable());
 		*variable = *value;
 		if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum && conversion.empty())
 		{
@@ -1610,36 +1610,36 @@ EnforceLink::EnforceLink(BaseLib::Obj* baseLib, xml_node<>* node) : EnforceLink(
 	}
 }
 
-std::shared_ptr<RPCVariable> EnforceLink::getValue(LogicalParameter::Type::Enum type)
+std::shared_ptr<Variable> EnforceLink::getValue(LogicalParameter::Type::Enum type)
 {
 	try
 	{
-		RPCVariableType rpcType = RPCVariableType::rpcVoid;
+		VariableType rpcType = VariableType::rpcVoid;
 		switch(type)
 		{
 		case LogicalParameter::Type::Enum::typeEnum:
-			rpcType = RPCVariableType::rpcInteger;
+			rpcType = VariableType::rpcInteger;
 			break;
 		case LogicalParameter::Type::Enum::typeAction:
-			rpcType = RPCVariableType::rpcBoolean;
+			rpcType = VariableType::rpcBoolean;
 			break;
 		case LogicalParameter::Type::Enum::typeBoolean:
-			rpcType = RPCVariableType::rpcBoolean;
+			rpcType = VariableType::rpcBoolean;
 			break;
 		case LogicalParameter::Type::Enum::typeFloat:
-			rpcType = RPCVariableType::rpcFloat;
+			rpcType = VariableType::rpcFloat;
 			break;
 		case LogicalParameter::Type::Enum::typeInteger:
-			rpcType = RPCVariableType::rpcInteger;
+			rpcType = VariableType::rpcInteger;
 			break;
 		case LogicalParameter::Type::Enum::typeString:
-			rpcType = RPCVariableType::rpcString;
+			rpcType = VariableType::rpcString;
 			break;
 		case LogicalParameter::Type::Enum::none:
-			rpcType = RPCVariableType::rpcString;
+			rpcType = VariableType::rpcString;
 			break;
 		}
-		return RPCVariable::fromString(value, rpcType);
+		return Variable::fromString(value, rpcType);
 	}
 	catch(const std::exception& ex)
     {
@@ -1653,7 +1653,7 @@ std::shared_ptr<RPCVariable> EnforceLink::getValue(LogicalParameter::Type::Enum 
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::shared_ptr<RPCVariable>();
+    return std::shared_ptr<Variable>();
 }
 
 DeviceChannel::DeviceChannel(BaseLib::Obj* baseLib)

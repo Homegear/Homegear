@@ -55,12 +55,12 @@ public:
 	void init();
 
 	void initServerMethods(std::pair<std::string, std::string> address);
-	void broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
+	void broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values);
 	void systemListMethods(std::pair<std::string, std::string> address);
 	void listDevices(std::pair<std::string, std::string> address);
-	void broadcastNewDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions);
-	void broadcastNewEvent(std::shared_ptr<BaseLib::RPC::RPCVariable> eventDescription);
-	void broadcastDeleteDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> deviceAddresses, std::shared_ptr<BaseLib::RPC::RPCVariable> deviceInfo);
+	void broadcastNewDevices(std::shared_ptr<BaseLib::RPC::Variable> deviceDescriptions);
+	void broadcastNewEvent(std::shared_ptr<BaseLib::RPC::Variable> eventDescription);
+	void broadcastDeleteDevices(std::shared_ptr<BaseLib::RPC::Variable> deviceAddresses, std::shared_ptr<BaseLib::RPC::Variable> deviceInfo);
 	void broadcastDeleteEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable);
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, std::string address, Hint::Enum hint);
 	void broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable);
@@ -68,8 +68,8 @@ public:
 	std::shared_ptr<RemoteRPCServer> addServer(std::pair<std::string, std::string> address, std::string path, std::string id);
 	void removeServer(std::pair<std::string, std::string> address);
 	std::shared_ptr<RemoteRPCServer> getServer(std::pair<std::string, std::string>);
-	std::shared_ptr<BaseLib::RPC::RPCVariable> listClientServers(std::string id);
-	std::shared_ptr<BaseLib::RPC::RPCVariable> clientServerInitialized(std::string id);
+	std::shared_ptr<BaseLib::RPC::Variable> listClientServers(std::string id);
+	std::shared_ptr<BaseLib::RPC::Variable> clientServerInitialized(std::string id);
 	void reset();
 private:
 	bool _disposing = false;
@@ -81,8 +81,8 @@ private:
 	std::map<uint32_t, std::shared_ptr<std::thread>> _invokeBroadcastThreads;
 
 	void removeBroadcastThread(uint32_t threadID);
-	void startInvokeBroadcastThread(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
-	void invokeBroadcastThread(uint32_t threadID, std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
+	void startInvokeBroadcastThread(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
+	void invokeBroadcastThread(uint32_t threadID, std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
 };
 
 }

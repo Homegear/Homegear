@@ -453,7 +453,7 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& pa
 	{
 		if(_stopped) return;
 		std::string methodName;
-		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters;
+		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters;
 		if(packetType == PacketType::Enum::binaryRequest) parameters = _rpcDecoder->decodeRequest(packet, methodName);
 		else if(packetType == PacketType::Enum::xmlRequest) parameters = _xmlRpcDecoder->decodeRequest(packet, methodName);
 		if(!parameters)
@@ -483,7 +483,7 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& pa
     }
 }
 
-void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::shared_ptr<BaseLib::RPC::RPCVariable> variable, PacketType::Enum responseType, bool keepAlive)
+void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::shared_ptr<BaseLib::RPC::Variable> variable, PacketType::Enum responseType, bool keepAlive)
 {
 	try
 	{
@@ -527,26 +527,26 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
     }
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> RPCServer::callMethod(std::string& methodName, std::shared_ptr<BaseLib::RPC::RPCVariable>& parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCServer::callMethod(std::string& methodName, std::shared_ptr<BaseLib::RPC::Variable>& parameters)
 {
 	try
 	{
-		if(!parameters) parameters = std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		if(_stopped) return BaseLib::RPC::RPCVariable::createError(100000, "Server is stopped.");
+		if(!parameters) parameters = std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+		if(_stopped) return BaseLib::RPC::Variable::createError(100000, "Server is stopped.");
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
 			_out.printError("Warning: RPC method not found: " + methodName);
-			return BaseLib::RPC::RPCVariable::createError(-32601, ": Requested method not found.");
+			return BaseLib::RPC::Variable::createError(-32601, ": Requested method not found.");
 		}
 		if(GD::bl->debugLevel >= 4)
 		{
 			_out.printInfo("Info: RPC Method called: " + methodName + " Parameters:");
-			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = parameters->arrayValue->begin(); i != parameters->arrayValue->end(); ++i)
+			for(std::vector<std::shared_ptr<BaseLib::RPC::Variable>>::iterator i = parameters->arrayValue->begin(); i != parameters->arrayValue->end(); ++i)
 			{
 				(*i)->print();
 			}
 		}
-		std::shared_ptr<BaseLib::RPC::RPCVariable> ret = _rpcMethods->at(methodName)->invoke(parameters->arrayValue);
+		std::shared_ptr<BaseLib::RPC::Variable> ret = _rpcMethods->at(methodName)->invoke(parameters->arrayValue);
 		if(GD::bl->debugLevel >= 5)
 		{
 			_out.printDebug("Response: ");
@@ -566,10 +566,10 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCServer::callMethod(std::string& me
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::RPC::RPCVariable::createError(-32500, ": Unknown application error.");
+    return BaseLib::RPC::Variable::createError(-32500, ": Unknown application error.");
 }
 
-void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters, PacketType::Enum responseType, bool keepAlive)
+void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters, PacketType::Enum responseType, bool keepAlive)
 {
 	try
 	{
@@ -577,18 +577,18 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
 			_out.printError("Warning: RPC method not found: " + methodName);
-			sendRPCResponseToClient(client, BaseLib::RPC::RPCVariable::createError(-32601, ": Requested method not found."), responseType, keepAlive);
+			sendRPCResponseToClient(client, BaseLib::RPC::Variable::createError(-32601, ": Requested method not found."), responseType, keepAlive);
 			return;
 		}
 		if(GD::bl->debugLevel >= 4)
 		{
 			_out.printInfo("Info: Client number " + std::to_string(client->socketDescriptor->id) + " is calling RPC method: " + methodName + " Parameters:");
-			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+			for(std::vector<std::shared_ptr<BaseLib::RPC::Variable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 			{
 				(*i)->print();
 			}
 		}
-		std::shared_ptr<BaseLib::RPC::RPCVariable> ret = _rpcMethods->at(methodName)->invoke(parameters);
+		std::shared_ptr<BaseLib::RPC::Variable> ret = _rpcMethods->at(methodName)->invoke(parameters);
 		if(GD::bl->debugLevel >= 5)
 		{
 			_out.printDebug("Response: ");
@@ -627,7 +627,7 @@ void RPCServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<c
 	try
 	{
 		if(_stopped) return;
-		std::shared_ptr<BaseLib::RPC::RPCVariable> response;
+		std::shared_ptr<BaseLib::RPC::Variable> response;
 		if(packetType == PacketType::Enum::binaryResponse) response = _rpcDecoder->decodeResponse(packet);
 		else if(packetType == PacketType::Enum::xmlResponse) response = _xmlRpcDecoder->decodeResponse(packet);
 		if(!response) return;

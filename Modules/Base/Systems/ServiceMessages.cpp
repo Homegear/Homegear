@@ -55,7 +55,7 @@ void ServiceMessages::raiseConfigPending(bool configPending)
 	if(_eventHandler) ((IServiceEventSink*)_eventHandler)->onConfigPending(configPending);
 }
 
-void ServiceMessages::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
+void ServiceMessages::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> values)
 {
 	if(id == 0) return;
 	if(_eventHandler) ((IServiceEventSink*)_eventHandler)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
@@ -292,8 +292,8 @@ bool ServiceMessages::set(std::string id, bool value)
 					raiseSaveParameter(id, i->first, data);
 
 					std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({id}));
-					std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
-					rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)0)));
+					std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> rpcValues(new std::vector<std::shared_ptr<RPC::Variable>>());
+					rpcValues->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)0)));
 					raiseRPCEvent(_peerID, 0, _peerSerial + ":" + std::to_string(i->first), valueKeys, rpcValues);
 				}
 			}
@@ -305,8 +305,8 @@ bool ServiceMessages::set(std::string id, bool value)
 		raiseSaveParameter(id, 0, data);
 
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({id}));
-		std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
-		rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value)));
+		std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> rpcValues(new std::vector<std::shared_ptr<RPC::Variable>>());
+		rpcValues->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(value)));
 
 		raiseRPCEvent(_peerID, 0, _peerSerial + ":0", valueKeys, rpcValues);
 	}
@@ -361,63 +361,63 @@ void ServiceMessages::set(std::string id, uint8_t value, uint32_t channel)
     }
 }
 
-std::shared_ptr<RPC::RPCVariable> ServiceMessages::get(bool returnID)
+std::shared_ptr<RPC::Variable> ServiceMessages::get(bool returnID)
 {
 	try
 	{
-		std::shared_ptr<RPC::RPCVariable> serviceMessages(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		std::shared_ptr<RPC::Variable> serviceMessages(new RPC::Variable(RPC::VariableType::rpcArray));
 		if(returnID && _peerID == 0) return serviceMessages;
-		std::shared_ptr<RPC::RPCVariable> array;
+		std::shared_ptr<RPC::Variable> array;
 		if(_unreach)
 		{
-			array.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+			array.reset(new RPC::Variable(RPC::VariableType::rpcArray));
 			if(returnID)
 			{
-				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)_peerID)));
-				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)0)));
+				array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)_peerID)));
+				array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)0)));
 			}
-			else array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peerSerial + ":0")));
-			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("UNREACH"))));
-			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
+			else array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(_peerSerial + ":0")));
+			array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(std::string("UNREACH"))));
+			array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(true)));
 			serviceMessages->arrayValue->push_back(array);
 		}
 		if(_stickyUnreach)
 		{
-			array.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+			array.reset(new RPC::Variable(RPC::VariableType::rpcArray));
 			if(returnID)
 			{
-				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)_peerID)));
-				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)0)));
+				array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)_peerID)));
+				array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)0)));
 			}
-			else array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peerSerial + ":0")));
-			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("STICKY_UNREACH"))));
-			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
+			else array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(_peerSerial + ":0")));
+			array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(std::string("STICKY_UNREACH"))));
+			array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(true)));
 			serviceMessages->arrayValue->push_back(array);
 		}
 		if(_configPending)
 		{
-			array.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+			array.reset(new RPC::Variable(RPC::VariableType::rpcArray));
 			if(returnID)
 			{
-				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)_peerID)));
-				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)0)));
+				array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)_peerID)));
+				array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)0)));
 			}
-			else array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peerSerial + ":0")));
-			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("CONFIG_PENDING"))));
-			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
+			else array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(_peerSerial + ":0")));
+			array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(std::string("CONFIG_PENDING"))));
+			array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(true)));
 			serviceMessages->arrayValue->push_back(array);
 		}
 		if(_lowbat)
 		{
-			array.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+			array.reset(new RPC::Variable(RPC::VariableType::rpcArray));
 			if(returnID)
 			{
-				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)_peerID)));
-				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)0)));
+				array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)_peerID)));
+				array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)0)));
 			}
-			else array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peerSerial + ":0")));
-			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("LOWBAT"))));
-			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
+			else array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(_peerSerial + ":0")));
+			array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(std::string("LOWBAT"))));
+			array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(true)));
 			serviceMessages->arrayValue->push_back(array);
 		}
 		_errorMutex.lock();
@@ -426,15 +426,15 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get(bool returnID)
 			for(std::map<std::string, uint8_t>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
 				if(j->second == 0) continue;
-				array.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+				array.reset(new RPC::Variable(RPC::VariableType::rpcArray));
 				if(returnID)
 				{
-					array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)_peerID)));
-					array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(i->first)));
+					array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)_peerID)));
+					array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(i->first)));
 				}
-				else array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peerSerial + ":" + std::to_string(i->first))));
-				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->first)));
-				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)j->second)));
+				else array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(_peerSerial + ":" + std::to_string(i->first))));
+				array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(j->first)));
+				array->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((uint32_t)j->second)));
 				serviceMessages->arrayValue->push_back(array);
 			}
 		}
@@ -454,7 +454,7 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get(bool returnID)
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _errorMutex.unlock();
-    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
 void ServiceMessages::checkUnreach(int32_t cyclicTimeout, uint32_t lastPacketReceived)
@@ -472,9 +472,9 @@ void ServiceMessages::checkUnreach(int32_t cyclicTimeout, uint32_t lastPacketRec
 			raiseSaveParameter("STICKY_UNREACH", 0, data);
 
 			std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({std::string("UNREACH"), std::string("STICKY_UNREACH")}));
-			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
-			rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
-			rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
+			std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> rpcValues(new std::vector<std::shared_ptr<RPC::Variable>>());
+			rpcValues->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(true)));
+			rpcValues->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(true)));
 
 			raiseRPCEvent(_peerID, 0, _peerSerial + ":0", valueKeys, rpcValues);
 		}
@@ -506,8 +506,8 @@ void ServiceMessages::endUnreach()
 			raiseSaveParameter("UNREACH", 0, data);
 
 			std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({std::string("UNREACH")}));
-			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
-			rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(false)));
+			std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> rpcValues(new std::vector<std::shared_ptr<RPC::Variable>>());
+			rpcValues->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(false)));
 
 			raiseRPCEvent(_peerID, 0, _peerSerial + ":0", valueKeys, rpcValues);
 		}
@@ -559,8 +559,8 @@ void ServiceMessages::setConfigPending(bool value)
 			raiseSaveParameter("CONFIG_PENDING", 0, data);
 
 			std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({std::string("CONFIG_PENDING")}));
-			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
-			rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value)));
+			std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> rpcValues(new std::vector<std::shared_ptr<RPC::Variable>>());
+			rpcValues->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(value)));
 
 			raiseRPCEvent(_peerID, 0, _peerSerial + ":0", valueKeys, rpcValues);
 			raiseConfigPending(value);
@@ -601,8 +601,8 @@ void ServiceMessages::setUnreach(bool value, bool requeue)
 			raiseSaveParameter("UNREACH", 0, data);
 
 			std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({std::string("UNREACH")}));
-			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
-			rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value)));
+			std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> rpcValues(new std::vector<std::shared_ptr<RPC::Variable>>());
+			rpcValues->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(value)));
 
 			if(value)
 			{
@@ -611,7 +611,7 @@ void ServiceMessages::setUnreach(bool value, bool requeue)
 				raiseSaveParameter("STICKY_UNREACH", 0, data);
 
 				valueKeys->push_back("STICKY_UNREACH");
-				rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
+				rpcValues->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable(true)));
 			}
 
 			raiseRPCEvent(_peerID, 0, _peerSerial + ":0", valueKeys, rpcValues);

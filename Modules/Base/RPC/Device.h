@@ -41,7 +41,7 @@
 #include <memory>
 
 #include "../Systems/Packet.h"
-#include "../Encoding/rapidxml.hpp"
+#include "../Encoding/RapidXml/rapidxml.hpp"
 #include "../Systems/DeviceTypes.h"
 #include "LogicalParameter.h"
 #include "PhysicalParameter.h"
@@ -61,7 +61,7 @@ namespace RPC
 class Parameter;
 class ParameterSet;
 class Device;
-class RPCVariable;
+class Variable;
 
 class DescriptionField
 {
@@ -117,8 +117,8 @@ public:
 	ParameterConversion(BaseLib::Obj* baseLib, Parameter* parameter);
 	ParameterConversion(BaseLib::Obj* baseLib, Parameter* parameter, xml_node<>* node);
 	virtual ~ParameterConversion() {}
-	virtual void fromPacket(std::shared_ptr<RPCVariable> value);
-	virtual void toPacket(std::shared_ptr<RPCVariable> value);
+	virtual void fromPacket(std::shared_ptr<Variable> value);
+	virtual void toPacket(std::shared_ptr<Variable> value);
 protected:
 	BaseLib::Obj* _bl = nullptr;
 	Parameter* _parameter = nullptr;
@@ -181,7 +181,7 @@ public:
 	 * @param isEvent (default false) Set to "true" if packet is an event packet. Necessary to set value of "Action" correctly.
 	 * @return Returns the RPC variable.
 	 */
-	virtual std::shared_ptr<RPC::RPCVariable> convertFromPacket(std::vector<uint8_t>& data, bool isEvent = false);
+	virtual std::shared_ptr<RPC::Variable> convertFromPacket(std::vector<uint8_t>& data, bool isEvent = false);
 
 	/**
 	 * Converts a RPC variable to binary data to send it over a physical interface.
@@ -189,7 +189,7 @@ public:
 	 * @param[in] value The value to convert.
 	 * @param[out] convertedValue The converted binary data.
 	 */
-	virtual void convertToPacket(const std::shared_ptr<RPC::RPCVariable> value, std::vector<uint8_t>& convertedValue);
+	virtual void convertToPacket(const std::shared_ptr<RPC::Variable> value, std::vector<uint8_t>& convertedValue);
 
 	/**
 	 * Tries to convert a string value to a binary data to send it over a physical interface.
@@ -286,7 +286,7 @@ public:
 	EnforceLink(BaseLib::Obj* baseLib);
 	EnforceLink(BaseLib::Obj* baseLib, xml_node<>* parameterSetNode);
 	virtual ~EnforceLink() {}
-	virtual std::shared_ptr<RPCVariable> getValue(LogicalParameter::Type::Enum type);
+	virtual std::shared_ptr<Variable> getValue(LogicalParameter::Type::Enum type);
 protected:
 	BaseLib::Obj* _bl = nullptr;
 };

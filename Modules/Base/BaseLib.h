@@ -6,6 +6,8 @@
 #include "Encoding/XMLRPCEncoder.h"
 #include "Encoding/RPCDecoder.h"
 #include "Encoding/RPCEncoder.h"
+#include "Encoding/JsonDecoder.h"
+#include "Encoding/JsonEncoder.h"
 #include "Encoding/HTTP.h"
 #include "Managers/SerialDeviceManager.h"
 #include "Managers/FileDescriptorManager.h"
@@ -22,7 +24,6 @@
 #include "Systems/SystemFactory.h"
 #include "Systems/UpdateInfo.h"
 #include "Threads/Threads.h"
-#include "JSON/json/json.h"
 
 namespace BaseLib
 {

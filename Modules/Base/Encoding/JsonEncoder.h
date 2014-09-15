@@ -27,41 +27,40 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef MAX_H_
-#define MAX_H_
+#ifndef JSONENCODER_H_
+#define JSONENCODER_H_
 
-#include "../Base/BaseLib.h"
+#include "../Exception.h"
+#include "../RPC/Variable.h"
 
-namespace MAX
+namespace BaseLib
 {
-class MAXDevice;
-class MAXCentral;
 
-class MAX : public BaseLib::Systems::DeviceFamily
+class Obj;
+
+namespace RPC
+{
+
+class JsonEncoder
 {
 public:
-	MAX(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
-	virtual ~MAX();
-	virtual bool init();
-	virtual void dispose();
+	JsonEncoder(BaseLib::Obj* baseLib);
+	virtual ~JsonEncoder() {}
 
-	virtual std::shared_ptr<BaseLib::Systems::IPhysicalInterface> createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
-	virtual void load();
-	virtual std::shared_ptr<MAXDevice> getDevice(uint32_t address);
-	virtual std::shared_ptr<MAXDevice> getDevice(std::string serialNumber);
-	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
-	virtual std::string handleCLICommand(std::string& command);
-	virtual std::string getName() { return "MAX!"; }
-	virtual std::shared_ptr<BaseLib::RPC::Variable> getPairingMethods();
+	void encode(const std::shared_ptr<Variable> variable, std::string& json);
 private:
-	std::shared_ptr<MAXCentral> _central;
+	BaseLib::Obj* _bl = nullptr;
 
-	void createCentral();
-	void createSpyDevice();
-	uint32_t getUniqueAddress(uint32_t seed);
-	std::string getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber);
+	void encodeValue(const std::shared_ptr<Variable>& variable, std::ostringstream& s);
+	void encodeArray(const std::shared_ptr<Variable>& variable, std::ostringstream& s);
+	void encodeStruct(const std::shared_ptr<Variable>& variable, std::ostringstream& s);
+	void encodeBoolean(const std::shared_ptr<Variable>& variable, std::ostringstream& s);
+	void encodeInteger( const std::shared_ptr<Variable>& variable, std::ostringstream& s);
+	void encodeFloat(const std::shared_ptr<Variable>& variable, std::ostringstream& s);
+	void encodeString(const std::shared_ptr<Variable>& variable, std::ostringstream& s);
+	void encodeVoid(const std::shared_ptr<Variable>& variable, std::ostringstream& s);
 };
-
+}
 }
 
 #endif

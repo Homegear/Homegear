@@ -218,7 +218,7 @@ std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetDeviceVaria
 	return GD::db.getDeviceVariables(deviceID);
 }
 
-void FamilyController::onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
+void FamilyController::onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values)
 {
 	try
 	{
@@ -258,7 +258,7 @@ void FamilyController::onRPCUpdateDevice(uint64_t id, int32_t channel, std::stri
 	}
 }
 
-void FamilyController::onRPCNewDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions)
+void FamilyController::onRPCNewDevices(std::shared_ptr<BaseLib::RPC::Variable> deviceDescriptions)
 {
 	try
 	{
@@ -278,7 +278,7 @@ void FamilyController::onRPCNewDevices(std::shared_ptr<BaseLib::RPC::RPCVariable
 	}
 }
 
-void FamilyController::onRPCDeleteDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> deviceAddresses, std::shared_ptr<BaseLib::RPC::RPCVariable> deviceInfo)
+void FamilyController::onRPCDeleteDevices(std::shared_ptr<BaseLib::RPC::Variable> deviceAddresses, std::shared_ptr<BaseLib::RPC::Variable> deviceInfo)
 {
 	try
 	{
@@ -298,7 +298,7 @@ void FamilyController::onRPCDeleteDevices(std::shared_ptr<BaseLib::RPC::RPCVaria
 	}
 }
 
-void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
+void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values)
 {
 	try
 	{
@@ -605,13 +605,13 @@ std::string FamilyController::handleCLICommand(std::string& command)
     return "Error executing command. See log file for more details.\n";
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> FamilyController::listFamilies()
+std::shared_ptr<BaseLib::RPC::Variable> FamilyController::listFamilies()
 {
 	try
 	{
 		if(_rpcCache) return _rpcCache;
 
-		std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		std::shared_ptr<BaseLib::RPC::Variable> array(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		if(_disposed) return array;
 
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
@@ -619,10 +619,10 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> FamilyController::listFamilies()
 			std::shared_ptr<BaseLib::Systems::Central> central = GD::deviceFamilies.at(i->first)->getCentral();
 			if(!central) continue;
 
-			std::shared_ptr<BaseLib::RPC::RPCVariable> familyDescription(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+			std::shared_ptr<BaseLib::RPC::Variable> familyDescription(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 
-			familyDescription->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)i->first))));
-			familyDescription->structValue->insert(BaseLib::RPC::RPCStructElement("NAME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(i->second->getName()))));
+			familyDescription->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)i->first))));
+			familyDescription->structValue->insert(BaseLib::RPC::RPCStructElement("NAME", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(i->second->getName()))));
 			familyDescription->structValue->insert(BaseLib::RPC::RPCStructElement("PAIRING_METHODS", i->second->getPairingMethods()));
 			array->arrayValue->push_back(familyDescription);
 		}
@@ -641,5 +641,5 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> FamilyController::listFamilies()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }

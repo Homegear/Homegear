@@ -40,7 +40,7 @@ XMLRPCDecoder::XMLRPCDecoder(BaseLib::Obj* baseLib)
 	_bl = baseLib;
 }
 
-std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> XMLRPCDecoder::decodeRequest(std::vector<char>& packet, std::string& methodName)
+std::shared_ptr<std::vector<std::shared_ptr<Variable>>> XMLRPCDecoder::decodeRequest(std::vector<char>& packet, std::string& methodName)
 {
 	xml_document<> doc;
 	try
@@ -50,29 +50,29 @@ std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> XMLRPCDecoder::decode
 		if(node == nullptr || std::string(doc.first_node()->name()) != "methodCall")
 		{
 			doc.clear();
-			return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>(new std::vector<std::shared_ptr<RPCVariable>>{RPCVariable::createError(-32700, "Parse error. First root node has to be \"methodCall\".")});
+			return std::shared_ptr<std::vector<std::shared_ptr<Variable>>>(new std::vector<std::shared_ptr<Variable>>{Variable::createError(-32700, "Parse error. First root node has to be \"methodCall\".")});
 		}
 		xml_node<>* subNode = node->first_node("methodName");
 		if(subNode == nullptr || std::string(subNode->name()) != "methodName")
 		{
 			doc.clear();
-			return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>(new std::vector<std::shared_ptr<RPCVariable>>{RPCVariable::createError(-32700, "Parse error. Node \"methodName\" not found.")});
+			return std::shared_ptr<std::vector<std::shared_ptr<Variable>>>(new std::vector<std::shared_ptr<Variable>>{Variable::createError(-32700, "Parse error. Node \"methodName\" not found.")});
 		}
 		methodName = std::string(subNode->value());
 		if(methodName.empty())
 		{
 			doc.clear();
-			return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>(new std::vector<std::shared_ptr<RPCVariable>>{RPCVariable::createError(-32700, "Parse error. \"methodName\" is empty.")});
+			return std::shared_ptr<std::vector<std::shared_ptr<Variable>>>(new std::vector<std::shared_ptr<Variable>>{Variable::createError(-32700, "Parse error. \"methodName\" is empty.")});
 		}
 
 		subNode = node->first_node("params");
 		if(subNode == nullptr)
 		{
 			doc.clear();
-			return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>(new std::vector<std::shared_ptr<RPCVariable>>{RPCVariable::createError(-32700, "Parse error. Node \"params\" not found.")});
+			return std::shared_ptr<std::vector<std::shared_ptr<Variable>>>(new std::vector<std::shared_ptr<Variable>>{Variable::createError(-32700, "Parse error. Node \"params\" not found.")});
 		}
 
-		std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters(new std::vector<std::shared_ptr<RPCVariable>>());
+		std::shared_ptr<std::vector<std::shared_ptr<Variable>>> parameters(new std::vector<std::shared_ptr<Variable>>());
 		for(xml_node<>* paramNode = subNode->first_node(); paramNode; paramNode = paramNode->next_sibling())
 		{
 			xml_node<>* valueNode = paramNode->first_node("value");
@@ -87,29 +87,29 @@ std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> XMLRPCDecoder::decode
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	doc.clear();
-    	return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>(new std::vector<std::shared_ptr<RPCVariable>>{RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what()))});
+    	return std::shared_ptr<std::vector<std::shared_ptr<Variable>>>(new std::vector<std::shared_ptr<Variable>>{Variable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what()))});
     }
     catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	doc.clear();
-    	return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>(new std::vector<std::shared_ptr<RPCVariable>>{RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what()))});
+    	return std::shared_ptr<std::vector<std::shared_ptr<Variable>>>(new std::vector<std::shared_ptr<Variable>>{Variable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what()))});
     }
     catch(...)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     	doc.clear();
     }
-    return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>(new std::vector<std::shared_ptr<RPCVariable>>{RPCVariable::createError(-32700, "Parse error. Not well formed.")});
+    return std::shared_ptr<std::vector<std::shared_ptr<Variable>>>(new std::vector<std::shared_ptr<Variable>>{Variable::createError(-32700, "Parse error. Not well formed.")});
 }
 
-std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(std::string& packet)
+std::shared_ptr<Variable> XMLRPCDecoder::decodeResponse(std::string& packet)
 {
 	xml_document<> doc;
 	try
 	{
 		doc.parse<0>(&packet.at(0));
-		std::shared_ptr<RPCVariable> response = decodeResponse(&doc);
+		std::shared_ptr<Variable> response = decodeResponse(&doc);
 		doc.clear();
 		return response;
 	}
@@ -117,23 +117,23 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(std::string& packet)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	doc.clear();
-    	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
+    	return std::shared_ptr<Variable>(Variable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
     }
     catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	doc.clear();
-    	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
+    	return std::shared_ptr<Variable>(Variable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
     }
     catch(...)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     	doc.clear();
     }
-    return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed."));
+    return std::shared_ptr<Variable>(Variable::createError(-32700, "Parse error. Not well formed."));
 }
 
-std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(std::vector<char>& packet)
+std::shared_ptr<Variable> XMLRPCDecoder::decodeResponse(std::vector<char>& packet)
 {
 	xml_document<> doc;
 	try
@@ -150,9 +150,9 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(std::vector<char>& pa
 				}
 			}
 		}
-		if(startPos >= (signed)packet.size()) return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: Could not find \"<\"."));
+		if(startPos >= (signed)packet.size()) return std::shared_ptr<Variable>(Variable::createError(-32700, "Parse error. Not well formed: Could not find \"<\"."));
 		doc.parse<0>(&packet.at(startPos));
-		std::shared_ptr<RPCVariable> response = decodeResponse(&doc);
+		std::shared_ptr<Variable> response = decodeResponse(&doc);
 		doc.clear();
 		return response;
 	}
@@ -160,23 +160,23 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(std::vector<char>& pa
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	doc.clear();
-    	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
+    	return std::shared_ptr<Variable>(Variable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
     }
     catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	doc.clear();
-    	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
+    	return std::shared_ptr<Variable>(Variable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
     }
     catch(...)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     	doc.clear();
     }
-    return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed."));
+    return std::shared_ptr<Variable>(Variable::createError(-32700, "Parse error. Not well formed."));
 }
 
-std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(xml_document<>* doc)
+std::shared_ptr<Variable> XMLRPCDecoder::decodeResponse(xml_document<>* doc)
 {
 	try
 	{
@@ -184,7 +184,7 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(xml_document<>* doc)
 		if(node == nullptr || std::string(doc->first_node()->name()) != "methodResponse")
 		{
 			doc->clear();
-			return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. First root node has to be \"methodResponse\"."));
+			return std::shared_ptr<Variable>(Variable::createError(-32700, "Parse error. First root node has to be \"methodResponse\"."));
 		}
 
 		bool errorStruct = false;
@@ -195,79 +195,79 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(xml_document<>* doc)
 			if(subNode == nullptr)
 			{
 				doc->clear();
-				return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Node \"fault\" and \"params\" not found."));
+				return std::shared_ptr<Variable>(Variable::createError(-32700, "Parse error. Node \"fault\" and \"params\" not found."));
 			}
 			errorStruct = true;
 		}
 		else
 		{
 			subNode = subNode->first_node("param");
-			if(subNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
+			if(subNode == nullptr) return std::shared_ptr<Variable>(new Variable(VariableType::rpcVoid));
 		}
 
 		subNode = subNode->first_node("value");
-		if(subNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
+		if(subNode == nullptr) return std::shared_ptr<Variable>(new Variable(VariableType::rpcVoid));
 
-		std::shared_ptr<RPCVariable> response = decodeParameter(subNode);
+		std::shared_ptr<Variable> response = decodeParameter(subNode);
 		if(errorStruct)
 		{
 			response->errorStruct = errorStruct;
-			if(response->structValue->find("faultCode") == response->structValue->end()) response->structValue->insert(RPC::RPCStructElement("faultCode", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(-1))));
-			if(response->structValue->find("faultString") == response->structValue->end()) response->structValue->insert(RPC::RPCStructElement("faultString", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("undefined")))));
+			if(response->structValue->find("faultCode") == response->structValue->end()) response->structValue->insert(RPC::RPCStructElement("faultCode", std::shared_ptr<RPC::Variable>(new RPC::Variable(-1))));
+			if(response->structValue->find("faultString") == response->structValue->end()) response->structValue->insert(RPC::RPCStructElement("faultString", std::shared_ptr<RPC::Variable>(new RPC::Variable(std::string("undefined")))));
 		}
 		return response;
 	}
 	catch(const std::exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
+    	return std::shared_ptr<Variable>(Variable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
     }
     catch(const Exception& ex)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
+    	return std::shared_ptr<Variable>(Variable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
     }
     catch(...)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed."));
+    return std::shared_ptr<Variable>(Variable::createError(-32700, "Parse error. Not well formed."));
 }
 
-std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeParameter(xml_node<>* valueNode)
+std::shared_ptr<Variable> XMLRPCDecoder::decodeParameter(xml_node<>* valueNode)
 {
 	try
 	{
-		if(valueNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
+		if(valueNode == nullptr) return std::shared_ptr<Variable>(new Variable(VariableType::rpcVoid));
 		xml_node<>* subNode = valueNode->first_node();
-		if(subNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcString));
+		if(subNode == nullptr) return std::shared_ptr<Variable>(new Variable(VariableType::rpcString));
 
 		std::string type(subNode->name());
 		HelperFunctions::toLower(type);
 		std::string value(subNode->value());
 		if(type == "string")
 		{
-			return std::shared_ptr<RPCVariable>(new RPCVariable(value));
+			return std::shared_ptr<Variable>(new Variable(value));
 		}
 		else if(type == "boolean")
 		{
 			bool boolean = false;
 			if(value == "true" || value == "1") boolean = true;
-			return std::shared_ptr<RPCVariable>(new RPCVariable(boolean));
+			return std::shared_ptr<Variable>(new Variable(boolean));
 		}
 		else if(type == "i4" || type == "int")
 		{
-			return std::shared_ptr<RPCVariable>(new RPCVariable(Math::getNumber(value)));
+			return std::shared_ptr<Variable>(new Variable(Math::getNumber(value)));
 		}
 		else if(type == "double")
 		{
 			double number = 0;
 			try { number = std::stod(value); } catch(...) {}
-			return std::shared_ptr<RPCVariable>(new RPCVariable(number));
+			return std::shared_ptr<Variable>(new Variable(number));
 		}
 		else if(type == "base64")
 		{
-			std::shared_ptr<RPCVariable> base64(new RPCVariable(RPCVariableType::rpcBase64));
+			std::shared_ptr<Variable> base64(new Variable(VariableType::rpcBase64));
 			base64->stringValue = value;
 			return base64;
 		}
@@ -281,9 +281,9 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeParameter(xml_node<>* valueNod
 		}
 		else if(type == "nil" || type == "ex:nil")
 		{
-			return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
+			return std::shared_ptr<Variable>(new Variable(VariableType::rpcVoid));
 		}
-		return std::shared_ptr<RPCVariable>(new RPCVariable(value)); //if no type is specified return string
+		return std::shared_ptr<Variable>(new Variable(value)); //if no type is specified return string
 	}
 	catch(const std::exception& ex)
     {
@@ -297,12 +297,12 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeParameter(xml_node<>* valueNod
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::shared_ptr<RPCVariable>(new RPCVariable(0));
+    return std::shared_ptr<Variable>(new Variable(0));
 }
 
-std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeStruct(xml_node<>* structNode)
+std::shared_ptr<Variable> XMLRPCDecoder::decodeStruct(xml_node<>* structNode)
 {
-	std::shared_ptr<RPCVariable> rpcStruct(new RPCVariable(RPCVariableType::rpcStruct));
+	std::shared_ptr<Variable> rpcStruct(new Variable(VariableType::rpcStruct));
 	try
 	{
 		if(structNode == nullptr) return rpcStruct;
@@ -315,7 +315,7 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeStruct(xml_node<>* structNode)
 			if(name.empty()) continue;
 			subNode = subNode->next_sibling("value");
 			if(subNode == nullptr) continue;
-			std::shared_ptr<RPCVariable> element = decodeParameter(subNode);
+			std::shared_ptr<Variable> element = decodeParameter(subNode);
 			rpcStruct->structValue->insert(RPCStructElement(name, element));
 		}
 	}
@@ -334,9 +334,9 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeStruct(xml_node<>* structNode)
 	return rpcStruct;
 }
 
-std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeArray(xml_node<>* arrayNode)
+std::shared_ptr<Variable> XMLRPCDecoder::decodeArray(xml_node<>* arrayNode)
 {
-	std::shared_ptr<RPCVariable> rpcArray(new RPCVariable(RPCVariableType::rpcArray));
+	std::shared_ptr<Variable> rpcArray(new Variable(VariableType::rpcArray));
 	try
 	{
 		if(arrayNode == nullptr) return rpcArray;

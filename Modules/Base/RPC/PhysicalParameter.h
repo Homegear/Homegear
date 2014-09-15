@@ -30,7 +30,7 @@
 #ifndef PHYSICALPARAMETER_H_
 #define PHYSICALPARAMETER_H_
 
-#include "../Encoding/rapidxml.hpp"
+#include "../Encoding/RapidXml/rapidxml.hpp"
 #include "../HelperFunctions/HelperFunctions.h"
 
 #include <fstream>
