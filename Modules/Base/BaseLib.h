@@ -41,6 +41,11 @@ public:
 	int32_t debugLevel = 3;
 
 	/**
+	 * True when Homegear is still starting. It is set to false, when start up is complete and isOpen() of all interfaces is "true" (plus 30 seconds).
+	 */
+	bool booting = true;
+
+	/**
 	 * The path of the main executable.
 	 */
 	std::string executablePath;

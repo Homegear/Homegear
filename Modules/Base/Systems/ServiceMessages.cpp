@@ -260,11 +260,13 @@ bool ServiceMessages::set(std::string id, bool value)
 		if(id == "LOWBAT_REPORTING") id = "LOWBAT"; //HM-TC-IT-WM-W-EU
 		if(id == "UNREACH" && value != _unreach)
 		{
+			if(value && _bl->booting) return true;
 			_unreach = value;
 			save(0, value);
 		}
 		else if(id == "STICKY_UNREACH" && value != _stickyUnreach)
 		{
+			if(value && _bl->booting) return true;
 			_stickyUnreach = value;
 			save(1, value);
 		}
@@ -584,6 +586,7 @@ void ServiceMessages::setUnreach(bool value, bool requeue)
 {
 	try
 	{
+		if(_disposing || (value && _bl->booting)) return;
 		if(value != _unreach)
 		{
 			if(value == true && requeue && _unreachResendCounter < 3)

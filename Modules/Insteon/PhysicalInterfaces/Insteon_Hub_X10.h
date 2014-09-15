@@ -62,7 +62,7 @@ class InsteonHubX10  : public IInsteonInterface
         void stopListening();
         void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
         int64_t lastAction() { return _lastAction; }
-        virtual bool isOpen() { return _socket->connected(); }
+        virtual bool isOpen() { return _initComplete && _socket->connected(); }
 
         virtual void addPeer(int32_t address);
 		virtual void addPeers(std::vector<int32_t>& addresses);

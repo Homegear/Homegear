@@ -47,7 +47,7 @@ class HueBridge  : public IPhilipsHueInterface
         void stopListening();
         void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
         int64_t lastAction() { return _lastAction; }
-        virtual bool isOpen() { return _client->connected(); }
+        virtual bool isOpen() { return true; /* Always return true, because there is no continuous connection. */ }
         virtual void searchLights();
         virtual std::vector<std::shared_ptr<PhilipsHuePacket>> getPeerInfo();
     protected:

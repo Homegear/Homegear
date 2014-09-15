@@ -98,6 +98,10 @@ void terminate(int32_t signalNumber)
 	{
 		if(signalNumber == SIGTERM)
 		{
+			while(!_startUpComplete)
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			}
 			_disposing = true;
 			GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
 			if(_startAsDaemon)
@@ -595,6 +599,41 @@ int main(int argc, char* argv[])
         GD::eventHandler.load();
         _startUpComplete = true;
         GD::out.printInfo("Startup complete.");
+
+        //Wait for all interfaces to connect before setting booting to false
+        {
+			std::vector<std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> interfaces;
+			for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+			{
+				std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> familyInterfaces = GD::physicalInterfaces.get(i->first);
+				for(std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>::iterator j = familyInterfaces.begin(); j != familyInterfaces.end(); ++j)
+				{
+					interfaces.push_back(j->second);
+				}
+			}
+
+			for(int32_t i = 0; i < 300; i++)
+			{
+				bool continueLoop = false;
+				for(std::vector<std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>::iterator j = interfaces.begin(); j != interfaces.end(); ++j)
+				{
+					if(!(*j)->isOpen())
+					{
+						continueLoop = true;
+						break;
+					}
+				}
+				if(!continueLoop) break;
+				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			}
+			interfaces.clear();
+			GD::out.printInfo("All physical interfaces are connected now.");
+
+			//Wait a little more. If "isOpen" of the physical interface is implemented correctly, this is not necessary. But just in case.
+			std::this_thread::sleep_for(std::chrono::milliseconds(30000));
+        }
+
+        GD::bl->booting = false;
 
         rl_bind_key('\t', rl_abort); //no autocompletion
 
