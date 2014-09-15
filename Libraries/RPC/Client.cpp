@@ -100,6 +100,7 @@ void Client::startInvokeBroadcastThread(std::shared_ptr<RemoteRPCServer> server,
 		{
 			GD::out.printCritical("Critical: More than 50 RPC broadcast threads are running. Server processing is too slow for the amount of requests. Dropping packet.");
 			_invokeBroadcastThreadsMutex.unlock();
+			return;
 		}
 		int32_t threadID = _currentInvokeBroadcastThreadID++;
 		std::shared_ptr<std::thread> t = std::shared_ptr<std::thread>(new std::thread(&Client::invokeBroadcastThread, this, threadID, server, methodName, parameters));

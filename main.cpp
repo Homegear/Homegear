@@ -609,7 +609,7 @@ int main(int argc, char* argv[])
 				input = std::string(inputBuffer);
 				if(inputBuffer[0] == '\n' || inputBuffer[0] == 0) continue;
 				if(strncmp(inputBuffer, "quit", 4) == 0 || strncmp(inputBuffer, "exit", 4) == 0 || strncmp(inputBuffer, "moin", 4) == 0) break;
-				else if(strncmp(inputBuffer, "test", 4) == 0)
+				/*else if(strncmp(inputBuffer, "test", 4) == 0)
 				{
 					std::string json("{\"on\":true, \"off\":    false, \"bla\":null, \"blupp\":  [5.643,false , null ,true ],\"blupp2\":[ 5.643,false,null,true], \"sat\":255.63456, \"bri\":-255,\"hue\":10000, \"bli\":{\"a\": 2,\"b\":false}    ,     \"e\"  :   -34785326,\"f\":-0.547887237, \"g\":{},\"h\":[], \"i\" : {    }  , \"j\" : [    ] , \"k\": {} , \"l\": [] }");
 					BaseLib::RPC::JsonDecoder bla(GD::bl.get());
@@ -620,7 +620,7 @@ int main(int argc, char* argv[])
 					blupp.encode(var, hmm);
 					std::cout << hmm << std::endl;
 					continue;
-				}
+				}*/
 
 				add_history(inputBuffer); //Sets inputBuffer to 0
 
