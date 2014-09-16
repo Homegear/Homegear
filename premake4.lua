@@ -59,6 +59,7 @@ solution "homegear"
         "./Modules/Base/Settings/*.h", "./Modules/Base/Settings/*.cpp",
       }
       buildoptions { "-Wall", "-std=c++11", "-fPIC" }
+      linkoptions { "-l gpg-error" }
  
       configuration "Debug"
          defines { "DEBUG" }

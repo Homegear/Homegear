@@ -46,6 +46,11 @@ public:
 	bool booting = true;
 
 	/**
+	 * True when Homegear received signal 15.
+	 */
+	bool shuttingDown = false;
+
+	/**
 	 * The path of the main executable.
 	 */
 	std::string executablePath;
