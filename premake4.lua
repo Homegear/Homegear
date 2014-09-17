@@ -59,7 +59,6 @@ solution "homegear"
         "./Modules/Base/Settings/*.h", "./Modules/Base/Settings/*.cpp",
       }
       buildoptions { "-Wall", "-std=c++11", "-fPIC" }
-      linkoptions { "-l gpg-error" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -412,7 +411,7 @@ solution "homegear"
       language "C++"
       files { "*.h", "*.cpp" }
 	  files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
-      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l sqlite3", "-l readline", "-l gpg-error", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l scriptengine", "-l ph7", "-l base" }
+      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l readline", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l scriptengine", "-l ph7", "-l base", "-l gpg-error", "-l sqlite3" }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
