@@ -44,7 +44,8 @@ namespace PhilipsHue
 		LLC006 =				0x0106,
 		LLC007 =				0x0107,
 		LLC011 =				0x0111,
-		LST001 =				0x0201
+		LST001 =				0x0201,
+		LWB004 =				0x0304
 	};
 }
 #endif
