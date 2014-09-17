@@ -157,7 +157,34 @@ void JsonEncoder::encodeFloat(const std::shared_ptr<Variable>& variable, std::os
 
 void JsonEncoder::encodeString(const std::shared_ptr<Variable>& variable, std::ostringstream& s)
 {
-	s << variable->stringValue;
+	//Source: https://github.com/miloyip/rapidjson/blob/master/include/rapidjson/writer.h
+	static const char hexDigits[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+	static const char escape[256] =
+	{
+		#define Z16 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+		//0 1 2 3 4 5 6 7 8 9 A B C D E F
+		'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'b', 't', 'n', 'u', 'f', 'r', 'u', 'u', // 00
+		'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', // 10
+		0, 0, '"', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 20
+		Z16, Z16, // 30~4F
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,'\\', 0, 0, 0, // 50
+		Z16, Z16, Z16, Z16, Z16, Z16, Z16, Z16, Z16, Z16 // 60~FF
+		#undef Z16
+	};
+	s << "\"";
+	for(std::string::iterator i = variable->stringValue.begin(); i != variable->stringValue.end(); ++i)
+	{
+		if(escape[(uint8_t)*i])
+		{
+			s << '\\' << escape[(uint8_t)*i];
+			if (escape[(uint8_t)*i] == 'u')
+			{
+				s << '0' << '0' << hexDigits[((uint8_t)*i) >> 4] << hexDigits[((uint8_t)*i) & 0xF];
+			}
+		}
+		else s << *i;
+	}
+	s << "\"";
 }
 
 void JsonEncoder::encodeVoid(const std::shared_ptr<Variable>& variable, std::ostringstream& s)

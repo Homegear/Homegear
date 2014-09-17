@@ -727,16 +727,20 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetAllValues::invoke(std::shared_ptr<
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
+			if(peerID > 0 && !central->knowsDevice(peerID)) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
 			std::shared_ptr<BaseLib::RPC::Variable> result = central->getAllValues(peerID, returnWriteOnly);
 			if(result && result->errorStruct)
 			{
-				GD::out.printWarning("Warning: Error calling method \"listDevices\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
+				if(peerID > 0) return result;
+				else GD::out.printWarning("Warning: Error calling method \"getAllValues\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
 				continue;
 			}
 			if(result && !result->arrayValue->empty()) values->arrayValue->insert(values->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
+			if(peerID > 0) break;
 		}
 
+		if(values->arrayValue->empty() && peerID > 0) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
 		return values;
 	}
 	catch(const std::exception& ex)

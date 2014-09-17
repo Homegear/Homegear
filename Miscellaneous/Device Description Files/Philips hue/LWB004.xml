@@ -65,18 +65,6 @@
 					<conversion type="option_string"/>
 					<conversion type="rpc_binary"/>
 				</parameter>
-				<parameter id="EFFECT" operations="read,write,event">
-					<logical type="option">
-						<option id="none" default="true" />
-						<option id="colorloop" />
-					</logical>
-					<physical interface="command" value_id="EFFECT" id="EFFECT">
-						<event packet="INFO" />
-						<set request="EFFECT_SET" />
-					</physical>
-					<conversion type="option_string"/>
-					<conversion type="rpc_binary"/>
-				</parameter>
 				<parameter id="REACHABLE" operations="read,event" ui_flags="service">
 					<logical type="boolean"/>
 					<physical interface="command" value_id="REACHABLE" id="REACHABLE">
@@ -105,10 +93,6 @@
 		<packet id="ALERT_SET" direction="to_device" type="0x02">
 			<parameter type="boolean" field="on" const_value="1"/>
 			<parameter field="alert" param="ALERT"/>
-		</packet>
-		<packet id="EFFECT_SET" direction="to_device" type="0x02">
-			<parameter type="boolean" field="on" const_value="1"/>
-			<parameter field="effect" param="EFFECT"/>
 		</packet>
 	</packets>
 </device>

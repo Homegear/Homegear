@@ -444,7 +444,8 @@ void PhilipsHuePeer::packetReceived(std::shared_ptr<PhilipsHuePacket> packet)
 						}
 						break;
 					}*/
-					if(*i == "HUE" || *i == "SATURATION" || *i == "BRIGHTNESS") //Calculate RGB
+					if((*i == "HUE" || *i == "SATURATION" || *i == "BRIGHTNESS") //Calculate RGB
+						&& valuesCentral.at(j->first).find("HUE") != valuesCentral.end()) //Does this peer support colors?
 					{
 						uint8_t brightness = _binaryDecoder->decodeResponse(valuesCentral.at(j->first).at("BRIGHTNESS").data)->integerValue;
 						uint8_t saturation = _binaryDecoder->decodeResponse(valuesCentral.at(j->first).at("SATURATION").data)->integerValue;
