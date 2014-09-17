@@ -94,7 +94,7 @@ void HTTPClient::sendRequest(const std::string& request, std::string& response)
 	char buffer[bufferMax + 1];
 	HTTP http;
 
-	std::this_thread::sleep_for(std::chrono::milliseconds(1)); //Some servers need a little, before the socket can be read.
+	std::this_thread::sleep_for(std::chrono::milliseconds(5)); //Some servers need a little, before the socket can be read.
 
 	for(int32_t i = 0; i < 100; i++) //Max 100 reads.
 	{
