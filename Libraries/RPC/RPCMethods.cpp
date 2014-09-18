@@ -1809,6 +1809,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCInit::invoke(std::shared_ptr<std::vec
 	{
 		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Method is disposing.");
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::VariableType>>({
+				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString }),
 				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString }),
 				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcInteger })
 		}));
@@ -1831,7 +1832,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCInit::invoke(std::shared_ptr<std::vec
 		server.second = std::to_string(BaseLib::Math::getNumber(server.second));
 		if(server.second.empty() || server.second == "0") return BaseLib::RPC::Variable::createError(-32602, "Port number is invalid.");
 
-		if(parameters->at(1)->stringValue.empty())
+		if(parameters->size() == 1 || parameters->at(1)->stringValue.empty())
 		{
 			GD::rpcClient.removeServer(server);
 		}
