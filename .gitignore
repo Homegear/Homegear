@@ -25,7 +25,9 @@
 *.pydevproject
 .metadata
 .gradle
+lib/
 bin/
+obj/
 tmp/
 *.tmp
 *.bak
