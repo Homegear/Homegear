@@ -32,11 +32,11 @@ ifeq ($(config),debug)
   TARGETDIR  = lib/Modules/Debug
   TARGET     = $(TARGETDIR)/libinsteon.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DDEBUG
-  INCLUDES  += 
+  INCLUDES  += -IARM\ headers
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -fPIC -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Debug -shared -l base
+  LDFLAGS   += -LARM\ libraries -Llib/Debug -shared -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -54,11 +54,11 @@ ifeq ($(config),release)
   TARGETDIR  = lib/Modules/Release
   TARGET     = $(TARGETDIR)/libinsteon.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
-  INCLUDES  += 
+  INCLUDES  += -IARM\ headers
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -fPIC -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Release -s -shared -l base
+  LDFLAGS   += -LARM\ libraries -Llib/Release -s -shared -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -76,11 +76,83 @@ ifeq ($(config),profiling)
   TARGETDIR  = lib/Modules/Profiling
   TARGET     = $(TARGETDIR)/libinsteon.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
-  INCLUDES  += 
+  INCLUDES  += -IARM\ headers
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -fPIC -Wall -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Profiling -shared -l base -pg
+  LDFLAGS   += -LARM\ libraries -Llib/Profiling -shared -l base -pg
+  RESFLAGS  += $(DEFINES) $(INCLUDES) 
+  LIBS      += 
+  LDDEPS    += 
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+endif
+
+ifeq ($(config),debug_rpi)
+  CC         = arm-linux-gnueabihf-gcc
+  CXX        = arm-linux-gnueabihf-g++
+  OBJDIR     = obj/rpi/Debug/insteon
+  TARGETDIR  = lib/Modules/Debug
+  TARGET     = $(TARGETDIR)/libinsteon.so
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DDEBUG
+  INCLUDES  += -IARM\ headers
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -fPIC -Wall -std=c++11
+  CXXFLAGS  += $(CFLAGS) 
+  LDFLAGS   += -LARM\ libraries -Llib/Debug -shared -l base
+  RESFLAGS  += $(DEFINES) $(INCLUDES) 
+  LIBS      += 
+  LDDEPS    += 
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+endif
+
+ifeq ($(config),release_rpi)
+  CC         = arm-linux-gnueabihf-gcc
+  CXX        = arm-linux-gnueabihf-g++
+  OBJDIR     = obj/rpi/Release/insteon
+  TARGETDIR  = lib/Modules/Release
+  TARGET     = $(TARGETDIR)/libinsteon.so
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
+  INCLUDES  += -IARM\ headers
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -fPIC -Wall -std=c++11
+  CXXFLAGS  += $(CFLAGS) 
+  LDFLAGS   += -LARM\ libraries -Llib/Release -s -shared -l base
+  RESFLAGS  += $(DEFINES) $(INCLUDES) 
+  LIBS      += 
+  LDDEPS    += 
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+endif
+
+ifeq ($(config),profiling_rpi)
+  CC         = arm-linux-gnueabihf-gcc
+  CXX        = arm-linux-gnueabihf-g++
+  OBJDIR     = obj/rpi/Profiling/insteon
+  TARGETDIR  = lib/Modules/Profiling
+  TARGET     = $(TARGETDIR)/libinsteon.so
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
+  INCLUDES  += -IARM\ headers
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -fPIC -Wall -std=c++11 -pg
+  CXXFLAGS  += $(CFLAGS) 
+  LDFLAGS   += -LARM\ libraries -Llib/Profiling -shared -l base -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -94,20 +166,20 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/PacketQueue.o \
-	$(OBJDIR)/InsteonPacket.o \
-	$(OBJDIR)/InsteonMessages.o \
 	$(OBJDIR)/GD.o \
-	$(OBJDIR)/InsteonDevice.o \
-	$(OBJDIR)/InsteonPeer.o \
+	$(OBJDIR)/PacketQueue.o \
 	$(OBJDIR)/PendingQueues.o \
 	$(OBJDIR)/QueueManager.o \
+	$(OBJDIR)/InsteonPacket.o \
+	$(OBJDIR)/InsteonMessages.o \
+	$(OBJDIR)/InsteonPeer.o \
 	$(OBJDIR)/PacketManager.o \
+	$(OBJDIR)/InsteonDevice.o \
+	$(OBJDIR)/Insteon.o \
 	$(OBJDIR)/Factory.o \
 	$(OBJDIR)/InsteonMessage.o \
-	$(OBJDIR)/Insteon.o \
-	$(OBJDIR)/Insteon-SD.o \
 	$(OBJDIR)/InsteonCentral.o \
+	$(OBJDIR)/Insteon-SD.o \
 	$(OBJDIR)/IInsteonInterface.o \
 	$(OBJDIR)/Insteon_Hub_X10.o \
 
@@ -174,22 +246,10 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/PacketQueue.o: Modules/Insteon/PacketQueue.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/InsteonPacket.o: Modules/Insteon/InsteonPacket.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/InsteonMessages.o: Modules/Insteon/InsteonMessages.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/GD.o: Modules/Insteon/GD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/InsteonDevice.o: Modules/Insteon/InsteonDevice.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/InsteonPeer.o: Modules/Insteon/InsteonPeer.cpp
+$(OBJDIR)/PacketQueue.o: Modules/Insteon/PacketQueue.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PendingQueues.o: Modules/Insteon/PendingQueues.cpp
@@ -198,7 +258,22 @@ $(OBJDIR)/PendingQueues.o: Modules/Insteon/PendingQueues.cpp
 $(OBJDIR)/QueueManager.o: Modules/Insteon/QueueManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/InsteonPacket.o: Modules/Insteon/InsteonPacket.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/InsteonMessages.o: Modules/Insteon/InsteonMessages.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/InsteonPeer.o: Modules/Insteon/InsteonPeer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PacketManager.o: Modules/Insteon/PacketManager.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/InsteonDevice.o: Modules/Insteon/InsteonDevice.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Insteon.o: Modules/Insteon/Insteon.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Factory.o: Modules/Insteon/Factory.cpp
@@ -207,13 +282,10 @@ $(OBJDIR)/Factory.o: Modules/Insteon/Factory.cpp
 $(OBJDIR)/InsteonMessage.o: Modules/Insteon/InsteonMessage.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Insteon.o: Modules/Insteon/Insteon.cpp
+$(OBJDIR)/InsteonCentral.o: Modules/Insteon/LogicalDevices/InsteonCentral.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Insteon-SD.o: Modules/Insteon/LogicalDevices/Insteon-SD.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/InsteonCentral.o: Modules/Insteon/LogicalDevices/InsteonCentral.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/IInsteonInterface.o: Modules/Insteon/PhysicalInterfaces/IInsteonInterface.cpp

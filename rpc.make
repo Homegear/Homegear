@@ -32,11 +32,11 @@ ifeq ($(config),debug)
   TARGETDIR  = lib/Debug
   TARGET     = $(TARGETDIR)/librpc.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DDEBUG
-  INCLUDES  += 
+  INCLUDES  += -IARM\ headers
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += 
+  LDFLAGS   += -LARM\ libraries
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -54,11 +54,11 @@ ifeq ($(config),release)
   TARGETDIR  = lib/Release
   TARGET     = $(TARGETDIR)/librpc.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
-  INCLUDES  += 
+  INCLUDES  += -IARM\ headers
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -s
+  LDFLAGS   += -LARM\ libraries -s
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -76,11 +76,83 @@ ifeq ($(config),profiling)
   TARGETDIR  = lib/Profiling
   TARGET     = $(TARGETDIR)/librpc.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
-  INCLUDES  += 
+  INCLUDES  += -IARM\ headers
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -pg
+  LDFLAGS   += -LARM\ libraries -pg
+  RESFLAGS  += $(DEFINES) $(INCLUDES) 
+  LIBS      += 
+  LDDEPS    += 
+  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+endif
+
+ifeq ($(config),debug_rpi)
+  CC         = arm-linux-gnueabihf-gcc
+  CXX        = arm-linux-gnueabihf-g++
+  OBJDIR     = obj/rpi/Debug/rpc
+  TARGETDIR  = lib/Debug
+  TARGET     = $(TARGETDIR)/librpc.a
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DDEBUG
+  INCLUDES  += -IARM\ headers
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++11
+  CXXFLAGS  += $(CFLAGS) 
+  LDFLAGS   += -LARM\ libraries
+  RESFLAGS  += $(DEFINES) $(INCLUDES) 
+  LIBS      += 
+  LDDEPS    += 
+  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+endif
+
+ifeq ($(config),release_rpi)
+  CC         = arm-linux-gnueabihf-gcc
+  CXX        = arm-linux-gnueabihf-g++
+  OBJDIR     = obj/rpi/Release/rpc
+  TARGETDIR  = lib/Release
+  TARGET     = $(TARGETDIR)/librpc.a
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
+  INCLUDES  += -IARM\ headers
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall -std=c++11
+  CXXFLAGS  += $(CFLAGS) 
+  LDFLAGS   += -LARM\ libraries -s
+  RESFLAGS  += $(DEFINES) $(INCLUDES) 
+  LIBS      += 
+  LDDEPS    += 
+  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+endif
+
+ifeq ($(config),profiling_rpi)
+  CC         = arm-linux-gnueabihf-gcc
+  CXX        = arm-linux-gnueabihf-g++
+  OBJDIR     = obj/rpi/Profiling/rpc
+  TARGETDIR  = lib/Profiling
+  TARGET     = $(TARGETDIR)/librpc.a
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
+  INCLUDES  += -IARM\ headers
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -std=c++11 -pg
+  CXXFLAGS  += $(CFLAGS) 
+  LDFLAGS   += -LARM\ libraries -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -94,16 +166,16 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
+	$(OBJDIR)/ClientSettings.o \
 	$(OBJDIR)/RPCMethod.o \
-	$(OBJDIR)/RPCServer.o \
-	$(OBJDIR)/Base64.o \
-	$(OBJDIR)/RPCClient.o \
 	$(OBJDIR)/Auth.o \
 	$(OBJDIR)/ServerSettings.o \
+	$(OBJDIR)/RPCServer.o \
 	$(OBJDIR)/RPCMethods.o \
-	$(OBJDIR)/ClientSettings.o \
-	$(OBJDIR)/Client.o \
+	$(OBJDIR)/RPCClient.o \
 	$(OBJDIR)/Server.o \
+	$(OBJDIR)/Base64.o \
+	$(OBJDIR)/Client.o \
 
 RESOURCES := \
 
@@ -168,16 +240,10 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
+$(OBJDIR)/ClientSettings.o: Libraries/RPC/ClientSettings.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RPCMethod.o: Libraries/RPC/RPCMethod.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCServer.o: Libraries/RPC/RPCServer.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Base64.o: Libraries/RPC/Base64.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCClient.o: Libraries/RPC/RPCClient.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Auth.o: Libraries/RPC/Auth.cpp
@@ -186,16 +252,22 @@ $(OBJDIR)/Auth.o: Libraries/RPC/Auth.cpp
 $(OBJDIR)/ServerSettings.o: Libraries/RPC/ServerSettings.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/RPCServer.o: Libraries/RPC/RPCServer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RPCMethods.o: Libraries/RPC/RPCMethods.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/ClientSettings.o: Libraries/RPC/ClientSettings.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Client.o: Libraries/RPC/Client.cpp
+$(OBJDIR)/RPCClient.o: Libraries/RPC/RPCClient.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Server.o: Libraries/RPC/Server.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Base64.o: Libraries/RPC/Base64.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Client.o: Libraries/RPC/Client.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

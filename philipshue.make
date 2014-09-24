@@ -32,11 +32,11 @@ ifeq ($(config),debug)
   TARGETDIR  = lib/Modules/Debug
   TARGET     = $(TARGETDIR)/libphilipshue.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DDEBUG
-  INCLUDES  += 
+  INCLUDES  += -IARM\ headers
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -fPIC -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Debug -shared -l base
+  LDFLAGS   += -LARM\ libraries -Llib/Debug -shared -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -54,11 +54,11 @@ ifeq ($(config),release)
   TARGETDIR  = lib/Modules/Release
   TARGET     = $(TARGETDIR)/libphilipshue.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
-  INCLUDES  += 
+  INCLUDES  += -IARM\ headers
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -fPIC -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Release -s -shared -l base
+  LDFLAGS   += -LARM\ libraries -Llib/Release -s -shared -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -76,11 +76,83 @@ ifeq ($(config),profiling)
   TARGETDIR  = lib/Modules/Profiling
   TARGET     = $(TARGETDIR)/libphilipshue.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
-  INCLUDES  += 
+  INCLUDES  += -IARM\ headers
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -fPIC -Wall -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Profiling -shared -l base -pg
+  LDFLAGS   += -LARM\ libraries -Llib/Profiling -shared -l base -pg
+  RESFLAGS  += $(DEFINES) $(INCLUDES) 
+  LIBS      += 
+  LDDEPS    += 
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+endif
+
+ifeq ($(config),debug_rpi)
+  CC         = arm-linux-gnueabihf-gcc
+  CXX        = arm-linux-gnueabihf-g++
+  OBJDIR     = obj/rpi/Debug/philipshue
+  TARGETDIR  = lib/Modules/Debug
+  TARGET     = $(TARGETDIR)/libphilipshue.so
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DDEBUG
+  INCLUDES  += -IARM\ headers
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -fPIC -Wall -std=c++11
+  CXXFLAGS  += $(CFLAGS) 
+  LDFLAGS   += -LARM\ libraries -Llib/Debug -shared -l base
+  RESFLAGS  += $(DEFINES) $(INCLUDES) 
+  LIBS      += 
+  LDDEPS    += 
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+endif
+
+ifeq ($(config),release_rpi)
+  CC         = arm-linux-gnueabihf-gcc
+  CXX        = arm-linux-gnueabihf-g++
+  OBJDIR     = obj/rpi/Release/philipshue
+  TARGETDIR  = lib/Modules/Release
+  TARGET     = $(TARGETDIR)/libphilipshue.so
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
+  INCLUDES  += -IARM\ headers
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -fPIC -Wall -std=c++11
+  CXXFLAGS  += $(CFLAGS) 
+  LDFLAGS   += -LARM\ libraries -Llib/Release -s -shared -l base
+  RESFLAGS  += $(DEFINES) $(INCLUDES) 
+  LIBS      += 
+  LDDEPS    += 
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+endif
+
+ifeq ($(config),profiling_rpi)
+  CC         = arm-linux-gnueabihf-gcc
+  CXX        = arm-linux-gnueabihf-g++
+  OBJDIR     = obj/rpi/Profiling/philipshue
+  TARGETDIR  = lib/Modules/Profiling
+  TARGET     = $(TARGETDIR)/libphilipshue.so
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
+  INCLUDES  += -IARM\ headers
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -fPIC -Wall -std=c++11 -pg
+  CXXFLAGS  += $(CFLAGS) 
+  LDFLAGS   += -LARM\ libraries -Llib/Profiling -shared -l base -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -94,12 +166,12 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/PhilipsHuePeer.o \
 	$(OBJDIR)/GD.o \
+	$(OBJDIR)/PhilipsHue.o \
+	$(OBJDIR)/PhilipsHuePeer.o \
+	$(OBJDIR)/PhilipsHuePacket.o \
 	$(OBJDIR)/PhilipsHueDevice.o \
 	$(OBJDIR)/PacketManager.o \
-	$(OBJDIR)/PhilipsHue.o \
-	$(OBJDIR)/PhilipsHuePacket.o \
 	$(OBJDIR)/Factory.o \
 	$(OBJDIR)/PhilipsHueCentral.o \
 	$(OBJDIR)/HueBridge.o \
@@ -168,22 +240,22 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
+$(OBJDIR)/GD.o: Modules/PhilipsHue/GD.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/PhilipsHue.o: Modules/PhilipsHue/PhilipsHue.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PhilipsHuePeer.o: Modules/PhilipsHue/PhilipsHuePeer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/GD.o: Modules/PhilipsHue/GD.cpp
+$(OBJDIR)/PhilipsHuePacket.o: Modules/PhilipsHue/PhilipsHuePacket.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PhilipsHueDevice.o: Modules/PhilipsHue/PhilipsHueDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PacketManager.o: Modules/PhilipsHue/PacketManager.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PhilipsHue.o: Modules/PhilipsHue/PhilipsHue.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PhilipsHuePacket.o: Modules/PhilipsHue/PhilipsHuePacket.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Factory.o: Modules/PhilipsHue/Factory.cpp

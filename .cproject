@@ -20,7 +20,7 @@
 					<folderInfo id="cdt.managedbuild.config.gnu.exe.debug.275614584." name="/" resourcePath="">
 						<toolChain errorParsers="" id="cdt.managedbuild.toolchain.gnu.exe.debug.782221185" name="Linux GCC" superClass="cdt.managedbuild.toolchain.gnu.exe.debug">
 							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="cdt.managedbuild.target.gnu.platform.exe.debug.567955920" name="Debug Platform" superClass="cdt.managedbuild.target.gnu.platform.exe.debug"/>
-							<builder arguments="Files (x86)\plink.exe -P 44444 -pw !5Weltzeit build@derverweb /home/build/makeRPIDebug.sh" autoBuildTarget="all" buildPath="${workspace_loc:/Homegear}" cleanBuildTarget="clean" command="C:\Program" enableAutoBuild="false" enableCleanBuild="true" enabledIncrementalBuild="true" id="cdt.managedbuild.builder.gnu.cross.177979262" incrementalBuildTarget="all" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" superClass="cdt.managedbuild.builder.gnu.cross">
+							<builder arguments="" autoBuildTarget="all" buildPath="${workspace_loc:/Homegear}" cleanBuildTarget="clean" command="/home/PREETZ/sathya/GitHub/makeHomegearRPIDebug.sh" enableAutoBuild="false" enableCleanBuild="true" enabledIncrementalBuild="true" id="cdt.managedbuild.builder.gnu.cross.177979262" incrementalBuildTarget="all" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" superClass="cdt.managedbuild.builder.gnu.cross">
 								<outputEntries>
 									<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="outputPath" name=""/>
 								</outputEntries>
@@ -118,13 +118,7 @@
 									<listOptionValue builtIn="false" value="__x86_64__=1"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.include.paths.1056346228" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;W:\include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\include\c++\4.7&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\include\c++\4.7\backward&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\include\c++\4.7\x86_64-linux-gnu&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\include\x86_64-linux-gnu&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\lib\gcc\x86_64-linux-gnu\4.7\include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\lib\gcc\x86_64-linux-gnu\4.7\include-fixed&quot;"/>
+									<listOptionValue builtIn="false" value="/usr/include/c++/4.8"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1073675196" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -132,10 +126,7 @@
 								<option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.exe.debug.option.optimization.level.1635135933" name="Optimization Level" superClass="gnu.c.compiler.exe.debug.option.optimization.level" valueType="enumerated"/>
 								<option id="gnu.c.compiler.exe.debug.option.debugging.level.1324059028" name="Debug Level" superClass="gnu.c.compiler.exe.debug.option.debugging.level" value="gnu.c.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.include.paths.1979052756" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;W:\include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\include\x86_64-linux-gnu&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\lib\gcc\x86_64-linux-gnu\4.7\include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\lib\gcc\x86_64-linux-gnu\4.7\include-fixed&quot;"/>
+									<listOptionValue builtIn="false" value="/usr/include/c++/4.8"/>
 								</option>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.1670075670" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="__GXX_EXPERIMENTAL_CXX0X__=1"/>
@@ -158,7 +149,9 @@
 								</inputType>
 							</tool>
 							<tool command="as" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GASErrorParser" id="cdt.managedbuild.tool.gnu.assembler.exe.debug.1534907246" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.exe.debug">
-								<option id="gnu.both.asm.option.include.paths.1149245389" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths"/>
+								<option id="gnu.both.asm.option.include.paths.1149245389" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="/usr/include/c++/4.8"/>
+								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1463545320" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
 						</toolChain>
@@ -285,6 +278,7 @@
 									<listOptionValue builtIn="false" value="&quot;W:\include\x86_64-linux-gnu&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;W:\lib\gcc\x86_64-linux-gnu\4.7\include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;W:\lib\gcc\x86_64-linux-gnu\4.7\include-fixed&quot;"/>
+									<listOptionValue builtIn="false" value="/usr/include/c++/4.8"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.852683577" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -296,6 +290,7 @@
 									<listOptionValue builtIn="false" value="&quot;W:\include\x86_64-linux-gnu&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;W:\lib\gcc\x86_64-linux-gnu\4.7\include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;W:\lib\gcc\x86_64-linux-gnu\4.7\include-fixed&quot;"/>
+									<listOptionValue builtIn="false" value="/usr/include/c++/4.8"/>
 								</option>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.1308428511" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="__GXX_EXPERIMENTAL_CXX0X__=1"/>
@@ -316,7 +311,9 @@
 								</inputType>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.assembler.exe.release.380417495" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.exe.release">
-								<option id="gnu.both.asm.option.include.paths.102057658" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths"/>
+								<option id="gnu.both.asm.option.include.paths.102057658" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="/usr/include/c++/4.8"/>
+								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1337759836" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
 						</toolChain>

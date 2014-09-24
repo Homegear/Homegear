@@ -32,11 +32,11 @@ ifeq ($(config),debug)
   TARGETDIR  = lib/Modules/Debug
   TARGET     = $(TARGETDIR)/libmax.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DDEBUG
-  INCLUDES  += 
+  INCLUDES  += -IARM\ headers
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -fPIC -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Debug -shared -l pthread -l base
+  LDFLAGS   += -LARM\ libraries -Llib/Debug -shared -l pthread -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -54,11 +54,11 @@ ifeq ($(config),release)
   TARGETDIR  = lib/Modules/Release
   TARGET     = $(TARGETDIR)/libmax.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
-  INCLUDES  += 
+  INCLUDES  += -IARM\ headers
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -fPIC -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Release -s -shared -l pthread -l base
+  LDFLAGS   += -LARM\ libraries -Llib/Release -s -shared -l pthread -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -76,11 +76,83 @@ ifeq ($(config),profiling)
   TARGETDIR  = lib/Modules/Profiling
   TARGET     = $(TARGETDIR)/libmax.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
-  INCLUDES  += 
+  INCLUDES  += -IARM\ headers
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -fPIC -Wall -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Profiling -shared -l pthread -l base -pg
+  LDFLAGS   += -LARM\ libraries -Llib/Profiling -shared -l pthread -l base -pg
+  RESFLAGS  += $(DEFINES) $(INCLUDES) 
+  LIBS      += 
+  LDDEPS    += 
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+endif
+
+ifeq ($(config),debug_rpi)
+  CC         = arm-linux-gnueabihf-gcc
+  CXX        = arm-linux-gnueabihf-g++
+  OBJDIR     = obj/rpi/Debug/max
+  TARGETDIR  = lib/Modules/Debug
+  TARGET     = $(TARGETDIR)/libmax.so
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DDEBUG
+  INCLUDES  += -IARM\ headers
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -fPIC -Wall -std=c++11
+  CXXFLAGS  += $(CFLAGS) 
+  LDFLAGS   += -LARM\ libraries -Llib/Debug -shared -l pthread -l base
+  RESFLAGS  += $(DEFINES) $(INCLUDES) 
+  LIBS      += 
+  LDDEPS    += 
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+endif
+
+ifeq ($(config),release_rpi)
+  CC         = arm-linux-gnueabihf-gcc
+  CXX        = arm-linux-gnueabihf-g++
+  OBJDIR     = obj/rpi/Release/max
+  TARGETDIR  = lib/Modules/Release
+  TARGET     = $(TARGETDIR)/libmax.so
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
+  INCLUDES  += -IARM\ headers
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -fPIC -Wall -std=c++11
+  CXXFLAGS  += $(CFLAGS) 
+  LDFLAGS   += -LARM\ libraries -Llib/Release -s -shared -l pthread -l base
+  RESFLAGS  += $(DEFINES) $(INCLUDES) 
+  LIBS      += 
+  LDDEPS    += 
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+endif
+
+ifeq ($(config),profiling_rpi)
+  CC         = arm-linux-gnueabihf-gcc
+  CXX        = arm-linux-gnueabihf-g++
+  OBJDIR     = obj/rpi/Profiling/max
+  TARGETDIR  = lib/Modules/Profiling
+  TARGET     = $(TARGETDIR)/libmax.so
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
+  INCLUDES  += -IARM\ headers
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -fPIC -Wall -std=c++11 -pg
+  CXXFLAGS  += $(CFLAGS) 
+  LDFLAGS   += -LARM\ libraries -Llib/Profiling -shared -l pthread -l base -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -94,23 +166,23 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/PacketQueue.o \
-	$(OBJDIR)/MAXPacket.o \
-	$(OBJDIR)/MAXDevice.o \
-	$(OBJDIR)/GD.o \
-	$(OBJDIR)/MAXMessages.o \
-	$(OBJDIR)/MAXPeer.o \
-	$(OBJDIR)/PendingQueues.o \
-	$(OBJDIR)/QueueManager.o \
-	$(OBJDIR)/PacketManager.o \
 	$(OBJDIR)/MAXMessage.o \
+	$(OBJDIR)/GD.o \
+	$(OBJDIR)/PacketQueue.o \
+	$(OBJDIR)/PendingQueues.o \
+	$(OBJDIR)/MAXPacket.o \
+	$(OBJDIR)/QueueManager.o \
+	$(OBJDIR)/MAXPeer.o \
+	$(OBJDIR)/MAXDevice.o \
+	$(OBJDIR)/MAXMessages.o \
+	$(OBJDIR)/PacketManager.o \
 	$(OBJDIR)/Factory.o \
 	$(OBJDIR)/MAX.o \
 	$(OBJDIR)/MAXCentral.o \
 	$(OBJDIR)/MAXSpyDevice.o \
 	$(OBJDIR)/TICC1100.o \
-	$(OBJDIR)/COC.o \
 	$(OBJDIR)/CUL.o \
+	$(OBJDIR)/COC.o \
 
 RESOURCES := \
 
@@ -175,34 +247,34 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/PacketQueue.o: Modules/MAX/PacketQueue.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/MAXPacket.o: Modules/MAX/MAXPacket.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/MAXDevice.o: Modules/MAX/MAXDevice.cpp
+$(OBJDIR)/MAXMessage.o: Modules/MAX/MAXMessage.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/GD.o: Modules/MAX/GD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/MAXMessages.o: Modules/MAX/MAXMessages.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/MAXPeer.o: Modules/MAX/MAXPeer.cpp
+$(OBJDIR)/PacketQueue.o: Modules/MAX/PacketQueue.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PendingQueues.o: Modules/MAX/PendingQueues.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/MAXPacket.o: Modules/MAX/MAXPacket.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/QueueManager.o: Modules/MAX/QueueManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PacketManager.o: Modules/MAX/PacketManager.cpp
+$(OBJDIR)/MAXPeer.o: Modules/MAX/MAXPeer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/MAXMessage.o: Modules/MAX/MAXMessage.cpp
+$(OBJDIR)/MAXDevice.o: Modules/MAX/MAXDevice.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/MAXMessages.o: Modules/MAX/MAXMessages.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/PacketManager.o: Modules/MAX/PacketManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Factory.o: Modules/MAX/Factory.cpp
@@ -220,10 +292,10 @@ $(OBJDIR)/MAXSpyDevice.o: Modules/MAX/LogicalDevices/MAXSpyDevice.cpp
 $(OBJDIR)/TICC1100.o: Modules/MAX/PhysicalInterfaces/TICC1100.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/COC.o: Modules/MAX/PhysicalInterfaces/COC.cpp
+$(OBJDIR)/CUL.o: Modules/MAX/PhysicalInterfaces/CUL.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/CUL.o: Modules/MAX/PhysicalInterfaces/CUL.cpp
+$(OBJDIR)/COC.o: Modules/MAX/PhysicalInterfaces/COC.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 
