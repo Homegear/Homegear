@@ -68,7 +68,7 @@ void Client::initServerMethods(std::pair<std::string, std::string> address)
 	try
 	{
 		//Wait a little before sending these methods
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 		systemListMethods(address);
 		std::shared_ptr<RemoteRPCServer> server = getServer(address);
 		if(!server) return; //server is empty when connection timed out

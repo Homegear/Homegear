@@ -447,6 +447,7 @@ class RPCInit : public RPCMethod
 public:
 	RPCInit()
 	{
+		addSignature(BaseLib::RPC::VariableType::rpcVoid, std::vector<BaseLib::RPC::VariableType>{BaseLib::RPC::VariableType::rpcString});
 		addSignature(BaseLib::RPC::VariableType::rpcVoid, std::vector<BaseLib::RPC::VariableType>{BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString});
 		addSignature(BaseLib::RPC::VariableType::rpcVoid, std::vector<BaseLib::RPC::VariableType>{BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcInteger});
 	}
@@ -575,6 +576,16 @@ public:
 	{
 		addSignature(BaseLib::RPC::VariableType::rpcVoid, std::vector<BaseLib::RPC::VariableType>{BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString});
 		addSignature(BaseLib::RPC::VariableType::rpcVoid, std::vector<BaseLib::RPC::VariableType>{BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger});
+	}
+	std::shared_ptr<BaseLib::RPC::Variable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
+};
+
+class RPCReportValueUsage : public RPCMethod
+{
+public:
+	RPCReportValueUsage()
+	{
+		addSignature(BaseLib::RPC::VariableType::rpcArray, std::vector<BaseLib::RPC::VariableType>({BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcInteger}));
 	}
 	std::shared_ptr<BaseLib::RPC::Variable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
 };

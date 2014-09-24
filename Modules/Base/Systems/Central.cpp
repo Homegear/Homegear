@@ -691,6 +691,29 @@ std::shared_ptr<RPC::Variable> Central::listDevices(bool channels, std::map<std:
     return RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::Variable> Central::reportValueUsage(std::string serialNumber)
+{
+	try
+	{
+		std::shared_ptr<Peer> peer(_me->getPeer(serialNumber));
+		if(!peer) return RPC::Variable::createError(-2, "Peer not found.");
+		return peer->reportValueUsage();
+	}
+	catch(const std::exception& ex)
+	{
+		_baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return RPC::Variable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::Variable> Central::rssiInfo()
 {
 	try

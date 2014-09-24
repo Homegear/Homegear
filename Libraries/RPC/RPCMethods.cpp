@@ -2330,6 +2330,48 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRemoveLink::invoke(std::shared_ptr<st
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<BaseLib::RPC::Variable> RPCReportValueUsage::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::VariableType>>({
+				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcInteger }),
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+		std::string serialNumber;
+		if(parameters->at(0)->type == BaseLib::RPC::VariableType::rpcString)
+		{
+			int32_t pos = parameters->at(0)->stringValue.find(':');
+			if(pos > -1)
+			{
+				serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+			}
+			else serialNumber = parameters->at(0)->stringValue;
+		}
+
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
+			if(central && central->knowsDevice(serialNumber)) return central->reportValueUsage(serialNumber);
+		}
+
+		return BaseLib::RPC::Variable::createError(-2, "Device not found.");
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. Check the address format.");
+}
+
 std::shared_ptr<BaseLib::RPC::Variable> RPCRssiInfo::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try

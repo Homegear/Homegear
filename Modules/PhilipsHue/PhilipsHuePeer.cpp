@@ -938,6 +938,7 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::setValue(uint32_t channe
 					bool paramFound = false;
 					for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator j = valuesCentral[channel].begin(); j != valuesCentral[channel].end(); ++j)
 					{
+						if(!j->second.rpcParameter) continue;
 						if(i->param == j->second.rpcParameter->physicalParameter->id)
 						{
 							if(i->field.empty()) continue;

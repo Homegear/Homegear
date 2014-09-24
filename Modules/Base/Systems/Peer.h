@@ -222,6 +222,7 @@ public:
     virtual std::shared_ptr<RPC::Variable> getServiceMessages(bool returnID);
     virtual std::shared_ptr<BaseLib::RPC::Variable> getValue(uint32_t channel, std::string valueKey);
     virtual std::shared_ptr<BaseLib::RPC::Variable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> variables, bool onlyPushing = false) = 0;
+    virtual std::shared_ptr<BaseLib::RPC::Variable> reportValueUsage();
     virtual std::shared_ptr<BaseLib::RPC::Variable> rssiInfo();
 
     /**

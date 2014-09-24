@@ -2122,6 +2122,28 @@ std::shared_ptr<RPC::Variable> Peer::getValue(uint32_t channel, std::string valu
     return RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::Variable> Peer::reportValueUsage()
+{
+	try
+	{
+		if(_disposing) return RPC::Variable::createError(-32500, "Peer is disposing.");
+		return std::shared_ptr<RPC::Variable>(new RPC::Variable(!serviceMessages->getConfigPending()));
+	}
+	catch(const std::exception& ex)
+	{
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return RPC::Variable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::Variable> Peer::rssiInfo()
 {
 	try
