@@ -103,6 +103,7 @@ bool BidCoSMessage::typeIsEqual(int32_t messageType, std::vector<std::pair<uint3
 {
 	try
 	{
+		if(_messageType == -1) return true; //Match any
 		if(_messageType != messageType) return false;
 		if(subtypes->size() != _subtypes.size()) return false;
 		for(uint32_t i = 0; i < subtypes->size(); i++)

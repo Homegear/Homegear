@@ -2090,7 +2090,7 @@ std::shared_ptr<RPC::Variable> Peer::getServiceMessages(bool returnID)
 	return serviceMessages->get(returnID);
 }
 
-std::shared_ptr<RPC::Variable> Peer::getValue(uint32_t channel, std::string valueKey)
+std::shared_ptr<RPC::Variable> Peer::getValue(uint32_t channel, std::string valueKey, bool requestFromDevice, bool asynchronous)
 {
 	try
 	{
@@ -2105,6 +2105,11 @@ std::shared_ptr<RPC::Variable> Peer::getValue(uint32_t channel, std::string valu
 		std::shared_ptr<RPC::Parameter> parameter = parameterSet->getParameter(valueKey);
 		if(!parameter) return RPC::Variable::createError(-5, "Unknown parameter.");
 		if(!(parameter->operations & BaseLib::RPC::Parameter::Operations::read) && !(parameter->operations & BaseLib::RPC::Parameter::Operations::event)) return RPC::Variable::createError(-6, "Parameter is not readable.");
+		if(requestFromDevice)
+		{
+			std::shared_ptr<RPC::Variable> variable = getValueFromDevice(parameter, channel, asynchronous);
+			if(!asynchronous || variable->errorStruct) return variable;
+		}
 		return parameter->convertFromPacket(valuesCentral[channel][valueKey].data);
 	}
 	catch(const std::exception& ex)

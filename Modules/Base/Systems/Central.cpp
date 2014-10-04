@@ -601,12 +601,12 @@ std::shared_ptr<RPC::Variable> Central::getServiceMessages(bool returnID)
     return RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::Variable> Central::getValue(std::string serialNumber, uint32_t channel, std::string valueKey)
+std::shared_ptr<RPC::Variable> Central::getValue(std::string serialNumber, uint32_t channel, std::string valueKey, bool requestFromDevice, bool asynchronous)
 {
 	try
 	{
 		std::shared_ptr<Peer> peer(_me->getPeer(serialNumber));
-		if(peer) return peer->getValue(channel, valueKey);
+		if(peer) return peer->getValue(channel, valueKey, requestFromDevice, asynchronous);
 		return RPC::Variable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)
@@ -624,12 +624,12 @@ std::shared_ptr<RPC::Variable> Central::getValue(std::string serialNumber, uint3
     return RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::Variable> Central::getValue(uint64_t id, uint32_t channel, std::string valueKey)
+std::shared_ptr<RPC::Variable> Central::getValue(uint64_t id, uint32_t channel, std::string valueKey, bool requestFromDevice, bool asynchronous)
 {
 	try
 	{
 		std::shared_ptr<Peer> peer(_me->getPeer(id));
-		if(peer) return peer->getValue(channel, valueKey);
+		if(peer) return peer->getValue(channel, valueKey, requestFromDevice, asynchronous);
 		return RPC::Variable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)

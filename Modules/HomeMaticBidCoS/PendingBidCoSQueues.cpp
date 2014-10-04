@@ -286,7 +286,7 @@ std::shared_ptr<BidCoSQueue> PendingBidCoSQueues::front()
     return std::shared_ptr<BidCoSQueue>();
 }
 
-void PendingBidCoSQueues::removeQueue(std::string parameterName, int32_t channel)
+void PendingBidCoSQueues::removeQueue(BidCoSQueueType type, std::string parameterName, int32_t channel)
 {
 	try
 	{
@@ -299,7 +299,7 @@ void PendingBidCoSQueues::removeQueue(std::string parameterName, int32_t channel
 		}
 		for(int32_t i = _queues.size() - 1; i >= 0; i--)
 		{
-			if(!_queues.at(i) || (_queues.at(i)->parameterName == parameterName && _queues.at(i)->channel == channel)) _queues.erase(_queues.begin() + i);
+			if(!_queues.at(i) || (_queues.at(i)->getQueueType() == type && _queues.at(i)->parameterName == parameterName && _queues.at(i)->channel == channel)) _queues.erase(_queues.begin() + i);
 		}
 	}
 	catch(const std::exception& ex)

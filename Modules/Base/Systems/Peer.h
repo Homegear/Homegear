@@ -220,7 +220,7 @@ public:
     virtual std::shared_ptr<RPC::Variable> getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel) = 0;
     virtual std::shared_ptr<RPC::Variable> getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
     virtual std::shared_ptr<RPC::Variable> getServiceMessages(bool returnID);
-    virtual std::shared_ptr<BaseLib::RPC::Variable> getValue(uint32_t channel, std::string valueKey);
+    virtual std::shared_ptr<BaseLib::RPC::Variable> getValue(uint32_t channel, std::string valueKey, bool requestFromDevice, bool asynchronous);
     virtual std::shared_ptr<BaseLib::RPC::Variable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> variables, bool onlyPushing = false) = 0;
     virtual std::shared_ptr<BaseLib::RPC::Variable> reportValueUsage();
     virtual std::shared_ptr<BaseLib::RPC::Variable> rssiInfo();
@@ -301,6 +301,24 @@ protected:
 	virtual void onEnqueuePendingQueues();
 	//End ServiceMessages event handling
 
+	/**
+	 * Gets a variable value directly from the device. This method is used as an inheritable hook method within getValue().
+	 *
+	 * @see getValue
+	 * @param parameter The parameter to get the value for.
+	 * @param channel The channel to get the value for.
+	 * @param asynchronous If set to true, the method returns immediately, otherwise it waits for the response packet.
+	 * @return Returns the requested value when asynchronous is false. If asynchronous is true, rpcVoid is returned.
+	 */
+	virtual std::shared_ptr<BaseLib::RPC::Variable> getValueFromDevice(std::shared_ptr<RPC::Parameter>& parameter, int32_t channel, bool asynchronous) { return RPC::Variable::createError(-32601, "Method not implemented for this device family."); }
+
+	/**
+	 * This method returns the correct parameter set for a specified channel and parameter set type. It is necessary, because sometimes multiple parameter sets are available for one channel depending on family specific conditions. This method is a mandatory hook method.
+	 *
+	 * @param channel The channel index.
+	 * @param type The parameter set type.
+	 * @return Returns the parameter set for the specified channel and type.
+	 */
 	virtual std::shared_ptr<RPC::ParameterSet> getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type) = 0;
 
 	/**

@@ -273,7 +273,7 @@ bool HomeMaticCentral::onPacketReceived(std::string& senderID, std::shared_ptr<B
     return false;
 }
 
-void HomeMaticCentral::enqueuePendingQueues(int32_t deviceAddress)
+std::shared_ptr<BidCoSQueue> HomeMaticCentral::enqueuePendingQueues(int32_t deviceAddress)
 {
 	try
 	{
@@ -282,14 +282,14 @@ void HomeMaticCentral::enqueuePendingQueues(int32_t deviceAddress)
 		if(!peer || !peer->pendingBidCoSQueues)
 		{
 			_enqueuePendingQueuesMutex.unlock();
-			return;
+			return std::shared_ptr<BidCoSQueue>();
 		}
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(deviceAddress);
 		if(!queue) queue = _bidCoSQueueManager.createQueue(this, peer->getPhysicalInterface(), BidCoSQueueType::DEFAULT, deviceAddress);
 		if(!queue)
 		{
 			_enqueuePendingQueuesMutex.unlock();
-			return;
+			return std::shared_ptr<BidCoSQueue>();
 		}
 		if(!queue->peer) queue->peer = peer;
 		if(queue->pendingQueuesEmpty())
@@ -297,6 +297,8 @@ void HomeMaticCentral::enqueuePendingQueues(int32_t deviceAddress)
 			if(peer->getRXModes() & BaseLib::RPC::Device::RXModes::burst) peer->pendingBidCoSQueues->setWakeOnRadioBit();
 			queue->push(peer->pendingBidCoSQueues);
 		}
+		_enqueuePendingQueuesMutex.unlock();
+		return queue;
 	}
 	catch(const std::exception& ex)
     {
@@ -311,6 +313,7 @@ void HomeMaticCentral::enqueuePendingQueues(int32_t deviceAddress)
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _enqueuePendingQueuesMutex.unlock();
+    return std::shared_ptr<BidCoSQueue>();
 }
 
 void HomeMaticCentral::enqueuePackets(int32_t deviceAddress, std::shared_ptr<BidCoSQueue> packets, bool pushPendingBidCoSQueues)

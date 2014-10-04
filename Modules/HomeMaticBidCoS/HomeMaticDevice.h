@@ -84,6 +84,7 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice, public BidCoSQue
         std::shared_ptr<BidCoSPeer> getPeer(int32_t address);
         std::shared_ptr<BidCoSPeer> getPeer(uint64_t id);
         std::shared_ptr<BidCoSPeer> getPeer(std::string serialNumber);
+        std::shared_ptr<BidCoSQueue> getQueue(int32_t address);
         virtual void loadPeers();
         virtual void savePeers(bool full);
         virtual void loadVariables();

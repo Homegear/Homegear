@@ -426,8 +426,12 @@ class RPCGetValue : public RPCMethod
 public:
 	RPCGetValue()
 	{
-		addSignature(BaseLib::RPC::VariableType::rpcVariant, std::vector<BaseLib::RPC::VariableType>{BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString});
-		addSignature(BaseLib::RPC::VariableType::rpcVariant, std::vector<BaseLib::RPC::VariableType>{BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcString});
+		addSignature(BaseLib::RPC::VariableType::rpcVariant, std::vector<BaseLib::RPC::VariableType>{ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString });
+		addSignature(BaseLib::RPC::VariableType::rpcVariant, std::vector<BaseLib::RPC::VariableType>{ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcBoolean });
+		addSignature(BaseLib::RPC::VariableType::rpcVariant, std::vector<BaseLib::RPC::VariableType>{ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcBoolean, BaseLib::RPC::VariableType::rpcBoolean });
+		addSignature(BaseLib::RPC::VariableType::rpcVariant, std::vector<BaseLib::RPC::VariableType>{ BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcString });
+		addSignature(BaseLib::RPC::VariableType::rpcVariant, std::vector<BaseLib::RPC::VariableType>{ BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcBoolean });
+		addSignature(BaseLib::RPC::VariableType::rpcVariant, std::vector<BaseLib::RPC::VariableType>{ BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcBoolean, BaseLib::RPC::VariableType::rpcBoolean });
 	}
 	std::shared_ptr<BaseLib::RPC::Variable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
 };

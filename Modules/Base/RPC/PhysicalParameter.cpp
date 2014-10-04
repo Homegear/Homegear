@@ -178,7 +178,8 @@ PhysicalParameter::PhysicalParameter(BaseLib::Obj* baseLib, xml_node<>* node) : 
 			{
 				attr = physicalNode->first_attribute("request");
 				if(attr) getRequest = std::string(attr->value());
-				//ignore "response"
+				attr = physicalNode->first_attribute("response");
+				if(attr) getResponse = std::string(attr->value());
 			}
 			else if(nodeName == "event")
 			{

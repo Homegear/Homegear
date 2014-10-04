@@ -125,6 +125,7 @@ public:
 	std::string valueID;
 	//bool noInit = false;
 	std::string getRequest;
+	std::string getResponse;
 	std::vector<std::shared_ptr<SetRequestEx>> setRequestsEx;
 	std::string setRequest;
 

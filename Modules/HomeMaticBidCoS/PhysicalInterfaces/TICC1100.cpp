@@ -747,7 +747,7 @@ void TICC1100::initChip()
 		writeRegister(Registers::Enum::FSTEST, 0x59, true);
 		writeRegister(Registers::Enum::TEST2, 0x81, true); //Determined by SmartRF Studio
 		writeRegister(Registers::Enum::TEST1, 0x35, true); //Determined by SmartRF Studio
-		writeRegister(Registers::Enum::PATABLE, 0xC3, true);
+		writeRegister(Registers::Enum::PATABLE, 0xC0, true);
 
 		sendCommandStrobe(CommandStrobes::Enum::SFRX);
 		usleep(20);

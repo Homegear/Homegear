@@ -196,7 +196,7 @@ void SerialReaderWriter::writeLine(std::string& data)
         _sendMutex.lock();
         while(bytesWritten < (signed)data.length())
         {
-        	_bl->out.printInfo("Writing: " + data);
+        	if(_bl->debugLevel >= 5) _bl->out.printDebug("Debug: Writing: " + data);
             i = write(_fileDescriptor->descriptor, data.c_str() + bytesWritten, data.length() - bytesWritten);
             if(i == -1)
             {

@@ -953,8 +953,10 @@ bool HomeMaticDevice::onPacketReceived(std::string& senderID, std::shared_ptr<Ba
 			return true;
 		}
 		if(_receivedPackets.set(bidCoSPacket->senderAddress(), bidCoSPacket, bidCoSPacket->timeReceived())) return true;
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(bidCoSPacket->senderAddress());
+		if(queue && queue->getQueueType() == BidCoSQueueType::GETVALUE) return false; //Don't handle peer's get value responses
 		std::shared_ptr<BidCoSMessage> message = _messages->find(DIRECTIONIN, bidCoSPacket);
-		if(message && message->checkAccess(bidCoSPacket, _bidCoSQueueManager.get(bidCoSPacket->senderAddress())))
+		if(message && message->checkAccess(bidCoSPacket, queue))
 		{
 			if(_bl->debugLevel >= 6) GD::out.printDebug("Debug: Device " + std::to_string(_deviceID) + ": Access granted for packet " + bidCoSPacket->hexString());
 			message->invokeMessageHandlerIncoming(bidCoSPacket);
@@ -1952,6 +1954,11 @@ std::shared_ptr<BidCoSPeer> HomeMaticDevice::getPeer(std::string serialNumber)
     }
     _peersMutex.unlock();
     return std::shared_ptr<BidCoSPeer>();
+}
+
+std::shared_ptr<BidCoSQueue> HomeMaticDevice::getQueue(int32_t address)
+{
+	return _bidCoSQueueManager.get(address);
 }
 
 int32_t HomeMaticDevice::calculateCycleLength(uint8_t messageCounter)

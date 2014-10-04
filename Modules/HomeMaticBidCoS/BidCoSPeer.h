@@ -168,7 +168,6 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         virtual void enqueuePendingQueues();
 
         void handleDominoEvent(std::shared_ptr<BaseLib::RPC::Parameter> parameter, std::string& frameID, uint32_t channel);
-        void getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::vector<FrameValues>& frameValue);
         bool hasLowbatBit(std::shared_ptr<BaseLib::RPC::DeviceFrame> frame);
         void packetReceived(std::shared_ptr<BidCoSPacket> packet);
         bool setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value);
@@ -280,6 +279,14 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 		virtual std::shared_ptr<BaseLib::Systems::LogicalDevice> getDevice(int32_t address);
 
+		/**
+		 * {@inheritDoc}
+		 */
+		virtual std::shared_ptr<BaseLib::RPC::Variable> getValueFromDevice(std::shared_ptr<BaseLib::RPC::Parameter>& parameter, int32_t channel, bool asynchronous);
+
+		/**
+		 * {@inheritDoc}
+		 */
 		virtual std::shared_ptr<BaseLib::RPC::ParameterSet> getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type);
 
 		/**
@@ -295,6 +302,8 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		 * {@inheritDoc}
 		 */
 		virtual void setDefaultValue(BaseLib::Systems::RPCConfigurationParameter* parameter);
+
+		void getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::vector<FrameValues>& frameValue);
 };
 }
-#endif // BIDCOSPEER_H
+#endif

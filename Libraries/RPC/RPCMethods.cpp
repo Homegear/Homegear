@@ -1704,12 +1704,18 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetValue::invoke(std::shared_ptr<std:
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::VariableType>>({
 				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString }),
+				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcBoolean }),
+				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcBoolean, BaseLib::RPC::VariableType::rpcBoolean }),
 				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcString }),
+				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcBoolean }),
+				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcBoolean, BaseLib::RPC::VariableType::rpcBoolean })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 		std::string serialNumber;
 		uint32_t channel = 0;
 		bool useSerialNumber = false;
+		bool requestFromDevice = false;
+		bool asynchronously = false;
 		if(parameters->at(0)->type == BaseLib::RPC::VariableType::rpcString)
 		{
 			useSerialNumber = true;
@@ -1720,6 +1726,13 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetValue::invoke(std::shared_ptr<std:
 				if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
 			}
 			else serialNumber = parameters->at(0)->stringValue;
+			if(parameters->size() >= 3) requestFromDevice = parameters->at(2)->booleanValue;
+			if(parameters->size() >= 4) asynchronously = parameters->at(3)->booleanValue;
+		}
+		else
+		{
+			if(parameters->size() >= 4) requestFromDevice = parameters->at(3)->booleanValue;
+			if(parameters->size() >= 5) asynchronously = parameters->at(4)->booleanValue;
 		}
 
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
@@ -1729,11 +1742,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetValue::invoke(std::shared_ptr<std:
 			{
 				if(useSerialNumber)
 				{
-					if(central->knowsDevice(serialNumber)) return central->getValue(serialNumber, channel, parameters->at(1)->stringValue);
+					if(central->knowsDevice(serialNumber)) return central->getValue(serialNumber, channel, parameters->at(1)->stringValue, requestFromDevice, asynchronously);
 				}
 				else
 				{
-					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getValue(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue);
+					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getValue(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue, requestFromDevice, asynchronously);
 				}
 			}
 		}

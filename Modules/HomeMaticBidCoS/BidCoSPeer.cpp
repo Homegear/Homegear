@@ -2077,6 +2077,112 @@ bool BidCoSPeer::hasLowbatBit(std::shared_ptr<BaseLib::RPC::DeviceFrame> frame)
     return false;
 }
 
+std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getValueFromDevice(std::shared_ptr<BaseLib::RPC::Parameter>& parameter, int32_t channel, bool asynchronous)
+{
+	try
+	{
+		if(!parameter) return BaseLib::RPC::Variable::createError(-32500, "parameter is nullptr.");
+		std::string getRequest = parameter->physicalParameter->getRequest;
+		std::string getResponse = parameter->physicalParameter->getResponse;
+		if(getRequest.empty()) return BaseLib::RPC::Variable::createError(-6, "Parameter can't be requested actively.");
+		if(rpcDevice->framesByID.find(getRequest) == rpcDevice->framesByID.end()) return BaseLib::RPC::Variable::createError(-6, "No frame was found for parameter " + parameter->id);
+		std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[getRequest];
+		std::shared_ptr<BaseLib::RPC::DeviceFrame> responseFrame;
+		if(rpcDevice->framesByID.find(getResponse) != rpcDevice->framesByID.end()) responseFrame = rpcDevice->framesByID[getResponse];
+
+		if(valuesCentral.find(channel) == valuesCentral.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
+		if(valuesCentral[channel].find(parameter->id) == valuesCentral[channel].end()) return BaseLib::RPC::Variable::createError(-5, "Unknown parameter.");
+
+		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(_physicalInterface, BidCoSQueueType::GETVALUE));
+		queue->noSending = true;
+
+		std::vector<uint8_t> payload;
+		if(frame->subtype > -1 && frame->subtypeIndex >= 9)
+		{
+			while((signed)payload.size() - 1 < frame->subtypeIndex - 9) payload.push_back(0);
+			payload.at(frame->subtypeIndex - 9) = (uint8_t)frame->subtype;
+		}
+		if(frame->channelField >= 9)
+		{
+			while((signed)payload.size() - 1 < frame->channelField - 9) payload.push_back(0);
+			payload.at(frame->channelField - 9) = (uint8_t)channel;
+		}
+		uint8_t controlByte = 0xA0;
+		if(getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst) controlByte |= 0x10;
+		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(_messageCounter, controlByte, (uint8_t)frame->type, getCentral()->physicalAddress(), _address, payload));
+
+		for(std::vector<BaseLib::RPC::Parameter>::iterator i = frame->parameters.begin(); i != frame->parameters.end(); ++i)
+		{
+			if(i->constValue > -1)
+			{
+				std::vector<uint8_t> data;
+				_bl->hf.memcpyBigEndian(data, i->constValue);
+				packet->setPosition(i->index, i->size, data);
+				continue;
+			}
+
+			bool paramFound = false;
+			for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator j = valuesCentral[channel].begin(); j != valuesCentral[channel].end(); ++j)
+			{
+				//Only compare id. Till now looking for value_id was not necessary.
+				if(i->param == j->second.rpcParameter->physicalParameter->id)
+				{
+					packet->setPosition(i->index, i->size, j->second.data);
+					paramFound = true;
+					break;
+				}
+			}
+			if(!paramFound) GD::out.printError("Error constructing packet. param \"" + i->param + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+		}
+
+		setMessageCounter(_messageCounter + 1);
+		queue->parameterName = parameter->id;
+		queue->channel = channel;
+		queue->push(packet);
+		std::shared_ptr<HomeMaticCentral> central = std::dynamic_pointer_cast<HomeMaticCentral>(getCentral());
+		if(responseFrame) queue->push(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(responseFrame->type, central.get(), 0, nullptr)));
+		else queue->push(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(-1, central.get(), 0, nullptr)));
+		pendingBidCoSQueues->removeQueue(BidCoSQueueType::GETVALUE, parameter->id, channel);
+		pendingBidCoSQueues->push(queue);
+		if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst))
+		{
+			if(HomeMaticDevice::isDimmer(_deviceType) || HomeMaticDevice::isSwitch(_deviceType)) queue->retries = 12;
+			//Assign the queue managers queue to "queue".
+			queue = central->enqueuePendingQueues(_address);
+		}
+		else
+		{
+			setValuePending(true);
+			if(peerInfoPacketsEnabled && _physicalInterface->autoResend()) _physicalInterface->setWakeUp(getPeerInfo());
+			GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
+		}
+
+		if(asynchronous) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
+
+		for(int32_t i = 0; i < 50; i++)
+		{
+			if(queue && !queue->isEmpty()) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			else break;
+		}
+
+		return parameter->convertFromPacket(valuesCentral[channel][parameter->id].data, true);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<BaseLib::RPC::ParameterSet> BidCoSPeer::getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type)
 {
 	try
@@ -2117,6 +2223,22 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		setLastPacketReceived();
 		setRSSIDevice(packet->rssiDevice());
 		serviceMessages->endUnreach();
+		std::shared_ptr<BidCoSQueue> queue = central->getQueue(_address);
+		if(queue && !queue->isEmpty() && queue->getQueueType() == BidCoSQueueType::GETVALUE)
+		{
+			//Handle get value response
+			std::shared_ptr<BidCoSPacket> queuePacket;
+			if(queue->front()->getType() == QueueEntryType::PACKET)
+			{
+				queuePacket = queue->front()->getPacket();
+				queue->pop();
+			}
+			if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::MESSAGE)
+			{
+				if(queue->front()->getMessage()->typeIsEqual(packet)) queue->pop();
+				else if(queuePacket) queue->pushFront(queuePacket);
+			}
+		}
 		std::vector<FrameValues> frameValues;
 		getValuesFromPacket(packet, frameValues);
 		//bool resendPacket = false;
@@ -3125,7 +3247,7 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setValue(uint32_t channel, s
 		queue->push(packet);
 		std::shared_ptr<HomeMaticCentral> central = std::dynamic_pointer_cast<HomeMaticCentral>(getCentral());
 		queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-		pendingBidCoSQueues->removeQueue(valueKey, channel);
+		pendingBidCoSQueues->removeQueue(BidCoSQueueType::PEER, valueKey, channel);
 		pendingBidCoSQueues->push(queue);
 		if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst))
 		{

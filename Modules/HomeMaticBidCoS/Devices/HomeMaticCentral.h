@@ -61,7 +61,14 @@ public:
 	void resetTeam(std::shared_ptr<BidCoSPeer> peer, uint32_t channel);
 	std::string handleCLICommand(std::string command);
 	virtual void enqueuePackets(int32_t deviceAddress, std::shared_ptr<BidCoSQueue> packets, bool pushPendingBidCoSQueues = false);
-	virtual void enqueuePendingQueues(int32_t deviceAddress);
+
+	/**
+	 * Enqueues the pending queues of the peer with deviceAddress.
+	 *
+	 * @param deviceAddress The BidCoS address of the device to enqueue the packets for.
+	 * @return Returns the queue managers BidCoS queue for the peer or nullptr when there are no pending queues or on errors.
+	 */
+	std::shared_ptr<BidCoSQueue> enqueuePendingQueues(int32_t deviceAddress);
 	int32_t getUniqueAddress(int32_t seed);
 	std::string getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber);
 	uint64_t getPeerIDFromSerial(std::string serialNumber) { std::shared_ptr<BidCoSPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
