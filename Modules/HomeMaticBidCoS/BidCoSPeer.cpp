@@ -697,6 +697,23 @@ bool BidCoSPeer::ping(int32_t packetCount, bool waitForResponse)
 		if(!central) return false;
 		uint32_t time = BaseLib::HelperFunctions::getTimeSeconds();
 		_lastPing = (int64_t)time * 1000;
+		if(rpcDevice && !rpcDevice->valueRequestFrames.empty())
+		{
+			bool success = false;
+			for(std::map<int32_t, std::map<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>>::iterator i = rpcDevice->valueRequestFrames.begin(); i != rpcDevice->valueRequestFrames.end(); ++i)
+			{
+				for(std::map<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+				{
+					if(j->second->associatedValues.empty()) continue;
+					std::shared_ptr<BaseLib::RPC::Variable> result = getValueFromDevice(j->second->associatedValues.at(0), i->first, false);
+					if(!result || result->errorStruct || result->type == BaseLib::RPC::VariableType::rpcVoid) return false;
+					success = true;
+				}
+			}
+			if(success) return true;
+		}
+
+		//No get value frames
 		std::vector<uint8_t> payload;
 		payload.push_back(0x00);
 		payload.push_back(0x06);
@@ -720,7 +737,6 @@ bool BidCoSPeer::ping(int32_t packetCount, bool waitForResponse)
 			}
 			if(responseReceived) return true;
 		}
-		return false;
 	}
 	catch(const std::exception& ex)
     {
@@ -2164,6 +2180,7 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getValueFromDevice(std::shar
 		{
 			if(queue && !queue->isEmpty()) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			else break;
+			if(i == 49) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		}
 
 		return parameter->convertFromPacket(valuesCentral[channel][parameter->id].data, true);

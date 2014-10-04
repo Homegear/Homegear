@@ -2108,7 +2108,7 @@ std::shared_ptr<RPC::Variable> Peer::getValue(uint32_t channel, std::string valu
 		if(requestFromDevice)
 		{
 			std::shared_ptr<RPC::Variable> variable = getValueFromDevice(parameter, channel, asynchronous);
-			if(!asynchronous || variable->errorStruct) return variable;
+			if((!asynchronous && variable->type != RPC::VariableType::rpcVoid) || variable->errorStruct) return variable;
 		}
 		return parameter->convertFromPacket(valuesCentral[channel][valueKey].data);
 	}

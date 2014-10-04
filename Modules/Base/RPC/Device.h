@@ -407,6 +407,7 @@ public:
 	std::vector<std::shared_ptr<DeviceType>> supportedTypes;
 	std::multimap<uint32_t, std::shared_ptr<DeviceFrame>> framesByMessageType;
 	std::map<std::string, std::shared_ptr<DeviceFrame>> framesByID;
+	std::map<int32_t, std::map<std::string, std::shared_ptr<DeviceFrame>>> valueRequestFrames;
 	RXModes::Enum rxModes = RXModes::Enum::always;
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
 	int32_t countFromSysinfoIndex = -1;
