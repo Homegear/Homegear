@@ -148,6 +148,7 @@ void RawLAN::startListening()
 		_stopped = false;
 		_listenThread = std::thread(&RawLAN::listen, this);
 		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
+		IPhysicalInterface::startListening();
 	}
     catch(const std::exception& ex)
     {
@@ -176,6 +177,7 @@ void RawLAN::stopListening()
 		_socket->close();
 		_stopped = true;
 		_sendMutex.unlock(); //In case it is deadlocked - shouldn't happen of course
+		IPhysicalInterface::stopListening();
 	}
 	catch(const std::exception& ex)
     {

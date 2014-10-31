@@ -682,6 +682,7 @@ void TICC1100::startListening()
 		_stopCallbackThread = false;
 		_listenThread = std::thread(&TICC1100::mainThread, this);
 		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
+		IPhysicalInterface::startListening();
 
 		//For sniffing update packets
 		//std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -714,6 +715,7 @@ void TICC1100::stopListening()
 		if(_fileDescriptor->descriptor != -1) closeDevice();
 		closeGPIO(1);
 		_stopped = true;
+		IPhysicalInterface::stopListening();
 	}
 	catch(const std::exception& ex)
     {

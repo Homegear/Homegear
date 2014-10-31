@@ -1487,6 +1487,7 @@ void HM_LGW::startListening()
 		if(_settings->listenThreadPriority > -1) BaseLib::Threads::setThreadPriority(_bl, _listenThreadKeepAlive.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 		_initThread = std::thread(&HM_LGW::doInit, this);
 		if(_settings->listenThreadPriority > -1) BaseLib::Threads::setThreadPriority(_bl, _initThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
+		IPhysicalInterface::startListening();
 	}
     catch(const std::exception& ex)
     {
@@ -1561,6 +1562,7 @@ void HM_LGW::stopListening()
 		_initComplete = false;
 		_initCompleteKeepAlive = false;
 		_firstPacket = true;
+		IPhysicalInterface::stopListening();
 	}
 	catch(const std::exception& ex)
     {

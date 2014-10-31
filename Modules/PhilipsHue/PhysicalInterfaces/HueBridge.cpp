@@ -161,6 +161,7 @@ void HueBridge::startListening()
 		_client = std::unique_ptr<BaseLib::HTTPClient>(new BaseLib::HTTPClient(_bl, _hostname, _port, false, _settings->ssl, _settings->caFile, _settings->verifyCertificate));
 		_listenThread = std::thread(&HueBridge::listen, this);
 		if(_settings->listenThreadPriority > -1) BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
+		IPhysicalInterface::startListening();
 	}
     catch(const std::exception& ex)
     {
@@ -188,6 +189,7 @@ void HueBridge::stopListening()
 			_client->disconnect();
 			_client.reset();
 		}
+		IPhysicalInterface::stopListening();
 	}
 	catch(const std::exception& ex)
     {

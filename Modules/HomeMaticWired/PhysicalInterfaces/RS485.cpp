@@ -510,6 +510,7 @@ void RS485::startListening()
 		_stopped = false;
 		_listenThread = std::thread(&RS485::listen, this);
 		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
+		IPhysicalInterface::startListening();
 	}
     catch(const std::exception& ex)
     {
@@ -539,6 +540,7 @@ void RS485::stopListening()
 		if(gpioDefined(1) && _settings->oneWay) closeGPIO(1);
 		_stopped = true;
 		_sendMutex.unlock(); //In case it is deadlocked - shouldn't happen of course
+		IPhysicalInterface::stopListening();
 	}
 	catch(const std::exception& ex)
     {

@@ -113,7 +113,6 @@ class BidCoSQueue
         void sleepAndPushPendingQueue();
         void resend(uint32_t threadId, bool burst);
         void startResendThread(bool force);
-        void stopResendThread();
         void popWaitThread(uint32_t threadId, uint32_t waitingTime);
         void stopPopWaitThread();
         void nextQueueEntry();
@@ -153,6 +152,7 @@ class BidCoSQueue
         void dispose();
         void serialize(std::vector<uint8_t>& encodedData);
         void unserialize(std::shared_ptr<std::vector<char>> serializedData, HomeMaticDevice* device, uint32_t position = 0);
+        void stopResendThread();
 
         BidCoSQueue();
         BidCoSQueue(std::shared_ptr<IBidCoSInterface> physicalDevice);

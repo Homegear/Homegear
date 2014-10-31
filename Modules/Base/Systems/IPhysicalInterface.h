@@ -38,6 +38,7 @@
 #include <thread>
 #include <mutex>
 #include <map>
+#include <condition_variable>
 
 #include <dirent.h>
 
@@ -86,8 +87,8 @@ public:
 
 	virtual ~IPhysicalInterface();
 
-	virtual void startListening() {}
-	virtual void stopListening() {}
+	virtual void startListening();
+	virtual void stopListening();
 	virtual void enableUpdateMode();
 	virtual void disableUpdateMode();
 	virtual void sendPacket(std::shared_ptr<Packet> packet) = 0;
@@ -103,10 +104,26 @@ public:
 protected:
 	BaseLib::Obj* _bl = nullptr;
 	std::shared_ptr<PhysicalInterfaceSettings> _settings;
-	int32_t _threadCounter = 0;
 	std::thread _listenThread;
 	std::thread _callbackThread;
 	bool _stopCallbackThread = false;
+	std::mutex _lowPriorityPacketBufferMutex;
+	int32_t _lowPriorityPacketBufferHead = 0;
+	int32_t _lowPriorityPacketBufferTail = 0;
+	std::shared_ptr<Packet> _lowPriorityPacketBuffer[20];
+	std::mutex _highPriorityPacketBufferMutex;
+	int32_t _highPriorityPacketBufferHead = 0;
+	int32_t _highPriorityPacketBufferTail = 0;
+	std::shared_ptr<Packet> _highPriorityPacketBuffer[20];
+	std::mutex _lowPriorityPacketProcessingThreadMutex;
+	std::thread _lowPriorityPacketProcessingThread;
+	bool _lowPriorityPacketProcessingPacketAvailable = false;
+	std::condition_variable _lowPriorityPacketProcessingConditionVariable;
+	std::mutex _highPriorityPacketProcessingThreadMutex;
+	std::thread _highPriorityPacketProcessingThread;
+	bool _highPriorityPacketProcessingPacketAvailable = false;
+	std::condition_variable _highPriorityPacketProcessingConditionVariable;
+	bool _stopPacketProcessingThreads = false;
 	std::string _lockfile;
 	std::mutex _sendMutex;
 	bool _stopped = false;
@@ -116,14 +133,12 @@ protected:
 	int64_t _lastPacketReceived = -1;
 	int64_t _maxPacketProcessingTime = 1000;
 	bool _updateMode = false;
-	uint32_t _currentPacketReceivedThreadID = 0;
-	std::mutex _packetReceivedThreadsMutex;
-	std::map<uint32_t, std::shared_ptr<std::thread>> _packetReceivedThreads;
 
 	//Event handling
 	virtual void raisePacketReceived(std::shared_ptr<Packet> packet, bool highPriority = false);
-	virtual void raisePacketReceivedThread(uint32_t threadID, std::shared_ptr<Packet> packet);
 	//End event handling
+	void processHighPriorityPackets();
+	void processLowPriorityPackets();
 	virtual void setDevicePermission(int32_t userID, int32_t groupID);
 	virtual void openGPIO(uint32_t index, bool readOnly);
 	virtual void getGPIOPath(uint32_t index);
@@ -136,7 +151,6 @@ protected:
 	virtual void setGPIOEdge(uint32_t index, GPIOEdge::Enum edge);
 	virtual bool gpioDefined(uint32_t);
 	virtual bool gpioOpen(uint32_t);
-	virtual void removePacketReceivedThread(uint32_t threadID);
 };
 
 }

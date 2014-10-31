@@ -330,8 +330,8 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 			longKeepAlive();
 			//Sleep for 2000 ms
 			i = 0;
-			sleepingTime = std::chrono::milliseconds(200);
-			while(!_stopResendThread && i < 10)
+			sleepingTime = std::chrono::milliseconds(100);
+			while(!_stopResendThread && i < 20)
 			{
 				std::this_thread::sleep_for(sleepingTime);
 				i++;

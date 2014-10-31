@@ -167,6 +167,7 @@ void COC::startListening()
 		}
 		writeToDevice(stackPrefix + "X21\n" + stackPrefix + "Zr\n");
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		IPhysicalInterface::startListening();
 	}
     catch(const std::exception& ex)
     {
@@ -190,6 +191,7 @@ void COC::stopListening()
 		_socket->removeEventHandler(this);
 		_socket->closeDevice();
 		_socket.reset();
+		IPhysicalInterface::stopListening();
 	}
 	catch(const std::exception& ex)
     {

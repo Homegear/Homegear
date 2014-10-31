@@ -675,6 +675,7 @@ void InsteonHubX10::startListening()
 		if(_settings->listenThreadPriority > -1) BaseLib::Threads::setThreadPriority(GD::bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 		_initThread = std::thread(&InsteonHubX10::doInit, this);
 		if(_settings->listenThreadPriority > -1) BaseLib::Threads::setThreadPriority(_bl, _initThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
+		IPhysicalInterface::startListening();
 	}
     catch(const std::exception& ex)
     {
@@ -704,6 +705,7 @@ void InsteonHubX10::reconnect()
 		_stopped = false;
 		_initThread = std::thread(&InsteonHubX10::doInit, this);
 		if(_settings->listenThreadPriority > -1) BaseLib::Threads::setThreadPriority(_bl, _initThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
+		IPhysicalInterface::stopListening();
 	}
     catch(const std::exception& ex)
     {

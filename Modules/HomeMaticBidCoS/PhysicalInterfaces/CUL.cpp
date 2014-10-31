@@ -403,6 +403,7 @@ void CUL::startListening()
 		std::this_thread::sleep_for(std::chrono::milliseconds(400));
 		_listenThread = std::thread(&CUL::listen, this);
 		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
+		IPhysicalInterface::startListening();
 	}
     catch(const std::exception& ex)
     {
@@ -436,6 +437,7 @@ void CUL::stopListening()
 			closeDevice();
 		}
 		_stopped = true;
+		IPhysicalInterface::stopListening();
 	}
 	catch(const std::exception& ex)
     {

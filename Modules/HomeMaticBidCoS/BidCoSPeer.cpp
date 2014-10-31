@@ -2159,9 +2159,6 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getValueFromDevice(std::shar
 		if(responseFrame) queue->push(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(responseFrame->type, central.get(), 0, nullptr)));
 		else queue->push(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(-1, central.get(), 0, nullptr)));
 		pendingBidCoSQueues->removeQueue(BidCoSQueueType::GETVALUE, parameter->id, channel);
-		//std::ostringstream ss;
-		//pendingBidCoSQueues->getInfoString(ss);
-		//GD::out.printError("Moin: " + ss.str());
 		pendingBidCoSQueues->push(queue);
 
 		if(HomeMaticDevice::isDimmer(_deviceType) || HomeMaticDevice::isSwitch(_deviceType)) queue->retries = 12;
@@ -2170,20 +2167,19 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getValueFromDevice(std::shar
 
 		if(asynchronous) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 
-		for(int32_t i = 0; i < 50; i++)
+		for(int32_t i = 0; i < 120; i++)
 		{
 			if(queue && !queue->isEmpty()) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			else break;
-			if(i == 49)
+			if(i == 119)
 			{
 				pendingBidCoSQueues->removeQueue(BidCoSQueueType::GETVALUE, parameter->id, channel);
 				return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 			}
 		}
 		queue.reset();
+		//Make sure queue gets deleted. This is a little nasty as it is a race condition
 		std::this_thread::sleep_for(std::chrono::milliseconds(200));
-
-		//GD::out.printError("Moin 2: " + std::to_string(channel));
 
 		return parameter->convertFromPacket(valuesCentral[channel][parameter->id].data, true);
 	}
@@ -2346,6 +2342,24 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 				}
 			}
 		}
+		std::shared_ptr<BidCoSQueue> queue = central->getQueue(_address);
+		if(queue && !queue->isEmpty() && queue->getQueueType() == BidCoSQueueType::GETVALUE)
+		{
+			//Handle get value response
+			//We need to stop the resend thread as packet sending might take a while.
+			//Popping is not possible at this point, because otherwise another packet might be queued before the response is sent.
+			std::shared_ptr<BidCoSPacket> queuePacket;
+			if(queue->front()->getType() == QueueEntryType::PACKET)
+			{
+				queuePacket = queue->front()->getPacket();
+				queue->pop();
+			}
+			if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::MESSAGE)
+			{
+				if(queue->front()->getMessage()->typeIsEqual(packet)) queue->stopResendThread();
+				else if(queuePacket) queue->pushFront(queuePacket);
+			}
+		}
 		if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp) && packet->senderAddress() == _address && (packet->controlByte() & 2) && pendingBidCoSQueues && !pendingBidCoSQueues->empty()) //Packet is wake me up packet and not bidirectional
 		{
 			if(packet->controlByte() & 0x20) //Bidirectional?
@@ -2372,22 +2386,11 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		{
 			central->sendOK(packet->messageCounter(), packet->senderAddress());
 		}
-		std::shared_ptr<BidCoSQueue> queue = central->getQueue(_address);
 		if(queue && !queue->isEmpty() && queue->getQueueType() == BidCoSQueueType::GETVALUE)
 		{
-			//Do this after sendOK, otherwise ACK might be sent after another packet, if other queues are waiting
 			//Handle get value response
-			std::shared_ptr<BidCoSPacket> queuePacket;
-			if(queue->front()->getType() == QueueEntryType::PACKET)
-			{
-				queuePacket = queue->front()->getPacket();
-				queue->pop();
-			}
-			if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::MESSAGE)
-			{
-				if(queue->front()->getMessage()->typeIsEqual(packet)) queue->pop();
-				else if(queuePacket) queue->pushFront(queuePacket);
-			}
+			//Do this after sendOK, otherwise ACK might be sent after another packet, if other queues are waiting
+			if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::MESSAGE && queue->front()->getMessage()->typeIsEqual(packet)) queue->pop();
 		}
 
 		//if(!rpcValues.empty() && !resendPacket)
