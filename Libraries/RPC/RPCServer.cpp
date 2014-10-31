@@ -803,6 +803,11 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				{
 					packetLength = 0;
 					packetReceived(client, packet, packetType, true);
+					if(client->socketDescriptor->descriptor == -1)
+					{
+						if(GD::bl->debugLevel >= 4) _out.printInfo("Info: Connection to client number " + std::to_string(client->socketDescriptor->id) + " closed.");
+						break;
+					}
 				}
 			}
 			else if(!strncmp(&buffer[0], "POST", 4) || !strncmp(&buffer[0], "HTTP/1.", 7))
@@ -864,6 +869,11 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						packet.push_back('\0');
 						packetReceived(client, packet, packetType, true);
 						packetLength = 0;
+						if(client->socketDescriptor->descriptor == -1)
+						{
+							if(GD::bl->debugLevel >= 4) _out.printInfo("Info: Connection to client number " + std::to_string(client->socketDescriptor->id) + " closed.");
+							break;
+						}
 					}
 				}
 				else
@@ -894,6 +904,11 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				packetReceived(client, *http.getContent(), packetType, http.getHeader()->connection == BaseLib::HTTP::Connection::Enum::keepAlive);
 				packetLength = 0;
 				http.reset();
+				if(client->socketDescriptor->descriptor == -1)
+				{
+					if(GD::bl->debugLevel >= 4) _out.printInfo("Info: Connection to client number " + std::to_string(client->socketDescriptor->id) + " closed.");
+					break;
+				}
 			}
 		}
 	}
@@ -925,13 +940,14 @@ std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientSocketDescriptor()
 		FD_ZERO(&readFileDescriptor);
 		GD::bl->fileDescriptorManager.lock();
 		int32_t nfds = _serverFileDescriptor->descriptor + 1;
-		FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
-		GD::bl->fileDescriptorManager.unlock();
 		if(nfds <= 0)
 		{
+			GD::bl->fileDescriptorManager.unlock();
 			GD::out.printError("Error: Server file descriptor is invalid.");
 			return fileDescriptor;
 		}
+		FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
+		GD::bl->fileDescriptorManager.unlock();
 		if(!select(nfds, &readFileDescriptor, NULL, NULL, &timeout)) return fileDescriptor;
 
 		struct sockaddr_storage clientInfo;

@@ -210,6 +210,7 @@ protected:
 	bool _sending = false;
 	bool _sendingPending = false;
 
+	void setConfig();
 	void setupDevice();
 	void openDevice();
     void closeDevice();

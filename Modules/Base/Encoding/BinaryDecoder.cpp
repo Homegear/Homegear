@@ -249,7 +249,8 @@ double BinaryDecoder::decodeFloat(std::vector<uint8_t>& encodedData, uint32_t& p
 		_bl->hf.memcpyBigEndian((char*)&exponent, (char*)&encodedData.at(position), 4);
 		position += 4;
 		double floatValue = (double)mantissa / 0x40000000;
-		floatValue *= std::pow(2, exponent);
+		if(exponent >= 0) floatValue *= (1 << exponent);
+		else floatValue /= (1 << (exponent * -1));
 		if(floatValue != 0)
 		{
 			int32_t digits = std::lround(std::floor(std::log10(floatValue) + 1));

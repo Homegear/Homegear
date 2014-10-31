@@ -157,6 +157,18 @@ void PhysicalInterfaces::load(std::string filename)
 					if(settings->responseDelay > 10000) settings->responseDelay = 10000;
 					GD::out.printDebug("Debug: responseDelay of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->responseDelay));
 				}
+				else if(name == "amplifier")
+				{
+					BaseLib::HelperFunctions::toLower(value);
+					if(value == "true") settings->amplifier = true;
+					GD::out.printDebug("Debug: amplifier of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->amplifier));
+				}
+				else if(name == "oscillatorfrequency")
+				{
+					settings->oscillatorFrequency = BaseLib::Math::getNumber(value);
+					if(settings->oscillatorFrequency < 0) settings->oscillatorFrequency = -1;
+					GD::out.printDebug("Debug: oscillatorFrequency of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->oscillatorFrequency));
+				}
 				else if(name == "oneway")
 				{
 					BaseLib::HelperFunctions::toLower(value);

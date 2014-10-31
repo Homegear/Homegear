@@ -36,6 +36,7 @@ solution "homegear"
    configuration { "linux", "gmake" }
       --GCRYPT_NO_DEPRECATED only works after modifying the header file. See: http://lists.gnupg.org/pipermail/gcrypt-devel/2011-September/001844.html
       defines { "FORTIFY_SOURCE=2", "GCRYPT_NO_DEPRECATED", "PH7_ENABLE_THREADS" }
+      linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear" }
 
    configuration { "rpi", "gmake" }
       includedirs { "./ARM\ headers" }
@@ -106,6 +107,7 @@ solution "homegear"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
 
+--[[
    project "homematicwired"
       kind "SharedLib"
       language "C++"
@@ -221,6 +223,7 @@ solution "homegear"
          targetdir "./lib/Modules/Profiling"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
+--]]
 
    project "user"
       kind "StaticLib"

@@ -416,7 +416,7 @@ void BidCoSPeer::worker()
 					int32_t data = 0;
 					_bl->hf.memcpyBigEndian(data, parameter->data); //Shortcut to save resources. The normal way would be to call "convertFromPacket".
 					int64_t pollingInterval = data * 60000;
-					if(pollingInterval < 600000) pollingInterval = 600000;
+					//if(pollingInterval < 600000) pollingInterval = 600000;
 					if(time - _lastPing >= pollingInterval && ((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst)))
 					{
 						int64_t timeSinceLastPacket = time - ((int64_t)_lastPacketReceived * 1000);
@@ -699,18 +699,17 @@ bool BidCoSPeer::ping(int32_t packetCount, bool waitForResponse)
 		_lastPing = (int64_t)time * 1000;
 		if(rpcDevice && !rpcDevice->valueRequestFrames.empty())
 		{
-			bool success = false;
 			for(std::map<int32_t, std::map<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>>::iterator i = rpcDevice->valueRequestFrames.begin(); i != rpcDevice->valueRequestFrames.end(); ++i)
 			{
 				for(std::map<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 				{
 					if(j->second->associatedValues.empty()) continue;
+					//GD::out.printError("Moin 1: " + std::to_string(i->first));
 					std::shared_ptr<BaseLib::RPC::Variable> result = getValueFromDevice(j->second->associatedValues.at(0), i->first, false);
 					if(!result || result->errorStruct || result->type == BaseLib::RPC::VariableType::rpcVoid) return false;
-					success = true;
 				}
 			}
-			if(success) return true;
+			return true;
 		}
 
 		//No get value frames
@@ -2098,6 +2097,7 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getValueFromDevice(std::shar
 	try
 	{
 		if(!parameter) return BaseLib::RPC::Variable::createError(-32500, "parameter is nullptr.");
+		if(!(getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) && !(getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst)) return BaseLib::RPC::Variable::createError(-6, "Parameter can't be requested actively, because the device isn't reachable all the time.");
 		std::string getRequest = parameter->physicalParameter->getRequest;
 		std::string getResponse = parameter->physicalParameter->getResponse;
 		if(getRequest.empty()) return BaseLib::RPC::Variable::createError(-6, "Parameter can't be requested actively.");
@@ -2159,20 +2159,14 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getValueFromDevice(std::shar
 		if(responseFrame) queue->push(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(responseFrame->type, central.get(), 0, nullptr)));
 		else queue->push(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(-1, central.get(), 0, nullptr)));
 		pendingBidCoSQueues->removeQueue(BidCoSQueueType::GETVALUE, parameter->id, channel);
+		//std::ostringstream ss;
+		//pendingBidCoSQueues->getInfoString(ss);
+		//GD::out.printError("Moin: " + ss.str());
 		pendingBidCoSQueues->push(queue);
-		if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst))
-		{
-			if(HomeMaticDevice::isDimmer(_deviceType) || HomeMaticDevice::isSwitch(_deviceType)) queue->retries = 12;
-			//Assign the queue managers queue to "queue".
-			queue = central->enqueuePendingQueues(_address);
-		}
-		else
-		{
-			setValuePending(true);
-			if(peerInfoPacketsEnabled && _physicalInterface->autoResend()) _physicalInterface->setWakeUp(getPeerInfo());
-			GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
-			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
-		}
+
+		if(HomeMaticDevice::isDimmer(_deviceType) || HomeMaticDevice::isSwitch(_deviceType)) queue->retries = 12;
+		//Assign the queue managers queue to "queue".
+		queue = central->enqueuePendingQueues(_address);
 
 		if(asynchronous) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 
@@ -2180,8 +2174,16 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getValueFromDevice(std::shar
 		{
 			if(queue && !queue->isEmpty()) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			else break;
-			if(i == 49) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
+			if(i == 49)
+			{
+				pendingBidCoSQueues->removeQueue(BidCoSQueueType::GETVALUE, parameter->id, channel);
+				return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
+			}
 		}
+		queue.reset();
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+		//GD::out.printError("Moin 2: " + std::to_string(channel));
 
 		return parameter->convertFromPacket(valuesCentral[channel][parameter->id].data, true);
 	}
@@ -2240,22 +2242,6 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		setLastPacketReceived();
 		setRSSIDevice(packet->rssiDevice());
 		serviceMessages->endUnreach();
-		std::shared_ptr<BidCoSQueue> queue = central->getQueue(_address);
-		if(queue && !queue->isEmpty() && queue->getQueueType() == BidCoSQueueType::GETVALUE)
-		{
-			//Handle get value response
-			std::shared_ptr<BidCoSPacket> queuePacket;
-			if(queue->front()->getType() == QueueEntryType::PACKET)
-			{
-				queuePacket = queue->front()->getPacket();
-				queue->pop();
-			}
-			if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::MESSAGE)
-			{
-				if(queue->front()->getMessage()->typeIsEqual(packet)) queue->pop();
-				else if(queuePacket) queue->pushFront(queuePacket);
-			}
-		}
 		std::vector<FrameValues> frameValues;
 		getValuesFromPacket(packet, frameValues);
 		//bool resendPacket = false;
@@ -2385,6 +2371,23 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		else if((packet->controlByte() & 0x20) && packet->destinationAddress() == central->getAddress())
 		{
 			central->sendOK(packet->messageCounter(), packet->senderAddress());
+		}
+		std::shared_ptr<BidCoSQueue> queue = central->getQueue(_address);
+		if(queue && !queue->isEmpty() && queue->getQueueType() == BidCoSQueueType::GETVALUE)
+		{
+			//Do this after sendOK, otherwise ACK might be sent after another packet, if other queues are waiting
+			//Handle get value response
+			std::shared_ptr<BidCoSPacket> queuePacket;
+			if(queue->front()->getType() == QueueEntryType::PACKET)
+			{
+				queuePacket = queue->front()->getPacket();
+				queue->pop();
+			}
+			if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::MESSAGE)
+			{
+				if(queue->front()->getMessage()->typeIsEqual(packet)) queue->pop();
+				else if(queuePacket) queue->pushFront(queuePacket);
+			}
 		}
 
 		//if(!rpcValues.empty() && !resendPacket)

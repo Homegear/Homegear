@@ -47,53 +47,11 @@ TICC1100::TICC1100(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> 
 			settings->listenThreadPriority = 45;
 			settings->listenThreadPolicy = SCHED_FIFO;
 		}
+		if(settings->oscillatorFrequency < 0) settings->oscillatorFrequency = 26000000;
 
 		_transfer =  { (uint64_t)0, (uint64_t)0, (uint32_t)0, (uint32_t)4000000, (uint16_t)0, (uint8_t)8, (uint8_t)0, (uint32_t)0 };
 
-		_config = //Read from HM-CC-VD
-		{
-			0x46, //00: IOCFG2 (GDO2_CFG)
-			0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
-			0x2E, //02: IOCFG0 (GDO0_CFG, GDO0 is not connected)
-			0x07, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
-			0xE9, //04: SYNC1
-			0xCA, //05: SYNC0
-			0xFF, //06: PKTLEN (Maximum packet length)
-			0x0C, //07: PKTCTRL1: CRC_AUTOFLUSH | APPEND_STATUS | NO_ADDR_CHECK
-			0x45, //08: PKTCTRL0
-			0x00, //09: ADDR
-			0x00, //0A: CHANNR
-			0x06, //0B: FSCTRL1
-			0x00, //0C: FSCTRL0
-			0x21, //0D: FREQ2
-			0x65, //0E: FREQ1
-			0x6A, //0F: FREQ0
-			0xC8, //10: MDMCFG4
-			0x93, //11: MDMCFG3
-			0x03, //12: MDMCFG2
-			0x22, //13: MDMCFG1
-			0xF8, //14: MDMCFG0
-			0x34, //15: DEVIATN
-			0x07, //16: MCSM2
-			0x00, //17: MCSM1: IDLE when packet has been received, RX after sending
-			0x18, //18: MCSM0
-			0x16, //19: FOCCFG
-			0x6C, //1A: BSCFG
-			0x43, //1B: AGCCTRL2
-			0x40, //1C: AGCCTRL1
-			0x91, //1D: AGCCTRL0
-			0x87, //1E: WOREVT1
-			0x6B, //1F: WOREVT0
-			0xF8, //20: WORCRTL
-			0x56, //21: FREND1
-			0x10, //22: FREND0
-			0xA9, //23: FSCAL3
-			0x0A, //24: FSCAL2
-			0x00, //25: FSCAL1
-			0x11, //26: FSCAL0
-			0x41, //27: RCCTRL1
-			0x00, //28: RCCTRL0
-		};
+		setConfig();
 	}
     catch(const std::exception& ex)
     {
@@ -132,47 +90,9 @@ TICC1100::~TICC1100()
     }
 }
 
-void TICC1100::enableUpdateMode()
+void TICC1100::setConfig()
 {
-	try
-	{
-		_updateMode = true;
-		while(_sending) std::this_thread::sleep_for(std::chrono::milliseconds(3));
-		_txMutex.try_lock();
-		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
-		writeRegister(Registers::Enum::FSCTRL1, 0x08, true);
-		writeRegister(Registers::Enum::MDMCFG4, 0x5B, true);
-		writeRegister(Registers::Enum::MDMCFG3, 0xF8, true);
-		writeRegister(Registers::Enum::DEVIATN, 0x47, true);
-		writeRegister(Registers::Enum::FOCCFG, 0x1D, true);
-		writeRegister(Registers::Enum::BSCFG, 0x1C, true);
-		writeRegister(Registers::Enum::AGCCTRL2, 0xC7, true);
-		writeRegister(Registers::Enum::AGCCTRL1, 0x00, true);
-		writeRegister(Registers::Enum::AGCCTRL0, 0xB2, true);
-		writeRegister(Registers::Enum::FREND1, 0xB6, true);
-		writeRegister(Registers::Enum::FSCAL3, 0xEA, true);
-		usleep(20);
-		sendCommandStrobe(CommandStrobes::Enum::SFRX);
-		sendCommandStrobe(CommandStrobes::Enum::SRX);
-	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _txMutex.unlock();
-}
-
-void TICC1100::disableUpdateMode()
-{
-	try
+	if(_settings->oscillatorFrequency == 26000000)
 	{
 		_config = //Read from HM-CC-VD
 		{
@@ -218,6 +138,102 @@ void TICC1100::disableUpdateMode()
 			0x41, //27: RCCTRL1
 			0x00, //28: RCCTRL0
 		};
+	}
+	else if(_settings->oscillatorFrequency == 27000000)
+	{
+		_config =
+		{
+			0x46, //00: IOCFG2 (GDO2_CFG: GDO2 connected to RPi interrupt pin, asserts when packet sent/received, active low)
+			0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
+			0x5B, //02: IOCFG0 (GDO0_CFG, GDO0 (optionally) connected to CC1190 PA_EN, PA_PD, active low(?!))
+			0x07, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
+			0xE9, //04: SYNC1
+			0xCA, //05: SYNC0
+			0xFF, //06: PKTLEN (Maximum packet length)
+			0x0C, //07: PKTCTRL1 (CRC_AUTOFLUSH | APPEND_STATUS | NO_ADDR_CHECK)
+			0x45, //08: PKTCTRL0 (WHITE_DATA = on, PKT_FORMAT = normal mode, CRC_EN = on, LENGTH_CONFIG = "Variable packet length mode. Packet length configured by the first byte after sync word")
+			0x00, //09: ADDR
+			0x00, //0A: CHANNR
+			0x06, //0B: FSCTRL1 (0x06 gives f_IF=152.34375kHz@26.0MHz XTAL, 158.203125kHz@f_XOSC=27.0MHz; default value is 0x0F which gives f_IF=381kHz@f_XOSC=26MHz; formula is f_IF=(f_XOSC/2^10)*FSCTRL1[5:0])
+			0x00, //0C: FSCTRL0
+			0x20, //0D: FREQ2 (base freq f_carrier=(f_XOSC/2^16)*FREQ[23:0]; register value FREQ[23:0]=(2^16/f_XOSC)*f_carrier; 0x21656A gives f_carrier=868.299866MHz@f_XOSC=26.0MHz, 0x2028C5 gives f_carrier=868.299911MHz@f_XOSC=27.0MHz)
+			0x28, //0E: FREQ1
+			0xC5, //0F: FREQ0
+			0xC8, //10: MDMCFG4 (CHANBW_E = 3, CHANBW_M = 0, gives BW_channel=f_XOSC/(8*(4+CHANBW_M)*2^CHANBW_E)=102kHz@f_XOSC=26MHz, 105kHz@f_XOSC=27MHz)
+//			0x93, //11: MDMCFG3 (26MHz: DRATE_E = 0x8, DRATE_M = 0x93, gives R_DATA=((256+DRATE_M)*2^DRATE_E/2^28)*f_XOSC=9993Baud)
+			0x84, //11: MDMCFG3 (27MHz: DRATE_M=(R_DATA*2^28)/(f_XOSC*2^DRATE_E)-256 ==> DRATE_E = 0x8, DRATE_M = 132=0x84, gives R_DATA=((256+DRATE_M)*2^DRATE_E/2^28)*f_XOSC=9991Baud)
+			0x03, //12: MDMCFG2 (DEM_DCFILT_OFF = 0, MOD_FORMAT = 0 (2-FSK), MANCHESTER_EN = 0, SYNC_MODE = 3 = 30/32 sync word bits detected)
+			0x22, //13: MDMCFG1 (FEC_EN = 0, NUM_PREAMBLE = 2 = 4 preamble bytes, CHANSPC_E = 2)
+//			0xF8, //14: MDMCFG0 (CHANSPC_M = 248 = 0xF8, Delta f_channel=(f_XOSC/2^18)*(256+CHANSPC_M)*2^CHANSPC_E=199.951kHz@f_XOSC=26MHz)
+			0xE5, //14: MDMCFG0 (CHANSPC_M=(Delta_F_channel*2^18/(f_XOSC*2^CHANSPC_E)-256 ==> CHANSPC_M = 229 = 0xE5, Delta_f_channel=(f_XOSC/2^18)*(256+CHANSPC_M)*2^CHANSPC_E=199.814kHz@f_XOSC=27MHz)
+			0x34, //15: DEVIATN (DEVIATION_E = 3, DEVIATION_M = 4, gives f_dev=(f_XOSC/2^17)*(8+DEVIATION_M)*2^DEVIATION_E=19.043kHz@f_XOSC=26MHz, =19.775kHz@f_XOSC=27MHz)
+			0x07, //16: MCSM2 (RX_TIME_RSSI = 0, RX_TIME_QUAL = 0, RX_TIME = 7)
+			0x00, //17: MCSM1 (CCA_MODE = 0b00 = "Always", RXOFF_MODE = 0 = IDLE, TXOFF_MODE = 0 = IDLE)
+			0x18, //18: MCSM0 (FS_AUTOCAL = 0b01 = cal@IDLE->RX/TX, PO_TIMEOUT = 0b10 = 149µs@27MHz, PIN_CTRL_EN = 0, XOSC_FORCE_ON = 0)
+			0x16, //19: FOCCFG (FOD_BS_CS_GATE = 0, FOC_PRE_K = 0b10 = 3K, FOC_POST_K = 1 = K/2, FOC_LIMIT = 0b10)
+			0x6C, //1A: BSCFG
+			0x43, //1B: AGCCTRL2
+			0x40, //1C: AGCCTRL1
+			0x91, //1D: AGCCTRL0
+			0x87, //1E: WOREVT1
+			0x6B, //1F: WOREVT0
+			0xF8, //20: WORCRTL
+			0x56, //21: FREND1
+			0x10, //22: FREND0
+			0xE9, //23: FSCAL3
+			0x2A, //24: FSCAL2
+			0x00, //25: FSCAL1
+			0x1F, //26: FSCAL0
+			0x41, //27: RCCTRL1
+			0x00, //28: RCCTRL0
+		};
+	}
+	else _out.printError("Error: Unknown value for \"oscillatorFrequency\" in physicalinterfaces.conf. Valid values are 26000000 and 27000000.");
+}
+
+void TICC1100::enableUpdateMode()
+{
+	try
+	{
+		_updateMode = true;
+		while(_sending) std::this_thread::sleep_for(std::chrono::milliseconds(3));
+		_txMutex.try_lock();
+		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
+		writeRegister(Registers::Enum::FSCTRL1, 0x08, true);
+		writeRegister(Registers::Enum::MDMCFG4, 0x5B, true);
+		writeRegister(Registers::Enum::MDMCFG3, 0xF8, true);
+		writeRegister(Registers::Enum::DEVIATN, 0x47, true);
+		writeRegister(Registers::Enum::FOCCFG, 0x1D, true);
+		writeRegister(Registers::Enum::BSCFG, 0x1C, true);
+		writeRegister(Registers::Enum::AGCCTRL2, 0xC7, true);
+		writeRegister(Registers::Enum::AGCCTRL1, 0x00, true);
+		writeRegister(Registers::Enum::AGCCTRL0, 0xB2, true);
+		writeRegister(Registers::Enum::FREND1, 0xB6, true);
+		writeRegister(Registers::Enum::FSCAL3, 0xEA, true); //Changes, because of the change of data rate
+		usleep(20);
+		sendCommandStrobe(CommandStrobes::Enum::SFRX);
+		sendCommandStrobe(CommandStrobes::Enum::SRX);
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _txMutex.unlock();
+}
+
+void TICC1100::disableUpdateMode()
+{
+	try
+	{
+		setConfig();
 		stopListening();
 		startListening();
 		_updateMode = false;
@@ -747,7 +763,8 @@ void TICC1100::initChip()
 		writeRegister(Registers::Enum::FSTEST, 0x59, true);
 		writeRegister(Registers::Enum::TEST2, 0x81, true); //Determined by SmartRF Studio
 		writeRegister(Registers::Enum::TEST1, 0x35, true); //Determined by SmartRF Studio
-		writeRegister(Registers::Enum::PATABLE, 0xC0, true);
+		if(_settings->amplifier) writeRegister(Registers::Enum::PATABLE, 0x54, true);
+		else writeRegister(Registers::Enum::PATABLE, 0xC0, true);
 
 		sendCommandStrobe(CommandStrobes::Enum::SFRX);
 		usleep(20);

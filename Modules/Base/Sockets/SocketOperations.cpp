@@ -140,9 +140,13 @@ int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 	FD_ZERO(&readFileDescriptor);
 	_bl->fileDescriptorManager.lock();
 	int32_t nfds = _socketDescriptor->descriptor + 1;
+	if(nfds <= 0)
+	{
+		_bl->fileDescriptorManager.unlock();
+		throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (1).");
+	}
 	FD_SET(_socketDescriptor->descriptor, &readFileDescriptor);
 	_bl->fileDescriptorManager.unlock();
-	if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (1).");
 	int32_t bytesRead = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
 	if(bytesRead == 0) throw SocketTimeOutException("Reading from socket timed out.");
 	if(bytesRead != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (2).");
@@ -191,9 +195,13 @@ int32_t SocketOperations::proofwrite(const std::vector<char>& data)
 		FD_ZERO(&writeFileDescriptor);
 		_bl->fileDescriptorManager.lock();
 		int32_t nfds = _socketDescriptor->descriptor + 1;
+		if(nfds <= 0)
+		{
+			_bl->fileDescriptorManager.unlock();
+			throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (4).");
+		}
 		FD_SET(_socketDescriptor->descriptor, &writeFileDescriptor);
 		_bl->fileDescriptorManager.unlock();
-		if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (4).");
 		int32_t readyFds = select(nfds, NULL, &writeFileDescriptor, NULL, &timeout);
 		if(readyFds == 0) throw SocketTimeOutException("Writing to socket timed out.");
 		if(readyFds != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (5).");
@@ -233,9 +241,13 @@ int32_t SocketOperations::proofwrite(const std::string& data)
 		FD_ZERO(&writeFileDescriptor);
 		_bl->fileDescriptorManager.lock();
 		int32_t nfds = _socketDescriptor->descriptor + 1;
+		if(nfds <= 0)
+		{
+			_bl->fileDescriptorManager.unlock();
+			throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (6).");
+		}
 		FD_SET(_socketDescriptor->descriptor, &writeFileDescriptor);
 		_bl->fileDescriptorManager.unlock();
-		if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (6).");
 		int32_t readyFds = select(nfds, NULL, &writeFileDescriptor, NULL, &timeout);
 		if(readyFds == 0) throw SocketTimeOutException("Writing to socket timed out.");
 		if(readyFds != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (7).");
@@ -384,9 +396,13 @@ bool SocketOperations::waitForSocket()
 	FD_ZERO(&readFileDescriptor);
 	_bl->fileDescriptorManager.lock();
 	int32_t nfds = _socketDescriptor->descriptor + 1;
+	if(nfds <= 0)
+	{
+		_bl->fileDescriptorManager.unlock();
+		throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (8).");
+	}
 	FD_SET(_socketDescriptor->descriptor, &readFileDescriptor);
 	_bl->fileDescriptorManager.unlock();
-	if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (8).");
 	int32_t bytesRead = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
 	if(bytesRead != 1) return false;
 	return true;

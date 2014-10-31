@@ -2213,6 +2213,7 @@ void Device::setCountFromSysinfo(int32_t countFromSysinfo)
 		uint32_t index = 0;
 		for(std::map<uint32_t, std::shared_ptr<DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
 		{
+			if(!i->second) continue;
 			if(i->second->countFromSysinfo > -1)
 			{
 				index = i->first;
@@ -2220,9 +2221,23 @@ void Device::setCountFromSysinfo(int32_t countFromSysinfo)
 				break;
 			}
 		}
+		std::shared_ptr<ParameterSet> valueSet = (channel->parameterSets.find(ParameterSet::Type::Enum::values) == channel->parameterSets.end()) ? nullptr : channel->parameterSets.at(ParameterSet::Type::Enum::values);
+
 		for(uint32_t i = index + 1; i < index + countFromSysinfo; i++)
 		{
-			if(channels.find(i) == channels.end()) channels[i] = channel;
+			if(channels.find(i) == channels.end())
+			{
+				channels[i] = channel;
+				if(!valueSet) continue;
+				for(std::vector<std::shared_ptr<Parameter>>::iterator j = valueSet->parameters.begin(); j != valueSet->parameters.end(); ++j)
+				{
+					if(!*j) continue;
+					if(!(*j)->physicalParameter->getRequest.empty() && framesByID.find((*j)->physicalParameter->getRequest) != framesByID.end())
+					{
+						valueRequestFrames[i][(*j)->physicalParameter->getRequest] = framesByID[(*j)->physicalParameter->getRequest];
+					}
+				}
+			}
 			else _bl->out.printError("Error: Tried to add channel with the same index twice. Index: " + std::to_string(i));
 		}
 	}

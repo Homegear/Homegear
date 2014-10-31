@@ -179,13 +179,14 @@ std::shared_ptr<BaseLib::FileDescriptor> Server::getClientFileDescriptor()
 		FD_ZERO(&readFileDescriptor);
 		GD::bl->fileDescriptorManager.lock();
 		int32_t nfds = _serverFileDescriptor->descriptor + 1;
-		FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
-		GD::bl->fileDescriptorManager.unlock();
 		if(nfds <= 0)
 		{
+			GD::bl->fileDescriptorManager.unlock();
 			GD::out.printError("Error: CLI server socket descriptor is invalid.");
 			return descriptor;
 		}
+		FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
+		GD::bl->fileDescriptorManager.unlock();
 		if(!select(nfds, &readFileDescriptor, NULL, NULL, &timeout)) return descriptor;
 
 		sockaddr_un clientAddress;
@@ -330,15 +331,16 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 			FD_ZERO(&readFileDescriptor);
 			GD::bl->fileDescriptorManager.lock();
 			int32_t nfds = clientData->fileDescriptor->descriptor + 1;
-			FD_SET(clientData->fileDescriptor->descriptor, &readFileDescriptor);
-			GD::bl->fileDescriptorManager.unlock();
 			if(nfds <= 0)
 			{
+				GD::bl->fileDescriptorManager.unlock();
 				removeClientData(clientData->id);
 				GD::out.printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
 				GD::bl->fileDescriptorManager.close(clientData->fileDescriptor);
 				return;
 			}
+			FD_SET(clientData->fileDescriptor->descriptor, &readFileDescriptor);
+			GD::bl->fileDescriptorManager.unlock();
 			bytesRead = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
 			if(bytesRead == 0) continue;
 			if(bytesRead != 1)
