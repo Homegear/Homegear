@@ -1984,7 +1984,7 @@ std::shared_ptr<RPC::Variable> Peer::getParamsetDescription(std::shared_ptr<RPC:
 				RPC::LogicalParameterEnum* parameter = (RPC::LogicalParameterEnum*)(*i)->logicalParameter.get();
 
 				if(!(*i)->control.empty()) description->structValue->insert(RPC::RPCStructElement("CONTROL", std::shared_ptr<RPC::Variable>(new RPC::Variable((*i)->control))));
-				if(parameter->defaultValueExists) description->structValue->insert(RPC::RPCStructElement("DEFAULT", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->defaultValue))));
+				description->structValue->insert(RPC::RPCStructElement("DEFAULT", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->defaultValueExists ? parameter->defaultValue : 0))));
 				description->structValue->insert(RPC::RPCStructElement("FLAGS", std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)(*i)->uiFlags))));
 				description->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::Variable>(new RPC::Variable((*i)->id))));
 				description->structValue->insert(RPC::RPCStructElement("MAX", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->max))));

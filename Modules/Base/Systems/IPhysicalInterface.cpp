@@ -155,21 +155,30 @@ void IPhysicalInterface::processHighPriorityPackets()
 				if(*i) eventHandlers.push_back((IPhysicalInterfaceEventSink*)(*i));
 			}
 			_eventHandlerMutex.unlock();
-			int64_t processingTime = HelperFunctions::getTime();
-			_lastPacketReceived = processingTime;
 
-			_highPriorityPacketBufferMutex.lock();
-			std::shared_ptr<Packet> packet = _highPriorityPacketBuffer[_highPriorityPacketBufferTail];
-			_highPriorityPacketBufferTail++;
-			if(_highPriorityPacketBufferTail > 19) _highPriorityPacketBufferTail = 0;
-			_highPriorityPacketBufferMutex.unlock();
-			for(std::vector<IPhysicalInterfaceEventSink*>::iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i)
+			while(_highPriorityPacketBufferHead != _highPriorityPacketBufferTail)
 			{
-				(*i)->onPacketReceived(_settings->id, packet);
+				int64_t processingTime = HelperFunctions::getTime();
+				_lastPacketReceived = processingTime;
+
+				_highPriorityPacketBufferMutex.lock();
+				std::shared_ptr<Packet> packet = _highPriorityPacketBuffer[_highPriorityPacketBufferTail];
+				_highPriorityPacketBuffer[_highPriorityPacketBufferTail].reset();
+				_highPriorityPacketBufferTail++;
+				if(_highPriorityPacketBufferTail > 19) _highPriorityPacketBufferTail = 0;
+				_highPriorityPacketBufferMutex.unlock();
+				if(packet)
+				{
+					for(std::vector<IPhysicalInterfaceEventSink*>::iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i)
+					{
+						(*i)->onPacketReceived(_settings->id, packet);
+					}
+				}
+				else _bl->out.printWarning("Warning: Packet was nullptr.");
+				processingTime = HelperFunctions::getTime() - processingTime;
+				if(_bl->settings.devLog() || _bl->debugLevel >= 5) _bl->out.printInfo("Info (" + _settings->id + "): Packet processing took " + std::to_string(processingTime) + " ms.");
+				if(processingTime > _maxPacketProcessingTime) _bl->out.printWarning("Warning (" + _settings->id + "): Packet processing took longer than 1 second.");
 			}
-			processingTime = HelperFunctions::getTime() - processingTime;
-			_bl->out.printInfo("Info (" + _settings->id + "): Packet processing took " + std::to_string(processingTime) + " ms.");
-			if(processingTime > _maxPacketProcessingTime) _bl->out.printWarning("Warning (" + _settings->id + "): Packet processing took longer than 1 second.");
 		}
 		catch(const std::exception& ex)
 		{
@@ -185,7 +194,6 @@ void IPhysicalInterface::processHighPriorityPackets()
 		}
 		_highPriorityPacketProcessingPacketAvailable = false;
 		lock.unlock();
-		_eventHandlerMutex.unlock();
 	}
 }
 
@@ -210,21 +218,30 @@ void IPhysicalInterface::processLowPriorityPackets()
 				if(*i) eventHandlers.push_back((IPhysicalInterfaceEventSink*)(*i));
 			}
 			_eventHandlerMutex.unlock();
-			int64_t processingTime = HelperFunctions::getTime();
-			_lastPacketReceived = processingTime;
 
-			_lowPriorityPacketBufferMutex.lock();
-			std::shared_ptr<Packet> packet = _lowPriorityPacketBuffer[_lowPriorityPacketBufferTail];
-			_lowPriorityPacketBufferTail++;
-			if(_lowPriorityPacketBufferTail > 19) _lowPriorityPacketBufferTail = 0;
-			_lowPriorityPacketBufferMutex.unlock();
-			for(std::vector<IPhysicalInterfaceEventSink*>::iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i)
+			while(_lowPriorityPacketBufferHead != _lowPriorityPacketBufferTail)
 			{
-				(*i)->onPacketReceived(_settings->id, packet);
+				int64_t processingTime = HelperFunctions::getTime();
+				_lastPacketReceived = processingTime;
+
+				_lowPriorityPacketBufferMutex.lock();
+				std::shared_ptr<Packet> packet = _lowPriorityPacketBuffer[_lowPriorityPacketBufferTail];
+				_lowPriorityPacketBuffer[_lowPriorityPacketBufferTail].reset();
+				_lowPriorityPacketBufferTail++;
+				if(_lowPriorityPacketBufferTail > 19) _lowPriorityPacketBufferTail = 0;
+				_lowPriorityPacketBufferMutex.unlock();
+				if(packet)
+				{
+					for(std::vector<IPhysicalInterfaceEventSink*>::iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i)
+					{
+						(*i)->onPacketReceived(_settings->id, packet);
+					}
+				}
+				else _bl->out.printWarning("Warning: Packet was nullptr.");
+				processingTime = HelperFunctions::getTime() - processingTime;
+				if(_bl->settings.devLog() || _bl->debugLevel >= 5) _bl->out.printInfo("Info (" + _settings->id + "): Packet processing took " + std::to_string(processingTime) + " ms.");
+				if(processingTime > _maxPacketProcessingTime) _bl->out.printWarning("Warning (" + _settings->id + "): Packet processing took longer than 1 second.");
 			}
-			processingTime = HelperFunctions::getTime() - processingTime;
-			_bl->out.printInfo("Info (" + _settings->id + "): Packet processing took " + std::to_string(processingTime) + " ms.");
-			if(processingTime > _maxPacketProcessingTime) _bl->out.printWarning("Warning (" + _settings->id + "): Packet processing took longer than 1 second.");
 		}
 		catch(const std::exception& ex)
 		{
@@ -240,7 +257,6 @@ void IPhysicalInterface::processLowPriorityPackets()
 		}
 		_lowPriorityPacketProcessingPacketAvailable = false;
 		lock.unlock();
-		_eventHandlerMutex.unlock();
 	}
 }
 
