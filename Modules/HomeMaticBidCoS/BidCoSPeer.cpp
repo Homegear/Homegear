@@ -2599,12 +2599,18 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::putParamset(int32_t channel,
 				saveParameter(parameter->databaseID, parameter->data);
 				if(peerInfoPacketsEnabled && i->first == "AES_ACTIVE" && !aesActivated) _physicalInterface->setAES(getPeerInfo(), channel);
 				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
-				//Only send to device when parameter is of type config
+				//Only send to device when parameter is of type config;
 				if(parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::configString) continue;
+				//Don't active AES, when aesAlways is true as it is activated already
+				if(i->first == "AES_ACTIVE" && rpcDevice->channels.at(channel)->aesAlways) continue;
 				changedParameters[list][intIndex] = allParameters[list][intIndex];
 			}
 
-			if(changedParameters.empty() || changedParameters.begin()->second.empty()) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
+			if(changedParameters.empty() || changedParameters.begin()->second.empty())
+			{
+				if(aesActivated) checkAESKey(onlyPushing); //If "aesAlways" is true, changedParameters might be empty
+				return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
+			}
 
 			std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(_physicalInterface, BidCoSQueueType::CONFIG));
 			queue->noSending = true;

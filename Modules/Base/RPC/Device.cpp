@@ -1693,7 +1693,7 @@ DeviceChannel::DeviceChannel(BaseLib::Obj* baseLib, xml_node<>* node, uint32_t& 
 		else if(attributeName == "count") count = Math::getNumber(attributeValue);
 		else if(attributeName == "has_team") { if(attributeValue == "true") hasTeam = true; }
 		else if(attributeName == "aes_default") { if(attributeValue == "true") aesDefault = true; }
-		else if(attributeName == "aes_always") { if(attributeValue == "true") aesDefault = true; }
+		else if(attributeName == "aes_always") { if(attributeValue == "true") { aesDefault = true; aesAlways = true; } }
 		else if(attributeName == "aes_cbc") { if(attributeValue == "true") aesCBC = true; }
 		else if(attributeName == "team_tag") teamTag = attributeValue;
 		else if(attributeName == "paired") { if(attributeValue == "true") paired = true; }
