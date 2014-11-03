@@ -123,7 +123,7 @@ public:
 		{
 			IOCFG2 =		0x00,
 			IOCFG1 = 		0x01,
-			IOCFG0 =		0x00,
+			IOCFG0 =		0x02,
 			FIFOTHR =		0x03,
 			SYNC1 =			0x04,
 			SYNC2 =			0x05,
@@ -204,6 +204,7 @@ protected:
 	bool _sending = false;
 	bool _sendingPending = false;
 
+	void setConfig();
 	void setupDevice();
 	void openDevice();
     void closeDevice();

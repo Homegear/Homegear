@@ -157,11 +157,10 @@ void PhysicalInterfaces::load(std::string filename)
 					if(settings->responseDelay > 10000) settings->responseDelay = 10000;
 					GD::out.printDebug("Debug: responseDelay of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->responseDelay));
 				}
-				else if(name == "amplifier")
+				else if(name == "txpowersetting")
 				{
-					BaseLib::HelperFunctions::toLower(value);
-					if(value == "true") settings->amplifier = true;
-					GD::out.printDebug("Debug: amplifier of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->amplifier));
+					settings->txPowerSetting = BaseLib::Math::getNumber(value);
+					GD::out.printDebug("Debug: txPowerSetting of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->txPowerSetting));
 				}
 				else if(name == "oscillatorfrequency")
 				{

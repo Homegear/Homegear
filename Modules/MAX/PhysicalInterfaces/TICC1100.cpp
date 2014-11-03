@@ -46,53 +46,12 @@ TICC1100::TICC1100(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> 
 			settings->listenThreadPriority = 45;
 			settings->listenThreadPolicy = SCHED_FIFO;
 		}
+		if(settings->oscillatorFrequency < 0) settings->oscillatorFrequency = 26000000;
+		if(settings->txPowerSetting < 0) settings->txPowerSetting = 0xC0;
 
 		_transfer =  { (uint64_t)0, (uint64_t)0, (uint32_t)0, (uint32_t)4000000, (uint16_t)0, (uint8_t)8, (uint8_t)0, (uint32_t)0 };
 
-		_config =
-		{
-			0x46, //00: IOCFG2 (GDO2_CFG)
-			0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
-			0x2E, //02: IOCFG0 (GDO0_CFG, GDO0 is not connected)
-			0x07, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
-			0xC6, //04: SYNC1
-			0x26, //05: SYNC0
-			0xFF, //06: PKTLEN (Maximum packet length)
-			0x0C, //07: PKTCTRL1: CRC_AUTOFLUSH | APPEND_STATUS | NO_ADDR_CHECK
-			0x45, //08: PKTCTRL0
-			0x00, //09: ADDR
-			0x00, //0A: CHANNR
-			0x06, //0B: FSCTRL1
-			0x00, //0C: FSCTRL0
-			0x21, //0D: FREQ2
-			0x65, //0E: FREQ1
-			0x6A, //0F: FREQ0
-			0xC8, //10: MDMCFG4
-			0x93, //11: MDMCFG3
-			0x03, //12: MDMCFG2
-			0x22, //13: MDMCFG1
-			0xF8, //14: MDMCFG0
-			0x34, //15: DEVIATN
-			0x07, //16: MCSM2
-			0x00, //17: MCSM1: IDLE when packet has been received, RX after sending
-			0x18, //18: MCSM0
-			0x16, //19: FOCCFG
-			0x6C, //1A: BSCFG
-			0x43, //1B: AGCCTRL2
-			0x40, //1C: AGCCTRL1
-			0x91, //1D: AGCCTRL0
-			0x87, //1E: WOREVT1
-			0x6B, //1F: WOREVT0
-			0xF8, //20: WORCRTL
-			0x56, //21: FREND1
-			0x10, //22: FREND0
-			0xA9, //23: FSCAL3
-			0x0A, //24: FSCAL2
-			0x00, //25: FSCAL1
-			0x11, //26: FSCAL0
-			0x41, //27: RCCTRL1
-			0x00, //28: RCCTRL0
-		};
+		setConfig();
 	}
     catch(const std::exception& ex)
     {
@@ -129,6 +88,105 @@ TICC1100::~TICC1100()
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+void TICC1100::setConfig()
+{
+	if(_settings->oscillatorFrequency == 26000000)
+	{
+		_config =
+		{
+			0x46, //00: IOCFG2 (GDO2_CFG)
+			0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
+			0x5B, //02: IOCFG0 (GDO0_CFG, GDO0 is not connected)
+			0x07, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
+			0xC6, //04: SYNC1
+			0x26, //05: SYNC0
+			0xFF, //06: PKTLEN (Maximum packet length)
+			0x0C, //07: PKTCTRL1: CRC_AUTOFLUSH | APPEND_STATUS | NO_ADDR_CHECK
+			0x45, //08: PKTCTRL0
+			0x00, //09: ADDR
+			0x00, //0A: CHANNR
+			0x06, //0B: FSCTRL1
+			0x00, //0C: FSCTRL0
+			0x21, //0D: FREQ2
+			0x65, //0E: FREQ1
+			0x6A, //0F: FREQ0
+			0xC8, //10: MDMCFG4
+			0x93, //11: MDMCFG3
+			0x03, //12: MDMCFG2
+			0x22, //13: MDMCFG1
+			0xF8, //14: MDMCFG0
+			0x34, //15: DEVIATN
+			0x07, //16: MCSM2
+			0x00, //17: MCSM1: IDLE when packet has been received, RX after sending
+			0x18, //18: MCSM0
+			0x16, //19: FOCCFG
+			0x6C, //1A: BSCFG
+			0x43, //1B: AGCCTRL2
+			0x40, //1C: AGCCTRL1
+			0x91, //1D: AGCCTRL0
+			0x87, //1E: WOREVT1
+			0x6B, //1F: WOREVT0
+			0xF8, //20: WORCRTL
+			0x56, //21: FREND1
+			0x10, //22: FREND0
+			0xE9, //23: FSCAL3
+			0x2A, //24: FSCAL2
+			0x00, //25: FSCAL1
+			0x1F, //26: FSCAL0
+			0x41, //27: RCCTRL1
+			0x00, //28: RCCTRL0
+		};
+	}
+	else if(_settings->oscillatorFrequency == 27000000)
+	{
+		_config =
+		{
+			0x46, //00: IOCFG2 (GDO2_CFG)
+			0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
+			0x5B, //02: IOCFG0 (GDO0_CFG, GDO0 is not connected)
+			0x07, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
+			0xC6, //04: SYNC1
+			0x26, //05: SYNC0
+			0xFF, //06: PKTLEN (Maximum packet length)
+			0x0C, //07: PKTCTRL1: CRC_AUTOFLUSH | APPEND_STATUS | NO_ADDR_CHECK
+			0x45, //08: PKTCTRL0
+			0x00, //09: ADDR
+			0x00, //0A: CHANNR
+			0x06, //0B: FSCTRL1
+			0x00, //0C: FSCTRL0
+			0x20, //0D: FREQ2
+			0x28, //0E: FREQ1
+			0xC5, //0F: FREQ0
+			0xC8, //10: MDMCFG4
+			0x84, //11: MDMCFG3
+			0x03, //12: MDMCFG2
+			0x22, //13: MDMCFG1
+			0xE5, //14: MDMCFG0
+			0x34, //15: DEVIATN
+			0x07, //16: MCSM2
+			0x00, //17: MCSM1: IDLE when packet has been received, RX after sending
+			0x18, //18: MCSM0
+			0x16, //19: FOCCFG
+			0x6C, //1A: BSCFG
+			0x43, //1B: AGCCTRL2
+			0x40, //1C: AGCCTRL1
+			0x91, //1D: AGCCTRL0
+			0x87, //1E: WOREVT1
+			0x6B, //1F: WOREVT0
+			0xF8, //20: WORCRTL
+			0x56, //21: FREND1
+			0x10, //22: FREND0
+			0xE9, //23: FSCAL3
+			0x2A, //24: FSCAL2
+			0x00, //25: FSCAL1
+			0x1F, //26: FSCAL0
+			0x41, //27: RCCTRL1
+			0x00, //28: RCCTRL0
+		};
+	}
+	else _out.printError("Error: Unknown value for \"oscillatorFrequency\" in physicalinterfaces.conf. Valid values are 26000000 and 27000000.");
 }
 
 void TICC1100::openDevice()
@@ -599,7 +657,7 @@ void TICC1100::initChip()
 		writeRegister(Registers::Enum::FSTEST, 0x59, true);
 		writeRegister(Registers::Enum::TEST2, 0x81, true); //Determined by SmartRF Studio
 		writeRegister(Registers::Enum::TEST1, 0x35, true); //Determined by SmartRF Studio
-		writeRegister(Registers::Enum::PATABLE, 0xC3, true);
+		writeRegister(Registers::Enum::PATABLE, _settings->txPowerSetting, true);
 
 		sendCommandStrobe(CommandStrobes::Enum::SFRX);
 		usleep(20);

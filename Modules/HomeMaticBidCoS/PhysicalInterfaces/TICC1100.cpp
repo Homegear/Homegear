@@ -48,6 +48,7 @@ TICC1100::TICC1100(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> 
 			settings->listenThreadPolicy = SCHED_FIFO;
 		}
 		if(settings->oscillatorFrequency < 0) settings->oscillatorFrequency = 26000000;
+		if(settings->txPowerSetting < 0) settings->txPowerSetting = 0xC0;
 
 		_transfer =  { (uint64_t)0, (uint64_t)0, (uint32_t)0, (uint32_t)4000000, (uint16_t)0, (uint8_t)8, (uint8_t)0, (uint32_t)0 };
 
@@ -98,7 +99,7 @@ void TICC1100::setConfig()
 		{
 			0x46, //00: IOCFG2 (GDO2_CFG)
 			0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
-			0x2E, //02: IOCFG0 (GDO0_CFG, GDO0 is not connected)
+			0x5B, //02: IOCFG0 (GDO0_CFG, GDO0 is not connected)
 			0x07, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
 			0xE9, //04: SYNC1
 			0xCA, //05: SYNC0
@@ -131,10 +132,10 @@ void TICC1100::setConfig()
 			0xF8, //20: WORCRTL
 			0x56, //21: FREND1
 			0x10, //22: FREND0
-			0xA9, //23: FSCAL3
-			0x0A, //24: FSCAL2
+			0xE9, //23: FSCAL3
+			0x2A, //24: FSCAL2
 			0x00, //25: FSCAL1
-			0x11, //26: FSCAL0
+			0x1F, //26: FSCAL0
 			0x41, //27: RCCTRL1
 			0x00, //28: RCCTRL0
 		};
@@ -199,10 +200,10 @@ void TICC1100::enableUpdateMode()
 		while(_sending) std::this_thread::sleep_for(std::chrono::milliseconds(3));
 		_txMutex.try_lock();
 		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
-		writeRegister(Registers::Enum::FSCTRL1, 0x08, true);
-		writeRegister(Registers::Enum::MDMCFG4, 0x5B, true);
-		writeRegister(Registers::Enum::MDMCFG3, 0xF8, true);
-		writeRegister(Registers::Enum::DEVIATN, 0x47, true);
+		writeRegister(Registers::Enum::FSCTRL1, 0x08, true); // gives higher IF, IF=203kHz@f_XOSC=26MHz, 211kHz@f_XOSC=27MHz
+		writeRegister(Registers::Enum::MDMCFG4, 0x5B, true); // CHANBW_E = 1, CHANBW_M = 1, BW_channel = 325kHz@26MHz, 338kHz@27MHz (higher)
+		writeRegister(Registers::Enum::MDMCFG3, (_settings->oscillatorFrequency == 26000000) ? 0xF8 : 0xE5, true); // 0xF8 gives R_DATA = 99.975kBaud@26MHz; 0xE5 gives R_DATA=99.907kBaud@27MHz
+		writeRegister(Registers::Enum::DEVIATN, (_settings->oscillatorFrequency == 26000000) ? 0x47 : 0x46, true); // 47.607kHz deviation @26MHz, 46.143kHz dev @27MHz
 		writeRegister(Registers::Enum::FOCCFG, 0x1D, true);
 		writeRegister(Registers::Enum::BSCFG, 0x1C, true);
 		writeRegister(Registers::Enum::AGCCTRL2, 0xC7, true);
@@ -763,8 +764,7 @@ void TICC1100::initChip()
 		writeRegister(Registers::Enum::FSTEST, 0x59, true);
 		writeRegister(Registers::Enum::TEST2, 0x81, true); //Determined by SmartRF Studio
 		writeRegister(Registers::Enum::TEST1, 0x35, true); //Determined by SmartRF Studio
-		if(_settings->amplifier) writeRegister(Registers::Enum::PATABLE, 0x54, true);
-		else writeRegister(Registers::Enum::PATABLE, 0xC0, true);
+		writeRegister(Registers::Enum::PATABLE, _settings->txPowerSetting, true);
 
 		sendCommandStrobe(CommandStrobes::Enum::SFRX);
 		usleep(20);
