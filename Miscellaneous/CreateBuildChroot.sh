@@ -56,6 +56,8 @@ if [ "$arch" == "armhf" ]; then
 	cp /usr/bin/qemu-arm-static usr/bin/
 elif [ "$arch" == "i386" ]; then
 	cp /usr/bin/qemu-i386-static usr/bin/
+elif [ "$arch" == "amd64" ]; then
+	cp /usr/bin/qemu-x86_64-static usr/bin/
 elif [ "$arch" == "mips" ]; then
 	cp /usr/bin/qemu-mips-static usr/bin/
 fi

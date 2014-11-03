@@ -117,12 +117,13 @@ dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
 read -p \"Ready to install Homegear. Hit [Enter] to continue...\"
 touch /tmp/HOMEGEAR_STATIC_INSTALLATION
 wget http://homegear.eu/downloads/homegear_current_rpi.deb
-dpkg -i /homegear_current_armhf.deb
+dpkg -i /homegear_current_rpi.deb
 rm /tmp/HOMEGEAR_STATIC_INSTALLATION
-rm homegear_current_armhf.deb
+rm homegear_current_rpi.deb
 service homegear stop
 echo \"*               soft    core            unlimited\" >> /etc/security/limits.d/homegear
 service ssh stop
+service ntp stop
 rm -rf /var/log/homegear/*
 rm -f third-stage
 " > third-stage
