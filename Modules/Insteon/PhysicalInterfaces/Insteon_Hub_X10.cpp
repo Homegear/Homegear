@@ -953,7 +953,7 @@ void InsteonHubX10::processPacket(std::vector<uint8_t>& data)
 			std::vector<uint8_t> binaryPacket(&data.at(2), &data.at(0) + data.size());
 			std::shared_ptr<InsteonPacket> insteonPacket(new InsteonPacket(binaryPacket, _settings->id, BaseLib::HelperFunctions::getTime()));
 			if(insteonPacket->destinationAddress() == _myAddress) insteonPacket->setDestinationAddress(_centralAddress);
-			raisePacketReceived(insteonPacket, false);
+			raisePacketReceived(insteonPacket);
 		}
 	}
     catch(const std::exception& ex)

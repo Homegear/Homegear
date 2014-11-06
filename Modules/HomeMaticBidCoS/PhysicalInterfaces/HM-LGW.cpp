@@ -2596,7 +2596,7 @@ void HM_LGW::parsePacket(std::vector<uint8_t>& packet)
 			}
 			_lastPacketReceived = BaseLib::HelperFunctions::getTime();
 			bool wakeUp = packet.at(5) == 5 && (packet.at(6) & 0x10);
-			raisePacketReceived(bidCoSPacket, wakeUp);
+			raisePacketReceived(bidCoSPacket);
 			if(wakeUp) //Wake up was sent
 			{
 				std::vector<uint8_t> payload;
@@ -2604,7 +2604,7 @@ void HM_LGW::parsePacket(std::vector<uint8_t>& packet)
 				std::shared_ptr<BidCoSPacket> ok(new BidCoSPacket(bidCoSPacket->messageCounter(), 0x80, 0x02, bidCoSPacket->senderAddress(), _myAddress, payload));
 				ok->setTimeReceived(bidCoSPacket->timeReceived() + 1);
 				std::this_thread::sleep_for(std::chrono::milliseconds(30));
-				raisePacketReceived(ok, true);
+				raisePacketReceived(ok);
 			}
 		}
 	}

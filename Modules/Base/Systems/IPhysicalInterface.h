@@ -108,23 +108,15 @@ protected:
 	std::thread _callbackThread;
 	bool _stopCallbackThread = false;
 	static const int32_t _packetBufferSize = 50;
-	std::mutex _lowPriorityPacketBufferMutex;
-	int32_t _lowPriorityPacketBufferHead = 0;
-	int32_t _lowPriorityPacketBufferTail = 0;
-	std::shared_ptr<Packet> _lowPriorityPacketBuffer[_packetBufferSize];
-	std::mutex _highPriorityPacketBufferMutex;
-	int32_t _highPriorityPacketBufferHead = 0;
-	int32_t _highPriorityPacketBufferTail = 0;
-	std::shared_ptr<Packet> _highPriorityPacketBuffer[_packetBufferSize];
-	std::mutex _lowPriorityPacketProcessingThreadMutex;
-	std::thread _lowPriorityPacketProcessingThread;
-	bool _lowPriorityPacketProcessingPacketAvailable = false;
-	std::condition_variable _lowPriorityPacketProcessingConditionVariable;
-	std::mutex _highPriorityPacketProcessingThreadMutex;
-	std::thread _highPriorityPacketProcessingThread;
-	bool _highPriorityPacketProcessingPacketAvailable = false;
-	std::condition_variable _highPriorityPacketProcessingConditionVariable;
-	bool _stopPacketProcessingThreads = false;
+	std::mutex _packetBufferMutex;
+	int32_t _packetBufferHead = 0;
+	int32_t _packetBufferTail = 0;
+	std::shared_ptr<Packet> _packetBuffer[_packetBufferSize];
+	std::mutex _packetProcessingThreadMutex;
+	std::thread _packetProcessingThread;
+	bool _packetProcessingPacketAvailable = false;
+	std::condition_variable _packetProcessingConditionVariable;
+	bool _stopPacketProcessingThread = false;
 	std::string _lockfile;
 	std::mutex _sendMutex;
 	bool _stopped = false;
@@ -136,10 +128,9 @@ protected:
 	bool _updateMode = false;
 
 	//Event handling
-	virtual void raisePacketReceived(std::shared_ptr<Packet> packet, bool highPriority);
+	virtual void raisePacketReceived(std::shared_ptr<Packet> packet);
 	//End event handling
-	void processHighPriorityPackets();
-	void processLowPriorityPackets();
+	void processPackets();
 	virtual void setDevicePermission(int32_t userID, int32_t groupID);
 	virtual void openGPIO(uint32_t index, bool readOnly);
 	virtual void getGPIOPath(uint32_t index);

@@ -223,7 +223,7 @@ void RawLAN::listen()
 						data.at(0) = 0xF8;
 					}
 					std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(data, BaseLib::HelperFunctions::getTime(), true));
-					raisePacketReceived(packet, true);
+					raisePacketReceived(packet);
 					_lastPacketReceived = BaseLib::HelperFunctions::getTime();
 					data.clear();
 					_socket->setReadTimeout(5000000);
@@ -257,7 +257,7 @@ void RawLAN::listen()
 					data.at(0) = 0xF8;
 				}
         		std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(data, BaseLib::HelperFunctions::getTime(), true));
-        		raisePacketReceived(packet, true);
+        		raisePacketReceived(packet);
         		_lastPacketReceived = BaseLib::HelperFunctions::getTime();
         		data.clear();
         	}

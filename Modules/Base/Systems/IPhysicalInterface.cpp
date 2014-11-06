@@ -52,37 +52,26 @@ IPhysicalInterface::IPhysicalInterface(BaseLib::Obj* baseLib, std::shared_ptr<Ph
 
 IPhysicalInterface::~IPhysicalInterface()
 {
-	_stopPacketProcessingThreads = true;
-	_lowPriorityPacketProcessingPacketAvailable = true;
-	_lowPriorityPacketProcessingConditionVariable.notify_one();
-	if(_lowPriorityPacketProcessingThread.joinable()) _lowPriorityPacketProcessingThread.join();
-	_highPriorityPacketProcessingPacketAvailable = true;
-	_highPriorityPacketProcessingConditionVariable.notify_one();
-	if(_highPriorityPacketProcessingThread.joinable()) _highPriorityPacketProcessingThread.join();
+	_stopPacketProcessingThread = true;
+	_packetProcessingPacketAvailable = true;
+	_packetProcessingConditionVariable.notify_one();
+	if(_packetProcessingThread.joinable()) _packetProcessingThread.join();
 }
 
 void IPhysicalInterface::startListening()
 {
 	try
 	{
-		_stopPacketProcessingThreads = true;
-		_lowPriorityPacketProcessingPacketAvailable = true;
-		_lowPriorityPacketProcessingConditionVariable.notify_one();
-		if(_lowPriorityPacketProcessingThread.joinable()) _lowPriorityPacketProcessingThread.join();
-		_highPriorityPacketProcessingPacketAvailable = true;
-		_highPriorityPacketProcessingConditionVariable.notify_one();
-		if(_highPriorityPacketProcessingThread.joinable()) _highPriorityPacketProcessingThread.join();
-		_stopPacketProcessingThreads = false;
-		_lowPriorityPacketProcessingPacketAvailable = false;
-		_highPriorityPacketProcessingPacketAvailable = false;
-		_lowPriorityPacketBufferHead = 0;
-		_lowPriorityPacketBufferTail = 0;
-		_lowPriorityPacketProcessingThread = std::thread(&IPhysicalInterface::processLowPriorityPackets, this);
-		BaseLib::Threads::setThreadPriority(_bl, _lowPriorityPacketProcessingThread.native_handle(), _bl->settings.packetReceivedThreadPriority(), _bl->settings.packetReceivedThreadPolicy());
-		_highPriorityPacketBufferHead = 0;
-		_highPriorityPacketBufferTail = 0;
-		_highPriorityPacketProcessingThread = std::thread(&IPhysicalInterface::processHighPriorityPackets, this);
-		BaseLib::Threads::setThreadPriority(_bl, _highPriorityPacketProcessingThread.native_handle(), 45, SCHED_FIFO);
+		_stopPacketProcessingThread = true;
+		_packetProcessingPacketAvailable = true;
+		_packetProcessingConditionVariable.notify_one();
+		if(_packetProcessingThread.joinable()) _packetProcessingThread.join();
+		_stopPacketProcessingThread = false;
+		_packetProcessingPacketAvailable = false;
+		_packetBufferHead = 0;
+		_packetBufferTail = 0;
+		_packetProcessingThread = std::thread(&IPhysicalInterface::processPackets, this);
+		BaseLib::Threads::setThreadPriority(_bl, _packetProcessingThread.native_handle(), 45, SCHED_FIFO);
 	}
     catch(const std::exception& ex)
     {
@@ -102,13 +91,10 @@ void IPhysicalInterface::stopListening()
 {
 	try
 	{
-		_stopPacketProcessingThreads = true;
-		_lowPriorityPacketProcessingPacketAvailable = true;
-		_lowPriorityPacketProcessingConditionVariable.notify_one();
-		if(_lowPriorityPacketProcessingThread.joinable()) _lowPriorityPacketProcessingThread.join();
-		_highPriorityPacketProcessingPacketAvailable = true;
-		_highPriorityPacketProcessingConditionVariable.notify_one();
-		if(_highPriorityPacketProcessingThread.joinable()) _highPriorityPacketProcessingThread.join();
+		_stopPacketProcessingThread = true;
+		_packetProcessingPacketAvailable = true;
+		_packetProcessingConditionVariable.notify_one();
+		if(_packetProcessingThread.joinable()) _packetProcessingThread.join();
 	}
     catch(const std::exception& ex)
     {
@@ -134,21 +120,21 @@ void IPhysicalInterface::disableUpdateMode()
 	throw Exception("Error: Method disableUpdateMode is not implemented.");
 }
 
-void IPhysicalInterface::processHighPriorityPackets()
+void IPhysicalInterface::processPackets()
 {
-	while(!_stopPacketProcessingThreads)
+	while(!_stopPacketProcessingThread)
 	{
-		std::unique_lock<std::mutex> lock(_highPriorityPacketProcessingThreadMutex);
+		std::unique_lock<std::mutex> lock(_packetProcessingThreadMutex);
 		try
 		{
-			_highPriorityPacketBufferMutex.lock();
-			if(_highPriorityPacketBufferHead == _highPriorityPacketBufferTail) //Only lock, when there is really no packet to process. This check is necessary, because the check of the while loop condition is outside of the mutex
+			_packetBufferMutex.lock();
+			if(_packetBufferHead == _packetBufferTail) //Only lock, when there is really no packet to process. This check is necessary, because the check of the while loop condition is outside of the mutex
 			{
-				_highPriorityPacketBufferMutex.unlock();
-				_highPriorityPacketProcessingConditionVariable.wait(lock, [&]{ return _highPriorityPacketProcessingPacketAvailable; });
+				_packetBufferMutex.unlock();
+				_packetProcessingConditionVariable.wait(lock, [&]{ return _packetProcessingPacketAvailable; });
 			}
-			_highPriorityPacketBufferMutex.unlock();
-			if(_stopPacketProcessingThreads)
+			_packetBufferMutex.unlock();
+			if(_stopPacketProcessingThread)
 			{
 				lock.unlock();
 				return;
@@ -162,18 +148,18 @@ void IPhysicalInterface::processHighPriorityPackets()
 			}
 			_eventHandlerMutex.unlock();
 
-			while(_highPriorityPacketBufferHead != _highPriorityPacketBufferTail)
+			while(_packetBufferHead != _packetBufferTail)
 			{
 				int64_t processingTime = HelperFunctions::getTime();
 				_lastPacketReceived = processingTime;
 
-				_highPriorityPacketBufferMutex.lock();
-				std::shared_ptr<Packet> packet = _highPriorityPacketBuffer[_highPriorityPacketBufferTail];
-				_highPriorityPacketBuffer[_highPriorityPacketBufferTail].reset();
-				_highPriorityPacketBufferTail++;
-				if(_highPriorityPacketBufferTail >= _packetBufferSize) _highPriorityPacketBufferTail = 0;
-				if(_highPriorityPacketBufferHead == _highPriorityPacketBufferHead) _highPriorityPacketProcessingPacketAvailable = false; //Set here, because otherwise it might be set to "true" in raisePacketReceived and then set to false again after the while loop
-				_highPriorityPacketBufferMutex.unlock();
+				_packetBufferMutex.lock();
+				std::shared_ptr<Packet> packet = _packetBuffer[_packetBufferTail];
+				_packetBuffer[_packetBufferTail].reset();
+				_packetBufferTail++;
+				if(_packetBufferTail >= _packetBufferSize) _packetBufferTail = 0;
+				if(_packetBufferHead == _packetBufferTail) _packetProcessingPacketAvailable = false; //Set here, because otherwise it might be set to "true" in raisePacketReceived and then set to false again after the while loop
+				_packetBufferMutex.unlock();
 				if(packet)
 				{
 					for(std::vector<IPhysicalInterfaceEventSink*>::iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i)
@@ -203,119 +189,27 @@ void IPhysicalInterface::processHighPriorityPackets()
 	}
 }
 
-void IPhysicalInterface::processLowPriorityPackets()
-{
-	while(!_stopPacketProcessingThreads)
-	{
-		std::unique_lock<std::mutex> lock(_lowPriorityPacketProcessingThreadMutex);
-		try
-		{
-			_lowPriorityPacketBufferMutex.lock();
-			if(_lowPriorityPacketBufferHead == _lowPriorityPacketBufferTail) //Only lock, when there is really no packet to process. This check is necessary, because the check of the while loop condition is outside of the mutex
-			{
-				_lowPriorityPacketBufferMutex.unlock();
-				_lowPriorityPacketProcessingConditionVariable.wait(lock, [&]{ return _lowPriorityPacketProcessingPacketAvailable; });
-			}
-			_lowPriorityPacketBufferMutex.unlock();
-			if(_stopPacketProcessingThreads)
-			{
-				lock.unlock();
-				return;
-			}
-			std::vector<IPhysicalInterfaceEventSink*> eventHandlers;
-			_eventHandlerMutex.lock();
-			//We need to copy all elements. In packetReceived so much can happen, that _homeMaticDevicesMutex might deadlock
-			for(std::forward_list<IEventSinkBase*>::const_iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-			{
-				if(*i) eventHandlers.push_back((IPhysicalInterfaceEventSink*)(*i));
-			}
-			_eventHandlerMutex.unlock();
-
-			while(_lowPriorityPacketBufferHead != _lowPriorityPacketBufferTail)
-			{
-				int64_t processingTime = HelperFunctions::getTime();
-				_lastPacketReceived = processingTime;
-
-				_lowPriorityPacketBufferMutex.lock();
-				std::shared_ptr<Packet> packet = _lowPriorityPacketBuffer[_lowPriorityPacketBufferTail];
-				_lowPriorityPacketBuffer[_lowPriorityPacketBufferTail].reset();
-				_lowPriorityPacketBufferTail++;
-				if(_lowPriorityPacketBufferTail >= _packetBufferSize) _lowPriorityPacketBufferTail = 0;
-				if(_lowPriorityPacketBufferHead == _lowPriorityPacketBufferTail) _lowPriorityPacketProcessingPacketAvailable = false; //Set here, because otherwise it might be set to "true" in raisePacketReceived and then set to false again after the while loop
-				_lowPriorityPacketBufferMutex.unlock();
-				if(packet)
-				{
-					for(std::vector<IPhysicalInterfaceEventSink*>::iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i)
-					{
-						(*i)->onPacketReceived(_settings->id, packet);
-					}
-				}
-				else _bl->out.printWarning("Warning: Packet was nullptr.");
-				processingTime = HelperFunctions::getTime() - processingTime;
-				if(_bl->settings.devLog() || _bl->debugLevel >= 5) _bl->out.printInfo("Info (" + _settings->id + "): Packet processing took " + std::to_string(processingTime) + " ms.");
-				if(processingTime > _maxPacketProcessingTime) _bl->out.printWarning("Warning (" + _settings->id + "): Packet processing took longer than 1 second.");
-			}
-		}
-		catch(const std::exception& ex)
-		{
-			_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(const Exception& ex)
-		{
-			_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		lock.unlock();
-	}
-}
-
-void IPhysicalInterface::raisePacketReceived(std::shared_ptr<Packet> packet, bool highPriority)
+void IPhysicalInterface::raisePacketReceived(std::shared_ptr<Packet> packet)
 {
 	try
 	{
-		if(highPriority)
+		_packetBufferMutex.lock();
+		int32_t tempHead = _packetBufferHead + 1;
+		if(tempHead >= _packetBufferSize) tempHead = 0;
+		if(tempHead == _packetBufferTail)
 		{
-			_highPriorityPacketBufferMutex.lock();
-			int32_t tempHead = _highPriorityPacketBufferHead + 1;
-			if(tempHead >= _packetBufferSize) tempHead = 0;
-			if(tempHead == _highPriorityPacketBufferTail)
-			{
-				_bl->out.printError("Error (" + _settings->id + "): More than 20 packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
-				_highPriorityPacketBufferMutex.unlock();
-				return;
-			}
-
-			_highPriorityPacketBuffer[_highPriorityPacketBufferHead] = packet;
-			_highPriorityPacketBufferHead++;
-			if(_highPriorityPacketBufferHead >= _packetBufferSize) _highPriorityPacketBufferHead = 0;
-			_highPriorityPacketProcessingPacketAvailable = true;
-			_highPriorityPacketBufferMutex.unlock();
-
-			_highPriorityPacketProcessingConditionVariable.notify_one();
+			_bl->out.printError("Error (" + _settings->id + "): More than 20 packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
+			_packetBufferMutex.unlock();
+			return;
 		}
-		else
-		{
-			_lowPriorityPacketBufferMutex.lock();
-			int32_t tempHead = _lowPriorityPacketBufferHead + 1;
-			if(tempHead >= _packetBufferSize) tempHead = 0;
-			if(tempHead == _lowPriorityPacketBufferTail)
-			{
-				_bl->out.printError("Error (" + _settings->id + "): More than 20 packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
-				_lowPriorityPacketBufferMutex.unlock();
-				return;
-			}
 
-			_lowPriorityPacketBuffer[_lowPriorityPacketBufferHead] = packet;
-			_lowPriorityPacketBufferHead++;
-			if(_lowPriorityPacketBufferHead >= _packetBufferSize) _lowPriorityPacketBufferHead = 0;
-			_lowPriorityPacketProcessingPacketAvailable = true;
-			_lowPriorityPacketBufferMutex.unlock();
+		_packetBuffer[_packetBufferHead] = packet;
+		_packetBufferHead++;
+		if(_packetBufferHead >= _packetBufferSize) _packetBufferHead = 0;
+		_packetProcessingPacketAvailable = true;
+		_packetBufferMutex.unlock();
 
-			_lowPriorityPacketProcessingConditionVariable.notify_one();
-		}
+		_packetProcessingConditionVariable.notify_one();
 	}
     catch(const std::exception& ex)
     {

@@ -571,7 +571,7 @@ void RS485::listen()
         	std::vector<uint8_t> rawPacket = readFromDevice();
         	if(rawPacket.empty()) continue;
 			std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(rawPacket, BaseLib::HelperFunctions::getTime()));
-			if(packet->type() != HMWiredPacketType::none) raisePacketReceived(packet, true);
+			if(packet->type() != HMWiredPacketType::none) raisePacketReceived(packet);
         }
     }
     catch(const std::exception& ex)
