@@ -73,7 +73,12 @@ void HMWiredDevice::dispose(bool wait)
 		GD::out.printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
 		if(GD::physicalInterface) GD::physicalInterface->removeEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
 		int64_t startTime = BaseLib::HelperFunctions::getTime();
-		//stopThreads();
+		_stopWorkerThread = true;
+		if(_workerThread.joinable())
+		{
+			GD::out.printDebug("Debug: Waiting for worker thread of device " + std::to_string(_deviceID) + "...");
+			_workerThread.join();
+		}
 		int64_t timeDifference = BaseLib::HelperFunctions::getTime() - startTime;
 		//Packets might still arrive, after removing this device from the physical interface, so sleep a little bit
 		//This is not necessary if the physical interface doesn't listen anymore
@@ -105,6 +110,9 @@ void HMWiredDevice::init()
 		if(GD::physicalInterface) GD::physicalInterface->addEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
 
 		_messageCounter[0] = 0; //Broadcast message counter
+
+		_workerThread = std::thread(&HMWiredDevice::worker, this);
+		BaseLib::Threads::setThreadPriority(_bl, _workerThread.native_handle(), _bl->settings.workerThreadPriority(), _bl->settings.workerThreadPolicy());
 	}
 	catch(const std::exception& ex)
     {

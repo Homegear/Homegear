@@ -172,7 +172,7 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice, public BidCoSQue
         virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
         virtual std::shared_ptr<HomeMaticDevice> getDevice(int32_t address);
         virtual std::shared_ptr<IBidCoSInterface> getPhysicalInterface(int32_t peerAddress);
-        virtual void worker();
+        virtual void worker() {}
 
         virtual void init();
         virtual void setUpBidCoSMessages();

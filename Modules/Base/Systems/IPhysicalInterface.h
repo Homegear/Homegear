@@ -107,14 +107,15 @@ protected:
 	std::thread _listenThread;
 	std::thread _callbackThread;
 	bool _stopCallbackThread = false;
+	static const int32_t _packetBufferSize = 50;
 	std::mutex _lowPriorityPacketBufferMutex;
 	int32_t _lowPriorityPacketBufferHead = 0;
 	int32_t _lowPriorityPacketBufferTail = 0;
-	std::shared_ptr<Packet> _lowPriorityPacketBuffer[20];
+	std::shared_ptr<Packet> _lowPriorityPacketBuffer[_packetBufferSize];
 	std::mutex _highPriorityPacketBufferMutex;
 	int32_t _highPriorityPacketBufferHead = 0;
 	int32_t _highPriorityPacketBufferTail = 0;
-	std::shared_ptr<Packet> _highPriorityPacketBuffer[20];
+	std::shared_ptr<Packet> _highPriorityPacketBuffer[_packetBufferSize];
 	std::mutex _lowPriorityPacketProcessingThreadMutex;
 	std::thread _lowPriorityPacketProcessingThread;
 	bool _lowPriorityPacketProcessingPacketAvailable = false;
@@ -135,7 +136,7 @@ protected:
 	bool _updateMode = false;
 
 	//Event handling
-	virtual void raisePacketReceived(std::shared_ptr<Packet> packet, bool highPriority = false);
+	virtual void raisePacketReceived(std::shared_ptr<Packet> packet, bool highPriority);
 	//End event handling
 	void processHighPriorityPackets();
 	void processLowPriorityPackets();

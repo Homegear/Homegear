@@ -87,7 +87,76 @@ HMWiredPeer::HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, 
 
 HMWiredPeer::~HMWiredPeer()
 {
+	_pingThreadMutex.lock();
+	if(_pingThread.joinable()) _pingThread.join();
+	_pingThreadMutex.unlock();
+}
 
+void HMWiredPeer::worker()
+{
+	if(!_centralFeatures || _disposing) return;
+	try
+	{
+		int64_t time = BaseLib::HelperFunctions::getTime();
+		if(rpcDevice)
+		{
+			serviceMessages->checkUnreach(rpcDevice->cyclicTimeout, getLastPacketReceived());
+			if(serviceMessages->getUnreach())
+			{
+				if(time - _lastPing > 600000 && ((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst)))
+				{
+					_pingThreadMutex.lock();
+					if(!_disposing && !deleting && _lastPing < time) //Check that _lastPing wasn't set in putParamset after locking the mutex
+					{
+						_lastPing = time; //Set here to avoid race condition between worker thread and ping thread
+						if(_pingThread.joinable()) _pingThread.join();
+						_pingThread = std::thread(&HMWiredPeer::pingThread, this);
+					}
+					_pingThreadMutex.unlock();
+				}
+			}
+			else
+			{
+				if(_centralFeatures && configCentral[0].find("POLLING") != configCentral[0].end() && configCentral[0].at("POLLING").data.size() > 0 && configCentral[0].at("POLLING").data.at(0) > 0 && configCentral[0].find("POLLING_INTERVAL") != configCentral[0].end())
+				{
+					//Polling is enabled
+					BaseLib::Systems::RPCConfigurationParameter* parameter = &configCentral[0]["POLLING_INTERVAL"];
+					int32_t data = 0;
+					_bl->hf.memcpyBigEndian(data, parameter->data); //Shortcut to save resources. The normal way would be to call "convertFromPacket".
+					int64_t pollingInterval = data * 60000;
+					//if(pollingInterval < 600000) pollingInterval = 600000;
+					if(time - _lastPing >= pollingInterval && ((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst)))
+					{
+						int64_t timeSinceLastPacket = time - ((int64_t)_lastPacketReceived * 1000);
+						if(timeSinceLastPacket > 0 && timeSinceLastPacket >= pollingInterval)
+						{
+							_pingThreadMutex.lock();
+							if(!_disposing && !deleting && _lastPing < time) //Check that _lastPing wasn't set in putParamset after locking the mutex
+							{
+								_lastPing = time; //Set here to avoid race condition between worker thread and ping thread
+								if(_pingThread.joinable()) _pingThread.join();
+								_pingThread = std::thread(&HMWiredPeer::pingThread, this);
+							}
+							_pingThreadMutex.unlock();
+						}
+					}
+				}
+				else _lastPing = time; //Set _lastPing, so there is a delay of 10 minutes after the device is unreachable before the first ping.
+			}
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void HMWiredPeer::initializeLinkConfig(int32_t channel, std::shared_ptr<BaseLib::Systems::BasicPeer> peer)
@@ -1083,6 +1152,49 @@ std::vector<uint8_t> HMWiredPeer::getMasterConfigParameter(int32_t channel, std:
     return std::vector<uint8_t>();
 }
 
+bool HMWiredPeer::ping(int32_t packetCount, bool waitForResponse)
+{
+	try
+	{
+		std::shared_ptr<HMWiredCentral> central = std::dynamic_pointer_cast<HMWiredCentral>(getCentral());
+		if(!central) return false;
+		uint32_t time = BaseLib::HelperFunctions::getTimeSeconds();
+		_lastPing = (int64_t)time * 1000;
+		if(rpcDevice && !rpcDevice->valueRequestFrames.empty())
+		{
+			for(std::map<int32_t, std::map<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>>::iterator i = rpcDevice->valueRequestFrames.begin(); i != rpcDevice->valueRequestFrames.end(); ++i)
+			{
+				for(std::map<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+				{
+					if(j->second->associatedValues.empty()) continue;
+					//GD::out.printError("Moin 1: " + std::to_string(i->first));
+					std::shared_ptr<BaseLib::RPC::Variable> result = getValueFromDevice(j->second->associatedValues.at(0), i->first, !waitForResponse);
+					if(!result || result->errorStruct || result->type == BaseLib::RPC::VariableType::rpcVoid) return false;
+				}
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return true;
+}
+
+void HMWiredPeer::pingThread()
+{
+	if(ping(3, true)) serviceMessages->endUnreach();
+	else serviceMessages->setUnreach(true, false);
+}
+
 void HMWiredPeer::addPeer(int32_t channel, std::shared_ptr<BaseLib::Systems::BasicPeer> peer)
 {
 	try
@@ -1753,6 +1865,84 @@ std::shared_ptr<HMWiredPacket> HMWiredPeer::getResponse(std::shared_ptr<HMWiredP
 	return std::shared_ptr<HMWiredPacket>();
 }
 
+std::shared_ptr<BaseLib::RPC::Variable> HMWiredPeer::getValueFromDevice(std::shared_ptr<BaseLib::RPC::Parameter>& parameter, int32_t channel, bool asynchronous)
+{
+	try
+	{
+		if(!parameter) return BaseLib::RPC::Variable::createError(-32500, "parameter is nullptr.");
+		std::string getRequestFrame = parameter->physicalParameter->getRequest;
+		std::string getResponseFrame = parameter->physicalParameter->getResponse;
+		if(getRequestFrame.empty()) return BaseLib::RPC::Variable::createError(-6, "Parameter can't be requested actively.");
+		if(rpcDevice->framesByID.find(getRequestFrame) == rpcDevice->framesByID.end()) return BaseLib::RPC::Variable::createError(-6, "No frame was found for parameter " + parameter->id);
+		std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[getRequestFrame];
+		std::shared_ptr<BaseLib::RPC::DeviceFrame> responseFrame;
+		if(rpcDevice->framesByID.find(getResponseFrame) != rpcDevice->framesByID.end()) responseFrame = rpcDevice->framesByID[getResponseFrame];
+
+		if(valuesCentral.find(channel) == valuesCentral.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
+		if(valuesCentral[channel].find(parameter->id) == valuesCentral[channel].end()) return BaseLib::RPC::Variable::createError(-5, "Unknown parameter.");
+
+		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = getParameterSet(channel, BaseLib::RPC::ParameterSet::Type::Enum::values);
+		if(!parameterSet) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
+
+		std::vector<uint8_t> payload({ (uint8_t)frame->type });
+		if(frame->subtype > -1 && frame->subtypeIndex >= 9)
+		{
+			while((signed)payload.size() - 1 < frame->subtypeIndex - 9) payload.push_back(0);
+			payload.at(frame->subtypeIndex - 9) = (uint8_t)frame->subtype;
+		}
+		if(frame->channelField >= 9)
+		{
+			while((signed)payload.size() - 1 < frame->channelField - 9) payload.push_back(0);
+			payload.at(frame->channelField - 9) = (uint8_t)channel + rpcDevice->channels.at(channel)->physicalIndexOffset;
+		}
+
+		std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(HMWiredPacketType::iMessage, getCentral()->physicalAddress(), _address, false, _messageCounter, 0, 0, payload));
+		for(std::vector<BaseLib::RPC::Parameter>::iterator i = frame->parameters.begin(); i != frame->parameters.end(); ++i)
+		{
+			if(i->constValue > -1)
+			{
+				std::vector<uint8_t> data;
+				_bl->hf.memcpyBigEndian(data, i->constValue);
+				packet->setPosition(i->index, i->size, data);
+				continue;
+			}
+
+			bool paramFound = false;
+			for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator j = parameterSet->parameters.begin(); j != parameterSet->parameters.end(); ++j)
+			{
+				//Only compare id. Till now looking for value_id was not necessary.
+				if(i->param == (*j)->physicalParameter->id)
+				{
+					packet->setPosition(i->index, i->size, valuesCentral[channel][(*j)->id].data);
+					paramFound = true;
+					break;
+				}
+			}
+			if(!paramFound) GD::out.printError("Error constructing packet. param \"" + i->param + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+		}
+		setMessageCounter(_messageCounter + 1);
+
+		std::shared_ptr<HMWiredPacket> response = getResponse(packet);
+		if(!response) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
+
+		//packetReceived(response); //getResposne doesn't trigger packetReceived, so trigger it manually.
+		return parameter->convertFromPacket(valuesCentral[channel][parameter->id].data, true);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<BaseLib::RPC::ParameterSet> HMWiredPeer::getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type)
 {
 	try
@@ -2065,6 +2255,11 @@ std::shared_ptr<BaseLib::RPC::Variable> HMWiredPeer::putParamset(int32_t channel
 		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = getParameterSet(channel, type);
 		if(!parameterSet) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
 		if(variables->structValue->empty()) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
+
+		_pingThreadMutex.lock();
+		_lastPing = BaseLib::HelperFunctions::getTime(); //No ping now
+		if(_pingThread.joinable()) _pingThread.join();
+		_pingThreadMutex.unlock();
 
 		std::map<int32_t, bool> changedBlocks;
 		if(type == BaseLib::RPC::ParameterSet::Type::Enum::master)

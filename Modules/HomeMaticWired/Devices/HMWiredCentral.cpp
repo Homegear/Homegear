@@ -73,6 +73,84 @@ void HMWiredCentral::init()
 	}
 }
 
+void HMWiredCentral::worker()
+{
+	try
+	{
+		std::chrono::milliseconds sleepingTime(10);
+		uint32_t counter = 0;
+		int32_t lastPeer;
+		lastPeer = 0;
+		//One loop on the Raspberry Pi takes about 30µs
+		while(!_stopWorkerThread)
+		{
+			try
+			{
+				std::this_thread::sleep_for(sleepingTime);
+				if(_stopWorkerThread) return;
+				if(counter > 10000)
+				{
+					counter = 0;
+					_peersMutex.lock();
+					if(_peers.size() > 0)
+					{
+						int32_t windowTimePerPeer = _bl->settings.workerThreadWindow() / _peers.size();
+						if(windowTimePerPeer > 2) windowTimePerPeer -= 2;
+						sleepingTime = std::chrono::milliseconds(windowTimePerPeer);
+					}
+					_peersMutex.unlock();
+				}
+				_peersMutex.lock();
+				if(!_peers.empty())
+				{
+					if(!_peers.empty())
+					{
+						std::unordered_map<int32_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator nextPeer = _peers.find(lastPeer);
+						if(nextPeer != _peers.end())
+						{
+							nextPeer++;
+							if(nextPeer == _peers.end()) nextPeer = _peers.begin();
+						}
+						else nextPeer = _peers.begin();
+						lastPeer = nextPeer->first;
+					}
+				}
+				_peersMutex.unlock();
+				std::shared_ptr<HMWiredPeer> peer(getPeer(lastPeer));
+				if(peer && !peer->deleting) peer->worker();
+				counter++;
+			}
+			catch(const std::exception& ex)
+			{
+				_peersMutex.unlock();
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				_peersMutex.unlock();
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				_peersMutex.unlock();
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+		}
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 bool HMWiredCentral::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
@@ -83,7 +161,7 @@ bool HMWiredCentral::onPacketReceived(std::string& senderID, std::shared_ptr<Bas
 		if(!hmWiredPacket) return false;
 		std::shared_ptr<HMWiredPeer> peer(getPeer(hmWiredPacket->senderAddress()));
 		if(peer) peer->packetReceived(hmWiredPacket);
-		else if(hmWiredPacket->messageType() == 0x41) handleAnnounce(hmWiredPacket);
+		else if(hmWiredPacket->messageType() == 0x41 && !_pairing) handleAnnounce(hmWiredPacket);
 	}
 	catch(const std::exception& ex)
     {
@@ -1690,7 +1768,6 @@ std::shared_ptr<BaseLib::RPC::Variable> HMWiredCentral::searchDevices()
 			}
 		}
 
-		_pairing = false;
 		GD::physicalInterface->disableSearchMode();
 		unlockBus();
 
@@ -1769,6 +1846,7 @@ std::shared_ptr<BaseLib::RPC::Variable> HMWiredCentral::searchDevices()
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
 		_peerInitMutex.unlock();
+		_pairing = false;
 		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((uint32_t)newPeers.size()));
 	}
 	catch(const std::exception& ex)

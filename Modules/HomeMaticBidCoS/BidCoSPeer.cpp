@@ -416,7 +416,7 @@ void BidCoSPeer::worker()
 					int32_t data = 0;
 					_bl->hf.memcpyBigEndian(data, parameter->data); //Shortcut to save resources. The normal way would be to call "convertFromPacket".
 					int64_t pollingInterval = data * 60000;
-					//if(pollingInterval < 600000) pollingInterval = 600000;
+					if(pollingInterval < 600000) pollingInterval = 600000;
 					if(time - _lastPing >= pollingInterval && ((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst)))
 					{
 						int64_t timeSinceLastPacket = time - ((int64_t)_lastPacketReceived * 1000);
@@ -705,7 +705,7 @@ bool BidCoSPeer::ping(int32_t packetCount, bool waitForResponse)
 				{
 					if(j->second->associatedValues.empty()) continue;
 					//GD::out.printError("Moin 1: " + std::to_string(i->first));
-					std::shared_ptr<BaseLib::RPC::Variable> result = getValueFromDevice(j->second->associatedValues.at(0), i->first, false);
+					std::shared_ptr<BaseLib::RPC::Variable> result = getValueFromDevice(j->second->associatedValues.at(0), i->first, !waitForResponse);
 					if(!result || result->errorStruct || result->type == BaseLib::RPC::VariableType::rpcVoid) return false;
 				}
 			}

@@ -80,6 +80,7 @@ protected:
 	//End
 
 	std::shared_ptr<HMWiredPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
+	virtual void worker();
 	void deletePeer(uint64_t id);
 	virtual void init();
 };

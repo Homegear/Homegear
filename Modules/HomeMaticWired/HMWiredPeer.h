@@ -74,6 +74,7 @@ public:
 
 	bool ignorePackets = false;
 
+	void worker();
 	virtual std::string handleCLICommand(std::string command);
 	void initializeLinkConfig(int32_t channel, std::shared_ptr<BaseLib::Systems::BasicPeer> peer);
 	std::vector<int32_t> setConfigParameter(double index, double size, std::vector<uint8_t>& binaryValue);
@@ -106,6 +107,16 @@ public:
 	void getValuesFromPacket(std::shared_ptr<HMWiredPacket> packet, std::vector<FrameValues>& frameValue);
 	void packetReceived(std::shared_ptr<HMWiredPacket> packet);
 
+	/**
+	 * This method polls a peer to check if it is reachable.
+	 *
+	 * @param packetCount The maximum number of ping packets to send if there is no response.
+	 * @param waitForResponse Wait for the response packet.
+	 * @see _lastPing
+	 * @return Returns true, when the execution was successful. If "waitForResponse" is true, then true is returned when the device sent a response packet and false when there was no response.
+	 */
+	virtual bool ping(int32_t packetCount, bool waitForResponse);
+
 	//RPC methods
 	virtual std::shared_ptr<BaseLib::RPC::Variable> getDeviceInfo(std::map<std::string, bool> fields);
 	virtual std::shared_ptr<BaseLib::RPC::Variable> getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
@@ -120,10 +131,48 @@ protected:
 	uint8_t _messageCounter = 0;
 	//End
 
+	/**
+	 * The timestamp of the last ping (successful and unsuccessful) is stored in this variable.
+	 * @see _pingThread
+	 * @see pingThread()
+	 * @see _pingThreadMutex
+	 */
+	int64_t _lastPing = 0;
+
+	/**
+	 * Protects _pingThread
+	 * @see _pingThread
+	 * @see pingThread()
+	 * @see _lastPing
+	 */
+	std::mutex _pingThreadMutex;
+
+	/**
+	 * Stores the pingThread thread object.
+	 * @see pingThread()
+	 * @see _pingThreadMutex
+	 * @see _lastPing
+	 */
+	std::thread _pingThread;
+
 	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 	virtual std::shared_ptr<BaseLib::Systems::LogicalDevice> getDevice(int32_t address);
 
+	/**
+	 * {@inheritDoc}
+	 */
+	virtual std::shared_ptr<BaseLib::RPC::Variable> getValueFromDevice(std::shared_ptr<BaseLib::RPC::Parameter>& parameter, int32_t channel, bool asynchronous);
+
 	virtual std::shared_ptr<BaseLib::RPC::ParameterSet> getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type);
+
+	/**
+	 * Executes the method "ping" and sets the ServiceMessage "UNREACH" depending on the result.
+	 * @see ping()
+	 * @see _pingThreadMutex
+	 * @see _pingThread
+	 * @see _lastPing
+	 */
+	virtual void pingThread();
 };
 
 }

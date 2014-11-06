@@ -99,11 +99,15 @@ class HMWiredDevice : public BaseLib::Systems::LogicalDevice
         std::unordered_map<int32_t, uint8_t> _messageCounter;
         //End
 
+        bool _stopWorkerThread = false;
+        std::thread _workerThread;
+
         HMWiredPacketManager _receivedPackets;
         HMWiredPacketManager _sentPackets;
         bool _pairing = false;
 
         virtual void init();
+        virtual void worker() {}
         void lockBus();
         void unlockBus();
     private:

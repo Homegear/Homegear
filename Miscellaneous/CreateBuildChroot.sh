@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Required build environment packages: qemu qemu-user-static debootstrap
+# Required build environment packages: qemu qemu-user-static debootstrap binfmt-support
 
 print_usage() {
 	echo "Usage: CreateBuildChroot.sh DEBIAN_MIRROR DEBIAN_RELEASE ARCH ROOTFS"
@@ -54,6 +54,10 @@ debootstrap --no-check-gpg --foreign --arch=$arch $deb_release $rootfs $deb_mirr
 
 if [ "$arch" == "armhf" ]; then
 	cp /usr/bin/qemu-arm-static usr/bin/
+elif [ "$arch" == "armel" ]; then
+	cp /usr/bin/qemu-arm-static usr/bin/
+elif [ "$arch" == "arm64" ]; then
+	cp /usr/bin/qemu-aarch64-static usr/bin/
 elif [ "$arch" == "i386" ]; then
 	cp /usr/bin/qemu-i386-static usr/bin/
 elif [ "$arch" == "amd64" ]; then

@@ -141,7 +141,13 @@ void IPhysicalInterface::processHighPriorityPackets()
 		std::unique_lock<std::mutex> lock(_highPriorityPacketProcessingThreadMutex);
 		try
 		{
-			_highPriorityPacketProcessingConditionVariable.wait(lock, [&]{return _highPriorityPacketProcessingPacketAvailable;});
+			_highPriorityPacketBufferMutex.lock();
+			if(_highPriorityPacketBufferHead == _highPriorityPacketBufferTail) //Only lock, when there is really no packet to process. This check is necessary, because the check of the while loop condition is outside of the mutex
+			{
+				_highPriorityPacketBufferMutex.unlock();
+				_highPriorityPacketProcessingConditionVariable.wait(lock, [&]{ return _highPriorityPacketProcessingPacketAvailable; });
+			}
+			_highPriorityPacketBufferMutex.unlock();
 			if(_stopPacketProcessingThreads)
 			{
 				lock.unlock();
@@ -165,7 +171,8 @@ void IPhysicalInterface::processHighPriorityPackets()
 				std::shared_ptr<Packet> packet = _highPriorityPacketBuffer[_highPriorityPacketBufferTail];
 				_highPriorityPacketBuffer[_highPriorityPacketBufferTail].reset();
 				_highPriorityPacketBufferTail++;
-				if(_highPriorityPacketBufferTail > 19) _highPriorityPacketBufferTail = 0;
+				if(_highPriorityPacketBufferTail >= _packetBufferSize) _highPriorityPacketBufferTail = 0;
+				if(_highPriorityPacketBufferHead == _highPriorityPacketBufferHead) _highPriorityPacketProcessingPacketAvailable = false; //Set here, because otherwise it might be set to "true" in raisePacketReceived and then set to false again after the while loop
 				_highPriorityPacketBufferMutex.unlock();
 				if(packet)
 				{
@@ -192,7 +199,6 @@ void IPhysicalInterface::processHighPriorityPackets()
 		{
 			_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
-		_highPriorityPacketProcessingPacketAvailable = false;
 		lock.unlock();
 	}
 }
@@ -204,7 +210,13 @@ void IPhysicalInterface::processLowPriorityPackets()
 		std::unique_lock<std::mutex> lock(_lowPriorityPacketProcessingThreadMutex);
 		try
 		{
-			_lowPriorityPacketProcessingConditionVariable.wait(lock, [&]{ return _lowPriorityPacketProcessingPacketAvailable; });
+			_lowPriorityPacketBufferMutex.lock();
+			if(_lowPriorityPacketBufferHead == _lowPriorityPacketBufferTail) //Only lock, when there is really no packet to process. This check is necessary, because the check of the while loop condition is outside of the mutex
+			{
+				_lowPriorityPacketBufferMutex.unlock();
+				_lowPriorityPacketProcessingConditionVariable.wait(lock, [&]{ return _lowPriorityPacketProcessingPacketAvailable; });
+			}
+			_lowPriorityPacketBufferMutex.unlock();
 			if(_stopPacketProcessingThreads)
 			{
 				lock.unlock();
@@ -228,7 +240,8 @@ void IPhysicalInterface::processLowPriorityPackets()
 				std::shared_ptr<Packet> packet = _lowPriorityPacketBuffer[_lowPriorityPacketBufferTail];
 				_lowPriorityPacketBuffer[_lowPriorityPacketBufferTail].reset();
 				_lowPriorityPacketBufferTail++;
-				if(_lowPriorityPacketBufferTail > 19) _lowPriorityPacketBufferTail = 0;
+				if(_lowPriorityPacketBufferTail >= _packetBufferSize) _lowPriorityPacketBufferTail = 0;
+				if(_lowPriorityPacketBufferHead == _lowPriorityPacketBufferTail) _lowPriorityPacketProcessingPacketAvailable = false; //Set here, because otherwise it might be set to "true" in raisePacketReceived and then set to false again after the while loop
 				_lowPriorityPacketBufferMutex.unlock();
 				if(packet)
 				{
@@ -255,7 +268,6 @@ void IPhysicalInterface::processLowPriorityPackets()
 		{
 			_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
-		_lowPriorityPacketProcessingPacketAvailable = false;
 		lock.unlock();
 	}
 }
@@ -268,7 +280,7 @@ void IPhysicalInterface::raisePacketReceived(std::shared_ptr<Packet> packet, boo
 		{
 			_highPriorityPacketBufferMutex.lock();
 			int32_t tempHead = _highPriorityPacketBufferHead + 1;
-			if(tempHead > 19) tempHead = 0;
+			if(tempHead >= _packetBufferSize) tempHead = 0;
 			if(tempHead == _highPriorityPacketBufferTail)
 			{
 				_bl->out.printError("Error (" + _settings->id + "): More than 20 packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
@@ -278,17 +290,17 @@ void IPhysicalInterface::raisePacketReceived(std::shared_ptr<Packet> packet, boo
 
 			_highPriorityPacketBuffer[_highPriorityPacketBufferHead] = packet;
 			_highPriorityPacketBufferHead++;
-			if(_highPriorityPacketBufferHead > 19) _highPriorityPacketBufferHead = 0;
+			if(_highPriorityPacketBufferHead >= _packetBufferSize) _highPriorityPacketBufferHead = 0;
+			_highPriorityPacketProcessingPacketAvailable = true;
 			_highPriorityPacketBufferMutex.unlock();
 
-			_highPriorityPacketProcessingPacketAvailable = true;
 			_highPriorityPacketProcessingConditionVariable.notify_one();
 		}
 		else
 		{
 			_lowPriorityPacketBufferMutex.lock();
 			int32_t tempHead = _lowPriorityPacketBufferHead + 1;
-			if(tempHead > 19) tempHead = 0;
+			if(tempHead >= _packetBufferSize) tempHead = 0;
 			if(tempHead == _lowPriorityPacketBufferTail)
 			{
 				_bl->out.printError("Error (" + _settings->id + "): More than 20 packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
@@ -298,10 +310,10 @@ void IPhysicalInterface::raisePacketReceived(std::shared_ptr<Packet> packet, boo
 
 			_lowPriorityPacketBuffer[_lowPriorityPacketBufferHead] = packet;
 			_lowPriorityPacketBufferHead++;
-			if(_lowPriorityPacketBufferHead > 19) _lowPriorityPacketBufferHead = 0;
+			if(_lowPriorityPacketBufferHead >= _packetBufferSize) _lowPriorityPacketBufferHead = 0;
+			_lowPriorityPacketProcessingPacketAvailable = true;
 			_lowPriorityPacketBufferMutex.unlock();
 
-			_lowPriorityPacketProcessingPacketAvailable = true;
 			_lowPriorityPacketProcessingConditionVariable.notify_one();
 		}
 	}
