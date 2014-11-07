@@ -79,10 +79,12 @@ std::shared_ptr<BaseLib::Systems::LogicalDevice> HMWiredPeer::getDevice(int32_t 
 
 HMWiredPeer::HMWiredPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(GD::bl, parentID, centralFeatures, eventHandler)
 {
+	_lastPing = BaseLib::HelperFunctions::getTime() - (BaseLib::HelperFunctions::getRandomNumber(1, 60) * 10000);
 }
 
 HMWiredPeer::HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(GD::bl, id, address, serialNumber, parentID, centralFeatures, eventHandler)
 {
+	_lastPing = BaseLib::HelperFunctions::getTime() - (BaseLib::HelperFunctions::getRandomNumber(1, 60) * 10000);
 }
 
 HMWiredPeer::~HMWiredPeer()
@@ -103,7 +105,7 @@ void HMWiredPeer::worker()
 			serviceMessages->checkUnreach(rpcDevice->cyclicTimeout, getLastPacketReceived());
 			if(serviceMessages->getUnreach())
 			{
-				if(time - _lastPing > 600000 && ((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst)))
+				if(time - _lastPing > 600000)
 				{
 					_pingThreadMutex.lock();
 					if(!_disposing && !deleting && _lastPing < time) //Check that _lastPing wasn't set in putParamset after locking the mutex
@@ -124,8 +126,8 @@ void HMWiredPeer::worker()
 					int32_t data = 0;
 					_bl->hf.memcpyBigEndian(data, parameter->data); //Shortcut to save resources. The normal way would be to call "convertFromPacket".
 					int64_t pollingInterval = data * 60000;
-					//if(pollingInterval < 600000) pollingInterval = 600000;
-					if(time - _lastPing >= pollingInterval && ((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst)))
+					if(pollingInterval < 600000) pollingInterval = 600000;
+					if(time - _lastPing >= pollingInterval)
 					{
 						int64_t timeSinceLastPacket = time - ((int64_t)_lastPacketReceived * 1000);
 						if(timeSinceLastPacket > 0 && timeSinceLastPacket >= pollingInterval)
@@ -1116,7 +1118,13 @@ std::vector<uint8_t> HMWiredPeer::getMasterConfigParameter(int32_t channel, std:
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return std::vector<uint8_t>();
 		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels[channel];
 		std::vector<uint8_t> value;
-		if(parameter->physicalParameter->address.operation == BaseLib::RPC::PhysicalParameterAddress::Operation::none)
+		if(parameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::store)
+		{
+			if(configCentral.find(channel) == configCentral.end()) return value;;
+			if(configCentral[channel].find(parameter->id) == configCentral[channel].end()) return value;
+			value = configCentral[channel][parameter->id].data;
+		}
+		else if(parameter->physicalParameter->address.operation == BaseLib::RPC::PhysicalParameterAddress::Operation::none)
 		{
 			value = getMasterConfigParameter(channel - rpcChannel->startIndex, parameter->physicalParameter->address.index, parameter->physicalParameter->address.step, parameter->physicalParameter->size);
 		}
@@ -1925,7 +1933,6 @@ std::shared_ptr<BaseLib::RPC::Variable> HMWiredPeer::getValueFromDevice(std::sha
 		std::shared_ptr<HMWiredPacket> response = getResponse(packet);
 		if(!response) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 
-		//packetReceived(response); //getResposne doesn't trigger packetReceived, so trigger it manually.
 		return parameter->convertFromPacket(valuesCentral[channel][parameter->id].data, true);
 	}
 	catch(const std::exception& ex)
@@ -2271,7 +2278,15 @@ std::shared_ptr<BaseLib::RPC::Variable> HMWiredPeer::putParamset(int32_t channel
 				if(!currentParameter) continue;
 				std::vector<uint8_t> value;
 				currentParameter->convertToPacket(i->second, value);
-				std::vector<int32_t> result = setMasterConfigParameter(channel, parameterSet, currentParameter, value);
+				std::vector<int32_t> result;
+				if(currentParameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::Enum::eeprom) result = setMasterConfigParameter(channel, parameterSet, currentParameter, value);
+				else if(currentParameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::Enum::store)
+				{
+					if(configCentral.find(channel) == configCentral.end() || configCentral[channel].find(i->first) == configCentral[channel].end()) continue;
+					BaseLib::Systems::RPCConfigurationParameter* parameter = &configCentral[channel][i->first];
+					parameter->data = value;
+					saveParameter(parameter->databaseID, parameter->data);
+				}
 				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(value) + ".");
 				//Only send to device when parameter is of type eeprom
 				if(currentParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::eeprom) continue;

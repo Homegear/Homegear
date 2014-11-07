@@ -599,7 +599,7 @@ int main(int argc, char* argv[])
         GD::out.printInfo("Loading events...");
         GD::eventHandler.load();
         _startUpComplete = true;
-        GD::out.printInfo("Startup complete.");
+        GD::out.printMessage("Startup complete.");
 
         //Wait for all interfaces to connect before setting booting to false
         {
@@ -628,22 +628,23 @@ int main(int argc, char* argv[])
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			}
 			interfaces.clear();
-			GD::out.printInfo("All physical interfaces are connected now.");
-
-			//Wait a little more. If "isOpen" of the physical interface is implemented correctly, this is not necessary. But just in case.
-			std::this_thread::sleep_for(std::chrono::milliseconds(30000));
+			GD::out.printMessage("All physical interfaces are connected now.");
         }
-
-        GD::bl->booting = false;
 
         rl_bind_key('\t', rl_abort); //no autocompletion
 
 		char* inputBuffer;
         std::string input;
         if(_startAsDaemon)
+        {
+        	//Wait a little more before setting "booting" to false. If "isOpen" of the physical interface is implemented correctly, this is not necessary. But just in case.
+			std::this_thread::sleep_for(std::chrono::milliseconds(30000));
+        	GD::bl->booting = false;
         	while(true) std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+        }
         else
         {
+        	GD::bl->booting = false;
 			while((inputBuffer = readline("")) != NULL)
 			{
 				input = std::string(inputBuffer);
