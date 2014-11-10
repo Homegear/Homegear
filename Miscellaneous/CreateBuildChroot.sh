@@ -73,10 +73,7 @@ echo "deb $deb_mirror $deb_release main contrib non-free
 echo "proc            /proc           proc    defaults        0       0" > etc/fstab
 
 LANG=C chroot $rootfs apt-get update
-LANG=C chroot $rootfs apt-get -y install locales console-common ntp openssh-server git-core binutils curl ca-certificates sudo parted unzip p7zip-full php5-cli php5-xmlrpc libxml2-utils keyboard-configuration liblzo2-dev python-lzo libgcrypt11 libgpg-error0 libgpg-error-dev libgnutlsxx27 libgnutls-dev binutils debhelper devscripts build-essential sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses-dev libssl-dev libparse-debcontrol-perl libgcrypt11-dev g++-4.7
-
-rm usr/bin/g++
-LANG=C chroot $rootfs ln -s /usr/bin/g++-4.7 /usr/bin/g++
+LANG=C chroot $rootfs apt-get -y install locales console-common ntp openssh-server git-core binutils curl ca-certificates sudo parted unzip p7zip-full php5-cli php5-xmlrpc libxml2-utils keyboard-configuration liblzo2-dev python-lzo libgcrypt11 libgpg-error0 libgpg-error-dev libgnutlsxx27 libgnutls-dev binutils debhelper devscripts build-essential sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses-dev libssl-dev libparse-debcontrol-perl libgcrypt11-dev g++
 
 echo "#!/bin/bash
 if [[ \$1 -lt 1 ]]

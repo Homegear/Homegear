@@ -114,6 +114,7 @@ echo \"root:raspberry\" | chpasswd
 echo \"pi ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers
 sed -i -e 's/KERNEL\!=\"eth\*|/KERNEL\!=\"/' /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
+dpkg-reconfigure locales
 read -p \"Ready to install Homegear. Hit [Enter] to continue...\"
 touch /tmp/HOMEGEAR_STATIC_INSTALLATION
 wget http://homegear.eu/downloads/homegear_current_rpi.deb
