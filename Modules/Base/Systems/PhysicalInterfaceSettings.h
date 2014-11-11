@@ -78,6 +78,7 @@ public:
 	bool verifyCertificate = true;
 	bool oneWay = false;
 	bool fastSending = false;
+	uint32_t timeout = 7;
 	uint32_t waitForBus = 100;
 	int32_t enableRXValue = -1;
 	int32_t enableTXValue = -1;

@@ -371,7 +371,7 @@ std::vector<uint8_t> RS485::readFromDevice()
 				}
 			}
 			else if(packet.size() == length) break;
-			timeoutTime = 7000;
+			timeoutTime = _settings->timeout * 1000;
 		}
 		if(_receivingSending)
 		{

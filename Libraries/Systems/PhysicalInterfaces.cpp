@@ -199,6 +199,12 @@ void PhysicalInterfaces::load(std::string filename)
 					else if(settings->waitForBus > 210) settings->waitForBus = 210;
 					GD::out.printDebug("Debug: waitForBus of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->waitForBus));
 				}
+				else if(name == "timeout")
+				{
+					settings->timeout = BaseLib::Math::getNumber(value);
+					if(settings->timeout > 100000) settings->timeout = 100000;
+					GD::out.printDebug("Debug: timeout of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->timeout));
+				}
 				else if(name == "gpio1")
 				{
 					int32_t number = BaseLib::Math::getNumber(value);
