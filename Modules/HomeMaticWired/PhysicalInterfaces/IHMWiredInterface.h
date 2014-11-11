@@ -40,13 +40,18 @@ public:
 	IHMWiredInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
 	virtual ~IHMWiredInterface();
 
-	void enableSearchMode() { _searchMode = true; }
-	void disableSearchMode() { _searchMode = false; }
 	bool getFastSending() { return _settings->fastSending; }
 	uint32_t getBusWaitingTime() { return _settings->waitForBus; }
+
+	/**
+	 * Search for new devices on the bus.
+	 * @param[out] foundDevices This array will be filled by the method with the found device addresses.
+	 */
+	virtual void search(std::vector<int32_t>& foundDevices) = 0;
+
+	virtual bool autoResend() { return false; }
 protected:
 	BaseLib::Output _out;
-	bool _searchMode = false;
 };
 
 }

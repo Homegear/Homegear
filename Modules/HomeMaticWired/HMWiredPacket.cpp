@@ -89,6 +89,51 @@ HMWiredPacket::HMWiredPacket(std::vector<uint8_t>& packet, int64_t timeReceived,
 	import(packet, removeEscapes);
 }
 
+HMWiredPacket::HMWiredPacket(std::vector<uint8_t>& packet, bool gatewayPacket, int64_t timeReceived, int32_t senderAddress, int32_t destinationAddress)
+{
+	if(!gatewayPacket)
+	{
+		HMWiredPacket(packet, timeReceived);
+		return;
+	}
+	init();
+	_timeReceived = timeReceived;
+	if(packet.at(3) == 0x65 && packet.size() >= 9)
+	{
+		_controlByte = packet.at(8);
+		_type = ((_controlByte & 1) == 1) ? HMWiredPacketType::ackMessage : HMWiredPacketType::iMessage;
+		if(_type == HMWiredPacketType::iMessage)
+		{
+			_senderMessageCounter = (_controlByte >> 1) & 3;
+			_synchronizationBit = (bool)(_controlByte & 0x80);
+		}
+		_receiverMessageCounter = (_controlByte >> 5) & 3;
+
+		_destinationAddress = (packet[4] << 24) + (packet[5] << 16) + (packet[6] << 8) + packet[7];
+		if((_controlByte & 8) && packet.size() >= 13)
+		{
+			_senderAddress = (packet[9] << 24) + (packet[10] << 16) + (packet[11] << 8) + packet[12];
+			if(packet.size() > 13) _payload.insert(_payload.end(), packet.begin() + 13, packet.end());
+		}
+		else if(packet.size() > 9) _payload.insert(_payload.end(), packet.begin() + 9, packet.end());
+	}
+	else if(packet.at(3) == 0x72 && packet.size() >= 5) //Response
+	{
+		_controlByte = packet.at(4);
+		_type = ((_controlByte & 1) == 1) ? HMWiredPacketType::ackMessage : HMWiredPacketType::iMessage;
+		if(_type == HMWiredPacketType::iMessage)
+		{
+			_senderMessageCounter = (_controlByte >> 1) & 3;
+			_synchronizationBit = (bool)(_controlByte & 0x80);
+		}
+		_receiverMessageCounter = (_controlByte >> 5) & 3;
+
+		_destinationAddress = destinationAddress;
+		_senderAddress = senderAddress;
+		if(packet.size() > 5) _payload.insert(_payload.end(), packet.begin() + 5, packet.end());
+	}
+}
+
 HMWiredPacket::HMWiredPacket(HMWiredPacketType type, int32_t senderAddress, int32_t destinationAddress, bool synchronizationBit, uint8_t senderMessageCounter, uint8_t receiverMessageCounter, uint8_t addressMask, std::vector<uint8_t>& payload)
 {
 	init();
@@ -347,19 +392,55 @@ void HMWiredPacket::import(std::string packetHex)
 
 void HMWiredPacket::escapePacket()
 {
+	escapePacket(_escapedPacket, _packet);
+}
+
+void HMWiredPacket::escapePacket(std::vector<uint8_t>& result, const std::vector<uint8_t>& packet)
+{
 	try
 	{
-		_escapedPacket.clear();
-		if(_packet.empty()) return;
-		_escapedPacket.push_back(_packet[0]);
-		for(uint32_t i = 1; i < _packet.size(); i++)
+		result.clear();
+		if(packet.empty()) return;
+		result.push_back(packet[0]);
+		for(uint32_t i = 1; i < packet.size(); i++)
 		{
-			if(_packet[i] == 0xFC || _packet[i] == 0xFD || _packet[i] == 0xFE)
+			if(packet[i] == 0xFC || packet[i] == 0xFD || packet[i] == 0xFE)
 			{
-				_escapedPacket.push_back(0xFC);
-				_escapedPacket.push_back(_packet[i] & 0x7F);
+				result.push_back(0xFC);
+				result.push_back(packet[i] & 0x7F);
 			}
-			else _escapedPacket.push_back(_packet[i]);
+			else result.push_back(packet[i]);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HMWiredPacket::escapePacket(std::vector<char>& result, const std::vector<char>& packet)
+{
+	try
+	{
+		result.clear();
+		if(packet.empty()) return;
+		result.push_back(packet[0]);
+		for(uint32_t i = 1; i < packet.size(); i++)
+		{
+			if(packet[i] == 0xFC || packet[i] == 0xFD || packet[i] == 0xFE)
+			{
+				result.push_back(0xFC);
+				result.push_back(packet[i] & 0x7F);
+			}
+			else result.push_back(packet[i]);
 		}
 	}
 	catch(const std::exception& ex)
@@ -420,6 +501,58 @@ void HMWiredPacket::generateControlByte()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+std::vector<char> HMWiredPacket::byteArrayLgw()
+{
+	try
+	{
+		if(_type == HMWiredPacketType::none) return std::vector<char>();
+
+		if(_payload.size() > 132)
+		{
+			GD::out.printError("Cannot create HomeMatic Wired packet with a payload size larger than 128 bytes.");
+			return std::vector<char>();
+		}
+
+		if(_controlByte == 0) generateControlByte();
+
+		std::vector<char> packet;
+		if(_type == HMWiredPacketType::iMessage || _type == HMWiredPacketType::ackMessage)
+		{
+			packet.push_back(_destinationAddress >> 24);
+			packet.push_back((_destinationAddress >> 16) & 0xFF);
+			packet.push_back((_destinationAddress >> 8) & 0xFF);
+			packet.push_back(_destinationAddress & 0xFF);
+			packet.push_back(_controlByte);
+			if(_controlByte & 8)
+			{
+				packet.push_back(_senderAddress >> 24);
+				packet.push_back((_senderAddress >> 16) & 0xFF);
+				packet.push_back((_senderAddress >> 8) & 0xFF);
+				packet.push_back(_senderAddress & 0xFF);
+			}
+			packet.insert(packet.end(), _payload.begin(), _payload.end());
+		}
+		else GD::out.printError("Error: Cannot create LGW packet, because the gateway only supports i messages.");
+
+		std::vector<char> escapedPacket;
+		escapePacket(escapedPacket, packet);
+		return escapedPacket;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::vector<char>();
 }
 
 std::vector<uint8_t> HMWiredPacket::byteArray()

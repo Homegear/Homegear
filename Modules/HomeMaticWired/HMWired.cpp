@@ -29,7 +29,6 @@
 
 #include "HMWired.h"
 #include "PhysicalInterfaces/RS485.h"
-#include "PhysicalInterfaces/RawLAN.h"
 #include "PhysicalInterfaces/HMW-LGW.h"
 #include "HMWiredDeviceTypes.h"
 #include "Devices/HMWiredCentral.h"
@@ -83,7 +82,6 @@ std::shared_ptr<BaseLib::Systems::IPhysicalInterface> HMWired::createPhysicalDev
 		GD::physicalInterface = std::shared_ptr<IHMWiredInterface>();
 		if(!settings) return GD::physicalInterface;
 		if(settings->type == "rs485") GD::physicalInterface.reset(new RS485(settings));
-		else if(settings->type == "rawlan") GD::physicalInterface.reset(new RawLAN(settings));
 		else if(settings->type == "hmwlgw") GD::physicalInterface.reset(new HMW_LGW(settings));
 		else GD::out.printError("Error: Unsupported physical device type for family HomeMatic Wired: " + settings->type);
 		return GD::physicalInterface;

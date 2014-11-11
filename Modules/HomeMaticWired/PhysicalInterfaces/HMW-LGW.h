@@ -64,19 +64,19 @@ class HMW_LGW  : public IHMWiredInterface
         int64_t lastAction() { return _lastAction; }
         virtual bool isOpen() { return _initComplete && _socket->connected(); }
 
+        virtual bool autoResend() { return true; }
+        virtual void search(std::vector<int32_t>& foundDevices);
     protected:
         class Request
         {
         public:
         	std::timed_mutex mutex;
         	std::vector<uint8_t> response;
-        	uint8_t getResponseControlByte() { return _responseControlByte; }
         	uint8_t getResponseType() { return _responseType; }
 
-        	Request(uint8_t responseControlByte, uint8_t responseType) { _responseControlByte = responseControlByte; _responseType = responseType; };
+        	Request(uint8_t responseType) { _responseType = responseType; };
         	virtual ~Request() {};
         private:
-        	uint8_t _responseControlByte;
         	uint8_t _responseType;
         };
 
@@ -95,6 +95,8 @@ class HMW_LGW  : public IHMWiredInterface
         int64_t _startUpTime = 0;
         int32_t _myAddress = 1;
         uint8_t _packetIndex = 0;
+        bool _searchFinished = false;
+        std::vector<int32_t> _searchResult;
 
         //AES stuff
         bool _aesInitialized = false;
@@ -120,7 +122,7 @@ class HMW_LGW  : public IHMWiredInterface
         void parsePacket(std::vector<uint8_t>& packet);
         void buildPacket(std::vector<char>& packet, const std::vector<char>& payload);
         void escapePacket(const std::vector<char>& unescapedPacket, std::vector<char>& escapedPacket);
-        void getResponse(const std::vector<char>& packet, std::vector<uint8_t>& response, uint8_t messageCounter, uint8_t responseControlByte, uint8_t responseType);
+        void getResponse(const std::vector<char>& packet, std::vector<uint8_t>& response, uint8_t messageCounter, uint8_t responseType);
         void send(std::string hexString, bool raw = false);
         void send(const std::vector<char>& data, bool raw);
         void sendKeepAlivePacket();

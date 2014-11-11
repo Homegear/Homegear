@@ -35,7 +35,7 @@ namespace HMWired
 HMW_LGW::HMW_LGW(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IHMWiredInterface(settings)
 {
 	_out.init(GD::bl);
-	_out.setPrefix(GD::out.getPrefix() + "LAN Gateway \"" + settings->id + "\": ");
+	_out.setPrefix(GD::out.getPrefix() + "HMW-LGW \"" + settings->id + "\": ");
 
 	signal(SIGPIPE, SIG_IGN);
 
@@ -75,6 +75,44 @@ HMW_LGW::~HMW_LGW()
     }
 }
 
+void HMW_LGW::search(std::vector<int32_t>& foundDevices)
+{
+	try
+	{
+		int32_t startTime = BaseLib::HelperFunctions::getTimeSeconds();
+		foundDevices.clear();
+		_searchResult.clear();
+		_searchFinished = false;
+
+		std::vector<char> startPacket;
+		std::vector<char> payload{ 0x44, 0x00, 0xFF };
+
+		buildPacket(startPacket, payload);
+		_packetIndex++;
+		send(startPacket, false);
+
+		while(!_searchFinished && BaseLib::HelperFunctions::getTimeSeconds() - startTime < 180)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		}
+		if(BaseLib::HelperFunctions::getTimeSeconds() - startTime >= 180) _out.printError("Error: Device search timed out.");
+
+		foundDevices.insert(foundDevices.begin(), _searchResult.begin(), _searchResult.end());
+	}
+	catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void HMW_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
@@ -89,97 +127,59 @@ void HMW_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		if(!_initComplete)
     	{
     		_out.printWarning("Warning: !!!Not!!! sending (Port " + _settings->port + "), because the init sequence is not completed: " + packet->hexString());
-    		_sendMutex.unlock();
     		return;
     	}
 
-		std::shared_ptr<HMWiredPacket> bidCoSPacket(std::dynamic_pointer_cast<HMWiredPacket>(packet));
-		if(!bidCoSPacket) return;
-		if(bidCoSPacket->messageType() == 0x02 && packet->senderAddress() == _myAddress && bidCoSPacket->controlByte() == 0x80 && bidCoSPacket->payload()->size() == 1 && bidCoSPacket->payload()->at(0) == 0)
+		std::shared_ptr<HMWiredPacket> hmwiredPacket(std::dynamic_pointer_cast<HMWiredPacket>(packet));
+		if(!hmwiredPacket) return;
+		if(hmwiredPacket->type() == HMWiredPacketType::ackMessage && packet->senderAddress() == _myAddress)
 		{
 			_out.printDebug("Debug: Ignoring ACK packet.", 6);
 			_lastPacketSent = BaseLib::HelperFunctions::getTime();
 			return;
 		}
-		if((bidCoSPacket->controlByte() & 0x01) && packet->senderAddress() == _myAddress && (bidCoSPacket->payload()->empty() || (bidCoSPacket->payload()->size() == 1 && bidCoSPacket->payload()->at(0) == 0)))
-		{
-			_out.printDebug("Debug: Ignoring wake up packet.", 6);
-			_lastPacketSent = BaseLib::HelperFunctions::getTime();
-			return;
-		}
 
-		std::vector<char> packetBytes = bidCoSPacket->byteArraySigned();
-		//Allow sender address 0 for firmware updates
-		if(bidCoSPacket->senderAddress() != 0 && bidCoSPacket->senderAddress() != _myAddress)
-		{
-			_out.printError("Error: Can't send packet, because sender address is not mine: " + _bl->hf.getHexString(packetBytes));
-			return;
-		}
-		if(!_initComplete)
-		{
-			_out.printWarning(std::string("Warning: !!!Not!!! sending packet, because init sequence is not complete: ") + _bl->hf.getHexString(packetBytes));
-			return;
-		}
-
+		std::vector<char> packetBytes = hmwiredPacket->byteArrayLgw();
 		if(_bl->debugLevel >= 4) _out.printInfo("Info: Sending (" + _settings->id + "): " + _bl->hf.getHexString(packetBytes));
 
-		for(int32_t j = 0; j < 40; j++)
+		if(hmwiredPacket->destinationAddress() == -1) //Broadcast packet
 		{
-			std::vector<uint8_t> responsePacket;
 			std::vector<char> requestPacket;
-			std::vector<char> payload{ 1, 2, 0, 0 };
-			payload.insert(payload.end(), packetBytes.begin() + 1, packetBytes.end());
+			std::vector<char> payload{ 0x53, 0 };
+			payload.insert(payload.end(), packetBytes.begin(), packetBytes.end());
 			buildPacket(requestPacket, payload);
 			_packetIndex++;
-			getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
-			if(responsePacket.size() == 9  && responsePacket.at(6) == 8)
+			send(requestPacket, false);
+		}
+		else
+		{
+			for(int32_t j = 0; j < 40; j++)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(50));
-				//Resend
-				continue;
-			}
-			else if(responsePacket.size() >= 9  && responsePacket.at(6) != 4)
-			{
-				//I assume byte 7 with i. e. 0x02 is the message type
-				if(responsePacket.at(6) == 0x0D)
+				std::vector<uint8_t> responsePacket;
+				std::vector<char> requestPacket;
+				std::vector<char> payload { 0x53, 0xC8 };
+				payload.insert(payload.end(), packetBytes.begin(), packetBytes.end());
+				buildPacket(requestPacket, payload);
+				_packetIndex++;
+				getResponse(requestPacket, responsePacket, _packetIndex - 1, 0x72);
+				if(responsePacket.size() < 5)
 				{
-					//0x0D is returned, when there is no response to the A003 packet and if the 8002
-					//packet doesn't match
-					//Example: FD000501BC040D025E14
-					_out.printWarning("Warning: AES handshake failed for packet: " + _bl->hf.getHexString(packetBytes));
-					return;
+					std::this_thread::sleep_for(std::chrono::milliseconds(50));
+					//Resend
+					continue;
 				}
-				else if(responsePacket.at(6) == 0x03)
+				else
 				{
-					//Example: FD001001B3040302391A8002282BE6FD26EF00C54D
-					_out.printDebug("Debug: Packet was sent successfully: " + _bl->hf.getHexString(packetBytes));
-				}
-				else if(responsePacket.at(6) == 0x0C)
-				{
-					//Example: FD00140168040C0228128002282BE6FD26EF00938ABE1C163D
-					_out.printDebug("Debug: Packet was sent successfully and AES handshake was successful: " + _bl->hf.getHexString(packetBytes));
-				}
-				if(responsePacket.size() == 9)
-				{
-					_out.printDebug("Debug: Packet was sent successfully: " + _bl->hf.getHexString(packetBytes));
+					std::shared_ptr<HMWiredPacket> responseHmwiredPacket(new HMWiredPacket(responsePacket, true, BaseLib::HelperFunctions::getTime(), hmwiredPacket->destinationAddress(), hmwiredPacket->senderAddress()));
+					_lastPacketReceived = BaseLib::HelperFunctions::getTime();
+					raisePacketReceived(responseHmwiredPacket);
 					break;
 				}
-				parsePacket(responsePacket);
-				break;
-			}
-			else if(responsePacket.size() == 9  && responsePacket.at(6) == 4)
-			{
-				//The gateway tries to send the packet three times, when there is no response
-				//NACK (0404) is returned
-				//NACK is sometimes also returned when the AES handshake wasn't successful (i. e.
-				//the handshake after sending a wake up packet)
-				_out.printInfo("Info: No answer to packet " + _bl->hf.getHexString(packetBytes));
-				return;
-			}
-			if(j == 2)
-			{
-				_out.printInfo("Info: No response from HMW-LGW to packet " + _bl->hf.getHexString(packetBytes));
-				return;
+				if(j == 2)
+				{
+					_out.printInfo("Info: No response from HMW-LGW to packet " + _bl->hf.getHexString(packetBytes));
+					return;
+				}
 			}
 		}
 
@@ -199,12 +199,12 @@ void HMW_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
     }
 }
 
-void HMW_LGW::getResponse(const std::vector<char>& packet, std::vector<uint8_t>& response, uint8_t messageCounter, uint8_t responseControlByte, uint8_t responseType)
+void HMW_LGW::getResponse(const std::vector<char>& packet, std::vector<uint8_t>& response, uint8_t messageCounter, uint8_t responseType)
 {
 	try
     {
 		if(packet.size() < 8 || _stopped) return;
-		std::shared_ptr<Request> request(new Request(responseControlByte, responseType));
+		std::shared_ptr<Request> request(new Request(responseType));
 		_requestsMutex.lock();
 		_requests[messageCounter] = request;
 		_requestsMutex.unlock();
@@ -509,7 +509,7 @@ void HMW_LGW::sendKeepAlivePacket()
 	try
     {
 		if(!_initComplete) return;
-		if(BaseLib::HelperFunctions::getTimeSeconds() - _lastKeepAlive >= 5)
+		if(BaseLib::HelperFunctions::getTimeSeconds() - _lastKeepAlive >= 20)
 		{
 			if(_lastKeepAliveResponse < _lastKeepAlive)
 			{
@@ -520,7 +520,7 @@ void HMW_LGW::sendKeepAlivePacket()
 
 			_lastKeepAlive = BaseLib::HelperFunctions::getTimeSeconds();
 			std::vector<char> packet;
-			std::vector<char> payload{ 0, 8 };
+			std::vector<char> payload{ 0x4B };
 			buildPacket(packet, payload);
 			_packetIndex++;
 			send(packet, false);
@@ -762,11 +762,9 @@ void HMW_LGW::buildPacket(std::vector<char>& packet, const std::vector<char>& pa
 		std::vector<char> unescapedPacket;
 		unescapedPacket.push_back(0xFD);
 		int32_t size = payload.size() + 1; //Payload size plus message counter size - control byte
-		unescapedPacket.push_back(size >> 8);
-		unescapedPacket.push_back(size & 0xFF);
-		unescapedPacket.push_back(payload.at(0));
+		unescapedPacket.push_back(size);
 		unescapedPacket.push_back(_packetIndex);
-		unescapedPacket.insert(unescapedPacket.end(), payload.begin() + 1, payload.end());
+		unescapedPacket.insert(unescapedPacket.end(), payload.begin(), payload.end());
 		escapePacket(unescapedPacket, packet);
 	}
     catch(const std::exception& ex)
@@ -819,22 +817,14 @@ void HMW_LGW::processPacket(std::vector<uint8_t>& packet)
 	try
 	{
 		_out.printDebug(std::string("Debug: Packet received from HMW-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(packet)));
-		if(packet.size() < 8) return;
+		if(packet.size() < 4) return;
 		_requestsMutex.lock();
-		if(_requests.find(packet.at(4)) != _requests.end())
+		if(_requests.find(packet.at(2)) != _requests.end())
 		{
-			std::shared_ptr<Request> request = _requests.at(packet.at(4));
+			std::shared_ptr<Request> request = _requests.at(packet.at(2));
 			_requestsMutex.unlock();
-			if(packet.at(3) == request->getResponseControlByte() && packet.at(5) == request->getResponseType())
+			if(packet.at(3) == request->getResponseType())
 			{
-				request->response = packet;
-				request->mutex.unlock();
-				return;
-			}
-			//E. g.: FD0004000004001938
-			else if(packet.size() == 9 && packet.at(6) == 0 && packet.at(5) == 4 && packet.at(3) == 0)
-			{
-				_out.printError("Error: Something is wrong with your HMW-LGW. You probably need to replace it. Check if it works with a CCU.");
 				request->response = packet;
 				request->mutex.unlock();
 				return;
@@ -873,7 +863,7 @@ void HMW_LGW::processData(std::vector<uint8_t>& data)
 			_out.printWarning("Warning: Too small packet received on port " + _settings->port + ": " + _bl->hf.getHexString(decryptedData));
 			return;
 		}
-		if(!_initComplete && _packetIndex == 0 && decryptedData.at(0) == 'S')
+		if(!_initComplete)
 		{
 			std::string packetString(&decryptedData.at(0), &decryptedData.at(0) + decryptedData.size());
 			if(_bl->debugLevel >= 5)
@@ -882,13 +872,15 @@ void HMW_LGW::processData(std::vector<uint8_t>& data)
 				_bl->hf.stringReplace(temp, "\r\n", "\\r\\n");
 				_out.printDebug(std::string("Debug: Packet received on port " + _settings->port + ": " + temp));
 			}
-			_requestsMutex.lock();
-			if(_requests.find(0) != _requests.end())
+			if(packetString.size() < 5 || packetString.at(0) != 'S')
 			{
-				_requests.at(0)->response = decryptedData;
-				_requests.at(0)->mutex.unlock();
+				_stopped = true;
+				_out.printError("Error: First packet does not start with \"S\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening.");
+				return;
 			}
-			_requestsMutex.unlock();
+			_initComplete = true;
+			std::vector<char> response = { '>', packetString.at(1), packetString.at(2), ',', '0', '0', '0', '0', '\r', '\n' };
+			send(response, false);
 			return;
 		}
 
@@ -934,44 +926,43 @@ void HMW_LGW::parsePacket(std::vector<uint8_t>& packet)
 {
 	try
 	{
-		/*
 		if(packet.empty()) return;
-		if(packet.at(5) == 4 && packet.at(3) == 0 && packet.size() == 10 && packet.at(6) == 2 && packet.at(7) == 0)
+		if(packet.at(3) == 0x61 && packet.size() == 5)
 		{
-			if(_bl->debugLevel >= 5) _out.printDebug("Debug: Keep alive response received on port " + _settings->port + ".");
-			_lastKeepAliveResponse = BaseLib::HelperFunctions::getTimeSeconds();
+			if(packet.at(4) == 0)
+			{
+				if(_bl->debugLevel >= 5) _out.printDebug("Debug: Keep alive response received on port " + _settings->port + ".");
+				_lastKeepAliveResponse = BaseLib::HelperFunctions::getTimeSeconds();
+			}
+			else if(packet.at(4) == 2)
+			{
+				_out.printWarning("Warning: NACK received.");
+			}
+			else
+			{
+				_out.printWarning("Warning: Unknown ACK received.");
+			}
 		}
-		else if((packet.at(5) == 5 || (packet.at(5) == 4 && packet.at(6) != 7)) && packet.at(3) == 1 && packet.size() >= 20)
+		else if(packet.at(3) == 0x63) //Discovery finished
 		{
-			std::vector<uint8_t> binaryPacket({(uint8_t)(packet.size() - 11)});
-			binaryPacket.insert(binaryPacket.end(), packet.begin() + 9, packet.end() - 2);
-			int32_t rssi = packet.at(8); //Range should be from 0x0B to 0x8A. 0x0B is -11dBm 0x8A -138dBm.
-			rssi *= -1;
-			//Convert to TI CC1101 format
-			if(rssi <= -75) rssi = ((rssi + 74) * 2) + 256;
-			else rssi = (rssi + 74) * 2;
-			binaryPacket.push_back(rssi);
-			std::shared_ptr<HMWiredPacket> hmwiredPacket(new HMWiredPacket(binaryPacket, true, BaseLib::HelperFunctions::getTime()));
-			//Don't use (packet.at(6) & 1) here. That bit is set for non-AES packets, too
-			//packet.at(6) == 3 and packet.at(7) == 0 is set on pairing packets: FD0020018A0503002494840026219BFD00011000AD4C4551303030333835365803FFFFCB99
-			if(packet.at(5) == 5 && ((packet.at(6) & 3) == 3 || (packet.at(6) & 5) == 5))
+			_searchFinished = true;
+		}
+		else if(packet.at(3) == 0x64) //Device found
+		{
+			if(packet.size() >= 8)
 			{
-				//Accept pairing packets from HM-TC-IT-WM-W-EU (version 1.0) and maybe other devices.
-				//For these devices the handshake is never executed, but the "failed bit" set anyway: Bug
-				if(!(hmwiredPacket->controlByte() & 0x4) || hmwiredPacket->messageType() != 0 || hmwiredPacket->payload()->size() != 17)
-				{
-					_out.printWarning("Warning: AES handshake failed for packet: " + _bl->hf.getHexString(binaryPacket));
-					return;
-				}
+				int32_t address = (packet[4] << 24) + (packet[5] << 16) + (packet[6] << 8) + packet[7];
+				_searchResult.push_back(address);
+				GD::out.printMessage("Peer found with address 0x" + BaseLib::HelperFunctions::getHexString(address, 8));
 			}
-			else if(_bl->debugLevel >= 5 && packet.at(5) == 5 && (packet.at(6) & 3) == 2)
-			{
-				_out.printDebug("Debug: AES handshake was successful for packet: " + _bl->hf.getHexString(binaryPacket));
-			}
+			else GD::out.printError("Error: \"Device found\" packet with wrong size received.");
+		}
+		else if(packet.at(3) == 0x65) //Packet received
+		{
+			std::shared_ptr<HMWiredPacket> hmwiredPacket(new HMWiredPacket(packet, true, BaseLib::HelperFunctions::getTime()));
 			_lastPacketReceived = BaseLib::HelperFunctions::getTime();
 			raisePacketReceived(hmwiredPacket);
 		}
-		*/
 	}
     catch(const std::exception& ex)
     {

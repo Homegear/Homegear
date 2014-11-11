@@ -1663,120 +1663,16 @@ std::shared_ptr<BaseLib::RPC::Variable> HMWiredCentral::searchDevices()
 	try
 	{
 		lockBus();
-		GD::physicalInterface->enableSearchMode();
 		_pairing = true;
-
-		std::vector<int32_t> newDevices;
-		int32_t addressMask = 0;
-		bool backwards = false;
-		uint32_t address = 0;
-		uint32_t address2 = 0;
-		int64_t time = 0;
-		std::shared_ptr<HMWiredPacket> receivedPacket;
-		int32_t retries = 0;
-		int32_t responseDelay = GD::physicalInterface->responseDelay();
-		std::pair<uint32_t, std::shared_ptr<HMWiredPacket>> packet;
-		while(true)
-		{
-			std::vector<uint8_t> payload;
-			if(packet.second && packet.second->addressMask() == addressMask && (uint32_t)packet.second->destinationAddress() == address)
-			{
-				if(packet.first < 3) packet.first++;
-				else
-				{
-					GD::out.printError("Event: Prevented deadlock while searching for HomeMatic Wired devices.");
-					address++;
-					backwards = true;
-				}
-			}
-			else
-			{
-				packet.first = 0;
-				packet.second.reset(new HMWiredPacket(HMWiredPacketType::discovery, 0, address, false, 0, 0, addressMask, payload));
-			}
-			time = BaseLib::HelperFunctions::getTime();
-			sendPacket(packet.second, false);
-
-			int32_t j = 0;
-			while(j * 3 < responseDelay)
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(3));
-				receivedPacket = _receivedPackets.get(0);
-				if(receivedPacket && receivedPacket->timeReceived() >= time) break;
-				j++;
-			}
-			if(receivedPacket && receivedPacket->timeReceived() >= time && receivedPacket->type() == HMWiredPacketType::discoveryResponse)
-			{
-				retries = 0;
-				if(addressMask < 31)
-				{
-					backwards = false;
-					addressMask++;
-				}
-				else
-				{
-					GD::out.printMessage("Peer found with address 0x" + BaseLib::HelperFunctions::getHexString(address, 8));
-					if(address > 0) newDevices.push_back(address);
-					backwards = true;
-					address++;
-					address2 = address;
-					int32_t shifts = 0;
-					while(!(address2 & 1))
-					{
-						address2 >>= 1;
-						addressMask--;
-						shifts++;
-					}
-					address = address2 << shifts;
-				}
-			}
-			else
-			{
-				if(retries < 2) retries++;
-				else
-				{
-					if(addressMask == 0 && (address & 0x80000000)) break;
-					retries = 0;
-					if(addressMask == 0) break;
-					if(backwards)
-					{
-						//Example:
-						//Input:
-						//0x8C      0x00      0d21
-						//10001100  00000000  10101
-						//Output:
-						//90        0x00      0d19
-						//10010000  00000000  10011
-						address2 = address;
-						int32_t shifts = 0;
-						while(!(address2 & 1))
-						{
-							address2 >>= 1;
-							shifts++;
-						}
-						address2++;
-						while(!(address2 & 1))
-						{
-							address2 >>= 1;
-							shifts++;
-							addressMask--;
-						}
-						address = address2 << shifts;
-					}
-					else address |= (1 << (31 - addressMask));
-				}
-			}
-		}
-
-		GD::physicalInterface->disableSearchMode();
+		std::vector<int32_t> foundDevices;
+		GD::physicalInterface->search(foundDevices);
 		unlockBus();
-
-		GD::out.printInfo("Info: Search completed. Found " + std::to_string(newDevices.size()) + " devices.");
+		GD::out.printInfo("Info: Search completed. Found " + std::to_string(foundDevices.size()) + " devices.");
 		std::vector<std::shared_ptr<HMWiredPeer>> newPeers;
 		_peerInitMutex.lock();
 		try
 		{
-			for(std::vector<int32_t>::iterator i = newDevices.begin(); i != newDevices.end(); ++i)
+			for(std::vector<int32_t>::iterator i = foundDevices.begin(); i != foundDevices.end(); ++i)
 			{
 				if(getPeer(*i)) continue;
 

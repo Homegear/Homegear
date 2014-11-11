@@ -60,7 +60,10 @@ class RS485 : public IHMWiredInterface
         void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
         int64_t lastAction() { return _lastAction; }
         virtual void setup(int32_t userID, int32_t groupID);
+        virtual void search(std::vector<int32_t>& foundDevices);
     protected:
+        bool _searchMode = false;
+        int64_t _searchResponse = 0;
         uint8_t _firstByte = 0;
         int64_t _lastAction = 0;
         bool _sending = false;

@@ -497,7 +497,7 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 		}
 		else if(_bl->debugLevel > 4) GD::out.printDebug("Debug: Sending HomeMatic Wired packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
 
-		if(resend)
+		if(GD::physicalInterface->autoResend() && resend)
 		{
 			std::shared_ptr<HMWiredPacket> receivedPacket;
 			if(GD::physicalInterface->getFastSending())

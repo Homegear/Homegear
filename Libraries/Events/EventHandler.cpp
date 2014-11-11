@@ -665,6 +665,11 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::shared_ptr<std
 	try
 	{
 		if(_disposing) return;
+		if(_triggerThreadCount > 20)
+		{
+			GD::out.printError("Error: Your event processing is too slow. More than 20 variables are queued to be checked. Skipping event check.");
+			return;
+		}
 		std::thread t(&EventHandler::triggerThreadMultipleVariables, this, peerID, channel, variables, values);
 		BaseLib::Threads::setThreadPriority(GD::bl.get(), t.native_handle(), GD::bl->settings.eventTriggerThreadPriority(), GD::bl->settings.eventTriggerThreadPolicy());
 		t.detach();
@@ -713,6 +718,11 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::string& variab
 	try
 	{
 		if(_disposing) return;
+		if(_triggerThreadCount > 20)
+		{
+			GD::out.printError("Error: Your event processing is too slow. More than 20 variables are queued to be checked. Skipping event check.");
+			return;
+		}
 		std::thread t(&EventHandler::triggerThread, this, peerID, channel, variable, value);
 		BaseLib::Threads::setThreadPriority(GD::bl.get(), t.native_handle(), GD::bl->settings.eventTriggerThreadPriority(), GD::bl->settings.eventTriggerThreadPolicy());
 		t.detach();

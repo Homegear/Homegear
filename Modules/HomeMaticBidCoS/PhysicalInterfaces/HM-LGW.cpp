@@ -84,7 +84,7 @@ uint16_t CRC16::calculate(const std::vector<uint8_t>& data, bool ignoreLastTwoBy
 HM_LGW::HM_LGW(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IBidCoSInterface(settings)
 {
 	_out.init(GD::bl);
-	_out.setPrefix(GD::out.getPrefix() + "LAN Gateway \"" + settings->id + "\": ");
+	_out.setPrefix(GD::out.getPrefix() + "HM-LGW \"" + settings->id + "\": ");
 
 	signal(SIGPIPE, SIG_IGN);
 
@@ -770,7 +770,6 @@ void HM_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		if(!_initComplete)
     	{
     		_out.printWarning("Warning: !!!Not!!! sending (Port " + _settings->port + "), because the init sequence is not completed: " + packet->hexString());
-    		_sendMutex.unlock();
     		return;
     	}
 
@@ -794,11 +793,6 @@ void HM_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		if(bidCoSPacket->senderAddress() != 0 && bidCoSPacket->senderAddress() != _myAddress)
 		{
 			_out.printError("Error: Can't send packet, because sender address is not mine: " + _bl->hf.getHexString(packetBytes));
-			return;
-		}
-		if(!_initComplete)
-		{
-			_out.printWarning(std::string("Warning: !!!Not!!! sending packet, because init sequence is not complete: ") + _bl->hf.getHexString(packetBytes));
 			return;
 		}
 

@@ -261,6 +261,129 @@ void RS485::setupDevice()
     }
 }
 
+void RS485::search(std::vector<int32_t>& foundDevices)
+{
+	try
+	{
+		int32_t startTime = BaseLib::HelperFunctions::getTimeSeconds();
+		foundDevices.clear();
+		_searchResponse = 0;
+		_searchMode = true;
+		int32_t addressMask = 0;
+		bool backwards = false;
+		uint32_t address = 0;
+		uint32_t address2 = 0;
+		int64_t time = 0;
+		int32_t retries = 0;
+		std::pair<uint32_t, std::shared_ptr<HMWiredPacket>> packet;
+		while(true)
+		{
+			if(BaseLib::HelperFunctions::getTimeSeconds() - startTime > 180)
+			{
+				GD::out.printError("Error: Device search timed out.");
+				break;
+			}
+			std::vector<uint8_t> payload;
+			if(packet.second && packet.second->addressMask() == addressMask && (uint32_t)packet.second->destinationAddress() == address)
+			{
+				if(packet.first < 3) packet.first++;
+				else
+				{
+					GD::out.printError("Error: Prevented deadlock while searching for HomeMatic Wired devices.");
+					address++;
+					backwards = true;
+				}
+			}
+			else
+			{
+				packet.first = 0;
+				packet.second.reset(new HMWiredPacket(HMWiredPacketType::discovery, 0, address, false, 0, 0, addressMask, payload));
+			}
+			time = BaseLib::HelperFunctions::getTime();
+			sendPacket(packet.second);
+
+			int32_t j = 0;
+			while(j * 3 < (signed)_settings->responseDelay)
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(3));
+				if(_searchResponse >= time) break;
+				j++;
+			}
+			if(_searchResponse >= time)
+			{
+				_searchResponse = 0;
+				retries = 0;
+				if(addressMask < 31)
+				{
+					backwards = false;
+					addressMask++;
+				}
+				else
+				{
+					GD::out.printMessage("Peer found with address 0x" + BaseLib::HelperFunctions::getHexString(address, 8));
+					if(address > 0) foundDevices.push_back(address);
+					backwards = true;
+					address++;
+					address2 = address;
+					int32_t shifts = 0;
+					while(!(address2 & 1))
+					{
+						address2 >>= 1;
+						addressMask--;
+						shifts++;
+					}
+					address = address2 << shifts;
+				}
+			}
+			else
+			{
+				if(retries < 2) retries++;
+				else
+				{
+					if(addressMask == 0 && (address & 0x80000000)) break;
+					retries = 0;
+					if(addressMask == 0) break;
+					if(backwards)
+					{
+						//Example:
+						//Input:
+						//0x8C      0x00      0d21
+						//10001100  00000000  10101
+						//Output:
+						//90        0x00      0d19
+						//10010000  00000000  10011
+						address2 = address;
+						int32_t shifts = 0;
+						while(!(address2 & 1))
+						{
+							address2 >>= 1;
+							shifts++;
+						}
+						address2++;
+						while(!(address2 & 1))
+						{
+							address2 >>= 1;
+							shifts++;
+							addressMask--;
+						}
+						address = address2 << shifts;
+					}
+					else address |= (1 << (31 - addressMask));
+				}
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _searchMode = false;
+}
+
 std::vector<uint8_t> RS485::readFromDevice()
 {
 	try
@@ -361,12 +484,19 @@ std::vector<uint8_t> RS485::readFromDevice()
 					}
 				}
 				else if(packet.at(0) == 0xFE) { if(packet.size() > 3) length = packet.at(3); }
-				else if(packet.at(0) == 0xF8) break;
+				else if(packet.at(0) == 0xF8)
+				{
+					_out.printInfo("Info: Response received to discovery packet.");
+					packet.clear();
+					_searchResponse = BaseLib::HelperFunctions::getTime();
+					break;
+				}
 				else if(_searchMode) //Devices sometimes receive nonsense instead of 0xF8
 				{
+					_out.printInfo("Info: Response received to discovery packet.");
 					_out.printWarning("Warning: Correcting wrong response: " + BaseLib::HelperFunctions::getHexString(packet) + ". This is normal for RS485 modules when searching for new devices.");
-					packet.clear(); //Remove something like 0xF0F0
-					packet.push_back(0xF8);
+					packet.clear();
+					_searchResponse = BaseLib::HelperFunctions::getTime();
 					break;
 				}
 			}
