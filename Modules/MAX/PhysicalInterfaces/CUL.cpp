@@ -238,6 +238,7 @@ std::string CUL::readFromDevice()
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			openDevice();
 			if(!isOpen()) return "";
+			writeToDevice("X21\nZr\n", false);
 		}
 		std::string packet;
 		int32_t i;
