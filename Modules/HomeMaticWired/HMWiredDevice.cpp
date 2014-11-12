@@ -423,7 +423,7 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 		std::shared_ptr<HMWiredPacketInfo> txPacketInfo = _sentPackets.getInfo(packet->destinationAddress());
 		int64_t timeDifference = 0;
 		if(txPacketInfo) timeDifference = time - txPacketInfo->time;
-		if((!txPacketInfo || timeDifference > 210) && packet->type() != HMWiredPacketType::discovery)
+		if(!GD::physicalInterface->autoResend() && (!txPacketInfo || timeDifference > 210))
 		{
 			rxPacketInfo = _receivedPackets.getInfo(packet->destinationAddress());
 			int64_t rxTimeDifference = 0;
@@ -497,9 +497,9 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 		}
 		else if(_bl->debugLevel > 4) GD::out.printDebug("Debug: Sending HomeMatic Wired packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
 
-		if(GD::physicalInterface->autoResend() && resend)
+		std::shared_ptr<HMWiredPacket> receivedPacket;
+		if(!GD::physicalInterface->autoResend() && resend)
 		{
-			std::shared_ptr<HMWiredPacket> receivedPacket;
 			if(GD::physicalInterface->getFastSending())
 			{
 				for(int32_t retries = 0; retries < 3; retries++)
@@ -542,7 +542,22 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 			std::shared_ptr<HMWiredPeer> peer = getPeer(packet->destinationAddress());
 			if(peer) peer->serviceMessages->setUnreach(true, false);
 		}
-		else GD::physicalInterface->sendPacket(packet);
+		else
+		{
+			int64_t time = BaseLib::HelperFunctions::getTime();
+			std::chrono::milliseconds sleepingTime(5);
+			GD::physicalInterface->sendPacket(packet);
+			for(int32_t i = 0; i < 12; i++)
+			{
+				if(i == 5) sleepingTime = std::chrono::milliseconds(25);
+				std::this_thread::sleep_for(sleepingTime);
+				receivedPacket = systemResponse ? _receivedPackets.get(0) : _receivedPackets.get(packet->destinationAddress());
+				if(receivedPacket && receivedPacket->timeReceived() >= time && receivedPacket->receiverMessageCounter() == packet->senderMessageCounter())
+				{
+					return receivedPacket;
+				}
+			}
+		}
 	}
 	catch(const std::exception& ex)
     {

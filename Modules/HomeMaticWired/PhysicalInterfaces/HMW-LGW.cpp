@@ -85,7 +85,7 @@ void HMW_LGW::search(std::vector<int32_t>& foundDevices)
 		_searchFinished = false;
 
 		std::vector<char> startPacket;
-		std::vector<char> payload{ 0x44, 0x00, 0xFF };
+		std::vector<char> payload{ 0x44, 0x00, (char)0xFF };
 
 		buildPacket(startPacket, payload);
 		_packetIndex++;
@@ -132,12 +132,7 @@ void HMW_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 
 		std::shared_ptr<HMWiredPacket> hmwiredPacket(std::dynamic_pointer_cast<HMWiredPacket>(packet));
 		if(!hmwiredPacket) return;
-		if(hmwiredPacket->type() == HMWiredPacketType::ackMessage && packet->senderAddress() == _myAddress)
-		{
-			_out.printDebug("Debug: Ignoring ACK packet.", 6);
-			_lastPacketSent = BaseLib::HelperFunctions::getTime();
-			return;
-		}
+		if(hmwiredPacket->type() == HMWiredPacketType::ackMessage) return; //Ignore ACK packets as they're sent automatically
 
 		std::vector<char> packetBytes = hmwiredPacket->byteArrayLgw();
 		if(_bl->debugLevel >= 4) _out.printInfo("Info: Sending (" + _settings->id + "): " + _bl->hf.getHexString(packetBytes));
@@ -151,24 +146,37 @@ void HMW_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			_packetIndex++;
 			send(requestPacket, false);
 		}
-		else
+		else if(hmwiredPacket->type() == HMWiredPacketType::ackMessage)
 		{
-			for(int32_t j = 0; j < 40; j++)
+			for(int32_t j = 0; j < 3; j++)
 			{
 				std::vector<uint8_t> responsePacket;
 				std::vector<char> requestPacket;
-				std::vector<char> payload { 0x53, 0xC8 };
+				std::vector<char> payload { 0x53, (char)0xC8 };
+				payload.insert(payload.end(), packetBytes.begin(), packetBytes.end());
+				buildPacket(requestPacket, payload);
+				_packetIndex++;
+				getResponse(requestPacket, responsePacket, _packetIndex - 1, 0x61);
+				if(!responsePacket.empty()) break;
+				if(j == 2)
+				{
+					_out.printInfo("Info: No response from HMW-LGW to packet " + _bl->hf.getHexString(packetBytes));
+					return;
+				}
+			}
+		}
+		else
+		{
+			for(int32_t j = 0; j < 3; j++) //This causes the packet to be sent 9 times all together.
+			{
+				std::vector<uint8_t> responsePacket;
+				std::vector<char> requestPacket;
+				std::vector<char> payload { 0x53, (char)0xC8 };
 				payload.insert(payload.end(), packetBytes.begin(), packetBytes.end());
 				buildPacket(requestPacket, payload);
 				_packetIndex++;
 				getResponse(requestPacket, responsePacket, _packetIndex - 1, 0x72);
-				if(responsePacket.size() < 5)
-				{
-					std::this_thread::sleep_for(std::chrono::milliseconds(50));
-					//Resend
-					continue;
-				}
-				else
+				if(!responsePacket.empty())
 				{
 					std::shared_ptr<HMWiredPacket> responseHmwiredPacket(new HMWiredPacket(responsePacket, true, BaseLib::HelperFunctions::getTime(), hmwiredPacket->destinationAddress(), hmwiredPacket->senderAddress()));
 					_lastPacketReceived = BaseLib::HelperFunctions::getTime();
@@ -210,7 +218,7 @@ void HMW_LGW::getResponse(const std::vector<char>& packet, std::vector<uint8_t>&
 		_requestsMutex.unlock();
 		request->mutex.try_lock(); //Lock and return immediately
 		send(packet, false);
-		if(!request->mutex.try_lock_for(std::chrono::milliseconds(10000)))
+		if(!request->mutex.try_lock_for(std::chrono::milliseconds(700)))
 		{
 			_out.printError("Error: No response received to packet: " + _bl->hf.getHexString(packet));
 		}
@@ -933,6 +941,10 @@ void HMW_LGW::parsePacket(std::vector<uint8_t>& packet)
 			{
 				if(_bl->debugLevel >= 5) _out.printDebug("Debug: Keep alive response received on port " + _settings->port + ".");
 				_lastKeepAliveResponse = BaseLib::HelperFunctions::getTimeSeconds();
+			}
+			else if(packet.at(4) == 1)
+			{
+				_out.printDebug("Debug: ACK response received on port " + _settings->port + ".");
 			}
 			else if(packet.at(4) == 2)
 			{
