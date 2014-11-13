@@ -580,6 +580,7 @@ int main(int argc, char* argv[])
         if(!GD::physicalInterfaces.isOpen())
         {
         	GD::out.printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
+        	GD::physicalInterfaces.stopListening();
         	exitHomegear(1);
         }
 

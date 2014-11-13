@@ -60,6 +60,7 @@ enum class DeviceType : uint32_t
 	HMLCSW4PCB =	0x002D,
 	HMSECSC =		0x002F,
 	HMSECRHS =		0x0030,
+	HMPBI4FM =		0x0034,
 	HMPB4WM =		0x0035,
 	HMPB2WM =		0x0036,
 	HMRC19 = 		0x0037,
