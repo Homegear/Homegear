@@ -206,7 +206,7 @@ protected:
 	std::vector<uint8_t> _config;
 	std::vector<uint8_t> _patable;
 	struct spi_ioc_transfer _transfer;
-	std::timed_mutex _txMutex;
+	std::mutex _txMutex;
 	bool _sending = false;
 	bool _sendingPending = false;
 

@@ -424,31 +424,6 @@ std::shared_ptr<HomeMaticDevice> HomeMaticDevice::getDevice(int32_t address)
 	return std::shared_ptr<HomeMaticDevice>();
 }
 
-void HomeMaticDevice::checkForDeadlock()
-{
-	try
-	{
-		if(!_peersMutex.try_lock_for(std::chrono::seconds(3)))
-		{
-			GD::out.printError("Critical: _peersMutex is deadlocked. Unlocking... This might crash the program.");
-			_peersMutex.unlock();
-		}
-		else _peersMutex.unlock();
-	}
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
 int32_t HomeMaticDevice::getHexInput()
 {
 	std::string input;

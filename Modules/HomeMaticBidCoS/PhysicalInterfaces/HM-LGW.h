@@ -39,6 +39,7 @@
 #include <string>
 #include <list>
 #include <mutex>
+#include <condition_variable>
 #include <chrono>
 #include <ctime>
 #include <iomanip>
@@ -93,7 +94,9 @@ class HM_LGW  : public IBidCoSInterface
         class Request
         {
         public:
-        	std::timed_mutex mutex;
+        	std::mutex mutex;
+        	std::condition_variable conditionVariable;
+        	bool mutexReady = false;
         	std::vector<uint8_t> response;
         	uint8_t getResponseControlByte() { return _responseControlByte; }
         	uint8_t getResponseType() { return _responseType; }

@@ -447,14 +447,14 @@ void InsteonHubX10::getResponse(const std::vector<char>& packet, std::vector<uin
 		{
 			if(_stopped || _stopCallbackThread) break;
 			_request.reset(new Request(responseType));
-			_request->mutex.try_lock(); //Lock and return immediately
+			std::unique_lock<std::mutex> lock(_request->mutex);
 			send(packet, false);
-			if(!_request->mutex.try_lock_for(std::chrono::milliseconds(10000)))
+			if(!_request->conditionVariable.wait_for(lock, std::chrono::milliseconds(10000), [&] { return _request->mutexReady; }))
 			{
 				_out.printError("Error: No response received to packet: " + _bl->hf.getHexString(packet));
 			}
-			_request->mutex.unlock();
 			response = _request->response;
+			lock.unlock();
 			if(response.size() > 1 && response.at(0) != 0x15) break;
 			if((response.size() < 1 || response.at(0) != 0x15) && i == 3)
 			{
@@ -942,7 +942,11 @@ void InsteonHubX10::processPacket(std::vector<uint8_t>& data)
 		if(_request && (data.size() == 1 || _request->getResponseType() == data.at(1)))
 		{
 			_request->response = data;
-			_request->mutex.unlock();
+			{
+				std::lock_guard<std::mutex> lock(_request->mutex);
+				_request->mutexReady = true;
+			}
+			_request->conditionVariable.notify_one();
 			return;
 		}
 

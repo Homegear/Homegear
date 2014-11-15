@@ -883,13 +883,12 @@ void HM_LGW::getResponse(const std::vector<char>& packet, std::vector<uint8_t>& 
 		_requestsMutex.lock();
 		_requests[messageCounter] = request;
 		_requestsMutex.unlock();
-		request->mutex.try_lock(); //Lock and return immediately
+		std::unique_lock<std::mutex> lock(request->mutex);
 		send(packet, false);
-		if(!request->mutex.try_lock_for(std::chrono::milliseconds(10000)))
+		if(!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(10000), [&] { return request->mutexReady; }))
 		{
 			_out.printError("Error: No response received to packet: " + _bl->hf.getHexString(packet));
 		}
-		request->mutex.unlock();
 		response = request->response;
 
 		_requestsMutex.lock();
@@ -1040,16 +1039,15 @@ void HM_LGW::doInit()
 		_requestsMutex.lock();
 		_requests[0] = request;
 		_requestsMutex.unlock();
-		request->mutex.try_lock(); //Lock and return immediately
+		std::unique_lock<std::mutex> lock(request->mutex);
 		_initStarted = true;
-		if(!request->mutex.try_lock_for(std::chrono::milliseconds(30000)))
+		if(!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(30000), [&] { return request->mutexReady; }))
 		{
 			_out.printError("Error: No init packet received.");
 			_stopped = true;
-			request->mutex.unlock();
 			return;
 		}
-		request->mutex.unlock();
+		lock.unlock();
 		std::string packetString(request->response.begin(), request->response.end());
 		_requestsMutex.lock();
 		_requests.erase(0);
@@ -2375,7 +2373,11 @@ void HM_LGW::processPacket(std::vector<uint8_t>& packet)
 				if(packet.at(3) == request->getResponseControlByte() && packet.at(5) == request->getResponseType())
 				{
 					request->response = packet;
-					request->mutex.unlock();
+					{
+						std::lock_guard<std::mutex> lock(request->mutex);
+						request->mutexReady = true;
+					}
+					request->conditionVariable.notify_one();
 					return;
 				}
 				//E. g.: FD0004000004001938
@@ -2383,7 +2385,11 @@ void HM_LGW::processPacket(std::vector<uint8_t>& packet)
 				{
 					_out.printError("Error: Something is wrong with your HM-LGW. You probably need to replace it. Check if it works with a CCU.");
 					request->response = packet;
-					request->mutex.unlock();
+					{
+						std::lock_guard<std::mutex> lock(request->mutex);
+						request->mutexReady = true;
+					}
+					request->conditionVariable.notify_one();
 					return;
 				}
 			}
@@ -2434,7 +2440,11 @@ void HM_LGW::processData(std::vector<uint8_t>& data)
 			if(_requests.find(0) != _requests.end())
 			{
 				_requests.at(0)->response = decryptedData;
-				_requests.at(0)->mutex.unlock();
+				{
+					std::lock_guard<std::mutex> lock(_requests.at(0)->mutex);
+					_requests.at(0)->mutexReady = true;
+				}
+				_requests.at(0)->conditionVariable.notify_one();
 			}
 			_requestsMutex.unlock();
 			return;

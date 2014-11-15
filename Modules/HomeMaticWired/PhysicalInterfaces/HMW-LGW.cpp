@@ -216,13 +216,12 @@ void HMW_LGW::getResponse(const std::vector<char>& packet, std::vector<uint8_t>&
 		_requestsMutex.lock();
 		_requests[messageCounter] = request;
 		_requestsMutex.unlock();
-		request->mutex.try_lock(); //Lock and return immediately
+		std::unique_lock<std::mutex> lock(request->mutex);
 		send(packet, false);
-		if(!request->mutex.try_lock_for(std::chrono::milliseconds(700)))
+		if(!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(700), [&] { return request->mutexReady; }))
 		{
 			_out.printError("Error: No response received to packet: " + _bl->hf.getHexString(packet));
 		}
-		request->mutex.unlock();
 		response = request->response;
 
 		_requestsMutex.lock();
@@ -834,7 +833,11 @@ void HMW_LGW::processPacket(std::vector<uint8_t>& packet)
 			if(packet.at(3) == request->getResponseType())
 			{
 				request->response = packet;
-				request->mutex.unlock();
+				{
+					std::lock_guard<std::mutex> lock(request->mutex);
+					request->mutexReady = true;
+				}
+				request->conditionVariable.notify_one();
 				return;
 			}
 		}

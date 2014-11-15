@@ -143,7 +143,7 @@ protected:
     std::unordered_map<int32_t, std::shared_ptr<Peer>> _peers;
     std::unordered_map<std::string, std::shared_ptr<Peer>> _peersBySerial;
     std::map<uint64_t, std::shared_ptr<Peer>> _peersByID;
-    std::timed_mutex _peersMutex;
+    std::mutex _peersMutex;
 
 	//Event handling
 	//Database

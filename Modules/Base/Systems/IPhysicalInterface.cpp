@@ -205,8 +205,14 @@ void IPhysicalInterface::raisePacketReceived(std::shared_ptr<Packet> packet)
 
 		_packetBuffer[_packetBufferHead] = packet;
 		_packetBufferHead++;
-		if(_packetBufferHead >= _packetBufferSize) _packetBufferHead = 0;
-		_packetProcessingPacketAvailable = true;
+		if(_packetBufferHead >= _packetBufferSize)
+		{
+			_packetBufferHead = 0;
+		}
+		{
+			std::lock_guard<std::mutex> lock(_packetProcessingThreadMutex);
+			_packetProcessingPacketAvailable = true;
+		}
 		_packetBufferMutex.unlock();
 
 		_packetProcessingConditionVariable.notify_one();

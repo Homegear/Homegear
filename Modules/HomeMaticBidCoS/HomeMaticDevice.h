@@ -67,7 +67,6 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice, public BidCoSQue
         virtual bool isCentral();
         static bool isDimmer(BaseLib::Systems::LogicalDeviceType type);
         static bool isSwitch(BaseLib::Systems::LogicalDeviceType type);
-        virtual void checkForDeadlock();
         virtual void reset();
 
         HomeMaticDevice(IDeviceEventSink* eventHandler);

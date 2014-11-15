@@ -74,7 +74,9 @@ class InsteonHubX10  : public IInsteonInterface
         class Request
         {
         public:
-        	std::timed_mutex mutex;
+        	std::mutex mutex;
+        	std::condition_variable conditionVariable;
+        	bool mutexReady = false;
         	std::vector<uint8_t> response;
         	uint8_t getResponseType() { return _responseType; }
 
