@@ -101,9 +101,9 @@ void ServiceMessages::load()
 			{
 				switch(row->second.at(2)->intValue)
 				{
-				case 0:
+				/*case 0:
 					_unreach = (bool)row->second.at(3)->intValue;
-					break;
+					break;*/
 				case 1:
 					_stickyUnreach = (bool)row->second.at(3)->intValue;
 					break;
@@ -126,6 +126,8 @@ void ServiceMessages::load()
 				_errorMutex.unlock();
 			}
 		}
+		_unreach = false; //Always set _unreach to false on start up.
+
 		//Synchronize service message data with peer parameters:
 		std::vector<uint8_t> data = { (uint8_t)_unreach };
 		raiseSaveParameter("UNREACH", 0, data);
@@ -463,6 +465,7 @@ void ServiceMessages::checkUnreach(int32_t cyclicTimeout, uint32_t lastPacketRec
 {
 	try
 	{
+		if(_bl->booting || _bl->shuttingDown) return;
 		uint32_t time = HelperFunctions::getTimeSeconds();
 		if(cyclicTimeout > 0 && (time - lastPacketReceived) > (unsigned)cyclicTimeout && !_unreach)
 		{
