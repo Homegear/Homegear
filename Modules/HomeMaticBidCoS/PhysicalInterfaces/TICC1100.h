@@ -209,6 +209,7 @@ protected:
 	std::mutex _txMutex;
 	bool _sending = false;
 	bool _sendingPending = false;
+	bool _firstPacket = true;
 
 	void setConfig();
 	void setupDevice();

@@ -96,9 +96,9 @@ void TICC1100::setConfig()
 	{
 		_config =
 		{
-			(_settings->interruptPin == 2) ? 0x46 : 0x5B, //00: IOCFG2 (GDO2_CFG)
+			(_settings->interruptPin == 2) ? (uint8_t)0x46 : (uint8_t)0x5B, //00: IOCFG2 (GDO2_CFG)
 			0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
-			(_settings->interruptPin == 0) ? 0x46 : 0x5B, //02: IOCFG0 (GDO0_CFG)
+			(_settings->interruptPin == 0) ? (uint8_t)0x46 : (uint8_t)0x5B, //02: IOCFG0 (GDO0_CFG)
 			0x07, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
 			0xC6, //04: SYNC1
 			0x26, //05: SYNC0
@@ -143,9 +143,9 @@ void TICC1100::setConfig()
 	{
 		_config =
 		{
-			(_settings->interruptPin == 2) ? 0x46 : 0x5B, //00: IOCFG2 (GDO2_CFG)
+			(_settings->interruptPin == 2) ? (uint8_t)0x46 : (uint8_t)0x5B, //00: IOCFG2 (GDO2_CFG)
 			0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
-			(_settings->interruptPin == 0) ? 0x46 : 0x5B, //02: IOCFG0 (GDO0_CFG)
+			(_settings->interruptPin == 0) ? (uint8_t)0x46 : (uint8_t)0x5B, //02: IOCFG0 (GDO0_CFG)
 			0x07, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
 			0xC6, //04: SYNC1
 			0x26, //05: SYNC0
@@ -737,6 +737,7 @@ void TICC1100::startListening()
 
 		initChip();
 
+		_firstPacket = true;
 		_stopCallbackThread = false;
 		_listenThread = std::thread(&TICC1100::mainThread, this);
 		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
@@ -871,7 +872,11 @@ void TICC1100::mainThread()
 						sendCommandStrobe(CommandStrobes::Enum::SFRX);
 						sendCommandStrobe(CommandStrobes::Enum::SRX);
 					}
-					if(packet) raisePacketReceived(packet);
+					if(packet)
+					{
+						if(_firstPacket) _firstPacket = false;
+						else raisePacketReceived(packet);
+					}
 				}
 				_txMutex.unlock(); //Packet sent or received, now we can send again
 			}

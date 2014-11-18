@@ -102,9 +102,9 @@ void TICC1100::setConfig()
 	{
 		_config = //Read from HM-CC-VD
 		{
-			(_settings->interruptPin == 2) ? 0x46 : 0x5B, //00: IOCFG2 (GDO2_CFG)
+			(_settings->interruptPin == 2) ? (uint8_t)0x46 : (uint8_t)0x5B, //00: IOCFG2 (GDO2_CFG)
 			0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
-			(_settings->interruptPin == 0) ? 0x46 : 0x5B, //02: IOCFG0 (GDO0_CFG)
+			(_settings->interruptPin == 0) ? (uint8_t)0x46 : (uint8_t)0x5B, //02: IOCFG0 (GDO0_CFG)
 			0x07, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
 			0xE9, //04: SYNC1
 			0xCA, //05: SYNC0
@@ -149,9 +149,9 @@ void TICC1100::setConfig()
 	{
 		_config =
 		{
-			(_settings->interruptPin == 2) ? 0x46 : 0x5B, //00: IOCFG2 (GDO2_CFG: GDO2 connected to RPi interrupt pin, asserts when packet sent/received, active low)
+			(_settings->interruptPin == 2) ? (uint8_t)0x46 : (uint8_t)0x5B, //00: IOCFG2 (GDO2_CFG: GDO2 connected to RPi interrupt pin, asserts when packet sent/received, active low)
 			0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
-			(_settings->interruptPin == 0) ? 0x46 : 0x5B, //02: IOCFG0 (GDO0_CFG, GDO0 (optionally) connected to CC1190 PA_EN, PA_PD, active low(?!))
+			(_settings->interruptPin == 0) ? (uint8_t)0x46 : (uint8_t)0x5B, //02: IOCFG0 (GDO0_CFG, GDO0 (optionally) connected to CC1190 PA_EN, PA_PD, active low(?!))
 			0x07, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
 			0xE9, //04: SYNC1
 			0xCA, //05: SYNC0
@@ -772,7 +772,6 @@ void TICC1100::initChip()
 		writeRegister(Registers::Enum::PATABLE, _settings->txPowerSetting, true);
 
 		sendCommandStrobe(CommandStrobes::Enum::SFRX);
-		usleep(20);
 
 		enableRX(true);
 	}
@@ -849,6 +848,7 @@ void TICC1100::startListening()
 
 		initChip();
 
+		_firstPacket = true;
 		_stopCallbackThread = false;
 		_listenThread = std::thread(&TICC1100::mainThread, this);
 		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
@@ -996,7 +996,11 @@ void TICC1100::mainThread()
 						sendCommandStrobe(CommandStrobes::Enum::SFRX);
 						sendCommandStrobe(CommandStrobes::Enum::SRX);
 					}
-					if(packet) raisePacketReceived(packet);
+					if(packet)
+					{
+						if(_firstPacket) _firstPacket = false;
+						else raisePacketReceived(packet);
+					}
 				}
 				_txMutex.unlock(); //Packet sent or received, now we can send again
 			}

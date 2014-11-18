@@ -208,7 +208,7 @@ void PhysicalInterfaces::load(std::string filename)
 				else if(name == "interruptpin")
 				{
 					int32_t number = BaseLib::Math::getNumber(value);
-					if(number > 0)
+					if(number >= 0)
 					{
 						settings->interruptPin = number;
 						GD::out.printDebug("Debug: interruptPin of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->interruptPin));
