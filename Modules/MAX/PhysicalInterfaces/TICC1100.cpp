@@ -96,9 +96,9 @@ void TICC1100::setConfig()
 	{
 		_config =
 		{
-			0x46, //00: IOCFG2 (GDO2_CFG)
+			(_settings->interruptPin == 2) ? 0x46 : 0x5B, //00: IOCFG2 (GDO2_CFG)
 			0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
-			0x5B, //02: IOCFG0 (GDO0_CFG, GDO0 is not connected)
+			(_settings->interruptPin == 0) ? 0x46 : 0x5B, //02: IOCFG0 (GDO0_CFG)
 			0x07, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
 			0xC6, //04: SYNC1
 			0x26, //05: SYNC0
@@ -143,9 +143,9 @@ void TICC1100::setConfig()
 	{
 		_config =
 		{
-			0x46, //00: IOCFG2 (GDO2_CFG)
+			(_settings->interruptPin == 2) ? 0x46 : 0x5B, //00: IOCFG2 (GDO2_CFG)
 			0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
-			0x5B, //02: IOCFG0 (GDO0_CFG, GDO0 is not connected)
+			(_settings->interruptPin == 0) ? 0x46 : 0x5B, //02: IOCFG0 (GDO0_CFG)
 			0x07, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
 			0xC6, //04: SYNC1
 			0x26, //05: SYNC0

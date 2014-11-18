@@ -100,6 +100,11 @@ console-common  console-data/keymap/full        select  us
 echo "#!/bin/bash
 debconf-set-selections /debconf.set
 rm -f /debconf.set
+mkdir -p /etc/apt/sources.list.d/
+echo \"deb http://homegear.eu/packages/Raspbian/ wheezy/\" >> /etc/apt/sources.list.d/homegear.list
+wget http://homegear.eu/packages/Release.key
+apt-key add - < Release.key
+rm Release.key
 apt-get update
 apt-get -y install locales console-common ntp openssh-server git-core binutils curl ca-certificates sudo parted unzip p7zip-full php5-cli php5-xmlrpc libxml2-utils keyboard-configuration liblzo2-dev python-lzo libgcrypt11 libgcrypt11-dev libgpg-error0 libgpg-error-dev libgnutlsxx27 libgnutls-dev
 update-ca-certificates --fresh
@@ -117,10 +122,8 @@ dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-reconfigure locales
 read -p \"Ready to install Homegear. Hit [Enter] to continue...\"
 touch /tmp/HOMEGEAR_STATIC_INSTALLATION
-wget http://homegear.eu/downloads/homegear_current_rpi.deb
-dpkg -i /homegear_current_rpi.deb
+apt-get -y install homegear
 rm /tmp/HOMEGEAR_STATIC_INSTALLATION
-rm homegear_current_rpi.deb
 service homegear stop
 echo \"*               soft    core            unlimited\" >> /etc/security/limits.d/homegear
 service ssh stop
@@ -200,6 +203,9 @@ echo \"Downloading firmware updates...\"
 echo \"Generating new SSH host keys. This might take a while.\"
 rm /etc/ssh/ssh_host* >/dev/null
 ssh-keygen -A >/dev/null
+echo \"Updating your system...\"
+apt-get update
+apt-get -y upgrade
 echo \"Generating new SSL keys and Diffie-Hellman parameters for Homegear. This might take a long time...\"
 rm -f /etc/homegear/homegear.key
 rm -f /etc/homegear/homegear.crt

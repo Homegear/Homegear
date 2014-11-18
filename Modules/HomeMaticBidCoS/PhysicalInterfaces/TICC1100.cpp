@@ -49,6 +49,11 @@ TICC1100::TICC1100(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> 
 		}
 		if(settings->oscillatorFrequency < 0) settings->oscillatorFrequency = 26000000;
 		if(settings->txPowerSetting < 0) settings->txPowerSetting = 0xC0;
+		if(settings->interruptPin != 0 && settings->interruptPin != 2)
+		{
+			if(settings->interruptPin > 0) _out.printWarning("Warning: Setting for interruptPin for device CC1100 in physicalinterfaces.conf is invalid.");
+			settings->interruptPin = 2;
+		}
 
 		_transfer =  { (uint64_t)0, (uint64_t)0, (uint32_t)0, (uint32_t)4000000, (uint16_t)0, (uint8_t)8, (uint8_t)0, (uint32_t)0 };
 
@@ -97,9 +102,9 @@ void TICC1100::setConfig()
 	{
 		_config = //Read from HM-CC-VD
 		{
-			0x46, //00: IOCFG2 (GDO2_CFG)
+			(_settings->interruptPin == 2) ? 0x46 : 0x5B, //00: IOCFG2 (GDO2_CFG)
 			0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
-			0x5B, //02: IOCFG0 (GDO0_CFG, GDO0 is not connected)
+			(_settings->interruptPin == 0) ? 0x46 : 0x5B, //02: IOCFG0 (GDO0_CFG)
 			0x07, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
 			0xE9, //04: SYNC1
 			0xCA, //05: SYNC0
@@ -144,9 +149,9 @@ void TICC1100::setConfig()
 	{
 		_config =
 		{
-			0x46, //00: IOCFG2 (GDO2_CFG: GDO2 connected to RPi interrupt pin, asserts when packet sent/received, active low)
+			(_settings->interruptPin == 2) ? 0x46 : 0x5B, //00: IOCFG2 (GDO2_CFG: GDO2 connected to RPi interrupt pin, asserts when packet sent/received, active low)
 			0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
-			0x5B, //02: IOCFG0 (GDO0_CFG, GDO0 (optionally) connected to CC1190 PA_EN, PA_PD, active low(?!))
+			(_settings->interruptPin == 0) ? 0x46 : 0x5B, //02: IOCFG0 (GDO0_CFG, GDO0 (optionally) connected to CC1190 PA_EN, PA_PD, active low(?!))
 			0x07, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
 			0xE9, //04: SYNC1
 			0xCA, //05: SYNC0

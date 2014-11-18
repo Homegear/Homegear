@@ -65,6 +65,7 @@ public:
 	std::map<uint32_t, GPIOSetting> gpio;
 	int32_t oscillatorFrequency = -1;
 	int32_t txPowerSetting = -1;
+	int32_t interruptPin = -1;
 	uint32_t stackPosition = 0;
 	std::string host;
 	std::string port;
