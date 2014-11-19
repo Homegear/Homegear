@@ -32,13 +32,14 @@
 namespace BaseLib
 {
 
-Obj::Obj(std::string exePath)
+Obj::Obj(std::string exePath, std::function<void(int32_t, std::string)> errorCallback)
 {
 	fileDescriptorManager.init(this);
 	serialDeviceManager.init(this);
 	hf.init(this);
 	settings.init(this);
 	out.init(this);
+	out.setErrorCallback(errorCallback);
 }
 
 Obj::~Obj()

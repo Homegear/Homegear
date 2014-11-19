@@ -198,6 +198,11 @@ void terminate(int32_t signalNumber)
     }
 }
 
+void errorCallback(int32_t level, std::string message)
+{
+	GD::rpcClient.broadcastError(level, message);
+}
+
 int32_t getIntInput()
 {
 	std::string input;
@@ -292,7 +297,7 @@ int main(int argc, char* argv[])
     try
     {
     	getExecutablePath();
-    	GD::bl.reset(new BaseLib::Obj(GD::executablePath));
+    	GD::bl.reset(new BaseLib::Obj(GD::executablePath, std::function<void(int32_t, std::string)>(errorCallback)));
     	GD::out.init(GD::bl.get());
 
     	for(int32_t i = 1; i < argc; i++)

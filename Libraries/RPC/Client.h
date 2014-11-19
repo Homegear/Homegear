@@ -58,6 +58,7 @@ public:
 	void broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values);
 	void systemListMethods(std::pair<std::string, std::string> address);
 	void listDevices(std::pair<std::string, std::string> address);
+	void broadcastError(int32_t level, std::string message);
 	void broadcastNewDevices(std::shared_ptr<BaseLib::RPC::Variable> deviceDescriptions);
 	void broadcastNewEvent(std::shared_ptr<BaseLib::RPC::Variable> eventDescription);
 	void broadcastDeleteDevices(std::shared_ptr<BaseLib::RPC::Variable> deviceAddresses, std::shared_ptr<BaseLib::RPC::Variable> deviceInfo);

@@ -41,6 +41,7 @@
 #include <map>
 #include <chrono>
 #include <ctime>
+#include <functional>
 
 namespace BaseLib
 {
@@ -69,6 +70,7 @@ public:
 	 * Initializes the object.
 	 * Not calling this method might cause segmentation faults as the base library pointer is unset.
 	 * @param baseLib A pointer to the common base library object.
+	 * @param errorCallback
 	 */
 	void init(Obj* baseLib);
 
@@ -85,6 +87,20 @@ public:
 	 * @param prefix The new prefix.
 	 */
 	void setPrefix(std::string prefix) { _prefix = prefix; }
+
+	/**
+	 * Returns the error callback function provided with init.
+	 * @see setErrorCallback()
+	 * @return Returns the error callback function.
+	 */
+	std::function<void(int32_t, std::string)> getErrorCallback() { return _errorCallback; }
+
+	/**
+	 * Sets a callback function which will be called for all error messages. First parameter of the function is the error level (1 = critical, 2 = error, 3 = warning), second parameter is the error string.
+	 * @see getErrorCallback()
+	 * @return Returns the error callback function.
+	 */
+	void setErrorCallback(std::function<void(int32_t, std::string)> errorCallback) { _errorCallback = errorCallback; }
 
 	/**
 	 * Prints the policy and priority of the thread executing this method.
@@ -201,6 +217,10 @@ public:
 	 * @param minDebugLevel The minimal debug level (default 0).
 	 */
 	void printMessage(std::string message, int32_t minDebugLevel = 0);
+
+	/**
+	 * Calls the error callback function registered with the constructor.
+	 */
 private:
 
 	/**
@@ -212,6 +232,11 @@ private:
 	 * A prefix put before all messages.
 	 */
 	std::string _prefix;
+
+	/**
+	 * Pointer to an optional callback function, which will be called whenever printEx, printWarning, printCritical or printError are called.
+	 */
+	std::function<void(int32_t, std::string)> _errorCallback;
 };
 }
-#endif /* OUTPUT_H_ */
+#endif

@@ -387,6 +387,36 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
     }
 }
 
+void Client::broadcastError(int32_t level, std::string message)
+{
+	try
+	{
+		_serversMutex.lock();
+		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
+		{
+			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("error") == (*server)->knownMethods.end())) continue;
+			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(level)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(message)));
+			startInvokeBroadcastThread((*server), "error", parameters);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _serversMutex.unlock();
+}
+
 void Client::broadcastNewDevices(std::shared_ptr<BaseLib::RPC::Variable> deviceDescriptions)
 {
 	try

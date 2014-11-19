@@ -40,6 +40,7 @@ Output::~Output()
 void Output::init(Obj* baseLib)
 {
 	_bl = baseLib;
+	_errorCallback = baseLib->out.getErrorCallback();
 }
 
 std::string Output::getTimeString(int64_t time)
@@ -175,37 +176,47 @@ void Output::printBinary(std::vector<char>& data)
 
 void Output::printEx(std::string file, uint32_t line, std::string function, std::string what)
 {
+	std::string error;
 	if(!what.empty())
 	{
-		std::cout << getTimeString() << " " << _prefix << "Error in file " << file << " line " << line << " in function " << function <<": " << what << std::endl;
-		std::cerr << getTimeString() << " " << _prefix << "Error in file " << file << " line " << line << " in function " << function <<": " << what << std::endl;
+		error = _prefix + "Error in file " + file + " line " + std::to_string(line) + " in function " + function + ": " + what;
+		std::cout << getTimeString() << " " << error << std::endl;
+		std::cerr << getTimeString() << " " << error << std::endl;
 	}
 	else
 	{
-		std::cout << getTimeString() << " " << _prefix << "Unknown error in file " << file << " line " << line << " in function " << function << "." << std::endl;
-		std::cerr << getTimeString() << " " << _prefix << "Unknown error in file " << file << " line " << line << " in function " << function << "." << std::endl;
+		error = _prefix + "Unknown error in file " + file + " line " + std::to_string(line) + " in function " + function + ".";
+		std::cout << getTimeString() << " " << error << std::endl;
+		std::cerr << getTimeString() << " " << error << std::endl;
 	}
+	if(_errorCallback) _errorCallback(2, error);
 }
 
 void Output::printCritical(std::string errorString)
 {
 	if(_bl && _bl->debugLevel < 1) return;
-	std::cout << getTimeString() << " " << _prefix << errorString << std::endl;
-	std::cerr << getTimeString() << " " << _prefix << errorString << std::endl;
+	std::string error = _prefix + errorString;
+	std::cout << getTimeString() << " " << error << std::endl;
+	std::cerr << getTimeString() << " " << error << std::endl;
+	if(_errorCallback) _errorCallback(1, error);
 }
 
 void Output::printError(std::string errorString)
 {
 	if(_bl && _bl->debugLevel < 2) return;
-	std::cout << getTimeString() << " " << _prefix << errorString << std::endl;
-	std::cerr << getTimeString() << " " << _prefix << errorString << std::endl;
+	std::string error = _prefix + errorString;
+	std::cout << getTimeString() << " " << error << std::endl;
+	std::cerr << getTimeString() << " " << error << std::endl;
+	if(_errorCallback) _errorCallback(2, error);
 }
 
 void Output::printWarning(std::string errorString)
 {
 	if(_bl && _bl->debugLevel < 3) return;
-	std::cout << getTimeString() << " " << _prefix << errorString << std::endl;
-	std::cerr << getTimeString() << " " << _prefix << errorString << std::endl;
+	std::string error = _prefix + errorString;
+	std::cout << getTimeString() << " " << error << std::endl;
+	std::cerr << getTimeString() << " " << error << std::endl;
+	if(_errorCallback) _errorCallback(3, error);
 }
 
 void Output::printInfo(std::string message)

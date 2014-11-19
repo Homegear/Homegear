@@ -95,7 +95,6 @@ endif
 
 OBJECTS := \
 	$(OBJDIR)/main.o \
-	$(OBJDIR)/AESTest.o \
 	$(OBJDIR)/PhysicalInterfaces.o \
 	$(OBJDIR)/DatabaseController.o \
 	$(OBJDIR)/FamilyController.o \
@@ -164,9 +163,6 @@ endif
 endif
 
 $(OBJDIR)/main.o: main.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/AESTest.o: AESTest.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PhysicalInterfaces.o: Libraries/Systems/PhysicalInterfaces.cpp
