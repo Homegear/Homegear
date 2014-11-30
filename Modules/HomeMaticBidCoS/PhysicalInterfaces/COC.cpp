@@ -104,7 +104,7 @@ void COC::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 
 		std::string packetHex = packet->hexString();
 		if(_bl->debugLevel > 3) _out.printInfo("Info: Sending (" + _settings->id + "): " + packetHex);
-		writeToDevice(stackPrefix + "As" + packetHex + "\n" + stackPrefix + "Ar\n");
+		writeToDevice(stackPrefix + "As" + packetHex + "\n" + (_updateMode ? "" : stackPrefix + "Ar\n"));
 	}
 	catch(const std::exception& ex)
     {
