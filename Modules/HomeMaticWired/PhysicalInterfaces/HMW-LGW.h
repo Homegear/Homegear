@@ -96,6 +96,7 @@ class HMW_LGW  : public IHMWiredInterface
         int32_t _lastTimePacket = 0;
         int64_t _startUpTime = 0;
         int32_t _myAddress = 1;
+        std::vector<uint8_t> _packetBuffer;
         uint8_t _packetIndex = 0;
         bool _searchFinished = false;
         std::vector<int32_t> _searchResult;

@@ -607,11 +607,6 @@ void HMW_LGW::listen()
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
-			if(data.size() == 1 && data.at(0) == 0xFD)
-			{
-				//Happens sometimes. The rest of the packet comes with the next read.
-				continue;
-			}
 			if(data.empty()) continue;
 			if(data.size() > 1000000)
 			{
@@ -896,6 +891,7 @@ void HMW_LGW::processData(std::vector<uint8_t>& data)
 		}
 
 		std::vector<uint8_t> packet;
+		if(!_packetBuffer.empty()) packet = _packetBuffer;
 		bool escapeByte = false;
 		for(std::vector<uint8_t>::iterator i = decryptedData.begin(); i != decryptedData.end(); ++i)
 		{
@@ -917,7 +913,12 @@ void HMW_LGW::processData(std::vector<uint8_t>& data)
 			}
 			else packet.push_back(*i);
 		}
-		processPacket(packet);
+		if(packet.size() < 8) _packetBuffer = packet;
+		else
+		{
+			processPacket(packet);
+			_packetBuffer.clear();
+		}
 	}
     catch(const std::exception& ex)
     {
