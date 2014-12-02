@@ -323,6 +323,7 @@ void RPCServer::mainThread()
 				while(_clients.find(client->id) != _clients.end())
 				{
 					_out.printError("Error: Client id was used twice. This shouldn't happen. Please report this error to the developer.");
+					_currentClientID++;
 					client->id++;
 				}
 				_clients[client->id] = client;
