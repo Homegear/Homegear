@@ -119,11 +119,11 @@ void TICC1100::setConfig()
 			0xF8, //14: MDMCFG0
 			0x34, //15: DEVIATN
 			0x07, //16: MCSM2
-			0x00, //17: MCSM1: IDLE when packet has been received, RX after sending
+			0x30, //17: MCSM1: IDLE when packet has been received, RX after sending
 			0x18, //18: MCSM0
 			0x16, //19: FOCCFG
 			0x6C, //1A: BSCFG
-			0x43, //1B: AGCCTRL2
+			0x03, //1B: AGCCTRL2
 			0x40, //1C: AGCCTRL1
 			0x91, //1D: AGCCTRL0
 			0x87, //1E: WOREVT1
@@ -166,11 +166,11 @@ void TICC1100::setConfig()
 			0xE5, //14: MDMCFG0
 			0x34, //15: DEVIATN
 			0x07, //16: MCSM2
-			0x00, //17: MCSM1: IDLE when packet has been received, RX after sending
+			0x30, //17: MCSM1: IDLE when packet has been received, RX after sending
 			0x18, //18: MCSM0
 			0x16, //19: FOCCFG
 			0x6C, //1A: BSCFG
-			0x43, //1B: AGCCTRL2
+			0x03, //1B: AGCCTRL2
 			0x40, //1C: AGCCTRL1
 			0x91, //1D: AGCCTRL0
 			0x87, //1E: WOREVT1
