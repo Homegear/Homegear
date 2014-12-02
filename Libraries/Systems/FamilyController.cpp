@@ -382,7 +382,7 @@ void FamilyController::init()
 				GD::physicalInterfaces.clear(i->first);
 				familiesToRemove.push_back(i->first);
 				if(familyAvailable(i->first)) GD::out.printError("Error: Could not initialize device family " + i->second->getName() + ".");
-				else GD::out.printInfo("Info: Not initializing device family " + i->second->getName() + ", bacause no physical interface was found.");
+				else GD::out.printInfo("Info: Not initializing device family " + i->second->getName() + ", because no physical interface was found.");
 			}
 		}
 		for(std::vector<BaseLib::Systems::DeviceFamilies>::iterator i = familiesToRemove.begin(); i != familiesToRemove.end(); ++i)

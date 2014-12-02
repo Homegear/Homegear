@@ -311,7 +311,7 @@ void HM_CFG_LAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		}
 		if(bidCoSPacket->senderAddress() != _myAddress)
 		{
-			_out.printError("Error: Can't send packet, because sender address is not mine: " + bidCoSPacket->hexString());
+			_out.printError("Error: Can't send packet, because sender address (" + BaseLib::HelperFunctions::getHexString(bidCoSPacket->senderAddress(), 6) + ") is not mine (" + BaseLib::HelperFunctions::getHexString(_myAddress, 6) + "): " + bidCoSPacket->hexString());
 			return;
 		}
 
@@ -452,7 +452,6 @@ void HM_CFG_LAN::reconnect()
 		_socket->open();
 		_out.printInfo("Connected to HM-CFG-LAN device with hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
-		IPhysicalInterface::stopListening();
 	}
     catch(const std::exception& ex)
     {
@@ -482,6 +481,7 @@ void HM_CFG_LAN::stopListening()
 		if(_useAES) aesCleanup();
 		_stopped = true;
 		_sendMutex.unlock(); //In case it is deadlocked - shouldn't happen of course
+		IPhysicalInterface::stopListening();
 	}
 	catch(const std::exception& ex)
     {

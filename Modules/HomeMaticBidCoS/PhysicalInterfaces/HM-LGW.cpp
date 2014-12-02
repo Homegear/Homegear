@@ -195,6 +195,30 @@ void HM_LGW::enableUpdateMode()
 		{
 			std::vector<uint8_t> responsePacket;
 			std::vector<char> requestPacket;
+			std::vector<char> payload{ 0, 6 };
+			buildPacket(requestPacket, payload);
+			_packetIndex++;
+			getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
+			if(responsePacket.size() >= 9  && responsePacket.at(6) == 1)
+			{
+				break;
+			}
+			else if(responsePacket.size() == 9 && responsePacket.at(6) == 8)
+			{
+				//Operation pending
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+				continue;
+			}
+			if(j == 2)
+			{
+				_out.printError("Error: Could not enable update mode.");
+				return;
+			}
+		}
+		for(int32_t j = 0; j < 40; j++)
+		{
+			std::vector<uint8_t> responsePacket;
+			std::vector<char> requestPacket;
 			std::vector<char> payload{ 0, 7 };
 			payload.push_back(0xE9);
 			payload.push_back(0xCA);
