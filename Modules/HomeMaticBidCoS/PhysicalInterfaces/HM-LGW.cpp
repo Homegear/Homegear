@@ -259,7 +259,7 @@ void HM_LGW::disableUpdateMode()
 			}
 			if(j == 2)
 			{
-				_out.printError("Error: Could not enable update mode.");
+				_out.printError("Error: Could not disable update mode (2).");
 				return;
 			}
 		}
@@ -1434,11 +1434,26 @@ void HM_LGW::doInit()
 			}
 		}
 
+		//Disable update mode
+		if(_stopped) return;
+		responsePacket.clear();
+		requestPacket.clear();
+		payload.clear();
+		payload.push_back(0);
+		payload.push_back(6);
+		buildPacket(requestPacket, payload);
+		_packetIndex++;
+		getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
+		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+		{
+			if(responsePacket.size() >= 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			_stopped = true;
+			return;
+		}
+
+		if(_stopped) return;
 		_out.printInfo("Info: Init queue completed. Sending peers...");
-		if(_stopped) return;
 		sendPeers();
-		if(_stopped) return;
-		disableUpdateMode();
 		return;
 	}
     catch(const std::exception& ex)

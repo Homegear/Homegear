@@ -42,6 +42,7 @@ RPCServer::Client::Client()
 RPCServer::Client::~Client()
 {
 	GD::bl->fileDescriptorManager.shutdown(socketDescriptor);
+	if(readThread.joinable()) readThread.detach();
 }
 
 RPCServer::RPCServer()

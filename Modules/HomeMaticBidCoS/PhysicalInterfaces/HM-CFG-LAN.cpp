@@ -894,7 +894,7 @@ bool HM_CFG_LAN::aesKeyExchange(std::vector<uint8_t>& data)
 		else if(_remoteIV.empty())
 		{
 			_stopCallbackThread = true;
-			_out.printError("Error: Error communicating with HM-CFG-LAN. AES is enabled but no IV was send from HM-CFG-LAN.");
+			_out.printError("Error: Error communicating with HM-CFG-LAN. AES is enabled but no IV was send from HM-CFG-LAN. Please use the HomeMatic LAN Interface Configurator to re-enable AES.");
 			return false;
 		}
 	}

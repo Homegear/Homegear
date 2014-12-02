@@ -650,7 +650,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetAllMetadata::invoke(std::shared_pt
 		if(!peerName.empty())
 		{
 			if(metadata->structValue->find("NAME") != metadata->structValue->end()) metadata->structValue->at("NAME")->stringValue = peerName;
-			else metadata->structValue->insert(BaseLib::RPC::RPCStructElement("NAME", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(peerName))));
+			else
+			{
+				if(metadata->errorStruct) metadata.reset(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct)); //Remove error struct
+				metadata->structValue->insert(BaseLib::RPC::RPCStructElement("NAME", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(peerName))));
+			}
 		}
 		return metadata;
 	}
