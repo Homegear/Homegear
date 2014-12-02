@@ -320,6 +320,11 @@ void RPCServer::mainThread()
 				std::shared_ptr<Client> client(new Client());
 				client->id = _currentClientID++;
 				client->socketDescriptor = clientFileDescriptor;
+				while(_clients.find(client->id) != _clients.end())
+				{
+					_out.printError("Error: Client id was used twice. This shouldn't happen. Please report this error to the developer.");
+					client->id++;
+				}
 				_clients[client->id] = client;
 				_stateMutex.unlock();
 
