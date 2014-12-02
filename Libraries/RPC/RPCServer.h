@@ -94,7 +94,7 @@ namespace RPC
 		protected:
 		private:
 			BaseLib::Output _out;
-			int32_t _currentClientID = 0;
+			volatile int32_t _currentClientID = 0;
 			std::shared_ptr<ServerSettings::Settings> _settings;
 			gnutls_certificate_credentials_t _x509Cred = nullptr;
 			gnutls_priority_t _tlsPriorityCache = nullptr;
