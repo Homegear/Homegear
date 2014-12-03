@@ -705,7 +705,6 @@ void InsteonHubX10::reconnect()
 		_stopped = false;
 		_initThread = std::thread(&InsteonHubX10::doInit, this);
 		if(_settings->listenThreadPriority > -1) BaseLib::Threads::setThreadPriority(_bl, _initThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
-		IPhysicalInterface::stopListening();
 	}
     catch(const std::exception& ex)
     {
@@ -734,6 +733,7 @@ void InsteonHubX10::stopListening()
 		_sendMutex.unlock(); //In case it is deadlocked - shouldn't happen of course
 		_initStarted = false;
 		_initComplete = false;
+		IPhysicalInterface::stopListening();
 	}
 	catch(const std::exception& ex)
     {
