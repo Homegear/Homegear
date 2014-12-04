@@ -262,7 +262,7 @@ void HM_LGW::disableUpdateMode()
 	try
 	{
 		if(!_initComplete || _stopped) return;
-		for(int32_t j = 0; j < 40; j++)
+		/*for(int32_t j = 0; j < 40; j++)
 		{
 			std::vector<uint8_t> responsePacket;
 			std::vector<char> requestPacket;
@@ -286,6 +286,13 @@ void HM_LGW::disableUpdateMode()
 				_out.printError("Error: Could not disable update mode (2).");
 				return;
 			}
+		}*/
+		//Reconnect
+		_stopped = true;
+		for(int32_t i = 0; i < 120; i++)
+		{
+			if(!_stopped) break;
+			std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		}
 		_updateMode = false;
 	}

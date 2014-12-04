@@ -664,7 +664,7 @@ std::shared_ptr<Variable> Parameter::convertFromPacket(std::vector<uint8_t>& dat
 			}
 			if(!variable)
 			{
-				_bl->out.printError("Error converting value: Variable is nullptr.");
+				_bl->out.printError("Error converting value: Variable " + id + " is nullptr.");
 				variable.reset(new Variable(VariableType::rpcInteger));
 			}
 			return variable;
