@@ -291,7 +291,7 @@ void HM_LGW::disableUpdateMode()
 		_stopped = true;
 		for(int32_t i = 0; i < 120; i++)
 		{
-			if(!_stopped) break;
+			if(!_stopped && _initComplete) break;
 			std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		}
 		_updateMode = false;
