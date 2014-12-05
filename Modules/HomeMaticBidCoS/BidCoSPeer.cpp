@@ -2026,6 +2026,44 @@ void BidCoSPeer::handleDominoEvent(std::shared_ptr<BaseLib::RPC::Parameter> para
     }
 }
 
+void BidCoSPeer::checkForBestInterface(std::string interfaceID, int32_t rssi)
+{
+	try
+	{
+		if(interfaceID == _physicalInterfaceID) return;
+		if(configCentral.find(0) == configCentral.end() || configCentral.at(0).find("ROAMING") == configCentral.at(0).end() || configCentral.at(0).at("ROAMING").data.size() == 0 || configCentral.at(0).at("ROAMING").data.at(0) == 0) return;
+
+		if(!interfaceID.empty() && GD::physicalInterfaces.find(interfaceID) == GD::physicalInterfaces.end()) return;
+		std::shared_ptr<IBidCoSInterface> interface(GD::physicalInterfaces.at(interfaceID));
+		if(std::get<0>(_bestInterface) < GD::bl->hf.getTime() - 200 || std::get<1>(_bestInterface) > rssi + 10) //RSSI is positive
+		{
+			if(aesEnabled())
+			{
+				if(!interface->aesSupported() || _aesKeyIndex != (signed)_physicalInterface->currentRFKeyIndex() || interface->rfKey() != _physicalInterface->rfKey() || interface->currentRFKeyIndex() != _physicalInterface->currentRFKeyIndex())
+				{
+					if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Not setting interface of peer " + std::to_string(_peerID) + " to " + interfaceID + ", because of conflicting AES settings.");
+					return;
+				}
+			}
+			GD::bl->out.printInfo("Info: Changing interface of peer " + std::to_string(_peerID) + " to " + interfaceID + ", because the reception is better.");
+			_bestInterface = std::tuple<int64_t, int32_t, std::string>(GD::bl->hf.getTime(), rssi, interfaceID);
+			setPhysicalInterfaceID(interfaceID);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void BidCoSPeer::setRSSIDevice(uint8_t rssi)
 {
 	try

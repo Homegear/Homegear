@@ -45,6 +45,7 @@
 #include <queue>
 #include <mutex>
 #include <list>
+#include <tuple>
 
 namespace BidCoS
 {
@@ -223,6 +224,13 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         virtual std::shared_ptr<BaseLib::RPC::Variable> setInterface(std::string interfaceID);
 
         /**
+         * Checks if the interface with ID interfaceID has better reception than the current interface. If that is the case and the configuration parameter "ROAMING" is "true" for the peer, the interface will be changed.
+         * @param interfaceID The id of the interface to check
+         * @param rssi The receive strength signal indicator of the interface
+         */
+        virtual void checkForBestInterface(std::string interfaceID, int32_t rssi);
+
+        /**
          * {@inheritDoc}
          */
         virtual std::shared_ptr<BaseLib::RPC::Variable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value);
@@ -245,6 +253,13 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		std::string _physicalInterfaceID;
 		bool _valuePending = false;
 		//End
+
+		/**
+		 * Stores information about the current best interface based on the RSSI.
+		 * The first element it the time stamp of the information, the second the RSSI and the third the ID of the interface.
+		 */
+		std::tuple<int64_t, int32_t, std::string> _bestInterface;
+
 
 		/**
 		 * The timestamp of the last ping (successful and unsuccessful) is stored in this variable.

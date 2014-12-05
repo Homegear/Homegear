@@ -229,10 +229,11 @@ bool HomeMaticCentral::onPacketReceived(std::string& senderID, std::shared_ptr<B
 			}
 			return false;
 		}
+		std::shared_ptr<BidCoSPeer> peer(getPeer(bidCoSPacket->senderAddress()));
+		if(peer) peer->checkForBestInterface(senderID, bidCoSPacket->rssiDevice());
 		std::shared_ptr<IBidCoSInterface> physicalInterface = getPhysicalInterface(bidCoSPacket->senderAddress());
 		if(physicalInterface->getID() != senderID) return true;
 		bool handled = HomeMaticDevice::onPacketReceived(senderID, bidCoSPacket);
-		std::shared_ptr<BidCoSPeer> peer(getPeer(bidCoSPacket->senderAddress()));
 		if(!peer) return false;
 		std::shared_ptr<BidCoSPeer> team;
 		if(peer->hasTeam() && bidCoSPacket->senderAddress() == peer->getTeamRemoteAddress()) team = getPeer(peer->getTeamRemoteSerialNumber());
