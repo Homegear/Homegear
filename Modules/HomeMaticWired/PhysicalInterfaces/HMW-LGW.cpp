@@ -314,6 +314,7 @@ void HMW_LGW::startListening()
 	try
 	{
 		stopListening();
+		_searchFinished = true;
 		aesInit();
 		_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->port, _settings->ssl, _settings->caFile, _settings->verifyCertificate));
 		_socket->setReadTimeout(1000000);
@@ -347,6 +348,7 @@ void HMW_LGW::reconnect()
 		_requests.clear();
 		_requestsMutex.unlock();
 		_initComplete = false;
+		_searchFinished = true;
 		_out.printDebug("Connecting to HMW-LGW with hostname " + _settings->host + " on port " + _settings->port + "...");
 		_socket->open();
 		_out.printInfo("Connected to HMW-LGW with hostname " + _settings->host + " on port " + _settings->port + ".");
@@ -515,9 +517,15 @@ void HMW_LGW::sendKeepAlivePacket()
 {
 	try
     {
-		if(!_initComplete) return;
+		if(!_initComplete) return; //Don't send keep alive during search
 		if(BaseLib::HelperFunctions::getTimeSeconds() - _lastKeepAlive >= 20)
 		{
+			if(!_searchFinished)
+			{
+				_lastKeepAlive = BaseLib::HelperFunctions::getTimeSeconds();
+				_lastKeepAliveResponse = _lastKeepAlive;
+				return;
+			}
 			if(_lastKeepAliveResponse < _lastKeepAlive)
 			{
 				_lastKeepAliveResponse = _lastKeepAlive;
@@ -913,7 +921,8 @@ void HMW_LGW::processData(std::vector<uint8_t>& data)
 			}
 			else packet.push_back(*i);
 		}
-		if(packet.size() < 8) _packetBuffer = packet;
+
+		if(packet.size() < 5) _packetBuffer = packet;
 		else
 		{
 			processPacket(packet);
