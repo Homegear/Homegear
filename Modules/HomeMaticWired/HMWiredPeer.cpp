@@ -1175,7 +1175,6 @@ bool HMWiredPeer::ping(int32_t packetCount, bool waitForResponse)
 				for(std::map<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 				{
 					if(j->second->associatedValues.empty()) continue;
-					//GD::out.printError("Moin 1: " + std::to_string(i->first));
 					std::shared_ptr<BaseLib::RPC::Variable> result = getValueFromDevice(j->second->associatedValues.at(0), i->first, !waitForResponse);
 					if(!result || result->errorStruct || result->type == BaseLib::RPC::VariableType::rpcVoid) return false;
 				}

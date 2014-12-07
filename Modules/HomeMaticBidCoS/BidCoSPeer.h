@@ -258,7 +258,13 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		 * Stores information about the current best interface based on the RSSI.
 		 * The first element it the time stamp of the information, the second the RSSI and the third the ID of the interface.
 		 */
-		std::tuple<int64_t, int32_t, std::string> _bestInterface;
+		std::tuple<int64_t, int32_t, std::string> _bestInterfaceLast;
+
+		/**
+		 * Stores information about the current best interface based on the RSSI.
+		 * The first element it the time stamp of the information, the second the RSSI and the third the ID of the interface.
+		 */
+		std::tuple<int64_t, int32_t, std::string> _bestInterfaceCurrent;
 
 
 		/**

@@ -279,7 +279,7 @@ void BidCoSPeer::setPhysicalInterfaceID(std::string id)
 		if(peerInfoPacketsEnabled && _physicalInterface->needsPeers()) _physicalInterface->removePeer(_address);
 		setPhysicalInterface(id.empty() ? GD::defaultPhysicalInterface : GD::physicalInterfaces.at(_physicalInterfaceID));
 		std::shared_ptr<HomeMaticDevice> virtualDevice = getHiddenPeerDevice();
-		if(virtualDevice) virtualDevice->setPhysicalInterfaceID(id);
+		if(virtualDevice && virtualDevice->getDeviceType() != (uint32_t)DeviceType::HMCENTRAL) virtualDevice->setPhysicalInterfaceID(id);
 		saveVariable(19, _physicalInterfaceID);
 		if(peerInfoPacketsEnabled && _physicalInterface->needsPeers()) _physicalInterface->addPeer(getPeerInfo());
 	}
@@ -704,7 +704,6 @@ bool BidCoSPeer::ping(int32_t packetCount, bool waitForResponse)
 				for(std::map<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 				{
 					if(j->second->associatedValues.empty()) continue;
-					//GD::out.printError("Moin 1: " + std::to_string(i->first));
 					std::shared_ptr<BaseLib::RPC::Variable> result = getValueFromDevice(j->second->associatedValues.at(0), i->first, !waitForResponse);
 					if(!result || result->errorStruct || result->type == BaseLib::RPC::VariableType::rpcVoid) return false;
 				}
@@ -2030,24 +2029,31 @@ void BidCoSPeer::checkForBestInterface(std::string interfaceID, int32_t rssi)
 {
 	try
 	{
-		if(interfaceID == _physicalInterfaceID) return;
-		if(configCentral.find(0) == configCentral.end() || configCentral.at(0).find("ROAMING") == configCentral.at(0).end() || configCentral.at(0).at("ROAMING").data.size() == 0 || configCentral.at(0).at("ROAMING").data.at(0) == 0) return;
+		//if(configCentral.find(0) == configCentral.end() || configCentral.at(0).find("ROAMING") == configCentral.at(0).end() || configCentral.at(0).at("ROAMING").data.size() == 0 || configCentral.at(0).at("ROAMING").data.at(0) == 0) return;
+		if(interfaceID.empty() || GD::physicalInterfaces.find(interfaceID) == GD::physicalInterfaces.end()) return;
 
-		if(!interfaceID.empty() && GD::physicalInterfaces.find(interfaceID) == GD::physicalInterfaces.end()) return;
-		std::shared_ptr<IBidCoSInterface> interface(GD::physicalInterfaces.at(interfaceID));
-		if(std::get<0>(_bestInterface) < GD::bl->hf.getTime() - 200 || std::get<1>(_bestInterface) > rssi + 10) //RSSI is positive
+		if(std::get<0>(_bestInterfaceCurrent) < GD::bl->hf.getTime() - 100 && !std::get<2>(_bestInterfaceCurrent).empty()) //Assume that all packets arrive within 100 ms.
+		{
+			_bestInterfaceLast = _bestInterfaceCurrent;
+			_bestInterfaceCurrent = std::tuple<int64_t, int32_t, std::string>(GD::bl->hf.getTime(), 0, "");
+			if(std::get<2>(_bestInterfaceLast) != _physicalInterfaceID)
+			{
+				GD::bl->out.printInfo("Info: Changing interface of peer " + std::to_string(_peerID) + " to " + std::get<2>(_bestInterfaceLast) + ", because the reception is better.");
+				setPhysicalInterfaceID(std::get<2>(_bestInterfaceLast));
+			}
+		}
+		if(std::get<2>(_bestInterfaceCurrent).empty() || std::get<1>(_bestInterfaceCurrent) == 0 || std::get<1>(_bestInterfaceCurrent) > rssi)
 		{
 			if(aesEnabled())
 			{
+				std::shared_ptr<IBidCoSInterface> interface(GD::physicalInterfaces.at(interfaceID));
 				if(!interface->aesSupported() || _aesKeyIndex != (signed)_physicalInterface->currentRFKeyIndex() || interface->rfKey() != _physicalInterface->rfKey() || interface->currentRFKeyIndex() != _physicalInterface->currentRFKeyIndex())
 				{
 					if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Not setting interface of peer " + std::to_string(_peerID) + " to " + interfaceID + ", because of conflicting AES settings.");
 					return;
 				}
 			}
-			GD::bl->out.printInfo("Info: Changing interface of peer " + std::to_string(_peerID) + " to " + interfaceID + ", because the reception is better.");
-			_bestInterface = std::tuple<int64_t, int32_t, std::string>(GD::bl->hf.getTime(), rssi, interfaceID);
-			setPhysicalInterfaceID(interfaceID);
+			_bestInterfaceCurrent = std::tuple<int64_t, int32_t, std::string>(GD::bl->hf.getTime(), rssi, interfaceID);
 		}
 	}
 	catch(const std::exception& ex)
