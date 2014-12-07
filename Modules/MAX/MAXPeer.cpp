@@ -1113,6 +1113,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::putParamset(int32_t channel, Ba
 					if(i->second.find((int32_t)(*j)->physicalParameter->index) != i->second.end()) continue;
 					if(configCentral[channel].find((*j)->id) == configCentral[channel].end()) continue;
 					RPCConfigurationParameter* parameter = &configCentral[channel][(*j)->id];
+					if(parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::configString) continue;
 					configPacket->setPosition((*j)->physicalParameter->index - (std::lround(std::ceil(((*j)->physicalParameter->size))) - 1), (*j)->physicalParameter->size, parameter->data);
 				}
 
