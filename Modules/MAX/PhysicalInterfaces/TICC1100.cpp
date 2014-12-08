@@ -371,7 +371,7 @@ void TICC1100::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		_lastPacketSent = BaseLib::HelperFunctions::getTime();
 		if(_lastPacketSent - timeBeforeLock > 100)
 		{
-			_out.printWarning("Warning: Timing problem. Sending took more than 100ms. Do you have enough system resources?");
+			_out.printWarning("Warning: You're sending too many packets at once. Sending MAX! packets takes a looong time!");
 		}
 		if(maxPacket->getBurst())
 		{
