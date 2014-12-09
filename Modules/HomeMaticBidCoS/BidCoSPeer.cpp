@@ -2029,7 +2029,7 @@ void BidCoSPeer::checkForBestInterface(std::string interfaceID, int32_t rssi)
 {
 	try
 	{
-		//if(configCentral.find(0) == configCentral.end() || configCentral.at(0).find("ROAMING") == configCentral.at(0).end() || configCentral.at(0).at("ROAMING").data.size() == 0 || configCentral.at(0).at("ROAMING").data.at(0) == 0) return;
+		if(configCentral.find(0) == configCentral.end() || configCentral.at(0).find("ROAMING") == configCentral.at(0).end() || configCentral.at(0).at("ROAMING").data.size() == 0 || configCentral.at(0).at("ROAMING").data.at(0) == 0) return;
 		if(interfaceID.empty() || GD::physicalInterfaces.find(interfaceID) == GD::physicalInterfaces.end()) return;
 
 		if(std::get<0>(_bestInterfaceCurrent) < GD::bl->hf.getTime() - 100 && !std::get<2>(_bestInterfaceCurrent).empty()) //Assume that all packets arrive within 100 ms.
