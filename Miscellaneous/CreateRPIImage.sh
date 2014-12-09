@@ -215,9 +215,11 @@ openssl x509 -req -in /etc/homegear/homegear.csr -signkey /etc/homegear/homegear
 rm /etc/homegear/homegear.csr
 chown homegear:homegear /etc/homegear/homegear.key
 chmod 400 /etc/homegear/homegear.key
-openssl dhparam -check -text -5 1024 -out /etc/homegear/dh1024.pem
-chown homegear:homegear /etc/homegear/dh1024.pem
-chmod 400 /etc/homegear/dh1024.pem
+if test ! -e /etc/homegear/dh1024.pem; then		
+	openssl dhparam -check -text -5 1024 -out /etc/homegear/dh1024.pem
+	chown homegear:homegear /etc/homegear/dh1024.pem
+	chmod 400 /etc/homegear/dh1024.pem			
+fi
 echo \"Starting raspi-config...\"
 raspi-config
 rm /scripts/firstStart.sh
