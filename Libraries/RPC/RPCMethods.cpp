@@ -3098,13 +3098,15 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCUpdateFirmware::invoke(std::shared_pt
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::VariableType>>({
 				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcInteger }),
 				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcBoolean }),
+				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString }),
+				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcBoolean }),
 				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcArray })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		bool manual = false;
 		bool array = true;
-		if(parameters->at(0)->type == BaseLib::RPC::VariableType::rpcInteger)
+		if(parameters->at(0)->type == BaseLib::RPC::VariableType::rpcInteger || parameters->at(0)->type == BaseLib::RPC::VariableType::rpcString)
 		{
 			array = false;
 			if(parameters->size() == 2 && parameters->at(1)->booleanValue) manual = true;
@@ -3114,20 +3116,27 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCUpdateFirmware::invoke(std::shared_pt
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
+			GD::out.printInfo("Moin1");
 			if(array)
 			{
 				std::vector<uint64_t> ids;
+				GD::out.printInfo("Moin2");
 				for(std::vector<std::shared_ptr<BaseLib::RPC::Variable>>::iterator i = parameters->at(0)->arrayValue->begin(); i != parameters->at(0)->arrayValue->end(); ++i)
 				{
-					if((*i)->integerValue != 0 && central->knowsDevice((*i)->integerValue)) ids.push_back((*i)->integerValue);
+					GD::out.printInfo("Moin3 " + std::to_string((*i)->integerValue));
+					if((*i)->type == BaseLib::RPC::VariableType::rpcInteger && (*i)->integerValue != 0 && central->knowsDevice((*i)->integerValue)) ids.push_back((*i)->integerValue);
+					else if((*i)->type == BaseLib::RPC::VariableType::rpcString && central->knowsDevice((*i)->stringValue)) ids.push_back(central->getPeerID((*i)->stringValue)->integerValue);
 				}
+				GD::out.printInfo("Moin4 " + std::to_string(ids.size()));
 				if(ids.size() > 0 && ids.size() != parameters->at(0)->arrayValue->size()) return BaseLib::RPC::Variable::createError(-2, "Please provide only devices of one device family.");
 				if(ids.size() > 0) return central->updateFirmware(ids, manual);
 			}
-			else if(central->knowsDevice(parameters->at(0)->integerValue))
+			else if((parameters->at(0)->type == BaseLib::RPC::VariableType::rpcInteger && central->knowsDevice(parameters->at(0)->integerValue)) ||
+					(parameters->at(0)->type == BaseLib::RPC::VariableType::rpcString && central->knowsDevice(parameters->at(0)->stringValue)))
 			{
 				std::vector<uint64_t> ids;
-				ids.push_back(parameters->at(0)->integerValue);
+				if(parameters->at(0)->type == BaseLib::RPC::VariableType::rpcString) ids.push_back(central->getPeerID(parameters->at(0)->stringValue)->integerValue);
+				else ids.push_back(parameters->at(0)->integerValue);
 				return central->updateFirmware(ids, manual);
 			}
 		}

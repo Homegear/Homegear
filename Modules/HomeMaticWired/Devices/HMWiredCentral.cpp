@@ -1776,7 +1776,7 @@ std::shared_ptr<BaseLib::RPC::Variable> HMWiredCentral::updateFirmware(std::vect
 		if(_updateFirmwareThread.joinable()) _updateFirmwareThread.join();
 		_updateFirmwareThread = std::thread(&HMWiredCentral::updateFirmwares, this, ids);
 		_updateFirmwareThreadMutex.unlock();
-		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(true));
 	}
 	catch(const std::exception& ex)
     {

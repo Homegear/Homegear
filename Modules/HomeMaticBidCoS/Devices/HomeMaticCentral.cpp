@@ -4093,7 +4093,7 @@ std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::updateFirmware(std::ve
 		if(_updateFirmwareThread.joinable()) _updateFirmwareThread.join();
 		_updateFirmwareThread = std::thread(&HomeMaticCentral::updateFirmwares, this, ids, manual);
 		_updateFirmwareThreadMutex.unlock();
-		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(true));
 	}
 	catch(const std::exception& ex)
     {
