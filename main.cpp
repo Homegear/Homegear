@@ -594,11 +594,11 @@ int main(int argc, char* argv[])
 
         startRPCServers();
 
-        if(_startAsDaemon)
-        {
+        //if(_startAsDaemon)
+        //{
         	GD::out.printInfo("Starting CLI server...");
         	GD::cliServer.start();
-        }
+        //}
 
         GD::out.printInfo("Initializing event handler...");
         GD::eventHandler.init();
