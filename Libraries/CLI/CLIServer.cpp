@@ -103,7 +103,7 @@ void Server::mainThread()
 			try
 			{
 				getFileDescriptor();
-				if(_serverFileDescriptor->descriptor == -1)
+				if(!_serverFileDescriptor || _serverFileDescriptor->descriptor == -1)
 				{
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					continue;
@@ -246,13 +246,15 @@ void Server::getFileDescriptor(bool deleteOldSocket)
 		struct stat sb;
 		if(stat(GD::runDir.c_str(), &sb) == -1)
 		{
-			if(errno == ENOENT) GD::out.printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear.");
+			if(errno == ENOENT) GD::out.printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear otherwise the command line interface won't work.");
 			else throw BaseLib::Exception("Error reading information of directory " + GD::runDir + ": " + strerror(errno));
+			_stopServer = true;
 			return;
 		}
 		if(!S_ISDIR(sb.st_mode))
 		{
-			GD::out.printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear.");
+			GD::out.printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear otherwise the command line interface won't work.");
+			_stopServer = true;
 			return;
 		}
 		if(deleteOldSocket)
