@@ -3116,18 +3116,14 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCUpdateFirmware::invoke(std::shared_pt
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
-			GD::out.printInfo("Moin1");
 			if(array)
 			{
 				std::vector<uint64_t> ids;
-				GD::out.printInfo("Moin2");
 				for(std::vector<std::shared_ptr<BaseLib::RPC::Variable>>::iterator i = parameters->at(0)->arrayValue->begin(); i != parameters->at(0)->arrayValue->end(); ++i)
 				{
-					GD::out.printInfo("Moin3 " + std::to_string((*i)->integerValue));
 					if((*i)->type == BaseLib::RPC::VariableType::rpcInteger && (*i)->integerValue != 0 && central->knowsDevice((*i)->integerValue)) ids.push_back((*i)->integerValue);
 					else if((*i)->type == BaseLib::RPC::VariableType::rpcString && central->knowsDevice((*i)->stringValue)) ids.push_back(central->getPeerID((*i)->stringValue)->integerValue);
 				}
-				GD::out.printInfo("Moin4 " + std::to_string(ids.size()));
 				if(ids.size() > 0 && ids.size() != parameters->at(0)->arrayValue->size()) return BaseLib::RPC::Variable::createError(-2, "Please provide only devices of one device family.");
 				if(ids.size() > 0) return central->updateFirmware(ids, manual);
 			}
