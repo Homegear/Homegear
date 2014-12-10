@@ -114,7 +114,9 @@ OBJECTS := \
 	$(OBJDIR)/RTLSDR-LAN.o \
 	$(OBJDIR)/TICC1100.o \
 	$(OBJDIR)/HM-CFG-LAN.o \
+	$(OBJDIR)/TICC1101.o \
 	$(OBJDIR)/CUL.o \
+	$(OBJDIR)/CUNO.o \
 	$(OBJDIR)/HM-LGW.o \
 	$(OBJDIR)/COC.o \
 	$(OBJDIR)/IBidCoSInterface.o \
@@ -242,7 +244,13 @@ $(OBJDIR)/TICC1100.o: Modules/HomeMaticBidCoS/PhysicalInterfaces/TICC1100.cpp
 $(OBJDIR)/HM-CFG-LAN.o: Modules/HomeMaticBidCoS/PhysicalInterfaces/HM-CFG-LAN.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/TICC1101.o: Modules/HomeMaticBidCoS/PhysicalInterfaces/TICC1101.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/CUL.o: Modules/HomeMaticBidCoS/PhysicalInterfaces/CUL.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/CUNO.o: Modules/HomeMaticBidCoS/PhysicalInterfaces/CUNO.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HM-LGW.o: Modules/HomeMaticBidCoS/PhysicalInterfaces/HM-LGW.cpp

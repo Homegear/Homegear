@@ -293,7 +293,6 @@ void HM_CFG_LAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			_out.printWarning("Warning: Packet was nullptr.");
 			return;
 		}
-		_lastAction = BaseLib::HelperFunctions::getTime();
 
 		std::shared_ptr<BidCoSPacket> bidCoSPacket(std::dynamic_pointer_cast<BidCoSPacket>(packet));
 		if(!bidCoSPacket) return;

@@ -31,7 +31,9 @@
 #include "PhysicalInterfaces/IBidCoSInterface.h"
 #include "PhysicalInterfaces/COC.h"
 #include "PhysicalInterfaces/CUL.h"
+#include "PhysicalInterfaces/CUNO.h"
 #include "PhysicalInterfaces/TICC1100.h"
+#include "PhysicalInterfaces/TICC1101.h"
 #include "PhysicalInterfaces/HM-CFG-LAN.h"
 #include "PhysicalInterfaces/HM-LGW.h"
 #include "PhysicalInterfaces/RTLSDR-LAN.h"
@@ -119,7 +121,9 @@ std::shared_ptr<BaseLib::Systems::IPhysicalInterface> BidCoS::createPhysicalDevi
 		if(!settings) return device;
 		if(settings->type == "cul") device.reset(new CUL(settings));
 		else if(settings->type == "coc") device.reset(new COC(settings));
+		else if(settings->type == "cuno") device.reset(new CUNO(settings));
 		else if(settings->type == "cc1100") device.reset(new TICC1100(settings));
+		else if(settings->type == "devtest") device.reset(new TICC1101(settings));
 		else if(settings->type == "hmcfglan") device.reset(new HM_CFG_LAN(settings));
 		else if(settings->type == "hmlgw") device.reset(new HM_LGW(settings));
 		else if(settings->type == "rtlsdrlan") device.reset(new RTLSDR_LAN(settings));

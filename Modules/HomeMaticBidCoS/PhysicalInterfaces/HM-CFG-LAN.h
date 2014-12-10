@@ -61,7 +61,6 @@ class HM_CFG_LAN  : public IBidCoSInterface
         void startListening();
         void stopListening();
         void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
-        int64_t lastAction() { return _lastAction; }
         virtual bool isOpen() { return _initComplete && _socket->connected(); }
         virtual bool aesSupported() { return true; }
         virtual bool autoResend() { return true; }
@@ -78,7 +77,6 @@ class HM_CFG_LAN  : public IBidCoSInterface
     protected:
         std::mutex _peersMutex;
         std::map<int32_t, PeerInfo> _peers;
-        int64_t _lastAction = 0;
         std::string _hostname;
         std::string _port;
         std::unique_ptr<BaseLib::SocketOperations> _socket;
