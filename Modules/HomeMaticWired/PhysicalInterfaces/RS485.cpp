@@ -447,8 +447,8 @@ std::vector<uint8_t> RS485::readFromDevice()
 			if(!_sending) _sendMutex.try_lock(); //Don't change to "lock", because it is called for each received byte!
 			else if(!_settings->oneWay)
 			{
-				_receivingSending = true;
 				_sendingMutex.try_lock();
+				_receivingSending = true;
 			}
 			i = read(_fileDescriptor->descriptor, &localBuffer.at(0), 1);
 			if(i == -1)
@@ -570,10 +570,17 @@ void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 			}
 			bytesWritten += i;
 		}
-		fsync(_fileDescriptor->descriptor);
-		if(!_settings->oneWay)
+		if(_settings->oneWay)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+			fsync(_fileDescriptor->descriptor);
+		}
+		else
+		{
+			for(int32_t i = 0; i < 50; i++)
+			{
+				if(_receivingSending || !_receivedSentPacket.empty()) break;
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
 			if(!_sendingMutex.try_lock_for(std::chrono::milliseconds(200)) && GD::bl->debugLevel >= 5)
 			{
 				_out.printDebug("Debug: Could not get sendMutex lock.");

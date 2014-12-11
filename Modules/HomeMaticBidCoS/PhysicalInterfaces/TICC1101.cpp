@@ -105,7 +105,7 @@ void TICC1101::setConfig()
 			(_settings->interruptPin == 2) ? (uint8_t)0x40 : (uint8_t)0x5B, //00: IOCFG2 (GDO2_CFG)
 			0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
 			(_settings->interruptPin == 0) ? (uint8_t)0x46 : (uint8_t)0x5B, //02: IOCFG0 (GDO0_CFG)
-			0x00, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
+			0x0F, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
 			0xCC, //04: SYNC1
 			0xC3, //05: SYNC0
 			0x54, //06: PKTLEN (Maximum packet length)
