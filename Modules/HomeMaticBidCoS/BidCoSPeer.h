@@ -325,6 +325,12 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		virtual void setDefaultValue(BaseLib::Systems::RPCConfigurationParameter* parameter);
 
 		void getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::vector<FrameValues>& frameValue);
+
+		/**
+		 * Returns if the peer needs to be woken up on next reception of a wake me up packet.
+		 * @return True if wake up is required otherwise false.
+		 */
+		bool needsWakeup();
 };
 }
 #endif

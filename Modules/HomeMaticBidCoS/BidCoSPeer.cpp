@@ -1674,6 +1674,28 @@ std::string BidCoSPeer::printConfig()
     return "";
 }
 
+bool BidCoSPeer::needsWakeup()
+{
+	try
+	{
+		BaseLib::RPC::Device::RXModes::Enum rxModes = getRXModes();
+		return (serviceMessages->getConfigPending() || _valuePending) && ((rxModes & BaseLib::RPC::Device::RXModes::Enum::wakeUp) || (rxModes & BaseLib::RPC::Device::RXModes::Enum::lazyConfig));
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
 IBidCoSInterface::PeerInfo BidCoSPeer::getPeerInfo()
 {
 	try
@@ -1681,11 +1703,7 @@ IBidCoSInterface::PeerInfo BidCoSPeer::getPeerInfo()
 		IBidCoSInterface::PeerInfo peerInfo;
 		peerInfo.address = _address;
 		if(!rpcDevice) return peerInfo;
-		BaseLib::RPC::Device::RXModes::Enum rxModes = getRXModes();
-		if((serviceMessages->getConfigPending() || _valuePending) && ((rxModes & BaseLib::RPC::Device::RXModes::Enum::wakeUp) || (rxModes & BaseLib::RPC::Device::RXModes::Enum::lazyConfig)))
-		{
-			peerInfo.wakeUp = true;
-		}
+		peerInfo.wakeUp = needsWakeup();
 		peerInfo.aesEnabled = (pendingBidCoSQueues->find(BidCoSQueueType::SETAESKEY) && _aesKeyIndex == 0) ? false : aesEnabled();
 		peerInfo.keyIndex = _aesKeyIndex;
 		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
@@ -2036,7 +2054,7 @@ void BidCoSPeer::checkForBestInterface(std::string interfaceID, int32_t rssi)
 		{
 			_bestInterfaceLast = _bestInterfaceCurrent;
 			_bestInterfaceCurrent = std::tuple<int64_t, int32_t, std::string>(GD::bl->hf.getTime(), 0, "");
-			if(std::get<2>(_bestInterfaceLast) != _physicalInterfaceID)
+			if(std::get<2>(_bestInterfaceLast) != _physicalInterfaceID && !needsWakeup()) //Don't change interface, when wake up is requested
 			{
 				GD::bl->out.printInfo("Info: Changing interface of peer " + std::to_string(_peerID) + " to " + std::get<2>(_bestInterfaceLast) + ", because the reception is better.");
 				setPhysicalInterfaceID(std::get<2>(_bestInterfaceLast));
