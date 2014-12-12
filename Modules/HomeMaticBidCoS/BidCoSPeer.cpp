@@ -2054,7 +2054,7 @@ void BidCoSPeer::checkForBestInterface(std::string interfaceID, int32_t rssi)
 		{
 			_bestInterfaceLast = _bestInterfaceCurrent;
 			_bestInterfaceCurrent = std::tuple<int64_t, int32_t, std::string>(GD::bl->hf.getTime(), 0, "");
-			if(std::get<2>(_bestInterfaceLast) != _physicalInterfaceID && !needsWakeup()) //Don't change interface, when wake up is requested
+			if(std::get<2>(_bestInterfaceLast) != _physicalInterfaceID && !needsWakeup() && pendingBidCoSQueues->empty()) //Don't change interface, when wake up is requested or there are pending queues
 			{
 				GD::bl->out.printInfo("Info: Changing interface of peer " + std::to_string(_peerID) + " to " + std::get<2>(_bestInterfaceLast) + ", because the reception is better.");
 				setPhysicalInterfaceID(std::get<2>(_bestInterfaceLast));
