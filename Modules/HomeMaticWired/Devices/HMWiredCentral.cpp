@@ -49,6 +49,9 @@ HMWiredCentral::~HMWiredCentral()
 	_updateFirmwareThreadMutex.lock();
 	if(_updateFirmwareThread.joinable()) _updateFirmwareThread.join();
 	_updateFirmwareThreadMutex.unlock();
+	_announceThreadMutex.lock();
+	if(_announceThread.joinable()) _announceThread.join();
+	_announceThreadMutex.unlock();
 }
 
 void HMWiredCentral::init()
@@ -161,7 +164,13 @@ bool HMWiredCentral::onPacketReceived(std::string& senderID, std::shared_ptr<Bas
 		if(!hmWiredPacket) return false;
 		std::shared_ptr<HMWiredPeer> peer(getPeer(hmWiredPacket->senderAddress()));
 		if(peer) peer->packetReceived(hmWiredPacket);
-		else if(hmWiredPacket->messageType() == 0x41 && !_pairing) handleAnnounce(hmWiredPacket);
+		else if(hmWiredPacket->messageType() == 0x41 && !_pairing)
+		{
+			_announceThreadMutex.lock();
+			if(_announceThread.joinable()) _announceThread.join();
+			_announceThread = std::thread(&HMWiredCentral::handleAnnounce, this, hmWiredPacket);
+			_announceThreadMutex.unlock();
+		}
 	}
 	catch(const std::exception& ex)
     {

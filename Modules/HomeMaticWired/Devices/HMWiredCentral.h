@@ -79,6 +79,9 @@ protected:
 	std::thread _updateFirmwareThread;
 	//End
 
+	std::mutex _announceThreadMutex;
+	std::thread _announceThread;
+
 	std::shared_ptr<HMWiredPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
 	virtual void worker();
 	void deletePeer(uint64_t id);
