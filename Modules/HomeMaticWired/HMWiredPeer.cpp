@@ -2079,7 +2079,7 @@ void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
 		}
 		if(packet->type() == HMWiredPacketType::iMessage && packet->destinationAddress() == central->getAddress())
 		{
-			central->sendOK(packet->senderMessageCounter(), packet->senderAddress());
+			if(packet->timeReceived() != 0 && BaseLib::HelperFunctions::getTime() - packet->timeReceived() < 150) central->sendOK(packet->senderMessageCounter(), packet->senderAddress());
 		}
 		if(!rpcValues.empty())
 		{

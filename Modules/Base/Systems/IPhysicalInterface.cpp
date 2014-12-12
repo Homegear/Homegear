@@ -198,7 +198,7 @@ void IPhysicalInterface::raisePacketReceived(std::shared_ptr<Packet> packet)
 		if(tempHead >= _packetBufferSize) tempHead = 0;
 		if(tempHead == _packetBufferTail)
 		{
-			_bl->out.printError("Error (" + _settings->id + "): More than 20 packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
+			_bl->out.printError("Error (" + _settings->id + "): More than " + std::to_string(_packetBufferSize) + " packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
 			_packetBufferMutex.unlock();
 			return;
 		}

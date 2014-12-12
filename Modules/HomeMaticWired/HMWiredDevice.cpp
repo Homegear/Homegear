@@ -423,7 +423,8 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 		std::shared_ptr<HMWiredPacketInfo> txPacketInfo = _sentPackets.getInfo(packet->destinationAddress());
 		int64_t timeDifference = 0;
 		if(txPacketInfo) timeDifference = time - txPacketInfo->time;
-		if(!GD::physicalInterface->autoResend() && (!txPacketInfo || timeDifference > 210))
+		//ACKs should always be sent immediately
+		if(packet->type() != HMWiredPacketType::ackMessage && !GD::physicalInterface->autoResend() && (!txPacketInfo || timeDifference > 210))
 		{
 			rxPacketInfo = _receivedPackets.getInfo(packet->destinationAddress());
 			int64_t rxTimeDifference = 0;
@@ -508,6 +509,7 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 					std::chrono::milliseconds sleepingTime(5);
 					if(retries > 0) _sentPackets.keepAlive(packet->destinationAddress());
 					GD::physicalInterface->sendPacket(packet);
+					if(packet->type() == HMWiredPacketType::ackMessage) return std::shared_ptr<HMWiredPacket>();
 					for(int32_t i = 0; i < ((signed)busWaitingTime - 20) / 5; i++)
 					{
 						std::this_thread::sleep_for(sleepingTime);
@@ -527,7 +529,8 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 					std::chrono::milliseconds sleepingTime(5);
 					if(retries > 0) _sentPackets.keepAlive(packet->destinationAddress());
 					GD::physicalInterface->sendPacket(packet);
-					for(int32_t i = 0; i < 12; i++)
+					if(packet->type() == HMWiredPacketType::ackMessage) return std::shared_ptr<HMWiredPacket>();
+					for(int32_t i = 0; i < 8; i++)
 					{
 						if(i == 5) sleepingTime = std::chrono::milliseconds(25);
 						std::this_thread::sleep_for(sleepingTime);
@@ -547,6 +550,7 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 			int64_t time = BaseLib::HelperFunctions::getTime();
 			std::chrono::milliseconds sleepingTime(5);
 			GD::physicalInterface->sendPacket(packet);
+			if(packet->type() == HMWiredPacketType::ackMessage) return std::shared_ptr<HMWiredPacket>();
 			for(int32_t i = 0; i < 12; i++)
 			{
 				if(i == 5) sleepingTime = std::chrono::milliseconds(25);

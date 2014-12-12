@@ -107,7 +107,7 @@ protected:
 	std::thread _listenThread;
 	std::thread _callbackThread;
 	bool _stopCallbackThread = false;
-	static const int32_t _packetBufferSize = 50;
+	static const int32_t _packetBufferSize = 1000;
 	std::mutex _packetBufferMutex;
 	int32_t _packetBufferHead = 0;
 	int32_t _packetBufferTail = 0;
