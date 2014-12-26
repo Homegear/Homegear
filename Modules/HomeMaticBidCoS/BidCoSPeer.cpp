@@ -1777,6 +1777,45 @@ void BidCoSPeer::onConfigPending(bool configPending)
     }
 }
 
+void BidCoSPeer::setValuePending(bool value)
+{
+	try
+	{
+		_valuePending = value;
+		saveVariable(20, value);
+
+		BaseLib::RPC::Device::RXModes::Enum rxModes = getRXModes();
+		if(value)
+		{
+			if(((rxModes & BaseLib::RPC::Device::RXModes::Enum::wakeUp) || (rxModes & BaseLib::RPC::Device::RXModes::Enum::lazyConfig)) && _physicalInterface->autoResend())
+			{
+				GD::out.printDebug("Debug: Setting physical device's wake up flag.");
+				if(peerInfoPacketsEnabled) _physicalInterface->setWakeUp(getPeerInfo());
+			}
+		}
+		else
+		{
+			if(((rxModes & BaseLib::RPC::Device::RXModes::Enum::wakeUp) || (rxModes & BaseLib::RPC::Device::RXModes::Enum::lazyConfig)) && _physicalInterface->autoResend())
+			{
+				GD::out.printDebug("Debug: Removing physical device's wake up flag.");
+				if(peerInfoPacketsEnabled) _physicalInterface->setWakeUp(getPeerInfo());
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 int32_t BidCoSPeer::getChannelGroupedWith(int32_t channel)
 {
 	try
@@ -3349,7 +3388,6 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setValue(uint32_t channel, s
 		else
 		{
 			setValuePending(true);
-			if(peerInfoPacketsEnabled && _physicalInterface->autoResend()) _physicalInterface->setWakeUp(getPeerInfo());
 			GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 		}
 
