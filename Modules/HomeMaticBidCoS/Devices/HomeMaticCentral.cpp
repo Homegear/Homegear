@@ -1765,6 +1765,113 @@ void HomeMaticCentral::addHomegearFeaturesRemote(std::shared_ptr<BidCoSPeer> pee
     }
 }
 
+void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<BidCoSPeer> peer, int32_t channel, bool pushPendingBidCoSQueues)
+{
+	try
+	{
+		if(!peer) return;
+		std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>> channels;
+		if(channel == -1)
+		{
+			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+			{
+				//Covers the case, that channel numbering is not continuous. A little overdoing, probably.
+				channels[i->first] = i->second;
+			}
+			if(channels.empty()) return; //All channels are already paired to actors
+		}
+		std::shared_ptr<BaseLib::Systems::BasicPeer> switchPeer;
+		if(channel > -1)
+		{
+			switchPeer.reset(new BaseLib::Systems::BasicPeer());
+			switchPeer->id = 0xFFFFFFFFFFFFFFFF;
+			switchPeer->address = _address;
+			switchPeer->serialNumber = _serialNumber;
+			switchPeer->channel = channel;
+			switchPeer->hidden = true;
+			peer->addPeer(channel, switchPeer);
+		}
+		else
+		{
+			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
+			{
+				if(i->second->type != "DIMMER" && i->second->type != "SWITCH") continue;
+				switchPeer.reset(new BaseLib::Systems::BasicPeer());
+				switchPeer->id = 0xFFFFFFFFFFFFFFFF;
+				switchPeer->address = _address;
+				switchPeer->serialNumber = _serialNumber;
+				switchPeer->channel = i->first;
+				switchPeer->hidden = true;
+				peer->addPeer(i->first, switchPeer);
+			}
+		}
+
+		std::vector<uint8_t> payload;
+		if(channel > -1)
+		{
+			std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(peer->getPhysicalInterface(), BidCoSQueueType::CONFIG));
+			pendingQueue->noSending = true;
+
+			payload.clear();
+			payload.push_back(channel);
+			payload.push_back(0x01);
+			payload.push_back(_address >> 16);
+			payload.push_back((_address >> 8) & 0xFF);
+			payload.push_back(_address & 0xFF);
+			payload.push_back(channel);
+			payload.push_back(0);
+			std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, peer->getAddress(), payload));
+			pendingQueue->push(configPacket);
+			pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+			_messageCounter[0]++;
+			peer->pendingBidCoSQueues->push(pendingQueue);
+			peer->serviceMessages->setConfigPending(true);
+		}
+		else
+		{
+			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
+			{
+				if(i->second->type != "DIMMER" && i->second->type != "SWITCH") continue;
+				std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(peer->getPhysicalInterface(), BidCoSQueueType::CONFIG));
+				pendingQueue->noSending = true;
+
+				payload.clear();
+				payload.push_back(i->first);
+				payload.push_back(0x01);
+				payload.push_back(_address >> 16);
+				payload.push_back((_address >> 8) & 0xFF);
+				payload.push_back(_address & 0xFF);
+				payload.push_back(i->first);
+				payload.push_back(0);
+				std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, peer->getAddress(), payload));
+				pendingQueue->push(configPacket);
+				pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+				_messageCounter[0]++;
+				peer->pendingBidCoSQueues->push(pendingQueue);
+				peer->serviceMessages->setConfigPending(true);
+			}
+		}
+
+		if(pushPendingBidCoSQueues)
+		{
+			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, peer->getPhysicalInterface(), BidCoSQueueType::CONFIG, peer->getAddress());
+			queue->push(peer->pendingBidCoSQueues);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void HomeMaticCentral::addHomegearFeaturesMotionDetector(std::shared_ptr<BidCoSPeer> peer, int32_t channel, bool pushPendingBidCoSQueues)
 {
 	try
@@ -1883,6 +1990,7 @@ void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<BidCoSPeer> peer, int
 				peer->getDeviceType().type() == (uint32_t)DeviceType::HMSENMDIRO) addHomegearFeaturesMotionDetector(peer, channel, pushPendingBidCoSQueues);
 		else if(peer->getDeviceType().type() == (uint32_t)DeviceType::HMCCRTDN ||
 				peer->getDeviceType().type() == (uint32_t)DeviceType::HMCCRTDNBOM) addHomegearFeaturesHMCCRTDN(peer, channel, pushPendingBidCoSQueues);
+		else if(HomeMaticDevice::isDimmer(peer->getDeviceType()) || HomeMaticDevice::isSwitch(peer->getDeviceType())) addHomegearFeaturesSwitch(peer, channel, pushPendingBidCoSQueues);
 		else GD::out.printDebug("Debug: No homegear features to add.");
 	}
 	catch(const std::exception& ex)
@@ -3293,7 +3401,9 @@ std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::addLink(uint64_t sende
 		if(receiver->getRXModes() & BaseLib::RPC::Device::RXModes::burst) configByte |= 0x10;
 
 		if(receiver->getDeviceType().type() != (uint32_t)DeviceType::HMCCRTDN &&
-			receiver->getDeviceType().type() != (uint32_t)DeviceType::HMCCRTDNBOM)
+			receiver->getDeviceType().type() != (uint32_t)DeviceType::HMCCRTDNBOM &&
+			!HomeMaticDevice::isSwitch(receiver->getDeviceType()) &&
+			!HomeMaticDevice::isDimmer(receiver->getDeviceType()))
 		{
 			hiddenPeer = receiver->getHiddenPeer(receiverChannelIndex);
 			if(hiddenPeer)
@@ -3514,7 +3624,9 @@ std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::removeLink(uint64_t se
 		queue->push(receiver->pendingBidCoSQueues);
 
 		if(receiver->getDeviceType().type() != (uint32_t)DeviceType::HMCCRTDN &&
-			receiver->getDeviceType().type() != (uint32_t)DeviceType::HMCCRTDNBOM)
+			receiver->getDeviceType().type() != (uint32_t)DeviceType::HMCCRTDNBOM &&
+			!HomeMaticDevice::isSwitch(receiver->getDeviceType()) &&
+			!HomeMaticDevice::isDimmer(receiver->getDeviceType()))
 		{
 			addHomegearFeatures(receiver, receiverChannelIndex, false);
 		}
@@ -3965,6 +4077,62 @@ void HomeMaticCentral::pairingModeTimer(int32_t duration, bool debugOutput)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::activateLinkParamset(std::string serialNumber, int32_t channel, std::string remoteSerialNumber, int32_t remoteChannel, bool longPress)
+{
+	try
+	{
+		std::shared_ptr<BidCoSPeer> peer(getPeer(serialNumber));
+		if(!peer) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
+		uint64_t remoteID = 0;
+		if(!remoteSerialNumber.empty())
+		{
+			std::shared_ptr<BidCoSPeer> remotePeer(getPeer(remoteSerialNumber));
+			if(!remotePeer)
+			{
+				if(remoteSerialNumber != _serialNumber) return BaseLib::RPC::Variable::createError(-3, "Remote peer is unknown.");
+			}
+			else remoteID = remotePeer->getID();
+		}
+		return peer->activateLinkParamset(channel, remoteID, remoteChannel, longPress);
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::activateLinkParamset(uint64_t peerID, int32_t channel, uint64_t remoteID, int32_t remoteChannel, bool longPress)
+{
+	try
+	{
+		std::shared_ptr<BidCoSPeer> peer(getPeer(peerID));
+		if(!peer) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
+		return peer->activateLinkParamset(channel, remoteID, remoteChannel, longPress);
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
 std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::putParamset(std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset)

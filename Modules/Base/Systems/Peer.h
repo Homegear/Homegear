@@ -207,6 +207,7 @@ public:
 	virtual std::shared_ptr<LogicalDevice> getDevice(int32_t address) = 0;
 
     //RPC methods
+	virtual std::shared_ptr<RPC::Variable> activateLinkParamset(int32_t channel, uint64_t remoteID, int32_t remoteChannel, bool longPress) { return RPC::Variable::createError(-32601, "Method not implemented by this device family."); }
 	virtual std::shared_ptr<RPC::Variable> getAllValues(bool returnWriteOnly);
 	virtual std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> getDeviceDescriptions(bool channels, std::map<std::string, bool> fields);
     virtual std::shared_ptr<RPC::Variable> getDeviceDescription(int32_t channel, std::map<std::string, bool> fields);
@@ -220,10 +221,10 @@ public:
     virtual std::shared_ptr<RPC::Variable> getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel) = 0;
     virtual std::shared_ptr<RPC::Variable> getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
     virtual std::shared_ptr<RPC::Variable> getServiceMessages(bool returnID);
-    virtual std::shared_ptr<BaseLib::RPC::Variable> getValue(uint32_t channel, std::string valueKey, bool requestFromDevice, bool asynchronous);
-    virtual std::shared_ptr<BaseLib::RPC::Variable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> variables, bool onlyPushing = false) = 0;
-    virtual std::shared_ptr<BaseLib::RPC::Variable> reportValueUsage();
-    virtual std::shared_ptr<BaseLib::RPC::Variable> rssiInfo();
+    virtual std::shared_ptr<RPC::Variable> getValue(uint32_t channel, std::string valueKey, bool requestFromDevice, bool asynchronous);
+    virtual std::shared_ptr<RPC::Variable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> variables, bool onlyPushing = false) = 0;
+    virtual std::shared_ptr<RPC::Variable> reportValueUsage();
+    virtual std::shared_ptr<RPC::Variable> rssiInfo();
 
     /**
      * RPC function to change the ID of the peer.

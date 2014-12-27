@@ -257,6 +257,79 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCAbortEventReset::invoke(std::shared_p
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<BaseLib::RPC::Variable> RPCActivateLinkParamset::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::VariableType>>({
+				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString }),
+				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcBoolean }),
+				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger }),
+				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcBoolean })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		int32_t channel = -1;
+		std::string serialNumber;
+		int32_t remoteChannel = -1;
+		std::string remoteSerialNumber;
+		bool longPress = false;
+
+		bool useSerialNumber = false;
+		if(parameters->at(0)->type == BaseLib::RPC::VariableType::rpcString)
+		{
+			useSerialNumber = true;
+			int32_t pos = parameters->at(0)->stringValue.find(':');
+			if(pos > -1)
+			{
+				serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+				if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
+			}
+			else serialNumber = parameters->at(0)->stringValue;
+
+			pos = parameters->at(1)->stringValue.find(':');
+			if(pos > -1)
+			{
+				remoteSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
+				if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+			}
+			else remoteSerialNumber = parameters->at(0)->stringValue;
+
+			if(parameters->size() > 2) longPress = parameters->at(2)->booleanValue;
+		}
+		else if(parameters->size() > 4) longPress = parameters->at(4)->booleanValue;
+
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
+			if(!central)continue;
+			if(useSerialNumber)
+			{
+				if(central->knowsDevice(serialNumber)) return central->activateLinkParamset(serialNumber, channel, remoteSerialNumber, remoteChannel, longPress);
+			}
+			else
+			{
+				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->activateLinkParamset(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->integerValue, parameters->at(3)->integerValue, longPress);
+			}
+		}
+
+		return BaseLib::RPC::Variable::createError(-2, "Device not found.");
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. Check the address format.");
+}
+
 std::shared_ptr<BaseLib::RPC::Variable> RPCAddDevice::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try

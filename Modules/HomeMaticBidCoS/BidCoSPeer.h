@@ -124,6 +124,8 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		void setPhysicalInterfaceID(std::string);
 		bool getValuePending() { return _valuePending; }
 		void setValuePending(bool value);
+		int32_t getGeneralCounter() { return _generalCounter; }
+		void setGeneralCounter(int32_t value) { _generalCounter = value; saveVariable(22, value); }
 		//End
 
         void setCentralFeatures(bool value) { _centralFeatures = value; }
@@ -193,6 +195,11 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         /**
          * {@inheritDoc}
          */
+        virtual std::shared_ptr<BaseLib::RPC::Variable> activateLinkParamset(int32_t channel, uint64_t remoteID, int32_t remoteChannel, bool longPress);
+
+        /**
+         * {@inheritDoc}
+         */
         virtual std::shared_ptr<BaseLib::RPC::Variable> getDeviceDescription(int32_t channel, std::map<std::string, bool> fields);
 
         /**
@@ -252,6 +259,7 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		int32_t _aesKeyIndex = 0;
 		std::string _physicalInterfaceID;
 		bool _valuePending = false;
+		uint8_t _generalCounter = 0;
 		//End
 
 		/**

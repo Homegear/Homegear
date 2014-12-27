@@ -1214,6 +1214,7 @@ void BidCoSPeer::saveVariables()
 		saveVariable(19, _physicalInterfaceID);
 		saveVariable(20, (int32_t)_valuePending);
 		saveVariable(21, (int32_t)_team.id);
+		saveVariable(22, _generalCounter);
 	}
 	catch(const std::exception& ex)
     {
@@ -1419,6 +1420,9 @@ void BidCoSPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::sha
 				break;
 			case 21:
 				_team.id = row->second.at(3)->intValue;
+				break;
+			case 22:
+				_generalCounter = row->second.at(3)->intValue;
 				break;
 			}
 		}
@@ -2520,6 +2524,63 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::activateLinkParamset(int32_t channel, uint64_t remoteID, int32_t remoteChannel, bool longPress)
+{
+	try
+	{
+		if(remoteID == 0) remoteID = 0xFFFFFFFFFFFFFFFF; //Remote peer is central
+		std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer = getPeer(channel, remoteID, remoteChannel);
+		if(!remotePeer) return BaseLib::RPC::Variable::createError(-3, "Not paired to this peer.");
+		if(remotePeer->isSender) return BaseLib::RPC::Variable::createError(-3, "Remote peer needs to be sender.");
+
+		std::vector<uint8_t> payload;
+		payload.push_back(remotePeer->address >> 16);
+		payload.push_back((remotePeer->address >> 8) & 0xFF);
+		payload.push_back(remotePeer->address & 0xFF);
+		payload.push_back(0x40);
+		payload.push_back(longPress ? (0x40 | remoteChannel) : remoteChannel);
+		payload.push_back(_generalCounter);
+		setGeneralCounter(_generalCounter + 1);
+
+		uint8_t controlByte = 0xA0;
+		if(getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst) controlByte |= 0x10;
+		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(_messageCounter, controlByte, 0x3E, getCentral()->physicalAddress(), _address, payload));
+		setMessageCounter(_messageCounter + 1);
+
+		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(_physicalInterface, BidCoSQueueType::PEER));
+		queue->noSending = true;
+		queue->push(packet);
+		std::shared_ptr<HomeMaticCentral> central = std::dynamic_pointer_cast<HomeMaticCentral>(getCentral());
+		queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+		pendingBidCoSQueues->push(queue);
+		if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst))
+		{
+			if(HomeMaticDevice::isDimmer(_deviceType) || HomeMaticDevice::isSwitch(_deviceType)) queue->retries = 12; //Probably always true
+			central->enqueuePendingQueues(_address);
+		}
+		else
+		{
+			setValuePending(true);
+			GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+		}
+
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
 std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getDeviceDescription(int32_t channel, std::map<std::string, bool> fields)

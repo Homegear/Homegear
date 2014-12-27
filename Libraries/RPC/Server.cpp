@@ -47,6 +47,7 @@ void Server::registerMethods()
 		_server->registerMethod("system.methodHelp", std::shared_ptr<RPCMethod>(new RPCSystemMethodHelp(_server)));
 		_server->registerMethod("system.methodSignature", std::shared_ptr<RPCMethod>(new RPCSystemMethodSignature(_server)));
 		_server->registerMethod("system.multicall", std::shared_ptr<RPCMethod>(new RPCSystemMulticall(_server)));
+		_server->registerMethod("activateLinkParamset", std::shared_ptr<RPCMethod>(new RPCActivateLinkParamset()));
 		_server->registerMethod("abortEventReset", std::shared_ptr<RPCMethod>(new RPCTriggerEvent()));
 		_server->registerMethod("addDevice", std::shared_ptr<RPCMethod>(new RPCAddDevice()));
 		_server->registerMethod("addEvent", std::shared_ptr<RPCMethod>(new RPCAddEvent()));

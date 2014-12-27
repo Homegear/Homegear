@@ -56,6 +56,8 @@ public:
 	virtual bool knowsDevice(std::string serialNumber) = 0;
 	virtual bool knowsDevice(uint64_t id) = 0;
 
+	virtual std::shared_ptr<RPC::Variable> activateLinkParamset(std::string serialNumber, int32_t channel, std::string remoteSerialNumber, int32_t remoteChannel, bool longPress) { return RPC::Variable::createError(-32601, "Method not implemented for this central."); }
+	virtual std::shared_ptr<RPC::Variable> activateLinkParamset(uint64_t peerID, int32_t channel, uint64_t remoteID, int32_t remoteChannel, bool longPress) { return RPC::Variable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::Variable> addDevice(std::string serialNumber) { return RPC::Variable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::Variable> addLink(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description) { return RPC::Variable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::Variable> addLink(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description) { return RPC::Variable::createError(-32601, "Method not implemented for this central."); }
