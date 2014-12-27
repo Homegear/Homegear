@@ -57,7 +57,8 @@ public:
 	uint32_t size();
 	std::shared_ptr<PacketQueue> front();
 	void clear();
-	void removeQueue(std::string value, int32_t channel);
+	void remove(std::string value, int32_t channel);
+	bool exists(std::string value, int32_t channel);
 	bool find(PacketQueueType queueType);
 
 	void getInfoString(std::ostringstream& stringStream);

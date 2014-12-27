@@ -267,7 +267,7 @@ std::shared_ptr<PacketQueue> PendingQueues::front()
     return std::shared_ptr<PacketQueue>();
 }
 
-void PendingQueues::removeQueue(std::string parameterName, int32_t channel)
+void PendingQueues::remove(std::string parameterName, int32_t channel)
 {
 	try
 	{
@@ -296,6 +296,43 @@ void PendingQueues::removeQueue(std::string parameterName, int32_t channel)
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _queuesMutex.unlock();
+}
+
+bool PendingQueues::exists(std::string parameterName, int32_t channel)
+{
+	try
+	{
+		if(parameterName.empty()) return false;
+		_queuesMutex.lock();
+		if(_queues.empty())
+		{
+			_queuesMutex.unlock();
+			return false;
+		}
+		for(int32_t i = _queues.size() - 1; i >= 0; i--)
+		{
+			if(!_queues.at(i)) continue;
+			if(_queues.at(i)->parameterName == parameterName && _queues.at(i)->channel == channel)
+			{
+				_queuesMutex.unlock();
+				return true;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _queuesMutex.unlock();
+    return false;
 }
 
 bool PendingQueues::find(PacketQueueType queueType)

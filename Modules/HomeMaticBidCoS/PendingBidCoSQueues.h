@@ -58,7 +58,8 @@ public:
 	uint32_t size();
 	std::shared_ptr<BidCoSQueue> front();
 	void clear();
-	void removeQueue(BidCoSQueueType type, std::string value, int32_t channel);
+	void remove(BidCoSQueueType type, std::string value, int32_t channel);
+	bool exists(BidCoSQueueType type, std::string value, int32_t channel);
 	bool find(BidCoSQueueType queueType);
 	void setWakeOnRadioBit();
 

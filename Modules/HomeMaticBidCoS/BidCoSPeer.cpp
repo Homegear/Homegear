@@ -2260,7 +2260,7 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getValueFromDevice(std::shar
 		std::shared_ptr<HomeMaticCentral> central = std::dynamic_pointer_cast<HomeMaticCentral>(getCentral());
 		if(responseFrame) queue->push(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(responseFrame->type, central.get(), 0, nullptr)));
 		else queue->push(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(-1, central.get(), 0, nullptr)));
-		pendingBidCoSQueues->removeQueue(BidCoSQueueType::GETVALUE, parameter->id, channel);
+		pendingBidCoSQueues->remove(BidCoSQueueType::GETVALUE, parameter->id, channel);
 		pendingBidCoSQueues->push(queue);
 
 		if(HomeMaticDevice::isDimmer(_deviceType) || HomeMaticDevice::isSwitch(_deviceType)) queue->retries = 12;
@@ -2275,7 +2275,7 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getValueFromDevice(std::shar
 			else break;
 			if(i == 119)
 			{
-				pendingBidCoSQueues->removeQueue(BidCoSQueueType::GETVALUE, parameter->id, channel);
+				pendingBidCoSQueues->remove(BidCoSQueueType::GETVALUE, parameter->id, channel);
 				return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 			}
 		}
@@ -2374,6 +2374,7 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 				for(std::list<uint32_t>::const_iterator j = a->paramsetChannels.begin(); j != a->paramsetChannels.end(); ++j)
 				{
 					if(std::find(i->second.channels.begin(), i->second.channels.end(), *j) == i->second.channels.end()) continue;
+					if(pendingBidCoSQueues->exists(BidCoSQueueType::PEER, i->first, *j)) continue; //Don't set queued values
 					if(!valueKeys[*j] || !rpcValues[*j])
 					{
 						valueKeys[*j].reset(new std::vector<std::string>());
@@ -2383,7 +2384,7 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 					BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
 					parameter->data = i->second.value;
 					saveParameter(parameter->databaseID, parameter->data);
-					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: " + i->first + " of HomeMatic BidCoS peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + ".");
+					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: " + i->first + " on channel " + std::to_string(*j) + " of HomeMatic BidCoS peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + ".");
 
 					if(parameter->rpcParameter)
 					{
@@ -3378,7 +3379,7 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setValue(uint32_t channel, s
 		queue->push(packet);
 		std::shared_ptr<HomeMaticCentral> central = std::dynamic_pointer_cast<HomeMaticCentral>(getCentral());
 		queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-		pendingBidCoSQueues->removeQueue(BidCoSQueueType::PEER, valueKey, channel);
+		pendingBidCoSQueues->remove(BidCoSQueueType::PEER, valueKey, channel);
 		pendingBidCoSQueues->push(queue);
 		if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst))
 		{

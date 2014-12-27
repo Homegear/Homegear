@@ -152,7 +152,7 @@ void MAXPeer::worker()
 				queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 				queue->parameterName = "CURRENT_TIME";
 				queue->channel = 0;
-				pendingQueues->removeQueue("CURRENT_TIME", 0);
+				pendingQueues->remove("CURRENT_TIME", 0);
 				pendingQueues->push(queue);
 				if((getRXModes() & Device::RXModes::always) || (getRXModes() & Device::RXModes::burst)) central->enqueuePendingQueues(_address);
 			}
@@ -839,6 +839,7 @@ void MAXPeer::packetReceived(std::shared_ptr<MAXPacket> packet)
 				for(std::list<uint32_t>::const_iterator j = a->paramsetChannels.begin(); j != a->paramsetChannels.end(); ++j)
 				{
 					if(std::find(i->second.channels.begin(), i->second.channels.end(), *j) == i->second.channels.end()) continue;
+					if(pendingQueues->exists(i->first, *j)) continue; //Don't set queued values
 					if(!valueKeys[*j] || !rpcValues[*j])
 					{
 						valueKeys[*j].reset(new std::vector<std::string>());
@@ -848,7 +849,7 @@ void MAXPeer::packetReceived(std::shared_ptr<MAXPacket> packet)
 					BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
 					parameter->data = i->second.value;
 					saveParameter(parameter->databaseID, parameter->data);
-					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: " + i->first + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + ".");
+					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: " + i->first + " on channel " + std::to_string(*j) + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber  + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + ".");
 
 					if(parameter->rpcParameter)
 					{
@@ -1414,7 +1415,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::setValue(uint32_t channel, std:
 		queue->channel = channel;
 		queue->push(packet);
 		queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-		pendingQueues->removeQueue(valueKey, channel);
+		pendingQueues->remove(valueKey, channel);
 		pendingQueues->push(queue);
 		if(MAXDevice::isSwitch(_deviceType)) queue->retries = 12;
 		central->enqueuePendingQueues(_address);

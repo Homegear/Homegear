@@ -768,6 +768,7 @@ void InsteonPeer::packetReceived(std::shared_ptr<InsteonPacket> packet)
 				for(std::list<uint32_t>::const_iterator j = a->paramsetChannels.begin(); j != a->paramsetChannels.end(); ++j)
 				{
 					if(std::find(i->second.channels.begin(), i->second.channels.end(), *j) == i->second.channels.end()) continue;
+					if(pendingQueues->exists(i->first, *j)) continue; //Don't set queued values
 					if(!valueKeys[*j] || !rpcValues[*j])
 					{
 						valueKeys[*j].reset(new std::vector<std::string>());
@@ -1116,7 +1117,7 @@ std::shared_ptr<BaseLib::RPC::Variable> InsteonPeer::setValue(uint32_t channel, 
 		std::shared_ptr<InsteonPeer> peer = central->getPeer(_peerID);
 
 		//Remove existing queues setting the same parameter
-		pendingQueues->removeQueue(valueKey, channel);
+		pendingQueues->remove(valueKey, channel);
 
 		for(std::vector<std::string>::iterator i = setRequests.begin(); i != setRequests.end(); ++i)
 		{

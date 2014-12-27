@@ -286,7 +286,7 @@ std::shared_ptr<BidCoSQueue> PendingBidCoSQueues::front()
     return std::shared_ptr<BidCoSQueue>();
 }
 
-void PendingBidCoSQueues::removeQueue(BidCoSQueueType type, std::string parameterName, int32_t channel)
+void PendingBidCoSQueues::remove(BidCoSQueueType type, std::string parameterName, int32_t channel)
 {
 	try
 	{
@@ -315,6 +315,43 @@ void PendingBidCoSQueues::removeQueue(BidCoSQueueType type, std::string paramete
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _queuesMutex.unlock();
+}
+
+bool PendingBidCoSQueues::exists(BidCoSQueueType type, std::string parameterName, int32_t channel)
+{
+	try
+	{
+		if(parameterName.empty()) return false;
+		_queuesMutex.lock();
+		if(_queues.empty())
+		{
+			_queuesMutex.unlock();
+			return false;
+		}
+		for(int32_t i = _queues.size() - 1; i >= 0; i--)
+		{
+			if(!_queues.at(i)) continue;
+			if(_queues.at(i)->getQueueType() == type && _queues.at(i)->parameterName == parameterName && _queues.at(i)->channel == channel)
+			{
+				_queuesMutex.unlock();
+				return true;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _queuesMutex.unlock();
+    return false;
 }
 
 bool PendingBidCoSQueues::find(BidCoSQueueType queueType)
