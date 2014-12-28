@@ -1,4 +1,4 @@
-/* Copyright 2013-2014 Sathya Laufer
+/* Copyright 2013-2015 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2534,6 +2534,7 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::activateLinkParamset(int32_t
 		std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer = getPeer(channel, remoteID, remoteChannel);
 		if(!remotePeer) return BaseLib::RPC::Variable::createError(-3, "Not paired to this peer.");
 		if(remotePeer->isSender) return BaseLib::RPC::Variable::createError(-3, "Remote peer needs to be sender.");
+		if(!HomeMaticDevice::isSwitch(getDeviceType()) && !HomeMaticDevice::isDimmer(getDeviceType())) return BaseLib::RPC::Variable::createError(-32400, "Method currently is only supported for dim and switch actuators.");
 
 		std::vector<uint8_t> payload;
 		payload.push_back(remotePeer->address >> 16);

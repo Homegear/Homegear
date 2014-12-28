@@ -1,4 +1,4 @@
-/* Copyright 2013-2014 Sathya Laufer
+/* Copyright 2013-2015 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -403,7 +403,7 @@ int main(int argc, char* argv[])
     		else if(arg == "-v")
     		{
     			std::cout <<  "Homegear version " << VERSION << std::endl;
-    			std::cout << "Copyright (C) 2013-2014 Sathya Laufer" << std::endl;
+    			std::cout << "Copyright (C) 2013-2015 Sathya Laufer" << std::endl;
     			exit(0);
     		}
     		else
