@@ -594,7 +594,7 @@ std::string MAXCentral::handleCLICommand(std::string command)
 					stringStream << "  FILTERTYPE:\tSee filter types below." << std::endl;
 					stringStream << "  FILTERVALUE:\tDepends on the filter type. If a number is required, it has to be in hexadecimal format." << std::endl << std::endl;
 					stringStream << "Filter types:" << std::endl;
-					stringStream << "  PEERID: Filter by id." << std::endl;
+					stringStream << "  ID: Filter by id." << std::endl;
 					stringStream << "      FILTERVALUE: The id of the peer to filter (e. g. 513)." << std::endl;
 					stringStream << "  ADDRESS: Filter by address." << std::endl;
 					stringStream << "      FILTERVALUE: The 4 byte address of the peer to filter (e. g. 001DA44D)." << std::endl;
@@ -653,7 +653,7 @@ std::string MAXCentral::handleCLICommand(std::string command)
 				{
 					if(filterType == "id")
 					{
-						uint64_t id = BaseLib::Math::getNumber(filterValue, true);
+						uint64_t id = BaseLib::Math::getNumber(filterValue, false);
 						if(i->second->getID() != id) continue;
 					}
 					else if(filterType == "name")
