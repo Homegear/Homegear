@@ -3240,6 +3240,7 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setInterface(std::string int
 				return BaseLib::RPC::Variable::createError(-103, "Can't set physical interface, because the AES key indexes of the old and new interface don't match. You need to disable AES first.");
 			}
 		}
+		if(configCentral.find(0) == configCentral.end() || configCentral.at(0).find("ROAMING") == configCentral.at(0).end() || configCentral.at(0).at("ROAMING").data.size() == 0 || configCentral.at(0).at("ROAMING").data.at(0) == 1) return BaseLib::RPC::Variable::createError(-104, "Can't set physical interface, because ROAMING is enabled. Please disable ROAMING to manually select the interface.");;
 		setPhysicalInterfaceID(interfaceID);
 		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
