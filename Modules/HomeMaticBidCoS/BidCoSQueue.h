@@ -94,6 +94,7 @@ class BidCoSQueue
         std::mutex _queueMutex;
         BidCoSQueueType _queueType;
         bool _stopResendThread = false;
+        std::mutex _resendThreadMutex;
         std::thread _resendThread;
         int32_t _resendCounter = 0;
         uint32_t _resendThreadId = 0;

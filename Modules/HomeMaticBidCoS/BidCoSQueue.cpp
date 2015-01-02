@@ -883,8 +883,21 @@ void BidCoSQueue::startResendThread(bool force)
 		{
 			stopResendThread();
 			bool burst = controlByte & 0x10;
-			_resendThread = std::thread(&BidCoSQueue::resend, this, _resendThreadId++, burst);
-			BaseLib::Threads::setThreadPriority(GD::bl, _resendThread.native_handle(), GD::bl->settings.packetQueueThreadPriority(), GD::bl->settings.packetQueueThreadPolicy());
+			_resendThreadMutex.lock();
+			try
+			{
+				_resendThread = std::thread(&BidCoSQueue::resend, this, _resendThreadId++, burst);
+				BaseLib::Threads::setThreadPriority(GD::bl, _resendThread.native_handle(), GD::bl->settings.packetQueueThreadPriority(), GD::bl->settings.packetQueueThreadPolicy());
+			}
+			catch(const std::exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			_resendThreadMutex.unlock();
 		}
 	}
 	catch(const std::exception& ex)

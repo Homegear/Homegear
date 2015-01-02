@@ -813,8 +813,21 @@ void PacketQueue::startResendThread(bool force)
 		if(destinationAddress != 0 || force) //Resend when no response?
 		{
 			stopResendThread();
-			_resendThread = std::thread(&PacketQueue::resend, this, _resendThreadId++);
-			BaseLib::Threads::setThreadPriority(GD::bl, _resendThread.native_handle(), GD::bl->settings.packetQueueThreadPriority(), GD::bl->settings.packetQueueThreadPolicy());
+			_resendThreadMutex.lock();
+			try
+			{
+				_resendThread = std::thread(&PacketQueue::resend, this, _resendThreadId++);
+				BaseLib::Threads::setThreadPriority(GD::bl, _resendThread.native_handle(), GD::bl->settings.packetQueueThreadPriority(), GD::bl->settings.packetQueueThreadPolicy());
+			}
+			catch(const std::exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			_resendThreadMutex.unlock();
 		}
 	}
 	catch(const std::exception& ex)
