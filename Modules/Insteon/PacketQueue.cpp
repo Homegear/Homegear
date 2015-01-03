@@ -774,6 +774,7 @@ void PacketQueue::stopResendThread()
 {
 	try
 	{
+		_resendThreadMutex.lock();
 		_stopResendThread = true;
 		if(_resendThread.joinable()) _resendThread.join();
 		_stopResendThread = false;
@@ -790,6 +791,7 @@ void PacketQueue::stopResendThread()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _resendThreadMutex.unlock();
 }
 
 void PacketQueue::startResendThread(bool force)
@@ -812,10 +814,12 @@ void PacketQueue::startResendThread(bool force)
 		_queueMutex.unlock();
 		if(destinationAddress != 0 || force) //Resend when no response?
 		{
-			stopResendThread();
 			_resendThreadMutex.lock();
 			try
 			{
+				_stopResendThread = true;
+				if(_resendThread.joinable()) _resendThread.join();
+				_stopResendThread = false;
 				_resendThread = std::thread(&PacketQueue::resend, this, _resendThreadId++);
 				BaseLib::Threads::setThreadPriority(GD::bl, _resendThread.native_handle(), GD::bl->settings.packetQueueThreadPriority(), GD::bl->settings.packetQueueThreadPolicy());
 			}
@@ -1130,7 +1134,9 @@ void PacketQueue::pop(bool silently)
 		if(silently) GD::out.printDebug("Popping silently from queue: " + std::to_string(id));
 		else GD::out.printDebug("Popping from queue: " + std::to_string(id));
 		if(_popWaitThread.joinable()) _stopPopWaitThread = true;
+		_resendThreadMutex.lock();
 		if(_resendThread.joinable()) _stopResendThread = true;
+		_resendThreadMutex.unlock();
 		_lastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		_queueMutex.lock();
 		if(_queue.empty())

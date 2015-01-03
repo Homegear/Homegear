@@ -674,7 +674,9 @@ void BidCoSQueue::pushFront(std::shared_ptr<BidCoSPacket> packet, bool stealthy,
 		{
 			GD::out.printDebug("Popping from BidCoSQueue and pushing packet at the front: " + std::to_string(id));
 			if(_popWaitThread.joinable()) _stopPopWaitThread = true;
+			_resendThreadMutex.lock();
 			if(_resendThread.joinable()) _stopResendThread = true;
+			_resendThreadMutex.unlock();
 			_queueMutex.lock();
 			_queue.pop_front();
 			_queueMutex.unlock();
@@ -838,6 +840,7 @@ void BidCoSQueue::stopResendThread()
 {
 	try
 	{
+		_resendThreadMutex.lock();
 		_stopResendThread = true;
 		if(_resendThread.joinable()) _resendThread.join();
 		_stopResendThread = false;
@@ -854,6 +857,7 @@ void BidCoSQueue::stopResendThread()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _resendThreadMutex.unlock();
 }
 
 void BidCoSQueue::startResendThread(bool force)
@@ -881,11 +885,13 @@ void BidCoSQueue::startResendThread(bool force)
 		_queueMutex.unlock();
 		if(!_physicalInterface->autoResend() && ((!(controlByte & 0x02) && (controlByte & 0x20)) || force)) //Resend when no response?
 		{
-			stopResendThread();
 			bool burst = controlByte & 0x10;
 			_resendThreadMutex.lock();
 			try
 			{
+				_stopResendThread = true;
+				if(_resendThread.joinable()) _resendThread.join();
+				_stopResendThread = false;
 				_resendThread = std::thread(&BidCoSQueue::resend, this, _resendThreadId++, burst);
 				BaseLib::Threads::setThreadPriority(GD::bl, _resendThread.native_handle(), GD::bl->settings.packetQueueThreadPriority(), GD::bl->settings.packetQueueThreadPolicy());
 			}
@@ -1191,7 +1197,9 @@ void BidCoSQueue::pop()
 		keepAlive();
 		GD::out.printDebug("Popping from BidCoSQueue: " + std::to_string(id));
 		if(_popWaitThread.joinable()) _stopPopWaitThread = true;
+		_resendThreadMutex.lock();
 		if(_resendThread.joinable()) _stopResendThread = true;
+		_resendThreadMutex.unlock();
 		_lastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		_queueMutex.lock();
 		if(_queue.empty())

@@ -664,7 +664,9 @@ void PacketQueue::pushFront(std::shared_ptr<MAXPacket> packet, bool stealthy, bo
 		{
 			GD::out.printDebug("Popping from MAX! queue and pushing packet at the front: " + std::to_string(id));
 			if(_popWaitThread.joinable()) _stopPopWaitThread = true;
+			_resendThreadMutex.lock();
 			if(_resendThread.joinable()) _stopResendThread = true;
+			_resendThreadMutex.unlock();
 			_queueMutex.lock();
 			_queue.pop_front();
 			_queueMutex.unlock();
@@ -853,6 +855,7 @@ void PacketQueue::stopResendThread()
 {
 	try
 	{
+		_resendThreadMutex.lock();
 		_stopResendThread = true;
 		if(_resendThread.joinable()) _resendThread.join();
 		_stopResendThread = false;
@@ -869,6 +872,7 @@ void PacketQueue::stopResendThread()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _resendThreadMutex.unlock();
 }
 
 void PacketQueue::startResendThread(bool force)
@@ -893,11 +897,13 @@ void PacketQueue::startResendThread(bool force)
 		_queueMutex.unlock();
 		if(destinationAddress != 0 || force) //Resend when no response?
 		{
-			stopResendThread();
 			if(peer && (peer->getRXModes() & Device::RXModes::burst)) burst = true;
 			_resendThreadMutex.lock();
 			try
 			{
+				_stopResendThread = true;
+				if(_resendThread.joinable()) _resendThread.join();
+				_stopResendThread = false;
 				_resendThread = std::thread(&PacketQueue::resend, this, _resendThreadId++, burst);
 				BaseLib::Threads::setThreadPriority(GD::bl, _resendThread.native_handle(), GD::bl->settings.packetQueueThreadPriority(), GD::bl->settings.packetQueueThreadPolicy());
 			}
@@ -1200,7 +1206,9 @@ void PacketQueue::pop()
 		keepAlive();
 		GD::out.printDebug("Popping from MAX! queue: " + std::to_string(id));
 		if(_popWaitThread.joinable()) _stopPopWaitThread = true;
+		_resendThreadMutex.lock();
 		if(_resendThread.joinable()) _stopResendThread = true;
+		_resendThreadMutex.unlock();
 		_lastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		_queueMutex.lock();
 		if(_queue.empty())
