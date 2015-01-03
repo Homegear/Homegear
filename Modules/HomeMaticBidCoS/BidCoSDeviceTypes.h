@@ -122,7 +122,8 @@ enum class DeviceType : uint32_t
 	HMESPMSW1PL =	0x00AC,
 	HMSECSC2 =		0x00B1,
 	HMCCRTDNBOM = 	0x00BD,
-	HMMODRE8 =		0x00BE
+	HMMODRE8 =		0x00BE,
+	HMRC8 =			0x00DA
 };
 }
 #endif /* BIDCOSDEVICETYPES_H_ */

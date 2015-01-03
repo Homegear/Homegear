@@ -1958,6 +1958,7 @@ void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<BidCoSPeer> peer, int
 		if(peer->getDeviceType().type() == (uint32_t)DeviceType::HMCCVD) addHomegearFeaturesHMCCVD(peer, channel, pushPendingBidCoSQueues);
 		else if(peer->getDeviceType().type() == (uint32_t)DeviceType::HMPB4DISWM ||
 				peer->getDeviceType().type() == (uint32_t)DeviceType::HMRC4 ||
+				peer->getDeviceType().type() == (uint32_t)DeviceType::HMRC8 ||
 				peer->getDeviceType().type() == (uint32_t)DeviceType::HMRC4B ||
 				peer->getDeviceType().type() == (uint32_t)DeviceType::HMRCP1 ||
 				peer->getDeviceType().type() == (uint32_t)DeviceType::HMRCSEC3 ||
