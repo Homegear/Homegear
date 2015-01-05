@@ -76,7 +76,7 @@ wget -P $FIRMWAREDIR http://www.eq-3.de/Downloads/Software/Firmware/hm-sen-rd-o_
 [ $? -ne 0 ] && exit 1
 tar -zxf $FIRMWAREDIR/hm-sen-rd-o_update_V1_4_003_130930.tgz -C $FIRMWAREDIR
 [ $? -ne 0 ] && exit 1
-mv $FIRMWAREDIR/hm-sen-rd-o_update_V1_4_003_130930.eq3 $SCRIPTDIR/0000.000000A7.fw
+mv $FIRMWAREDIR/hm-sen-rd-o_update_V1_4_130930.eq3 $SCRIPTDIR/0000.000000A7.fw
 [ $? -ne 0 ] && exit 1
 rm $FIRMWAREDIR/hm-sen-rd-o_update_V1_4_003_130930.tgz
 rm $FIRMWAREDIR/changelog.txt
