@@ -2228,6 +2228,21 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 					return;
 				}
 				peer = queue->peer;
+				if(peer->rpcDevice && ((peer->rpcDevice->channels.find(0) != peer->rpcDevice->channels.end() && peer->rpcDevice->channels.at(0)->aesAlways) || (peer->rpcDevice->channels.find(1) != peer->rpcDevice->channels.end() && peer->rpcDevice->channels.at(1)->aesAlways)))
+				{
+					//AES is mandatory try to find AES capable interface, if the default interface has no AES support.
+					if(!peer->getPhysicalInterface()->aesSupported())
+					{
+						for(std::map<std::string, std::shared_ptr<IBidCoSInterface>>::iterator i = GD::physicalInterfaces.begin(); i != GD::physicalInterfaces.end(); ++i)
+						{
+							if(i->second->aesSupported())
+							{
+								peer->setPhysicalInterfaceID(i->second->getID());
+								break;
+							}
+						}
+					}
+				}
 				if(peer->getPhysicalInterface()->needsPeers()) peer->getPhysicalInterface()->addPeer(peer->getPeerInfo());
 			}
 
