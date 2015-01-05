@@ -1,17 +1,17 @@
 #!/bin/bash
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-FIRMWAREDIR=/tmp/HomegearTemp/rootfs/rootfs.ubi/1045862938/root/firmware
+FIRMWAREDIR=/tmp/HomegearTemp/rootfs/rootfs.ubi/125662337/root/firmware
 
 if test ! -d $FIRMWAREDIR; then
 	rm -Rf /tmp/HomegearTemp
 	[ $? -ne 0 ] && exit 1
 	mkdir /tmp/HomegearTemp
 	[ $? -ne 0 ] && exit 1
-	wget -P /tmp/HomegearTemp/ http://www.eq-3.de/Downloads/Software/HM-CCU2-Firmware_Updates/HM-CCU2-2.9.10/HM-CCU-2.9.10.tar.gz
+	wget -P /tmp/HomegearTemp/ http://www.eq-3.de/Downloads/Software/HM-CCU2-Firmware_Updates/HM-CCU2-2.11.6/HM-CCU-2.11.6.tar.gz
 	[ $? -ne 0 ] && exit 1
-	tar -zxf /tmp/HomegearTemp/HM-CCU-2.9.10.tar.gz -C /tmp/HomegearTemp
+	tar -zxf /tmp/HomegearTemp/HM-CCU-2.11.6.tar.gz -C /tmp/HomegearTemp
 	[ $? -ne 0 ] && exit 1
-	rm -f /tmp/HomegearTemp/HM-CCU-2.9.10.tar.gz
+	rm -f /tmp/HomegearTemp/HM-CCU-2.11.6.tar.gz
 	
 	echo "Downloading UBI Reader..."
 	echo "(C) 2013 Jason Pruitt (Jason Pruitt), see https://github.com/jrspruitt/ubi_reader"
@@ -72,8 +72,15 @@ rm $FIRMWAREDIR/info
 echo "12" > $SCRIPTDIR/0000.000000AD.version
 [ $? -ne 0 ] && exit 1
 
-mv $FIRMWAREDIR/hm-sen-rd-o_update.eq3 $SCRIPTDIR/0000.000000A7.fw
+wget -P $FIRMWAREDIR http://www.eq-3.de/Downloads/Software/Firmware/hm-sen-rd-o_update_V1_4_003_130930.tgz
 [ $? -ne 0 ] && exit 1
+tar -zxf $FIRMWAREDIR/hm-sen-rd-o_update_V1_4_003_130930.tgz -C $FIRMWAREDIR
+[ $? -ne 0 ] && exit 1
+mv $FIRMWAREDIR/hm-sen-rd-o_update_V1_4_003_130930.eq3 $SCRIPTDIR/0000.000000A7.fw
+[ $? -ne 0 ] && exit 1
+rm $FIRMWAREDIR/hm-sen-rd-o_update_V1_4_003_130930.tgz
+rm $FIRMWAREDIR/changelog.txt
+rm $FIRMWAREDIR/info
 echo "14" > $SCRIPTDIR/0000.000000A7.version
 [ $? -ne 0 ] && exit 1
 

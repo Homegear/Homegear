@@ -1,6 +1,6 @@
 #!/bin/bash
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-FIRMWAREDIR=/tmp/HomegearTemp/rootfs/rootfs.ubi/1045862938/root/firmware
+FIRMWAREDIR=/tmp/HomegearTemp/rootfs/rootfs.ubi/125662337/root/firmware
 NODELETE=0
 if [ "$#" -eq "1" ] && [ "$1" -eq "1" ]; then
     NODELETE=1
@@ -16,11 +16,11 @@ rm -Rf /tmp/HomegearTemp
 [ $? -ne 0 ] && exit 1
 mkdir /tmp/HomegearTemp
 [ $? -ne 0 ] && exit 1
-wget -P /tmp/HomegearTemp/ http://www.eq-3.de/Downloads/Software/HM-CCU2-Firmware_Updates/HM-CCU2-2.9.10/HM-CCU-2.9.10.tar.gz
+wget -P /tmp/HomegearTemp/ http://www.eq-3.de/Downloads/Software/HM-CCU2-Firmware_Updates/HM-CCU2-2.11.6/HM-CCU-2.11.6.tar.gz
 [ $? -ne 0 ] && exit 1
-tar -zxf /tmp/HomegearTemp/HM-CCU-2.9.10.tar.gz -C /tmp/HomegearTemp
+tar -zxf /tmp/HomegearTemp/HM-CCU-2.11.6.tar.gz -C /tmp/HomegearTemp
 [ $? -ne 0 ] && exit 1
-rm -f /tmp/HomegearTemp/HM-CCU-2.9.10.tar.gz
+rm -f /tmp/HomegearTemp/HM-CCU-2.11.6.tar.gz
 
 echo "Downloading UBI Reader..."
 echo "(C) 2013 Jason Pruitt (Jason Pruitt), see https://github.com/jrspruitt/ubi_reader"

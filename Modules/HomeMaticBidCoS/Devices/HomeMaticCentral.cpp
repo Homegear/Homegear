@@ -2242,6 +2242,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 							}
 						}
 					}
+					if(!peer->getPhysicalInterface()->aesSupported()) GD::out.printError("Error: No physical interface supporting AES could be found. Can't pair peer of type with serial number \"" + serialNumber + "\". Trying anyway, but the pairing probably will fail.");
 				}
 				if(peer->getPhysicalInterface()->needsPeers()) peer->getPhysicalInterface()->addPeer(peer->getPeerInfo());
 			}
