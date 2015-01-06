@@ -131,6 +131,7 @@ class BidCoSQueue
         std::list<BidCoSQueueEntry>* getQueue() { return &_queue; }
         void setQueueType(BidCoSQueueType queueType) {  _queueType = queueType; }
         std::shared_ptr<IBidCoSInterface> getPhysicalInterface() { return _physicalInterface; }
+        void setPhysicalInterface(std::shared_ptr<IBidCoSInterface> interface) { _physicalInterface = interface; }
         std::string parameterName;
         int32_t channel = -1;
 

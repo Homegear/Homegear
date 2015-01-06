@@ -753,7 +753,7 @@ void HM_LGW::removePeer(int32_t address)
 		if(_peers.find(address) != _peers.end()) _peers.erase(address);
 		if(_initComplete)
 		{
-			for(int32_t i = 0; i < 3; i++)
+			for(int32_t i = 0; i < 40; i++)
 			{
 				std::vector<uint8_t> responsePacket;
 				std::vector<char> requestPacket;
@@ -765,9 +765,17 @@ void HM_LGW::removePeer(int32_t address)
 				_packetIndex++;
 				getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
 				if(responsePacket.size() >= 13  && responsePacket.at(6) == 7) break;
+				else if(responsePacket.size() == 9 && responsePacket.at(6) == 8)
+				{
+					//Operation pending
+					std::this_thread::sleep_for(std::chrono::milliseconds(50));
+					continue;
+				}
 				if(i == 2)
 				{
 					_out.printError("Error: Could not remove peer with address 0x" + _bl->hf.getHexString(address, 6));
+					_peersMutex.unlock();
+					return;
 				}
 			}
 		}

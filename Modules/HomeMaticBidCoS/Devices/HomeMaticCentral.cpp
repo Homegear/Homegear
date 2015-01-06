@@ -2237,7 +2237,9 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 						{
 							if(i->second->aesSupported())
 							{
+								GD::out.printInfo("Info: Setting default interface of new peer to " + i->second->getID() + ", because peer requires AES support.");
 								peer->setPhysicalInterfaceID(i->second->getID());
+								queue->setPhysicalInterface(i->second);
 								break;
 							}
 						}
