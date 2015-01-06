@@ -88,12 +88,12 @@ wget -P $FIRMWAREDIR http://www.eq-3.de/Downloads/Software/Firmware/HM-LC-Bl1PBU
 [ $? -ne 0 ] && exit 1
 tar -zxf $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.tgz -C $FIRMWAREDIR
 [ $? -ne 0 ] && exit 1
-mv $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.eq3 $SCRIPTDIR/0000.00000022.fw
+mv $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.eq3 $SCRIPTDIR/0000.0000006A.fw
 [ $? -ne 0 ] && exit 1
 rm $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.tgz
 rm $FIRMWAREDIR/changelog.txt
 rm $FIRMWAREDIR/info
-echo "23" > $SCRIPTDIR/0000.00000022.version
+echo "23" > $SCRIPTDIR/0000.0000006A.version
 [ $? -ne 0 ] && exit 1
 
 mv $FIRMWAREDIR/hmw_io_4_fm_hw0.hex $SCRIPTDIR/0001.00001000.fw
