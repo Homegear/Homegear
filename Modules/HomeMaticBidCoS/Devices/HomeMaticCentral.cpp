@@ -1969,6 +1969,7 @@ void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<BidCoSPeer> peer, int
 				peer->getDeviceType().type() == (uint32_t)DeviceType::HMPBI4FM ||
 				peer->getDeviceType().type() == (uint32_t)DeviceType::HMPB4WM ||
 				peer->getDeviceType().type() == (uint32_t)DeviceType::HMPB2WM ||
+				peer->getDeviceType().type() == (uint32_t)DeviceType::HMPB2FM ||
 				peer->getDeviceType().type() == (uint32_t)DeviceType::HMRC12 ||
 				peer->getDeviceType().type() == (uint32_t)DeviceType::HMRC12B ||
 				peer->getDeviceType().type() == (uint32_t)DeviceType::HMRC12SW ||

@@ -123,6 +123,7 @@ enum class DeviceType : uint32_t
 	HMSECSC2 =		0x00B1,
 	HMCCRTDNBOM = 	0x00BD,
 	HMMODRE8 =		0x00BE,
+	HMPB2FM =		0x00BF,
 	HMRC8 =			0x00DA
 };
 }
