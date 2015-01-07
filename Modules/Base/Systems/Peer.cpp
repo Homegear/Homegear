@@ -1379,7 +1379,7 @@ std::shared_ptr<RPC::Variable> Peer::getDeviceDescription(int32_t channel, std::
 			//Compatibility
 			if(fields.empty() || fields.find("RF_ADDRESS") != fields.end()) description->structValue->insert(RPC::RPCStructElement("RF_ADDRESS", std::shared_ptr<RPC::Variable>(new RPC::Variable(_address))));
 			//Compatibility
-			if(fields.empty() || fields.find("ROAMING") != fields.end()) description->structValue->insert(RPC::RPCStructElement("ROAMING", std::shared_ptr<RPC::Variable>(new RPC::Variable(false))));
+			if(fields.empty() || fields.find("ROAMING") != fields.end()) description->structValue->insert(RPC::RPCStructElement("ROAMING", std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)0))));
 
 			if(fields.empty() || fields.find("RX_MODE") != fields.end()) description->structValue->insert(RPC::RPCStructElement("RX_MODE", std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)rpcDevice->rxModes))));
 
@@ -1407,7 +1407,8 @@ std::shared_ptr<RPC::Variable> Peer::getDeviceDescription(int32_t channel, std::
 				{
 					aesActive = 1;
 				}
-				description->structValue->insert(RPC::RPCStructElement("AES_ACTIVE", std::shared_ptr<RPC::Variable>(new RPC::Variable((bool)aesActive))));
+				//Integer for compatability
+				description->structValue->insert(RPC::RPCStructElement("AES_ACTIVE", std::shared_ptr<RPC::Variable>(new RPC::Variable(aesActive))));
 			}
 
 			if(fields.empty() || fields.find("DIRECTION") != fields.end() || fields.find("LINK_SOURCE_ROLES") != fields.end() || fields.find("LINK_TARGET_ROLES") != fields.end())
