@@ -91,6 +91,8 @@ public:
 	virtual bool getUnreach() { return _unreach; }
 	virtual void checkUnreach(int32_t cyclicTimeout, uint32_t lastPacketReceived);
     virtual void endUnreach();
+
+    virtual bool getLowbat() { return _lowbat; }
 protected:
     BaseLib::Obj* _bl = nullptr;
     std::map<uint32_t, uint32_t> _variableDatabaseIDs;

@@ -170,7 +170,7 @@ void IPhysicalInterface::processPackets()
 				else _bl->out.printWarning("Warning: Packet was nullptr.");
 				processingTime = HelperFunctions::getTime() - processingTime;
 				if(_bl->settings.devLog() || _bl->debugLevel >= 5) _bl->out.printInfo("Info (" + _settings->id + "): Packet processing took " + std::to_string(processingTime) + " ms.");
-				if(processingTime > _maxPacketProcessingTime) _bl->out.printWarning("Warning (" + _settings->id + "): Packet processing took longer than 1 second.");
+				if(processingTime > _maxPacketProcessingTime) _bl->out.printInfo("Info (" + _settings->id + "): Packet processing took longer than 1 second.");
 			}
 		}
 		catch(const std::exception& ex)

@@ -455,6 +455,7 @@ bool MAXPeer::load(BaseLib::Systems::LogicalDevice* device)
 			GD::out.printError("Error loading peer " + std::to_string(_peerID) + ": Device type not found: 0x" + BaseLib::HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
 			return false;
 		}
+		initializeTypeString();
 		std::string entry;
 		loadConfig();
 		initializeCentralConfig();

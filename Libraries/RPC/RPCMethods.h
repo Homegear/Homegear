@@ -398,8 +398,8 @@ class RPCGetPeerId : public RPCMethod
 public:
 	RPCGetPeerId()
 	{
-		addSignature(BaseLib::RPC::VariableType::rpcInteger, std::vector<BaseLib::RPC::VariableType>{BaseLib::RPC::VariableType::rpcString});
 		addSignature(BaseLib::RPC::VariableType::rpcInteger, std::vector<BaseLib::RPC::VariableType>{BaseLib::RPC::VariableType::rpcInteger});
+		addSignature(BaseLib::RPC::VariableType::rpcInteger, std::vector<BaseLib::RPC::VariableType>{BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcString});
 	}
 	std::shared_ptr<BaseLib::RPC::Variable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
 };

@@ -768,6 +768,8 @@ void Peer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::shared_pt
 				break;
 			}
 		}
+		_databaseMutex.unlock();
+		return;
 	}
 	catch(const std::exception& ex)
     {
@@ -781,7 +783,7 @@ void Peer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::shared_pt
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-	_databaseMutex.unlock();
+    _databaseMutex.unlock();
 }
 
 void Peer::saveVariables()
@@ -1160,6 +1162,30 @@ void Peer::loadConfig()
     _databaseMutex.unlock();
 }
 
+void Peer::initializeTypeString()
+{
+	try
+	{
+		if(!rpcDevice) return;
+		std::shared_ptr<RPC::DeviceType> rpcDeviceType = rpcDevice->getType(_deviceType, _firmwareVersion);
+		if(rpcDeviceType) _typeString = rpcDeviceType->id;
+		else if(_deviceType.type() == 0) _typeString = "HM-RCV-50"; //Central
+		else if(!rpcDevice->supportedTypes.empty()) _typeString = rpcDevice->supportedTypes.at(0)->id;
+	}
+	catch(const std::exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(const Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 //RPC methods
 std::shared_ptr<RPC::Variable> Peer::getAllValues(bool returnWriteOnly)
 {
@@ -1168,19 +1194,10 @@ std::shared_ptr<RPC::Variable> Peer::getAllValues(bool returnWriteOnly)
 		if(_disposing) return RPC::Variable::createError(-32500, "Peer is disposing.");
 		std::shared_ptr<RPC::Variable> values(new RPC::Variable(RPC::VariableType::rpcStruct));
 
-		std::string type;
-		std::shared_ptr<RPC::DeviceType> rpcDeviceType = rpcDevice->getType(_deviceType, _firmwareVersion);
-		if(rpcDeviceType) type = rpcDeviceType->id;
-		else if(_deviceType.type() == 0) type = "HM-RCV-50"; //Central
-		else
-		{
-			if(!rpcDevice->supportedTypes.empty()) type = rpcDevice->supportedTypes.at(0)->id;
-		}
-
 		values->structValue->insert(RPC::RPCStructElement("FAMILY", std::shared_ptr<RPC::Variable>(new RPC::Variable((uint32_t)_deviceType.family()))));
 		values->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::Variable>(new RPC::Variable((uint32_t)_peerID))));
 		values->structValue->insert(RPC::RPCStructElement("ADDRESS", std::shared_ptr<RPC::Variable>(new RPC::Variable(_serialNumber))));
-		values->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::Variable>(new RPC::Variable(type))));
+		values->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::Variable>(new RPC::Variable(_typeString))));
 		std::shared_ptr<RPC::Variable> channels(new RPC::Variable(RPC::VariableType::rpcArray));
 		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 		{

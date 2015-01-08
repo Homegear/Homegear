@@ -158,10 +158,12 @@ public:
 	virtual int32_t getFirmwareVersion() { return _firmwareVersion; }
 	virtual void setFirmwareVersion(int32_t value) { _firmwareVersion = value; saveVariable(1001, value); }
 	virtual LogicalDeviceType getDeviceType() { return _deviceType; }
-	virtual void setDeviceType(LogicalDeviceType value) { _deviceType = value; saveVariable(1002, (int32_t)_deviceType.type()); }
+	virtual void setDeviceType(LogicalDeviceType value) { _deviceType = value; saveVariable(1002, (int32_t)_deviceType.type()); initializeTypeString(); }
     virtual std::string getName() { return _name; }
 	virtual void setName(std::string value) { _name = value; saveVariable(1000, _name); }
     //End
+
+	virtual std::string getTypeString() { return _typeString; }
 
 	virtual std::string handleCLICommand(std::string command) = 0;
 	virtual RPC::Device::RXModes::Enum getRXModes();
@@ -254,6 +256,7 @@ protected:
 	std::string _name;
 	//End
 
+	std::string _typeString;
 	RPC::Device::RXModes::Enum _rxModes = RPC::Device::RXModes::Enum::none;
 
 	bool _disposing = false;
@@ -343,6 +346,13 @@ protected:
 	 * @see initializeCentralConfig()
 	 */
 	virtual void initializeValueSet(int32_t channel, std::shared_ptr<BaseLib::RPC::ParameterSet> valueSet);
+
+	/**
+	 * Initializes _typeString.
+	 *
+	 * @see _typeString
+	 */
+	virtual void initializeTypeString();
 };
 
 }

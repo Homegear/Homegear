@@ -521,6 +521,127 @@ std::shared_ptr<RPC::Variable> Central::getParamsetId(uint64_t peerID, uint32_t 
     return RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::Variable> Central::getPeerID(int32_t filterType, std::string filterValue)
+{
+	try
+	{
+		std::shared_ptr<BaseLib::RPC::Variable> ids(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+		if(filterType == 1) //Serial number
+		{
+			std::shared_ptr<Peer> peer = _me->getPeer(filterValue);
+			if(peer) ids->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)peer->getID())));
+		}
+		else if(filterType == 2) //Physical address
+		{
+			int32_t address = Math::getNumber(filterValue);
+			if(address != 0)
+			{
+				std::shared_ptr<Peer> peer = _me->getPeer(address);
+				if(peer) ids->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)peer->getID())));
+			}
+		}
+		else if(filterType == 3) //Type id
+		{
+			uint32_t type = (uint32_t)Math::getNumber(filterValue);
+			std::vector<std::shared_ptr<Peer>> peers;
+			//Copy all peers first, because getServiceMessages takes very long and we don't want to lock _peersMutex too long
+			_me->getPeers(peers);
+
+			for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+			{
+				if(!*i) continue;
+				if((*i)->getDeviceType().type() == type) ids->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)(*i)->getID())));
+			}
+		}
+		else if(filterType == 4) //Type string
+		{
+			std::vector<std::shared_ptr<Peer>> peers;
+			//Copy all peers first, because getServiceMessages takes very long and we don't want to lock _peersMutex too long
+			_me->getPeers(peers);
+
+			for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+			{
+				if(!*i) continue;
+				if((*i)->getTypeString() == filterValue) ids->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)(*i)->getID())));
+			}
+		}
+		else if(filterType == 5) //Name
+		{
+			std::vector<std::shared_ptr<Peer>> peers;
+			//Copy all peers first, because getServiceMessages takes very long and we don't want to lock _peersMutex too long
+			_me->getPeers(peers);
+
+			for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+			{
+				if(!*i) continue;
+				if((*i)->getName().find(filterValue) != std::string::npos) ids->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)(*i)->getID())));
+			}
+		}
+		else if(filterType == 6) //Pending config
+		{
+			std::vector<std::shared_ptr<Peer>> peers;
+			//Copy all peers first, because getServiceMessages takes very long and we don't want to lock _peersMutex too long
+			_me->getPeers(peers);
+
+			for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+			{
+				if(!*i) continue;
+				if((*i)->serviceMessages->getConfigPending()) ids->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)(*i)->getID())));
+			}
+		}
+		else if(filterType == 7) //Unreachable
+		{
+			std::vector<std::shared_ptr<Peer>> peers;
+			//Copy all peers first, because getServiceMessages takes very long and we don't want to lock _peersMutex too long
+			_me->getPeers(peers);
+
+			for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+			{
+				if(!*i) continue;
+				if((*i)->serviceMessages->getUnreach()) ids->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)(*i)->getID())));
+			}
+		}
+		else if(filterType == 8) //Reachable
+		{
+			std::vector<std::shared_ptr<Peer>> peers;
+			//Copy all peers first, because getServiceMessages takes very long and we don't want to lock _peersMutex too long
+			_me->getPeers(peers);
+
+			for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+			{
+				if(!*i) continue;
+				if(!(*i)->serviceMessages->getUnreach()) ids->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)(*i)->getID())));
+			}
+		}
+		else if(filterType == 9) //Low battery
+		{
+			std::vector<std::shared_ptr<Peer>> peers;
+			//Copy all peers first, because getServiceMessages takes very long and we don't want to lock _peersMutex too long
+			_me->getPeers(peers);
+
+			for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+			{
+				if(!*i) continue;
+				if((*i)->serviceMessages->getLowbat()) ids->arrayValue->push_back(std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)(*i)->getID())));
+			}
+		}
+		return ids;
+	}
+	catch(const std::exception& ex)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::Variable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::Variable> Central::getPeerID(int32_t address)
 {
 	try

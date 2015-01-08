@@ -67,6 +67,7 @@ public:
 	virtual std::shared_ptr<RPC::Variable> getDeviceDescription(std::string serialNumber, int32_t channel);
 	virtual std::shared_ptr<RPC::Variable> getDeviceDescription(uint64_t id, int32_t channel);
 	virtual std::shared_ptr<RPC::Variable> getDeviceInfo(uint64_t id, std::map<std::string, bool> fields) = 0;
+	virtual std::shared_ptr<RPC::Variable> getPeerID(int32_t filterType, std::string filterValue);
 	virtual std::shared_ptr<RPC::Variable> getPeerID(int32_t address);
 	virtual std::shared_ptr<RPC::Variable> getPeerID(std::string serialNumber);
 	virtual std::shared_ptr<RPC::Variable> getInstallMode() { return RPC::Variable::createError(-32601, "Method not implemented for this central."); }

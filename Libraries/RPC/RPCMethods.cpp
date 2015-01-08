@@ -1623,20 +1623,12 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetPeerId::invoke(std::shared_ptr<std
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::VariableType>>({
-			std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString }),
-			std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcInteger })
+			std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcInteger }),
+			std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcString })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		std::string serialNumber;
-		bool useSerialNumber = false;
-		if(parameters->at(0)->type == BaseLib::RPC::VariableType::rpcString)
-		{
-			useSerialNumber = true;
-			int32_t pos = parameters->at(0)->stringValue.find(':');
-			if(pos > -1) serialNumber = parameters->at(0)->stringValue.substr(0, pos);
-			else serialNumber = parameters->at(0)->stringValue;
-		}
+		std::string filterValue = (parameters->size() > 1) ? parameters->at(1)->stringValue : "";
 
 		std::shared_ptr<BaseLib::RPC::Variable> ids(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
@@ -1644,14 +1636,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetPeerId::invoke(std::shared_ptr<std
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central)
 			{
-				std::shared_ptr<BaseLib::RPC::Variable> result;
-				if(useSerialNumber) result = central->getPeerID(serialNumber);
-				else result = central->getPeerID(parameters->at(0)->integerValue);
-				if(result && !result->errorStruct) ids->arrayValue->push_back(result);
+				std::shared_ptr<BaseLib::RPC::Variable> result = central->getPeerID(parameters->at(0)->integerValue, filterValue);
+				if(result && !result->errorStruct && result->arrayValue->size() > 0) ids->arrayValue->insert(ids->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
 			}
 		}
 
-		if(ids->arrayValue->empty()) return BaseLib::RPC::Variable::createError(-2, "Device not found.");
 		return ids;
 	}
 	catch(const std::exception& ex)
