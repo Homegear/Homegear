@@ -51,6 +51,7 @@ bool Variable::operator==(const Variable& rhs)
 {
 	if(type != rhs.type) return false;
 	if(type == VariableType::rpcBoolean) return booleanValue == rhs.booleanValue;
+	if(type == VariableType::rpcInteger) return integerValue == rhs.integerValue;
 	if(type == VariableType::rpcString) return stringValue == rhs.stringValue;
 	if(type == VariableType::rpcFloat) return floatValue == rhs.floatValue;
 	if(type == VariableType::rpcArray)

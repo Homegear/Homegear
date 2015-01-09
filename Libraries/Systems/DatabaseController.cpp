@@ -578,6 +578,7 @@ std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::setSystemVariable(st
 
 		db.executeCommand("INSERT INTO systemVariables VALUES(?, ?)", data);
 
+		GD::eventHandler.trigger(0, -1, variableID, value);
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableID});
 		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>{value});
 		GD::rpcClient.broadcastEvent(0, -1, "", valueKeys, values);

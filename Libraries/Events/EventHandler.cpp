@@ -205,8 +205,8 @@ std::shared_ptr<BaseLib::RPC::Variable> EventHandler::add(std::shared_ptr<BaseLi
 
 		if(event->type == Event::Type::Enum::triggered)
 		{
-			if(eventDescription->structValue->find("PEERID") == eventDescription->structValue->end() || eventDescription->structValue->at("PEERID")->integerValue == 0) return BaseLib::RPC::Variable::createError(-5, "No peer id specified.");
-			event->peerID = eventDescription->structValue->at("PEERID")->integerValue;
+			if(eventDescription->structValue->find("PEERID") == eventDescription->structValue->end()) event->peerID = 0;
+			else event->peerID = eventDescription->structValue->at("PEERID")->integerValue;
 			if(eventDescription->structValue->find("PEERCHANNEL") != eventDescription->structValue->end()) event->peerChannel = eventDescription->structValue->at("PEERCHANNEL")->integerValue;
 
 			if(eventDescription->structValue->find("VARIABLE") == eventDescription->structValue->end() || eventDescription->structValue->at("VARIABLE")->stringValue.empty()) return BaseLib::RPC::Variable::createError(-5, "No variable specified.");
