@@ -3287,7 +3287,11 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setValue(uint32_t channel, s
 		{
 			rpcParameter->convertToPacket(value, parameter->data);
 			saveParameter(parameter->databaseID, parameter->data);
-			if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+			if(!valueKeys->empty())
+			{
+				raiseEvent(_peerID, channel, valueKeys, values);
+				raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+			}
 			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		}
 		else if(rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::command) return BaseLib::RPC::Variable::createError(-6, "Parameter is not settable.");
@@ -3324,9 +3328,6 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setValue(uint32_t channel, s
 		rpcParameter->convertToPacket(value, parameter->data);
 		saveParameter(parameter->databaseID, parameter->data);
 		if(_bl->debugLevel > 4) GD::out.printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(parameter->data) + ".");
-		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({ valueKey }));
-		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> rpcValues(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>({value}));
-		raiseEvent(_peerID, channel, valueKeys, rpcValues);
 
 		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(_physicalInterface, BidCoSQueueType::PEER));
 		queue->noSending = true;
@@ -3459,7 +3460,11 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setValue(uint32_t channel, s
 			GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 		}
 
-		if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+		if(!valueKeys->empty())
+		{
+			raiseEvent(_peerID, channel, valueKeys, values);
+			raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+		}
 
 		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
