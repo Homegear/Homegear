@@ -3324,6 +3324,9 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setValue(uint32_t channel, s
 		rpcParameter->convertToPacket(value, parameter->data);
 		saveParameter(parameter->databaseID, parameter->data);
 		if(_bl->debugLevel > 4) GD::out.printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(parameter->data) + ".");
+		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({ valueKey }));
+		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> rpcValues(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>({value}));
+		raiseEvent(_peerID, channel, valueKeys, rpcValues);
 
 		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(_physicalInterface, BidCoSQueueType::PEER));
 		queue->noSending = true;
