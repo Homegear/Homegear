@@ -6,6 +6,10 @@
 			<type_id>0x0200</type_id>
 			<firmware cond_op="GE">0x10</firmware>
 		</type>
+		<type name="MAX! Radiator Thermostat" id="BC-RT-TRX-CyG-2">
+			<type_id>0x02FF</type_id>
+			<firmware cond_op="GE">0x10</firmware>
+		</type>
 	</types>
 	<parameters type="MASTER" id="switch_dev_master">
 		<parameter id="TEMPERATURE_SATURDAY_1">
