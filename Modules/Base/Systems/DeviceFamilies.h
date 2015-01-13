@@ -55,7 +55,7 @@ enum class DeviceFamilies : uint32_t
 	CUSTOM08 = 0xFB,
 	CUSTOM09 = 0xFC,
 	CUSTOM10 = 0xFD,
-	CUSTOM11 = 0xFE
+	Miscellaneous = 0xFE
 };
 }
 }

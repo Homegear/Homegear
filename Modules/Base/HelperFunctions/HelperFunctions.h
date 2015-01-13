@@ -405,6 +405,14 @@ public:
 	 * @param data The byte array to convert.
 	 * @return Returns the hex string of the byte array.
 	 */
+	static std::string getHexString(const std::string& data);
+
+	/**
+	 * Converts a byte array to a hex string.
+	 *
+	 * @param data The byte array to convert.
+	 * @return Returns the hex string of the byte array.
+	 */
 	static std::string getHexString(const std::vector<uint8_t>& data);
 
 	/**
@@ -460,6 +468,14 @@ public:
 	 * @return Returns a vector of type unsigned char.
 	 */
 	std::vector<uint8_t> getUBinary(std::vector<uint8_t>& hexData);
+
+	/**
+	 * Converts a hex string to a binary array of type string.
+	 *
+	 * @param hexString The hex string to convert.
+	 * @return Returns a string containing the binary data.
+	 */
+	std::string getBinaryString(std::string hexString);
 
 	/**
 	 * Gets the UID of a user.

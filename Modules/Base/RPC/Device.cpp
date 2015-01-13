@@ -123,6 +123,8 @@ DeviceFrame::DeviceFrame(BaseLib::Obj* baseLib, xml_node<>* node) : DeviceFrame(
 		}
 		else if(attributeName == "size") size = Math::getNumber(attributeValue);
 		else if(attributeName == "double_send") { if(attributeValue == "true") doubleSend = true; }
+		else if(attributeName == "max_packets") maxPackets = Math::getNumber(attributeValue);
+		else if(attributeName == "split_after") splitAfter = Math::getNumber(attributeValue);
 		else _bl->out.printWarning("Warning: Unknown attribute for \"frame\": " + attributeName);
 	}
 	for(xml_node<>* frameNode = node->first_node("parameter"); frameNode; frameNode = frameNode->next_sibling("parameter"))
@@ -269,6 +271,10 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::Variable> value)
 			value->stringValue = "";
 			value->type = VariableType::rpcInteger;
 		}
+		else if(type == Type::Enum::hexstringBytearray)
+		{
+			value->stringValue = _bl->hf.getHexString(value->stringValue);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -408,6 +414,14 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::Variable> value)
 			}
 			else _bl->out.printWarning("Warning: Only strings can be converted to Json arrays.");
 		}
+		else if(type == Type::Enum::hexstringBytearray)
+		{
+			if(_parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeString)
+			{
+				value->stringValue = _bl->hf.getBinaryString(value->stringValue);
+			}
+			else _bl->out.printWarning("Warning: Only strings can be converted to byte arrays.");
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -455,6 +469,7 @@ ParameterConversion::ParameterConversion(BaseLib::Obj* baseLib, Parameter* param
 			else if(attributeValue == "rpc_binary") type = Type::Enum::rpcBinary;
 			else if(attributeValue == "option_string") type = Type::Enum::optionString;
 			else if(attributeValue == "string_json_array_float") type = Type::Enum::stringJsonArrayFloat;
+			else if(attributeValue == "hexstring_bytearray") type = Type::Enum::hexstringBytearray;
 			else _bl->out.printWarning("Warning: Unknown type for \"conversion\": " + attributeValue);
 		}
 		else if(attributeName == "factor") factor = Math::getDouble(attributeValue);
@@ -628,7 +643,12 @@ std::shared_ptr<Variable> Parameter::convertFromPacket(std::vector<uint8_t>& dat
 		else
 		{
 			std::shared_ptr<Variable> variable;
-			if(value->size() <= 4)
+			if(physicalParameter->type == PhysicalParameter::Type::typeString)
+			{
+				variable.reset(new Variable(VariableType::rpcString));
+				variable->stringValue.insert(variable->stringValue.end(), value->begin(), value->end());
+			}
+			else if(value->size() <= 4)
 			{
 				int32_t integerValue;
 				_bl->hf.memcpyBigEndian(integerValue, *value);
@@ -920,6 +940,10 @@ void Parameter::convertToPacket(const std::shared_ptr<Variable> value, std::vect
 				variable->integerValue &= valueMask;
 			}
 			_bl->hf.memcpyBigEndian(convertedValue, variable->integerValue);
+		}
+		else
+		{
+			convertedValue.insert(convertedValue.end(), variable->stringValue.begin(), variable->stringValue.end());
 		}
 
 		if(physicalParameter->endian == PhysicalParameter::Endian::Enum::little)
@@ -1951,6 +1975,7 @@ void Device::parseXML(xml_node<>* node)
 				{
 					HelperFunctions::toLower(HelperFunctions::trim(element));
 					if(element == "wakeup") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::wakeUp);
+					else if(element == "wakeup2") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::wakeUp2);
 					else if(element == "config") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::config);
 					else if(element == "burst") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::burst);
 					else if(element == "always") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::always);

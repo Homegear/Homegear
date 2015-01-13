@@ -395,6 +395,18 @@ std::string HelperFunctions::getHexString(const std::vector<char>& data)
 	return stringstream.str();
 }
 
+std::string HelperFunctions::getHexString(const std::string& data)
+{
+	std::ostringstream stringstream;
+	stringstream << std::hex << std::setfill('0') << std::uppercase;
+	for(std::string::const_iterator i = data.begin(); i != data.end(); ++i)
+	{
+		stringstream << std::setw(2) << (int32_t)((uint8_t)(*i));
+	}
+	stringstream << std::dec;
+	return stringstream.str();
+}
+
 std::string HelperFunctions::getHexString(int32_t number, int32_t width)
 {
 	std::ostringstream stringstream;
@@ -407,6 +419,21 @@ std::string HelperFunctions::getHexString(int32_t number, int32_t width)
 std::vector<char> HelperFunctions::getBinary(std::string hexString)
 {
     std::vector<char> binary;
+    if(hexString.empty()) return binary;
+	if(hexString.size() % 2 != 0) hexString = hexString.substr(1);
+    for (std::string::const_iterator i = hexString.begin(); i != hexString.end(); i += 2)
+    {
+        uint8_t byte = 0;
+        if(isxdigit(*i)) byte = _asciiToBinaryTable[std::toupper(*i) - '0'] << 4;
+        if(i + 1 != hexString.end() && isxdigit(*(i + 1))) byte += _asciiToBinaryTable[std::toupper(*(i + 1)) - '0'];
+        binary.push_back(byte);
+    }
+    return binary;
+}
+
+std::string HelperFunctions::getBinaryString(std::string hexString)
+{
+    std::string binary;
     if(hexString.empty()) return binary;
 	if(hexString.size() % 2 != 0) hexString = hexString.substr(1);
     for (std::string::const_iterator i = hexString.begin(); i != hexString.end(); i += 2)

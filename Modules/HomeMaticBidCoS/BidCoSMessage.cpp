@@ -226,6 +226,12 @@ bool BidCoSMessage::checkAccess(std::shared_ptr<BidCoSPacket> packet, std::share
 		if(access == NOACCESS) return false;
 		if(queue && !queue->isEmpty() && packet->destinationAddress() == _device->getAddress())
 		{
+			if(packet->messageType() == 2 && packet->payload()->size() == 1 && packet->payload()->at(0) == 0x80)
+			{
+				queue->pop();
+				GD::out.printWarning("Warning: NACK received. Popping from queue anyway. If the device doesn't seem to work, please reset it to factory defaults and pair it again to Homegear.");
+				return false;
+			}
 			if(queue->front()->getType() == QueueEntryType::PACKET || (queue->front()->getType() == QueueEntryType::MESSAGE && !typeIsEqual(queue->front()->getMessage())))
 			{
 				queue->pop(); //Popping takes place here to be able to process resent messages.

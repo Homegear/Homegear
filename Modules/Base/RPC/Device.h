@@ -89,7 +89,7 @@ class ParameterConversion
 public:
 	struct Type
 	{
-		enum Enum { none, toggle, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap, floatConfigTime, optionInteger, integerTinyFloat, stringUnsignedInteger, blindTest, cfm, ccrtdnParty, optionString, stringJsonArrayFloat, rpcBinary };
+		enum Enum { none, toggle, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap, floatConfigTime, optionInteger, integerTinyFloat, stringUnsignedInteger, blindTest, cfm, ccrtdnParty, optionString, stringJsonArrayFloat, rpcBinary, hexstringBytearray };
 	};
 	Type::Enum type = Type::Enum::none;
 	std::unordered_map<int32_t, int32_t> integerValueMapDevice;
@@ -374,6 +374,8 @@ public:
 	int32_t channelIndexOffset = 0;
 	int32_t fixedChannel = -1;
 	int32_t size = -1;
+	int32_t splitAfter = -1;
+	int32_t maxPackets = -1;
 	std::vector<Parameter> parameters;
 	std::vector<std::shared_ptr<Parameter>> associatedValues;
 
@@ -393,7 +395,7 @@ public:
 	};
 	struct RXModes
 	{
-		enum Enum { none = 0, always = 1, burst = 2, config = 4, wakeUp = 8, lazyConfig = 16 };
+		enum Enum { none = 0, always = 1, burst = 2, config = 4, wakeUp = 8, lazyConfig = 16, wakeUp2 = 32 };
 	};
 
 	bool loaded() { return _loaded; }

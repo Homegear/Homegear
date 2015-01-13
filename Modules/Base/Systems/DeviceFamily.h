@@ -119,6 +119,7 @@ public:
 	virtual std::shared_ptr<RPC::Variable> getPairingMethods() = 0;
 	virtual std::string handleCLICommand(std::string& command) = 0;
 	virtual bool deviceSelected() { return (bool)_currentDevice; }
+	virtual bool skipFamilyCLI() { return false; }
 protected:
 	BaseLib::Obj* _bl = nullptr;
 	IFamilyEventSink* _eventHandler;
