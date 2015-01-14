@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<device version="1">
+	<supported_types>
+		<type name="Open Weather Map" id="Open_Weather_Map">
+			<type_id>0x0100</type_id>
+		</type>
+	</supported_types>
+	<run_program>
+		<path>DeviceScripts/OpenWeatherMap/OpenWeatherMap.php</path>
+		<arguments>$PEERID</arguments>
+		<start_type>permanent</start_type>
+	</run_program>
+	<paramset type="MASTER" id="custom_ch0_master">
+		<parameter id="REQUEST_INTERVAL">
+			<logical type="integer" default="60" min="60" max="86400" unit="s"/>
+			<physical interface="config"/>
+			<conversion type="rpc_binary" />
+		</parameter>
+		<parameter id="CITY">
+			<logical type="string" default="Kiel"/>
+			<physical interface="config"/>
+			<conversion type="rpc_binary" />
+		</parameter>
+		<parameter id="COUNTRY_CODE">
+			<logical type="string" default="DE"/>
+			<physical interface="config"/>
+			<conversion type="rpc_binary" />
+		</parameter>
+		<parameter id="LANGUAGE_CODE">
+			<logical type="string" default="EN"/>
+			<physical interface="config"/>
+			<conversion type="rpc_binary" />
+		</parameter>
+	</paramset>
+	<channels>
+		<channel index="1" type="CUSTOM">
+			<paramset type="VALUES" id="custom_ch1_values">
+				<parameter id="CITY_LONGITUDE" operations="read,write,event">
+					<logical type="float" min="-180.0" max="180.0" unit="°" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="CITY_LATITUDE" operations="read,write,event">
+					<logical type="float" min="-90.0" max="90.0" unit="°" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="SUNRISE" operations="read,write,event">
+					<logical type="integer" min="0" unit="s" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="SUNSET" operations="read,write,event">
+					<logical type="integer" min="0" unit="s" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="WEATHER" operations="read,write,event">
+					<logical type="string" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="WEATHER_DESCRIPTION" operations="read,write,event">
+					<logical type="string" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="WEATHER_ICON" operations="read,write,event">
+					<logical type="string" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="WEATHER_ICON_URL" operations="read,write,event">
+					<logical type="string" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="TEMPERATURE" operations="read,write,event">
+					<logical type="float" min="-100.0" max="100.0" unit="°C" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="HUMIDITY" operations="read,write,event">
+					<logical type="integer" min="0" max="100" unit="%" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="PRESSURE" operations="read,write,event">
+					<logical type="float" min="0.0" max="2000.0" unit="hPa" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="WIND_SPEED" operations="read,write,event">
+					<logical type="float" min="0.0" unit="km/h" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="WIND_DIRECTION" operations="read,write,event">
+					<logical type="float" min="0.0" max="360.0" unit="°" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="RAIN_3H" operations="read,write,event">
+					<logical type="float" min="0.0" unit="mm" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="SNOW_3H" operations="read,write,event">
+					<logical type="float" min="0.0" unit="mm" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="CLOUD_COVERAGE" operations="read,write,event">
+					<logical type="integer" min="0" max="100" unit="%" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+			</paramset>
+		</channel>
+	</channels>
+</device>
