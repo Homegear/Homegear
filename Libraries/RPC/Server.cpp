@@ -53,6 +53,7 @@ void Server::registerMethods()
 		_server->registerMethod("addEvent", std::shared_ptr<RPCMethod>(new RPCAddEvent()));
 		_server->registerMethod("addLink", std::shared_ptr<RPCMethod>(new RPCAddLink()));
 		_server->registerMethod("clientServerInitialized", std::shared_ptr<RPCMethod>(new RPCClientServerInitialized()));
+		_server->registerMethod("createDevice", std::shared_ptr<RPCMethod>(new RPCCreateDevice()));
 		_server->registerMethod("deleteDevice", std::shared_ptr<RPCMethod>(new RPCDeleteDevice()));
 		_server->registerMethod("deleteMetadata", std::shared_ptr<RPCMethod>(new RPCDeleteMetadata()));
 		_server->registerMethod("deleteSystemVariable", std::shared_ptr<RPCMethod>(new RPCDeleteSystemVariable()));

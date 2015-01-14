@@ -1,5 +1,3 @@
-#define VERSION "0.5.22"
-
 /* Copyright 2013-2015 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
@@ -28,3 +26,50 @@
  * version.  If you delete this exception statement from all source
  * files in the program, then also delete it here.
  */
+
+#ifndef MISCDEVICE_H
+#define MISCDEVICE_H
+
+#include "../Base/BaseLib.h"
+#include "MiscPeer.h"
+#include "DeviceTypes.h"
+
+#include <string>
+#include <unordered_map>
+#include <map>
+#include <mutex>
+#include <vector>
+#include <queue>
+#include <thread>
+#include <chrono>
+#include "pthread.h"
+
+namespace Misc
+{
+class MiscDevice : public BaseLib::Systems::LogicalDevice
+{
+    public:
+		virtual bool isCentral();
+
+        MiscDevice(IDeviceEventSink* eventHandler);
+        MiscDevice(uint32_t deviceID, std::string serialNumber, IDeviceEventSink* eventHandler);
+        virtual ~MiscDevice();
+        virtual void dispose(bool wait = true);
+
+        virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet) { return true; }
+
+        virtual void addPeer(std::shared_ptr<MiscPeer> peer);
+		virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
+		std::shared_ptr<MiscPeer> getPeer(uint64_t id);
+		std::shared_ptr<MiscPeer> getPeer(std::string serialNumber);
+		virtual void loadPeers();
+		virtual void savePeers(bool full);
+        virtual void loadVariables() {}
+        virtual void saveVariables() {}
+    protected:
+
+        virtual void init();
+    private:
+};
+}
+#endif

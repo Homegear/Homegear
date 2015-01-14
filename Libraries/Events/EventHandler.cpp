@@ -46,7 +46,7 @@ void EventHandler::dispose()
 	_disposing = true;
 	_stopThread = true;
 	uint32_t i = 0;
-	while(_triggerThreadCount > 0 && i < 300)
+	while(_eventThreadCount > 0 && i < 300)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		i++;
@@ -84,14 +84,18 @@ void EventHandler::mainThread()
 			{
 				std::shared_ptr<Event> event = _timedEvents.begin()->second;
 				_eventsMutex.unlock();
-				std::shared_ptr<BaseLib::RPC::Variable> result;
-				if(event->enabled) result = GD::rpcServers.begin()->second.callMethod(event->eventMethod, event->eventMethodParameters);
-				event->lastRaised = currentTime;
-				if(result && result->errorStruct)
+
+				if(_eventThreadCount <= 20)
 				{
-					GD::out.printError("Could not execute RPC method \"" + event->eventMethod + "\" for timed event \"" + event->name + "\". Error struct:");
-					result->print();
+					if(event->enabled)
+					{
+						std::thread t(&EventHandler::rpcCallThread, this, event->name, event->eventMethod, event->eventMethodParameters);
+						BaseLib::Threads::setThreadPriority(GD::bl.get(), t.native_handle(), GD::bl->settings.eventTriggerThreadPriority(), GD::bl->settings.eventTriggerThreadPolicy());
+						t.detach();
+						event->lastRaised = currentTime;
+					}
 				}
+				else GD::out.printError("Error: Your event processing is too slow. More than 20 events are queued. Skipping timed event " + event->name + ".");
 				save(event);
 				if(event->recurEvery == 0 || (event->endTime > 0 && currentTime >= event->endTime))
 				{
@@ -124,18 +128,19 @@ void EventHandler::mainThread()
 			{
 				std::shared_ptr<Event> event = _eventsToReset.begin()->second;
 				_eventsMutex.unlock();
-				GD::out.printInfo("Info: Resetting event " + event->name + ".");
-				std::shared_ptr<BaseLib::RPC::Variable> result;
-				if(event->enabled) result = GD::rpcServers.begin()->second.callMethod(event->resetMethod, event->resetMethodParameters);
-				if(result && result->errorStruct)
+
+				if(_eventThreadCount <= 20)
 				{
-					GD::out.printError("Could not execute RPC method \"" + event->eventMethod + "\" for timed event \"" + event->name + "\". Error struct:");
-					result->print();
+					GD::out.printInfo("Info: Resetting event " + event->name + ".");
+					std::thread t(&EventHandler::rpcCallThread, this, event->name, event->resetMethod, event->resetMethodParameters);
+					BaseLib::Threads::setThreadPriority(GD::bl.get(), t.native_handle(), GD::bl->settings.eventTriggerThreadPriority(), GD::bl->settings.eventTriggerThreadPolicy());
+					t.detach();
+					removeEventToReset(event->id);
+					event->lastReset = currentTime;
+					save(event);
+					GD::rpcClient.broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
 				}
-				removeEventToReset(event->id);
-				event->lastReset = currentTime;
-				save(event);
-				GD::rpcClient.broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
+				else GD::out.printError("Error: Your event processing is too slow. More than 20 events are queued. Skipping reset of event " + event->name + ".");
 			}
 			else if(!_timesToReset.empty() && _timesToReset.begin()->first <= currentTime)
 			{
@@ -665,7 +670,7 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::shared_ptr<std
 	try
 	{
 		if(_disposing) return;
-		if(_triggerThreadCount > 20)
+		if(_eventThreadCount > 20)
 		{
 			GD::out.printError("Error: Your event processing is too slow. More than 20 variables are queued to be checked. Skipping event check.");
 			return;
@@ -718,7 +723,7 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::string& variab
 	try
 	{
 		if(_disposing) return;
-		if(_triggerThreadCount > 20)
+		if(_eventThreadCount > 20)
 		{
 			GD::out.printError("Error: Your event processing is too slow. More than 20 variables are queued to be checked. Skipping event check.");
 			return;
@@ -743,7 +748,7 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::string& variab
 
 void EventHandler::triggerThreadMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values)
 {
-	_triggerThreadCount++;
+	_eventThreadCount++;
 	try
 	{
 		for(uint32_t i = 0; i < variables->size(); i++)
@@ -763,7 +768,7 @@ void EventHandler::triggerThreadMultipleVariables(uint64_t peerID, int32_t chann
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-	_triggerThreadCount--;
+	_eventThreadCount--;
 }
 
 void EventHandler::removeEventToReset(uint32_t id)
@@ -1067,29 +1072,56 @@ std::shared_ptr<BaseLib::RPC::Variable> EventHandler::trigger(std::string name)
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
+void EventHandler::rpcCallThread(std::string eventName, std::string eventMethod, std::shared_ptr<BaseLib::RPC::Variable> eventMethodParameters)
+{
+	_eventThreadCount++;
+	try
+	{
+		std::shared_ptr<BaseLib::RPC::Variable> result = GD::rpcServers.begin()->second.callMethod(eventMethod, eventMethodParameters);
+		if(result && result->errorStruct)
+		{
+			GD::out.printError("Could not execute RPC method \"" + eventMethod + "\" for event \"" + eventName + "\". Error struct:");
+			result->print();
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventThreadCount--;
+}
+
 void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string variable, std::shared_ptr<BaseLib::RPC::Variable> value)
 {
-	_triggerThreadCount++;
+	_eventThreadCount++;
 	try
 	{
 		_eventsMutex.lock();
 		if(!value || _triggeredEvents.find(peerID) == _triggeredEvents.end())
 		{
-			_triggerThreadCount--;
+			_eventThreadCount--;
 			_eventsMutex.unlock();
 			return;
 		}
 		std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>* channels = &_triggeredEvents.at(peerID);
 		if(channels->find(channel) == channels->end())
 		{
-			_triggerThreadCount--;
+			_eventThreadCount--;
 			_eventsMutex.unlock();
 			return;
 		}
 		std::map<std::string, std::vector<std::shared_ptr<Event>>>* variables = &channels->at(channel);
 		if(variables->find(variable) == variables->end())
 		{
-			_triggerThreadCount--;
+			_eventThreadCount--;
 			_eventsMutex.unlock();
 			return;
 		}
@@ -1238,22 +1270,19 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 	catch(const std::exception& ex)
     {
 		_eventsMutex.unlock();
-		_mainThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
     	_eventsMutex.unlock();
-    	_mainThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_eventsMutex.unlock();
-    	_mainThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _triggerThreadCount--;
+    _eventThreadCount--;
 }
 
 void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, std::shared_ptr<BaseLib::RPC::Variable>& rpcResult, uint64_t currentTime)
@@ -1270,7 +1299,7 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, std::shared_p
 			GD::out.printError("Error: Could not execute RPC method for event from peer with id " + std::to_string(event->peerID) + ", channel " + std::to_string(event->peerChannel) + " and variable " + event->variable + ". Error struct:");
 			rpcResult->print();
 		}
-		if(event->resetAfter > 0 || event->initialTime > 0)
+		if(event->lastRaised >= currentTime && (event->resetAfter > 0 || event->initialTime > 0))
 		{
 			try
 			{

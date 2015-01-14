@@ -251,60 +251,6 @@ void HMWiredDevice::addPeer(std::shared_ptr<HMWiredPeer> peer)
     _peersMutex.unlock();
 }
 
-bool HMWiredDevice::peerExists(int32_t address)
-{
-	try
-	{
-		_peersMutex.lock();
-		if(_peers.find(address) != _peers.end())
-		{
-			_peersMutex.unlock();
-			return true;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _peersMutex.unlock();
-    return false;
-}
-
-bool HMWiredDevice::peerExists(uint64_t id)
-{
-	try
-	{
-		_peersMutex.lock();
-		if(_peersByID.find(id) != _peersByID.end())
-		{
-			_peersMutex.unlock();
-			return true;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _peersMutex.unlock();
-    return false;
-}
-
 std::shared_ptr<BaseLib::Systems::Central> HMWiredDevice::getCentral()
 {
 	try

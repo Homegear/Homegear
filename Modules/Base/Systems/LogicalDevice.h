@@ -114,7 +114,7 @@ public:
 	std::shared_ptr<Peer> getPeer(int32_t address);
     std::shared_ptr<Peer> getPeer(uint64_t id);
     std::shared_ptr<Peer> getPeer(std::string serialNumber);
-	virtual bool peerSelected() { return false; }
+	virtual bool peerSelected() { return (bool)_currentPeer; }
 	virtual void setPeerID(uint64_t oldPeerID, uint64_t newPeerID);
 	virtual void deletePeersFromDatabase();
 	virtual void load();
@@ -126,6 +126,10 @@ public:
 	virtual void saveVariable(uint32_t index, std::string& stringValue);
 	virtual void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue);
 	virtual void savePeers(bool full) = 0;
+
+	virtual bool peerExists(int32_t address);
+	virtual bool peerExists(std::string serialNumber);
+	virtual bool peerExists(uint64_t id);
 protected:
 	BaseLib::Obj* _bl = nullptr;
 	DeviceFamilies _deviceFamily = DeviceFamilies::none;

@@ -1753,60 +1753,6 @@ void HomeMaticDevice::setLowBattery(bool lowBattery)
 
 void HomeMaticDevice::sendDutyCycleResponse(int32_t destinationAddress) {}
 
-bool HomeMaticDevice::peerExists(int32_t address)
-{
-	try
-	{
-		_peersMutex.lock();
-		if(_peers.find(address) != _peers.end())
-		{
-			_peersMutex.unlock();
-			return true;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _peersMutex.unlock();
-    return false;
-}
-
-bool HomeMaticDevice::peerExists(uint64_t id)
-{
-	try
-	{
-		_peersMutex.lock();
-		if(_peersByID.find(id) != _peersByID.end())
-		{
-			_peersMutex.unlock();
-			return true;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _peersMutex.unlock();
-    return false;
-}
-
 void HomeMaticDevice::addPeer(std::shared_ptr<BidCoSPeer> peer)
 {
 	try

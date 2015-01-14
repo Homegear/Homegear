@@ -107,7 +107,7 @@ public:
 	void trigger(uint64_t peerID, int32_t channel, std::string& variable, std::shared_ptr<BaseLib::RPC::Variable>& value);
 protected:
 	bool _disposing = false;
-	int32_t _triggerThreadCount = 0;
+	int32_t _eventThreadCount = 0;
 	std::mutex _eventsMutex;
 	std::map<uint64_t, std::shared_ptr<Event>> _timedEvents;
 	std::map<uint64_t, std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>> _triggeredEvents;
@@ -122,6 +122,7 @@ protected:
 
 	void triggerThreadMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values);
 	void triggerThread(uint64_t peerID, int32_t channel, std::string variable, std::shared_ptr<BaseLib::RPC::Variable> value);
+	void rpcCallThread(std::string eventName, std::string eventMethod, std::shared_ptr<BaseLib::RPC::Variable> eventMethodParameters);
 	void mainThread();
 	uint64_t getNextExecution(uint64_t startTime, uint64_t recurEvery);
 	void removeEventToReset(uint32_t id);

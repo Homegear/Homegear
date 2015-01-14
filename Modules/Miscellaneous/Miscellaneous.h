@@ -1,5 +1,3 @@
-#define VERSION "0.5.22"
-
 /* Copyright 2013-2015 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
@@ -28,3 +26,42 @@
  * version.  If you delete this exception statement from all source
  * files in the program, then also delete it here.
  */
+
+#ifndef MISCELLANEOUS_H_
+#define MISCELLANEOUS_H_
+
+#include "../Base/BaseLib.h"
+
+namespace Misc
+{
+class MiscDevice;
+class MiscCentral;
+
+class Miscellaneous : public BaseLib::Systems::DeviceFamily
+{
+public:
+	Miscellaneous(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
+	virtual ~Miscellaneous();
+	virtual bool init();
+	virtual void dispose();
+
+	virtual void load();
+	virtual std::shared_ptr<MiscDevice> getDevice(uint32_t address);
+	virtual std::shared_ptr<MiscDevice> getDevice(std::string serialNumber);
+	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
+	virtual std::string handleCLICommand(std::string& command);
+	virtual std::string getName() { return "Miscellaneous"; }
+	virtual bool skipFamilyCLI() { return true; }
+	virtual std::shared_ptr<BaseLib::RPC::Variable> getPairingMethods();
+private:
+	std::shared_ptr<MiscCentral> _central;
+
+	void createCentral();
+	void createSpyDevice();
+	uint32_t getUniqueAddress(uint32_t seed);
+	std::string getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber);
+};
+
+}
+
+#endif

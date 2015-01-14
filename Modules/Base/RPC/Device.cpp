@@ -134,6 +134,49 @@ DeviceFrame::DeviceFrame(BaseLib::Obj* baseLib, xml_node<>* node) : DeviceFrame(
 	}
 }
 
+DeviceProgram::DeviceProgram(BaseLib::Obj* baseLib)
+{
+	_bl = baseLib;
+}
+
+DeviceProgram::DeviceProgram(BaseLib::Obj* baseLib, xml_node<>* node) : DeviceProgram(baseLib)
+{
+	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
+	{
+		_bl->out.printWarning("Warning: Unknown attribute for \"run_program\": " + std::string(attr->name()));
+	}
+	xml_node<>* pathNode = node->first_node("path");
+	if(pathNode)
+	{
+		for(xml_attribute<>* attr = pathNode->first_attribute(); attr; attr = attr->next_attribute()) _bl->out.printWarning("Warning: Unknown attribute for \"path\": " + std::string(attr->name()));
+		path = std::string(pathNode->value());
+	}
+	xml_node<>* argumentsNode = node->first_node("arguments");
+	if(argumentsNode)
+	{
+		for(xml_attribute<>* attr = pathNode->first_attribute(); attr; attr = attr->next_attribute()) _bl->out.printWarning("Warning: Unknown attribute for \"arguments\": " + std::string(attr->name()));
+		arguments = std::string(argumentsNode->value());
+	}
+	xml_node<>* startTypeNode = node->first_node("start_type");
+	if(startTypeNode)
+	{
+		for(xml_attribute<>* attr = pathNode->first_attribute(); attr; attr = attr->next_attribute()) _bl->out.printWarning("Warning: Unknown attribute for \"startType\": " + std::string(attr->name()));
+		std::string value(startTypeNode->value());
+		_bl->hf.toLower(value);
+		if(value == "once") startType = StartType::Enum::once;
+		else if(value == "interval") startType = StartType::Enum::interval;
+		else if(value == "permanent") startType = StartType::Enum::permanent;
+		else _bl->out.printWarning("Warning: Unknown start_type for \"run_program\": " + value);
+	}
+	xml_node<>* intervalNode = node->first_node("interval");
+	if(intervalNode)
+	{
+		for(xml_attribute<>* attr = pathNode->first_attribute(); attr; attr = attr->next_attribute()) _bl->out.printWarning("Warning: Unknown attribute for \"interval\": " + std::string(attr->name()));
+		std::string value(intervalNode->value());
+		interval = Math::getUnsignedNumber(value);
+	}
+}
+
 void ParameterConversion::fromPacket(std::shared_ptr<RPC::Variable> value)
 {
 	try
@@ -1158,9 +1201,9 @@ bool DeviceType::matches(Systems::LogicalDeviceType deviceType, uint32_t firmwar
 	try
 	{
 		if((device && deviceType.family() != device->family)) return false;
-		if(firmware != -1 && typeID != -1)
+		if(typeID != -1)
 		{
-			if((signed)deviceType.type() == typeID && checkFirmwareVersion(firmwareVersion)) return true;
+			if((signed)deviceType.type() == typeID && (firmware == -1 || checkFirmwareVersion(firmwareVersion))) return true;
 		}
 		else
 		{
@@ -2101,6 +2144,10 @@ void Device::parseXML(xml_node<>* node)
 					framesByMessageType.insert(std::pair<uint32_t, std::shared_ptr<DeviceFrame>>(frame->type, frame));
 					framesByID[frame->id] = frame;
 				}
+			}
+			else if(nodeName == "run_program")
+			{
+				runProgram.reset(new DeviceProgram(_bl, node));
 			}
 			else if(nodeName == "team")
 			{

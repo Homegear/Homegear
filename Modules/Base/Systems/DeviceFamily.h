@@ -118,6 +118,7 @@ public:
 	virtual std::string getName() = 0;
 	virtual std::shared_ptr<RPC::Variable> getPairingMethods() = 0;
 	virtual std::string handleCLICommand(std::string& command) = 0;
+	virtual bool peerSelected() { if(!_currentDevice) return false; return _currentDevice->peerSelected(); }
 	virtual bool deviceSelected() { return (bool)_currentDevice; }
 	virtual bool skipFamilyCLI() { return false; }
 protected:

@@ -523,6 +523,36 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClientServerInitialized::invoke(std::
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<BaseLib::RPC::Variable> RPCCreateDevice::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::VariableType>>({
+			std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		if(GD::deviceFamilies.find((BaseLib::Systems::DeviceFamilies)parameters->at(0)->integerValue) == GD::deviceFamilies.end())
+		{
+			return BaseLib::RPC::Variable::createError(-2, "Device family is unknown.");
+		}
+		return GD::deviceFamilies.at((BaseLib::Systems::DeviceFamilies)parameters->at(0)->integerValue)->getCentral()->createDevice(parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->integerValue, parameters->at(4)->integerValue);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<BaseLib::RPC::Variable> RPCDeleteDevice::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try

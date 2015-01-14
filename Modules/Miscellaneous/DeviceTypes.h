@@ -1,5 +1,3 @@
-#define VERSION "0.5.22"
-
 /* Copyright 2013-2015 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
@@ -28,3 +26,18 @@
  * version.  If you delete this exception statement from all source
  * files in the program, then also delete it here.
  */
+
+#ifndef DEVICETYPES_H_
+#define DEVICETYPES_H_
+
+#include <stdint.h>
+
+namespace Misc
+{
+	enum class DeviceType : uint32_t
+	{
+		none = 					0xFFFFFFFF,
+		CENTRAL = 				0xFEFFFFFD
+	};
+}
+#endif

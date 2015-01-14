@@ -1285,7 +1285,11 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::setValue(uint32_t channel, std:
 		{
 			rpcParameter->convertToPacket(value, parameter->data);
 			saveParameter(parameter->databaseID, parameter->data);
-			if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+			if(!valueKeys->empty())
+			{
+				raiseEvent(_peerID, channel, valueKeys, values);
+				raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+			}
 			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		}
 		else if(rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::command) return BaseLib::RPC::Variable::createError(-6, "Parameter is not settable.");
@@ -1421,7 +1425,11 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::setValue(uint32_t channel, std:
 		if(MAXDevice::isSwitch(_deviceType)) queue->retries = 12;
 		central->enqueuePendingQueues(_address);
 
-		if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+		if(!valueKeys->empty())
+		{
+			raiseEvent(_peerID, channel, valueKeys, values);
+			raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+		}
 
 		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}

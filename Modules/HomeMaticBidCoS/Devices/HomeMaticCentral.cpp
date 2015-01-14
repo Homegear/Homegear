@@ -549,7 +549,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				stringStream << "  PAIRINGPACKET:\tThe 27 byte hex of a pairing packet. Example: 1A0080001F454D1D01231900044B45513030323236393510010100" << std::endl;
 				return stringStream.str();
 			}
-			if(peerExists(peerAddress)) stringStream << "This peer is already paired to this central." << std::endl;
+			if(peerExists(peerAddress) || peerExists(serialNumber)) stringStream << "This peer is already paired to this central." << std::endl;
 			else
 			{
 				std::shared_ptr<BidCoSPeer> peer = createPeer(peerAddress, firmwareVersion, BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS, deviceType), serialNumber, 0, 0, packet, false);

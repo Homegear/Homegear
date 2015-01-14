@@ -104,8 +104,8 @@ public:
 class LogicalParameterFloat : public LogicalParameter
 {
 public:
-	double min = std::numeric_limits<double>::min();
-	double max = std::numeric_limits<double>::max();
+	double min = 1.175494351e-38f;
+	double max = 3.40282347e+38f;
 	double defaultValue = 0;
 	double enforceValue = 0;
 	std::unordered_map<std::string, double> specialValues;

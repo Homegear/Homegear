@@ -29,6 +29,7 @@
 
 #include "HelperFunctions.h"
 #include "../BaseLib.h"
+#include "sys/resource.h"
 
 namespace BaseLib
 {
@@ -581,6 +582,38 @@ int32_t HelperFunctions::groupID(std::string groupname)
 		return -1;
 	}
 	return grp.gr_gid;
+}
+
+pid_t HelperFunctions::system(std::string command, std::string arguments)
+{
+    pid_t pid;
+
+    if(command.empty() || command.back() == '/') return -1;
+
+    pid = fork();
+
+    if(pid < 0) return pid;
+    else if(pid == 0)
+    {
+    	//Child process
+        struct rlimit limits;
+    	if(getrlimit(RLIMIT_NOFILE, &limits) == -1)
+    	{
+    		_bl->out.printError("Error: Couldn't read rlimits.");
+    		return -1;
+    	}
+        // Close all other descriptors for the safety sake.
+        for(uint32_t i = 3; i < limits.rlim_cur; ++i) ::close(i);
+
+        setsid();
+        std::string programName = (command.find('/') == std::string::npos) ? command : command.substr(command.find_last_of('/') + 1);
+        execl(command.c_str(), programName.c_str(), arguments.c_str(), (char*)NULL);
+        _exit(1);
+    }
+
+    //Parent process
+
+    return pid;
 }
 
 void HelperFunctions::checkEndianness()

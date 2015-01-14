@@ -880,7 +880,11 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::setValue(uint32_t channe
 			saveParameter(parameter->databaseID, parameter->data);
 			valueKeys->push_back(valueKey);
 			values->push_back(value);
-			if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+			if(!valueKeys->empty())
+			{
+				raiseEvent(_peerID, channel, valueKeys, values);
+				raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+			}
 			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		}
 
@@ -958,7 +962,11 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::setValue(uint32_t channe
 			if(central) central->sendPacket(packet);
 		}
 
-		if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+		if(!valueKeys->empty())
+		{
+			raiseEvent(_peerID, channel, valueKeys, values);
+			raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+		}
 
 		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}

@@ -66,9 +66,6 @@ class HMWiredDevice : public BaseLib::Systems::LogicalDevice
         virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet);
 
         virtual void addPeer(std::shared_ptr<HMWiredPeer> peer);
-        virtual bool peerSelected() { return (bool)_currentPeer; }
-		bool peerExists(int32_t address);
-		bool peerExists(uint64_t id);
 		virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 		std::shared_ptr<HMWiredPeer> getPeer(int32_t address);
 		std::shared_ptr<HMWiredPeer> getPeer(uint64_t id);

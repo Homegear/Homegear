@@ -215,7 +215,9 @@ void Peer::onSaveParameter(std::string name, uint32_t channel, std::vector<uint8
 		if(_peerID == 0) return; //Peer not saved yet
 		if(valuesCentral.find(channel) == valuesCentral.end())
 		{
-			_bl->out.printWarning("Warning: Could not set parameter " + name + " on channel " + std::to_string(channel) + " for peer " + std::to_string(_peerID) + ". Channel does not exist.");
+			//Service message variables sometimes just don't exist. So only output a debug message.
+			if(channel != 0) _bl->out.printWarning("Warning: Could not set parameter " + name + " on channel " + std::to_string(channel) + " for peer " + std::to_string(_peerID) + ". Channel does not exist.");
+			else _bl->out.printDebug("Debug: Could not set parameter " + name + " on channel " + std::to_string(channel) + " for peer " + std::to_string(_peerID) + ". Channel does not exist.");
 			return;
 		}
 		if(valuesCentral.at(channel).find(name) == valuesCentral.at(channel).end())
@@ -2295,12 +2297,10 @@ std::shared_ptr<RPC::Variable> Peer::setValue(uint32_t channel, std::string valu
 				std::string numberPart = value->stringValue.substr(2);
 				double factor = Math::getDouble(numberPart);
 				if(factor == 0) return RPC::Variable::createError(-1, "Factor is \"0\" or no valid number.");
-				_bl->out.printError(std::to_string(currentValue->floatValue));
 				if(value->stringValue.at(0) == '+') value->floatValue = currentValue->floatValue + factor;
 				else if(value->stringValue.at(0) == '-') value->floatValue = currentValue->floatValue - factor;
 				else if(value->stringValue.at(0) == '*') value->floatValue = currentValue->floatValue * factor;
 				else if(value->stringValue.at(0) == '/') value->floatValue = currentValue->floatValue / factor;
-				_bl->out.printError(std::to_string(value->floatValue));
 			}
 			else if(rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeInteger)
 			{

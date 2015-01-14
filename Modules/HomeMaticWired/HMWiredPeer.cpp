@@ -2384,7 +2384,11 @@ std::shared_ptr<BaseLib::RPC::Variable> HMWiredPeer::setValue(uint32_t channel, 
 		{
 			rpcParameter->convertToPacket(value, parameter->data);
 			saveParameter(parameter->databaseID, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
-			if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+			if(!valueKeys->empty())
+			{
+				raiseEvent(_peerID, channel, valueKeys, values);
+				raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+			}
 			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		}
 		else if(rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::command) return BaseLib::RPC::Variable::createError(-6, "Parameter is not settable.");
@@ -2513,7 +2517,11 @@ std::shared_ptr<BaseLib::RPC::Variable> HMWiredPeer::setValue(uint32_t channel, 
 		}
 		else
 		{
-			if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+			if(!valueKeys->empty())
+			{
+				raiseEvent(_peerID, channel, valueKeys, values);
+				raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+			}
 			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		}
 	}

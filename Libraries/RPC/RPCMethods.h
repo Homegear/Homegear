@@ -177,6 +177,16 @@ public:
 	std::shared_ptr<BaseLib::RPC::Variable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
 };
 
+class RPCCreateDevice : public RPCMethod
+{
+public:
+	RPCCreateDevice()
+	{
+		addSignature(BaseLib::RPC::VariableType::rpcInteger, std::vector<BaseLib::RPC::VariableType>{BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcInteger, BaseLib::RPC::VariableType::rpcInteger});
+	}
+	std::shared_ptr<BaseLib::RPC::Variable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
+};
+
 class RPCDeleteDevice : public RPCMethod
 {
 public:

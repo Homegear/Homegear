@@ -394,6 +394,87 @@ std::shared_ptr<Peer> LogicalDevice::getPeer(std::string serialNumber)
     return std::shared_ptr<Peer>();
 }
 
+bool LogicalDevice::peerExists(int32_t address)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(_peers.find(address) != _peers.end())
+		{
+			_peersMutex.unlock();
+			return true;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peersMutex.unlock();
+    return false;
+}
+
+bool LogicalDevice::peerExists(uint64_t id)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(_peersByID.find(id) != _peersByID.end())
+		{
+			_peersMutex.unlock();
+			return true;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peersMutex.unlock();
+    return false;
+}
+
+bool LogicalDevice::peerExists(std::string serialNumber)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(_peersBySerial.find(serialNumber) != _peersBySerial.end())
+		{
+			_peersMutex.unlock();
+			return true;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peersMutex.unlock();
+    return false;
+}
+
 void LogicalDevice::setPeerID(uint64_t oldPeerID, uint64_t newPeerID)
 {
 	try

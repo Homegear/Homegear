@@ -1,5 +1,3 @@
-#define VERSION "0.5.22"
-
 /* Copyright 2013-2015 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
@@ -28,3 +26,13 @@
  * version.  If you delete this exception statement from all source
  * files in the program, then also delete it here.
  */
+
+#include "GD.h"
+
+namespace Misc
+{
+	BaseLib::Obj* GD::bl = nullptr;
+	Miscellaneous* GD::family = nullptr;
+	BaseLib::Output GD::out;
+	BaseLib::RPC::Devices GD::rpcDevices(BaseLib::Systems::DeviceFamilies::Miscellaneous);
+}

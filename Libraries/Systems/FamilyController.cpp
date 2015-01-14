@@ -321,7 +321,7 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 
 bool FamilyController::familyAvailable(BaseLib::Systems::DeviceFamilies family)
 {
-	return GD::physicalInterfaces.count(family) > 0;
+	return GD::physicalInterfaces.count(family) > 0 || family == BaseLib::Systems::DeviceFamilies::Miscellaneous;
 }
 
 void FamilyController::loadModules()
@@ -501,6 +501,11 @@ std::string FamilyController::handleCLICommand(std::string& command)
 		}
 		else if((command.compare(0, 8, "families") || BaseLib::HelperFunctions::isShortCLICommand(command)) && _currentFamily)
 		{
+			if((command == "unselect" || command == "u") && _currentFamily && _currentFamily->skipFamilyCLI() && !_currentFamily->peerSelected())
+			{
+				_currentFamily = nullptr;
+				return "Device family unselected.\n";
+			}
 			return _currentFamily->handleCLICommand(command);
 		}
 		else if(command == "families help" || command == "fh")

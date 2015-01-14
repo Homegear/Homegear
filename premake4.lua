@@ -223,6 +223,34 @@ solution "homegear"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
 
+   project "miscellaneous"
+      kind "SharedLib"
+      language "C++"
+      files { "./Modules/Miscellaneous/*.h", "./Modules/Miscellaneous/*.cpp" }
+      files { "./Modules/Miscellaneous/LogicalDevices/*.h", "./Modules/Miscellaneous/LogicalDevices/*.cpp" }
+      linkoptions { "-l pthread", "-l base" }
+      buildoptions { "-Wall", "-std=c++11" }
+      
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         libdirs { "./lib/Debug" }
+         targetdir "./lib/Modules/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         libdirs { "./lib/Release" }
+         targetdir "./lib/Modules/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         libdirs { "./lib/Profiling" }
+         targetdir "./lib/Modules/Profiling"
+         buildoptions { "-pg" }
+         linkoptions { "-pg" }
+
    project "user"
       kind "StaticLib"
       language "C++"

@@ -494,6 +494,14 @@ public:
 	int32_t groupID(std::string groupname);
 
 	/**
+	 * Starts a program and returns the process id.
+	 *
+	 * @param path The program to start.
+	 * @param arguments The arguments to pass.
+	 */
+	pid_t system(std::string path, std::string arguments);
+
+	/**
 	 * Gets the error message to a GCRYPT error code.
 	 *
 	 * @param errorCode The GCRYPT error code.

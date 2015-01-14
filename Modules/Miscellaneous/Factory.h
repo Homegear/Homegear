@@ -1,5 +1,3 @@
-#define VERSION "0.5.22"
-
 /* Copyright 2013-2015 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
@@ -28,3 +26,19 @@
  * version.  If you delete this exception statement from all source
  * files in the program, then also delete it here.
  */
+
+#ifndef FACTORY_H
+#define FACTORY_H
+
+#include "../Base/BaseLib.h"
+#include "Miscellaneous.h"
+
+class MiscellaneousFactory : BaseLib::Systems::SystemFactory
+{
+public:
+	virtual BaseLib::Systems::DeviceFamily* createDeviceFamily(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
+};
+
+extern "C" BaseLib::Systems::SystemFactory* getFactory();
+
+#endif
