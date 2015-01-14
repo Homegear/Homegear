@@ -630,11 +630,15 @@ int main(int argc, char* argv[])
 						break;
 					}
 				}
-				if(!continueLoop) break;
+				if(!continueLoop)
+				{
+					GD::out.printMessage("All physical interfaces are connected now.");
+					break;
+				}
+				if(i == 299) GD::out.printError("Error: At least one physical interface is not connected.");
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			}
 			interfaces.clear();
-			GD::out.printMessage("All physical interfaces are connected now.");
         }
 
         rl_bind_key('\t', rl_abort); //no autocompletion
