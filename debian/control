@@ -2,7 +2,7 @@ Source: homegear
 Maintainer: Sathya Laufer <sathya@laufers.net>
 Section: misc
 Priority: optional
-Standards-Version: 3.9.4
+Standards-Version: 3.9.5
 Build-Depends: debhelper (>= 8), libsqlite3-dev (>= 3.7.13), libreadline6-dev (>= 6.2), libgcrypt11-dev | libgcrypt20-dev, libgpg-error-dev (>= 1.10), libgnutls-dev | libgnutls28-dev
 Homepage: https://homegear.eu
 

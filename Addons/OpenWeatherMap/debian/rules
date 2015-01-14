@@ -1,0 +1,25 @@
+#!/usr/bin/make -f
+
+override_dh_auto_clean:
+
+override_dh_auto_configure:
+	# We can for example download needed files here.
+	# All shell commands are supported
+
+override_dh_auto_build:
+
+override_dh_auto_install:
+	dh_testdir
+	dh_testroot
+	dh_prep
+	dh_installdirs
+	mkdir -p $(CURDIR)/debian/homegear-openweathermap/etc/homegear/devices/254
+	cp $(CURDIR)/OpenWeatherMap.xml $(CURDIR)/debian/homegear-openweathermap/etc/homegear/devices/254
+	chmod 755 $(CURDIR)/debian/homegear-openweathermap/etc/homegear/devices/254
+	chmod 644 $(CURDIR)/debian/homegear-openweathermap/etc/homegear/devices/254/*
+	
+	mkdir -p $(CURDIR)/debian/homegear-openweathermap/var/lib/homegear/scripts/DeviceScripts/OpenWeatherMap
+	cp -R $(CURDIR)/*.php $(CURDIR)/HM-XMLRPC-Client $(CURDIR)/debian/homegear-openweathermap/var/lib/homegear/scripts/DeviceScripts/OpenWeatherMap
+	chmod -R 755 $(CURDIR)/debian/homegear-openweathermap/var/lib/homegear/scripts/DeviceScripts/OpenWeatherMap
+%:
+	dh $@
