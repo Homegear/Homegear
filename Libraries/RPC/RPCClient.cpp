@@ -434,11 +434,6 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 		BaseLib::HTTP http;
 		uint32_t packetLength = 0;
 		uint32_t dataSize = 0;
-		//Enable chunked packets for HomeMatic Manager. Necessary, because HTTP header does not contain transfer-encoding.
-		if(server->id.size() > 3 && server->id.compare(0, 3, "hmm") == 0)
-		{
-			http.getHeader()->transferEncoding = BaseLib::HTTP::TransferEncoding::chunked;
-		}
 
 		while(!http.isFinished()) //This is equal to while(true) for binary packets
 		{
@@ -533,17 +528,20 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 			}
 			else
 			{
-				if(!http.headerIsFinished() && (!strncmp(buffer, "401", 3) || !strncmp(&buffer[9], "401", 3))) //"401 Unauthorized" or "HTTP/1.X 401 Unauthorized"
+				if(!http.headerIsFinished())
 				{
-					GD::out.printError("Error: Authentication failed. Server " + server->hostname + ", port " + server->address.second + ". Check user name and password in rpcclients.conf.");
-					if(!server->keepAlive) server->socket->close();
-					_sendCounter--;
-					return;
+					if(!strncmp(buffer, "401", 3) || !strncmp(&buffer[9], "401", 3)) //"401 Unauthorized" or "HTTP/1.X 401 Unauthorized"
+					{
+						GD::out.printError("Error: Authentication failed. Server " + server->hostname + ", port " + server->address.second + ". Check user name and password in rpcclients.conf.");
+						if(!server->keepAlive) server->socket->close();
+						_sendCounter--;
+						return;
+					}
 				}
 
 				try
 				{
-					http.process(buffer, receivedBytes);
+					http.process(buffer, receivedBytes, true); //Check for chunked packets (HomeMatic Manager, ioBroker). Necessary, because HTTP header does not contain transfer-encoding.
 				}
 				catch(BaseLib::HTTPException& ex)
 				{

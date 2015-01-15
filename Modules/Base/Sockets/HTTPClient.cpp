@@ -169,7 +169,7 @@ void HTTPClient::sendRequest(const std::string& request, std::string& response)
 
 		try
 		{
-			if(_bl->debugLevel >= 5) _bl->out.printDebug("Debug: Received packet from HTTP server \"" + _hostname + "\": " + std::string(buffer, buffer + receivedBytes));
+			if(_bl->debugLevel >= 5) _bl->out.printDebug("Debug: Received packet from HTTP server \"" + _hostname + "\": " + std::string(buffer, receivedBytes));
 			http.process(buffer, receivedBytes);
 		}
 		catch(HTTPException& ex)

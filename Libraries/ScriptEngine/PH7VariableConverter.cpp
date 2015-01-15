@@ -50,7 +50,7 @@ int32_t arrayWalkCallback(ph7_value* key, ph7_value* value, void* userData)
 		rpcArray->type = BaseLib::RPC::VariableType::rpcStruct; //Always set to struct, when key is of type String
 		int32_t length = 0;
 		const char* string = ph7_value_to_string(key, &length);
-		std::string keyString(string, string + length);
+		std::string keyString(string, length);
 		if(!keyString.empty()) rpcArray->structValue->insert(BaseLib::RPC::RPCStructElement(keyString, element));
 	}
 	else
@@ -94,7 +94,7 @@ std::shared_ptr<BaseLib::RPC::Variable> PH7VariableConverter::getVariable(ph7_va
 		{
 			int32_t length = 0;
 			const char* string = ph7_value_to_string(value, &length);
-			if(length > 0) variable.reset(new BaseLib::RPC::Variable(std::string(string, string + length)));
+			if(length > 0) variable.reset(new BaseLib::RPC::Variable(std::string(string, length)));
 			else variable.reset(new BaseLib::RPC::Variable(std::string("")));
 		}
 		else if(ph7_value_is_array(value))

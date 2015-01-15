@@ -652,7 +652,7 @@ bool HMW_LGW::aesKeyExchange(std::vector<uint8_t>& data)
 {
 	try
 	{
-		std::string hex(&data.at(0), &data.at(0) + data.size());
+		std::string hex((char*)&data.at(0), data.size());
 		if(_bl->debugLevel >= 5)
 		{
 			std::string temp = hex;
@@ -689,7 +689,7 @@ bool HMW_LGW::aesKeyExchange(std::vector<uint8_t>& data)
 				return false;
 			}
 			_remoteIV.clear();
-			std::string ivHex(&data.at(startPos), &data.at(startPos) + length);
+			std::string ivHex((char*)&data.at(startPos), length);
 			_remoteIV = _bl->hf.getUBinary(ivHex);
 			if(_remoteIV.size() != 16)
 			{
@@ -879,7 +879,7 @@ void HMW_LGW::processData(std::vector<uint8_t>& data)
 		}
 		if(!_initComplete)
 		{
-			std::string packetString(&decryptedData.at(0), &decryptedData.at(0) + decryptedData.size());
+			std::string packetString((char*)&decryptedData.at(0), decryptedData.size());
 			if(_bl->debugLevel >= 5)
 			{
 				std::string temp = packetString;

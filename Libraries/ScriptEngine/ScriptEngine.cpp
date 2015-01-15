@@ -33,7 +33,7 @@
 int32_t logScriptOutput(const void *output, unsigned int outputLen, void *userData)
 {
 	if(!output || outputLen == 0) return PH7_OK;
-	std::string stringOutput((const char*)output, (const char*)output + outputLen);
+	std::string stringOutput((const char*)output, outputLen);
 	GD::out.printMessage("Script output: " + stringOutput);
     return PH7_OK;
 }
@@ -305,7 +305,7 @@ int32_t hg_invoke(ph7_context* context, int32_t argc, ph7_value** argv)
 		ph7_result_bool(context, 0);
 		return PH7_OK;
 	}
-	std::string methodName(pMethodName, pMethodName + length);
+	std::string methodName(pMethodName, length);
 	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 	for(int32_t i = 1; i < argc; i++)
 	{

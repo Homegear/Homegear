@@ -905,7 +905,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			}
 			else
 			{
-				_out.printError("Error: Uninterpretable packet received. Closing connection. Packet was: " + std::string(buffer, buffer + bytesRead));
+				_out.printError("Error: Uninterpretable packet received. Closing connection. Packet was: " + std::string(buffer, bytesRead));
 				break;
 			}
 			if(http.isFinished())

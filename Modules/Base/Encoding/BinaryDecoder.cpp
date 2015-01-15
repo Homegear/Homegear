@@ -47,7 +47,7 @@ int32_t BinaryDecoder::decodeInteger(std::vector<char>& encodedData, uint32_t& p
 		{
 			if(position + 1 > encodedData.size()) return 0;
 			//IP-Symcon encodes integers as string => Difficult to interpret. This works for numbers up to 3 digits:
-			std::string string(&encodedData.at(position), &encodedData.at(encodedData.size() - 1) + 1);
+			std::string string(&encodedData.at(position), encodedData.size());
 			position = encodedData.size();
 			integer = Math::getNumber(string);
 			return integer;
@@ -79,7 +79,7 @@ int32_t BinaryDecoder::decodeInteger(std::vector<uint8_t>& encodedData, uint32_t
 		{
 			if(position + 1 > encodedData.size()) return 0;
 			//IP-Symcon encodes integers as string => Difficult to interpret. This works for numbers up to 3 digits:
-			std::string string(&encodedData.at(position), &encodedData.at(encodedData.size() - 1) + 1);
+			std::string string((char*)&encodedData.at(position), encodedData.size());
 			position = encodedData.size();
 			integer = Math::getNumber(string);
 			return integer;
@@ -156,7 +156,7 @@ std::string BinaryDecoder::decodeString(std::vector<char>& encodedData, uint32_t
 	{
 		int32_t stringLength = decodeInteger(encodedData, position);
 		if(position + stringLength > encodedData.size() || stringLength == 0) return "";
-		std::string string(&encodedData.at(position), &encodedData.at(position) + stringLength);
+		std::string string(&encodedData.at(position), stringLength);
 		position += stringLength;
 		return string;
 	}
@@ -181,7 +181,7 @@ std::string BinaryDecoder::decodeString(std::vector<uint8_t>& encodedData, uint3
 	{
 		int32_t stringLength = decodeInteger(encodedData, position);
 		if(position + stringLength > encodedData.size() || stringLength == 0) return "";
-		std::string string(&encodedData.at(position), &encodedData.at(position) + stringLength);
+		std::string string((char*)&encodedData.at(position), stringLength);
 		position += stringLength;
 		return string;
 	}

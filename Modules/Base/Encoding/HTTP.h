@@ -92,10 +92,18 @@ public:
 	uint32_t getContentSize() { return _content->size(); }
 	Header* getHeader() { return &_header; }
 	void reset();
-	void process(char* buffer, int32_t bufferLength);
+
+	/**
+	 * Parses HTTP data from a buffer.
+	 *
+	 * @param buffer The buffer to parse
+	 * @param bufferLength The size of the buffer
+	 * @param checkForChunkedXML Optional. Only works for XML-like content (content needs to start with '<'). Needed when TransferEncoding is not set to chunked.
+	 */
+	void process(char* buffer, int32_t bufferLength, bool checkForChunkedXML = false);
 	bool dataProcessed() { return _dataProcessed; }
 private:
-	bool _dataProcessed = false;;
+	bool _dataProcessed = false;
 	bool _crlf = true;
 	Header _header;
 	Type::Enum _type = Type::Enum::none;

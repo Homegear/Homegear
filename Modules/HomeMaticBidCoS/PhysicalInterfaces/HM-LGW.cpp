@@ -1025,13 +1025,13 @@ void HM_LGW::sendKeepAlive(std::vector<char>& data, bool raw)
     	_sendMutexKeepAlive.lock();
     	if(!_socketKeepAlive->connected() || _stopped)
     	{
-    		_out.printWarning("Warning: !!!Not!!! sending (Port " + _settings->portKeepAlive + "): " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
+    		_out.printWarning("Warning: !!!Not!!! sending (Port " + _settings->portKeepAlive + "): " + std::string(&data.at(0), data.size() - 2));
     		_sendMutexKeepAlive.unlock();
     		return;
     	}
     	if(_bl->debugLevel >= 5)
         {
-            _out.printDebug(std::string("Debug: Sending (Port " + _settings->portKeepAlive + "): ") + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
+            _out.printDebug(std::string("Debug: Sending (Port " + _settings->portKeepAlive + "): ") + std::string(&data.at(0), data.size() - 2));
         }
     	(!raw) ? _socketKeepAlive->proofwrite(encryptedData) : _socketKeepAlive->proofwrite(data);
     	 _sendMutexKeepAlive.unlock();
@@ -2102,7 +2102,7 @@ bool HM_LGW::aesKeyExchange(std::vector<uint8_t>& data)
 {
 	try
 	{
-		std::string hex(&data.at(0), &data.at(0) + data.size());
+		std::string hex((char*)&data.at(0), data.size());
 		if(_bl->debugLevel >= 5)
 		{
 			std::string temp = hex;
@@ -2139,7 +2139,7 @@ bool HM_LGW::aesKeyExchange(std::vector<uint8_t>& data)
 				return false;
 			}
 			_remoteIV.clear();
-			std::string ivHex(&data.at(startPos), &data.at(startPos) + length);
+			std::string ivHex((char*)&data.at(startPos), length);
 			_remoteIV = _bl->hf.getUBinary(ivHex);
 			if(_remoteIV.size() != 16)
 			{
@@ -2219,7 +2219,7 @@ bool HM_LGW::aesKeyExchangeKeepAlive(std::vector<uint8_t>& data)
 {
 	try
 	{
-		std::string hex(&data.at(0), &data.at(0) + data.size());
+		std::string hex((char*)&data.at(0), data.size());
 		if(_bl->debugLevel >= 5)
 		{
 			std::string temp = hex;
@@ -2256,7 +2256,7 @@ bool HM_LGW::aesKeyExchangeKeepAlive(std::vector<uint8_t>& data)
 				return false;
 			}
 			_remoteIVKeepAlive.clear();
-			std::string ivHex(&data.at(startPos), &data.at(startPos) + length);
+			std::string ivHex((char*)&data.at(startPos), length);
 			_remoteIVKeepAlive = _bl->hf.getUBinary(ivHex);
 			if(_remoteIVKeepAlive.size() != 16)
 			{
@@ -2479,7 +2479,7 @@ void HM_LGW::processData(std::vector<uint8_t>& data)
 		}
 		if(!_initComplete && _packetIndex == 0 && decryptedData.at(0) == 'S')
 		{
-			std::string packetString(&decryptedData.at(0), &decryptedData.at(0) + decryptedData.size());
+			std::string packetString((char*)&decryptedData.at(0), decryptedData.size());
 			if(_bl->debugLevel >= 5)
 			{
 				std::string temp = packetString;

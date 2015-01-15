@@ -666,7 +666,7 @@ std::shared_ptr<Variable> Parameter::convertFromPacket(std::vector<uint8_t>& dat
 			if(!value->empty() && value->at(0) != 0)
 			{
 				int32_t size = value->back() == 0 ? value->size() - 1 : value->size();
-				std::string string(&value->at(0), &value->at(0) + size);
+				std::string string((char*)&value->at(0), size);
 				return std::shared_ptr<RPC::Variable>(new Variable(string));
 			}
 			return std::shared_ptr<RPC::Variable>(new Variable(VariableType::rpcString));

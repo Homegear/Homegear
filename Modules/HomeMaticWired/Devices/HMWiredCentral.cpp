@@ -1138,7 +1138,7 @@ void HMWiredCentral::handleAnnounce(std::shared_ptr<HMWiredPacket> packet)
 		}
 		int32_t deviceType = (packet->payload()->at(2) << 8) + packet->payload()->at(3);
 		int32_t firmwareVersion = (packet->payload()->at(4) << 8) + packet->payload()->at(5);
-		std::string serialNumber(&packet->payload()->at(6), &packet->payload()->at(6) + 10);
+		std::string serialNumber((char*)&packet->payload()->at(6), 10);
 
 		std::shared_ptr<HMWiredPeer> peer = createPeer(packet->senderAddress(), firmwareVersion, BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::HomeMaticWired, deviceType), serialNumber, true);
 		if(!peer)
@@ -1710,7 +1710,7 @@ std::shared_ptr<BaseLib::RPC::Variable> HMWiredCentral::searchDevices()
 					GD::out.printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + BaseLib::HelperFunctions::getHexString(*i, 8) + ". Serial number request failed.");
 					continue;
 				}
-				std::string serialNumber(&response->payload()->at(0), &response->payload()->at(0) + response->payload()->size());
+				std::string serialNumber((char*)&response->payload()->at(0), response->payload()->size());
 
 				std::shared_ptr<HMWiredPeer> peer = createPeer(*i, firmwareVersion, BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::HomeMaticWired, deviceType), serialNumber, true);
 				if(!peer)

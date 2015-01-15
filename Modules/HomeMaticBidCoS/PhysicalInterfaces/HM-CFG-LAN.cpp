@@ -374,13 +374,13 @@ void HM_CFG_LAN::send(std::vector<char>& data, bool raw)
     	_sendMutex.lock();
     	if(!_socket->connected() || _stopped)
     	{
-    		_out.printWarning(std::string("Warning: !!!Not!!! sending") + ((_useAES && !raw) ? " (encrypted)" : "") + ": " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
+    		_out.printWarning(std::string("Warning: !!!Not!!! sending") + ((_useAES && !raw) ? " (encrypted)" : "") + ": " + std::string(&data.at(0), data.size() - 2));
     		_sendMutex.unlock();
     		return;
     	}
     	if(_bl->debugLevel >= 5)
         {
-            _out.printInfo(std::string("Debug: Sending") + ((_useAES && !raw) ? " (encrypted)" : "") + ": " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
+            _out.printInfo(std::string("Debug: Sending") + ((_useAES && !raw) ? " (encrypted)" : "") + ": " + std::string(&data.at(0), data.size() - 2));
         }
     	(_useAES && !raw) ? _socket->proofwrite(encryptedData) : _socket->proofwrite(data);
     	 _sendMutex.unlock();
@@ -836,7 +836,7 @@ bool HM_CFG_LAN::aesKeyExchange(std::vector<uint8_t>& data)
 				return false;
 			}
 			_remoteIV.clear();
-			std::string ivHex(&data.at(1), &data.at(1) + (data.size() - 3));
+			std::string ivHex((char*)&data.at(1), data.size() - 3);
 			_remoteIV = _bl->hf.getUBinary(ivHex);
 			if(_remoteIV.size() != 16)
 			{

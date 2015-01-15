@@ -39,10 +39,24 @@ HTTP::HTTP()
 	_chunk.reset(new std::vector<char>());
 }
 
-void HTTP::process(char* buffer, int32_t bufferLength)
+void HTTP::process(char* buffer, int32_t bufferLength, bool checkForChunkedXML)
 {
 	if(bufferLength <= 0 || _finished) return;
 	if(!_header.parsed) processHeader(&buffer, bufferLength);
+	if(!_dataProcessed && checkForChunkedXML)
+	{
+		if(bufferLength + _partialChunkSize.length() < 8) //Not enough data.
+		{
+			_partialChunkSize.append(buffer, bufferLength);
+			return;
+		}
+		std::string chunk = _partialChunkSize + std::string(buffer, bufferLength);
+		size_t pos = chunk.find('<');
+		if(pos != std::string::npos && pos != 0)
+		{
+			if(BaseLib::Math::isNumber(BaseLib::HelperFunctions::trim(chunk), true)) _header.transferEncoding = BaseLib::HTTP::TransferEncoding::chunked;
+		}
+	}
 	_dataProcessed = true;
 	if(_header.transferEncoding & TransferEncoding::Enum::chunked) processChunkedContent(buffer, bufferLength); else processContent(buffer, bufferLength);
 }

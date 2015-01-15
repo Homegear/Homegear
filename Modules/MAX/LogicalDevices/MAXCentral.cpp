@@ -1043,7 +1043,7 @@ void MAXCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<MA
 			return;
 		}
 
-		std::string serialNumber(&packet->payload()->at(4), &packet->payload()->at(4) + 10);
+		std::string serialNumber((char*)&packet->payload()->at(4), 10);
 		uint32_t rawType = (packet->payload()->at(2) << 8) + packet->payload()->at(3);
 		LogicalDeviceType deviceType(BaseLib::Systems::DeviceFamilies::MAX, rawType);
 

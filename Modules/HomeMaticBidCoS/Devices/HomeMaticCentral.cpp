@@ -1323,7 +1323,7 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 				receivedPacket = _receivedPackets.get(peer->getAddress());
 				if(receivedPacket && receivedPacket->timeReceived() > time && receivedPacket->payload()->size() > 1 && receivedPacket->payload()->at(0) == 0 && receivedPacket->destinationAddress() == 0 && receivedPacket->controlByte() == 0 && receivedPacket->messageType() == 0x10)
 				{
-					std::string serialNumber(&receivedPacket->payload()->at(1), &receivedPacket->payload()->at(1) + receivedPacket->payload()->size() - 1);
+					std::string serialNumber((char*)&receivedPacket->payload()->at(1), receivedPacket->payload()->size() - 1);
 					if(serialNumber == peer->getSerialNumber())
 					{
 						requestReceived = true;
