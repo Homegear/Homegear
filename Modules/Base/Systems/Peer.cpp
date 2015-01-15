@@ -602,7 +602,7 @@ void Peer::save(bool savePeer, bool variables, bool centralConfig)
 	try
 	{
 		if(deleting || isTeam()) return;
-		raiseCreateSavepoint("peer" + std::to_string(_parentID) + std::to_string(_address));
+		raiseCreateSavepoint("peer" + std::to_string(_parentID) + std::to_string(_peerID));
 		if(savePeer)
 		{
 			_databaseMutex.lock();
@@ -628,7 +628,7 @@ void Peer::save(bool savePeer, bool variables, bool centralConfig)
     	_databaseMutex.unlock();
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    raiseReleaseSavepoint("peer" + std::to_string(_parentID) + std::to_string(_address));
+    raiseReleaseSavepoint("peer" + std::to_string(_parentID) + std::to_string(_peerID));
 }
 
 void Peer::saveParameter(uint32_t parameterID, std::vector<uint8_t>& value)

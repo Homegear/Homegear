@@ -709,7 +709,11 @@ std::shared_ptr<RemoteRPCServer> Client::getServer(std::pair<std::string, std::s
 		std::shared_ptr<RemoteRPCServer> server;
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
 		{
-			if((*i)->address == address) server = *i;
+			if((*i)->address == address)
+			{
+				server = *i;
+				break;
+			}
 		}
 		_serversMutex.unlock();
 		return server;
@@ -736,17 +740,17 @@ std::shared_ptr<BaseLib::RPC::Variable> Client::listClientServers(std::string id
 {
 	try
 	{
-		std::shared_ptr<std::vector<std::shared_ptr<RemoteRPCServer>>> servers(new std::vector<std::shared_ptr<RemoteRPCServer>>());
+		std::vector<std::shared_ptr<RemoteRPCServer>> servers;
 		_serversMutex.lock();
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
 		{
 			if(!id.empty() && (*i)->id != id) continue;
-			servers->push_back(*i);
+			servers.push_back(*i);
 		}
 		_serversMutex.unlock();
-		if(servers->empty()) return BaseLib::RPC::Variable::createError(-32602, "Server is unknown.");
+		if(servers.empty()) return BaseLib::RPC::Variable::createError(-32602, "Server is unknown.");
 		std::shared_ptr<BaseLib::RPC::Variable> serverInfos(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
-		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = servers->begin(); i != servers->end(); ++i)
+		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = servers.begin(); i != servers.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::RPC::Variable> serverInfo(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE_ID", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*i)->id))));

@@ -595,5 +595,30 @@ void DeviceFamily::dispose()
     }
 }
 
+void DeviceFamily::homegearShuttingDown()
+{
+	try
+	{
+		_devicesMutex.lock();
+		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		{
+			(*i)->homegearShuttingDown();
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(const Exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _devicesMutex.unlock();
+}
+
 }
 }

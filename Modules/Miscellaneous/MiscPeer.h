@@ -65,6 +65,11 @@ public:
 
     std::string printConfig();
 
+    /**
+	 * {@inheritDoc}
+	 */
+    virtual void homegearShuttingDown();
+
 	//RPC methods
 	virtual std::shared_ptr<BaseLib::RPC::Variable> getDeviceInfo(std::map<std::string, bool> fields);
 	virtual std::shared_ptr<BaseLib::RPC::Variable> getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);

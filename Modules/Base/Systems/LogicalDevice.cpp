@@ -505,6 +505,31 @@ DeviceFamilies LogicalDevice::deviceFamily()
 	return _deviceFamily;
 }
 
+void LogicalDevice::homegearShuttingDown()
+{
+	try
+	{
+		std::vector<std::shared_ptr<Peer>> peers;
+		getPeers(peers);
+		for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+		{
+			(*i)->homegearShuttingDown();
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(const Exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void LogicalDevice::load()
 {
 	try

@@ -194,6 +194,11 @@ public:
     virtual void savePeers() = 0;
 
     /*
+     * Executed before Homegear starts shutting down.
+     */
+    virtual void homegearShuttingDown() {}
+
+    /*
      * Initializes the MASTER and VALUES config parameter sets by inserting all missing RPC parameters into configCentral and valuesCentral and creating the database entries. If a parameter does not exist yet, it is initialized with the default value defined in the device's XML file.
      *
      * @see configCentral

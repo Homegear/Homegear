@@ -319,6 +319,29 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 }
 //End Device event handling
 
+void FamilyController::homegearShuttingDown()
+{
+	try
+	{
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		{
+			if(i->second) i->second->homegearShuttingDown();
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 bool FamilyController::familyAvailable(BaseLib::Systems::DeviceFamilies family)
 {
 	return GD::physicalInterfaces.count(family) > 0 || family == BaseLib::Systems::DeviceFamilies::Miscellaneous;

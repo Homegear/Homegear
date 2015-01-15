@@ -68,6 +68,7 @@ public:
 	bool keepAlive = false;
 	bool binary = false;
 	bool useID = false;
+	bool subscribePeers = false;
 	std::string hostname;
 	std::pair<std::string, std::string> address;
 	std::string path;
@@ -79,6 +80,7 @@ public:
 	std::mutex sendMutex;
 	Auth auth;
 	int32_t lastPacketSent = -1;
+	std::set<uint64_t> subscribedPeers;
 };
 
 class RPCClient {

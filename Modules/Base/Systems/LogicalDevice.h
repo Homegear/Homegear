@@ -130,6 +130,11 @@ public:
 	virtual bool peerExists(int32_t address);
 	virtual bool peerExists(std::string serialNumber);
 	virtual bool peerExists(uint64_t id);
+
+	/*
+     * Executed before Homegear starts shutting down.
+     */
+    virtual void homegearShuttingDown();
 protected:
 	BaseLib::Obj* _bl = nullptr;
 	DeviceFamilies _deviceFamily = DeviceFamilies::none;

@@ -112,6 +112,11 @@ public:
 	std::string handleCLICommand(std::string& command);
 	bool familyAvailable(BaseLib::Systems::DeviceFamilies family);
 
+	/*
+     * Executed before Homegear starts shutting down.
+     */
+	void homegearShuttingDown();
+
 	std::shared_ptr<BaseLib::RPC::Variable> listFamilies();
 private:
 	bool _disposed = false;

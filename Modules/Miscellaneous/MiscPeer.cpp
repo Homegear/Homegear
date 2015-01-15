@@ -112,6 +112,37 @@ MiscPeer::~MiscPeer()
 	}
 }
 
+void MiscPeer::homegearShuttingDown()
+{
+	try
+	{
+		Peer::homegearShuttingDown();
+		if(_programPID != -1)
+		{
+			kill(_programPID, 15);
+			_programPID = -1;
+		}
+		_stopRunProgramThread = true;
+		if(_runProgramThread.joinable())
+		{
+			if(rpcDevice->runProgram->startType != BaseLib::RPC::DeviceProgram::StartType::once) GD::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
+			_runProgramThread.join();
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 void MiscPeer::runProgram()
 {
 	try

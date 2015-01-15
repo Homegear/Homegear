@@ -110,7 +110,11 @@ void HTTP::processHeader(char** buffer, int32_t& bufferLength)
 void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32_t valueSize)
 {
 	if(nameSize == 0 || valueSize == 0 || !name || !value) return;
-	if(!strnaicmp(name, "content-length", nameSize)) _header.contentLength = strtol(value, NULL, 10);
+	if(!strnaicmp(name, "content-length", nameSize))
+	{
+		//Ignore Content-Length when Transfer-Encoding is present. See: http://greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
+		if(_header.transferEncoding == TransferEncoding::Enum::none) _header.contentLength = strtol(value, NULL, 10);
+	}
 	else if(!strnaicmp(name, "host", nameSize))
 	{
 		_header.host = std::string(value, valueSize);
@@ -123,6 +127,7 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 	}
 	else if(!strnaicmp(name, "transfer-encoding", nameSize) || !strnaicmp(name, "te", nameSize))
 	{
+		if(_header.contentLength > 0) _header.contentLength = 0; //Ignore Content-Length when Transfer-Encoding is present. See: http://greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
 		std::string s(value, valueSize);
 		s = s.substr(0, s.find(';'));
 		int32_t pos = 0;
@@ -131,9 +136,9 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 		    std::string te = (pos == (signed)std::string::npos) ? s : s.substr(0, pos);
 		    HelperFunctions::trim(BaseLib::HelperFunctions::toLower(te));
 		    if(te == "chunked") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::chunked);
-			else if(te == "compress") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::compress);
-			else if(te == "deflate") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::deflate);
-			else if(te == "gzip") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::gzip);
+			else if(te == "compress") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::compress | TransferEncoding::Enum::chunked);
+			else if(te == "deflate") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::deflate | TransferEncoding::Enum::chunked);
+			else if(te == "gzip") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::gzip | TransferEncoding::Enum::chunked);
 			else if(te == "identity") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::identity);
 			else throw HTTPException("Unknown value for HTTP header \"Transfer-Encoding\": " + std::string(value, valueSize));
 		    if(pos == (signed)std::string::npos) s.clear(); else s.erase(0, pos + 1);

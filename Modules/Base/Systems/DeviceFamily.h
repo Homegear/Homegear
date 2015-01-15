@@ -121,6 +121,11 @@ public:
 	virtual bool peerSelected() { if(!_currentDevice) return false; return _currentDevice->peerSelected(); }
 	virtual bool deviceSelected() { return (bool)_currentDevice; }
 	virtual bool skipFamilyCLI() { return false; }
+
+	/*
+     * Executed before Homegear starts shutting down.
+     */
+    virtual void homegearShuttingDown();
 protected:
 	BaseLib::Obj* _bl = nullptr;
 	IFamilyEventSink* _eventHandler;

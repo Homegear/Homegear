@@ -1966,6 +1966,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCInit::invoke(std::shared_ptr<std::vec
 				eventServer->keepAlive = (parameters->at(2)->integerValue & 1);
 				eventServer->binary = (parameters->at(2)->integerValue & 2);
 				eventServer->useID = (parameters->at(2)->integerValue & 4);
+				eventServer->subscribePeers = (parameters->at(2)->integerValue & 8);
 			}
 			_initServerThreadMutex.lock();
 			if(_disposing)
@@ -3163,6 +3164,56 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSetValue::invoke(std::shared_ptr<std:
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
+std::shared_ptr<BaseLib::RPC::Variable> RPCSubscribePeers::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::VariableType>>({
+				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcArray })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		std::pair<std::string, std::string> server = BaseLib::HelperFunctions::split(parameters->at(0)->stringValue, ':');
+		if(server.first.empty() || server.second.empty()) return BaseLib::RPC::Variable::createError(-32602, "Server address or port is empty.");
+		if(server.first.size() < 8) return BaseLib::RPC::Variable::createError(-32602, "Server address too short.");
+		BaseLib::HelperFunctions::toLower(server.first);
+
+		std::string path = "/RPC2";
+		int32_t pos = server.second.find_first_of('/');
+		if(pos > 0)
+		{
+			path = server.second.substr(pos);
+			GD::out.printDebug("Debug: Server path set to: " + path);
+			server.second = server.second.substr(0, pos);
+			GD::out.printDebug("Debug: Server port set to: " + server.second);
+		}
+		server.second = std::to_string(BaseLib::Math::getNumber(server.second));
+		if(server.second.empty() || server.second == "0") return BaseLib::RPC::Variable::createError(-32602, "Port number is invalid.");
+
+		std::shared_ptr<RemoteRPCServer> eventServer = GD::rpcClient.getServer(server);
+		if(!eventServer) return BaseLib::RPC::Variable::createError(-1, "Event server is unknown.");
+		for(BaseLib::RPC::RPCArray::iterator i = parameters->at(1)->arrayValue->begin(); i != parameters->at(1)->arrayValue->end(); ++i)
+		{
+			if((*i)->integerValue != 0) eventServer->subscribedPeers.insert((*i)->integerValue);
+		}
+
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<BaseLib::RPC::Variable> RPCTriggerEvent::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
@@ -3171,6 +3222,56 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCTriggerEvent::invoke(std::shared_ptr<
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		return GD::eventHandler.trigger(parameters->at(0)->stringValue);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::Variable> RPCUnsubscribePeers::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::VariableType>>({
+				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcArray })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		std::pair<std::string, std::string> server = BaseLib::HelperFunctions::split(parameters->at(0)->stringValue, ':');
+		if(server.first.empty() || server.second.empty()) return BaseLib::RPC::Variable::createError(-32602, "Server address or port is empty.");
+		if(server.first.size() < 8) return BaseLib::RPC::Variable::createError(-32602, "Server address too short.");
+		BaseLib::HelperFunctions::toLower(server.first);
+
+		std::string path = "/RPC2";
+		int32_t pos = server.second.find_first_of('/');
+		if(pos > 0)
+		{
+			path = server.second.substr(pos);
+			GD::out.printDebug("Debug: Server path set to: " + path);
+			server.second = server.second.substr(0, pos);
+			GD::out.printDebug("Debug: Server port set to: " + server.second);
+		}
+		server.second = std::to_string(BaseLib::Math::getNumber(server.second));
+		if(server.second.empty() || server.second == "0") return BaseLib::RPC::Variable::createError(-32602, "Port number is invalid.");
+
+		std::shared_ptr<RemoteRPCServer> eventServer = GD::rpcClient.getServer(server);
+		if(!eventServer) return BaseLib::RPC::Variable::createError(-1, "Event server is unknown.");
+		for(BaseLib::RPC::RPCArray::iterator i = parameters->at(1)->arrayValue->begin(); i != parameters->at(1)->arrayValue->end(); ++i)
+		{
+			if((*i)->integerValue != 0) eventServer->subscribedPeers.erase((*i)->integerValue);
+		}
+
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {

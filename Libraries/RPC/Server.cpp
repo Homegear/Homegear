@@ -104,7 +104,9 @@ void Server::registerMethods()
 		_server->registerMethod("setSystemVariable", std::shared_ptr<RPCMethod>(new RPCSetSystemVariable()));
 		_server->registerMethod("setTeam", std::shared_ptr<RPCMethod>(new RPCSetTeam()));
 		_server->registerMethod("setValue", std::shared_ptr<RPCMethod>(new RPCSetValue()));
+		_server->registerMethod("subscribePeers", std::shared_ptr<RPCMethod>(new RPCSubscribePeers()));
 		_server->registerMethod("triggerEvent", std::shared_ptr<RPCMethod>(new RPCTriggerEvent()));
+		_server->registerMethod("unsubscribePeers", std::shared_ptr<RPCMethod>(new RPCUnsubscribePeers()));
 		_server->registerMethod("updateFirmware", std::shared_ptr<RPCMethod>(new RPCUpdateFirmware()));
 	}
 	catch(const std::exception& ex)
