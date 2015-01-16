@@ -61,8 +61,10 @@ public:
 	bool prioritizeThreads() { return _prioritizeThreads; }
 	void setPrioritizeThreads(bool value) { _prioritizeThreads = value; }
 	uint32_t workerThreadWindow() { return _workerThreadWindow; }
+	uint32_t rpcServerMaxConnections() { return _rpcServerMaxConnections; }
 	int32_t rpcServerThreadPriority() { return _rpcServerThreadPriority; }
 	int32_t rpcServerThreadPolicy() { return _rpcServerThreadPolicy; }
+	uint32_t rpcClientThreadMax() { return _rpcClientThreadMax; }
 	int32_t rpcClientThreadPriority() { return _rpcClientThreadPriority; }
 	int32_t rpcClientThreadPolicy() { return _rpcClientThreadPolicy; }
 	int32_t workerThreadPriority() { return _workerThreadPriority; }
@@ -71,6 +73,7 @@ public:
 	int32_t packetQueueThreadPolicy() { return _packetQueueThreadPolicy; }
 	int32_t packetReceivedThreadPriority() { return _packetReceivedThreadPriority; }
 	int32_t packetReceivedThreadPolicy() { return _packetReceivedThreadPolicy; }
+	uint32_t eventThreadMax() { return _eventThreadMax; }
 	int32_t eventTriggerThreadPriority() { return _eventTriggerThreadPriority; }
 	int32_t eventTriggerThreadPolicy() { return _eventTriggerThreadPolicy; }
 	std::string deviceDescriptionPath() { return _deviceDescriptionPath; }
@@ -101,8 +104,10 @@ private:
 	std::string _logfilePath;
 	bool _prioritizeThreads = true;
 	uint32_t _workerThreadWindow = 3000;
+	uint32_t _rpcServerMaxConnections = 50;
 	int32_t _rpcServerThreadPriority = 0;
 	int32_t _rpcServerThreadPolicy = SCHED_OTHER;
+	uint32_t _rpcClientThreadMax = 50;
 	int32_t _rpcClientThreadPriority = 0;
 	int32_t _rpcClientThreadPolicy = SCHED_OTHER;
 	int32_t _workerThreadPriority = 0;
@@ -111,6 +116,7 @@ private:
 	int32_t _packetQueueThreadPolicy = SCHED_FIFO;
 	int32_t _packetReceivedThreadPriority = 0;
 	int32_t _packetReceivedThreadPolicy = SCHED_OTHER;
+	uint32_t _eventThreadMax = 20;
 	int32_t _eventTriggerThreadPriority = 0;
 	int32_t _eventTriggerThreadPolicy = SCHED_OTHER;
 	std::string _deviceDescriptionPath;

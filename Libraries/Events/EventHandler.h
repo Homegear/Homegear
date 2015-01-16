@@ -107,7 +107,7 @@ public:
 	void trigger(uint64_t peerID, int32_t channel, std::string& variable, std::shared_ptr<BaseLib::RPC::Variable>& value);
 protected:
 	bool _disposing = false;
-	int32_t _eventThreadCount = 0;
+	volatile uint32_t _eventThreadCount = 0;
 	std::mutex _eventsMutex;
 	std::map<uint64_t, std::shared_ptr<Event>> _timedEvents;
 	std::map<uint64_t, std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>> _triggeredEvents;

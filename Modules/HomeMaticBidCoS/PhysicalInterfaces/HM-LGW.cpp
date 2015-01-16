@@ -828,13 +828,6 @@ void HM_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		}
 
 		std::vector<char> packetBytes = bidCoSPacket->byteArraySigned();
-		//Allow sender address 0 for firmware updates
-		if(bidCoSPacket->senderAddress() != 0 && bidCoSPacket->senderAddress() != _myAddress)
-		{
-			_out.printError("Error: Can't send packet, because sender address is not mine: " + _bl->hf.getHexString(packetBytes));
-			return;
-		}
-
 		if(_bl->debugLevel >= 4) _out.printInfo("Info: Sending (" + _settings->id + "): " + _bl->hf.getHexString(packetBytes));
 
 		for(int32_t j = 0; j < 40; j++)

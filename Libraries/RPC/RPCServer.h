@@ -67,6 +67,7 @@ namespace RPC
 			{
 			public:
 				int32_t id = -1;
+				bool closed = false;
 				std::thread readThread;
 				std::shared_ptr<BaseLib::FileDescriptor> socketDescriptor;
 				std::shared_ptr<BaseLib::SocketOperations> socket;
@@ -84,6 +85,7 @@ namespace RPC
 			RPCServer();
 			virtual ~RPCServer();
 
+			const std::shared_ptr<ServerSettings::Settings> getSettings() { return _settings; }
 			bool isRunning() { return !_stopped; }
 			void start(std::shared_ptr<ServerSettings::Settings>& settings);
 			void stop();
@@ -105,8 +107,8 @@ namespace RPC
 			bool _stopped = true;
 			std::thread _mainThread;
 			int32_t _backlog = 10;
+			int64_t _lastGargabeCollection = 0;
 			std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
-			int32_t _maxConnections = 50;
 			std::mutex _stateMutex;
 			std::map<int32_t, std::shared_ptr<Client>> _clients;
 			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> _rpcMethods;
@@ -115,6 +117,7 @@ namespace RPC
 			std::unique_ptr<BaseLib::RPC::XMLRPCDecoder> _xmlRpcDecoder;
 			std::unique_ptr<BaseLib::RPC::XMLRPCEncoder> _xmlRpcEncoder;
 
+			void collectGarbage();
 			void getSocketDescriptor();
 			std::shared_ptr<BaseLib::FileDescriptor> getClientSocketDescriptor();
 			void getSSLSocketDescriptor(std::shared_ptr<Client>);
@@ -125,7 +128,6 @@ namespace RPC
 			void packetReceived(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
 			void analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
 			void analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
-			void removeClient(int32_t clientID);
 			void callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters, PacketType::Enum responseType, bool keepAlive);
 			std::string getHttpResponseHeader(uint32_t contentLength, bool closeConnection);
 			void closeClientConnection(std::shared_ptr<Client> client);

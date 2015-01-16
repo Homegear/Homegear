@@ -659,6 +659,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "debuglevel (dl)\t\tChanges the debug level" << std::endl;
 			stringStream << "runscript (rs)\t\tExecutes a script with the internal PHP engine" << std::endl;
+			stringStream << "rpcservers (rpc)\t\tLists all active RPC servers" << std::endl;
 			stringStream << "users [COMMAND]\t\tExecute user commands. Type \"users help\" for more information." << std::endl;
 			stringStream << "families [COMMAND]\tExecute device family commands. Type \"families help\" for more information." << std::endl;
 			return stringStream.str();
@@ -736,6 +737,79 @@ std::string Server::handleGlobalCommand(std::string& command)
 
 			int32_t exitCode = GD::scriptEngine.execute(path, arguments.str());
 			stringStream << "Script executed. Exit code: " << std::dec << exitCode << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 10, "rpcservers") == 0 || command.compare(0, 3, "rpc") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index == 0)
+				{
+					index++;
+					continue;
+				}
+				else
+				{
+					index++;
+					break;
+				}
+			}
+			if(index > 1)
+			{
+				stringStream << "Description: This command lists all active RPC servers." << std::endl;
+				stringStream << "Usage: rpcservers" << std::endl << std::endl;
+				return stringStream.str();
+			}
+
+			int32_t nameWidth = 20;
+			int32_t interfaceWidth = 20;
+			int32_t portWidth = 6;
+			int32_t sslWidth = 5;
+			int32_t authWidth = 5;
+			std::string nameCaption("Name");
+			std::string interfaceCaption("Interface");
+			nameCaption.resize(nameWidth, ' ');
+			interfaceCaption.resize(interfaceWidth, ' ');
+			stringStream << std::setfill(' ')
+				<< nameCaption << "  "
+				<< interfaceCaption << "  "
+				<< std::setw(portWidth) << "Port" << "  "
+				<< std::setw(sslWidth) << "SSL" << "  "
+				<< std::setw(authWidth) << "Auth" << "  "
+				<< std::endl;
+
+			//Safe to use without mutex
+			for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+			{
+				if(!i->second.isRunning()) continue;
+				const std::shared_ptr<RPC::ServerSettings::Settings> settings = i->second.getSettings();
+				std::string name = settings->name;
+				if(name.size() > (unsigned)nameWidth)
+				{
+					name.resize(nameWidth - 3);
+					name += "...";
+				}
+				else name.resize(nameWidth, ' ');
+				std::string interface = settings->interface;
+				if(interface.size() > (unsigned)interfaceWidth)
+				{
+					interface.resize(interfaceWidth - 3);
+					interface += "...";
+				}
+				else interface.resize(interfaceWidth, ' ');
+				stringStream
+					<< name << "  "
+					<< interface << "  "
+					<< std::setw(portWidth) << settings->port << "  "
+					<< std::setw(sslWidth) << (settings->ssl ? "true" : "false") << "  "
+					<< std::setw(authWidth) << (settings->authType == RPC::ServerSettings::Settings::AuthType::basic ? "basic" : "none") << "  "
+					<< std::endl;
+
+			}
 			return stringStream.str();
 		}
 		return "";

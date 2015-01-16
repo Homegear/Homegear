@@ -155,7 +155,11 @@ DeviceProgram::DeviceProgram(BaseLib::Obj* baseLib, xml_node<>* node) : DevicePr
 	if(argumentsNode)
 	{
 		for(xml_attribute<>* attr = pathNode->first_attribute(); attr; attr = attr->next_attribute()) _bl->out.printWarning("Warning: Unknown attribute for \"arguments\": " + std::string(attr->name()));
-		arguments = std::string(argumentsNode->value());
+		for(argumentsNode = argumentsNode->first_node(); argumentsNode; argumentsNode = argumentsNode->next_sibling())
+		{
+			if(std::string(argumentsNode->name()) == "argument") arguments.push_back(std::string(argumentsNode->value()));
+			else _bl->out.printWarning("Warning: Unknown node for \"arguments\": " + std::string(argumentsNode->name()));
+		}
 	}
 	xml_node<>* startTypeNode = node->first_node("start_type");
 	if(startTypeNode)

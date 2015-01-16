@@ -1969,13 +1969,24 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCInit::invoke(std::shared_ptr<std::vec
 				eventServer->subscribePeers = (parameters->at(2)->integerValue & 8);
 			}
 			_initServerThreadMutex.lock();
-			if(_disposing)
+			try
 			{
-				_initServerThreadMutex.unlock();
-				return BaseLib::RPC::Variable::createError(-32500, "I'm disposing.");
+				if(_disposing)
+				{
+					_initServerThreadMutex.unlock();
+					return BaseLib::RPC::Variable::createError(-32500, "I'm disposing.");
+				}
+				if(_initServerThread.joinable()) _initServerThread.join();
+				_initServerThread = std::thread(&RPC::Client::initServerMethods, &GD::rpcClient, server);
 			}
-			if(_initServerThread.joinable()) _initServerThread.join();
-			_initServerThread = std::thread(&RPC::Client::initServerMethods, &GD::rpcClient, server);
+			catch(const std::exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
 			_initServerThreadMutex.unlock();
 		}
 

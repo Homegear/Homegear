@@ -184,13 +184,8 @@ void RPCServer::stop()
 		_stopped = true;
 		_stopServer = true;
 		if(_mainThread.joinable()) _mainThread.join();
-		int32_t i = 0;
-		while(_clients.size() > 0 && i < 300)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-			i++;
-			if(i == 299) GD::out.printError("Error: " + std::to_string(_clients.size()) + " RPC clients are still connected to RPC server.");
-		}
+		_out.printInfo("Info: Waiting for threads to finish.");
+		collectGarbage();
 		if(_x509Cred)
 		{
 			gnutls_certificate_free_credentials(_x509Cred);
@@ -275,8 +270,8 @@ void RPCServer::closeClientConnection(std::shared_ptr<Client> client)
 {
 	try
 	{
-		removeClient(client->id);
 		GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+		client->closed = true;
 	}
 	catch(const std::exception& ex)
     {
@@ -303,6 +298,7 @@ void RPCServer::mainThread()
 			{
 				if(!_serverFileDescriptor || _serverFileDescriptor->descriptor < 0)
 				{
+					if(_stopServer) break;
 					std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 					getSocketDescriptor();
 					continue;
@@ -310,13 +306,6 @@ void RPCServer::mainThread()
 				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = getClientSocketDescriptor();
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor < 0) continue;
 				_stateMutex.lock();
-				if(_clients.size() >= (unsigned)_maxConnections)
-				{
-					_stateMutex.unlock();
-					_out.printError("Error: Client connection rejected, because there are too many clients connected to me.");
-					GD::bl->fileDescriptorManager.shutdown(clientFileDescriptor);
-					continue;
-				}
 				std::shared_ptr<Client> client(new Client());
 				client->id = _currentClientID++;
 				client->socketDescriptor = clientFileDescriptor;
@@ -681,16 +670,48 @@ void RPCServer::packetReceived(std::shared_ptr<Client> client, std::vector<char>
     }
 }
 
-void RPCServer::removeClient(int32_t clientID)
+void RPCServer::collectGarbage()
 {
 	try
 	{
+		_lastGargabeCollection = GD::bl->hf.getTime();
+		std::vector<std::shared_ptr<Client>> clientsToRemove;
 		_stateMutex.lock();
-		if(_clients.find(clientID) != _clients.end())
+		try
 		{
-			std::shared_ptr<Client> client = _clients.at(clientID);
-			_clients.erase(clientID);
-			if(client->readThread.joinable()) client->readThread.detach();
+			for(std::map<int32_t, std::shared_ptr<Client>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) clientsToRemove.push_back(i->second);
+			}
+		}
+		catch(const std::exception& ex)
+		{
+			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+		_stateMutex.unlock();
+		for(std::vector<std::shared_ptr<Client>>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
+		{
+			_stateMutex.lock();
+			try
+			{
+				_clients.erase((*i)->id);
+			}
+			catch(const std::exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			_stateMutex.unlock();
+			_out.printDebug("Debug: Joining read thread of client " + std::to_string((*i)->id));
+			if((*i)->readThread.joinable()) (*i)->readThread.join();
+			_out.printDebug("Debug: Client " + std::to_string((*i)->id) + " removed.");
 		}
 	}
 	catch(const std::exception& ex)
@@ -705,7 +726,7 @@ void RPCServer::removeClient(int32_t clientID)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _stateMutex.unlock();
+
 }
 
 void RPCServer::readClient(std::shared_ptr<Client> client)
@@ -942,6 +963,20 @@ std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientSocketDescriptor()
 	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
 	try
 	{
+		_stateMutex.lock();
+		if(_clients.size() > GD::bl->settings.rpcServerMaxConnections())
+		{
+			_stateMutex.unlock();
+			collectGarbage();
+			if(_clients.size() > GD::bl->settings.rpcServerMaxConnections())
+			{
+				_out.printError("Error: There are too many clients connected to me. Waiting for connections to close. You can increase the number of allowed connections in main.conf.");
+				std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+				return fileDescriptor;
+			}
+		}
+		_stateMutex.unlock();
+
 		timeval timeout;
 		timeout.tv_sec = 5;
 		timeout.tv_usec = 0;
@@ -957,7 +992,11 @@ std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientSocketDescriptor()
 		}
 		FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
 		GD::bl->fileDescriptorManager.unlock();
-		if(!select(nfds, &readFileDescriptor, NULL, NULL, &timeout)) return fileDescriptor;
+		if(!select(nfds, &readFileDescriptor, NULL, NULL, &timeout))
+		{
+			if(GD::bl->hf.getTime() - _lastGargabeCollection > 60000 || _clients.size() > GD::bl->settings.rpcServerMaxConnections() * 100 / 112) collectGarbage();
+			return fileDescriptor;
+		}
 
 		struct sockaddr_storage clientInfo;
 		socklen_t addressSize = sizeof(addressSize);

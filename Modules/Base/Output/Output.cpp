@@ -192,13 +192,13 @@ void Output::printEx(std::string file, uint32_t line, std::string function, std:
 	if(_errorCallback) _errorCallback(2, error);
 }
 
-void Output::printCritical(std::string errorString)
+void Output::printCritical(std::string errorString, bool errorCallback)
 {
 	if(_bl && _bl->debugLevel < 1) return;
 	std::string error = _prefix + errorString;
 	std::cout << getTimeString() << " " << error << std::endl;
 	std::cerr << getTimeString() << " " << error << std::endl;
-	if(_errorCallback) _errorCallback(1, error);
+	if(_errorCallback && errorCallback) _errorCallback(1, error);
 }
 
 void Output::printError(std::string errorString)

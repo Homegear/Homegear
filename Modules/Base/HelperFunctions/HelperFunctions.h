@@ -499,7 +499,7 @@ public:
 	 * @param path The program to start.
 	 * @param arguments The arguments to pass.
 	 */
-	pid_t system(std::string path, std::string arguments);
+	pid_t system(std::string path, std::vector<std::string> arguments);
 
 	/**
 	 * Gets the error message to a GCRYPT error code.

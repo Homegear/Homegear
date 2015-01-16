@@ -48,6 +48,7 @@ public:
 	void start(std::shared_ptr<ServerSettings::Settings>& settings);
 	void stop();
 	bool isRunning() { if(!_server) return false; return _server->isRunning(); }
+	const std::shared_ptr<ServerSettings::Settings> getSettings() { if(!_server) return std::shared_ptr<ServerSettings::Settings>(); return _server->getSettings(); }
 	uint32_t connectionCount();
 	std::shared_ptr<BaseLib::RPC::Variable> callMethod(std::string methodName, std::shared_ptr<BaseLib::RPC::Variable> parameters);
 protected:

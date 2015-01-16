@@ -13,8 +13,12 @@
 		<!-- Either a relative path to a subdirectory of Homegear's script path (default: /var/lib/homegear/scripts) or the full path to the program -->
 		<path>DeviceScripts/MyTCPServerDevice/MyTCPServerDevice.php</path>
 		<!-- Arguments that should be passed to the program -->
-		<!-- $PEERID is replaced by the id of the calling peer -->
-		<arguments>-p 10000</arguments>
+		<arguments>
+			<!-- $PEERID is replaced by the id of the calling peer -->
+			<!-- $RPCPORT is replaced by the port, Homegear's non ssl RPC server listens on -->
+			<argument>$PEERID</argument>
+			<argument>$RPCPORT</argument>
+		</arguments>
 		<!-- once, interval or permanent -->
 		<!-- "once" and "permanent" are equivalent except when "permanent" is used, the program is being restarted when it is closed. -->
 		<!-- If "permanent" is used, Homegear sends signal 15 (SIGTERM) to the process on shutting down (equivalent to "kill pid"). -->

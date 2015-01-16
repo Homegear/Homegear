@@ -96,10 +96,10 @@ void Client::startInvokeBroadcastThread(std::shared_ptr<RemoteRPCServer> server,
 	try
 	{
 		_invokeBroadcastThreadsMutex.lock();
-		if(_invokeBroadcastThreads.size() > 50)
+		if(_invokeBroadcastThreads.size() > GD::bl->settings.rpcClientThreadMax())
 		{
-			GD::out.printCritical("Critical: More than 50 RPC broadcast threads are running. Server processing is too slow for the amount of requests. Dropping packet.");
 			_invokeBroadcastThreadsMutex.unlock();
+			GD::out.printCritical("Critical: More than " + std::to_string(GD::bl->settings.rpcClientThreadMax()) + " RPC broadcast threads are running. Server processing is too slow for the amount of requests. Dropping packet.", false);
 			return;
 		}
 		int32_t threadID = _currentInvokeBroadcastThreadID++;
@@ -245,7 +245,7 @@ void Client::systemListMethods(std::pair<std::string, std::string> address)
 		if(result->errorStruct)
 		{
 			if(server->removed) return;
-			GD::out.printWarning("Warning: Error calling XML RPC method system.listMethods on server " + address.first + " with port " + address.second + ". Error struct: ");
+			GD::out.printWarning("Warning: Error calling XML RPC method \"system.listMethods\" on server " + address.first + " with port " + address.second + ". Error struct: ");
 			result->print();
 			return;
 		}
@@ -293,7 +293,7 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 		if(result->errorStruct)
 		{
 			if(server->removed) return;
-			GD::out.printError("Error calling XML RPC method listDevices on server " + address.first + " with port " + address.second + ". Error struct: ");
+			GD::out.printError("Error calling XML RPC method \"listDevices\" on server " + address.first + " with port " + address.second + ". Error struct: ");
 			result->print();
 			return;
 		}
@@ -368,7 +368,7 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 		if(result->errorStruct)
 		{
 			if(server->removed) return;
-			GD::out.printError("Error calling XML RPC method newDevices on server " + address.first + " with port " + address.second + ". Error struct: ");
+			GD::out.printError("Error calling XML RPC method \"newDevices\" on server " + address.first + " with port " + address.second + ". Error struct: ");
 			result->print();
 			return;
 		}
@@ -493,23 +493,20 @@ void Client::broadcastDeleteDevices(std::shared_ptr<BaseLib::RPC::Variable> devi
 			else parameters->push_back(deviceAddresses);
 			startInvokeBroadcastThread((*server), "deleteDevices", parameters);
 		}
-		_serversMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_serversMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	_serversMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_serversMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _serversMutex.unlock();
 }
 
 void Client::broadcastDeleteEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable)
@@ -622,23 +619,20 @@ void Client::reset()
 	{
 		_serversMutex.lock();
 		_servers.reset(new std::vector<std::shared_ptr<RemoteRPCServer>>());
-		_serversMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_serversMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	_serversMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_serversMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _serversMutex.unlock();
 }
 
 std::shared_ptr<RemoteRPCServer> Client::addServer(std::pair<std::string, std::string> address, std::string path, std::string id)
@@ -720,19 +714,17 @@ std::shared_ptr<RemoteRPCServer> Client::getServer(std::pair<std::string, std::s
 	}
 	catch(const std::exception& ex)
     {
-		_serversMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	_serversMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_serversMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _serversMutex.unlock();
     return std::shared_ptr<RemoteRPCServer>();
 }
 

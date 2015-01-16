@@ -396,7 +396,7 @@ public:
 
 	StartType::Enum startType = StartType::none;
 	std::string path;
-	std::string arguments;
+	std::vector<std::string> arguments;
 	uint32_t interval = 0;
 
 	DeviceProgram(BaseLib::Obj* baseLib);

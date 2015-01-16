@@ -584,7 +584,7 @@ int32_t HelperFunctions::groupID(std::string groupname)
 	return grp.gr_gid;
 }
 
-pid_t HelperFunctions::system(std::string command, std::string arguments)
+pid_t HelperFunctions::system(std::string command, std::vector<std::string> arguments)
 {
     pid_t pid;
 
@@ -607,7 +607,15 @@ pid_t HelperFunctions::system(std::string command, std::string arguments)
 
         setsid();
         std::string programName = (command.find('/') == std::string::npos) ? command : command.substr(command.find_last_of('/') + 1);
-        execl(command.c_str(), programName.c_str(), arguments.c_str(), (char*)NULL);
+        if(programName.empty()) _exit(1);
+        char* argv[arguments.size() + 2];
+        argv[0] = &programName[0]; //Dirty, but as argv is not modified, there are no problems. Since C++11 the data is null terminated.
+        for(uint32_t i = 0; i < arguments.size(); i++)
+        {
+        	argv[i + 1] = &arguments[i][0];
+        }
+        argv[arguments.size() + 1] = nullptr;
+        execv(command.c_str(), argv);
         _exit(1);
     }
 

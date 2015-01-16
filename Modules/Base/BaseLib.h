@@ -72,6 +72,11 @@ public:
 	Settings settings;
 
 	/**
+	 * Port, the non-ssl RPC server listens on.
+	 */
+	uint32_t rpcPort = 0;
+
+	/**
 	 * Object to store information about running updates and to only allow one update at a time.
 	 */
 	Systems::UpdateInfo deviceUpdateInfo;

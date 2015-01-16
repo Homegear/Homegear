@@ -94,7 +94,7 @@ MiscPeer::~MiscPeer()
 		_stopRunProgramThread = true;
 		if(_runProgramThread.joinable())
 		{
-			if(rpcDevice->runProgram->startType != BaseLib::RPC::DeviceProgram::StartType::once) GD::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
+			if(_programPID != -1) GD::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
 			_runProgramThread.join();
 		}
 	}
@@ -125,7 +125,7 @@ void MiscPeer::homegearShuttingDown()
 		_stopRunProgramThread = true;
 		if(_runProgramThread.joinable())
 		{
-			if(rpcDevice->runProgram->startType != BaseLib::RPC::DeviceProgram::StartType::once) GD::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
+			if(_programPID != -1) GD::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
 			_runProgramThread.join();
 		}
 	}
@@ -152,8 +152,12 @@ void MiscPeer::runProgram()
 		std::string path = rpcDevice->runProgram->path;
 		if(path.empty()) return;
 		if(path.front() != '/') path = GD::bl->settings.scriptPath() + path;
-		std::string arguments = rpcDevice->runProgram->arguments;
-		GD::bl->hf.stringReplace(arguments, "$PEERID", std::to_string(_peerID));
+		std::vector<std::string> arguments = rpcDevice->runProgram->arguments;
+		for(std::vector<std::string>::iterator i = arguments.begin(); i != arguments.end(); ++i)
+		{
+			GD::bl->hf.stringReplace(*i, "$PEERID", std::to_string(_peerID));
+			GD::bl->hf.stringReplace(*i, "$RPCPORT", std::to_string(_bl->rpcPort));
+		}
 		if(rpcDevice->runProgram->interval == 0) rpcDevice->runProgram->interval = 10;
 		while(!_stopRunProgramThread)
 		{

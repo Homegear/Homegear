@@ -55,8 +55,10 @@ void Settings::reset()
 	_logfilePath = "/var/log/homegear/";
 	_prioritizeThreads = true;
 	_workerThreadWindow = 3000;
+	_rpcServerMaxConnections = 50;
 	_rpcServerThreadPriority = 0;
 	_rpcServerThreadPolicy = SCHED_OTHER;
+	_rpcClientThreadMax = 50;
 	_rpcClientThreadPriority = 0;
 	_rpcClientThreadPolicy = SCHED_OTHER;
 	_workerThreadPriority = 0;
@@ -65,6 +67,7 @@ void Settings::reset()
 	_packetQueueThreadPolicy = SCHED_FIFO;
 	_packetReceivedThreadPriority = 0;
 	_packetReceivedThreadPolicy = SCHED_OTHER;
+	_eventThreadMax = 20;
 	_eventTriggerThreadPriority = 0;
 	_eventTriggerThreadPolicy = SCHED_OTHER;
 	_deviceDescriptionPath = "/etc/homegear/devices/";
@@ -201,6 +204,11 @@ void Settings::load(std::string filename)
 					if(_workerThreadWindow > 3600000) _workerThreadWindow = 3600000;
 					_bl->out.printDebug("Debug: workerThreadWindow set to " + std::to_string(_workerThreadWindow));
 				}
+				else if(name == "rpcservermaxconnections")
+				{
+					_rpcServerMaxConnections = Math::getNumber(value);
+					_bl->out.printDebug("Debug: rpcServerMaxConnections set to " + std::to_string(_rpcServerMaxConnections));
+				}
 				else if(name == "rpcserverthreadpriority")
 				{
 					_rpcServerThreadPriority = Math::getNumber(value);
@@ -213,6 +221,11 @@ void Settings::load(std::string filename)
 					_rpcServerThreadPolicy = Threads::getThreadPolicyFromString(value);
 					_rpcServerThreadPriority = Threads::parseThreadPriority(_rpcServerThreadPriority, _rpcServerThreadPolicy);
 					_bl->out.printDebug("Debug: rpcServerThreadPolicy set to " + std::to_string(_rpcServerThreadPolicy));
+				}
+				else if(name == "rpcclientmaxthreads")
+				{
+					_rpcClientThreadMax = Math::getNumber(value);
+					_bl->out.printDebug("Debug: rpcClientMaxThreads set to " + std::to_string(_rpcClientThreadMax));
 				}
 				else if(name == "rpcclientthreadpriority")
 				{
@@ -265,6 +278,11 @@ void Settings::load(std::string filename)
 					_packetReceivedThreadPolicy = Threads::getThreadPolicyFromString(value);
 					_packetReceivedThreadPriority = Threads::parseThreadPriority(_packetReceivedThreadPriority, _packetReceivedThreadPolicy);
 					_bl->out.printDebug("Debug: packetReceivedThreadPolicy set to " + std::to_string(_packetReceivedThreadPolicy));
+				}
+				else if(name == "eventmaxthreads")
+				{
+					_eventThreadMax = Math::getNumber(value);
+					_bl->out.printDebug("Debug: eventMaxThreads set to " + std::to_string(_eventThreadMax));
 				}
 				else if(name == "eventtriggerthreadpriority")
 				{

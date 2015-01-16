@@ -103,7 +103,7 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 			return;
 		}
 		server->sendMutex.lock();
-		GD::out.printInfo("Info: Calling XML RPC method " + methodName + " on server " + server->address.first + " and port " + server->address.second + ".");
+		GD::out.printInfo("Info: Calling XML RPC method \"" + methodName + "\" on server " + server->address.first + " and port " + server->address.second + ".");
 		if(GD::bl->debugLevel >= 5)
 		{
 			GD::out.printDebug("Parameters:");
@@ -186,7 +186,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
 			server->sendMutex.unlock();
 			return BaseLib::RPC::Variable::createError(-32300, "Server was removed and has to send \"init\" again.");;
 		}
-		GD::out.printInfo("Info: Calling XML RPC method " + methodName + " on server " + server->address.first + " and port " + server->address.second + ".");
+		GD::out.printInfo("Info: Calling XML RPC method \"" + methodName + "\" on server " + server->address.first + " and port " + server->address.second + ".");
 		if(GD::bl->debugLevel >= 5)
 		{
 			GD::out.printDebug("Parameters:");

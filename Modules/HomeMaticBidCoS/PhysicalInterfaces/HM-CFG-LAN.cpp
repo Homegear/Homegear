@@ -308,11 +308,6 @@ void HM_CFG_LAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			_lastPacketSent = BaseLib::HelperFunctions::getTime();
 			return;
 		}
-		if(bidCoSPacket->senderAddress() != _myAddress)
-		{
-			_out.printError("Error: Can't send packet, because sender address (" + BaseLib::HelperFunctions::getHexString(bidCoSPacket->senderAddress(), 6) + ") is not mine (" + BaseLib::HelperFunctions::getHexString(_myAddress, 6) + "): " + bidCoSPacket->hexString());
-			return;
-		}
 
 		if(!_initComplete)
 		{

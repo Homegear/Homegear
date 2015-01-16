@@ -153,8 +153,9 @@ public:
 	 * @see printDebug()
 	 * @see printMessage()
 	 * @param errorString The error message.
+	 * @param errorCallback If set to false, the error will not be send to RPC event servers (default true)
 	 */
-	void printCritical(std::string errorString);
+	void printCritical(std::string errorString, bool errorCallback = true);
 
 	/**
 	 * Prints an error message (debug level < 2).

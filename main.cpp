@@ -70,6 +70,7 @@ void startRPCServers()
 		std::shared_ptr<RPC::ServerSettings::Settings> settings = GD::serverSettings.get(i);
 		std::string info = "Starting XML RPC server " + settings->name + " listening on " + settings->interface + ":" + std::to_string(settings->port);
 		if(settings->ssl) info += ", SSL enabled";
+		else GD::bl->rpcPort = settings->port;
 		if(settings->authType != RPC::ServerSettings::Settings::AuthType::none) info += ", authentification enabled";
 		info += "...";
 		GD::out.printInfo(info);
@@ -89,6 +90,7 @@ void stopRPCServers()
 	{
 		i->second.stop();
 	}
+	GD::bl->rpcPort = 0;
 	//Don't clear map!!! Server is still accessed i. e. by the event handler!
 }
 
@@ -595,11 +597,8 @@ int main(int argc, char* argv[])
 
         startRPCServers();
 
-        //if(_startAsDaemon)
-        //{
-        	GD::out.printInfo("Starting CLI server...");
-        	GD::cliServer.start();
-        //}
+		GD::out.printInfo("Starting CLI server...");
+		GD::cliServer.start();
 
         GD::out.printInfo("Initializing event handler...");
         GD::eventHandler.init();
