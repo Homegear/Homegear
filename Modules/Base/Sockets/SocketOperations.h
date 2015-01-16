@@ -135,7 +135,7 @@ public:
 	void close();
 protected:
 	BaseLib::Obj* _bl = nullptr;
-	int64_t _readTimeout = 5000000;
+	int64_t _readTimeout = 15000000;
 	bool _autoConnect = true;
 	std::string _hostname;
 	std::string _port;

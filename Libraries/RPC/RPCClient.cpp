@@ -329,9 +329,9 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 		}
 
 		_sendCounter++;
-		if(_sendCounter > 50)
+		if(_sendCounter > (signed)GD::bl->settings.rpcClientThreadMax())
 		{
-			GD::out.printCritical("Critical: Could not execute XML RPC method on server " + server->address.first + " and port " + server->address.second + ", because there are more than 50 requests queued. Your server is either not reachable currently or your connection is too slow.");
+			GD::out.printCritical("Critical: Could not execute XML RPC method on server " + server->address.first + " and port " + server->address.second + ", because there are more than " + std::to_string(GD::bl->settings.rpcClientThreadMax()) + " requests queued. Your server is either not reachable currently or your connection is too slow.", false);
 			_sendCounter--;
 			return;
 		}

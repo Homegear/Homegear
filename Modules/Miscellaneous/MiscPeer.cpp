@@ -756,20 +756,18 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::setValue(uint32_t channel, std
 		BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
 		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>());
-		if((rpcParameter->operations & BaseLib::RPC::Parameter::Operations::read) || (rpcParameter->operations & BaseLib::RPC::Parameter::Operations::event))
-		{
-			valueKeys->push_back(valueKey);
-			values->push_back(value);
-		}
+
+		valueKeys->push_back(valueKey);
+		values->push_back(value);
+
 		if(rpcParameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::Enum::store)
 		{
 			rpcParameter->convertToPacket(value, parameter->data);
 			saveParameter(parameter->databaseID, parameter->data);
-			if(!valueKeys->empty())
-			{
-				raiseEvent(_peerID, channel, valueKeys, values);
-				raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
-			}
+
+			raiseEvent(_peerID, channel, valueKeys, values);
+			raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+
 			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		}
 		return BaseLib::RPC::Variable::createError(-6, "Only interface type \"store\" is supported for this device family.");
