@@ -1956,11 +1956,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCInit::invoke(std::shared_ptr<std::vec
 			if(server.first.compare(0, 5, "https") == 0 || server.first.compare(0, 7, "binarys") == 0) eventServer->useSSL = true;
 			if(server.first.compare(0, 6, "binary") == 0 ||
 			   server.first.compare(0, 7, "binarys") == 0 ||
-			   server.first.compare(0, 10, "xmlrpc_bin") == 0)
-			{
-				eventServer->binary = true;
-				eventServer->keepAlive = true;
-			}
+			   server.first.compare(0, 10, "xmlrpc_bin") == 0) eventServer->binary = true;
 			if(parameters->size() > 2)
 			{
 				eventServer->keepAlive = (parameters->at(2)->integerValue & 1);
