@@ -38,6 +38,7 @@
 #include <map>
 #include <mutex>
 #include <thread>
+#include <future>
 
 class Event
 {
@@ -107,7 +108,6 @@ public:
 	void trigger(uint64_t peerID, int32_t channel, std::string& variable, std::shared_ptr<BaseLib::RPC::Variable>& value);
 protected:
 	bool _disposing = false;
-	volatile uint32_t _eventThreadCount = 0;
 	std::mutex _eventsMutex;
 	std::map<uint64_t, std::shared_ptr<Event>> _timedEvents;
 	std::map<uint64_t, std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>> _triggeredEvents;
@@ -120,6 +120,14 @@ protected:
 	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
 
+	//Event thraeds
+	int64_t _lastGargabeCollection = 0;
+	volatile int32_t _currentEventThreadID = 0;
+	std::map<int32_t, std::future<void>> _eventThreads;
+	std::mutex _eventThreadMutex;
+
+	void collectGarbage();
+	bool eventThreadMaxReached();
 	void triggerThreadMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values);
 	void triggerThread(uint64_t peerID, int32_t channel, std::string variable, std::shared_ptr<BaseLib::RPC::Variable> value);
 	void rpcCallThread(std::string eventName, std::string eventMethod, std::shared_ptr<BaseLib::RPC::Variable> eventMethodParameters);

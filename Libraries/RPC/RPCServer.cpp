@@ -185,7 +185,11 @@ void RPCServer::stop()
 		_stopServer = true;
 		if(_mainThread.joinable()) _mainThread.join();
 		_out.printInfo("Info: Waiting for threads to finish.");
-		collectGarbage();
+		while(_clients.size() > 0)
+		{
+			collectGarbage();
+			if(_clients.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		}
 		if(_x509Cred)
 		{
 			gnutls_certificate_free_credentials(_x509Cred);
