@@ -49,7 +49,11 @@ case $1 in
 
 		chown -R homegear:homegear /var/lib/homegear/firmware
 		chmod -R 550 /var/lib/homegear/firmware
-		cd /var/lib/homegear/modules/ && rename 's/lib/mod_/' *.so
+		FILES=/var/lib/homegear/modules/*
+		for f in $FILES; do
+			f2=`echo $f | sed 's#.*/##' | sed 's/^lib/mod_/'`
+			mv $f /var/lib/homegear/modules/$f2
+		done
 		chown -R homegear:homegear /var/lib/homegear/modules
 		chmod -R 550 /var/lib/homegear/modules
 

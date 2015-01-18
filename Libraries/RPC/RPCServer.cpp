@@ -857,6 +857,37 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			}
 			else if(!strncmp(&buffer[0], "GET", 3))
 			{
+				buffer[bytesRead] = '\0';
+
+				try
+				{
+					http.reset();
+					http.process(buffer, bytesRead);
+				}
+				catch(BaseLib::HTTPException& ex)
+				{
+					_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
+				}
+
+				if(_settings->authType == ServerSettings::Settings::AuthType::basic)
+				{
+					if(!client->auth.initialized()) client->auth = Auth(client->socket, _settings->validUsers);
+					try
+					{
+						if(!client->auth.basicServer(http))
+						{
+							_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection.");
+							break;
+						}
+						else _out.printDebug("Client successfully authorized using basic authentification.");
+					}
+					catch(AuthException& ex)
+					{
+						_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection. Error was: " + ex.what());
+						break;
+					}
+				}
+
 				std::string content = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\" /><title>Homegear</title></head><body><p>Homegear works! Please use \"POST\" to call RPC methods.</p><ul><li><a href=\"https://www.homegear.eu/\">Homegear Wiki</a></li><li><a href=\"https://www.homegear.eu/index.php/Homegear_Reference\">Homegear Reference</a></li><li><a href=\"https://forum.homegear.eu\">Homegear Forum</a></li></ul></body></html>";
 				std::string header = getHttpHtmlResponseHeader(content.size(), true);
 				std::vector<char> data;

@@ -1,5 +1,5 @@
-#!/bin/bash
-SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+#!/bin/sh
+SCRIPTDIR="$( cd "$(dirname $0)" && pwd )"
 FIRMWAREDIR=/tmp/HomegearTemp/rootfs/rootfs.ubi/125662337/root/firmware
 
 if test ! -d $FIRMWAREDIR; then
