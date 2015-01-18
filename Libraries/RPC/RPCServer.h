@@ -130,6 +130,7 @@ namespace RPC
 			void analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
 			void callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters, PacketType::Enum responseType, bool keepAlive);
 			std::string getHttpResponseHeader(uint32_t contentLength, bool closeConnection);
+			std::string getHttpHtmlResponseHeader(uint32_t contentLength, bool closeConnection);
 			void closeClientConnection(std::shared_ptr<Client> client);
 			bool clientValid(std::shared_ptr<Client>& client);
 	};

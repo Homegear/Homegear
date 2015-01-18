@@ -624,6 +624,17 @@ std::string RPCServer::getHttpResponseHeader(uint32_t contentLength, bool closeC
 	return header;
 }
 
+std::string RPCServer::getHttpHtmlResponseHeader(uint32_t contentLength, bool closeConnection)
+{
+	std::string header;
+	header.append("HTTP/1.1 200 OK\r\n");
+	header.append("Connection: ");
+	header.append(closeConnection ? "close\r\n" : "Keep-Alive\r\n");
+	header.append("Content-Type: text/html\r\n");
+	header.append("Content-Length: ").append(std::to_string(contentLength + 21)).append("\r\n\r\n");
+	return header;
+}
+
 void RPCServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
 {
 	try
@@ -843,6 +854,15 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						break;
 					}
 				}
+			}
+			else if(!strncmp(&buffer[0], "GET", 3))
+			{
+				std::string content = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\" /><title>Homegear</title></head><body><p>Homegear works! Please use \"POST\" to call RPC methods.</p><ul><li><a href=\"https://www.homegear.eu/\">Homegear Wiki</a></li><li><a href=\"https://www.homegear.eu/index.php/Homegear_Reference\">Homegear Reference</a></li><li><a href=\"https://forum.homegear.eu\">Homegear Forum</a></li></ul></body></html>";
+				std::string header = getHttpHtmlResponseHeader(content.size(), true);
+				std::vector<char> data;
+				data.insert(data.end(), header.begin(), header.end());
+				data.insert(data.end(), content.begin(), content.end());
+				sendRPCResponseToClient(client, data, false);
 			}
 			else if(!strncmp(&buffer[0], "POST", 4) || !strncmp(&buffer[0], "HTTP/1.", 7))
 			{

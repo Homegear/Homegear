@@ -112,17 +112,17 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 				(*i)->print();
 			}
 		}
-		bool timedout = false;
+		bool retry = false;
 		std::vector<char> requestData;
 		std::vector<char> responseData;
 		if(server->binary) _rpcEncoder->encodeRequest(methodName, parameters, requestData);
 		else _xmlRpcEncoder->encodeRequest(methodName, parameters, requestData);
 		for(uint32_t i = 0; i < 3; ++i)
 		{
-			timedout = false;
-			if(i == 0) sendRequest(server, requestData, responseData, true, timedout);
-			else sendRequest(server, requestData, responseData, false, timedout);
-			if(!timedout || server->removed) break;
+			retry = false;
+			if(i == 0) sendRequest(server, requestData, responseData, true, retry);
+			else sendRequest(server, requestData, responseData, false, retry);
+			if(!retry || server->removed) break;
 		}
 		if(server->removed)
 		{
@@ -130,7 +130,7 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 			GD::rpcClient.removeServer(server->address);
 			return;
 		}
-		if(timedout)
+		if(retry)
 		{
 			GD::out.printError("Removing server \"" + server->id + "\". Server has to send \"init\" again.");
 			server->removed = true;
@@ -195,17 +195,17 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
 				(*i)->print();
 			}
 		}
-		bool timedout = false;
+		bool retry = false;
 		std::vector<char> requestData;
 		std::vector<char> responseData;
 		if(server->binary) _rpcEncoder->encodeRequest(methodName, parameters, requestData);
 		else _xmlRpcEncoder->encodeRequest(methodName, parameters, requestData);
 		for(uint32_t i = 0; i < 3; ++i)
 		{
-			timedout = false;
-			if(i == 0) sendRequest(server, requestData, responseData, true, timedout);
-			else sendRequest(server, requestData, responseData, false, timedout);
-			if(!timedout || server->removed) break;
+			retry = false;
+			if(i == 0) sendRequest(server, requestData, responseData, true, retry);
+			else sendRequest(server, requestData, responseData, false, retry);
+			if(!retry || server->removed) break;
 		}
 		if(server->removed)
 		{
@@ -213,7 +213,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
 			GD::rpcClient.removeServer(server->address);
 			return BaseLib::RPC::Variable::createError(-32300, "Server was removed and has to send \"init\" again.");
 		}
-		if(timedout)
+		if(retry)
 		{
 			GD::out.printError("Removing server \"" + server->id + "\". Server has to send \"init\" again.");
 			server->removed = true;
@@ -304,7 +304,7 @@ std::string RPCClient::getIPAddress(std::string address)
     return "";
 }
 
-void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector<char>& data, std::vector<char>& responseData, bool insertHeader, bool& timedout)
+void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector<char>& data, std::vector<char>& responseData, bool insertHeader, bool& retry)
 {
 	try
 	{
@@ -420,7 +420,8 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 		}
 		catch(const BaseLib::SocketOperationException& ex)
 		{
-			GD::out.printError("Error: Could not send data to XML RPC server " + server->hostname + " on port " + server->address.second + ": " + ex.what() + ". Giving up.");
+			GD::out.printError("Error: Could not send data to XML RPC server " + server->hostname + " on port " + server->address.second + ": " + ex.what() + ".");
+			retry = true;
 			server->socket->close();
 			_sendCounter--;
 			return;
@@ -447,7 +448,7 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 			catch(const BaseLib::SocketTimeOutException& ex)
 			{
 				GD::out.printInfo("Info: Reading from XML RPC server timed out. Server: " + server->hostname + " Port: " + server->address.second);
-				timedout = true;
+				retry = true;
 				if(!server->keepAlive) server->socket->close();
 				_sendCounter--;
 				return;
@@ -455,6 +456,7 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 			catch(const BaseLib::SocketClosedException& ex)
 			{
 				GD::out.printWarning("Warning: " + ex.what());
+				retry = true;
 				if(!server->keepAlive) server->socket->close();
 				_sendCounter--;
 				return;
@@ -462,6 +464,7 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 			catch(const BaseLib::SocketOperationException& ex)
 			{
 				GD::out.printError(ex.what());
+				retry = true;
 				if(!server->keepAlive) server->socket->close();
 				_sendCounter--;
 				return;
