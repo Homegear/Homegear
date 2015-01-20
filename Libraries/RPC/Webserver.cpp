@@ -85,6 +85,8 @@ void WebServer::get(std::string path, std::vector<char>& request, std::vector<ch
 {
 	try
 	{
+		std::string requestString(&request[0], request.size());
+		GD::bl->out.printInfo(requestString);
 		uint32_t pos = path.find('?');
 		if(pos != std::string::npos) path = path.substr(0, pos);
 		path = decodeURL(path);
@@ -113,6 +115,7 @@ void WebServer::get(std::string path, std::vector<char>& request, std::vector<ch
 			if(pos != std::string::npos && (unsigned)pos < path.size() - 1) ending = path.substr(pos + 1);
 			GD::bl->hf.toLower(ending);
 			std::string contentString;
+			std::string cookie;
 			if(ending == "html" || ending == "htm") contentType = "text/html";
 			else if(ending == "xhtml") contentType = "application/xhtml+xml";
 			else if(ending == "css") contentType = "text/css";
@@ -134,7 +137,7 @@ void WebServer::get(std::string path, std::vector<char>& request, std::vector<ch
 			else if(ending == "php" || ending == "php5")
 			{
 				contentType = "text/html";
-				GD::scriptEngine.executeWebRequest(_settings->contentPath + path, request, content);
+				GD::scriptEngine.executeWebRequest(_settings->contentPath + path, request, content, cookie);
 			}
 			if(content.empty())
 			{
@@ -145,7 +148,7 @@ void WebServer::get(std::string path, std::vector<char>& request, std::vector<ch
 			}
 			else
 			{
-				std::string header = getHeader(content.size(), contentType, 200, "OK");
+				std::string header = getHeader(content.size(), contentType, 200, "OK", cookie);
 				content.insert(content.begin(), header.begin(), header.end());
 			}
 		}
@@ -197,9 +200,10 @@ void WebServer::post(std::string path, std::vector<char>& request, std::vector<c
 		}
 		try
 		{
+			std::string cookie;
 			if(path.front() == '/') path = path.substr(1);
-			GD::scriptEngine.executeWebRequest(_settings->contentPath + path, request, content);
-			std::string header = getHeader(content.size(), "text/html", 200, "OK");
+			GD::scriptEngine.executeWebRequest(_settings->contentPath + path, request, content, cookie);
+			std::string header = getHeader(content.size(), "text/html", 200, "OK", cookie);
 			content.insert(content.begin(), header.begin(), header.end());
 		}
 		catch(const std::exception& ex)

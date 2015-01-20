@@ -161,6 +161,15 @@ public:
 	static std::string getTimeString(int64_t time = 0);
 
 	/**
+	 * Gets the current time as a string with custom formatting.
+	 *
+	 * @param format The format like described for strftime
+	 * @param time The unix time stamp in milliseconds to get the time string for. If "0" the current time is returned.
+	 * @return Returns a time string like "08/27/14 14:13:53.471".
+	 */
+	static std::string getTimeString(std::string format, int64_t time = 0);
+
+	/**
 	 * Left trims a string.
 	 *
 	 * @see rtrim()
@@ -509,6 +518,16 @@ public:
 	 * @param arguments The arguments to pass.
 	 */
 	pid_t system(std::string path, std::vector<std::string> arguments);
+
+	/**
+	 * Starts a program and returns the output.
+	 *
+	 * @param path The program to start.
+	 * @param arguments The arguments to pass.
+	 * @param[out] output The program output.
+	 * @return Returns 0 on success, otherwise -1.
+	 */
+	int32_t exec(std::string path, std::string arguments, std::vector<char>& output);
 
 	/**
 	 * Gets the error message to a GCRYPT error code.

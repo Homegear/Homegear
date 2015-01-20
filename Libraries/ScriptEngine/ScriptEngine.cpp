@@ -54,6 +54,39 @@ int32_t storeScriptOutput(const void *output, unsigned int outputLen, void *user
     return PH7_OK;
 }
 
+int32_t fillArray(ph7_value* pKey, ph7_value* pValue, void* pUserData)
+{
+	((std::map<std::string, std::string>*)pUserData)->operator [](std::string(ph7_value_to_string(pKey, 0))) = std::string(ph7_value_to_string(pValue, 0));
+	return PH7_OK;
+}
+
+int32_t session_start(ph7_context* context, int32_t argc, ph7_value** argv)
+{
+	ph7_result_bool(context, 1);
+	ScriptEngine::ScriptInfo* info = (ScriptEngine::ScriptInfo*)ph7_context_user_data(context);
+	if(!info) return PH7_OK;
+	if(!info->sessionID.empty())
+	{
+		std::shared_ptr<ScriptEngine::Session> session = info->engine->getSession(info->sessionID);
+		if(session)
+		{
+			for(std::map<std::string, std::string>::iterator i = session->data.begin(); i != session->data.end(); ++i)
+			{
+				ph7_vm_config(info->compiledProgram, PH7_VM_CONFIG_SESSION_ATTR, i->first.c_str(), i->second.c_str(), i->second.size());
+			}
+			return PH7_OK;
+		}
+	}
+	std::vector<uint8_t> id;
+	id.reserve(16);
+	for(int i = 0; i < 16; i++)
+	{
+		id.push_back((uint8_t)BaseLib::HelperFunctions::getRandomNumber(0, 255));
+	}
+	ph7_vm_config(info->compiledProgram, PH7_VM_CONFIG_COOKIE_ATTR, "PH7SESSID", BaseLib::HelperFunctions::getHexString(id).c_str(), 32);
+	return PH7_OK;
+}
+
 int32_t hg_set_system(ph7_context* context, int32_t argc, ph7_value** argv)
 {
 	if(argc != 2)
@@ -428,7 +461,7 @@ void ScriptEngine::appendOutput(std::string& path, const char* output, uint32_t 
 	_outputMutex.unlock();
 }
 
-ph7_vm* ScriptEngine::addProgram(std::string path, bool storeOutput)
+ScriptEngine::ScriptInfo* ScriptEngine::addProgram(std::string path, bool storeOutput)
 {
 	try
 	{
@@ -532,10 +565,21 @@ ph7_vm* ScriptEngine::addProgram(std::string path, bool storeOutput)
 			_programs.erase(path);
 			_executeMutexes.at(path)->unlock();
 		}
+		ScriptInfo* info = nullptr;
 		if(!_disposing)
 		{
 			_executeMutexes.insert(std::pair<std::string, std::unique_ptr<std::mutex>>(path, std::unique_ptr<std::mutex>(new std::mutex())));
-			ScriptInfo* info = &_programs[path];
+			info = &_programs[path];
+
+			result = ph7_create_function(compiledProgram, "session_start", session_start, info);
+			if(result != PH7_OK)
+			{
+				GD::out.printError("Error adding functions to script \"" + path + "\".");
+				ph7_vm_release(compiledProgram);
+				_programsMutex.unlock();
+				return nullptr;
+			}
+
 			info->compiledProgram = compiledProgram;
 			info->lastModified = GD::bl->hf.getFileLastModifiedTime(path);
 			info->path = path;
@@ -572,7 +616,7 @@ ph7_vm* ScriptEngine::addProgram(std::string path, bool storeOutput)
 			compiledProgram = nullptr;
 		}
 		_programsMutex.unlock();
-		return compiledProgram;
+		return info;
 	}
 	catch(const std::exception& ex)
 	{
@@ -590,11 +634,11 @@ ph7_vm* ScriptEngine::addProgram(std::string path, bool storeOutput)
 	return nullptr;
 }
 
-ph7_vm* ScriptEngine::getProgram(std::string path, bool storeOutput)
+ScriptEngine::ScriptInfo* ScriptEngine::getProgram(std::string path, bool storeOutput)
 {
 	try
 	{
-		ph7_vm* compiledProgram = nullptr;
+		ScriptInfo* scriptInfo = nullptr;
 		_programsMutex.lock();
 		if(!_disposing && _programs.find(path) != _programs.end())
 		{
@@ -605,12 +649,12 @@ ph7_vm* ScriptEngine::getProgram(std::string path, bool storeOutput)
 			}
 			else
 			{
-				compiledProgram = _programs.at(path).compiledProgram;
+				scriptInfo = &_programs.at(path);
 				_programsMutex.unlock();
 			}
 		}
 		else _programsMutex.unlock();
-		return compiledProgram;
+		return scriptInfo;
 	}
 	catch(const std::exception& ex)
 	{
@@ -693,8 +737,14 @@ int32_t ScriptEngine::execute(const std::string& path, const std::string& argume
 	{
 		if(_disposing || _noExecution) return 1;
 		_executionCount++;
-		ph7_vm* compiledProgram = getProgram(path, false);
-		if(!compiledProgram) compiledProgram = addProgram(path, false);
+		ScriptInfo* scriptInfo = getProgram(path, false);
+		if(!scriptInfo) scriptInfo = addProgram(path, false);
+		if(!scriptInfo)
+		{
+			_executionCount--;
+			return 1;
+		}
+		ph7_vm* compiledProgram = scriptInfo->compiledProgram;
 		if(!compiledProgram)
 		{
 			_executionCount--;
@@ -714,6 +764,9 @@ int32_t ScriptEngine::execute(const std::string& path, const std::string& argume
 			_executionCount--;
 			return 1;
 		}
+
+		scriptInfo->sessionID = "";
+		scriptInfo->cookie = nullptr;
 
 		std::vector<std::string> stringArgv = getArgs(path, arguments);
 		ph7_value* argument = ph7_new_scalar(compiledProgram);
@@ -780,7 +833,63 @@ int32_t ScriptEngine::execute(const std::string& path, const std::string& argume
 	return 1;
 }
 
-int32_t ScriptEngine::executeWebRequest(const std::string& path, const std::vector<char>& request, std::vector<char>& output)
+void ScriptEngine::cleanUpSessions()
+{
+	try
+	{
+		_sessionsMutex.lock();
+		std::vector<std::string> sessionsToDelete;
+		for(std::map<std::string, std::shared_ptr<Session>>::iterator i = _sessions.begin(); i != _sessions.end(); ++i)
+		{
+			if(i->second->lastAccess < BaseLib::HelperFunctions::getTime() - 3600000) sessionsToDelete.push_back(i->first);
+		}
+		for(std::vector<std::string>::iterator i = sessionsToDelete.begin(); i != sessionsToDelete.end(); ++i)
+		{
+			_sessions.erase(*i);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_sessionsMutex.unlock();
+}
+
+std::shared_ptr<ScriptEngine::Session> ScriptEngine::getSession(std::string id)
+{
+	try
+	{
+		_sessionsMutex.lock();
+		std::shared_ptr<ScriptEngine::Session> session;
+		if(_sessions.find(id) != _sessions.end()) session = _sessions[id];
+		_sessionsMutex.unlock();
+		return session;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_sessionsMutex.unlock();
+	return std::shared_ptr<ScriptEngine::Session>();
+}
+
+int32_t ScriptEngine::executeWebRequest(const std::string& path, const std::vector<char>& request, std::vector<char>& output, std::string& cookie)
 {
 	try
 	{
@@ -794,8 +903,17 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, const std::vect
 			output.insert(output.end(), error.begin(), error.end());
 			return 1;
 		}
-		ph7_vm* compiledProgram = getProgram(path, true);
-		if(!compiledProgram) compiledProgram = addProgram(path, true);
+		cleanUpSessions();
+		ScriptInfo* scriptInfo = getProgram(path, true);
+		if(!scriptInfo) scriptInfo = addProgram(path, true);
+		if(!scriptInfo)
+		{
+			_executionCount--;
+			std::string error("Error executing script. Check Homegear log for more details.");
+			output.insert(output.end(), error.begin(), error.end());
+			return 1;
+		}
+		ph7_vm* compiledProgram = scriptInfo->compiledProgram;
 		if(!compiledProgram)
 		{
 			_executionCount--;
@@ -825,14 +943,20 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, const std::vect
 			return 1;
 		}
 
+		scriptInfo->sessionID = "";
+		scriptInfo->cookie = nullptr;
 		ph7_value* nullValue1 = ph7_new_array(compiledProgram);
 		ph7_value* nullValue2 = ph7_new_array(compiledProgram);
 		ph7_value* nullValue3 = ph7_new_array(compiledProgram);
 		ph7_value* nullValue4 = ph7_new_array(compiledProgram);
+		ph7_value* cookieValue = ph7_new_array(compiledProgram);
+		ph7_value* sessionValue = ph7_new_array(compiledProgram);
 		if(ph7_vm_config(compiledProgram, PH7_VM_CONFIG_CREATE_SUPER, "_GET", nullValue1) != PH7_OK ||
 		   ph7_vm_config(compiledProgram, PH7_VM_CONFIG_CREATE_SUPER, "_POST", nullValue2) != PH7_OK ||
 		   ph7_vm_config(compiledProgram, PH7_VM_CONFIG_CREATE_SUPER, "_REQUEST", nullValue3) != PH7_OK ||
-		   ph7_vm_config(compiledProgram, PH7_VM_CONFIG_CREATE_SUPER, "_SERVER", nullValue4) != PH7_OK)
+		   ph7_vm_config(compiledProgram, PH7_VM_CONFIG_CREATE_SUPER, "_SERVER", nullValue4) != PH7_OK ||
+		   ph7_vm_config(compiledProgram, PH7_VM_CONFIG_CREATE_SUPER, "_COOKIE", cookieValue) != PH7_OK ||
+		   ph7_vm_config(compiledProgram, PH7_VM_CONFIG_CREATE_SUPER, "_SESSION", sessionValue) != PH7_OK)
 		{
 			GD::out.printError("Error resetting HTTP request information for script \"" + path + "\".");
 			_executeMutexes.at(path)->unlock();
@@ -856,11 +980,37 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, const std::vect
 			return 1;
 		}
 
+		ph7_value* pSessionID = ph7_array_fetch(cookieValue, "PH7SESSID", 9);
+		if(pSessionID)
+		{
+			scriptInfo->sessionID = std::string(ph7_value_to_string(pSessionID, 0));
+		}
+		scriptInfo->cookie = cookieValue;
+
 		int32_t exitStatus = 0;
 		if(ph7_vm_exec(compiledProgram, &exitStatus) != PH7_OK)
 		{
 			GD::out.printError("Error executing script \"" + path + "\".");
 		}
+		pSessionID = ph7_array_fetch(cookieValue, "PH7SESSID", 9);
+		if(pSessionID)
+		{
+			std::string sessionID(ph7_value_to_string(pSessionID, 0));
+			_sessionsMutex.lock();
+			std::shared_ptr<Session> session;
+			if(_sessions.find(sessionID) == _sessions.end())
+			{
+				session.reset(new Session());
+				_sessions[sessionID] = session;
+			}
+			else session = _sessions[sessionID];
+			session->lastAccess = BaseLib::HelperFunctions::getTime();
+			ph7_array_walk(sessionValue, fillArray, (void*)&(session->data));
+			_sessionsMutex.unlock();
+			cookie = "Set-Cookie: PH7SESSID=" + sessionID + ";\r\nexpires=" + BaseLib::HelperFunctions::getTimeString("a, d-b-Y H:I:S GMT", BaseLib::HelperFunctions::getTime() + 3600000) + ";\r\nMax-Age=2592000;\r\nPath=/";
+		}
+		ph7_release_value(compiledProgram, cookieValue);
+		ph7_release_value(compiledProgram, sessionValue);
 		if(ph7_vm_reset(compiledProgram) != PH7_OK)
 		{
 			GD::out.printError("Error resetting script \"" + path + "\".");

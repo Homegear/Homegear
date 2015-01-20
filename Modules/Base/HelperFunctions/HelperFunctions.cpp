@@ -233,6 +233,28 @@ std::string HelperFunctions::getTimeString(int64_t time)
 	return timeStream.str();
 }
 
+std::string HelperFunctions::getTimeString(std::string format, int64_t time)
+{
+	std::time_t t;
+	int32_t milliseconds;
+	if(time > 0)
+	{
+		t = std::time_t(time / 1000);
+		milliseconds = time % 1000;
+	}
+	else
+	{
+		const auto timePoint = std::chrono::system_clock::now();
+		t = std::chrono::system_clock::to_time_t(timePoint);
+		milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(timePoint.time_since_epoch()).count() % 1000;
+	}
+	char timeString[50];
+	strftime(&timeString[0], 50, format.c_str(), std::localtime(&t));
+	std::ostringstream timeStream;
+	timeStream << timeString << "." << std::setw(3) << std::setfill('0') << milliseconds;
+	return timeStream.str();
+}
+
 int32_t HelperFunctions::getRandomNumber(int32_t min, int32_t max)
 {
 	std::random_device rd;
@@ -634,6 +656,29 @@ pid_t HelperFunctions::system(std::string command, std::vector<std::string> argu
     //Parent process
 
     return pid;
+}
+
+int32_t HelperFunctions::exec(std::string path, std::string arguments, std::vector<char>& output)
+{
+	FILE* pipe = popen((path + " " + arguments).c_str(), "r");
+    if (!pipe)
+    {
+    	_bl->out.printError(std::string("Error executing " + path + ": ") + std::string(strerror(errno)));
+    	return -1;
+    }
+    char buffer[128];
+    int32_t bytesRead = 0;
+    output.reserve(1024);
+    while(!feof(pipe))
+    {
+    	if(fgets(buffer, 128, pipe) != 0)
+    	{
+    		if(output.size() + bytesRead > output.capacity()) output.reserve(output.capacity() + 1024);
+    		output.insert(output.end(), buffer, buffer + strlen(buffer));
+    	}
+    }
+    pclose(pipe);
+    return 0;
 }
 
 void HelperFunctions::checkEndianness()

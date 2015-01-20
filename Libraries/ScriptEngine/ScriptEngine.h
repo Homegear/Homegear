@@ -43,6 +43,16 @@
 class ScriptEngine
 {
 public:
+	class Session
+	{
+	public:
+		Session() {}
+		virtual ~Session() {}
+
+		int64_t lastAccess = 0;
+		std::map<std::string, std::string> data;
+	};
+
 	class ScriptInfo
 	{
 	public:
@@ -60,6 +70,8 @@ public:
 		int32_t lastModified = 0;
 		std::string path;
 		ScriptEngine* engine = nullptr;
+		std::string sessionID;
+		ph7_value* cookie = nullptr;
 	};
 
 	ScriptEngine();
@@ -67,8 +79,9 @@ public:
 	void dispose();
 
 	int32_t execute(const std::string& path, const std::string& arguments);
-	int32_t executeWebRequest(const std::string& path, const std::vector<char>& request, std::vector<char>& output);
+	int32_t executeWebRequest(const std::string& path, const std::vector<char>& request, std::vector<char>& output, std::string& cookie);
 	void clearPrograms();
+	std::shared_ptr<Session> getSession(std::string id);
 
 	void appendOutput(std::string& path, const char* output, uint32_t outputLength);
 protected:
@@ -82,12 +95,15 @@ protected:
 	std::map<std::string, std::unique_ptr<std::mutex>> _executeMutexes;
 	std::mutex _outputMutex;
 	std::map<std::string, std::vector<char>*> _outputs;
+	std::mutex _sessionsMutex;
+	std::map<std::string, std::shared_ptr<Session>> _sessions;
 
-	ph7_vm* addProgram(std::string path, bool storeOutput);
-	ph7_vm* getProgram(std::string path, bool storeOutput);
+	ScriptInfo* addProgram(std::string path,  bool storeOutput);
+	ScriptInfo* getProgram(std::string path, bool storeOutput);
 	bool isValid(const std::string& path, ph7_vm* compiledProgram);
 	void removeProgram(std::string path);
 	void printError(int32_t code);
+	void cleanUpSessions();
 	std::vector<std::string> getArgs(const std::string& path, const std::string& args);
 };
 #endif
