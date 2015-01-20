@@ -103,6 +103,7 @@ OBJECTS := \
 	$(OBJDIR)/RPCClient.o \
 	$(OBJDIR)/Server.o \
 	$(OBJDIR)/Base64.o \
+	$(OBJDIR)/Webserver.o \
 	$(OBJDIR)/Client.o \
 
 RESOURCES := \
@@ -193,6 +194,9 @@ $(OBJDIR)/Server.o: Libraries/RPC/Server.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Base64.o: Libraries/RPC/Base64.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Webserver.o: Libraries/RPC/Webserver.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Client.o: Libraries/RPC/Client.cpp

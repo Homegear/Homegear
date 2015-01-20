@@ -27,58 +27,30 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef SERVERSETTINGS_H_
-#define SERVERSETTINGS_H_
+#ifndef WEBSERVER_H_
+#define WEBSERVER_H_
 
-#include "../../Modules/Base/Exception.h"
-
-#include <memory>
-#include <iostream>
-#include <string>
-#include <map>
-#include <cstring>
-#include <vector>
+#include "../../Modules/Base/BaseLib.h"
+#include "ServerSettings.h"
 
 namespace RPC
 {
-class ServerSettings
-{
-public:
-	class Settings
-	{
-	public:
-		enum AuthType { none, basic };
+	class WebServer {
+		public:
+			WebServer(std::shared_ptr<ServerSettings::Settings>& settings);
+			virtual ~WebServer();
 
-		Settings()
-		{
-			interface = "::";
-			contentPath = "/var/lib/homegear/www/";
-		}
-		virtual ~Settings() {}
-		int32_t index = -1;
-		std::string name;
-		std::string interface;
-		int32_t port = -1;
-		bool ssl = true;
-		AuthType authType = AuthType::basic;
-		std::vector<std::string> validUsers;
-		int32_t diffieHellmanKeySize = 1024;
-		std::string contentPath;
-		bool webServer = false;
-		bool rpcServer = true;
-		std::string redirectTo;
+			void get(std::string path, std::vector<char>& request, std::vector<char>& content);
+			void post(std::string path, std::vector<char>& request, std::vector<char>& content);
+			void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content, std::string headerSuffix = "");
+		protected:
+		private:
+			BaseLib::Output _out;
+			std::shared_ptr<ServerSettings::Settings> _settings;
+			BaseLib::Math _math;
+
+			std::string getHeader(uint32_t contentLength, std::string contentType, int32_t code, std::string codeDescription, std::string headerSuffix = "");
+			std::string decodeURL(const std::string& url);
 	};
-
-	ServerSettings();
-	virtual ~ServerSettings() {}
-	void load(std::string filename);
-
-	int32_t count() { return _servers.size(); }
-	std::shared_ptr<Settings> get(int32_t index) { if(_servers.find(index) != _servers.end()) return _servers[index]; else return std::shared_ptr<Settings>(); }
-private:
-	std::map<int32_t, std::shared_ptr<Settings>> _servers;
-
-	void reset();
-};
 }
-#endif /* SERVERSETTINGS_H_ */
+#endif

@@ -37,73 +37,146 @@ HTTP::HTTP()
 {
 	_content.reset(new std::vector<char>());
 	_chunk.reset(new std::vector<char>());
+	_rawHeader.reset(new std::vector<char>());
 }
 
 void HTTP::process(char* buffer, int32_t bufferLength, bool checkForChunkedXML)
 {
 	if(bufferLength <= 0 || _finished) return;
+	_headerProcessingStarted = true;
 	if(!_header.parsed) processHeader(&buffer, bufferLength);
-	if(!_dataProcessed && checkForChunkedXML)
+	if(!_header.parsed) return;
+	if(_header.method == Method::Enum::get)
 	{
-		if(bufferLength + _partialChunkSize.length() < 8) //Not enough data.
-		{
-			_partialChunkSize.append(buffer, bufferLength);
-			return;
-		}
-		std::string chunk = _partialChunkSize + std::string(buffer, bufferLength);
-		size_t pos = chunk.find('<');
-		if(pos != std::string::npos && pos != 0)
-		{
-			if(BaseLib::Math::isNumber(BaseLib::HelperFunctions::trim(chunk), true)) _header.transferEncoding = BaseLib::HTTP::TransferEncoding::chunked;
-		}
+		_dataProcessingStarted = true;
+		setFinished();
+		return;
 	}
-	_dataProcessed = true;
+	if(!_dataProcessingStarted)
+	{
+		if(checkForChunkedXML)
+		{
+			if(bufferLength + _partialChunkSize.length() < 8) //Not enough data.
+			{
+				_partialChunkSize.append(buffer, bufferLength);
+				return;
+			}
+			std::string chunk = _partialChunkSize + std::string(buffer, bufferLength);
+			size_t pos = chunk.find('<');
+			if(pos != std::string::npos && pos != 0)
+			{
+				if(BaseLib::Math::isNumber(BaseLib::HelperFunctions::trim(chunk), true)) _header.transferEncoding = BaseLib::HTTP::TransferEncoding::chunked;
+			}
+		}
+		if(_header.contentLength > 10485760) throw HTTPException("Data is larger than 10MiB.");
+		_content->reserve(_header.contentLength);
+	}
+	_dataProcessingStarted = true;
 	if(_header.transferEncoding & TransferEncoding::Enum::chunked) processChunkedContent(buffer, bufferLength); else processContent(buffer, bufferLength);
 }
 
 void HTTP::processHeader(char** buffer, int32_t& bufferLength)
 {
 	char* end = strstr(*buffer, "\r\n\r\n");
-	uint32_t headerSize;
+	uint32_t headerSize = 0;
 	int32_t crlfOffset = 2;
 	if(!end || ((end + 3) - *buffer) + 1 > bufferLength)
 	{
 		end = strstr(*buffer, "\n\n");
-		if(!end || ((end + 1) - *buffer) + 1 > bufferLength) throw HTTPException("Could not find HTTP header.");
-		crlfOffset = 1;
-		_crlf = false;
-		headerSize = ((end + 1) - *buffer) + 1;
+		if(!end || ((end + 1) - *buffer) + 1 > bufferLength)
+		{
+			if(_rawHeader->size() > 2 && (
+					(_rawHeader->back() == '\n' && **buffer == '\n') ||
+					(_rawHeader->back() == '\r' && **buffer == '\n' && *(*buffer + 1) == '\r') ||
+					(_rawHeader->at(_rawHeader->size() - 2) == '\r' && _rawHeader->back() == '\n' && **buffer == '\r') ||
+					(_rawHeader->at(_rawHeader->size() - 2) == '\n' && _rawHeader->back() == '\r' && **buffer == '\n')
+			))
+			{
+				//Special case: The two new lines are split between _rawHeader and buffer
+				//Cases:
+				//	For crlf:
+				//		rawHeader = ...\n, buffer = \n...
+				//	For lf:
+				//		rawHeader = ...\r, buffer = \n\r\n...
+				//		rawHeader = ...\r\n, buffer = \r\n...
+				//		rawHeader = ...\r\n\r, buffer = \n...
+				if(**buffer == '\n' && *(*buffer + 1) != '\r') //rawHeader = ...\r\n\r, buffer = \n... or rawHeader = ...\n, buffer = \n...
+				{
+					headerSize = 1;
+					if(_rawHeader->back() == '\r') crlfOffset = 2;
+					else crlfOffset = 1;
+				}
+				else if(**buffer == '\n' && *(*buffer + 1) == '\r' && *(*buffer + 2) == '\n') //rawHeader = ...\r, buffer = \n\r\n...
+				{
+					headerSize = 3;
+					crlfOffset = 2;
+				}
+				else if(**buffer == '\r' && *(*buffer + 1) == '\n') //rawHeader = ...\r\n, buffer = \r\n...
+				{
+					headerSize = 2;
+					crlfOffset = 2;
+				}
+			}
+			else
+			{
+				_rawHeader->insert(_rawHeader->end(), *buffer, *buffer + bufferLength);
+				return;
+			}
+		}
+		else
+		{
+			crlfOffset = 1;
+			_crlf = false;
+			headerSize = ((end + 1) - *buffer) + 1;
+		}
 	}
 	else headerSize = ((end + 3) - *buffer) + 1;
 
-	bufferLength -= headerSize;
+	_rawHeader->insert(_rawHeader->end(), *buffer, *buffer + headerSize);
 
-	if(strncmp(*buffer, "GET", 3) || strncmp(*buffer, "POST", 4)) _type = Type::Enum::request;
-	else if(strncmp(*buffer, "HTTP/1.", 7))
+	char* headerBuffer = &_rawHeader->at(0);
+	end = &_rawHeader->at(0) + _rawHeader->size();
+	bufferLength -= headerSize;
+	*buffer += headerSize;
+
+	if(!strncmp(headerBuffer, "GET", 3))
+	{
+		_type = Type::Enum::request;
+		_header.method = Method::Enum::get;
+	}
+	else if(!strncmp(headerBuffer, "POST", 4))
+	{
+		_type = Type::Enum::request;
+		_header.method = Method::Enum::post;
+	}
+	else if(!strncmp(headerBuffer, "HTTP/1.", 7))
 	{
 		_type = Type::Enum::response;
-		_header.responseCode = strtol(*buffer + 9, NULL, 10);
+		_header.responseCode = strtol(headerBuffer + 9, NULL, 10);
 		if(_header.responseCode != 200) throw HTTPException("Response code was: " + std::to_string(_header.responseCode));
 	}
 	else throw HTTPException("Unknown HTTP request method.");
 
-	char* newlinePos;
-	char* colonPos;
-	newlinePos = strchr(*buffer, '\n');
+	char* newlinePos = nullptr;
+	char* colonPos = nullptr;
+	newlinePos = (char*)memchr(headerBuffer, '\n', _rawHeader->size());
 	if(!newlinePos || newlinePos > end) throw HTTPException("Could not parse HTTP header.");
-	*buffer = newlinePos + 1;
+	headerBuffer = newlinePos + 1;
 
-	while(*buffer < end)
+	while(headerBuffer < end)
 	{
-		newlinePos = (crlfOffset == 2) ? strchr(*buffer, '\r') : strchr(*buffer, '\n');
+		newlinePos = (crlfOffset == 2) ? strchr(headerBuffer, '\r') : strchr(headerBuffer, '\n');
 		if(!newlinePos || newlinePos > end) break;
-		colonPos = strchr(*buffer, ':');
-		if(!colonPos || colonPos > newlinePos) continue;
+		colonPos = strchr(headerBuffer, ':');
+		if(!colonPos || colonPos > newlinePos)
+		{
+			headerBuffer = newlinePos + crlfOffset;
+			continue;
+		}
 
-		if(colonPos < newlinePos - 2) processHeaderField(*buffer, (uint32_t)(colonPos - *buffer), colonPos + 2, (uint32_t)(newlinePos - colonPos - 2));
-		*buffer = newlinePos + crlfOffset;
+		if(colonPos < newlinePos - 2) processHeaderField(headerBuffer, (uint32_t)(colonPos - headerBuffer), colonPos + 2, (uint32_t)(newlinePos - colonPos - 2));
+		headerBuffer = newlinePos + crlfOffset;
 	}
-	*buffer += crlfOffset;
 	_header.parsed = true;
 }
 
@@ -178,10 +251,12 @@ void HTTP::reset()
 {
 	_header = Header();
 	_content.reset(new std::vector<char>());
+	_rawHeader.reset(new std::vector<char>());
 	_chunk.reset(new std::vector<char>());
 	_type = Type::Enum::none;
 	_finished = false;
-	_dataProcessed = false;
+	_dataProcessingStarted = false;
+	_headerProcessingStarted = false;
 }
 
 void HTTP::setFinished()

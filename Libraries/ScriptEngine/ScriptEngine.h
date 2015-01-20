@@ -43,13 +43,6 @@
 class ScriptEngine
 {
 public:
-	ScriptEngine();
-	virtual ~ScriptEngine();
-	void dispose();
-	
-	int32_t execute(const std::string& path, const std::string& arguments);
-	void clearPrograms();
-protected:
 	class ScriptInfo
 	{
 	public:
@@ -65,17 +58,33 @@ protected:
 
 		ph7_vm* compiledProgram = nullptr;
 		int32_t lastModified = 0;
+		std::string path;
+		ScriptEngine* engine = nullptr;
 	};
 
+	ScriptEngine();
+	virtual ~ScriptEngine();
+	void dispose();
+
+	int32_t execute(const std::string& path, const std::string& arguments);
+	int32_t executeWebRequest(const std::string& path, const std::vector<char>& request, std::vector<char>& output);
+	void clearPrograms();
+
+	void appendOutput(std::string& path, const char* output, uint32_t outputLength);
+protected:
+	bool _noExecution = false;
 	bool _disposing = false;
 	ph7 *_engine = nullptr;
 
 	std::mutex _programsMutex;
 	std::map<std::string, ScriptInfo> _programs;
-	std::mutex _executeMutex;
+	volatile int32_t _executionCount;
+	std::map<std::string, std::unique_ptr<std::mutex>> _executeMutexes;
+	std::mutex _outputMutex;
+	std::map<std::string, std::vector<char>*> _outputs;
 
-	ph7_vm* addProgram(std::string path);
-	ph7_vm* getProgram(std::string path);
+	ph7_vm* addProgram(std::string path, bool storeOutput);
+	ph7_vm* getProgram(std::string path, bool storeOutput);
 	bool isValid(const std::string& path, ph7_vm* compiledProgram);
 	void removeProgram(std::string path);
 	void printError(int32_t code);

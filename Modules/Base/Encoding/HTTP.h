@@ -54,6 +54,10 @@ public:
 	{
 		enum Enum { none, request, response };
 	};
+	struct Method
+	{
+		enum Enum { none, get, post };
+	};
 	struct TransferEncoding
 	{
 		enum Enum { none = 0, chunked = 1, compress = 2, deflate = 4, gzip = 8, identity = 16 };
@@ -65,6 +69,7 @@ public:
 	struct Header
 	{
 		bool parsed = false;
+		Method::Enum method = Method::Enum::none;
 		int32_t responseCode = -1;
 		uint32_t contentLength = 0;
 		std::string host;
@@ -88,6 +93,7 @@ public:
 	 * @see _finished
 	 */
 	void setFinished();
+	std::shared_ptr<std::vector<char>> getRawHeader() { return _rawHeader; }
 	std::shared_ptr<std::vector<char>> getContent() { return _content; }
 	uint32_t getContentSize() { return _content->size(); }
 	Header* getHeader() { return &_header; }
@@ -101,11 +107,14 @@ public:
 	 * @param checkForChunkedXML Optional. Only works for XML-like content (content needs to start with '<'). Needed when TransferEncoding is not set to chunked.
 	 */
 	void process(char* buffer, int32_t bufferLength, bool checkForChunkedXML = false);
-	bool dataProcessed() { return _dataProcessed; }
+	bool headerProcessingStarted() { return _headerProcessingStarted; }
+	bool dataProcessingStarted() { return _dataProcessingStarted; }
 private:
-	bool _dataProcessed = false;
+	bool _headerProcessingStarted = false;
+	bool _dataProcessingStarted = false;
 	bool _crlf = true;
 	Header _header;
+	std::shared_ptr<std::vector<char>> _rawHeader;
 	Type::Enum _type = Type::Enum::none;
 	std::shared_ptr<std::vector<char>> _content;
 	std::shared_ptr<std::vector<char>> _chunk;

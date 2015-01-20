@@ -34,6 +34,7 @@
 #include "RPCMethod.h"
 #include "Auth.h"
 #include "ServerSettings.h"
+#include "Webserver.h"
 
 #include <thread>
 #include <iostream>
@@ -116,6 +117,7 @@ namespace RPC
 			std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
 			std::unique_ptr<BaseLib::RPC::XMLRPCDecoder> _xmlRpcDecoder;
 			std::unique_ptr<BaseLib::RPC::XMLRPCEncoder> _xmlRpcEncoder;
+			std::unique_ptr<WebServer> _webServer;
 
 			void collectGarbage();
 			void getSocketDescriptor();

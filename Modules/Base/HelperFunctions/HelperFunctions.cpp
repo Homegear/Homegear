@@ -96,6 +96,18 @@ bool HelperFunctions::fileExists(std::string filename)
 	return in;
 }
 
+int32_t HelperFunctions::isDirectory(std::string path, bool& result)
+{
+	struct stat s;
+	result = false;
+	if(stat(path.c_str(), &s) == 0)
+	{
+		if(s.st_mode & S_IFDIR) result = true;
+		return 0;
+	}
+	return -1;
+}
+
 int32_t HelperFunctions::getFileLastModifiedTime(const std::string& filename)
 {
 	struct stat attributes;

@@ -128,7 +128,6 @@ void SocketOperations::close()
 
 int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 {
-	_bl->out.printDebug("Debug: Calling proofread...", 6);
 	if(!_socketDescriptor) throw SocketOperationException("Socket descriptor is nullptr.");
 	if(!connected()) autoConnect();
 	//Timeout needs to be set every time, so don't put it outside of the while loop
@@ -178,15 +177,14 @@ int32_t SocketOperations::proofwrite(const std::shared_ptr<std::vector<char>> da
 int32_t SocketOperations::proofwrite(const std::vector<char>& data)
 {
 
-	_bl->out.printDebug("Debug: Calling proofwrite ...", 6);
 	if(!_socketDescriptor) throw SocketOperationException("Socket descriptor is nullptr.");
 	if(!connected()) autoConnect();
 	if(data.empty()) return 0;
 	if(data.size() > 10485760) throw SocketDataLimitException("Data size is larger than 10 MiB.");
 	_bl->out.printDebug("Debug: ... data size is " + std::to_string(data.size()), 6);
 
-	int32_t bytesSentSoFar = 0;
-	while (bytesSentSoFar < (signed)data.size())
+	int32_t totalBytesWritten = 0;
+	while (totalBytesWritten < (signed)data.size())
 	{
 		timeval timeout;
 		timeout.tv_sec = 5;
@@ -206,19 +204,16 @@ int32_t SocketOperations::proofwrite(const std::vector<char>& data)
 		if(readyFds == 0) throw SocketTimeOutException("Writing to socket timed out.");
 		if(readyFds != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed (5).");
 
-		int32_t bytesToSend = data.size() - bytesSentSoFar;
-		int32_t bytesSentInStep = _socketDescriptor->tlsSession ? gnutls_record_send(_socketDescriptor->tlsSession, &data.at(bytesSentSoFar), bytesToSend) : send(_socketDescriptor->descriptor, &data.at(bytesSentSoFar), bytesToSend, MSG_NOSIGNAL);
-		if(bytesSentInStep <= 0)
+		int32_t bytesWritten = _socketDescriptor->tlsSession ? gnutls_record_send(_socketDescriptor->tlsSession, &data.at(totalBytesWritten), data.size() - totalBytesWritten) : send(_socketDescriptor->descriptor, &data.at(totalBytesWritten), data.size() - totalBytesWritten, MSG_NOSIGNAL);
+		if(bytesWritten <= 0)
 		{
-			_bl->out.printDebug("Debug: ... exception at " + std::to_string(bytesSentSoFar) + " error is " + strerror(errno));
 			close();
-			if(_socketDescriptor->tlsSession) throw SocketOperationException(gnutls_strerror(bytesSentInStep));
+			if(_socketDescriptor->tlsSession) throw SocketOperationException(gnutls_strerror(bytesWritten));
 			else throw SocketOperationException(strerror(errno));
 		}
-		bytesSentSoFar += bytesSentInStep;
+		totalBytesWritten += bytesWritten;
 	}
-	_bl->out.printDebug("Debug: ... sent " + std::to_string(bytesSentSoFar), 6);
-	return bytesSentSoFar;
+	return totalBytesWritten;
 }
 
 int32_t SocketOperations::proofwrite(const std::string& data)

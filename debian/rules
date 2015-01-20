@@ -73,6 +73,10 @@ override_dh_auto_install:
 	cp $(CURDIR)/lib/Modules/Release/*.so $(CURDIR)/debian/homegear/var/lib/homegear/modules
 	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear/modules
 	chmod -R 550 $(CURDIR)/debian/homegear/var/lib/homegear/modules
+	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear/www
+	cp -R $(CURDIR)/Miscellaneous/www/* $(CURDIR)/debian/homegear/var/lib/homegear/www
+	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear/www
+	chmod -R 550 $(CURDIR)/debian/homegear/var/lib/homegear/www
 	cp $(CURDIR)/Miscellaneous/GetDeviceFiles.sh $(CURDIR)/debian/homegear/var/lib/homegear
 	chown root:root $(CURDIR)/debian/homegear/var/lib/homegear/GetDeviceFiles.sh
 	chmod 755 $(CURDIR)/debian/homegear/var/lib/homegear/GetDeviceFiles.sh

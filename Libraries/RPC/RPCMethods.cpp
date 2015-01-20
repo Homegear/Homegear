@@ -944,7 +944,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetDeviceInfo::invoke(std::shared_ptr
 			if(error != ParameterError::Enum::noError) return getError(error);
 		}
 
-		uint32_t peerID = 0;
+		uint64_t peerID = 0;
 		int32_t fieldsIndex = -1;
 		if(parameters->size() == 1 && parameters->at(0)->type == BaseLib::RPC::VariableType::rpcArray)
 		{

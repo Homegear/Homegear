@@ -88,6 +88,15 @@ public:
 	static bool fileExists(std::string filename);
 
 	/**
+	 * Checks if a path is a directory.
+	 *
+	 * @param path The path to check.
+	 * @param[out] result True when the path is a directory otherwise false
+	 * @return Returns 0 on success or -1 on error.
+	 */
+	static int32_t isDirectory(std::string path, bool& result);
+
+	/**
 	 * Reads a file and returns the content as a string.
 	 *
 	 * @param filename The path to the file to read.
@@ -279,7 +288,7 @@ public:
 			 pos = haystack.find(search, pos);
 			 if (pos == (signed)std::string::npos) break;
 			 haystack.replace(pos, search.size(), replace);
-			 pos += search.size();
+			 pos += replace.size();
 		}
 		return haystack;
 	}

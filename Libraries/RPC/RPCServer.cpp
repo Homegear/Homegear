@@ -79,6 +79,7 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 			_out.printError("Error: Settings is nullptr.");
 			return;
 		}
+		if(!_settings->webServer && !_settings->rpcServer) return;
 		_out.setPrefix("RPC Server (Port " + std::to_string(settings->port) + "): ");
 		if(_settings->ssl)
 		{
@@ -157,6 +158,7 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 			}
 			gnutls_certificate_set_dh_params(_x509Cred, _dhParams);
 		}
+		_webServer.reset(new WebServer(_settings));
 		_mainThread = std::thread(&RPCServer::mainThread, this);
 		BaseLib::Threads::setThreadPriority(GD::bl.get(), _mainThread.native_handle(), _threadPriority, _threadPolicy);
 		_stopped = false;
@@ -205,6 +207,7 @@ void RPCServer::stop()
 			gnutls_dh_params_deinit(_dhParams);
 			_dhParams = nullptr;
 		}
+		_webServer.reset();
 	}
 	catch(const std::exception& ex)
     {
@@ -624,17 +627,6 @@ std::string RPCServer::getHttpResponseHeader(uint32_t contentLength, bool closeC
 	return header;
 }
 
-std::string RPCServer::getHttpHtmlResponseHeader(uint32_t contentLength, bool closeConnection)
-{
-	std::string header;
-	header.append("HTTP/1.1 200 OK\r\n");
-	header.append("Connection: ");
-	header.append(closeConnection ? "close\r\n" : "Keep-Alive\r\n");
-	header.append("Content-Type: text/html\r\n");
-	header.append("Content-Length: ").append(std::to_string(contentLength + 21)).append("\r\n\r\n");
-	return header;
-}
-
 void RPCServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
 {
 	try
@@ -751,6 +743,8 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 		if(!client) return;
 		int32_t bufferMax = 1024;
 		char buffer[bufferMax + 1];
+		//Make sure the buffer is null terminated.
+		buffer[bufferMax] = '\0';
 		std::vector<char> packet;
 		uint32_t packetLength = 0;
 		int32_t bytesRead;
@@ -766,7 +760,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				bytesRead = client->socket->proofread(buffer, bufferMax);
 				buffer[bufferMax] = 0; //Even though it shouldn't matter, make sure there is a null termination.
 				//Some clients send only one byte in the first packet
-				if(packetLength == 0 && bytesRead == 1) bytesRead += client->socket->proofread(&buffer[1], bufferMax - 1);
+				if(packetLength == 0 && !http.headerProcessingStarted() && bytesRead == 1) bytesRead += client->socket->proofread(&buffer[1], bufferMax - 1);
 			}
 			catch(const BaseLib::SocketTimeOutException& ex)
 			{
@@ -791,8 +785,9 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				rawPacket.insert(rawPacket.begin(), buffer, buffer + bytesRead);
 				_out.printDebug("Debug: Packet received: " + BaseLib::HelperFunctions::getHexString(rawPacket));
 			}
-			if(!strncmp(&buffer[0], "Bin", 3))
+			if(!http.headerProcessingStarted() && packetLength == 0 && !strncmp(&buffer[0], "Bin", 3))
 			{
+				if(!_settings->rpcServer) continue;
 				http.reset();
 				//buffer[3] & 1 is true for buffer[3] == 0xFF, too
 				packetType = (buffer[3] & 1) ? PacketType::Enum::binaryResponse : PacketType::Enum::binaryRequest;
@@ -823,6 +818,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					continue;
 				}
 				packet.clear();
+				packet.reserve(dataSize + 9);
 				packet.insert(packet.end(), buffer, buffer + bytesRead);
 				std::shared_ptr<BaseLib::RPC::RPCHeader> header = _rpcDecoder->decodeHeader(packet);
 				if(_settings->authType == ServerSettings::Settings::AuthType::basic)
@@ -855,89 +851,56 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					}
 				}
 			}
-			else if(!strncmp(&buffer[0], "GET", 3))
+			else if(!http.headerProcessingStarted() && !strncmp(&buffer[0], "GET ", 4))
 			{
+				if(bytesRead < 8) continue;
 				buffer[bytesRead] = '\0';
+				packetType = PacketType::Enum::xmlRequest;
 
-				try
+				if(!_settings->redirectTo.empty())
 				{
-					http.reset();
-					http.process(buffer, bytesRead);
+					std::vector<char> data;
+					_webServer->getError(301, "Moved Permanently", "The document has moved <a href=\"" + _settings->redirectTo + "\">here</a>.", data, std::string("Location: ") + _settings->redirectTo);
+					sendRPCResponseToClient(client, data, false);
+					continue;
 				}
-				catch(BaseLib::HTTPException& ex)
+				if(!_settings->webServer)
 				{
-					_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
-				}
-
-				if(_settings->authType == ServerSettings::Settings::AuthType::basic)
-				{
-					if(!client->auth.initialized()) client->auth = Auth(client->socket, _settings->validUsers);
-					try
-					{
-						if(!client->auth.basicServer(http))
-						{
-							_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection.");
-							break;
-						}
-						else _out.printDebug("Client successfully authorized using basic authentification.");
-					}
-					catch(AuthException& ex)
-					{
-						_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection. Error was: " + ex.what());
-						break;
-					}
-				}
-
-				std::string content = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\" /><title>Homegear</title></head><body><p>Homegear works! Please use \"POST\" to call RPC methods.</p><ul><li><a href=\"https://www.homegear.eu/\">Homegear Wiki</a></li><li><a href=\"https://www.homegear.eu/index.php/Homegear_Reference\">Homegear Reference</a></li><li><a href=\"https://forum.homegear.eu\">Homegear Forum</a></li></ul></body></html>";
-				std::string header = getHttpHtmlResponseHeader(content.size(), true);
-				std::vector<char> data;
-				data.insert(data.end(), header.begin(), header.end());
-				data.insert(data.end(), content.begin(), content.end());
-				sendRPCResponseToClient(client, data, false);
-			}
-			else if(!strncmp(&buffer[0], "POST", 4) || !strncmp(&buffer[0], "HTTP/1.", 7))
-			{
-				packetType = (!strncmp(&buffer[0], "POST", 4)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
-				//We are using string functions to process the buffer. So just to make sure,
-				//they don't do something in the memory after buffer, we add '\0'
-				buffer[bytesRead] = '\0';
-
-				try
-				{
-					http.reset();
-					http.process(buffer, bytesRead);
-				}
-				catch(BaseLib::HTTPException& ex)
-				{
-					_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
-				}
-
-				if(http.getHeader()->contentLength > 10485760)
-				{
-					_out.printError("Error: Packet with data larger than 10 MiB received.");
+					std::vector<char> data;
+					_webServer->getError(400, "Bad Request", "Your client sent a request that this server could not understand.", data);
+					sendRPCResponseToClient(client, data, false);
 					continue;
 				}
 
-				if(_settings->authType == ServerSettings::Settings::AuthType::basic)
+				try
 				{
-					if(!client->auth.initialized()) client->auth = Auth(client->socket, _settings->validUsers);
-					try
-					{
-						if(!client->auth.basicServer(http))
-						{
-							_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection.");
-							break;
-						}
-						else _out.printDebug("Client successfully authorized using basic authentification.");
-					}
-					catch(AuthException& ex)
-					{
-						_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection. Error was: " + ex.what());
-						break;
-					}
+					http.reset();
+					http.process(buffer, bytesRead);
+				}
+				catch(BaseLib::HTTPException& ex)
+				{
+					_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
+					std::vector<char> data;
+					_webServer->getError(400, "Bad Request", "Your client sent a request that this server could not understand.", data);
+					sendRPCResponseToClient(client, data, false);
 				}
 			}
-			else if(packetLength > 0 || http.dataProcessed())
+			else if(!http.headerProcessingStarted() && (!strncmp(&buffer[0], "POST", 4) || !strncmp(&buffer[0], "HTTP/1.", 7)))
+			{
+				buffer[bytesRead] = '\0';
+				packetType = (!strncmp(&buffer[0], "POST", 4)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
+
+				try
+				{
+					http.reset();
+					http.process(buffer, bytesRead);
+				}
+				catch(BaseLib::HTTPException& ex)
+				{
+					_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
+				}
+			}
+			else if(packetLength > 0 || http.headerProcessingStarted())
 			{
 				if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::binaryResponse)
 				{
@@ -963,6 +926,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				}
 				else
 				{
+					buffer[bytesRead] = '\0';
 					try
 					{
 						http.process(buffer, bytesRead);
@@ -970,12 +934,18 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					catch(BaseLib::HTTPException& ex)
 					{
 						_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
+						http.reset();
+						std::vector<char> data;
+						_webServer->getError(400, "Bad Request", "Your client sent a request that the server couldn't understand..", data);
+						sendRPCResponseToClient(client, data, false);
 					}
 
 					if(http.getContentSize() > 10485760)
 					{
 						http.reset();
-						_out.printError("Error: Packet with data larger than 10 MiB received.");
+						std::vector<char> data;
+						_webServer->getError(400, "Bad Request", "Your client sent a request larger than 10 MiB.", data);
+						sendRPCResponseToClient(client, data, false);
 					}
 				}
 			}
@@ -986,7 +956,48 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			}
 			if(http.isFinished())
 			{
-				packetReceived(client, *http.getContent(), packetType, http.getHeader()->connection == BaseLib::HTTP::Connection::Enum::keepAlive);
+				if(_settings->authType == ServerSettings::Settings::AuthType::basic)
+				{
+					if(!client->auth.initialized()) client->auth = Auth(client->socket, _settings->validUsers);
+					try
+					{
+						if(!client->auth.basicServer(http))
+						{
+							_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection.");
+							break;
+						}
+						else _out.printDebug("Client successfully authorized using basic authentification.");
+					}
+					catch(AuthException& ex)
+					{
+						_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection. Error was: " + ex.what());
+						break;
+					}
+				}
+
+				if(_settings->webServer && (!_settings->rpcServer || http.getHeader()->contentType != "text/xml"))
+				{
+
+					std::vector<char> request;
+					std::vector<char> response;
+					std::shared_ptr<std::vector<char>> header = http.getRawHeader();
+					std::shared_ptr<std::vector<char>> content = http.getContent();
+					request.reserve(header->size() + content->size());
+					request.insert(request.end(), header->begin(), header->end());
+					request.insert(request.end(), content->begin(), content->end());
+
+					int32_t startPos = (http.getHeader()->method == BaseLib::HTTP::Method::post) ? 5 : 4;
+					char* endPos = strchr(&request[0] + startPos, ' ');
+					if(!endPos) _webServer->getError(400, "Bad Request", "Your client sent a request that this server could not understand.", response);
+					else
+					{
+						std::string path(&request[0] + startPos, (int32_t)(endPos - &request[0] - startPos));
+						if(http.getHeader()->method == BaseLib::HTTP::Method::post) _webServer->post(path, request, response);
+						else if(http.getHeader()->method == BaseLib::HTTP::Method::get) _webServer->get(path, request, response);
+					}
+					sendRPCResponseToClient(client, response, false);
+				}
+				else if(_settings->rpcServer) packetReceived(client, *http.getContent(), packetType, http.getHeader()->connection == BaseLib::HTTP::Connection::Enum::keepAlive);
 				packetLength = 0;
 				http.reset();
 				if(client->socketDescriptor->descriptor == -1)

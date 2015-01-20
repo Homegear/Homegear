@@ -34,7 +34,6 @@ namespace RPC
 {
 ServerSettings::ServerSettings()
 {
-
 }
 
 void ServerSettings::reset()
@@ -109,25 +108,25 @@ void ServerSettings::load(std::string filename)
 				{
 					settings->interface = value;
 					if(settings->interface.empty()) settings->interface = "::";
-					GD::out.printDebug("Debug: interface of RPC server " + settings->name + " set to " + settings->interface);
+					GD::out.printDebug("Debug: interface of server " + settings->name + " set to " + settings->interface);
 				}
 				else if(name == "port")
 				{
 					settings->port = BaseLib::Math::getNumber(value);
-					GD::out.printDebug("Debug: port of RPC server " + settings->name + " set to " + std::to_string(settings->port));
+					GD::out.printDebug("Debug: port of server " + settings->name + " set to " + std::to_string(settings->port));
 				}
 				else if(name == "ssl")
 				{
 					BaseLib::HelperFunctions::toLower(value);
 					if(value == "false") settings->ssl = false;
-					GD::out.printDebug("Debug: ssl of RPC server " + settings->name + " set to " + std::to_string(settings->ssl));
+					GD::out.printDebug("Debug: ssl of server " + settings->name + " set to " + std::to_string(settings->ssl));
 				}
 				else if(name == "authtype")
 				{
 					BaseLib::HelperFunctions::toLower(value);
 					if(value == "none") settings->authType = Settings::AuthType::none;
 					else if(value == "basic") settings->authType = Settings::AuthType::basic;
-					GD::out.printDebug("Debug: authType of RPC server " + settings->name + " set to " + std::to_string(settings->authType));
+					GD::out.printDebug("Debug: authType of server " + settings->name + " set to " + std::to_string(settings->authType));
 				}
 				else if(name == "validusers")
 				{
@@ -144,7 +143,30 @@ void ServerSettings::load(std::string filename)
 					settings->diffieHellmanKeySize = BaseLib::Math::getNumber(value);
 					if(settings->diffieHellmanKeySize < 128) settings->diffieHellmanKeySize = 128;
 					if(settings->diffieHellmanKeySize < 1024) GD::out.printWarning("Diffie-Hellman key size of server " + settings->name + " is smaller than 1024 bit.");
-					GD::out.printDebug("Debug: diffieHellmanKeySize of RPC server " + settings->name + " set to " + std::to_string(settings->diffieHellmanKeySize));
+					GD::out.printDebug("Debug: diffieHellmanKeySize of server " + settings->name + " set to " + std::to_string(settings->diffieHellmanKeySize));
+				}
+				else if(name == "contentpath")
+				{
+					settings->contentPath = value;
+					if(settings->contentPath.back() != '/') settings->contentPath.push_back('/');
+					GD::out.printDebug("Debug: contentPath of RPC server " + settings->name + " set to " + settings->contentPath);
+				}
+				else if(name == "rpcserver")
+				{
+					BaseLib::HelperFunctions::toLower(value);
+					if(value == "false") settings->rpcServer = false;
+					GD::out.printDebug("Debug: rpcServer of server " + settings->name + " set to " + std::to_string(settings->webServer));
+				}
+				else if(name == "webserver")
+				{
+					BaseLib::HelperFunctions::toLower(value);
+					if(value == "true") settings->webServer = true;
+					GD::out.printDebug("Debug: webServer of server " + settings->name + " set to " + std::to_string(settings->webServer));
+				}
+				else if(name == "redirectto")
+				{
+					settings->redirectTo = value;
+					GD::out.printDebug("Debug: redirectToPort of server " + settings->name + " set to " + settings->redirectTo);
 				}
 				else
 				{
