@@ -85,8 +85,6 @@ void WebServer::get(std::string path, std::vector<char>& request, std::vector<ch
 {
 	try
 	{
-		std::string requestString(&request[0], request.size());
-		GD::bl->out.printInfo(requestString);
 		uint32_t pos = path.find('?');
 		if(pos != std::string::npos) path = path.substr(0, pos);
 		path = decodeURL(path);

@@ -904,6 +904,9 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, const std::vect
 			return 1;
 		}
 		cleanUpSessions();
+		std::string importPath;
+		uint32_t pos = path.find_last_of('/');
+		if(pos != std::string::npos) importPath = path.substr(0, pos);
 		ScriptInfo* scriptInfo = getProgram(path, true);
 		if(!scriptInfo) scriptInfo = addProgram(path, true);
 		if(!scriptInfo)
@@ -943,6 +946,7 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, const std::vect
 			return 1;
 		}
 
+		ph7_vm_config(compiledProgram, PH7_VM_CONFIG_IMPORT_PATH, importPath.c_str());
 		scriptInfo->sessionID = "";
 		scriptInfo->cookie = nullptr;
 		ph7_value* nullValue1 = ph7_new_array(compiledProgram);
