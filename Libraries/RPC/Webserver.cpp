@@ -103,6 +103,7 @@ void WebServer::get(std::string path, std::vector<char>& request, std::vector<ch
 		if(pos != std::string::npos) path = path.substr(0, pos);
 		path = decodeURL(path);
 		BaseLib::HelperFunctions::stringReplace(path, "../", "");
+		_out.printInfo("Client is requesting: " + path);
 
 		bool isDirectory = false;
 		BaseLib::HelperFunctions::isDirectory(_settings->contentPath + path, isDirectory);
@@ -197,6 +198,7 @@ void WebServer::post(std::string path, std::vector<char>& request, std::vector<c
 		if((unsigned)pos != std::string::npos) path = path.substr(0, pos);
 		path = decodeURL(path);
 		BaseLib::HelperFunctions::stringReplace(path, "../", "");
+		_out.printInfo("Client is requesting: " + path);
 
 		bool isDirectory = false;
 		BaseLib::HelperFunctions::isDirectory(_settings->contentPath + path, isDirectory);

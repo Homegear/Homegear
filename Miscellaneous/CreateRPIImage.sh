@@ -24,7 +24,7 @@ fi
 echo "Creating image..."
 mkdir -p $buildenv
 image="${buildenv}/rpi_homegear_${deb_release}_${mydate}.img"
-dd if=/dev/zero of=$image bs=1MB count=1000
+dd if=/dev/zero of=$image bs=1MB count=1900
 device=`losetup -f --show $image`
 echo "Image $image Created and mounted as $device"
 
