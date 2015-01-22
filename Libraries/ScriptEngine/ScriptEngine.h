@@ -70,7 +70,9 @@ public:
 		int32_t lastModified = 0;
 		std::string path;
 		ScriptEngine* engine = nullptr;
+		std::vector<std::string>* headers = nullptr;
 		std::string sessionID;
+		bool died = false;
 		ph7_value* cookie = nullptr;
 	};
 
@@ -79,11 +81,12 @@ public:
 	void dispose();
 
 	int32_t execute(const std::string& path, const std::string& arguments);
-	int32_t executeWebRequest(const std::string& path, const std::vector<char>& request, std::vector<char>& output, std::string& cookie);
+	int32_t executeWebRequest(const std::string& path, const std::vector<char>& request, std::vector<char>& output, std::vector<std::string>& headers);
 	void clearPrograms();
 	std::shared_ptr<Session> getSession(std::string id);
 
 	void appendOutput(std::string& path, const char* output, uint32_t outputLength);
+	void resetOutput(std::string& path);
 protected:
 	bool _noExecution = false;
 	bool _disposing = false;

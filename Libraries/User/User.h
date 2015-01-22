@@ -35,6 +35,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <map>
 
 #include <gcrypt.h>
 
@@ -44,7 +45,13 @@ public:
 	User() {}
 	virtual ~User() {}
 	static std::vector<unsigned char> generateWHIRLPOOL(const std::string& password, std::vector<unsigned char>& salt);
+	static uint64_t getID(const std::string& userName);
 	static bool verify(const std::string& userName, const std::string& password);
+	static bool exists(const std::string& userName);
+	static bool create(const std::string& userName, const std::string& password);
+	static bool update(const std::string& userName, const std::string& password);
+	static bool remove(const std::string& userName);
+	static bool getAll(std::map<uint64_t, std::string>& users);
 };
 
 #endif

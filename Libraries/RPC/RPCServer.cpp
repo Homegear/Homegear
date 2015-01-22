@@ -860,7 +860,8 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				if(!_settings->redirectTo.empty())
 				{
 					std::vector<char> data;
-					_webServer->getError(301, "Moved Permanently", "The document has moved <a href=\"" + _settings->redirectTo + "\">here</a>.", data, std::string("Location: ") + _settings->redirectTo);
+					std::vector<std::string> additionalHeaders({std::string("Location: ") + _settings->redirectTo});
+					_webServer->getError(301, "Moved Permanently", "The document has moved <a href=\"" + _settings->redirectTo + "\">here</a>.", data, additionalHeaders);
 					sendRPCResponseToClient(client, data, false);
 					continue;
 				}

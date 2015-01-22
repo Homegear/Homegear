@@ -522,12 +522,11 @@ public:
 	/**
 	 * Starts a program and returns the output.
 	 *
-	 * @param path The program to start.
-	 * @param arguments The arguments to pass.
+	 * @param command The command to execute (passed to sh with "-c").
 	 * @param[out] output The program output.
 	 * @return Returns 0 on success, otherwise -1.
 	 */
-	int32_t exec(std::string path, std::string arguments, std::vector<char>& output);
+	static int32_t exec(std::string command, std::string& output);
 
 	/**
 	 * Gets the error message to a GCRYPT error code.

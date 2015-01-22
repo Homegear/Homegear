@@ -658,14 +658,10 @@ pid_t HelperFunctions::system(std::string command, std::vector<std::string> argu
     return pid;
 }
 
-int32_t HelperFunctions::exec(std::string path, std::string arguments, std::vector<char>& output)
+int32_t HelperFunctions::exec(std::string command, std::string& output)
 {
-	FILE* pipe = popen((path + " " + arguments).c_str(), "r");
-    if (!pipe)
-    {
-    	_bl->out.printError(std::string("Error executing " + path + ": ") + std::string(strerror(errno)));
-    	return -1;
-    }
+	FILE* pipe = popen(command.c_str(), "r");
+    if (!pipe) return -1;
     char buffer[128];
     int32_t bytesRead = 0;
     output.reserve(1024);

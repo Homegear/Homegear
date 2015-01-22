@@ -50,6 +50,7 @@ int32_t storeScriptOutput(const void *output, unsigned int outputLen, void *user
 {
 	if(!output || outputLen == 0) return PH7_OK;
 	if(!userData || !((ScriptEngine::ScriptInfo*)userData)->engine) return PH7_OK;
+	if(((ScriptEngine::ScriptInfo*)userData)->died) return PH7_ABORT;
 	((ScriptEngine::ScriptInfo*)userData)->engine->appendOutput(((ScriptEngine::ScriptInfo*)userData)->path, (const char*)output, outputLen);
     return PH7_OK;
 }
@@ -57,6 +58,50 @@ int32_t storeScriptOutput(const void *output, unsigned int outputLen, void *user
 int32_t fillArray(ph7_value* pKey, ph7_value* pValue, void* pUserData)
 {
 	((std::map<std::string, std::string>*)pUserData)->operator [](std::string(ph7_value_to_string(pKey, 0))) = std::string(ph7_value_to_string(pValue, 0));
+	return PH7_OK;
+}
+
+int32_t abort(ph7_context* context, int32_t argc, ph7_value** argv)
+{
+	ScriptEngine::ScriptInfo* info = (ScriptEngine::ScriptInfo*)ph7_context_user_data(context);
+	if(!info) return PH7_ABORT;
+	info->engine->resetOutput(info->path);
+	info->died = true;
+	if(argc > 0)
+	{
+		if(ph7_value_is_string(argv[0]))
+		{
+			const char* message;
+			int32_t length = 0;
+			message = ph7_value_to_string(argv[0], &length);
+			info->engine->appendOutput(info->path, message, length);
+		}
+	}
+	return PH7_ABORT;
+}
+
+int32_t header(ph7_context* context, int32_t argc, ph7_value** argv)
+{
+	if(argc != 1)
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Wrong parameter count.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_string(argv[0]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Parameter is no string.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+
+	ScriptEngine::ScriptInfo* info = (ScriptEngine::ScriptInfo*)ph7_context_user_data(context);
+	if(!info || !info->headers) return PH7_OK;
+
+	int32_t length = 0;
+	const char* header = ph7_value_to_string(argv[0], &length);
+	info->headers->push_back(std::string(header, length));
+
 	return PH7_OK;
 }
 
@@ -84,6 +129,225 @@ int32_t session_start(ph7_context* context, int32_t argc, ph7_value** argv)
 		id.push_back((uint8_t)BaseLib::HelperFunctions::getRandomNumber(0, 255));
 	}
 	ph7_vm_config(info->compiledProgram, PH7_VM_CONFIG_COOKIE_ATTR, "PH7SESSID", BaseLib::HelperFunctions::getHexString(id).c_str(), 32);
+	return PH7_OK;
+}
+
+int32_t shell_exec(ph7_context* context, int32_t argc, ph7_value** argv)
+{
+	if(argc != 1)
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Wrong parameter count.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_string(argv[0]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Parameter is no string.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+
+	int32_t length = 0;
+	const char* cmd = ph7_value_to_string(argv[0], &length);
+
+	std::string result;
+	if(BaseLib::HelperFunctions::exec(std::string(cmd, length), result) != 0)
+	{
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+
+	ph7_result_string(context, result.c_str(), result.size());
+	return PH7_OK;
+}
+
+int32_t hg_auth(ph7_context* context, int32_t argc, ph7_value** argv)
+{
+	if(argc != 2)
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Wrong parameter count.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_string(argv[0]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "First parameter is no string.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_string(argv[1]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Second parameter is no string.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+
+	int32_t lengthUser = 0;
+	const char* user = ph7_value_to_string(argv[0], &lengthUser);
+	int32_t lengthPassword = 0;
+	const char* password = ph7_value_to_string(argv[1], &lengthPassword);
+
+	if(User::verify(std::string(user, lengthUser), std::string(password, lengthPassword)))
+	{
+		ph7_result_bool(context, 1);
+		return PH7_OK;
+	}
+
+	ph7_result_bool(context, 0);
+	return PH7_OK;
+}
+
+int32_t hg_create_user(ph7_context* context, int32_t argc, ph7_value** argv)
+{
+	if(argc != 2)
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Wrong parameter count.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_string(argv[0]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "First parameter is no string.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_string(argv[1]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Second parameter is no string.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+
+	int32_t lengthUser = 0;
+	const char* user = ph7_value_to_string(argv[0], &lengthUser);
+	int32_t lengthPassword = 0;
+	const char* password = ph7_value_to_string(argv[1], &lengthPassword);
+
+	if(User::create(std::string(user, lengthUser), std::string(password, lengthPassword)))
+	{
+		ph7_result_bool(context, 1);
+		return PH7_OK;
+	}
+
+	ph7_result_bool(context, 0);
+	return PH7_OK;
+}
+
+int32_t hg_delete_user(ph7_context* context, int32_t argc, ph7_value** argv)
+{
+	if(argc != 1)
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Wrong parameter count.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_string(argv[0]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Parameter is no string.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+
+	int32_t lengthUser = 0;
+	const char* user = ph7_value_to_string(argv[0], &lengthUser);
+
+	if(User::remove(std::string(user, lengthUser)))
+	{
+		ph7_result_bool(context, 1);
+		return PH7_OK;
+	}
+
+	ph7_result_bool(context, 0);
+	return PH7_OK;
+}
+
+int32_t hg_update_user(ph7_context* context, int32_t argc, ph7_value** argv)
+{
+	if(argc != 2)
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Wrong parameter count.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_string(argv[0]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "First parameter is no string.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_string(argv[1]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Second parameter is no string.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+
+	int32_t lengthUser = 0;
+	const char* user = ph7_value_to_string(argv[0], &lengthUser);
+	int32_t lengthPassword = 0;
+	const char* password = ph7_value_to_string(argv[1], &lengthPassword);
+
+	if(User::update(std::string(user, lengthUser), std::string(password, lengthPassword)))
+	{
+		ph7_result_bool(context, 1);
+		return PH7_OK;
+	}
+
+	ph7_result_bool(context, 0);
+	return PH7_OK;
+}
+
+int32_t hg_user_exists(ph7_context* context, int32_t argc, ph7_value** argv)
+{
+	if(argc != 1)
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Wrong parameter count.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+	if(!ph7_value_is_string(argv[0]))
+	{
+		ph7_context_throw_error(context, PH7_CTX_WARNING, "Parameter is no string.");
+		ph7_result_bool(context, 0);
+		return PH7_OK;
+	}
+
+	int32_t lengthUser = 0;
+	const char* user = ph7_value_to_string(argv[0], &lengthUser);
+
+	if(User::exists(std::string(user, lengthUser)))
+	{
+		ph7_result_bool(context, 1);
+		return PH7_OK;
+	}
+
+	ph7_result_bool(context, 0);
+	return PH7_OK;
+}
+
+int32_t hg_users(ph7_context* context, int32_t argc, ph7_value** argv)
+{
+	std::map<uint64_t, std::string> users;
+	User::getAll(users);
+
+	ph7_value* pArray = ph7_context_new_array(context);
+	ph7_value* pKey = ph7_context_new_scalar(context);
+	ph7_value* pValue = ph7_context_new_scalar(context);
+	if(!pArray || !pKey || !pValue)
+	{
+		ph7_result_bool(context, 0);
+		return PH7_ABORT;
+	}
+
+	for(std::map<uint64_t, std::string>::iterator i = users.begin(); i != users.end(); ++i)
+	{
+		ph7_value_int(pKey, i->first);
+		ph7_value_string(pValue, i->second.c_str(), i->second.size());
+		ph7_array_add_elem(pArray, pKey, pValue);
+		ph7_value_reset_string_cursor(pValue);
+	}
+
+	ph7_result_value(context, pArray);
 	return PH7_OK;
 }
 
@@ -461,6 +725,34 @@ void ScriptEngine::appendOutput(std::string& path, const char* output, uint32_t 
 	_outputMutex.unlock();
 }
 
+void ScriptEngine::resetOutput(std::string& path)
+{
+	_outputMutex.lock();
+	try
+	{
+		std::vector<char>* out = _outputs[path];
+		if(!out)
+		{
+			_outputMutex.unlock();
+			return;
+		}
+		out->clear();
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_outputMutex.unlock();
+}
+
 ScriptEngine::ScriptInfo* ScriptEngine::addProgram(std::string path, bool storeOutput)
 {
 	try
@@ -499,6 +791,55 @@ ScriptEngine::ScriptInfo* ScriptEngine::addProgram(std::string path, bool storeO
 			return nullptr;
 		}
 
+		result = ph7_create_function(compiledProgram, "shell_exec", shell_exec, 0);
+		if(result != PH7_OK)
+		{
+			GD::out.printError("Error adding functions to script \"" + path + "\".");
+			ph7_vm_release(compiledProgram);
+			return nullptr;
+		}
+		result = ph7_create_function(compiledProgram, "hg_auth", hg_auth, 0);
+		if(result != PH7_OK)
+		{
+			GD::out.printError("Error adding functions to script \"" + path + "\".");
+			ph7_vm_release(compiledProgram);
+			return nullptr;
+		}
+		result = ph7_create_function(compiledProgram, "hg_create_user", hg_create_user, 0);
+		if(result != PH7_OK)
+		{
+			GD::out.printError("Error adding functions to script \"" + path + "\".");
+			ph7_vm_release(compiledProgram);
+			return nullptr;
+		}
+		result = ph7_create_function(compiledProgram, "hg_delete_user", hg_delete_user, 0);
+		if(result != PH7_OK)
+		{
+			GD::out.printError("Error adding functions to script \"" + path + "\".");
+			ph7_vm_release(compiledProgram);
+			return nullptr;
+		}
+		result = ph7_create_function(compiledProgram, "hg_update_user", hg_update_user, 0);
+		if(result != PH7_OK)
+		{
+			GD::out.printError("Error adding functions to script \"" + path + "\".");
+			ph7_vm_release(compiledProgram);
+			return nullptr;
+		}
+		result = ph7_create_function(compiledProgram, "hg_user_exists", hg_user_exists, 0);
+		if(result != PH7_OK)
+		{
+			GD::out.printError("Error adding functions to script \"" + path + "\".");
+			ph7_vm_release(compiledProgram);
+			return nullptr;
+		}
+		result = ph7_create_function(compiledProgram, "hg_users", hg_users, 0);
+		if(result != PH7_OK)
+		{
+			GD::out.printError("Error adding functions to script \"" + path + "\".");
+			ph7_vm_release(compiledProgram);
+			return nullptr;
+		}
 		result = ph7_create_function(compiledProgram, "hg_invoke", hg_invoke, 0);
 		if(result != PH7_OK)
 		{
@@ -571,6 +912,22 @@ ScriptEngine::ScriptInfo* ScriptEngine::addProgram(std::string path, bool storeO
 			_executeMutexes.insert(std::pair<std::string, std::unique_ptr<std::mutex>>(path, std::unique_ptr<std::mutex>(new std::mutex())));
 			info = &_programs[path];
 
+			result = ph7_create_function(compiledProgram, "abort", abort, info);
+			if(result != PH7_OK)
+			{
+				GD::out.printError("Error adding functions to script \"" + path + "\".");
+				ph7_vm_release(compiledProgram);
+				_programsMutex.unlock();
+				return nullptr;
+			}
+			result = ph7_create_function(compiledProgram, "header", header, info);
+			if(result != PH7_OK)
+			{
+				GD::out.printError("Error adding functions to script \"" + path + "\".");
+				ph7_vm_release(compiledProgram);
+				_programsMutex.unlock();
+				return nullptr;
+			}
 			result = ph7_create_function(compiledProgram, "session_start", session_start, info);
 			if(result != PH7_OK)
 			{
@@ -867,8 +1224,9 @@ std::shared_ptr<ScriptEngine::Session> ScriptEngine::getSession(std::string id)
 {
 	try
 	{
-		_sessionsMutex.lock();
 		std::shared_ptr<ScriptEngine::Session> session;
+		if(id.empty()) return session;
+		_sessionsMutex.lock();
 		if(_sessions.find(id) != _sessions.end()) session = _sessions[id];
 		_sessionsMutex.unlock();
 		return session;
@@ -889,7 +1247,7 @@ std::shared_ptr<ScriptEngine::Session> ScriptEngine::getSession(std::string id)
 	return std::shared_ptr<ScriptEngine::Session>();
 }
 
-int32_t ScriptEngine::executeWebRequest(const std::string& path, const std::vector<char>& request, std::vector<char>& output, std::string& cookie)
+int32_t ScriptEngine::executeWebRequest(const std::string& path, const std::vector<char>& request, std::vector<char>& output, std::vector<std::string>& headers)
 {
 	try
 	{
@@ -990,6 +1348,8 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, const std::vect
 			scriptInfo->sessionID = std::string(ph7_value_to_string(pSessionID, 0));
 		}
 		scriptInfo->cookie = cookieValue;
+		scriptInfo->headers = &headers;
+		scriptInfo->died = false;
 
 		int32_t exitStatus = 0;
 		if(ph7_vm_exec(compiledProgram, &exitStatus) != PH7_OK)
@@ -1000,18 +1360,21 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, const std::vect
 		if(pSessionID)
 		{
 			std::string sessionID(ph7_value_to_string(pSessionID, 0));
-			_sessionsMutex.lock();
-			std::shared_ptr<Session> session;
-			if(_sessions.find(sessionID) == _sessions.end())
+			if(!sessionID.empty())
 			{
-				session.reset(new Session());
-				_sessions[sessionID] = session;
+				_sessionsMutex.lock();
+				std::shared_ptr<Session> session;
+				if(_sessions.find(sessionID) == _sessions.end())
+				{
+					session.reset(new Session());
+					_sessions[sessionID] = session;
+				}
+				else session = _sessions[sessionID];
+				session->lastAccess = BaseLib::HelperFunctions::getTime();
+				ph7_array_walk(sessionValue, fillArray, (void*)&(session->data));
+				_sessionsMutex.unlock();
+				headers.push_back("Set-Cookie: PH7SESSID=" + sessionID + ";\r\nexpires=" + BaseLib::HelperFunctions::getTimeString("a, d-b-Y H:I:S GMT", BaseLib::HelperFunctions::getTime() + 3600000) + ";\r\nMax-Age=2592000;\r\nPath=/");
 			}
-			else session = _sessions[sessionID];
-			session->lastAccess = BaseLib::HelperFunctions::getTime();
-			ph7_array_walk(sessionValue, fillArray, (void*)&(session->data));
-			_sessionsMutex.unlock();
-			cookie = "Set-Cookie: PH7SESSID=" + sessionID + ";\r\nexpires=" + BaseLib::HelperFunctions::getTimeString("a, d-b-Y H:I:S GMT", BaseLib::HelperFunctions::getTime() + 3600000) + ";\r\nMax-Age=2592000;\r\nPath=/";
 		}
 		ph7_release_value(compiledProgram, cookieValue);
 		ph7_release_value(compiledProgram, sessionValue);

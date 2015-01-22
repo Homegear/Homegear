@@ -430,14 +430,15 @@ std::string Server::handleUserCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			std::shared_ptr<BaseLib::Database::DataTable> rows = GD::db.getUsers();
-			if(rows->size() == 0) return "No users exist.\n";
+			std::map<uint64_t, std::string> users;
+			User::getAll(users);
+			if(users.size() == 0) return "No users exist.\n";
 
 			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(30) << "Name" << std::endl;
-			for(BaseLib::Database::DataTable::const_iterator i = rows->begin(); i != rows->end(); ++i)
+			for(std::map<uint64_t, std::string>::iterator i = users.begin(); i != users.end(); ++i)
 			{
 				if(i->second.size() < 2 || !i->second.at(0) || !i->second.at(1)) continue;
-				stringStream << std::setw(6) << i->second.at(0)->intValue << std::setw(30) << i->second.at(1)->textValue << std::endl;
+				stringStream << std::setw(6) << i->first << std::setw(30) << i->second << std::endl;
 			}
 
 			return stringStream.str();
@@ -503,12 +504,9 @@ std::string Server::handleUserCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			if(GD::db.userNameExists(userName)) return "A user with that name already exists.\n";
+			if(User::exists(userName)) return "A user with that name already exists.\n";
 
-			std::vector<uint8_t> salt;
-			std::vector<uint8_t> passwordHash = User::generateWHIRLPOOL(password, salt);
-
-			if(GD::db.createUser(userName, passwordHash, salt)) stringStream << "User successfully created." << std::endl;
+			if(User::create(userName, password)) stringStream << "User successfully created." << std::endl;
 			else stringStream << "Error creating user. See log for more details." << std::endl;
 
 			return stringStream.str();
@@ -573,13 +571,9 @@ std::string Server::handleUserCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			uint64_t userID = GD::db.getUserID(userName);
-			if(userID == 0) return "The user doesn't exist.\n";
+			if(!User::exists(userName)) return "The user doesn't exist.\n";
 
-			std::vector<uint8_t> salt;
-			std::vector<uint8_t> passwordHash = User::generateWHIRLPOOL(password, salt);
-
-			if(GD::db.updateUser(userID, passwordHash, salt)) stringStream << "User successfully updated." << std::endl;
+			if(User::update(userName, password)) stringStream << "User successfully updated." << std::endl;
 			else stringStream << "Error updating user. See log for more details." << std::endl;
 
 			return stringStream.str();
@@ -623,10 +617,9 @@ std::string Server::handleUserCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			uint64_t userID = GD::db.getUserID(userName);
-			if(userID == 0) return "The user doesn't exist.\n";
+			if(!User::exists(userName)) return "The user doesn't exist.\n";
 
-			if(GD::db.deleteUser(userID)) stringStream << "User successfully deleted." << std::endl;
+			if(User::remove(userName)) stringStream << "User successfully deleted." << std::endl;
 			else stringStream << "Error deleting user. See log for more details." << std::endl;
 
 			return stringStream.str();

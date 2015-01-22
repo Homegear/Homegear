@@ -54,15 +54,29 @@ std::string WebServer::decodeURL(const std::string& url)
     return "";
 }
 
-std::string WebServer::getHeader(uint32_t contentLength, std::string contentType, int32_t code, std::string codeDescription, std::string headerSuffix)
+std::string WebServer::getHeader(uint32_t contentLength, std::string contentType, int32_t code, std::string codeDescription, std::vector<std::string>& additionalHeaders)
 {
 	try
 	{
+		std::string additionalHeader;
+		additionalHeader.reserve(1024);
+		for(std::vector<std::string>::iterator i = additionalHeaders.begin(); i != additionalHeaders.end(); ++i)
+		{
+			BaseLib::HelperFunctions::trim(*i);
+			if((*i).find("Location: ") == 0)
+			{
+				code = 301;
+				codeDescription = "Moved Permanently";
+			}
+			if(!(*i).empty()) additionalHeader.append(*i + "\r\n");
+		}
+
 		std::string header;
+		header.reserve(1024);
 		header.append("HTTP/1.1 " + std::to_string(code) + " " + codeDescription + "\r\n");
 		header.append("Connection: close\r\n");
 		header.append("Content-Type: " + contentType + "\r\n");
-		if(!headerSuffix.empty()) header.append(headerSuffix + "\r\n");
+		header.append(additionalHeader);
 		header.append("Content-Length: ").append(std::to_string(contentLength + 21)).append("\r\n\r\n");
 		return header;
 	}
@@ -113,7 +127,7 @@ void WebServer::get(std::string path, std::vector<char>& request, std::vector<ch
 			if(pos != std::string::npos && (unsigned)pos < path.size() - 1) ending = path.substr(pos + 1);
 			GD::bl->hf.toLower(ending);
 			std::string contentString;
-			std::string cookie;
+			std::vector<std::string> headers;
 			if(ending == "html" || ending == "htm") contentType = "text/html";
 			else if(ending == "xhtml") contentType = "application/xhtml+xml";
 			else if(ending == "css") contentType = "text/css";
@@ -135,18 +149,18 @@ void WebServer::get(std::string path, std::vector<char>& request, std::vector<ch
 			else if(ending == "php" || ending == "php5")
 			{
 				contentType = "text/html";
-				GD::scriptEngine.executeWebRequest(_settings->contentPath + path, request, content, cookie);
+				GD::scriptEngine.executeWebRequest(_settings->contentPath + path, request, content, headers);
 			}
 			if(content.empty())
 			{
 				contentString = GD::bl->hf.getFileContent(_settings->contentPath + path);
-				std::string header = getHeader(contentString.size(), contentType, 200, "OK");
+				std::string header = getHeader(contentString.size(), contentType, 200, "OK", headers);
 				content.insert(content.end(), header.begin(), header.end());
 				content.insert(content.end(), contentString.begin(), contentString.end());
 			}
 			else
 			{
-				std::string header = getHeader(content.size(), contentType, 200, "OK", cookie);
+				std::string header = getHeader(content.size(), contentType, 200, "OK", headers);
 				content.insert(content.begin(), header.begin(), header.end());
 			}
 		}
@@ -198,10 +212,10 @@ void WebServer::post(std::string path, std::vector<char>& request, std::vector<c
 		}
 		try
 		{
-			std::string cookie;
+			std::vector<std::string> headers;
 			if(path.front() == '/') path = path.substr(1);
-			GD::scriptEngine.executeWebRequest(_settings->contentPath + path, request, content, cookie);
-			std::string header = getHeader(content.size(), "text/html", 200, "OK", cookie);
+			GD::scriptEngine.executeWebRequest(_settings->contentPath + path, request, content, headers);
+			std::string header = getHeader(content.size(), "text/html", 200, "OK", headers);
 			content.insert(content.begin(), header.begin(), header.end());
 		}
 		catch(const std::exception& ex)
@@ -229,12 +243,36 @@ void WebServer::post(std::string path, std::vector<char>& request, std::vector<c
     }
 }
 
-void WebServer::getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content, std::string headerSuffix)
+void WebServer::getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content)
+{
+	try
+	{
+		std::vector<std::string> additionalHeaders;
+		std::string contentString = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear " + VERSION + " at Port " + std::to_string(_settings->port) + "</address></body></html>";
+		std::string header = getHeader(contentString.size(), "text/html", code, codeDescription, additionalHeaders);
+		content.insert(content.end(), header.begin(), header.end());
+		content.insert(content.end(), contentString.begin(), contentString.end());
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void WebServer::getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content, std::vector<std::string>& additionalHeaders)
 {
 	try
 	{
 		std::string contentString = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear " + VERSION + " at Port " + std::to_string(_settings->port) + "</address></body></html>";
-		std::string header = getHeader(contentString.size(), "text/html", code, codeDescription, headerSuffix);
+		std::string header = getHeader(contentString.size(), "text/html", code, codeDescription, additionalHeaders);
 		content.insert(content.end(), header.begin(), header.end());
 		content.insert(content.end(), contentString.begin(), contentString.end());
 	}

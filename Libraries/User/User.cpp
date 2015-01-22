@@ -91,3 +91,105 @@ bool User::verify(const std::string& userName, const std::string& password)
 	}
 	return false;
 }
+
+uint64_t User::getID(const std::string& userName)
+{
+	uint64_t userID = GD::db.getUserID(userName);
+	return userID;
+}
+
+bool User::exists(const std::string& userName)
+{
+	return GD::db.userNameExists(userName);
+}
+
+bool User::remove(const std::string& userName)
+{
+	try
+	{
+		uint64_t userID = GD::db.getUserID(userName);
+		if(userID == 0) return false;
+
+		if(GD::db.deleteUser(userID)) return true;
+		return false;
+	}
+	catch(std::exception& ex)
+	{
+		GD::out.printError("Error creating user: " + std::string(ex.what()));
+	}
+	catch(...)
+	{
+		GD::out.printError("Unknown error creating user.");
+	}
+	return false;
+}
+
+bool User::create(const std::string& userName, const std::string& password)
+{
+	try
+	{
+		if(exists(userName)) return false;
+
+		std::vector<uint8_t> salt;
+		std::vector<uint8_t> passwordHash = generateWHIRLPOOL(password, salt);
+
+		if(GD::db.createUser(userName, passwordHash, salt)) return true;
+	}
+	catch(std::exception& ex)
+	{
+		GD::out.printError("Error creating user: " + std::string(ex.what()));
+	}
+	catch(...)
+	{
+		GD::out.printError("Unknown error creating user.");
+	}
+	return false;
+}
+
+bool User::update(const std::string& userName, const std::string& password)
+{
+	try
+	{
+		uint64_t userID = GD::db.getUserID(userName);
+		if(userID == 0) return false;
+
+		std::vector<uint8_t> salt;
+		std::vector<uint8_t> passwordHash = User::generateWHIRLPOOL(password, salt);
+
+		if(GD::db.updateUser(userID, passwordHash, salt)) return true;
+	}
+	catch(std::exception& ex)
+	{
+		GD::out.printError("Error creating user: " + std::string(ex.what()));
+	}
+	catch(...)
+	{
+		GD::out.printError("Unknown error creating user.");
+	}
+	return false;
+}
+
+bool User::getAll(std::map<uint64_t, std::string>& users)
+{
+	try
+	{
+		users.clear();
+		std::shared_ptr<BaseLib::Database::DataTable> rows = GD::db.getUsers();
+		if(rows->size() == 0) return true;
+
+		for(BaseLib::Database::DataTable::const_iterator i = rows->begin(); i != rows->end(); ++i)
+		{
+			users[i->second.at(0)->intValue] = i->second.at(1)->textValue;
+		}
+		return true;
+	}
+	catch(std::exception& ex)
+	{
+		GD::out.printError("Error creating user: " + std::string(ex.what()));
+	}
+	catch(...)
+	{
+		GD::out.printError("Unknown error creating user.");
+	}
+	return false;
+}
