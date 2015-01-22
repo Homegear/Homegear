@@ -196,12 +196,7 @@ echo \"************************************************************\"
 echo \"************* Welcome to your Homegear system! *************\"
 echo \"************************************************************\"
 echo \"************************************************************\"
-echo \"Downloading device description files...\"
-/var/lib/homegear/GetDeviceFiles.sh 1
-[ $? -ne 0 ] && echo \"Download of device description files failed. Please execute '/var/lib/homegear/GetDeviceFiles.sh' manually. Homegear won't work until the files are downloaded.\"
-echo \"Downloading firmware updates...\"
-/var/lib/homegear/firmware/GetFirmwareUpdates.sh
-[ $? -ne 0 ] && echo \"Download of firmware updates failed. Please execute '/var/lib/homegear/firmware/GetFirmwareUpdates.sh' manually.\"
+read -p \"The Oracle Java Development Kit 8 (JDK 8) is installed on this system. By pressing [Enter] you accept the Oracle Binary Code License Agreement for Java SE (http://www.oracle.com/technetwork/java/javase/terms/license/index.html)...\"
 echo \"Generating new SSH host keys. This might take a while.\"
 rm /etc/ssh/ssh_host* >/dev/null
 ssh-keygen -A >/dev/null
