@@ -121,7 +121,7 @@ sed -i -e 's/KERNEL\!=\"eth\*|/KERNEL\!=\"/' /lib/udev/rules.d/75-persistent-net
 dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-reconfigure locales
 read -p \"Ready to install Java. Please provide the download link to the current ARM package (http://www.oracle.com/technetwork/java/javase/downloads/jdk8-arm-downloads-2187472.html): \" JAVAPACKAGE
-wget $JAVAPACKAGE
+wget --header \"Cookie: oraclelicense=accept-securebackup-cookie\" \$JAVAPACKAGE
 tar -zxf jdk*.tar.gz -C /opt
 rm jdk*.tar.gz
 update-alternatives --install /usr/bin/javac javac /opt/jdk1.8.0/bin/javac 1

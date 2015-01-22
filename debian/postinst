@@ -56,8 +56,8 @@ case $1 in
 		done
 		chown -R homegear:homegear /var/lib/homegear/modules
 		chmod -R 550 /var/lib/homegear/modules
-		chmod 550 /var/lib/homegear/www
-		chmod 440 /var/lib/homegear/www/*
+		find /var/lib/homegear/www -type d -exec chmod 550 {} \;
+		find /var/lib/homegear/www -type f -exec chmod 440 {} \;
 
 		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION; then
 			if test ! -e /etc/homegear/devices/0/rf_s.xml; then
