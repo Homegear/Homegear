@@ -424,7 +424,7 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::vec
 		try
 		{
 			//Sleep a tiny little bit. Some clients like the linux version of IP-Symcon don't accept responses too fast.
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(2));
 			client->socket->proofwrite(data);
 		}
 		catch(BaseLib::SocketDataLimitException& ex)
