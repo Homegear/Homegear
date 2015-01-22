@@ -120,12 +120,14 @@ echo \"pi ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers
 sed -i -e 's/KERNEL\!=\"eth\*|/KERNEL\!=\"/' /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-reconfigure locales
-read -p \"Ready to install Homegear. Hit [Enter] to continue...\"
-touch /tmp/HOMEGEAR_STATIC_INSTALLATION
-apt-get -y install homegear
-rm /tmp/HOMEGEAR_STATIC_INSTALLATION
-service homegear stop
-echo \"*               soft    core            unlimited\" >> /etc/security/limits.d/homegear
+read -p \"Ready to install Java. Please provide the download link to the current ARM package (http://www.oracle.com/technetwork/java/javase/downloads/jdk8-arm-downloads-2187472.html): \" JAVAPACKAGE
+wget $JAVAPACKAGE
+tar -zxf jdk*.tar.gz -C /opt
+rm jdk*.tar.gz
+update-alternatives --install /usr/bin/javac javac /opt/jdk1.8.0/bin/javac 1
+update-alternatives --install /usr/bin/java java /opt/jdk1.8.0/bin/java 1
+update-alternatives --config javac
+update-alternatives --config java
 service ssh stop
 service ntp stop
 rm -rf /var/log/homegear/*
@@ -206,20 +208,7 @@ ssh-keygen -A >/dev/null
 echo \"Updating your system...\"
 apt-get update
 apt-get -y upgrade
-echo \"Generating new SSL keys and Diffie-Hellman parameters for Homegear. This might take a long time...\"
-rm -f /etc/homegear/homegear.key
-rm -f /etc/homegear/homegear.crt
-openssl genrsa -out /etc/homegear/homegear.key 2048
-openssl req -batch -new -key /etc/homegear/homegear.key -out /etc/homegear/homegear.csr
-openssl x509 -req -in /etc/homegear/homegear.csr -signkey /etc/homegear/homegear.key -out /etc/homegear/homegear.crt
-rm /etc/homegear/homegear.csr
-chown homegear:homegear /etc/homegear/homegear.key
-chmod 400 /etc/homegear/homegear.key
-if test ! -e /etc/homegear/dh1024.pem; then		
-	openssl dhparam -check -text -5 1024 -out /etc/homegear/dh1024.pem
-	chown homegear:homegear /etc/homegear/dh1024.pem
-	chmod 400 /etc/homegear/dh1024.pem			
-fi
+apt-get -y install homegear
 echo \"Starting raspi-config...\"
 raspi-config
 rm /scripts/firstStart.sh
