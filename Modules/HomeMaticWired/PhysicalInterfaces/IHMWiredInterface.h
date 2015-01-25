@@ -50,6 +50,9 @@ public:
 	virtual void search(std::vector<int32_t>& foundDevices) = 0;
 
 	virtual bool autoResend() { return false; }
+
+	virtual void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet) {}
+	virtual void sendPacket(std::vector<uint8_t>& rawPacket) {}
 protected:
 	BaseLib::Output _out;
 };

@@ -223,7 +223,8 @@ let hours=\$((\${upSeconds}/3600%24))
 let days=\$((\${upSeconds}/86400))
 UPTIME=\`printf \"%d days, %02dh %02dm %02ds\" \"\$days\" \"\$hours\" \"\$mins\" \"\$secs\"\`
 
-echo \"\$(tput setaf 4)\$(tput bold)
+if test -e /usr/bin/homegear; then
+	echo \"\$(tput setaf 4)\$(tput bold)
                    dd
                   dddd
                 dddddddd
@@ -242,6 +243,7 @@ ddddddddddddddd,        ,ddddddddddddddd
 
 
 \$(tput sgr0)\"
+fi
 
 # if running bash
 if [ -n \"\$BASH_VERSION\" ]; then

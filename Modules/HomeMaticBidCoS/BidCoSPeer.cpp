@@ -2172,7 +2172,7 @@ bool BidCoSPeer::hasLowbatBit(std::shared_ptr<BaseLib::RPC::DeviceFrame> frame)
 	{
 		//Three things to check to see if position 9.7 is used: channelField, subtypeIndex and parameter indices
 		if(frame->channelField == 9 && frame->channelFieldSize >= 0.8) return false;
-		else if(frame->subtypeIndex == 9) return false;
+		else if(frame->subtypeIndex == 9 && frame->subtypeFieldSize >= 0.8) return false;
 		for(std::vector<BaseLib::RPC::Parameter>::iterator j = frame->parameters.begin(); j != frame->parameters.end(); ++j)
 		{
 			if(j->index >= 9 && j->index < 10)

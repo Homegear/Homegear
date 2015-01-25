@@ -80,7 +80,7 @@ void RS485::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			_out.printWarning("Warning: Packet was nullptr.");
 			return;
 		}
-		if(_fileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _settings->device));
+		if(_fileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't write to RS485 serial device, because the file descriptor is not valid: " + _settings->device));
 		_lastAction = BaseLib::HelperFunctions::getTime();
 		if(packet->payload()->size() > 132)
 		{
@@ -92,6 +92,39 @@ void RS485::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		if(!hmWiredPacket) return;
 		std::vector<uint8_t> data = hmWiredPacket->byteArray();
 		writeToDevice(data, true);
+	}
+	catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void RS485::sendPacket(std::vector<uint8_t>& rawPacket)
+{
+	try
+	{
+		if(rawPacket.empty())
+		{
+			_out.printWarning("Warning: Packet is empty.");
+			return;
+		}
+		if(_fileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't write to RS485 serial device, because the file descriptor is not valid: " + _settings->device));
+		_lastAction = BaseLib::HelperFunctions::getTime();
+		if(rawPacket.size() > 132)
+		{
+			if(_bl->debugLevel >= 2) _out.printError("Tried to send packet with payload larger than 128 bytes. That is not supported.");
+			return;
+		}
+
+		writeToDevice(rawPacket, true);
 	}
 	catch(const std::exception& ex)
     {
@@ -128,7 +161,7 @@ void RS485::openDevice()
 			lockfileStream >> processID;
 			if(getpid() != processID && kill(processID, 0) == 0)
 			{
-				_out.printCritical("CRC RS485 device is in use: " + _settings->device);
+				_out.printCritical("RS485 serial device is in use: " + _settings->device);
 				return;
 			}
 			unlink(_lockfile.c_str());
@@ -148,7 +181,7 @@ void RS485::openDevice()
 
 		if(_fileDescriptor->descriptor == -1)
 		{
-			_out.printCritical("Couldn't open CRC RS485 device \"" + _settings->device + "\": " + strerror(errno));
+			_out.printCritical("Couldn't open RS485 serial device \"" + _settings->device + "\": " + strerror(errno));
 			return;
 		}
 
@@ -235,15 +268,15 @@ void RS485::setupDevice()
 		term.c_cc[VTIME] = 0;
 		cfsetispeed(&term, B19200);
 		cfsetospeed(&term, B19200);
-		if(tcflush(_fileDescriptor->descriptor, TCIFLUSH) == -1) throw(BaseLib::Exception("Couldn't flush CRC RS485 device " + _settings->device));
-		if(tcsetattr(_fileDescriptor->descriptor, TCSANOW, &term) == -1) throw(BaseLib::Exception("Couldn't set CRC RS485 device settings: " + _settings->device));
+		if(tcflush(_fileDescriptor->descriptor, TCIFLUSH) == -1) throw(BaseLib::Exception("Couldn't flush RS485 serial device " + _settings->device));
+		if(tcsetattr(_fileDescriptor->descriptor, TCSANOW, &term) == -1) throw(BaseLib::Exception("Couldn't set RS485 serial device settings: " + _settings->device));
 
 		int flags = fcntl(_fileDescriptor->descriptor, F_GETFL);
 		if(!(flags & O_NONBLOCK))
 		{
 			if(fcntl(_fileDescriptor->descriptor, F_SETFL, flags | O_NONBLOCK) == -1)
 			{
-				throw(BaseLib::Exception("Couldn't set CRC RS485 device to non blocking mode: " + _settings->device));
+				throw(BaseLib::Exception("Couldn't set RS485 serial device to non blocking mode: " + _settings->device));
 			}
 		}
 	}
@@ -391,7 +424,7 @@ std::vector<uint8_t> RS485::readFromDevice()
 		if(_stopped) return std::vector<uint8_t>();
 		if(_fileDescriptor->descriptor == -1)
 		{
-			_out.printCritical("Couldn't read from CRC RS485 device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
+			_out.printCritical("Couldn't read from RS485 serial device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
 			closeDevice();
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			openDevice();
@@ -436,12 +469,12 @@ std::vector<uint8_t> RS485::readFromDevice()
 			}
 			else if(i == -1)
 			{
-					_out.printError("Error reading from CRC RS485 device: " + _settings->device);
+					_out.printError("Error reading from RS485 serial device: " + _settings->device);
 					break;
 			}
 			else if(i != 1)
 			{
-					_out.printError("Error reading from CRC RS485 device: " + _settings->device);
+					_out.printError("Error reading from RS485 serial device: " + _settings->device);
 					break;
 			}
 			if(!_sending) _sendMutex.try_lock(); //Don't change to "lock", because it is called for each received byte!
@@ -454,7 +487,7 @@ std::vector<uint8_t> RS485::readFromDevice()
 			if(i == -1)
 			{
 				if(errno == EAGAIN) continue;
-				_out.printError("Error reading from CRC RS485 device: " + _settings->device);
+				_out.printError("Error reading from RS485 serial device: " + _settings->device);
 				break;
 			}
 			if(i == 0 || (packet.empty() && localBuffer[0] == 0)) break;
@@ -462,7 +495,7 @@ std::vector<uint8_t> RS485::readFromDevice()
 			if(!packet.empty() && (localBuffer[0] == 0xFD || localBuffer[0] == 0xFE))
 			{
 				_firstByte = localBuffer[0];
-				_out.printWarning("Invalid byte received from CRC RS485 device (collision?): 0x" + BaseLib::HelperFunctions::getHexString(localBuffer[0], 2));
+				_out.printWarning("Invalid byte received from RS485 serial device (collision?): 0x" + BaseLib::HelperFunctions::getHexString(localBuffer[0], 2));
 				break;
 			}
 			if(_receivingSending) escapedPacket.push_back(localBuffer[0]);
@@ -533,7 +566,7 @@ void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
     try
     {
     	if(_stopped || packet.empty()) return;
-        if(_fileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _settings->device));
+        if(_fileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't write to RS485 serial device, because the file descriptor is not valid: " + _settings->device));
         _sendMutex.lock();
         //Before _sending is set to true wait for the last sending to finish. Without this line
         //the new sending is sometimes not detected when two packets are sent at the same time.
@@ -566,7 +599,7 @@ void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 			if(i == -1)
 			{
 				if(errno == EAGAIN) continue;
-				throw(BaseLib::Exception("Error writing to CRC RS485 device (3, " + std::to_string(errno) + "): " + _settings->device));
+				throw(BaseLib::Exception("Error writing to RS485 serial device (3, " + std::to_string(errno) + "): " + _settings->device));
 			}
 			bytesWritten += i;
 		}

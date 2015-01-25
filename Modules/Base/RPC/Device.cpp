@@ -98,7 +98,12 @@ DeviceFrame::DeviceFrame(BaseLib::Obj* baseLib, xml_node<>* node) : DeviceFrame(
 			else type = Math::getNumber(attributeValue);
 		}
 		else if(attributeName == "subtype") subtype = Math::getNumber(attributeValue);
-		else if(attributeName == "subtype_index") subtypeIndex = std::stoll(attributeValue);
+		else if(attributeName == "subtype_index")
+		{
+			std::pair<std::string, std::string> splitString = HelperFunctions::split(attributeValue, ':');
+			subtypeIndex = Math::getNumber(splitString.first);
+			if(!splitString.second.empty()) subtypeFieldSize = Math::getDouble(splitString.second);
+		}
 		else if(attributeName == "response_type") responseType = Math::getNumber(attributeValue);
 		else if(attributeName == "response_subtype") responseSubtype = Math::getNumber(attributeValue);
 		else if(attributeName == "channel_field")
@@ -2090,10 +2095,7 @@ void Device::parseXML(xml_node<>* node)
 				for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 				{
 					std::string attributeName(attr->name());
-					std::string attributeValue(attr->value());
-					HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
-					if(attributeName == "id") parameterSet->id = attributeValue;
-					else _bl->out.printWarning("Warning: Unknown attribute for \"paramset_defs\": " + attributeName);
+					_bl->out.printWarning("Warning: Unknown attribute for \"paramset_defs\": " + attributeName);
 				}
 
 				for(xml_node<>* paramsetNode = node->first_node(); paramsetNode; paramsetNode = paramsetNode->next_sibling())
@@ -2101,8 +2103,8 @@ void Device::parseXML(xml_node<>* node)
 					std::string nodeName(paramsetNode->name());
 					if(nodeName == "paramset" || nodeName == "parameters")
 					{
-						std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(_bl, paramsetNode));
-						parameterSetDefinitions[parameterSet->id] = parameterSet;
+						std::shared_ptr<ParameterSet> parameterSetDefinition(new ParameterSet(_bl, paramsetNode));
+						parameterSetDefinitions[parameterSetDefinition->id] = parameterSetDefinition;
 					}
 					else _bl->out.printWarning("Warning: Unknown node name for \"paramset_defs\": " + nodeName);
 				}
