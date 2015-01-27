@@ -5,9 +5,13 @@
 #   Klaus M Pfeiffer (http://blog.kmp.or.at/2012/05/build-your-own-raspberry-pi-image/)
 #   Alex Bradbury (http://asbradbury.org/projects/spindle/)
 
-OPENHAB=0
-if [ "$1" = "--with-openhab" ]; then
+read -p "Do you want to include openHAB and Java in the image [y/N]: " OPENHAB
+if [ "$OPENHAB" = "y" ]; then
 	OPENHAB=1
+	echo "Creating image with openHAB and Java..."
+else
+	OPENHAB=0
+	echo "Creating image without openHAB and Java..."
 fi
 
 deb_mirror="http://mirrordirector.raspbian.org/raspbian/"
@@ -173,7 +177,7 @@ cd /tmp/dtc/dtc-dtc-fixup-65cc4d2
 make PREFIX=/usr/ CC=gcc CROSS_COMPILE=all
 make PREFIX=/usr/ install
 cd /
-dtc -@ -I dts -O dtb -o /boot/enable-i2c-spi-overlay.dtb /enable-i2c-spi-overlay.dts
+dtc -@ -I dts -O dtb -o /boot/overlays/enable-i2c-spi-overlay.dtb /enable-i2c-spi-overlay.dts
 rm -Rf /tmp/dtc
 rm /enable-i2c-spi-overlay.dts
 dpkg --purge bison build-essential flex
@@ -272,10 +276,7 @@ echo \"************* Welcome to your Homegear system! *************\"
 echo \"************************************************************\"
 echo \"************************************************************\"" > scripts/firstStart.sh
 if [ $OPENHAB -eq 1 ]; then
-	echo "read -p \"The Oracle Java Development Kit 8 (JDK 8) is installed on this system.
-By pressing [Enter] you accept the
-\\\"Oracle Binary Code License Agreement for Java SE\\\"
-(http://www.oracle.com/technetwork/java/javase/terms/license/index.html)...\"" >> scripts/firstStart.sh
+	echo "read -p \"The Oracle Java Development Kit 8 (JDK 8) is installed on this system. By pressing [Enter] you accept the \\\"Oracle Binary Code License Agreement for Java SE\\\" (http://www.oracle.com/technetwork/java/javase/terms/license/index.html)...\"" >> scripts/firstStart.sh
 fi
 echo "echo \"Generating new SSH host keys. This might take a while.\"
 rm /etc/ssh/ssh_host* >/dev/null
