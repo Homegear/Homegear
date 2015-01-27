@@ -27,6 +27,8 @@
  * files in the program, then also delete it here.
  */
 
+#ifdef BIDCOSTICC1101
+
 #include "TICC1101.h"
 #include "../BidCoSPacket.h"
 #include "../../Base/BaseLib.h"
@@ -102,15 +104,15 @@ void TICC1101::setConfig()
 	{
 		_config = //Read from HM-CC-VD
 		{
-			(_settings->interruptPin == 2) ? (uint8_t)0x40 : (uint8_t)0x5B, //00: IOCFG2 (GDO2_CFG)
+			(_settings->interruptPin == 2) ? (uint8_t)0x46 : (uint8_t)0x5B, //00: IOCFG2 (GDO2_CFG)
 			0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
 			(_settings->interruptPin == 0) ? (uint8_t)0x46 : (uint8_t)0x5B, //02: IOCFG0 (GDO0_CFG)
-			0x0F, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
+			0x00, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
 			0xCC, //04: SYNC1
 			0xC3, //05: SYNC0
-			0x54, //06: PKTLEN (Maximum packet length)
+			0x40, //06: PKTLEN (Maximum packet length)
 			0x04, //07: PKTCTRL1: CRC_AUTOFLUSH | APPEND_STATUS | NO_ADDR_CHECK
-			0x02, //08: PKTCTRL0
+			0x00, //08: PKTCTRL0
 			0x00, //09: ADDR
 			0x00, //0A: CHANNR
 			0x06, //0B: FSCTRL1
@@ -120,7 +122,7 @@ void TICC1101::setConfig()
 			0x6A, //0F: FREQ0
 			0x0D, //10: MDMCFG4
 			0x3B, //11: MDMCFG3
-			0x32, //12: MDMCFG2
+			0x35, //12: MDMCFG2
 			0x02, //13: MDMCFG1
 			0xF8, //14: MDMCFG0
 			0x15, //15: DEVIATN
@@ -933,6 +935,7 @@ void TICC1101::mainThread()
 		int32_t pollResult;
 		int32_t bytesRead;
 		std::vector<char> readBuffer({'0'});
+		bool reading = true;
 
         while(!_stopCallbackThread && _fileDescriptor->descriptor > -1 && _gpioDescriptors[1]->descriptor > -1)
         {
@@ -947,7 +950,7 @@ void TICC1101::mainThread()
 				(short)0
 			};
 
-			pollResult = poll(&pollstruct, 1, 100);
+        	pollResult = poll(&pollstruct, 1, 100);
 			/*if(pollstruct.revents & POLLERR)
 			{
 				_out.printWarning("Warning: Error polling GPIO. Reopening...");
@@ -957,16 +960,22 @@ void TICC1101::mainThread()
 			}*/
 			if(pollResult > 0)
 			{
+				if(reading)
+				{
+					reading = false;
+					continue;
+				}
+				reading = true;
 				if(lseek(_gpioDescriptors[1]->descriptor, 0, SEEK_SET) == -1) throw BaseLib::Exception("Could not poll gpio: " + std::string(strerror(errno)));
 				bytesRead = read(_gpioDescriptors[1]->descriptor, &readBuffer[0], 1);
 				if(!bytesRead) continue;
-				if(readBuffer.at(0) == 0x30)
+				if(readBuffer.at(0) == 0x31)
 				{
-					//sendCommandStrobe(CommandStrobes::Enum::SIDLE);
-					std::vector<uint8_t> encodedData = readRegisters(Registers::Enum::FIFO, 84); //Read packet + RSSI
+					sendCommandStrobe(CommandStrobes::Enum::SIDLE);
+					std::vector<uint8_t> encodedData = readRegisters(Registers::Enum::FIFO, 0x40); //Read packet + RSSI
 					_out.printInfo(_bl->hf.getHexString(encodedData));
 
-					sendCommandStrobe(CommandStrobes::Enum::SIDLE);
+
 					sendCommandStrobe(CommandStrobes::Enum::SFRX);
 					sendCommandStrobe(CommandStrobes::Enum::SRX);
 
@@ -1025,3 +1034,5 @@ void TICC1101::mainThread()
     }
 }
 }
+
+#endif

@@ -123,10 +123,14 @@ std::shared_ptr<BaseLib::Systems::IPhysicalInterface> BidCoS::createPhysicalDevi
 		else if(settings->type == "coc") device.reset(new COC(settings));
 		else if(settings->type == "cuno") device.reset(new CUNO(settings));
 		else if(settings->type == "cc1100") device.reset(new TICC1100(settings));
+#ifdef BIDCOSTICC1101
 		else if(settings->type == "devtest") device.reset(new TICC1101(settings));
+#endif
 		else if(settings->type == "hmcfglan") device.reset(new HM_CFG_LAN(settings));
 		else if(settings->type == "hmlgw") device.reset(new HM_LGW(settings));
+#ifdef BIDCOSRTLSDRLAN
 		else if(settings->type == "rtlsdrlan") device.reset(new RTLSDR_LAN(settings));
+#endif
 		else GD::out.printError("Error: Unsupported physical device type for family HomeMatic BidCoS: " + settings->type);
 		if(device)
 		{

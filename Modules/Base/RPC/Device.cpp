@@ -1587,7 +1587,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 			xml_attribute<>* attr = parameterNode->first_attribute("function");
 			if(!attr)
 			{
-				_bl->out.printWarning("Warning: Could not parse \"subset\". Attribute ref not set.");
+				_bl->out.printWarning("Warning: Could not parse \"subset\". Attribute function not set.");
 				continue;
 			}
 			std::string function = std::string(attr->value());

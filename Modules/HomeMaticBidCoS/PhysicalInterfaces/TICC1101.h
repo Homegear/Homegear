@@ -27,6 +27,8 @@
  * files in the program, then also delete it here.
  */
 
+#ifdef BIDCOSTICC1101
+
 #ifndef TICC1101_H_
 #define TICC1101_H_
 
@@ -231,5 +233,7 @@ protected:
 };
 
 }
+
+#endif
 
 #endif /* TICC1101_H_ */

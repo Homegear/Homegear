@@ -116,6 +116,9 @@
 									<listOptionValue builtIn="false" value="__unix__=1"/>
 									<listOptionValue builtIn="false" value="__x86_64=1"/>
 									<listOptionValue builtIn="false" value="__x86_64__=1"/>
+									<listOptionValue builtIn="false" value="BIDCOSTICC1101"/>
+									<listOptionValue builtIn="false" value="BIDCOSTICC1100"/>
+									<listOptionValue builtIn="false" value="BIDCOSCUL"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.include.paths.1056346228" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/usr/include/c++/4.8"/>

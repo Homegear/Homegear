@@ -27,6 +27,8 @@
  * files in the program, then also delete it here.
  */
 
+#ifdef BIDCOSRTLSDRLAN
+
 #include "RTLSDR-LAN.h"
 #include "../GD.h"
 
@@ -203,3 +205,5 @@ void RTLSDR_LAN::listen()
 }
 
 }
+
+#endif

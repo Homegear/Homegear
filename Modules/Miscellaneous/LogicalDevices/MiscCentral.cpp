@@ -609,10 +609,10 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::createDevice(int32_t device
 	try
 	{
 		if(serialNumber.size() != 10) return BaseLib::RPC::Variable::createError(-1, "The serial number needs to have a size of 10.");
-		if(peerExists(serialNumber)) BaseLib::RPC::Variable::createError(-5, "This peer is already paired to this central.");
+		if(peerExists(serialNumber)) return BaseLib::RPC::Variable::createError(-5, "This peer is already paired to this central.");
 
 		std::shared_ptr<MiscPeer> peer = createPeer(BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::Miscellaneous, deviceType), serialNumber, false);
-		if(!peer || !peer->rpcDevice) BaseLib::RPC::Variable::createError(-6, "Unknown device type.");
+		if(!peer || !peer->rpcDevice) return BaseLib::RPC::Variable::createError(-6, "Unknown device type.");
 
 		try
 		{

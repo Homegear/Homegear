@@ -5,6 +5,11 @@
 #   Klaus M Pfeiffer (http://blog.kmp.or.at/2012/05/build-your-own-raspberry-pi-image/)
 #   Alex Bradbury (http://asbradbury.org/projects/spindle/)
 
+OPENHAB=0
+if [ "$1" = "--with-openhab" ]; then
+	OPENHAB=1
+fi
+
 deb_mirror="http://mirrordirector.raspbian.org/raspbian/"
 deb_local_mirror=$deb_mirror
 deb_release="wheezy"
@@ -120,14 +125,6 @@ echo \"pi ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers
 sed -i -e 's/KERNEL\!=\"eth\*|/KERNEL\!=\"/' /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-reconfigure locales
-read -p \"Ready to install Java. Please provide the download link to the current ARM package (http://www.oracle.com/technetwork/java/javase/downloads/jdk8-arm-downloads-2187472.html): \" JAVAPACKAGE
-wget --header \"Cookie: oraclelicense=accept-securebackup-cookie\" \$JAVAPACKAGE
-tar -zxf jdk*.tar.gz -C /opt
-rm jdk*.tar.gz
-update-alternatives --install /usr/bin/javac javac /opt/jdk1.8.0/bin/javac 1
-update-alternatives --install /usr/bin/java java /opt/jdk1.8.0/bin/java 1
-update-alternatives --config javac
-update-alternatives --config java
 service ssh stop
 service ntp stop
 rm -rf /var/log/homegear/*
@@ -135,6 +132,83 @@ rm -f third-stage
 " > third-stage
 chmod +x third-stage
 LANG=C chroot $rootfs /third-stage
+
+#Create SPI and I2C device tree blob
+echo "// Enable the i2c-1, spidev-0 & spidev-1 devices
+/dts-v1/;
+/plugin/;
+
+/ {
+   compatible = \"brcm,bcm2708\";
+
+   fragment@0 {
+      target = <&i2c0>;
+      __overlay__ {
+         status = \"okay\";
+      };
+   };
+
+   fragment@1 {
+      target = <&i2c1>;
+      __overlay__ {
+         status = \"okay\";
+      };
+   };
+
+   fragment@2 {
+      target = <&spi0>;
+      __overlay__ {
+         status = \"okay\";
+      };
+   };
+};
+" > enable-i2c-spi-overlay.dts
+
+echo "#!/bin/bash
+apt-get -y install bison build-essential flex
+mkdir /tmp/dtc
+wget -P /tmp/dtc https://github.com/RobertCNelson/dtc/archive/dtc-fixup-65cc4d2.zip
+unzip /tmp/dtc/dtc-fixup-65cc4d2.zip -d /tmp/dtc
+cd /tmp/dtc/dtc-dtc-fixup-65cc4d2
+make PREFIX=/usr/ CC=gcc CROSS_COMPILE=all
+make PREFIX=/usr/ install
+cd /
+dtc -@ -I dts -O dtb -o /boot/enable-i2c-spi-overlay.dtb /enable-i2c-spi-overlay.dts
+rm -Rf /tmp/dtc
+rm /enable-i2c-spi-overlay.dts
+dpkg --purge bison build-essential flex
+apt-get -y autoremove
+rm -f fourth-stage
+" > fourth-stage
+chmod +x fourth-stage
+chroot $rootfs /fourth-stage
+#End create SPI and I2C device tree blob
+
+#Install Java and OpenHAB
+if [ $OPENHAB -eq 1 ]; then
+	echo "#!/bin/bash
+read -p \"Ready to install Java. Please provide the download link to the current ARM package (http://www.oracle.com/technetwork/java/javase/downloads/jdk8-arm-downloads-2187472.html): \" JAVAPACKAGE
+wget --header \"Cookie: oraclelicense=accept-securebackup-cookie\" \$JAVAPACKAGE
+tar -zxf jdk*.tar.gz -C /opt
+rm jdk*.tar.gz
+JDK=\`ls /opt/ | grep jdk\`
+update-alternatives --install /usr/bin/javac javac /opt/\${JDK}/bin/javac 1
+update-alternatives --install /usr/bin/java java /opt/\${JDK}/bin/java 1
+update-alternatives --config javac
+update-alternatives --config java
+read -p \"Ready to install OpenHAB. Please provide the current version number (e. g. 1.6.1): \" OPENHABVERSION
+echo \"deb http://repository-openhab.forge.cloudbees.com/release/\${OPENHABVERSION}/apt-repo/ /\" > /etc/apt/sources.list.d/openhab.list
+apt-get update
+apt-get -y --force-yes install openhab-runtime openhab-addon-action-homematic openhab-addon-binding-homematic
+cp /etc/openhab/configurations/openhab_default.cfg /etc/openhab/configurations/openhab.cfg
+sed -i \"s/^# homematic:host=/homematic:host=127.0.0.1/\" /etc/openhab/configurations/openhab.cfg
+sed -i \"s/^# homematic:callback.host=/homematic:callback.host=127.0.0.1/\" /etc/openhab/configurations/openhab.cfg
+rm -f fifth-stage
+" > fifth-stage
+	chmod +x fifth-stage
+	chroot $rootfs /fifth-stage
+fi
+#End install Java and OpenHAB
 
 #Install raspi-config
 wget https://raw.github.com/asb/raspi-config/master/raspi-config
@@ -180,7 +254,8 @@ echo "*/10 *  *       *       *       /scripts/checkServices.sh 2>&1 |/usr/bin/l
 echo "arm_freq=900
 core_freq=250
 sdram_freq=450
-over_voltage=2" > boot/config.txt
+over_voltage=2
+device_tree_overlay=overlays/enable-i2c-spi-overlay.dtb" > boot/config.txt
 chown root:root boot/config.txt
 chmod 755 boot/config.txt
 #End Raspberry Pi boot config
@@ -195,9 +270,14 @@ echo \"************************************************************\"
 echo \"************************************************************\"
 echo \"************* Welcome to your Homegear system! *************\"
 echo \"************************************************************\"
-echo \"************************************************************\"
-read -p \"The Oracle Java Development Kit 8 (JDK 8) is installed on this system. By pressing [Enter] you accept the Oracle Binary Code License Agreement for Java SE (http://www.oracle.com/technetwork/java/javase/terms/license/index.html)...\"
-echo \"Generating new SSH host keys. This might take a while.\"
+echo \"************************************************************\"" > scripts/firstStart.sh
+if [ $OPENHAB -eq 1 ]; then
+	echo "read -p \"The Oracle Java Development Kit 8 (JDK 8) is installed on this system.
+By pressing [Enter] you accept the
+\\\"Oracle Binary Code License Agreement for Java SE\\\"
+(http://www.oracle.com/technetwork/java/javase/terms/license/index.html)...\"" >> scripts/firstStart.sh
+fi
+echo "echo \"Generating new SSH host keys. This might take a while.\"
 rm /etc/ssh/ssh_host* >/dev/null
 ssh-keygen -A >/dev/null
 echo \"Updating your system...\"
@@ -208,7 +288,7 @@ echo \"Starting raspi-config...\"
 raspi-config
 rm /scripts/firstStart.sh
 rm -Rf /var/log/homegear/*
-reboot" > scripts/firstStart.sh
+reboot" >> scripts/firstStart.sh
 chown root:root scripts/firstStart.sh
 chmod 755 scripts/firstStart.sh
 

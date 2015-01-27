@@ -123,14 +123,15 @@ protected:
 	//Event thraeds
 	int64_t _lastGargabeCollection = 0;
 	volatile int32_t _currentEventThreadID = 0;
-	std::map<int32_t, std::future<void>> _eventThreads;
+	//Future of type void would be enough, but causes compilation to fail on Debian 7 armel with g++ 4.7
+	std::map<int32_t, std::future<bool>> _eventThreads;
 	std::mutex _eventThreadMutex;
 
 	void collectGarbage();
 	bool eventThreadMaxReached();
-	void triggerThreadMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values);
-	void triggerThread(uint64_t peerID, int32_t channel, std::string variable, std::shared_ptr<BaseLib::RPC::Variable> value);
-	void rpcCallThread(std::string eventName, std::string eventMethod, std::shared_ptr<BaseLib::RPC::Variable> eventMethodParameters);
+	bool triggerThreadMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values);
+	bool triggerThread(uint64_t peerID, int32_t channel, std::string variable, std::shared_ptr<BaseLib::RPC::Variable> value);
+	bool rpcCallThread(std::string eventName, std::string eventMethod, std::shared_ptr<BaseLib::RPC::Variable> eventMethodParameters);
 	void mainThread();
 	uint64_t getNextExecution(uint64_t startTime, uint64_t recurEvery);
 	void removeEventToReset(uint32_t id);

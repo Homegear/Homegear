@@ -232,4 +232,4 @@ protected:
 
 }
 
-#endif /* TICC1100_H_ */
+#endif
