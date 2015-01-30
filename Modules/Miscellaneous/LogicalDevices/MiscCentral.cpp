@@ -466,7 +466,7 @@ std::string MiscCentral::handleCLICommand(std::string command)
 		}
 		else if(command.compare(0, 12, "peers select") == 0 || command.compare(0, 2, "ps") == 0)
 		{
-			uint64_t id;
+			uint64_t id = 0;
 
 			std::stringstream stream(command);
 			std::string element;

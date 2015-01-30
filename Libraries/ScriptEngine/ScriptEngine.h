@@ -31,82 +31,22 @@
 #define SCRIPTENGINE_H_
 
 #include "../../Modules/Base/BaseLib.h"
-#include "PH7VariableConverter.h"
 
 #include <mutex>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <wordexp.h>
-#include "ph7.h"
+#include "php_sapi.h"
 
 class ScriptEngine
 {
 public:
-	class Session
-	{
-	public:
-		Session() {}
-		virtual ~Session() {}
-
-		int64_t lastAccess = 0;
-		std::map<std::string, std::string> data;
-	};
-
-	class ScriptInfo
-	{
-	public:
-		ScriptInfo() {}
-		virtual ~ScriptInfo()
-		{
-			if(compiledProgram)
-			{
-				ph7_vm_release(compiledProgram);
-				compiledProgram = nullptr;
-			}
-		}
-
-		ph7_vm* compiledProgram = nullptr;
-		int32_t lastModified = 0;
-		std::string path;
-		ScriptEngine* engine = nullptr;
-		std::vector<std::string>* headers = nullptr;
-		std::string sessionID;
-		bool died = false;
-		ph7_value* cookie = nullptr;
-	};
-
 	ScriptEngine();
 	virtual ~ScriptEngine();
 	void dispose();
 
 	int32_t execute(const std::string& path, const std::string& arguments);
 	int32_t executeWebRequest(const std::string& path, const std::vector<char>& request, std::vector<char>& output, std::vector<std::string>& headers);
-	void clearPrograms();
-	std::shared_ptr<Session> getSession(std::string id);
 
-	void appendOutput(std::string& path, const char* output, uint32_t outputLength);
-	void resetOutput(std::string& path);
 protected:
-	bool _noExecution = false;
 	bool _disposing = false;
-	ph7 *_engine = nullptr;
-
-	std::mutex _programsMutex;
-	std::map<std::string, ScriptInfo> _programs;
-	volatile int32_t _executionCount;
-	std::map<std::string, std::unique_ptr<std::mutex>> _executeMutexes;
-	std::mutex _outputMutex;
-	std::map<std::string, std::vector<char>*> _outputs;
-	std::mutex _sessionsMutex;
-	std::map<std::string, std::shared_ptr<Session>> _sessions;
-
-	ScriptInfo* addProgram(std::string path,  bool storeOutput);
-	ScriptInfo* getProgram(std::string path, bool storeOutput);
-	bool isValid(const std::string& path, ph7_vm* compiledProgram);
-	void removeProgram(std::string path);
-	void printError(int32_t code);
-	void cleanUpSessions();
-	std::vector<std::string> getArgs(const std::string& path, const std::string& args);
 };
 #endif

@@ -30,6 +30,7 @@
 #include "PH7VariableConverter.h"
 #include "../GD/GD.h"
 
+/*
 int32_t arrayWalkCallback(ph7_value* key, ph7_value* value, void* userData)
 {
 	if(!userData) return PH7_ABORT;
@@ -204,3 +205,4 @@ ph7_value* PH7VariableConverter::getPH7Variable(ph7_context* context, std::share
 	}
 	return nullptr;
 }
+*/

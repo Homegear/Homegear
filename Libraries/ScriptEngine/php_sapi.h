@@ -1,5 +1,3 @@
-#define VERSION "0.6.0"
-
 /* Copyright 2013-2015 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
@@ -28,3 +26,35 @@
  * version.  If you delete this exception statement from all source
  * files in the program, then also delete it here.
  */
+
+#ifndef HOMEGEAR_PHP_SAPI_H_
+#define HOMEGEAR_PHP_SAPI_H_
+
+#include <iostream>
+#include <string>
+
+#include <php.h>
+#include <SAPI.h>
+#include <php_main.h>
+#include <php_variables.h>
+#include <php_ini.h>
+#include <zend_API.h>
+#include <zend_ini.h>
+
+#define PTSRMLS_D        void ****ptsrm_ls
+#define PTSRMLS_DC       , PTSRMLS_D
+#define PTSRMLS_C        &tsrm_ls
+#define PTSRMLS_CC       , PTSRMLS_C
+
+ZEND_BEGIN_MODULE_GLOBALS(homegear)
+	unsigned long index;
+ZEND_END_MODULE_GLOBALS(homegear)
+
+BEGIN_EXTERN_C()
+int php_homegear_init();
+void php_homegear_shutdown();
+int php_homegear_module_startup(TSRMLS_D);
+extern sapi_module_struct php_homegear_module;
+END_EXTERN_C()
+
+#endif

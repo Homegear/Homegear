@@ -31,7 +31,7 @@ ifeq ($(config),debug)
   OBJDIR     = obj/Debug/philipshue
   TARGETDIR  = lib/Modules/Debug
   TARGET     = $(TARGETDIR)/libphilipshue.so
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -fPIC -Wall -std=c++11
@@ -53,7 +53,7 @@ ifeq ($(config),release)
   OBJDIR     = obj/Release/philipshue
   TARGETDIR  = lib/Modules/Release
   TARGET     = $(TARGETDIR)/libphilipshue.so
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -fPIC -Wall -std=c++11
@@ -75,7 +75,7 @@ ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/philipshue
   TARGETDIR  = lib/Modules/Profiling
   TARGET     = $(TARGETDIR)/libphilipshue.so
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -fPIC -Wall -std=c++11 -pg

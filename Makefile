@@ -6,7 +6,7 @@ ifndef config
 endif
 export config
 
-PROJECTS := base homematicbidcos homematicwired max insteon philipshue miscellaneous user rpc cli events database ph7 scriptengine gd homegear
+PROJECTS := base homematicbidcos homematicwired max insteon philipshue miscellaneous user rpc cli events database scriptengine gd homegear
 
 .PHONY: all clean help $(PROJECTS)
 
@@ -60,10 +60,6 @@ database:
 	@echo "==== Building database ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f database.make
 
-ph7: 
-	@echo "==== Building ph7 ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f ph7.make
-
 scriptengine: 
 	@echo "==== Building scriptengine ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f scriptengine.make
@@ -89,7 +85,6 @@ clean:
 	@${MAKE} --no-print-directory -C . -f cli.make clean
 	@${MAKE} --no-print-directory -C . -f events.make clean
 	@${MAKE} --no-print-directory -C . -f database.make clean
-	@${MAKE} --no-print-directory -C . -f ph7.make clean
 	@${MAKE} --no-print-directory -C . -f scriptengine.make clean
 	@${MAKE} --no-print-directory -C . -f gd.make clean
 	@${MAKE} --no-print-directory -C . -f homegear.make clean
@@ -117,7 +112,6 @@ help:
 	@echo "   cli"
 	@echo "   events"
 	@echo "   database"
-	@echo "   ph7"
 	@echo "   scriptengine"
 	@echo "   gd"
 	@echo "   homegear"

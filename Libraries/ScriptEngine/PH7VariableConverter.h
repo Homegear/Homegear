@@ -27,6 +27,7 @@
  * files in the program, then also delete it here.
  */
 
+/*
 #ifndef PH7VARIABLECONVERTER_H_
 #define PH7VARIABLECONVERTER_H_
 
@@ -47,3 +48,4 @@ public:
 protected:
 };
 #endif
+*/

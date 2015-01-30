@@ -32,7 +32,7 @@ ifeq ($(config),debug)
   TARGETDIR  = lib/Debug
   TARGET     = $(TARGETDIR)/libph7.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DDEBUG
-  INCLUDES  += 
+  INCLUDES  += -I/var/lib/homegear/modules/php/include/php -I/var/lib/homegear/modules/php/include/php/main -I/var/lib/homegear/modules/php/include/php/sapi -I/var/lib/homegear/modules/php/include/php/TSRM -I/var/lib/homegear/modules/php/include/php/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall
   CXXFLAGS  += $(CFLAGS) 
@@ -54,7 +54,7 @@ ifeq ($(config),release)
   TARGETDIR  = lib/Release
   TARGET     = $(TARGETDIR)/libph7.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
-  INCLUDES  += 
+  INCLUDES  += -I/var/lib/homegear/modules/php/include/php -I/var/lib/homegear/modules/php/include/php/main -I/var/lib/homegear/modules/php/include/php/sapi -I/var/lib/homegear/modules/php/include/php/TSRM -I/var/lib/homegear/modules/php/include/php/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall
   CXXFLAGS  += $(CFLAGS) 
@@ -76,7 +76,7 @@ ifeq ($(config),profiling)
   TARGETDIR  = lib/Profiling
   TARGET     = $(TARGETDIR)/libph7.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
-  INCLUDES  += 
+  INCLUDES  += -I/var/lib/homegear/modules/php/include/php -I/var/lib/homegear/modules/php/include/php/main -I/var/lib/homegear/modules/php/include/php/sapi -I/var/lib/homegear/modules/php/include/php/TSRM -I/var/lib/homegear/modules/php/include/php/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -pg
   CXXFLAGS  += $(CFLAGS) 

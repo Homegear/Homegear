@@ -31,7 +31,7 @@ ifeq ($(config),debug)
   OBJDIR     = obj/Debug/base
   TARGETDIR  = lib/Debug
   TARGET     = $(TARGETDIR)/libbase.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++11 -fPIC
@@ -53,7 +53,7 @@ ifeq ($(config),release)
   OBJDIR     = obj/Release/base
   TARGETDIR  = lib/Release
   TARGET     = $(TARGETDIR)/libbase.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall -std=c++11 -fPIC
@@ -75,7 +75,7 @@ ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/base
   TARGETDIR  = lib/Profiling
   TARGET     = $(TARGETDIR)/libbase.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -std=c++11 -fPIC -pg

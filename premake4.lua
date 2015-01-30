@@ -39,7 +39,6 @@ solution "homegear"
       {
          "FORTIFY_SOURCE=2",
          "GCRYPT_NO_DEPRECATED",
-         "PH7_ENABLE_THREADS",
          --"BIDCOSTICC1101",
          --"BIDCOSRTLSDRLAN",
       }
@@ -262,6 +261,14 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/User/*.h", "./Libraries/User/*.cpp" }
+      includedirs
+      {
+         "/var/lib/homegear/modules/php/include/php",
+         "/var/lib/homegear/modules/php/include/php/main",
+         "/var/lib/homegear/modules/php/include/php/sapi",
+         "/var/lib/homegear/modules/php/include/php/TSRM",
+         "/var/lib/homegear/modules/php/include/php/Zend"
+      }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
@@ -285,6 +292,14 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/RPC/*.h", "./Libraries/RPC/*.cpp" }
+      includedirs
+      {
+         "/var/lib/homegear/modules/php/include/php",
+         "/var/lib/homegear/modules/php/include/php/main",
+         "/var/lib/homegear/modules/php/include/php/sapi",
+         "/var/lib/homegear/modules/php/include/php/TSRM",
+         "/var/lib/homegear/modules/php/include/php/Zend"
+      }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
@@ -308,6 +323,14 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/CLI/*.h", "./Libraries/CLI/*.cpp" }
+      includedirs
+      {
+         "/var/lib/homegear/modules/php/include/php",
+         "/var/lib/homegear/modules/php/include/php/main",
+         "/var/lib/homegear/modules/php/include/php/sapi",
+         "/var/lib/homegear/modules/php/include/php/TSRM",
+         "/var/lib/homegear/modules/php/include/php/Zend"
+      }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
@@ -331,6 +354,14 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/Events/*.h", "./Libraries/Events/*.cpp" }
+      includedirs
+      {
+         "/var/lib/homegear/modules/php/include/php",
+         "/var/lib/homegear/modules/php/include/php/main",
+         "/var/lib/homegear/modules/php/include/php/sapi",
+         "/var/lib/homegear/modules/php/include/php/TSRM",
+         "/var/lib/homegear/modules/php/include/php/Zend"
+      }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
@@ -354,6 +385,14 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/Database/*.h", "./Libraries/Database/*.cpp" }
+      includedirs
+      {
+         "/var/lib/homegear/modules/php/include/php",
+         "/var/lib/homegear/modules/php/include/php/main",
+         "/var/lib/homegear/modules/php/include/php/sapi",
+         "/var/lib/homegear/modules/php/include/php/TSRM",
+         "/var/lib/homegear/modules/php/include/php/Zend"
+      }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
@@ -372,34 +411,19 @@ solution "homegear"
          targetdir "./lib/Profiling"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
-   
-   project "ph7"
-      kind "StaticLib"
-      language "C"
-      files { "./Libraries/ScriptEngine/ph7.h", "./Libraries/ScriptEngine/ph7.c" }
-      buildoptions { "-Wall" }
- 
-      configuration "Debug"
-         defines { "DEBUG" }
-         flags { "Symbols" }
-         targetdir "./lib/Debug"
- 
-      configuration "Release"
-         defines { "NDEBUG" }
-         flags { "Optimize" }
-         targetdir "./lib/Release"
-
-      configuration "Profiling"
-         defines { "NDEBUG" }
-         flags { "Optimize", "Symbols" }
-         targetdir "./lib/Profiling"
-         buildoptions { "-pg" }
-         linkoptions { "-pg" }
-   
+      
    project "scriptengine"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/ScriptEngine/*.h", "./Libraries/ScriptEngine/*.cpp" }
+      includedirs
+      {
+         "/var/lib/homegear/modules/php/include/php",
+         "/var/lib/homegear/modules/php/include/php/main",
+         "/var/lib/homegear/modules/php/include/php/sapi",
+         "/var/lib/homegear/modules/php/include/php/TSRM",
+         "/var/lib/homegear/modules/php/include/php/Zend"
+      }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
@@ -423,6 +447,14 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/GD/*.h", "./Libraries/GD/*.cpp" }
+      includedirs
+      {
+         "/var/lib/homegear/modules/php/include/php",
+         "/var/lib/homegear/modules/php/include/php/main",
+         "/var/lib/homegear/modules/php/include/php/sapi",
+         "/var/lib/homegear/modules/php/include/php/TSRM",
+         "/var/lib/homegear/modules/php/include/php/Zend"
+      }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
@@ -446,8 +478,16 @@ solution "homegear"
       kind "ConsoleApp"
       language "C++"
       files { "*.h", "*.cpp" }
-	  files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
-      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l readline", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l scriptengine", "-l ph7", "-l base", "-l gpg-error", "-l sqlite3" }
+      files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
+      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l readline", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l scriptengine", "-l php5", "-l base", "-l gpg-error", "-l sqlite3" }
+      includedirs
+      {
+         "/var/lib/homegear/modules/php/include/php",
+         "/var/lib/homegear/modules/php/include/php/main",
+         "/var/lib/homegear/modules/php/include/php/sapi",
+         "/var/lib/homegear/modules/php/include/php/TSRM",
+         "/var/lib/homegear/modules/php/include/php/Zend"
+      }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"

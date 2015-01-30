@@ -31,8 +31,8 @@ ifeq ($(config),debug)
   OBJDIR     = obj/Debug/rpc
   TARGETDIR  = lib/Debug
   TARGET     = $(TARGETDIR)/librpc.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DDEBUG
-  INCLUDES  += 
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DDEBUG
+  INCLUDES  += -I/var/lib/homegear/modules/php/include/php -I/var/lib/homegear/modules/php/include/php/main -I/var/lib/homegear/modules/php/include/php/sapi -I/var/lib/homegear/modules/php/include/php/TSRM -I/var/lib/homegear/modules/php/include/php/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
@@ -53,8 +53,8 @@ ifeq ($(config),release)
   OBJDIR     = obj/Release/rpc
   TARGETDIR  = lib/Release
   TARGET     = $(TARGETDIR)/librpc.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
-  INCLUDES  += 
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
+  INCLUDES  += -I/var/lib/homegear/modules/php/include/php -I/var/lib/homegear/modules/php/include/php/main -I/var/lib/homegear/modules/php/include/php/sapi -I/var/lib/homegear/modules/php/include/php/TSRM -I/var/lib/homegear/modules/php/include/php/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
@@ -75,8 +75,8 @@ ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/rpc
   TARGETDIR  = lib/Profiling
   TARGET     = $(TARGETDIR)/librpc.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DPH7_ENABLE_THREADS -DNDEBUG
-  INCLUDES  += 
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
+  INCLUDES  += -I/var/lib/homegear/modules/php/include/php -I/var/lib/homegear/modules/php/include/php/main -I/var/lib/homegear/modules/php/include/php/sapi -I/var/lib/homegear/modules/php/include/php/TSRM -I/var/lib/homegear/modules/php/include/php/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
