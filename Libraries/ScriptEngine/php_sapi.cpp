@@ -103,9 +103,7 @@ static int php_homegear_ub_write(const char* str, uint32_t length TSRMLS_DC)
 
 static void php_homegear_flush(void *server_context)
 {
-	if (fflush(stdout)==EOF) {
-		php_handle_aborted_connection();
-	}
+	//We are normally buffering only, so no flush is needed.
 }
 
 static void php_homegear_send_header(sapi_header_struct *sapi_header, void *server_context TSRMLS_DC)

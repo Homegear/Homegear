@@ -46,7 +46,7 @@ public:
 
 	std::vector<std::string> getArgs(const std::string& args);
 	int32_t execute(const std::string path, const std::string arguments, bool wait = true);
-	int32_t executeWebRequest(const std::string& path, const std::vector<char>& request, std::vector<char>& output, std::vector<std::string>& headers);
+	int32_t executeWebRequest(const std::string& path, BaseLib::HTTP& request, std::vector<char>& output, std::vector<std::string>& headers);
 
 protected:
 	bool _disposing = false;

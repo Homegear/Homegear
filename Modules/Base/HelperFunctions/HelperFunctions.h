@@ -276,8 +276,8 @@ public:
 			else if ((c & 0xF8) == 0xF0) i += 3;
 			else return ""; //invalid utf8
 		}
-		if (q <= start + length || length == std::string::npos) max = i;
-		if (min == std::string::npos || max == std::string::npos) return "";
+		if (q <= start + length || length == (unsigned)std::string::npos) max = i;
+		if (min == (unsigned)std::string::npos || max == (unsigned)std::string::npos) return "";
 		return s.substr(min, max);
 	}
 

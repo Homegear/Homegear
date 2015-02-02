@@ -797,5 +797,16 @@ public:
 	std::shared_ptr<BaseLib::RPC::Variable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
 };
 
+class RPCWriteLog : public RPCMethod
+{
+public:
+	RPCWriteLog()
+	{
+		addSignature(BaseLib::RPC::VariableType::rpcVoid, std::vector<BaseLib::RPC::VariableType>{BaseLib::RPC::VariableType::rpcVoid, BaseLib::RPC::VariableType::rpcString});
+		addSignature(BaseLib::RPC::VariableType::rpcVoid, std::vector<BaseLib::RPC::VariableType>{BaseLib::RPC::VariableType::rpcVoid, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcInteger});
+	}
+	std::shared_ptr<BaseLib::RPC::Variable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
+};
+
 } /* namespace RPC */
 #endif /* RPCMETHODS_H_ */

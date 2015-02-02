@@ -2557,8 +2557,8 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRunScript::invoke(std::shared_ptr<std
 
 		filename = parameters->at(offset)->stringValue;
 		std::string ending = "";
-		uint32_t pos = filename.find_last_of('.');
-		if(pos != std::string::npos && (unsigned)pos < filename.size() - 1) ending = filename.substr(pos + 1);
+		int32_t pos = filename.find_last_of('.');
+		if(pos != (signed)std::string::npos && (unsigned)pos < filename.size() - 1) ending = filename.substr(pos + 1);
 		GD::bl->hf.toLower(ending);
 		if(ending == ".php" || ending == ".php5") internalEngine = true;
 
@@ -3319,6 +3319,36 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCUpdateFirmware::invoke(std::shared_pt
 		}
 
 		return BaseLib::RPC::Variable::createError(-2, "Device not found.");
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::Variable> RPCWriteLog::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::VariableType>>({
+				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString }),
+				std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcInteger })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		if(parameters->size() == 2) GD::out.printMessage(parameters->at(0)->stringValue, parameters->at(1)->integerValue);
+		else GD::out.printMessage(parameters->at(0)->stringValue);
+
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {

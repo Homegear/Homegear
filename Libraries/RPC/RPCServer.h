@@ -69,6 +69,7 @@ namespace RPC
 			public:
 				int32_t id = -1;
 				bool closed = false;
+				bool binaryPacket = false;
 				std::thread readThread;
 				std::shared_ptr<BaseLib::FileDescriptor> socketDescriptor;
 				std::shared_ptr<BaseLib::SocketOperations> socket;

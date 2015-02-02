@@ -40,18 +40,16 @@ namespace RPC
 			WebServer(std::shared_ptr<ServerSettings::Settings>& settings);
 			virtual ~WebServer();
 
-			void get(std::string path, std::vector<char>& request, std::vector<char>& content);
-			void post(std::string path, std::vector<char>& request, std::vector<char>& content);
+			void get(BaseLib::HTTP& http, std::vector<char>& content);
+			void post(BaseLib::HTTP& http, std::vector<char>& content);
 			void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content);
 			void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content, std::vector<std::string>& additionalHeaders);
 		protected:
 		private:
 			BaseLib::Output _out;
 			std::shared_ptr<ServerSettings::Settings> _settings;
-			BaseLib::Math _math;
 
 			std::string getHeader(uint32_t contentLength, std::string contentType, int32_t code, std::string codeDescription, std::vector<std::string>& additionalHeaders);
-			std::string decodeURL(const std::string& url);
 	};
 }
 #endif

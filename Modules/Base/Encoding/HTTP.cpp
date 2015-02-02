@@ -62,8 +62,8 @@ void HTTP::process(char* buffer, int32_t bufferLength, bool checkForChunkedXML)
 				return;
 			}
 			std::string chunk = _partialChunkSize + std::string(buffer, bufferLength);
-			size_t pos = chunk.find('<');
-			if(pos != std::string::npos && pos != 0)
+			int32_t pos = chunk.find('<');
+			if(pos != (signed)std::string::npos && pos != 0)
 			{
 				if(BaseLib::Math::isNumber(BaseLib::HelperFunctions::trim(chunk), true)) _header.transferEncoding = BaseLib::HTTP::TransferEncoding::chunked;
 			}
@@ -157,6 +157,27 @@ void HTTP::processHeader(char** buffer, int32_t& bufferLength)
 	}
 	else throw HTTPException("Unknown HTTP request method.");
 
+	if(_header.method != Method::Enum::none)
+	{
+		int32_t startPos = (_header.method == HTTP::Method::post) ? 5 : 4;
+		char* endPos = strchr(headerBuffer + startPos, ' ');
+		if(!endPos) throw HTTPException("Your client sent a request that this server could not understand.");
+		_header.path = std::string(headerBuffer + startPos, (int32_t)(endPos - headerBuffer - startPos));
+		int32_t pos = _header.path.find('?');
+		if(pos != (signed)std::string::npos)
+		{
+			if((unsigned)pos + 1 < _header.path.size()) _header.args = _header.path.substr(pos + 1);
+			_header.path = _header.path.substr(0, pos);
+		}
+		_header.path = decodeURL(_header.path);
+		HelperFunctions::stringReplace(_header.path, "../", "");
+
+
+		if(!strncmp(endPos + 1, "HTTP/1.1", 8)) _header.protocol = HTTP::Protocol::http11;
+		else if(!strncmp(endPos + 1, "HTTP/1.0", 8)) _header.protocol = HTTP::Protocol::http10;
+		else throw HTTPException("Your client is using a HTTP protocol version that this server cannot understand.");
+	}
+
 	char* newlinePos = nullptr;
 	char* colonPos = nullptr;
 	newlinePos = (char*)memchr(headerBuffer, '\n', _rawHeader->size());
@@ -192,6 +213,7 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 	{
 		_header.host = std::string(value, valueSize);
 		HelperFunctions::toLower(_header.host);
+		HelperFunctions::stringReplace(_header.host, "../", "");
 	}
 	else if(!strnaicmp(name, "content-type", nameSize))
 	{
@@ -370,4 +392,50 @@ void HTTP::readChunkSize(char** buffer, int32_t& bufferLength)
 		*buffer = newlinePos + 1;
 	}
 }
+
+std::string HTTP::decodeURL(const std::string& url)
+{
+	std::ostringstream decoded;
+	char character;
+	for(std::string::const_iterator i = url.begin(); i != url.end(); ++i)
+	{
+		if(*i == '%')
+		{
+			i++;
+			if(i == url.end()) return decoded.str();
+			character = (char)(_math.getNumber(*i) << 4);
+			i++;
+			if(i == url.end()) return decoded.str();
+			character += (char)_math.getNumber(*i);
+			decoded << character;
+		}
+		else decoded << *i;
+	}
+	return decoded.str();
+}
+
+size_t HTTP::readStream(char* buffer, size_t requestLength)
+{
+	ssize_t bytesRead = 0;
+	if(_streamPos < _rawHeader->size())
+	{
+		size_t length = requestLength;
+		if(_streamPos + length > _rawHeader->size()) length = _rawHeader->size() - _streamPos;
+		memcpy(buffer, &_rawHeader->at(_streamPos), length);
+		_streamPos += length;
+		bytesRead += length;
+		requestLength -= length;
+	}
+	if(requestLength > 0 && (_streamPos - _rawHeader->size()) < _content->size())
+	{
+		size_t length = requestLength;
+		if((_streamPos - _rawHeader->size()) + length > _content->size()) length = _content->size() - (_streamPos - _rawHeader->size());
+		memcpy(buffer + bytesRead, &_content->at(_streamPos - _rawHeader->size()), length);
+		_streamPos += length;
+		bytesRead += length;
+		requestLength -= length;
+	}
+	return bytesRead;
+}
+
 }

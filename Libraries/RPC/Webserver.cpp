@@ -17,43 +17,6 @@ WebServer::~WebServer()
 {
 }
 
-std::string WebServer::decodeURL(const std::string& url)
-{
-	try
-	{
-		std::ostringstream decoded;
-		char character;
-		for(std::string::const_iterator i = url.begin(); i != url.end(); ++i)
-		{
-			if(*i == '%')
-			{
-				i++;
-				if(i == url.end()) return decoded.str();
-				character = (char)(_math.getNumber(*i) << 4);
-				i++;
-				if(i == url.end()) return decoded.str();
-				character += (char)_math.getNumber(*i);
-				decoded << character;
-			}
-			else decoded << *i;
-		}
-		return decoded.str();
-	}
-	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return "";
-}
-
 std::string WebServer::getHeader(uint32_t contentLength, std::string contentType, int32_t code, std::string codeDescription, std::vector<std::string>& additionalHeaders)
 {
 	try
@@ -95,15 +58,20 @@ std::string WebServer::getHeader(uint32_t contentLength, std::string contentType
     return "";
 }
 
-void WebServer::get(std::string path, std::vector<char>& request, std::vector<char>& content)
+void WebServer::get(BaseLib::HTTP& http, std::vector<char>& content)
 {
 	try
 	{
-		uint32_t pos = path.find('?');
-		if(pos != std::string::npos) path = path.substr(0, pos);
-		path = decodeURL(path);
-		BaseLib::HelperFunctions::stringReplace(path, "../", "");
-		_out.printInfo("Client is requesting: " + path);
+		/*std::vector<char> request;
+		std::shared_ptr<std::vector<char>> header = http.getRawHeader();
+		std::shared_ptr<std::vector<char>> content = http.getContent();
+		request.reserve(header->size() + content->size());
+		request.insert(request.end(), header->begin(), header->end());
+		request.insert(request.end(), content->begin(), content->end());*/
+
+		_out.printInfo("Client is requesting: " + http.getHeader()->path);
+
+		std::string path = http.getHeader()->path;
 
 		bool isDirectory = false;
 		BaseLib::HelperFunctions::isDirectory(_settings->contentPath + path, isDirectory);
@@ -124,8 +92,8 @@ void WebServer::get(std::string path, std::vector<char>& request, std::vector<ch
 			if(path.front() == '/') path = path.substr(1);
 			std::string contentType = "application/octet-stream";
 			std::string ending = "";
-			pos = path.find_last_of('.');
-			if(pos != std::string::npos && (unsigned)pos < path.size() - 1) ending = path.substr(pos + 1);
+			int32_t pos = path.find_last_of('.');
+			if(pos != (signed)std::string::npos && (unsigned)pos < path.size() - 1) ending = path.substr(pos + 1);
 			GD::bl->hf.toLower(ending);
 			std::string contentString;
 			std::vector<std::string> headers;
@@ -150,9 +118,9 @@ void WebServer::get(std::string path, std::vector<char>& request, std::vector<ch
 			else if(ending == "php" || ending == "php5")
 			{
 				contentType = "text/html";
-				GD::scriptEngine.executeWebRequest(_settings->contentPath + path, request, content, headers);
+				GD::scriptEngine.executeWebRequest(_settings->contentPath + path, http, content, headers);
 			}
-			if(content.empty())
+			if(content.empty() && ending != "php" && ending != "php5")
 			{
 				contentString = GD::bl->hf.getFileContent(_settings->contentPath + path);
 				std::string header = getHeader(contentString.size(), contentType, 200, "OK", headers);
@@ -190,16 +158,20 @@ void WebServer::get(std::string path, std::vector<char>& request, std::vector<ch
     }
 }
 
-void WebServer::post(std::string path, std::vector<char>& request, std::vector<char>& content)
+void WebServer::post(BaseLib::HTTP& http, std::vector<char>& content)
 {
 	try
 	{
-		int32_t pos = path.find('?');
-		if((unsigned)pos != std::string::npos) path = path.substr(0, pos);
-		path = decodeURL(path);
-		BaseLib::HelperFunctions::stringReplace(path, "../", "");
-		_out.printInfo("Client is requesting: " + path);
+		/*std::vector<char> request;
+		std::shared_ptr<std::vector<char>> header = http.getRawHeader();
+		std::shared_ptr<std::vector<char>> content = http.getContent();
+		request.reserve(header->size() + content->size());
+		request.insert(request.end(), header->begin(), header->end());
+		request.insert(request.end(), content->begin(), content->end());*/
 
+		_out.printInfo("Client is requesting: " + http.getHeader()->path);
+
+		std::string path = http.getHeader()->path;
 		bool isDirectory = false;
 		BaseLib::HelperFunctions::isDirectory(_settings->contentPath + path, isDirectory);
 		if(isDirectory)
@@ -216,7 +188,7 @@ void WebServer::post(std::string path, std::vector<char>& request, std::vector<c
 		{
 			std::vector<std::string> headers;
 			if(path.front() == '/') path = path.substr(1);
-			GD::scriptEngine.executeWebRequest(_settings->contentPath + path, request, content, headers);
+			GD::scriptEngine.executeWebRequest(_settings->contentPath + path, http, content, headers);
 			std::string header = getHeader(content.size(), "text/html", 200, "OK", headers);
 			content.insert(content.begin(), header.begin(), header.end());
 		}

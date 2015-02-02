@@ -425,6 +425,7 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::vec
 		{
 			//Sleep a tiny little bit. Some clients like the linux version of IP-Symcon don't accept responses too fast.
 			std::this_thread::sleep_for(std::chrono::milliseconds(2));
+			if(!keepAlive || !client->binaryPacket) std::this_thread::sleep_for(std::chrono::milliseconds(15)); //Add additional time for XMLRPC requests. Otherwise clients might not receive response.
 			client->socket->proofwrite(data);
 		}
 		catch(BaseLib::SocketDataLimitException& ex)
@@ -791,6 +792,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				http.reset();
 				//buffer[3] & 1 is true for buffer[3] == 0xFF, too
 				packetType = (buffer[3] & 1) ? PacketType::Enum::binaryResponse : PacketType::Enum::binaryRequest;
+				client->binaryPacket = true;
 				if(bytesRead < 8) continue;
 				uint32_t headerSize = 0;
 				if(buffer[3] & 0x40)
@@ -979,23 +981,9 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				if(_settings->webServer && (!_settings->rpcServer || http.getHeader()->contentType != "text/xml"))
 				{
 
-					std::vector<char> request;
 					std::vector<char> response;
-					std::shared_ptr<std::vector<char>> header = http.getRawHeader();
-					std::shared_ptr<std::vector<char>> content = http.getContent();
-					request.reserve(header->size() + content->size());
-					request.insert(request.end(), header->begin(), header->end());
-					request.insert(request.end(), content->begin(), content->end());
-
-					int32_t startPos = (http.getHeader()->method == BaseLib::HTTP::Method::post) ? 5 : 4;
-					char* endPos = strchr(&request[0] + startPos, ' ');
-					if(!endPos) _webServer->getError(400, "Bad Request", "Your client sent a request that this server could not understand.", response);
-					else
-					{
-						std::string path(&request[0] + startPos, (int32_t)(endPos - &request[0] - startPos));
-						if(http.getHeader()->method == BaseLib::HTTP::Method::post) _webServer->post(path, request, response);
-						else if(http.getHeader()->method == BaseLib::HTTP::Method::get) _webServer->get(path, request, response);
-					}
+					if(http.getHeader()->method == BaseLib::HTTP::Method::post) _webServer->post(http, response);
+					else if(http.getHeader()->method == BaseLib::HTTP::Method::get) _webServer->get(http, response);
 					sendRPCResponseToClient(client, response, false);
 				}
 				else if(_settings->rpcServer) packetReceived(client, *http.getContent(), packetType, http.getHeader()->connection == BaseLib::HTTP::Connection::Enum::keepAlive);

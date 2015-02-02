@@ -208,6 +208,7 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 		std::vector<char> output;
 		php_homegear_get_globals(TSRMLS_C)->output = &output;
 
+		PG(during_request_startup) = 0;
 		SG(options) |= SAPI_OPTION_NO_CHDIR;
 		SG(headers_sent) = 1;
 		SG(request_info).no_headers = 1;
@@ -247,29 +248,48 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 	return 1;
 }
 
-int32_t ScriptEngine::executeWebRequest(const std::string& path, const std::vector<char>& request, std::vector<char>& output, std::vector<std::string>& headers)
+int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& request, std::vector<char>& output, std::vector<std::string>& headers)
 {
 	try
 	{
 		if(_disposing) return 1;
-		if(request.empty()) return 1;
 
 		zend_file_handle script;
 
 		/* Set up a File Handle structure */
 		script.type = ZEND_HANDLE_FILENAME;
+
 		script.filename = path.c_str();
 		script.opened_path = NULL;
 		script.free_filename = 0;
 
 		TSRMLS_FETCH();
-		std::vector<char> output;
 		php_homegear_get_globals(TSRMLS_C)->output = &output;
 
-		SG(options) |= SAPI_OPTION_NO_CHDIR;
-		SG(headers_sent) = 0;
-		SG(request_info).no_headers = false;
-		SG(request_info).query_string = (char*)&request.at(0);
+		PG(during_request_startup) = 0;
+		SG(sapi_headers).http_response_code = 200;
+		SG(request_info).content_type = request.getHeader()->contentType.c_str();
+		SG(request_info).proto_num = request.getHeader()->protocol == BaseLib::HTTP::Protocol::http10 ? 1000 : 1001;
+		std::string uri = (request.getHeader()->path.front() == '/') ? request.getHeader()->host + request.getHeader()->path : request.getHeader()->path;
+		char query_string[request.getHeader()->args.size() + 1];
+		if(!request.getHeader()->args.empty())
+		{
+			strncpy(query_string, &request.getHeader()->args.at(0), request.getHeader()->args.size() + 1);
+			SG(request_info).query_string = query_string;
+		}
+		char request_uri[uri.size() + 1];
+		if(!uri.empty())
+		{
+			strncpy(request_uri, &uri.at(0), uri.size() + 1);
+			SG(request_info).request_uri = request_uri;
+		}
+		char path_translated[path.size() + 1];
+		if(!path.empty())
+		{
+			strncpy(path_translated, &path.at(0), path.size() + 1);
+			SG(request_info).path_translated = path_translated;
+		}
+		SG(request_info).content_length = request.getHeader()->contentLength;
 
 		if (php_request_startup(TSRMLS_C) == FAILURE) {
 			GD::bl->out.printError("Error calling php_request_startup...");

@@ -31,6 +31,7 @@
 #define HTTP_H_
 
 #include "../Exception.h"
+#include "../HelperFunctions/Math.h"
 
 #include <iostream>
 #include <string>
@@ -66,12 +67,19 @@ public:
 	{
 		enum Enum { none, keepAlive, close };
 	};
+	struct Protocol
+	{
+		enum Enum { none, http10, http11 };
+	};
 	struct Header
 	{
 		bool parsed = false;
 		Method::Enum method = Method::Enum::none;
+		Protocol::Enum protocol = Protocol::Enum::none;
 		int32_t responseCode = -1;
 		uint32_t contentLength = 0;
+		std::string path;
+		std::string args;
 		std::string host;
 		std::string contentType;
 		TransferEncoding::Enum transferEncoding = TransferEncoding::Enum::none;
@@ -109,6 +117,8 @@ public:
 	void process(char* buffer, int32_t bufferLength, bool checkForChunkedXML = false);
 	bool headerProcessingStarted() { return _headerProcessingStarted; }
 	bool dataProcessingStarted() { return _dataProcessingStarted; }
+	std::string decodeURL(const std::string& url);
+	size_t readStream(char* buffer, size_t requestLength);
 private:
 	bool _headerProcessingStarted = false;
 	bool _dataProcessingStarted = false;
@@ -122,6 +132,8 @@ private:
 	int32_t _chunkSize = -1;
 	int32_t _endChunkSizeBytes = -1;
 	std::string _partialChunkSize;
+	size_t _streamPos = 0;
+	Math _math;
 
 	void processHeader(char** buffer, int32_t& bufferLength);
 	void processHeaderField(char* name, uint32_t nameSize, char* value, uint32_t valueSize);
