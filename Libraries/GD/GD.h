@@ -30,6 +30,7 @@
 #ifndef GD_H_
 #define GD_H_
 
+#include "../ScriptEngine/ScriptEngine.h"
 #include "../CLI/CLIServer.h"
 #include "../CLI/CLIClient.h"
 #include "../Systems/FamilyController.h"
@@ -38,7 +39,6 @@
 #include "../../Modules/Base/BaseLib.h"
 #include "../RPC/Server.h"
 #include "../RPC/Client.h"
-#include "../ScriptEngine/ScriptEngine.h"
 
 #include <vector>
 #include <map>

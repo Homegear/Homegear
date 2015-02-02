@@ -70,6 +70,7 @@ void Settings::reset()
 	_eventThreadMax = 20;
 	_eventTriggerThreadPriority = 0;
 	_eventTriggerThreadPolicy = SCHED_OTHER;
+	_scriptThreadMax = 10;
 	_deviceDescriptionPath = "/etc/homegear/devices/";
 	_clientSettingsPath = "/etc/homegear/rpcclients.conf";
 	_serverSettingsPath = "/etc/homegear/rpcservers.conf";
@@ -296,6 +297,11 @@ void Settings::load(std::string filename)
 					_eventTriggerThreadPolicy = Threads::getThreadPolicyFromString(value);
 					_eventTriggerThreadPriority = Threads::parseThreadPriority(_eventTriggerThreadPriority, _eventTriggerThreadPolicy);
 					_bl->out.printDebug("Debug: eventTriggerThreadPolicy set to " + std::to_string(_eventTriggerThreadPolicy));
+				}
+				else if(name == "scriptmaxthreads")
+				{
+					_scriptThreadMax = Math::getNumber(value);
+					_bl->out.printDebug("Debug: scriptMaxThreads set to " + std::to_string(_scriptThreadMax));
 				}
 				else if(name == "devicedescriptionpath")
 				{

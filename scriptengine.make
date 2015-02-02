@@ -32,7 +32,7 @@ ifeq ($(config),debug)
   TARGETDIR  = lib/Debug
   TARGET     = $(TARGETDIR)/libscriptengine.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DDEBUG
-  INCLUDES  += -I/var/lib/homegear/modules/php/include/php -I/var/lib/homegear/modules/php/include/php/main -I/var/lib/homegear/modules/php/include/php/sapi -I/var/lib/homegear/modules/php/include/php/TSRM -I/var/lib/homegear/modules/php/include/php/Zend
+  INCLUDES  += -IIncludes/PHP -IIncludes/PHP/main -IIncludes/PHP/sapi -IIncludes/PHP/TSRM -IIncludes/PHP/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
@@ -54,7 +54,7 @@ ifeq ($(config),release)
   TARGETDIR  = lib/Release
   TARGET     = $(TARGETDIR)/libscriptengine.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
-  INCLUDES  += -I/var/lib/homegear/modules/php/include/php -I/var/lib/homegear/modules/php/include/php/main -I/var/lib/homegear/modules/php/include/php/sapi -I/var/lib/homegear/modules/php/include/php/TSRM -I/var/lib/homegear/modules/php/include/php/Zend
+  INCLUDES  += -IIncludes/PHP -IIncludes/PHP/main -IIncludes/PHP/sapi -IIncludes/PHP/TSRM -IIncludes/PHP/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
@@ -76,7 +76,7 @@ ifeq ($(config),profiling)
   TARGETDIR  = lib/Profiling
   TARGET     = $(TARGETDIR)/libscriptengine.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
-  INCLUDES  += -I/var/lib/homegear/modules/php/include/php -I/var/lib/homegear/modules/php/include/php/main -I/var/lib/homegear/modules/php/include/php/sapi -I/var/lib/homegear/modules/php/include/php/TSRM -I/var/lib/homegear/modules/php/include/php/Zend
+  INCLUDES  += -IIncludes/PHP -IIncludes/PHP/main -IIncludes/PHP/sapi -IIncludes/PHP/TSRM -IIncludes/PHP/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
@@ -95,7 +95,7 @@ endif
 
 OBJECTS := \
 	$(OBJDIR)/php_sapi.o \
-	$(OBJDIR)/PH7VariableConverter.o \
+	$(OBJDIR)/PHPVariableConverter.o \
 	$(OBJDIR)/ScriptEngine.o \
 
 RESOURCES := \
@@ -164,7 +164,7 @@ endif
 $(OBJDIR)/php_sapi.o: Libraries/ScriptEngine/php_sapi.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PH7VariableConverter.o: Libraries/ScriptEngine/PH7VariableConverter.cpp
+$(OBJDIR)/PHPVariableConverter.o: Libraries/ScriptEngine/PHPVariableConverter.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/ScriptEngine.o: Libraries/ScriptEngine/ScriptEngine.cpp

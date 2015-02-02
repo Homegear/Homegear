@@ -45,7 +45,7 @@ solution "homegear"
       linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear" }
 
    configuration { "rpi", "gmake" }
-      includedirs { "./ARM\ headers" }
+      includedirs { "./Includes/ARM\ headers" }
       libdirs { "./ARM\ libraries" }
 
    project "base"
@@ -113,6 +113,7 @@ solution "homegear"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
 
+--[[
    project "homematicwired"
       kind "SharedLib"
       language "C++"
@@ -256,6 +257,7 @@ solution "homegear"
          targetdir "./lib/Modules/Profiling"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
+--]]
 
    project "user"
       kind "StaticLib"
@@ -263,11 +265,11 @@ solution "homegear"
       files { "./Libraries/User/*.h", "./Libraries/User/*.cpp" }
       includedirs
       {
-         "/var/lib/homegear/modules/php/include/php",
-         "/var/lib/homegear/modules/php/include/php/main",
-         "/var/lib/homegear/modules/php/include/php/sapi",
-         "/var/lib/homegear/modules/php/include/php/TSRM",
-         "/var/lib/homegear/modules/php/include/php/Zend"
+         "./Includes/PHP",
+         "./Includes/PHP/main",
+         "./Includes/PHP/sapi",
+         "./Includes/PHP/TSRM",
+         "./Includes/PHP/Zend"
       }
       buildoptions { "-Wall", "-std=c++11" }
  
@@ -294,11 +296,11 @@ solution "homegear"
       files { "./Libraries/RPC/*.h", "./Libraries/RPC/*.cpp" }
       includedirs
       {
-         "/var/lib/homegear/modules/php/include/php",
-         "/var/lib/homegear/modules/php/include/php/main",
-         "/var/lib/homegear/modules/php/include/php/sapi",
-         "/var/lib/homegear/modules/php/include/php/TSRM",
-         "/var/lib/homegear/modules/php/include/php/Zend"
+         "./Includes/PHP",
+         "./Includes/PHP/main",
+         "./Includes/PHP/sapi",
+         "./Includes/PHP/TSRM",
+         "./Includes/PHP/Zend"
       }
       buildoptions { "-Wall", "-std=c++11" }
  
@@ -325,11 +327,11 @@ solution "homegear"
       files { "./Libraries/CLI/*.h", "./Libraries/CLI/*.cpp" }
       includedirs
       {
-         "/var/lib/homegear/modules/php/include/php",
-         "/var/lib/homegear/modules/php/include/php/main",
-         "/var/lib/homegear/modules/php/include/php/sapi",
-         "/var/lib/homegear/modules/php/include/php/TSRM",
-         "/var/lib/homegear/modules/php/include/php/Zend"
+         "./Includes/PHP",
+         "./Includes/PHP/main",
+         "./Includes/PHP/sapi",
+         "./Includes/PHP/TSRM",
+         "./Includes/PHP/Zend"
       }
       buildoptions { "-Wall", "-std=c++11" }
  
@@ -356,11 +358,11 @@ solution "homegear"
       files { "./Libraries/Events/*.h", "./Libraries/Events/*.cpp" }
       includedirs
       {
-         "/var/lib/homegear/modules/php/include/php",
-         "/var/lib/homegear/modules/php/include/php/main",
-         "/var/lib/homegear/modules/php/include/php/sapi",
-         "/var/lib/homegear/modules/php/include/php/TSRM",
-         "/var/lib/homegear/modules/php/include/php/Zend"
+         "./Includes/PHP",
+         "./Includes/PHP/main",
+         "./Includes/PHP/sapi",
+         "./Includes/PHP/TSRM",
+         "./Includes/PHP/Zend"
       }
       buildoptions { "-Wall", "-std=c++11" }
  
@@ -387,11 +389,11 @@ solution "homegear"
       files { "./Libraries/Database/*.h", "./Libraries/Database/*.cpp" }
       includedirs
       {
-         "/var/lib/homegear/modules/php/include/php",
-         "/var/lib/homegear/modules/php/include/php/main",
-         "/var/lib/homegear/modules/php/include/php/sapi",
-         "/var/lib/homegear/modules/php/include/php/TSRM",
-         "/var/lib/homegear/modules/php/include/php/Zend"
+         "./Includes/PHP",
+         "./Includes/PHP/main",
+         "./Includes/PHP/sapi",
+         "./Includes/PHP/TSRM",
+         "./Includes/PHP/Zend"
       }
       buildoptions { "-Wall", "-std=c++11" }
  
@@ -418,11 +420,11 @@ solution "homegear"
       files { "./Libraries/ScriptEngine/*.h", "./Libraries/ScriptEngine/*.cpp" }
       includedirs
       {
-         "/var/lib/homegear/modules/php/include/php",
-         "/var/lib/homegear/modules/php/include/php/main",
-         "/var/lib/homegear/modules/php/include/php/sapi",
-         "/var/lib/homegear/modules/php/include/php/TSRM",
-         "/var/lib/homegear/modules/php/include/php/Zend"
+         "./Includes/PHP",
+         "./Includes/PHP/main",
+         "./Includes/PHP/sapi",
+         "./Includes/PHP/TSRM",
+         "./Includes/PHP/Zend"
       }
       buildoptions { "-Wall", "-std=c++11" }
  
@@ -449,11 +451,11 @@ solution "homegear"
       files { "./Libraries/GD/*.h", "./Libraries/GD/*.cpp" }
       includedirs
       {
-         "/var/lib/homegear/modules/php/include/php",
-         "/var/lib/homegear/modules/php/include/php/main",
-         "/var/lib/homegear/modules/php/include/php/sapi",
-         "/var/lib/homegear/modules/php/include/php/TSRM",
-         "/var/lib/homegear/modules/php/include/php/Zend"
+         "./Includes/PHP",
+         "./Includes/PHP/main",
+         "./Includes/PHP/sapi",
+         "./Includes/PHP/TSRM",
+         "./Includes/PHP/Zend"
       }
       buildoptions { "-Wall", "-std=c++11" }
  
@@ -479,14 +481,14 @@ solution "homegear"
       language "C++"
       files { "*.h", "*.cpp" }
       files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
-      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l readline", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l scriptengine", "-l php5", "-l base", "-l gpg-error", "-l sqlite3" }
+      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l readline", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l scriptengine", "-l base", "-l gpg-error", "-l sqlite3", "-l php5" }
       includedirs
       {
-         "/var/lib/homegear/modules/php/include/php",
-         "/var/lib/homegear/modules/php/include/php/main",
-         "/var/lib/homegear/modules/php/include/php/sapi",
-         "/var/lib/homegear/modules/php/include/php/TSRM",
-         "/var/lib/homegear/modules/php/include/php/Zend"
+         "./Includes/PHP",
+         "./Includes/PHP/main",
+         "./Includes/PHP/sapi",
+         "./Includes/PHP/TSRM",
+         "./Includes/PHP/Zend"
       }
       buildoptions { "-Wall", "-std=c++11" }
  

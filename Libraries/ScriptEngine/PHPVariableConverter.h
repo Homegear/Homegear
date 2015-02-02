@@ -27,25 +27,23 @@
  * files in the program, then also delete it here.
  */
 
-/*
-#ifndef PH7VARIABLECONVERTER_H_
-#define PH7VARIABLECONVERTER_H_
+#ifndef PHPVARIABLECONVERTER_H_
+#define PHPVARIABLECONVERTER_H_
 
 #include "../../Modules/Base/BaseLib.h"
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "ph7.h"
+#include <zend_API.h>
 
-class PH7VariableConverter
+class PHPVariableConverter
 {
 public:
-	PH7VariableConverter();
-	virtual ~PH7VariableConverter();
+	PHPVariableConverter();
+	virtual ~PHPVariableConverter();
 
-	static std::shared_ptr<BaseLib::RPC::Variable> getVariable(ph7_value* value);
-	static ph7_value* getPH7Variable(ph7_context* context, std::shared_ptr<BaseLib::RPC::Variable> value);
+	static std::shared_ptr<BaseLib::RPC::Variable> getVariable(zval* value);
+	static void getPHPVariable(std::shared_ptr<BaseLib::RPC::Variable> input, zval* output);
 protected:
 };
 #endif
-*/

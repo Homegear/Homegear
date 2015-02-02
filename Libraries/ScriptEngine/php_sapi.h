@@ -32,6 +32,8 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
+#include <iterator>
 
 #include <php.h>
 #include <SAPI.h>
@@ -47,14 +49,14 @@
 #define PTSRMLS_CC       , PTSRMLS_C
 
 ZEND_BEGIN_MODULE_GLOBALS(homegear)
-	unsigned long index;
+	std::vector<char>* output = nullptr;
+	std::vector<std::string>* headers = nullptr;
 ZEND_END_MODULE_GLOBALS(homegear)
 
-BEGIN_EXTERN_C()
+zend_homegear_globals* php_homegear_get_globals(TSRMLS_D);
+void php_homegear_build_argv(std::vector<std::string>& arguments TSRMLS_DC);
 int php_homegear_init();
 void php_homegear_shutdown();
 int php_homegear_module_startup(TSRMLS_D);
-extern sapi_module_struct php_homegear_module;
-END_EXTERN_C()
 
 #endif

@@ -32,11 +32,11 @@ ifeq ($(config),debug)
   TARGETDIR  = bin/Debug
   TARGET     = $(TARGETDIR)/homegear
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DDEBUG
-  INCLUDES  += -I/var/lib/homegear/modules/php/include/php -I/var/lib/homegear/modules/php/include/php/main -I/var/lib/homegear/modules/php/include/php/sapi -I/var/lib/homegear/modules/php/include/php/TSRM -I/var/lib/homegear/modules/php/include/php/Zend
+  INCLUDES  += -IIncludes/PHP -IIncludes/PHP/main -IIncludes/PHP/sapi -IIncludes/PHP/TSRM -IIncludes/PHP/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Debug -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l rpc -l dl -l pthread -l readline -l gcrypt -l gnutls -l user -l cli -l events -l gd -l database -l scriptengine -l php5 -l base -l gpg-error -l sqlite3
+  LDFLAGS   += -Llib/Debug -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l rpc -l dl -l pthread -l readline -l gcrypt -l gnutls -l user -l cli -l events -l gd -l database -l scriptengine -l base -l gpg-error -l sqlite3 -l php5
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -54,11 +54,11 @@ ifeq ($(config),release)
   TARGETDIR  = bin/Release
   TARGET     = $(TARGETDIR)/homegear
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
-  INCLUDES  += -I/var/lib/homegear/modules/php/include/php -I/var/lib/homegear/modules/php/include/php/main -I/var/lib/homegear/modules/php/include/php/sapi -I/var/lib/homegear/modules/php/include/php/TSRM -I/var/lib/homegear/modules/php/include/php/Zend
+  INCLUDES  += -IIncludes/PHP -IIncludes/PHP/main -IIncludes/PHP/sapi -IIncludes/PHP/TSRM -IIncludes/PHP/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Release -s -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l rpc -l dl -l pthread -l readline -l gcrypt -l gnutls -l user -l cli -l events -l gd -l database -l scriptengine -l php5 -l base -l gpg-error -l sqlite3
+  LDFLAGS   += -Llib/Release -s -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l rpc -l dl -l pthread -l readline -l gcrypt -l gnutls -l user -l cli -l events -l gd -l database -l scriptengine -l base -l gpg-error -l sqlite3 -l php5
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -76,11 +76,11 @@ ifeq ($(config),profiling)
   TARGETDIR  = bin/Profiling
   TARGET     = $(TARGETDIR)/homegear
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
-  INCLUDES  += -I/var/lib/homegear/modules/php/include/php -I/var/lib/homegear/modules/php/include/php/main -I/var/lib/homegear/modules/php/include/php/sapi -I/var/lib/homegear/modules/php/include/php/TSRM -I/var/lib/homegear/modules/php/include/php/Zend
+  INCLUDES  += -IIncludes/PHP -IIncludes/PHP/main -IIncludes/PHP/sapi -IIncludes/PHP/TSRM -IIncludes/PHP/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Profiling -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l rpc -l dl -l pthread -l readline -l gcrypt -l gnutls -l user -l cli -l events -l gd -l database -l scriptengine -l php5 -l base -l gpg-error -l sqlite3 -pg
+  LDFLAGS   += -Llib/Profiling -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l rpc -l dl -l pthread -l readline -l gcrypt -l gnutls -l user -l cli -l events -l gd -l database -l scriptengine -l base -l gpg-error -l sqlite3 -l php5 -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 

@@ -2531,28 +2531,15 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRssiInfo::invoke(std::shared_ptr<std:
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-RPCRunScript::~RPCRunScript()
-{
-	_disposing = true;
-	_runScriptThreadMutex.lock();
-	if(_runScriptThread.joinable()) _runScriptThread.join();
-	_runScriptThreadMutex.unlock();
-}
-
 std::shared_ptr<BaseLib::RPC::Variable> RPCRunScript::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
-		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Method is disposing.");
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::VariableType>>({
 			std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString }),
 			std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcBoolean }),
 			std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString }),
 			std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcBoolean }),
-			std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcBoolean, BaseLib::RPC::VariableType::rpcString }),
-			std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcBoolean, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcBoolean }),
-			std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcBoolean, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString }),
-			std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcBoolean, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcBoolean })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
@@ -2569,6 +2556,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRunScript::invoke(std::shared_ptr<std
 		std::string arguments;
 
 		filename = parameters->at(offset)->stringValue;
+		std::string ending = "";
+		uint32_t pos = filename.find_last_of('.');
+		if(pos != std::string::npos && (unsigned)pos < filename.size() - 1) ending = filename.substr(pos + 1);
+		GD::bl->hf.toLower(ending);
+		if(ending == ".php" || ending == ".php5") internalEngine = true;
 
 		if((signed)parameters->size() == offset + 2)
 		{
@@ -2584,22 +2576,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRunScript::invoke(std::shared_ptr<std
 		std::string path = GD::bl->settings.scriptPath() + filename;
 
 		int32_t exitCode = 0;
-		if(internalEngine)
-		{
-			if(wait) exitCode = GD::scriptEngine.execute(path, arguments);
-			else
-			{
-				_runScriptThreadMutex.lock();
-				if(_disposing)
-				{
-					_runScriptThreadMutex.unlock();
-					return BaseLib::RPC::Variable::createError(-32500, "Method is disposing.");
-				}
-				if(_runScriptThread.joinable()) _runScriptThread.join();
-				_runScriptThread = std::thread(&ScriptEngine::execute, &GD::scriptEngine, path, arguments);
-				_runScriptThreadMutex.unlock();
-			}
-		}
+		if(internalEngine) exitCode = GD::scriptEngine.execute(path, arguments, wait);
 		else
 		{
 			std::string command = path + " " + arguments;

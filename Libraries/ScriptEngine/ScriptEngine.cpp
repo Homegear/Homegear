@@ -60,13 +60,142 @@ void ScriptEngine::dispose()
 	if(_disposing) return;
 	_disposing = true;
 	php_homegear_shutdown();
+	GD::out.printInfo("Info: Waiting for script threads to finish.");
+	while(_scriptThreads.size() > 0)
+	{
+		collectGarbage();
+		if(_scriptThreads.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+	}
 }
 
-int32_t ScriptEngine::execute(const std::string& path, const std::string& arguments)
+void ScriptEngine::collectGarbage()
+{
+	try
+	{
+		std::vector<int32_t> threadsToRemove;
+		_scriptThreadMutex.lock();
+		try
+		{
+			for(std::map<int32_t, std::future<int32_t>>::iterator i = _scriptThreads.begin(); i != _scriptThreads.end(); ++i)
+			{
+				if(i->second.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) threadsToRemove.push_back(i->first);
+			}
+		}
+		catch(const std::exception& ex)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+		for(std::vector<int32_t>::iterator i = threadsToRemove.begin(); i != threadsToRemove.end(); ++i)
+		{
+			try
+			{
+				_scriptThreads.erase(*i);
+			}
+			catch(const std::exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_scriptThreadMutex.unlock();
+}
+
+bool ScriptEngine::scriptThreadMaxReached()
+{
+	try
+	{
+		_scriptThreadMutex.lock();
+		if(_scriptThreads.size() >= GD::bl->settings.scriptThreadMax() * 100 / 125)
+		{
+			_scriptThreadMutex.unlock();
+			collectGarbage();
+			_scriptThreadMutex.lock();
+			if(_scriptThreads.size() >= GD::bl->settings.scriptThreadMax())
+			{
+				_scriptThreadMutex.unlock();
+				GD::out.printError("Error: Your script processing is too slow. More than " + std::to_string(GD::bl->settings.scriptThreadMax()) + " scripts are queued. Not executing script.");
+				return true;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_scriptThreadMutex.unlock();
+	return false;
+}
+
+std::vector<std::string> ScriptEngine::getArgs(const std::string& args)
+{
+	std::vector<std::string> argv;
+	wordexp_t p;
+	if(wordexp(args.c_str(), &p, 0) == 0)
+	{
+		for (size_t i = 0; i < p.we_wordc; i++)
+		{
+			argv.push_back(std::string(p.we_wordv[i]));
+		}
+		wordfree(&p);
+	}
+	return argv;
+}
+
+int32_t ScriptEngine::execute(const std::string path, const std::string arguments, bool wait)
 {
 	try
 	{
 		if(_disposing) return 1;
+		if(!wait)
+		{
+			collectGarbage();
+			if(!scriptThreadMaxReached())
+			{
+				_scriptThreadMutex.lock();
+				try
+				{
+					_scriptThreads.insert(std::pair<int32_t, std::future<int32_t>>(_currentScriptThreadID++, std::async(std::launch::async, &ScriptEngine::execute, this, path, arguments, false)));
+				}
+				catch(const std::exception& ex)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(...)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				}
+				_scriptThreadMutex.unlock();
+			}
+			return 0;
+		}
 		zend_file_handle script;
 
 		/* Set up a File Handle structure */
@@ -76,15 +205,32 @@ int32_t ScriptEngine::execute(const std::string& path, const std::string& argume
 		script.free_filename = 0;
 
 		TSRMLS_FETCH();
+		std::vector<char> output;
+		php_homegear_get_globals(TSRMLS_C)->output = &output;
 
 		SG(options) |= SAPI_OPTION_NO_CHDIR;
+		SG(headers_sent) = 1;
+		SG(request_info).no_headers = 1;
+
 		if (php_request_startup(TSRMLS_C) == FAILURE) {
 			GD::bl->out.printError("Error calling php_request_startup...");
 			return 1;
 		}
 
+		std::vector<std::string> argv = getArgs(arguments);
+		php_homegear_build_argv(argv TSRMLS_CC);
+
 		php_execute_script(&script TSRMLS_CC);
+		int32_t exitCode = EG(exit_status);
+
 		php_request_shutdown(NULL);
+		if(output.size() > 0)
+		{
+			std::string outputString(&output.at(0), output.size());
+			if(BaseLib::HelperFunctions::trim(outputString).size() > 0) GD::out.printMessage("Script output: " + outputString);
+		}
+
+		return exitCode;
 	}
 	catch(const std::exception& ex)
 	{
@@ -108,6 +254,34 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, const std::vect
 		if(_disposing) return 1;
 		if(request.empty()) return 1;
 
+		zend_file_handle script;
+
+		/* Set up a File Handle structure */
+		script.type = ZEND_HANDLE_FILENAME;
+		script.filename = path.c_str();
+		script.opened_path = NULL;
+		script.free_filename = 0;
+
+		TSRMLS_FETCH();
+		std::vector<char> output;
+		php_homegear_get_globals(TSRMLS_C)->output = &output;
+
+		SG(options) |= SAPI_OPTION_NO_CHDIR;
+		SG(headers_sent) = 0;
+		SG(request_info).no_headers = false;
+		SG(request_info).query_string = (char*)&request.at(0);
+
+		if (php_request_startup(TSRMLS_C) == FAILURE) {
+			GD::bl->out.printError("Error calling php_request_startup...");
+			return 1;
+		}
+
+		php_execute_script(&script TSRMLS_CC);
+		int32_t exitCode = EG(exit_status);
+
+		php_request_shutdown(NULL);
+
+		return exitCode;
 	}
 	catch(const std::exception& ex)
 	{

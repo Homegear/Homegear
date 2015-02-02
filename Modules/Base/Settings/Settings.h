@@ -36,7 +36,6 @@
 
 namespace BaseLib
 {
-
 class Obj;
 
 class Settings
@@ -76,6 +75,7 @@ public:
 	uint32_t eventThreadMax() { return _eventThreadMax; }
 	int32_t eventTriggerThreadPriority() { return _eventTriggerThreadPriority; }
 	int32_t eventTriggerThreadPolicy() { return _eventTriggerThreadPolicy; }
+	uint32_t scriptThreadMax() { return _scriptThreadMax; }
 	std::string deviceDescriptionPath() { return _deviceDescriptionPath; }
 	std::string clientSettingsPath() { return _clientSettingsPath; }
 	std::string serverSettingsPath() { return _serverSettingsPath; }
@@ -119,6 +119,7 @@ private:
 	uint32_t _eventThreadMax = 20;
 	int32_t _eventTriggerThreadPriority = 0;
 	int32_t _eventTriggerThreadPolicy = SCHED_OTHER;
+	uint32_t _scriptThreadMax = 10;
 	std::string _deviceDescriptionPath;
 	std::string _clientSettingsPath;
 	std::string _serverSettingsPath;

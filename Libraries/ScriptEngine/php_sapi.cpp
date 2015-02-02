@@ -28,17 +28,53 @@
  */
 
 #include "php_sapi.h"
+#include "../GD/GD.h"
+#include "PHPVariableConverter.h"
 
 #define SEG(v) TSRMG(homegear_globals_id, zend_homegear_globals*, v)
 
 static int homegear_globals_id;
 
-const char HARDCODED_INI[] =
-	"register_argc_argv=1\n"
-	"implicit_flush=1\n"
-	"output_buffering=0\n"
-	"max_execution_time=0\n"
-	"max_input_time=-1\n\0";
+zend_homegear_globals* php_homegear_get_globals(TSRMLS_D)
+{
+	return ((zend_homegear_globals*) (*((void ***) tsrm_ls))[((homegear_globals_id)-1)]);
+}
+
+void php_homegear_build_argv(std::vector<std::string>& arguments TSRMLS_DC)
+{
+	zval* argc = nullptr;
+	zval* argv = nullptr;
+	ALLOC_INIT_ZVAL(argv);
+	array_init(argv);
+	zval* arg = nullptr;
+
+	for(std::vector<std::string>::const_iterator i = arguments.begin(); i != arguments.end(); ++i)
+	{
+		ALLOC_ZVAL(arg);
+		Z_TYPE_P(arg) = IS_STRING;
+		Z_STRLEN_P(arg) = (*i).size();
+		Z_STRVAL_P(arg) = estrndup((*i).c_str(), Z_STRLEN_P(arg));
+		INIT_PZVAL(arg);
+		if (zend_hash_next_index_insert(Z_ARRVAL_P(argv), &arg, sizeof(zval*), NULL) == FAILURE) {
+			if (Z_TYPE_P(arg) == IS_STRING) {
+				efree(Z_STRVAL_P(arg));
+			}
+		}
+	}
+
+	ALLOC_INIT_ZVAL(argc);
+	Z_LVAL_P(argc) = arguments.size();
+	Z_TYPE_P(argc) = IS_LONG;
+
+	Z_ADDREF_P(argv);
+	Z_ADDREF_P(argc);
+
+	zend_hash_update(&EG(symbol_table), "argv", sizeof("argv"), &argv, sizeof(zval *), NULL);
+	zend_hash_update(&EG(symbol_table), "argc", sizeof("argc"), &argc, sizeof(zval *), NULL);
+
+	zval_ptr_dtor(&argc);
+	zval_ptr_dtor(&argv);
+}
 
 static int php_homegear_read_post(char *buf, uint count_bytes TSRMLS_DC)
 {
@@ -52,37 +88,17 @@ static char* php_homegear_read_cookies(TSRMLS_D)
 	return NULL;
 }
 
-static inline size_t php_homegear_single_write(const char *str, uint str_length)
+static int php_homegear_ub_write(const char* str, uint32_t length TSRMLS_DC)
 {
-#ifdef PHP_WRITE_STDOUT
-	long ret = write(STDOUT_FILENO, str, str_length);
-	if (ret <= 0) return 0;
-	return ret;
-#else
-	size_t ret;
-
-	ret = fwrite(str, 1, MIN(str_length, 16384), stdout);
-	return ret;
-#endif
-}
-
-
-static int php_homegear_ub_write(const char *str, uint str_length TSRMLS_DC)
-{
-	const char *ptr = str;
-	uint remaining = str_length;
-	size_t ret;
-
-	while (remaining > 0) {
-		ret = php_homegear_single_write(ptr, remaining);
-		if (!ret) {
-			php_handle_aborted_connection();
-		}
-		ptr += ret;
-		remaining -= ret;
+	if(length == 0) return 0;
+	std::vector<char>* out = SEG(output);
+	if(out)
+	{
+		if(out->size() + length > out->capacity()) out->reserve(out->capacity() + 1024);
+		out->insert(out->end(), str, str + length);
 	}
-
-	return str_length;
+	else GD::out.printMessage("Script output: " + std::string(str, length));
+	return length;
 }
 
 static void php_homegear_flush(void *server_context)
@@ -106,12 +122,7 @@ static void php_homegear_log_message(char *message TSRMLS_DC)
 
 static void php_homegear_register_variables(zval *track_vars_array TSRMLS_DC)
 {
-	std::cout << "php_homegear_register_variables" << std::endl;
-
-	char buf[101];
-	snprintf(buf, 100, "%s/%s", "TESTBLA", "TESTBLUPP");
-	php_register_variable("TESTVAR", buf, track_vars_array TSRMLS_CC);
-	php_register_variable("SAPI_TYPE", "Homegear", track_vars_array TSRMLS_CC);
+	php_register_variable((char*)"SAPI_TYPE", (char*)"Homegear", track_vars_array TSRMLS_CC);
 
 	php_import_environment_variables(track_vars_array TSRMLS_CC);
 }
@@ -127,19 +138,17 @@ static int php_homegear_startup(sapi_module_struct *sapi_module)
 
 static int php_homegear_activate(TSRMLS_D)
 {
-	std::cout << "php_homegear_activate" << std::endl;
 	return SUCCESS;
 }
 
 static int php_homegear_deactivate(TSRMLS_D)
 {
-	std::cout << "php_homegear_deactivate" << std::endl;
 	return SUCCESS;
 }
 
-extern sapi_module_struct php_homegear_module = {
-	"homegear",                       /* name */
-	"PHP Homegear Library",        /* pretty name */
+sapi_module_struct php_homegear_module = {
+	(char*)"homegear",                       /* name */
+	(char*)"PHP Homegear Library",        /* pretty name */
 
 	php_homegear_startup,              /* startup == MINIT. Called for each new thread. */
 	php_module_shutdown_wrapper,   /* shutdown == MSHUTDOWN. Called for each new thread. */
@@ -170,58 +179,233 @@ extern sapi_module_struct php_homegear_module = {
 };
 /* }}} */
 
-ZEND_FUNCTION(mein_blii) {
-	unsigned long index = TSRMG(homegear_globals_id, zend_homegear_globals*, index);
-	std::cout << "Index in mein_blii: " << index << std::endl;
-	php_printf("Hi!");
-}
-
-ZEND_FUNCTION(mein_blupp) {
-	RETURN_LONG(34);
-
-	std::cout << "mein_blupp..." << std::endl;
-	long number1;
-	long number2;
-
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll", &number1, &number2) != SUCCESS) {
-		RETURN_NULL();
-	}
-
-	/* set return value */
-	RETURN_LONG(number1 * number2);
-}
-
-ZEND_BEGIN_ARG_INFO(arginfo_foobar_void, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(arginfo_mein_blupp, 0, 0, 1)
-	ZEND_ARG_INFO(0, number1)
-	ZEND_ARG_INFO(0, number2)
-ZEND_END_ARG_INFO()
-
-static const zend_function_entry additional_functions[] = {
-	ZEND_FE(mein_blii, arginfo_foobar_void)
-	ZEND_FE(mein_blupp, arginfo_mein_blupp)
-	{NULL, NULL, NULL}
-};
-
 static void php_homegear_globals_ctor(zend_homegear_globals* homegear_globals TSRMLS_DC)
 {
-	homegear_globals->index = std::rand();
-	std::cout << "Setting globals index to: " << homegear_globals->index << std::endl;
+
 }
 
 static void php_homegear_globals_dtor(zend_homegear_globals* homegear_globals TSRMLS_DC)
 {
-	std::cout << "Cleaning up globals." << std::endl;
+
 }
+
+void php_homegear_invoke_rpc(std::string& methodName, std::shared_ptr<BaseLib::RPC::Variable>& parameters, int ht, zval *return_value, zval **return_value_ptr, zval *this_ptr, int return_value_used , void ***tsrm_ls)
+{
+	std::shared_ptr<BaseLib::RPC::Variable> result = GD::rpcServers.begin()->second.callMethod(methodName, parameters);
+	if(result->errorStruct)
+	{
+		std::string errorString("RPC error (Code " + std::to_string(result->structValue->at("faultCode")->integerValue) + "): " + result->structValue->at("faultString")->stringValue);
+		zend_error(E_ERROR, "%s", errorString.c_str());
+		RETURN_FALSE;
+	}
+	PHPVariableConverter::getPHPVariable(result, return_value);
+}
+
+/* Script engine specific functions */
+
+ZEND_FUNCTION(hg_auth)
+{
+	char* pName = nullptr;
+	int32_t nameLength = 0;
+	char* pPassword = nullptr;
+	int32_t passwordLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
+	if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
+	if(User::verify(std::string(pName, nameLength), std::string(pPassword, passwordLength))) RETURN_TRUE;
+	RETURN_FALSE;
+}
+
+ZEND_FUNCTION(hg_create_user)
+{
+	char* pName = nullptr;
+	int32_t nameLength = 0;
+	char* pPassword = nullptr;
+	int32_t passwordLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
+	if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
+	if(User::create(std::string(pName, nameLength), std::string(pPassword, passwordLength))) RETURN_TRUE;
+	RETURN_FALSE;
+}
+
+ZEND_FUNCTION(hg_delete_user)
+{
+	char* pName = nullptr;
+	int32_t nameLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
+	if(nameLength == 0) RETURN_FALSE;
+	if(User::remove(std::string(pName, nameLength))) RETURN_TRUE;
+	RETURN_FALSE;
+}
+
+ZEND_FUNCTION(hg_invoke)
+{
+	int32_t argc = ZEND_NUM_ARGS();
+	zval*** args = (zval ***)safe_emalloc(argc, sizeof(zval**), 0);
+	if (argc == 0 || zend_get_parameters_array_ex(argc, args) == FAILURE)
+	{
+        efree(args);
+        WRONG_PARAM_COUNT;
+    }
+	if(Z_TYPE_PP(args[0]) != IS_STRING)
+	{
+		efree(args);
+		zend_error(E_ERROR, "Function requires string as first argument.");
+		RETURN_FALSE;
+	}
+	std::string methodName(Z_STRVAL_P(*args[0]), Z_STRLEN_P(*args[0]));
+	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+	for(int32_t i = 1; i < argc; i++)
+	{
+		std::shared_ptr<BaseLib::RPC::Variable> parameter = PHPVariableConverter::getVariable(*args[i]);
+		if(parameter) parameters->arrayValue->push_back(parameter);
+	}
+	efree(args);
+	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used, tsrm_ls);
+}
+
+ZEND_FUNCTION(hg_update_user)
+{
+	char* pName = nullptr;
+	int32_t nameLength = 0;
+	char* pPassword = nullptr;
+	int32_t passwordLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
+	if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
+	if(User::update(std::string(pName, nameLength), std::string(pPassword, passwordLength))) RETURN_TRUE;
+	RETURN_FALSE;
+}
+
+ZEND_FUNCTION(hg_user_exists)
+{
+	char* pName = nullptr;
+	int32_t nameLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
+	if(nameLength == 0) RETURN_FALSE;
+	if(User::exists(std::string(pName, nameLength))) RETURN_TRUE;
+	RETURN_FALSE;
+}
+
+ZEND_FUNCTION(hg_users)
+{
+	std::map<uint64_t, std::string> users;
+	User::getAll(users);
+	array_init(return_value);
+	for(std::map<uint64_t, std::string>::iterator i = users.begin(); i != users.end(); ++i)
+	{
+		add_next_index_string(return_value, i->second.c_str(), i->second.size());
+	}
+}
+
+/* RPC functions */
+
+ZEND_FUNCTION(hg_get_meta)
+{
+	uint32_t id = 0;
+	char* pName = nullptr;
+	int32_t nameLength = 0;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ls", &id, &pName, &nameLength) != SUCCESS) RETURN_NULL();
+	std::string methodName("getMetadata");
+	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(id)));
+	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string(pName, nameLength))));
+	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used, tsrm_ls);
+}
+
+ZEND_FUNCTION(hg_get_system)
+{
+	char* pName = nullptr;
+	int32_t nameLength = 0;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s",&pName, &nameLength) != SUCCESS) RETURN_NULL();
+	std::string methodName("getSystemVariable");
+	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string(pName, nameLength))));
+	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used, tsrm_ls);
+}
+
+ZEND_FUNCTION(hg_get_value)
+{
+	uint32_t id = 0;
+	int32_t channel = -1;
+	char* pParameterName = nullptr;
+	int32_t parameterNameLength = 0;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lls", &id, &channel, &pParameterName, &parameterNameLength) != SUCCESS) RETURN_NULL();
+	std::string methodName("getValue");
+	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(id)));
+	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(channel)));
+	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string(pParameterName, parameterNameLength))));
+	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used, tsrm_ls);
+}
+
+ZEND_FUNCTION(hg_set_meta)
+{
+	uint32_t id = 0;
+	char* pName = nullptr;
+	int32_t nameLength = 0;
+	zval* newValue;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lsz", &id, &pName, &nameLength, &newValue) != SUCCESS) RETURN_NULL();
+	std::string methodName("setMetadata");
+	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(id)));
+	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string(pName, nameLength))));
+	std::shared_ptr<BaseLib::RPC::Variable> parameter = PHPVariableConverter::getVariable(newValue);
+	if(parameter) parameters->arrayValue->push_back(parameter);
+	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used, tsrm_ls);
+}
+
+ZEND_FUNCTION(hg_set_system)
+{
+	char* pName = nullptr;
+	int32_t nameLength = 0;
+	zval* newValue;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz", &pName, &nameLength, &newValue) != SUCCESS) RETURN_NULL();
+	std::string methodName("setSystemVariable");
+	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string(pName, nameLength))));
+	std::shared_ptr<BaseLib::RPC::Variable> parameter = PHPVariableConverter::getVariable(newValue);
+	if(parameter) parameters->arrayValue->push_back(parameter);
+	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used, tsrm_ls);
+}
+
+ZEND_FUNCTION(hg_set_value)
+{
+	uint32_t id = 0;
+	int32_t channel = -1;
+	char* pParameterName = nullptr;
+	int32_t parameterNameLength = 0;
+	zval* newValue;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "llsz", &id, &channel, &pParameterName, &parameterNameLength, &newValue) != SUCCESS) RETURN_NULL();
+	std::string methodName("setValue");
+	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(id)));
+	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(channel)));
+	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string(pParameterName, parameterNameLength))));
+	std::shared_ptr<BaseLib::RPC::Variable> parameter = PHPVariableConverter::getVariable(newValue);
+	if(parameter) parameters->arrayValue->push_back(parameter);
+	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used, tsrm_ls);
+}
+
+static const zend_function_entry additional_functions[] = {
+	ZEND_FE(hg_auth, NULL)
+	ZEND_FE(hg_create_user, NULL)
+	ZEND_FE(hg_delete_user, NULL)
+	ZEND_FE(hg_invoke, NULL)
+	ZEND_FE(hg_update_user, NULL)
+	ZEND_FE(hg_user_exists, NULL)
+	ZEND_FE(hg_users, NULL)
+	ZEND_FE(hg_get_meta, NULL)
+	ZEND_FE(hg_get_system, NULL)
+	ZEND_FE(hg_get_value, NULL)
+	ZEND_FE(hg_set_meta, NULL)
+	ZEND_FE(hg_set_system, NULL)
+	ZEND_FE(hg_set_value, NULL)
+	{NULL, NULL, NULL}
+};
 
 int php_homegear_init()
 {
 	tsrm_startup(1, 1, 0, NULL);
 	sapi_startup(&php_homegear_module);
-	php_homegear_module.ini_entries = (char*)malloc(sizeof(HARDCODED_INI));
-	memcpy(php_homegear_module.ini_entries, HARDCODED_INI, sizeof(HARDCODED_INI));
 	php_homegear_module.additional_functions = additional_functions;
 	sapi_module.startup(&php_homegear_module);
 

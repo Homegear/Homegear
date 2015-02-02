@@ -638,12 +638,7 @@ public:
 		addSignature(BaseLib::RPC::VariableType::rpcInteger, std::vector<BaseLib::RPC::VariableType>{BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString});
 		addSignature(BaseLib::RPC::VariableType::rpcInteger, std::vector<BaseLib::RPC::VariableType>{BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcBoolean});
 	}
-	virtual ~RPCRunScript();
 	std::shared_ptr<BaseLib::RPC::Variable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
-protected:
-	bool _disposing = false;
-	std::mutex _runScriptThreadMutex;
-	std::thread _runScriptThread;
 };
 
 class RPCSearchDevices : public RPCMethod

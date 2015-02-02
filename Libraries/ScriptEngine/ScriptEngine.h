@@ -31,10 +31,11 @@
 #define SCRIPTENGINE_H_
 
 #include "../../Modules/Base/BaseLib.h"
+#include "php_sapi.h"
 
 #include <mutex>
-
-#include "php_sapi.h"
+#include <future>
+#include <wordexp.h>
 
 class ScriptEngine
 {
@@ -43,10 +44,17 @@ public:
 	virtual ~ScriptEngine();
 	void dispose();
 
-	int32_t execute(const std::string& path, const std::string& arguments);
+	std::vector<std::string> getArgs(const std::string& args);
+	int32_t execute(const std::string path, const std::string arguments, bool wait = true);
 	int32_t executeWebRequest(const std::string& path, const std::vector<char>& request, std::vector<char>& output, std::vector<std::string>& headers);
 
 protected:
 	bool _disposing = false;
+	volatile int32_t _currentScriptThreadID = 0;
+	std::map<int32_t, std::future<int32_t>> _scriptThreads;
+	std::mutex _scriptThreadMutex;
+
+	void collectGarbage();
+	bool scriptThreadMaxReached();
 };
 #endif

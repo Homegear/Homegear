@@ -1,0 +1,16 @@
+apt-get build-dep libphp5-embed
+apt-get install devscripts
+apt-get source libphp5-embed
+
+cd php5-XXX
+Edit "debian/rules"
+Add the following to COMMON_CONFIG=...:
+	--enable-maintainer-zts \
+	--enable-pthreads
+
+Add changelog entry and increase version number with "dch -i":
+	Version: 5.X.99-0+hgu1
+	Change log entry: Rebuild with ZTS support.
+mv source package to "php5_5.X.99+hgu1.orig.tar.gz"
+cd php-XXX again
+DEB_BUILD_OPTIONS=nocheck debuild

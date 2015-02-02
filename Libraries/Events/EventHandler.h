@@ -123,7 +123,6 @@ protected:
 	//Event thraeds
 	int64_t _lastGargabeCollection = 0;
 	volatile int32_t _currentEventThreadID = 0;
-	//Future of type void would be enough, but causes compilation to fail on Debian 7 armel with g++ 4.7
 	std::map<int32_t, std::future<bool>> _eventThreads;
 	std::mutex _eventThreadMutex;
 
