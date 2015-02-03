@@ -250,10 +250,11 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 
 int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& request, std::vector<char>& output, std::vector<std::string>& headers)
 {
+	if(_disposing) return 1;
+	TSRMLS_FETCH();
+	char* request_method = nullptr;
 	try
 	{
-		if(_disposing) return 1;
-
 		zend_file_handle script;
 
 		/* Set up a File Handle structure */
@@ -263,43 +264,49 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& 
 		script.opened_path = NULL;
 		script.free_filename = 0;
 
-		TSRMLS_FETCH();
 		php_homegear_get_globals(TSRMLS_C)->output = &output;
+		php_homegear_get_globals(TSRMLS_C)->http = &request;
 
 		PG(during_request_startup) = 0;
+		SG(server_context) = (void*)&request; //Must be defined! Otherwise POST data is not processed.
 		SG(sapi_headers).http_response_code = 200;
-		SG(request_info).content_type = request.getHeader()->contentType.c_str();
+		SG(request_info).content_length = request.getHeader()->contentLength;
+		if(!request.getHeader()->contentType.empty()) SG(request_info).content_type = request.getHeader()->contentType.c_str();
+		request_method = request.getHeader()->method == BaseLib::HTTP::Method::post ? estrndup("POST", 4) : estrndup("GET", 3);
+		SG(request_info).request_method = request_method;
 		SG(request_info).proto_num = request.getHeader()->protocol == BaseLib::HTTP::Protocol::http10 ? 1000 : 1001;
 		std::string uri = (request.getHeader()->path.front() == '/') ? request.getHeader()->host + request.getHeader()->path : request.getHeader()->path;
-		char query_string[request.getHeader()->args.size() + 1];
-		if(!request.getHeader()->args.empty())
-		{
-			strncpy(query_string, &request.getHeader()->args.at(0), request.getHeader()->args.size() + 1);
-			SG(request_info).query_string = query_string;
-		}
-		char request_uri[uri.size() + 1];
-		if(!uri.empty())
-		{
-			strncpy(request_uri, &uri.at(0), uri.size() + 1);
-			SG(request_info).request_uri = request_uri;
-		}
-		char path_translated[path.size() + 1];
-		if(!path.empty())
-		{
-			strncpy(path_translated, &path.at(0), path.size() + 1);
-			SG(request_info).path_translated = path_translated;
-		}
-		SG(request_info).content_length = request.getHeader()->contentLength;
+		if(!request.getHeader()->args.empty()) SG(request_info).query_string = estrndup(&request.getHeader()->args.at(0), request.getHeader()->args.size());
+		if(!uri.empty()) SG(request_info).request_uri = estrndup(&uri.at(0), uri.size());
+		if(!path.empty()) SG(request_info).path_translated = estrndup(&path.at(0), path.size());
+
+		std::cerr << "Moin0 " << (int64_t)SG(request_info).cookie_data << std::endl << std::flush;
+		std::cerr << "Moin0 " << SG(request_info).content_length << std::endl << std::flush;
+		std::cerr << "Moin0 " << SG(request_info).path_translated << std::endl << std::flush;
+
+		SG(request_info).content_length = 0;
 
 		if (php_request_startup(TSRMLS_C) == FAILURE) {
 			GD::bl->out.printError("Error calling php_request_startup...");
 			return 1;
 		}
 
+		std::cerr << "Moin1 " << (int64_t)SG(request_info).cookie_data << std::endl << std::flush;
+		std::cerr << "Moin1 " << SG(request_info).content_length << std::endl << std::flush;
+		std::cerr << "Moin1 " << SG(request_info).path_translated << std::endl << std::flush;
+
 		php_execute_script(&script TSRMLS_CC);
 		int32_t exitCode = EG(exit_status);
 
+		std::cerr << "Moin2 " << SG(request_info).content_length << std::endl;
+
 		php_request_shutdown(NULL);
+
+		if(request_method) efree(request_method);
+
+		if(SG(request_info).query_string) efree(SG(request_info).query_string);
+		if(SG(request_info).request_uri) efree(SG(request_info).request_uri);
+		if(SG(request_info).path_translated) efree(SG(request_info).path_translated);
 
 		return exitCode;
 	}
@@ -317,5 +324,9 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& 
 	}
 	std::string error("Error executing script. Check Homegear log for more details.");
 	output.insert(output.end(), error.begin(), error.end());
+	if(request_method) efree(request_method);
+	if(SG(request_info).query_string) efree(SG(request_info).query_string);
+	if(SG(request_info).request_uri) efree(SG(request_info).request_uri);
+	if(SG(request_info).path_translated) efree(SG(request_info).path_translated);
 	return 1;
 }

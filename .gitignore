@@ -48,3 +48,6 @@ local.properties
 .target
 # TeXlipse plugin
 .texlipse
+premake4.lua
+Makefile
+.make

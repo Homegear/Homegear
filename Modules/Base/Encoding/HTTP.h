@@ -119,6 +119,7 @@ public:
 	bool dataProcessingStarted() { return _dataProcessingStarted; }
 	std::string decodeURL(const std::string& url);
 	size_t readStream(char* buffer, size_t requestLength);
+	size_t readContentStream(char* buffer, size_t requestLength);
 private:
 	bool _headerProcessingStarted = false;
 	bool _dataProcessingStarted = false;
@@ -133,6 +134,7 @@ private:
 	int32_t _endChunkSizeBytes = -1;
 	std::string _partialChunkSize;
 	size_t _streamPos = 0;
+	size_t _contentStreamPos = 0;
 	Math _math;
 
 	void processHeader(char** buffer, int32_t& bufferLength);

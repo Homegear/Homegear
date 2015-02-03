@@ -30,6 +30,8 @@
 #ifndef HOMEGEAR_PHP_SAPI_H_
 #define HOMEGEAR_PHP_SAPI_H_
 
+#include "../../Modules/Base/BaseLib.h"
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -49,6 +51,7 @@
 #define PTSRMLS_CC       , PTSRMLS_C
 
 ZEND_BEGIN_MODULE_GLOBALS(homegear)
+	BaseLib::HTTP* http = nullptr;
 	std::vector<char>* output = nullptr;
 	std::vector<std::string>* headers = nullptr;
 ZEND_END_MODULE_GLOBALS(homegear)

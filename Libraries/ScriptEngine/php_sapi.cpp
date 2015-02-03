@@ -78,13 +78,15 @@ void php_homegear_build_argv(std::vector<std::string>& arguments TSRMLS_DC)
 
 static int php_homegear_read_post(char *buf, uint count_bytes TSRMLS_DC)
 {
-	std::cout << "php_homegear_read_post" << std::endl;
-	return count_bytes;
+	std::cout << "php_homegear_read_post " << SG(request_info).content_length << std::endl << std::flush;
+	BaseLib::HTTP* http = SEG(http);
+	if(!http) return 0;
+	return  http->readContentStream(buf, count_bytes);
 }
 
 static char* php_homegear_read_cookies(TSRMLS_D)
 {
-	std::cout << "php_homegear_read_cookies" << std::endl;
+	std::cout << "php_homegear_read_cookies " << SG(request_info).content_length << std::endl << std::flush;
 	return NULL;
 }
 
@@ -127,11 +129,7 @@ static void php_homegear_register_variables(zval *track_vars_array TSRMLS_DC)
 
 static int php_homegear_startup(sapi_module_struct *sapi_module)
 {
-	if (php_module_startup(sapi_module, NULL, 0)==FAILURE) {
-		return FAILURE;
-	}
-
-	return SUCCESS;
+	return php_module_startup(sapi_module, NULL, 0);
 }
 
 static int php_homegear_activate(TSRMLS_D)
@@ -237,27 +235,24 @@ ZEND_FUNCTION(hg_delete_user)
 
 ZEND_FUNCTION(hg_invoke)
 {
-	int32_t argc = ZEND_NUM_ARGS();
-	zval*** args = (zval ***)safe_emalloc(argc, sizeof(zval**), 0);
-	if (argc == 0 || zend_get_parameters_array_ex(argc, args) == FAILURE)
+	char* pMethodName = nullptr;
+	int32_t methodNameLength = 0;
+	int32_t argc = 0;
+	zval*** args = NULL;
+	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s*", &pMethodName, &methodNameLength, &args, &argc) != SUCCESS) RETURN_NULL();
+	if(methodNameLength == 0)
 	{
-        efree(args);
-        WRONG_PARAM_COUNT;
-    }
-	if(Z_TYPE_PP(args[0]) != IS_STRING)
-	{
-		efree(args);
-		zend_error(E_ERROR, "Function requires string as first argument.");
+		if(args) efree(args);
 		RETURN_FALSE;
 	}
-	std::string methodName(Z_STRVAL_P(*args[0]), Z_STRLEN_P(*args[0]));
+	std::string methodName(std::string(pMethodName, methodNameLength));
 	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
-	for(int32_t i = 1; i < argc; i++)
+	for(int32_t i = 0; i < argc; i++)
 	{
 		std::shared_ptr<BaseLib::RPC::Variable> parameter = PHPVariableConverter::getVariable(*args[i]);
 		if(parameter) parameters->arrayValue->push_back(parameter);
 	}
-	efree(args);
+	if(args) efree(args);
 	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used, tsrm_ls);
 }
 

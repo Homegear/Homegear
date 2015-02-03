@@ -438,4 +438,19 @@ size_t HTTP::readStream(char* buffer, size_t requestLength)
 	return bytesRead;
 }
 
+size_t HTTP::readContentStream(char* buffer, size_t requestLength)
+{
+	ssize_t bytesRead = 0;
+	if(_contentStreamPos < _content->size())
+	{
+		size_t length = requestLength;
+		if(_contentStreamPos + length > _content->size()) length = _content->size() - _contentStreamPos;
+		memcpy(buffer, &_content->at(_contentStreamPos), length);
+		_contentStreamPos += length;
+		bytesRead += length;
+		requestLength -= length;
+	}
+	return bytesRead;
+}
+
 }
