@@ -50,4 +50,4 @@ local.properties
 .texlipse
 premake4.lua
 Makefile
-.make
+*.make
