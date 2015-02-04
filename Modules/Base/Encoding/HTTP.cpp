@@ -33,6 +33,131 @@
 
 namespace BaseLib
 {
+std::map <std::string, std::string> HTTP::_extMimeTypeMap = {
+	{"html", "text/html"},
+	{"htm", "text/html"},
+	{"js", "text/javascript"},
+	{"css", "text/css"},
+	{"gif", "image/gif"},
+	{"jpg", "image/jpeg"},
+	{"jpeg", "image/jpeg"},
+	{"jpe", "image/jpeg"},
+	{"pdf", "application/pdf"},
+	{"png", "image/png"},
+	{"svg", "image/svg+xml"},
+	{"txt", "text/plain"},
+	{"webm", "video/webm"},
+	{"ogv", "video/ogg"},
+	{"ogg", "video/ogg"},
+	{"3gp", "video/3gpp"},
+	{"apk", "application/vnd.android.package-archive"},
+	{"avi", "video/x-msvideo"},
+	{"bmp", "image/x-ms-bmp"},
+	{"csv", "text/comma-separated-values"},
+	{"doc", "application/msword"},
+	{"docx", "application/msword"},
+	{"flac", "audio/flac"},
+	{"gz", "application/x-gzip"},
+	{"gzip", "application/x-gzip"},
+	{"ics", "text/calendar"},
+	{"kml", "application/vnd.google-earth.kml+xml"},
+	{"kmz", "application/vnd.google-earth.kmz"},
+	{"m4a", "audio/mp4"},
+	{"mp3", "audio/mpeg"},
+	{"mp4", "video/mp4"},
+	{"mpg", "video/mpeg"},
+	{"mpeg", "video/mpeg"},
+	{"mov", "video/quicktime"},
+	{"odp", "application/vnd.oasis.opendocument.presentation"},
+	{"ods", "application/vnd.oasis.opendocument.spreadsheet"},
+	{"odt", "application/vnd.oasis.opendocument.text"},
+	{"oga", "audio/ogg"},
+	{"pptx", "application/vnd.ms-powerpoint"},
+	{"pps", "application/vnd.ms-powerpoint"},
+	{"qt", "video/quicktime"},
+	{"swf", "application/x-shockwave-flash"},
+	{"tar", "application/x-tar"},
+	{"text", "text/plain"},
+	{"tif", "image/tiff"},
+	{"tiff", "image/tiff"},
+	{"wav", "audio/wav"},
+	{"wmv", "video/x-ms-wmv"},
+	{"xls", "application/vnd.ms-excel"},
+	{"xlsx", "application/vnd.ms-excel"},
+	{"zip", "application/zip"},
+	{"xml", "application/xml"},
+	{"xsl", "application/xml"},
+	{"xsd", "application/xml"},
+
+	{"xhtml", "application/xhtml+xml"},
+	{"json", "application/json"},
+	{"dtd", "application/xml-dtd"},
+	{"xslt", "application/xslt+xml"},
+	{"java", "text/x-java-source,java"}
+};
+
+
+std::map <int32_t, std::string> HTTP::_statusCodeMap = {
+	{100, "Continue"},
+	{101, "Switching Protocols"},
+	{200, "OK"},
+	{201, "Created"},
+	{202, "Accepted"},
+	{203, "Non-Authoritative Information"},
+	{204, "No Content"},
+	{205, "Reset Content"},
+	{206, "Partial Content"},
+	{300, "Multiple Choices"},
+	{301, "Moved Permanently"},
+	{302, "Found"},
+	{303, "See Other"},
+	{304, "Not Modified"},
+	{305, "Use Proxy"},
+	{307, "Temporary Redirect"},
+	{308, "Permanent Redirect"},
+	{400, "Bad Request"},
+	{401, "Unauthorized"},
+	{402, "Payment Required"},
+	{403, "Forbidden"},
+	{404, "Not Found"},
+	{405, "Method Not Allowed"},
+	{406, "Not Acceptable"},
+	{407, "Proxy Authentication Required"},
+	{408, "Request Timeout"},
+	{409, "Conflict"},
+	{410, "Gone"},
+	{411, "Length Required"},
+	{412, "Precondition Failed"},
+	{413, "Request Entity Too Large"},
+	{414, "Request-URI Too Long"},
+	{415, "Unsupported Media Type"},
+	{416, "Requested Range Not Satisfiable"},
+	{417, "Expectation Failed"},
+	{426, "Upgrade Required"},
+	{428, "Precondition Required"},
+	{429, "Too Many Requests"},
+	{431, "Request Header Fields Too Large"},
+	{500, "Internal Server Error"},
+	{501, "Not Implemented"},
+	{502, "Bad Gateway"},
+	{503, "Service Unavailable"},
+	{504, "Gateway Timeout"},
+	{505, "HTTP Version Not Supported"},
+	{511, "Network Authentication Required"}
+};
+
+std::string HTTP::getMimeType(std::string extension)
+{
+	if(_extMimeTypeMap.find(extension) != _extMimeTypeMap.end()) return _extMimeTypeMap[extension];
+	return "";
+}
+
+std::string HTTP::getStatusText(int32_t code)
+{
+	if(_statusCodeMap.find(code) != _statusCodeMap.end()) return _statusCodeMap[code];
+	return "";
+}
+
 HTTP::HTTP()
 {
 	_content.reset(new std::vector<char>());
@@ -46,7 +171,7 @@ void HTTP::process(char* buffer, int32_t bufferLength, bool checkForChunkedXML)
 	_headerProcessingStarted = true;
 	if(!_header.parsed) processHeader(&buffer, bufferLength);
 	if(!_header.parsed) return;
-	if(_header.method == Method::Enum::get)
+	if(_header.method == "GET")
 	{
 		_dataProcessingStarted = true;
 		setFinished();
@@ -139,28 +264,24 @@ void HTTP::processHeader(char** buffer, int32_t& bufferLength)
 	bufferLength -= headerSize;
 	*buffer += headerSize;
 
-	if(!strncmp(headerBuffer, "GET", 3))
-	{
-		_type = Type::Enum::request;
-		_header.method = Method::Enum::get;
-	}
-	else if(!strncmp(headerBuffer, "POST", 4))
-	{
-		_type = Type::Enum::request;
-		_header.method = Method::Enum::post;
-	}
-	else if(!strncmp(headerBuffer, "HTTP/1.", 7))
+	if(!strncmp(headerBuffer, "HTTP/1.", 7))
 	{
 		_type = Type::Enum::response;
 		_header.responseCode = strtol(headerBuffer + 9, NULL, 10);
 		if(_header.responseCode != 200) throw HTTPException("Response code was: " + std::to_string(_header.responseCode));
 	}
-	else throw HTTPException("Unknown HTTP request method.");
-
-	if(_header.method != Method::Enum::none)
+	else
 	{
-		int32_t startPos = (_header.method == HTTP::Method::post) ? 5 : 4;
-		char* endPos = strchr(headerBuffer + startPos, ' ');
+		char* endPos = (char*)memchr(headerBuffer, ' ', 10);
+		if(!endPos) throw HTTPException("Your client sent a request that this server could not understand.");
+		_type = Type::Enum::request;
+		_header.method = std::string(headerBuffer, endPos);
+	}
+
+	if(!_header.method.empty())
+	{
+		int32_t startPos = _header.method.size() + 1;
+		char* endPos = (char*)memchr(headerBuffer + startPos, ' ', _rawHeader->size());
 		if(!endPos) throw HTTPException("Your client sent a request that this server could not understand.");
 		_header.path = std::string(headerBuffer + startPos, (int32_t)(endPos - headerBuffer - startPos));
 		int32_t pos = _header.path.find('?');
@@ -171,7 +292,6 @@ void HTTP::processHeader(char** buffer, int32_t& bufferLength)
 		}
 		_header.path = decodeURL(_header.path);
 		HelperFunctions::stringReplace(_header.path, "../", "");
-
 
 		if(!strncmp(endPos + 1, "HTTP/1.1", 8)) _header.protocol = HTTP::Protocol::http11;
 		else if(!strncmp(endPos + 1, "HTTP/1.0", 8)) _header.protocol = HTTP::Protocol::http10;
@@ -255,6 +375,13 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 			if(pos == (signed)std::string::npos) s.clear(); else s.erase(0, pos + 1);
 		}
 	}
+	else if(!strnaicmp(name, "cookie", nameSize)) _header.cookie = std::string(value, valueSize);
+	else if(!strnaicmp(name, "referer", nameSize)) _header.referer = std::string(value, valueSize);
+	else if(!strnaicmp(name, "user-agent", nameSize)) _header.userAgent = std::string(value, valueSize);
+	else if(!strnaicmp(name, "accept", nameSize)) _header.accept = std::string(value, valueSize);
+	else if(!strnaicmp(name, "accept-language", nameSize)) _header.acceptLanguage = std::string(value, valueSize);
+	else if(!strnaicmp(name, "accept-encoding", nameSize)) _header.acceptEncoding = std::string(value, valueSize);
+	else if(!strnaicmp(name, "cookie", nameSize)) _header.cookie = std::string(value, valueSize);
 	else if(!strnaicmp(name, "authorization", nameSize)) _header.authorization = std::string(value, valueSize);
 }
 

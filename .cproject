@@ -123,11 +123,11 @@
 								</option>
 								<option id="gnu.cpp.compiler.option.include.paths.1056346228" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/usr/include/c++/4.8"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/main"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/sapi"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/TSRM"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/Zend"/>
+									<listOptionValue builtIn="false" value="/usr/include/php5"/>
+									<listOptionValue builtIn="false" value="/usr/include/php5/main"/>
+									<listOptionValue builtIn="false" value="/usr/include/php5/sapi"/>
+									<listOptionValue builtIn="false" value="/usr/include/php5/TSRM"/>
+									<listOptionValue builtIn="false" value="/usr/include/php5/Zend"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1073675196" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -136,11 +136,6 @@
 								<option id="gnu.c.compiler.exe.debug.option.debugging.level.1324059028" name="Debug Level" superClass="gnu.c.compiler.exe.debug.option.debugging.level" value="gnu.c.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.include.paths.1979052756" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/usr/include/c++/4.8"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/main"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/sapi"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/TSRM"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/Zend"/>
 								</option>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.1670075670" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="__GXX_EXPERIMENTAL_CXX0X__=1"/>
@@ -166,11 +161,6 @@
 							<tool command="as" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GASErrorParser" id="cdt.managedbuild.tool.gnu.assembler.exe.debug.1534907246" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.exe.debug">
 								<option id="gnu.both.asm.option.include.paths.1149245389" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/usr/include/c++/4.8"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/main"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/sapi"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/TSRM"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/Zend"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1463545320" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
@@ -300,11 +290,11 @@
 									<listOptionValue builtIn="false" value="&quot;W:\lib\gcc\x86_64-linux-gnu\4.7\include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;W:\lib\gcc\x86_64-linux-gnu\4.7\include-fixed&quot;"/>
 									<listOptionValue builtIn="false" value="/usr/include/c++/4.8"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/main"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/sapi"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/TSRM"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/Zend"/>
+									<listOptionValue builtIn="false" value="/usr/include/php5"/>
+									<listOptionValue builtIn="false" value="/usr/include/php5/main"/>
+									<listOptionValue builtIn="false" value="/usr/include/php5/sapi"/>
+									<listOptionValue builtIn="false" value="/usr/include/php5/TSRM"/>
+									<listOptionValue builtIn="false" value="/usr/include/php5/Zend"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.852683577" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -317,11 +307,6 @@
 									<listOptionValue builtIn="false" value="&quot;W:\lib\gcc\x86_64-linux-gnu\4.7\include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;W:\lib\gcc\x86_64-linux-gnu\4.7\include-fixed&quot;"/>
 									<listOptionValue builtIn="false" value="/usr/include/c++/4.8"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/main"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/sapi"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/TSRM"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/Zend"/>
 								</option>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.1308428511" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="__GXX_EXPERIMENTAL_CXX0X__=1"/>
@@ -345,11 +330,6 @@
 							<tool id="cdt.managedbuild.tool.gnu.assembler.exe.release.380417495" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.exe.release">
 								<option id="gnu.both.asm.option.include.paths.102057658" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/usr/include/c++/4.8"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/main"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/sapi"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/TSRM"/>
-									<listOptionValue builtIn="false" value="/var/lib/homegear/modules/php/include/php/Zend"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1337759836" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>

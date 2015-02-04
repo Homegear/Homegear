@@ -263,11 +263,11 @@ solution "homegear"
       files { "./Libraries/User/*.h", "./Libraries/User/*.cpp" }
       includedirs
       {
-         "./Includes/PHP",
-         "./Includes/PHP/main",
-         "./Includes/PHP/sapi",
-         "./Includes/PHP/TSRM",
-         "./Includes/PHP/Zend"
+         "/usr/include/php5",
+         "/usr/include/php5/main",
+         "/usr/include/php5/sapi",
+         "/usr/include/php5/TSRM",
+         "/usr/include/php5/Zend"
       }
       buildoptions { "-Wall", "-std=c++11" }
  
@@ -294,11 +294,11 @@ solution "homegear"
       files { "./Libraries/RPC/*.h", "./Libraries/RPC/*.cpp" }
       includedirs
       {
-         "./Includes/PHP",
-         "./Includes/PHP/main",
-         "./Includes/PHP/sapi",
-         "./Includes/PHP/TSRM",
-         "./Includes/PHP/Zend"
+         "/usr/include/php5",
+         "/usr/include/php5/main",
+         "/usr/include/php5/sapi",
+         "/usr/include/php5/TSRM",
+         "/usr/include/php5/Zend"
       }
       buildoptions { "-Wall", "-std=c++11" }
  
@@ -325,11 +325,11 @@ solution "homegear"
       files { "./Libraries/CLI/*.h", "./Libraries/CLI/*.cpp" }
       includedirs
       {
-         "./Includes/PHP",
-         "./Includes/PHP/main",
-         "./Includes/PHP/sapi",
-         "./Includes/PHP/TSRM",
-         "./Includes/PHP/Zend"
+         "/usr/include/php5",
+         "/usr/include/php5/main",
+         "/usr/include/php5/sapi",
+         "/usr/include/php5/TSRM",
+         "/usr/include/php5/Zend"
       }
       buildoptions { "-Wall", "-std=c++11" }
  
@@ -356,11 +356,11 @@ solution "homegear"
       files { "./Libraries/Events/*.h", "./Libraries/Events/*.cpp" }
       includedirs
       {
-         "./Includes/PHP",
-         "./Includes/PHP/main",
-         "./Includes/PHP/sapi",
-         "./Includes/PHP/TSRM",
-         "./Includes/PHP/Zend"
+         "/usr/include/php5",
+         "/usr/include/php5/main",
+         "/usr/include/php5/sapi",
+         "/usr/include/php5/TSRM",
+         "/usr/include/php5/Zend"
       }
       buildoptions { "-Wall", "-std=c++11" }
  
@@ -387,11 +387,11 @@ solution "homegear"
       files { "./Libraries/Database/*.h", "./Libraries/Database/*.cpp" }
       includedirs
       {
-         "./Includes/PHP",
-         "./Includes/PHP/main",
-         "./Includes/PHP/sapi",
-         "./Includes/PHP/TSRM",
-         "./Includes/PHP/Zend"
+         "/usr/include/php5",
+         "/usr/include/php5/main",
+         "/usr/include/php5/sapi",
+         "/usr/include/php5/TSRM",
+         "/usr/include/php5/Zend"
       }
       buildoptions { "-Wall", "-std=c++11" }
  
@@ -418,11 +418,11 @@ solution "homegear"
       files { "./Libraries/ScriptEngine/*.h", "./Libraries/ScriptEngine/*.cpp" }
       includedirs
       {
-         "./Includes/PHP",
-         "./Includes/PHP/main",
-         "./Includes/PHP/sapi",
-         "./Includes/PHP/TSRM",
-         "./Includes/PHP/Zend"
+         "/usr/include/php5",
+         "/usr/include/php5/main",
+         "/usr/include/php5/sapi",
+         "/usr/include/php5/TSRM",
+         "/usr/include/php5/Zend"
       }
       buildoptions { "-Wall", "-std=c++11" }
  
@@ -449,11 +449,11 @@ solution "homegear"
       files { "./Libraries/GD/*.h", "./Libraries/GD/*.cpp" }
       includedirs
       {
-         "./Includes/PHP",
-         "./Includes/PHP/main",
-         "./Includes/PHP/sapi",
-         "./Includes/PHP/TSRM",
-         "./Includes/PHP/Zend"
+         "/usr/include/php5",
+         "/usr/include/php5/main",
+         "/usr/include/php5/sapi",
+         "/usr/include/php5/TSRM",
+         "/usr/include/php5/Zend"
       }
       buildoptions { "-Wall", "-std=c++11" }
  
@@ -482,11 +482,11 @@ solution "homegear"
       linkoptions { "-l rpc", "-l dl", "-l pthread", "-l readline", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l scriptengine", "-l base", "-l gpg-error", "-l sqlite3", "-l php5" }
       includedirs
       {
-         "./Includes/PHP",
-         "./Includes/PHP/main",
-         "./Includes/PHP/sapi",
-         "./Includes/PHP/TSRM",
-         "./Includes/PHP/Zend"
+         "/usr/include/php5",
+         "/usr/include/php5/main",
+         "/usr/include/php5/sapi",
+         "/usr/include/php5/TSRM",
+         "/usr/include/php5/Zend"
       }
       buildoptions { "-Wall", "-std=c++11" }
  

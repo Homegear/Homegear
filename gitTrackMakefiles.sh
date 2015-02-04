@@ -10,6 +10,7 @@ elif [ "$1" = "start" ]; then
 	git update-index --no-assume-unchanged Makefile
 	git update-index --no-assume-unchanged *.make
 else
+	echo "This script enable's or disables git tracking of make files so you can change them without uploading the changes to the repository."
 	echo "Usage (execute in repository's root directory): gitTrackMakefiles.sh [start|stop]"
 fi
 

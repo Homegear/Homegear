@@ -31,13 +31,13 @@
 #define WEBSERVER_H_
 
 #include "../../Modules/Base/BaseLib.h"
-#include "ServerSettings.h"
+#include "ServerInfo.h"
 
 namespace RPC
 {
 	class WebServer {
 		public:
-			WebServer(std::shared_ptr<ServerSettings::Settings>& settings);
+			WebServer(std::shared_ptr<ServerInfo::Info>& serverInfo);
 			virtual ~WebServer();
 
 			void get(BaseLib::HTTP& http, std::vector<char>& content);
@@ -47,7 +47,7 @@ namespace RPC
 		protected:
 		private:
 			BaseLib::Output _out;
-			std::shared_ptr<ServerSettings::Settings> _settings;
+			std::shared_ptr<ServerInfo::Info> _serverInfo;
 
 			std::string getHeader(uint32_t contentLength, std::string contentType, int32_t code, std::string codeDescription, std::vector<std::string>& additionalHeaders);
 	};

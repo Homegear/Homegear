@@ -32,7 +32,7 @@ ifeq ($(config),debug)
   TARGETDIR  = lib/Debug
   TARGET     = $(TARGETDIR)/librpc.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DDEBUG
-  INCLUDES  += -IIncludes/PHP -IIncludes/PHP/main -IIncludes/PHP/sapi -IIncludes/PHP/TSRM -IIncludes/PHP/Zend
+  INCLUDES  += -I/usr/include/php5 -I/usr/include/php5/main -I/usr/include/php5/sapi -I/usr/include/php5/TSRM -I/usr/include/php5/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
@@ -54,7 +54,7 @@ ifeq ($(config),release)
   TARGETDIR  = lib/Release
   TARGET     = $(TARGETDIR)/librpc.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
-  INCLUDES  += -IIncludes/PHP -IIncludes/PHP/main -IIncludes/PHP/sapi -IIncludes/PHP/TSRM -IIncludes/PHP/Zend
+  INCLUDES  += -I/usr/include/php5 -I/usr/include/php5/main -I/usr/include/php5/sapi -I/usr/include/php5/TSRM -I/usr/include/php5/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
@@ -76,7 +76,7 @@ ifeq ($(config),profiling)
   TARGETDIR  = lib/Profiling
   TARGET     = $(TARGETDIR)/librpc.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
-  INCLUDES  += -IIncludes/PHP -IIncludes/PHP/main -IIncludes/PHP/sapi -IIncludes/PHP/TSRM -IIncludes/PHP/Zend
+  INCLUDES  += -I/usr/include/php5 -I/usr/include/php5/main -I/usr/include/php5/sapi -I/usr/include/php5/TSRM -I/usr/include/php5/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
@@ -97,12 +97,12 @@ OBJECTS := \
 	$(OBJDIR)/ClientSettings.o \
 	$(OBJDIR)/RPCMethod.o \
 	$(OBJDIR)/Auth.o \
-	$(OBJDIR)/ServerSettings.o \
 	$(OBJDIR)/RPCServer.o \
 	$(OBJDIR)/RPCMethods.o \
 	$(OBJDIR)/RPCClient.o \
 	$(OBJDIR)/Server.o \
 	$(OBJDIR)/Base64.o \
+	$(OBJDIR)/ServerInfo.o \
 	$(OBJDIR)/Webserver.o \
 	$(OBJDIR)/Client.o \
 
@@ -178,9 +178,6 @@ $(OBJDIR)/RPCMethod.o: Libraries/RPC/RPCMethod.cpp
 $(OBJDIR)/Auth.o: Libraries/RPC/Auth.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/ServerSettings.o: Libraries/RPC/ServerSettings.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RPCServer.o: Libraries/RPC/RPCServer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
@@ -194,6 +191,9 @@ $(OBJDIR)/Server.o: Libraries/RPC/Server.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Base64.o: Libraries/RPC/Base64.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/ServerInfo.o: Libraries/RPC/ServerInfo.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Webserver.o: Libraries/RPC/Webserver.cpp

@@ -300,6 +300,7 @@ std::string HMWired_SD::handleCLICommand(std::string command)
 			stringStream << "filters add\t\tAdds a packet filter" << std::endl;
 			stringStream << "filters remove\t\tRemoves a packet filter" << std::endl;
 			stringStream << "send\t\t\tSends a HomeMatic Wired packet" << std::endl;
+			stringStream << "sendraw\t\t\tSends arbitrary hex encoded data" << std::endl;
 			return stringStream.str();
 		}
 		if(command.compare(0, 12, "filters list") == 0)
@@ -492,6 +493,41 @@ std::string HMWired_SD::handleCLICommand(std::string command)
 			else stringStream << "Filter not found." << std::endl;
 			return stringStream.str();
 		}
+		else if(command.compare(0, 7, "sendraw") == 0)
+		{
+			std::string packetHex;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 1)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1)
+				{
+					if(element == "help") break;
+					packetHex = element;
+				}
+				index++;
+			}
+			if(index == 1)
+			{
+				stringStream << "Description: Sends raw binary data." << std::endl;
+				stringStream << "Usage: send PACKET" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  PACKET:\tThe hex encoded packet to send" << std::endl;
+				return stringStream.str();
+			}
+
+			std::vector<uint8_t> packet = BaseLib::HelperFunctions::hexToBin(packetHex);
+			GD::physicalInterface->sendPacket(packet);
+			stringStream << "Packet sent: " << BaseLib::HelperFunctions::getHexString(packet) << std::endl;
+			return stringStream.str();
+		}
 		else if(command.compare(0, 4, "send") == 0)
 		{
 			std::string packetHex;
@@ -525,41 +561,6 @@ std::string HMWired_SD::handleCLICommand(std::string command)
 			std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(packetHex));
 			sendPacket(packet, false);
 			stringStream << "Packet sent: " << packet->hexString() << std::endl;
-			return stringStream.str();
-		}
-		else if(command.compare(0, 7, "sendraw") == 0)
-		{
-			std::string packetHex;
-
-			std::stringstream stream(command);
-			std::string element;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index < 1)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1)
-				{
-					if(element == "help") break;
-					packetHex = element;
-				}
-				index++;
-			}
-			if(index == 1)
-			{
-				stringStream << "Description: Sends raw binary data." << std::endl;
-				stringStream << "Usage: send PACKET" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  PACKET:\tThe hex encoded packet to send" << std::endl;
-				return stringStream.str();
-			}
-
-			std::vector<uint8_t> packet(&packetHex.at(0), &packetHex.at(0) + packetHex.size());
-			GD::physicalInterface->sendPacket(packet);
-			stringStream << "Packet sent: " << packetHex << std::endl;
 			return stringStream.str();
 		}
 		else return "Unknown command.\n";

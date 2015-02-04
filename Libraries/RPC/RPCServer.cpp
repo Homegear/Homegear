@@ -54,7 +54,7 @@ RPCServer::RPCServer()
 	_xmlRpcDecoder = std::unique_ptr<BaseLib::RPC::XMLRPCDecoder>(new BaseLib::RPC::XMLRPCDecoder(GD::bl.get()));
 	_xmlRpcEncoder = std::unique_ptr<BaseLib::RPC::XMLRPCEncoder>(new BaseLib::RPC::XMLRPCEncoder(GD::bl.get()));
 
-	_settings.reset(new ServerSettings::Settings());
+	_info.reset(new ServerInfo::Info());
 	_rpcMethods.reset(new std::map<std::string, std::shared_ptr<RPCMethod>>);
 	_serverFileDescriptor.reset(new BaseLib::FileDescriptor);
 	_threadPriority = GD::bl->settings.rpcServerThreadPriority();
@@ -67,21 +67,21 @@ RPCServer::~RPCServer()
 	_rpcMethods->clear();
 }
 
-void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
+void RPCServer::start(std::shared_ptr<ServerInfo::Info>& info)
 {
 	try
 	{
 		stop();
 		_stopServer = false;
-		_settings = settings;
-		if(!_settings)
+		_info = info;
+		if(!_info)
 		{
 			_out.printError("Error: Settings is nullptr.");
 			return;
 		}
-		if(!_settings->webServer && !_settings->rpcServer) return;
-		_out.setPrefix("RPC Server (Port " + std::to_string(settings->port) + "): ");
-		if(_settings->ssl)
+		if(!_info->webServer && !_info->rpcServer) return;
+		_out.setPrefix("RPC Server (Port " + std::to_string(info->port) + "): ");
+		if(_info->ssl)
 		{
 			int32_t result = 0;
 			if((result = gnutls_certificate_allocate_credentials(&_x509Cred)) != GNUTLS_E_SUCCESS)
@@ -158,7 +158,7 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 			}
 			gnutls_certificate_set_dh_params(_x509Cred, _dhParams);
 		}
-		_webServer.reset(new WebServer(_settings));
+		_webServer.reset(new WebServer(_info));
 		_mainThread = std::thread(&RPCServer::mainThread, this);
 		BaseLib::Threads::setThreadPriority(GD::bl.get(), _mainThread.native_handle(), _threadPriority, _threadPolicy);
 		_stopped = false;
@@ -299,6 +299,8 @@ void RPCServer::mainThread()
 	try
 	{
 		getSocketDescriptor();
+		std::string address;
+		int32_t port = -1;
 		while(!_stopServer)
 		{
 			try
@@ -310,7 +312,7 @@ void RPCServer::mainThread()
 					getSocketDescriptor();
 					continue;
 				}
-				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = getClientSocketDescriptor();
+				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = getClientSocketDescriptor(address, port);
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor < 0) continue;
 				_stateMutex.lock();
 				std::shared_ptr<Client> client(new Client());
@@ -327,7 +329,7 @@ void RPCServer::mainThread()
 
 				try
 				{
-					if(_settings->ssl)
+					if(_info->ssl)
 					{
 						getSSLSocketDescriptor(client);
 						if(!client->socketDescriptor->tlsSession)
@@ -338,6 +340,8 @@ void RPCServer::mainThread()
 						}
 					}
 					client->socket = std::shared_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl.get(), client->socketDescriptor));
+					client->address = address;
+					client->port = port;
 
 					client->readThread = std::thread(&RPCServer::readClient, this, client);
 					BaseLib::Threads::setThreadPriority(GD::bl.get(), client->readThread.native_handle(), _threadPriority, _threadPolicy);
@@ -788,7 +792,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			}
 			if(!http.headerProcessingStarted() && packetLength == 0 && !strncmp(&buffer[0], "Bin", 3))
 			{
-				if(!_settings->rpcServer) continue;
+				if(!_info->rpcServer) continue;
 				http.reset();
 				//buffer[3] & 1 is true for buffer[3] == 0xFF, too
 				packetType = (buffer[3] & 1) ? PacketType::Enum::binaryResponse : PacketType::Enum::binaryRequest;
@@ -823,9 +827,9 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				packet.reserve(dataSize + 9);
 				packet.insert(packet.end(), buffer, buffer + bytesRead);
 				std::shared_ptr<BaseLib::RPC::RPCHeader> header = _rpcDecoder->decodeHeader(packet);
-				if(_settings->authType == ServerSettings::Settings::AuthType::basic)
+				if(_info->authType == ServerInfo::Info::AuthType::basic)
 				{
-					if(!client->auth.initialized()) client->auth = Auth(client->socket, _settings->validUsers);
+					if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
 					try
 					{
 						if(!client->auth.basicServer(header))
@@ -853,21 +857,21 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					}
 				}
 			}
-			else if(!http.headerProcessingStarted() && !strncmp(&buffer[0], "GET ", 4))
+			else if(!http.headerProcessingStarted() && (!strncmp(&buffer[0], "GET ", 4) || !strncmp(&buffer[0], "HEAD ", 5)))
 			{
 				if(bytesRead < 8) continue;
 				buffer[bytesRead] = '\0';
 				packetType = PacketType::Enum::xmlRequest;
 
-				if(!_settings->redirectTo.empty())
+				if(!_info->redirectTo.empty())
 				{
 					std::vector<char> data;
-					std::vector<std::string> additionalHeaders({std::string("Location: ") + _settings->redirectTo});
-					_webServer->getError(301, "Moved Permanently", "The document has moved <a href=\"" + _settings->redirectTo + "\">here</a>.", data, additionalHeaders);
+					std::vector<std::string> additionalHeaders({std::string("Location: ") + _info->redirectTo});
+					_webServer->getError(301, "Moved Permanently", "The document has moved <a href=\"" + _info->redirectTo + "\">here</a>.", data, additionalHeaders);
 					sendRPCResponseToClient(client, data, false);
 					continue;
 				}
-				if(!_settings->webServer)
+				if(!_info->webServer)
 				{
 					std::vector<char> data;
 					_webServer->getError(400, "Bad Request", "Your client sent a request that this server could not understand.", data);
@@ -959,9 +963,9 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			}
 			if(http.isFinished())
 			{
-				if(_settings->authType == ServerSettings::Settings::AuthType::basic)
+				if(_info->authType == ServerInfo::Info::AuthType::basic)
 				{
-					if(!client->auth.initialized()) client->auth = Auth(client->socket, _settings->validUsers);
+					if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
 					try
 					{
 						if(!client->auth.basicServer(http))
@@ -978,15 +982,17 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					}
 				}
 
-				if(_settings->webServer && (!_settings->rpcServer || http.getHeader()->contentType != "text/xml"))
+				if(_info->webServer && (!_info->rpcServer || http.getHeader()->contentType != "text/xml"))
 				{
 
+					http.getHeader()->remoteAddress = client->address;
+					http.getHeader()->remotePort = client->port;
 					std::vector<char> response;
-					if(http.getHeader()->method == BaseLib::HTTP::Method::post) _webServer->post(http, response);
-					else if(http.getHeader()->method == BaseLib::HTTP::Method::get) _webServer->get(http, response);
+					if(http.getHeader()->method == "POST") _webServer->post(http, response);
+					else if(http.getHeader()->method == "GET" || http.getHeader()->method == "HEAD") _webServer->get(http, response);
 					sendRPCResponseToClient(client, response, false);
 				}
-				else if(_settings->rpcServer) packetReceived(client, *http.getContent(), packetType, http.getHeader()->connection == BaseLib::HTTP::Connection::Enum::keepAlive);
+				else if(_info->rpcServer) packetReceived(client, *http.getContent(), packetType, http.getHeader()->connection == BaseLib::HTTP::Connection::Enum::keepAlive);
 				packetLength = 0;
 				http.reset();
 				if(client->socketDescriptor->descriptor == -1)
@@ -1013,7 +1019,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 	closeClientConnection(client);
 }
 
-std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientSocketDescriptor()
+std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientSocketDescriptor(std::string& address, int32_t& port)
 {
 	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
 	try
@@ -1060,7 +1066,6 @@ std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientSocketDescriptor()
 
 		getpeername(fileDescriptor->descriptor, (struct sockaddr*)&clientInfo, &addressSize);
 
-		uint32_t port;
 		char ipString[INET6_ADDRSTRLEN];
 		if (clientInfo.ss_family == AF_INET) {
 			struct sockaddr_in *s = (struct sockaddr_in *)&clientInfo;
@@ -1071,8 +1076,9 @@ std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientSocketDescriptor()
 			port = ntohs(s->sin6_port);
 			inet_ntop(AF_INET6, &s->sin6_addr, ipString, sizeof(ipString));
 		}
-		std::string ipString2(&ipString[0]);
-		_out.printInfo("Info: Connection from " + ipString2 + ":" + std::to_string(port) + " accepted. Client number: " + std::to_string(fileDescriptor->id));
+		address = std::string(&ipString[0]);
+
+		_out.printInfo("Info: Connection from " + address + ":" + std::to_string(port) + " accepted. Client number: " + std::to_string(fileDescriptor->id));
 	}
     catch(const std::exception& ex)
     {
@@ -1177,9 +1183,9 @@ void RPCServer::getSocketDescriptor()
 		hostInfo.ai_socktype = SOCK_STREAM;
 		hostInfo.ai_flags = AI_PASSIVE;
 		char buffer[100];
-		std::string port = std::to_string(_settings->port);
+		std::string port = std::to_string(_info->port);
 		int32_t result;
-		if((result = getaddrinfo(_settings->interface.c_str(), port.c_str(), &hostInfo, &serverInfo)) != 0)
+		if((result = getaddrinfo(_info->interface.c_str(), port.c_str(), &hostInfo, &serverInfo)) != 0)
 		{
 			_out.printCritical("Error: Could not get address information: " + std::string(gai_strerror(result)));
 			return;
@@ -1201,19 +1207,18 @@ void RPCServer::getSocketDescriptor()
 				error = errno;
 				continue;
 			}
-			std::string address;
 			switch (info->ai_family)
 			{
 				case AF_INET:
 					inet_ntop (info->ai_family, &((struct sockaddr_in *) info->ai_addr)->sin_addr, buffer, 100);
-					address = std::string(buffer);
+					_info->address = std::string(buffer);
 					break;
 				case AF_INET6:
 					inet_ntop (info->ai_family, &((struct sockaddr_in6 *) info->ai_addr)->sin6_addr, buffer, 100);
-					address = std::string(buffer);
+					_info->address = std::string(buffer);
 					break;
 			}
-			_out.printInfo("Info: RPC Server started listening on address " + address + " and port " + port);
+			_out.printInfo("Info: RPC Server started listening on address " + _info->address + " and port " + port);
 			bound = true;
 			break;
 		}

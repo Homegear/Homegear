@@ -384,6 +384,17 @@ std::vector<std::string> HelperFunctions::splitAll(std::string string, char deli
 	return elements;
 }
 
+std::vector<uint8_t> HelperFunctions::hexToBin(const std::string& data)
+{
+	std::vector<uint8_t> bin;
+	bin.reserve(data.size() / 2);
+	for(uint32_t i = 0; i < data.size(); i+=2)
+	{
+		try	{ bin.push_back(std::stoi(data.substr(i, 2), 0, 16)); } catch(...) {}
+	}
+	return bin;
+}
+
 char HelperFunctions::getHexChar(int32_t nibble)
 {
 	try

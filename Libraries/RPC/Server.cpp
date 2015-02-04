@@ -135,10 +135,10 @@ std::shared_ptr<BaseLib::RPC::Variable> Server::callMethod(std::string methodNam
 	return _server->callMethod(methodName, parameters);
 }
 
-void Server::start(std::shared_ptr<ServerSettings::Settings>& settings)
+void Server::start(std::shared_ptr<ServerInfo::Info>& serverInfo)
 {
 	if(!_server) return;
-	_server->start(settings);
+	_server->start(serverInfo);
 }
 
 void Server::stop()

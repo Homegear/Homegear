@@ -779,7 +779,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 			{
 				if(!i->second.isRunning()) continue;
-				const std::shared_ptr<RPC::ServerSettings::Settings> settings = i->second.getSettings();
+				const std::shared_ptr<RPC::ServerInfo::Info> settings = i->second.getInfo();
 				std::string name = settings->name;
 				if(name.size() > (unsigned)nameWidth)
 				{
@@ -799,7 +799,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 					<< interface << "  "
 					<< std::setw(portWidth) << settings->port << "  "
 					<< std::setw(sslWidth) << (settings->ssl ? "true" : "false") << "  "
-					<< std::setw(authWidth) << (settings->authType == RPC::ServerSettings::Settings::AuthType::basic ? "basic" : "none") << "  "
+					<< std::setw(authWidth) << (settings->authType == RPC::ServerInfo::Info::AuthType::basic ? "basic" : "none") << "  "
 					<< std::endl;
 
 			}

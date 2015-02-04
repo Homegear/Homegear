@@ -62,7 +62,7 @@ public:
 	static RPC::Client rpcClient;
 	static CLI::Server cliServer;
 	static CLI::Client cliClient;
-	static RPC::ServerSettings serverSettings;
+	static RPC::ServerInfo serverInfo;
 	static RPC::ClientSettings clientSettings;
 	static int32_t rpcLogLevel;
 	static EventHandler eventHandler;

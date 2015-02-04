@@ -44,7 +44,7 @@ RPC::Client GD::rpcClient;
 CLI::Server GD::cliServer;
 CLI::Client GD::cliClient;
 int32_t GD::rpcLogLevel = 1;
-RPC::ServerSettings GD::serverSettings;
+RPC::ServerInfo GD::serverInfo;
 RPC::ClientSettings GD::clientSettings;
 EventHandler GD::eventHandler;
 PhysicalInterfaces GD::physicalInterfaces;

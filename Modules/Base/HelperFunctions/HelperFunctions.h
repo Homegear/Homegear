@@ -410,6 +410,14 @@ public:
 	void memcpyBigEndian(std::vector<uint8_t>& to, const int32_t& from);
 
 	/**
+	 * Converts a hex string to a byte array.
+	 *
+	 * @param data The hex string to convert.
+	 * @return Returns the byte array encoded by the hex string.
+	 */
+	static std::vector<uint8_t> hexToBin(const std::string& data);
+
+	/**
 	 * Converts a byte array to a hex string.
 	 *
 	 * @param data The byte array to convert.

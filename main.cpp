@@ -31,7 +31,7 @@
 #include "Libraries/GD/GD.h"
 #include "Modules/Base/BaseLib.h"
 #include "Modules/Base/HelperFunctions/HelperFunctions.h"
-#include "Libraries/RPC/ServerSettings.h"
+#include "Libraries/RPC/ServerInfo.h"
 
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -65,13 +65,13 @@ void exitHomegear(int exitCode)
 
 void startRPCServers()
 {
-	for(int32_t i = 0; i < GD::serverSettings.count(); i++)
+	for(int32_t i = 0; i < GD::serverInfo.count(); i++)
 	{
-		std::shared_ptr<RPC::ServerSettings::Settings> settings = GD::serverSettings.get(i);
+		std::shared_ptr<RPC::ServerInfo::Info> settings = GD::serverInfo.get(i);
 		std::string info = "Starting XML RPC server " + settings->name + " listening on " + settings->interface + ":" + std::to_string(settings->port);
 		if(settings->ssl) info += ", SSL enabled";
 		else GD::bl->rpcPort = settings->port;
-		if(settings->authType != RPC::ServerSettings::Settings::AuthType::none) info += ", authentification enabled";
+		if(settings->authType != RPC::ServerInfo::Info::AuthType::none) info += ", authentification enabled";
 		info += "...";
 		GD::out.printInfo(info);
 		GD::rpcServers[i].start(settings);
@@ -162,7 +162,7 @@ void terminate(int32_t signalNumber)
 				GD::out.printMessage("Reloading settings...");
 				GD::bl->settings.load(GD::configPath + "main.conf");
 				GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
-				GD::serverSettings.load(GD::bl->settings.serverSettingsPath());
+				GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
 				GD::physicalInterfaces.startListening();
 				startRPCServers();
 			}
@@ -441,7 +441,7 @@ int main(int argc, char* argv[])
 		GD::bl->settings.load(GD::configPath + "main.conf");
 
 		GD::out.printInfo("Loading RPC server settings from " + GD::bl->settings.serverSettingsPath());
-		GD::serverSettings.load(GD::bl->settings.serverSettingsPath());
+		GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
 		GD::out.printInfo("Loading RPC client settings from " + GD::bl->settings.clientSettingsPath());
 		GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
 

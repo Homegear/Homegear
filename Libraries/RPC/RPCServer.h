@@ -33,7 +33,7 @@
 #include "../../Modules/Base/BaseLib.h"
 #include "RPCMethod.h"
 #include "Auth.h"
-#include "ServerSettings.h"
+#include "ServerInfo.h"
 #include "Webserver.h"
 
 #include <thread>
@@ -74,6 +74,8 @@ namespace RPC
 				std::shared_ptr<BaseLib::FileDescriptor> socketDescriptor;
 				std::shared_ptr<BaseLib::SocketOperations> socket;
 				Auth auth;
+				std::string address;
+				int32_t port;
 
 				Client();
 				virtual ~Client();
@@ -87,9 +89,9 @@ namespace RPC
 			RPCServer();
 			virtual ~RPCServer();
 
-			const std::shared_ptr<ServerSettings::Settings> getSettings() { return _settings; }
+			const std::shared_ptr<ServerInfo::Info> getInfo() { return _info; }
 			bool isRunning() { return !_stopped; }
-			void start(std::shared_ptr<ServerSettings::Settings>& settings);
+			void start(std::shared_ptr<ServerInfo::Info>& settings);
 			void stop();
 			void registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method);
 			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> getMethods() { return _rpcMethods; }
@@ -99,7 +101,7 @@ namespace RPC
 		private:
 			BaseLib::Output _out;
 			volatile int32_t _currentClientID = 0;
-			std::shared_ptr<ServerSettings::Settings> _settings;
+			std::shared_ptr<ServerInfo::Info> _info;
 			gnutls_certificate_credentials_t _x509Cred = nullptr;
 			gnutls_priority_t _tlsPriorityCache = nullptr;
 			gnutls_dh_params_t _dhParams = nullptr;
@@ -122,7 +124,7 @@ namespace RPC
 
 			void collectGarbage();
 			void getSocketDescriptor();
-			std::shared_ptr<BaseLib::FileDescriptor> getClientSocketDescriptor();
+			std::shared_ptr<BaseLib::FileDescriptor> getClientSocketDescriptor(std::string& address, int32_t& port);
 			void getSSLSocketDescriptor(std::shared_ptr<Client>);
 			void mainThread();
 			void readClient(std::shared_ptr<Client> client);

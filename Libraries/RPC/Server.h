@@ -33,7 +33,7 @@
 #include <memory>
 #include <string>
 
-#include "ServerSettings.h"
+#include "ServerInfo.h"
 #include "../../Modules/Base/BaseLib.h"
 #include "RPCServer.h"
 #include "RPCMethods.h"
@@ -45,10 +45,10 @@ public:
 	virtual ~Server() {}
 
 	void registerMethods();
-	void start(std::shared_ptr<ServerSettings::Settings>& settings);
+	void start(std::shared_ptr<ServerInfo::Info>& serverInfo);
 	void stop();
 	bool isRunning() { if(!_server) return false; return _server->isRunning(); }
-	const std::shared_ptr<ServerSettings::Settings> getSettings() { if(!_server) return std::shared_ptr<ServerSettings::Settings>(); return _server->getSettings(); }
+	const std::shared_ptr<ServerInfo::Info> getInfo() { if(!_server) return std::shared_ptr<ServerInfo::Info>(); return _server->getInfo(); }
 	uint32_t connectionCount();
 	std::shared_ptr<BaseLib::RPC::Variable> callMethod(std::string methodName, std::shared_ptr<BaseLib::RPC::Variable> parameters);
 protected:

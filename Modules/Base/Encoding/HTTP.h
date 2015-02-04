@@ -55,10 +55,6 @@ public:
 	{
 		enum Enum { none, request, response };
 	};
-	struct Method
-	{
-		enum Enum { none, get, post };
-	};
 	struct TransferEncoding
 	{
 		enum Enum { none = 0, chunked = 1, compress = 2, deflate = 4, gzip = 8, identity = 16 };
@@ -74,7 +70,7 @@ public:
 	struct Header
 	{
 		bool parsed = false;
-		Method::Enum method = Method::Enum::none;
+		std::string method;
 		Protocol::Enum protocol = Protocol::Enum::none;
 		int32_t responseCode = -1;
 		uint32_t contentLength = 0;
@@ -85,6 +81,14 @@ public:
 		TransferEncoding::Enum transferEncoding = TransferEncoding::Enum::none;
 		Connection::Enum connection = Connection::Enum::none;
 		std::string authorization;
+		std::string cookie;
+		std::string referer;
+		std::string userAgent;
+		std::string accept;
+		std::string acceptLanguage;
+		std::string acceptEncoding;
+		std::string remoteAddress;
+		int32_t remotePort = 0;
 	};
 
 	HTTP();
@@ -120,6 +124,8 @@ public:
 	std::string decodeURL(const std::string& url);
 	size_t readStream(char* buffer, size_t requestLength);
 	size_t readContentStream(char* buffer, size_t requestLength);
+	static std::string getMimeType(std::string extension);
+	static std::string getStatusText(int32_t code);
 private:
 	bool _headerProcessingStarted = false;
 	bool _dataProcessingStarted = false;
@@ -136,6 +142,8 @@ private:
 	size_t _streamPos = 0;
 	size_t _contentStreamPos = 0;
 	Math _math;
+	static std::map <std::string, std::string> _extMimeTypeMap;
+	static std::map <int32_t, std::string> _statusCodeMap;
 
 	void processHeader(char** buffer, int32_t& bufferLength);
 	void processHeaderField(char* name, uint32_t nameSize, char* value, uint32_t valueSize);

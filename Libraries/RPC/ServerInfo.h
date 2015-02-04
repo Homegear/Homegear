@@ -27,35 +27,61 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef SCRIPTENGINE_H_
-#define SCRIPTENGINE_H_
+#ifndef SERVERINFO_H_
+#define SERVERINFO_H_
 
-#include "../../Modules/Base/BaseLib.h"
-#include "../RPC/ServerInfo.h"
-#include "php_sapi.h"
+#include "../../Modules/Base/Exception.h"
 
-#include <mutex>
-#include <future>
-#include <wordexp.h>
+#include <memory>
+#include <iostream>
+#include <string>
+#include <map>
+#include <cstring>
+#include <vector>
 
-class ScriptEngine
+namespace RPC
+{
+class ServerInfo
 {
 public:
-	ScriptEngine();
-	virtual ~ScriptEngine();
-	void dispose();
+	class Info
+	{
+	public:
+		enum AuthType { none, basic };
 
-	std::vector<std::string> getArgs(const std::string& args);
-	int32_t execute(const std::string path, const std::string arguments, bool wait = true);
-	int32_t executeWebRequest(const std::string& path, BaseLib::HTTP& request, std::shared_ptr<RPC::ServerInfo::Info>& serverInfo, std::vector<char>& output);
+		Info()
+		{
+			interface = "::";
+			contentPath = "/var/lib/homegear/www/";
+		}
+		virtual ~Info() {}
+		int32_t index = -1;
+		std::string name;
+		std::string interface;
+		int32_t port = -1;
+		bool ssl = true;
+		AuthType authType = AuthType::basic;
+		std::vector<std::string> validUsers;
+		int32_t diffieHellmanKeySize = 1024;
+		std::string contentPath;
+		bool webServer = false;
+		bool rpcServer = true;
+		std::string redirectTo;
 
-protected:
-	bool _disposing = false;
-	volatile int32_t _currentScriptThreadID = 0;
-	std::map<int32_t, std::future<int32_t>> _scriptThreads;
-	std::mutex _scriptThreadMutex;
+		//Not settable
+		std::string address;
+	};
 
-	void collectGarbage();
-	bool scriptThreadMaxReached();
+	ServerInfo();
+	virtual ~ServerInfo() {}
+	void load(std::string filename);
+
+	int32_t count() { return _servers.size(); }
+	std::shared_ptr<Info> get(int32_t index) { if(_servers.find(index) != _servers.end()) return _servers[index]; else return std::shared_ptr<Info>(); }
+private:
+	std::map<int32_t, std::shared_ptr<Info>> _servers;
+
+	void reset();
 };
+}
 #endif

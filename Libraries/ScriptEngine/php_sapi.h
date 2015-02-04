@@ -53,7 +53,8 @@
 ZEND_BEGIN_MODULE_GLOBALS(homegear)
 	BaseLib::HTTP* http = nullptr;
 	std::vector<char>* output = nullptr;
-	std::vector<std::string>* headers = nullptr;
+	bool commandLine = false;
+	bool cookiesParsed = false;
 ZEND_END_MODULE_GLOBALS(homegear)
 
 zend_homegear_globals* php_homegear_get_globals(TSRMLS_D);

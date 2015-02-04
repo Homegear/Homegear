@@ -68,7 +68,7 @@ std::shared_ptr<BaseLib::RPC::Variable> PHPVariableConverter::getVariable(zval* 
 			HashTable* ht = Z_ARRVAL_P(value);
 			char* key = nullptr;
 			uint32_t keyLength = 0;
-			uint64_t keyIndex = 0;
+			unsigned long keyIndex = 0;
 			for(zend_hash_internal_pointer_reset_ex(ht, pos); zend_hash_has_more_elements_ex(ht, pos) == SUCCESS; zend_hash_move_forward_ex(ht, pos))
 			{
 				int32_t type = zend_hash_get_current_key_ex(ht, &key, &keyLength, &keyIndex, 0, pos);

@@ -30,6 +30,7 @@
 #include "php_sapi.h"
 #include "../GD/GD.h"
 #include "PHPVariableConverter.h"
+#include "../../Version.h"
 
 #define SEG(v) TSRMG(homegear_globals_id, zend_homegear_globals*, v)
 
@@ -78,7 +79,6 @@ void php_homegear_build_argv(std::vector<std::string>& arguments TSRMLS_DC)
 
 static int php_homegear_read_post(char *buf, uint count_bytes TSRMLS_DC)
 {
-	std::cout << "php_homegear_read_post " << SG(request_info).content_length << std::endl << std::flush;
 	BaseLib::HTTP* http = SEG(http);
 	if(!http) return 0;
 	return  http->readContentStream(buf, count_bytes);
@@ -86,7 +86,14 @@ static int php_homegear_read_post(char *buf, uint count_bytes TSRMLS_DC)
 
 static char* php_homegear_read_cookies(TSRMLS_D)
 {
-	std::cout << "php_homegear_read_cookies " << SG(request_info).content_length << std::endl << std::flush;
+	BaseLib::HTTP* http = SEG(http);
+	if(!http) return 0;
+	if(!SEG(cookiesParsed))
+	{
+		SEG(cookiesParsed) = true;
+		//Conversion from (const char*) to (char*) is ok, because PHP makes a copy before parsing and does not change the original data.
+		if(!http->getHeader()->cookie.empty()) return (char*)http->getHeader()->cookie.c_str();
+	}
 	return NULL;
 }
 
@@ -108,26 +115,145 @@ static void php_homegear_flush(void *server_context)
 	//We are normally buffering only, so no flush is needed.
 }
 
-static void php_homegear_send_header(sapi_header_struct *sapi_header, void *server_context TSRMLS_DC)
+static int php_homegear_send_headers(sapi_headers_struct* sapi_headers TSRMLS_DC)
 {
-	if(!sapi_header) return;
-	std::string header(sapi_header->header, sapi_header->header_len);
-	std::cout << "php_homegear_send_header: " << header << std::endl;
+	if(!sapi_headers) return SAPI_HEADER_SEND_FAILED;
+	std::vector<char>* out = SEG(output);
+	if(!out) return SAPI_HEADER_SEND_FAILED;
+	if(out->size() + 100 > out->capacity()) out->reserve(out->capacity() + 1024);
+	if(sapi_headers->http_status_line)
+	{
+		out->insert(out->end(), sapi_headers->http_status_line, sapi_headers->http_status_line + strlen(sapi_headers->http_status_line));
+		out->push_back('\r');
+		out->push_back('\n');
+	}
+	else
+	{
+		std::string status = "HTTP/1.1 " + std::to_string(sapi_headers->http_response_code) + " " + BaseLib::HTTP::getStatusText(sapi_headers->http_response_code) + "\r\n";
+		out->insert(out->end(), &status[0], &status[0] + status.size());
+	}
+	zend_llist_element* element = sapi_headers->headers.head;
+	while(element)
+	{
+		sapi_header_struct* header = (sapi_header_struct*)element->data;
+		if(out->size() + header->header_len + 4 > out->capacity()) out->reserve(out->capacity() + 1024);
+		out->insert(out->end(), header->header, header->header + header->header_len);
+		out->push_back('\r');
+		out->push_back('\n');
+		element = element->next;
+	}
+	out->push_back('\r');
+	out->push_back('\n');
+	return SAPI_HEADER_SENT_SUCCESSFULLY;
 }
 
-static void php_homegear_log_message(char *message TSRMLS_DC)
+/*static int php_homegear_header_handler(sapi_header_struct *sapi_header, sapi_header_op_enum op, sapi_headers_struct *sapi_headers TSRMLS_DC)
+{
+	std::cerr << "php_homegear_header_handler: " << std::string(sapi_header->header, sapi_header->header_len) << std::endl;
+	std::vector<char>* out = SEG(output);
+	if(!out) return FAILURE;
+	switch(op)
+	{
+		case SAPI_HEADER_DELETE:
+			return SUCCESS;
+		case SAPI_HEADER_DELETE_ALL:
+			out->clear();
+			return SUCCESS;
+		case SAPI_HEADER_ADD:
+		case SAPI_HEADER_REPLACE:
+			if (!memchr(sapi_header->header, ':', sapi_header->header_len))
+			{
+				sapi_free_header(sapi_header);
+				return SUCCESS;
+			}
+			if(out->size() + sapi_header->header_len + 4 > out->capacity()) out->reserve(out->capacity() + 1024);
+			out->insert(out->end(), sapi_header->header, sapi_header->header + sapi_header->header_len);
+			out->push_back('\r');
+			out->push_back('\n');
+			return SAPI_HEADER_ADD;
+		default:
+			return SUCCESS;
+	}
+}*/
+
+/*static void php_homegear_send_header(sapi_header_struct *sapi_header, void *server_context TSRMLS_DC)
+{
+	if(!sapi_header) return;
+	std::vector<char>* out = SEG(output);
+	if(out)
+	{
+		if(out->size() + sapi_header->header_len + 4 > out->capacity()) out->reserve(out->capacity() + 1024);
+		out->insert(out->end(), sapi_header->header, sapi_header->header + sapi_header->header_len);
+		out->push_back('\r');
+		out->push_back('\n');
+		std::cerr << "php_homegear_send_header: " << std::string(sapi_header->header, sapi_header->header_len) << std::endl;
+	}
+}*/
+
+static void php_homegear_log_message(char* message TSRMLS_DC)
 {
 	fprintf (stderr, "%s\n", message);
 }
 
-static void php_homegear_register_variables(zval *track_vars_array TSRMLS_DC)
+static void php_homegear_register_variables(zval* track_vars_array TSRMLS_DC)
 {
-	php_register_variable((char*)"SAPI_TYPE", (char*)"Homegear", track_vars_array TSRMLS_CC);
+	BaseLib::HTTP* http = SEG(http);
+	if(!http) return;
+	BaseLib::HTTP::Header* header = http->getHeader();
+	if(!header) return;
+	RPC::ServerInfo::Info* server = (RPC::ServerInfo::Info*)SG(server_context);
+	zval* value;
 
-	php_import_environment_variables(track_vars_array TSRMLS_CC);
+	if(server)
+	{
+		if(server->ssl) php_register_variable_safe((char*)"HTTPS", (char*)"on", 2, track_vars_array TSRMLS_CC);
+		else php_register_variable_safe((char*)"HTTPS", (char*)"", 0, track_vars_array TSRMLS_CC);
+		std::string connection = (header->connection == BaseLib::HTTP::Connection::keepAlive) ? "keep-alive" : "close";
+		php_register_variable_safe((char*)"HTTP_CONNECTION", (char*)connection.c_str(), connection.size(), track_vars_array TSRMLS_CC);
+		php_register_variable_safe((char*)"DOCUMENT_ROOT", (char*)server->contentPath.c_str(), server->contentPath.size(), track_vars_array TSRMLS_CC);
+		php_register_variable_safe((char*)"SERVER_NAME", (char*)server->name.c_str(), server->name.size(), track_vars_array TSRMLS_CC);
+		php_register_variable_safe((char*)"SERVER_ADDR", (char*)server->address.c_str(), server->address.size(), track_vars_array TSRMLS_CC);
+		ALLOC_INIT_ZVAL(value);
+		Z_LVAL_P(value) = server->port;
+		Z_TYPE_P(value) = IS_LONG;
+		php_register_variable_ex((char*)"SERVER_PORT", value, track_vars_array TSRMLS_CC);
+		zval_ptr_dtor(&value);
+		value = nullptr;
+	}
+
+	std::string version = std::string("Homegear ") + VERSION;
+	php_register_variable_safe((char*)"SERVER_SOFTWARE", (char*)version.c_str(), version.size(), track_vars_array TSRMLS_CC);
+	//PHP make a copy, so conversion from (const char*) to (char*) is ok.
+	php_register_variable_safe((char*)"SCRIPT_NAME", (char*)header->path.c_str(), header->path.size(), track_vars_array TSRMLS_CC);
+	php_register_variable_safe((char*)"PHP_SELF", (char*)header->path.c_str(), header->path.size(), track_vars_array TSRMLS_CC);
+	php_register_variable_safe((char*)"HTTP_HOST", (char*)header->host.c_str(), header->host.size(), track_vars_array TSRMLS_CC);
+	php_register_variable_safe((char*)"QUERY_STRING", (char*)header->args.c_str(), header->args.size(), track_vars_array TSRMLS_CC);
+	php_register_variable_safe((char*)"SERVER_PROTOCOL", (char*)"HTTP/1.1", 8, track_vars_array TSRMLS_CC);
+	php_register_variable_safe((char*)"HTTP_ACCEPT", (char*)header->accept.c_str(), header->accept.size(), track_vars_array TSRMLS_CC);
+	php_register_variable_safe((char*)"HTTP_ACCEPT_LANGUAGE", (char*)header->acceptLanguage.c_str(), header->acceptLanguage.size(), track_vars_array TSRMLS_CC);
+	php_register_variable_safe((char*)"HTTP_ACCEPT_ENCODING", (char*)header->acceptEncoding.c_str(), header->acceptEncoding.size(), track_vars_array TSRMLS_CC);
+	php_register_variable_safe((char*)"HTTP_REFERER", (char*)header->referer.c_str(), header->referer.size(), track_vars_array TSRMLS_CC);
+	php_register_variable_safe((char*)"HTTP_USER_AGENT", (char*)header->userAgent.c_str(), header->userAgent.size(), track_vars_array TSRMLS_CC);
+	php_register_variable_safe((char*)"REMOTE_ADDRESS", (char*)header->remoteAddress.c_str(), header->remoteAddress.size(), track_vars_array TSRMLS_CC);
+	ALLOC_INIT_ZVAL(value);
+	Z_LVAL_P(value) = header->remotePort;
+	Z_TYPE_P(value) = IS_LONG;
+	php_register_variable_ex((char*)"REMOTE_PORT", value, track_vars_array TSRMLS_CC);
+	zval_ptr_dtor(&value);
+	value = nullptr;
+	php_register_variable((char*)"REQUEST_METHOD", (char*)SG(request_info).request_method, track_vars_array TSRMLS_CC);
+	php_register_variable((char*)"REQUEST_URI", SG(request_info).request_uri, track_vars_array TSRMLS_CC);
+	ALLOC_INIT_ZVAL(value);
+	Z_LVAL_P(value) = header->contentLength;
+	Z_TYPE_P(value) = IS_LONG;
+	php_register_variable_ex((char*)"CONTENT_LENGTH", value, track_vars_array TSRMLS_CC);
+	zval_ptr_dtor(&value);
+	value = nullptr;
+	php_register_variable_safe((char*)"CONTENT_TYPE", (char*)header->contentType.c_str(), header->contentType.size(), track_vars_array TSRMLS_CC);
+	if(SEG(commandLine)) php_import_environment_variables(track_vars_array TSRMLS_CC);
 }
 
-static int php_homegear_startup(sapi_module_struct *sapi_module)
+static int php_homegear_startup(sapi_module_struct* sapi_module)
 {
 	return php_module_startup(sapi_module, NULL, 0);
 }
@@ -160,8 +286,8 @@ sapi_module_struct php_homegear_module = {
 	php_error,                     /* error handler */
 
 	NULL,                          /* header handler */
-	NULL,                          /* send headers handler */
-	php_homegear_send_header,          /* send header handler */
+	php_homegear_send_headers,                          /* send headers handler */
+	NULL,          /* send header handler */
 
 	php_homegear_read_post,            /* read POST data */
 	php_homegear_read_cookies,         /* read Cookies */
