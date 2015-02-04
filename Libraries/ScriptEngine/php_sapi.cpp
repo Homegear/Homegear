@@ -204,6 +204,7 @@ static void php_homegear_register_variables(zval* track_vars_array TSRMLS_DC)
 	RPC::ServerInfo::Info* server = (RPC::ServerInfo::Info*)SG(server_context);
 	zval* value;
 
+	//PHP makes copies of all values, so conversion from const to non-const is ok.
 	if(server)
 	{
 		if(server->ssl) php_register_variable_safe((char*)"HTTPS", (char*)"on", 2, track_vars_array TSRMLS_CC);
@@ -223,7 +224,6 @@ static void php_homegear_register_variables(zval* track_vars_array TSRMLS_DC)
 
 	std::string version = std::string("Homegear ") + VERSION;
 	php_register_variable_safe((char*)"SERVER_SOFTWARE", (char*)version.c_str(), version.size(), track_vars_array TSRMLS_CC);
-	//PHP make a copy, so conversion from (const char*) to (char*) is ok.
 	php_register_variable_safe((char*)"SCRIPT_NAME", (char*)header->path.c_str(), header->path.size(), track_vars_array TSRMLS_CC);
 	php_register_variable_safe((char*)"PHP_SELF", (char*)header->path.c_str(), header->path.size(), track_vars_array TSRMLS_CC);
 	php_register_variable_safe((char*)"HTTP_HOST", (char*)header->host.c_str(), header->host.size(), track_vars_array TSRMLS_CC);
