@@ -46,7 +46,7 @@ solution "homegear"
 
    configuration { "rpi", "gmake" }
       includedirs { "./Includes/ARM\ headers" }
-      libdirs { "./ARM\ libraries" }
+      libdirs { "./ARM\ libraries", "/usr/lib/php5" }
 
    project "base"
       kind "StaticLib"
