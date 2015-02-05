@@ -114,7 +114,7 @@ static int php_homegear_ub_write(const char* str, uint32_t length TSRMLS_DC)
 
 static void php_homegear_flush(void *server_context)
 {
-	//We are normally buffering only, so no flush is needed.
+	//We are storing all data, so no flush is needed.
 }
 
 static int php_homegear_send_headers(sapi_headers_struct* sapi_headers TSRMLS_DC)

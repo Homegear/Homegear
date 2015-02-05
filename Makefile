@@ -6,7 +6,7 @@ ifndef config
 endif
 export config
 
-PROJECTS := base homematicbidcos user rpc cli events database scriptengine gd homegear
+PROJECTS := base homematicbidcos homematicwired max insteon philipshue miscellaneous user rpc cli events database scriptengine gd homegear
 
 .PHONY: all clean help $(PROJECTS)
 
@@ -19,6 +19,26 @@ base:
 homematicbidcos: 
 	@echo "==== Building homematicbidcos ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f homematicbidcos.make
+
+homematicwired: 
+	@echo "==== Building homematicwired ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f homematicwired.make
+
+max: 
+	@echo "==== Building max ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f max.make
+
+insteon: 
+	@echo "==== Building insteon ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f insteon.make
+
+philipshue: 
+	@echo "==== Building philipshue ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f philipshue.make
+
+miscellaneous: 
+	@echo "==== Building miscellaneous ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f miscellaneous.make
 
 user: 
 	@echo "==== Building user ($(config)) ===="
@@ -55,6 +75,11 @@ homegear:
 clean:
 	@${MAKE} --no-print-directory -C . -f base.make clean
 	@${MAKE} --no-print-directory -C . -f homematicbidcos.make clean
+	@${MAKE} --no-print-directory -C . -f homematicwired.make clean
+	@${MAKE} --no-print-directory -C . -f max.make clean
+	@${MAKE} --no-print-directory -C . -f insteon.make clean
+	@${MAKE} --no-print-directory -C . -f philipshue.make clean
+	@${MAKE} --no-print-directory -C . -f miscellaneous.make clean
 	@${MAKE} --no-print-directory -C . -f user.make clean
 	@${MAKE} --no-print-directory -C . -f rpc.make clean
 	@${MAKE} --no-print-directory -C . -f cli.make clean
@@ -77,6 +102,11 @@ help:
 	@echo "   clean"
 	@echo "   base"
 	@echo "   homematicbidcos"
+	@echo "   homematicwired"
+	@echo "   max"
+	@echo "   insteon"
+	@echo "   philipshue"
+	@echo "   miscellaneous"
 	@echo "   user"
 	@echo "   rpc"
 	@echo "   cli"
