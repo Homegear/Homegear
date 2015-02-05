@@ -273,11 +273,12 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& 
 		if(!request.getHeader()->contentType.empty()) SG(request_info).content_type = request.getHeader()->contentType.c_str();
 		SG(request_info).request_method = request.getHeader()->method.c_str();
 		SG(request_info).proto_num = request.getHeader()->protocol == BaseLib::HTTP::Protocol::http10 ? 1000 : 1001;
-		std::string uri = request.getHeader()->path;
+		std::string uri = request.getHeader()->path + request.getHeader()->pathInfo;
 		if(!request.getHeader()->args.empty()) uri.append('?' + request.getHeader()->args);
 		if(!request.getHeader()->args.empty()) SG(request_info).query_string = estrndup(&request.getHeader()->args.at(0), request.getHeader()->args.size());
 		if(!uri.empty()) SG(request_info).request_uri = estrndup(&uri.at(0), uri.size());
-		if(!path.empty()) SG(request_info).path_translated = estrndup(&path.at(0), path.size());
+		std::string pathTranslated = serverInfo->contentPath.substr(0, serverInfo->contentPath.size() - 1) + request.getHeader()->pathInfo;
+		if(!path.empty()) SG(request_info).path_translated = estrndup(&pathTranslated.at(0), pathTranslated.size());
 
 		if (php_request_startup(TSRMLS_C) == FAILURE) {
 			GD::bl->out.printError("Error calling php_request_startup...");

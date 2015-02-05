@@ -69,18 +69,18 @@ void WebServer::get(BaseLib::HTTP& http, std::vector<char>& content)
 		request.insert(request.end(), header->begin(), header->end());
 		request.insert(request.end(), content->begin(), content->end());*/
 
-		_out.printInfo("Client is requesting: " + http.getHeader()->path);
-
 		std::string path = http.getHeader()->path;
+		if(!path.empty() && path.front() == '/') path = path.substr(1);
 
 		bool isDirectory = false;
 		BaseLib::HelperFunctions::isDirectory(_serverInfo->contentPath + path, isDirectory);
 		if(isDirectory)
 		{
-			if(GD::bl->hf.fileExists(_serverInfo->contentPath + "index.html")) path = "index.html";
-			else if(GD::bl->hf.fileExists(_serverInfo->contentPath + "index.htm")) path = "index.htm";
-			else if(GD::bl->hf.fileExists(_serverInfo->contentPath + "index.php")) path = "index.php";
-			else if(GD::bl->hf.fileExists(_serverInfo->contentPath + "index.php5")) path = "index.php5";
+			if(!path.empty() && path.back() != '/') path.push_back('/');
+			if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
+			else if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
+			else if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.html")) path += "index.html";
+			else if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.htm")) path += "index.htm";
 			else
 			{
 				getError(404, "Not Found", "The requested URL / was not found on this server.", content);
@@ -89,7 +89,7 @@ void WebServer::get(BaseLib::HTTP& http, std::vector<char>& content)
 		}
 		try
 		{
-			if(path.front() == '/') path = path.substr(1);
+			_out.printInfo("Client is requesting: " + http.getHeader()->path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
 			std::string ending = "";
 			int32_t pos = path.find_last_of('.');
 			if(pos != (signed)std::string::npos && (unsigned)pos < path.size() - 1) ending = path.substr(pos + 1);
@@ -145,15 +145,16 @@ void WebServer::post(BaseLib::HTTP& http, std::vector<char>& content)
 		request.insert(request.end(), header->begin(), header->end());
 		request.insert(request.end(), content->begin(), content->end());*/
 
-		_out.printInfo("Client is requesting: " + http.getHeader()->path);
-
 		std::string path = http.getHeader()->path;
+		if(!path.empty() && path.front() == '/') path = path.substr(1);
+
 		bool isDirectory = false;
 		BaseLib::HelperFunctions::isDirectory(_serverInfo->contentPath + path, isDirectory);
 		if(isDirectory)
 		{
-			if(GD::bl->hf.fileExists(_serverInfo->contentPath + "index.php")) path = "index.php";
-			else if(GD::bl->hf.fileExists(_serverInfo->contentPath + "index.php5")) path = "index.php5";
+			if(!path.empty() && path.back() != '/') path.push_back('/');
+			if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
+			else if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
 			else
 			{
 				getError(404, BaseLib::HTTP::getStatusText(404), "The requested URL / was not found on this server.", content);
@@ -162,8 +163,7 @@ void WebServer::post(BaseLib::HTTP& http, std::vector<char>& content)
 		}
 		try
 		{
-			std::vector<std::string> headers;
-			if(path.front() == '/') path = path.substr(1);
+			_out.printInfo("Client is requesting: " + http.getHeader()->path + " (translated to: \"" + _serverInfo->contentPath + path + "\", method: POST)");
 			GD::scriptEngine.executeWebRequest(_serverInfo->contentPath + path, http, _serverInfo, content);
 		}
 		catch(const std::exception& ex)

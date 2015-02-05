@@ -348,6 +348,7 @@ int main(int argc, char* argv[])
     					exit(1);
     				}
     				GD::bl->settings.load(GD::configPath + "main.conf");
+    				GD::bl->debugLevel = 3; //Only output warnings.
     				GD::familyController.loadModules();
     				GD::physicalInterfaces.load(GD::bl->settings.physicalInterfaceSettingsPath());
     				int32_t userID = GD::bl->hf.userID(std::string(argv[i + 1]));

@@ -75,6 +75,7 @@ public:
 		int32_t responseCode = -1;
 		uint32_t contentLength = 0;
 		std::string path;
+		std::string pathInfo;
 		std::string args;
 		std::string host;
 		std::string contentType;
@@ -82,13 +83,9 @@ public:
 		Connection::Enum connection = Connection::Enum::none;
 		std::string authorization;
 		std::string cookie;
-		std::string referer;
-		std::string userAgent;
-		std::string accept;
-		std::string acceptLanguage;
-		std::string acceptEncoding;
 		std::string remoteAddress;
 		int32_t remotePort = 0;
+		std::map<std::string, std::string> fields;
 	};
 
 	HTTP();
@@ -124,6 +121,7 @@ public:
 	std::string decodeURL(const std::string& url);
 	size_t readStream(char* buffer, size_t requestLength);
 	size_t readContentStream(char* buffer, size_t requestLength);
+	size_t readFirstContentLine(char* buffer, size_t requestLength);
 	static std::string getMimeType(std::string extension);
 	static std::string getStatusText(int32_t code);
 private:

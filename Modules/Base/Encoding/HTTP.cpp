@@ -290,6 +290,16 @@ void HTTP::processHeader(char** buffer, int32_t& bufferLength)
 			if((unsigned)pos + 1 < _header.path.size()) _header.args = _header.path.substr(pos + 1);
 			_header.path = _header.path.substr(0, pos);
 		}
+		pos = _header.path.find(".php");
+		if(pos != (signed)std::string::npos)
+		{
+			pos = _header.path.find('/', pos);
+			if(pos != (signed)std::string::npos)
+			{
+				_header.pathInfo = _header.path.substr(pos);
+				_header.path = _header.path.substr(0, pos);
+			}
+		}
 		_header.path = decodeURL(_header.path);
 		HelperFunctions::stringReplace(_header.path, "../", "");
 
@@ -376,13 +386,8 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 		}
 	}
 	else if(!strnaicmp(name, "cookie", nameSize)) _header.cookie = std::string(value, valueSize);
-	else if(!strnaicmp(name, "referer", nameSize)) _header.referer = std::string(value, valueSize);
-	else if(!strnaicmp(name, "user-agent", nameSize)) _header.userAgent = std::string(value, valueSize);
-	else if(!strnaicmp(name, "accept", nameSize)) _header.accept = std::string(value, valueSize);
-	else if(!strnaicmp(name, "accept-language", nameSize)) _header.acceptLanguage = std::string(value, valueSize);
-	else if(!strnaicmp(name, "accept-encoding", nameSize)) _header.acceptEncoding = std::string(value, valueSize);
-	else if(!strnaicmp(name, "cookie", nameSize)) _header.cookie = std::string(value, valueSize);
 	else if(!strnaicmp(name, "authorization", nameSize)) _header.authorization = std::string(value, valueSize);
+	else _header.fields[std::string(name, nameSize)] = std::string(value, valueSize);
 }
 
 int32_t HTTP::strnaicmp(char const *a, char const *b, uint32_t size)
@@ -543,7 +548,7 @@ std::string HTTP::decodeURL(const std::string& url)
 
 size_t HTTP::readStream(char* buffer, size_t requestLength)
 {
-	ssize_t bytesRead = 0;
+	size_t bytesRead = 0;
 	if(_streamPos < _rawHeader->size())
 	{
 		size_t length = requestLength;
@@ -553,10 +558,12 @@ size_t HTTP::readStream(char* buffer, size_t requestLength)
 		bytesRead += length;
 		requestLength -= length;
 	}
-	if(requestLength > 0 && (_streamPos - _rawHeader->size()) < _content->size())
+	if(_content->size() == 0) return bytesRead;
+	size_t contentSize = _content->size() - 1; //Ignore trailing "0"
+	if(requestLength > 0 && (_streamPos - _rawHeader->size()) < contentSize)
 	{
 		size_t length = requestLength;
-		if((_streamPos - _rawHeader->size()) + length > _content->size()) length = _content->size() - (_streamPos - _rawHeader->size());
+		if((_streamPos - _rawHeader->size()) + length > contentSize) length = _content->size() - (_streamPos - _rawHeader->size());
 		memcpy(buffer + bytesRead, &_content->at(_streamPos - _rawHeader->size()), length);
 		_streamPos += length;
 		bytesRead += length;
@@ -567,11 +574,34 @@ size_t HTTP::readStream(char* buffer, size_t requestLength)
 
 size_t HTTP::readContentStream(char* buffer, size_t requestLength)
 {
-	ssize_t bytesRead = 0;
-	if(_contentStreamPos < _content->size())
+	size_t bytesRead = 0;
+	size_t contentSize = _content->size() - 1; //Ignore trailing "0"
+	if(_contentStreamPos < contentSize)
 	{
 		size_t length = requestLength;
-		if(_contentStreamPos + length > _content->size()) length = _content->size() - _contentStreamPos;
+		if(_contentStreamPos + length > contentSize) length = contentSize - _contentStreamPos;
+		memcpy(buffer, &_content->at(_contentStreamPos), length);
+		_contentStreamPos += length;
+		bytesRead += length;
+		requestLength -= length;
+	}
+	return bytesRead;
+}
+
+size_t HTTP::readFirstContentLine(char* buffer, size_t requestLength)
+{
+	if(_content->size() == 0) return 0;
+	if(_contentStreamPos >= _content->size() - 1) return 0;
+	size_t bytesRead = 0;
+	char* posTemp = (char*)memchr(&_content->at(_contentStreamPos), '\n', _content->size() - 1 - _contentStreamPos);
+	int32_t newlinePos = 0;
+	if(posTemp > 0) newlinePos = posTemp - &_content->at(0);
+	if(newlinePos > 0 && _content->at(newlinePos - 1) == '\r') newlinePos--;
+	else if(newlinePos <= 0) newlinePos = _content->size() - 1;
+	if(_contentStreamPos < (unsigned)newlinePos)
+	{
+		size_t length = requestLength;
+		if(_contentStreamPos + length > (unsigned)newlinePos) length = newlinePos - _contentStreamPos;
 		memcpy(buffer, &_content->at(_contentStreamPos), length);
 		_contentStreamPos += length;
 		bytesRead += length;

@@ -43,10 +43,11 @@ solution "homegear"
          --"BIDCOSRTLSDRLAN",
       }
       linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear" }
+      libdirs { "/usr/lib/php5" }
 
    configuration { "rpi", "gmake" }
       includedirs { "./Includes/ARM\ headers" }
-      libdirs { "./ARM\ libraries", "/usr/lib/php5" }
+      libdirs { "./ARM\ libraries" }
 
    project "base"
       kind "StaticLib"
@@ -113,6 +114,7 @@ solution "homegear"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
 
+--[[
    project "homematicwired"
       kind "SharedLib"
       language "C++"
@@ -256,6 +258,7 @@ solution "homegear"
          targetdir "./lib/Modules/Profiling"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
+--]]
 
    project "user"
       kind "StaticLib"
