@@ -83,5 +83,9 @@ override_dh_auto_install:
 	cp $(CURDIR)/Miscellaneous/DeviceTypePatch.patch $(CURDIR)/debian/homegear/var/lib/homegear
 	chown root:root $(CURDIR)/debian/homegear/var/lib/homegear/DeviceTypePatch.patch
 	chmod 644 $(CURDIR)/debian/homegear/var/lib/homegear/DeviceTypePatch.patch
+	
+override_dh_shlibdeps
+	dh_shlibdeps -l/usr/lib/php5
+	
 %:
 	dh $@
