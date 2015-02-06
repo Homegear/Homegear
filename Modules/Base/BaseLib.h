@@ -14,6 +14,8 @@
 #include "HelperFunctions/HelperFunctions.h"
 #include "HelperFunctions/Color.h"
 #include "HelperFunctions/Math.h"
+#include "HelperFunctions/Crypt.h"
+#include "HelperFunctions/Base64.h"
 #include "Output/Output.h"
 #include "RPC/Devices.h"
 #include "Settings/Settings.h"

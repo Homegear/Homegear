@@ -101,7 +101,6 @@ OBJECTS := \
 	$(OBJDIR)/RPCMethods.o \
 	$(OBJDIR)/RPCClient.o \
 	$(OBJDIR)/Server.o \
-	$(OBJDIR)/Base64.o \
 	$(OBJDIR)/ServerInfo.o \
 	$(OBJDIR)/Webserver.o \
 	$(OBJDIR)/Client.o \
@@ -188,9 +187,6 @@ $(OBJDIR)/RPCClient.o: Libraries/RPC/RPCClient.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Server.o: Libraries/RPC/Server.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Base64.o: Libraries/RPC/Base64.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/ServerInfo.o: Libraries/RPC/ServerInfo.cpp

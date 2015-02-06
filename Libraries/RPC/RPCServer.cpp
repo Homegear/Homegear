@@ -741,6 +741,74 @@ void RPCServer::collectGarbage()
 
 }
 
+void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib::HTTP& http)
+{
+	try
+	{
+		if(http.getHeader()->fields.find("upgrade") != http.getHeader()->fields.end() && http.getHeader()->fields["upgrade"] == "websocket")
+		{
+			if(http.getHeader()->fields.find("sec-websocket-protocol") == http.getHeader()->fields.end())
+			{
+				closeClientConnection(client);
+				_out.printError("Error: No websocket protocol specified.");
+				return;
+			}
+			if(http.getHeader()->fields.find("sec-websocket-key") == http.getHeader()->fields.end())
+			{
+				closeClientConnection(client);
+				_out.printError("Error: No websocket key specified.");
+				return;
+			}
+			std::string protocol = http.getHeader()->fields["sec-websocket-protocol"];
+			BaseLib::HelperFunctions::toLower(protocol);
+			std::string websocketKey = http.getHeader()->fields["sec-websocket-key"] + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+			std::vector<char> data(&websocketKey[0], &websocketKey[0] + websocketKey.size());
+			std::vector<char> sha1;
+			BaseLib::Crypt::sha1(data, sha1);
+			std::string websocketAccept;
+			BaseLib::Base64::encode(sha1, websocketAccept);
+			if(protocol == "server")
+			{
+				std::string header;
+				header.append("HTTP/1.1 101 Switching Protocols\r\n");
+				header.append("Connection: Upgrade\r\n");
+				header.append("Sec-WebSocket-Accept: ").append(websocketAccept).append("\r\n");
+				header.append("Sec-WebSocket-Protocol: server\r\n");
+			}
+			else if(protocol == "client")
+			{
+				std::string header;
+				header.append("HTTP/1.1 101 Switching Protocols\r\n");
+				header.append("Connection: Upgrade\r\n");
+				header.append("Sec-WebSocket-Accept: ").append(websocketAccept).append("\r\n");
+				header.append("Sec-WebSocket-Protocol: client\r\n");
+			}
+			else
+			{
+				closeClientConnection(client);
+				_out.printError("Error: Unknown websocket protocol. Known protocols are \"server\" and \"client\".");
+			}
+		}
+		else
+		{
+			closeClientConnection(client);
+			_out.printError("Error: Connection upgrade type not supported.");
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void RPCServer::readClient(std::shared_ptr<Client> client)
 {
 	try
@@ -982,7 +1050,11 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					}
 				}
 
-				if(_info->webServer && (!_info->rpcServer || http.getHeader()->contentType != "text/xml"))
+				if(http.getHeader()->connection == BaseLib::HTTP::Connection::upgrade)
+				{
+					handleConnectionUpgrade(client, http);
+				}
+				else if(_info->webServer && (!_info->rpcServer || http.getHeader()->contentType != "text/xml"))
 				{
 
 					http.getHeader()->remoteAddress = client->address;
@@ -990,7 +1062,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					std::vector<char> response;
 					if(http.getHeader()->method == "POST") _webServer->post(http, response);
 					else if(http.getHeader()->method == "GET" || http.getHeader()->method == "HEAD") _webServer->get(http, response);
-					sendRPCResponseToClient(client, response, false);
+					sendRPCResponseToClient(client, response, http.getHeader()->connection == BaseLib::HTTP::Connection::keepAlive);
 				}
 				else if(_info->rpcServer) packetReceived(client, *http.getContent(), packetType, http.getHeader()->connection == BaseLib::HTTP::Connection::Enum::keepAlive);
 				packetLength = 0;

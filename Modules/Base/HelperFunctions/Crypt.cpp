@@ -27,53 +27,24 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef AUTH_H_
-#define AUTH_H_
+#include "Crypt.h"
+#include <gcrypt.h>
 
-#include "../../Modules/Base/BaseLib.h"
-#include "../User/User.h"
-
-#include <string>
-#include <memory>
-#include <vector>
-
-namespace RPC
+namespace BaseLib
 {
+	bool Crypt::sha1(const std::vector<char>& in, std::vector<char>& out)
+	{
+		out.clear();
+		out.resize(gcry_md_get_algo_dlen(GCRY_MD_SHA1));
+		gcry_md_hash_buffer(GCRY_MD_SHA1, &out[0], &in[0], in.size());
+		return true;
+	}
 
-class AuthException : public BaseLib::Exception
-{
-public:
-	AuthException(std::string message) : BaseLib::Exception(message) {}
-};
-
-class Auth
-{
-public:
-	Auth();
-	Auth(std::shared_ptr<BaseLib::SocketOperations>& socket, std::vector<std::string>& validUsers);
-	Auth(std::shared_ptr<BaseLib::SocketOperations>& socket, std::string userName, std::string password);
-	virtual ~Auth() {}
-
-	bool initialized() { return _initialized; }
-	std::pair<std::string, std::string> basicClient();
-	bool basicServer(std::shared_ptr<BaseLib::RPC::RPCHeader>& binaryHeader);
-	bool basicServer(BaseLib::HTTP& httpPacket);
-protected:
-	bool _initialized = false;
-	std::string _hostname;
-	std::shared_ptr<BaseLib::SocketOperations> _socket;
-	std::string _basicAuthHTTPHeader;
-	std::vector<char> _basicUnauthBinaryHeader;
-	std::vector<char> _basicUnauthHTTPHeader;
-	std::vector<std::string> _validUsers;
-	std::string _userName;
-	std::string _password;
-	std::pair<std::string, std::string> _basicAuthString;
-	BaseLib::HTTP _http;
-	std::shared_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
-
-	void sendBasicUnauthorized(bool binary);
-};
-
+	bool Crypt::md5(const std::vector<char>& in, std::vector<char>& out)
+	{
+		out.clear();
+		out.resize(gcry_md_get_algo_dlen(GCRY_MD_MD5));
+		gcry_md_hash_buffer(GCRY_MD_MD5, &out[0], &in[0], in.size());
+		return true;
+	}
 }
-#endif

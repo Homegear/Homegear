@@ -27,53 +27,48 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef AUTH_H_
-#define AUTH_H_
+#ifndef CRYPT_H_
+#define CRYPT_H_
 
-#include "../../Modules/Base/BaseLib.h"
-#include "../User/User.h"
-
-#include <string>
-#include <memory>
 #include <vector>
 
-namespace RPC
+namespace BaseLib
 {
 
-class AuthException : public BaseLib::Exception
-{
-public:
-	AuthException(std::string message) : BaseLib::Exception(message) {}
-};
-
-class Auth
+class Crypt
 {
 public:
-	Auth();
-	Auth(std::shared_ptr<BaseLib::SocketOperations>& socket, std::vector<std::string>& validUsers);
-	Auth(std::shared_ptr<BaseLib::SocketOperations>& socket, std::string userName, std::string password);
-	virtual ~Auth() {}
+	/**
+	 * Destructor.
+	 * Does nothing.
+	 */
+	virtual ~Crypt();
 
-	bool initialized() { return _initialized; }
-	std::pair<std::string, std::string> basicClient();
-	bool basicServer(std::shared_ptr<BaseLib::RPC::RPCHeader>& binaryHeader);
-	bool basicServer(BaseLib::HTTP& httpPacket);
+	/**
+	 * Calculates the SHA1 of the passed binary data.
+	 *
+	 * @param[in] in The data to calculate the SHA1 for.
+	 * @param[out] out A vector to store the calculated SHA1 in.
+	 * @return Returns "true" on success and "false" on error.
+	 */
+	static bool sha1(const std::vector<char>& in, std::vector<char>& out);
+
+	/**
+	 * Calculates the MD5 of the passed binary data.
+	 *
+	 * @param[in] in The data to calculate the MD5 for.
+	 * @param[out] out A vector to store the calculated MD5 in.
+	 * @return Returns "true" on success and "false" on error.
+	 */
+	static bool md5(const std::vector<char>& in, std::vector<char>& out);
 protected:
-	bool _initialized = false;
-	std::string _hostname;
-	std::shared_ptr<BaseLib::SocketOperations> _socket;
-	std::string _basicAuthHTTPHeader;
-	std::vector<char> _basicUnauthBinaryHeader;
-	std::vector<char> _basicUnauthHTTPHeader;
-	std::vector<std::string> _validUsers;
-	std::string _userName;
-	std::string _password;
-	std::pair<std::string, std::string> _basicAuthString;
-	BaseLib::HTTP _http;
-	std::shared_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
-
-	void sendBasicUnauthorized(bool binary);
+	/**
+	 * Constructor. It is protected, because the class only contains static methods.
+	 * It does nothing.
+	 */
+	Crypt();
 };
 
 }
+
 #endif

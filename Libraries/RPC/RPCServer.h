@@ -58,6 +58,7 @@
 #include <sys/socket.h>
 #include <errno.h>
 
+#include <gcrypt.h>
 #include <gnutls/gnutls.h>
 
 namespace RPC
@@ -131,6 +132,7 @@ namespace RPC
 			void sendRPCResponseToClient(std::shared_ptr<Client> client, std::shared_ptr<BaseLib::RPC::Variable> error, PacketType::Enum packetType, bool keepAlive);
 			void sendRPCResponseToClient(std::shared_ptr<Client> client, std::vector<char>& data, bool keepAlive);
 			void packetReceived(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
+			void handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib::HTTP& http);
 			void analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
 			void analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
 			void callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters, PacketType::Enum responseType, bool keepAlive);

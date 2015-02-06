@@ -380,6 +380,7 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 			HelperFunctions::trim(BaseLib::HelperFunctions::toLower(c));
 			if(c == "keep-alive") _header.connection = Connection::Enum::keepAlive;
 			else if(c == "close") _header.connection = Connection::Enum::close;
+			else if(c == "upgrade") _header.connection = Connection::Enum::upgrade;
 			else if(c == "te") {} //ignore
 			else throw HTTPException("Unknown value for HTTP header \"Connection\": " + std::string(value, valueSize));
 			if(pos == (signed)std::string::npos) s.clear(); else s.erase(0, pos + 1);
@@ -387,7 +388,12 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 	}
 	else if(!strnaicmp(name, "cookie", nameSize)) _header.cookie = std::string(value, valueSize);
 	else if(!strnaicmp(name, "authorization", nameSize)) _header.authorization = std::string(value, valueSize);
-	else _header.fields[std::string(name, nameSize)] = std::string(value, valueSize);
+	else
+	{
+		std::string lowercaseName(name, nameSize);
+		HelperFunctions::toLower(lowercaseName);
+		_header.fields[lowercaseName] = std::string(value, valueSize);
+	}
 }
 
 int32_t HTTP::strnaicmp(char const *a, char const *b, uint32_t size)

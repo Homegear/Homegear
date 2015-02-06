@@ -28,23 +28,60 @@
 #ifndef BASE64_H_
 #define BASE64_H_
 
-#include <iostream>
+#include <string>
+#include <vector>
 
-namespace RPC
+namespace BaseLib
 {
 
 class Base64 {
 public:
 	virtual ~Base64() {}
 
-	static std::string encode(std::string const& s);
-	static std::string decode(std::string const& s);
+	/**
+	 * Encodes a string to Base64.
+	 *
+	 * @param[in] in The string to encode.
+	 * @param[out] out The string the result is stored in.
+	 */
+	static void encode(const std::string& in, std::string& out);
+
+	/**
+	 * Encodes a char vector to Base64.
+	 *
+	 * @param[in] in The binary data to encode.
+	 * @param[out] out The string the result is stored in.
+	 */
+	static void encode(const std::vector<char>& in, std::string& out);
+
+	/**
+	 * Decodes a Base64 encoded string.
+	 *
+	 * @param[in] in The data to decode.
+	 * @param[out] out The string the result is stored in.
+	 */
+	static void decode(const std::string& in, std::string& out);
+
+	/**
+	 * Decodes Base64 encoded binary data.
+	 *
+	 * @param[in] in The data to decode.
+	 * @param[out] out The char vector the result is stored in.
+	 */
+	static void decode(const std::string& in, std::vector<char>& out);
+private:
+	Base64() {}
+
+	/**
+	 * Checks whether a character is Base64 decodeable.
+	 *
+	 * @param c The character to check.
+	 * @return Returns "true" when the character is decodeable, otherwise "false".
+	 */
 	static inline bool isBase64(unsigned char c) {
 		return (isalnum(c) || (c == '+') || (c == '/'));
 	}
-private:
-	Base64() {}
 };
 
-} /* namespace RPC */
-#endif /* BASE64_H_ */
+}
+#endif
