@@ -9,6 +9,7 @@ then
   echo "Please specify branch."
   exit 0;
 fi
+export LD_LIBRARY_PATH=/usr/lib/php5:${LD_LIBRARY_PATH}
 wget https://github.com/hfedcba/Homegear/archive/$2.zip
 unzip $2.zip
 rm $2.zip
