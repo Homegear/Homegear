@@ -1,28 +1,32 @@
--- create Makefile with "./premake4 --platform=rpi gmake" or "./premake4 gmake"
+-- create Makefile with "./premake4 --platform=rpi gmake", "./premake4 --platform=armel gmake" or "./premake4 gmake"
 
 function newplatform(plf)
     local name = plf.name
     local description = plf.description
- 
+    local crosscompiler
+
     -- Register new platform
     premake.platforms[name] = {
         cfgsuffix = "_"..name,
-        iscrosscompiler = true
+        iscrosscompiler = crosscompiler
     }
- 
+
     -- Allow use of new platform in --platfroms
     table.insert(premake.option.list["platform"].allowed, { name, description })
     table.insert(premake.fields.platforms.allowed, name)
- 
+
     -- Add compiler support
     -- gcc
-    premake.gcc.platforms[name] = plf.gcc
+    if plf.gcc then
+        premake.gcc.platforms[name] = plf.gcc
+    end
     --other compilers (?)
 end
 
 newplatform {
     name = "rpi",
     description = "Raspberry Pi",
+    iscrosscompiler = true,
     gcc = {
         cc = "arm-linux-gnueabihf-gcc",
         cxx = "arm-linux-gnueabihf-g++",
@@ -32,13 +36,21 @@ newplatform {
 
 newplatform {
     name = "armel",
-    description = "armel",
+    description = "Compile without script engine and event handler, because std::future is not supported on armel.",
+    -- Needs to be "true" to be able to differentiate between "native" and "armel"
+    iscrosscompiler = true,
+    -- "iscrosscompiler" does not work without providing gcc
+    gcc = {
+        cc = "gcc",
+        cxx = "g++",
+        cppflags = ""
+    }
 }
 
 solution "homegear"
-   configurations { "Debug", "Release", "Profiling" }
- 
-   configuration { "linux", "gmake" }
+   configurations { "Release", "Debug", "Profiling" }
+
+   configuration { "native", "linux", "gmake" }
       --GCRYPT_NO_DEPRECATED only works after modifying the header file. See: http://lists.gnupg.org/pipermail/gcrypt-devel/2011-September/001844.html
       defines
       {
