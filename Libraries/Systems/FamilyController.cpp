@@ -302,7 +302,9 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 {
 	try
 	{
+#ifdef EVENTHANDLER
 		GD::eventHandler.trigger(peerID, channel, variables, values);
+#endif
 	}
 	catch(const std::exception& ex)
 	{

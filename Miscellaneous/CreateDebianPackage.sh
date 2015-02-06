@@ -2,14 +2,14 @@
 if [[ $1 -lt 1 ]]
 then
 	echo "Please provide a revision number."
-	exit 0;
+	exit 0
 fi
 if test -z $2
 then
   echo "Please specify branch."
-  exit 0;
+  exit 0
 fi
-export LD_LIBRARY_PATH=/usr/lib/php5:${LD_LIBRARY_PATH}
+
 wget https://github.com/hfedcba/Homegear/archive/$2.zip
 unzip $2.zip
 rm $2.zip

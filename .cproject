@@ -120,6 +120,8 @@
 									<listOptionValue builtIn="false" value="BIDCOSTICC1100"/>
 									<listOptionValue builtIn="false" value="BIDCOSCUL"/>
 									<listOptionValue builtIn="false" value="_GLIBCXX_USE_NANOSLEEP"/>
+									<listOptionValue builtIn="false" value="SCRIPTENGINE"/>
+									<listOptionValue builtIn="false" value="EVENTHANDLER"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.include.paths.1056346228" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/usr/include/c++/4.8"/>
@@ -280,6 +282,8 @@
 									<listOptionValue builtIn="false" value="__x86_64=1"/>
 									<listOptionValue builtIn="false" value="__x86_64__=1"/>
 									<listOptionValue builtIn="false" value="_GLIBCXX_USE_NANOSLEEP"/>
+									<listOptionValue builtIn="false" value="SCRIPTENGINE"/>
+									<listOptionValue builtIn="false" value="EVENTHANDLER"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.include.paths.2065907104" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;W:\include&quot;"/>

@@ -27,6 +27,7 @@
  * files in the program, then also delete it here.
  */
 
+#ifdef SCRIPTENGINE
 #ifndef PHPVARIABLECONVERTER_H_
 #define PHPVARIABLECONVERTER_H_
 
@@ -46,4 +47,5 @@ public:
 	static void getPHPVariable(std::shared_ptr<BaseLib::RPC::Variable> input, zval* output);
 protected:
 };
+#endif
 #endif

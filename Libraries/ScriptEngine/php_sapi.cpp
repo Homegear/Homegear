@@ -27,6 +27,7 @@
  * files in the program, then also delete it here.
  */
 
+#ifdef SCRIPTENGINE
 #include "php_sapi.h"
 #include "../GD/GD.h"
 #include "PHPVariableConverter.h"
@@ -556,3 +557,4 @@ void php_homegear_shutdown()
 	sapi_shutdown();
 	tsrm_shutdown();
 }
+#endif

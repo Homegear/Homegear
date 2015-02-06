@@ -27,6 +27,7 @@
 * files in the program, then also delete it here.
 */
 
+#ifdef SCRIPTENGINE
 #include "ScriptEngine.h"
 #include "../GD/GD.h"
 
@@ -339,3 +340,4 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& 
 	}
 	return 1;
 }
+#endif

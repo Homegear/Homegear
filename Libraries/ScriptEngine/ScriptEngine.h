@@ -27,6 +27,7 @@
  * files in the program, then also delete it here.
  */
 
+#ifdef SCRIPTENGINE
 #ifndef SCRIPTENGINE_H_
 #define SCRIPTENGINE_H_
 
@@ -58,4 +59,5 @@ protected:
 	void collectGarbage();
 	bool scriptThreadMaxReached();
 };
+#endif
 #endif

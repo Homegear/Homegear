@@ -27,6 +27,7 @@
 * files in the program, then also delete it here.
 */
 
+#ifdef SCRIPTENGINE
 #include "PHPVariableConverter.h"
 #include "../GD/GD.h"
 
@@ -180,3 +181,4 @@ void PHPVariableConverter::getPHPVariable(std::shared_ptr<BaseLib::RPC::Variable
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
+#endif

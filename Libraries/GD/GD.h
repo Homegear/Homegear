@@ -65,10 +65,14 @@ public:
 	static RPC::ServerInfo serverInfo;
 	static RPC::ClientSettings clientSettings;
 	static int32_t rpcLogLevel;
-	static EventHandler eventHandler;
 	static PhysicalInterfaces physicalInterfaces;
 	static std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>> deviceFamilies;
+#ifdef EVENTHANDLER
+	static EventHandler eventHandler;
+#endif
+#ifdef SCRIPTENGINE
 	static ScriptEngine scriptEngine;
+#endif
 
 	virtual ~GD() {}
 private:

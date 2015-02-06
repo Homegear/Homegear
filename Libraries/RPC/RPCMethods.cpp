@@ -235,6 +235,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSystemMulticall::invoke(std::shared_p
 
 std::shared_ptr<BaseLib::RPC::Variable> RPCAbortEventReset::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
+#ifdef EVENTHANDLER
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString }));
@@ -255,6 +256,9 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCAbortEventReset::invoke(std::shared_p
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+#else
+    return BaseLib::RPC::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
+#endif
 }
 
 std::shared_ptr<BaseLib::RPC::Variable> RPCActivateLinkParamset::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
@@ -388,6 +392,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCAddDevice::invoke(std::shared_ptr<std
 
 std::shared_ptr<BaseLib::RPC::Variable> RPCAddEvent::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
+#ifdef EVENTHANDLER
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcStruct }));
@@ -408,6 +413,9 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCAddEvent::invoke(std::shared_ptr<std:
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+#else
+    return BaseLib::RPC::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
+#endif
 }
 
 std::shared_ptr<BaseLib::RPC::Variable> RPCAddLink::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
@@ -685,6 +693,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCDeleteSystemVariable::invoke(std::sha
 
 std::shared_ptr<BaseLib::RPC::Variable> RPCEnableEvent::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
+#ifdef EVENTHANDLER
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcBoolean }));
@@ -705,6 +714,9 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCEnableEvent::invoke(std::shared_ptr<s
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+#else
+    return BaseLib::RPC::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
+#endif
 }
 
 std::shared_ptr<BaseLib::RPC::Variable> RPCGetAllMetadata::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
@@ -1009,6 +1021,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetDeviceInfo::invoke(std::shared_ptr
 
 std::shared_ptr<BaseLib::RPC::Variable> RPCGetEvent::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
+#ifdef EVENTHANDLER
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString }));
@@ -1029,6 +1042,9 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetEvent::invoke(std::shared_ptr<std:
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+#else
+    return BaseLib::RPC::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
+#endif
 }
 
 std::shared_ptr<BaseLib::RPC::Variable> RPCGetInstallMode::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
@@ -2114,6 +2130,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCListDevices::invoke(std::shared_ptr<s
 
 std::shared_ptr<BaseLib::RPC::Variable> RPCListEvents::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
+#ifdef EVENTHANDLER
 	try
 	{
 		if(parameters->size() > 0)
@@ -2155,6 +2172,9 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCListEvents::invoke(std::shared_ptr<st
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+#else
+    return BaseLib::RPC::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
+#endif
 }
 
 std::shared_ptr<BaseLib::RPC::Variable> RPCListFamilies::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
@@ -2362,6 +2382,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCPutParamset::invoke(std::shared_ptr<s
 
 std::shared_ptr<BaseLib::RPC::Variable> RPCRemoveEvent::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
+#ifdef EVENTHANDLER
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString }));
@@ -2382,6 +2403,9 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRemoveEvent::invoke(std::shared_ptr<s
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+#else
+    return BaseLib::RPC::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
+#endif
 }
 
 std::shared_ptr<BaseLib::RPC::Variable> RPCRemoveLink::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
@@ -2533,6 +2557,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRssiInfo::invoke(std::shared_ptr<std:
 
 std::shared_ptr<BaseLib::RPC::Variable> RPCRunScript::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
+#ifdef SCRIPTENGINE
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::VariableType>>({
@@ -2616,6 +2641,9 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRunScript::invoke(std::shared_ptr<std
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+#else
+    return BaseLib::RPC::Variable::createError(-32500, "This version of Homegear is compiled without script engine.");
+#endif
 }
 
 std::shared_ptr<BaseLib::RPC::Variable> RPCSearchDevices::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
@@ -3200,6 +3228,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSubscribePeers::invoke(std::shared_pt
 
 std::shared_ptr<BaseLib::RPC::Variable> RPCTriggerEvent::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
+#ifdef EVENTHANDLER
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::VariableType>({ BaseLib::RPC::VariableType::rpcString }));
@@ -3220,6 +3249,9 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCTriggerEvent::invoke(std::shared_ptr<
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+#else
+    return BaseLib::RPC::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
+#endif
 }
 
 std::shared_ptr<BaseLib::RPC::Variable> RPCUnsubscribePeers::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)

@@ -27,6 +27,7 @@
  * files in the program, then also delete it here.
  */
 
+#ifdef SCRIPTENGINE
 #include "EventHandler.h"
 #include "../GD/GD.h"
 #include "../../Modules/Base/BaseLib.h"
@@ -1657,3 +1658,4 @@ void EventHandler::save(std::shared_ptr<Event> event)
     }
     _databaseMutex.unlock();
 }
+#endif

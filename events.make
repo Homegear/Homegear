@@ -31,7 +31,7 @@ ifeq ($(config),debug)
   OBJDIR     = obj/Debug/events
   TARGETDIR  = lib/Debug
   TARGET     = $(TARGETDIR)/libevents.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DSCRIPTENGINE -DEVENTHANDLER -DDEBUG
   INCLUDES  += -I/usr/include/php5 -I/usr/include/php5/main -I/usr/include/php5/sapi -I/usr/include/php5/TSRM -I/usr/include/php5/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++11
@@ -53,7 +53,7 @@ ifeq ($(config),release)
   OBJDIR     = obj/Release/events
   TARGETDIR  = lib/Release
   TARGET     = $(TARGETDIR)/libevents.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DSCRIPTENGINE -DEVENTHANDLER -DNDEBUG
   INCLUDES  += -I/usr/include/php5 -I/usr/include/php5/main -I/usr/include/php5/sapi -I/usr/include/php5/TSRM -I/usr/include/php5/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall -std=c++11
@@ -75,7 +75,7 @@ ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/events
   TARGETDIR  = lib/Profiling
   TARGET     = $(TARGETDIR)/libevents.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DSCRIPTENGINE -DEVENTHANDLER -DNDEBUG
   INCLUDES  += -I/usr/include/php5 -I/usr/include/php5/main -I/usr/include/php5/sapi -I/usr/include/php5/TSRM -I/usr/include/php5/Zend
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -std=c++11 -pg

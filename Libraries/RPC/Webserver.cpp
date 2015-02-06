@@ -96,11 +96,13 @@ void WebServer::get(BaseLib::HTTP& http, std::vector<char>& content)
 			GD::bl->hf.toLower(ending);
 			std::string contentString;
 			std::vector<std::string> headers;
+#ifdef SCRIPTENGINE
 			if(ending == "php" || ending == "php5")
 			{
 				GD::scriptEngine.executeWebRequest(_serverInfo->contentPath + path, http, _serverInfo, content);
 				return;
 			}
+#endif
 			std::string contentType = BaseLib::HTTP::getMimeType(ending);
 			if(contentType.empty()) contentType = "application/octet-stream";
 			//Don't return content when method is "HEAD"
@@ -138,13 +140,7 @@ void WebServer::post(BaseLib::HTTP& http, std::vector<char>& content)
 {
 	try
 	{
-		/*std::vector<char> request;
-		std::shared_ptr<std::vector<char>> header = http.getRawHeader();
-		std::shared_ptr<std::vector<char>> content = http.getContent();
-		request.reserve(header->size() + content->size());
-		request.insert(request.end(), header->begin(), header->end());
-		request.insert(request.end(), content->begin(), content->end());*/
-
+#ifdef SCRIPTENGINE
 		std::string path = http.getHeader()->path;
 		if(!path.empty() && path.front() == '/') path = path.substr(1);
 
@@ -176,6 +172,9 @@ void WebServer::post(BaseLib::HTTP& http, std::vector<char>& content)
 			getError(404, BaseLib::HTTP::getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 			return;
 		}
+#else
+		getError(304, BaseLib::HTTP::getStatusText(304), "Homegear is compiled without script engine.", content);
+#endif
 	}
 	catch(const std::exception& ex)
     {

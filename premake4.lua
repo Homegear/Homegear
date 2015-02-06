@@ -30,6 +30,11 @@ newplatform {
     }
 }
 
+newplatform {
+    name = "armel",
+    description = "armel",
+}
+
 solution "homegear"
    configurations { "Debug", "Release", "Profiling" }
  
@@ -39,6 +44,8 @@ solution "homegear"
       {
          "FORTIFY_SOURCE=2",
          "GCRYPT_NO_DEPRECATED",
+         "SCRIPTENGINE",
+         "EVENTHANDLER"
          --"BIDCOSTICC1101",
          --"BIDCOSRTLSDRLAN",
       }
@@ -49,12 +56,22 @@ solution "homegear"
       includedirs { "./Includes/ARM\ headers" }
       libdirs { "./ARM\ libraries" }
 
+   --armel does not support std::future which is used in script engine and event handler
+   configuration { "armel", "gmake" }
+      --GCRYPT_NO_DEPRECATED only works after modifying the header file. See: http://lists.gnupg.org/pipermail/gcrypt-devel/2011-September/001844.html
+      defines
+      {
+         "FORTIFY_SOURCE=2",
+         "GCRYPT_NO_DEPRECATED",
+      }
+      linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear" }
+
    project "base"
       kind "StaticLib"
       language "C++"
       files
       { 
-      	"./Modules/Base/*h", "./Modules/Base/*.cpp",
+        "./Modules/Base/*h", "./Modules/Base/*.cpp",
         "./Modules/Base/HelperFunctions/*.h", "./Modules/Base/HelperFunctions/*.cpp",
         "./Modules/Base/Output/*.h", "./Modules/Base/Output/*.cpp",
         "./Modules/Base/RPC/*.h", "./Modules/Base/RPC/*.cpp",

@@ -27,6 +27,7 @@
  * files in the program, then also delete it here.
  */
 
+#ifdef SCRIPTENGINE
 #ifndef HOMEGEAR_PHP_SAPI_H_
 #define HOMEGEAR_PHP_SAPI_H_
 
@@ -63,4 +64,5 @@ int php_homegear_init();
 void php_homegear_shutdown();
 int php_homegear_module_startup(TSRMLS_D);
 
+#endif
 #endif

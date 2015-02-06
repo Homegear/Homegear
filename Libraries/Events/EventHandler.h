@@ -27,6 +27,7 @@
  * files in the program, then also delete it here.
  */
 
+#ifdef SCRIPTENGINE
 #ifndef EVENTHANDLER_H_
 #define EVENTHANDLER_H_
 
@@ -143,4 +144,5 @@ protected:
 	void save(std::shared_ptr<Event>);
 	void postTriggerTasks(std::shared_ptr<Event>& event, std::shared_ptr<BaseLib::RPC::Variable>& rpcResult, uint64_t currentTime);
 };
-#endif /* EVENTHANDLER_H_ */
+#endif
+#endif

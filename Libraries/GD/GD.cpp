@@ -46,7 +46,11 @@ CLI::Client GD::cliClient;
 int32_t GD::rpcLogLevel = 1;
 RPC::ServerInfo GD::serverInfo;
 RPC::ClientSettings GD::clientSettings;
-EventHandler GD::eventHandler;
 PhysicalInterfaces GD::physicalInterfaces;
 std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>> GD::deviceFamilies;
+#ifdef EVENTHANDLER
+EventHandler GD::eventHandler;
+#endif
+#ifdef SCRIPTENGINE
 ScriptEngine GD::scriptEngine;
+#endif
