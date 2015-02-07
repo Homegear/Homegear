@@ -177,6 +177,7 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 	try
 	{
 		if(_disposing) return 1;
+		if(path.empty()) return -1;
 		if(!wait)
 		{
 			collectGarbage();
@@ -231,10 +232,10 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 		php_homegear_get_globals(TSRMLS_C)->commandLine = true;
 
 		PG(register_argc_argv) = 1;
-		SG(server_context) = (void*)&arguments; //Must be defined! Otherwise arguments are not processed.
 		SG(options) |= SAPI_OPTION_NO_CHDIR;
 		SG(headers_sent) = 1;
 		SG(request_info).no_headers = 1;
+		SG(request_info).path_translated = estrndup(path.c_str(), path.size());
 
 		if (php_request_startup(TSRMLS_C) == FAILURE) {
 			GD::bl->out.printError("Error calling php_request_startup...");
@@ -255,6 +256,11 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 			if(BaseLib::HelperFunctions::trim(outputString).size() > 0) GD::out.printMessage("Script output: " + outputString);
 		}
 
+		if(SG(request_info).path_translated)
+		{
+			efree(SG(request_info).query_string);
+			SG(request_info).query_string = nullptr;
+		}
 		return exitCode;
 	}
 	catch(const std::exception& ex)
@@ -268,6 +274,11 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 	catch(...)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	if(SG(request_info).path_translated)
+	{
+		efree(SG(request_info).query_string);
+		SG(request_info).query_string = nullptr;
 	}
 	return 1;
 }

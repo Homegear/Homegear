@@ -202,75 +202,88 @@ static void php_homegear_log_message(char* message TSRMLS_DC)
 
 static void php_homegear_register_variables(zval* track_vars_array TSRMLS_DC)
 {
-	BaseLib::HTTP* http = SEG(http);
-	if(!http) return;
-	BaseLib::HTTP::Header* header = http->getHeader();
-	if(!header) return;
-	RPC::ServerInfo::Info* server = (RPC::ServerInfo::Info*)SG(server_context);
-	zval* value;
-
-	//PHP makes copies of all values, so conversion from const to non-const is ok.
-	if(server)
+	if(SEG(commandLine))
 	{
-		if(server->ssl) php_register_variable_safe((char*)"HTTPS", (char*)"on", 2, track_vars_array TSRMLS_CC);
-		else php_register_variable_safe((char*)"HTTPS", (char*)"", 0, track_vars_array TSRMLS_CC);
-		std::string connection = (header->connection == BaseLib::HTTP::Connection::keepAlive) ? "keep-alive" : "close";
-		php_register_variable_safe((char*)"HTTP_CONNECTION", (char*)connection.c_str(), connection.size(), track_vars_array TSRMLS_CC);
-		php_register_variable_safe((char*)"DOCUMENT_ROOT", (char*)server->contentPath.c_str(), server->contentPath.size(), track_vars_array TSRMLS_CC);
-		std::string filename = server->contentPath;
-		filename += (!header->path.empty() && header->path.front() == '/') ? header->path.substr(1) : header->path;
-		php_register_variable_safe((char*)"SCRIPT_FILENAME", (char*)filename.c_str(), filename.size(), track_vars_array TSRMLS_CC);
-		php_register_variable_safe((char*)"SERVER_NAME", (char*)server->name.c_str(), server->name.size(), track_vars_array TSRMLS_CC);
-		php_register_variable_safe((char*)"SERVER_ADDR", (char*)server->address.c_str(), server->address.size(), track_vars_array TSRMLS_CC);
+		if(SG(request_info).path_translated)
+		{
+			php_register_variable((char*)"PHP_SELF", (char*)SG(request_info).path_translated, track_vars_array TSRMLS_CC);
+			php_register_variable((char*)"SCRIPT_NAME", (char*)SG(request_info).path_translated, track_vars_array TSRMLS_CC);
+			php_register_variable((char*)"SCRIPT_FILENAME", (char*)SG(request_info).path_translated, track_vars_array TSRMLS_CC);
+			php_register_variable((char*)"PATH_TRANSLATED", (char*)SG(request_info).path_translated, track_vars_array TSRMLS_CC);
+		}
+		php_import_environment_variables(track_vars_array TSRMLS_CC);
+	}
+	else
+	{
+		BaseLib::HTTP* http = SEG(http);
+		if(!http) return;
+		BaseLib::HTTP::Header* header = http->getHeader();
+		if(!header) return;
+		RPC::ServerInfo::Info* server = (RPC::ServerInfo::Info*)SG(server_context);
+		zval* value;
+
+		//PHP makes copies of all values, so conversion from const to non-const is ok.
+		if(server)
+		{
+			if(server->ssl) php_register_variable_safe((char*)"HTTPS", (char*)"on", 2, track_vars_array TSRMLS_CC);
+			else php_register_variable_safe((char*)"HTTPS", (char*)"", 0, track_vars_array TSRMLS_CC);
+			std::string connection = (header->connection == BaseLib::HTTP::Connection::keepAlive) ? "keep-alive" : "close";
+			php_register_variable_safe((char*)"HTTP_CONNECTION", (char*)connection.c_str(), connection.size(), track_vars_array TSRMLS_CC);
+			php_register_variable_safe((char*)"DOCUMENT_ROOT", (char*)server->contentPath.c_str(), server->contentPath.size(), track_vars_array TSRMLS_CC);
+			std::string filename = server->contentPath;
+			filename += (!header->path.empty() && header->path.front() == '/') ? header->path.substr(1) : header->path;
+			php_register_variable_safe((char*)"SCRIPT_FILENAME", (char*)filename.c_str(), filename.size(), track_vars_array TSRMLS_CC);
+			php_register_variable_safe((char*)"SERVER_NAME", (char*)server->name.c_str(), server->name.size(), track_vars_array TSRMLS_CC);
+			php_register_variable_safe((char*)"SERVER_ADDR", (char*)server->address.c_str(), server->address.size(), track_vars_array TSRMLS_CC);
+			ALLOC_INIT_ZVAL(value);
+			Z_LVAL_P(value) = server->port;
+			Z_TYPE_P(value) = IS_LONG;
+			php_register_variable_ex((char*)"SERVER_PORT", value, track_vars_array TSRMLS_CC);
+			zval_ptr_dtor(&value);
+			value = nullptr;
+		}
+
+		std::string version = std::string("Homegear ") + VERSION;
+		php_register_variable_safe((char*)"SERVER_SOFTWARE", (char*)version.c_str(), version.size(), track_vars_array TSRMLS_CC);
+		php_register_variable_safe((char*)"SCRIPT_NAME", (char*)header->path.c_str(), header->path.size(), track_vars_array TSRMLS_CC);
+		std::string phpSelf = header->path + header->pathInfo;
+		php_register_variable_safe((char*)"PHP_SELF", (char*)phpSelf.c_str(), phpSelf.size(), track_vars_array TSRMLS_CC);
+		if(!header->pathInfo.empty())
+		{
+			php_register_variable_safe((char*)"PATH_INFO", (char*)header->pathInfo.c_str(), header->pathInfo.size(), track_vars_array TSRMLS_CC);
+			if(SG(request_info).path_translated) php_register_variable((char*)"PATH_TRANSLATED", (char*)SG(request_info).path_translated, track_vars_array TSRMLS_CC);
+		}
+		php_register_variable_safe((char*)"HTTP_HOST", (char*)header->host.c_str(), header->host.size(), track_vars_array TSRMLS_CC);
+		php_register_variable_safe((char*)"QUERY_STRING", (char*)header->args.c_str(), header->args.size(), track_vars_array TSRMLS_CC);
+		php_register_variable_safe((char*)"SERVER_PROTOCOL", (char*)"HTTP/1.1", 8, track_vars_array TSRMLS_CC);
+		php_register_variable_safe((char*)"REMOTE_ADDRESS", (char*)header->remoteAddress.c_str(), header->remoteAddress.size(), track_vars_array TSRMLS_CC);
 		ALLOC_INIT_ZVAL(value);
-		Z_LVAL_P(value) = server->port;
+		Z_LVAL_P(value) = header->remotePort;
 		Z_TYPE_P(value) = IS_LONG;
-		php_register_variable_ex((char*)"SERVER_PORT", value, track_vars_array TSRMLS_CC);
+		php_register_variable_ex((char*)"REMOTE_PORT", value, track_vars_array TSRMLS_CC);
 		zval_ptr_dtor(&value);
 		value = nullptr;
+		if(SG(request_info).request_method) php_register_variable((char*)"REQUEST_METHOD", (char*)SG(request_info).request_method, track_vars_array TSRMLS_CC);
+		if(SG(request_info).request_uri) php_register_variable((char*)"REQUEST_URI", SG(request_info).request_uri, track_vars_array TSRMLS_CC);
+		if(!header->pathInfo.empty()) php_register_variable_safe((char*)"REMOTE_ADDRESS", (char*)header->pathInfo.c_str(), header->pathInfo.size(), track_vars_array TSRMLS_CC);
+		if(header->contentLength > 0)
+		{
+			ALLOC_INIT_ZVAL(value);
+			Z_LVAL_P(value) = header->contentLength;
+			Z_TYPE_P(value) = IS_LONG;
+			php_register_variable_ex((char*)"CONTENT_LENGTH", value, track_vars_array TSRMLS_CC);
+			zval_ptr_dtor(&value);
+			value = nullptr;
+		}
+		if(!header->contentType.empty()) php_register_variable_safe((char*)"CONTENT_TYPE", (char*)header->contentType.c_str(), header->contentType.size(), track_vars_array TSRMLS_CC);
+		for(std::map<std::string, std::string>::const_iterator i = header->fields.begin(); i != header->fields.end(); ++i)
+		{
+			std::string name = "HTTP_" + i->first;
+			BaseLib::HelperFunctions::stringReplace(name, "-", "_");
+			BaseLib::HelperFunctions::toUpper(name);
+			php_register_variable_safe((char*)name.c_str(), (char*)i->second.c_str(), i->second.size(), track_vars_array TSRMLS_CC);
+		}
 	}
-
-	std::string version = std::string("Homegear ") + VERSION;
-	php_register_variable_safe((char*)"SERVER_SOFTWARE", (char*)version.c_str(), version.size(), track_vars_array TSRMLS_CC);
-	php_register_variable_safe((char*)"SCRIPT_NAME", (char*)header->path.c_str(), header->path.size(), track_vars_array TSRMLS_CC);
-	std::string phpSelf = header->path + header->pathInfo;
-	php_register_variable_safe((char*)"PHP_SELF", (char*)phpSelf.c_str(), phpSelf.size(), track_vars_array TSRMLS_CC);
-	if(!header->pathInfo.empty())
-	{
-		php_register_variable_safe((char*)"PATH_INFO", (char*)header->pathInfo.c_str(), header->pathInfo.size(), track_vars_array TSRMLS_CC);
-		if(SG(request_info).path_translated) php_register_variable((char*)"PATH_TRANSLATED", (char*)SG(request_info).path_translated, track_vars_array TSRMLS_CC);
-	}
-	php_register_variable_safe((char*)"HTTP_HOST", (char*)header->host.c_str(), header->host.size(), track_vars_array TSRMLS_CC);
-	php_register_variable_safe((char*)"QUERY_STRING", (char*)header->args.c_str(), header->args.size(), track_vars_array TSRMLS_CC);
-	php_register_variable_safe((char*)"SERVER_PROTOCOL", (char*)"HTTP/1.1", 8, track_vars_array TSRMLS_CC);
-	php_register_variable_safe((char*)"REMOTE_ADDRESS", (char*)header->remoteAddress.c_str(), header->remoteAddress.size(), track_vars_array TSRMLS_CC);
-	ALLOC_INIT_ZVAL(value);
-	Z_LVAL_P(value) = header->remotePort;
-	Z_TYPE_P(value) = IS_LONG;
-	php_register_variable_ex((char*)"REMOTE_PORT", value, track_vars_array TSRMLS_CC);
-	zval_ptr_dtor(&value);
-	value = nullptr;
-	if(SG(request_info).request_method) php_register_variable((char*)"REQUEST_METHOD", (char*)SG(request_info).request_method, track_vars_array TSRMLS_CC);
-	if(SG(request_info).request_uri) php_register_variable((char*)"REQUEST_URI", SG(request_info).request_uri, track_vars_array TSRMLS_CC);
-	if(!header->pathInfo.empty()) php_register_variable_safe((char*)"REMOTE_ADDRESS", (char*)header->pathInfo.c_str(), header->pathInfo.size(), track_vars_array TSRMLS_CC);
-	if(header->contentLength > 0)
-	{
-		ALLOC_INIT_ZVAL(value);
-		Z_LVAL_P(value) = header->contentLength;
-		Z_TYPE_P(value) = IS_LONG;
-		php_register_variable_ex((char*)"CONTENT_LENGTH", value, track_vars_array TSRMLS_CC);
-		zval_ptr_dtor(&value);
-		value = nullptr;
-	}
-	if(!header->contentType.empty()) php_register_variable_safe((char*)"CONTENT_TYPE", (char*)header->contentType.c_str(), header->contentType.size(), track_vars_array TSRMLS_CC);
-	for(std::map<std::string, std::string>::const_iterator i = header->fields.begin(); i != header->fields.end(); ++i)
-	{
-		std::string name = "HTTP_" + i->first;
-		BaseLib::HelperFunctions::stringReplace(name, "-", "_");
-		BaseLib::HelperFunctions::toUpper(name);
-		php_register_variable_safe((char*)name.c_str(), (char*)i->second.c_str(), i->second.size(), track_vars_array TSRMLS_CC);
-	}
-	if(SEG(commandLine)) php_import_environment_variables(track_vars_array TSRMLS_CC);
 }
 
 static int php_homegear_startup(sapi_module_struct* sapi_module)
