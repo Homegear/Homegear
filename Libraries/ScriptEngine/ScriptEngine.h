@@ -46,7 +46,7 @@ public:
 	virtual ~ScriptEngine();
 	void dispose();
 
-	std::vector<std::string> getArgs(const std::string& args);
+	std::vector<std::string> getArgs(const std::string& path, const std::string& args);
 	int32_t execute(const std::string path, const std::string arguments, bool wait = true);
 	int32_t executeWebRequest(const std::string& path, BaseLib::HTTP& request, std::shared_ptr<RPC::ServerInfo::Info>& serverInfo, std::vector<char>& output);
 

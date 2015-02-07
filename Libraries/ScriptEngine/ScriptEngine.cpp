@@ -155,9 +155,11 @@ bool ScriptEngine::scriptThreadMaxReached()
 	return false;
 }
 
-std::vector<std::string> ScriptEngine::getArgs(const std::string& args)
+std::vector<std::string> ScriptEngine::getArgs(const std::string& path, const std::string& args)
 {
 	std::vector<std::string> argv;
+	if(!path.empty() && path.back() != '/') argv.push_back(path.substr(path.find_last_of('/') + 1));
+	else argv.push_back(path);
 	wordexp_t p;
 	if(wordexp(args.c_str(), &p, 0) == 0)
 	{
@@ -197,6 +199,25 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 			}
 			return 0;
 		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		return -1;
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		return -1;
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		return -1;
+	}
+	TSRMLS_FETCH();
+	try
+	{
 		zend_file_handle script;
 
 		/* Set up a File Handle structure */
@@ -205,12 +226,12 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 		script.opened_path = NULL;
 		script.free_filename = 0;
 
-		TSRMLS_FETCH();
 		std::vector<char> output;
 		php_homegear_get_globals(TSRMLS_C)->output = &output;
 		php_homegear_get_globals(TSRMLS_C)->commandLine = true;
 
-		PG(during_request_startup) = 0;
+		PG(register_argc_argv) = 1;
+		SG(server_context) = (void*)&arguments; //Must be defined! Otherwise arguments are not processed.
 		SG(options) |= SAPI_OPTION_NO_CHDIR;
 		SG(headers_sent) = 1;
 		SG(request_info).no_headers = 1;
@@ -220,8 +241,9 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 			return 1;
 		}
 
-		std::vector<std::string> argv = getArgs(arguments);
+		std::vector<std::string> argv = getArgs(path, arguments);
 		php_homegear_build_argv(argv TSRMLS_CC);
+		php_startup_auto_globals(TSRMLS_C);
 
 		php_execute_script(&script TSRMLS_CC);
 		int32_t exitCode = EG(exit_status);

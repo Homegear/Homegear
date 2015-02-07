@@ -76,6 +76,8 @@ void php_homegear_build_argv(std::vector<std::string>& arguments TSRMLS_DC)
 
 	zval_ptr_dtor(&argc);
 	zval_ptr_dtor(&argv);
+
+	SG(request_info).argc = arguments.size();
 }
 
 static int php_homegear_read_post(char *buf, uint count_bytes TSRMLS_DC)
@@ -342,6 +344,10 @@ void php_homegear_invoke_rpc(std::string& methodName, std::shared_ptr<BaseLib::R
 }
 
 /* Script engine specific functions */
+ZEND_FUNCTION(hg_devtest)
+{
+	RETURN_TRUE;
+}
 
 ZEND_FUNCTION(hg_auth)
 {
@@ -523,6 +529,7 @@ ZEND_FUNCTION(hg_set_value)
 }
 
 static const zend_function_entry additional_functions[] = {
+	ZEND_FE(hg_devtest, NULL)
 	ZEND_FE(hg_auth, NULL)
 	ZEND_FE(hg_create_user, NULL)
 	ZEND_FE(hg_delete_user, NULL)

@@ -143,7 +143,7 @@ echo "// Enable the i2c-1, spidev-0 & spidev-1 devices
 /plugin/;
 
 / {
-   compatible = \"brcm,bcm2708\";
+   compatible = \"brcm,bcm2708,bcm2836\";
 
    fragment@0 {
       target = <&i2c0>;
