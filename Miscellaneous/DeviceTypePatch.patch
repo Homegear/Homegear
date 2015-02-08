@@ -1,6 +1,6 @@
 diff -Naur Original/hmw_io_12_fm.xml Patched/hmw_io_12_fm.xml
---- Original/hmw_io_12_fm.xml	2015-01-27 09:13:05.860755500 +0100
-+++ Patched/hmw_io_12_fm.xml	2015-01-27 09:13:08.868755600 +0100
+--- Original/hmw_io_12_fm.xml	2015-02-08 18:34:28.922585700 +0100
++++ Patched/hmw_io_12_fm.xml	2015-02-08 18:34:32.370585800 +0100
 @@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
 +<?xml version="1.0"?>
@@ -94,8 +94,8 @@ diff -Naur Original/hmw_io_12_fm.xml Patched/hmw_io_12_fm.xml
              <logical type="option">
                <option id="MINIMAL"/>
 diff -Naur Original/hmw_io12_sw14_dr.xml Patched/hmw_io12_sw14_dr.xml
---- Original/hmw_io12_sw14_dr.xml	2015-01-27 09:13:05.868755500 +0100
-+++ Patched/hmw_io12_sw14_dr.xml	2015-01-27 09:13:08.876755600 +0100
+--- Original/hmw_io12_sw14_dr.xml	2015-02-08 18:34:28.930585700 +0100
++++ Patched/hmw_io12_sw14_dr.xml	2015-02-08 18:34:32.378585800 +0100
 @@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
 +<?xml version="1.0"?>
@@ -132,8 +132,8 @@ diff -Naur Original/hmw_io12_sw14_dr.xml Patched/hmw_io12_sw14_dr.xml
      </channel>
      <channel index="1" count="6" physical_index_offset="-1" type="DIGITAL_OUTPUT">
 diff -Naur Original/hmw_io12_sw7_dr_V3_02.xml Patched/hmw_io12_sw7_dr_V3_02.xml
---- Original/hmw_io12_sw7_dr_V3_02.xml	2015-01-27 09:13:05.876755500 +0100
-+++ Patched/hmw_io12_sw7_dr_V3_02.xml	2015-01-27 09:13:08.884755600 +0100
+--- Original/hmw_io12_sw7_dr_V3_02.xml	2015-02-08 18:34:28.938585700 +0100
++++ Patched/hmw_io12_sw7_dr_V3_02.xml	2015-02-08 18:34:32.386585800 +0100
 @@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
 +<?xml version="1.0"?>
@@ -227,8 +227,8 @@ diff -Naur Original/hmw_io12_sw7_dr_V3_02.xml Patched/hmw_io12_sw7_dr_V3_02.xml
            <logical type="option">
              <option id="MINIMAL"/>
 diff -Naur Original/hmw_io12_sw7_dr.xml Patched/hmw_io12_sw7_dr.xml
---- Original/hmw_io12_sw7_dr.xml	2015-01-27 09:13:05.884755500 +0100
-+++ Patched/hmw_io12_sw7_dr.xml	2015-01-27 09:13:08.892755600 +0100
+--- Original/hmw_io12_sw7_dr.xml	2015-02-08 18:34:28.946585700 +0100
++++ Patched/hmw_io12_sw7_dr.xml	2015-02-08 18:34:32.394585800 +0100
 @@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
 +<?xml version="1.0"?>
@@ -322,8 +322,8 @@ diff -Naur Original/hmw_io12_sw7_dr.xml Patched/hmw_io12_sw7_dr.xml
            <logical type="option">
              <option id="MINIMAL"/>
 diff -Naur Original/hmw_io_4_fm_V3_02.xml Patched/hmw_io_4_fm_V3_02.xml
---- Original/hmw_io_4_fm_V3_02.xml	2015-01-27 09:13:05.892755500 +0100
-+++ Patched/hmw_io_4_fm_V3_02.xml	2015-01-27 09:13:08.904755600 +0100
+--- Original/hmw_io_4_fm_V3_02.xml	2015-02-08 18:34:28.954585700 +0100
++++ Patched/hmw_io_4_fm_V3_02.xml	2015-02-08 18:34:32.406585800 +0100
 @@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
 +<?xml version="1.0"?>
@@ -417,8 +417,8 @@ diff -Naur Original/hmw_io_4_fm_V3_02.xml Patched/hmw_io_4_fm_V3_02.xml
              <logical type="option">
                <option id="MINIMAL"/>
 diff -Naur Original/hmw_io_4_fm.xml Patched/hmw_io_4_fm.xml
---- Original/hmw_io_4_fm.xml	2015-01-27 09:13:05.904755500 +0100
-+++ Patched/hmw_io_4_fm.xml	2015-01-27 09:13:08.912755600 +0100
+--- Original/hmw_io_4_fm.xml	2015-02-08 18:34:28.962585700 +0100
++++ Patched/hmw_io_4_fm.xml	2015-02-08 18:34:32.414585800 +0100
 @@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
 +<?xml version="1.0"?>
@@ -512,8 +512,8 @@ diff -Naur Original/hmw_io_4_fm.xml Patched/hmw_io_4_fm.xml
              <logical type="option">
                <option id="MINIMAL"/>
 diff -Naur Original/hmw_io_sr_fm.xml Patched/hmw_io_sr_fm.xml
---- Original/hmw_io_sr_fm.xml	2015-01-27 09:13:05.916755500 +0100
-+++ Patched/hmw_io_sr_fm.xml	2015-01-27 09:13:08.920755600 +0100
+--- Original/hmw_io_sr_fm.xml	2015-02-08 18:34:28.970585700 +0100
++++ Patched/hmw_io_sr_fm.xml	2015-02-08 18:34:32.422585800 +0100
 @@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
 +<?xml version="1.0"?>
@@ -607,8 +607,8 @@ diff -Naur Original/hmw_io_sr_fm.xml Patched/hmw_io_sr_fm.xml
            <logical type="option">
              <option id="MINIMAL"/>
 diff -Naur Original/hmw_lc_bl1_dr_V3_02.xml Patched/hmw_lc_bl1_dr_V3_02.xml
---- Original/hmw_lc_bl1_dr_V3_02.xml	2015-01-27 09:13:05.928755500 +0100
-+++ Patched/hmw_lc_bl1_dr_V3_02.xml	2015-01-27 09:13:08.932755600 +0100
+--- Original/hmw_lc_bl1_dr_V3_02.xml	2015-02-08 18:34:28.982585700 +0100
++++ Patched/hmw_lc_bl1_dr_V3_02.xml	2015-02-08 18:34:32.430585800 +0100
 @@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
 +<?xml version="1.0"?>
@@ -702,8 +702,8 @@ diff -Naur Original/hmw_lc_bl1_dr_V3_02.xml Patched/hmw_lc_bl1_dr_V3_02.xml
            <logical type="option">
              <option id="MINIMAL"/>
 diff -Naur Original/hmw_lc_bl1_dr.xml Patched/hmw_lc_bl1_dr.xml
---- Original/hmw_lc_bl1_dr.xml	2015-01-27 09:13:05.940755500 +0100
-+++ Patched/hmw_lc_bl1_dr.xml	2015-01-27 09:13:08.944755600 +0100
+--- Original/hmw_lc_bl1_dr.xml	2015-02-08 18:34:28.998585700 +0100
++++ Patched/hmw_lc_bl1_dr.xml	2015-02-08 18:34:32.442585800 +0100
 @@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
 +<?xml version="1.0"?>
@@ -797,8 +797,8 @@ diff -Naur Original/hmw_lc_bl1_dr.xml Patched/hmw_lc_bl1_dr.xml
            <logical type="option">
              <option id="MINIMAL"/>
 diff -Naur Original/hmw_lc_dim1l_dr.xml Patched/hmw_lc_dim1l_dr.xml
---- Original/hmw_lc_dim1l_dr.xml	2015-01-27 09:13:05.948755500 +0100
-+++ Patched/hmw_lc_dim1l_dr.xml	2015-01-27 09:13:08.952755600 +0100
+--- Original/hmw_lc_dim1l_dr.xml	2015-02-08 18:34:29.010585700 +0100
++++ Patched/hmw_lc_dim1l_dr.xml	2015-02-08 18:34:32.454585800 +0100
 @@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
 +<?xml version="1.0"?>
@@ -892,8 +892,8 @@ diff -Naur Original/hmw_lc_dim1l_dr.xml Patched/hmw_lc_dim1l_dr.xml
            <logical type="option">
              <option id="ABSOLUTE" default="true"/>
 diff -Naur Original/hmw_lc_sw2_dr_V3_02.xml Patched/hmw_lc_sw2_dr_V3_02.xml
---- Original/hmw_lc_sw2_dr_V3_02.xml	2015-01-27 09:13:05.960755500 +0100
-+++ Patched/hmw_lc_sw2_dr_V3_02.xml	2015-01-27 09:13:08.964755600 +0100
+--- Original/hmw_lc_sw2_dr_V3_02.xml	2015-02-08 18:34:29.018585700 +0100
++++ Patched/hmw_lc_sw2_dr_V3_02.xml	2015-02-08 18:34:32.462585800 +0100
 @@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
 +<?xml version="1.0"?>
@@ -987,8 +987,8 @@ diff -Naur Original/hmw_lc_sw2_dr_V3_02.xml Patched/hmw_lc_sw2_dr_V3_02.xml
            <logical type="option">
              <option id="MINIMAL"/>
 diff -Naur Original/hmw_lc_sw2_dr.xml Patched/hmw_lc_sw2_dr.xml
---- Original/hmw_lc_sw2_dr.xml	2015-01-27 09:13:05.968755500 +0100
-+++ Patched/hmw_lc_sw2_dr.xml	2015-01-27 09:13:08.972755600 +0100
+--- Original/hmw_lc_sw2_dr.xml	2015-02-08 18:34:29.026585700 +0100
++++ Patched/hmw_lc_sw2_dr.xml	2015-02-08 18:34:32.470585800 +0100
 @@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
 +<?xml version="1.0"?>
@@ -1082,8 +1082,8 @@ diff -Naur Original/hmw_lc_sw2_dr.xml Patched/hmw_lc_sw2_dr.xml
            <logical type="option">
              <option id="MINIMAL"/>
 diff -Naur Original/hmw_sen_sc_12_dr.xml Patched/hmw_sen_sc_12_dr.xml
---- Original/hmw_sen_sc_12_dr.xml	2015-01-27 09:13:05.976755500 +0100
-+++ Patched/hmw_sen_sc_12_dr.xml	2015-01-27 09:13:08.980755600 +0100
+--- Original/hmw_sen_sc_12_dr.xml	2015-02-08 18:34:29.034585700 +0100
++++ Patched/hmw_sen_sc_12_dr.xml	2015-02-08 18:34:32.478585800 +0100
 @@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
 +<?xml version="1.0"?>
@@ -1120,8 +1120,8 @@ diff -Naur Original/hmw_sen_sc_12_dr.xml Patched/hmw_sen_sc_12_dr.xml
      </channel>
      <channel index="1" physical_index_offset="-1" count="12" type="SENSOR">
 diff -Naur Original/rf_4dis.xml Patched/rf_4dis.xml
---- Original/rf_4dis.xml	2015-01-27 09:13:05.984755500 +0100
-+++ Patched/rf_4dis.xml	2015-01-27 09:13:08.984755600 +0100
+--- Original/rf_4dis.xml	2015-02-08 18:34:29.042585700 +0100
++++ Patched/rf_4dis.xml	2015-02-08 18:34:32.486585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: Modified frames, so PRESS_LONG_RELEASE is working -->
@@ -1175,8 +1175,8 @@ diff -Naur Original/rf_4dis.xml Patched/rf_4dis.xml
        <parameter type="integer" index="10.0" size="1.0" param="COUNTER"/>
        <parameter type="integer" index="10.0" size="1.0" param="TEST_COUNTER"/>
 diff -Naur Original/rf_ash550.xml Patched/rf_ash550.xml
---- Original/rf_ash550.xml	2015-01-27 09:13:06.008755500 +0100
-+++ Patched/rf_ash550.xml	2015-01-27 09:13:08.992755600 +0100
+--- Original/rf_ash550.xml	2015-02-08 18:34:29.050585700 +0100
++++ Patched/rf_ash550.xml	2015-02-08 18:34:32.494585800 +0100
 @@ -31,6 +31,10 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="1" size="1.0"/>
@@ -1203,8 +1203,8 @@ diff -Naur Original/rf_ash550.xml Patched/rf_ash550.xml
      </channel>
      <channel index="1" type="WEATHER">
 diff -Naur Original/rf_bl_644.xml Patched/rf_bl_644.xml
---- Original/rf_bl_644.xml	2015-01-27 09:13:06.016755500 +0100
-+++ Patched/rf_bl_644.xml	2015-01-27 09:13:09.004755600 +0100
+--- Original/rf_bl_644.xml	2015-02-08 18:34:29.058585700 +0100
++++ Patched/rf_bl_644.xml	2015-02-08 18:34:32.502585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Set IT_COMMAND in frame INSTALL_TEST to const_value="2" -->
@@ -1254,8 +1254,8 @@ diff -Naur Original/rf_bl_644.xml Patched/rf_bl_644.xml
      </frame>
    </frames>
 diff -Naur Original/rf_bl_conf_644_e_v2_0.xml Patched/rf_bl_conf_644_e_v2_0.xml
---- Original/rf_bl_conf_644_e_v2_0.xml	2015-01-27 09:13:06.032755500 +0100
-+++ Patched/rf_bl_conf_644_e_v2_0.xml	2015-01-27 09:13:09.012755600 +0100
+--- Original/rf_bl_conf_644_e_v2_0.xml	2015-02-08 18:34:29.090585700 +0100
++++ Patched/rf_bl_conf_644_e_v2_0.xml	2015-02-08 18:34:32.514585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Set IT_COMMAND in frame INSTALL_TEST to const_value="2" -->
@@ -1305,8 +1305,8 @@ diff -Naur Original/rf_bl_conf_644_e_v2_0.xml Patched/rf_bl_conf_644_e_v2_0.xml
      </frame>
    </frames>
 diff -Naur Original/rf_bl_conf_644_e_v2_1.xml Patched/rf_bl_conf_644_e_v2_1.xml
---- Original/rf_bl_conf_644_e_v2_1.xml	2015-01-27 09:13:06.040755500 +0100
-+++ Patched/rf_bl_conf_644_e_v2_1.xml	2015-01-27 09:13:09.024755600 +0100
+--- Original/rf_bl_conf_644_e_v2_1.xml	2015-02-08 18:34:29.098585700 +0100
++++ Patched/rf_bl_conf_644_e_v2_1.xml	2015-02-08 18:34:32.526585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Set IT_COMMAND in frame INSTALL_TEST to const_value="2" -->
@@ -1356,8 +1356,8 @@ diff -Naur Original/rf_bl_conf_644_e_v2_1.xml Patched/rf_bl_conf_644_e_v2_1.xml
      </frame>
    </frames>
 diff -Naur Original/rf_bl_conf_644.xml Patched/rf_bl_conf_644.xml
---- Original/rf_bl_conf_644.xml	2015-01-27 09:13:06.052755500 +0100
-+++ Patched/rf_bl_conf_644.xml	2015-01-27 09:13:09.044755600 +0100
+--- Original/rf_bl_conf_644.xml	2015-02-08 18:34:29.110585700 +0100
++++ Patched/rf_bl_conf_644.xml	2015-02-08 18:34:32.538585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Set IT_COMMAND in frame INSTALL_TEST to const_value="2" -->
@@ -1407,8 +1407,8 @@ diff -Naur Original/rf_bl_conf_644.xml Patched/rf_bl_conf_644.xml
      </frame>
    </frames>
 diff -Naur Original/rf_bl_le_v2_3.xml Patched/rf_bl_le_v2_3.xml
---- Original/rf_bl_le_v2_3.xml	2015-01-27 09:13:06.064755500 +0100
-+++ Patched/rf_bl_le_v2_3.xml	2015-01-27 09:13:09.060755600 +0100
+--- Original/rf_bl_le_v2_3.xml	2015-02-08 18:34:29.122585700 +0100
++++ Patched/rf_bl_le_v2_3.xml	2015-02-08 18:34:32.550585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Set IT_COMMAND in frame INSTALL_TEST to const_value="2" -->
@@ -1458,8 +1458,8 @@ diff -Naur Original/rf_bl_le_v2_3.xml Patched/rf_bl_le_v2_3.xml
      </frame>
    </frames>
 diff -Naur Original/rf_bl.xml Patched/rf_bl.xml
---- Original/rf_bl.xml	2015-01-27 09:13:06.076755500 +0100
-+++ Patched/rf_bl.xml	2015-01-27 09:13:09.076755600 +0100
+--- Original/rf_bl.xml	2015-02-08 18:34:29.134585700 +0100
++++ Patched/rf_bl.xml	2015-02-08 18:34:32.562585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Set IT_COMMAND in frame INSTALL_TEST to const_value="2" -->
@@ -1509,8 +1509,8 @@ diff -Naur Original/rf_bl.xml Patched/rf_bl.xml
      </frame>
    </frames>
 diff -Naur Original/rf_cc_rt_dn_bom.xml Patched/rf_cc_rt_dn_bom.xml
---- Original/rf_cc_rt_dn_bom.xml	2015-01-27 09:13:06.092755500 +0100
-+++ Patched/rf_cc_rt_dn_bom.xml	2015-01-27 09:13:09.088755600 +0100
+--- Original/rf_cc_rt_dn_bom.xml	2015-02-08 18:34:29.146585700 +0100
++++ Patched/rf_cc_rt_dn_bom.xml	2015-02-08 18:34:32.574585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Added parameter WINDOW_STATE - Added frame WINDOW_STATE_SET -->
@@ -1571,8 +1571,8 @@ diff -Naur Original/rf_cc_rt_dn_bom.xml Patched/rf_cc_rt_dn_bom.xml
    </frames>
    <paramset_defs/>
 diff -Naur Original/rf_cc_rt_dn.xml Patched/rf_cc_rt_dn.xml
---- Original/rf_cc_rt_dn.xml	2015-01-27 09:13:06.108755500 +0100
-+++ Patched/rf_cc_rt_dn.xml	2015-01-27 09:13:09.104755600 +0100
+--- Original/rf_cc_rt_dn.xml	2015-02-08 18:34:29.170585700 +0100
++++ Patched/rf_cc_rt_dn.xml	2015-02-08 18:34:32.590585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Added parameter WINDOW_STATE - Added frame WINDOW_STATE_SET -->
@@ -1633,8 +1633,8 @@ diff -Naur Original/rf_cc_rt_dn.xml Patched/rf_cc_rt_dn.xml
    </frames>
    <paramset_defs/>
 diff -Naur Original/rf_cc_tc_le_v1_9.xml Patched/rf_cc_tc_le_v1_9.xml
---- Original/rf_cc_tc_le_v1_9.xml	2015-01-27 09:13:06.124755500 +0100
-+++ Patched/rf_cc_tc_le_v1_9.xml	2015-01-27 09:13:09.120755600 +0100
+--- Original/rf_cc_tc_le_v1_9.xml	2015-02-08 18:34:29.190585700 +0100
++++ Patched/rf_cc_tc_le_v1_9.xml	2015-02-08 18:34:32.614585800 +0100
 @@ -33,6 +33,10 @@
        </logical>
        <physical type="integer" interface="config" list="0" index="5.0" size="0.6"/>
@@ -1661,8 +1661,8 @@ diff -Naur Original/rf_cc_tc_le_v1_9.xml Patched/rf_cc_tc_le_v1_9.xml
      </channel>
      <channel index="1" type="WEATHER">
 diff -Naur Original/rf_cc_tc.xml Patched/rf_cc_tc.xml
---- Original/rf_cc_tc.xml	2015-01-27 09:13:06.148755500 +0100
-+++ Patched/rf_cc_tc.xml	2015-01-27 09:13:09.144755600 +0100
+--- Original/rf_cc_tc.xml	2015-02-08 18:34:29.238585700 +0100
++++ Patched/rf_cc_tc.xml	2015-02-08 18:34:32.634585800 +0100
 @@ -37,6 +37,10 @@
        </logical>
        <physical type="integer" interface="config" list="0" index="5.0" size="0.6"/>
@@ -1689,8 +1689,8 @@ diff -Naur Original/rf_cc_tc.xml Patched/rf_cc_tc.xml
      </channel>
      <channel index="1" type="WEATHER">
 diff -Naur Original/rf_cc_vd.xml Patched/rf_cc_vd.xml
---- Original/rf_cc_vd.xml	2015-01-27 09:13:06.164755500 +0100
-+++ Patched/rf_cc_vd.xml	2015-01-27 09:13:09.160755600 +0100
+--- Original/rf_cc_vd.xml	2015-02-08 18:34:29.246585700 +0100
++++ Patched/rf_cc_vd.xml	2015-02-08 18:34:32.654585800 +0100
 @@ -8,7 +8,12 @@
        <parameter index="10.0" size="2.0" const_value="0x7A"/>
      </type>
@@ -1720,8 +1720,8 @@ diff -Naur Original/rf_cc_vd.xml Patched/rf_cc_vd.xml
      </channel>
      <channel index="1" type="CLIMATECONTROL_VENT_DRIVE">
 diff -Naur Original/rf_central.xml Patched/rf_central.xml
---- Original/rf_central.xml	2015-01-27 09:13:06.176755500 +0100
-+++ Patched/rf_central.xml	2015-01-27 09:13:09.168755600 +0100
+--- Original/rf_central.xml	2015-02-08 18:34:29.254585700 +0100
++++ Patched/rf_central.xml	2015-02-08 18:34:32.662585800 +0100
 @@ -18,6 +18,13 @@
            <logical type="boolean" default="false"/>
            <physical type="integer" interface="internal" value_id="INSTALL_MODE"/>
@@ -1737,8 +1737,8 @@ diff -Naur Original/rf_central.xml Patched/rf_central.xml
      </channel>
      <channel index="1" type="VIRTUAL_KEY" count="50" direction="sender">
 diff -Naur Original/rf_cfm.xml Patched/rf_cfm.xml
---- Original/rf_cfm.xml	2015-01-27 09:13:06.180755500 +0100
-+++ Patched/rf_cfm.xml	2015-01-27 09:13:09.180755600 +0100
+--- Original/rf_cfm.xml	2015-02-08 18:34:29.262585700 +0100
++++ Patched/rf_cfm.xml	2015-02-08 18:34:32.670585800 +0100
 @@ -11,6 +11,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24" size="1"/>
@@ -1773,8 +1773,8 @@ diff -Naur Original/rf_cfm.xml Patched/rf_cfm.xml
      </channel>
      <channel index="1" type="SIGNAL_LED" count="1">
 diff -Naur Original/rf_cf.xml Patched/rf_cf.xml
---- Original/rf_cf.xml	2015-01-27 09:13:06.196755600 +0100
-+++ Patched/rf_cf.xml	2015-01-27 09:13:09.192755600 +0100
+--- Original/rf_cf.xml	2015-02-08 18:34:29.274585700 +0100
++++ Patched/rf_cf.xml	2015-02-08 18:34:32.682585800 +0100
 @@ -6,7 +6,20 @@
        <parameter index="10.0" size="2.0" const_value="0x5C"/>
      </type>
@@ -1812,8 +1812,8 @@ diff -Naur Original/rf_cf.xml Patched/rf_cf.xml
      </channel>
      <channel index="1" type="SIGNAL_LED" count="1">
 diff -Naur Original/rf_cm.xml Patched/rf_cm.xml
---- Original/rf_cm.xml	2015-01-27 09:13:06.208755600 +0100
-+++ Patched/rf_cm.xml	2015-01-27 09:13:09.204755600 +0100
+--- Original/rf_cm.xml	2015-02-08 18:34:29.310585700 +0100
++++ Patched/rf_cm.xml	2015-02-08 18:34:32.698585800 +0100
 @@ -11,6 +11,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24" size="1"/>
@@ -1848,8 +1848,8 @@ diff -Naur Original/rf_cm.xml Patched/rf_cm.xml
      </channel>
      <channel index="1" type="SIGNAL_CHIME" count="1">
 diff -Naur Original/rf_ddc.xml Patched/rf_ddc.xml
---- Original/rf_ddc.xml	2015-01-27 09:13:06.216755600 +0100
-+++ Patched/rf_ddc.xml	2015-01-27 09:13:09.212755600 +0100
+--- Original/rf_ddc.xml	2015-02-08 18:34:29.326585700 +0100
++++ Patched/rf_ddc.xml	2015-02-08 18:34:32.706585800 +0100
 @@ -6,7 +6,20 @@
        <parameter index="10.0" size="2.0" const_value="0x004E"/>
      </type>
@@ -1887,8 +1887,8 @@ diff -Naur Original/rf_ddc.xml Patched/rf_ddc.xml
      </channel>
      <channel index="1" type="DDC" count_from_sysinfo="23.0:1.0">
 diff -Naur Original/rf_dim_1l_644_le_v2_4.xml Patched/rf_dim_1l_644_le_v2_4.xml
---- Original/rf_dim_1l_644_le_v2_4.xml	2015-01-27 09:13:06.228755600 +0100
-+++ Patched/rf_dim_1l_644_le_v2_4.xml	2015-01-27 09:13:09.228755600 +0100
+--- Original/rf_dim_1l_644_le_v2_4.xml	2015-02-08 18:34:29.338585700 +0100
++++ Patched/rf_dim_1l_644_le_v2_4.xml	2015-02-08 18:34:32.718585800 +0100
 @@ -23,6 +23,18 @@
        </logical>
        <physical type="integer" interface="config" list="0" index="0x15" size="1"/>
@@ -1923,8 +1923,8 @@ diff -Naur Original/rf_dim_1l_644_le_v2_4.xml Patched/rf_dim_1l_644_le_v2_4.xml
      </channel>
      <channel index="1" type="DIMMER" count="1">
 diff -Naur Original/rf_dim_1l_644.xml Patched/rf_dim_1l_644.xml
---- Original/rf_dim_1l_644.xml	2015-01-27 09:13:06.240755600 +0100
-+++ Patched/rf_dim_1l_644.xml	2015-01-27 09:13:09.236755600 +0100
+--- Original/rf_dim_1l_644.xml	2015-02-08 18:34:29.350585700 +0100
++++ Patched/rf_dim_1l_644.xml	2015-02-08 18:34:32.734585800 +0100
 @@ -33,6 +33,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24.0" size="0.1"/>
@@ -1959,8 +1959,8 @@ diff -Naur Original/rf_dim_1l_644.xml Patched/rf_dim_1l_644.xml
      </channel>
      <channel index="1" type="DIMMER" count="1">
 diff -Naur Original/rf_dim_1pwm_644_le_v2_4.xml Patched/rf_dim_1pwm_644_le_v2_4.xml
---- Original/rf_dim_1pwm_644_le_v2_4.xml	2015-01-27 09:13:06.256755600 +0100
-+++ Patched/rf_dim_1pwm_644_le_v2_4.xml	2015-01-27 09:13:09.252755600 +0100
+--- Original/rf_dim_1pwm_644_le_v2_4.xml	2015-02-08 18:34:29.362585700 +0100
++++ Patched/rf_dim_1pwm_644_le_v2_4.xml	2015-02-08 18:34:32.746585800 +0100
 @@ -18,6 +18,18 @@
        </logical>
        <physical type="integer" interface="config" list="0" index="0x15" size="1"/>
@@ -1995,8 +1995,8 @@ diff -Naur Original/rf_dim_1pwm_644_le_v2_4.xml Patched/rf_dim_1pwm_644_le_v2_4.
      </channel>
      <channel index="1" type="DIMMER" count="1">
 diff -Naur Original/rf_dim_1pwm_644.xml Patched/rf_dim_1pwm_644.xml
---- Original/rf_dim_1pwm_644.xml	2015-01-27 09:13:06.276755600 +0100
-+++ Patched/rf_dim_1pwm_644.xml	2015-01-27 09:13:09.264755600 +0100
+--- Original/rf_dim_1pwm_644.xml	2015-02-08 18:34:29.374585700 +0100
++++ Patched/rf_dim_1pwm_644.xml	2015-02-08 18:34:32.758585800 +0100
 @@ -25,6 +25,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24.0" size="0.1"/>
@@ -2031,8 +2031,8 @@ diff -Naur Original/rf_dim_1pwm_644.xml Patched/rf_dim_1pwm_644.xml
      </channel>
      <channel index="1" type="DIMMER" count="1">
 diff -Naur Original/rf_dim_1t_644_le_v2_4.xml Patched/rf_dim_1t_644_le_v2_4.xml
---- Original/rf_dim_1t_644_le_v2_4.xml	2015-01-27 09:13:06.284755600 +0100
-+++ Patched/rf_dim_1t_644_le_v2_4.xml	2015-01-27 09:13:09.280755600 +0100
+--- Original/rf_dim_1t_644_le_v2_4.xml	2015-02-08 18:34:29.386585700 +0100
++++ Patched/rf_dim_1t_644_le_v2_4.xml	2015-02-08 18:34:32.778585800 +0100
 @@ -28,6 +28,18 @@
        </logical>
        <physical type="integer" interface="config" list="0" index="0x15" size="1"/>
@@ -2067,8 +2067,8 @@ diff -Naur Original/rf_dim_1t_644_le_v2_4.xml Patched/rf_dim_1t_644_le_v2_4.xml
      </channel>
      <channel index="1" type="DIMMER" count="1">
 diff -Naur Original/rf_dim_1t_644.xml Patched/rf_dim_1t_644.xml
---- Original/rf_dim_1t_644.xml	2015-01-27 09:13:06.300755600 +0100
-+++ Patched/rf_dim_1t_644.xml	2015-01-27 09:13:09.292755600 +0100
+--- Original/rf_dim_1t_644.xml	2015-02-08 18:34:29.398585700 +0100
++++ Patched/rf_dim_1t_644.xml	2015-02-08 18:34:32.802585800 +0100
 @@ -41,6 +41,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24.0" size="0.1"/>
@@ -2103,8 +2103,8 @@ diff -Naur Original/rf_dim_1t_644.xml Patched/rf_dim_1t_644.xml
      </channel>
      <channel index="1" type="DIMMER" count="1">
 diff -Naur Original/rf_dim_1tconf_644_le_v2_4.xml Patched/rf_dim_1tconf_644_le_v2_4.xml
---- Original/rf_dim_1tconf_644_le_v2_4.xml	2015-01-27 09:13:06.312755600 +0100
-+++ Patched/rf_dim_1tconf_644_le_v2_4.xml	2015-01-27 09:13:09.308755700 +0100
+--- Original/rf_dim_1tconf_644_le_v2_4.xml	2015-02-08 18:34:29.414585700 +0100
++++ Patched/rf_dim_1tconf_644_le_v2_4.xml	2015-02-08 18:34:32.814585800 +0100
 @@ -17,6 +17,18 @@
        <logical type="boolean" default="true"/>
        <physical type="integer" interface="config" list="0" index="2.7" size="0.1"/>
@@ -2139,8 +2139,8 @@ diff -Naur Original/rf_dim_1tconf_644_le_v2_4.xml Patched/rf_dim_1tconf_644_le_v
      </channel>
      <channel index="1" type="DIMMER" count="1">
 diff -Naur Original/rf_dim_1tconf_644.xml Patched/rf_dim_1tconf_644.xml
---- Original/rf_dim_1tconf_644.xml	2015-01-27 09:13:06.324755600 +0100
-+++ Patched/rf_dim_1tconf_644.xml	2015-01-27 09:13:09.320755700 +0100
+--- Original/rf_dim_1tconf_644.xml	2015-02-08 18:34:29.426585700 +0100
++++ Patched/rf_dim_1tconf_644.xml	2015-02-08 18:34:32.826585800 +0100
 @@ -19,6 +19,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24.0" size="0.1"/>
@@ -2175,8 +2175,8 @@ diff -Naur Original/rf_dim_1tconf_644.xml Patched/rf_dim_1tconf_644.xml
      </channel>
      <channel index="1" type="DIMMER" count="1">
 diff -Naur Original/rf_dim_2l_644_le_v2_4.xml Patched/rf_dim_2l_644_le_v2_4.xml
---- Original/rf_dim_2l_644_le_v2_4.xml	2015-01-27 09:13:06.340755600 +0100
-+++ Patched/rf_dim_2l_644_le_v2_4.xml	2015-01-27 09:13:09.332755700 +0100
+--- Original/rf_dim_2l_644_le_v2_4.xml	2015-02-08 18:34:29.438585700 +0100
++++ Patched/rf_dim_2l_644_le_v2_4.xml	2015-02-08 18:34:32.838585800 +0100
 @@ -18,6 +18,18 @@
        </logical>
        <physical type="integer" interface="config" list="0" index="0x15" size="1"/>
@@ -2211,8 +2211,8 @@ diff -Naur Original/rf_dim_2l_644_le_v2_4.xml Patched/rf_dim_2l_644_le_v2_4.xml
      </channel>
      <channel index="1" type="DIMMER" count="2">
 diff -Naur Original/rf_dim_2l_644.xml Patched/rf_dim_2l_644.xml
---- Original/rf_dim_2l_644.xml	2015-01-27 09:13:06.352755600 +0100
-+++ Patched/rf_dim_2l_644.xml	2015-01-27 09:13:09.344755700 +0100
+--- Original/rf_dim_2l_644.xml	2015-02-08 18:34:29.450585700 +0100
++++ Patched/rf_dim_2l_644.xml	2015-02-08 18:34:32.854585800 +0100
 @@ -25,6 +25,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24.0" size="0.1"/>
@@ -2247,8 +2247,8 @@ diff -Naur Original/rf_dim_2l_644.xml Patched/rf_dim_2l_644.xml
      </channel>
      <channel index="1" type="DIMMER" count="2">
 diff -Naur Original/rf_dim_2t_644_le_v2_4.xml Patched/rf_dim_2t_644_le_v2_4.xml
---- Original/rf_dim_2t_644_le_v2_4.xml	2015-01-27 09:13:06.368755600 +0100
-+++ Patched/rf_dim_2t_644_le_v2_4.xml	2015-01-27 09:13:09.360755700 +0100
+--- Original/rf_dim_2t_644_le_v2_4.xml	2015-02-08 18:34:29.462585700 +0100
++++ Patched/rf_dim_2t_644_le_v2_4.xml	2015-02-08 18:34:32.866585800 +0100
 @@ -18,6 +18,18 @@
        </logical>
        <physical type="integer" interface="config" list="0" index="0x15" size="1"/>
@@ -2283,8 +2283,8 @@ diff -Naur Original/rf_dim_2t_644_le_v2_4.xml Patched/rf_dim_2t_644_le_v2_4.xml
      </channel>
      <channel index="1" type="DIMMER" count="2">
 diff -Naur Original/rf_dim_2t_644.xml Patched/rf_dim_2t_644.xml
---- Original/rf_dim_2t_644.xml	2015-01-27 09:13:06.380755600 +0100
-+++ Patched/rf_dim_2t_644.xml	2015-01-27 09:13:09.376755700 +0100
+--- Original/rf_dim_2t_644.xml	2015-02-08 18:34:29.474585700 +0100
++++ Patched/rf_dim_2t_644.xml	2015-02-08 18:34:32.886585800 +0100
 @@ -25,6 +25,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24.0" size="0.1"/>
@@ -2319,8 +2319,8 @@ diff -Naur Original/rf_dim_2t_644.xml Patched/rf_dim_2t_644.xml
      </channel>
      <channel index="1" type="DIMMER" count="2">
 diff -Naur Original/rf_dim_t_le_v1_9.xml Patched/rf_dim_t_le_v1_9.xml
---- Original/rf_dim_t_le_v1_9.xml	2015-01-27 09:13:06.392755600 +0100
-+++ Patched/rf_dim_t_le_v1_9.xml	2015-01-27 09:13:09.392755700 +0100
+--- Original/rf_dim_t_le_v1_9.xml	2015-02-08 18:34:29.486585700 +0100
++++ Patched/rf_dim_t_le_v1_9.xml	2015-02-08 18:34:32.898585800 +0100
 @@ -29,6 +29,18 @@
        </logical>
        <physical type="integer" interface="config" list="0" index="0x15" size="1"/>
@@ -2355,8 +2355,8 @@ diff -Naur Original/rf_dim_t_le_v1_9.xml Patched/rf_dim_t_le_v1_9.xml
      </channel>
      <channel index="1" type="DIMMER" count_from_sysinfo="23.0:0.2">
 diff -Naur Original/rf_dim_t.xml Patched/rf_dim_t.xml
---- Original/rf_dim_t.xml	2015-01-27 09:13:06.412755600 +0100
-+++ Patched/rf_dim_t.xml	2015-01-27 09:13:09.404755700 +0100
+--- Original/rf_dim_t.xml	2015-02-08 18:34:29.498585700 +0100
++++ Patched/rf_dim_t.xml	2015-02-08 18:34:32.906585800 +0100
 @@ -37,6 +37,18 @@
        </logical>
        <physical type="integer" interface="config" list="0" index="0x15" size="1"/>
@@ -2391,8 +2391,8 @@ diff -Naur Original/rf_dim_t.xml Patched/rf_dim_t.xml
      </channel>
      <channel index="1" type="DIMMER" count_from_sysinfo="23.0:0.3">
 diff -Naur Original/rf_dis_wm55.xml Patched/rf_dis_wm55.xml
---- Original/rf_dis_wm55.xml	2015-01-27 09:13:06.424755600 +0100
-+++ Patched/rf_dis_wm55.xml	2015-01-27 09:13:09.416755700 +0100
+--- Original/rf_dis_wm55.xml	2015-02-08 18:34:29.510585700 +0100
++++ Patched/rf_dis_wm55.xml	2015-02-08 18:34:32.918585800 +0100
 @@ -1,5 +1,6 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 -<device version="17" rx_modes="CONFIG" peering_sysinfo_expect_channel="false" supports_aes="false">
@@ -2452,8 +2452,8 @@ diff -Naur Original/rf_dis_wm55.xml Patched/rf_dis_wm55.xml
          <conversion type="hexstring_bytearray"/>
        </parameter>
 diff -Naur Original/rf_d_le_v1_7.xml Patched/rf_d_le_v1_7.xml
---- Original/rf_d_le_v1_7.xml	2015-01-27 09:13:06.432755600 +0100
-+++ Patched/rf_d_le_v1_7.xml	2015-01-27 09:13:09.424755700 +0100
+--- Original/rf_d_le_v1_7.xml	2015-02-08 18:34:29.518585700 +0100
++++ Patched/rf_d_le_v1_7.xml	2015-02-08 18:34:32.930585800 +0100
 @@ -27,6 +27,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="2.7" size="0.1"/>
@@ -2488,8 +2488,8 @@ diff -Naur Original/rf_d_le_v1_7.xml Patched/rf_d_le_v1_7.xml
      </channel>
      <channel index="1" type="DIMMER" count_from_sysinfo="23.0:0.2">
 diff -Naur Original/rf_d_le_v1_9.xml Patched/rf_d_le_v1_9.xml
---- Original/rf_d_le_v1_9.xml	2015-01-27 09:13:06.444755600 +0100
-+++ Patched/rf_d_le_v1_9.xml	2015-01-27 09:13:09.432755700 +0100
+--- Original/rf_d_le_v1_9.xml	2015-02-08 18:34:29.530585700 +0100
++++ Patched/rf_d_le_v1_9.xml	2015-02-08 18:34:32.942585800 +0100
 @@ -32,6 +32,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="2.7" size="0.1"/>
@@ -2524,8 +2524,8 @@ diff -Naur Original/rf_d_le_v1_9.xml Patched/rf_d_le_v1_9.xml
      </channel>
      <channel index="1" type="DIMMER" count_from_sysinfo="23.0:0.2">
 diff -Naur Original/rf_d.xml Patched/rf_d.xml
---- Original/rf_d.xml	2015-01-27 09:13:06.456755600 +0100
-+++ Patched/rf_d.xml	2015-01-27 09:13:09.444755700 +0100
+--- Original/rf_d.xml	2015-02-08 18:34:29.538585700 +0100
++++ Patched/rf_d.xml	2015-02-08 18:34:32.950585800 +0100
 @@ -41,6 +41,18 @@
        </logical>
        <physical type="integer" interface="config" list="0" index="0x15" size="1"/>
@@ -2560,8 +2560,8 @@ diff -Naur Original/rf_d.xml Patched/rf_d.xml
      </channel>
      <channel index="1" type="DIMMER" count_from_sysinfo="23.0:0.3">
 diff -Naur Original/rf_em_8.xml Patched/rf_em_8.xml
---- Original/rf_em_8.xml	2015-01-27 09:13:06.468755600 +0100
-+++ Patched/rf_em_8.xml	2015-01-27 09:13:09.456755700 +0100
+--- Original/rf_em_8.xml	2015-02-08 18:34:29.550585700 +0100
++++ Patched/rf_em_8.xml	2015-02-08 18:34:32.962585800 +0100
 @@ -34,6 +34,10 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24" size="0.1"/>
@@ -2588,8 +2588,8 @@ diff -Naur Original/rf_em_8.xml Patched/rf_em_8.xml
      </channel>
      <channel type="KEY" autoregister="true" index="1" count_from_sysinfo="23.0:1.0" pair_function="BA" function="A" paired="false" aes_default="false">
 diff -Naur Original/rf_es_pmsw_le_v2_4.xml Patched/rf_es_pmsw_le_v2_4.xml
---- Original/rf_es_pmsw_le_v2_4.xml	2015-01-27 09:13:06.476755600 +0100
-+++ Patched/rf_es_pmsw_le_v2_4.xml	2015-01-27 09:13:09.468755700 +0100
+--- Original/rf_es_pmsw_le_v2_4.xml	2015-02-08 18:34:29.558585700 +0100
++++ Patched/rf_es_pmsw_le_v2_4.xml	2015-02-08 18:34:32.974585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Added parameter for LOWBAT - Removed parameter "BOOT" from frame "POWER_EVENT_CYCLIC" and "POWER_EVENT_CYCLIC" from "BOOT", so boot can trigger an event -->
@@ -2657,8 +2657,8 @@ diff -Naur Original/rf_es_pmsw_le_v2_4.xml Patched/rf_es_pmsw_le_v2_4.xml
        <parameter type="integer" index="12.0" size="3.0" param="POWER"/>
        <parameter type="integer" index="15.0" size="2.0" param="CURRENT"/>
 diff -Naur Original/rf_es_pmsw.xml Patched/rf_es_pmsw.xml
---- Original/rf_es_pmsw.xml	2015-01-27 09:13:06.492755600 +0100
-+++ Patched/rf_es_pmsw.xml	2015-01-27 09:13:09.480755700 +0100
+--- Original/rf_es_pmsw.xml	2015-02-08 18:34:29.570585700 +0100
++++ Patched/rf_es_pmsw.xml	2015-02-08 18:34:32.986585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Added parameter for LOWBAT - Removed parameter "BOOT" from frame "POWER_EVENT_CYCLIC" and "POWER_EVENT_CYCLIC" from "BOOT", so boot can trigger an event -->
@@ -2726,8 +2726,8 @@ diff -Naur Original/rf_es_pmsw.xml Patched/rf_es_pmsw.xml
        <parameter type="integer" index="12.0" size="3.0" param="POWER"/>
        <parameter type="integer" index="15.0" size="2.0" param="CURRENT"/>
 diff -Naur Original/rf_es_tx_wm.xml Patched/rf_es_tx_wm.xml
---- Original/rf_es_tx_wm.xml	2015-01-27 09:13:06.504755600 +0100
-+++ Patched/rf_es_tx_wm.xml	2015-01-27 09:13:09.488755700 +0100
+--- Original/rf_es_tx_wm.xml	2015-02-08 18:34:29.582585700 +0100
++++ Patched/rf_es_tx_wm.xml	2015-02-08 18:34:32.998585800 +0100
 @@ -10,6 +10,10 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24" size="0.1"/>
@@ -2754,8 +2754,8 @@ diff -Naur Original/rf_es_tx_wm.xml Patched/rf_es_tx_wm.xml
      </channel>
      <channel index="1" type="POWERMETER_IGL">
 diff -Naur Original/rf_fs_ba.xml Patched/rf_fs_ba.xml
---- Original/rf_fs_ba.xml	2015-01-27 09:13:06.512755600 +0100
-+++ Patched/rf_fs_ba.xml	2015-01-27 09:13:09.496755700 +0100
+--- Original/rf_fs_ba.xml	2015-02-08 18:34:29.590585700 +0100
++++ Patched/rf_fs_ba.xml	2015-02-08 18:34:33.006585800 +0100
 @@ -23,6 +23,18 @@
        <physical type="integer" interface="config" list="0" index="18" size="1"/>
        <conversion type="float_integer_scale" factor="10"/>
@@ -2790,44 +2790,406 @@ diff -Naur Original/rf_fs_ba.xml Patched/rf_fs_ba.xml
      </channel>
      <channel index="1" type="STATUS_INDICATOR" count="1">
 diff -Naur Original/rf_keymatic.xml Patched/rf_keymatic.xml
---- Original/rf_keymatic.xml	2015-01-27 09:13:06.524755600 +0100
-+++ Patched/rf_keymatic.xml	2015-01-27 09:13:09.512755700 +0100
-@@ -32,6 +32,18 @@
-       <logical type="boolean" default="true"/>
-       <physical type="integer" interface="config" list="0" index="3.0" size="0.1"/>
-     </parameter>
-+    <parameter id="POLLING" ui_flags="internal">
-+      <logical type="boolean" default="false"/>
-+      <physical type="integer" interface="store"/>
-+    </parameter>
-+    <parameter id="POLLING_INTERVAL" ui_flags="internal">
-+      <logical type="integer" min="360" max="1440" default="60" unit="min"/>
-+      <physical type="integer" interface="store"/>
-+    </parameter>
-+    <parameter id="ROAMING" ui_flags="internal">
-+      <logical type="boolean" default="false"/>
-+      <physical type="integer" interface="store"/>
-+    </parameter>
-   </paramset>
-   <channels>
-     <channel index="0" type="MAINTENANCE" ui_flags="internal" class="maintenance" count="1">
-@@ -69,6 +81,13 @@
-           <logical type="integer"/>
-           <physical type="integer" interface="internal" value_id="RSSI_PEER"/>
-         </parameter>
-+        <parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
-+          <logical type="option">
-+            <option id="UNSET" index="0" default="true"/>
-+            <option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
-+          </logical>
-+          <physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED"/>
-+        </parameter>
-       </paramset>
-     </channel>
-     <channel index="1" type="KEYMATIC" count="1" aes_always="true">
+--- Original/rf_keymatic.xml	2015-02-08 18:34:29.598585700 +0100
++++ Patched/rf_keymatic.xml	2015-02-08 18:34:33.018585800 +0100
+@@ -1,394 +0,0 @@
+-<?xml version="1.0" encoding="ISO-8859-1"?>
+-<device version="7" rx_modes="BURST" supports_aes="true">
+-  <supported_types>
+-    <type name="KeyMatic white" id="HM-Sec-Key" priority="2">
+-      <parameter index="10.0" size="2.0" const_value="25"/>
+-    </type>
+-    <type name="KeyMatic silver" id="HM-Sec-Key-S" priority="2">
+-      <parameter index="10.0" size="2.0" const_value="38"/>
+-    </type>
+-    <type name="KeyMatic bronze" id="HM-Sec-Key-O" priority="2">
+-      <parameter index="10.0" size="2.0" const_value="39"/>
+-    </type>
+-    <type name="Generic KeyMatic" id="HM-Sec-Key-Generic" priority="1">
+-      <parameter index="22.0" size="1.0" const_value="0xc0"/>
+-    </type>
+-  </supported_types>
+-  <paramset type="MASTER" id="keymatic_dev_master">
+-    <parameter id="SIGNAL">
+-      <logical type="boolean" default="true"/>
+-      <physical type="integer" interface="config" list="0" index="3.4" size="0.1"/>
+-    </parameter>
+-    <parameter id="SIGNAL_TONE">
+-      <logical type="option">
+-        <option id="LOW" default="true"/>
+-        <option id="MID"/>
+-        <option id="HIGH"/>
+-        <option id="VERY_HIGH"/>
+-      </logical>
+-      <physical type="integer" interface="config" list="0" index="3.6" size="0.2"/>
+-    </parameter>
+-    <parameter id="KEYPRESS_SIGNAL">
+-      <logical type="boolean" default="true"/>
+-      <physical type="integer" interface="config" list="0" index="3.0" size="0.1"/>
+-    </parameter>
+-  </paramset>
+-  <channels>
+-    <channel index="0" type="MAINTENANCE" ui_flags="internal" class="maintenance" count="1">
+-      <paramset type="MASTER" id="maint_ch_master"/>
+-      <paramset type="VALUES" id="maint_ch_values">
+-        <parameter id="UNREACH" operations="read,event" ui_flags="service">
+-          <logical type="boolean"/>
+-          <physical type="integer" interface="internal" value_id="UNREACH"/>
+-        </parameter>
+-        <parameter id="STICKY_UNREACH" operations="read,write,event" ui_flags="service,sticky">
+-          <logical type="boolean"/>
+-          <physical type="integer" interface="internal" value_id="STICKY_UNREACH"/>
+-        </parameter>
+-        <parameter id="CONFIG_PENDING" operations="read,event" ui_flags="service">
+-          <logical type="boolean"/>
+-          <physical type="integer" interface="internal" value_id="CONFIG_PENDING"/>
+-        </parameter>
+-        <parameter id="LOWBAT" operations="read,event" ui_flags="service">
+-          <logical type="boolean"/>
+-          <physical type="integer" interface="internal" value_id="LOWBAT"/>
+-        </parameter>
+-        <parameter id="DUTYCYCLE" operations="read,event" ui_flags="service">
+-          <logical type="boolean"/>
+-          <physical type="integer" interface="internal" value_id="DUTYCYCLE"/>
+-        </parameter>
+-        <parameter id="AES_KEY" operations="read" ui_flags="invisible">
+-          <logical type="integer" min="0" max="127"/>
+-          <physical type="integer" interface="internal" value_id="AES_KEY"/>
+-        </parameter>
+-        <parameter id="RSSI_DEVICE" operations="read,event">
+-          <logical type="integer"/>
+-          <physical type="integer" interface="internal" value_id="RSSI_DEVICE"/>
+-        </parameter>
+-        <parameter id="RSSI_PEER" operations="read,event">
+-          <logical type="integer"/>
+-          <physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+-        </parameter>
+-      </paramset>
+-    </channel>
+-    <channel index="1" type="KEYMATIC" count="1" aes_always="true">
+-      <link_roles>
+-        <target name="KEYMATIC"/>
+-      </link_roles>
+-      <paramset type="MASTER" id="keymatic_ch_master">
+-        <subset ref="keymatic_paramset"/>
+-      </paramset>
+-      <paramset type="VALUES" id="keymatic_ch_values">
+-        <subset ref="keymatic_valueset"/>
+-      </paramset>
+-      <paramset type="LINK" id="keymatic_ch_link">
+-        <subset ref="keymatic_linkset"/>
+-      </paramset>
+-      <enforce_link>
+-        <value id="LCD_SYMBOL" value="4"/>
+-        <value id="LCD_LEVEL_INTERP" value="4"/>
+-        <value id="PEER_NEEDS_BURST" value="true"/>
+-      </enforce_link>
+-    </channel>
+-  </channels>
+-  <frames>
+-    <frame id="LEVEL_SET" direction="to_device" type="0x11" subtype="0x80" subtype_index="9" channel_field="10">
+-      <parameter type="integer" index="11.0" size="1.0" param="LEVEL"/>
+-      <parameter type="integer" index="12.0" size="1.0" param="RELOCK_DELAY"/>
+-    </frame>
+-    <frame id="OPEN" direction="to_device" type="0x11" subtype="0x80" subtype_index="9" channel_field="10">
+-      <parameter type="integer" index="11.0" size="1.0" const_value="200"/>
+-      <parameter type="integer" index="12.0" size="1.0" param="RELOCK_DELAY"/>
+-    </frame>
+-    <frame id="SET_LOCK" direction="to_device" type="0x11" channel_field="10">
+-      <parameter type="integer" index="9.0" size="0.1" param="INHIBIT"/>
+-    </frame>
+-    <frame id="LEVEL_GET" direction="to_device" type="0x01" channel_field="9">
+-      <parameter type="integer" index="10.0" size="1.0" const_value="14"/>
+-    </frame>
+-    <frame id="INFO_LEVEL" direction="from_device" allowed_receivers="CENTRAL" event="true" type="0x10" subtype="6" subtype_index="9" channel_field="10">
+-      <parameter type="integer" index="11.0" size="1.0" param="LEVEL"/>
+-      <parameter type="integer" index="12.1" size="0.3" param="ERROR"/>
+-      <parameter type="integer" index="12.4" size="0.2" param="LEVEL_STATE"/>
+-    </frame>
+-    <frame id="ACK_STATUS" direction="from_device" allowed_receivers="CENTRAL" event="true" type="0x02" subtype="1" subtype_index="9" channel_field="10">
+-      <parameter type="integer" index="11.0" size="1.0" param="LEVEL"/>
+-      <parameter type="integer" index="12.1" size="0.3" param="ERROR"/>
+-      <parameter type="integer" index="12.4" size="0.2" param="LEVEL_STATE"/>
+-    </frame>
+-    <frame id="TOGGLE_INSTALL_TEST" direction="to_device" type="0x11" subtype="0x80" subtype_index="9" channel_field="10">
+-      <parameter type="integer" index="11.0" size="1.0" param="TOGGLE_FLAG"/>
+-      <parameter type="integer" index="12.0" size="1.0" const_value="255"/>
+-    </frame>
+-  </frames>
+-  <paramset_defs>
+-    <paramset id="keymatic_valueset">
+-      <parameter id="STATE" operations="read,write,event" control="LOCK.STATE">
+-        <logical type="boolean"/>
+-        <physical type="integer" interface="command" value_id="LEVEL">
+-          <set request="LEVEL_SET"/>
+-          <get request="LEVEL_GET" response="INFO_LEVEL" process_as_event="true" auth_violate_policy="reject"/>
+-          <event frame="INFO_LEVEL" auth_violate_policy="get"/>
+-          <event frame="ACK_STATUS" auth_violate_policy="get"/>
+-          <reset_after_send param="RELOCK_DELAY"/>
+-        </physical>
+-      </parameter>
+-      <parameter id="OPEN" operations="write" control="LOCK.OPEN">
+-        <logical type="action"/>
+-        <physical type="integer" interface="command">
+-          <set request="OPEN"/>
+-          <reset_after_send param="RELOCK_DELAY"/>
+-        </physical>
+-      </parameter>
+-      <parameter id="RELOCK_DELAY" operations="write" control="NONE">
+-        <logical type="float" min="0.0" max="65535.0" default="111600.0" unit="s">
+-          <special_value id="NOT_USED" value="111600.0"/>
+-        </logical>
+-        <physical type="integer" interface="store" id="RELOCK_DELAY" volatile="true"/>
+-        <conversion type="float_configtime"/>
+-      </parameter>
+-      <parameter id="STATE_UNCERTAIN" operations="read,event" control="LOCK.UNCERTAIN">
+-        <logical type="boolean" default="true"/>
+-        <physical type="integer" interface="command" value_id="LEVEL_STATE">
+-          <get request="LEVEL_GET" response="INFO_LEVEL" process_as_event="true" auth_violate_policy="reject"/>
+-          <event frame="INFO_LEVEL" auth_violate_policy="reject"/>
+-          <event frame="ACK_STATUS" auth_violate_policy="reject"/>
+-        </physical>
+-        <conversion type="boolean_integer" threshold="3"/>
+-      </parameter>
+-      <parameter id="DIRECTION" operations="read,event" ui_flags="internal">
+-        <logical type="option">
+-          <option id="NONE" default="true"/>
+-          <option id="UP"/>
+-          <option id="DOWN"/>
+-          <option id="UNDEFINED"/>
+-        </logical>
+-        <physical type="integer" interface="command" value_id="LEVEL_STATE">
+-          <get request="LEVEL_GET" response="INFO_LEVEL"/>
+-          <event frame="INFO_LEVEL"/>
+-          <event frame="ACK_STATUS"/>
+-        </physical>
+-        <conversion type="option_integer">
+-          <value_map device_value="0x00" parameter_value="0"/>
+-          <value_map device_value="0x01" parameter_value="1"/>
+-          <value_map device_value="0x02" parameter_value="2"/>
+-          <value_map device_value="0x03" parameter_value="3"/>
+-        </conversion>
+-      </parameter>
+-      <parameter id="INHIBIT" operations="read,write,event" control="NONE" loopback="true">
+-        <logical type="boolean"/>
+-        <physical type="integer" interface="command" value_id="INHIBIT">
+-          <set request="SET_LOCK"/>
+-        </physical>
+-      </parameter>
+-      <parameter id="INSTALL_TEST" operations="write" ui_flags="internal">
+-        <logical type="action"/>
+-        <physical type="integer" interface="command" value_id="TOGGLE_FLAG" no_init="true">
+-          <set request="TOGGLE_INSTALL_TEST"/>
+-        </physical>
+-        <conversion type="toggle" value="LEVEL"/>
+-      </parameter>
+-      <parameter id="ERROR" operations="read,event" ui_flags="service" control="NONE">
+-        <logical type="option">
+-          <option id="NO_ERROR" index="0" default="true"/>
+-          <option id="CLUTCH_FAILURE" index="1"/>
+-          <option id="MOTOR_ABORTED" index="2"/>
+-        </logical>
+-        <physical type="integer" interface="command" value_id="ERROR">
+-          <event frame="INFO_LEVEL"/>
+-          <event frame="ACK_STATUS"/>
+-        </physical>
+-      </parameter>
+-    </paramset>
+-    <paramset id="keymatic_paramset">
+-      <parameter id="HOLD_TIME">
+-        <logical type="float" min="0" max="8.16" default="0" unit="s"/>
+-        <physical type="integer" interface="config" list="1" index="20" size="1"/>
+-        <conversion type="float_integer_scale" factor="31.25"/>
+-      </parameter>
+-      <parameter id="HOLD_PWM">
+-        <logical type="integer" min="0" max="255" default="100"/>
+-        <physical type="integer" interface="config" list="1" index="21" size="1"/>
+-      </parameter>
+-      <parameter id="SETUP_DIR">
+-        <logical type="option">
+-          <option id="RIGHT"/>
+-          <option id="LEFT" default="true"/>
+-        </logical>
+-        <physical type="integer" interface="config" list="1" index="22.0" size="0.1"/>
+-      </parameter>
+-      <parameter id="SETUP_POSITION">
+-        <logical type="integer" min="0" max="3000" default="360" unit="deg"/>
+-        <physical type="integer" interface="config" list="1" index="23" size="1"/>
+-        <conversion type="integer_integer_scale" div="15"/>
+-      </parameter>
+-      <parameter id="ANGLE_OPEN">
+-        <logical type="integer" min="0" max="3000" default="270" unit="deg"/>
+-        <physical type="integer" interface="config" list="1" index="24" size="1"/>
+-        <conversion type="integer_integer_scale" div="15"/>
+-      </parameter>
+-      <parameter id="ANGLE_MAX">
+-        <logical type="integer" min="0" max="3000" default="1170" unit="deg"/>
+-        <physical type="integer" interface="config" list="1" index="25" size="1"/>
+-        <conversion type="integer_integer_scale" div="15"/>
+-      </parameter>
+-      <parameter id="ANGLE_LOCKED">
+-        <logical type="integer" min="0" max="3000" default="1080" unit="deg"/>
+-        <physical type="integer" interface="config" list="1" index="26" size="1"/>
+-        <conversion type="integer_integer_scale" div="15"/>
+-      </parameter>
+-      <parameter id="LED_FLASH_UNLOCKED">
+-        <logical type="boolean" default="false"/>
+-        <physical type="integer" interface="config" list="1" index="31.3" size="0.1"/>
+-      </parameter>
+-      <parameter id="LED_FLASH_LOCKED">
+-        <logical type="boolean" default="false"/>
+-        <physical type="integer" interface="config" list="1" index="31.6" size="0.1"/>
+-      </parameter>
+-    </paramset>
+-    <paramset id="keymatic_linkset">
+-      <parameter id="UI_HINT">
+-        <logical type="string" default="" use_default_on_failure="true"/>
+-        <physical type="string" interface="store" id="UI_HINT" save_on_change="true"/>
+-      </parameter>
+-      <parameter id="SHORT_CT_OFF">
+-        <logical type="option">
+-          <option id="X GE COND_VALUE_LO" default="true"/>
+-          <option id="X GE COND_VALUE_HI"/>
+-          <option id="X LT COND_VALUE_LO"/>
+-          <option id="X LT COND_VALUE_HI"/>
+-          <option id="COND_VALUE_LO LE X LT COND_VALUE_HI"/>
+-          <option id="X LT COND_VALUE_LO OR X GE COND_VALUE_HI"/>
+-        </logical>
+-        <physical type="integer" interface="config" list="3" index="0x3.4" size="0.4"/>
+-      </parameter>
+-      <parameter id="SHORT_CT_ON">
+-        <logical type="option">
+-          <option id="X GE COND_VALUE_LO" default="true"/>
+-          <option id="X GE COND_VALUE_HI"/>
+-          <option id="X LT COND_VALUE_LO"/>
+-          <option id="X LT COND_VALUE_HI"/>
+-          <option id="COND_VALUE_LO LE X LT COND_VALUE_HI"/>
+-          <option id="X LT COND_VALUE_LO OR X GE COND_VALUE_HI"/>
+-        </logical>
+-        <physical type="integer" interface="config" list="3" index="0x3.0" size="0.4"/>
+-      </parameter>
+-      <parameter id="SHORT_COND_VALUE_LO">
+-        <logical type="integer" min="0" max="255" default="0"/>
+-        <physical type="integer" interface="config" list="3" index="4" size="1"/>
+-      </parameter>
+-      <parameter id="SHORT_COND_VALUE_HI">
+-        <logical type="integer" min="0" max="255" default="0"/>
+-        <physical type="integer" interface="config" list="3" index="5" size="1"/>
+-      </parameter>
+-      <parameter id="SHORT_ON_TIME">
+-        <logical type="float" min="0.0" max="65535.0" default="111600.0" unit="s">
+-          <special_value id="NOT_USED" value="111600.0"/>
+-        </logical>
+-        <physical type="integer" interface="config" list="3" index="7" size="1"/>
+-        <conversion type="float_configtime"/>
+-      </parameter>
+-      <parameter id="SHORT_JT_OFF">
+-        <logical type="option">
+-          <option id="NO_JUMP_IGNORE_COMMAND"/>
+-          <option id="UNLOCK(ONDELAY)"/>
+-          <option id="UNLOCK(RAMPON)"/>
+-          <option id="UNLOCK"/>
+-          <option id="LOCK(OFFDELAY)"/>
+-          <option id="LOCK(RAMPOFF)"/>
+-          <option id="LOCK" default="true"/>
+-          <option id="OPEN"/>
+-        </logical>
+-        <physical type="integer" interface="config" list="3" index="0xB.4" size="0x0.4"/>
+-        <conversion type="option_integer">
+-          <value_map device_value="0x08" parameter_value="7"/>
+-        </conversion>
+-      </parameter>
+-      <parameter id="SHORT_JT_ON">
+-        <logical type="option">
+-          <option id="NO_JUMP_IGNORE_COMMAND"/>
+-          <option id="UNLOCK(ONDELAY)"/>
+-          <option id="UNLOCK(RAMPON)"/>
+-          <option id="UNLOCK"/>
+-          <option id="LOCK(OFFDELAY)"/>
+-          <option id="LOCK(RAMPOFF)"/>
+-          <option id="LOCK" default="true"/>
+-          <option id="OPEN"/>
+-        </logical>
+-        <physical type="integer" interface="config" list="3" index="0xB.0" size="0x0.4"/>
+-        <conversion type="option_integer">
+-          <value_map device_value="0x08" parameter_value="7"/>
+-        </conversion>
+-      </parameter>
+-      <parameter id="LONG_CT_OFF">
+-        <logical type="option">
+-          <option id="X GE COND_VALUE_LO" default="true"/>
+-          <option id="X GE COND_VALUE_HI"/>
+-          <option id="X LT COND_VALUE_LO"/>
+-          <option id="X LT COND_VALUE_HI"/>
+-          <option id="COND_VALUE_LO LE X LT COND_VALUE_HI"/>
+-          <option id="X LT COND_VALUE_LO OR X GE COND_VALUE_HI"/>
+-        </logical>
+-        <physical type="integer" interface="config" list="3" index="0x83.4" size="0.4"/>
+-      </parameter>
+-      <parameter id="LONG_CT_ON">
+-        <logical type="option">
+-          <option id="X GE COND_VALUE_LO" default="true"/>
+-          <option id="X GE COND_VALUE_HI"/>
+-          <option id="X LT COND_VALUE_LO"/>
+-          <option id="X LT COND_VALUE_HI"/>
+-          <option id="COND_VALUE_LO LE X LT COND_VALUE_HI"/>
+-          <option id="X LT COND_VALUE_LO OR X GE COND_VALUE_HI"/>
+-        </logical>
+-        <physical type="integer" interface="config" list="3" index="0x83.0" size="0.4"/>
+-      </parameter>
+-      <parameter id="LONG_COND_VALUE_LO">
+-        <logical type="integer" min="0" max="255" default="0"/>
+-        <physical type="integer" interface="config" list="3" index="0x84" size="1"/>
+-      </parameter>
+-      <parameter id="LONG_COND_VALUE_HI">
+-        <logical type="integer" min="0" max="255" default="0"/>
+-        <physical type="integer" interface="config" list="3" index="0x85" size="1"/>
+-      </parameter>
+-      <parameter id="LONG_ON_TIME">
+-        <logical type="float" min="0.0" max="65535.0" default="111600.0" unit="s">
+-          <special_value id="NOT_USED" value="111600.0"/>
+-        </logical>
+-        <physical type="integer" interface="config" list="3" index="0x87" size="1"/>
+-        <conversion type="float_configtime"/>
+-      </parameter>
+-      <parameter id="LONG_JT_OFF">
+-        <logical type="option">
+-          <option id="NO_JUMP_IGNORE_COMMAND"/>
+-          <option id="UNLOCK(ONDELAY)"/>
+-          <option id="UNLOCK(RAMPON)"/>
+-          <option id="UNLOCK"/>
+-          <option id="LOCK(OFFDELAY)"/>
+-          <option id="LOCK(RAMPOFF)"/>
+-          <option id="LOCK" default="true"/>
+-          <option id="OPEN"/>
+-        </logical>
+-        <physical type="integer" interface="config" list="3" index="0x8B.4" size="0x0.4"/>
+-        <conversion type="option_integer">
+-          <value_map device_value="0x08" parameter_value="7"/>
+-        </conversion>
+-      </parameter>
+-      <parameter id="LONG_JT_ON">
+-        <logical type="option">
+-          <option id="NO_JUMP_IGNORE_COMMAND"/>
+-          <option id="UNLOCK(ONDELAY)"/>
+-          <option id="UNLOCK(RAMPON)"/>
+-          <option id="UNLOCK"/>
+-          <option id="LOCK(OFFDELAY)"/>
+-          <option id="LOCK(RAMPOFF)"/>
+-          <option id="LOCK" default="true"/>
+-          <option id="OPEN"/>
+-        </logical>
+-        <physical type="integer" interface="config" list="3" index="0x8B.0" size="0x0.4"/>
+-        <conversion type="option_integer">
+-          <value_map device_value="0x08" parameter_value="7"/>
+-        </conversion>
+-      </parameter>
+-    </paramset>
+-  </paramset_defs>
+-</device>
 diff -Naur Original/rf_ks550.xml Patched/rf_ks550.xml
---- Original/rf_ks550.xml	2015-01-27 09:13:06.532755600 +0100
-+++ Patched/rf_ks550.xml	2015-01-27 09:13:09.520755700 +0100
+--- Original/rf_ks550.xml	2015-02-08 18:34:29.606585700 +0100
++++ Patched/rf_ks550.xml	2015-02-08 18:34:33.022585800 +0100
 @@ -22,6 +22,10 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="1" size="1.0"/>
@@ -2854,8 +3216,8 @@ diff -Naur Original/rf_ks550.xml Patched/rf_ks550.xml
      </channel>
      <channel index="1" type="WEATHER">
 diff -Naur Original/rf_ou_led16_ge_v1_1.xml Patched/rf_ou_led16_ge_v1_1.xml
---- Original/rf_ou_led16_ge_v1_1.xml	2015-01-27 09:13:06.540755600 +0100
-+++ Patched/rf_ou_led16_ge_v1_1.xml	2015-01-27 09:13:09.528755700 +0100
+--- Original/rf_ou_led16_ge_v1_1.xml	2015-02-08 18:34:29.614585700 +0100
++++ Patched/rf_ou_led16_ge_v1_1.xml	2015-02-08 18:34:33.030585800 +0100
 @@ -41,6 +41,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24" size="0.1"/>
@@ -2890,8 +3252,8 @@ diff -Naur Original/rf_ou_led16_ge_v1_1.xml Patched/rf_ou_led16_ge_v1_1.xml
      </channel>
      <channel index="1" type="KEY" count_from_sysinfo="23.0:1.0" function="A" aes_default="false">
 diff -Naur Original/rf_ou_led16_le_v1_0.xml Patched/rf_ou_led16_le_v1_0.xml
---- Original/rf_ou_led16_le_v1_0.xml	2015-01-27 09:13:06.548755600 +0100
-+++ Patched/rf_ou_led16_le_v1_0.xml	2015-01-27 09:13:09.540755700 +0100
+--- Original/rf_ou_led16_le_v1_0.xml	2015-02-08 18:34:29.622585700 +0100
++++ Patched/rf_ou_led16_le_v1_0.xml	2015-02-08 18:34:33.038585800 +0100
 @@ -37,6 +37,18 @@
        </logical>
        <physical type="integer" interface="config" list="0" index="4.0" size="0.4"/>
@@ -2926,8 +3288,8 @@ diff -Naur Original/rf_ou_led16_le_v1_0.xml Patched/rf_ou_led16_le_v1_0.xml
      </channel>
      <channel index="1" type="KEY" count_from_sysinfo="23.0:1.0" function="A" aes_default="false">
 diff -Naur Original/rf_pb-2-wm55_ge_v1_4.xml Patched/rf_pb-2-wm55_ge_v1_4.xml
---- Original/rf_pb-2-wm55_ge_v1_4.xml	2015-01-27 09:13:06.556755600 +0100
-+++ Patched/rf_pb-2-wm55_ge_v1_4.xml	2015-01-27 09:13:09.544755700 +0100
+--- Original/rf_pb-2-wm55_ge_v1_4.xml	2015-02-08 18:34:29.630585700 +0100
++++ Patched/rf_pb-2-wm55_ge_v1_4.xml	2015-02-08 18:34:33.046585800 +0100
 @@ -18,7 +18,12 @@
        <parameter index="10.0" size="2.0" const_value="0x008D"/>
      </type>
@@ -2957,8 +3319,8 @@ diff -Naur Original/rf_pb-2-wm55_ge_v1_4.xml Patched/rf_pb-2-wm55_ge_v1_4.xml
      </channel>
      <channel autoregister="true" index="1" type="KEY" count_from_sysinfo="23.0:1.0" pair_function="BA" function="A" paired="true" aes_default="true">
 diff -Naur Original/rf_pb-2-wm55_le_v1_3.xml Patched/rf_pb-2-wm55_le_v1_3.xml
---- Original/rf_pb-2-wm55_le_v1_3.xml	2015-01-27 09:13:06.568755600 +0100
-+++ Patched/rf_pb-2-wm55_le_v1_3.xml	2015-01-27 09:13:09.556755700 +0100
+--- Original/rf_pb-2-wm55_le_v1_3.xml	2015-02-08 18:34:29.638585700 +0100
++++ Patched/rf_pb-2-wm55_le_v1_3.xml	2015-02-08 18:34:33.054585800 +0100
 @@ -14,7 +14,12 @@
        <parameter index="10.0" size="2.0" const_value="0x008D"/>
      </type>
@@ -2988,8 +3350,8 @@ diff -Naur Original/rf_pb-2-wm55_le_v1_3.xml Patched/rf_pb-2-wm55_le_v1_3.xml
      </channel>
      <channel autoregister="true" index="1" type="KEY" count_from_sysinfo="23.0:1.0" pair_function="BA" function="A" paired="true" aes_default="true">
 diff -Naur Original/rf_pb-2.xml Patched/rf_pb-2.xml
---- Original/rf_pb-2.xml	2015-01-27 09:13:06.572755600 +0100
-+++ Patched/rf_pb-2.xml	2015-01-27 09:13:09.560755700 +0100
+--- Original/rf_pb-2.xml	2015-02-08 18:34:29.646585700 +0100
++++ Patched/rf_pb-2.xml	2015-02-08 18:34:33.062585800 +0100
 @@ -21,6 +21,10 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24" size="0.1"/>
@@ -3016,8 +3378,8 @@ diff -Naur Original/rf_pb-2.xml Patched/rf_pb-2.xml
      </channel>
      <channel autoregister="true" index="1" type="KEY" count_from_sysinfo="23.0:1.0" pair_function="BA" function="A" paired="true" aes_default="true">
 diff -Naur Original/rf_pbi.xml Patched/rf_pbi.xml
---- Original/rf_pbi.xml	2015-01-27 09:13:06.580755600 +0100
-+++ Patched/rf_pbi.xml	2015-01-27 09:13:09.568755700 +0100
+--- Original/rf_pbi.xml	2015-02-08 18:34:29.654585700 +0100
++++ Patched/rf_pbi.xml	2015-02-08 18:34:33.070585800 +0100
 @@ -14,7 +14,12 @@
        <parameter index="22.0" size="1.0" const_value="0x43"/>
      </type>
@@ -3047,8 +3409,8 @@ diff -Naur Original/rf_pbi.xml Patched/rf_pbi.xml
      </channel>
      <channel autoregister="true" index="1" type="KEY" count_from_sysinfo="23.0:1.0" pair_function="BA" function="T" paired="false" aes_default="true">
 diff -Naur Original/rf_rc_12.xml Patched/rf_rc_12.xml
---- Original/rf_rc_12.xml	2015-01-27 09:13:06.588755600 +0100
-+++ Patched/rf_rc_12.xml	2015-01-27 09:13:09.576755700 +0100
+--- Original/rf_rc_12.xml	2015-02-08 18:34:29.658585700 +0100
++++ Patched/rf_rc_12.xml	2015-02-08 18:34:33.078585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Added parameter for TEST_COUNTER - Added parameter for SIM_COUNTER -->
@@ -3102,8 +3464,8 @@ diff -Naur Original/rf_rc_12.xml Patched/rf_rc_12.xml
          <logical type="action"/>
          <physical type="integer" interface="command" value_id="TEST_COUNTER">
 diff -Naur Original/rf_rc_19.xml Patched/rf_rc_19.xml
---- Original/rf_rc_19.xml	2015-01-27 09:13:06.596755600 +0100
-+++ Patched/rf_rc_19.xml	2015-01-27 09:13:09.584755700 +0100
+--- Original/rf_rc_19.xml	2015-02-08 18:34:29.666585700 +0100
++++ Patched/rf_rc_19.xml	2015-02-08 18:34:33.086585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Added parameter for TEST_COUNTER - Added parameter for SIM_COUNTER - Added parameter for COMMA -->
@@ -3189,8 +3551,8 @@ diff -Naur Original/rf_rc_19.xml Patched/rf_rc_19.xml
            <logical type="option">
              <option id="NONE" index="0" default="true"/>
 diff -Naur Original/rf_rc-4-2.xml Patched/rf_rc-4-2.xml
---- Original/rf_rc-4-2.xml	2015-01-27 09:13:06.608755600 +0100
-+++ Patched/rf_rc-4-2.xml	2015-01-27 09:13:09.592755700 +0100
+--- Original/rf_rc-4-2.xml	2015-02-08 18:34:29.674585700 +0100
++++ Patched/rf_rc-4-2.xml	2015-02-08 18:34:33.098585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Added parameter for TEST_COUNTER - Added parameter for SIM_COUNTER -->
@@ -3244,8 +3606,8 @@ diff -Naur Original/rf_rc-4-2.xml Patched/rf_rc-4-2.xml
          <logical type="action"/>
          <physical type="integer" interface="command" value_id="TEST_COUNTER">
 diff -Naur Original/rf_rc-key4-2.xml Patched/rf_rc-key4-2.xml
---- Original/rf_rc-key4-2.xml	2015-01-27 09:13:06.616755600 +0100
-+++ Patched/rf_rc-key4-2.xml	2015-01-27 09:13:09.600755700 +0100
+--- Original/rf_rc-key4-2.xml	2015-02-08 18:34:29.682585700 +0100
++++ Patched/rf_rc-key4-2.xml	2015-02-08 18:34:33.106585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Added parameter for TEST_COUNTER - Added parameter for SIM_COUNTER - Added parameter PRESS_CONT - Added parameter PRESS_LONG_RELEASE - Added frame KEY_EVENT_LONG_BIDI -->
@@ -3325,8 +3687,8 @@ diff -Naur Original/rf_rc-key4-2.xml Patched/rf_rc-key4-2.xml
          <logical type="action"/>
          <physical type="integer" interface="command" value_id="TEST_COUNTER">
 diff -Naur Original/rf_rc-sec4-2.xml Patched/rf_rc-sec4-2.xml
---- Original/rf_rc-sec4-2.xml	2015-01-27 09:13:06.620755600 +0100
-+++ Patched/rf_rc-sec4-2.xml	2015-01-27 09:13:09.608755700 +0100
+--- Original/rf_rc-sec4-2.xml	2015-02-08 18:34:29.690585700 +0100
++++ Patched/rf_rc-sec4-2.xml	2015-02-08 18:34:33.114585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Added parameter for TEST_COUNTER - Added parameter for SIM_COUNTER - Added parameter PRESS_CONT - Added parameter PRESS_LONG_RELEASE - Added frame KEY_EVENT_LONG_BIDI -->
@@ -3406,8 +3768,8 @@ diff -Naur Original/rf_rc-sec4-2.xml Patched/rf_rc-sec4-2.xml
          <logical type="action"/>
          <physical type="integer" interface="command" value_id="TEST_COUNTER">
 diff -Naur Original/rf_rc_single_on.xml Patched/rf_rc_single_on.xml
---- Original/rf_rc_single_on.xml	2015-01-27 09:13:06.628755600 +0100
-+++ Patched/rf_rc_single_on.xml	2015-01-27 09:13:09.616755700 +0100
+--- Original/rf_rc_single_on.xml	2015-02-08 18:34:29.698585700 +0100
++++ Patched/rf_rc_single_on.xml	2015-02-08 18:34:33.122585800 +0100
 @@ -8,7 +8,12 @@
        <parameter index="22.0" size="1.0" const_value="0x44"/>
      </type>
@@ -3437,8 +3799,8 @@ diff -Naur Original/rf_rc_single_on.xml Patched/rf_rc_single_on.xml
      </channel>
      <channel autoregister="true" index="1" type="KEY" count_from_sysinfo="23.0:1.0" function="A" paired="false" aes_default="true">
 diff -Naur Original/rf_rc.xml Patched/rf_rc.xml
---- Original/rf_rc.xml	2015-01-27 09:13:06.644755600 +0100
-+++ Patched/rf_rc.xml	2015-01-27 09:13:09.624755700 +0100
+--- Original/rf_rc.xml	2015-02-08 18:34:29.706585700 +0100
++++ Patched/rf_rc.xml	2015-02-08 18:34:33.130585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Added parameter for TEST_COUNTER - Added parameter for SIM_COUNTER -->
@@ -3495,8 +3857,8 @@ diff -Naur Original/rf_rc.xml Patched/rf_rc.xml
          <logical type="action"/>
          <physical type="integer" interface="command" value_id="TEST_COUNTER">
 diff -Naur Original/rf_rd_le_v1_3.xml Patched/rf_rd_le_v1_3.xml
---- Original/rf_rd_le_v1_3.xml	2015-01-27 09:13:06.648755600 +0100
-+++ Patched/rf_rd_le_v1_3.xml	2015-01-27 09:13:09.632755700 +0100
+--- Original/rf_rd_le_v1_3.xml	2015-02-08 18:34:29.714585700 +0100
++++ Patched/rf_rd_le_v1_3.xml	2015-02-08 18:34:33.138585800 +0100
 @@ -15,6 +15,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24" size="1"/>
@@ -3531,8 +3893,8 @@ diff -Naur Original/rf_rd_le_v1_3.xml Patched/rf_rd_le_v1_3.xml
      </channel>
      <channel autoregister="true" index="1" type="RAINDETECTOR" count="1">
 diff -Naur Original/rf_rd.xml Patched/rf_rd.xml
---- Original/rf_rd.xml	2015-01-27 09:13:06.656755600 +0100
-+++ Patched/rf_rd.xml	2015-01-27 09:13:09.636755700 +0100
+--- Original/rf_rd.xml	2015-02-08 18:34:29.722585700 +0100
++++ Patched/rf_rd.xml	2015-02-08 18:34:33.146585800 +0100
 @@ -15,6 +15,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24" size="1"/>
@@ -3567,8 +3929,8 @@ diff -Naur Original/rf_rd.xml Patched/rf_rd.xml
      </channel>
      <channel autoregister="true" index="1" type="RAINDETECTOR" count="1">
 diff -Naur Original/rf_rep.xml Patched/rf_rep.xml
---- Original/rf_rep.xml	2015-01-27 09:13:06.672755600 +0100
-+++ Patched/rf_rep.xml	2015-01-27 09:13:09.648755700 +0100
+--- Original/rf_rep.xml	2015-02-08 18:34:29.730585700 +0100
++++ Patched/rf_rep.xml	2015-02-08 18:34:33.158585800 +0100
 @@ -11,6 +11,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="23" size="0.1"/>
@@ -3603,8 +3965,8 @@ diff -Naur Original/rf_rep.xml Patched/rf_rep.xml
      </channel>
      <channel index="1" type="REPEATER">
 diff -Naur Original/rf_resc_win_pcb_sc.xml Patched/rf_resc_win_pcb_sc.xml
---- Original/rf_resc_win_pcb_sc.xml	2015-01-27 09:13:06.684755600 +0100
-+++ Patched/rf_resc_win_pcb_sc.xml	2015-01-27 09:13:09.668755700 +0100
+--- Original/rf_resc_win_pcb_sc.xml	2015-02-08 18:34:29.742585700 +0100
++++ Patched/rf_resc_win_pcb_sc.xml	2015-02-08 18:34:33.170585800 +0100
 @@ -25,6 +25,18 @@
        <logical type="integer" min="10" max="0xff" default="10.0" unit="s"/>
        <physical type="integer" interface="config" list="0" index="29" size="1"/>
@@ -3639,8 +4001,8 @@ diff -Naur Original/rf_resc_win_pcb_sc.xml Patched/rf_resc_win_pcb_sc.xml
      </channel>
      <channel index="1" type="ACTOR_WINDOW" count="1">
 diff -Naur Original/rf_rhs_e_v1_7.xml Patched/rf_rhs_e_v1_7.xml
---- Original/rf_rhs_e_v1_7.xml	2015-01-27 09:13:06.696755600 +0100
-+++ Patched/rf_rhs_e_v1_7.xml	2015-01-27 09:13:09.680755700 +0100
+--- Original/rf_rhs_e_v1_7.xml	2015-02-08 18:34:29.754585700 +0100
++++ Patched/rf_rhs_e_v1_7.xml	2015-02-08 18:34:33.182585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: Moved AES_ACTIVE of channel 1 to last position, otherwise the parameters after AES_ACTIVE won't work with the HomeMatic Configurator because of a wront TAB_ORDER value. -->
@@ -3695,8 +4057,8 @@ diff -Naur Original/rf_rhs_e_v1_7.xml Patched/rf_rhs_e_v1_7.xml
        <paramset type="VALUES" id="rhs_ch_values">
          <parameter id="STATE" operations="read,event" control="RHS.STATE">
 diff -Naur Original/rf_rhs_le_v1_6.xml Patched/rf_rhs_le_v1_6.xml
---- Original/rf_rhs_le_v1_6.xml	2015-01-27 09:13:06.704755600 +0100
-+++ Patched/rf_rhs_le_v1_6.xml	2015-01-27 09:13:09.688755700 +0100
+--- Original/rf_rhs_le_v1_6.xml	2015-02-08 18:34:29.762585700 +0100
++++ Patched/rf_rhs_le_v1_6.xml	2015-02-08 18:34:33.190585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: Moved AES_ACTIVE of channel 1 to last position, otherwise the parameters after AES_ACTIVE won't work with the HomeMatic Configurator because of a wront TAB_ORDER value. -->
@@ -3751,8 +4113,8 @@ diff -Naur Original/rf_rhs_le_v1_6.xml Patched/rf_rhs_le_v1_6.xml
        <paramset type="VALUES" id="rhs_ch_values">
          <parameter id="STATE" operations="read,event" control="RHS.STATE">
 diff -Naur Original/rf_rhs.xml Patched/rf_rhs.xml
---- Original/rf_rhs.xml	2015-01-27 09:13:06.712755600 +0100
-+++ Patched/rf_rhs.xml	2015-01-27 09:13:09.696755700 +0100
+--- Original/rf_rhs.xml	2015-02-08 18:34:29.770585700 +0100
++++ Patched/rf_rhs.xml	2015-02-08 18:34:33.202585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: Moved AES_ACTIVE of channel 1 to last position, otherwise the parameters after AES_ACTIVE won't work with the HomeMatic Configurator because of a wront TAB_ORDER value. -->
@@ -3807,8 +4169,8 @@ diff -Naur Original/rf_rhs.xml Patched/rf_rhs.xml
        <paramset type="VALUES" id="rhs_ch_values">
          <parameter id="STATE" operations="read,event" control="RHS.STATE">
 diff -Naur Original/rf_roto_wdf_solar.xml Patched/rf_roto_wdf_solar.xml
---- Original/rf_roto_wdf_solar.xml	2015-01-27 09:13:06.720755600 +0100
-+++ Patched/rf_roto_wdf_solar.xml	2015-01-27 09:13:09.704755700 +0100
+--- Original/rf_roto_wdf_solar.xml	2015-02-08 18:34:29.778585700 +0100
++++ Patched/rf_roto_wdf_solar.xml	2015-02-08 18:34:33.210585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Removed unnecessary parameters outside of parameter set in "paramset_defs" -->
@@ -3884,8 +4246,8 @@ diff -Naur Original/rf_roto_wdf_solar.xml Patched/rf_roto_wdf_solar.xml
        <parameter id="LEVEL" operations="read,write,event" control="WINDOW.LEVEL">
          <logical type="float" default="0.0" min="0.0" max="1.0" unit="100%">
 diff -Naur Original/rf_s_1conf_644_le_v2_1.xml Patched/rf_s_1conf_644_le_v2_1.xml
---- Original/rf_s_1conf_644_le_v2_1.xml	2015-01-27 09:13:06.736755600 +0100
-+++ Patched/rf_s_1conf_644_le_v2_1.xml	2015-01-27 09:13:09.716755700 +0100
+--- Original/rf_s_1conf_644_le_v2_1.xml	2015-02-08 18:34:29.794585700 +0100
++++ Patched/rf_s_1conf_644_le_v2_1.xml	2015-02-08 18:34:33.226585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Added event to parameter INHIBIT -->
@@ -3934,8 +4296,8 @@ diff -Naur Original/rf_s_1conf_644_le_v2_1.xml Patched/rf_s_1conf_644_le_v2_1.xm
        </parameter>
        <parameter id="WORKING" operations="read,event" ui_flags="internal">
 diff -Naur Original/rf_s_1conf_644_le_v2_3.xml Patched/rf_s_1conf_644_le_v2_3.xml
---- Original/rf_s_1conf_644_le_v2_3.xml	2015-01-27 09:13:06.748755600 +0100
-+++ Patched/rf_s_1conf_644_le_v2_3.xml	2015-01-27 09:13:09.732755700 +0100
+--- Original/rf_s_1conf_644_le_v2_3.xml	2015-02-08 18:34:29.802585700 +0100
++++ Patched/rf_s_1conf_644_le_v2_3.xml	2015-02-08 18:34:33.238585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Added event to parameter INHIBIT -->
@@ -3984,8 +4346,8 @@ diff -Naur Original/rf_s_1conf_644_le_v2_3.xml Patched/rf_s_1conf_644_le_v2_3.xm
        </parameter>
        <parameter id="WORKING" operations="read,event" ui_flags="internal">
 diff -Naur Original/rf_s_1conf_644.xml Patched/rf_s_1conf_644.xml
---- Original/rf_s_1conf_644.xml	2015-01-27 09:13:06.760755600 +0100
-+++ Patched/rf_s_1conf_644.xml	2015-01-27 09:13:09.740755700 +0100
+--- Original/rf_s_1conf_644.xml	2015-02-08 18:34:29.810585700 +0100
++++ Patched/rf_s_1conf_644.xml	2015-02-08 18:34:33.254585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Added event to parameter INHIBIT -->
@@ -4034,8 +4396,8 @@ diff -Naur Original/rf_s_1conf_644.xml Patched/rf_s_1conf_644.xml
        </parameter>
        <parameter id="WORKING" operations="read,event" ui_flags="internal">
 diff -Naur Original/rf_s_4_ba.xml Patched/rf_s_4_ba.xml
---- Original/rf_s_4_ba.xml	2015-01-27 09:13:06.768755600 +0100
-+++ Patched/rf_s_4_ba.xml	2015-01-27 09:13:09.748755700 +0100
+--- Original/rf_s_4_ba.xml	2015-02-08 18:34:29.822585700 +0100
++++ Patched/rf_s_4_ba.xml	2015-02-08 18:34:33.270585800 +0100
 @@ -27,6 +27,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24" size="1"/>
@@ -4070,8 +4432,8 @@ diff -Naur Original/rf_s_4_ba.xml Patched/rf_s_4_ba.xml
      </channel>
      <channel index="1" type="SWITCH" count_from_sysinfo="23.0:0.4">
 diff -Naur Original/rf_s550ia.xml Patched/rf_s550ia.xml
---- Original/rf_s550ia.xml	2015-01-27 09:13:06.776755600 +0100
-+++ Patched/rf_s550ia.xml	2015-01-27 09:13:09.760755700 +0100
+--- Original/rf_s550ia.xml	2015-02-08 18:34:29.830585700 +0100
++++ Patched/rf_s550ia.xml	2015-02-08 18:34:33.286585800 +0100
 @@ -13,6 +13,10 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="1" size="1.0"/>
@@ -4098,8 +4460,8 @@ diff -Naur Original/rf_s550ia.xml Patched/rf_s550ia.xml
      </channel>
      <channel index="1" type="WEATHER">
 diff -Naur Original/rf_s_644.xml Patched/rf_s_644.xml
---- Original/rf_s_644.xml	2015-01-27 09:13:06.784755600 +0100
-+++ Patched/rf_s_644.xml	2015-01-27 09:13:09.768755700 +0100
+--- Original/rf_s_644.xml	2015-02-08 18:34:29.838585700 +0100
++++ Patched/rf_s_644.xml	2015-02-08 18:34:33.294585800 +0100
 @@ -73,6 +73,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24.0" size="0.1"/>
@@ -4134,8 +4496,8 @@ diff -Naur Original/rf_s_644.xml Patched/rf_s_644.xml
      </channel>
      <channel index="1" type="SWITCH" count_from_sysinfo="23.0:1.0">
 diff -Naur Original/rf_s_8_ba.xml Patched/rf_s_8_ba.xml
---- Original/rf_s_8_ba.xml	2015-01-27 09:13:06.796755600 +0100
-+++ Patched/rf_s_8_ba.xml	2015-01-27 09:13:09.780755700 +0100
+--- Original/rf_s_8_ba.xml	2015-02-08 18:34:29.846585700 +0100
++++ Patched/rf_s_8_ba.xml	2015-02-08 18:34:33.306585800 +0100
 @@ -27,6 +27,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24" size="1"/>
@@ -4170,8 +4532,8 @@ diff -Naur Original/rf_s_8_ba.xml Patched/rf_s_8_ba.xml
      </channel>
      <channel index="1" type="SWITCH" count_from_sysinfo="23.0:0.4">
 diff -Naur Original/rf_s_ba.xml Patched/rf_s_ba.xml
---- Original/rf_s_ba.xml	2015-01-27 09:13:06.808755600 +0100
-+++ Patched/rf_s_ba.xml	2015-01-27 09:13:09.788755700 +0100
+--- Original/rf_s_ba.xml	2015-02-08 18:34:29.858585700 +0100
++++ Patched/rf_s_ba.xml	2015-02-08 18:34:33.322585800 +0100
 @@ -23,6 +23,18 @@
        <physical type="integer" interface="config" list="0" index="18" size="1"/>
        <conversion type="float_integer_scale" factor="10"/>
@@ -4206,8 +4568,8 @@ diff -Naur Original/rf_s_ba.xml Patched/rf_s_ba.xml
      </channel>
      <channel index="1" type="SWITCH" count_from_sysinfo="23.0:0.4">
 diff -Naur Original/rf_scd_v1_0.xml Patched/rf_scd_v1_0.xml
---- Original/rf_scd_v1_0.xml	2015-01-27 09:13:06.816755600 +0100
-+++ Patched/rf_scd_v1_0.xml	2015-01-27 09:13:09.800755700 +0100
+--- Original/rf_scd_v1_0.xml	2015-02-08 18:34:29.866585700 +0100
++++ Patched/rf_scd_v1_0.xml	2015-02-08 18:34:33.334585800 +0100
 @@ -10,7 +10,12 @@
        <parameter index="10.0" size="2.0" const_value="0x0084"/>
      </type>
@@ -4237,8 +4599,8 @@ diff -Naur Original/rf_scd_v1_0.xml Patched/rf_scd_v1_0.xml
      </channel>
      <channel autoregister="true" index="1" type="SENSOR_FOR_CARBON_DIOXIDE" count_from_sysinfo="23.0:0.3" aes_default="true">
 diff -Naur Original/rf_sc_e_v1_7.xml Patched/rf_sc_e_v1_7.xml
---- Original/rf_sc_e_v1_7.xml	2015-01-27 09:13:06.824755600 +0100
-+++ Patched/rf_sc_e_v1_7.xml	2015-01-27 09:13:09.808755700 +0100
+--- Original/rf_sc_e_v1_7.xml	2015-02-08 18:34:29.874585700 +0100
++++ Patched/rf_sc_e_v1_7.xml	2015-02-08 18:34:33.342585800 +0100
 @@ -17,6 +17,10 @@
      </parameter>
      <enforce id="CYCLIC_INFO_MSG" value="true"/>
@@ -4265,8 +4627,8 @@ diff -Naur Original/rf_sc_e_v1_7.xml Patched/rf_sc_e_v1_7.xml
      </channel>
      <channel autoregister="true" index="1" type="SHUTTER_CONTACT" count_from_sysinfo="23.0:0.3" aes_default="true">
 diff -Naur Original/rf_sci_3.xml Patched/rf_sci_3.xml
---- Original/rf_sci_3.xml	2015-01-27 09:13:06.832755600 +0100
-+++ Patched/rf_sci_3.xml	2015-01-27 09:13:09.836755700 +0100
+--- Original/rf_sci_3.xml	2015-02-08 18:34:29.886585700 +0100
++++ Patched/rf_sci_3.xml	2015-02-08 18:34:33.354585800 +0100
 @@ -16,6 +16,10 @@
        <physical type="integer" interface="config" list="0" index="20" size="1"/>
      </parameter>
@@ -4293,8 +4655,8 @@ diff -Naur Original/rf_sci_3.xml Patched/rf_sci_3.xml
      </channel>
      <channel autoregister="true" index="1" type="SHUTTER_CONTACT" count_from_sysinfo="23.0:0.3" aes_default="true">
 diff -Naur Original/rf_sc_le_v1_6.xml Patched/rf_sc_le_v1_6.xml
---- Original/rf_sc_le_v1_6.xml	2015-01-27 09:13:06.840755600 +0100
-+++ Patched/rf_sc_le_v1_6.xml	2015-01-27 09:13:09.840755700 +0100
+--- Original/rf_sc_le_v1_6.xml	2015-02-08 18:34:29.894585700 +0100
++++ Patched/rf_sc_le_v1_6.xml	2015-02-08 18:34:33.366585800 +0100
 @@ -17,6 +17,10 @@
      </parameter>
      <enforce id="CYCLIC_INFO_MSG" value="true"/>
@@ -4321,8 +4683,8 @@ diff -Naur Original/rf_sc_le_v1_6.xml Patched/rf_sc_le_v1_6.xml
      </channel>
      <channel autoregister="true" index="1" type="SHUTTER_CONTACT" count_from_sysinfo="23.0:0.3" aes_default="true">
 diff -Naur Original/rf_sc.xml Patched/rf_sc.xml
---- Original/rf_sc.xml	2015-01-27 09:13:06.848755600 +0100
-+++ Patched/rf_sc.xml	2015-01-27 09:13:09.848755700 +0100
+--- Original/rf_sc.xml	2015-02-08 18:34:29.902585700 +0100
++++ Patched/rf_sc.xml	2015-02-08 18:34:33.374585800 +0100
 @@ -29,6 +29,10 @@
      </parameter>
      <enforce id="CYCLIC_INFO_MSG" value="true"/>
@@ -4349,8 +4711,8 @@ diff -Naur Original/rf_sc.xml Patched/rf_sc.xml
      </channel>
      <channel autoregister="true" index="1" type="SHUTTER_CONTACT" count_from_sysinfo="23.0:0.3" aes_default="true">
 diff -Naur Original/rf_sec_mdir_v1_5.xml Patched/rf_sec_mdir_v1_5.xml
---- Original/rf_sec_mdir_v1_5.xml	2015-01-27 09:13:06.856755600 +0100
-+++ Patched/rf_sec_mdir_v1_5.xml	2015-01-27 09:13:09.856755700 +0100
+--- Original/rf_sec_mdir_v1_5.xml	2015-02-08 18:34:29.910585700 +0100
++++ Patched/rf_sec_mdir_v1_5.xml	2015-02-08 18:34:33.386585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Changed operations of NEXT_TRANSMISSION to "read, event" -->
@@ -4392,8 +4754,8 @@ diff -Naur Original/rf_sec_mdir_v1_5.xml Patched/rf_sec_mdir_v1_5.xml
            <physical type="integer" interface="command" value_id="NEXT_TRANSMISSION">
              <event frame="EVENT"/>
 diff -Naur Original/rf_sec_mdir.xml Patched/rf_sec_mdir.xml
---- Original/rf_sec_mdir.xml	2015-01-27 09:13:06.868755600 +0100
-+++ Patched/rf_sec_mdir.xml	2015-01-27 09:13:09.884755700 +0100
+--- Original/rf_sec_mdir.xml	2015-02-08 18:34:29.918585700 +0100
++++ Patched/rf_sec_mdir.xml	2015-02-08 18:34:33.394585800 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Changed operations of NEXT_TRANSMISSION to "read, event" -->
@@ -4435,8 +4797,8 @@ diff -Naur Original/rf_sec_mdir.xml Patched/rf_sec_mdir.xml
            <physical type="integer" interface="command" value_id="NEXT_TRANSMISSION">
              <event frame="EVENT"/>
 diff -Naur Original/rf_sec_sco.xml Patched/rf_sec_sco.xml
---- Original/rf_sec_sco.xml	2015-01-27 09:13:06.872755600 +0100
-+++ Patched/rf_sec_sco.xml	2015-01-27 09:13:09.892755700 +0100
+--- Original/rf_sec_sco.xml	2015-02-08 18:34:29.926585700 +0100
++++ Patched/rf_sec_sco.xml	2015-02-08 18:34:33.410585900 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Added aes_always="true" to channel 0 -->
@@ -4478,8 +4840,8 @@ diff -Naur Original/rf_sec_sco.xml Patched/rf_sec_sco.xml
      </channel>
      <channel autoregister="true" index="1" type="SHUTTER_CONTACT" count_from_sysinfo="23.0:0.3" aes_default="true">
 diff -Naur Original/rf_sec_sd_schueco.xml Patched/rf_sec_sd_schueco.xml
---- Original/rf_sec_sd_schueco.xml	2015-01-27 09:13:06.884755600 +0100
-+++ Patched/rf_sec_sd_schueco.xml	2015-01-27 09:13:09.900755700 +0100
+--- Original/rf_sec_sd_schueco.xml	2015-02-08 18:34:29.930585700 +0100
++++ Patched/rf_sec_sd_schueco.xml	2015-02-08 18:34:33.418585900 +0100
 @@ -5,7 +5,20 @@
        <parameter index="10.0" size="2.0" const_value="0x0091"/>
      </type>
@@ -4526,8 +4888,8 @@ diff -Naur Original/rf_sec_sd_schueco.xml Patched/rf_sec_sd_schueco.xml
        </frame>
      </frames>
 diff -Naur Original/rf_sec_sd.xml Patched/rf_sec_sd.xml
---- Original/rf_sec_sd.xml	2015-01-27 09:13:06.892755600 +0100
-+++ Patched/rf_sec_sd.xml	2015-01-27 09:13:09.908755700 +0100
+--- Original/rf_sec_sd.xml	2015-02-08 18:34:29.938585700 +0100
++++ Patched/rf_sec_sd.xml	2015-02-08 18:34:33.426585900 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Added parameter SENDERADDRESS - Added frame INFO_LEVEL_ERROR and modified LOWBAT - Added "write" to team's STATE - Added "write" to team's INSTALL_TEST - Changed subtype_index of EVENT frame to "9:0.6" -->
@@ -4623,8 +4985,8 @@ diff -Naur Original/rf_sec_sd.xml Patched/rf_sec_sd.xml
          <paramset type="LINK" id="sd_team_ch_link"/>
          <enforce_link>
 diff -Naur Original/rf_sec_sfa.xml Patched/rf_sec_sfa.xml
---- Original/rf_sec_sfa.xml	2015-01-27 09:13:06.900755600 +0100
-+++ Patched/rf_sec_sfa.xml	2015-01-27 09:13:09.916755700 +0100
+--- Original/rf_sec_sfa.xml	2015-02-08 18:34:29.946585700 +0100
++++ Patched/rf_sec_sfa.xml	2015-02-08 18:34:33.438585900 +0100
 @@ -31,6 +31,18 @@
      </parameter>
      <enforce id="CYCLIC_INFO_MSG" value="true"/>
@@ -4659,8 +5021,8 @@ diff -Naur Original/rf_sec_sfa.xml Patched/rf_sec_sfa.xml
      </channel>
      <channel index="1" type="ALARMACTUATOR" count_from_sysinfo="23.0:0.5">
 diff -Naur Original/rf_sen_db.xml Patched/rf_sen_db.xml
---- Original/rf_sen_db.xml	2015-01-27 09:13:06.912755600 +0100
-+++ Patched/rf_sen_db.xml	2015-01-27 09:13:09.928755700 +0100
+--- Original/rf_sen_db.xml	2015-02-08 18:34:29.962585700 +0100
++++ Patched/rf_sen_db.xml	2015-02-08 18:34:33.454585900 +0100
 @@ -25,6 +25,10 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24" size="0.1"/>
@@ -4687,8 +5049,8 @@ diff -Naur Original/rf_sen_db.xml Patched/rf_sen_db.xml
      </channel>
      <channel autoregister="true" index="1" type="KEY" count_from_sysinfo="23.0:1.0" pair_function="BA" function="A" paired="false" aes_default="false">
 diff -Naur Original/rf_sen_ep.xml Patched/rf_sen_ep.xml
---- Original/rf_sen_ep.xml	2015-01-27 09:13:06.920755600 +0100
-+++ Patched/rf_sen_ep.xml	2015-01-27 09:13:09.936755700 +0100
+--- Original/rf_sen_ep.xml	2015-02-08 18:34:29.966585700 +0100
++++ Patched/rf_sen_ep.xml	2015-02-08 18:34:33.462585900 +0100
 @@ -8,7 +8,12 @@
        <parameter index="22.0" size="1.0" const_value="0x41"/>
      </type>
@@ -4718,8 +5080,8 @@ diff -Naur Original/rf_sen_ep.xml Patched/rf_sen_ep.xml
      </channel>
      <channel autoregister="true" index="1" type="PULSE_SENSOR" count_from_sysinfo="23.0:0.3" aes_default="true">
 diff -Naur Original/rf_sen_mdir_v1_5.xml Patched/rf_sen_mdir_v1_5.xml
---- Original/rf_sen_mdir_v1_5.xml	2015-01-27 09:13:06.924755600 +0100
-+++ Patched/rf_sen_mdir_v1_5.xml	2015-01-27 09:13:09.944755700 +0100
+--- Original/rf_sen_mdir_v1_5.xml	2015-02-08 18:34:29.974585700 +0100
++++ Patched/rf_sen_mdir_v1_5.xml	2015-02-08 18:34:33.474585900 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Changed operations of NEXT_TRANSMISSION to "read, event" -->
@@ -4764,8 +5126,8 @@ diff -Naur Original/rf_sen_mdir_v1_5.xml Patched/rf_sen_mdir_v1_5.xml
            <physical type="integer" interface="command" value_id="NEXT_TRANSMISSION">
              <event frame="EVENT"/>
 diff -Naur Original/rf_sen_mdir_wm55.xml Patched/rf_sen_mdir_wm55.xml
---- Original/rf_sen_mdir_wm55.xml	2015-01-27 09:13:06.936755600 +0100
-+++ Patched/rf_sen_mdir_wm55.xml	2015-01-27 09:13:09.952755700 +0100
+--- Original/rf_sen_mdir_wm55.xml	2015-02-08 18:34:29.990585700 +0100
++++ Patched/rf_sen_mdir_wm55.xml	2015-02-08 18:34:33.486585900 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Changed operations of NEXT_TRANSMISSION to "read, event" -->
@@ -4807,8 +5169,8 @@ diff -Naur Original/rf_sen_mdir_wm55.xml Patched/rf_sen_mdir_wm55.xml
          <physical type="integer" interface="command" value_id="NEXT_TRANSMISSION">
            <event frame="EVENT"/>
 diff -Naur Original/rf_sen_mdir.xml Patched/rf_sen_mdir.xml
---- Original/rf_sen_mdir.xml	2015-01-27 09:13:06.940755600 +0100
-+++ Patched/rf_sen_mdir.xml	2015-01-27 09:13:09.960755700 +0100
+--- Original/rf_sen_mdir.xml	2015-02-08 18:34:29.994585700 +0100
++++ Patched/rf_sen_mdir.xml	2015-02-08 18:34:33.490585900 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Changed operations of NEXT_TRANSMISSION to "read, event" -->
@@ -4853,8 +5215,8 @@ diff -Naur Original/rf_sen_mdir.xml Patched/rf_sen_mdir.xml
            <physical type="integer" interface="command" value_id="NEXT_TRANSMISSION">
              <event frame="EVENT"/>
 diff -Naur Original/rf_sen_wa_od.xml Patched/rf_sen_wa_od.xml
---- Original/rf_sen_wa_od.xml	2015-01-27 09:13:06.948755600 +0100
-+++ Patched/rf_sen_wa_od.xml	2015-01-27 09:13:09.972755700 +0100
+--- Original/rf_sen_wa_od.xml	2015-02-08 18:34:30.002585700 +0100
++++ Patched/rf_sen_wa_od.xml	2015-02-08 18:34:33.502585900 +0100
 @@ -20,6 +20,10 @@
        <physical type="integer" interface="config" list="0" index="24" size="1"/>
      </parameter>
@@ -4881,8 +5243,8 @@ diff -Naur Original/rf_sen_wa_od.xml Patched/rf_sen_wa_od.xml
      </channel>
      <channel autoregister="true" index="1" type="CAPACITIVE_FILLING_LEVEL_SENSOR" count="1" aes_default="false">
 diff -Naur Original/rf_s_le_v1_5.xml Patched/rf_s_le_v1_5.xml
---- Original/rf_s_le_v1_5.xml	2015-01-27 09:13:06.956755600 +0100
-+++ Patched/rf_s_le_v1_5.xml	2015-01-27 09:13:09.980755700 +0100
+--- Original/rf_s_le_v1_5.xml	2015-02-08 18:34:30.010585700 +0100
++++ Patched/rf_s_le_v1_5.xml	2015-02-08 18:34:33.510585900 +0100
 @@ -39,6 +39,18 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="2.7" size="0.1"/>
@@ -4917,8 +5279,8 @@ diff -Naur Original/rf_s_le_v1_5.xml Patched/rf_s_le_v1_5.xml
      </channel>
      <channel index="1" type="SWITCH" count_from_sysinfo="23.0:1.0">
 diff -Naur Original/rf_s_le_v2_3.xml Patched/rf_s_le_v2_3.xml
---- Original/rf_s_le_v2_3.xml	2015-01-27 09:13:06.972755600 +0100
-+++ Patched/rf_s_le_v2_3.xml	2015-01-27 09:13:09.992755700 +0100
+--- Original/rf_s_le_v2_3.xml	2015-02-08 18:34:30.018585700 +0100
++++ Patched/rf_s_le_v2_3.xml	2015-02-08 18:34:33.522585900 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Added parameter BOOT -->
@@ -4973,8 +5335,8 @@ diff -Naur Original/rf_s_le_v2_3.xml Patched/rf_s_le_v2_3.xml
        <parameter type="integer" const_value="0" param="STATE_FLAGS"/>
        <parameter type="integer" const_value="0" param="INHIBIT"/>
 diff -Naur Original/rf_s_mega168.xml Patched/rf_s_mega168.xml
---- Original/rf_s_mega168.xml	2015-01-27 09:13:06.980755600 +0100
-+++ Patched/rf_s_mega168.xml	2015-01-27 09:13:10.000755700 +0100
+--- Original/rf_s_mega168.xml	2015-02-08 18:34:30.030585700 +0100
++++ Patched/rf_s_mega168.xml	2015-02-08 18:34:33.538585900 +0100
 @@ -11,7 +11,20 @@
        <parameter index="10.0" size="2.0" const_value="0x0015"/>
      </type>
@@ -5012,8 +5374,8 @@ diff -Naur Original/rf_s_mega168.xml Patched/rf_s_mega168.xml
      </channel>
      <channel index="1" type="SWITCH" count_from_sysinfo="23.0:1.0">
 diff -Naur Original/rf_swi.xml Patched/rf_swi.xml
---- Original/rf_swi.xml	2015-01-27 09:13:06.988755600 +0100
-+++ Patched/rf_swi.xml	2015-01-27 09:13:10.008755700 +0100
+--- Original/rf_swi.xml	2015-02-08 18:34:30.038585700 +0100
++++ Patched/rf_swi.xml	2015-02-08 18:34:33.550585900 +0100
 @@ -14,7 +14,12 @@
        <parameter index="22.0" size="1.0" const_value="0x42"/>
      </type>
@@ -5043,8 +5405,8 @@ diff -Naur Original/rf_swi.xml Patched/rf_swi.xml
      </channel>
      <channel autoregister="true" index="1" type="SWITCH_INTERFACE" count_from_sysinfo="23.0:1.0" pair_function="BA" function="T" paired="false" aes_default="true">
 diff -Naur Original/rf_s.xml Patched/rf_s.xml
---- Original/rf_s.xml	2015-01-27 09:13:06.996755600 +0100
-+++ Patched/rf_s.xml	2015-01-27 09:13:10.016755700 +0100
+--- Original/rf_s.xml	2015-02-08 18:34:30.046585700 +0100
++++ Patched/rf_s.xml	2015-02-08 18:34:33.562585900 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 +<!-- Modified from original Changes: - Added event to parameter INHIBIT - Added parameter BOOT -->
@@ -5107,8 +5469,8 @@ diff -Naur Original/rf_s.xml Patched/rf_s.xml
        </parameter>
        <parameter id="WORKING" operations="read,event" ui_flags="internal">
 diff -Naur Original/rf_tc_it_wm-w-eu.xml Patched/rf_tc_it_wm-w-eu.xml
---- Original/rf_tc_it_wm-w-eu.xml	2015-01-27 09:13:07.016755600 +0100
-+++ Patched/rf_tc_it_wm-w-eu.xml	2015-01-27 09:13:10.036755700 +0100
+--- Original/rf_tc_it_wm-w-eu.xml	2015-02-08 18:34:30.058585700 +0100
++++ Patched/rf_tc_it_wm-w-eu.xml	2015-02-08 18:34:33.582585900 +0100
 @@ -1,5 +1,6 @@
  <?xml version="1.0" encoding="ISO-8859-1"?>
 -<device version="19" rx_modes="CONFIG,BURST" cyclic_timeout="600" supports_aes="true">
@@ -5152,8 +5514,8 @@ diff -Naur Original/rf_tc_it_wm-w-eu.xml Patched/rf_tc_it_wm-w-eu.xml
            <physical type="string" interface="command" value_id="PARTY_MODE_SUBMIT" no_init="true">
              <set request="PARTY_MODE_SUBMIT_FRAME"/>
 diff -Naur Original/rf_tis_le_v1_0.xml Patched/rf_tis_le_v1_0.xml
---- Original/rf_tis_le_v1_0.xml	2015-01-27 09:13:07.048755600 +0100
-+++ Patched/rf_tis_le_v1_0.xml	2015-01-27 09:13:10.064755700 +0100
+--- Original/rf_tis_le_v1_0.xml	2015-02-08 18:34:30.086585700 +0100
++++ Patched/rf_tis_le_v1_0.xml	2015-02-08 18:34:33.610585900 +0100
 @@ -12,6 +12,10 @@
        <physical type="integer" interface="config" list="0" index="9" size="1"/>
      </parameter>
@@ -5180,8 +5542,8 @@ diff -Naur Original/rf_tis_le_v1_0.xml Patched/rf_tis_le_v1_0.xml
      </channel>
      <channel autoregister="true" index="1" type="TILT_SENSOR" count_from_sysinfo="23.0:0.3" aes_default="true">
 diff -Naur Original/rf_tis.xml Patched/rf_tis.xml
---- Original/rf_tis.xml	2015-01-27 09:13:07.056755600 +0100
-+++ Patched/rf_tis.xml	2015-01-27 09:13:10.072755700 +0100
+--- Original/rf_tis.xml	2015-02-08 18:34:30.094585700 +0100
++++ Patched/rf_tis.xml	2015-02-08 18:34:33.618585900 +0100
 @@ -16,6 +16,10 @@
        <physical type="integer" interface="config" list="0" index="20" size="1"/>
      </parameter>
@@ -5208,8 +5570,8 @@ diff -Naur Original/rf_tis.xml Patched/rf_tis.xml
      </channel>
      <channel autoregister="true" index="1" type="TILT_SENSOR" count_from_sysinfo="23.0:0.3" aes_default="true">
 diff -Naur Original/rf_wds30_ot2.xml Patched/rf_wds30_ot2.xml
---- Original/rf_wds30_ot2.xml	2015-01-27 09:13:07.064755600 +0100
-+++ Patched/rf_wds30_ot2.xml	2015-01-27 09:13:10.080755700 +0100
+--- Original/rf_wds30_ot2.xml	2015-02-08 18:34:30.102585700 +0100
++++ Patched/rf_wds30_ot2.xml	2015-02-08 18:34:33.626585900 +0100
 @@ -28,6 +28,10 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24" size="1"/>
@@ -5236,8 +5598,8 @@ diff -Naur Original/rf_wds30_ot2.xml Patched/rf_wds30_ot2.xml
      </channel>
      <channel index="1" type="WEATHER" count="4">
 diff -Naur Original/rf_wds40_th_i_2.xml Patched/rf_wds40_th_i_2.xml
---- Original/rf_wds40_th_i_2.xml	2015-01-27 09:13:07.076755600 +0100
-+++ Patched/rf_wds40_th_i_2.xml	2015-01-27 09:13:10.092755700 +0100
+--- Original/rf_wds40_th_i_2.xml	2015-02-08 18:34:30.110585700 +0100
++++ Patched/rf_wds40_th_i_2.xml	2015-02-08 18:34:33.638585900 +0100
 @@ -14,6 +14,10 @@
        <logical type="boolean" default="false"/>
        <physical type="integer" interface="config" list="0" index="24.0" size="0.1"/>
@@ -5264,8 +5626,8 @@ diff -Naur Original/rf_wds40_th_i_2.xml Patched/rf_wds40_th_i_2.xml
      </channel>
      <channel index="1" type="WEATHER" aes_cbc="true">
 diff -Naur Original/rf_wds_v1_0.xml Patched/rf_wds_v1_0.xml
---- Original/rf_wds_v1_0.xml	2015-01-27 09:13:07.084755600 +0100
-+++ Patched/rf_wds_v1_0.xml	2015-01-27 09:13:10.100755700 +0100
+--- Original/rf_wds_v1_0.xml	2015-02-08 18:34:30.118585700 +0100
++++ Patched/rf_wds_v1_0.xml	2015-02-08 18:34:33.642585900 +0100
 @@ -12,6 +12,10 @@
        <physical type="integer" interface="config" list="0" index="9" size="1"/>
      </parameter>
@@ -5292,8 +5654,8 @@ diff -Naur Original/rf_wds_v1_0.xml Patched/rf_wds_v1_0.xml
      </channel>
      <channel autoregister="true" index="1" type="WATERDETECTIONSENSOR" count_from_sysinfo="23.0:0.3" aes_default="true">
 diff -Naur Original/rf_wds_v1_1.xml Patched/rf_wds_v1_1.xml
---- Original/rf_wds_v1_1.xml	2015-01-27 09:13:07.092755600 +0100
-+++ Patched/rf_wds_v1_1.xml	2015-01-27 09:13:10.108755700 +0100
+--- Original/rf_wds_v1_1.xml	2015-02-08 18:34:30.126585700 +0100
++++ Patched/rf_wds_v1_1.xml	2015-02-08 18:34:33.650585900 +0100
 @@ -20,6 +20,10 @@
        <physical type="integer" interface="config" list="0" index="20" size="1"/>
      </parameter>
@@ -5320,8 +5682,8 @@ diff -Naur Original/rf_wds_v1_1.xml Patched/rf_wds_v1_1.xml
      </channel>
      <channel autoregister="true" index="1" type="WATERDETECTIONSENSOR" count_from_sysinfo="23.0:0.3" aes_default="true">
 diff -Naur Original/rf_winmatic.xml Patched/rf_winmatic.xml
---- Original/rf_winmatic.xml	2015-01-27 09:13:07.100755600 +0100
-+++ Patched/rf_winmatic.xml	2015-01-27 09:13:10.116755700 +0100
+--- Original/rf_winmatic.xml	2015-02-08 18:34:30.134585700 +0100
++++ Patched/rf_winmatic.xml	2015-02-08 18:34:33.658585900 +0100
 @@ -26,6 +26,18 @@
        <logical type="boolean" default="true"/>
        <physical type="integer" interface="config" list="0" index="3.0" size="0.1"/>
@@ -5356,8 +5718,8 @@ diff -Naur Original/rf_winmatic.xml Patched/rf_winmatic.xml
      </channel>
      <channel index="1" type="WINMATIC" count="1" aes_always="true">
 diff -Naur Original/rf_ws550.xml Patched/rf_ws550.xml
---- Original/rf_ws550.xml	2015-01-27 09:13:07.108755600 +0100
-+++ Patched/rf_ws550.xml	2015-01-27 09:13:10.124755700 +0100
+--- Original/rf_ws550.xml	2015-02-08 18:34:30.142585700 +0100
++++ Patched/rf_ws550.xml	2015-02-08 18:34:33.670585900 +0100
 @@ -20,7 +20,20 @@
        <parameter index="10.0" size="2.0" const_value="65"/>
      </type>

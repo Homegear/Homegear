@@ -48,17 +48,26 @@ public:
 	virtual ~JsonEncoder() {}
 
 	void encode(const std::shared_ptr<Variable> variable, std::string& json);
+	void encode(const std::shared_ptr<Variable> variable, std::vector<char>& json);
 private:
 	BaseLib::Obj* _bl = nullptr;
 
 	void encodeValue(const std::shared_ptr<Variable>& variable, std::ostringstream& s);
+	void encodeValue(const std::shared_ptr<Variable>& variable, std::vector<char>& s);
 	void encodeArray(const std::shared_ptr<Variable>& variable, std::ostringstream& s);
+	void encodeArray(const std::shared_ptr<Variable>& variable, std::vector<char>& s);
 	void encodeStruct(const std::shared_ptr<Variable>& variable, std::ostringstream& s);
+	void encodeStruct(const std::shared_ptr<Variable>& variable, std::vector<char>& s);
 	void encodeBoolean(const std::shared_ptr<Variable>& variable, std::ostringstream& s);
+	void encodeBoolean(const std::shared_ptr<Variable>& variable, std::vector<char>& s);
 	void encodeInteger( const std::shared_ptr<Variable>& variable, std::ostringstream& s);
+	void encodeInteger( const std::shared_ptr<Variable>& variable, std::vector<char>& s);
 	void encodeFloat(const std::shared_ptr<Variable>& variable, std::ostringstream& s);
+	void encodeFloat(const std::shared_ptr<Variable>& variable, std::vector<char>& s);
 	void encodeString(const std::shared_ptr<Variable>& variable, std::ostringstream& s);
+	void encodeString(const std::shared_ptr<Variable>& variable, std::vector<char>& s);
 	void encodeVoid(const std::shared_ptr<Variable>& variable, std::ostringstream& s);
+	void encodeVoid(const std::shared_ptr<Variable>& variable, std::vector<char>& s);
 };
 }
 }

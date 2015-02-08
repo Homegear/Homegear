@@ -163,6 +163,12 @@ void ServerInfo::load(std::string filename)
 					if(value == "true") info->webServer = true;
 					GD::out.printDebug("Debug: webServer of server " + info->name + " set to " + std::to_string(info->webServer));
 				}
+				else if(name == "websocket")
+				{
+					BaseLib::HelperFunctions::toLower(value);
+					if(value == "true") info->webSocket = true;
+					GD::out.printDebug("Debug: webSocket of server " + info->name + " set to " + std::to_string(info->webSocket));
+				}
 				else if(name == "redirectto")
 				{
 					info->redirectTo = value;

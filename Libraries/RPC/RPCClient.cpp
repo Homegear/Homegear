@@ -315,17 +315,20 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 		}
 		if(server->removed) return;
 
-		if(server->hostname.empty()) server->hostname = getIPAddress(server->address.first);
-		if(server->hostname.empty()) return;
-		//Get settings pointer every time this method is executed, because
-		//the settings might change.
-		server->settings = GD::clientSettings.get(server->hostname);
-		if(server->settings) GD::out.printDebug("Debug: Settings found for host " + server->hostname);
-		if(!server->useSSL && server->settings && server->settings->forceSSL)
+		if(server->autoConnect)
 		{
-			GD::out.printError("RPC Client: Tried to send unencrypted packet to " + server->hostname + " with forceSSL enabled for this server. Removing server from list. Server has to send \"init\" again.");
-			server->removed = true;
-			return;
+			if(server->hostname.empty()) server->hostname = getIPAddress(server->address.first);
+			if(server->hostname.empty()) return;
+			//Get settings pointer every time this method is executed, because
+			//the settings might change.
+			server->settings = GD::clientSettings.get(server->hostname);
+			if(server->settings) GD::out.printDebug("Debug: Settings found for host " + server->hostname);
+			if(!server->useSSL && server->settings && server->settings->forceSSL)
+			{
+				GD::out.printError("RPC Client: Tried to send unencrypted packet to " + server->hostname + " with forceSSL enabled for this server. Removing server from list. Server has to send \"init\" again.");
+				server->removed = true;
+				return;
+			}
 		}
 
 		_sendCounter++;
@@ -340,15 +343,25 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 		{
 			if(!server->socket->connected())
 			{
-				server->socket->setHostname(server->hostname);
-				server->socket->setPort(server->address.second);
-				if(server->settings)
+				if(server->autoConnect)
 				{
-					server->socket->setCAFile(server->settings->caFile);
-					server->socket->setVerifyCertificate(server->settings->verifyCertificate);
+					server->socket->setHostname(server->hostname);
+					server->socket->setPort(server->address.second);
+					if(server->settings)
+					{
+						server->socket->setCAFile(server->settings->caFile);
+						server->socket->setVerifyCertificate(server->settings->verifyCertificate);
+					}
+					server->socket->setUseSSL(server->useSSL);
+					server->socket->open();
 				}
-				server->socket->setUseSSL(server->useSSL);
-				server->socket->open();
+				else
+				{
+					GD::out.printError("Connection to server with id " + std::to_string(server->uid) + " closed. Removing server.");
+					server->removed = true;
+					_sendCounter--;
+					return;
+				}
 			}
 		}
 		catch(const BaseLib::SocketOperationException& ex)
@@ -384,6 +397,10 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 					header.authorization = authField.second;
 				}
 				_rpcEncoder->insertHeader(data, header);
+			}
+			else if(server->webSocket)
+			{
+
 			}
 			else
 			{
@@ -570,6 +587,7 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 		}
 		_sendCounter--;
 		if(http.isFinished()) responseData = *http.getContent();
+		return;
     }
     catch(const std::exception& ex)
     {

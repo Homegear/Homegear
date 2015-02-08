@@ -58,7 +58,6 @@
 #include <sys/socket.h>
 #include <errno.h>
 
-#include <gcrypt.h>
 #include <gnutls/gnutls.h>
 
 namespace RPC
@@ -71,6 +70,7 @@ namespace RPC
 				int32_t id = -1;
 				bool closed = false;
 				bool binaryPacket = false;
+				bool webSocket = false;
 				std::thread readThread;
 				std::shared_ptr<BaseLib::FileDescriptor> socketDescriptor;
 				std::shared_ptr<BaseLib::SocketOperations> socket;
@@ -84,7 +84,7 @@ namespace RPC
 
 			struct PacketType
 			{
-				enum Enum { xmlRequest, xmlResponse, binaryRequest, binaryResponse };
+				enum Enum { xmlRequest, xmlResponse, binaryRequest, binaryResponse, webSocketRequest, webSocketResponse };
 			};
 
 			RPCServer();
@@ -121,6 +121,8 @@ namespace RPC
 			std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
 			std::unique_ptr<BaseLib::RPC::XMLRPCDecoder> _xmlRpcDecoder;
 			std::unique_ptr<BaseLib::RPC::XMLRPCEncoder> _xmlRpcEncoder;
+			std::unique_ptr<BaseLib::RPC::JsonDecoder> _jsonDecoder;
+			std::unique_ptr<BaseLib::RPC::JsonEncoder> _jsonEncoder;
 			std::unique_ptr<WebServer> _webServer;
 
 			void collectGarbage();

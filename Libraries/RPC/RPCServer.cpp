@@ -53,6 +53,8 @@ RPCServer::RPCServer()
 	_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
 	_xmlRpcDecoder = std::unique_ptr<BaseLib::RPC::XMLRPCDecoder>(new BaseLib::RPC::XMLRPCDecoder(GD::bl.get()));
 	_xmlRpcEncoder = std::unique_ptr<BaseLib::RPC::XMLRPCEncoder>(new BaseLib::RPC::XMLRPCEncoder(GD::bl.get()));
+	_jsonDecoder = std::unique_ptr<BaseLib::RPC::JsonDecoder>(new BaseLib::RPC::JsonDecoder(GD::bl.get()));
+	_jsonEncoder = std::unique_ptr<BaseLib::RPC::JsonEncoder>(new BaseLib::RPC::JsonEncoder(GD::bl.get()));
 
 	_info.reset(new ServerInfo::Info());
 	_rpcMethods.reset(new std::map<std::string, std::shared_ptr<RPCMethod>>);
@@ -466,12 +468,31 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& pa
 		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters;
 		if(packetType == PacketType::Enum::binaryRequest) parameters = _rpcDecoder->decodeRequest(packet, methodName);
 		else if(packetType == PacketType::Enum::xmlRequest) parameters = _xmlRpcDecoder->decodeRequest(packet, methodName);
+		else if(packetType == PacketType::Enum::webSocketRequest)
+		{
+			std::shared_ptr<BaseLib::RPC::Variable> result = _jsonDecoder->decode(packet);
+			if(result->type == BaseLib::RPC::VariableType::rpcStruct)
+			{
+				if(result->structValue->find("method") == result->structValue->end())
+				{
+					_out.printWarning("Warning: Could not decode JSON RPC packet.");
+					return;
+				}
+				methodName = result->structValue->at("method")->stringValue;
+				if(result->structValue->find("params") != result->structValue->end()) parameters = result->structValue->at("params")->arrayValue;
+				else parameters.reset(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>());
+			}
+		}
 		if(!parameters)
 		{
 			_out.printWarning("Warning: Could not decode RPC packet.");
 			return;
 		}
-		PacketType::Enum responseType = (packetType == PacketType::Enum::binaryRequest) ? PacketType::Enum::binaryResponse : PacketType::Enum::xmlResponse;
+		PacketType::Enum responseType;
+		if(packetType == PacketType::Enum::binaryRequest) responseType = PacketType::Enum::binaryResponse;
+		else if(packetType == PacketType::Enum::xmlRequest) responseType = PacketType::Enum::xmlResponse;
+		else if(packetType == PacketType::Enum::webSocketRequest) responseType = PacketType::Enum::webSocketResponse;
+
 		if(!parameters->empty() && parameters->at(0)->errorStruct)
 		{
 			sendRPCResponseToClient(client, parameters->at(0), responseType, keepAlive);
@@ -510,7 +531,6 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 			{
 				_out.printDebug("Response packet: " + std::string(&data.at(0), data.size()));
 			}
-			sendRPCResponseToClient(client, data, keepAlive);
 		}
 		else if(responseType == PacketType::Enum::binaryResponse)
 		{
@@ -520,8 +540,18 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 				_out.printDebug("Response binary:");
 				_out.printBinary(data);
 			}
-			sendRPCResponseToClient(client, data, keepAlive);
 		}
+		else if(responseType == PacketType::Enum::webSocketResponse)
+		{
+			std::vector<char> json;
+			_jsonEncoder->encode(variable, json);
+			BaseLib::WebSocket::encode(json, BaseLib::WebSocket::Header::Opcode::text, data);
+			if(GD::bl->debugLevel >= 5)
+			{
+				_out.printDebug("Response packet: " + std::string(&data.at(1), data.size() - 1));
+			}
+		}
+		sendRPCResponseToClient(client, data, keepAlive);
 	}
 	catch(const std::exception& ex)
     {
@@ -665,7 +695,7 @@ void RPCServer::packetReceived(std::shared_ptr<Client> client, std::vector<char>
 {
 	try
 	{
-		if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::xmlRequest) analyzeRPC(client, packet, packetType, keepAlive);
+		if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::xmlRequest || packetType == PacketType::Enum::webSocketRequest) analyzeRPC(client, packet, packetType, keepAlive);
 		else if(packetType == PacketType::Enum::binaryResponse || packetType == PacketType::Enum::xmlResponse) analyzeRPCResponse(client, packet, packetType, keepAlive);
 	}
     catch(const std::exception& ex)
@@ -769,19 +799,33 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 			BaseLib::Base64::encode(sha1, websocketAccept);
 			if(protocol == "server")
 			{
+				client->webSocket = true;
 				std::string header;
+				header.reserve(133 + websocketAccept.size());
 				header.append("HTTP/1.1 101 Switching Protocols\r\n");
 				header.append("Connection: Upgrade\r\n");
+				header.append("Upgrade: websocket\r\n");
 				header.append("Sec-WebSocket-Accept: ").append(websocketAccept).append("\r\n");
-				header.append("Sec-WebSocket-Protocol: server\r\n");
+				header.append("Sec-WebSocket-Protocol: server\r\n\r\n");
+				std::vector<char> data(&header[0], &header[0] + header.size());
+				sendRPCResponseToClient(client, data, true);
 			}
 			else if(protocol == "client")
 			{
+				client->webSocket = true;
 				std::string header;
+				header.reserve(133 + websocketAccept.size());
 				header.append("HTTP/1.1 101 Switching Protocols\r\n");
 				header.append("Connection: Upgrade\r\n");
+				header.append("Upgrade: websocket\r\n");
 				header.append("Sec-WebSocket-Accept: ").append(websocketAccept).append("\r\n");
-				header.append("Sec-WebSocket-Protocol: client\r\n");
+				header.append("Sec-WebSocket-Protocol: client\r\n\r\n");
+				std::vector<char> data(&header[0], &header[0] + header.size());
+				sendRPCResponseToClient(client, data, true);
+				_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
+				GD::rpcClient.addWebSocketServer(client->socketDescriptor, client->socket);
+				client->socketDescriptor.reset();
+				client->socket.reset();
 			}
 			else
 			{
@@ -824,6 +868,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 		uint32_t dataSize = 0;
 		PacketType::Enum packetType = PacketType::binaryRequest;
 		BaseLib::HTTP http;
+		BaseLib::WebSocket webSocket;
 
 		_out.printDebug("Listening for incoming packets from client number " + std::to_string(client->socketDescriptor->id) + ".");
 		while(!_stopServer)
@@ -854,11 +899,10 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 
 			if(GD::bl->debugLevel >= 5)
 			{
-				std::vector<uint8_t> rawPacket;
-				rawPacket.insert(rawPacket.begin(), buffer, buffer + bytesRead);
+				std::vector<uint8_t> rawPacket(buffer, buffer + bytesRead);
 				_out.printDebug("Debug: Packet received: " + BaseLib::HelperFunctions::getHexString(rawPacket));
 			}
-			if(!http.headerProcessingStarted() && packetLength == 0 && !strncmp(&buffer[0], "Bin", 3))
+			if(!http.headerProcessingStarted() && !webSocket.dataProcessingStarted() && packetLength == 0 && !strncmp(&buffer[0], "Bin", 3))
 			{
 				if(!_info->rpcServer) continue;
 				http.reset();
@@ -925,7 +969,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					}
 				}
 			}
-			else if(!http.headerProcessingStarted() && (!strncmp(&buffer[0], "GET ", 4) || !strncmp(&buffer[0], "HEAD ", 5)))
+			else if(!http.headerProcessingStarted() && !webSocket.dataProcessingStarted() && (!strncmp(&buffer[0], "GET ", 4) || !strncmp(&buffer[0], "HEAD ", 5)))
 			{
 				if(bytesRead < 8) continue;
 				buffer[bytesRead] = '\0';
@@ -960,7 +1004,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					sendRPCResponseToClient(client, data, false);
 				}
 			}
-			else if(!http.headerProcessingStarted() && (!strncmp(&buffer[0], "POST", 4) || !strncmp(&buffer[0], "HTTP/1.", 7)))
+			else if(!http.headerProcessingStarted() && !webSocket.dataProcessingStarted() && (!strncmp(&buffer[0], "POST", 4) || !strncmp(&buffer[0], "HTTP/1.", 7)))
 			{
 				buffer[bytesRead] = '\0';
 				packetType = (!strncmp(&buffer[0], "POST", 4)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
@@ -975,7 +1019,13 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
 				}
 			}
-			else if(packetLength > 0 || http.headerProcessingStarted())
+			else if(client->webSocket && !webSocket.dataProcessingStarted())
+			{
+				packetType = PacketType::Enum::webSocketRequest;
+				webSocket.reset();
+				webSocket.process(buffer, bytesRead);
+			}
+			else if(packetLength > 0 || http.headerProcessingStarted() || webSocket.dataProcessingStarted())
 			{
 				if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::binaryResponse)
 				{
@@ -1002,25 +1052,29 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				else
 				{
 					buffer[bytesRead] = '\0';
-					try
+					if(client->webSocket) webSocket.process(buffer, bytesRead);
+					else
 					{
-						http.process(buffer, bytesRead);
-					}
-					catch(BaseLib::HTTPException& ex)
-					{
-						_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
-						http.reset();
-						std::vector<char> data;
-						_webServer->getError(400, "Bad Request", "Your client sent a request that the server couldn't understand..", data);
-						sendRPCResponseToClient(client, data, false);
-					}
+						try
+						{
+							http.process(buffer, bytesRead);
+						}
+						catch(BaseLib::HTTPException& ex)
+						{
+							_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
+							http.reset();
+							std::vector<char> data;
+							_webServer->getError(400, "Bad Request", "Your client sent a request that the server couldn't understand..", data);
+							sendRPCResponseToClient(client, data, false);
+						}
 
-					if(http.getContentSize() > 10485760)
-					{
-						http.reset();
-						std::vector<char> data;
-						_webServer->getError(400, "Bad Request", "Your client sent a request larger than 10 MiB.", data);
-						sendRPCResponseToClient(client, data, false);
+						if(http.getContentSize() > 10485760)
+						{
+							http.reset();
+							std::vector<char> data;
+							_webServer->getError(400, "Bad Request", "Your client sent a request larger than 10 MiB.", data);
+							sendRPCResponseToClient(client, data, false);
+						}
 					}
 				}
 			}
@@ -1029,7 +1083,25 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				_out.printError("Error: Uninterpretable packet received. Closing connection. Packet was: " + std::string(buffer, bytesRead));
 				break;
 			}
-			if(http.isFinished())
+			if(client->webSocket && webSocket.isFinished())
+			{
+				if(webSocket.getHeader()->close)
+				{
+					std::vector<char> response;
+					webSocket.encode(*webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::close, response);
+					sendRPCResponseToClient(client, response, false);
+					closeClientConnection(client);
+				}
+				else if(webSocket.getHeader()->opcode == BaseLib::WebSocket::Header::Opcode::ping)
+				{
+					std::vector<char> response;
+					webSocket.encode(*webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::pong, response);
+					sendRPCResponseToClient(client, response, false);
+				}
+				else packetReceived(client, *webSocket.getContent(), packetType, true);
+				webSocket.reset();
+			}
+			else if(http.isFinished())
 			{
 				if(_info->authType == ServerInfo::Info::AuthType::basic)
 				{
@@ -1050,9 +1122,10 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					}
 				}
 
-				if(http.getHeader()->connection == BaseLib::HTTP::Connection::upgrade)
+				if(_info->webSocket && (http.getHeader()->connection & BaseLib::HTTP::Connection::upgrade))
 				{
 					handleConnectionUpgrade(client, http);
+					if(!client->socket) return; //Client transfered
 				}
 				else if(_info->webServer && (!_info->rpcServer || http.getHeader()->contentType != "text/xml"))
 				{
@@ -1062,9 +1135,9 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					std::vector<char> response;
 					if(http.getHeader()->method == "POST") _webServer->post(http, response);
 					else if(http.getHeader()->method == "GET" || http.getHeader()->method == "HEAD") _webServer->get(http, response);
-					sendRPCResponseToClient(client, response, http.getHeader()->connection == BaseLib::HTTP::Connection::keepAlive);
+					sendRPCResponseToClient(client, response, false);
 				}
-				else if(_info->rpcServer) packetReceived(client, *http.getContent(), packetType, http.getHeader()->connection == BaseLib::HTTP::Connection::Enum::keepAlive);
+				else if(_info->rpcServer) packetReceived(client, *http.getContent(), packetType, http.getHeader()->connection & BaseLib::HTTP::Connection::Enum::keepAlive);
 				packetLength = 0;
 				http.reset();
 				if(client->socketDescriptor->descriptor == -1)
@@ -1073,6 +1146,13 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					break;
 				}
 			}
+		}
+		if(client->webSocket) //Send close packet
+		{
+			std::vector<char> payload;
+			std::vector<char> response;
+			BaseLib::WebSocket::encode(payload, BaseLib::WebSocket::Header::Opcode::close, response);
+			sendRPCResponseToClient(client, response, false);
 		}
 	}
     catch(const std::exception& ex)

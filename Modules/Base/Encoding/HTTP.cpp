@@ -378,9 +378,9 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 		{
 			std::string c = (pos == (signed)std::string::npos) ? s : s.substr(0, pos);
 			HelperFunctions::trim(BaseLib::HelperFunctions::toLower(c));
-			if(c == "keep-alive") _header.connection = Connection::Enum::keepAlive;
-			else if(c == "close") _header.connection = Connection::Enum::close;
-			else if(c == "upgrade") _header.connection = Connection::Enum::upgrade;
+			if(c == "keep-alive") _header.connection = (Connection::Enum)(_header.connection | Connection::Enum::keepAlive);
+			else if(c == "close") _header.connection = (Connection::Enum)(_header.connection | Connection::Enum::close);
+			else if(c == "upgrade") _header.connection = (Connection::Enum)(_header.connection | Connection::Enum::upgrade);
 			else if(c == "te") {} //ignore
 			else throw HTTPException("Unknown value for HTTP header \"Connection\": " + std::string(value, valueSize));
 			if(pos == (signed)std::string::npos) s.clear(); else s.erase(0, pos + 1);

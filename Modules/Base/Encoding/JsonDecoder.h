@@ -53,19 +53,30 @@ public:
 	virtual ~JsonDecoder() {}
 
 	std::shared_ptr<Variable> decode(const std::string& json);
+	std::shared_ptr<Variable> decode(const std::vector<char>& json);
 private:
 	BaseLib::Obj* _bl = nullptr;
 
 	static inline bool posValid(const std::string& json, uint32_t& pos);
+	static inline bool posValid(const std::vector<char>& json, uint32_t& pos);
 	void skipWhitespace(const std::string& json, uint32_t& pos);
+	void skipWhitespace(const std::vector<char>& json, uint32_t& pos);
 	void decodeObject(const std::string& json, uint32_t& pos, std::shared_ptr<Variable>& variable);
+	void decodeObject(const std::vector<char>& json, uint32_t& pos, std::shared_ptr<Variable>& variable);
 	void decodeArray(const std::string& json, uint32_t& pos, std::shared_ptr<Variable>& variable);
+	void decodeArray(const std::vector<char>& json, uint32_t& pos, std::shared_ptr<Variable>& variable);
 	void decodeString(const std::string& json, uint32_t& pos, std::shared_ptr<Variable>& value);
+	void decodeString(const std::vector<char>& json, uint32_t& pos, std::shared_ptr<Variable>& value);
 	void decodeString(const std::string& json, uint32_t& pos, std::string& s);
+	void decodeString(const std::vector<char>& json, uint32_t& pos, std::string& s);
 	void decodeValue(const std::string& json, uint32_t& pos, std::shared_ptr<Variable>& value);
+	void decodeValue(const std::vector<char>& json, uint32_t& pos, std::shared_ptr<Variable>& value);
 	void decodeBoolean(const std::string& json, uint32_t& pos, std::shared_ptr<Variable>& value);
+	void decodeBoolean(const std::vector<char>& json, uint32_t& pos, std::shared_ptr<Variable>& value);
 	void decodeNull(const std::string& json, uint32_t& pos, std::shared_ptr<Variable>& value);
+	void decodeNull(const std::vector<char>& json, uint32_t& pos, std::shared_ptr<Variable>& value);
 	void decodeNumber(const std::string& json, uint32_t& pos, std::shared_ptr<Variable>& value);
+	void decodeNumber(const std::vector<char>& json, uint32_t& pos, std::shared_ptr<Variable>& value);
 };
 }
 }

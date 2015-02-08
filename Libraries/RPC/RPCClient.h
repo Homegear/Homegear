@@ -66,13 +66,16 @@ public:
 	bool initialized = false;
 	bool useSSL = false;
 	bool keepAlive = false;
+	bool autoConnect = true;
 	bool binary = false;
+	bool webSocket = false;
 	bool useID = false;
 	bool subscribePeers = false;
 	std::string hostname;
 	std::pair<std::string, std::string> address;
 	std::string path;
 	std::string id;
+	int32_t uid;
 	std::shared_ptr<std::set<uint64_t>> knownDevices;
 	std::map<std::string, bool> knownMethods;
 	std::shared_ptr<BaseLib::SocketOperations> socket;

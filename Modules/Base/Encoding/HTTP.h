@@ -61,7 +61,7 @@ public:
 	};
 	struct Connection
 	{
-		enum Enum { none, keepAlive, close, upgrade };
+		enum Enum { none = 0, keepAlive = 1, close = 2, upgrade = 4 };
 	};
 	struct Protocol
 	{

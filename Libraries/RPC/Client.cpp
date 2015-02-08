@@ -645,6 +645,36 @@ std::shared_ptr<RemoteRPCServer> Client::addServer(std::pair<std::string, std::s
 		server->address = address;
 		server->path = path;
 		server->id = id;
+		server->uid = _serverId++;
+		_servers->push_back(server);
+		_serversMutex.unlock();
+		return server;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _serversMutex.unlock();
+    return std::shared_ptr<RemoteRPCServer>(new RemoteRPCServer());
+}
+
+std::shared_ptr<RemoteRPCServer> Client::addWebSocketServer(std::shared_ptr<BaseLib::FileDescriptor> socketDescriptor, std::shared_ptr<BaseLib::SocketOperations> socket)
+{
+	try
+	{
+		_serversMutex.lock();
+		std::shared_ptr<RemoteRPCServer> server(new RemoteRPCServer());
+		server->uid = _serverId++;
+		server->webSocket = true;
+		server->autoConnect = false;
 		_servers->push_back(server);
 		_serversMutex.unlock();
 		return server;

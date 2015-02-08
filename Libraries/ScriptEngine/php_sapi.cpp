@@ -227,7 +227,7 @@ static void php_homegear_register_variables(zval* track_vars_array TSRMLS_DC)
 		{
 			if(server->ssl) php_register_variable_safe((char*)"HTTPS", (char*)"on", 2, track_vars_array TSRMLS_CC);
 			else php_register_variable_safe((char*)"HTTPS", (char*)"", 0, track_vars_array TSRMLS_CC);
-			std::string connection = (header->connection == BaseLib::HTTP::Connection::keepAlive) ? "keep-alive" : "close";
+			std::string connection = (header->connection & BaseLib::HTTP::Connection::keepAlive) ? "keep-alive" : "close";
 			php_register_variable_safe((char*)"HTTP_CONNECTION", (char*)connection.c_str(), connection.size(), track_vars_array TSRMLS_CC);
 			php_register_variable_safe((char*)"DOCUMENT_ROOT", (char*)server->contentPath.c_str(), server->contentPath.size(), track_vars_array TSRMLS_CC);
 			std::string filename = server->contentPath;

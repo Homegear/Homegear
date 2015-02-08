@@ -61,8 +61,73 @@ void JsonEncoder::encode(const std::shared_ptr<Variable> variable, std::string& 
 	json = s.str();
 }
 
+void JsonEncoder::encode(const std::shared_ptr<Variable> variable, std::vector<char>& json)
+{
+	if(!variable) return;
+	json.clear();
+	json.reserve(1024);
+	switch(variable->type)
+	{
+	case VariableType::rpcStruct:
+		encodeStruct(variable, json);
+		break;
+	case VariableType::rpcArray:
+		encodeArray(variable, json);
+		break;
+	default:
+		json.push_back('[');
+		encodeValue(variable, json);
+		json.push_back(']');
+		break;
+	}
+}
+
 void JsonEncoder::encodeValue(const std::shared_ptr<Variable>& variable, std::ostringstream& s)
 {
+	switch(variable->type)
+	{
+	case VariableType::rpcArray:
+		if(_bl->debugLevel >= 5) _bl->out.printDebug("Encoding JSON array.");
+		encodeArray(variable, s);
+		break;
+	case VariableType::rpcStruct:
+		if(_bl->debugLevel >= 5) _bl->out.printDebug("Encoding JSON struct.");
+		encodeStruct(variable, s);
+		break;
+	case VariableType::rpcBoolean:
+		if(_bl->debugLevel >= 5) _bl->out.printDebug("Encoding JSON boolean.");
+		encodeBoolean(variable, s);
+		break;
+	case VariableType::rpcInteger:
+		if(_bl->debugLevel >= 5) _bl->out.printDebug("Encoding JSON integer.");
+		encodeInteger(variable, s);
+		break;
+	case VariableType::rpcFloat:
+		if(_bl->debugLevel >= 5) _bl->out.printDebug("Encoding JSON float.");
+		encodeFloat(variable, s);
+		break;
+	case VariableType::rpcBase64:
+		if(_bl->debugLevel >= 5) _bl->out.printDebug("Encoding JSON string.");
+		encodeString(variable, s);
+		break;
+	case VariableType::rpcString:
+		if(_bl->debugLevel >= 5) _bl->out.printDebug("Encoding JSON string.");
+		encodeString(variable, s);
+		break;
+	case VariableType::rpcVoid:
+		if(_bl->debugLevel >= 5) _bl->out.printDebug("Encoding JSON null.");
+		encodeVoid(variable, s);
+		break;
+	case VariableType::rpcVariant:
+		if(_bl->debugLevel >= 5) _bl->out.printDebug("Encoding JSON null.");
+		encodeVoid(variable, s);
+		break;
+	}
+}
+
+void JsonEncoder::encodeValue(const std::shared_ptr<Variable>& variable, std::vector<char>& s)
+{
+	if(s.size() + 128 > s.capacity()) s.reserve(s.capacity() + 1024);
 	switch(variable->type)
 	{
 	case VariableType::rpcArray:
@@ -119,6 +184,21 @@ void JsonEncoder::encodeArray(const std::shared_ptr<Variable>& variable, std::os
 	s << ']';
 }
 
+void JsonEncoder::encodeArray(const std::shared_ptr<Variable>& variable, std::vector<char>& s)
+{
+	s.push_back('[');
+	if(!variable->arrayValue->empty())
+	{
+		encodeValue(variable->arrayValue->at(0), s);
+		for(std::vector<std::shared_ptr<Variable>>::iterator i = ++variable->arrayValue->begin(); i != variable->arrayValue->end(); ++i)
+		{
+			s.push_back(',');
+			encodeValue(*i, s);
+		}
+	}
+	s.push_back(']');
+}
+
 void JsonEncoder::encodeStruct(const std::shared_ptr<Variable>& variable, std::ostringstream& s)
 {
 	s << '{';
@@ -140,9 +220,51 @@ void JsonEncoder::encodeStruct(const std::shared_ptr<Variable>& variable, std::o
 	s << '}';
 }
 
+void JsonEncoder::encodeStruct(const std::shared_ptr<Variable>& variable, std::vector<char>& s)
+{
+	s.push_back('{');
+	if(!variable->structValue->empty())
+	{
+		s.push_back('"');
+		s.insert(s.end(), variable->structValue->begin()->first.begin(), variable->structValue->begin()->first.end());
+		s.push_back('"');
+		s.push_back(':');
+		encodeValue(variable->structValue->begin()->second, s);
+		for(std::map<std::string, std::shared_ptr<Variable>>::iterator i = ++variable->structValue->begin(); i != variable->structValue->end(); ++i)
+		{
+			s.push_back(',');
+			s.push_back('"');
+			s.insert(s.end(), i->first.begin(), i->first.end());
+			s.push_back('"');
+			s.push_back(':');
+			encodeValue(i->second, s);
+		}
+	}
+	s.push_back('}');
+}
+
 void JsonEncoder::encodeBoolean(const std::shared_ptr<Variable>& variable, std::ostringstream& s)
 {
 	s << ((variable->booleanValue) ? "true" : "false");
+}
+
+void JsonEncoder::encodeBoolean(const std::shared_ptr<Variable>& variable, std::vector<char>& s)
+{
+	if(variable->booleanValue)
+	{
+		s.push_back('t');
+		s.push_back('r');
+		s.push_back('u');
+		s.push_back('e');
+	}
+	else
+	{
+		s.push_back('f');
+		s.push_back('a');
+		s.push_back('l');
+		s.push_back('s');
+		s.push_back('e');
+	}
 }
 
 void JsonEncoder::encodeInteger(const std::shared_ptr<Variable>& variable, std::ostringstream& s)
@@ -150,9 +272,23 @@ void JsonEncoder::encodeInteger(const std::shared_ptr<Variable>& variable, std::
 	s << std::to_string(variable->integerValue);
 }
 
+void JsonEncoder::encodeInteger(const std::shared_ptr<Variable>& variable, std::vector<char>& s)
+{
+	std::string value(std::to_string(variable->integerValue));
+	s.insert(s.end(), value.begin(), value.end());
+}
+
 void JsonEncoder::encodeFloat(const std::shared_ptr<Variable>& variable, std::ostringstream& s)
 {
 	s << std::fixed << std::setprecision(15) << variable->floatValue;
+}
+
+void JsonEncoder::encodeFloat(const std::shared_ptr<Variable>& variable, std::vector<char>& s)
+{
+	std::ostringstream os;
+	os << std::fixed << std::setprecision(15) << variable->floatValue;
+	std::string value(os.str());
+	s.insert(s.end(), value.begin(), value.end());
 }
 
 void JsonEncoder::encodeString(const std::shared_ptr<Variable>& variable, std::ostringstream& s)
@@ -187,9 +323,58 @@ void JsonEncoder::encodeString(const std::shared_ptr<Variable>& variable, std::o
 	s << "\"";
 }
 
+void JsonEncoder::encodeString(const std::shared_ptr<Variable>& variable, std::vector<char>& s)
+{
+	if(s.size() + variable->stringValue.size() + 128 > s.capacity())
+	{
+		int32_t factor = variable->stringValue.size() / 1024;
+		s.reserve(s.capacity() + (factor * 1024) + 1024);
+	}
+	//Source: https://github.com/miloyip/rapidjson/blob/master/include/rapidjson/writer.h
+	static const char hexDigits[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+	static const char escape[256] =
+	{
+		#define Z16 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+		//0 1 2 3 4 5 6 7 8 9 A B C D E F
+		'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'b', 't', 'n', 'u', 'f', 'r', 'u', 'u', // 00
+		'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', // 10
+		0, 0, '"', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 20
+		Z16, Z16, // 30~4F
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,'\\', 0, 0, 0, // 50
+		Z16, Z16, Z16, Z16, Z16, Z16, Z16, Z16, Z16, Z16 // 60~FF
+		#undef Z16
+	};
+	s.push_back('"');
+	for(std::string::iterator i = variable->stringValue.begin(); i != variable->stringValue.end(); ++i)
+	{
+		if(escape[(uint8_t)*i])
+		{
+			s.push_back('\\');
+			s.push_back(escape[(uint8_t)*i]);
+			if (escape[(uint8_t)*i] == 'u')
+			{
+				s.push_back('0');
+				s.push_back('0');
+				s.push_back(hexDigits[((uint8_t)*i) >> 4]);
+				s.push_back(hexDigits[((uint8_t)*i) & 0xF]);
+			}
+		}
+		else s.push_back(*i);
+	}
+	s.push_back('"');
+}
+
 void JsonEncoder::encodeVoid(const std::shared_ptr<Variable>& variable, std::ostringstream& s)
 {
 	s << "null";
+}
+
+void JsonEncoder::encodeVoid(const std::shared_ptr<Variable>& variable, std::vector<char>& s)
+{
+	s.push_back('n');
+	s.push_back('u');
+	s.push_back('l');
+	s.push_back('l');
 }
 
 }

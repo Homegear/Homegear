@@ -146,4 +146,4 @@ void Server::stop()
 	if(_server) _server->stop();
 }
 
-} /* namespace RPC */
+}

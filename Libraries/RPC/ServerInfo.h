@@ -65,6 +65,7 @@ public:
 		int32_t diffieHellmanKeySize = 1024;
 		std::string contentPath;
 		bool webServer = false;
+		bool webSocket = false;
 		bool rpcServer = true;
 		std::string redirectTo;
 
