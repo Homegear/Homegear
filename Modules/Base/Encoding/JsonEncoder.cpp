@@ -40,6 +40,34 @@ JsonEncoder::JsonEncoder(BaseLib::Obj* baseLib)
 	_bl = baseLib;
 }
 
+void JsonEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<Variable>>> parameters, std::vector<char>& encodedData)
+{
+	try
+	{
+		std::shared_ptr<Variable> methodCall(new Variable(VariableType::rpcStruct));
+		methodCall->structValue->insert(RPCStructElement("method", std::shared_ptr<Variable>(new Variable(methodName))));
+		std::shared_ptr<Variable> params(new Variable(VariableType::rpcArray));
+		for(std::list<std::shared_ptr<Variable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+		{
+			params->arrayValue->push_back(*i);
+		}
+		methodCall->structValue->insert(RPCStructElement("params", params));
+		encode(methodCall, encodedData);
+	}
+	catch(const std::exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(const Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void JsonEncoder::encode(const std::shared_ptr<Variable> variable, std::string& json)
 {
 	if(!variable) return;

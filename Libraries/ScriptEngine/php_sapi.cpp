@@ -71,8 +71,8 @@ void php_homegear_build_argv(std::vector<std::string>& arguments TSRMLS_DC)
 	Z_ADDREF_P(argv);
 	Z_ADDREF_P(argc);
 
-	zend_hash_update(&EG(symbol_table), "argv", sizeof("argv"), &argv, sizeof(zval *), NULL);
-	zend_hash_update(&EG(symbol_table), "argc", sizeof("argc"), &argc, sizeof(zval *), NULL);
+	//zend_hash_update(&EG(symbol_table), "argv", sizeof("argv"), &argv, sizeof(zval *), NULL);
+	//zend_hash_update(&EG(symbol_table), "argc", sizeof("argc"), &argc, sizeof(zval *), NULL);
 
 	zval_ptr_dtor(&argc);
 	zval_ptr_dtor(&argv);

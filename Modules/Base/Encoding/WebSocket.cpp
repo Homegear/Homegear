@@ -177,4 +177,12 @@ void WebSocket::encode(const std::vector<char>& data, Header::Opcode::Enum messa
 
 	if(!data.empty()) output.insert(output.end(), data.begin(), data.end());
 }
+
+void WebSocket::encodeClose(std::vector<char>& output)
+{
+	output.clear();
+	output.reserve(2);
+	output.push_back(0x80 | (char)Header::Opcode::close);
+	output.push_back(0);
+}
 }

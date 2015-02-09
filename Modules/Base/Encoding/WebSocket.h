@@ -96,9 +96,17 @@ public:
 	 * Encodes a WebSocket packet.
 	 *
 	 * @param[in] data The data to encode
+	 * @param[in] messageType The message type of the packet.
 	 * @param[out] output The WebSocket packet
 	 */
 	static void encode(const std::vector<char>& data, Header::Opcode::Enum messageType, std::vector<char>& output);
+
+	/**
+	 * Encodes a WebSocket "close" packet.
+	 *
+	 * @param[out] output The WebSocket "close" packet.
+	 */
+	static void encodeClose(std::vector<char>& output);
 private:
 	Header _header;
 	std::shared_ptr<std::vector<char>> _content;

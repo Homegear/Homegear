@@ -53,6 +53,8 @@ RPCClient::RPCClient()
 		_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
 		_xmlRpcDecoder = std::unique_ptr<BaseLib::RPC::XMLRPCDecoder>(new BaseLib::RPC::XMLRPCDecoder(GD::bl.get()));
 		_xmlRpcEncoder = std::unique_ptr<BaseLib::RPC::XMLRPCEncoder>(new BaseLib::RPC::XMLRPCEncoder(GD::bl.get()));
+		_jsonDecoder = std::unique_ptr<BaseLib::RPC::JsonDecoder>(new BaseLib::RPC::JsonDecoder(GD::bl.get()));
+		_jsonEncoder = std::unique_ptr<BaseLib::RPC::JsonEncoder>(new BaseLib::RPC::JsonEncoder(GD::bl.get()));
 	}
 	catch(const std::exception& ex)
     {
@@ -116,6 +118,12 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 		std::vector<char> requestData;
 		std::vector<char> responseData;
 		if(server->binary) _rpcEncoder->encodeRequest(methodName, parameters, requestData);
+		else if(server->webSocket)
+		{
+			std::vector<char> json;
+			_jsonEncoder->encodeRequest(methodName, parameters, json);
+			BaseLib::WebSocket::encode(json, BaseLib::WebSocket::Header::Opcode::text, requestData);
+		}
 		else _xmlRpcEncoder->encodeRequest(methodName, parameters, requestData);
 		for(uint32_t i = 0; i < 3; ++i)
 		{
@@ -127,7 +135,7 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 		if(server->removed)
 		{
 			server->sendMutex.unlock();
-			GD::rpcClient.removeServer(server->address);
+			GD::rpcClient.removeServer(server->uid);
 			return;
 		}
 		if(retry)
@@ -135,17 +143,28 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 			GD::out.printError("Removing server \"" + server->id + "\". Server has to send \"init\" again.");
 			server->removed = true;
 			server->sendMutex.unlock();
-			GD::rpcClient.removeServer(server->address);
+			GD::rpcClient.removeServer(server->uid);
 			return;
 		}
 		if(responseData.empty())
 		{
-			GD::out.printWarning("Warning: Response is empty. XML RPC method: " + methodName + " Server: " + server->address.first + " Port: " + server->address.second);
-			server->sendMutex.unlock();
+			if(server->webSocket)
+			{
+				server->removed = true;
+				server->sendMutex.unlock();
+				GD::rpcClient.removeServer(server->uid);
+				GD::out.printInfo("Info: Connection to server closed. Host: " + server->address.first + " Port: " + server->address.second);
+			}
+			else
+			{
+				server->sendMutex.unlock();
+				GD::out.printWarning("Warning: Response is empty. RPC method: " + methodName + " Server: " + server->address.first + " Port: " + server->address.second);
+			}
 			return;
 		}
 		std::shared_ptr<BaseLib::RPC::Variable> returnValue;
 		if(server->binary) returnValue = _rpcDecoder->decodeResponse(responseData);
+		else if(server->webSocket) returnValue = _jsonDecoder->decode(responseData);
 		else returnValue = _xmlRpcDecoder->decodeResponse(responseData);
 
 		if(returnValue->errorStruct) GD::out.printError("Error in RPC response from " + server->hostname + " on port " + server->address.second + ": faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
@@ -199,6 +218,12 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
 		std::vector<char> requestData;
 		std::vector<char> responseData;
 		if(server->binary) _rpcEncoder->encodeRequest(methodName, parameters, requestData);
+		else if(server->webSocket)
+		{
+			std::vector<char> json;
+			_jsonEncoder->encodeRequest(methodName, parameters, json);
+			BaseLib::WebSocket::encode(json, BaseLib::WebSocket::Header::Opcode::text, requestData);
+		}
 		else _xmlRpcEncoder->encodeRequest(methodName, parameters, requestData);
 		for(uint32_t i = 0; i < 3; ++i)
 		{
@@ -223,11 +248,19 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
 		}
 		if(responseData.empty())
 		{
-			server->sendMutex.unlock();
+			if(server->webSocket)
+			{
+				server->removed = true;
+				server->sendMutex.unlock();
+				GD::rpcClient.removeServer(server->uid);
+				GD::out.printInfo("Info: Connection to server closed. Host: " + server->address.first + " Port: " + server->address.second);
+			}
+			else server->sendMutex.unlock();
 			return BaseLib::RPC::Variable::createError(-32700, "No response data.");
 		}
 		std::shared_ptr<BaseLib::RPC::Variable> returnValue;
 		if(server->binary) returnValue = _rpcDecoder->decodeResponse(responseData);
+		else if(server->webSocket) returnValue = _jsonDecoder->decode(responseData);
 		else returnValue = _xmlRpcDecoder->decodeResponse(responseData);
 		if(returnValue->errorStruct) GD::out.printError("Error in RPC response from " + server->hostname + " on port " + server->address.second + ": faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
 		else
@@ -398,11 +431,8 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 				}
 				_rpcEncoder->insertHeader(data, header);
 			}
-			else if(server->webSocket)
-			{
-
-			}
-			else
+			else if(server->webSocket) {}
+			else //XMLRPC
 			{
 				data.push_back('\r');
 				data.push_back('\n');
@@ -421,7 +451,7 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 
 		if(GD::bl->debugLevel >= 5)
 		{
-			if(server->binary) GD::out.printDebug("Sending packet: " + GD::bl->hf.getHexString(data));
+			if(server->binary || server->webSocket) GD::out.printDebug("Sending packet: " + GD::bl->hf.getHexString(data));
 			else GD::out.printDebug("Sending packet: " + std::string(&data.at(0), data.size()));
 		}
 		try
@@ -450,21 +480,22 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 		int32_t bufferMax = 2048;
 		char buffer[bufferMax + 1];
 		BaseLib::HTTP http;
+		BaseLib::WebSocket webSocket;
 		uint32_t packetLength = 0;
 		uint32_t dataSize = 0;
 
-		while(!http.isFinished()) //This is equal to while(true) for binary packets
+		while(!http.isFinished() && !webSocket.isFinished()) //This is equal to while(true) for binary packets
 		{
 			try
 			{
 				receivedBytes = server->socket->proofread(buffer, bufferMax);
 
 				//Some clients send only one byte in the first packet
-				if(packetLength == 0 && receivedBytes == 1 && !http.headerIsFinished()) receivedBytes += server->socket->proofread(&buffer[1], bufferMax - 1);
+				if(packetLength == 0 && receivedBytes == 1 && !http.headerIsFinished() && !webSocket.dataProcessingStarted()) receivedBytes += server->socket->proofread(&buffer[1], bufferMax - 1);
 			}
 			catch(const BaseLib::SocketTimeOutException& ex)
 			{
-				GD::out.printInfo("Info: Reading from XML RPC server timed out. Server: " + server->hostname + " Port: " + server->address.second);
+				GD::out.printInfo("Info: Reading from RPC server timed out. Server: " + server->hostname + " Port: " + server->address.second);
 				retry = true;
 				if(!server->keepAlive) server->socket->close();
 				_sendCounter--;
@@ -546,6 +577,27 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 					break;
 				}
 			}
+			else if(server->webSocket)
+			{
+				try
+				{
+					webSocket.process(buffer, receivedBytes); //Check for chunked packets (HomeMatic Manager, ioBroker). Necessary, because HTTP header does not contain transfer-encoding.
+				}
+				catch(BaseLib::WebSocketException& ex)
+				{
+					GD::out.printError("RPC Client: Could not process WebSocket packet: " + ex.what() + " Buffer: " + std::string(buffer, receivedBytes));
+					if(!server->keepAlive) server->socket->close();
+					_sendCounter--;
+					return;
+				}
+				if(http.getContentSize() > 10485760 || http.getHeader()->contentLength > 10485760)
+				{
+					GD::out.printError("Error: Packet with data larger than 100 MiB received.");
+					if(!server->keepAlive) server->socket->close();
+					_sendCounter--;
+					return;
+				}
+			}
 			else
 			{
 				if(!http.headerIsFinished())
@@ -585,8 +637,9 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 			if(server->binary) GD::out.printDebug("Debug: Received packet from server " + server->hostname + " on port " + server->address.second + ": " + GD::bl->hf.getHexString(responseData));
 			else GD::out.printDebug("Debug: Received packet from server " + server->hostname + " on port " + server->address.second + ":\n" + std::string(&http.getContent()->at(0), http.getContent()->size()));
 		}
+		if(server->webSocket && webSocket.isFinished()) responseData = *webSocket.getContent();
+		else if(http.isFinished()) responseData = *http.getContent();
 		_sendCounter--;
-		if(http.isFinished()) responseData = *http.getContent();
 		return;
     }
     catch(const std::exception& ex)

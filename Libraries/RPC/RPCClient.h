@@ -100,6 +100,8 @@ protected:
 	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
 	std::unique_ptr<BaseLib::RPC::XMLRPCDecoder> _xmlRpcDecoder;
 	std::unique_ptr<BaseLib::RPC::XMLRPCEncoder> _xmlRpcEncoder;
+	std::unique_ptr<BaseLib::RPC::JsonDecoder> _jsonDecoder;
+	std::unique_ptr<BaseLib::RPC::JsonEncoder> _jsonEncoder;
 	int32_t _sendCounter = 0;
 
 	void sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector<char>& data, std::vector<char>& responseData, bool insertHeader, bool& retry);

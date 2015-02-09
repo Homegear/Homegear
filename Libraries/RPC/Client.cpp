@@ -666,15 +666,20 @@ std::shared_ptr<RemoteRPCServer> Client::addServer(std::pair<std::string, std::s
     return std::shared_ptr<RemoteRPCServer>(new RemoteRPCServer());
 }
 
-std::shared_ptr<RemoteRPCServer> Client::addWebSocketServer(std::shared_ptr<BaseLib::FileDescriptor> socketDescriptor, std::shared_ptr<BaseLib::SocketOperations> socket)
+std::shared_ptr<RemoteRPCServer> Client::addWebSocketServer(std::shared_ptr<BaseLib::SocketOperations> socket, std::string address, std::string port)
 {
 	try
 	{
 		_serversMutex.lock();
 		std::shared_ptr<RemoteRPCServer> server(new RemoteRPCServer());
+		server->address.first = address;
+		server->address.second = port;
 		server->uid = _serverId++;
 		server->webSocket = true;
 		server->autoConnect = false;
+		server->initialized = true;
+		server->socket = socket;
+		server->keepAlive = true;
 		_servers->push_back(server);
 		_serversMutex.unlock();
 		return server;
@@ -703,6 +708,36 @@ void Client::removeServer(std::pair<std::string, std::string> server)
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
 		{
 			if((*i)->address == server)
+			{
+				_servers->erase(i);
+				_serversMutex.unlock();
+				return;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _serversMutex.unlock();
+}
+
+void Client::removeServer(int32_t uid)
+{
+	try
+	{
+		_serversMutex.lock();
+		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
+		{
+			if((*i)->uid == uid)
 			{
 				_servers->erase(i);
 				_serversMutex.unlock();

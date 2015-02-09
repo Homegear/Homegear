@@ -813,6 +813,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 			else if(protocol == "client")
 			{
 				client->webSocket = true;
+				client->webSocketClient = true;
 				std::string header;
 				header.reserve(133 + websocketAccept.size());
 				header.append("HTTP/1.1 101 Switching Protocols\r\n");
@@ -822,10 +823,14 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 				header.append("Sec-WebSocket-Protocol: client\r\n\r\n");
 				std::vector<char> data(&header[0], &header[0] + header.size());
 				sendRPCResponseToClient(client, data, true);
-				_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
-				GD::rpcClient.addWebSocketServer(client->socketDescriptor, client->socket);
-				client->socketDescriptor.reset();
-				client->socket.reset();
+				if(_info->authType != ServerInfo::Info::AuthType::basic)
+				{
+					_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
+					GD::rpcClient.addWebSocketServer(client->socket, client->address, std::to_string(client->port));
+					client->socketDescriptor.reset(new BaseLib::FileDescriptor());
+					client->socket.reset(new BaseLib::SocketOperations(GD::bl.get()));
+					client->closed = true;
+				}
 			}
 			else
 			{
@@ -878,7 +883,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				bytesRead = client->socket->proofread(buffer, bufferMax);
 				buffer[bufferMax] = 0; //Even though it shouldn't matter, make sure there is a null termination.
 				//Some clients send only one byte in the first packet
-				if(packetLength == 0 && !http.headerProcessingStarted() && bytesRead == 1) bytesRead += client->socket->proofread(&buffer[1], bufferMax - 1);
+				if(packetLength == 0 && !http.headerProcessingStarted() && !webSocket.dataProcessingStarted() && bytesRead == 1) bytesRead += client->socket->proofread(&buffer[1], bufferMax - 1);
 			}
 			catch(const BaseLib::SocketTimeOutException& ex)
 			{
@@ -1092,17 +1097,64 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					sendRPCResponseToClient(client, response, false);
 					closeClientConnection(client);
 				}
+				else if(_info->authType == ServerInfo::Info::AuthType::basic && !client->webSocketAuthorized)
+				{
+					if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
+					try
+					{
+						if(!client->auth.basicServer(webSocket))
+						{
+							_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection.");
+							std::vector <char> output;
+							BaseLib::WebSocket::encodeClose(output);
+							sendRPCResponseToClient(client, output, false);
+							break;
+						}
+						else
+						{
+							client->webSocketAuthorized = true;
+							_out.printDebug("Client successfully authorized using basic authentification.");
+							if(client->webSocketClient)
+							{
+								_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
+								GD::rpcClient.addWebSocketServer(client->socket, client->address, std::to_string(client->port));
+								client->socketDescriptor.reset(new BaseLib::FileDescriptor());
+								client->socket.reset(new BaseLib::SocketOperations(GD::bl.get()));
+								client->closed = true;
+								break;
+							}
+						}
+					}
+					catch(AuthException& ex)
+					{
+						_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection. Error was: " + ex.what());
+						break;
+					}
+				}
 				else if(webSocket.getHeader()->opcode == BaseLib::WebSocket::Header::Opcode::ping)
 				{
 					std::vector<char> response;
 					webSocket.encode(*webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::pong, response);
 					sendRPCResponseToClient(client, response, false);
 				}
-				else packetReceived(client, *webSocket.getContent(), packetType, true);
+				else
+				{
+					packetReceived(client, *webSocket.getContent(), packetType, true);
+				}
 				webSocket.reset();
 			}
 			else if(http.isFinished())
 			{
+				if(_info->webSocket && (http.getHeader()->connection & BaseLib::HTTP::Connection::upgrade))
+				{
+					//Do this before basic auth, because currently basic auth is not supported by websockets. Authorization takes place after the upgrade.
+					handleConnectionUpgrade(client, http);
+					if(client->closed) break; //No auth and client transferred.
+					packetLength = 0;
+					http.reset();
+					continue;
+				}
+
 				if(_info->authType == ServerInfo::Info::AuthType::basic)
 				{
 					if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
@@ -1120,12 +1172,6 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection. Error was: " + ex.what());
 						break;
 					}
-				}
-
-				if(_info->webSocket && (http.getHeader()->connection & BaseLib::HTTP::Connection::upgrade))
-				{
-					handleConnectionUpgrade(client, http);
-					if(!client->socket) return; //Client transfered
 				}
 				else if(_info->webServer && (!_info->rpcServer || http.getHeader()->contentType != "text/xml"))
 				{

@@ -3377,7 +3377,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCWriteLog::invoke(std::shared_ptr<std:
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		if(parameters->size() == 2) GD::out.printMessage(parameters->at(0)->stringValue, parameters->at(1)->integerValue);
+		if(parameters->size() == 2) GD::out.printMessage(parameters->at(0)->stringValue, parameters->at(1)->integerValue, true);
 		else GD::out.printMessage(parameters->at(0)->stringValue);
 
 		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));

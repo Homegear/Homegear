@@ -181,7 +181,6 @@ int32_t SocketOperations::proofwrite(const std::vector<char>& data)
 	if(!connected()) autoConnect();
 	if(data.empty()) return 0;
 	if(data.size() > 10485760) throw SocketDataLimitException("Data size is larger than 10 MiB.");
-	_bl->out.printDebug("Debug: ... data size is " + std::to_string(data.size()), 6);
 
 	int32_t totalBytesWritten = 0;
 	while (totalBytesWritten < (signed)data.size())

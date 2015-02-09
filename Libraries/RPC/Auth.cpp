@@ -43,6 +43,7 @@ Auth::Auth(std::shared_ptr<BaseLib::SocketOperations>& socket, std::vector<std::
 	_validUsers = validUsers;
 	_initialized = true;
 	_rpcEncoder = std::shared_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
+	_jsonDecoder = std::shared_ptr<BaseLib::RPC::JsonDecoder>(new BaseLib::RPC::JsonDecoder(GD::bl.get()));
 }
 
 Auth::Auth(std::shared_ptr<BaseLib::SocketOperations>& socket, std::string userName, std::string password)
@@ -205,5 +206,59 @@ bool Auth::basicServer(BaseLib::HTTP& httpPacket)
 	return false;
 }
 
+bool Auth::basicServer(BaseLib::WebSocket& webSocket)
+{
+	if(!_initialized) throw AuthException("Not initialized.");
+	if(webSocket.getContent()->empty())
+	{
+		sendWebSocketUnauthorized(webSocket, "No data received.");
+		return false;
+	}
+	std::shared_ptr<BaseLib::RPC::Variable> variable;
+	try
+	{
+		variable = _jsonDecoder->decode(*webSocket.getContent());
+	}
+	catch(BaseLib::RPC::JsonDecoderException& ex)
+	{
+		sendWebSocketUnauthorized(webSocket, "Error decoding json (is packet in json format?).");
+		return false;
+	}
+	if(variable->type != BaseLib::RPC::VariableType::rpcStruct)
+	{
+		sendWebSocketUnauthorized(webSocket, "Received data is no json object.");
+		return false;
+	}
+	if(variable->structValue->find("user") == variable->structValue->end() || variable->structValue->find("password") == variable->structValue->end())
+	{
+		sendWebSocketUnauthorized(webSocket, "Either \"user\" or \"password\" is not specified.");
+		return false;
+	}
+	if(User::verify(variable->structValue->at("user")->stringValue, variable->structValue->at("password")->stringValue))
+	{
+		sendWebSocketAuthorized(webSocket);
+		return true;
+	}
+	sendWebSocketUnauthorized(webSocket, "Wrong user name or password.");
+	return false;
+}
+
+void Auth::sendWebSocketAuthorized(BaseLib::WebSocket& webSocket)
+{
+	std::vector <char> output;
+	std::string json("{\"auth\":\"success\"}");
+	std::vector<char> data(&json[0], &json[0] + json.size());
+	BaseLib::WebSocket::encode(data, BaseLib::WebSocket::Header::Opcode::text, output);
+	_socket->proofwrite(output);
+}
+
+void Auth::sendWebSocketUnauthorized(BaseLib::WebSocket& webSocket, std::string reason)
+{
+	std::vector <char> output;
+	std::string json("{\"auth\":\"failure\",\"reason\":\"" + reason + "\"}");
+	std::vector<char> data(&json[0], &json[0] + json.size());
+	BaseLib::WebSocket::encode(data, BaseLib::WebSocket::Header::Opcode::text, output);
+	_socket->proofwrite(output);
+}
 
 } /* namespace RPC */

@@ -58,6 +58,7 @@ public:
 	std::pair<std::string, std::string> basicClient();
 	bool basicServer(std::shared_ptr<BaseLib::RPC::RPCHeader>& binaryHeader);
 	bool basicServer(BaseLib::HTTP& httpPacket);
+	bool basicServer(BaseLib::WebSocket& webSocket);
 protected:
 	bool _initialized = false;
 	std::string _hostname;
@@ -71,8 +72,11 @@ protected:
 	std::pair<std::string, std::string> _basicAuthString;
 	BaseLib::HTTP _http;
 	std::shared_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
+	std::shared_ptr<BaseLib::RPC::JsonDecoder> _jsonDecoder;
 
 	void sendBasicUnauthorized(bool binary);
+	void sendWebSocketAuthorized(BaseLib::WebSocket& webSocket);
+	void sendWebSocketUnauthorized(BaseLib::WebSocket& webSocket, std::string reason);
 };
 
 }

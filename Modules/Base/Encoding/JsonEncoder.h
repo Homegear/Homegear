@@ -33,6 +33,8 @@
 #include "../Exception.h"
 #include "../RPC/Variable.h"
 
+#include <list>
+
 namespace BaseLib
 {
 
@@ -49,6 +51,7 @@ public:
 
 	void encode(const std::shared_ptr<Variable> variable, std::string& json);
 	void encode(const std::shared_ptr<Variable> variable, std::vector<char>& json);
+	void encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<Variable>>> parameters, std::vector<char>& encodedData);
 private:
 	BaseLib::Obj* _bl = nullptr;
 

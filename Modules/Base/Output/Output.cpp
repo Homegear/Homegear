@@ -231,10 +231,16 @@ void Output::printDebug(std::string message, int32_t minDebugLevel)
 	std::cout << getTimeString() << " " << _prefix << message << std::endl;
 }
 
-void Output::printMessage(std::string message, int32_t minDebugLevel)
+void Output::printMessage(std::string message, int32_t minDebugLevel, bool errorLog)
 {
 	if(_bl && _bl->debugLevel < minDebugLevel) return;
-	std::cout << getTimeString() << " " << _prefix << message << std::endl;
+	message = _prefix + message;
+	std::cout << getTimeString() << " " << message << std::endl;
+	if(minDebugLevel <= 3 && errorLog)
+	{
+		std::cerr << getTimeString() << " " << message << std::endl;
+		if(_errorCallback) _errorCallback(3, message);
+	}
 }
 
 }

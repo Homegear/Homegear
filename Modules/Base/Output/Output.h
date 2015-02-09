@@ -216,8 +216,9 @@ public:
 	 * @see printDebug()
 	 * @param message The message.
 	 * @param minDebugLevel The minimal debug level (default 0).
+	 * @param errorLog If set to true and minDebugLevel is at least "warning", the message is written to the error log, too (default false).
 	 */
-	void printMessage(std::string message, int32_t minDebugLevel = 0);
+	void printMessage(std::string message, int32_t minDebugLevel = 0, bool errorLog = false);
 
 	/**
 	 * Calls the error callback function registered with the constructor.
