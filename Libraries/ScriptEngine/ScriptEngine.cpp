@@ -244,6 +244,13 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 
 		std::vector<std::string> argv = getArgs(path, arguments);
 		php_homegear_build_argv(argv TSRMLS_CC);
+		SG(request_info).argc = argv.size();
+		SG(request_info).argv = (char**)malloc((argv.size() + 1) * sizeof(char*));
+		for(uint32_t i = 0; i < argv.size(); ++i)
+		{
+			SG(request_info).argv[i] = (char*)argv[i].c_str(); //Value is not modified.
+		}
+		SG(request_info).argv[argv.size()] = nullptr;
 		php_startup_auto_globals(TSRMLS_C);
 
 		php_execute_script(&script TSRMLS_CC);
@@ -261,6 +268,12 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 			efree(SG(request_info).query_string);
 			SG(request_info).query_string = nullptr;
 		}
+		if(SG(request_info).argv)
+		{
+			free(SG(request_info).argv);
+			SG(request_info).argv = nullptr;
+		}
+		SG(request_info).argc = 0;
 		return exitCode;
 	}
 	catch(const std::exception& ex)
@@ -280,6 +293,12 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 		efree(SG(request_info).query_string);
 		SG(request_info).query_string = nullptr;
 	}
+	if(SG(request_info).argv)
+	{
+		free(SG(request_info).argv);
+		SG(request_info).argv = nullptr;
+	}
+	SG(request_info).argc = 0;
 	return 1;
 }
 

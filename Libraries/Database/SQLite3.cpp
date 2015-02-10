@@ -130,6 +130,13 @@ void SQLite3::closeDatabase()
 		_databaseMutex.lock();
 		GD::out.printInfo("Closing database...");
 		char* errorMessage = nullptr;
+		sqlite3_exec(_database, "COMMIT", 0, 0, &errorMessage); //Release all savepoints
+		if(errorMessage)
+		{
+			//Normally error is: No transaction is active, so no real error
+			GD::out.printInfo("Can't execute \"COMMIT\": " + std::string(errorMessage));
+			sqlite3_free(errorMessage);
+		}
 		sqlite3_exec(_database, "PRAGMA synchronous = FULL", 0, 0, &errorMessage);
 		if(errorMessage)
 		{
@@ -140,13 +147,6 @@ void SQLite3::closeDatabase()
 		if(errorMessage)
 		{
 			GD::out.printError("Can't execute \"PRAGMA journal_mode = DELETE\": " + std::string(errorMessage));
-			sqlite3_free(errorMessage);
-		}
-		sqlite3_exec(_database, "COMMIT", 0, 0, &errorMessage); //Release all savepoints
-		if(errorMessage)
-		{
-			//Normally error is: No transaction is active, so no real error
-			GD::out.printInfo("Can't execute \"COMMIT\": " + std::string(errorMessage));
 			sqlite3_free(errorMessage);
 		}
 		sqlite3_close(_database);

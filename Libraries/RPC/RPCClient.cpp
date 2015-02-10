@@ -105,7 +105,7 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 			return;
 		}
 		server->sendMutex.lock();
-		GD::out.printInfo("Info: Calling XML RPC method \"" + methodName + "\" on server " + server->address.first + " and port " + server->address.second + ".");
+		GD::out.printInfo("Info: Calling RPC method \"" + methodName + "\" on server " + server->address.first + " and port " + server->address.second + ".");
 		if(GD::bl->debugLevel >= 5)
 		{
 			GD::out.printDebug("Parameters:");
@@ -205,7 +205,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
 			server->sendMutex.unlock();
 			return BaseLib::RPC::Variable::createError(-32300, "Server was removed and has to send \"init\" again.");;
 		}
-		GD::out.printInfo("Info: Calling XML RPC method \"" + methodName + "\" on server " + server->address.first + " and port " + server->address.second + ".");
+		GD::out.printInfo("Info: Calling RPC method \"" + methodName + "\" on server " + server->address.first + " and port " + server->address.second + ".");
 		if(GD::bl->debugLevel >= 5)
 		{
 			GD::out.printDebug("Parameters:");
@@ -473,7 +473,32 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 			_sendCounter--;
 			return;
 		}
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
+    	_sendCounter--;
+    	return;
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
+    	_sendCounter--;
+    	return;
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
+    	_sendCounter--;
+    	return;
+    }
 
+    //Receive response
+	try
+	{
 		responseData.clear();
 		ssize_t receivedBytes;
 

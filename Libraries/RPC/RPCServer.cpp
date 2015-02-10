@@ -548,7 +548,8 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 			BaseLib::WebSocket::encode(json, BaseLib::WebSocket::Header::Opcode::text, data);
 			if(GD::bl->debugLevel >= 5)
 			{
-				_out.printDebug("Response packet: " + std::string(&data.at(1), data.size() - 1));
+				_out.printDebug("Response WebSocket packet: ");
+				_out.printBinary(data);
 			}
 		}
 		sendRPCResponseToClient(client, data, keepAlive);

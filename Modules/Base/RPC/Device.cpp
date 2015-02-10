@@ -1989,6 +1989,11 @@ void Device::load(std::string xmlFilename)
 			fileStream.close();
 			buffer[length] = '\0';
 			doc.parse<parse_no_entity_translation | parse_validate_closing_tags>(buffer);
+			if(!doc.first_node("device"))
+			{
+				_bl->out.printError("Error: Device XML file \"" + xmlFilename + "\" does not start with \"device\".");
+				return;
+			}
 			parseXML(doc.first_node("device"));
 		}
 		else _bl->out.printError("Error reading file " + xmlFilename + ": " + strerror(errno));
