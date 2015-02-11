@@ -171,7 +171,7 @@ void HTTP::process(char* buffer, int32_t bufferLength, bool checkForChunkedXML)
 	_headerProcessingStarted = true;
 	if(!_header.parsed) processHeader(&buffer, bufferLength);
 	if(!_header.parsed) return;
-	if(_header.method == "GET")
+	if(_header.method == "GET" || _header.method == "M-SEARCH" || _header.method == "NOTIFY")
 	{
 		_dataProcessingStarted = true;
 		setFinished();

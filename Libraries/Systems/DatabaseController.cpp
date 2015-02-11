@@ -281,6 +281,46 @@ void DatabaseController::releaseSavepoint(std::string name)
 }
 //End general
 
+//Homegear variables
+bool DatabaseController::getHomegearVariableString(HomegearVariables::Enum id, std::string& value)
+{
+	BaseLib::Database::DataRow data;
+	data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((uint64_t)id)));
+	std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT stringValue FROM homegearVariables WHERE variableIndex=?", data);
+	if(result->empty() || result->at(0).empty()) return false;
+	value = result->at(0).at(0)->textValue;
+	return true;
+}
+
+void DatabaseController::setHomegearVariableString(HomegearVariables::Enum id, std::string value)
+{
+	BaseLib::Database::DataRow data;
+	data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((uint64_t)id)));
+	std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT variableID FROM homegearVariables WHERE variableIndex=?", data);
+	data.clear();
+	if(result->empty() || result->at(0).empty())
+	{
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((uint64_t)id)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+		//Don't forget to set new version in initializeDatabase!!!
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+		db.executeWriteCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+	}
+	else
+	{
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((uint64_t)id)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+		//Don't forget to set new version in initializeDatabase!!!
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+		db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+	}
+}
+//End Homegear variables
+
 //Metadata
 std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::getAllMetadata(uint64_t peerID, std::string serialNumber)
 {

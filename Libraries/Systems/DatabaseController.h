@@ -37,6 +37,11 @@
 class DatabaseController
 {
 public:
+	struct HomegearVariables
+	{
+		enum Enum { version = 0, upnpusn = 1 };
+	};
+
 	DatabaseController();
 	virtual ~DatabaseController();
 	void dispose();
@@ -50,6 +55,11 @@ public:
 	virtual void createSavepoint(std::string name);
 	virtual void releaseSavepoint(std::string name);
 	//End general
+
+	//Homegear variables
+	virtual bool getHomegearVariableString(HomegearVariables::Enum id, std::string& value);
+	virtual void setHomegearVariableString(HomegearVariables::Enum id, std::string value);
+	//End Homegear variables
 
 	//Metadata
 	virtual std::shared_ptr<BaseLib::RPC::Variable> setMetadata(uint64_t peerID, std::string serialNumber, std::string dataID, std::shared_ptr<BaseLib::RPC::Variable> metadata);

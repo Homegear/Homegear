@@ -413,6 +413,7 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command)
     return dataRows;
 }
 
+/*
 void SQLite3::benchmark1()
 {
 	//Duration for REPLACE in ms: 17836
@@ -657,6 +658,6 @@ void SQLite3::benchmark4()
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
-
+*/
 }
 }

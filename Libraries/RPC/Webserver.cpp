@@ -62,16 +62,20 @@ void WebServer::get(BaseLib::HTTP& http, std::vector<char>& content)
 {
 	try
 	{
-		/*std::vector<char> request;
-		std::shared_ptr<std::vector<char>> header = http.getRawHeader();
-		std::shared_ptr<std::vector<char>> content = http.getContent();
-		request.reserve(header->size() + content->size());
-		request.insert(request.end(), header->begin(), header->end());
-		request.insert(request.end(), content->begin(), content->end());*/
-
 		std::string path = http.getHeader()->path;
-		if(!path.empty() && path.front() == '/') path = path.substr(1);
+		std::vector<std::string> headers;
+		if(GD::bl->settings.enableUPnP() && path == "/description.xml")
+		{
+			GD::uPnP.getDescription(_serverInfo->port, content);
+			if(!content.empty())
+			{
+				std::string header = getHeader(content.size(), "text/xml", 200, "OK", headers);
+				content.insert(content.begin(), header.begin(), header.end());
+				return;
+			}
+		}
 
+		if(!path.empty() && path.front() == '/') path = path.substr(1);
 		bool isDirectory = false;
 		BaseLib::HelperFunctions::isDirectory(_serverInfo->contentPath + path, isDirectory);
 		if(isDirectory)
@@ -95,7 +99,6 @@ void WebServer::get(BaseLib::HTTP& http, std::vector<char>& content)
 			if(pos != (signed)std::string::npos && (unsigned)pos < path.size() - 1) ending = path.substr(pos + 1);
 			GD::bl->hf.toLower(ending);
 			std::string contentString;
-			std::vector<std::string> headers;
 #ifdef SCRIPTENGINE
 			if(ending == "php" || ending == "php5")
 			{

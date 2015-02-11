@@ -33,7 +33,6 @@
 
 #include "../../Modules/Base/BaseLib.h"
 #include "../RPC/ServerInfo.h"
-#include "php_sapi.h"
 
 #include <mutex>
 #include <future>

@@ -130,7 +130,7 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 			retry = false;
 			if(i == 0) sendRequest(server, requestData, responseData, true, retry);
 			else sendRequest(server, requestData, responseData, false, retry);
-			if(!retry || server->removed) break;
+			if(!retry || server->removed || !server->autoConnect) break;
 		}
 		if(server->removed)
 		{
@@ -140,7 +140,7 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 		}
 		if(retry)
 		{
-			GD::out.printError("Removing server \"" + server->id + "\". Server has to send \"init\" again.");
+			if(!server->webSocket) GD::out.printError("Removing server \"" + server->id + "\". Server has to send \"init\" again.");
 			server->removed = true;
 			server->sendMutex.unlock();
 			GD::rpcClient.removeServer(server->uid);
@@ -230,7 +230,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
 			retry = false;
 			if(i == 0) sendRequest(server, requestData, responseData, true, retry);
 			else sendRequest(server, requestData, responseData, false, retry);
-			if(!retry || server->removed) break;
+			if(!retry || server->removed || !server->autoConnect) break;
 		}
 		if(server->removed)
 		{
@@ -240,7 +240,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
 		}
 		if(retry)
 		{
-			GD::out.printError("Removing server \"" + server->id + "\". Server has to send \"init\" again.");
+			if(!server->webSocket) GD::out.printError("Removing server \"" + server->id + "\". Server has to send \"init\" again.");
 			server->removed = true;
 			server->sendMutex.unlock();
 			GD::rpcClient.removeServer(server->address);

@@ -48,6 +48,8 @@ void Settings::reset()
 	_keyPath = "/etc/homegear/homegear.key";
 	_dhParamPath = "/etc/homegear/dh2048.pem";
 	_debugLevel = 3;
+	_enableUPnP = true;
+	_uPnPIpAddress = "";
 	_devLog = false;
 	_databasePath = _bl->executablePath + "db.sql";
 	_databaseSynchronous = false;
@@ -165,6 +167,16 @@ void Settings::load(std::string filename)
 					if(_debugLevel < 0) _debugLevel = 3;
 					_bl->debugLevel = _debugLevel;
 					_bl->out.printDebug("Debug: debugLevel set to " + std::to_string(_debugLevel));
+				}
+				else if(name == "enableupnp")
+				{
+					if(HelperFunctions::toLower(value) == "false") _enableUPnP = false;
+					_bl->out.printDebug("Debug: enableUPnP set to " + std::to_string(_enableUPnP));
+				}
+				else if(name == "upnpipaddress")
+				{
+					_uPnPIpAddress = value;
+					_bl->out.printDebug("Debug: uPnPIpAddress set to " + _uPnPIpAddress);
 				}
 				else if(name == "devlog")
 				{

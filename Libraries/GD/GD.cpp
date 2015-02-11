@@ -48,6 +48,7 @@ RPC::ServerInfo GD::serverInfo;
 RPC::ClientSettings GD::clientSettings;
 PhysicalInterfaces GD::physicalInterfaces;
 std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>> GD::deviceFamilies;
+UPnP GD::uPnP;
 #ifdef EVENTHANDLER
 EventHandler GD::eventHandler;
 #endif

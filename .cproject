@@ -130,6 +130,15 @@
 									<listOptionValue builtIn="false" value="/usr/include/php5/sapi"/>
 									<listOptionValue builtIn="false" value="/usr/include/php5/TSRM"/>
 									<listOptionValue builtIn="false" value="/usr/include/php5/Zend"/>
+									<listOptionValue builtIn="false" value="/usr/include/gupnp-1.0/libgupnp"/>
+									<listOptionValue builtIn="false" value="/usr/include/glib-2.0"/>
+									<listOptionValue builtIn="false" value="/usr/include/libsoup-2.4"/>
+									<listOptionValue builtIn="false" value="/usr/include/gssdp-1.0"/>
+									<listOptionValue builtIn="false" value="/usr/include/libxml2"/>
+									<listOptionValue builtIn="false" value="/usr/lib/arm-linux-gnueabi/glib-2.0/include"/>
+									<listOptionValue builtIn="false" value="/usr/lib/arm-linux-gnueabihf/glib-2.0/include"/>
+									<listOptionValue builtIn="false" value="/usr/lib/i386-linux-gnu/glib-2.0/include"/>
+									<listOptionValue builtIn="false" value="/usr/lib/x86_64-linux-gnu/glib-2.0/include"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1073675196" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -286,19 +295,21 @@
 									<listOptionValue builtIn="false" value="EVENTHANDLER"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.include.paths.2065907104" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;W:\include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\include\c++\4.7&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\include\c++\4.7\backward&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\include\c++\4.7\x86_64-linux-gnu&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\include\x86_64-linux-gnu&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\lib\gcc\x86_64-linux-gnu\4.7\include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\lib\gcc\x86_64-linux-gnu\4.7\include-fixed&quot;"/>
 									<listOptionValue builtIn="false" value="/usr/include/c++/4.8"/>
 									<listOptionValue builtIn="false" value="/usr/include/php5"/>
 									<listOptionValue builtIn="false" value="/usr/include/php5/main"/>
 									<listOptionValue builtIn="false" value="/usr/include/php5/sapi"/>
 									<listOptionValue builtIn="false" value="/usr/include/php5/TSRM"/>
 									<listOptionValue builtIn="false" value="/usr/include/php5/Zend"/>
+									<listOptionValue builtIn="false" value="/usr/include/gupnp-1.0/libgupnp"/>
+									<listOptionValue builtIn="false" value="/usr/include/glib-2.0"/>
+									<listOptionValue builtIn="false" value="/usr/include/libsoup-2.4"/>
+									<listOptionValue builtIn="false" value="/usr/include/gssdp-1.0"/>
+									<listOptionValue builtIn="false" value="/usr/include/libxml2"/>
+									<listOptionValue builtIn="false" value="/usr/lib/arm-linux-gnueabi/glib-2.0/include"/>
+									<listOptionValue builtIn="false" value="/usr/lib/arm-linux-gnueabihf/glib-2.0/include"/>
+									<listOptionValue builtIn="false" value="/usr/lib/i386-linux-gnu/glib-2.0/include"/>
+									<listOptionValue builtIn="false" value="/usr/lib/x86_64-linux-gnu/glib-2.0/include"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.852683577" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -306,10 +317,6 @@
 								<option defaultValue="gnu.c.optimization.level.most" id="gnu.c.compiler.exe.release.option.optimization.level.1119504433" name="Optimization Level" superClass="gnu.c.compiler.exe.release.option.optimization.level" valueType="enumerated"/>
 								<option id="gnu.c.compiler.exe.release.option.debugging.level.999710478" name="Debug Level" superClass="gnu.c.compiler.exe.release.option.debugging.level" value="gnu.c.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.include.paths.503809192" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;W:\include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\include\x86_64-linux-gnu&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\lib\gcc\x86_64-linux-gnu\4.7\include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;W:\lib\gcc\x86_64-linux-gnu\4.7\include-fixed&quot;"/>
 									<listOptionValue builtIn="false" value="/usr/include/c++/4.8"/>
 								</option>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.1308428511" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">

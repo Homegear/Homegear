@@ -75,16 +75,19 @@ void startRPCServers()
 		info += "...";
 		GD::out.printInfo(info);
 		GD::rpcServers[i].start(settings);
+		if(GD::bl->settings.enableUPnP() && !settings->ssl && settings->authType == RPC::ServerInfo::Info::AuthType::none && settings->webServer) GD::uPnP.registerServer(settings->port);
 	}
 	if(GD::rpcServers.size() == 0)
 	{
 		GD::out.printCritical("Critical: No RPC servers are running. Terminating Homegear.");
 		exitHomegear(1);
 	}
+
 }
 
 void stopRPCServers()
 {
+	GD::uPnP.resetServers();
 	GD::out.printInfo( "(Shutdown) => Stopping RPC servers");
 	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 	{
@@ -112,6 +115,11 @@ void terminate(int32_t signalNumber)
 			{
 				GD::out.printInfo("(Shutdown) => Stopping CLI server");
 				GD::cliServer.stop();
+			}
+			if(GD::bl->settings.enableUPnP())
+			{
+				GD::out.printInfo("Stopping UPnP server...");
+				GD::uPnP.stop();
 			}
 			stopRPCServers();
 			GD::rpcServers.clear();
@@ -155,6 +163,11 @@ void terminate(int32_t signalNumber)
 			_startUpComplete = false;
 			if(GD::bl->settings.changed())
 			{
+				if(GD::bl->settings.enableUPnP())
+				{
+					GD::out.printInfo("Stopping UPnP server...");
+					GD::uPnP.stop();
+				}
 				stopRPCServers();
 				GD::physicalInterfaces.stopListening();
 				//Binding fails sometimes with "address is already in use" without waiting.
@@ -165,6 +178,11 @@ void terminate(int32_t signalNumber)
 				GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
 				GD::physicalInterfaces.startListening();
 				startRPCServers();
+				if(GD::bl->settings.enableUPnP())
+				{
+					GD::out.printInfo("Starting UPnP server...");
+					GD::uPnP.start();
+				}
 			}
 			//Reopen log files, important for logrotate
 			if(_startAsDaemon)
@@ -641,6 +659,12 @@ int main(int argc, char* argv[])
 			}
 			interfaces.clear();
         }
+
+        if(GD::bl->settings.enableUPnP())
+		{
+        	GD::out.printInfo("Starting UPnP server...");
+        	GD::uPnP.start();
+		}
 
         rl_bind_key('\t', rl_abort); //no autocompletion
 

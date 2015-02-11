@@ -27,48 +27,55 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef SQLITE3_H_
-#define SQLITE3_H_
+#ifndef UPNP_H_
+#define UPNP_H_
 
-#include "../../Modules/Base/Database/DatabaseTypes.h"
+#include "../../Modules/Base/BaseLib.h"
 
-#include <mutex>
-
-#include <sqlite3.h>
-
-namespace BaseLib
+class UPnP
 {
-namespace Database
-{
+public:
+	UPnP();
+	virtual ~UPnP();
 
-class SQLite3
-{
-    public:
-		SQLite3();
-        SQLite3(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal);
-        virtual ~SQLite3();
-        void dispose();
-        void init(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, std::string backupPath = "");
-        uint32_t executeWriteCommand(std::string command, DataRow& dataToEscape);
-        std::shared_ptr<DataTable> executeCommand(std::string command);
-        std::shared_ptr<DataTable> executeCommand(std::string command, DataRow& dataToEscape);
-        bool isOpen() { return _database != nullptr; }
-        /*void benchmark1();
-        void benchmark2();
-        void benchmark3();
-        void benchmark4();*/
-    protected:
-    private:
-        sqlite3* _database = nullptr;
-        std::mutex _databaseMutex;
+	void start();
+	void stop();
+	void registerServer(int32_t port);
+	void resetServers() { _packets.clear(); }
+	void getDescription(int32_t port, std::vector<char>& output);
+private:
+	struct Packets
+	{
+		std::vector<char> notifyRoot;
+		std::vector<char> notifyRootUUID;
+		std::vector<char> notify;
+		std::vector<char> okRoot;
+		std::vector<char> okRootUUID;
+		std::vector<char> ok;
+		std::vector<char> byebyeRoot;
+		std::vector<char> byebyeRootUUID;
+		std::vector<char> byebye;
+		std::vector<char> description;
+	};
 
-        void openDatabase(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal);
-        void closeDatabase();
-        void getDataRows(sqlite3_stmt* statement, std::shared_ptr<DataTable>& dataRows);
-        void bindData(sqlite3_stmt* statement, DataRow& dataToEscape);
+	BaseLib::Output _out;
+	bool _stopServer = false;
+	std::shared_ptr<BaseLib::FileDescriptor> _serverSocketDescriptor;
+	std::thread _listenThread;
+	std::string _address;
+	std::string _udn;
+	std::string _st;
+	std::map<int32_t, Packets> _packets;
+	int64_t _lastAdvertisement;
+
+	void getAddress();
+	void getUDN();
+	void getSocketDescriptor();
+	void listen();
+	void processPacket(BaseLib::HTTP& http);
+	void sendOK(std::string destinationIpAddress, int32_t destinationPort, bool rootDeviceOnly);
+	void sendNotify();
+	void sendByebye();
 };
 
-}
-}
-
-#endif /* SQLITE3_H_ */
+#endif

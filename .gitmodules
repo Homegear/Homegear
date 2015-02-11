@@ -1,6 +1,0 @@
-[submodule "php-src"]
-	path = php-src
-	url = https://github.com/php/php-src
-[submodule "Libraries/UPnP/gupnp"]
-	path = Libraries/UPnP/gupnp
-	url = git://git.gnome.org/gupnp

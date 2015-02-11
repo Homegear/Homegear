@@ -39,6 +39,7 @@
 #include "../../Modules/Base/BaseLib.h"
 #include "../RPC/Server.h"
 #include "../RPC/Client.h"
+#include "../UPnP/UPnP.h"
 
 #include <vector>
 #include <map>
@@ -67,6 +68,7 @@ public:
 	static int32_t rpcLogLevel;
 	static PhysicalInterfaces physicalInterfaces;
 	static std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>> deviceFamilies;
+	static UPnP uPnP;
 #ifdef EVENTHANDLER
 	static EventHandler eventHandler;
 #endif

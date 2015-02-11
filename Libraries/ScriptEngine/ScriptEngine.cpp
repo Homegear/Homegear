@@ -29,6 +29,7 @@
 
 #ifdef SCRIPTENGINE
 #include "ScriptEngine.h"
+#include "php_sapi.h"
 #include "../GD/GD.h"
 
 ScriptEngine::ScriptEngine()

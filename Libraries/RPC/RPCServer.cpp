@@ -164,7 +164,6 @@ void RPCServer::start(std::shared_ptr<ServerInfo::Info>& info)
 		_mainThread = std::thread(&RPCServer::mainThread, this);
 		BaseLib::Threads::setThreadPriority(GD::bl.get(), _mainThread.native_handle(), _threadPriority, _threadPolicy);
 		_stopped = false;
-		return;
 	}
 	catch(const std::exception& ex)
     {
@@ -307,7 +306,7 @@ void RPCServer::mainThread()
 		{
 			try
 			{
-				if(!_serverFileDescriptor || _serverFileDescriptor->descriptor < 0)
+				if(!_serverFileDescriptor || _serverFileDescriptor->descriptor == -1)
 				{
 					if(_stopServer) break;
 					std::this_thread::sleep_for(std::chrono::milliseconds(5000));
@@ -380,7 +379,6 @@ void RPCServer::mainThread()
 				_stateMutex.unlock();
 			}
 		}
-		GD::bl->fileDescriptorManager.shutdown(_serverFileDescriptor);
 	}
 	catch(const std::exception& ex)
     {
@@ -394,6 +392,7 @@ void RPCServer::mainThread()
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    GD::bl->fileDescriptorManager.shutdown(_serverFileDescriptor);
 }
 
 bool RPCServer::clientValid(std::shared_ptr<Client>& client)
