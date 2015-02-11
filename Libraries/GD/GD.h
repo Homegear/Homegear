@@ -39,12 +39,14 @@
 #include "../../Modules/Base/BaseLib.h"
 #include "../RPC/Server.h"
 #include "../RPC/Client.h"
-#include "../UPnP/UPnP.h"
 
 #include <vector>
 #include <map>
 #include <string>
 #include <memory>
+
+class UPnP;
+class MQTT;
 
 class GD
 {
@@ -68,7 +70,8 @@ public:
 	static int32_t rpcLogLevel;
 	static PhysicalInterfaces physicalInterfaces;
 	static std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>> deviceFamilies;
-	static UPnP uPnP;
+	static std::unique_ptr<UPnP> uPnP;
+	static std::unique_ptr<MQTT> mqtt;
 #ifdef EVENTHANDLER
 	static EventHandler eventHandler;
 #endif

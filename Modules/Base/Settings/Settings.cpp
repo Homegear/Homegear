@@ -76,6 +76,7 @@ void Settings::reset()
 	_deviceDescriptionPath = "/etc/homegear/devices/";
 	_clientSettingsPath = "/etc/homegear/rpcclients.conf";
 	_serverSettingsPath = "/etc/homegear/rpcservers.conf";
+	_mqttSettingsPath = "/etc/homegear/mqtt.conf";
 	_physicalInterfaceSettingsPath = "/etc/homegear/physicalinterfaces.conf";
 	_modulePath = "/var/lib/homegear/modules/";
 	_scriptPath = "/var/lib/homegear/scripts/";
@@ -334,6 +335,12 @@ void Settings::load(std::string filename)
 					if(_clientSettingsPath.empty()) _clientSettingsPath = "/etc/homegear/rpcclients.conf";
 					_bl->out.printDebug("Debug: clientSettingsPath set to " + _clientSettingsPath);
 				}
+				else if(name == "mqttsettingspath")
+				{
+					_mqttSettingsPath = value;
+					if(_mqttSettingsPath.empty()) _mqttSettingsPath = "/etc/homegear/mqtt.conf";
+					_bl->out.printDebug("Debug: mqttSettingsPath set to " + _mqttSettingsPath);
+				}
 				else if(name == "physicalinterfacesettingspath")
 				{
 					_physicalInterfaceSettingsPath = value;
@@ -383,6 +390,7 @@ void Settings::load(std::string filename)
 		_lastModified = _bl->hf.getFileLastModifiedTime(filename);
 		_clientSettingsLastModified = _bl->hf.getFileLastModifiedTime(_clientSettingsPath);
 		_serverSettingsLastModified = _bl->hf.getFileLastModifiedTime(_serverSettingsPath);
+		_mqttSettingsLastModified = _bl->hf.getFileLastModifiedTime(_mqttSettingsPath);
 	}
 	catch(const std::exception& ex)
     {

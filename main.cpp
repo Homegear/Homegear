@@ -29,6 +29,8 @@
 
 #include "Version.h"
 #include "Libraries/GD/GD.h"
+#include "Libraries/UPnP/UPnP.h"
+#include "Libraries/MQTT/MQTT.h"
 #include "Modules/Base/BaseLib.h"
 #include "Modules/Base/HelperFunctions/HelperFunctions.h"
 #include "Libraries/RPC/ServerInfo.h"
@@ -75,7 +77,7 @@ void startRPCServers()
 		info += "...";
 		GD::out.printInfo(info);
 		GD::rpcServers[i].start(settings);
-		if(GD::bl->settings.enableUPnP() && !settings->ssl && settings->authType == RPC::ServerInfo::Info::AuthType::none && settings->webServer) GD::uPnP.registerServer(settings->port);
+		if(GD::bl->settings.enableUPnP() && !settings->ssl && settings->authType == RPC::ServerInfo::Info::AuthType::none && settings->webServer) GD::uPnP->registerServer(settings->port);
 	}
 	if(GD::rpcServers.size() == 0)
 	{
@@ -87,7 +89,7 @@ void startRPCServers()
 
 void stopRPCServers()
 {
-	GD::uPnP.resetServers();
+	GD::uPnP->resetServers();
 	GD::out.printInfo( "(Shutdown) => Stopping RPC servers");
 	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 	{
@@ -119,12 +121,17 @@ void terminate(int32_t signalNumber)
 			if(GD::bl->settings.enableUPnP())
 			{
 				GD::out.printInfo("Stopping UPnP server...");
-				GD::uPnP.stop();
+				GD::uPnP->stop();
 			}
 			stopRPCServers();
 			GD::rpcServers.clear();
 			GD::out.printInfo( "(Shutdown) => Stopping Event handler");
 			GD::eventHandler.dispose();
+			if(GD::mqtt->enabled())
+			{
+				GD::out.printInfo( "(Shutdown) => Stopping MQTT client");;
+				GD::mqtt->stop();
+			}
 			GD::out.printInfo( "(Shutdown) => Stopping RPC client");;
 			GD::rpcClient.dispose();
 			GD::out.printInfo( "(Shutdown) => Closing physical devices");
@@ -165,10 +172,15 @@ void terminate(int32_t signalNumber)
 			{
 				if(GD::bl->settings.enableUPnP())
 				{
-					GD::out.printInfo("Stopping UPnP server...");
-					GD::uPnP.stop();
+					GD::out.printInfo("Stopping UPnP server");
+					GD::uPnP->stop();
 				}
 				stopRPCServers();
+				if(GD::mqtt->enabled())
+				{
+					GD::out.printInfo( "(Shutdown) => Stopping MQTT client");;
+					GD::mqtt->stop();
+				}
 				GD::physicalInterfaces.stopListening();
 				//Binding fails sometimes with "address is already in use" without waiting.
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
@@ -176,12 +188,18 @@ void terminate(int32_t signalNumber)
 				GD::bl->settings.load(GD::configPath + "main.conf");
 				GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
 				GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
+				GD::mqtt->loadSettings();
+				if(GD::mqtt->enabled())
+				{
+					GD::out.printInfo("Starting MQTT client");;
+					GD::mqtt->start();
+				}
 				GD::physicalInterfaces.startListening();
 				startRPCServers();
 				if(GD::bl->settings.enableUPnP())
 				{
-					GD::out.printInfo("Starting UPnP server...");
-					GD::uPnP.start();
+					GD::out.printInfo("Starting UPnP server");
+					GD::uPnP->start();
 				}
 			}
 			//Reopen log files, important for logrotate
@@ -463,6 +481,7 @@ int main(int argc, char* argv[])
 		GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
 		GD::out.printInfo("Loading RPC client settings from " + GD::bl->settings.clientSettingsPath());
 		GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
+		GD::mqtt->loadSettings();
 
     	if(_startAsDaemon) startDaemon();
 
@@ -614,6 +633,12 @@ int main(int argc, char* argv[])
         GD::out.printInfo("Initializing RPC client...");
         GD::rpcClient.init();
 
+        if(GD::mqtt->enabled())
+		{
+			GD::out.printInfo("Starting MQTT client...");;
+			GD::mqtt->start();
+		}
+
         startRPCServers();
 
 		GD::out.printInfo("Starting CLI server...");
@@ -663,7 +688,7 @@ int main(int argc, char* argv[])
         if(GD::bl->settings.enableUPnP())
 		{
         	GD::out.printInfo("Starting UPnP server...");
-        	GD::uPnP.start();
+        	GD::uPnP->start();
 		}
 
         rl_bind_key('\t', rl_abort); //no autocompletion

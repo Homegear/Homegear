@@ -325,7 +325,7 @@ void HTTP::processHeader(char** buffer, int32_t& bufferLength)
 			continue;
 		}
 
-		if(colonPos < newlinePos - 2) processHeaderField(headerBuffer, (uint32_t)(colonPos - headerBuffer), colonPos + 2, (uint32_t)(newlinePos - colonPos - 2));
+		if(colonPos < newlinePos - 1) processHeaderField(headerBuffer, (uint32_t)(colonPos - headerBuffer), colonPos + 1, (uint32_t)(newlinePos - colonPos - 1));
 		headerBuffer = newlinePos + crlfOffset;
 	}
 	_header.parsed = true;
@@ -334,6 +334,12 @@ void HTTP::processHeader(char** buffer, int32_t& bufferLength)
 void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32_t valueSize)
 {
 	if(nameSize == 0 || valueSize == 0 || !name || !value) return;
+	while(*value == ' ' && valueSize > 0)
+	{
+		//Skip whitespace
+		value++;
+		valueSize--;
+	}
 	if(!strnaicmp(name, "content-length", nameSize))
 	{
 		//Ignore Content-Length when Transfer-Encoding is present. See: http://greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4

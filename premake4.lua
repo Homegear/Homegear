@@ -481,11 +481,10 @@ solution "homegear"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
 
---[[
-    project "paho.mqtt"
+    project "mqtt"
       kind "StaticLib"
       language "C++"
-      files { "./Libraries/MQTT/paho.mqtt/src/*.h", "./Libraries/MQTT/paho.mqtt/src/*.cpp" }
+      files { "./Libraries/MQTT/*.h", "./Libraries/MQTT/*.cpp" }
       includedirs { "./Libraries/MQTT/paho.mqtt.c/src" }
       buildoptions { "-Wall", "-std=c++11" }
  
@@ -505,7 +504,6 @@ solution "homegear"
          targetdir "./lib/Profiling"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
---]]
 
     project "gd"
       kind "StaticLib"
@@ -535,7 +533,7 @@ solution "homegear"
       language "C++"
       files { "*.h", "*.cpp" }
       files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
-      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l readline", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l upnp", "-l database", "-l scriptengine", "-l base", "-l gpg-error", "-l sqlite3", "-l php5" }
+      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l readline", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l upnp", "-l mqtt", "-l paho.mqtt.c", "-l database", "-l scriptengine", "-l base", "-l gpg-error", "-l sqlite3", "-l php5" }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"

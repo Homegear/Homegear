@@ -1,6 +1,7 @@
 #include "Webserver.h"
 #include "../GD/GD.h"
 #include "../../Version.h"
+#include "../UPnP/UPnP.h"
 
 namespace RPC
 {
@@ -66,7 +67,7 @@ void WebServer::get(BaseLib::HTTP& http, std::vector<char>& content)
 		std::vector<std::string> headers;
 		if(GD::bl->settings.enableUPnP() && path == "/description.xml")
 		{
-			GD::uPnP.getDescription(_serverInfo->port, content);
+			GD::uPnP->getDescription(_serverInfo->port, content);
 			if(!content.empty())
 			{
 				std::string header = getHeader(content.size(), "text/xml", 200, "OK", headers);

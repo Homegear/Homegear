@@ -81,6 +81,7 @@ public:
 	std::string deviceDescriptionPath() { return _deviceDescriptionPath; }
 	std::string clientSettingsPath() { return _clientSettingsPath; }
 	std::string serverSettingsPath() { return _serverSettingsPath; }
+	std::string mqttSettingsPath() { return _mqttSettingsPath; }
 	std::string physicalInterfaceSettingsPath() { return _physicalInterfaceSettingsPath; }
 	std::string modulePath() { return _modulePath; }
 	std::string scriptPath() { return _scriptPath; }
@@ -93,6 +94,7 @@ private:
 	int32_t _lastModified = -1;
 	int32_t _clientSettingsLastModified = -1;
 	int32_t _serverSettingsLastModified = -1;
+	int32_t _mqttSettingsLastModified = -1;
 
 	std::string _certPath;
 	std::string _keyPath;
@@ -127,6 +129,7 @@ private:
 	std::string _deviceDescriptionPath;
 	std::string _clientSettingsPath;
 	std::string _serverSettingsPath;
+	std::string _mqttSettingsPath;
 	std::string _physicalInterfaceSettingsPath;
 	std::string _modulePath;
 	std::string _scriptPath;

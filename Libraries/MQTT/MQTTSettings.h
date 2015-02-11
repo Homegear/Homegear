@@ -27,34 +27,36 @@
  * files in the program, then also delete it here.
  */
 
-#include "GD.h"
-#include "../UPnP/UPnP.h"
-#include "../MQTT/MQTT.h"
+#ifndef MQTTSETTINGS_H_
+#define MQTTSETTINGS_H_
 
-std::unique_ptr<BaseLib::Obj> GD::bl;
-BaseLib::Output GD::out;
-DatabaseController GD::db;
-std::string GD::configPath = "/etc/homegear/";
-std::string GD::pidfilePath = "";
-std::string GD::runDir = "/var/run/homegear/";
-std::string GD::socketPath = GD::runDir + "homegear.sock";
-std::string GD::workingDirectory = "";
-std::string GD::executablePath = "";
-FamilyController GD::familyController;
-std::map<int32_t, RPC::Server> GD::rpcServers;
-RPC::Client GD::rpcClient;
-CLI::Server GD::cliServer;
-CLI::Client GD::cliClient;
-int32_t GD::rpcLogLevel = 1;
-RPC::ServerInfo GD::serverInfo;
-RPC::ClientSettings GD::clientSettings;
-PhysicalInterfaces GD::physicalInterfaces;
-std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>> GD::deviceFamilies;
-std::unique_ptr<UPnP> GD::uPnP(new UPnP());
-std::unique_ptr<MQTT> GD::mqtt(new MQTT());
-#ifdef EVENTHANDLER
-EventHandler GD::eventHandler;
-#endif
-#ifdef SCRIPTENGINE
-ScriptEngine GD::scriptEngine;
+#include "../../Modules/Base/BaseLib.h"
+
+#include <memory>
+#include <iostream>
+#include <string>
+#include <map>
+#include <cstring>
+
+class MQTTSettings
+{
+public:
+	MQTTSettings();
+	virtual ~MQTTSettings() {}
+	void load(std::string filename);
+
+	bool enabled() { return _enabled; }
+	std::string brokerHostname() { return _brokerHostname; }
+	std::string brokerPort() { return _brokerPort; }
+	std::string clientName() { return _clientName; }
+	std::string homegearId() { return _homegearId; }
+private:
+	bool _enabled = false;
+	std::string _brokerHostname;
+	std::string _brokerPort;
+	std::string _clientName;
+	std::string _homegearId;
+
+	void reset();
+};
 #endif

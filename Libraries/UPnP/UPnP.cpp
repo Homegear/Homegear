@@ -261,11 +261,7 @@ void UPnP::listen()
 				bytesReceived = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
 				if(bytesReceived == 0)
 				{
-					if(BaseLib::HelperFunctions::getTimeSeconds() - _lastAdvertisement >= 900)
-					{
-						sendNotify();
-						_lastAdvertisement = BaseLib::HelperFunctions::getTimeSeconds();
-					}
+					if(BaseLib::HelperFunctions::getTimeSeconds() - _lastAdvertisement >= 60) sendNotify();
 					continue;
 				}
 				if(bytesReceived != 1)
@@ -314,26 +310,29 @@ void UPnP::processPacket(BaseLib::HTTP& http)
 	try
 	{
 		BaseLib::HTTP::Header* header = http.getHeader();
-		if(!header || header->method != "M-SEARCH") return;
+		if(!header || header->method != "M-SEARCH" || header->fields.find("st") == header->fields.end() || header->host.empty()) return;
 
-		std::string temp(&http.getRawHeader()->at(0), http.getRawHeader()->size());
-		if(!header->host.empty() && header->fields.find("st") != header->fields.end() && (header->fields.at("st") == "urn:schemas-upnp-org:device:basic:1" || header->fields.at("st") == "ssdp:all" || header->fields.at("st") == "upnp:rootdevice" || header->fields.at("st") == _st))
+		BaseLib::HelperFunctions::toLower(header->fields.at("st"));
+		if(header->fields.at("st") == "urn:schemas-upnp-org:device:basic:1" || header->fields.at("st") == "urn:schemas-upnp-org:device:basic:1.0" || header->fields.at("st") == "ssdp:all" || header->fields.at("st") == "upnp:rootdevice" || header->fields.at("st") == _st)
 		{
 			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Discovery packet received from " + header->host);
 			std::pair<std::string, std::string> address = BaseLib::HelperFunctions::split(header->host, ':');
 			int32_t port = BaseLib::Math::getNumber(address.second, false);
 			if(!address.first.empty() && port > 0)
 			{
-				int32_t mx = 5000;
+				int32_t mx = 500;
 				if(header->fields.find("mx") != header->fields.end()) mx = BaseLib::Math::getNumber(header->fields.at("mx"), false) * 1000;
 				std::this_thread::sleep_for(std::chrono::milliseconds(20));
 				//Wait for 0 to mx seconds for load balancing
-				if(mx > 0)
+				if(mx > 500)
 				{
+					mx = BaseLib::HelperFunctions::getRandomNumber(0, mx - 500);
 					GD::out.printDebug("Debug: Sleeping " + std::to_string(mx) + "ms before sending response.");
-					std::this_thread::sleep_for(std::chrono::milliseconds(BaseLib::HelperFunctions::getRandomNumber(0, mx)));
+					std::this_thread::sleep_for(std::chrono::milliseconds(mx));
 				}
 				sendOK(address.first, port, header->fields.at("st") == "upnp:rootdevice");
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				sendNotify();
 			}
 		}
 	}
@@ -388,7 +387,7 @@ void UPnP::registerServer(int32_t port)
 		packet->byebyeRootUUID = std::vector<char>(&byebyePacketRootUUID.at(0), &byebyePacketRootUUID.at(0) + byebyePacketRootUUID.size());
 		packet->byebye = std::vector<char>(&byebyePacket.at(0), &byebyePacket.at(0) + byebyePacket.size());
 
-		std::string okPacketBase = std::string("HTTP/1.1 200 OK\r\nCache-Control: max-age=1800\r\nExt: \r\nLocation: ") + "http://" + _address + ":" + std::to_string(port) + "/description.xml\r\nServer: Homegear " + std::string(VERSION) + "\r\n";
+		std::string okPacketBase = std::string("HTTP/1.1 200 OK\r\nCache-Control: max-age=1800\r\nLocation: ") + "http://" + _address + ":" + std::to_string(port) + "/description.xml\r\nServer: Homegear " + std::string(VERSION) + "\r\n";
 		std::string okPacketRoot = okPacketBase + "ST: upnp:rootdevice\r\nUSN: " + _st + "::upnp:rootdevice\r\n\r\n";
 		std::string okPacketRootUUID = okPacketBase + "ST: " + _st + "\r\nUSN: " + _st + "\r\n\r\n";
 		std::string okPacket = okPacketBase + "ST: urn:schemas-upnp-org:device:basic:1\r\nUSN: " + _st + "\r\n\r\n";
@@ -469,6 +468,7 @@ void UPnP::sendNotify()
 			sendto(_serverSocketDescriptor->descriptor, &i->second.notifyRootUUID.at(0), i->second.notifyRootUUID.size(), 0, (struct sockaddr*)&addessInfo, sizeof(addessInfo));
 			sendto(_serverSocketDescriptor->descriptor, &i->second.notify.at(0), i->second.notify.size(), 0, (struct sockaddr*)&addessInfo, sizeof(addessInfo));
 		}
+		_lastAdvertisement = BaseLib::HelperFunctions::getTimeSeconds();
 	}
 	catch(const std::exception& ex)
 	{

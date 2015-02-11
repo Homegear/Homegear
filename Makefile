@@ -6,7 +6,7 @@ ifndef config
 endif
 export config
 
-PROJECTS := base homematicbidcos user rpc cli events database scriptengine upnp paho.mqtt.c gd homegear
+PROJECTS := base homematicbidcos user rpc cli events database scriptengine upnp paho.mqtt.c mqtt gd homegear
 
 .PHONY: all clean help $(PROJECTS)
 
@@ -52,6 +52,10 @@ paho.mqtt.c:
 	@echo "==== Building paho.mqtt.c ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f paho.mqtt.c.make
 
+mqtt: 
+	@echo "==== Building mqtt ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f mqtt.make
+
 gd: 
 	@echo "==== Building gd ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f gd.make
@@ -71,6 +75,7 @@ clean:
 	@${MAKE} --no-print-directory -C . -f scriptengine.make clean
 	@${MAKE} --no-print-directory -C . -f upnp.make clean
 	@${MAKE} --no-print-directory -C . -f paho.mqtt.c.make clean
+	@${MAKE} --no-print-directory -C . -f mqtt.make clean
 	@${MAKE} --no-print-directory -C . -f gd.make clean
 	@${MAKE} --no-print-directory -C . -f homegear.make clean
 
@@ -95,6 +100,7 @@ help:
 	@echo "   scriptengine"
 	@echo "   upnp"
 	@echo "   paho.mqtt.c"
+	@echo "   mqtt"
 	@echo "   gd"
 	@echo "   homegear"
 	@echo ""

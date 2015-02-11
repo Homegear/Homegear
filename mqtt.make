@@ -28,19 +28,19 @@ ifndef RESCOMP
 endif
 
 ifeq ($(config),release)
-  OBJDIR     = obj/Release/homegear
-  TARGETDIR  = bin/Release
-  TARGET     = $(TARGETDIR)/homegear
+  OBJDIR     = obj/Release/mqtt
+  TARGETDIR  = lib/Release
+  TARGET     = $(TARGETDIR)/libmqtt.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DSCRIPTENGINE -DEVENTHANDLER -DNDEBUG
-  INCLUDES  += 
+  INCLUDES  += -ILibraries/MQTT/paho.mqtt.c/src
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -L/usr/lib/php5 -Llib/Release -s -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l rpc -l dl -l pthread -l readline -l gcrypt -l gnutls -l user -l cli -l events -l gd -l upnp -l mqtt -l paho.mqtt.c -l database -l scriptengine -l base -l gpg-error -l sqlite3 -l php5
+  LDFLAGS   += -L/usr/lib/php5 -s -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -50,19 +50,19 @@ ifeq ($(config),release)
 endif
 
 ifeq ($(config),debug)
-  OBJDIR     = obj/Debug/homegear
-  TARGETDIR  = bin/Debug
-  TARGET     = $(TARGETDIR)/homegear
+  OBJDIR     = obj/Debug/mqtt
+  TARGETDIR  = lib/Debug
+  TARGET     = $(TARGETDIR)/libmqtt.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DSCRIPTENGINE -DEVENTHANDLER -DDEBUG
-  INCLUDES  += 
+  INCLUDES  += -ILibraries/MQTT/paho.mqtt.c/src
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -L/usr/lib/php5 -Llib/Debug -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l rpc -l dl -l pthread -l readline -l gcrypt -l gnutls -l user -l cli -l events -l gd -l upnp -l mqtt -l paho.mqtt.c -l database -l scriptengine -l base -l gpg-error -l sqlite3 -l php5
+  LDFLAGS   += -L/usr/lib/php5 -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -72,19 +72,19 @@ ifeq ($(config),debug)
 endif
 
 ifeq ($(config),profiling)
-  OBJDIR     = obj/Profiling/homegear
-  TARGETDIR  = bin/Profiling
-  TARGET     = $(TARGETDIR)/homegear
+  OBJDIR     = obj/Profiling/mqtt
+  TARGETDIR  = lib/Profiling
+  TARGET     = $(TARGETDIR)/libmqtt.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DSCRIPTENGINE -DEVENTHANDLER -DNDEBUG
-  INCLUDES  += 
+  INCLUDES  += -ILibraries/MQTT/paho.mqtt.c/src
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -L/usr/lib/php5 -Llib/Profiling -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l rpc -l dl -l pthread -l readline -l gcrypt -l gnutls -l user -l cli -l events -l gd -l upnp -l mqtt -l paho.mqtt.c -l database -l scriptengine -l base -l gpg-error -l sqlite3 -l php5 -pg
+  LDFLAGS   += -L/usr/lib/php5 -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -94,10 +94,8 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/main.o \
-	$(OBJDIR)/PhysicalInterfaces.o \
-	$(OBJDIR)/DatabaseController.o \
-	$(OBJDIR)/FamilyController.o \
+	$(OBJDIR)/MQTTSettings.o \
+	$(OBJDIR)/MQTT.o \
 
 RESOURCES := \
 
@@ -115,7 +113,7 @@ all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
 	@:
 
 $(TARGET): $(GCH) $(OBJECTS) $(LDDEPS) $(RESOURCES)
-	@echo Linking homegear
+	@echo Linking mqtt
 	$(SILENT) $(LINKCMD)
 	$(POSTBUILDCMDS)
 
@@ -136,7 +134,7 @@ else
 endif
 
 clean:
-	@echo Cleaning homegear
+	@echo Cleaning mqtt
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) rm -f  $(TARGET)
 	$(SILENT) rm -rf $(OBJDIR)
@@ -162,16 +160,10 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/main.o: main.cpp
+$(OBJDIR)/MQTTSettings.o: Libraries/MQTT/MQTTSettings.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PhysicalInterfaces.o: Libraries/Systems/PhysicalInterfaces.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/DatabaseController.o: Libraries/Systems/DatabaseController.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/FamilyController.o: Libraries/Systems/FamilyController.cpp
+$(OBJDIR)/MQTT.o: Libraries/MQTT/MQTT.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 
