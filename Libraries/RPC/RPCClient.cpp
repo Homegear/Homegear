@@ -514,7 +514,6 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 			try
 			{
 				receivedBytes = server->socket->proofread(buffer, bufferMax);
-
 				//Some clients send only one byte in the first packet
 				if(packetLength == 0 && receivedBytes == 1 && !http.headerIsFinished() && !webSocket.dataProcessingStarted()) receivedBytes += server->socket->proofread(&buffer[1], bufferMax - 1);
 			}
@@ -542,6 +541,7 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 				_sendCounter--;
 				return;
 			}
+
 			//We are using string functions to process the buffer. So just to make sure,
 			//they don't do something in the memory after buffer, we add '\0'
 			buffer[receivedBytes] = '\0';
@@ -660,7 +660,8 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 		if(GD::bl->debugLevel >= 5)
 		{
 			if(server->binary) GD::out.printDebug("Debug: Received packet from server " + server->hostname + " on port " + server->address.second + ": " + GD::bl->hf.getHexString(responseData));
-			else GD::out.printDebug("Debug: Received packet from server " + server->hostname + " on port " + server->address.second + ":\n" + std::string(&http.getContent()->at(0), http.getContent()->size()));
+			else if(http.isFinished() && !http.getContent()->empty()) GD::out.printDebug("Debug: Received packet from server " + server->hostname + " on port " + server->address.second + ":\n" + std::string(&http.getContent()->at(0), http.getContent()->size()));
+			else if(webSocket.isFinished() && !webSocket.getContent()->empty()) GD::out.printDebug("Debug: Received packet from server " + server->hostname + " on port " + server->address.second + ":\n" + std::string(&webSocket.getContent()->at(0), webSocket.getContent()->size()));
 		}
 		if(server->webSocket && webSocket.isFinished()) responseData = *webSocket.getContent();
 		else if(http.isFinished()) responseData = *http.getContent();

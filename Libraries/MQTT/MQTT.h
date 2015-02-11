@@ -45,22 +45,40 @@ public:
 	void loadSettings();
 
 	/**
-	 * Publishes data to the MQTT broker.
+	 * Queues a message for publishing to the MQTT broker.
 	 *
-	 * @param topic The topic without Homegear prefix ("/homegear/UNIQUEID/") and without starting "/" (e.g. c/d).
-	 * @param data The data to publish.
+	 * @param message The message to queue. The first part of the pair is the topic, the second part the data.
 	 */
-	void publish(const std::string& topic, const std::vector<char>& data);
+	void queueMessage(std::shared_ptr<std::pair<std::string, std::vector<char>>>& message);
 private:
 	BaseLib::Output _out;
-	std::mutex _sendMutex;
 	MQTTSettings _settings;
+
+	static const int32_t _messageBufferSize = 1000;
+	std::mutex _messageBufferMutex;
+	int32_t _messageBufferHead = 0;
+	int32_t _messageBufferTail = 0;
+	std::shared_ptr<std::pair<std::string, std::vector<char>>> _messageBuffer[_messageBufferSize];
+	std::mutex _messageProcessingThreadMutex;
+	std::thread _messageProcessingThread;
+	bool _messageProcessingMessageAvailable = false;
+	std::condition_variable _messageProcessingConditionVariable;
+	bool _stopMessageProcessingThread = false;
 
 	void* _connectionOptions;
 	void* _client = nullptr;
 
 	void connect();
 	void disconnect();
+	void processMessages();
+
+	/**
+	 * Publishes data to the MQTT broker.
+	 *
+	 * @param topic The topic without Homegear prefix ("/homegear/UNIQUEID/") and without starting "/" (e.g. c/d).
+	 * @param data The data to publish.
+	 */
+	void publish(const std::string& topic, const std::vector<char>& data);
 };
 
 #endif

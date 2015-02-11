@@ -29,6 +29,7 @@
 
 #include "Client.h"
 #include "../GD/GD.h"
+#include "../MQTT/MQTT.h"
 #include "../../Modules/Base/BaseLib.h"
 
 namespace RPC
@@ -61,6 +62,7 @@ void Client::init()
 {
 	//GD::bl needs to be valid, before _client is created.
 	_client.reset(new RPCClient());
+	_jsonEncoder = std::unique_ptr<BaseLib::RPC::JsonEncoder>(new BaseLib::RPC::JsonEncoder(GD::bl.get()));
 }
 
 void Client::initServerMethods(std::pair<std::string, std::string> address)
@@ -126,7 +128,7 @@ void Client::invokeBroadcastThread(uint32_t threadID, std::shared_ptr<RemoteRPCS
 {
 	try
 	{
-		if(_client)	_client->invokeBroadcast(server, methodName, parameters);
+		if(_client) _client->invokeBroadcast(server, methodName, parameters);
 	}
 	catch(const std::exception& ex)
     {
@@ -174,6 +176,16 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 	try
 	{
 		if(!valueKeys || !values || valueKeys->size() != values->size()) return;
+		if(GD::mqtt->enabled())
+		{
+			for(uint32_t i = 0; i < valueKeys->size(); i++)
+			{
+				std::shared_ptr<std::pair<std::string, std::vector<char>>> message(new std::pair<std::string, std::vector<char>>());
+				message->first = std::to_string(id) + '/' + std::to_string(channel) + '/' + valueKeys->at(i);
+				_jsonEncoder->encode(values->at(i), message->second);
+				GD::mqtt->queueMessage(message);
+			}
+		}
 		std::string methodName("event"); //We can't just create the methods BaseLib::RPC::Variable with new BaseLib::RPC::Variable("methodName", "event") because "event" is not a string object. That's why we create the string object here.
 		std::vector<std::shared_ptr<RemoteRPCServer>> _serversToRemove;
 		_serversMutex.lock();
@@ -680,6 +692,7 @@ std::shared_ptr<RemoteRPCServer> Client::addWebSocketServer(std::shared_ptr<Base
 		server->initialized = true;
 		server->socket = socket;
 		server->keepAlive = true;
+		server->useID = true;
 		_servers->push_back(server);
 		_serversMutex.unlock();
 		return server;

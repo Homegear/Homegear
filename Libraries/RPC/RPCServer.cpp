@@ -777,7 +777,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 	{
 		if(http.getHeader()->fields.find("upgrade") != http.getHeader()->fields.end() && http.getHeader()->fields["upgrade"] == "websocket")
 		{
-			if(http.getHeader()->fields.find("sec-websocket-protocol") == http.getHeader()->fields.end())
+			if(http.getHeader()->fields.find("sec-websocket-protocol") == http.getHeader()->fields.end() && (http.getHeader()->path.empty() || http.getHeader()->path == "/"))
 			{
 				closeClientConnection(client);
 				_out.printError("Error: No websocket protocol specified.");
@@ -797,7 +797,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 			BaseLib::Crypt::sha1(data, sha1);
 			std::string websocketAccept;
 			BaseLib::Base64::encode(sha1, websocketAccept);
-			if(protocol == "server")
+			if(protocol == "server" || http.getHeader()->path == "/server")
 			{
 				client->webSocket = true;
 				std::string header;
@@ -806,11 +806,12 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 				header.append("Connection: Upgrade\r\n");
 				header.append("Upgrade: websocket\r\n");
 				header.append("Sec-WebSocket-Accept: ").append(websocketAccept).append("\r\n");
-				header.append("Sec-WebSocket-Protocol: server\r\n\r\n");
+				if(!protocol.empty()) header.append("Sec-WebSocket-Protocol: server\r\n");
+				header.append("\r\n");
 				std::vector<char> data(&header[0], &header[0] + header.size());
 				sendRPCResponseToClient(client, data, true);
 			}
-			else if(protocol == "client")
+			else if(protocol == "client" || http.getHeader()->path == "/client")
 			{
 				client->webSocket = true;
 				client->webSocketClient = true;
@@ -820,7 +821,8 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 				header.append("Connection: Upgrade\r\n");
 				header.append("Upgrade: websocket\r\n");
 				header.append("Sec-WebSocket-Accept: ").append(websocketAccept).append("\r\n");
-				header.append("Sec-WebSocket-Protocol: client\r\n\r\n");
+				if(!protocol.empty()) header.append("Sec-WebSocket-Protocol: client\r\n");
+				header.append("\r\n");
 				std::vector<char> data(&header[0], &header[0] + header.size());
 				sendRPCResponseToClient(client, data, true);
 				if(_info->authType != ServerInfo::Info::AuthType::basic)

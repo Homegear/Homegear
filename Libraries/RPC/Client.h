@@ -83,6 +83,7 @@ private:
 	std::mutex _invokeBroadcastThreadsMutex;
 	uint32_t _currentInvokeBroadcastThreadID = 0;
 	std::map<uint32_t, std::shared_ptr<std::thread>> _invokeBroadcastThreads;
+	std::unique_ptr<BaseLib::RPC::JsonEncoder> _jsonEncoder;
 
 	void removeBroadcastThread(uint32_t threadID);
 	void startInvokeBroadcastThread(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
