@@ -181,10 +181,10 @@ void MQTT::publish(const std::string& topic, const std::vector<char>& data)
 {
 	try
 	{
-		topic = "homegear/" + _settings.homegearId() + "/" + topic;
+		std::string fullTopic = "homegear/" + _settings.homegearId() + "/" + topic;
 		MQTTClient_deliveryToken token;
 		MQTTClient_message message = MQTTClient_message_initializer;
-		message.payload = &data.at(0);
+		message.payload = (void*)&data.at(0);
 		message.payloadlen = data.size();
 		message.qos = 1;
 		message.retained = 0;
@@ -195,14 +195,14 @@ void MQTT::publish(const std::string& topic, const std::vector<char>& data)
 			if(_client == nullptr)
 			{
 				_sendMutex.unlock();
-				GD::out.printError("Could not publish message, because we are not connected to a message broker. Topic: " + topic + " Data: " + std::string(&data.at(0), data.size()));
+				GD::out.printError("Could not publish message, because we are not connected to a message broker. Topic: " + fullTopic + " Data: " + std::string(&data.at(0), data.size()));
 				return;
 			}
 			if(GD::bl->debugLevel >= 5) _out.printDebug("Publishing message: " + std::string(&data.at(0), data.size()));
-			MQTTClient_publishMessage(_client, topic.c_str(), &message, &token);
+			MQTTClient_publishMessage(_client, fullTopic.c_str(), &message, &token);
 			if(MQTTClient_waitForCompletion(_client, token, 5000) != MQTTCLIENT_SUCCESS)
 			{
-				if(i == 2) GD::out.printError("Could not publish message with topic " + topic + " and data: " + std::string(&data.at(0), data.size()));
+				if(i == 2) GD::out.printError("Could not publish message with topic " + fullTopic + " and data: " + std::string(&data.at(0), data.size()));
 				disconnect();
 				continue;
 			}
