@@ -129,6 +129,7 @@ OBJECTS := \
 	$(OBJDIR)/JsonDecoder.o \
 	$(OBJDIR)/XMLRPCEncoder.o \
 	$(OBJDIR)/RPCEncoder.o \
+	$(OBJDIR)/WebSocket.o \
 	$(OBJDIR)/SocketOperations.o \
 	$(OBJDIR)/SerialReaderWriter.o \
 	$(OBJDIR)/HTTPClient.o \
@@ -301,6 +302,9 @@ $(OBJDIR)/XMLRPCEncoder.o: Modules/Base/Encoding/XMLRPCEncoder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RPCEncoder.o: Modules/Base/Encoding/RPCEncoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/WebSocket.o: Modules/Base/Encoding/WebSocket.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/SocketOperations.o: Modules/Base/Sockets/SocketOperations.cpp

@@ -291,14 +291,6 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/User/*.h", "./Libraries/User/*.cpp" }
-      includedirs
-      {
-         "/usr/include/php5",
-         "/usr/include/php5/main",
-         "/usr/include/php5/sapi",
-         "/usr/include/php5/TSRM",
-         "/usr/include/php5/Zend"
-      }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
@@ -322,14 +314,6 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/RPC/*.h", "./Libraries/RPC/*.cpp" }
-      includedirs
-      {
-         "/usr/include/php5",
-         "/usr/include/php5/main",
-         "/usr/include/php5/sapi",
-         "/usr/include/php5/TSRM",
-         "/usr/include/php5/Zend"
-      }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
@@ -353,14 +337,6 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/CLI/*.h", "./Libraries/CLI/*.cpp" }
-      includedirs
-      {
-         "/usr/include/php5",
-         "/usr/include/php5/main",
-         "/usr/include/php5/sapi",
-         "/usr/include/php5/TSRM",
-         "/usr/include/php5/Zend"
-      }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
@@ -384,14 +360,6 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/Events/*.h", "./Libraries/Events/*.cpp" }
-      includedirs
-      {
-         "/usr/include/php5",
-         "/usr/include/php5/main",
-         "/usr/include/php5/sapi",
-         "/usr/include/php5/TSRM",
-         "/usr/include/php5/Zend"
-      }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
@@ -415,14 +383,6 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/Database/*.h", "./Libraries/Database/*.cpp" }
-      includedirs
-      {
-         "/usr/include/php5",
-         "/usr/include/php5/main",
-         "/usr/include/php5/sapi",
-         "/usr/include/php5/TSRM",
-         "/usr/include/php5/Zend"
-      }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
@@ -472,19 +432,34 @@ solution "homegear"
          targetdir "./lib/Profiling"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
-		 
-   project "gd"
+
+    project "upnp"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/UPnP/*.h", "./Libraries/UPnP/*.cpp" }
+      buildoptions { "-Wall", "-std=c++11" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-pg" }
+         linkoptions { "-pg" }
+
+    project "gd"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/GD/*.h", "./Libraries/GD/*.cpp" }
-      includedirs
-      {
-         "/usr/include/php5",
-         "/usr/include/php5/main",
-         "/usr/include/php5/sapi",
-         "/usr/include/php5/TSRM",
-         "/usr/include/php5/Zend"
-      }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"
@@ -509,15 +484,7 @@ solution "homegear"
       language "C++"
       files { "*.h", "*.cpp" }
       files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
-      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l readline", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l scriptengine", "-l base", "-l gpg-error", "-l sqlite3", "-l php5" }
-      includedirs
-      {
-         "/usr/include/php5",
-         "/usr/include/php5/main",
-         "/usr/include/php5/sapi",
-         "/usr/include/php5/TSRM",
-         "/usr/include/php5/Zend"
-      }
+      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l readline", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l upnp", "-l database", "-l scriptengine", "-l base", "-l gpg-error", "-l sqlite3", "-l php5" }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"

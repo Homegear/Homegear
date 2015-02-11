@@ -224,7 +224,7 @@ void UPnP::listen()
 		getSocketDescriptor();
 		_out.printInfo("Info: Started listening.");
 
-		_lastAdvertisement = BaseLib::HelperFunctions::getTime();
+		_lastAdvertisement = BaseLib::HelperFunctions::getTimeSeconds();
 		char buffer[1024];
 		int32_t bytesReceived = 0;
 		struct sockaddr_in si_other;
@@ -261,10 +261,10 @@ void UPnP::listen()
 				bytesReceived = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
 				if(bytesReceived == 0)
 				{
-					if(BaseLib::HelperFunctions::getTime() - _lastAdvertisement >= 100000)
+					if(BaseLib::HelperFunctions::getTimeSeconds() - _lastAdvertisement >= 900)
 					{
 						sendNotify();
-						_lastAdvertisement = BaseLib::HelperFunctions::getTime();
+						_lastAdvertisement = BaseLib::HelperFunctions::getTimeSeconds();
 					}
 					continue;
 				}
@@ -324,14 +324,14 @@ void UPnP::processPacket(BaseLib::HTTP& http)
 			int32_t port = BaseLib::Math::getNumber(address.second, false);
 			if(!address.first.empty() && port > 0)
 			{
-				int32_t mx = 5;
-				if(header->fields.find("mx") != header->fields.end()) mx = BaseLib::Math::getNumber(header->fields.at("mx"), false);
+				int32_t mx = 5000;
+				if(header->fields.find("mx") != header->fields.end()) mx = BaseLib::Math::getNumber(header->fields.at("mx"), false) * 1000;
 				std::this_thread::sleep_for(std::chrono::milliseconds(20));
 				//Wait for 0 to mx seconds for load balancing
 				if(mx > 0)
 				{
-					GD::out.printDebug("Debug: Sleeping " + std::to_string(mx) + "s before sending response.");
-					std::this_thread::sleep_for(std::chrono::seconds(BaseLib::HelperFunctions::getRandomNumber(0, mx)));
+					GD::out.printDebug("Debug: Sleeping " + std::to_string(mx) + "ms before sending response.");
+					std::this_thread::sleep_for(std::chrono::milliseconds(BaseLib::HelperFunctions::getRandomNumber(0, mx)));
 				}
 				sendOK(address.first, port, header->fields.at("st") == "upnp:rootdevice");
 			}
@@ -373,7 +373,7 @@ void UPnP::registerServer(int32_t port)
 			return;
 		}
 		Packets* packet = &_packets[port];
-		std::string notifyPacketBase = "NOTIFY * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nCACHE-CONTROL: max-age=100\r\nSERVER: Homegear " + std::string(VERSION) + "\r\nLOCATION: " + "http://" + _address + ":" + std::to_string(port) + "/description.xml\r\n";
+		std::string notifyPacketBase = "NOTIFY * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nCACHE-CONTROL: max-age=1800\r\nSERVER: Homegear " + std::string(VERSION) + "\r\nLOCATION: " + "http://" + _address + ":" + std::to_string(port) + "/description.xml\r\n";
 		std::string alivePacketRoot = notifyPacketBase + "NT: upnp:rootdevice\r\nUSN: " + _st + "::upnp:rootdevice\r\nNTS: ssdp:alive\r\n\r\n";
 		std::string alivePacketRootUUID = notifyPacketBase + "NT: " + _st + "\r\nUSN: " + _st + "\r\nNTS: ssdp:alive\r\n\r\n";
 		std::string alivePacket = notifyPacketBase + "NT: urn:schemas-upnp-org:device:basic:1\r\nUSN: " + _st + "\r\nNTS: ssdp:alive\r\n\r\n";
@@ -388,7 +388,7 @@ void UPnP::registerServer(int32_t port)
 		packet->byebyeRootUUID = std::vector<char>(&byebyePacketRootUUID.at(0), &byebyePacketRootUUID.at(0) + byebyePacketRootUUID.size());
 		packet->byebye = std::vector<char>(&byebyePacket.at(0), &byebyePacket.at(0) + byebyePacket.size());
 
-		std::string okPacketBase = std::string("HTTP/1.1 200 OK\r\nCache-Control: max-age=100\r\nExt: \r\nLocation: ") + "http://" + _address + ":" + std::to_string(port) + "/description.xml\r\nServer: Homegear " + std::string(VERSION) + "\r\n";
+		std::string okPacketBase = std::string("HTTP/1.1 200 OK\r\nCache-Control: max-age=1800\r\nExt: \r\nLocation: ") + "http://" + _address + ":" + std::to_string(port) + "/description.xml\r\nServer: Homegear " + std::string(VERSION) + "\r\n";
 		std::string okPacketRoot = okPacketBase + "ST: upnp:rootdevice\r\nUSN: " + _st + "::upnp:rootdevice\r\n\r\n";
 		std::string okPacketRootUUID = okPacketBase + "ST: " + _st + "\r\nUSN: " + _st + "\r\n\r\n";
 		std::string okPacket = okPacketBase + "ST: urn:schemas-upnp-org:device:basic:1\r\nUSN: " + _st + "\r\n\r\n";
