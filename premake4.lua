@@ -143,6 +143,7 @@ solution "homegear"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
 
+--[[
    project "homematicwired"
       kind "SharedLib"
       language "C++"
@@ -286,6 +287,7 @@ solution "homegear"
          targetdir "./lib/Modules/Profiling"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
+--]]
 
    project "user"
       kind "StaticLib"
@@ -455,6 +457,55 @@ solution "homegear"
          targetdir "./lib/Profiling"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
+
+    project "paho.mqtt.c"
+      kind "StaticLib"
+      language "C"
+      files { "./Libraries/MQTT/paho.mqtt.c/src/*.h", "./Libraries/MQTT/paho.mqtt.c/src/*.c" }
+      buildoptions { "-Wall" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-pg" }
+         linkoptions { "-pg" }
+
+--[[
+    project "paho.mqtt"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/MQTT/paho.mqtt/src/*.h", "./Libraries/MQTT/paho.mqtt/src/*.cpp" }
+      includedirs { "./Libraries/MQTT/paho.mqtt.c/src" }
+      buildoptions { "-Wall", "-std=c++11" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-pg" }
+         linkoptions { "-pg" }
+--]]
 
     project "gd"
       kind "StaticLib"

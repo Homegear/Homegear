@@ -130,6 +130,7 @@
 									<listOptionValue builtIn="false" value="/usr/include/php5/sapi"/>
 									<listOptionValue builtIn="false" value="/usr/include/php5/TSRM"/>
 									<listOptionValue builtIn="false" value="/usr/include/php5/Zend"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Homegear/Libraries/MQTT/paho.mqtt.c/src}&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1073675196" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -292,6 +293,7 @@
 									<listOptionValue builtIn="false" value="/usr/include/php5/sapi"/>
 									<listOptionValue builtIn="false" value="/usr/include/php5/TSRM"/>
 									<listOptionValue builtIn="false" value="/usr/include/php5/Zend"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Homegear/Libraries/MQTT/paho.mqtt.c/src}&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.852683577" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
