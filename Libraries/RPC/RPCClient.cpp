@@ -433,6 +433,7 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 				}
 				_rpcEncoder->insertHeader(data, header);
 			}
+			else if(server->webSocket) {}
 			else //XML-RPC, JSON-RPC
 			{
 				data.push_back('\r');
