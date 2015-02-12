@@ -146,6 +146,7 @@ void MQTT::connect()
 		{
 			disconnect();
 			_out.printError("Error: Failed to connect to message broker.");
+			return;
 		}
 		_out.printInfo("Info: Successfully connected to message broker.");
 	}
@@ -236,7 +237,6 @@ void MQTT::publish(const std::string& topic, const std::vector<char>& data)
 		message.payload = (void*)&data.at(0);
 		message.payloadlen = data.size();
 		message.qos = 1;
-		std::cerr << "Moin10" << std::endl;
 		message.retained = 0;
 		for(int32_t i = 0; i < 3; i++)
 		{
@@ -247,17 +247,13 @@ void MQTT::publish(const std::string& topic, const std::vector<char>& data)
 				return;
 			}
 			if(GD::bl->debugLevel >= 5) _out.printDebug("Publishing message with topic " + fullTopic + ": " + std::string(&data.at(0), data.size()));
-			std::cerr << "Moin11" << std::endl;
 			MQTTClient_publishMessage(_client, fullTopic.c_str(), &message, &token);
-			std::cerr << "Moin12" << std::endl;
 			if(MQTTClient_waitForCompletion(_client, token, 5000) != MQTTCLIENT_SUCCESS)
 			{
 				if(i == 2) GD::out.printError("Could not publish message with topic " + fullTopic + " and data: " + std::string(&data.at(0), data.size()));
-				std::cerr << "Moin13" << std::endl;
 				disconnect();
 				continue;
 			}
-			std::cerr << "Moin14" << std::endl;
 			break;
 		}
 	}
@@ -279,33 +275,25 @@ void MQTT::processMessages()
 {
 	while(!_stopMessageProcessingThread)
 	{
-		std::cerr << "Moin1" << std::endl;
 		std::unique_lock<std::mutex> lock(_messageProcessingThreadMutex);
-		std::cerr << "Moin2" << std::endl;
 		try
 		{
 			_messageBufferMutex.lock();
-			std::cerr << "Moin3" << std::endl;
 			if(_messageBufferHead == _messageBufferTail) //Only lock, when there is really no packet to process. This check is necessary, because the check of the while loop condition is outside of the mutex
 			{
 				_messageBufferMutex.unlock();
-				std::cerr << "Moin4" << std::endl;
 				_messageProcessingConditionVariable.wait(lock, [&]{ return _messageProcessingMessageAvailable; });
-				std::cerr << "Moin5" << std::endl;
 			}
 			_messageBufferMutex.unlock();
 			if(_stopMessageProcessingThread)
 			{
-				std::cerr << "Moin6" << std::endl;
 				lock.unlock();
 				return;
 			}
 
 			while(_messageBufferHead != _messageBufferTail)
 			{
-				std::cerr << "Moin7" << std::endl;
 				_messageBufferMutex.lock();
-				std::cerr << "Moin8" << std::endl;
 				std::shared_ptr<std::pair<std::string, std::vector<char>>> message = _messageBuffer[_messageBufferTail];
 				_messageBuffer[_messageBufferTail].reset();
 				_messageBufferTail++;
@@ -314,7 +302,6 @@ void MQTT::processMessages()
 				_messageBufferMutex.unlock();
 				if(message) publish(message->first, message->second);
 			}
-			std::cerr << "Moin9" << std::endl;
 		}
 		catch(const std::exception& ex)
 		{
