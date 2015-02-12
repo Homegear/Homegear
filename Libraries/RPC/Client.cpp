@@ -181,7 +181,7 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 			for(uint32_t i = 0; i < valueKeys->size(); i++)
 			{
 				std::shared_ptr<std::pair<std::string, std::vector<char>>> message(new std::pair<std::string, std::vector<char>>());
-				message->first = std::to_string(id) + '/' + std::to_string(channel) + '/' + valueKeys->at(i);
+				message->first = "event/" + std::to_string(id) + '/' + std::to_string(channel) + '/' + valueKeys->at(i);
 				_jsonEncoder->encode(values->at(i), message->second);
 				GD::mqtt->queueMessage(message);
 			}

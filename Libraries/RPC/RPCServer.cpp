@@ -489,7 +489,7 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& pa
 			_out.printWarning("Warning: Could not decode RPC packet.");
 			return;
 		}
-		PacketType::Enum responseType;
+		PacketType::Enum responseType = PacketType::Enum::xmlResponse;
 		if(packetType == PacketType::Enum::binaryRequest) responseType = PacketType::Enum::binaryResponse;
 		else if(packetType == PacketType::Enum::xmlRequest) responseType = PacketType::Enum::xmlResponse;
 		else if(packetType == PacketType::Enum::jsonRequest) responseType = PacketType::Enum::jsonResponse;

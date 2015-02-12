@@ -101,6 +101,37 @@ void JsonEncoder::encodeResponse(const std::shared_ptr<Variable>& variable, int3
     }
 }
 
+void JsonEncoder::encodeMQTTResponse(const std::string methodName, const std::shared_ptr<Variable>& variable, int32_t id, std::vector<char>& json)
+{
+	try
+	{
+		std::shared_ptr<Variable> response(new Variable(VariableType::rpcStruct));
+		response->structValue->insert(RPCStructElement("method", std::shared_ptr<Variable>(new Variable(methodName))));
+		if(variable->errorStruct)
+		{
+			std::shared_ptr<Variable> error(new Variable(VariableType::rpcStruct));
+			error->structValue->insert(RPCStructElement("code", variable->structValue->at("faultCode")));
+			error->structValue->insert(RPCStructElement("message", variable->structValue->at("faultString")));
+			response->structValue->insert(RPCStructElement("error", error));
+		}
+		else response->structValue->insert(RPCStructElement("result", variable));
+		response->structValue->insert(RPCStructElement("id", std::shared_ptr<Variable>(new Variable(id))));
+		encode(response, json);
+	}
+	catch(const std::exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(const Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void JsonEncoder::encode(const std::shared_ptr<Variable> variable, std::string& json)
 {
 	if(!variable) return;

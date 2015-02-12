@@ -50,9 +50,18 @@ public:
 	 * @param message The message to queue. The first part of the pair is the topic, the second part the data.
 	 */
 	void queueMessage(std::shared_ptr<std::pair<std::string, std::vector<char>>>& message);
+
+	/**
+	 * Processes a message received from a message broker.
+	 *
+	 * @param payload The content of the message.
+	 */
+	void messageReceived(std::vector<char>& payload);
 private:
 	BaseLib::Output _out;
 	MQTTSettings _settings;
+	std::unique_ptr<BaseLib::RPC::JsonEncoder> _jsonEncoder;
+	std::unique_ptr<BaseLib::RPC::JsonDecoder> _jsonDecoder;
 
 	static const int32_t _messageBufferSize = 1000;
 	std::mutex _messageBufferMutex;

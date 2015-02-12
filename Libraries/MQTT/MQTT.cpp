@@ -35,6 +35,14 @@
 #include "string.h"
 #include "MQTTClient.h"
 
+int MQTTMessageArrived(void* context, char* topicName, int topicLength, MQTTClient_message* message)
+{
+    std::vector<char> payload((char*)message->payload, (char*)message->payload + message->payloadlen);
+    MQTTClient_freeMessage(&message);
+    MQTTClient_free(topicName);
+    GD::mqtt->messageReceived(payload);
+    return 1;
+}
 
 MQTT::MQTT()
 {
@@ -87,6 +95,8 @@ void MQTT::start()
 	{
 		_out.init(GD::bl.get());
 		_out.setPrefix("MQTT Client: ");
+		_jsonEncoder = std::unique_ptr<BaseLib::RPC::JsonEncoder>(new BaseLib::RPC::JsonEncoder(GD::bl.get()));
+		_jsonDecoder = std::unique_ptr<BaseLib::RPC::JsonDecoder>(new BaseLib::RPC::JsonDecoder(GD::bl.get()));
 		connect();
 		_stopMessageProcessingThread = false;
 		_messageProcessingMessageAvailable = false;
@@ -142,6 +152,7 @@ void MQTT::connect()
 		MQTTClient_create(&_client, std::string("tcp://" + _settings.brokerHostname() + ":" + _settings.brokerPort()).c_str(), _settings.clientName().c_str(), MQTTCLIENT_PERSISTENCE_NONE, NULL);
 		((MQTTClient_connectOptions*)_connectionOptions)->keepAliveInterval = 20;
 		((MQTTClient_connectOptions*)_connectionOptions)->cleansession = 1;
+		MQTTClient_setCallbacks(_client, NULL, NULL, MQTTMessageArrived, NULL);
 		if ((MQTTClient_connect(_client, (MQTTClient_connectOptions*)_connectionOptions)) != MQTTCLIENT_SUCCESS)
 		{
 			disconnect();
@@ -149,6 +160,7 @@ void MQTT::connect()
 			return;
 		}
 		_out.printInfo("Info: Successfully connected to message broker.");
+		MQTTClient_subscribe(_client, std::string("homegear/" + _settings.homegearId() + "/rpc/#").c_str(), 1);
 	}
 	catch(const std::exception& ex)
 	{
@@ -173,6 +185,54 @@ void MQTT::disconnect()
 		_client = nullptr;
 		if(_connectionOptions) free(_connectionOptions);
 		_connectionOptions = nullptr;
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void MQTT::messageReceived(std::vector<char>& message)
+{
+	try
+	{
+		std::shared_ptr<BaseLib::RPC::Variable> result = _jsonDecoder->decode(message);
+		std::string methodName;
+		std::string clientId;
+		int32_t messageId = 0;
+		std::shared_ptr<BaseLib::RPC::Variable> parameters;
+		if(result->type == BaseLib::RPC::VariableType::rpcStruct)
+		{
+			if(result->structValue->find("method") == result->structValue->end())
+			{
+				_out.printWarning("Warning: Could not decode JSON RPC packet from MQTT payload.");
+				return;
+			}
+			methodName = result->structValue->at("method")->stringValue;
+			if(result->structValue->find("id") != result->structValue->end()) messageId = result->structValue->at("id")->integerValue;
+			if(result->structValue->find("clientid") != result->structValue->end()) clientId = result->structValue->at("clientid")->stringValue;
+			if(result->structValue->find("params") != result->structValue->end()) parameters = result->structValue->at("params");
+			else parameters.reset(new BaseLib::RPC::Variable());
+		}
+		else
+		{
+			_out.printWarning("Warning: Could not decode MQTT RPC packet.");
+			return;
+		}
+		GD::out.printInfo("Info: MQTT RPC call received. Method: " + methodName);
+		std::shared_ptr<BaseLib::RPC::Variable> response = GD::rpcServers.begin()->second.callMethod(methodName, parameters);
+		std::shared_ptr<std::pair<std::string, std::vector<char>>> responseData(new std::pair<std::string, std::vector<char>>());
+		_jsonEncoder->encodeMQTTResponse(methodName, response, messageId, responseData->second);
+		responseData->first = (!clientId.empty()) ? clientId + "/rpcResult" : "rpcResult";
+		queueMessage(responseData);
 	}
 	catch(const std::exception& ex)
 	{
