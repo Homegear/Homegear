@@ -81,7 +81,7 @@ void RPCServer::start(std::shared_ptr<ServerInfo::Info>& info)
 			_out.printError("Error: Settings is nullptr.");
 			return;
 		}
-		if(!_info->webServer && !_info->rpcServer) return;
+		if(!_info->webServer && !_info->xmlrpcServer && !_info->jsonrpcServer) return;
 		_out.setPrefix("RPC Server (Port " + std::to_string(info->port) + "): ");
 		if(_info->ssl)
 		{
@@ -464,10 +464,11 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& pa
 	{
 		if(_stopped) return;
 		std::string methodName;
+		int32_t messageId = 0;
 		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters;
 		if(packetType == PacketType::Enum::binaryRequest) parameters = _rpcDecoder->decodeRequest(packet, methodName);
 		else if(packetType == PacketType::Enum::xmlRequest) parameters = _xmlRpcDecoder->decodeRequest(packet, methodName);
-		else if(packetType == PacketType::Enum::webSocketRequest)
+		else if(packetType == PacketType::Enum::jsonRequest || packetType == PacketType::Enum::webSocketRequest)
 		{
 			std::shared_ptr<BaseLib::RPC::Variable> result = _jsonDecoder->decode(packet);
 			if(result->type == BaseLib::RPC::VariableType::rpcStruct)
@@ -478,6 +479,7 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& pa
 					return;
 				}
 				methodName = result->structValue->at("method")->stringValue;
+				if(result->structValue->find("id") != result->structValue->end()) messageId = result->structValue->at("id")->integerValue;
 				if(result->structValue->find("params") != result->structValue->end()) parameters = result->structValue->at("params")->arrayValue;
 				else parameters.reset(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>());
 			}
@@ -490,14 +492,15 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& pa
 		PacketType::Enum responseType;
 		if(packetType == PacketType::Enum::binaryRequest) responseType = PacketType::Enum::binaryResponse;
 		else if(packetType == PacketType::Enum::xmlRequest) responseType = PacketType::Enum::xmlResponse;
+		else if(packetType == PacketType::Enum::jsonRequest) responseType = PacketType::Enum::jsonResponse;
 		else if(packetType == PacketType::Enum::webSocketRequest) responseType = PacketType::Enum::webSocketResponse;
 
 		if(!parameters->empty() && parameters->at(0)->errorStruct)
 		{
-			sendRPCResponseToClient(client, parameters->at(0), responseType, keepAlive);
+			sendRPCResponseToClient(client, parameters->at(0), messageId, responseType, keepAlive);
 			return;
 		}
-		callMethod(client, methodName, parameters, responseType, keepAlive);
+		callMethod(client, methodName, parameters, messageId, responseType, keepAlive);
 	}
 	catch(const std::exception& ex)
     {
@@ -513,7 +516,7 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& pa
     }
 }
 
-void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::shared_ptr<BaseLib::RPC::Variable> variable, PacketType::Enum responseType, bool keepAlive)
+void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::shared_ptr<BaseLib::RPC::Variable> variable, int32_t messageId, PacketType::Enum responseType, bool keepAlive)
 {
 	try
 	{
@@ -524,7 +527,8 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 			_xmlRpcEncoder->encodeResponse(variable, data);
 			data.push_back('\r');
 			data.push_back('\n');
-			std::string header = getHttpResponseHeader(data.size(), !keepAlive);
+			std::string header = getHttpResponseHeader("text/xml", data.size() + 21, !keepAlive);
+			header.append("<?xml version=\"1.0\"?>");
 			data.insert(data.begin(), header.begin(), header.end());
 			if(GD::bl->debugLevel >= 5)
 			{
@@ -540,10 +544,22 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 				_out.printBinary(data);
 			}
 		}
+		else if(responseType == PacketType::Enum::jsonResponse)
+		{
+			_jsonEncoder->encodeResponse(variable, messageId, data);
+			data.push_back('\r');
+			data.push_back('\n');
+			std::string header = getHttpResponseHeader("application/json", data.size(), !keepAlive);
+			data.insert(data.begin(), header.begin(), header.end());
+			if(GD::bl->debugLevel >= 5)
+			{
+				_out.printDebug("Response packet: " + std::string(&data.at(0), data.size()));
+			}
+		}
 		else if(responseType == PacketType::Enum::webSocketResponse)
 		{
 			std::vector<char> json;
-			_jsonEncoder->encode(variable, json);
+			_jsonEncoder->encodeResponse(variable, messageId, json);
 			BaseLib::WebSocket::encode(json, BaseLib::WebSocket::Header::Opcode::text, data);
 			if(GD::bl->debugLevel >= 5)
 			{
@@ -609,7 +625,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCServer::callMethod(std::string& metho
     return BaseLib::RPC::Variable::createError(-32500, ": Unknown application error.");
 }
 
-void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters, PacketType::Enum responseType, bool keepAlive)
+void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters, int32_t messageId, PacketType::Enum responseType, bool keepAlive)
 {
 	try
 	{
@@ -617,7 +633,7 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
 			_out.printError("Warning: RPC method not found: " + methodName);
-			sendRPCResponseToClient(client, BaseLib::RPC::Variable::createError(-32601, ": Requested method not found."), responseType, keepAlive);
+			sendRPCResponseToClient(client, BaseLib::RPC::Variable::createError(-32601, ": Requested method not found."), messageId, responseType, keepAlive);
 			return;
 		}
 		if(GD::bl->debugLevel >= 4)
@@ -634,7 +650,7 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 			_out.printDebug("Response: ");
 			ret->print();
 		}
-		sendRPCResponseToClient(client, ret, responseType, keepAlive);
+		sendRPCResponseToClient(client, ret, messageId, responseType, keepAlive);
 	}
 	catch(const std::exception& ex)
     {
@@ -650,15 +666,14 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
     }
 }
 
-std::string RPCServer::getHttpResponseHeader(uint32_t contentLength, bool closeConnection)
+std::string RPCServer::getHttpResponseHeader(std::string contentType, uint32_t contentLength, bool closeConnection)
 {
 	std::string header;
 	header.append("HTTP/1.1 200 OK\r\n");
 	header.append("Connection: ");
 	header.append(closeConnection ? "close\r\n" : "Keep-Alive\r\n");
-	header.append("Content-Type: text/xml\r\n");
-	header.append("Content-Length: ").append(std::to_string(contentLength + 21)).append("\r\n\r\n");
-	header.append("<?xml version=\"1.0\"?>");
+	header.append("Content-Type: " + contentType + "\r\n");
+	header.append("Content-Length: ").append(std::to_string(contentLength)).append("\r\n\r\n");
 	return header;
 }
 
@@ -695,7 +710,7 @@ void RPCServer::packetReceived(std::shared_ptr<Client> client, std::vector<char>
 {
 	try
 	{
-		if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::xmlRequest || packetType == PacketType::Enum::webSocketRequest) analyzeRPC(client, packet, packetType, keepAlive);
+		if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::xmlRequest || packetType == PacketType::Enum::jsonRequest || packetType == PacketType::Enum::webSocketRequest) analyzeRPC(client, packet, packetType, keepAlive);
 		else if(packetType == PacketType::Enum::binaryResponse || packetType == PacketType::Enum::xmlResponse) analyzeRPCResponse(client, packet, packetType, keepAlive);
 	}
     catch(const std::exception& ex)
@@ -911,7 +926,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			}
 			if(!http.headerProcessingStarted() && !webSocket.dataProcessingStarted() && packetLength == 0 && !strncmp(&buffer[0], "Bin", 3))
 			{
-				if(!_info->rpcServer) continue;
+				if(!_info->xmlrpcServer) continue;
 				http.reset();
 				//buffer[3] & 1 is true for buffer[3] == 0xFF, too
 				packetType = (buffer[3] & 1) ? PacketType::Enum::binaryResponse : PacketType::Enum::binaryRequest;
@@ -1175,7 +1190,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						break;
 					}
 				}
-				else if(_info->webServer && (!_info->rpcServer || http.getHeader()->contentType != "text/xml"))
+				else if(_info->webServer && (!_info->xmlrpcServer || http.getHeader()->contentType != "text/xml") && (!_info->jsonrpcServer || http.getHeader()->contentType != "application/json"))
 				{
 
 					http.getHeader()->remoteAddress = client->address;
@@ -1185,7 +1200,11 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					else if(http.getHeader()->method == "GET" || http.getHeader()->method == "HEAD") _webServer->get(http, response);
 					sendRPCResponseToClient(client, response, false);
 				}
-				else if(_info->rpcServer) packetReceived(client, *http.getContent(), packetType, http.getHeader()->connection & BaseLib::HTTP::Connection::Enum::keepAlive);
+				else if(http.getContentSize() > 0 && (_info->xmlrpcServer || _info->jsonrpcServer))
+				{
+					if(http.getHeader()->contentType == "application/json" || http.getContent()->at(0) == '{') packetType = PacketType::jsonRequest;
+					packetReceived(client, *http.getContent(), packetType, http.getHeader()->connection & BaseLib::HTTP::Connection::Enum::keepAlive);
+				}
 				packetLength = 0;
 				http.reset();
 				if(client->socketDescriptor->descriptor == -1)

@@ -151,11 +151,17 @@ void ServerInfo::load(std::string filename)
 					if(info->contentPath.back() != '/') info->contentPath.push_back('/');
 					GD::out.printDebug("Debug: contentPath of RPC server " + info->name + " set to " + info->contentPath);
 				}
-				else if(name == "rpcserver")
+				else if(name == "xmlrpcserver")
 				{
 					BaseLib::HelperFunctions::toLower(value);
-					if(value == "false") info->rpcServer = false;
-					GD::out.printDebug("Debug: rpcServer of server " + info->name + " set to " + std::to_string(info->webServer));
+					if(value == "false") info->xmlrpcServer = false;
+					GD::out.printDebug("Debug: xmlrpcServer of server " + info->name + " set to " + std::to_string(info->xmlrpcServer));
+				}
+				else if(name == "jsonrpcserver")
+				{
+					BaseLib::HelperFunctions::toLower(value);
+					if(value == "false") info->jsonrpcServer = false;
+					GD::out.printDebug("Debug: jsonrpcServer of server " + info->name + " set to " + std::to_string(info->jsonrpcServer));
 				}
 				else if(name == "webserver")
 				{

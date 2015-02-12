@@ -68,6 +68,7 @@ public:
 	bool keepAlive = false;
 	bool autoConnect = true;
 	bool binary = false;
+	bool json = false;
 	bool webSocket = false;
 	bool useID = false;
 	bool subscribePeers = false;

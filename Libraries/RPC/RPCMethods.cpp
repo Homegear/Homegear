@@ -1979,6 +1979,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCInit::invoke(std::shared_ptr<std::vec
 				eventServer->binary = (parameters->at(2)->integerValue & 2);
 				eventServer->useID = (parameters->at(2)->integerValue & 4);
 				eventServer->subscribePeers = (parameters->at(2)->integerValue & 8);
+				eventServer->json = (parameters->at(2)->integerValue & 16);
 			}
 			_initServerThreadMutex.lock();
 			try

@@ -124,6 +124,7 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 			_jsonEncoder->encodeRequest(methodName, parameters, json);
 			BaseLib::WebSocket::encode(json, BaseLib::WebSocket::Header::Opcode::text, requestData);
 		}
+		else if(server->json) _jsonEncoder->encodeRequest(methodName, parameters, requestData);
 		else _xmlRpcEncoder->encodeRequest(methodName, parameters, requestData);
 		for(uint32_t i = 0; i < 3; ++i)
 		{
@@ -164,7 +165,7 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 		}
 		std::shared_ptr<BaseLib::RPC::Variable> returnValue;
 		if(server->binary) returnValue = _rpcDecoder->decodeResponse(responseData);
-		else if(server->webSocket) returnValue = _jsonDecoder->decode(responseData);
+		else if(server->webSocket || server->json) returnValue = _jsonDecoder->decode(responseData);
 		else returnValue = _xmlRpcDecoder->decodeResponse(responseData);
 
 		if(returnValue->errorStruct) GD::out.printError("Error in RPC response from " + server->hostname + " on port " + server->address.second + ": faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
@@ -224,6 +225,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
 			_jsonEncoder->encodeRequest(methodName, parameters, json);
 			BaseLib::WebSocket::encode(json, BaseLib::WebSocket::Header::Opcode::text, requestData);
 		}
+		else if(server->json) _jsonEncoder->encodeRequest(methodName, parameters, requestData);
 		else _xmlRpcEncoder->encodeRequest(methodName, parameters, requestData);
 		for(uint32_t i = 0; i < 3; ++i)
 		{
@@ -260,7 +262,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
 		}
 		std::shared_ptr<BaseLib::RPC::Variable> returnValue;
 		if(server->binary) returnValue = _rpcDecoder->decodeResponse(responseData);
-		else if(server->webSocket) returnValue = _jsonDecoder->decode(responseData);
+		else if(server->webSocket || server->json) returnValue = _jsonDecoder->decode(responseData);
 		else returnValue = _xmlRpcDecoder->decodeResponse(responseData);
 		if(returnValue->errorStruct) GD::out.printError("Error in RPC response from " + server->hostname + " on port " + server->address.second + ": faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
 		else
@@ -431,12 +433,11 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 				}
 				_rpcEncoder->insertHeader(data, header);
 			}
-			else if(server->webSocket) {}
-			else //XMLRPC
+			else //XML-RPC, JSON-RPC
 			{
 				data.push_back('\r');
 				data.push_back('\n');
-				std::string header = "POST " + server->path + " HTTP/1.1\r\nUser-Agent: Homegear " + std::string(VERSION) + "\r\nHost: " + server->hostname + ":" + server->address.second + "\r\nContent-Type: text/xml\r\nContent-Length: " + std::to_string(data.size()) + "\r\nConnection: " + (server->keepAlive ? "Keep-Alive" : "close") + "\r\n";
+				std::string header = "POST " + server->path + " HTTP/1.1\r\nUser-Agent: Homegear " + std::string(VERSION) + "\r\nHost: " + server->hostname + ":" + server->address.second + "\r\nContent-Type: " + (server->json ? "application/json" : "text/xml") + "\r\nContent-Length: " + std::to_string(data.size()) + "\r\nConnection: " + (server->keepAlive ? "Keep-Alive" : "close") + "\r\n";
 				if(server->settings && server->settings->authType == ClientSettings::Settings::AuthType::basic)
 				{
 					GD::out.printDebug("Using Basic Access Authentication.");

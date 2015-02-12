@@ -40,11 +40,12 @@ JsonEncoder::JsonEncoder(BaseLib::Obj* baseLib)
 	_bl = baseLib;
 }
 
-void JsonEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<Variable>>> parameters, std::vector<char>& encodedData)
+void JsonEncoder::encodeRequest(std::string& methodName, std::shared_ptr<std::list<std::shared_ptr<Variable>>>& parameters, std::vector<char>& encodedData)
 {
 	try
 	{
 		std::shared_ptr<Variable> methodCall(new Variable(VariableType::rpcStruct));
+		methodCall->structValue->insert(RPCStructElement("jsonrpc", std::shared_ptr<Variable>(new Variable(std::string("2.0")))));
 		methodCall->structValue->insert(RPCStructElement("method", std::shared_ptr<Variable>(new Variable(methodName))));
 		std::shared_ptr<Variable> params(new Variable(VariableType::rpcArray));
 		for(std::list<std::shared_ptr<Variable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
@@ -52,7 +53,39 @@ void JsonEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::lis
 			params->arrayValue->push_back(*i);
 		}
 		methodCall->structValue->insert(RPCStructElement("params", params));
+		methodCall->structValue->insert(RPCStructElement("id", std::shared_ptr<Variable>(new Variable(_requestId++))));
 		encode(methodCall, encodedData);
+	}
+	catch(const std::exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(const Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void JsonEncoder::encodeResponse(const std::shared_ptr<Variable>& variable, int32_t id, std::vector<char>& json)
+{
+	try
+	{
+		std::shared_ptr<Variable> response(new Variable(VariableType::rpcStruct));
+		response->structValue->insert(RPCStructElement("jsonrpc", std::shared_ptr<Variable>(new Variable(std::string("2.0")))));
+		if(variable->errorStruct)
+		{
+			std::shared_ptr<Variable> error(new Variable(VariableType::rpcStruct));
+			error->structValue->insert(RPCStructElement("code", variable->structValue->at("faultCode")));
+			error->structValue->insert(RPCStructElement("message", variable->structValue->at("faultString")));
+			response->structValue->insert(RPCStructElement("error", error));
+		}
+		else response->structValue->insert(RPCStructElement("result", variable));
+		response->structValue->insert(RPCStructElement("id", std::shared_ptr<Variable>(new Variable(id))));
+		encode(response, json);
 	}
 	catch(const std::exception& ex)
     {

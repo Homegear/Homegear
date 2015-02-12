@@ -186,7 +186,7 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 				GD::mqtt->queueMessage(message);
 			}
 		}
-		std::string methodName("event"); //We can't just create the methods BaseLib::RPC::Variable with new BaseLib::RPC::Variable("methodName", "event") because "event" is not a string object. That's why we create the string object here.
+		std::string methodName("event");
 		std::vector<std::shared_ptr<RemoteRPCServer>> _serversToRemove;
 		_serversMutex.lock();
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
@@ -197,29 +197,50 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 				continue;
 			}
 			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && ((*server)->knownMethods.find("event") == (*server)->knownMethods.end() || (*server)->knownMethods.find("system.multicall") == (*server)->knownMethods.end()))) continue;
-			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
-			std::shared_ptr<BaseLib::RPC::Variable> array(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
-			std::shared_ptr<BaseLib::RPC::Variable> method;
-			for(uint32_t i = 0; i < valueKeys->size(); i++)
+			if((*server)->webSocket || (*server)->json)
 			{
-				method.reset(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
-				array->arrayValue->push_back(method);
-				method->structValue->insert(BaseLib::RPC::RPCStructElement("methodName", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(methodName))));
-				std::shared_ptr<BaseLib::RPC::Variable> params(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
-				method->structValue->insert(BaseLib::RPC::RPCStructElement("params", params));
-				params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
-				if((*server)->useID)
+				//No system.multicall
+				for(uint32_t i = 0; i < valueKeys->size(); i++)
 				{
-					params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)id)));
-					params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(channel)));
+					std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
+					parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
+					if((*server)->useID)
+					{
+						parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)id)));
+						parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(channel)));
+					}
+					else parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(deviceAddress)));
+					parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(valueKeys->at(i))));
+					parameters->push_back(values->at(i));
+					startInvokeBroadcastThread((*server), "event", parameters);
 				}
-				else params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(deviceAddress)));
-				params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(valueKeys->at(i))));
-				params->arrayValue->push_back(values->at(i));
 			}
-			parameters->push_back(array);
-			//Sadly some clients only support multicall and not "event" directly for single events. That's why we use multicall even when there is only one value.
-			startInvokeBroadcastThread((*server), "system.multicall", parameters);
+			else
+			{
+				std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
+				std::shared_ptr<BaseLib::RPC::Variable> array(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+				std::shared_ptr<BaseLib::RPC::Variable> method;
+				for(uint32_t i = 0; i < valueKeys->size(); i++)
+				{
+					method.reset(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
+					array->arrayValue->push_back(method);
+					method->structValue->insert(BaseLib::RPC::RPCStructElement("methodName", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(methodName))));
+					std::shared_ptr<BaseLib::RPC::Variable> params(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+					method->structValue->insert(BaseLib::RPC::RPCStructElement("params", params));
+					params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
+					if((*server)->useID)
+					{
+						params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)id)));
+						params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(channel)));
+					}
+					else params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(deviceAddress)));
+					params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(valueKeys->at(i))));
+					params->arrayValue->push_back(values->at(i));
+				}
+				parameters->push_back(array);
+				//Sadly some clients only support multicall and not "event" directly for single events. That's why we use multicall even when there is only one value.
+				startInvokeBroadcastThread((*server), "system.multicall", parameters);
+			}
 		}
 		_serversMutex.unlock();
 		if(!_serversToRemove.empty())

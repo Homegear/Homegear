@@ -86,7 +86,7 @@ namespace RPC
 
 			struct PacketType
 			{
-				enum Enum { xmlRequest, xmlResponse, binaryRequest, binaryResponse, webSocketRequest, webSocketResponse };
+				enum Enum { xmlRequest, xmlResponse, binaryRequest, binaryResponse, jsonRequest, jsonResponse, webSocketRequest, webSocketResponse };
 			};
 
 			RPCServer();
@@ -133,14 +133,14 @@ namespace RPC
 			void getSSLSocketDescriptor(std::shared_ptr<Client>);
 			void mainThread();
 			void readClient(std::shared_ptr<Client> client);
-			void sendRPCResponseToClient(std::shared_ptr<Client> client, std::shared_ptr<BaseLib::RPC::Variable> error, PacketType::Enum packetType, bool keepAlive);
+			void sendRPCResponseToClient(std::shared_ptr<Client> client, std::shared_ptr<BaseLib::RPC::Variable> variable, int32_t messageId, PacketType::Enum packetType, bool keepAlive);
 			void sendRPCResponseToClient(std::shared_ptr<Client> client, std::vector<char>& data, bool keepAlive);
 			void packetReceived(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
 			void handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib::HTTP& http);
 			void analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
 			void analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
-			void callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters, PacketType::Enum responseType, bool keepAlive);
-			std::string getHttpResponseHeader(uint32_t contentLength, bool closeConnection);
+			void callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters, int32_t messageId, PacketType::Enum responseType, bool keepAlive);
+			std::string getHttpResponseHeader(std::string contentType, uint32_t contentLength, bool closeConnection);
 			std::string getHttpHtmlResponseHeader(uint32_t contentLength, bool closeConnection);
 			void closeClientConnection(std::shared_ptr<Client> client);
 			bool clientValid(std::shared_ptr<Client>& client);

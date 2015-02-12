@@ -51,9 +51,11 @@ public:
 
 	void encode(const std::shared_ptr<Variable> variable, std::string& json);
 	void encode(const std::shared_ptr<Variable> variable, std::vector<char>& json);
-	void encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<Variable>>> parameters, std::vector<char>& encodedData);
+	void encodeRequest(std::string& methodName, std::shared_ptr<std::list<std::shared_ptr<Variable>>>& parameters, std::vector<char>& encodedData);
+	void encodeResponse(const std::shared_ptr<Variable>& variable, int32_t id, std::vector<char>& json);
 private:
 	BaseLib::Obj* _bl = nullptr;
+	int32_t _requestId = 1;
 
 	void encodeValue(const std::shared_ptr<Variable>& variable, std::ostringstream& s);
 	void encodeValue(const std::shared_ptr<Variable>& variable, std::vector<char>& s);

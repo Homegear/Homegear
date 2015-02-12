@@ -66,7 +66,8 @@ public:
 		std::string contentPath;
 		bool webServer = false;
 		bool webSocket = false;
-		bool rpcServer = true;
+		bool xmlrpcServer = true;
+		bool jsonrpcServer = true;
 		std::string redirectTo;
 
 		//Not settable
