@@ -3186,22 +3186,21 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSubscribePeers::invoke(std::shared_pt
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
+		if(parameters->at(0)->stringValue.empty()) return BaseLib::RPC::Variable::createError(-32602, "Server id is empty.");
 		std::pair<std::string, std::string> server = BaseLib::HelperFunctions::split(parameters->at(0)->stringValue, ':');
-		if(server.first.empty() || server.second.empty()) return BaseLib::RPC::Variable::createError(-32602, "Server address or port is empty.");
-		if(server.first.size() < 8) return BaseLib::RPC::Variable::createError(-32602, "Server address too short.");
 		BaseLib::HelperFunctions::toLower(server.first);
 
-		std::string path = "/RPC2";
 		int32_t pos = server.second.find_first_of('/');
 		if(pos > 0)
 		{
-			path = server.second.substr(pos);
-			GD::out.printDebug("Debug: Server path set to: " + path);
 			server.second = server.second.substr(0, pos);
 			GD::out.printDebug("Debug: Server port set to: " + server.second);
 		}
-		server.second = std::to_string(BaseLib::Math::getNumber(server.second));
-		if(server.second.empty() || server.second == "0") return BaseLib::RPC::Variable::createError(-32602, "Port number is invalid.");
+		if(!server.second.empty()) //Port number specified
+		{
+			server.second = std::to_string(BaseLib::Math::getNumber(server.second));
+			if(server.second.empty() || server.second == "0") return BaseLib::RPC::Variable::createError(-32602, "Port number is invalid.");
+		}
 
 		std::shared_ptr<RemoteRPCServer> eventServer = GD::rpcClient.getServer(server);
 		if(!eventServer) return BaseLib::RPC::Variable::createError(-1, "Event server is unknown.");
@@ -3264,22 +3263,21 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCUnsubscribePeers::invoke(std::shared_
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
+		if(parameters->at(0)->stringValue.empty()) return BaseLib::RPC::Variable::createError(-32602, "Server id is empty.");
 		std::pair<std::string, std::string> server = BaseLib::HelperFunctions::split(parameters->at(0)->stringValue, ':');
-		if(server.first.empty() || server.second.empty()) return BaseLib::RPC::Variable::createError(-32602, "Server address or port is empty.");
-		if(server.first.size() < 8) return BaseLib::RPC::Variable::createError(-32602, "Server address too short.");
 		BaseLib::HelperFunctions::toLower(server.first);
 
-		std::string path = "/RPC2";
 		int32_t pos = server.second.find_first_of('/');
 		if(pos > 0)
 		{
-			path = server.second.substr(pos);
-			GD::out.printDebug("Debug: Server path set to: " + path);
 			server.second = server.second.substr(0, pos);
 			GD::out.printDebug("Debug: Server port set to: " + server.second);
 		}
-		server.second = std::to_string(BaseLib::Math::getNumber(server.second));
-		if(server.second.empty() || server.second == "0") return BaseLib::RPC::Variable::createError(-32602, "Port number is invalid.");
+		if(!server.second.empty()) //Port number specified
+		{
+			server.second = std::to_string(BaseLib::Math::getNumber(server.second));
+			if(server.second.empty() || server.second == "0") return BaseLib::RPC::Variable::createError(-32602, "Port number is invalid.");
+		}
 
 		std::shared_ptr<RemoteRPCServer> eventServer = GD::rpcClient.getServer(server);
 		if(!eventServer) return BaseLib::RPC::Variable::createError(-1, "Event server is unknown.");

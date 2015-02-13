@@ -197,6 +197,8 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 				continue;
 			}
 			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && ((*server)->knownMethods.find("event") == (*server)->knownMethods.end() || (*server)->knownMethods.find("system.multicall") == (*server)->knownMethods.end()))) continue;
+			std::cerr << (*server)->subscribedPeers.size() << std::endl;
+			if((*server)->subscribePeers && (*server)->subscribedPeers.find(id) == (*server)->subscribedPeers.end()) continue;
 			if((*server)->webSocket || (*server)->json)
 			{
 				//No system.multicall
@@ -699,20 +701,24 @@ std::shared_ptr<RemoteRPCServer> Client::addServer(std::pair<std::string, std::s
     return std::shared_ptr<RemoteRPCServer>(new RemoteRPCServer());
 }
 
-std::shared_ptr<RemoteRPCServer> Client::addWebSocketServer(std::shared_ptr<BaseLib::SocketOperations> socket, std::string address, std::string port)
+std::shared_ptr<RemoteRPCServer> Client::addWebSocketServer(std::shared_ptr<BaseLib::SocketOperations> socket, std::string clientId, std::string address)
 {
 	try
 	{
+		std::pair<std::string, std::string> serverAddress;
+		serverAddress.first = clientId;
+		removeServer(serverAddress);
 		_serversMutex.lock();
 		std::shared_ptr<RemoteRPCServer> server(new RemoteRPCServer());
-		server->address.first = address;
-		server->address.second = port;
+		server->address.first = clientId;
+		server->hostname = address;
 		server->uid = _serverId++;
 		server->webSocket = true;
 		server->autoConnect = false;
 		server->initialized = true;
 		server->socket = socket;
 		server->keepAlive = true;
+		server->subscribePeers = true;
 		server->useID = true;
 		_servers->push_back(server);
 		_serversMutex.unlock();

@@ -96,7 +96,7 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 	{
 		if(methodName.empty())
 		{
-			GD::out.printError("Error: Could not invoke XML RPC method for server " + server->address.first + ". methodName is empty.");
+			GD::out.printError("Error: Could not invoke RPC method for server " + server->hostname + ". methodName is empty.");
 			return;
 		}
 		if(!server)
@@ -105,7 +105,7 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 			return;
 		}
 		server->sendMutex.lock();
-		GD::out.printInfo("Info: Calling RPC method \"" + methodName + "\" on server " + server->address.first + " and port " + server->address.second + ".");
+		GD::out.printInfo("Info: Calling RPC method \"" + methodName + "\" on server " + server->hostname + ".");
 		if(GD::bl->debugLevel >= 5)
 		{
 			GD::out.printDebug("Parameters:");
@@ -154,12 +154,12 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 				server->removed = true;
 				server->sendMutex.unlock();
 				GD::rpcClient.removeServer(server->uid);
-				GD::out.printInfo("Info: Connection to server closed. Host: " + server->address.first + " Port: " + server->address.second);
+				GD::out.printInfo("Info: Connection to server closed. Host: " + server->hostname);
 			}
 			else
 			{
 				server->sendMutex.unlock();
-				GD::out.printWarning("Warning: Response is empty. RPC method: " + methodName + " Server: " + server->address.first + " Port: " + server->address.second);
+				GD::out.printWarning("Warning: Response is empty. RPC method: " + methodName + " Server: " + server->hostname);
 			}
 			return;
 		}
@@ -168,7 +168,7 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 		else if(server->webSocket || server->json) returnValue = _jsonDecoder->decode(responseData);
 		else returnValue = _xmlRpcDecoder->decodeResponse(responseData);
 
-		if(returnValue->errorStruct) GD::out.printError("Error in RPC response from " + server->hostname + " on port " + server->address.second + ": faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
+		if(returnValue->errorStruct) GD::out.printError("Error in RPC response from " + server->hostname + ". faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
 		else
 		{
 			if(GD::bl->debugLevel >= 5)
@@ -206,7 +206,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
 			server->sendMutex.unlock();
 			return BaseLib::RPC::Variable::createError(-32300, "Server was removed and has to send \"init\" again.");;
 		}
-		GD::out.printInfo("Info: Calling RPC method \"" + methodName + "\" on server " + server->address.first + " and port " + server->address.second + ".");
+		GD::out.printInfo("Info: Calling RPC method \"" + methodName + "\" on server " + server->hostname + ".");
 		if(GD::bl->debugLevel >= 5)
 		{
 			GD::out.printDebug("Parameters:");
@@ -255,7 +255,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
 				server->removed = true;
 				server->sendMutex.unlock();
 				GD::rpcClient.removeServer(server->uid);
-				GD::out.printInfo("Info: Connection to server closed. Host: " + server->address.first + " Port: " + server->address.second);
+				GD::out.printInfo("Info: Connection to server closed. Host: " + server->hostname);
 			}
 			else server->sendMutex.unlock();
 			return BaseLib::RPC::Variable::createError(-32700, "No response data.");
@@ -264,7 +264,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
 		if(server->binary) returnValue = _rpcDecoder->decodeResponse(responseData);
 		else if(server->webSocket || server->json) returnValue = _jsonDecoder->decode(responseData);
 		else returnValue = _xmlRpcDecoder->decodeResponse(responseData);
-		if(returnValue->errorStruct) GD::out.printError("Error in RPC response from " + server->hostname + " on port " + server->address.second + ": faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
+		if(returnValue->errorStruct) GD::out.printError("Error in RPC response from " + server->hostname + ". faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
 		else
 		{
 			if(GD::bl->debugLevel >= 5)
@@ -352,7 +352,7 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 
 		if(server->autoConnect)
 		{
-			if(server->hostname.empty()) server->hostname = getIPAddress(server->address.first);
+			if(server->hostname.empty()) server->hostname = getIPAddress(server->hostname);
 			if(server->hostname.empty()) return;
 			//Get settings pointer every time this method is executed, because
 			//the settings might change.
@@ -369,7 +369,7 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 		_sendCounter++;
 		if(_sendCounter > (signed)GD::bl->settings.rpcClientThreadMax())
 		{
-			GD::out.printCritical("Critical: Could not execute XML RPC method on server " + server->address.first + " and port " + server->address.second + ", because there are more than " + std::to_string(GD::bl->settings.rpcClientThreadMax()) + " requests queued. Your server is either not reachable currently or your connection is too slow.", false);
+			GD::out.printCritical("Critical: Could not execute RPC method on server " + server->hostname + ", because there are more than " + std::to_string(GD::bl->settings.rpcClientThreadMax()) + " requests queued. Your server is either not reachable currently or your connection is too slow.", false);
 			_sendCounter--;
 			return;
 		}
@@ -412,7 +412,7 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 		{
 			if(server->settings->userName.empty() || server->settings->password.empty())
 			{
-				GD::out.printError("Error: No user name or password specified in config file for XML RPC server " + server->hostname + " on port " + server->address.second + ". Closing connection.");
+				GD::out.printError("Error: No user name or password specified in config file for RPC server " + server->hostname + ". Closing connection.");
 				server->socket->close();
 				_sendCounter--;
 				return;
@@ -469,7 +469,7 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 		}
 		catch(const BaseLib::SocketOperationException& ex)
 		{
-			GD::out.printError("Error: Could not send data to XML RPC server " + server->hostname + " on port " + server->address.second + ": " + ex.what() + ".");
+			GD::out.printError("Error: Could not send data to XML RPC server " + server->hostname + ": " + ex.what() + ".");
 			retry = true;
 			server->socket->close();
 			_sendCounter--;
@@ -521,7 +521,7 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 			}
 			catch(const BaseLib::SocketTimeOutException& ex)
 			{
-				GD::out.printInfo("Info: Reading from RPC server timed out. Server: " + server->hostname + " Port: " + server->address.second);
+				GD::out.printInfo("Info: Reading from RPC server timed out. Server: " + server->hostname);
 				retry = true;
 				if(!server->keepAlive) server->socket->close();
 				_sendCounter--;
@@ -555,14 +555,14 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 					if(!(buffer[3] & 1) && buffer[3] != 0xFF)
 					{
 						responseData.insert(responseData.end(), buffer, buffer + receivedBytes);
-						GD::out.printError("Error: RPC client received binary request as response from server " + server->hostname + " on port " + server->address.second + ". Packet was: " + GD::bl->hf.getHexString(responseData));
+						GD::out.printError("Error: RPC client received binary request as response from server " + server->hostname + ". Packet was: " + GD::bl->hf.getHexString(responseData));
 						if(!server->keepAlive) server->socket->close();
 						_sendCounter--;
 						return;
 					}
 					if(receivedBytes < 8)
 					{
-						GD::out.printError("Error: RPC client received binary packet smaller than 8 bytes from server " + server->hostname + " on port " + server->address.second);
+						GD::out.printError("Error: RPC client received binary packet smaller than 8 bytes from server " + server->hostname);
 						if(!server->keepAlive) server->socket->close();
 						_sendCounter--;
 						return;
@@ -571,7 +571,7 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 					GD::out.printDebug("RPC client receiving binary rpc packet with size: " + std::to_string(receivedBytes) + ". Payload size is: " + std::to_string(dataSize));
 					if(dataSize == 0)
 					{
-						GD::out.printError("Error: RPC client received binary packet without data from server " + server->hostname + " on port " + server->address.second);
+						GD::out.printError("Error: RPC client received binary packet without data from server " + server->hostname + ".");
 						if(!server->keepAlive) server->socket->close();
 						_sendCounter--;
 						return;
@@ -631,7 +631,7 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 				{
 					if(!strncmp(buffer, "401", 3) || !strncmp(&buffer[9], "401", 3)) //"401 Unauthorized" or "HTTP/1.X 401 Unauthorized"
 					{
-						GD::out.printError("Error: Authentication failed. Server " + server->hostname + ", port " + server->address.second + ". Check user name and password in rpcclients.conf.");
+						GD::out.printError("Error: Authentication failed. Server " + server->hostname + ". Check user name and password in rpcclients.conf.");
 						if(!server->keepAlive) server->socket->close();
 						_sendCounter--;
 						return;
@@ -661,9 +661,9 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 		if(!server->keepAlive) server->socket->close();
 		if(GD::bl->debugLevel >= 5)
 		{
-			if(server->binary) GD::out.printDebug("Debug: Received packet from server " + server->hostname + " on port " + server->address.second + ": " + GD::bl->hf.getHexString(responseData));
-			else if(http.isFinished() && !http.getContent()->empty()) GD::out.printDebug("Debug: Received packet from server " + server->hostname + " on port " + server->address.second + ":\n" + std::string(&http.getContent()->at(0), http.getContent()->size()));
-			else if(webSocket.isFinished() && !webSocket.getContent()->empty()) GD::out.printDebug("Debug: Received packet from server " + server->hostname + " on port " + server->address.second + ":\n" + std::string(&webSocket.getContent()->at(0), webSocket.getContent()->size()));
+			if(server->binary) GD::out.printDebug("Debug: Received packet from server " + server->hostname + ": " + GD::bl->hf.getHexString(responseData));
+			else if(http.isFinished() && !http.getContent()->empty()) GD::out.printDebug("Debug: Received packet from server " + server->hostname + ":\n" + std::string(&http.getContent()->at(0), http.getContent()->size()));
+			else if(webSocket.isFinished() && !webSocket.getContent()->empty()) GD::out.printDebug("Debug: Received packet from server " + server->hostname + ":\n" + std::string(&webSocket.getContent()->at(0), webSocket.getContent()->size()));
 		}
 		if(server->webSocket && webSocket.isFinished()) responseData = *webSocket.getContent();
 		else if(http.isFinished()) responseData = *http.getContent();

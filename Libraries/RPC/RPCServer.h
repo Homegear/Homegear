@@ -73,6 +73,7 @@ namespace RPC
 				bool webSocket = false;
 				bool webSocketClient = false;
 				bool webSocketAuthorized = false;
+				std::string webSocketClientId;
 				std::thread readThread;
 				std::shared_ptr<BaseLib::FileDescriptor> socketDescriptor;
 				std::shared_ptr<BaseLib::SocketOperations> socket;

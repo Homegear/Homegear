@@ -812,7 +812,22 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 			BaseLib::Crypt::sha1(data, sha1);
 			std::string websocketAccept;
 			BaseLib::Base64::encode(sha1, websocketAccept);
-			if(protocol == "server" || http.getHeader()->path == "/server")
+			std::string pathProtocol;
+			if(http.getHeader()->path.size() >= 7) pathProtocol = http.getHeader()->path.substr(1, 6);
+			if(http.getHeader()->path.size() > 7 && http.getHeader()->path.at(7) == '/' && (pathProtocol == "client" || pathProtocol == "server"))
+			{
+				//path starts with "/client/" or "/server/". Both are not part of the client id.
+				if(http.getHeader()->path.size() > 8) client->webSocketClientId = http.getHeader()->path.substr(8);
+			}
+			else if(http.getHeader()->path.size() > 1)
+			{
+				//Full path is client id.
+				pathProtocol.clear();
+				client->webSocketClientId = http.getHeader()->path.substr(1);
+			}
+			BaseLib::HelperFunctions::toLower(client->webSocketClientId);
+
+			if(protocol == "server" || pathProtocol == "server")
 			{
 				client->webSocket = true;
 				std::string header;
@@ -826,7 +841,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 				std::vector<char> data(&header[0], &header[0] + header.size());
 				sendRPCResponseToClient(client, data, true);
 			}
-			else if(protocol == "client" || http.getHeader()->path == "/client")
+			else if(protocol == "client" || pathProtocol == "client")
 			{
 				client->webSocket = true;
 				client->webSocketClient = true;
@@ -843,7 +858,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 				if(_info->authType != ServerInfo::Info::AuthType::basic)
 				{
 					_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
-					GD::rpcClient.addWebSocketServer(client->socket, client->address, std::to_string(client->port));
+					GD::rpcClient.addWebSocketServer(client->socket, client->webSocketClientId, client->address);
 					client->socketDescriptor.reset(new BaseLib::FileDescriptor());
 					client->socket.reset(new BaseLib::SocketOperations(GD::bl.get()));
 					client->closed = true;
@@ -1134,7 +1149,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 							if(client->webSocketClient)
 							{
 								_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
-								GD::rpcClient.addWebSocketServer(client->socket, client->address, std::to_string(client->port));
+								GD::rpcClient.addWebSocketServer(client->socket, client->webSocketClientId, client->address);
 								client->socketDescriptor.reset(new BaseLib::FileDescriptor());
 								client->socket.reset(new BaseLib::SocketOperations(GD::bl.get()));
 								client->closed = true;
