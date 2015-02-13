@@ -56,6 +56,8 @@ solution "homegear"
       {
          "FORTIFY_SOURCE=2",
          "GCRYPT_NO_DEPRECATED",
+         --Needed because of gnutls.h/php_config.h conflict.
+         "HAVE_SSIZE_T=1",
          "SCRIPTENGINE",
          "EVENTHANDLER"
          --"BIDCOSTICC1101",
@@ -143,7 +145,6 @@ solution "homegear"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
 
---[[
    project "homematicwired"
       kind "SharedLib"
       language "C++"
@@ -287,7 +288,6 @@ solution "homegear"
          targetdir "./lib/Modules/Profiling"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
---]]
 
    project "user"
       kind "StaticLib"
@@ -533,7 +533,7 @@ solution "homegear"
       language "C++"
       files { "*.h", "*.cpp" }
       files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
-      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l readline", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l upnp", "-l mqtt", "-l paho.mqtt.c", "-l database", "-l scriptengine", "-l base", "-l gpg-error", "-l sqlite3", "-l php5" }
+      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l readline", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l upnp", "-l mqtt", "-l database", "-l scriptengine", "-l base", "-l gpg-error", "-l sqlite3", "-l php5", "-l paho.mqtt.c" }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration "Debug"

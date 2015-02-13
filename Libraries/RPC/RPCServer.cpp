@@ -813,16 +813,17 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 			std::string websocketAccept;
 			BaseLib::Base64::encode(sha1, websocketAccept);
 			std::string pathProtocol;
-			if(http.getHeader()->path.size() >= 7) pathProtocol = http.getHeader()->path.substr(1, 6);
-			if(http.getHeader()->path.size() > 7 && http.getHeader()->path.at(7) == '/' && (pathProtocol == "client" || pathProtocol == "server"))
+			int32_t pos = http.getHeader()->path.find('/', 1);
+			if(http.getHeader()->path.size() == 7 || pos == 7) pathProtocol = http.getHeader()->path.substr(1, 6);
+			if(pathProtocol == "client" || pathProtocol == "server")
 			{
 				//path starts with "/client/" or "/server/". Both are not part of the client id.
 				if(http.getHeader()->path.size() > 8) client->webSocketClientId = http.getHeader()->path.substr(8);
 			}
 			else if(http.getHeader()->path.size() > 1)
 			{
-				//Full path is client id.
 				pathProtocol.clear();
+				//Full path is client id.
 				client->webSocketClientId = http.getHeader()->path.substr(1);
 			}
 			BaseLib::HelperFunctions::toLower(client->webSocketClientId);

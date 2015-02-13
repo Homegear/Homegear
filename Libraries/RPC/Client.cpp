@@ -197,7 +197,6 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 				continue;
 			}
 			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && ((*server)->knownMethods.find("event") == (*server)->knownMethods.end() || (*server)->knownMethods.find("system.multicall") == (*server)->knownMethods.end()))) continue;
-			std::cerr << (*server)->subscribedPeers.size() << std::endl;
 			if((*server)->subscribePeers && (*server)->subscribedPeers.find(id) == (*server)->subscribedPeers.end()) continue;
 			if((*server)->webSocket || (*server)->json)
 			{
