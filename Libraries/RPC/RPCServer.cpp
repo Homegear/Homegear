@@ -790,7 +790,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 {
 	try
 	{
-		if(http.getHeader()->fields.find("upgrade") != http.getHeader()->fields.end() && http.getHeader()->fields["upgrade"] == "websocket")
+		if(http.getHeader()->fields.find("upgrade") != http.getHeader()->fields.end() && BaseLib::HelperFunctions::toLower(http.getHeader()->fields["upgrade"]) == "websocket")
 		{
 			if(http.getHeader()->fields.find("sec-websocket-protocol") == http.getHeader()->fields.end() && (http.getHeader()->path.empty() || http.getHeader()->path == "/"))
 			{
@@ -874,7 +874,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 		else
 		{
 			closeClientConnection(client);
-			_out.printError("Error: Connection upgrade type not supported.");
+			_out.printError("Error: Connection upgrade type not supported: " + http.getHeader()->fields["upgrade"]);
 		}
 	}
 	catch(const std::exception& ex)

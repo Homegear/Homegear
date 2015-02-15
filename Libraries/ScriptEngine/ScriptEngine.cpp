@@ -252,7 +252,6 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 			SG(request_info).argv[i] = (char*)argv[i].c_str(); //Value is not modified.
 		}
 		SG(request_info).argv[argv.size()] = nullptr;
-		php_startup_auto_globals(TSRMLS_C);
 
 		php_execute_script(&script TSRMLS_CC);
 		int32_t exitCode = EG(exit_status);
