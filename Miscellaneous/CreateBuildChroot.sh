@@ -72,6 +72,15 @@ echo "deb $deb_mirror $deb_release main contrib non-free
 
 echo "proc            /proc           proc    defaults        0       0" > etc/fstab
 
+# Prevent init scripts from running
+LANG=C chroot $rootfs dpkg-divert --local --rename --add /sbin/initctl
+echo "exit 0
+" > sbin/initctl
+chmod 755 sbin/initctl
+echo "exit 101
+" > usr/sbin/policy-rc.d
+chmod 755 usr/sbin/policy-rc.d
+
 LANG=C chroot $rootfs apt-get update
 LANG=C chroot $rootfs apt-get -y install locales console-common ntp openssh-server git-core binutils curl ca-certificates sudo parted unzip p7zip-full php5-cli php5-xmlrpc libxml2-utils keyboard-configuration liblzo2-dev python-lzo libgcrypt11 libgpg-error0 libgpg-error-dev libgnutlsxx27 libgnutls-dev binutils debhelper devscripts build-essential sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses-dev libssl-dev libparse-debcontrol-perl libgcrypt11-dev g++
 

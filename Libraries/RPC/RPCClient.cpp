@@ -355,7 +355,7 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 			if(server->hostname.empty()) server->hostname = getIPAddress(server->address.first);
 			if(server->hostname.empty())
 			{
-				GD::out.printError("RPC Client: Error: hostname is empty.")
+				GD::out.printError("RPC Client: Error: hostname is empty.");
 				server->removed = true;
 				return;
 			}
