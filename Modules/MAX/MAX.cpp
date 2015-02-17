@@ -411,8 +411,8 @@ std::string MAX::handleCLICommand(std::string& command)
 				stringStream << "  SERIALNUMBER:\tAny unused serial number with a maximum size of 10 characters. Don't use special characters. Example: VSW9179403" << std::endl;
 				stringStream << "  DEVICETYPE:\tThe type of the device to create. Example: FEFFFFFD" << std::endl << std::endl;
 				stringStream << "Currently supported MAX virtual device id's:" << std::endl;
-				stringStream << "  FEFFFFFD:\tCentral device" << std::endl;
-				stringStream << "  FEFFFFFE:\tSpy device" << std::endl;
+				stringStream << "  FFFFFFFD:\tCentral device" << std::endl;
+				stringStream << "  FFFFFFFE:\tSpy device" << std::endl;
 				return stringStream.str();
 			}
 

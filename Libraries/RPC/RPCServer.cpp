@@ -314,7 +314,7 @@ void RPCServer::mainThread()
 					continue;
 				}
 				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = getClientSocketDescriptor(address, port);
-				if(!clientFileDescriptor || clientFileDescriptor->descriptor < 0) continue;
+				if(!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
 				_stateMutex.lock();
 				std::shared_ptr<Client> client(new Client());
 				client->id = _currentClientID++;
@@ -943,7 +943,6 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			if(!http.headerProcessingStarted() && !webSocket.dataProcessingStarted() && packetLength == 0 && !strncmp(&buffer[0], "Bin", 3))
 			{
 				if(!_info->xmlrpcServer) continue;
-				http.reset();
 				//buffer[3] & 1 is true for buffer[3] == 0xFF, too
 				packetType = (buffer[3] & 1) ? PacketType::Enum::binaryResponse : PacketType::Enum::binaryRequest;
 				client->binaryPacket = true;

@@ -221,8 +221,8 @@ void MiscPeer::runProgram()
 					std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				}
 			}
-			int32_t result;
-			int32_t status;
+			int32_t result = 0;
+			int32_t status = 0;
 			while(!_stopRunProgramThread && (result = waitpid(_programPID, &status, WNOHANG)) == 0)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
