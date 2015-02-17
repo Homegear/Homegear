@@ -36,7 +36,7 @@ ifeq ($(config),release)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall -std=c++11 -fPIC
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -L/usr/lib/php5 -s -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear
+  LDFLAGS   += -L/usr/lib/php5 -s -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -Wl,-rpath=/usr/lib/php5
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -58,7 +58,7 @@ ifeq ($(config),debug)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++11 -fPIC
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -L/usr/lib/php5 -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear
+  LDFLAGS   += -L/usr/lib/php5 -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -Wl,-rpath=/usr/lib/php5
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -80,7 +80,7 @@ ifeq ($(config),profiling)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -std=c++11 -fPIC -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -L/usr/lib/php5 -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -pg
+  LDFLAGS   += -L/usr/lib/php5 -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -Wl,-rpath=/usr/lib/php5 -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
