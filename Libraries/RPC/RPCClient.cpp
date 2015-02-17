@@ -352,8 +352,13 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 
 		if(server->autoConnect)
 		{
-			if(server->hostname.empty()) server->hostname = getIPAddress(server->hostname);
-			if(server->hostname.empty()) return;
+			if(server->hostname.empty()) server->hostname = getIPAddress(server->address.first);
+			if(server->hostname.empty())
+			{
+				GD::out.printError("RPC Client: Error: hostname is empty.")
+				server->removed = true;
+				return;
+			}
 			//Get settings pointer every time this method is executed, because
 			//the settings might change.
 			server->settings = GD::clientSettings.get(server->hostname);
