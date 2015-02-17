@@ -63,7 +63,7 @@ solution "homegear"
          --"BIDCOSTICC1101",
          --"BIDCOSRTLSDRLAN",
       }
-      linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear" }
+      linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear", "-Wl,-rpath=/usr/lib/php5" }
       libdirs { "/usr/lib/php5" }
 
    configuration { "rpi", "gmake" }
@@ -78,7 +78,7 @@ solution "homegear"
          "FORTIFY_SOURCE=2",
          "GCRYPT_NO_DEPRECATED",
       }
-      linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear" }
+      linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear", "-Wl,-rpath=/usr/lib/php5" }
 
    project "base"
       kind "StaticLib"
