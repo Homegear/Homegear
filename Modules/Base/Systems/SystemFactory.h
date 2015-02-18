@@ -43,7 +43,7 @@ class SystemFactory
 {
 public:
 	SystemFactory() {}
-	virtual ~SystemFactory();
+	virtual ~SystemFactory() {}
 
 	virtual DeviceFamily* createDeviceFamily(BaseLib::Obj* bl, DeviceFamily::IFamilyEventSink* eventHandler) = 0;
 };

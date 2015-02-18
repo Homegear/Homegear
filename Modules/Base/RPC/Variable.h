@@ -55,6 +55,12 @@ enum class VariableType
 	rpcVariant = 0x1111
 };
 
+class Variable;
+
+typedef std::pair<std::string, std::shared_ptr<Variable>> RPCStructElement;
+typedef std::map<std::string, std::shared_ptr<Variable>> RPCStruct;
+typedef std::vector<std::shared_ptr<Variable>> RPCArray;
+
 class Variable {
 public:
 	bool errorStruct = false;
@@ -74,6 +80,8 @@ public:
 	Variable(std::string string) : Variable() { type = VariableType::rpcString; stringValue = string; }
 	Variable(bool boolean) : Variable() { type = VariableType::rpcBoolean; booleanValue = boolean; }
 	Variable(double floatVal) : Variable() { type = VariableType::rpcFloat; floatValue = floatVal; }
+	Variable(std::shared_ptr<RPCArray> arrayVal) : Variable() { type = VariableType::rpcArray; arrayValue = arrayVal; }
+	Variable(std::shared_ptr<RPCStruct> structVal) : Variable() { type = VariableType::rpcStruct; structValue = structVal; }
 	virtual ~Variable();
 	static std::shared_ptr<Variable> createError(int32_t faultCode, std::string faultString);
 	void print();
@@ -90,11 +98,6 @@ private:
 	void printStruct(std::shared_ptr<std::map<std::string, std::shared_ptr<Variable>>> rpcStruct, std::string indent);
 	void printArray(std::shared_ptr<std::vector<std::shared_ptr<Variable>>> rpcArray, std::string indent);
 };
-
-typedef std::pair<std::string, std::shared_ptr<Variable>> RPCStructElement;
-typedef std::map<std::string, std::shared_ptr<Variable>> RPCStruct;
-typedef std::vector<std::shared_ptr<Variable>> RPCArray;
-
 }
 }
 
