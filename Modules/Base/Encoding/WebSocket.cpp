@@ -165,10 +165,10 @@ void WebSocket::encode(const std::vector<char>& data, Header::Opcode::Enum messa
 	else
 	{
 		output.push_back(127);
-		output.push_back(data.size() >> 56);
-		output.push_back((data.size() >> 48) & 0xFF);
-		output.push_back((data.size() >> 40) & 0xFF);
-		output.push_back((data.size() >> 32) & 0xFF);
+		output.push_back(((uint64_t)data.size()) >> 56);
+		output.push_back((((uint64_t)data.size()) >> 48) & 0xFF);
+		output.push_back((((uint64_t)data.size()) >> 40) & 0xFF);
+		output.push_back((((uint64_t)data.size()) >> 32) & 0xFF);
 		output.push_back((data.size() >> 24) & 0xFF);
 		output.push_back((data.size() >> 16) & 0xFF);
 		output.push_back((data.size() >> 8) & 0xFF);

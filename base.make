@@ -111,7 +111,6 @@ OBJECTS := \
 	$(OBJDIR)/Central.o \
 	$(OBJDIR)/IPhysicalInterface.o \
 	$(OBJDIR)/DeviceTypes.o \
-	$(OBJDIR)/SystemFactory.o \
 	$(OBJDIR)/LogicalDevice.o \
 	$(OBJDIR)/Packet.o \
 	$(OBJDIR)/DeviceFamily.o \
@@ -248,9 +247,6 @@ $(OBJDIR)/IPhysicalInterface.o: Modules/Base/Systems/IPhysicalInterface.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/DeviceTypes.o: Modules/Base/Systems/DeviceTypes.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/SystemFactory.o: Modules/Base/Systems/SystemFactory.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/LogicalDevice.o: Modules/Base/Systems/LogicalDevice.cpp
