@@ -728,8 +728,12 @@ std::string Server::handleGlobalCommand(std::string& command)
 				return stringStream.str();
 			}
 
+#ifdef SCRIPTENGINE
 			int32_t exitCode = GD::scriptEngine.execute(path, arguments.str());
 			stringStream << "Script executed. Exit code: " << std::dec << exitCode << std::endl;
+#else
+			stringStream << "This Homegear binary is compiled without script engine support." << std::endl;
+#endif
 			return stringStream.str();
 		}
 		else if(command.compare(0, 10, "rpcservers") == 0 || command.compare(0, 3, "rpc") == 0)
