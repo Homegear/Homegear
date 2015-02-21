@@ -2578,7 +2578,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRunScript::invoke(std::shared_ptr<std
 		filename = parameters->at(0)->stringValue;
 		std::string ending = "";
 		int32_t pos = filename.find_last_of('.');
-		if(pos != (signed)std::string::npos && (unsigned)pos < filename.size() - 1) ending = filename.substr(pos + 1);
+		if(pos != (signed)std::string::npos) ending = filename.substr(pos);
 		GD::bl->hf.toLower(ending);
 		if(ending == ".php" || ending == ".php5") internalEngine = true;
 
@@ -2596,9 +2596,14 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRunScript::invoke(std::shared_ptr<std
 		std::string path = GD::bl->settings.scriptPath() + filename;
 
 		int32_t exitCode = 0;
-		if(internalEngine) exitCode = GD::scriptEngine.execute(path, arguments, wait);
+		if(internalEngine)
+		{
+			if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Executing script \"" + path + "\" with parameters \"" + arguments + "\" using internal script engine.");
+			exitCode = GD::scriptEngine.execute(path, arguments, wait);
+		}
 		else
 		{
+			if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Executing program/script \"" + path + "\" with parameters \"" + arguments + "\".");
 			std::string command = path + " " + arguments;
 			if(!wait) command += "&";
 
