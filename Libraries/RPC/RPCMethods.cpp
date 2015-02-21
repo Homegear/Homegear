@@ -2570,33 +2570,27 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRunScript::invoke(std::shared_ptr<std
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		bool internalEngine = false;
-		int32_t offset = 0;
-		if(parameters->at(0)->type == BaseLib::RPC::VariableType::rpcBoolean)
-		{
-			internalEngine = parameters->at(0)->booleanValue;
-			offset = 1;
-		}
 
 		bool wait = false;
 		std::string filename;
 		std::string arguments;
 
-		filename = parameters->at(offset)->stringValue;
+		filename = parameters->at(0)->stringValue;
 		std::string ending = "";
 		int32_t pos = filename.find_last_of('.');
 		if(pos != (signed)std::string::npos && (unsigned)pos < filename.size() - 1) ending = filename.substr(pos + 1);
 		GD::bl->hf.toLower(ending);
 		if(ending == ".php" || ending == ".php5") internalEngine = true;
 
-		if((signed)parameters->size() == offset + 2)
+		if((signed)parameters->size() == 2)
 		{
-			if(parameters->at(offset + 1)->type == BaseLib::RPC::VariableType::rpcBoolean) wait = parameters->at(offset + 1)->booleanValue;
-			else arguments = parameters->at(offset + 1)->stringValue;
+			if(parameters->at(1)->type == BaseLib::RPC::VariableType::rpcBoolean) wait = parameters->at(1)->booleanValue;
+			else arguments = parameters->at(1)->stringValue;
 		}
-		if((signed)parameters->size() == offset + 3)
+		if((signed)parameters->size() == 3)
 		{
-			arguments = parameters->at(offset + 1)->stringValue;
-			wait = parameters->at(offset + 2)->booleanValue;
+			arguments = parameters->at(1)->stringValue;
+			wait = parameters->at(2)->booleanValue;
 		}
 
 		std::string path = GD::bl->settings.scriptPath() + filename;

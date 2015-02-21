@@ -187,7 +187,7 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 				_scriptThreadMutex.lock();
 				try
 				{
-					_scriptThreads.insert(std::pair<int32_t, std::future<int32_t>>(_currentScriptThreadID++, std::async(std::launch::async, &ScriptEngine::execute, this, path, arguments, false)));
+					_scriptThreads.insert(std::pair<int32_t, std::future<int32_t>>(_currentScriptThreadID++, std::async(std::launch::async, &ScriptEngine::execute, this, path, arguments, true)));
 				}
 				catch(const std::exception& ex)
 				{

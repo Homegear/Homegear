@@ -649,7 +649,7 @@ int main(int argc, char* argv[])
         GD::out.printInfo("Loading events...");
         GD::eventHandler.load();
         _startUpComplete = true;
-        GD::out.printMessage("Startup complete.");
+        GD::out.printMessage("Startup complete. Waiting for physical interfaces to connect.");
 
         //Wait for all interfaces to connect before setting booting to false
         {

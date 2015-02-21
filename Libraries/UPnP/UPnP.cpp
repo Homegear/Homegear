@@ -170,7 +170,7 @@ void UPnP::getAddress()
 			ifaddrs* interfaces = nullptr;
 			if(getifaddrs(&interfaces) != 0)
 			{
-				GD::out.printCritical("Error: Could not get address information.");
+				GD::out.printCritical("Error: Could not get address information: " + std::string(strerror(errno)));
 				return;
 			}
 			for(ifaddrs* info = interfaces; info != 0; info = info->ifa_next)

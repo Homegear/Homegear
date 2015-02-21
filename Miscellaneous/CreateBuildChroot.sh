@@ -74,10 +74,12 @@ echo "proc            /proc           proc    defaults        0       0" > etc/f
 
 # Prevent init scripts from running
 LANG=C chroot $rootfs dpkg-divert --local --rename --add /sbin/initctl
-echo "exit 0
+echo "#!/bin/sh
+exit 0
 " > sbin/initctl
 chmod 755 sbin/initctl
-echo "exit 101
+echo "#!/bin/sh
+exit 101
 " > usr/sbin/policy-rc.d
 chmod 755 usr/sbin/policy-rc.d
 

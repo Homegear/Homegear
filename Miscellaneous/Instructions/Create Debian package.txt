@@ -1,8 +1,5 @@
--	apt-get install binutils debhelper devscripts g++-4.7 sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses-dev libssl-dev libparse-debcontrol-perl libgcrypt11-dev libgpg-error-dev libgnutls-dev 
--	If g++-4.7 was not installed before do:
-	o	cd /usr/bin
-	o	rm g++
-	o	ln -s g++-4.7 g++
+-	apt-get install binutils debhelper devscripts sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses-dev libssl-dev libparse-debcontrol-perl libgcrypt11-dev libgpg-error-dev libgnutls-dev 
+-	Note that you need at least g++ version 4.7 installed.
 -	Now use the script CreateDebianPackage.sh or do it manually:
 -	Make a copy of the Homegear directory to work with in the next steps
 -	Remove all unnecessary files and directories out of the homegear directory:

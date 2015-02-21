@@ -120,6 +120,7 @@ static void php_homegear_flush(void *server_context)
 
 static int php_homegear_send_headers(sapi_headers_struct* sapi_headers TSRMLS_DC)
 {
+	if(SEG(commandLine)) return SAPI_HEADER_SENT_SUCCESSFULLY;
 	if(!sapi_headers) return SAPI_HEADER_SEND_FAILED;
 	std::vector<char>* out = SEG(output);
 	if(!out) return SAPI_HEADER_SEND_FAILED;
