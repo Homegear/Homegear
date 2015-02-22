@@ -19,6 +19,14 @@ mv Homegear-$2 $sourcePath
 rm -Rf $sourcePath/.* 1>/dev/null 2>&2
 rm -Rf $sourcePath/obj
 rm -Rf $sourcePath/bin
+cd $sourcePath/Libraries/MQTT/paho.mqtt.c
+wget https://github.com/Homegear/paho.mqtt.c/archive/develop.zip
+unzip develop.zip
+rm develop.zip
+mv paho.mqtt.c-develop/* .
+rm -Rf paho.mqtt.c-develop
+cd ../../../../
+
 tar -zcpf homegear_$version.orig.tar.gz $sourcePath
 cd $sourcePath
 dch -v $version-$1 -M
