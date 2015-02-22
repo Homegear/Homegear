@@ -63,8 +63,7 @@ solution "homegear"
          --"BIDCOSTICC1101",
          --"BIDCOSRTLSDRLAN",
       }
-      linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear", "-Wl,-rpath=/usr/lib/php5" }
-      libdirs { "/usr/lib/php5" }
+      linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear" }
 
    configuration { "rpi", "gmake" }
       includedirs { "./Includes/ARM\ headers" }
