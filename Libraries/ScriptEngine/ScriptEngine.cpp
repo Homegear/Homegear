@@ -62,9 +62,9 @@ void ScriptEngine::dispose()
 	if(_disposing) return;
 	_disposing = true;
 	php_homegear_shutdown();
-	GD::out.printInfo("Info: Waiting for script threads to finish.");
 	while(_scriptThreads.size() > 0)
 	{
+		GD::out.printInfo("Info: Waiting for script threads to finish.");
 		collectGarbage();
 		if(_scriptThreads.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
@@ -308,8 +308,6 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& 
 {
 	if(_disposing) return 1;
 	TSRMLS_FETCH();
-	char* defaultMimeType = nullptr;
-	char* defaultCharset = nullptr;
 	try
 	{
 		zend_file_handle script;
@@ -326,10 +324,8 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& 
 
 		SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise POST data is not processed.
 		SG(sapi_headers).http_response_code = 200;
-		defaultMimeType = estrndup("text/html", 9);
-		defaultCharset = estrndup("UTF-8", 5);
-		SG(default_mimetype) = defaultMimeType;
-		SG(default_charset) = defaultCharset;
+		SG(default_mimetype) = nullptr;
+		SG(default_charset) = nullptr;
 		SG(request_info).content_length = request.getHeader()->contentLength;
 		if(!request.getHeader()->contentType.empty()) SG(request_info).content_type = request.getHeader()->contentType.c_str();
 		SG(request_info).request_method = request.getHeader()->method.c_str();
@@ -364,16 +360,6 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& 
 			efree(SG(request_info).path_translated);
 			SG(request_info).path_translated = nullptr;
 		}
-		if(defaultMimeType)
-		{
-			efree(defaultMimeType);
-			defaultMimeType = nullptr;
-		}
-		if(defaultCharset)
-		{
-			efree(defaultCharset);
-			defaultMimeType = nullptr;
-		}
 
 		php_request_shutdown(NULL);
 
@@ -407,16 +393,6 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& 
 	{
 		efree(SG(request_info).path_translated);
 		SG(request_info).path_translated = nullptr;
-	}
-	if(defaultMimeType)
-	{
-		efree(defaultMimeType);
-		defaultMimeType = nullptr;
-	}
-	if(defaultCharset)
-	{
-		efree(defaultCharset);
-		defaultMimeType = nullptr;
 	}
 	return 1;
 }
