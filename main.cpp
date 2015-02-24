@@ -160,7 +160,7 @@ void terminate(int32_t signalNumber)
 				signal(signalNumber, SIG_DFL); //Reset signal handler for the current signal to default
 				kill(getpid(), signalNumber); //Generate core dump
 			}
-			GD::out.printError("Error: Signal SIGABRT (6) received.");
+
 		}
 		else if(signalNumber == SIGHUP)
 		{
@@ -503,7 +503,7 @@ int main(int argc, char* argv[])
 
     	//Enable printing of backtraces
     	signal(SIGHUP, terminate);
-    	signal(SIGABRT, terminate);
+    	//signal(SIGABRT, terminate);
     	signal(SIGSEGV, terminate);
     	signal(SIGTERM, terminate);
 
