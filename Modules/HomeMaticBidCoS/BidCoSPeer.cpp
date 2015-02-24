@@ -2179,7 +2179,7 @@ bool BidCoSPeer::hasLowbatBit(std::shared_ptr<BaseLib::RPC::DeviceFrame> frame)
 			{
 				//fmod is needed for sizes > 1 (e. g. for frame WEATHER_EVENT)
 				//9.8 is not working, result is 9.7999999
-				if((j->index + std::fmod(j->size, 1)) >= 9.79) return false;
+				if((j->index + std::fmod(j->size, 1)) >= 9.79 && j->param != "LOWBAT") return false;
 			}
 		}
 		return true;

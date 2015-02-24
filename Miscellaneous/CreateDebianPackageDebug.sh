@@ -21,6 +21,7 @@ rm -Rf $sourcePath/obj
 rm -Rf $sourcePath/bin
 sed -i 's/make config=release/make config=debug/g' $sourcePath/debian/rules
 sed -i 's/$(CURDIR)\/bin\/Release\/homegear/$(CURDIR)\/bin\/Debug\/homegear/g' $sourcePath/debian/rules
+sed -i 's/$(CURDIR)\/lib\/Modules\/Release\//$(CURDIR)\/lib\/Modules\/Debug\//g' $sourcePath/debian/rules
 cd $sourcePath/Libraries/MQTT/paho.mqtt.c
 wget https://github.com/Homegear/paho.mqtt.c/archive/develop.zip
 unzip develop.zip

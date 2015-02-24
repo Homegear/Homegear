@@ -126,7 +126,9 @@ void terminate(int32_t signalNumber)
 			stopRPCServers();
 			GD::rpcServers.clear();
 			GD::out.printInfo( "(Shutdown) => Stopping Event handler");
+#ifdef EVENTHANDLER
 			GD::eventHandler.dispose();
+#endif
 			if(GD::mqtt->enabled())
 			{
 				GD::out.printInfo( "(Shutdown) => Stopping MQTT client");;
@@ -644,10 +646,12 @@ int main(int argc, char* argv[])
 		GD::out.printInfo("Starting CLI server...");
 		GD::cliServer.start();
 
+#ifdef EVENTHANDLER
         GD::out.printInfo("Initializing event handler...");
         GD::eventHandler.init();
         GD::out.printInfo("Loading events...");
         GD::eventHandler.load();
+#endif
         _startUpComplete = true;
         GD::out.printMessage("Startup complete. Waiting for physical interfaces to connect.");
 

@@ -4,23 +4,12 @@
 
 set -x
 
-print_usage() {
-	echo "Usage: CreateDockerRaspbianJessiePHPBuild.sh ARCH"
-	echo "  ARCH:           The CPU architecture. E. g. armhf"
-}
-
 if [ $EUID -ne 0 ]; then
 	echo "ERROR: This tool must be run as Root"
 	exit 1
 fi
 
-if test -z $1; then
-	echo "Please provide a valid CPU architecture."	
-	print_usage
-	exit 0;
-fi
-
-arch=$1
+arch="armhf"
 
 dir="$(mktemp -d ${TMPDIR:-/var/tmp}/docker-mkimage.XXXXXXXXXX)"
 rootfs=$dir/rootfs
@@ -87,7 +76,11 @@ chroot $rootfs bash -c "cd /PHPBuild && apt-get source php5"
 cd $rootfs/PHPBuild
 tar -zxf php5_5*.debian.tar.gz
 cd ..
-chroot $rootfs bash -c "cd /PHPBuild && mk-build-deps --install debian/control"
+sed -i '/.*libt1-dev,.*/d' $rootfs/PHPBuild/debian/control
+chroot $rootfs bash -c "cd /PHPBuild && mk-build-deps debian/control"
+chroot $rootfs bash -c "cd /PHPBuild && dpkg -i php5-build-deps_*.deb"
+chroot $rootfs apt-get -y -f install
+chroot $rootfs apt-get -y -f install
 rm -Rf $rootfs/PHPBuild/*
 cat > "$rootfs/PHPBuild/CreatePHPPackages.sh" <<-'EOF'
 #!/bin/bash
@@ -121,6 +114,7 @@ echo "php5 (${version}-${revision}~homegear.${1}) ${distribution}; urgency=mediu
  -- Sathya Laufer <sathya@laufers.net>  $date
 " | cat - debian/changelog > debian/changelog2
 mv debian/changelog2 debian/changelog
+sed -i 's/^Architecture: all.*/Architecture: any/' "debian/control"
 DEB_BUILD_OPTIONS=nocheck debuild
 rm -Rf /PHPBuild/*/
 /PHPBuild/Upload.sh
@@ -223,6 +217,8 @@ echo "Container setup successful. You can now execute \"/PHPBuild/CreatePHPPacka
 EOF
 chmod 755 $rootfs/FirstStart.sh
 echo "/FirstStart.sh" >> $rootfs/root/.bashrc
+
+read -p "Copy additional files into ${rootfs} and check that all packages were installed ok then hit [Enter] to continue..."
 
 chroot $rootfs apt-get clean
 rm -Rf $rootfs/var/lib/apt/lists/*

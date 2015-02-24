@@ -68,6 +68,17 @@ solution "homegear"
    configuration { "rpi", "gmake" }
       includedirs { "./Includes/ARM\ headers" }
       libdirs { "./ARM\ libraries" }
+      defines
+      {
+         "FORTIFY_SOURCE=2",
+         "GCRYPT_NO_DEPRECATED",
+         --Needed because of gnutls.h/php_config.h conflict.
+         "HAVE_SSIZE_T=1",
+         "SCRIPTENGINE",
+         "EVENTHANDLER"
+         --"BIDCOSTICC1101",
+         --"BIDCOSRTLSDRLAN",
+      }
 
    --armel does not support std::future which is used in script engine and event handler
    configuration { "armel", "gmake" }
