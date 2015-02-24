@@ -230,7 +230,9 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 
 		std::vector<char> output;
 		php_homegear_get_globals(TSRMLS_C)->output = &output;
+		php_homegear_get_globals(TSRMLS_C)->http = nullptr;
 		php_homegear_get_globals(TSRMLS_C)->commandLine = true;
+		php_homegear_get_globals(TSRMLS_C)->cookiesParsed = true;
 
 		PG(register_argc_argv) = 1;
 		SG(options) |= SAPI_OPTION_NO_CHDIR;

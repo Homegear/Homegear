@@ -80,6 +80,7 @@ void php_homegear_build_argv(std::vector<std::string>& arguments TSRMLS_DC)
 
 static int php_homegear_read_post(char *buf, uint count_bytes TSRMLS_DC)
 {
+	if(SEG(commandLine)) return 0;
 	BaseLib::HTTP* http = SEG(http);
 	if(!http) return 0;
 	size_t bytesRead = http->readContentStream(buf, count_bytes);
@@ -89,8 +90,9 @@ static int php_homegear_read_post(char *buf, uint count_bytes TSRMLS_DC)
 
 static char* php_homegear_read_cookies(TSRMLS_D)
 {
+	if(SEG(commandLine)) return 0;
 	BaseLib::HTTP* http = SEG(http);
-	if(!http) return 0;
+	if(!http || !http->getHeader()) return 0;
 	if(!SEG(cookiesParsed))
 	{
 		SEG(cookiesParsed) = true;
