@@ -37,26 +37,11 @@
 #include "Webserver.h"
 
 #include <thread>
-#include <iostream>
-#include <iomanip>
 #include <string>
 #include <vector>
 #include <list>
-#include <iterator>
-#include <sstream>
 #include <mutex>
 #include <memory>
-#include <map>
-#include <unordered_map>
-#include <utility>
-#include <cstring>
-
-#include <fcntl.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/socket.h>
-#include <errno.h>
 
 #include <gnutls/gnutls.h>
 

@@ -88,6 +88,7 @@ cd $rootfs/PHPBuild
 tar -zxf php5_5*.debian.tar.gz
 cd ..
 sed -i '/.*libt1-dev,.*/d' $rootfs/PHPBuild/debian/control
+sed -i '/.*libxml2-dev/a\\t       libxpm-dev,' $rootfs/PHPBuild/debian/control
 chroot $rootfs bash -c "cd /PHPBuild && mk-build-deps debian/control"
 chroot $rootfs bash -c "cd /PHPBuild && dpkg -i php5-build-deps_*.deb"
 chroot $rootfs apt-get -y -f install
@@ -126,6 +127,9 @@ echo "php5 (${version}-${revision}~homegear.${1}) ${distribution}; urgency=mediu
 " | cat - debian/changelog > debian/changelog2
 mv debian/changelog2 debian/changelog
 sed -i 's/^Architecture: all.*/Architecture: any/' debian/control
+sed -i '/.*libt1-dev,.*/d' debian/control
+sed -i '/.*libxml2-dev/a\\t       libxpm-dev,' debian/control
+sed -i '/.*--with-t1lib.*/d' debian/rules
 DEB_BUILD_OPTIONS=nocheck debuild
 rm -Rf /PHPBuild/*/
 /PHPBuild/Upload.sh

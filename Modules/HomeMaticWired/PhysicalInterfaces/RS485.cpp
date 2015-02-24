@@ -445,8 +445,6 @@ std::vector<uint8_t> RS485::readFromDevice()
 		uint32_t length = 0;
 		std::vector<uint8_t> localBuffer(1);
 		fd_set readFileDescriptor;
-		FD_ZERO(&readFileDescriptor);
-		FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
 
 		while(!_stopCallbackThread)
 		{

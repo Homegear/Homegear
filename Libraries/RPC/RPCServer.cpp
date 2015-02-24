@@ -431,7 +431,6 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::vec
 			//Sleep a tiny little bit. Some clients like the linux version of IP-Symcon don't accept responses too fast.
 			std::this_thread::sleep_for(std::chrono::milliseconds(2));
 			if(!keepAlive || !client->binaryPacket) std::this_thread::sleep_for(std::chrono::milliseconds(20)); //Add additional time for XMLRPC requests. Otherwise clients might not receive response.
-			if(GD::bl->debugLevel >= 4) GD::out.printDebug("Debug: Response: " + BaseLib::HelperFunctions::getHexString(data));
 			client->socket->proofwrite(data);
 		}
 		catch(BaseLib::SocketDataLimitException& ex)
@@ -1214,6 +1213,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					std::vector<char> response;
 					if(http.getHeader()->method == "POST") _webServer->post(http, response);
 					else if(http.getHeader()->method == "GET" || http.getHeader()->method == "HEAD") _webServer->get(http, response);
+					if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Webserver response: " + BaseLib::HelperFunctions::getHexString(response));
 					sendRPCResponseToClient(client, response, false);
 				}
 				else if(http.getContentSize() > 0 && (_info->xmlrpcServer || _info->jsonrpcServer))

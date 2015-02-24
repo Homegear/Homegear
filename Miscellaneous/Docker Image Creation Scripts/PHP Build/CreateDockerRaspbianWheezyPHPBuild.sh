@@ -113,7 +113,7 @@ echo "php5 (${version}-${revision}~homegear.${1}) ${distribution}; urgency=mediu
  -- Sathya Laufer <sathya@laufers.net>  $date
 " | cat - debian/changelog > debian/changelog2
 mv debian/changelog2 debian/changelog
-sed -i 's/^Architecture: all.*/Architecture: any/' "debian/control"
+sed -i 's/^Architecture: all.*/Architecture: any/' debian/control
 DEB_BUILD_OPTIONS=nocheck debuild
 rm -Rf /PHPBuild/*/
 /PHPBuild/Upload.sh
