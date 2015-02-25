@@ -60,6 +60,7 @@ ScriptEngine::~ScriptEngine()
 void ScriptEngine::dispose()
 {
 	if(_disposing) return;
+	if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Disposing of ScriptEngine started.");
 	_disposing = true;
 	php_homegear_shutdown();
 	while(_scriptThreads.size() > 0)
@@ -68,6 +69,7 @@ void ScriptEngine::dispose()
 		collectGarbage();
 		if(_scriptThreads.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
+	if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Disposing of ScriptEngine finished.");
 }
 
 void ScriptEngine::collectGarbage()
