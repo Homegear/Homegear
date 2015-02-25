@@ -236,6 +236,6 @@ EOF
 
 rm -Rf $rootfs
 
-docker build -t homegear/phpbuild:raspbian-wheezy-$arch "$dir"
+docker build -t homegear/phpbuild:raspbian-wheezy "$dir"
 
 rm -Rf $dir

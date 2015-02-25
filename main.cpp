@@ -504,7 +504,7 @@ int main(int argc, char* argv[])
 
     	//Enable printing of backtraces
     	signal(SIGHUP, terminate);
-    	//signal(SIGABRT, terminate);
+    	signal(SIGABRT, terminate);
     	signal(SIGSEGV, terminate);
     	signal(SIGTERM, terminate);
 

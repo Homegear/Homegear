@@ -27,7 +27,7 @@
  * files in the program, then also delete it here.
  */
 
-#ifdef SCRIPTENGINE
+#ifdef EVENTHANDLER
 #include "EventHandler.h"
 #include "../GD/GD.h"
 #include "../../Modules/Base/BaseLib.h"

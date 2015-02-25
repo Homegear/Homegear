@@ -241,6 +241,6 @@ EOF
 
 rm -Rf $rootfs
 
-docker build -t homegear/phpbuild:raspbian-jessie-$arch "$dir"
+docker build -t homegear/phpbuild:raspbian-jessie "$dir"
 
 rm -Rf $dir

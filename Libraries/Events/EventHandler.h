@@ -27,7 +27,7 @@
  * files in the program, then also delete it here.
  */
 
-#ifdef SCRIPTENGINE
+#ifdef EVENTHANDLER
 #ifndef EVENTHANDLER_H_
 #define EVENTHANDLER_H_
 
