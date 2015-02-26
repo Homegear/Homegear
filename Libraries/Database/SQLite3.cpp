@@ -218,7 +218,7 @@ void SQLite3::getDataRows(sqlite3_stmt* statement, std::shared_ptr<DataTable>& d
 void SQLite3::bindData(sqlite3_stmt* statement, DataRow& dataToEscape)
 {
 	//There is no try/catch block on purpose!
-	int32_t result;
+	int32_t result = 0;
 	int32_t index = 1;
 	std::for_each(dataToEscape.begin(), dataToEscape.end(), [&](std::shared_ptr<DataColumn> col)
 	{

@@ -139,7 +139,9 @@ void terminate(int32_t signalNumber)
 			GD::out.printInfo( "(Shutdown) => Closing physical devices");
 			GD::physicalInterfaces.stopListening();
 			GD::physicalInterfaces.dispose();
+#ifdef SCRIPTENGINE
 			GD::scriptEngine.dispose();
+#endif
 			GD::familyController.saveAndDispose(false);
 			GD::db.dispose();
 			GD::out.printMessage("(Shutdown) => Shutdown complete.");
