@@ -50,6 +50,7 @@ public:
 	Devices(BaseLib::Systems::DeviceFamilies family);
 	virtual ~Devices() {}
 	bool empty() { return _devices.empty(); }
+	void clear() { _devices.clear(); }
 	void init(BaseLib::Obj* baseLib);
 	virtual void load();
 	virtual std::shared_ptr<Device> find(Systems::DeviceFamilies family, std::shared_ptr<Systems::Packet> packet);

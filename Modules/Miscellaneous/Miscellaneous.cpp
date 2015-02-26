@@ -65,6 +65,7 @@ void Miscellaneous::dispose()
 	DeviceFamily::dispose();
 
 	_central.reset();
+	GD::rpcDevices.clear();
 }
 
 std::shared_ptr<BaseLib::Systems::Central> Miscellaneous::getCentral() { return _central; }

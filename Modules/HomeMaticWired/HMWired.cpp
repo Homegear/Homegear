@@ -69,6 +69,7 @@ void HMWired::dispose()
 
 	GD::physicalInterface.reset();
 	_central.reset();
+	GD::rpcDevices.clear();
 }
 
 std::shared_ptr<BaseLib::Systems::Central> HMWired::getCentral() { return _central; }
