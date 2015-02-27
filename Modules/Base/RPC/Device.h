@@ -133,7 +133,7 @@ public:
 	};
 	struct Operations
 	{
-		enum Enum { none = 0, read = 1, write = 2, event = 4 };
+		enum Enum { none = 0, read = 1, write = 2, event = 4, addonWrite = 16 };
 	};
 	struct UIFlags
 	{

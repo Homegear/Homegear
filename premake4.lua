@@ -543,9 +543,15 @@ solution "homegear"
       language "C++"
       files { "*.h", "*.cpp" }
       files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
-      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l readline", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l upnp", "-l mqtt", "-l database", "-l scriptengine", "-l base", "-l gpg-error", "-l sqlite3", "-l php5", "-l paho.mqtt.c" }
+      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l readline", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l upnp", "-l mqtt", "-l database", "-l scriptengine", "-l base", "-l gpg-error", "-l sqlite3", "-l paho.mqtt.c" }
       buildoptions { "-Wall", "-std=c++11" }
  
+      configuration { "native", "linux", "gmake" }
+        linkoptions { "-l php5" }
+
+      configuration { "rpi", "gmake" }
+        linkoptions { "-l php5" }
+
       configuration "Debug"
          defines { "DEBUG" }
          flags { "Symbols" }

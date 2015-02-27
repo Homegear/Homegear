@@ -169,6 +169,7 @@ void MiscPeer::runProgram()
 				GD::out.printError("Error: Could not execute script: " + std::string(strerror(errno)));
 				std::this_thread::sleep_for(std::chrono::milliseconds(rpcDevice->runProgram->interval));
 				if(rpcDevice->runProgram->startType == BaseLib::RPC::DeviceProgram::StartType::once) return;
+				std::this_thread::sleep_for(std::chrono::milliseconds(rpcDevice->runProgram->interval));
 				continue;
 			}
 

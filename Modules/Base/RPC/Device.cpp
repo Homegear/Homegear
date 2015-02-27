@@ -1088,6 +1088,7 @@ Parameter::Parameter(BaseLib::Obj* baseLib, xml_node<>* node, bool checkForID) :
 				if(element == "read") operations = (Operations::Enum)(operations | Operations::Enum::read);
 				else if(element == "write") operations = (Operations::Enum)(operations | Operations::Enum::write);
 				else if(element == "event") operations = (Operations::Enum)(operations | Operations::Enum::event);
+				else if(element == "addon_write") operations = (Operations::Enum)(operations | Operations::Enum::addonWrite);
 			}
 		}
 		else if(attributeName == "ui_flags")

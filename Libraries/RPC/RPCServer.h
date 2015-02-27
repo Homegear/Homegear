@@ -54,6 +54,7 @@ namespace RPC
 			public:
 				int32_t id = -1;
 				bool closed = false;
+				bool addon = false;
 				bool binaryPacket = false;
 				bool webSocket = false;
 				bool webSocketClient = false;

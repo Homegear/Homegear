@@ -84,6 +84,7 @@ public:
 	Variable(int32_t integer) : Variable() { type = VariableType::rpcInteger; integerValue = integer; }
 	Variable(uint32_t integer) : Variable() { type = VariableType::rpcInteger; integerValue = (int32_t)integer; }
 	Variable(std::string string) : Variable() { type = VariableType::rpcString; stringValue = string; }
+	Variable(const char* string) : Variable() { type = VariableType::rpcString; stringValue = std::string(string); }
 	Variable(bool boolean) : Variable() { type = VariableType::rpcBoolean; booleanValue = boolean; }
 	Variable(double floatVal) : Variable() { type = VariableType::rpcFloat; floatValue = floatVal; }
 	Variable(PRPCArray arrayVal) : Variable() { type = VariableType::rpcArray; arrayValue = arrayVal; }

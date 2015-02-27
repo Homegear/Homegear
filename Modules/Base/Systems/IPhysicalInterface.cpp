@@ -539,7 +539,7 @@ void IPhysicalInterface::exportGPIO(uint32_t index)
 	{
 		if(!gpioDefined(index))
 		{
-			_bl->out.printError("Error: Failed to export GPIO with index " + std::to_string(index) + " for device \"" + _settings->type + ": GPIO not defined in physicel devices' settings.");
+			_bl->out.printError("Error: Failed to export GPIO with index " + std::to_string(index) + " for device \"" + _settings->type + "\": GPIO not defined in physicel devices' settings.");
 			return;
 		}
 		if(_settings->gpio[index].path.empty()) getGPIOPath(index);
