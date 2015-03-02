@@ -319,6 +319,11 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
+
+int32_t FamilyController::onIsAddonClient(int32_t clientID)
+{
+	return RPC::Server::isAddonClient(clientID);
+}
 //End Device event handling
 
 void FamilyController::homegearShuttingDown()

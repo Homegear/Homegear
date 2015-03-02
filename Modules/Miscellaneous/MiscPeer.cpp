@@ -540,11 +540,11 @@ std::shared_ptr<BaseLib::RPC::ParameterSet> MiscPeer::getParameterSet(int32_t ch
 	return std::shared_ptr<BaseLib::RPC::ParameterSet>();
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::getDeviceInfo(std::map<std::string, bool> fields)
+std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::getDeviceInfo(int32_t clientID, std::map<std::string, bool> fields)
 {
 	try
 	{
-		std::shared_ptr<BaseLib::RPC::Variable> info(Peer::getDeviceInfo(fields));
+		std::shared_ptr<BaseLib::RPC::Variable> info(Peer::getDeviceInfo(clientID, fields));
 		return info;
 	}
 	catch(const std::exception& ex)
@@ -562,7 +562,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::getDeviceInfo(std::map<std::st
     return std::shared_ptr<BaseLib::RPC::Variable>();
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
+std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::getParamset(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
 {
 	try
 	{
@@ -625,7 +625,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::getParamset(int32_t channel, B
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
+std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::getParamsetDescription(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
 {
 	try
 	{
@@ -640,7 +640,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::getParamsetDescription(int32_t
 		}
 
 		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets[type];
-		return Peer::getParamsetDescription(parameterSet);
+		return Peer::getParamsetDescription(clientID, parameterSet);
 	}
 	catch(const std::exception& ex)
     {
@@ -657,7 +657,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::getParamsetDescription(int32_t
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> variables, bool onlyPushing)
+std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::putParamset(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> variables, bool onlyPushing)
 {
 	try
 	{
@@ -716,7 +716,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::putParamset(int32_t channel, B
 			for(BaseLib::RPC::RPCStruct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
 				if(i->first.empty() || !i->second) continue;
-				setValue(channel, i->first, i->second);
+				setValue(clientID, channel, i->first, i->second);
 			}
 		}
 		else
@@ -740,11 +740,11 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::putParamset(int32_t channel, B
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value)
+std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::setValue(int32_t clientID, uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value)
 {
 	try
 	{
-		Peer::setValue(channel, valueKey, value); //Ignore result, otherwise setHomegerValue might not be executed
+		Peer::setValue(clientID, channel, valueKey, value); //Ignore result, otherwise setHomegerValue might not be executed
 		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
 		if(!_centralFeatures) return BaseLib::RPC::Variable::createError(-2, "Not a central peer.");
 		if(valueKey.empty()) return BaseLib::RPC::Variable::createError(-5, "Value key is empty.");
@@ -754,6 +754,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::setValue(uint32_t channel, std
 		std::shared_ptr<BaseLib::RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
 		if(!rpcParameter) return BaseLib::RPC::Variable::createError(-5, "Unknown parameter.");
 		if(rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::typeAction && !value->booleanValue) return BaseLib::RPC::Variable::createError(-5, "Parameter of type action cannot be set to \"false\".");
+		if(!(rpcParameter->operations & BaseLib::RPC::Parameter::Operations::write) && !((rpcParameter->operations & BaseLib::RPC::Parameter::Operations::addonWrite) && raiseIsAddonClient(clientID) == 1)) return BaseLib::RPC::Variable::createError(-6, "parameter is read only");
 		BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
 		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>());

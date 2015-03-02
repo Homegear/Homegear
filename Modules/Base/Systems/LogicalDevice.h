@@ -94,6 +94,7 @@ public:
 		virtual void onRPCNewDevices(std::shared_ptr<RPC::Variable> deviceDescriptions) = 0;
 		virtual void onRPCDeleteDevices(std::shared_ptr<RPC::Variable> deviceAddresses, std::shared_ptr<RPC::Variable> deviceInfo) = 0;
 		virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values) = 0;
+		virtual int32_t onIsAddonClient(int32_t clientID) = 0;
 	};
 	//End event handling
 
@@ -191,6 +192,7 @@ protected:
 	virtual void raiseRPCNewDevices(std::shared_ptr<RPC::Variable> deviceDescriptions);
 	virtual void raiseRPCDeleteDevices(std::shared_ptr<RPC::Variable> deviceAddresses, std::shared_ptr<RPC::Variable> deviceInfo);
 	virtual void raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values);
+	virtual int32_t raiseIsAddonClient(int32_t clientID);
 	//End event handling
 
 	//Physical device event handling
@@ -225,6 +227,7 @@ protected:
 	virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> values);
 	virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint);
 	virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values);
+	virtual int32_t onIsAddonClient(int32_t clientID);
 	//End Peer event handling
 };
 

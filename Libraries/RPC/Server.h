@@ -51,6 +51,16 @@ public:
 	const std::shared_ptr<ServerInfo::Info> getInfo() { if(!_server) return std::shared_ptr<ServerInfo::Info>(); return _server->getInfo(); }
 	uint32_t connectionCount();
 	std::shared_ptr<BaseLib::RPC::Variable> callMethod(std::string methodName, std::shared_ptr<BaseLib::RPC::Variable> parameters);
+
+	/**
+	 * Checks if a client is an addon on all RPC servers.
+	 *
+	 * @param clientID The id of the client to check.
+	 * @return Returns 1 if the client is known and is an addon, 0 if the client is known and no addon and -1 if the client is unknown.
+	 */
+	static int32_t isAddonClient(int32_t clientID);
+
+	int32_t checkAddonClient(int32_t clientID);
 protected:
 	std::shared_ptr<RPCServer> _server;
 };

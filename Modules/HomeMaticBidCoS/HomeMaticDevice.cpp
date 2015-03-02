@@ -557,7 +557,7 @@ void HomeMaticDevice::loadPeers()
 					team->rpcDevice = peer->rpcDevice->team;
 					team->initializeCentralConfig();
 					team->setID(peer->getID() | (1 << 30));
-					team->setInterface(peer->getPhysicalInterfaceID());
+					team->setInterface(-1, peer->getPhysicalInterfaceID());
 					_peersBySerial[team->getSerialNumber()] = team;
 					_peersByID[team->getID()] = team;
 				}

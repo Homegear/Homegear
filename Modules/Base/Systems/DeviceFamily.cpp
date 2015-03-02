@@ -189,6 +189,12 @@ void DeviceFamily::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<
 {
 	if(_eventHandler) ((IFamilyEventSink*)_eventHandler)->onEvent(peerID, channel, variables, values);
 }
+
+int32_t DeviceFamily::raiseIsAddonClient(int32_t clientID)
+{
+	if(_eventHandler) return ((IFamilyEventSink*)_eventHandler)->onIsAddonClient(clientID);
+	return -1;
+}
 //End event handling
 
 //Device event handling
@@ -310,6 +316,11 @@ void DeviceFamily::onRPCDeleteDevices(std::shared_ptr<RPC::Variable> deviceAddre
 void DeviceFamily::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values)
 {
 	raiseEvent(peerID, channel, variables, values);
+}
+
+int32_t DeviceFamily::onIsAddonClient(int32_t clientID)
+{
+	return raiseIsAddonClient(clientID);
 }
 //End Device event handling
 

@@ -330,6 +330,7 @@ public:
 	bool paired = false;
 	double countFromSysinfo = -1;
 	double countFromSysinfoSize = 1;
+	std::string countFromVariable;
 	std::string function;
 	std::string pairFunction1;
 	std::string pairFunction2;

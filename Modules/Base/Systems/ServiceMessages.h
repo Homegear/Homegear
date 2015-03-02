@@ -80,7 +80,7 @@ public:
 	virtual void save(int32_t channel, std::string id, uint8_t value);
 	virtual bool set(std::string id, bool value);
 	virtual void set(std::string id, uint8_t value, uint32_t channel);
-	virtual std::shared_ptr<RPC::Variable> get(bool returnID);
+	virtual std::shared_ptr<RPC::Variable> get(int32_t clientID, bool returnID);
 
 	virtual void setConfigPending(bool value);
 	virtual bool getConfigPending() { return _configPending; }

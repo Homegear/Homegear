@@ -195,6 +195,12 @@ void LogicalDevice::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 {
 	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onEvent(peerID, channel, variables, values);
 }
+
+int32_t LogicalDevice::raiseIsAddonClient(int32_t clientID)
+{
+	if(_eventHandler) return ((IDeviceEventSink*)_eventHandler)->onIsAddonClient(clientID);
+	return -1;
+}
 //End event handling
 
 //Peer event handling
@@ -281,6 +287,11 @@ void LogicalDevice::onRPCUpdateDevice(uint64_t id, int32_t channel, std::string 
 void LogicalDevice::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values)
 {
 	raiseEvent(peerID, channel, variables, values);
+}
+
+int32_t LogicalDevice::onIsAddonClient(int32_t clientID)
+{
+	return raiseIsAddonClient(clientID);
 }
 //End Peer event handling
 

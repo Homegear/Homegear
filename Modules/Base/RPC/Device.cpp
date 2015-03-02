@@ -1807,6 +1807,7 @@ DeviceChannel::DeviceChannel(BaseLib::Obj* baseLib, xml_node<>* node, uint32_t& 
 				}
 			}
 		}
+		else if(attributeName == "count_from_variable") countFromVariable = attributeValue;
 		else _bl->out.printWarning("Warning: Unknown attribute for \"channel\": " + attributeName);
 	}
 	for(xml_node<>* channelNode = node->first_node(); channelNode; channelNode = channelNode->next_sibling())

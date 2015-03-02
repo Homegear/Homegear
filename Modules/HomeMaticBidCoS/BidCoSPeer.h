@@ -195,32 +195,32 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         /**
          * {@inheritDoc}
          */
-        virtual std::shared_ptr<BaseLib::RPC::Variable> activateLinkParamset(int32_t channel, uint64_t remoteID, int32_t remoteChannel, bool longPress);
+        virtual std::shared_ptr<BaseLib::RPC::Variable> activateLinkParamset(int32_t clientID, int32_t channel, uint64_t remoteID, int32_t remoteChannel, bool longPress);
 
         /**
          * {@inheritDoc}
          */
-        virtual std::shared_ptr<BaseLib::RPC::Variable> getDeviceDescription(int32_t channel, std::map<std::string, bool> fields);
+        virtual std::shared_ptr<BaseLib::RPC::Variable> getDeviceDescription(int32_t clientID, int32_t channel, std::map<std::string, bool> fields);
 
         /**
          * {@inheritDoc}
          */
-        virtual std::shared_ptr<BaseLib::RPC::Variable> getDeviceInfo(std::map<std::string, bool> fields);
+        virtual std::shared_ptr<BaseLib::RPC::Variable> getDeviceInfo(int32_t clientID, std::map<std::string, bool> fields);
 
         /**
          * {@inheritDoc}
          */
-        virtual std::shared_ptr<BaseLib::RPC::Variable> getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
+        virtual std::shared_ptr<BaseLib::RPC::Variable> getParamsetDescription(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
 
         /**
          * {@inheritDoc}
          */
-        virtual std::shared_ptr<BaseLib::RPC::Variable> getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
+        virtual std::shared_ptr<BaseLib::RPC::Variable> getParamset(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
 
         /**
          * {@inheritDoc}
          */
-        virtual std::shared_ptr<BaseLib::RPC::Variable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> variables, bool onlyPushing = false);
+        virtual std::shared_ptr<BaseLib::RPC::Variable> putParamset(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> variables, bool onlyPushing = false);
 
         /**
          * Sets the physical interface for this peer.
@@ -228,7 +228,7 @@ class BidCoSPeer : public BaseLib::Systems::Peer
          * @param interfaceID The id of the physical interface as defined in physicalinterfaces.conf
          * @return Returns "RPC void" on success, RPC error "-5" when the interface is unknown, RPC error "-103" to "-100" on AES errors. See the RPC reference for more information.
          */
-        virtual std::shared_ptr<BaseLib::RPC::Variable> setInterface(std::string interfaceID);
+        virtual std::shared_ptr<BaseLib::RPC::Variable> setInterface(int32_t clientID, std::string interfaceID);
 
         /**
          * Checks if the interface with ID interfaceID has better reception than the current interface. If that is the case and the configuration parameter "ROAMING" is "true" for the peer, the interface will be changed.
@@ -240,7 +240,7 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         /**
          * {@inheritDoc}
          */
-        virtual std::shared_ptr<BaseLib::RPC::Variable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value);
+        virtual std::shared_ptr<BaseLib::RPC::Variable> setValue(int32_t clientID, uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value);
         //End RPC methods
     protected:
         uint32_t _lastRSSIDevice = 0;

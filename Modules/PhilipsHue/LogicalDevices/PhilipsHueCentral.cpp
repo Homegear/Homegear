@@ -511,7 +511,7 @@ std::string PhilipsHueCentral::handleCLICommand(std::string command)
 				index++;
 			}
 
-			std::shared_ptr<BaseLib::RPC::Variable> result = searchDevices();
+			std::shared_ptr<BaseLib::RPC::Variable> result = searchDevices(-1);
 			if(result->errorStruct) stringStream << "Error: " << result->structValue->at("faultString")->stringValue << std::endl;
 			else stringStream << "Search completed successfully." << std::endl;
 			return stringStream.str();
@@ -618,7 +618,7 @@ bool PhilipsHueCentral::knowsDevice(uint64_t id)
 }
 
 //RPC functions
-std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::deleteDevice(std::string serialNumber, int32_t flags)
+std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::deleteDevice(int32_t clientID, std::string serialNumber, int32_t flags)
 {
 	try
 	{
@@ -626,7 +626,7 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::deleteDevice(std::str
 		if(serialNumber[0] == '*') return BaseLib::RPC::Variable::createError(-2, "Cannot delete virtual device.");
 		std::shared_ptr<PhilipsHuePeer> peer = getPeer(serialNumber);
 		if(!peer) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
-		return deleteDevice(peer->getID(), flags);
+		return deleteDevice(clientID, peer->getID(), flags);
 	}
 	catch(const std::exception& ex)
     {
@@ -643,7 +643,7 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::deleteDevice(std::str
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::deleteDevice(uint64_t peerID, int32_t flags)
+std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::deleteDevice(int32_t clientID, uint64_t peerID, int32_t flags)
 {
 	try
 	{
@@ -671,7 +671,7 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::deleteDevice(uint64_t
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::getDeviceInfo(uint64_t id, std::map<std::string, bool> fields)
+std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::getDeviceInfo(int32_t clientID, uint64_t id, std::map<std::string, bool> fields)
 {
 	try
 	{
@@ -680,7 +680,7 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::getDeviceInfo(uint64_
 			std::shared_ptr<PhilipsHuePeer> peer(getPeer(id));
 			if(!peer) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
 
-			return peer->getDeviceInfo(fields);
+			return peer->getDeviceInfo(clientID, fields);
 		}
 		else
 		{
@@ -699,7 +699,7 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::getDeviceInfo(uint64_
 			{
 				//listDevices really needs a lot of resources, so wait a little bit after each device
 				std::this_thread::sleep_for(std::chrono::milliseconds(3));
-				std::shared_ptr<BaseLib::RPC::Variable> info = (*i)->getDeviceInfo(fields);
+				std::shared_ptr<BaseLib::RPC::Variable> info = (*i)->getDeviceInfo(clientID, fields);
 				if(!info) continue;
 				array->arrayValue->push_back(info);
 			}
@@ -725,7 +725,7 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::getDeviceInfo(uint64_
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::putParamset(std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset)
+std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::putParamset(int32_t clientID, std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset)
 {
 	try
 	{
@@ -741,7 +741,7 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::putParamset(std::stri
 			}
 			else remoteID = remotePeer->getID();
 		}
-		std::shared_ptr<BaseLib::RPC::Variable> result = peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
+		std::shared_ptr<BaseLib::RPC::Variable> result = peer->putParamset(clientID, channel, type, remoteID, remoteChannel, paramset);
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -759,13 +759,13 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::putParamset(std::stri
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::putParamset(uint64_t peerID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset)
+std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::putParamset(int32_t clientID, uint64_t peerID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset)
 {
 	try
 	{
 		std::shared_ptr<PhilipsHuePeer> peer(getPeer(peerID));
 		if(!peer) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
-		std::shared_ptr<BaseLib::RPC::Variable> result = peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
+		std::shared_ptr<BaseLib::RPC::Variable> result = peer->putParamset(clientID, channel, type, remoteID, remoteChannel, paramset);
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -783,7 +783,7 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::putParamset(uint64_t 
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::searchDevices()
+std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::searchDevices(int32_t clientID)
 {
 	try
 	{
@@ -846,7 +846,7 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::searchDevices()
 			std::shared_ptr<BaseLib::RPC::Variable> deviceDescriptions(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 			for(std::vector<std::shared_ptr<PhilipsHuePeer>>::iterator i = newPeers.begin(); i != newPeers.end(); ++i)
 			{
-				std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> descriptions = (*i)->getDeviceDescriptions(true, std::map<std::string, bool>());
+				std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> descriptions = (*i)->getDeviceDescriptions(clientID, true, std::map<std::string, bool>());
 				if(!descriptions) continue;
 				for(std::vector<std::shared_ptr<BaseLib::RPC::Variable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
 				{

@@ -33,6 +33,8 @@
 
 using namespace RPC;
 
+int32_t RPCServer::_currentClientID = 0;
+
 RPCServer::Client::Client()
 {
 	 socket = std::shared_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl.get()));
@@ -318,6 +320,7 @@ void RPCServer::mainThread()
 				_stateMutex.lock();
 				std::shared_ptr<Client> client(new Client());
 				client->id = _currentClientID++;
+				if(client->id == -1) client->id = _currentClientID++; //-1 is not allowed
 				client->socketDescriptor = clientFileDescriptor;
 				while(_clients.find(client->id) != _clients.end())
 				{
@@ -602,7 +605,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCServer::callMethod(std::string& metho
 				(*i)->print();
 			}
 		}
-		std::shared_ptr<BaseLib::RPC::Variable> ret = _rpcMethods->at(methodName)->invoke(parameters->arrayValue);
+		std::shared_ptr<BaseLib::RPC::Variable> ret = _rpcMethods->at(methodName)->invoke(-1, parameters->arrayValue);
 		if(GD::bl->debugLevel >= 5)
 		{
 			_out.printDebug("Response: ");
@@ -630,6 +633,19 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 	try
 	{
 		if(_stopped) return;
+
+		if(methodName == "setClientType" && parameters->size() > 0)
+		{
+			if(parameters->at(0)->integerValue == 1)
+			{
+				_out.printInfo("Info: Type of client " + std::to_string(client->id) + " set to addon.");
+				client->addon = true;
+				BaseLib::RPC::PVariable ret(new BaseLib::RPC::Variable());
+				sendRPCResponseToClient(client, ret, messageId, responseType, keepAlive);
+			}
+			return;
+		}
+
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
 			_out.printError("Warning: RPC method not found: " + methodName);
@@ -644,7 +660,7 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 				(*i)->print();
 			}
 		}
-		std::shared_ptr<BaseLib::RPC::Variable> ret = _rpcMethods->at(methodName)->invoke(parameters);
+		std::shared_ptr<BaseLib::RPC::Variable> ret = _rpcMethods->at(methodName)->invoke(client->id, parameters);
 		if(GD::bl->debugLevel >= 5)
 		{
 			_out.printDebug("Response: ");
@@ -725,6 +741,41 @@ void RPCServer::packetReceived(std::shared_ptr<Client> client, std::vector<char>
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+int32_t RPCServer::isAddonClient(int32_t clientID)
+{
+	try
+	{
+		_stateMutex.lock();
+		if(_clients.find(clientID) != _clients.end())
+		{
+			if(_clients.at(clientID)->addon)
+			{
+				_stateMutex.unlock();
+				return 1;
+			}
+			else
+			{
+				_stateMutex.unlock();
+				return 0;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _stateMutex.unlock();
+    return -1;
 }
 
 void RPCServer::collectGarbage()

@@ -61,14 +61,14 @@ public:
 	virtual bool knowsDevice(std::string serialNumber);
 	virtual bool knowsDevice(uint64_t id);
 
-	virtual std::shared_ptr<BaseLib::RPC::Variable> addDevice(std::string serialNumber);
-	virtual std::shared_ptr<BaseLib::RPC::Variable> deleteDevice(std::string serialNumber, int32_t flags);
-	virtual std::shared_ptr<BaseLib::RPC::Variable> deleteDevice(uint64_t peerID, int32_t flags);
-	virtual std::shared_ptr<BaseLib::RPC::Variable> getDeviceInfo(uint64_t id, std::map<std::string, bool> fields);
-	virtual std::shared_ptr<BaseLib::RPC::Variable> getInstallMode();
-	virtual std::shared_ptr<BaseLib::RPC::Variable> putParamset(std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset);
-	virtual std::shared_ptr<BaseLib::RPC::Variable> putParamset(uint64_t peerID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset);
-	virtual std::shared_ptr<BaseLib::RPC::Variable> setInstallMode(bool on, uint32_t duration = 60, bool debugOutput = true);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> addDevice(int32_t clientID, std::string serialNumber);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> deleteDevice(int32_t clientID, std::string serialNumber, int32_t flags);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> deleteDevice(int32_t clientID, uint64_t peerID, int32_t flags);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> getDeviceInfo(int32_t clientID, uint64_t id, std::map<std::string, bool> fields);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> getInstallMode(int32_t clientID);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> putParamset(int32_t clientID, std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> putParamset(int32_t clientID, uint64_t peerID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> setInstallMode(int32_t clientID, bool on, uint32_t duration = 60, bool debugOutput = true);
 protected:
 	uint32_t _timeLeftInPairingMode = 0;
 	void pairingModeTimer(int32_t duration, bool debugOutput = true);

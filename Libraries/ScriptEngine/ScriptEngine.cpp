@@ -173,12 +173,13 @@ std::vector<std::string> ScriptEngine::getArgs(const std::string& path, const st
 	return argv;
 }
 
-int32_t ScriptEngine::execute(const std::string path, const std::string arguments, bool wait)
+int32_t ScriptEngine::execute(const std::string path, const std::string arguments, std::shared_ptr<std::vector<char>> output, bool wait)
 {
 	try
 	{
 		if(_disposing) return 1;
 		if(path.empty()) return -1;
+		if(!output) output.reset(new std::vector<char>());
 		if(!wait)
 		{
 			collectGarbage();
@@ -187,7 +188,7 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 				_scriptThreadMutex.lock();
 				try
 				{
-					_scriptThreads.insert(std::pair<int32_t, std::future<int32_t>>(_currentScriptThreadID++, std::async(std::launch::async, &ScriptEngine::execute, this, path, arguments, true)));
+					_scriptThreads.insert(std::pair<int32_t, std::future<int32_t>>(_currentScriptThreadID++, std::async(std::launch::async, &ScriptEngine::execute, this, path, arguments, output, true)));
 				}
 				catch(const std::exception& ex)
 				{
@@ -228,8 +229,7 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 		script.opened_path = NULL;
 		script.free_filename = 0;
 
-		std::vector<char> output;
-		php_homegear_get_globals(TSRMLS_C)->output = &output;
+		php_homegear_get_globals(TSRMLS_C)->output = output.get();
 		php_homegear_get_globals(TSRMLS_C)->http = nullptr;
 		php_homegear_get_globals(TSRMLS_C)->commandLine = true;
 		php_homegear_get_globals(TSRMLS_C)->cookiesParsed = true;
@@ -259,9 +259,9 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 		int32_t exitCode = EG(exit_status);
 
 		php_request_shutdown(NULL);
-		if(output.size() > 0)
+		if(GD::bl->debugLevel >= 5 && output->size() > 0)
 		{
-			std::string outputString(&output.at(0), output.size());
+			std::string outputString(&output->at(0), output->size());
 			if(BaseLib::HelperFunctions::trim(outputString).size() > 0) GD::out.printMessage("Script output: " + outputString);
 		}
 

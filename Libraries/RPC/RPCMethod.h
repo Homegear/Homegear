@@ -51,7 +51,7 @@ public:
 
 	ParameterError::Enum checkParameters(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters, std::vector<BaseLib::RPC::VariableType> types);
 	ParameterError::Enum checkParameters(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters, std::vector<std::vector<BaseLib::RPC::VariableType>> types);
-	virtual std::shared_ptr<BaseLib::RPC::Variable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
 	std::shared_ptr<BaseLib::RPC::Variable> getError(ParameterError::Enum error);
 	std::shared_ptr<BaseLib::RPC::Variable> getSignature() { return _signatures; }
 	std::shared_ptr<BaseLib::RPC::Variable> getHelp() { return _help; }

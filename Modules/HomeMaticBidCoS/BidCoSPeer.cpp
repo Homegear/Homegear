@@ -377,7 +377,7 @@ void BidCoSPeer::worker()
 				else
 				{
 					std::shared_ptr<BaseLib::RPC::Variable> rpcValue = valuesCentral.at((*i)->channel).at((*i)->key).rpcParameter->convertFromPacket((*i)->data);
-					setValue((*i)->channel, (*i)->key, rpcValue);
+					setValue(-1, (*i)->channel, (*i)->key, rpcValue);
 				}
 			}
 			_variablesToResetMutex.lock();
@@ -2536,7 +2536,7 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
     }
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::activateLinkParamset(int32_t channel, uint64_t remoteID, int32_t remoteChannel, bool longPress)
+std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::activateLinkParamset(int32_t clientID, int32_t channel, uint64_t remoteID, int32_t remoteChannel, bool longPress)
 {
 	try
 	{
@@ -2594,11 +2594,11 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::activateLinkParamset(int32_t
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getDeviceDescription(int32_t channel, std::map<std::string, bool> fields)
+std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getDeviceDescription(int32_t clientID, int32_t channel, std::map<std::string, bool> fields)
 {
 	try
 	{
-		std::shared_ptr<BaseLib::RPC::Variable> description(Peer::getDeviceDescription(channel, fields));
+		std::shared_ptr<BaseLib::RPC::Variable> description(Peer::getDeviceDescription(clientID, channel, fields));
 		if(description->errorStruct || description->structValue->empty()) return description;
 
 		if(channel > -1)
@@ -2647,11 +2647,11 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getDeviceDescription(int32_t
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getDeviceInfo(std::map<std::string, bool> fields)
+std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getDeviceInfo(int32_t clientID, std::map<std::string, bool> fields)
 {
 	try
 	{
-		std::shared_ptr<BaseLib::RPC::Variable> info(Peer::getDeviceInfo(fields));
+		std::shared_ptr<BaseLib::RPC::Variable> info(Peer::getDeviceInfo(clientID, fields));
 		if(info->errorStruct) return info;
 
 		if(fields.empty() || fields.find("INTERFACE") != fields.end()) info->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(_physicalInterface->getID()))));
@@ -2673,7 +2673,7 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getDeviceInfo(std::map<std::
     return std::shared_ptr<BaseLib::RPC::Variable>();
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
+std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getParamsetDescription(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
 {
 	try
 	{
@@ -2688,7 +2688,7 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getParamsetDescription(int32
 		}
 
 		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets[type];
-		return Peer::getParamsetDescription(parameterSet);
+		return Peer::getParamsetDescription(clientID, parameterSet);
 	}
 	catch(const std::exception& ex)
     {
@@ -2705,7 +2705,7 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getParamsetDescription(int32
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> variables, bool onlyPushing)
+std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::putParamset(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> variables, bool onlyPushing)
 {
 	try
 	{
@@ -2874,7 +2874,7 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::putParamset(int32_t channel,
 			for(BaseLib::RPC::RPCStruct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
 				if(i->first.empty() || !i->second) continue;
-				setValue(channel, i->first, i->second);
+				setValue(clientID, channel, i->first, i->second);
 			}
 		}
 		else if(type == BaseLib::RPC::ParameterSet::Type::Enum::link)
@@ -3022,7 +3022,7 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::putParamset(int32_t channel,
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
+std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::getParamset(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
 {
 	try
 	{
@@ -3222,7 +3222,7 @@ void BidCoSPeer::addVariableToResetCallback(std::shared_ptr<CallbackFunctionPara
     }
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setInterface(std::string interfaceID)
+std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setInterface(int32_t clientID, std::string interfaceID)
 {
 	try
 	{
@@ -3269,11 +3269,11 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setInterface(std::string int
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value)
+std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setValue(int32_t clientID, uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value)
 {
 	try
 	{
-		Peer::setValue(channel, valueKey, value); //Ignore result, otherwise setHomegerValue might not be executed
+		Peer::setValue(clientID, channel, valueKey, value); //Ignore result, otherwise setHomegerValue might not be executed
 		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
 		if(!_centralFeatures) return BaseLib::RPC::Variable::createError(-2, "Not a central peer.");
 		if(valueKey.empty()) return BaseLib::RPC::Variable::createError(-5, "Value key is empty.");
@@ -3328,7 +3328,7 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setValue(uint32_t channel, s
 				toggleValue = toggleParam->rpcParameter->convertFromPacket(temp);
 			}
 			else return BaseLib::RPC::Variable::createError(-6, "Toggle parameter has to be of type boolean, float or integer.");
-			return setValue(channel, toggleKey, toggleValue);
+			return setValue(clientID, channel, toggleKey, toggleValue);
 		}
 		std::string setRequest = rpcParameter->physicalParameter->setRequest;
 		if(setRequest.empty()) return BaseLib::RPC::Variable::createError(-6, "parameter is read only");

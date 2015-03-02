@@ -35,7 +35,7 @@
 namespace RPC
 {
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCSystemGetCapabilities::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCSystemGetCapabilities::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -75,7 +75,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSystemGetCapabilities::invoke(std::sh
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCSystemListMethods::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCSystemListMethods::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -105,7 +105,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSystemListMethods::invoke(std::shared
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCSystemMethodHelp::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCSystemMethodHelp::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -138,7 +138,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSystemMethodHelp::invoke(std::shared_
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCSystemMethodSignature::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCSystemMethodSignature::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -177,7 +177,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSystemMethodSignature::invoke(std::sh
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCSystemMulticall::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCSystemMulticall::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -213,7 +213,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSystemMulticall::invoke(std::shared_p
 
 			if(methodName == "system.multicall") returns->arrayValue->push_back(BaseLib::RPC::Variable::createError(-32602, "Recursive calls to system.multicall are not allowed."));
 			else if(methods->find(methodName) == methods->end()) returns->arrayValue->push_back(BaseLib::RPC::Variable::createError(-32601, "Requested method not found."));
-			else returns->arrayValue->push_back(methods->at(methodName)->invoke(parameters));
+			else returns->arrayValue->push_back(methods->at(methodName)->invoke(clientID, parameters));
 		}
 
 		return returns;
@@ -233,7 +233,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSystemMulticall::invoke(std::shared_p
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCAbortEventReset::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCAbortEventReset::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 #ifdef EVENTHANDLER
 	try
@@ -261,7 +261,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCAbortEventReset::invoke(std::shared_p
 #endif
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCActivateLinkParamset::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCActivateLinkParamset::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -309,11 +309,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCActivateLinkParamset::invoke(std::sha
 			if(!central)continue;
 			if(useSerialNumber)
 			{
-				if(central->knowsDevice(serialNumber)) return central->activateLinkParamset(serialNumber, channel, remoteSerialNumber, remoteChannel, longPress);
+				if(central->knowsDevice(serialNumber)) return central->activateLinkParamset(clientID, serialNumber, channel, remoteSerialNumber, remoteChannel, longPress);
 			}
 			else
 			{
-				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->activateLinkParamset(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->integerValue, parameters->at(3)->integerValue, longPress);
+				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->activateLinkParamset(clientID, parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->integerValue, parameters->at(3)->integerValue, longPress);
 			}
 		}
 
@@ -334,7 +334,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCActivateLinkParamset::invoke(std::sha
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCAddDevice::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCAddDevice::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -361,7 +361,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCAddDevice::invoke(std::shared_ptr<std
 			{
 				return BaseLib::RPC::Variable::createError(-2, "Device family is unknown.");
 			}
-			return GD::deviceFamilies.at((BaseLib::Systems::DeviceFamilies)familyID)->getCentral()->addDevice(serialNumber);
+			return GD::deviceFamilies.at((BaseLib::Systems::DeviceFamilies)familyID)->getCentral()->addDevice(clientID, serialNumber);
 		}
 
 		std::shared_ptr<BaseLib::RPC::Variable> result;
@@ -369,7 +369,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCAddDevice::invoke(std::shared_ptr<std
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
-			if(central) result = central->addDevice(serialNumber);
+			if(central) result = central->addDevice(clientID, serialNumber);
 			if(result && !result->errorStruct) returnResult = result;
 		}
 		if(returnResult) return returnResult;
@@ -390,7 +390,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCAddDevice::invoke(std::shared_ptr<std
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCAddEvent::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCAddEvent::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 #ifdef EVENTHANDLER
 	try
@@ -418,7 +418,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCAddEvent::invoke(std::shared_ptr<std:
 #endif
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCAddLink::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCAddLink::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -481,11 +481,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCAddLink::invoke(std::shared_ptr<std::
 			{
 				if(useSerialNumber)
 				{
-					if(central->knowsDevice(senderSerialNumber)) return central->addLink(senderSerialNumber, senderChannel, receiverSerialNumber, receiverChannel, name, description);
+					if(central->knowsDevice(senderSerialNumber)) return central->addLink(clientID, senderSerialNumber, senderChannel, receiverSerialNumber, receiverChannel, name, description);
 				}
 				else
 				{
-					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->addLink(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->integerValue, parameters->at(3)->integerValue, name, description);
+					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->addLink(clientID, parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->integerValue, parameters->at(3)->integerValue, name, description);
 				}
 			}
 		}
@@ -507,7 +507,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCAddLink::invoke(std::shared_ptr<std::
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCClientServerInitialized::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCClientServerInitialized::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -531,7 +531,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClientServerInitialized::invoke(std::
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCCreateDevice::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCCreateDevice::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -544,7 +544,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCCreateDevice::invoke(std::shared_ptr<
 		{
 			return BaseLib::RPC::Variable::createError(-2, "Device family is unknown.");
 		}
-		return GD::deviceFamilies.at((BaseLib::Systems::DeviceFamilies)parameters->at(0)->integerValue)->getCentral()->createDevice(parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->integerValue, parameters->at(4)->integerValue);
+		return GD::deviceFamilies.at((BaseLib::Systems::DeviceFamilies)parameters->at(0)->integerValue)->getCentral()->createDevice(clientID, parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->integerValue, parameters->at(4)->integerValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -561,7 +561,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCCreateDevice::invoke(std::shared_ptr<
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCDeleteDevice::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCDeleteDevice::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -579,11 +579,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCDeleteDevice::invoke(std::shared_ptr<
 			{
 				if(useSerialNumber)
 				{
-					if(central->knowsDevice(parameters->at(0)->stringValue)) return central->deleteDevice(parameters->at(0)->stringValue, parameters->at(1)->integerValue);
+					if(central->knowsDevice(parameters->at(0)->stringValue)) return central->deleteDevice(clientID, parameters->at(0)->stringValue, parameters->at(1)->integerValue);
 				}
 				else
 				{
-					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->deleteDevice(parameters->at(0)->integerValue, parameters->at(1)->integerValue);
+					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->deleteDevice(clientID, parameters->at(0)->integerValue, parameters->at(1)->integerValue);
 				}
 			}
 		}
@@ -605,7 +605,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCDeleteDevice::invoke(std::shared_ptr<
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCDeleteMetadata::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCDeleteMetadata::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -667,7 +667,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCDeleteMetadata::invoke(std::shared_pt
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCDeleteSystemVariable::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCDeleteSystemVariable::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -691,7 +691,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCDeleteSystemVariable::invoke(std::sha
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCEnableEvent::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCEnableEvent::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 #ifdef EVENTHANDLER
 	try
@@ -719,7 +719,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCEnableEvent::invoke(std::shared_ptr<s
 #endif
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetAllMetadata::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetAllMetadata::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -788,7 +788,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetAllMetadata::invoke(std::shared_pt
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetAllSystemVariables::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetAllSystemVariables::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -811,7 +811,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetAllSystemVariables::invoke(std::sh
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetAllValues::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetAllValues::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -848,7 +848,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetAllValues::invoke(std::shared_ptr<
 			if(!central) continue;
 			if(peerID > 0 && !central->knowsDevice(peerID)) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<BaseLib::RPC::Variable> result = central->getAllValues(peerID, returnWriteOnly);
+			std::shared_ptr<BaseLib::RPC::Variable> result = central->getAllValues(clientID, peerID, returnWriteOnly);
 			if(result && result->errorStruct)
 			{
 				if(peerID > 0) return result;
@@ -877,7 +877,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetAllValues::invoke(std::shared_ptr<
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetDeviceDescription::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetDeviceDescription::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -916,11 +916,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetDeviceDescription::invoke(std::sha
 			{
 				if(useSerialNumber)
 				{
-					if(central->knowsDevice(serialNumber)) return central->getDeviceDescription(serialNumber, channel);
+					if(central->knowsDevice(serialNumber)) return central->getDeviceDescription(clientID, serialNumber, channel);
 				}
 				else
 				{
-					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getDeviceDescription(parameters->at(0)->integerValue, parameters->at(1)->integerValue);
+					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getDeviceDescription(clientID, parameters->at(0)->integerValue, parameters->at(1)->integerValue);
 				}
 			}
 		}
@@ -942,7 +942,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetDeviceDescription::invoke(std::sha
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetDeviceInfo::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetDeviceInfo::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -986,12 +986,12 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetDeviceInfo::invoke(std::shared_ptr
 			if(!central) continue;
 			if(peerID > 0)
 			{
-				if(central->knowsDevice(peerID)) return central->getDeviceInfo(peerID, fields);
+				if(central->knowsDevice(peerID)) return central->getDeviceInfo(clientID, peerID, fields);
 			}
 			else
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(3));
-				std::shared_ptr<BaseLib::RPC::Variable> result = central->getDeviceInfo(peerID, fields);
+				std::shared_ptr<BaseLib::RPC::Variable> result = central->getDeviceInfo(clientID, peerID, fields);
 				if(result && result->errorStruct)
 				{
 					GD::out.printWarning("Warning: Error calling method \"listDevices\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
@@ -1019,7 +1019,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetDeviceInfo::invoke(std::shared_ptr
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetEvent::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetEvent::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 #ifdef EVENTHANDLER
 	try
@@ -1047,7 +1047,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetEvent::invoke(std::shared_ptr<std:
 #endif
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetInstallMode::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetInstallMode::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -1068,7 +1068,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetInstallMode::invoke(std::shared_pt
 			{
 				return BaseLib::RPC::Variable::createError(-2, "Device family is unknown.");
 			}
-			return GD::deviceFamilies.at((BaseLib::Systems::DeviceFamilies)familyID)->getCentral()->getInstallMode();
+			return GD::deviceFamilies.at((BaseLib::Systems::DeviceFamilies)familyID)->getCentral()->getInstallMode(clientID);
 		}
 
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
@@ -1076,7 +1076,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetInstallMode::invoke(std::shared_pt
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central)
 			{
-				std::shared_ptr<BaseLib::RPC::Variable> result = central->getInstallMode();
+				std::shared_ptr<BaseLib::RPC::Variable> result = central->getInstallMode(clientID);
 				if(result->integerValue > 0) return result;
 			}
 		}
@@ -1098,7 +1098,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetInstallMode::invoke(std::shared_pt
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetKeyMismatchDevice::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetKeyMismatchDevice::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -1122,7 +1122,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetKeyMismatchDevice::invoke(std::sha
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetLinkInfo::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetLinkInfo::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -1165,11 +1165,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetLinkInfo::invoke(std::shared_ptr<s
 			{
 				if(useSerialNumber)
 				{
-					if(central->knowsDevice(senderSerialNumber)) return central->getLinkInfo(senderSerialNumber, senderChannel, receiverSerialNumber, receiverChannel);
+					if(central->knowsDevice(senderSerialNumber)) return central->getLinkInfo(clientID, senderSerialNumber, senderChannel, receiverSerialNumber, receiverChannel);
 				}
 				else
 				{
-					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getLinkInfo(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->integerValue, parameters->at(3)->integerValue);
+					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getLinkInfo(clientID, parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->integerValue, parameters->at(3)->integerValue);
 				}
 			}
 		}
@@ -1191,7 +1191,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetLinkInfo::invoke(std::shared_ptr<s
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetLinkPeers::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetLinkPeers::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -1227,11 +1227,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetLinkPeers::invoke(std::shared_ptr<
 			{
 				if(useSerialNumber)
 				{
-					if(central->knowsDevice(serialNumber)) return central->getLinkPeers(serialNumber, channel);
+					if(central->knowsDevice(serialNumber)) return central->getLinkPeers(clientID, serialNumber, channel);
 				}
 				else
 				{
-					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getLinkPeers(parameters->at(0)->integerValue, parameters->at(1)->integerValue);
+					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getLinkPeers(clientID, parameters->at(0)->integerValue, parameters->at(1)->integerValue);
 				}
 			}
 		}
@@ -1253,7 +1253,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetLinkPeers::invoke(std::shared_ptr<
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetLinks::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetLinks::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -1307,18 +1307,18 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetLinks::invoke(std::shared_ptr<std:
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
 			if(serialNumber.empty() && peerID == 0)
 			{
-				std::shared_ptr<BaseLib::RPC::Variable> result = central->getLinks(peerID, channel, flags);
+				std::shared_ptr<BaseLib::RPC::Variable> result = central->getLinks(clientID, peerID, channel, flags);
 				if(result && !result->arrayValue->empty()) links->arrayValue->insert(links->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
 			}
 			else
 			{
 				if(useSerialNumber)
 				{
-					if(central->knowsDevice(serialNumber)) return central->getLinks(serialNumber, channel, flags);
+					if(central->knowsDevice(serialNumber)) return central->getLinks(clientID, serialNumber, channel, flags);
 				}
 				else
 				{
-					if(central->knowsDevice(peerID)) return central->getLinks(peerID, channel, flags);
+					if(central->knowsDevice(peerID)) return central->getLinks(clientID, peerID, channel, flags);
 				}
 			}
 		}
@@ -1341,7 +1341,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetLinks::invoke(std::shared_ptr<std:
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetMetadata::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetMetadata::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -1411,7 +1411,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetMetadata::invoke(std::shared_ptr<s
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetParamsetDescription::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetParamsetDescription::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -1470,11 +1470,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetParamsetDescription::invoke(std::s
 			if(!central) continue;
 			if(useSerialNumber)
 			{
-				if(central->knowsDevice(serialNumber)) return central->getParamsetDescription(serialNumber, channel, type, remoteSerialNumber, remoteChannel);
+				if(central->knowsDevice(serialNumber)) return central->getParamsetDescription(clientID, serialNumber, channel, type, remoteSerialNumber, remoteChannel);
 			}
 			else
 			{
-				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getParamsetDescription(parameters->at(0)->integerValue, parameters->at(1)->integerValue, type, remoteID, remoteChannel);
+				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getParamsetDescription(clientID, parameters->at(0)->integerValue, parameters->at(1)->integerValue, type, remoteID, remoteChannel);
 			}
 		}
 
@@ -1495,7 +1495,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetParamsetDescription::invoke(std::s
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetParamsetId::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetParamsetId::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -1554,11 +1554,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetParamsetId::invoke(std::shared_ptr
 			if(!central) continue;
 			if(useSerialNumber)
 			{
-				if(central->knowsDevice(serialNumber)) return central->getParamsetId(serialNumber, channel, type, remoteSerialNumber, remoteChannel);
+				if(central->knowsDevice(serialNumber)) return central->getParamsetId(clientID, serialNumber, channel, type, remoteSerialNumber, remoteChannel);
 			}
 			else
 			{
-				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getParamsetId(parameters->at(0)->integerValue, parameters->at(1)->integerValue, type, remoteID, remoteChannel);
+				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getParamsetId(clientID, parameters->at(0)->integerValue, parameters->at(1)->integerValue, type, remoteID, remoteChannel);
 			}
 		}
 
@@ -1579,7 +1579,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetParamsetId::invoke(std::shared_ptr
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetParamset::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetParamset::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -1639,11 +1639,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetParamset::invoke(std::shared_ptr<s
 			if(!central) continue;
 			if(useSerialNumber)
 			{
-				if(central->knowsDevice(serialNumber)) return central->getParamset(serialNumber, channel, type, remoteSerialNumber, remoteChannel);
+				if(central->knowsDevice(serialNumber)) return central->getParamset(clientID, serialNumber, channel, type, remoteSerialNumber, remoteChannel);
 			}
 			else
 			{
-				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getParamset(parameters->at(0)->integerValue, parameters->at(1)->integerValue, type, remoteID, remoteChannel);
+				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getParamset(clientID, parameters->at(0)->integerValue, parameters->at(1)->integerValue, type, remoteID, remoteChannel);
 			}
 		}
 
@@ -1664,7 +1664,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetParamset::invoke(std::shared_ptr<s
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetPeerId::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetPeerId::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -1704,7 +1704,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetPeerId::invoke(std::shared_ptr<std
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetServiceMessages::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetServiceMessages::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -1724,7 +1724,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetServiceMessages::invoke(std::share
 			if(!central) continue;
 			//getServiceMessages really needs a lot of ressources, so wait a little bit after each central
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<BaseLib::RPC::Variable> messages = central->getServiceMessages(id);
+			std::shared_ptr<BaseLib::RPC::Variable> messages = central->getServiceMessages(clientID, id);
 			if(!messages->arrayValue->empty()) serviceMessages->arrayValue->insert(serviceMessages->arrayValue->end(), messages->arrayValue->begin(), messages->arrayValue->end());
 		}
 
@@ -1745,7 +1745,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetServiceMessages::invoke(std::share
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetSystemVariable::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetSystemVariable::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -1769,7 +1769,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetSystemVariable::invoke(std::shared
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetUpdateStatus::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetUpdateStatus::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -1810,7 +1810,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetUpdateStatus::invoke(std::shared_p
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetValue::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetValue::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -1854,11 +1854,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetValue::invoke(std::shared_ptr<std:
 			{
 				if(useSerialNumber)
 				{
-					if(central->knowsDevice(serialNumber)) return central->getValue(serialNumber, channel, parameters->at(1)->stringValue, requestFromDevice, asynchronously);
+					if(central->knowsDevice(serialNumber)) return central->getValue(clientID, serialNumber, channel, parameters->at(1)->stringValue, requestFromDevice, asynchronously);
 				}
 				else
 				{
-					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getValue(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue, requestFromDevice, asynchronously);
+					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getValue(clientID, parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue, requestFromDevice, asynchronously);
 				}
 			}
 		}
@@ -1880,7 +1880,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetValue::invoke(std::shared_ptr<std:
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCGetVersion::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetVersion::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -1928,7 +1928,7 @@ RPCInit::~RPCInit()
     }
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCInit::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCInit::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2020,7 +2020,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCInit::invoke(std::shared_ptr<std::vec
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCListBidcosInterfaces::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCListBidcosInterfaces::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2044,7 +2044,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCListBidcosInterfaces::invoke(std::sha
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCListClientServers::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCListClientServers::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2072,7 +2072,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCListClientServers::invoke(std::shared
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCListDevices::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCListDevices::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2103,7 +2103,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCListDevices::invoke(std::shared_ptr<s
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<BaseLib::RPC::Variable> result = central->listDevices(channels, fields);
+			std::shared_ptr<BaseLib::RPC::Variable> result = central->listDevices(clientID, channels, fields);
 			if(result && result->errorStruct)
 			{
 				GD::out.printWarning("Warning: Error calling method \"listDevices\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
@@ -2129,7 +2129,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCListDevices::invoke(std::shared_ptr<s
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCListEvents::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCListEvents::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 #ifdef EVENTHANDLER
 	try
@@ -2178,7 +2178,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCListEvents::invoke(std::shared_ptr<st
 #endif
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCListFamilies::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCListFamilies::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2201,7 +2201,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCListFamilies::invoke(std::shared_ptr<
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCListInterfaces::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCListInterfaces::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2233,7 +2233,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCListInterfaces::invoke(std::shared_pt
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCListTeams::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCListTeams::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2245,7 +2245,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCListTeams::invoke(std::shared_ptr<std
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<BaseLib::RPC::Variable> result = central->listTeams();
+			std::shared_ptr<BaseLib::RPC::Variable> result = central->listTeams(clientID);
 			if(!result->arrayValue->empty()) teams->arrayValue->insert(teams->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
 		}
 
@@ -2266,7 +2266,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCListTeams::invoke(std::shared_ptr<std
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCLogLevel::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCLogLevel::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2296,7 +2296,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCLogLevel::invoke(std::shared_ptr<std:
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCPutParamset::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCPutParamset::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2356,11 +2356,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCPutParamset::invoke(std::shared_ptr<s
 			if(!central)continue;
 			if(useSerialNumber)
 			{
-				if(central->knowsDevice(serialNumber)) return central->putParamset(serialNumber, channel, type, remoteSerialNumber, remoteChannel, parameters->back());
+				if(central->knowsDevice(serialNumber)) return central->putParamset(clientID, serialNumber, channel, type, remoteSerialNumber, remoteChannel, parameters->back());
 			}
 			else
 			{
-				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->putParamset(parameters->at(0)->integerValue, parameters->at(1)->integerValue, type, remoteID, remoteChannel, parameters->back());
+				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->putParamset(clientID, parameters->at(0)->integerValue, parameters->at(1)->integerValue, type, remoteID, remoteChannel, parameters->back());
 			}
 		}
 
@@ -2381,7 +2381,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCPutParamset::invoke(std::shared_ptr<s
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCRemoveEvent::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCRemoveEvent::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 #ifdef EVENTHANDLER
 	try
@@ -2409,7 +2409,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRemoveEvent::invoke(std::shared_ptr<s
 #endif
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCRemoveLink::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCRemoveLink::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2451,11 +2451,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRemoveLink::invoke(std::shared_ptr<st
 			if(!central) continue;
 			if(useSerialNumber)
 			{
-				if(central->knowsDevice(senderSerialNumber)) return central->removeLink(senderSerialNumber, senderChannel, receiverSerialNumber, receiverChannel);
+				if(central->knowsDevice(senderSerialNumber)) return central->removeLink(clientID, senderSerialNumber, senderChannel, receiverSerialNumber, receiverChannel);
 			}
 			else
 			{
-				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->removeLink(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->integerValue, parameters->at(3)->integerValue);
+				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->removeLink(clientID, parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->integerValue, parameters->at(3)->integerValue);
 			}
 		}
 
@@ -2476,7 +2476,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRemoveLink::invoke(std::shared_ptr<st
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCReportValueUsage::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCReportValueUsage::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2498,7 +2498,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCReportValueUsage::invoke(std::shared_
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
-			if(central && central->knowsDevice(serialNumber)) return central->reportValueUsage(serialNumber);
+			if(central && central->knowsDevice(serialNumber)) return central->reportValueUsage(clientID, serialNumber);
 		}
 
 		return BaseLib::RPC::Variable::createError(-2, "Device not found.");
@@ -2518,7 +2518,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCReportValueUsage::invoke(std::shared_
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCRssiInfo::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCRssiInfo::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2530,7 +2530,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRssiInfo::invoke(std::shared_ptr<std:
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<BaseLib::RPC::Variable> result = central->rssiInfo();
+			std::shared_ptr<BaseLib::RPC::Variable> result = central->rssiInfo(clientID);
 			if(result && result->errorStruct)
 			{
 				GD::out.printWarning("Warning: Error calling method \"rssiInfo\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
@@ -2556,7 +2556,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRssiInfo::invoke(std::shared_ptr<std:
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCRunScript::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCRunScript::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 #ifdef SCRIPTENGINE
 	try
@@ -2599,7 +2599,14 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRunScript::invoke(std::shared_ptr<std
 		if(internalEngine)
 		{
 			if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Executing script \"" + path + "\" with parameters \"" + arguments + "\" using internal script engine.");
-			exitCode = GD::scriptEngine.execute(path, arguments, wait);
+			std::shared_ptr<std::vector<char>> scriptOutput(new std::vector<char>());
+			exitCode = GD::scriptEngine.execute(path, arguments, scriptOutput, wait);
+			if(scriptOutput->size() > 0)
+			{
+				std::string outputString(&scriptOutput->at(0), &scriptOutput->at(0) + scriptOutput->size());
+				return BaseLib::RPC::PVariable(new BaseLib::RPC::Variable(outputString));
+			}
+			else return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(exitCode));
 		}
 		else
 		{
@@ -2625,8 +2632,8 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRunScript::invoke(std::shared_ptr<std
 			int32_t signal = WIFSIGNALED(exitCode);
 			if(signal) return BaseLib::RPC::Variable::createError(-32400, "Script exited with signal: " + std::to_string(signal));
 			exitCode = WEXITSTATUS(exitCode);
+			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(exitCode));
 		}
-		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(exitCode));
 	}
 	catch(const std::exception& ex)
     {
@@ -2646,7 +2653,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRunScript::invoke(std::shared_ptr<std
 #endif
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCSearchDevices::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCSearchDevices::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2667,14 +2674,14 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSearchDevices::invoke(std::shared_ptr
 			{
 				return BaseLib::RPC::Variable::createError(-2, "Device family is unknown.");
 			}
-			return GD::deviceFamilies.at((BaseLib::Systems::DeviceFamilies)familyID)->getCentral()->searchDevices();
+			return GD::deviceFamilies.at((BaseLib::Systems::DeviceFamilies)familyID)->getCentral()->searchDevices(clientID);
 		}
 
 		std::shared_ptr<BaseLib::RPC::Variable> result(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcInteger));
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
-			if(central) result->integerValue += central->searchDevices()->integerValue;
+			if(central) result->integerValue += central->searchDevices(clientID)->integerValue;
 		}
 
 		return result;
@@ -2694,7 +2701,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSearchDevices::invoke(std::shared_ptr
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCSetId::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCSetId::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2708,7 +2715,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSetId::invoke(std::shared_ptr<std::ve
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central && central->knowsDevice(parameters->at(0)->integerValue))
 			{
-				return central->setId(parameters->at(0)->integerValue, parameters->at(1)->integerValue);
+				return central->setId(clientID, parameters->at(0)->integerValue, parameters->at(1)->integerValue);
 			}
 		}
 
@@ -2729,7 +2736,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSetId::invoke(std::shared_ptr<std::ve
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCSetInstallMode::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCSetInstallMode::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2789,7 +2796,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSetInstallMode::invoke(std::shared_pt
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCSetInterface::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCSetInterface::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2803,7 +2810,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSetInterface::invoke(std::shared_ptr<
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central)
 			{
-				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->setInterface(parameters->at(0)->integerValue, parameters->at(1)->stringValue);
+				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->setInterface(clientID, parameters->at(0)->integerValue, parameters->at(1)->stringValue);
 			}
 		}
 
@@ -2824,7 +2831,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSetInterface::invoke(std::shared_ptr<
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCSetLinkInfo::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCSetLinkInfo::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2886,11 +2893,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSetLinkInfo::invoke(std::shared_ptr<s
 			{
 				if(useSerialNumber)
 				{
-					if(central->knowsDevice(senderSerialNumber)) return central->setLinkInfo(senderSerialNumber, senderChannel, receiverSerialNumber, receiverChannel, name, description);
+					if(central->knowsDevice(senderSerialNumber)) return central->setLinkInfo(clientID, senderSerialNumber, senderChannel, receiverSerialNumber, receiverChannel, name, description);
 				}
 				else
 				{
-					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->setLinkInfo(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->integerValue, parameters->at(3)->integerValue, name, description);
+					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->setLinkInfo(clientID, parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->integerValue, parameters->at(3)->integerValue, name, description);
 				}
 			}
 		}
@@ -2912,7 +2919,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSetLinkInfo::invoke(std::shared_ptr<s
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCSetMetadata::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCSetMetadata::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2975,7 +2982,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSetMetadata::invoke(std::shared_ptr<s
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCSetName::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCSetName::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -2989,7 +2996,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSetName::invoke(std::shared_ptr<std::
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central && central->knowsDevice(parameters->at(0)->integerValue))
 			{
-				return central->setName(parameters->at(0)->integerValue, parameters->at(1)->stringValue);
+				return central->setName(clientID, parameters->at(0)->integerValue, parameters->at(1)->stringValue);
 			}
 		}
 
@@ -3010,7 +3017,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSetName::invoke(std::shared_ptr<std::
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCSetSystemVariable::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCSetSystemVariable::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -3034,7 +3041,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSetSystemVariable::invoke(std::shared
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCSetTeam::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCSetTeam::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -3087,11 +3094,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSetTeam::invoke(std::shared_ptr<std::
 			if(!central) continue;
 			if(useSerialNumber)
 			{
-				if(central->knowsDevice(deviceSerialNumber)) return central->setTeam(deviceSerialNumber, deviceChannel, teamSerialNumber, teamChannel);
+				if(central->knowsDevice(deviceSerialNumber)) return central->setTeam(clientID, deviceSerialNumber, deviceChannel, teamSerialNumber, teamChannel);
 			}
 			else
 			{
-				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->setTeam(parameters->at(0)->integerValue, parameters->at(1)->integerValue, teamID, teamChannel);
+				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->setTeam(clientID, parameters->at(0)->integerValue, parameters->at(1)->integerValue, teamID, teamChannel);
 			}
 		}
 
@@ -3112,7 +3119,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSetTeam::invoke(std::shared_ptr<std::
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCSetValue::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCSetValue::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -3150,11 +3157,11 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSetValue::invoke(std::shared_ptr<std:
 			{
 				if(useSerialNumber)
 				{
-					if(central->knowsDevice(serialNumber)) return central->setValue(serialNumber, channel, parameters->at(1)->stringValue, value);
+					if(central->knowsDevice(serialNumber)) return central->setValue(clientID, serialNumber, channel, parameters->at(1)->stringValue, value);
 				}
 				else
 				{
-					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->setValue(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue, value);
+					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->setValue(clientID, parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue, value);
 				}
 			}
 		}
@@ -3176,7 +3183,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSetValue::invoke(std::shared_ptr<std:
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCSubscribePeers::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCSubscribePeers::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -3225,7 +3232,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSubscribePeers::invoke(std::shared_pt
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCTriggerEvent::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCTriggerEvent::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 #ifdef EVENTHANDLER
 	try
@@ -3253,7 +3260,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCTriggerEvent::invoke(std::shared_ptr<
 #endif
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCUnsubscribePeers::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCUnsubscribePeers::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -3302,7 +3309,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCUnsubscribePeers::invoke(std::shared_
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCUpdateFirmware::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCUpdateFirmware::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -3333,18 +3340,18 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCUpdateFirmware::invoke(std::shared_pt
 				for(std::vector<std::shared_ptr<BaseLib::RPC::Variable>>::iterator i = parameters->at(0)->arrayValue->begin(); i != parameters->at(0)->arrayValue->end(); ++i)
 				{
 					if((*i)->type == BaseLib::RPC::VariableType::rpcInteger && (*i)->integerValue != 0 && central->knowsDevice((*i)->integerValue)) ids.push_back((*i)->integerValue);
-					else if((*i)->type == BaseLib::RPC::VariableType::rpcString && central->knowsDevice((*i)->stringValue)) ids.push_back(central->getPeerID((*i)->stringValue)->integerValue);
+					else if((*i)->type == BaseLib::RPC::VariableType::rpcString && central->knowsDevice((*i)->stringValue)) ids.push_back(central->getPeerID(clientID, (*i)->stringValue)->integerValue);
 				}
 				if(ids.size() > 0 && ids.size() != parameters->at(0)->arrayValue->size()) return BaseLib::RPC::Variable::createError(-2, "Please provide only devices of one device family.");
-				if(ids.size() > 0) return central->updateFirmware(ids, manual);
+				if(ids.size() > 0) return central->updateFirmware(clientID, ids, manual);
 			}
 			else if((parameters->at(0)->type == BaseLib::RPC::VariableType::rpcInteger && central->knowsDevice(parameters->at(0)->integerValue)) ||
 					(parameters->at(0)->type == BaseLib::RPC::VariableType::rpcString && central->knowsDevice(parameters->at(0)->stringValue)))
 			{
 				std::vector<uint64_t> ids;
-				if(parameters->at(0)->type == BaseLib::RPC::VariableType::rpcString) ids.push_back(central->getPeerID(parameters->at(0)->stringValue)->integerValue);
+				if(parameters->at(0)->type == BaseLib::RPC::VariableType::rpcString) ids.push_back(central->getPeerID(clientID, parameters->at(0)->stringValue)->integerValue);
 				else ids.push_back(parameters->at(0)->integerValue);
-				return central->updateFirmware(ids, manual);
+				return central->updateFirmware(clientID, ids, manual);
 			}
 		}
 
@@ -3365,7 +3372,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCUpdateFirmware::invoke(std::shared_pt
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCWriteLog::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RPCWriteLog::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{

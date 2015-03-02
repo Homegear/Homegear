@@ -977,11 +977,11 @@ void MAXPeer::setRSSIDevice(uint8_t rssi)
 }
 
 //RPC Methods
-std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::getDeviceInfo(std::map<std::string, bool> fields)
+std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::getDeviceInfo(int32_t clientID, std::map<std::string, bool> fields)
 {
 	try
 	{
-		std::shared_ptr<BaseLib::RPC::Variable> info(Peer::getDeviceInfo(fields));
+		std::shared_ptr<BaseLib::RPC::Variable> info(Peer::getDeviceInfo(clientID, fields));
 		if(info->errorStruct) return info;
 
 		if(fields.empty() || fields.find("INTERFACE") != fields.end()) info->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(_physicalInterface->getID()))));
@@ -1003,7 +1003,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::getDeviceInfo(std::map<std::str
     return std::shared_ptr<BaseLib::RPC::Variable>();
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
+std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::getParamsetDescription(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
 {
 	try
 	{
@@ -1018,7 +1018,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::getParamsetDescription(int32_t 
 		}
 
 		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets[type];
-		return Peer::getParamsetDescription(parameterSet);
+		return Peer::getParamsetDescription(clientID, parameterSet);
 	}
 	catch(const std::exception& ex)
     {
@@ -1035,7 +1035,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::getParamsetDescription(int32_t 
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> variables, bool onlyPushing)
+std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::putParamset(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> variables, bool onlyPushing)
 {
 	try
 	{
@@ -1138,7 +1138,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::putParamset(int32_t channel, Ba
 			for(BaseLib::RPC::RPCStruct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
 				if(i->first.empty() || !i->second) continue;
-				setValue(channel, i->first, i->second);
+				setValue(clientID, channel, i->first, i->second);
 			}
 		}
 		else
@@ -1162,7 +1162,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::putParamset(int32_t channel, Ba
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
+std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::getParamset(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
 {
 	try
 	{
@@ -1232,7 +1232,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::getParamset(int32_t channel, Ba
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::setInterface(std::string interfaceID)
+std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::setInterface(int32_t clientID, std::string interfaceID)
 {
 	try
 	{
@@ -1259,11 +1259,11 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::setInterface(std::string interf
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value)
+std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::setValue(int32_t clientID, uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value)
 {
 	try
 	{
-		Peer::setValue(channel, valueKey, value); //Ignore result, otherwise setHomegerValue might not be executed
+		Peer::setValue(clientID, channel, valueKey, value); //Ignore result, otherwise setHomegerValue might not be executed
 		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
 		if(!_centralFeatures) return BaseLib::RPC::Variable::createError(-2, "Not a central peer.");
 		if(valueKey.empty()) return BaseLib::RPC::Variable::createError(-5, "Value key is empty.");
@@ -1317,7 +1317,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::setValue(uint32_t channel, std:
 				toggleValue = toggleParam->rpcParameter->convertFromPacket(temp);
 			}
 			else return BaseLib::RPC::Variable::createError(-6, "Toggle parameter has to be of type boolean, float or integer.");
-			return setValue(channel, toggleKey, toggleValue);
+			return setValue(clientID, channel, toggleKey, toggleValue);
 		}
 		std::string setRequest = rpcParameter->physicalParameter->setRequest;
 		if(setRequest.empty()) return BaseLib::RPC::Variable::createError(-6, "parameter is read only");

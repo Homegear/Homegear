@@ -728,9 +728,15 @@ std::string Server::handleGlobalCommand(std::string& command)
 				return stringStream.str();
 			}
 
+			std::shared_ptr<std::vector<char>> scriptOutput(new std::vector<char>());
 #ifdef SCRIPTENGINE
-			int32_t exitCode = GD::scriptEngine.execute(path, arguments.str());
-			stringStream << "Script executed. Exit code: " << std::dec << exitCode << std::endl;
+			int32_t exitCode = GD::scriptEngine.execute(path, arguments.str(), scriptOutput);
+			if(scriptOutput->size() > 0)
+			{
+				std::string outputString(&scriptOutput->at(0), &scriptOutput->at(0) + scriptOutput->size());
+				stringStream << outputString << std::endl;
+			}
+			stringStream << "Exit code: " << std::dec << exitCode << std::endl;
 #else
 			stringStream << "This Homegear binary is compiled without script engine support." << std::endl;
 #endif

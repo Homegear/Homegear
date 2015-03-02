@@ -96,6 +96,7 @@ public:
 	virtual void onRPCNewDevices(std::shared_ptr<BaseLib::RPC::Variable> deviceDescriptions);
 	virtual void onRPCDeleteDevices(std::shared_ptr<BaseLib::RPC::Variable> deviceAddresses, std::shared_ptr<BaseLib::RPC::Variable> deviceInfo);
 	virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values);
+	virtual int32_t onIsAddonClient(int32_t clientID);
 	//End Family event handling
 
 	FamilyController();

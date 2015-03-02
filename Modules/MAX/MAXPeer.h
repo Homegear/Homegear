@@ -106,12 +106,12 @@ public:
 	void packetReceived(std::shared_ptr<MAXPacket> packet);
 
 	//RPC methods
-	virtual std::shared_ptr<BaseLib::RPC::Variable> getDeviceInfo(std::map<std::string, bool> fields);
-	virtual std::shared_ptr<BaseLib::RPC::Variable> getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
-	virtual std::shared_ptr<BaseLib::RPC::Variable> getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
-	virtual std::shared_ptr<BaseLib::RPC::Variable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> variables, bool onlyPushing = false);
-	std::shared_ptr<BaseLib::RPC::Variable> setInterface(std::string interfaceID);
-	virtual std::shared_ptr<BaseLib::RPC::Variable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> getDeviceInfo(int32_t clientID, std::map<std::string, bool> fields);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> getParamsetDescription(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> getParamset(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> putParamset(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> variables, bool onlyPushing = false);
+	std::shared_ptr<BaseLib::RPC::Variable> setInterface(int32_t clientID, std::string interfaceID);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> setValue(int32_t clientID, uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value);
 	//End RPC methods
 protected:
 	uint32_t _lastRSSIDevice = 0;

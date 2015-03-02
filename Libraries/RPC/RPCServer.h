@@ -87,10 +87,18 @@ namespace RPC
 			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> getMethods() { return _rpcMethods; }
 			uint32_t connectionCount();
 			std::shared_ptr<BaseLib::RPC::Variable> callMethod(std::string& methodName, std::shared_ptr<BaseLib::RPC::Variable>& parameters);
+
+			/**
+			 * Checks if a client is an addon.
+			 *
+			 * @param clientID The id of the client to check.
+			 * @return Returns 1 if the client is known and is an addon, 0 if the client is known and no addon and -1 if the client is unknown.
+			 */
+			int32_t isAddonClient(int32_t clientID);
 		protected:
 		private:
 			BaseLib::Output _out;
-			volatile int32_t _currentClientID = 0;
+			static int32_t _currentClientID;
 			std::shared_ptr<ServerInfo::Info> _info;
 			gnutls_certificate_credentials_t _x509Cred = nullptr;
 			gnutls_priority_t _tlsPriorityCache = nullptr;

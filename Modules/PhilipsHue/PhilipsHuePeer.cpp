@@ -666,11 +666,11 @@ double PhilipsHuePeer::getHueFactor(const double& hue)
 }
 
 //RPC Methods
-std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::getDeviceInfo(std::map<std::string, bool> fields)
+std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::getDeviceInfo(int32_t clientID, std::map<std::string, bool> fields)
 {
 	try
 	{
-		std::shared_ptr<BaseLib::RPC::Variable> info(Peer::getDeviceInfo(fields));
+		std::shared_ptr<BaseLib::RPC::Variable> info(Peer::getDeviceInfo(clientID, fields));
 		if(info->errorStruct) return info;
 
 		if(fields.empty() || fields.find("INTERFACE") != fields.end()) info->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(GD::physicalInterface->getID()))));
@@ -692,7 +692,7 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::getDeviceInfo(std::map<s
     return std::shared_ptr<BaseLib::RPC::Variable>();
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
+std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::getParamsetDescription(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
 {
 	try
 	{
@@ -702,7 +702,7 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::getParamsetDescription(i
 		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set");
 
 		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets[type];
-		return Peer::getParamsetDescription(parameterSet);
+		return Peer::getParamsetDescription(clientID, parameterSet);
 	}
 	catch(const std::exception& ex)
     {
@@ -719,7 +719,7 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::getParamsetDescription(i
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> variables, bool onlyPushing)
+std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::putParamset(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> variables, bool onlyPushing)
 {
 	try
 	{
@@ -735,7 +735,7 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::putParamset(int32_t chan
 			for(BaseLib::RPC::RPCStruct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
 				if(i->first.empty() || !i->second) continue;
-				setValue(channel, i->first, i->second);
+				setValue(clientID, channel, i->first, i->second);
 			}
 		}
 		else
@@ -759,7 +759,7 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::putParamset(int32_t chan
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
+std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::getParamset(int32_t clientID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
 {
 	try
 	{
@@ -812,16 +812,16 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::getParamset(int32_t chan
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value)
+std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::setValue(int32_t clientID, uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value)
 {
-	return setValue(channel, valueKey, value, false);
+	return setValue(clientID, channel, valueKey, value, false);
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value, bool noSending)
+std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::setValue(int32_t clientID, uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value, bool noSending)
 {
 	try
 	{
-		Peer::setValue(channel, valueKey, value); //Ignore result, otherwise setHomegerValue might not be executed
+		Peer::setValue(clientID, channel, valueKey, value); //Ignore result, otherwise setHomegerValue might not be executed
 		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
 		if(!_centralFeatures) return BaseLib::RPC::Variable::createError(-2, "Not a central peer.");
 		if(valueKey.empty()) return BaseLib::RPC::Variable::createError(-5, "Value key is empty.");
@@ -862,16 +862,16 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::setValue(uint32_t channe
 
 			std::shared_ptr<BaseLib::RPC::Variable> result;
 			uint8_t brightness = std::lround(hsv.getBrightness() * 255.0);
-			if(brightness < 10) result = setValue(channel, "STATE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(false)), true);
-			else result = setValue(channel, "STATE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(true)), true);
+			if(brightness < 10) result = setValue(clientID, channel, "STATE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(false)), true);
+			else result = setValue(clientID, channel, "STATE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(true)), true);
 			if(result->errorStruct) return result;
-			result = setValue(channel, "BRIGHTNESS", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)brightness)), true);
+			result = setValue(clientID, channel, "BRIGHTNESS", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)brightness)), true);
 			if(result->errorStruct) return result;
 			int32_t hue = std::lround(hsv.getHue() * getHueFactor(hsv.getHue()));
-			result = setValue(channel, "HUE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(hue)), true);
+			result = setValue(clientID, channel, "HUE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(hue)), true);
 			if(result->errorStruct) return result;
 			uint8_t saturation = std::lround(hsv.getSaturation() * 255.0);
-			result = setValue(channel, "SATURATION", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)saturation)), false);
+			result = setValue(clientID, channel, "SATURATION", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)saturation)), false);
 			if(result->errorStruct) return result;
 
 			//Convert back, because the value might be different than the passed one.

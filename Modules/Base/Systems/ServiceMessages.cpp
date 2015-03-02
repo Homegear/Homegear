@@ -365,7 +365,7 @@ void ServiceMessages::set(std::string id, uint8_t value, uint32_t channel)
     }
 }
 
-std::shared_ptr<RPC::Variable> ServiceMessages::get(bool returnID)
+std::shared_ptr<RPC::Variable> ServiceMessages::get(int32_t clientID, bool returnID)
 {
 	try
 	{

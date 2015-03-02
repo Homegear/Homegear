@@ -82,6 +82,7 @@ public:
 			virtual std::shared_ptr<Database::DataTable> onGetPeerVariables(uint64_t peerID) = 0;
 			virtual void onDeletePeerParameter(uint64_t peerID, Database::DataRow data) = 0;
 			virtual bool onSetPeerID(uint64_t oldPeerID, uint64_t newPeerID) = 0;
+			virtual int32_t onIsAddonClient(int32_t clientID) = 0;
 
 			//Service messages
 			virtual std::shared_ptr<Database::DataTable> onGetServiceMessages(uint64_t peerID) = 0;
@@ -178,6 +179,7 @@ protected:
 	virtual void raiseRPCNewDevices(std::shared_ptr<RPC::Variable> deviceDescriptions);
 	virtual void raiseRPCDeleteDevices(std::shared_ptr<RPC::Variable> deviceAddresses, std::shared_ptr<RPC::Variable> deviceInfo);
 	virtual void raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values);
+	virtual int32_t raiseIsAddonClient(int32_t clientID);
 	//End event handling
 
 	//Device event handling
@@ -217,6 +219,7 @@ protected:
 	virtual void onRPCNewDevices(std::shared_ptr<RPC::Variable> deviceDescriptions);
 	virtual void onRPCDeleteDevices(std::shared_ptr<RPC::Variable> deviceAddresses, std::shared_ptr<RPC::Variable> deviceInfo);
 	virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values);
+	virtual int32_t onIsAddonClient(int32_t clientID);
 	//End Device event handling
 };
 

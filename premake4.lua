@@ -86,9 +86,9 @@ solution "homegear"
       defines
       {
          "FORTIFY_SOURCE=2",
-         "GCRYPT_NO_DEPRECATED",
+         "GCRYPT_NO_DEPRECATED"
       }
-      linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear", "-Wl,-rpath=/usr/lib/php5" }
+      linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear" }
 
    project "base"
       kind "StaticLib"
@@ -555,19 +555,19 @@ solution "homegear"
       configuration "Debug"
          defines { "DEBUG" }
          flags { "Symbols" }
-		 libdirs { "./lib/Debug" }
+         libdirs { "./lib/Debug" }
          targetdir "bin/Debug"
  
       configuration "Release"
          defines { "NDEBUG" }
          flags { "Optimize" }
-		 libdirs { "./lib/Release" }
+         libdirs { "./lib/Release" }
          targetdir "bin/Release"
 
       configuration "Profiling"
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols" }
-		 libdirs { "./lib/Profiling" }
+         libdirs { "./lib/Profiling" }
          targetdir "bin/Profiling"
          buildoptions { "-pg" }
          linkoptions { "-pg" }

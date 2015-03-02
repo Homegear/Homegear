@@ -213,7 +213,7 @@ std::string MiscCentral::handleCLICommand(std::string command)
 				}
 
 				std::shared_ptr<BaseLib::RPC::Variable> deviceDescriptions(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
-				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(true, std::map<std::string, bool>());
+				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(-1, true, std::map<std::string, bool>());
 				raiseRPCNewDevices(deviceDescriptions);
 				GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(peer->getID()) + ".");
 				stringStream << "Added peer " + std::to_string(peer->getID()) + " of type 0x" << (int32_t)deviceType << " with serial number " << serialNumber << "." << std::dec << std::endl;
@@ -604,7 +604,7 @@ bool MiscCentral::knowsDevice(uint64_t id)
 	return false;
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::createDevice(int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion)
+std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::createDevice(int32_t clientID, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion)
 {
 	try
 	{
@@ -642,7 +642,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::createDevice(int32_t device
 		}
 
 		std::shared_ptr<BaseLib::RPC::Variable> deviceDescriptions(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
-		deviceDescriptions->arrayValue = peer->getDeviceDescriptions(true, std::map<std::string, bool>());
+		deviceDescriptions->arrayValue = peer->getDeviceDescriptions(-1, true, std::map<std::string, bool>());
 		raiseRPCNewDevices(deviceDescriptions);
 		GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(peer->getID()) + ".");
 		peer->initProgram();
@@ -664,7 +664,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::createDevice(int32_t device
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::deleteDevice(std::string serialNumber, int32_t flags)
+std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::deleteDevice(int32_t clientID, std::string serialNumber, int32_t flags)
 {
 	try
 	{
@@ -672,7 +672,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::deleteDevice(std::string se
 		std::shared_ptr<MiscPeer> peer = getPeer(serialNumber);
 		if(!peer) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 
-		return deleteDevice(peer->getID(), flags);
+		return deleteDevice(clientID, peer->getID(), flags);
 	}
 	catch(const std::exception& ex)
     {
@@ -689,7 +689,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::deleteDevice(std::string se
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::deleteDevice(uint64_t peerID, int32_t flags)
+std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::deleteDevice(int32_t clientID, uint64_t peerID, int32_t flags)
 {
 	try
 	{
@@ -719,7 +719,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::deleteDevice(uint64_t peerI
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::getDeviceInfo(uint64_t id, std::map<std::string, bool> fields)
+std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::getDeviceInfo(int32_t clientID, uint64_t id, std::map<std::string, bool> fields)
 {
 	try
 	{
@@ -728,7 +728,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::getDeviceInfo(uint64_t id, 
 			std::shared_ptr<MiscPeer> peer(getPeer(id));
 			if(!peer) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
 
-			return peer->getDeviceInfo(fields);
+			return peer->getDeviceInfo(clientID, fields);
 		}
 		else
 		{
@@ -747,7 +747,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::getDeviceInfo(uint64_t id, 
 			{
 				//listDevices really needs a lot of resources, so wait a little bit after each device
 				std::this_thread::sleep_for(std::chrono::milliseconds(3));
-				std::shared_ptr<BaseLib::RPC::Variable> info = (*i)->getDeviceInfo(fields);
+				std::shared_ptr<BaseLib::RPC::Variable> info = (*i)->getDeviceInfo(clientID, fields);
 				if(!info) continue;
 				array->arrayValue->push_back(info);
 			}
@@ -770,7 +770,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::getDeviceInfo(uint64_t id, 
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::putParamset(std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset)
+std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::putParamset(int32_t clientID, std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset)
 {
 	try
 	{
@@ -782,7 +782,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::putParamset(std::string ser
 			if(!remotePeer) return BaseLib::RPC::Variable::createError(-3, "Remote peer is unknown.");
 			remoteID = remotePeer->getID();
 		}
-		if(peer) return peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
+		if(peer) return peer->putParamset(clientID, channel, type, remoteID, remoteChannel, paramset);
 		return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)
@@ -800,12 +800,12 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::putParamset(std::string ser
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::putParamset(uint64_t peerID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset)
+std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::putParamset(int32_t clientID, uint64_t peerID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset)
 {
 	try
 	{
 		std::shared_ptr<MiscPeer> peer(getPeer(peerID));
-		if(peer) return peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
+		if(peer) return peer->putParamset(clientID, channel, type, remoteID, remoteChannel, paramset);
 		return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)
