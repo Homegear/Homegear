@@ -748,13 +748,13 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::setValue(int32_t clientID, uin
 		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
 		if(!_centralFeatures) return BaseLib::RPC::Variable::createError(-2, "Not a central peer.");
 		if(valueKey.empty()) return BaseLib::RPC::Variable::createError(-5, "Value key is empty.");
-		if(channel == 0 && serviceMessages->set(valueKey, value->booleanValue)) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		if(valuesCentral.find(channel) == valuesCentral.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
 		if(valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return BaseLib::RPC::Variable::createError(-5, "Unknown parameter.");
 		std::shared_ptr<BaseLib::RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
 		if(!rpcParameter) return BaseLib::RPC::Variable::createError(-5, "Unknown parameter.");
+		if(channel == 0 && (rpcParameter->uiFlags & BaseLib::RPC::Parameter::UIFlags::service) && serviceMessages->set(valueKey, value->booleanValue)) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		if(rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::typeAction && !value->booleanValue) return BaseLib::RPC::Variable::createError(-5, "Parameter of type action cannot be set to \"false\".");
-		if(!(rpcParameter->operations & BaseLib::RPC::Parameter::Operations::write) && !((rpcParameter->operations & BaseLib::RPC::Parameter::Operations::addonWrite) && raiseIsAddonClient(clientID) == 1)) return BaseLib::RPC::Variable::createError(-6, "parameter is read only");
+		if(!(rpcParameter->operations & BaseLib::RPC::Parameter::Operations::write) && clientID != -1 && !((rpcParameter->operations & BaseLib::RPC::Parameter::Operations::addonWrite) && raiseIsAddonClient(clientID) == 1)) return BaseLib::RPC::Variable::createError(-6, "parameter is read only");
 		BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
 		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>());
