@@ -454,7 +454,7 @@ bool PhysicalInterfaces::isOpen()
 {
 	try
 	{
-		if(_physicalInterfaces.empty()) return false;
+		if(_physicalInterfaces.empty()) return true;
 		_physicalInterfacesMutex.lock();
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>>::iterator i = _physicalInterfaces.begin(); i != _physicalInterfaces.end(); ++i)
 		{

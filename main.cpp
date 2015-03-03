@@ -612,11 +612,7 @@ int main(int argc, char* argv[])
     	if(!GD::db.isOpen()) exitHomegear(1);
 
     	GD::physicalInterfaces.load(GD::bl->settings.physicalInterfaceSettingsPath());
-        if(GD::physicalInterfaces.count() == 0)
-        {
-        	GD::out.printCritical("Critical: No physical device could be initialized... Exiting...");
-        	exitHomegear(1);
-        }
+
         GD::out.printInfo("Initializing database...");
         GD::db.convertDatabase();
         GD::db.initializeDatabase();
