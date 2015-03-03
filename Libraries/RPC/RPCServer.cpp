@@ -780,6 +780,7 @@ int32_t RPCServer::isAddonClient(int32_t clientID)
 
 void RPCServer::collectGarbage()
 {
+	_garbageCollectionMutex.lock();
 	try
 	{
 		_lastGargabeCollection = GD::bl->hf.getTime();
@@ -803,6 +804,8 @@ void RPCServer::collectGarbage()
 		_stateMutex.unlock();
 		for(std::vector<std::shared_ptr<Client>>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
 		{
+			_out.printDebug("Debug: Joining read thread of client " + std::to_string((*i)->id));
+			if((*i)->readThread.joinable()) (*i)->readThread.join();
 			_stateMutex.lock();
 			try
 			{
@@ -817,8 +820,6 @@ void RPCServer::collectGarbage()
 				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 			_stateMutex.unlock();
-			_out.printDebug("Debug: Joining read thread of client " + std::to_string((*i)->id));
-			if((*i)->readThread.joinable()) (*i)->readThread.join();
 			_out.printDebug("Debug: Client " + std::to_string((*i)->id) + " removed.");
 		}
 	}
@@ -834,7 +835,7 @@ void RPCServer::collectGarbage()
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-
+    _garbageCollectionMutex.unlock();
 }
 
 void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib::HTTP& http)

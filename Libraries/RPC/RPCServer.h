@@ -109,6 +109,7 @@ namespace RPC
 			bool _stopped = true;
 			std::thread _mainThread;
 			int32_t _backlog = 10;
+			std::mutex _garbageCollectionMutex;
 			int64_t _lastGargabeCollection = 0;
 			std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
 			std::mutex _stateMutex;
