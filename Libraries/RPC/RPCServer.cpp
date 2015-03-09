@@ -1257,7 +1257,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						break;
 					}
 				}
-				else if(_info->webServer && (!_info->xmlrpcServer || http.getHeader()->contentType != "text/xml") && (!_info->jsonrpcServer || http.getHeader()->contentType != "application/json"))
+				else if(_info->webServer && (!_info->xmlrpcServer || (!http.getHeader()->contentType.empty() && http.getHeader()->contentType != "text/xml")) && (!_info->jsonrpcServer || http.getHeader()->contentType != "application/json"))
 				{
 
 					http.getHeader()->remoteAddress = client->address;

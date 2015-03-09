@@ -2,6 +2,10 @@
 <!-- The sensor sends one status packet every hour -->
 <device version="1" rx_modes="WAKEUP" cyclic_timeout="12000">
 	<types>
+		<type name="MAX! Radiator Thermostat" id="BC-RT-TRX-CyG-2">
+			<type_id>0x0400</type_id>
+			<firmware cond_op="GE">0x10</firmware>
+		</type>
 		<type name="MAX! Window Sensor" id="BC-SC-Rd-WM">
 			<type_id>0x040F</type_id>
 			<firmware cond_op="GE">0x10</firmware>

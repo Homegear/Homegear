@@ -2,6 +2,10 @@
 <device version="1" rx_modes="WAKEUP">
 	<types>
 		<type name="MAX! Eco Switch" id="BC-PB-2-WM">
+			<type_id>0x0500</type_id>
+			<firmware cond_op="GE">0x10</firmware>
+		</type>
+		<type name="MAX! Eco Switch" id="BC-PB-2-WM">
 			<type_id>0x050F</type_id>
 			<firmware cond_op="GE">0x10</firmware>
 		</type>
