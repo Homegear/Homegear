@@ -387,7 +387,7 @@ std::string MAXCentral::handleCLICommand(std::string command)
 				index++;
 			}
 
-			setInstallMode(true, duration, false);
+			setInstallMode(-1, true, duration, false);
 			stringStream << "Pairing mode enabled." << std::endl;
 			return stringStream.str();
 		}
@@ -418,7 +418,7 @@ std::string MAXCentral::handleCLICommand(std::string command)
 				index++;
 			}
 
-			setInstallMode(false, -1, false);
+			setInstallMode(-1, false, -1, false);
 			stringStream << "Pairing mode disabled." << std::endl;
 			return stringStream.str();
 		}
