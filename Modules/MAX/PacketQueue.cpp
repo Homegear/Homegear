@@ -368,7 +368,6 @@ void PacketQueue::resend(uint32_t threadId, bool burst)
 						_sendThreadMutex.unlock();
 						return;
 					}
-					packet->setMessageCounter(packet->messageCounter() + 1);
 					if(burst) packet->setBurst(true);
 					_sendThread = std::thread(&PacketQueue::send, this, packet, stealthy);
 					BaseLib::Threads::setThreadPriority(GD::bl, _sendThread.native_handle(), GD::bl->settings.packetQueueThreadPriority(), GD::bl->settings.packetQueueThreadPolicy());
@@ -834,6 +833,7 @@ void PacketQueue::send(std::shared_ptr<MAXPacket> packet, bool stealthy)
 	try
 	{
 		if(noSending || _disposing) return;
+		if(packet->getBurst()) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		if(device) device->sendPacket(_physicalInterface, packet, stealthy);
 		else GD::out.printError("Error: Device pointer of queue " + std::to_string(id) + " is null.");
 	}
