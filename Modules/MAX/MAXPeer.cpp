@@ -1091,14 +1091,12 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::putParamset(int32_t clientID, i
 
 			std::shared_ptr<MAXCentral> central = std::dynamic_pointer_cast<MAXCentral>(getCentral());
 
-			bool firstPacket = true;
 			for(std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>>::iterator i = changedParameters.begin(); i != changedParameters.end(); ++i)
 			{
 				std::vector<uint8_t> payload;
 				payload.push_back(0);
 				payload.push_back(i->first);
-				std::shared_ptr<MAXPacket> configPacket = std::shared_ptr<MAXPacket>(new MAXPacket(_messageCounter, 0x10, 0x00, central->getAddress(), _address, payload, firstPacket && (getRXModes() & Device::RXModes::burst)));
-				firstPacket = false;
+				std::shared_ptr<MAXPacket> configPacket = std::shared_ptr<MAXPacket>(new MAXPacket(_messageCounter, 0x10, 0x00, central->getAddress(), _address, payload, getRXModes() & Device::RXModes::burst));
 
 				for(std::map<int32_t, std::vector<uint8_t>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 				{
