@@ -238,6 +238,8 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 		SG(options) |= SAPI_OPTION_NO_CHDIR;
 		SG(headers_sent) = 1;
 		SG(request_info).no_headers = 1;
+		SG(default_mimetype) = nullptr;
+		SG(default_charset) = nullptr;
 		SG(request_info).path_translated = estrndup(path.c_str(), path.size());
 
 		if (php_request_startup(TSRMLS_C) == FAILURE) {
