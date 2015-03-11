@@ -1249,7 +1249,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 							_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection.");
 							break;
 						}
-						else _out.printDebug("Client successfully authorized using basic authentification.");
+						else _out.printInfo("Info: Client successfully authorized using basic authentification.");
 					}
 					catch(AuthException& ex)
 					{
@@ -1257,7 +1257,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						break;
 					}
 				}
-				else if(_info->webServer && (!_info->xmlrpcServer || (!http.getHeader()->contentType.empty() && http.getHeader()->contentType != "text/xml")) && (!_info->jsonrpcServer || http.getHeader()->contentType != "application/json"))
+				if(_info->webServer && (!_info->xmlrpcServer || http.getHeader()->method != "POST" || (!http.getHeader()->contentType.empty() && http.getHeader()->contentType != "text/xml")) && (!_info->jsonrpcServer || http.getHeader()->method != "POST" || (!http.getHeader()->contentType.empty() && http.getHeader()->contentType != "application/json")))
 				{
 
 					http.getHeader()->remoteAddress = client->address;
