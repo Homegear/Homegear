@@ -143,7 +143,9 @@ static int php_homegear_send_headers(sapi_headers_struct* sapi_headers TSRMLS_DC
 	{
 		sapi_header_struct* header = (sapi_header_struct*)element->data;
 		if(out->size() + header->header_len + 4 > out->capacity()) out->reserve(out->capacity() + 1024);
-		out->insert(out->end(), header->header, header->header + header->header_len);
+		std::string temp(header->header, header->header_len);
+		if(temp.compare(0, 22, "Content-Type: ext/html") == 0) temp = "Content-Type: text/html";
+		out->insert(out->end(), temp.begin(), temp.end());
 		out->push_back('\r');
 		out->push_back('\n');
 		element = element->next;
