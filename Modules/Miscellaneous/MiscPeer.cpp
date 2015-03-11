@@ -752,7 +752,14 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::setValue(int32_t clientID, uin
 		if(valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return BaseLib::RPC::Variable::createError(-5, "Unknown parameter.");
 		std::shared_ptr<BaseLib::RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
 		if(!rpcParameter) return BaseLib::RPC::Variable::createError(-5, "Unknown parameter.");
-		if(channel == 0 && (rpcParameter->uiFlags & BaseLib::RPC::Parameter::UIFlags::service) && serviceMessages->set(valueKey, value->booleanValue)) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
+		if(rpcParameter->uiFlags & BaseLib::RPC::Parameter::UIFlags::service)
+		{
+			if(channel == 0 && value->type == BaseLib::RPC::VariableType::rpcBoolean)
+			{
+				if(serviceMessages->set(valueKey, value->booleanValue)) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
+			}
+			else if(value->type == BaseLib::RPC::VariableType::rpcInteger) serviceMessages->set(valueKey, value->integerValue, channel);
+		}
 		if(rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::typeAction && !value->booleanValue) return BaseLib::RPC::Variable::createError(-5, "Parameter of type action cannot be set to \"false\".");
 		if(!(rpcParameter->operations & BaseLib::RPC::Parameter::Operations::write) && clientID != -1 && !((rpcParameter->operations & BaseLib::RPC::Parameter::Operations::addonWrite) && raiseIsAddonClient(clientID) == 1)) return BaseLib::RPC::Variable::createError(-6, "parameter is read only");
 		BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
