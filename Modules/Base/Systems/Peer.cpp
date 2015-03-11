@@ -1937,6 +1937,7 @@ std::shared_ptr<RPC::Variable> Peer::getParamsetDescription(int32_t clientID, st
 				_bl->out.printDebug("Debug: Omitting parameter " + (*i)->id + " because of it's ui flag.");
 				continue;
 			}
+			int32_t operations = ((*i)->operations & RPC::Parameter::Operations::addonWrite) ? ((int32_t)(*i)->operations) - 16 : (int32_t)(*i)->operations;
 			if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeBoolean)
 			{
 				RPC::LogicalParameterBoolean* parameter = (RPC::LogicalParameterBoolean*)(*i)->logicalParameter.get();
@@ -1947,7 +1948,7 @@ std::shared_ptr<RPC::Variable> Peer::getParamsetDescription(int32_t clientID, st
 				description->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::Variable>(new RPC::Variable((*i)->id))));
 				description->structValue->insert(RPC::RPCStructElement("MAX", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->max))));
 				description->structValue->insert(RPC::RPCStructElement("MIN", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->min))));
-				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)(*i)->operations))));
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", std::shared_ptr<RPC::Variable>(new RPC::Variable(operations))));
 				description->structValue->insert(RPC::RPCStructElement("TAB_ORDER", std::shared_ptr<RPC::Variable>(new RPC::Variable(index))));
 				description->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::Variable>(new RPC::Variable(std::string("BOOL")))));
 				description->structValue->insert(RPC::RPCStructElement("UNIT", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->unit))));
@@ -1962,7 +1963,7 @@ std::shared_ptr<RPC::Variable> Peer::getParamsetDescription(int32_t clientID, st
 				description->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::Variable>(new RPC::Variable((*i)->id))));
 				description->structValue->insert(RPC::RPCStructElement("MAX", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->max))));
 				description->structValue->insert(RPC::RPCStructElement("MIN", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->min))));
-				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)(*i)->operations))));
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", std::shared_ptr<RPC::Variable>(new RPC::Variable(operations))));
 				description->structValue->insert(RPC::RPCStructElement("TAB_ORDER", std::shared_ptr<RPC::Variable>(new RPC::Variable(index))));
 				description->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::Variable>(new RPC::Variable(std::string("STRING")))));
 				description->structValue->insert(RPC::RPCStructElement("UNIT", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->unit))));
@@ -1977,7 +1978,7 @@ std::shared_ptr<RPC::Variable> Peer::getParamsetDescription(int32_t clientID, st
 				description->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::Variable>(new RPC::Variable((*i)->id))));
 				description->structValue->insert(RPC::RPCStructElement("MAX", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->max))));
 				description->structValue->insert(RPC::RPCStructElement("MIN", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->min))));
-				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)(*i)->operations))));
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", std::shared_ptr<RPC::Variable>(new RPC::Variable(operations))));
 				description->structValue->insert(RPC::RPCStructElement("TAB_ORDER", std::shared_ptr<RPC::Variable>(new RPC::Variable(index))));
 				description->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::Variable>(new RPC::Variable(std::string("ACTION")))));
 				description->structValue->insert(RPC::RPCStructElement("UNIT", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->unit))));
@@ -1992,7 +1993,7 @@ std::shared_ptr<RPC::Variable> Peer::getParamsetDescription(int32_t clientID, st
 				description->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::Variable>(new RPC::Variable((*i)->id))));
 				description->structValue->insert(RPC::RPCStructElement("MAX", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->max))));
 				description->structValue->insert(RPC::RPCStructElement("MIN", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->min))));
-				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)(*i)->operations))));
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", std::shared_ptr<RPC::Variable>(new RPC::Variable(operations))));
 
 				if(!parameter->specialValues.empty())
 				{
@@ -2021,7 +2022,7 @@ std::shared_ptr<RPC::Variable> Peer::getParamsetDescription(int32_t clientID, st
 				description->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::Variable>(new RPC::Variable((*i)->id))));
 				description->structValue->insert(RPC::RPCStructElement("MAX", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->max))));
 				description->structValue->insert(RPC::RPCStructElement("MIN", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->min))));
-				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)(*i)->operations))));
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", std::shared_ptr<RPC::Variable>(new RPC::Variable(operations))));
 				description->structValue->insert(RPC::RPCStructElement("TAB_ORDER", std::shared_ptr<RPC::Variable>(new RPC::Variable(index))));
 				description->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::Variable>(new RPC::Variable(std::string("ENUM")))));
 				description->structValue->insert(RPC::RPCStructElement("UNIT", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->unit))));
@@ -2043,7 +2044,7 @@ std::shared_ptr<RPC::Variable> Peer::getParamsetDescription(int32_t clientID, st
 				description->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::Variable>(new RPC::Variable((*i)->id))));
 				description->structValue->insert(RPC::RPCStructElement("MAX", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->max))));
 				description->structValue->insert(RPC::RPCStructElement("MIN", std::shared_ptr<RPC::Variable>(new RPC::Variable(parameter->min))));
-				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)(*i)->operations))));
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", std::shared_ptr<RPC::Variable>(new RPC::Variable(operations))));
 
 				if(!parameter->specialValues.empty())
 				{

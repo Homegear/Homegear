@@ -2058,7 +2058,7 @@ void Device::parseXML(xml_node<>* node)
 				if(attributeValue == "visible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::visible);
 				else if(attributeValue == "internal") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::internal);
 				else if(attributeValue == "dontdelete") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::dontdelete);
-				else _bl->out.printWarning("Warning: Unknown ui flag for \"channel\": " + attributeValue);
+				else _bl->out.printWarning("Warning: Unknown ui flag for \"device\": " + attributeValue);
 			}
 			else if(attributeName == "cyclic_timeout") cyclicTimeout = Math::getNumber(attributeValue);
 			else if(attributeName == "supports_aes") { if(attributeValue == "true") supportsAES = true; }
