@@ -788,6 +788,33 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetAllMetadata::invoke(int32_t client
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<BaseLib::RPC::Variable> RPCGetAllScripts::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+{
+#ifdef SCRIPTENGINE
+	try
+	{
+		if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
+
+		return GD::scriptEngine.getAllScripts();
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+#else
+    return BaseLib::RPC::Variable::createError(-32500, "This version of Homegear is compiled without script engine.");
+#endif
+}
+
 std::shared_ptr<BaseLib::RPC::Variable> RPCGetAllSystemVariables::invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try

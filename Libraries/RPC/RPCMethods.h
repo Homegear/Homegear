@@ -242,6 +242,16 @@ public:
 	std::shared_ptr<BaseLib::RPC::Variable> invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
 };
 
+class RPCGetAllScripts : public RPCMethod
+{
+public:
+	RPCGetAllScripts()
+	{
+		addSignature(BaseLib::RPC::VariableType::rpcArray, std::vector<BaseLib::RPC::VariableType>());
+	}
+	std::shared_ptr<BaseLib::RPC::Variable> invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
+};
+
 class RPCGetAllValues : public RPCMethod
 {
 public:

@@ -398,4 +398,34 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& 
 	}
 	return 1;
 }
+
+std::shared_ptr<BaseLib::RPC::Variable> ScriptEngine::getAllScripts()
+{
+	try
+	{
+		BaseLib::RPC::PVariable array(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+		if(_disposing) return array;
+
+		std::vector<std::string> scripts = GD::bl->hf.getFiles(GD::bl->settings.scriptPath(), true);
+		for(std::vector<std::string>::iterator i = scripts.begin(); i != scripts.end(); ++i)
+		{
+			array->arrayValue->push_back(BaseLib::RPC::PVariable(new BaseLib::RPC::Variable(*i)));
+		}
+
+		return array;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+}
 #endif

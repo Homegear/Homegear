@@ -163,7 +163,7 @@ std::vector<uint8_t> HelperFunctions::getUBinaryFileContent(std::string filename
 	throw Exception(strerror(errno));
 }
 
-std::vector<std::string> HelperFunctions::getFiles(std::string path)
+std::vector<std::string> HelperFunctions::getFiles(std::string path, bool recursive)
 {
 	std::vector<std::string> files;
 	DIR* directory;
@@ -172,7 +172,7 @@ std::vector<std::string> HelperFunctions::getFiles(std::string path)
 	{
 		while((entry = readdir(directory)) != 0)
 		{
-			if(entry->d_type == 8)
+			if(entry->d_type == DT_REG)
 			{
 				try
 				{
@@ -189,6 +189,17 @@ std::vector<std::string> HelperFunctions::getFiles(std::string path)
 				catch(...)
 				{
 					_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				}
+			}
+			else if(entry->d_type == DT_DIR && recursive)
+			{
+				std::string subdirName(entry->d_name);
+				if(subdirName == "." || subdirName == "..") continue;
+				std::string subdir = path + ((path.back() == '/') ? "" : "/") + subdirName;
+				std::vector<std::string> subdirFiles = getFiles(subdir, recursive);
+				for(std::vector<std::string>::iterator i = subdirFiles.begin(); i != subdirFiles.end(); ++i)
+				{
+					files.push_back(subdirName + '/' + *i);
 				}
 			}
 		}

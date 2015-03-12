@@ -121,12 +121,13 @@ public:
 	static std::vector<uint8_t> getUBinaryFileContent(std::string filename);
 
 	/**
-	 * Returns an array of all files within a path.
+	 * Returns an array of all files within a path. The files are not prefixed with "path".
 	 *
 	 * @param path The path to get all files for.
+	 * @param recursive Also return files of subdirectories. The files are prefixed with the subdirectory.
 	 * @return Returns an array of all file names within path.
 	 */
-	std::vector<std::string> getFiles(std::string path);
+	std::vector<std::string> getFiles(std::string path, bool recursive = false);
 
 	/**
 	 * Gets the current unix time stamp in milliseconds.

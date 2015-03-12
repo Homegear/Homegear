@@ -49,6 +49,7 @@ public:
 	int32_t execute(const std::string path, const std::string arguments, std::shared_ptr<std::vector<char>> output = nullptr, bool wait = true);
 	int32_t executeWebRequest(const std::string& path, BaseLib::HTTP& request, std::shared_ptr<RPC::ServerInfo::Info>& serverInfo, std::vector<char>& output);
 
+	std::shared_ptr<BaseLib::RPC::Variable> getAllScripts();
 protected:
 	bool _disposing = false;
 	volatile int32_t _currentScriptThreadID = 0;

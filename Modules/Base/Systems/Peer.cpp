@@ -1214,6 +1214,7 @@ std::shared_ptr<RPC::Variable> Peer::getAllValues(int32_t clientID, bool returnW
 			if(!i->second->countFromVariable.empty() && configCentral[0].find(i->second->countFromVariable) != configCentral[0].end() && configCentral[0][i->second->countFromVariable].data.size() > 0 && i->first >= i->second->startIndex + configCentral[0][i->second->countFromVariable].data.at(configCentral[0][i->second->countFromVariable].data.size() - 1)) continue;
 			std::shared_ptr<RPC::Variable> channel(new RPC::Variable(RPC::VariableType::rpcStruct));
 			channel->structValue->insert(RPC::RPCStructElement("INDEX", std::shared_ptr<RPC::Variable>(new RPC::Variable(i->first))));
+			channel->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::Variable>(new RPC::Variable(i->second->type))));
 
 			std::shared_ptr<RPC::Variable> parameters(new RPC::Variable(RPC::VariableType::rpcStruct));
 			channel->structValue->insert(RPC::RPCStructElement("PARAMSET", parameters));
