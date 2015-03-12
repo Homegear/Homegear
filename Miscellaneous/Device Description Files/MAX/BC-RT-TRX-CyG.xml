@@ -970,7 +970,7 @@
 						<special_value id="ON" value="30.5"/>
 					</logical>
 					<physical type="integer" interface="command" id="SET_TEMPERATURE" value_id="SET_TEMPERATURE">
-						<set request="MANU_MODE"/>
+						<set request="SET_TEMPERATURE"/>
 						<event frame="INFO_LEVEL"/>
 						<event frame="INFO_LEVEL2"/>
 						<event frame="INFO_LEVEL_PARTY"/>
@@ -1052,14 +1052,15 @@
 						<set request="BOOST_MODE"/>
 					</physical>
 				</parameter>
-				<parameter id="CONTROL_MODE" operations="read,event" control="HEATING_CONTROL.CONTROL_MODE">
+				<parameter id="CONTROL_MODE" operations="read,write,event" control="HEATING_CONTROL.CONTROL_MODE">
 					<logical type="option">
 						<option id="AUTO-MODE"/>
 						<option id="MANU-MODE" default="true"/>
 						<option id="PARTY-MODE"/>
 						<option id="BOOST-MODE"/>
 					</logical>
-					<physical type="integer" interface="command" value_id="CONTROL_MODE">
+					<physical type="integer" interface="command" id="CONTROL_MODE" value_id="CONTROL_MODE">
+						<set request="SET_TEMPERATURE"/>
 						<event frame="INFO_LEVEL"/>
 						<event frame="INFO_LEVEL2"/>
 						<event frame="INFO_LEVEL_PARTY"/>
@@ -1183,6 +1184,12 @@
 		</channel>
 	</channels>
 	<packets>
+		<packet id="SET_TEMPERATURE" direction="to_device" type="0x40" subtype="0x05">
+			<!-- Index 9 is the room/group index -->
+			<parameter type="integer" index="9.0" size="1.0" const_value="1"/>
+			<parameter type="integer" index="10.0" size="0.6" param="SET_TEMPERATURE"/>
+			<parameter type="integer" index="10.6" size="0.2" param="CONTROL_MODE"/>
+		</packet>
 		<packet id="MANU_MODE" direction="to_device" type="0x40" subtype="0x04">
 			<!-- Index 9 is the room/group index -->
 			<parameter type="integer" index="9.0" size="1.0" const_value="1"/>
