@@ -68,7 +68,6 @@ void PhilipsHue::dispose()
 	GD::physicalInterface.reset();
 	_central.reset();
 	GD::rpcDevices.clear();
-	GD::out.~Output();
 }
 
 std::shared_ptr<BaseLib::Systems::Central> PhilipsHue::getCentral() { return _central; }

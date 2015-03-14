@@ -139,7 +139,7 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 			GD::rpcClient.removeServer(server->uid);
 			return;
 		}
-		if(retry)
+		if(retry && !server->reconnectInfinitely)
 		{
 			if(!server->webSocket) GD::out.printError("Removing server \"" + server->id + "\". Server has to send \"init\" again.");
 			server->removed = true;
@@ -240,7 +240,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
 			GD::rpcClient.removeServer(server->address);
 			return BaseLib::RPC::Variable::createError(-32300, "Server was removed and has to send \"init\" again.");
 		}
-		if(retry)
+		if(retry && !server->reconnectInfinitely)
 		{
 			if(!server->webSocket) GD::out.printError("Removing server \"" + server->id + "\". Server has to send \"init\" again.");
 			server->removed = true;
@@ -407,7 +407,7 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 		catch(const BaseLib::SocketOperationException& ex)
 		{
 			GD::out.printError(ex.what() + " Removing server. Server has to send \"init\" again.");
-			server->removed = true;
+			if(!server->reconnectInfinitely) server->removed = true;
 			_sendCounter--;
 			return;
 		}

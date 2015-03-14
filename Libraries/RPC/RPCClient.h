@@ -72,6 +72,7 @@ public:
 	bool webSocket = false;
 	bool useID = false;
 	bool subscribePeers = false;
+	bool reconnectInfinitely = false;
 	std::string hostname;
 	std::pair<std::string, std::string> address;
 	std::string path;
