@@ -2010,7 +2010,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCInit::invoke(int32_t clientID, std::s
 				eventServer->reconnectInfinitely = (parameters->at(2)->integerValue & 128);
 			}
 			//Reconnect on CCU2 as it doesn't reconnect automatically
-			if(server.second == "1008" || server.second == "Homegear_java") eventServer->reconnectInfinitely = true;
+			if(parameters->at(1)->stringValue == "1008" || parameters->at(1)->stringValue == "Homegear_java") eventServer->reconnectInfinitely = true;
 			_initServerThreadMutex.lock();
 			try
 			{
