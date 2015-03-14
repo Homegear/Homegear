@@ -353,7 +353,7 @@ void php_homegear_invoke_rpc(std::string& methodName, std::shared_ptr<BaseLib::R
 	if(result->errorStruct)
 	{
 		std::string errorString("RPC error (Code " + std::to_string(result->structValue->at("faultCode")->integerValue) + "): " + result->structValue->at("faultString")->stringValue);
-		zend_error(E_ERROR, "%s", errorString.c_str());
+		zend_error(E_WARNING, "%s", errorString.c_str());
 		RETURN_FALSE;
 	}
 	PHPVariableConverter::getPHPVariable(result, return_value);

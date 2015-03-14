@@ -171,7 +171,7 @@ void HTTP::process(char* buffer, int32_t bufferLength, bool checkForChunkedXML)
 	_headerProcessingStarted = true;
 	if(!_header.parsed) processHeader(&buffer, bufferLength);
 	if(!_header.parsed) return;
-	if(_header.method == "GET" || _header.method == "M-SEARCH" || _header.method == "NOTIFY")
+	if(_header.method == "GET" || _header.method == "M-SEARCH" || _header.method == "NOTIFY" || (_contentLengthSet && _header.contentLength == 0))
 	{
 		_dataProcessingStarted = true;
 		setFinished();
@@ -343,7 +343,11 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 	if(!strnaicmp(name, "content-length", nameSize))
 	{
 		//Ignore Content-Length when Transfer-Encoding is present. See: http://greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
-		if(_header.transferEncoding == TransferEncoding::Enum::none) _header.contentLength = strtol(value, NULL, 10);
+		if(_header.transferEncoding == TransferEncoding::Enum::none)
+		{
+			_contentLengthSet = true;
+			_header.contentLength = strtol(value, NULL, 10);
+		}
 	}
 	else if(!strnaicmp(name, "host", nameSize))
 	{

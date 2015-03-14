@@ -125,6 +125,7 @@ public:
 	static std::string getMimeType(std::string extension);
 	static std::string getStatusText(int32_t code);
 private:
+	bool _contentLengthSet = false;
 	bool _headerProcessingStarted = false;
 	bool _dataProcessingStarted = false;
 	bool _crlf = true;

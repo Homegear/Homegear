@@ -1434,7 +1434,7 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
         } while (result < 0 && gnutls_error_is_fatal(result) == 0);
 		if(result < 0)
 		{
-			_out.printError("Error: TLS handshake has failed: " + std::string(gnutls_strerror(result)));
+			_out.printWarning("Warning: TLS handshake has failed: " + std::string(gnutls_strerror(result)));
 			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
