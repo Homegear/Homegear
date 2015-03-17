@@ -221,6 +221,9 @@ protected:
 	virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values);
 	virtual int32_t onIsAddonClient(int32_t clientID);
 	//End Device event handling
+private:
+	DeviceFamily(const DeviceFamily&);
+	DeviceFamily& operator=(const DeviceFamily&);
 };
 
 }

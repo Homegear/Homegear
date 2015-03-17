@@ -54,6 +54,9 @@ public:
 	virtual std::string getName() { return "Philips hue"; }
 	virtual std::shared_ptr<BaseLib::RPC::Variable> getPairingMethods();
 private:
+	PhilipsHue(const PhilipsHue&);
+	PhilipsHue& operator=(const PhilipsHue&);
+
 	std::shared_ptr<PhilipsHueCentral> _central;
 
 	void createCentral();

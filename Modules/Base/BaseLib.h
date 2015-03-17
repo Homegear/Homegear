@@ -107,6 +107,8 @@ public:
 	 */
 	virtual ~Obj();
 private:
+	Obj(const Obj&);
+	Obj& operator=(const Obj&);
 };
 }
 #endif

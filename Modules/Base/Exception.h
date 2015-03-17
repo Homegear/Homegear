@@ -41,6 +41,7 @@ class Exception
 {
     public:
         Exception(std::string message) {  _message = message; }
+        virtual ~Exception() {}
 
         const std::string what() const { return _message; }
     protected:

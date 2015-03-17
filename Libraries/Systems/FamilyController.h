@@ -51,6 +51,9 @@ private:
 	std::string _name;
 	void* _handle = nullptr;
 	std::unique_ptr<BaseLib::Systems::SystemFactory> _factory;
+
+	ModuleLoader(const ModuleLoader&);
+	ModuleLoader& operator=(const ModuleLoader&);
 };
 
 class FamilyController : public BaseLib::Systems::DeviceFamily::IFamilyEventSink
@@ -125,6 +128,9 @@ private:
 
 	std::map<std::string, std::unique_ptr<ModuleLoader>> moduleLoaders;
 	BaseLib::Systems::DeviceFamily* _currentFamily = nullptr;
+
+	FamilyController(const FamilyController&);
+	FamilyController& operator=(const FamilyController&);
 };
 
 #endif

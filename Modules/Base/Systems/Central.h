@@ -120,6 +120,8 @@ protected:
 	LogicalDevice* _me = nullptr;
 private:
 	BaseLib::Obj* _baseLib = nullptr;
+	Central(const Central&);
+	Central& operator=(const Central&);
 };
 
 }

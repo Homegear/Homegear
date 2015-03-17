@@ -122,6 +122,9 @@ public:
 protected:
 	BaseLib::Obj* _bl = nullptr;
 	Parameter* _parameter = nullptr;
+private:
+	ParameterConversion(const ParameterConversion&);
+	ParameterConversion& operator=(const ParameterConversion&);
 };
 
 class Parameter
@@ -240,6 +243,9 @@ public:
 	virtual bool checkFirmwareVersion(int32_t version);
 protected:
 	BaseLib::Obj* _bl = nullptr;
+private:
+	DeviceType(const DeviceType&);
+	DeviceType& operator=(const DeviceType&);
 };
 
 typedef std::vector<std::pair<std::string, std::string>> DefaultValue;
@@ -346,6 +352,9 @@ public:
 	virtual ~DeviceChannel() {}
 protected:
 	BaseLib::Obj* _bl = nullptr;
+private:
+	DeviceChannel(const DeviceChannel&);
+	DeviceChannel& operator=(const DeviceChannel&);
 };
 
 class DeviceFrame

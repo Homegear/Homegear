@@ -55,6 +55,9 @@ public:
 	virtual IEventSinkBase* getEventHandler();
 protected:
     IEventSinkBase* _eventHandler = nullptr;
+private:
+	IEvents(const IEvents&);
+    IEvents& operator=(const IEvents&);
 };
 
 class IEventsEx
@@ -70,6 +73,9 @@ public:
 protected:
     std::mutex _eventHandlerMutex;
     std::forward_list<IEventSinkBase*> _eventHandlers;
+private:
+    IEventsEx(const IEventsEx&);
+    IEventsEx& operator=(const IEventsEx&);
 };
 }
 #endif
