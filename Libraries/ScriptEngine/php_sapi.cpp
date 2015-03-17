@@ -144,7 +144,16 @@ static int php_homegear_send_headers(sapi_headers_struct* sapi_headers TSRMLS_DC
 		sapi_header_struct* header = (sapi_header_struct*)element->data;
 		if(out->size() + header->header_len + 4 > out->capacity()) out->reserve(out->capacity() + 1024);
 		std::string temp(header->header, header->header_len);
-		if(temp.compare(0, 22, "Content-Type: ext/html") == 0) temp = "Content-Type: text/html";
+		//PHP returns this sometimes
+		if(temp.compare(0, 22, "Content-type: ext/html") == 0)
+		{
+			if(GD::bl->settings.devLog())
+			{
+				GD::out.printError("PHP Content-Type error.");
+				if(SG(default_mimetype)) GD::out.printError("Default MIME type is: " + std::string(SG(default_mimetype)));
+			}
+			temp = "Content-Type: text/html";
+		}
 		out->insert(out->end(), temp.begin(), temp.end());
 		out->push_back('\r');
 		out->push_back('\n');
@@ -200,7 +209,9 @@ static int php_homegear_send_headers(sapi_headers_struct* sapi_headers TSRMLS_DC
 
 static void php_homegear_log_message(char* message TSRMLS_DC)
 {
-	fprintf (stderr, "%s\n", message);
+	std::string pathTranslated;
+	if(SG(request_info).path_translated) pathTranslated = SG(request_info).path_translated;
+	GD::out.printError("Scriptengine" + (SG(request_info).path_translated ? std::string(" (") + std::string(SG(request_info).path_translated) + "): " : ": ") + std::string(message));
 }
 
 static void php_homegear_register_variables(zval* track_vars_array TSRMLS_DC)
