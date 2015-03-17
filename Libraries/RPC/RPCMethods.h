@@ -783,6 +783,16 @@ public:
 	std::shared_ptr<BaseLib::RPC::Variable> invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
 };
 
+class RPCTriggerRPCEvent : public RPCMethod
+{
+public:
+	RPCTriggerRPCEvent()
+	{
+		addSignature(BaseLib::RPC::VariableType::rpcVoid, std::vector<BaseLib::RPC::VariableType>{BaseLib::RPC::VariableType::rpcString, BaseLib::RPC::VariableType::rpcArray});
+	}
+	std::shared_ptr<BaseLib::RPC::Variable> invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
+};
+
 class RPCUnsubscribePeers : public RPCMethod
 {
 public:

@@ -152,7 +152,7 @@ static int php_homegear_send_headers(sapi_headers_struct* sapi_headers TSRMLS_DC
 				GD::out.printError("PHP Content-Type error.");
 				if(SG(default_mimetype)) GD::out.printError("Default MIME type is: " + std::string(SG(default_mimetype)));
 			}
-			temp = "Content-Type: text/html";
+			temp = "Content-Type: text/html; charset=UTF-8";
 		}
 		out->insert(out->end(), temp.begin(), temp.end());
 		out->push_back('\r');
