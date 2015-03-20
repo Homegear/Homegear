@@ -396,7 +396,9 @@ ZEND_FUNCTION(hg_create_user)
 	int32_t passwordLength = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
 	if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
-	if(User::create(std::string(pName, nameLength), std::string(pPassword, passwordLength))) RETURN_TRUE;
+	std::string userName(pName, nameLength);
+	if(!BaseLib::HelperFunctions::isAlphaNumeric(userName)) RETURN_FALSE;
+	if(User::create(userName, std::string(pPassword, passwordLength))) RETURN_TRUE;
 	RETURN_FALSE;
 }
 

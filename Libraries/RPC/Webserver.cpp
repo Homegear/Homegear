@@ -81,7 +81,13 @@ void WebServer::get(BaseLib::HTTP& http, std::vector<char>& content)
 		BaseLib::HelperFunctions::isDirectory(_serverInfo->contentPath + path, isDirectory);
 		if(isDirectory)
 		{
-			if(!path.empty() && path.back() != '/') path.push_back('/');
+			if(!path.empty() && path.back() != '/')
+			{
+				path.push_back('/');
+				std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
+				getError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
+				return;
+			}
 			if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
 			else if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
 			else if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.html")) path += "index.html";
@@ -152,7 +158,13 @@ void WebServer::post(BaseLib::HTTP& http, std::vector<char>& content)
 		BaseLib::HelperFunctions::isDirectory(_serverInfo->contentPath + path, isDirectory);
 		if(isDirectory)
 		{
-			if(!path.empty() && path.back() != '/') path.push_back('/');
+			if(!path.empty() && path.back() != '/')
+			{
+				path.push_back('/');
+				std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
+				getError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
+				return;
+			}
 			if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
 			else if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
 			else
