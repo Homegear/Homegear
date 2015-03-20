@@ -244,17 +244,17 @@ void CUL::setupDevice()
 	try
 	{
 		if(_fileDescriptor->descriptor == -1) return;
-		struct termios term;
-		term.c_cflag = B38400 | CS8 | CREAD;
-		term.c_iflag = 0;
-		term.c_oflag = 0;
-		term.c_lflag = 0;
-		term.c_cc[VMIN] = 1;
-		term.c_cc[VTIME] = 0;
-		cfsetispeed(&term, B38400);
-		cfsetospeed(&term, B38400);
+		memset(&_termios, 0, sizeof(termios));
+		_termios.c_cflag = B38400 | CS8 | CREAD;
+		_termios.c_iflag = 0;
+		_termios.c_oflag = 0;
+		_termios.c_lflag = 0;
+		_termios.c_cc[VMIN] = 1;
+		_termios.c_cc[VTIME] = 0;
+		cfsetispeed(&_termios, B38400);
+		cfsetospeed(&_termios, B38400);
 		if(tcflush(_fileDescriptor->descriptor, TCIFLUSH) == -1) throw(BaseLib::Exception("Couldn't flush CUL device " + _settings->device));
-		if(tcsetattr(_fileDescriptor->descriptor, TCSANOW, &term) == -1) throw(BaseLib::Exception("Couldn't set CUL device settings: " + _settings->device));
+		if(tcsetattr(_fileDescriptor->descriptor, TCSANOW, &_termios) == -1) throw(BaseLib::Exception("Couldn't set CUL device settings: " + _settings->device));
 
 		int flags = fcntl(_fileDescriptor->descriptor, F_GETFL);
 		if(!(flags & O_NONBLOCK))

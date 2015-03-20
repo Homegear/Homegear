@@ -38,8 +38,20 @@ Server::Server()
 	registerMethods();
 }
 
+Server::~Server()
+{
+	dispose();
+}
+
+void Server::dispose()
+{
+	if(_server) _server->dispose();
+	_server.reset();
+}
+
 void Server::registerMethods()
 {
+	if(!_server) return;
 	try
 	{
 		_server->registerMethod("system.getCapabilities", std::shared_ptr<RPCMethod>(new RPCSystemGetCapabilities()));

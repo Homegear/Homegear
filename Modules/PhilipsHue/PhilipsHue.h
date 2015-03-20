@@ -54,11 +54,10 @@ public:
 	virtual std::string getName() { return "Philips hue"; }
 	virtual std::shared_ptr<BaseLib::RPC::Variable> getPairingMethods();
 private:
-	PhilipsHue(const PhilipsHue&);
-	PhilipsHue& operator=(const PhilipsHue&);
-
 	std::shared_ptr<PhilipsHueCentral> _central;
 
+	PhilipsHue(const PhilipsHue&);
+	PhilipsHue& operator=(const PhilipsHue&);
 	void createCentral();
 	uint32_t getUniqueAddress(uint32_t seed);
 	std::string getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber);

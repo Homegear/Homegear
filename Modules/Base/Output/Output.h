@@ -58,7 +58,7 @@ public:
 	 * The main constructor.
 	 * The constructor does nothing. You need to call "init" after creating the object.
 	 */
-	Output() {}
+	Output();
 
 	/**
 	 * The destructor.
@@ -93,14 +93,14 @@ public:
 	 * @see setErrorCallback()
 	 * @return Returns the error callback function.
 	 */
-	std::function<void(int32_t, std::string)> getErrorCallback() { return _errorCallback; }
+	std::function<void(int32_t, std::string)>* getErrorCallback();
 
 	/**
 	 * Sets a callback function which will be called for all error messages. First parameter of the function is the error level (1 = critical, 2 = error, 3 = warning), second parameter is the error string.
 	 * @see getErrorCallback()
 	 * @return Returns the error callback function.
 	 */
-	void setErrorCallback(std::function<void(int32_t, std::string)> errorCallback) { _errorCallback = errorCallback; }
+	void setErrorCallback(std::function<void(int32_t, std::string)>* errorCallback);
 
 	/**
 	 * Prints the policy and priority of the thread executing this method.
@@ -238,7 +238,10 @@ private:
 	/**
 	 * Pointer to an optional callback function, which will be called whenever printEx, printWarning, printCritical or printError are called.
 	 */
-	std::function<void(int32_t, std::string)> _errorCallback;
+	std::function<void(int32_t, std::string)>* _errorCallback = nullptr;
+
+	Output(const Output&);
+	Output& operator=(const Output&);
 };
 }
 #endif

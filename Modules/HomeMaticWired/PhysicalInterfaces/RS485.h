@@ -79,6 +79,7 @@ class RS485 : public IHMWiredInterface
         std::vector<uint8_t> readFromDevice();
         void listen();
     private:
+        struct termios _termios;
 };
 
 }

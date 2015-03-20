@@ -71,6 +71,7 @@ protected:
 	BaseLib::Obj* _bl = nullptr;
 	std::shared_ptr<FileDescriptor> _fileDescriptor;
 	std::string _device;
+	struct termios _termios;
 	int32_t _baudrate = 0;
 	int32_t _flags = 0;
 	bool _createLockFile;

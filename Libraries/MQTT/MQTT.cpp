@@ -180,11 +180,17 @@ void MQTT::disconnect()
 {
 	try
 	{
-		MQTTClient_disconnect(_client, 10000);
-		MQTTClient_destroy(&_client);
-		_client = nullptr;
-		if(_connectionOptions) free(_connectionOptions);
-		_connectionOptions = nullptr;
+		if(_client)
+		{
+			MQTTClient_disconnect(_client, 10000);
+			MQTTClient_destroy(&_client);
+			_client = nullptr;
+		}
+		if(_connectionOptions)
+		{
+			free(_connectionOptions);
+			_connectionOptions = nullptr;
+		}
 	}
 	catch(const std::exception& ex)
 	{

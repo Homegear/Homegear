@@ -316,9 +316,9 @@ void HTTP::processHeader(char** buffer, int32_t& bufferLength)
 
 	while(headerBuffer < end)
 	{
-		newlinePos = (crlfOffset == 2) ? strchr(headerBuffer, '\r') : strchr(headerBuffer, '\n');
+		newlinePos = (crlfOffset == 2) ? (char*)memchr(headerBuffer, '\r', end - headerBuffer) : (char*)memchr(headerBuffer, '\n', end - headerBuffer);
 		if(!newlinePos || newlinePos > end) break;
-		colonPos = strchr(headerBuffer, ':');
+		colonPos = (char*)memchr(headerBuffer, ':', newlinePos - headerBuffer);
 		if(!colonPos || colonPos > newlinePos)
 		{
 			headerBuffer = newlinePos + crlfOffset;

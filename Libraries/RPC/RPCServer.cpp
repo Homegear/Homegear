@@ -67,6 +67,11 @@ RPCServer::RPCServer()
 
 RPCServer::~RPCServer()
 {
+	dispose();
+}
+
+void RPCServer::dispose()
+{
 	stop();
 	_rpcMethods->clear();
 }

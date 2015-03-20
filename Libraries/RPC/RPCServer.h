@@ -79,6 +79,7 @@ namespace RPC
 			RPCServer();
 			virtual ~RPCServer();
 
+			void dispose();
 			const std::shared_ptr<ServerInfo::Info> getInfo() { return _info; }
 			bool isRunning() { return !_stopped; }
 			void start(std::shared_ptr<ServerInfo::Info>& settings);

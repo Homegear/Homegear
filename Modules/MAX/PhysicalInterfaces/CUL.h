@@ -68,6 +68,7 @@ class CUL : public BaseLib::Systems::IPhysicalInterface
         std::string readFromDevice();
         void listen();
     private:
+        struct termios _termios;
 };
 
 }

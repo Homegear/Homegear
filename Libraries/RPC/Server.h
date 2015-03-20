@@ -42,8 +42,9 @@ namespace RPC {
 class Server {
 public:
 	Server();
-	virtual ~Server() {}
+	virtual ~Server();
 
+	void dispose();
 	void registerMethods();
 	void start(std::shared_ptr<ServerInfo::Info>& serverInfo);
 	void stop();

@@ -59,7 +59,6 @@ void SerialReaderWriter::openDevice()
 	if(_fileDescriptor->descriptor == -1) throw SerialReaderWriterException("Couldn't open device \"" + _device + "\": " + strerror(errno));
 
 	tcflag_t baudrate;
-	struct termios term;
 	switch(_baudrate)
 	{
 	case 50:
@@ -116,16 +115,17 @@ void SerialReaderWriter::openDevice()
 	default:
 		throw SerialReaderWriterException("Couldn't setup device \"" + _device + "\": Unsupported baudrate.");
 	}
-	term.c_cflag = baudrate | CS8 | CREAD;
-	term.c_iflag = 0;
-	term.c_oflag = 0;
-	term.c_lflag = 0;
-	term.c_cc[VMIN] = 1;
-	term.c_cc[VTIME] = 0;
-	cfsetispeed(&term, baudrate);
-	cfsetospeed(&term, baudrate);
+	memset(&_termios, 0, sizeof(termios));
+	_termios.c_cflag = baudrate | CS8 | CREAD;
+	_termios.c_iflag = 0;
+	_termios.c_oflag = 0;
+	_termios.c_lflag = 0;
+	_termios.c_cc[VMIN] = 1;
+	_termios.c_cc[VTIME] = 0;
+	cfsetispeed(&_termios, baudrate);
+	cfsetospeed(&_termios, baudrate);
 	if(tcflush(_fileDescriptor->descriptor, TCIFLUSH) == -1) throw SerialReaderWriterException("Couldn't flush device " + _device);
-	if(tcsetattr(_fileDescriptor->descriptor, TCSANOW, &term) == -1) throw SerialReaderWriterException("Couldn't set device settings for device " + _device);
+	if(tcsetattr(_fileDescriptor->descriptor, TCSANOW, &_termios) == -1) throw SerialReaderWriterException("Couldn't set device settings for device " + _device);
 
 	int flags = fcntl(_fileDescriptor->descriptor, F_GETFL);
 	if(!(flags & O_NONBLOCK))

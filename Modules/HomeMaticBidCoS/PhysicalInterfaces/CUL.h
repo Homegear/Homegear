@@ -69,6 +69,7 @@ class CUL  : public IBidCoSInterface
         std::string readFromDevice();
         void listen();
     private:
+        struct termios _termios;
 };
 
 }

@@ -74,9 +74,11 @@ private:
 	std::condition_variable _messageProcessingConditionVariable;
 	bool _stopMessageProcessingThread = false;
 
-	void* _connectionOptions;
+	void* _connectionOptions = nullptr;
 	void* _client = nullptr;
 
+	MQTT(const MQTT&);
+	MQTT& operator=(const MQTT&);
 	void connect();
 	void disconnect();
 	void processMessages();

@@ -32,6 +32,21 @@
 
 namespace BaseLib
 {
+std::function<void(int32_t, std::string)>* Output::getErrorCallback()
+{
+	return _errorCallback;
+}
+
+void Output::setErrorCallback(std::function<void(int32_t, std::string)>* errorCallback)
+{
+	_errorCallback = errorCallback;
+}
+
+Output::Output()
+{
+	_bl = nullptr;
+}
+
 Output::~Output()
 {
 
@@ -189,7 +204,7 @@ void Output::printEx(std::string file, uint32_t line, std::string function, std:
 		std::cout << getTimeString() << " " << error << std::endl;
 		std::cerr << getTimeString() << " " << error << std::endl;
 	}
-	if(_errorCallback) _errorCallback(2, error);
+	if(_errorCallback && *_errorCallback) (*_errorCallback)(2, error);
 }
 
 void Output::printCritical(std::string errorString, bool errorCallback)
@@ -198,7 +213,7 @@ void Output::printCritical(std::string errorString, bool errorCallback)
 	std::string error = _prefix + errorString;
 	std::cout << getTimeString() << " " << error << std::endl;
 	std::cerr << getTimeString() << " " << error << std::endl;
-	if(_errorCallback && errorCallback) _errorCallback(1, error);
+	if(_errorCallback && *_errorCallback && errorCallback) (*_errorCallback)(1, error);
 }
 
 void Output::printError(std::string errorString)
@@ -207,7 +222,7 @@ void Output::printError(std::string errorString)
 	std::string error = _prefix + errorString;
 	std::cout << getTimeString() << " " << error << std::endl;
 	std::cerr << getTimeString() << " " << error << std::endl;
-	if(_errorCallback) _errorCallback(2, error);
+	if(_errorCallback && *_errorCallback) (*_errorCallback)(2, error);
 }
 
 void Output::printWarning(std::string errorString)
@@ -216,7 +231,7 @@ void Output::printWarning(std::string errorString)
 	std::string error = _prefix + errorString;
 	std::cout << getTimeString() << " " << error << std::endl;
 	std::cerr << getTimeString() << " " << error << std::endl;
-	if(_errorCallback) _errorCallback(3, error);
+	if(_errorCallback && *_errorCallback) (*_errorCallback)(3, error);
 }
 
 void Output::printInfo(std::string message)
@@ -239,7 +254,7 @@ void Output::printMessage(std::string message, int32_t minDebugLevel, bool error
 	if(minDebugLevel <= 3 && errorLog)
 	{
 		std::cerr << getTimeString() << " " << message << std::endl;
-		if(_errorCallback) _errorCallback(3, message);
+		if(_errorCallback && *_errorCallback) (*_errorCallback)(3, message);
 	}
 }
 

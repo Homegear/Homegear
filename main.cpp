@@ -57,6 +57,7 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 bool _startAsDaemon = false;
 bool _startUpComplete = false;
 bool _disposing = false;
+std::shared_ptr<std::function<void(int32_t, std::string)>> _errorCallback;
 
 void exitHomegear(int exitCode)
 {
@@ -87,13 +88,14 @@ void startRPCServers()
 
 }
 
-void stopRPCServers()
+void stopRPCServers(bool dispose)
 {
 	GD::uPnP->resetServers();
 	GD::out.printInfo( "(Shutdown) => Stopping RPC servers");
 	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 	{
 		i->second.stop();
+		if(dispose) i->second.dispose();
 	}
 	GD::bl->rpcPort = 0;
 	//Don't clear map!!! Server is still accessed i. e. by the event handler!
@@ -123,7 +125,7 @@ void terminate(int32_t signalNumber)
 				GD::out.printInfo("Stopping UPnP server...");
 				GD::uPnP->stop();
 			}
-			stopRPCServers();
+			stopRPCServers(true);
 			GD::rpcServers.clear();
 			GD::out.printInfo( "(Shutdown) => Stopping Event handler");
 #ifdef EVENTHANDLER
@@ -171,7 +173,7 @@ void terminate(int32_t signalNumber)
 					GD::out.printInfo("Stopping UPnP server");
 					GD::uPnP->stop();
 				}
-				stopRPCServers();
+				stopRPCServers(false);
 				if(GD::mqtt->enabled())
 				{
 					GD::out.printInfo( "(Shutdown) => Stopping MQTT client");;
@@ -332,7 +334,8 @@ int main(int argc, char* argv[])
     try
     {
     	getExecutablePath();
-    	GD::bl.reset(new BaseLib::Obj(GD::executablePath, std::function<void(int32_t, std::string)>(errorCallback)));
+    	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
+    	GD::bl.reset(new BaseLib::Obj(GD::executablePath, _errorCallback.get()));
     	GD::out.init(GD::bl.get());
 
     	for(int32_t i = 1; i < argc; i++)

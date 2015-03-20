@@ -41,6 +41,11 @@ namespace MAX
 
 MAX::MAX(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(bl, eventHandler)
 {
+	if(!bl || !eventHandler)
+	{
+		std::cerr << "Critical: bl or eventHandler are nullptr in MAX module contstructor." << std::endl;
+		exit(1);
+	}
 	GD::bl = _bl;
 	GD::family = this;
 	GD::out.init(bl);
