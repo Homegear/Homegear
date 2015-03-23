@@ -691,7 +691,6 @@ int main(int argc, char* argv[])
         rl_bind_key('\t', rl_abort); //no autocompletion
 
 		char* inputBuffer;
-        std::string input;
         if(_startAsDaemon)
         {
         	//Wait a little more before setting "booting" to false. If "isOpen" of the physical interface is implemented correctly, this is not necessary. But just in case.
@@ -704,7 +703,6 @@ int main(int argc, char* argv[])
         	GD::bl->booting = false;
 			while((inputBuffer = readline("")) != NULL)
 			{
-				input = std::string(inputBuffer);
 				if(inputBuffer[0] == '\n' || inputBuffer[0] == 0) continue;
 				if(strncmp(inputBuffer, "quit", 4) == 0 || strncmp(inputBuffer, "exit", 4) == 0 || strncmp(inputBuffer, "moin", 4) == 0) break;
 				/*else if(strncmp(inputBuffer, "test", 4) == 0)
@@ -732,6 +730,7 @@ int main(int argc, char* argv[])
 					//std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(0x2F, 0xA0, 0x11, 0x212000, 0x1F454D, payload));
 					//GD::physicalInterfaces.get(DeviceFamily::HomeMaticBidCoS)->sendPacket(packet);
 				//}
+				std::string input(inputBuffer);
 				std::cout << GD::familyController.handleCLICommand(input);
 			}
         }
