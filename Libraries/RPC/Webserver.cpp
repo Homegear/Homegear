@@ -113,7 +113,7 @@ void WebServer::get(BaseLib::HTTP& http, std::vector<char>& content)
 				return;
 			}
 #endif
-			std::string contentType = BaseLib::HTTP::getMimeType(ending);
+			std::string contentType = _http.getMimeType(ending);
 			if(contentType.empty()) contentType = "application/octet-stream";
 			//Don't return content when method is "HEAD"
 			if(http.getHeader()->method == "GET") contentString = GD::bl->hf.getFileContent(_serverInfo->contentPath + path);
@@ -123,12 +123,12 @@ void WebServer::get(BaseLib::HTTP& http, std::vector<char>& content)
 		}
 		catch(const std::exception& ex)
 		{
-			getError(404, BaseLib::HTTP::getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
+			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 			return;
 		}
 		catch(BaseLib::Exception& ex)
 		{
-			getError(404, BaseLib::HTTP::getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
+			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 			return;
 		}
 	}
@@ -169,7 +169,7 @@ void WebServer::post(BaseLib::HTTP& http, std::vector<char>& content)
 			else if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
 			else
 			{
-				getError(404, BaseLib::HTTP::getStatusText(404), "The requested URL / was not found on this server.", content);
+				getError(404, _http.getStatusText(404), "The requested URL / was not found on this server.", content);
 				return;
 			}
 		}
@@ -180,12 +180,12 @@ void WebServer::post(BaseLib::HTTP& http, std::vector<char>& content)
 		}
 		catch(const std::exception& ex)
 		{
-			getError(404, BaseLib::HTTP::getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
+			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 			return;
 		}
 		catch(BaseLib::Exception& ex)
 		{
-			getError(404, BaseLib::HTTP::getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
+			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 			return;
 		}
 #else

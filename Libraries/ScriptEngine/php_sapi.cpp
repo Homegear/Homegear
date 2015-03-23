@@ -37,6 +37,8 @@
 
 static int homegear_globals_id;
 
+BaseLib::HTTP _http;
+
 zend_homegear_globals* php_homegear_get_globals(TSRMLS_D)
 {
 	return ((zend_homegear_globals*) (*((void ***) tsrm_ls))[((homegear_globals_id)-1)]);
@@ -135,7 +137,7 @@ static int php_homegear_send_headers(sapi_headers_struct* sapi_headers TSRMLS_DC
 	}
 	else
 	{
-		std::string status = "HTTP/1.1 " + std::to_string(sapi_headers->http_response_code) + " " + BaseLib::HTTP::getStatusText(sapi_headers->http_response_code) + "\r\n";
+		std::string status = "HTTP/1.1 " + std::to_string(sapi_headers->http_response_code) + " " + _http.getStatusText(sapi_headers->http_response_code) + "\r\n";
 		out->insert(out->end(), &status[0], &status[0] + status.size());
 	}
 	zend_llist_element* element = sapi_headers->headers.head;
@@ -395,7 +397,7 @@ ZEND_FUNCTION(hg_create_user)
 	char* pPassword = nullptr;
 	int32_t passwordLength = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
-	if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
+	if(nameLength == 0 || passwordLength < 8) RETURN_FALSE;
 	std::string userName(pName, nameLength);
 	if(!BaseLib::HelperFunctions::isAlphaNumeric(userName)) RETURN_FALSE;
 	if(User::create(userName, std::string(pPassword, passwordLength))) RETURN_TRUE;

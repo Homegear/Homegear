@@ -48,6 +48,7 @@ namespace RPC
 		private:
 			BaseLib::Output _out;
 			std::shared_ptr<ServerInfo::Info> _serverInfo;
+			BaseLib::HTTP _http;
 
 			std::string getHeader(uint32_t contentLength, std::string contentType, int32_t code, std::string codeDescription, std::vector<std::string>& additionalHeaders);
 	};

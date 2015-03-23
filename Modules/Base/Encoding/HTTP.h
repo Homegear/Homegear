@@ -89,7 +89,7 @@ public:
 	};
 
 	HTTP();
-	virtual ~HTTP() {}
+	virtual ~HTTP();
 
 	Type::Enum getType() { return _type; }
 	bool headerIsFinished() { return _header.parsed; }
@@ -122,8 +122,8 @@ public:
 	size_t readStream(char* buffer, size_t requestLength);
 	size_t readContentStream(char* buffer, size_t requestLength);
 	size_t readFirstContentLine(char* buffer, size_t requestLength);
-	static std::string getMimeType(std::string extension);
-	static std::string getStatusText(int32_t code);
+	std::string getMimeType(std::string extension);
+	std::string getStatusText(int32_t code);
 private:
 	bool _contentLengthSet = false;
 	bool _headerProcessingStarted = false;
@@ -141,8 +141,8 @@ private:
 	size_t _streamPos = 0;
 	size_t _contentStreamPos = 0;
 	Math _math;
-	static std::map <std::string, std::string> _extMimeTypeMap;
-	static std::map <int32_t, std::string> _statusCodeMap;
+	std::map <std::string, std::string> _extMimeTypeMap;
+	std::map <int32_t, std::string> _statusCodeMap;
 
 	void processHeader(char** buffer, int32_t& bufferLength);
 	void processHeaderField(char* name, uint32_t nameSize, char* value, uint32_t valueSize);
