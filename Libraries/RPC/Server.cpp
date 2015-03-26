@@ -34,8 +34,6 @@ namespace RPC
 {
 Server::Server()
 {
-	_server.reset(new RPCServer());
-	registerMethods();
 }
 
 Server::~Server()
@@ -151,7 +149,8 @@ std::shared_ptr<BaseLib::RPC::Variable> Server::callMethod(std::string methodNam
 
 void Server::start(std::shared_ptr<ServerInfo::Info>& serverInfo)
 {
-	if(!_server) return;
+	if(!_server) _server.reset(new RPCServer());
+	if(_server->getMethods()->size() == 0) registerMethods();
 	_server->start(serverInfo);
 }
 

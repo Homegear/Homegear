@@ -1,3 +1,5 @@
+#!/bin/bash
+
 rm -f lib/Release/*
 rm -f lib/Modules/Release/*
 rm -f bin/Release/homegear

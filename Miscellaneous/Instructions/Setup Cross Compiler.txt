@@ -1,7 +1,11 @@
 - Follow instructions here: http://airwiki.ws.dei.polimi.it/index.php/Cross-compiling_for_the_RaspberryPi
 - You can ignore the copying of the libraries and the cmake part of the howto
-- Copy the libraries from the directory "ARM\ libraries" into $HOME/raspberrypi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/arm-linux-gnueabihf/libc/usr/lib/arm-linux-gnueabihf
-- Now makeRPI.sh should work
+- Create a Raspbian debootstrap environment in "/debootstrap/Raspbian" with all necessary libraries
+- Change into $HOME/raspberrypi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/arm-linux-gnueabihf/libc
+- Move usr to usr.bak and lib to lib.bak
+- Create a softlink "usr" from the usr directory of the debootstrap environment and a softlink "lib" from the lib directory of the bootstrap environment
+- Link /lib/arm-linux-gnueabihf of the bootstrap environment to /lib/arm-linux-gnueabihf and /usr/lib/arm-linux-gnueabihf of the bootstrap environment to /usr/lib/arm-linux-gnueabihf
+- Now makeRPIDebug.sh and makeRPIRelease.sh should work
 
 When libraries are not found, this helps:
 cd into the Homegear source dir and type:
