@@ -231,13 +231,32 @@ void MQTT::connect()
 			((MQTTClient_connectOptions*)_connectionOptions)->ssl = (MQTTClient_SSLOptions*)_sslOptions;
 		}
 		MQTTClient_create(&_client, std::string((_settings.enableSSL() ? "ssl://" : "tcp://") + _settings.brokerHostname() + ":" + _settings.brokerPort()).c_str(), _settings.clientName().c_str(), MQTTCLIENT_PERSISTENCE_NONE, NULL);
-		((MQTTClient_connectOptions*)_connectionOptions)->keepAliveInterval = 20;
+		((MQTTClient_connectOptions*)_connectionOptions)->keepAliveInterval = 10;
 		((MQTTClient_connectOptions*)_connectionOptions)->cleansession = 1;
 		MQTTClient_setCallbacks(_client, NULL, NULL, MQTTMessageArrived, NULL);
-		if ((MQTTClient_connect(_client, (MQTTClient_connectOptions*)_connectionOptions)) != MQTTCLIENT_SUCCESS)
+		int32_t result = MQTTClient_connect(_client, (MQTTClient_connectOptions*)_connectionOptions);
+		if (result != MQTTCLIENT_SUCCESS)
 		{
 			disconnect();
-			_out.printError("Error: Failed to connect to message broker.");
+			std::string reason;
+			//see http://www.eclipse.org/paho/files/mqttdoc/Cclient/_m_q_t_t_client_8h.html#aaa8ae61cd65c9dc0846df10122d7bd4e
+			if(result == 1) reason = "Connection refused: Unacceptable protocol version";
+			else if(result == 2) reason = "Connection refused: Identifier rejected";
+			else if(result == 3) reason = "Connection refused: Server unavailable";
+			else if(result == 4) reason = "Connection refused: Bad user name or password";
+			else if(result == 5) reason = "Connection refused: Not authorized";
+			else reason = "Unknown reason. Check broker log for more details. One common reason is, that the broker requires SSL and SSL is not enabled in Homegear's mqtt.conf.";
+			_out.printError("Error: Failed to connect to message broker: " + reason);
+			if(_connectionOptions)
+			{
+				free(_connectionOptions);
+				_connectionOptions = nullptr;
+			}
+			if(_sslOptions)
+			{
+				free(_sslOptions);
+				_sslOptions = nullptr;
+			}
 			return;
 		}
 		_out.printInfo("Info: Successfully connected to message broker.");
