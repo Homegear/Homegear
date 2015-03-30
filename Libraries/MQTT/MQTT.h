@@ -75,6 +75,7 @@ private:
 	bool _stopMessageProcessingThread = false;
 
 	void* _connectionOptions = nullptr;
+	void* _sslOptions = nullptr;
 	void* _client = nullptr;
 
 	MQTT(const MQTT&);

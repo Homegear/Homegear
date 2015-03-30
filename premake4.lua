@@ -59,15 +59,14 @@ solution "homegear"
          --Needed because of gnutls.h/php_config.h conflict.
          "HAVE_SSIZE_T=1",
          "SCRIPTENGINE",
-         "EVENTHANDLER"
+         "EVENTHANDLER",
+         "OPENSSL"
          --"BIDCOSTICC1101",
          --"BIDCOSRTLSDRLAN",
       }
       linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear" }
 
    configuration { "rpi", "gmake" }
-      includedirs { "./Includes/ARM\ headers" }
-      libdirs { "./ARM\ libraries" }
       defines
       {
          "FORTIFY_SOURCE=2",
@@ -75,7 +74,8 @@ solution "homegear"
          --Needed because of gnutls.h/php_config.h conflict.
          "HAVE_SSIZE_T=1",
          "SCRIPTENGINE",
-         "EVENTHANDLER"
+         "EVENTHANDLER",
+         "OPENSSL"
          --"BIDCOSTICC1101",
          --"BIDCOSRTLSDRLAN",
       }
@@ -86,7 +86,8 @@ solution "homegear"
       defines
       {
          "FORTIFY_SOURCE=2",
-         "GCRYPT_NO_DEPRECATED"
+         "GCRYPT_NO_DEPRECATED",
+         "OPENSSL"
       }
       linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear" }
 
@@ -543,7 +544,7 @@ solution "homegear"
       language "C++"
       files { "*.h", "*.cpp" }
       files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
-      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l readline", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l upnp", "-l mqtt", "-l database", "-l scriptengine", "-l base", "-l gpg-error", "-l sqlite3", "-l paho.mqtt.c" }
+      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l readline", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l upnp", "-l mqtt", "-l database", "-l scriptengine", "-l base", "-l gpg-error", "-l sqlite3", "-l paho.mqtt.c", "-l crypto", "-l ssl" }
       buildoptions { "-Wall", "-std=c++11" }
  
       configuration { "native", "linux", "gmake" }

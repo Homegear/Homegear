@@ -149,7 +149,88 @@ void MQTT::connect()
 	{
 		disconnect();
 		_connectionOptions = new MQTTClient_connectOptions(MQTTClient_connectOptions_initializer);
-		MQTTClient_create(&_client, std::string("tcp://" + _settings.brokerHostname() + ":" + _settings.brokerPort()).c_str(), _settings.clientName().c_str(), MQTTCLIENT_PERSISTENCE_NONE, NULL);
+		if(!_settings.username().empty())
+		{
+			((MQTTClient_connectOptions*)_connectionOptions)->username = _settings.username().c_str();
+			((MQTTClient_connectOptions*)_connectionOptions)->password = _settings.password().c_str();
+		}
+		if(_settings.enableSSL())
+		{
+			_out.printInfo("Info: Enabling SSL for MQTT.");
+#ifndef OPENSSL
+			_out.printError("Error: MQTT library is compiled without OpenSSL support. Can't enable SSL. Aborting.");
+			if(_connectionOptions)
+			{
+				free(_connectionOptions);
+				_connectionOptions = nullptr;
+			}
+			return;
+#endif
+			if(_settings.caFile().empty())
+			{
+				_out.printError("Error: SSL is enabled but \"caFile\" is not set.");
+				if(_connectionOptions)
+				{
+					free(_connectionOptions);
+					_connectionOptions = nullptr;
+				}
+				return;
+			}
+			if(!BaseLib::HelperFunctions::fileExists(_settings.caFile()))
+			{
+				_out.printError("Error: CA certificate file does not exist or can't be opened.");
+				if(_connectionOptions)
+				{
+					free(_connectionOptions);
+					_connectionOptions = nullptr;
+				}
+				return;
+			}
+			if(_settings.certPath().empty())
+			{
+				_out.printError("Error: SSL is enabled but \"certPath\" is not set.");
+				if(_connectionOptions)
+				{
+					free(_connectionOptions);
+					_connectionOptions = nullptr;
+				}
+				return;
+			}
+			if(!BaseLib::HelperFunctions::fileExists(_settings.certPath()))
+			{
+				_out.printError("Error: Client certificate file does not exist or can't be opened.");
+				if(_connectionOptions)
+				{
+					free(_connectionOptions);
+					_connectionOptions = nullptr;
+				}
+				return;
+			}
+			if(_settings.keyPath().empty())
+			{
+				_out.printError("Error: SSL is enabled but \"keyPath\" is not set.");
+				if(_connectionOptions)
+				{
+					free(_connectionOptions);
+					_connectionOptions = nullptr;
+				}
+				return;
+			}
+			if(!BaseLib::HelperFunctions::fileExists(_settings.keyPath()))
+			{
+				_out.printError("Error: Client key file does not exist or can't be opened.");
+				if(_connectionOptions)
+				{
+					free(_connectionOptions);
+					_connectionOptions = nullptr;
+				}
+				return;
+			}
+
+			_sslOptions = new MQTTClient_SSLOptions({ {'M', 'Q', 'T', 'S'}, 0, _settings.caFile().c_str(), _settings.certPath().c_str(), _settings.keyPath().c_str(), nullptr, nullptr, _settings.verifyCertificate() });
+			((MQTTClient_connectOptions*)_connectionOptions)->ssl = (MQTTClient_SSLOptions*)_sslOptions;
+		}
+		MQTTClient_create(&_client, std::string((_settings.enableSSL() ? "ssl://" : "tcp://") + _settings.brokerHostname() + ":" + _settings.brokerPort()).c_str(), _settings.clientName().c_str(), MQTTCLIENT_PERSISTENCE_NONE, NULL);
 		((MQTTClient_connectOptions*)_connectionOptions)->keepAliveInterval = 20;
 		((MQTTClient_connectOptions*)_connectionOptions)->cleansession = 1;
 		MQTTClient_setCallbacks(_client, NULL, NULL, MQTTMessageArrived, NULL);
@@ -190,6 +271,11 @@ void MQTT::disconnect()
 		{
 			free(_connectionOptions);
 			_connectionOptions = nullptr;
+		}
+		if(_sslOptions)
+		{
+			free(_sslOptions);
+			_sslOptions = nullptr;
 		}
 	}
 	catch(const std::exception& ex)

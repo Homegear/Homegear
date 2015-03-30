@@ -50,12 +50,26 @@ public:
 	std::string brokerPort() { return _brokerPort; }
 	std::string clientName() { return _clientName; }
 	std::string homegearId() { return _homegearId; }
+	std::string username() { return _username; }
+	std::string password() { return _password; }
+	bool enableSSL() { return _enableSSL; }
+	std::string caFile() { return _caFile; }
+	bool verifyCertificate() { return _verifyCertificate; }
+	std::string certPath() { return _certPath; }
+	std::string keyPath() { return _keyPath; }
 private:
 	bool _enabled = false;
 	std::string _brokerHostname;
 	std::string _brokerPort;
 	std::string _clientName;
 	std::string _homegearId;
+	std::string _username;
+	std::string _password;
+	bool _enableSSL = false;
+	std::string _caFile;
+	bool _verifyCertificate = true;
+	std::string _certPath;
+	std::string _keyPath;
 
 	void reset();
 };

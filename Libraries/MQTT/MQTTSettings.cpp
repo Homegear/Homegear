@@ -41,6 +41,13 @@ void MQTTSettings::reset()
 	_brokerHostname = "";
 	_brokerPort = "";
 	_homegearId = "";
+	_username = "";
+	_password = "";
+	bool _enableSSL = false;
+	_caFile = "";
+	bool _verifyCertificate = true;
+	_certPath = "";
+	_keyPath = "";
 }
 
 void MQTTSettings::load(std::string filename)
@@ -108,6 +115,41 @@ void MQTTSettings::load(std::string filename)
 				{
 					_homegearId = value;
 					GD::bl->out.printDebug("Debug (MQTT settings): homegearId set to " + _homegearId);
+				}
+				else if(name == "username")
+				{
+					_username = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): username set to " + _username);
+				}
+				else if(name == "password")
+				{
+					_password = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): password set to " + _password);
+				}
+				else if(name == "enablessl")
+				{
+					if(value == "true") _enableSSL = true;
+					GD::bl->out.printDebug("Debug (MQTT settings): enableSSL set to " + _enableSSL);
+				}
+				else if(name == "cafile")
+				{
+					_caFile = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): caFile set to " + _caFile);
+				}
+				else if(name == "verifycertificate")
+				{
+					if(value == "false") _verifyCertificate = false;
+					GD::bl->out.printDebug("Debug (MQTT settings): verifyCertificate set to " + std::to_string(_verifyCertificate));
+				}
+				else if(name == "certpath")
+				{
+					_certPath = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): certPath set to " + _certPath);
+				}
+				else if(name == "keypath")
+				{
+					_keyPath = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): keyPath set to " + _keyPath);
 				}
 				else
 				{
