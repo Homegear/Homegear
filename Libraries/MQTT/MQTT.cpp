@@ -93,6 +93,8 @@ void MQTT::start()
 {
 	try
 	{
+		if(_started) return;
+		_started = true;
 		_out.init(GD::bl.get());
 		_out.setPrefix("MQTT Client: ");
 		_jsonEncoder = std::unique_ptr<BaseLib::RPC::JsonEncoder>(new BaseLib::RPC::JsonEncoder(GD::bl.get()));
@@ -123,14 +125,11 @@ void MQTT::stop()
 {
 	try
 	{
-		std::cerr << "Moin1" << std::endl;
+		_started = false;
 		_stopMessageProcessingThread = true;
 		_messageProcessingMessageAvailable = true;
-		std::cerr << "Moin2" << std::endl;
 		_messageProcessingConditionVariable.notify_one();
-		std::cerr << "Moin3" << std::endl;
 		if(_messageProcessingThread.joinable()) _messageProcessingThread.join();
-		std::cerr << "Moin4" << std::endl;
 		disconnect();
 	}
 	catch(const std::exception& ex)
@@ -151,7 +150,7 @@ void MQTT::connect()
 {
 	try
 	{
-		disconnect();
+		if(_started || _client) return;
 		_connectionOptions = new MQTTClient_connectOptions(MQTTClient_connectOptions_initializer);
 		if(!_settings.username().empty())
 		{
@@ -254,6 +253,7 @@ void MQTT::disconnect()
 {
 	try
 	{
+		_started = false;
 		if(_client)
 		{
 			MQTTClient_disconnect(_client, 10000);
@@ -427,9 +427,7 @@ void MQTT::processMessages()
 			if(_messageBufferHead == _messageBufferTail) //Only lock, when there is really no packet to process. This check is necessary, because the check of the while loop condition is outside of the mutex
 			{
 				_messageBufferMutex.unlock();
-				std::cerr << "Moin5" << std::endl;
 				_messageProcessingConditionVariable.wait(lock, [&]{ return _messageProcessingMessageAvailable; });
-				std::cerr << "Moin6" << std::endl;
 			}
 			_messageBufferMutex.unlock();
 			if(_stopMessageProcessingThread)
@@ -447,9 +445,7 @@ void MQTT::processMessages()
 				if(_messageBufferTail >= _messageBufferSize) _messageBufferTail = 0;
 				if(_messageBufferHead == _messageBufferTail) _messageProcessingMessageAvailable = false; //Set here, because otherwise it might be set to "true" in publish and then set to false again after the while loop
 				_messageBufferMutex.unlock();
-				std::cerr << "Moin7" << std::endl;
 				if(message) publish(message->first, message->second);
-				std::cerr << "Moin8" << std::endl;
 			}
 		}
 		catch(const std::exception& ex)

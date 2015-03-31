@@ -43,9 +43,9 @@ void MQTTSettings::reset()
 	_homegearId = "";
 	_username = "";
 	_password = "";
-	bool _enableSSL = false;
+	_enableSSL = false;
 	_caFile = "";
-	bool _verifyCertificate = true;
+	_verifyCertificate = true;
 	_certPath = "";
 	_keyPath = "";
 }

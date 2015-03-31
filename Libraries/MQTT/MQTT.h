@@ -73,6 +73,7 @@ private:
 	bool _messageProcessingMessageAvailable = false;
 	std::condition_variable _messageProcessingConditionVariable;
 	bool _stopMessageProcessingThread = false;
+	bool _started = false;
 
 	void* _connectionOptions = nullptr;
 	void* _sslOptions = nullptr;
