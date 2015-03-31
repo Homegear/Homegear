@@ -123,10 +123,14 @@ void MQTT::stop()
 {
 	try
 	{
+		std::cerr << "Moin1" << std::endl;
 		_stopMessageProcessingThread = true;
 		_messageProcessingMessageAvailable = true;
+		std::cerr << "Moin2" << std::endl;
 		_messageProcessingConditionVariable.notify_one();
+		std::cerr << "Moin3" << std::endl;
 		if(_messageProcessingThread.joinable()) _messageProcessingThread.join();
+		std::cerr << "Moin4" << std::endl;
 		disconnect();
 	}
 	catch(const std::exception& ex)
@@ -159,11 +163,7 @@ void MQTT::connect()
 			_out.printInfo("Info: Enabling SSL for MQTT.");
 #ifndef OPENSSL
 			_out.printError("Error: MQTT library is compiled without OpenSSL support. Can't enable SSL. Aborting.");
-			if(_connectionOptions)
-			{
-				free(_connectionOptions);
-				_connectionOptions = nullptr;
-			}
+			disconnect();
 			return;
 #endif
 			if(_settings.caFile().empty())
@@ -179,11 +179,7 @@ void MQTT::connect()
 			if(!BaseLib::HelperFunctions::fileExists(_settings.caFile()))
 			{
 				_out.printError("Error: CA certificate file does not exist or can't be opened.");
-				if(_connectionOptions)
-				{
-					free(_connectionOptions);
-					_connectionOptions = nullptr;
-				}
+				disconnect();
 				return;
 			}
 			if(_settings.certPath().empty())
@@ -199,31 +195,19 @@ void MQTT::connect()
 			if(!BaseLib::HelperFunctions::fileExists(_settings.certPath()))
 			{
 				_out.printError("Error: Client certificate file does not exist or can't be opened.");
-				if(_connectionOptions)
-				{
-					free(_connectionOptions);
-					_connectionOptions = nullptr;
-				}
+				disconnect();
 				return;
 			}
 			if(_settings.keyPath().empty())
 			{
 				_out.printError("Error: SSL is enabled but \"keyPath\" is not set.");
-				if(_connectionOptions)
-				{
-					free(_connectionOptions);
-					_connectionOptions = nullptr;
-				}
+				disconnect();
 				return;
 			}
 			if(!BaseLib::HelperFunctions::fileExists(_settings.keyPath()))
 			{
 				_out.printError("Error: Client key file does not exist or can't be opened.");
-				if(_connectionOptions)
-				{
-					free(_connectionOptions);
-					_connectionOptions = nullptr;
-				}
+				disconnect();
 				return;
 			}
 
@@ -247,16 +231,6 @@ void MQTT::connect()
 			else if(result == 5) reason = "Connection refused: Not authorized";
 			else reason = "Unknown reason. Check broker log for more details. One common reason is, that the broker requires SSL and SSL is not enabled in Homegear's mqtt.conf.";
 			_out.printError("Error: Failed to connect to message broker: " + reason);
-			if(_connectionOptions)
-			{
-				free(_connectionOptions);
-				_connectionOptions = nullptr;
-			}
-			if(_sslOptions)
-			{
-				free(_sslOptions);
-				_sslOptions = nullptr;
-			}
 			return;
 		}
 		_out.printInfo("Info: Successfully connected to message broker.");
@@ -453,7 +427,9 @@ void MQTT::processMessages()
 			if(_messageBufferHead == _messageBufferTail) //Only lock, when there is really no packet to process. This check is necessary, because the check of the while loop condition is outside of the mutex
 			{
 				_messageBufferMutex.unlock();
+				std::cerr << "Moin5" << std::endl;
 				_messageProcessingConditionVariable.wait(lock, [&]{ return _messageProcessingMessageAvailable; });
+				std::cerr << "Moin6" << std::endl;
 			}
 			_messageBufferMutex.unlock();
 			if(_stopMessageProcessingThread)
@@ -471,7 +447,9 @@ void MQTT::processMessages()
 				if(_messageBufferTail >= _messageBufferSize) _messageBufferTail = 0;
 				if(_messageBufferHead == _messageBufferTail) _messageProcessingMessageAvailable = false; //Set here, because otherwise it might be set to "true" in publish and then set to false again after the while loop
 				_messageBufferMutex.unlock();
+				std::cerr << "Moin7" << std::endl;
 				if(message) publish(message->first, message->second);
+				std::cerr << "Moin8" << std::endl;
 			}
 		}
 		catch(const std::exception& ex)
