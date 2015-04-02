@@ -203,6 +203,8 @@ void CUL::setupDevice()
 		if(tcflush(_fileDescriptor->descriptor, TCIFLUSH) == -1) throw(BaseLib::Exception("Couldn't flush CUL device " + _settings->device));
 		if(tcsetattr(_fileDescriptor->descriptor, TCSANOW, &_termios) == -1) throw(BaseLib::Exception("Couldn't set CUL device settings: " + _settings->device));
 
+		std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+
 		int flags = fcntl(_fileDescriptor->descriptor, F_GETFL);
 		if(!(flags & O_NONBLOCK))
 		{

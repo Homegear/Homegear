@@ -2347,8 +2347,6 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		serviceMessages->endUnreach();
 		std::vector<FrameValues> frameValues;
 		getValuesFromPacket(packet, frameValues);
-		//bool resendPacket = false;
-		std::shared_ptr<BidCoSPacket> sentPacket;
 		std::map<uint32_t, std::shared_ptr<std::vector<std::string>>> valueKeys;
 		std::map<uint32_t, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>>> rpcValues;
 		//Loop through all matching frames
@@ -2357,15 +2355,6 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame;
 			if(!a->frameID.empty()) frame = rpcDevice->framesByID.at(a->frameID);
 
-			std::vector<FrameValues> sentFrameValues;
-			if(packet->messageType() == 0x02) //ACK packet: Check if all values were set correctly. If not set value again
-			{
-				sentPacket = central->getSentPacket(_address);
-				if(sentPacket && sentPacket->messageType() > 0 && !sentPacket->payload()->empty())
-				{
-					getValuesFromPacket(sentPacket, sentFrameValues);
-				}
-			}
 			//Check for low battery
 			//If values is not empty, packet is valid
 			if(rpcDevice->hasBattery && !a->values.empty() && !packet->payload()->empty() && frame && hasLowbatBit(frame))

@@ -195,7 +195,7 @@ void CUL::openDevice()
 		//std::string chmod("chmod 666 " + _lockfile);
 		//system(chmod.c_str());
 
-		_fileDescriptor = _bl->fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
+		_fileDescriptor = _bl->fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY));
 		if(_fileDescriptor->descriptor == -1)
 		{
 			_out.printCritical("Couldn't open CUL device \"" + _settings->device + "\": " + strerror(errno));
@@ -245,16 +245,21 @@ void CUL::setupDevice()
 	{
 		if(_fileDescriptor->descriptor == -1) return;
 		memset(&_termios, 0, sizeof(termios));
+
 		_termios.c_cflag = B38400 | CS8 | CREAD;
 		_termios.c_iflag = 0;
 		_termios.c_oflag = 0;
 		_termios.c_lflag = 0;
 		_termios.c_cc[VMIN] = 1;
 		_termios.c_cc[VTIME] = 0;
+
 		cfsetispeed(&_termios, B38400);
 		cfsetospeed(&_termios, B38400);
+
 		if(tcflush(_fileDescriptor->descriptor, TCIFLUSH) == -1) throw(BaseLib::Exception("Couldn't flush CUL device " + _settings->device));
 		if(tcsetattr(_fileDescriptor->descriptor, TCSANOW, &_termios) == -1) throw(BaseLib::Exception("Couldn't set CUL device settings: " + _settings->device));
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
 		int flags = fcntl(_fileDescriptor->descriptor, F_GETFL);
 		if(!(flags & O_NONBLOCK))

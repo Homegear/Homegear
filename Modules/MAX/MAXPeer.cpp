@@ -816,7 +816,6 @@ void MAXPeer::packetReceived(std::shared_ptr<MAXPacket> packet)
 		serviceMessages->endUnreach();
 		std::vector<FrameValues> frameValues;
 		getValuesFromPacket(packet, frameValues);
-		std::shared_ptr<MAXPacket> sentPacket;
 		std::map<uint32_t, std::shared_ptr<std::vector<std::string>>> valueKeys;
 		std::map<uint32_t, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>>> rpcValues;
 		//Loop through all matching frames
@@ -824,16 +823,6 @@ void MAXPeer::packetReceived(std::shared_ptr<MAXPacket> packet)
 		{
 			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame;
 			if(!a->frameID.empty()) frame = rpcDevice->framesByID.at(a->frameID);
-
-			std::vector<FrameValues> sentFrameValues;
-			if(packet->messageType() == 0x02) //ACK packet: Check if all values were set correctly. If not set value again
-			{
-				sentPacket = central->getSentPacket(_address);
-				if(sentPacket && sentPacket->messageType() > 0 && !sentPacket->payload()->empty())
-				{
-					getValuesFromPacket(sentPacket, sentFrameValues);
-				}
-			}
 
 			for(std::map<std::string, FrameValue>::iterator i = a->values.begin(); i != a->values.end(); ++i)
 			{
