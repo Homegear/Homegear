@@ -29,6 +29,7 @@
 
 #include "WebSocket.h"
 #include "../HelperFunctions/HelperFunctions.h"
+#include <iostream>
 
 namespace BaseLib
 {
@@ -77,22 +78,22 @@ void WebSocket::processHeader(char** buffer, int32_t& bufferLength)
 	_header.opcode = (Header::Opcode::Enum)((*buffer)[0] & 0x0F);
 	_header.hasMask = (*buffer)[1] & 0x80;
 	(*buffer)[1] &= 0x7F;
-	if((*buffer)[1 ] == 126) lengthBytes = 2;
+	if((*buffer)[1] == 126) lengthBytes = 2;
 	else if((*buffer)[1] == 127) lengthBytes = 8;
 	else
 	{
 		lengthBytes = 0;
-		_header.length = (*buffer)[1];
+		_header.length = (uint8_t)(*buffer)[1];
 	}
 	uint32_t headerSize = 2 + lengthBytes + (_header.hasMask ? 4 : 0);
 	if((unsigned)bufferLength < headerSize) throw WebSocketException("Not enough data to process header");
 	if(lengthBytes == 2)
 	{
-		_header.length = (((int32_t)(*buffer)[2]) << 8) + (*buffer)[3];
+		_header.length = (((uint32_t)(uint8_t)(*buffer)[2]) << 8) + (uint8_t)(*buffer)[3];
 	}
 	else if(lengthBytes == 8)
 	{
-		_header.length = (((uint64_t)(*buffer)[2]) << 56) + (((uint64_t)(*buffer)[3]) << 48) + (((uint64_t)(*buffer)[4]) << 40) + (((uint64_t)(*buffer)[5]) << 32) + (((uint64_t)(*buffer)[6]) << 24) + (((uint64_t)(*buffer)[7]) << 16) + (((uint64_t)(*buffer)[8]) << 8) + (*buffer)[9];
+		_header.length = (((uint64_t)(uint8_t)(*buffer)[2]) << 56) + (((uint64_t)(uint8_t)(*buffer)[3]) << 48) + (((uint64_t)(uint8_t)(*buffer)[4]) << 40) + (((uint64_t)(uint8_t)(*buffer)[5]) << 32) + (((uint64_t)(uint8_t)(*buffer)[6]) << 24) + (((uint64_t)(uint8_t)(*buffer)[7]) << 16) + (((uint64_t)(uint8_t)(*buffer)[8]) << 8) + (uint8_t)(*buffer)[9];
 	}
 	if(_header.hasMask)
 	{

@@ -104,7 +104,7 @@ int32_t BinaryDecoder::decodeInteger(std::vector<uint8_t>& encodedData, uint32_t
 
 uint8_t BinaryDecoder::decodeByte(std::vector<char>& encodedData, uint32_t& position)
 {
-	int32_t byte = 0;
+	uint8_t byte = 0;
 	try
 	{
 		if(position + 1 > encodedData.size()) return 0;
@@ -128,7 +128,7 @@ uint8_t BinaryDecoder::decodeByte(std::vector<char>& encodedData, uint32_t& posi
 
 uint8_t BinaryDecoder::decodeByte(std::vector<uint8_t>& encodedData, uint32_t& position)
 {
-	int32_t byte = 0;
+	uint8_t byte = 0;
 	try
 	{
 		if(position + 1 > encodedData.size()) return 0;

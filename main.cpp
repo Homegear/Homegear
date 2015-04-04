@@ -690,6 +690,8 @@ int main(int argc, char* argv[])
 
         rl_bind_key('\t', rl_abort); //no autocompletion
 
+        GD::scriptEngine.checkSessionId("bla");
+
 		char* inputBuffer;
         if(_startAsDaemon)
         {

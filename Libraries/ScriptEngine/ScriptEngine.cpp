@@ -337,7 +337,7 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& 
 		if(!request.getHeader()->args.empty()) SG(request_info).query_string = estrndup(&request.getHeader()->args.at(0), request.getHeader()->args.size());
 		if(!uri.empty()) SG(request_info).request_uri = estrndup(&uri.at(0), uri.size());
 		std::string pathTranslated = serverInfo->contentPath.substr(0, serverInfo->contentPath.size() - 1) + request.getHeader()->pathInfo;
-		if(!path.empty()) SG(request_info).path_translated = estrndup(&pathTranslated.at(0), pathTranslated.size());
+		SG(request_info).path_translated = estrndup(&pathTranslated.at(0), pathTranslated.size());
 
 		if (php_request_startup(TSRMLS_C) == FAILURE) {
 			GD::bl->out.printError("Error calling php_request_startup...");
@@ -345,6 +345,7 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& 
 		}
 
 		php_execute_script(&script TSRMLS_CC);
+
 		int32_t exitCode = EG(exit_status);
 
 		if(SG(request_info).query_string)
@@ -397,6 +398,72 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& 
 		SG(request_info).path_translated = nullptr;
 	}
 	return 1;
+}
+
+bool ScriptEngine::checkSessionId(const std::string& sessionId)
+{
+	if(_disposing) return false;
+	std::unique_ptr<BaseLib::HTTP> request(new BaseLib::HTTP());
+	TSRMLS_FETCH();
+	try
+	{
+		php_homegear_get_globals(TSRMLS_C)->output = nullptr;
+		php_homegear_get_globals(TSRMLS_C)->http = request.get();
+		php_homegear_get_globals(TSRMLS_C)->commandLine = false;
+		php_homegear_get_globals(TSRMLS_C)->cookiesParsed = false;
+
+		SG(server_context) = (void*)request.get(); //Must be defined! Otherwise POST data is not processed.
+		SG(sapi_headers).http_response_code = 200;
+		SG(default_mimetype) = nullptr;
+		SG(default_charset) = nullptr;
+		SG(request_info).content_length = 0;
+		SG(request_info).request_method = "GET";
+		SG(request_info).proto_num = 1001;
+		request->getHeader()->cookie = "PHPSESSID=" + sessionId;
+
+		if (php_request_startup(TSRMLS_C) == FAILURE) {
+			GD::bl->out.printError("Error calling php_request_startup...");
+			return false;
+		}
+
+		zval returnValue;
+		zval function;
+
+		ZVAL_STRING(&function, "session_start", 0);
+		call_user_function(EG(function_table), NULL, &function, &returnValue, 0, nullptr TSRMLS_CC);
+
+		bool result = false;
+		zval** array;
+		zval** token;
+		if(zend_hash_find(&EG(symbol_table), "_SESSION", sizeof("_SESSION"), (void**)&array) == SUCCESS)
+		{
+			if(array && Z_TYPE_PP(array) == IS_ARRAY)
+			{
+				if(zend_hash_find(Z_ARRVAL_PP(array), "authorized", sizeof("authorized"), (void**)&token) == SUCCESS)
+				{
+					result = token && Z_TYPE_PP(token) == IS_BOOL && Z_LVAL_PP(token);
+				}
+			}
+        }
+
+		php_request_shutdown(NULL);
+
+		return result;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	std::string error("Error executing script. Check Homegear log for more details.");
+	return false;
 }
 
 std::shared_ptr<BaseLib::RPC::Variable> ScriptEngine::getAllScripts()

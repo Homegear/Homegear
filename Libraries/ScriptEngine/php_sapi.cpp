@@ -84,7 +84,7 @@ static int php_homegear_read_post(char *buf, uint count_bytes TSRMLS_DC)
 {
 	if(SEG(commandLine)) return 0;
 	BaseLib::HTTP* http = SEG(http);
-	if(!http) return 0;
+	if(!http || http->getContentSize() == 0) return 0;
 	size_t bytesRead = http->readContentStream(buf, count_bytes);
 	if(GD::bl->debugLevel >= 5 && bytesRead > 0) GD::out.printDebug("Debug: Raw post data: " + std::string(buf, bytesRead));
 	return bytesRead;
@@ -127,7 +127,7 @@ static int php_homegear_send_headers(sapi_headers_struct* sapi_headers TSRMLS_DC
 	if(SEG(commandLine)) return SAPI_HEADER_SENT_SUCCESSFULLY;
 	if(!sapi_headers) return SAPI_HEADER_SEND_FAILED;
 	std::vector<char>* out = SEG(output);
-	if(!out) return SAPI_HEADER_SEND_FAILED;
+	if(!out) return SAPI_HEADER_SENT_SUCCESSFULLY;
 	if(out->size() + 100 > out->capacity()) out->reserve(out->capacity() + 1024);
 	if(sapi_headers->http_status_line)
 	{

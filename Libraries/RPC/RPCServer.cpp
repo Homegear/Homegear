@@ -1202,7 +1202,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						else
 						{
 							client->webSocketAuthorized = true;
-							_out.printDebug("Client successfully authorized using basic authentification.");
+							_out.printInfo("Client successfully authorized using basic authentification.");
 							if(client->webSocketClient)
 							{
 								_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");

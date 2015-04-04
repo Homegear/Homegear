@@ -231,8 +231,16 @@ bool Auth::basicServer(BaseLib::WebSocket& webSocket)
 	}
 	if(variable->structValue->find("user") == variable->structValue->end() || variable->structValue->find("password") == variable->structValue->end())
 	{
-		sendWebSocketUnauthorized(webSocket, "Either \"user\" or \"password\" is not specified.");
-		return false;
+		if(variable->structValue->find("user") != variable->structValue->end() && GD::scriptEngine.checkSessionId(variable->structValue->at("user")->stringValue))
+		{
+			sendWebSocketAuthorized(webSocket);
+			return true;
+		}
+		else
+		{
+			sendWebSocketUnauthorized(webSocket, "Either \"user\" or \"password\" is not specified.");
+			return false;
+		}
 	}
 	if(User::verify(variable->structValue->at("user")->stringValue, variable->structValue->at("password")->stringValue))
 	{

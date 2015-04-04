@@ -834,7 +834,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			}
 			if(!result) stringStream << "Unknown error." << std::endl;
 			else if(result->errorStruct) stringStream << result->structValue->at("faultString")->stringValue << std::endl;
-			else stringStream << "Started firmware update(s)... This might take a long time. Use the RPC function \"getUpdateProgress\" or see the log for details." << std::endl;
+			else stringStream << "Started firmware update(s)... This might take a long time. Use the RPC function \"getUpdateStatus\" or see the log for details." << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 10, "peers list") == 0 || command.compare(0, 2, "pl") == 0 || command.compare(0, 2, "ls") == 0)
