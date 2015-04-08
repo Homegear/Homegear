@@ -3480,6 +3480,20 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setValue(int32_t clientID, u
 			if(HomeMaticDevice::isDimmer(_deviceType) || HomeMaticDevice::isSwitch(_deviceType)) queue->retries = 12;
 			central->enqueuePendingQueues(_address);
 		}
+		else if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp2))
+		{
+			std::shared_ptr<BidCoSPacket> lastPacket = central->getReceivedPacket(_address);
+			if(lastPacket && BaseLib::HelperFunctions::getTime() - lastPacket->timeReceived() < 150)
+			{
+				if(HomeMaticDevice::isDimmer(_deviceType) || HomeMaticDevice::isSwitch(_deviceType)) queue->retries = 12;
+				central->enqueuePendingQueues(_address);
+			}
+			else
+			{
+				setValuePending(true);
+				GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+			}
+		}
 		else
 		{
 			setValuePending(true);
