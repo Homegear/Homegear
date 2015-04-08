@@ -149,11 +149,9 @@ void MQTT::connect()
 {
 	try
 	{
-		std::cerr << "Moin Connect 1" << std::endl;
 		if(_started || _client) return;
 		_started = true;
 		_connectionOptions = new MQTTClient_connectOptions(MQTTClient_connectOptions_initializer);
-		std::cerr << "Moin Connect 2" << std::endl;
 		if(!_settings.username().empty())
 		{
 			((MQTTClient_connectOptions*)_connectionOptions)->username = _settings.username().c_str();
@@ -207,15 +205,11 @@ void MQTT::connect()
 			_sslOptions = new MQTTClient_SSLOptions({ {'M', 'Q', 'T', 'S'}, 0, _settings.caFile().c_str(), _settings.certPath().c_str(), _settings.keyPath().c_str(), nullptr, nullptr, _settings.verifyCertificate() });
 			((MQTTClient_connectOptions*)_connectionOptions)->ssl = (MQTTClient_SSLOptions*)_sslOptions;
 		}
-		std::cerr << "Moin Connect 3" << std::endl;
 		MQTTClient_create(&_client, std::string((_settings.enableSSL() ? "ssl://" : "tcp://") + _settings.brokerHostname() + ":" + _settings.brokerPort()).c_str(), _settings.clientName().c_str(), MQTTCLIENT_PERSISTENCE_NONE, NULL);
-		std::cerr << "Moin Connect 4" << std::endl;
 		((MQTTClient_connectOptions*)_connectionOptions)->keepAliveInterval = 10;
 		((MQTTClient_connectOptions*)_connectionOptions)->cleansession = 1;
 		MQTTClient_setCallbacks(_client, NULL, NULL, MQTTMessageArrived, NULL);
-		std::cerr << "Moin Connect 5" << std::endl;
 		int32_t result = MQTTClient_connect(_client, (MQTTClient_connectOptions*)_connectionOptions);
-		std::cerr << "Moin Connect 6" << std::endl;
 		if (result != MQTTCLIENT_SUCCESS)
 		{
 			disconnect();
@@ -232,7 +226,6 @@ void MQTT::connect()
 		}
 		_out.printInfo("Info: Successfully connected to message broker.");
 		MQTTClient_subscribe(_client, std::string("homegear/" + _settings.homegearId() + "/rpc/#").c_str(), 1);
-		std::cerr << "Moin Connect 7" << std::endl;
 	}
 	catch(const std::exception& ex)
 	{
@@ -255,11 +248,8 @@ void MQTT::disconnect()
 		_started = false;
 		if(_client)
 		{
-			std::cerr << "Moin Disconnect 1" << std::endl;
 			MQTTClient_disconnect(_client, 10000);
-			std::cerr << "Moin Disconnect 2" << std::endl;
 			MQTTClient_destroy(&_client);
-			std::cerr << "Moin Disconnect 3" << std::endl;
 			_client = nullptr;
 		}
 		if(_connectionOptions)
@@ -394,17 +384,13 @@ void MQTT::publish(const std::string& topic, const std::vector<char>& data)
 				return;
 			}
 			if(GD::bl->debugLevel >= 5) _out.printDebug("Publishing message with topic " + fullTopic + ": " + std::string(&data.at(0), data.size()));
-			std::cerr << "Moin 1" << std::endl;
 			MQTTClient_publishMessage(_client, fullTopic.c_str(), &message, &token);
-			std::cerr << "Moin 2" << std::endl;
 			if(MQTTClient_waitForCompletion(_client, token, 5000) != MQTTCLIENT_SUCCESS)
 			{
-				std::cerr << "Moin 3a" << std::endl;
 				if(i == 2) GD::out.printError("Could not publish message with topic " + fullTopic + " and data: " + std::string(&data.at(0), data.size()));
 				disconnect();
 				continue;
 			}
-			std::cerr << "Moin 3b" << std::endl;
 			break;
 		}
 	}
