@@ -2481,12 +2481,6 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 					central->enqueuePackets(_address, queue, true);
 				}
 			}
-			else if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp2)) //Device can receive packets after sending. Wake up bit is not set.
-			{
-				//Bidirectional?
-				if(packet->controlByte() & 0x20) central->sendOK(packet->messageCounter(), packet->senderAddress());
-				central->enqueuePendingQueues(_address);
-			}
 		}
 		else if((packet->controlByte() & 0x20) && packet->destinationAddress() == central->getAddress())
 		{
