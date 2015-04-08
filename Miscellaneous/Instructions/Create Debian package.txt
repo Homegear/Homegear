@@ -1,4 +1,4 @@
--	apt-get install binutils debhelper devscripts sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses-dev libssl-dev libparse-debcontrol-perl libgcrypt11-dev libgpg-error-dev libgnutls-dev php5-dev libphp5-embed
+-	apt-get install binutils debhelper devscripts sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses-dev libssl-dev libparse-debcontrol-perl libgcrypt11-dev libgpg-error-dev libgnutls-dev php5-dev libphp5-embed libssl-dev libcrypto++-dev
 -	Note that you need at least g++ version 4.7 installed.
 -	Now use the script CreateDebianPackage.sh or do it manually:
 -	Make a copy of the Homegear directory to work with in the next steps

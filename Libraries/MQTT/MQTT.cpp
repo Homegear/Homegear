@@ -94,7 +94,6 @@ void MQTT::start()
 	try
 	{
 		if(_started) return;
-		_started = true;
 		_out.init(GD::bl.get());
 		_out.setPrefix("MQTT Client: ");
 		_jsonEncoder = std::unique_ptr<BaseLib::RPC::JsonEncoder>(new BaseLib::RPC::JsonEncoder(GD::bl.get()));
@@ -150,8 +149,11 @@ void MQTT::connect()
 {
 	try
 	{
+		std::cerr << "Moin Connect 1" << std::endl;
 		if(_started || _client) return;
+		_started = true;
 		_connectionOptions = new MQTTClient_connectOptions(MQTTClient_connectOptions_initializer);
+		std::cerr << "Moin Connect 2" << std::endl;
 		if(!_settings.username().empty())
 		{
 			((MQTTClient_connectOptions*)_connectionOptions)->username = _settings.username().c_str();
@@ -168,11 +170,7 @@ void MQTT::connect()
 			if(_settings.caFile().empty())
 			{
 				_out.printError("Error: SSL is enabled but \"caFile\" is not set.");
-				if(_connectionOptions)
-				{
-					free(_connectionOptions);
-					_connectionOptions = nullptr;
-				}
+				disconnect();
 				return;
 			}
 			if(!BaseLib::HelperFunctions::fileExists(_settings.caFile()))
@@ -184,11 +182,7 @@ void MQTT::connect()
 			if(_settings.certPath().empty())
 			{
 				_out.printError("Error: SSL is enabled but \"certPath\" is not set.");
-				if(_connectionOptions)
-				{
-					free(_connectionOptions);
-					_connectionOptions = nullptr;
-				}
+				disconnect();
 				return;
 			}
 			if(!BaseLib::HelperFunctions::fileExists(_settings.certPath()))
@@ -213,11 +207,15 @@ void MQTT::connect()
 			_sslOptions = new MQTTClient_SSLOptions({ {'M', 'Q', 'T', 'S'}, 0, _settings.caFile().c_str(), _settings.certPath().c_str(), _settings.keyPath().c_str(), nullptr, nullptr, _settings.verifyCertificate() });
 			((MQTTClient_connectOptions*)_connectionOptions)->ssl = (MQTTClient_SSLOptions*)_sslOptions;
 		}
+		std::cerr << "Moin Connect 3" << std::endl;
 		MQTTClient_create(&_client, std::string((_settings.enableSSL() ? "ssl://" : "tcp://") + _settings.brokerHostname() + ":" + _settings.brokerPort()).c_str(), _settings.clientName().c_str(), MQTTCLIENT_PERSISTENCE_NONE, NULL);
+		std::cerr << "Moin Connect 4" << std::endl;
 		((MQTTClient_connectOptions*)_connectionOptions)->keepAliveInterval = 10;
 		((MQTTClient_connectOptions*)_connectionOptions)->cleansession = 1;
 		MQTTClient_setCallbacks(_client, NULL, NULL, MQTTMessageArrived, NULL);
+		std::cerr << "Moin Connect 5" << std::endl;
 		int32_t result = MQTTClient_connect(_client, (MQTTClient_connectOptions*)_connectionOptions);
+		std::cerr << "Moin Connect 6" << std::endl;
 		if (result != MQTTCLIENT_SUCCESS)
 		{
 			disconnect();
@@ -228,12 +226,13 @@ void MQTT::connect()
 			else if(result == 3) reason = "Connection refused: Server unavailable";
 			else if(result == 4) reason = "Connection refused: Bad user name or password";
 			else if(result == 5) reason = "Connection refused: Not authorized";
-			else reason = "Unknown reason. Check broker log for more details. One common reason is, that the broker requires SSL and SSL is not enabled in Homegear's mqtt.conf.";
+			else reason = "Unknown reason. Check broker log for more details. A few common reasons: The broker is not running, the broker is not reachable (wrong IP address, wrong port, firewall, ...), the broker requires SSL and SSL is not enabled in Homegear's mqtt.conf.";
 			_out.printError("Error: Failed to connect to message broker: " + reason);
 			return;
 		}
 		_out.printInfo("Info: Successfully connected to message broker.");
 		MQTTClient_subscribe(_client, std::string("homegear/" + _settings.homegearId() + "/rpc/#").c_str(), 1);
+		std::cerr << "Moin Connect 7" << std::endl;
 	}
 	catch(const std::exception& ex)
 	{
@@ -256,18 +255,21 @@ void MQTT::disconnect()
 		_started = false;
 		if(_client)
 		{
+			std::cerr << "Moin Disconnect 1" << std::endl;
 			MQTTClient_disconnect(_client, 10000);
+			std::cerr << "Moin Disconnect 2" << std::endl;
 			MQTTClient_destroy(&_client);
+			std::cerr << "Moin Disconnect 3" << std::endl;
 			_client = nullptr;
 		}
 		if(_connectionOptions)
 		{
-			free(_connectionOptions);
+			delete((MQTTClient_connectOptions*)_connectionOptions);
 			_connectionOptions = nullptr;
 		}
 		if(_sslOptions)
 		{
-			free(_sslOptions);
+			delete((MQTTClient_SSLOptions*)_sslOptions);
 			_sslOptions = nullptr;
 		}
 	}
@@ -392,13 +394,17 @@ void MQTT::publish(const std::string& topic, const std::vector<char>& data)
 				return;
 			}
 			if(GD::bl->debugLevel >= 5) _out.printDebug("Publishing message with topic " + fullTopic + ": " + std::string(&data.at(0), data.size()));
+			std::cerr << "Moin 1" << std::endl;
 			MQTTClient_publishMessage(_client, fullTopic.c_str(), &message, &token);
+			std::cerr << "Moin 2" << std::endl;
 			if(MQTTClient_waitForCompletion(_client, token, 5000) != MQTTCLIENT_SUCCESS)
 			{
+				std::cerr << "Moin 3a" << std::endl;
 				if(i == 2) GD::out.printError("Could not publish message with topic " + fullTopic + " and data: " + std::string(&data.at(0), data.size()));
 				disconnect();
 				continue;
 			}
+			std::cerr << "Moin 3b" << std::endl;
 			break;
 		}
 	}
