@@ -377,6 +377,16 @@ public:
 	std::shared_ptr<BaseLib::RPC::Variable> invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
 };
 
+class RPCGetName : public RPCMethod
+{
+public:
+	RPCGetName()
+	{
+		addSignature(BaseLib::RPC::VariableType::rpcString, std::vector<BaseLib::RPC::VariableType>{BaseLib::RPC::VariableType::rpcInteger});
+	}
+	std::shared_ptr<BaseLib::RPC::Variable> invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
+};
+
 class RPCGetParamsetDescription : public RPCMethod
 {
 public:

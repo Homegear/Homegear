@@ -96,7 +96,7 @@ void HTTPClient::sendRequest(const std::string& request, std::string& response)
 
 	std::this_thread::sleep_for(std::chrono::milliseconds(5)); //Some servers need a little, before the socket can be read.
 
-	for(int32_t i = 0; i < 100; i++) //Max 100 reads.
+	for(int32_t i = 0; i < 10000; i++) //Max 10000 reads.
 	{
 		if(i > 0 && !_socket->connected())
 		{

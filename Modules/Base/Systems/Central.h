@@ -78,6 +78,7 @@ public:
 	virtual std::shared_ptr<RPC::Variable> getLinkPeers(int32_t clientID, uint64_t peerID, int32_t channel);
 	virtual std::shared_ptr<RPC::Variable> getLinks(int32_t clientID, std::string serialNumber, int32_t channel, int32_t flags);
 	virtual std::shared_ptr<RPC::Variable> getLinks(int32_t clientID, uint64_t peerID, int32_t channel, int32_t flags);
+	virtual std::shared_ptr<RPC::Variable> getName(int32_t clientID, uint64_t id);
 	virtual std::shared_ptr<RPC::Variable> getParamsetDescription(int32_t clientID, std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
 	virtual std::shared_ptr<RPC::Variable> getParamsetDescription(int32_t clientID, uint64_t peerID, int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
 	virtual std::shared_ptr<RPC::Variable> getParamsetId(int32_t clientID, std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);

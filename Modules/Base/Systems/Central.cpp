@@ -330,6 +330,29 @@ std::shared_ptr<RPC::Variable> Central::getLinks(int32_t clientID, uint64_t peer
     return RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::Variable> Central::getName(int32_t clientID, uint64_t id)
+{
+	try
+	{
+		std::shared_ptr<Peer> peer(_me->getPeer(id));
+		if(peer) return std::shared_ptr<RPC::Variable>(new RPC::Variable(peer->getName()));
+		return RPC::Variable::createError(-2, "Unknown device.");
+	}
+	catch(const std::exception& ex)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::Variable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::Variable> Central::getParamset(int32_t clientID, std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel)
 {
 	try
