@@ -261,10 +261,10 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 		int32_t exitCode = EG(exit_status);
 
 		php_request_shutdown(NULL);
-		if(GD::bl->debugLevel >= 5 && output->size() > 0)
+		if(output->size() > 0)
 		{
 			std::string outputString(&output->at(0), output->size());
-			if(BaseLib::HelperFunctions::trim(outputString).size() > 0) GD::out.printMessage("Script output: " + outputString);
+			if(BaseLib::HelperFunctions::trim(outputString).size() > 0) GD::out.printMessage("Script output:\n" + outputString);
 		}
 
 		if(SG(request_info).path_translated)
