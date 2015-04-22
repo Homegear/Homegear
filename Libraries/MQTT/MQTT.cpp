@@ -329,6 +329,7 @@ void MQTT::queueMessage(std::shared_ptr<std::pair<std::string, std::vector<char>
 {
 	try
 	{
+		if(!_started) return;
 		_messageBufferMutex.lock();
 		int32_t tempHead = _messageBufferHead + 1;
 		if(tempHead >= _messageBufferSize) tempHead = 0;

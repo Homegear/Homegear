@@ -175,6 +175,11 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 {
 	try
 	{
+		if(GD::bl->booting)
+		{
+			GD::out.printInfo("Info: Not broadcasting event as I'm still starting up.");
+			return;
+		}
 		if(!valueKeys || !values || valueKeys->size() != values->size()) return;
 		if(GD::mqtt->enabled())
 		{
