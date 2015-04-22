@@ -50,6 +50,11 @@ newplatform {
 solution "homegear"
    configurations { "Release", "Debug", "Profiling" }
 
+   includedirs
+   {
+      "/usr/include/bla"
+   }
+
    configuration { "native", "linux", "gmake" }
       --GCRYPT_NO_DEPRECATED only works after modifying the header file. See: http://lists.gnupg.org/pipermail/gcrypt-devel/2011-September/001844.html
       defines

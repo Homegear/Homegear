@@ -1744,7 +1744,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetPeerId::invoke(int32_t clientID, s
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central)
 			{
-				std::shared_ptr<BaseLib::RPC::Variable> result = central->getPeerID(parameters->at(0)->integerValue, filterValue);
+				std::shared_ptr<BaseLib::RPC::Variable> result = central->getPeerID(clientID, parameters->at(0)->integerValue, filterValue);
 				if(result && !result->errorStruct && result->arrayValue->size() > 0) ids->arrayValue->insert(ids->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
 			}
 		}
