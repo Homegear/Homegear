@@ -189,7 +189,7 @@ void WebServer::post(BaseLib::HTTP& http, std::vector<char>& content)
 			return;
 		}
 #else
-		getError(304, BaseLib::HTTP::getStatusText(304), "Homegear is compiled without script engine.", content);
+		getError(304, _http.getStatusText(304), "Homegear is compiled without script engine.", content);
 #endif
 	}
 	catch(const std::exception& ex)
