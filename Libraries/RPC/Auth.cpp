@@ -229,6 +229,7 @@ bool Auth::basicServer(BaseLib::WebSocket& webSocket)
 		sendWebSocketUnauthorized(webSocket, "Received data is no json object.");
 		return false;
 	}
+#ifdef SCRIPTENGINE
 	if(variable->structValue->find("user") == variable->structValue->end() || variable->structValue->find("password") == variable->structValue->end())
 	{
 		if(variable->structValue->find("user") != variable->structValue->end() && GD::scriptEngine.checkSessionId(variable->structValue->at("user")->stringValue))
@@ -242,6 +243,10 @@ bool Auth::basicServer(BaseLib::WebSocket& webSocket)
 			return false;
 		}
 	}
+#else
+	sendWebSocketUnauthorized(webSocket, "Either \"user\" or \"password\" is not specified.");
+	return false;
+#endif
 	if(User::verify(variable->structValue->at("user")->stringValue, variable->structValue->at("password")->stringValue))
 	{
 		sendWebSocketAuthorized(webSocket);
