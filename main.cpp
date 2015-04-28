@@ -125,12 +125,13 @@ void terminate(int32_t signalNumber)
 				GD::out.printInfo("Stopping UPnP server...");
 				GD::uPnP->stop();
 			}
-			stopRPCServers(true);
-			GD::rpcServers.clear();
-			GD::out.printInfo( "(Shutdown) => Stopping Event handler");
 #ifdef EVENTHANDLER
 			GD::eventHandler.dispose();
 #endif
+			stopRPCServers(true);
+			GD::rpcServers.clear();
+			GD::out.printInfo( "(Shutdown) => Stopping Event handler");
+
 			if(GD::mqtt->enabled())
 			{
 				GD::out.printInfo( "(Shutdown) => Stopping MQTT client");;
