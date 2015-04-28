@@ -292,6 +292,7 @@ std::shared_ptr<BaseLib::RPC::Variable> EventHandler::add(std::shared_ptr<BaseLi
 {
 	try
 	{
+		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Event handler is shutting down.");
 		if(eventDescription->type != BaseLib::RPC::VariableType::rpcStruct) return BaseLib::RPC::Variable::createError(-5, "Parameter is not of type Struct.");
 		if(eventDescription->structValue->find("ID") == eventDescription->structValue->end()) return BaseLib::RPC::Variable::createError(-5, "No id specified.");
 		if(eventDescription->structValue->find("TYPE") == eventDescription->structValue->end()) return BaseLib::RPC::Variable::createError(-5, "No type specified.");
@@ -419,6 +420,7 @@ std::shared_ptr<BaseLib::RPC::Variable> EventHandler::list(int32_t type, uint64_
 {
 	try
 	{
+		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Event handler is shutting down.");
 		std::vector<std::shared_ptr<Event>> events;
 		_eventsMutex.lock();
 		//Copy all events first, because listEvents takes very long and we don't want to lock _eventsMutex too long
@@ -485,6 +487,7 @@ std::shared_ptr<BaseLib::RPC::Variable> EventHandler::get(std::string name)
 {
 	try
 	{
+		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Event handler is shutting down.");
 		std::shared_ptr<Event> event = getEvent(name);
 		if(!event) return BaseLib::RPC::Variable::createError(-5, "Event not found.");
 		return getEventDescription(event);
@@ -509,6 +512,7 @@ std::shared_ptr<BaseLib::RPC::Variable> EventHandler::getEventDescription(std::s
 {
 	try
 	{
+		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Event handler is shutting down.");
 		if(!event) return BaseLib::RPC::Variable::createError(-32500, "Event is nullptr.");
 		std::shared_ptr<BaseLib::RPC::Variable> eventDescription(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 		if(event->type == Event::Type::timed)
@@ -582,6 +586,7 @@ std::shared_ptr<BaseLib::RPC::Variable> EventHandler::remove(std::string name)
 {
 	try
 	{
+		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Event handler is shutting down.");
 		_eventsMutex.lock();
 		std::shared_ptr<Event> event;
 		for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
@@ -652,6 +657,7 @@ std::shared_ptr<BaseLib::RPC::Variable> EventHandler::enable(std::string name, b
 {
 	try
 	{
+		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Event handler is shutting down.");
 		_eventsMutex.lock();
 		std::shared_ptr<Event> event;
 		for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
@@ -716,6 +722,7 @@ std::shared_ptr<BaseLib::RPC::Variable> EventHandler::abortReset(std::string nam
 {
 	try
 	{
+		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Event handler is shutting down.");
 		_eventsMutex.lock();
 		std::shared_ptr<Event> event;
 		for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
@@ -1108,6 +1115,7 @@ std::shared_ptr<BaseLib::RPC::Variable> EventHandler::trigger(std::string name)
 {
 	try
 	{
+		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Event handler is shutting down.");
 		_eventsMutex.lock();
 		std::shared_ptr<Event> event;
 		for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
