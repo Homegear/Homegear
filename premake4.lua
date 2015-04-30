@@ -47,13 +47,21 @@ newplatform {
     }
 }
 
+newplatform {
+    name = "armel_static",
+    description = "Compile without script engine and event handler, because std::future is not supported on armel.",
+    -- Needs to be "true" to be able to differentiate between "native" and "armel"
+    iscrosscompiler = true,
+    -- "iscrosscompiler" does not work without providing gcc
+    gcc = {
+        cc = "gcc",
+        cxx = "g++",
+        cppflags = ""
+    }
+}
+
 solution "homegear"
    configurations { "Release", "Debug", "Profiling" }
-
-   includedirs
-   {
-      "/usr/include/bla"
-   }
 
    configuration { "native", "linux", "gmake" }
       --GCRYPT_NO_DEPRECATED only works after modifying the header file. See: http://lists.gnupg.org/pipermail/gcrypt-devel/2011-September/001844.html
@@ -87,6 +95,17 @@ solution "homegear"
 
    --armel does not support std::future which is used in script engine and event handler
    configuration { "armel", "gmake" }
+      --GCRYPT_NO_DEPRECATED only works after modifying the header file. See: http://lists.gnupg.org/pipermail/gcrypt-devel/2011-September/001844.html
+      defines
+      {
+         "FORTIFY_SOURCE=2",
+         "GCRYPT_NO_DEPRECATED",
+         "OPENSSL"
+      }
+      linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear" }
+
+   --armel does not support std::future which is used in script engine and event handler
+   configuration { "armel_static", "gmake" }
       --GCRYPT_NO_DEPRECATED only works after modifying the header file. See: http://lists.gnupg.org/pipermail/gcrypt-devel/2011-September/001844.html
       defines
       {
@@ -549,14 +568,20 @@ solution "homegear"
       language "C++"
       files { "*.h", "*.cpp" }
       files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
-      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l readline", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l upnp", "-l mqtt", "-l database", "-l scriptengine", "-l base", "-l gpg-error", "-l sqlite3", "-l paho.mqtt.c", "-l crypto", "-l ssl" }
       buildoptions { "-Wall", "-std=c++11" }
- 
+
+      --Inserted after linkoptions above
       configuration { "native", "linux", "gmake" }
-        linkoptions { "-l php5" }
+        linkoptions { "-Wl,-Bstatic", "-lrpc", "-Wl,-Bdynamic", "-ldl", "-lpthread", "-lreadline", "-lgcrypt", "-lgnutls", "-Wl,-Bstatic", "-luser", "-lcli", "-levents", "-lgd", "-lupnp", "-lmqtt", "-ldatabase", "-lscriptengine", "-lbase", "-Wl,-Bdynamic", "-lgpg-error", "-lsqlite3", "-Wl,-Bstatic", "-lpaho.mqtt.c", "-Wl,-Bdynamic", "-lcrypto", "-lssl", "-Wl,-Bdynamic", "-lphp5", "-Wl,--as-needed" }
 
       configuration { "rpi", "gmake" }
-        linkoptions { "-l php5" }
+        linkoptions { "-Wl,-Bstatic", "-lrpc", "-Wl,-Bdynamic", "-ldl", "-lpthread", "-lreadline", "-lgcrypt", "-lgnutls", "-Wl,-Bstatic", "-luser", "-lcli", "-levents", "-lgd", "-lupnp", "-lmqtt", "-ldatabase", "-lscriptengine", "-lbase", "-Wl,-Bdynamic", "-lgpg-error", "-lsqlite3", "-Wl,-Bstatic", "-lpaho.mqtt.c", "-Wl,-Bdynamic", "-lcrypto", "-lssl", "-Wl,-Bdynamic", "-lphp5", "-Wl,--as-needed" }
+
+      configuration { "armel", "gmake" }
+        linkoptions { "-Wl,-Bstatic", "-lrpc", "-Wl,-Bdynamic", "-ldl", "-lpthread", "-lreadline", "-lgcrypt", "-lgnutls", "-Wl,-Bstatic", "-luser", "-lcli", "-levents", "-lgd", "-lupnp", "-lmqtt", "-ldatabase", "-lscriptengine", "-lbase", "-Wl,-Bdynamic", "-lgpg-error", "-lsqlite3", "-Wl,-Bstatic", "-lpaho.mqtt.c", "-Wl,-Bdynamic", "-lcrypto", "-lssl", "-Wl,-Bdynamic", "-lphp5", "-Wl,--as-needed" }
+
+      configuration { "armel_static", "gmake" }
+        linkoptions { "-Wl,-Bstatic", "-lrpc", "-Wl,-Bdynamic", "-ldl", "-Wl,-Bstatic", "-lpthread", "-lreadline", "-lgcrypt", "-lgnutls", "-luser", "-lcli", "-levents", "-lgd", "-lupnp", "-lmqtt", "-ldatabase", "-lscriptengine", "-lbase", "-lgpg-error", "-lsqlite3", "-lpaho.mqtt.c", "-lssl", "-lcrypto", "-Wl,--as-needed" }
 
       configuration "Debug"
          defines { "DEBUG" }

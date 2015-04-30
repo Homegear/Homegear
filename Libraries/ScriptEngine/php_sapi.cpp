@@ -586,6 +586,9 @@ int php_homegear_init()
 
 	ts_allocate_id(&homegear_globals_id, sizeof(zend_homegear_globals), (void(*)(void*, void***))php_homegear_globals_ctor, (void(*)(void*, void***))php_homegear_globals_dtor);
 
+	zend_class_entry ce;
+
+
 	return SUCCESS;
 }
 

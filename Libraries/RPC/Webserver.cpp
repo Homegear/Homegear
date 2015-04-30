@@ -39,9 +39,9 @@ std::string WebServer::getHeader(uint32_t contentLength, std::string contentType
 		header.reserve(1024);
 		header.append("HTTP/1.1 " + std::to_string(code) + " " + codeDescription + "\r\n");
 		header.append("Connection: close\r\n");
-		header.append("Content-Type: " + contentType + "\r\n");
+		if(!contentType.empty()) header.append("Content-Type: " + contentType + "\r\n");
 		header.append(additionalHeader);
-		header.append("Content-Length: ").append(std::to_string(contentLength + 21)).append("\r\n\r\n");
+		header.append("Content-Length: ").append(std::to_string(contentLength)).append("\r\n\r\n");
 		return header;
 	}
 	catch(const std::exception& ex)
