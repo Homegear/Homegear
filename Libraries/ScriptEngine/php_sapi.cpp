@@ -360,48 +360,7 @@ void php_homegear_invoke_rpc(std::string& methodName, std::shared_ptr<BaseLib::R
 	PHPVariableConverter::getPHPVariable(result, return_value);
 }
 
-/* Script engine specific functions */
-
-ZEND_FUNCTION(hg_devtest)
-{
-	RETURN_TRUE;
-}
-
-ZEND_FUNCTION(hg_auth)
-{
-	char* pName = nullptr;
-	int32_t nameLength = 0;
-	char* pPassword = nullptr;
-	int32_t passwordLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
-	if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
-	if(User::verify(std::string(pName, nameLength), std::string(pPassword, passwordLength))) RETURN_TRUE;
-	RETURN_FALSE;
-}
-
-ZEND_FUNCTION(hg_create_user)
-{
-	char* pName = nullptr;
-	int32_t nameLength = 0;
-	char* pPassword = nullptr;
-	int32_t passwordLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
-	if(nameLength == 0 || passwordLength < 8) RETURN_FALSE;
-	std::string userName(pName, nameLength);
-	if(!BaseLib::HelperFunctions::isAlphaNumeric(userName)) RETURN_FALSE;
-	if(User::create(userName, std::string(pPassword, passwordLength))) RETURN_TRUE;
-	RETURN_FALSE;
-}
-
-ZEND_FUNCTION(hg_delete_user)
-{
-	char* pName = nullptr;
-	int32_t nameLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
-	if(nameLength == 0) RETURN_FALSE;
-	if(User::remove(std::string(pName, nameLength))) RETURN_TRUE;
-	RETURN_FALSE;
-}
+/* RPC functions */
 
 ZEND_FUNCTION(hg_invoke)
 {
@@ -420,41 +379,6 @@ ZEND_FUNCTION(hg_invoke)
 	}
 	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used PTSRMLS_CC);
 }
-
-ZEND_FUNCTION(hg_update_user)
-{
-	char* pName = nullptr;
-	int32_t nameLength = 0;
-	char* pPassword = nullptr;
-	int32_t passwordLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
-	if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
-	if(User::update(std::string(pName, nameLength), std::string(pPassword, passwordLength))) RETURN_TRUE;
-	RETURN_FALSE;
-}
-
-ZEND_FUNCTION(hg_user_exists)
-{
-	char* pName = nullptr;
-	int32_t nameLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
-	if(nameLength == 0) RETURN_FALSE;
-	if(User::exists(std::string(pName, nameLength))) RETURN_TRUE;
-	RETURN_FALSE;
-}
-
-ZEND_FUNCTION(hg_users)
-{
-	std::map<uint64_t, std::string> users;
-	User::getAll(users);
-	array_init(return_value);
-	for(std::map<uint64_t, std::string>::iterator i = users.begin(); i != users.end(); ++i)
-	{
-		add_next_index_string(return_value, i->second.c_str(), i->second.size());
-	}
-}
-
-/* RPC functions */
 
 ZEND_FUNCTION(hg_get_meta)
 {
@@ -544,14 +468,7 @@ ZEND_FUNCTION(hg_set_value)
 }
 
 static const zend_function_entry homegear_functions[] = {
-	ZEND_FE(hg_devtest, NULL)
-	ZEND_FE(hg_auth, NULL)
-	ZEND_FE(hg_create_user, NULL)
-	ZEND_FE(hg_delete_user, NULL)
 	ZEND_FE(hg_invoke, NULL)
-	ZEND_FE(hg_update_user, NULL)
-	ZEND_FE(hg_user_exists, NULL)
-	ZEND_FE(hg_users, NULL)
 	ZEND_FE(hg_get_meta, NULL)
 	ZEND_FE(hg_get_system, NULL)
 	ZEND_FE(hg_get_value, NULL)
@@ -560,6 +477,77 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_set_value, NULL)
 	{NULL, NULL, NULL}
 };
+
+/* User functions/methods */
+
+ZEND_FUNCTION(hg_auth)
+{
+	char* pName = nullptr;
+	int32_t nameLength = 0;
+	char* pPassword = nullptr;
+	int32_t passwordLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
+	if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
+	if(User::verify(std::string(pName, nameLength), std::string(pPassword, passwordLength))) RETURN_TRUE;
+	RETURN_FALSE;
+}
+
+ZEND_FUNCTION(hg_create_user)
+{
+	char* pName = nullptr;
+	int32_t nameLength = 0;
+	char* pPassword = nullptr;
+	int32_t passwordLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
+	if(nameLength == 0 || passwordLength < 8) RETURN_FALSE;
+	std::string userName(pName, nameLength);
+	if(!BaseLib::HelperFunctions::isAlphaNumeric(userName)) RETURN_FALSE;
+	if(User::create(userName, std::string(pPassword, passwordLength))) RETURN_TRUE;
+	RETURN_FALSE;
+}
+
+ZEND_FUNCTION(hg_delete_user)
+{
+	char* pName = nullptr;
+	int32_t nameLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
+	if(nameLength == 0) RETURN_FALSE;
+	if(User::remove(std::string(pName, nameLength))) RETURN_TRUE;
+	RETURN_FALSE;
+}
+
+ZEND_FUNCTION(hg_update_user)
+{
+	char* pName = nullptr;
+	int32_t nameLength = 0;
+	char* pPassword = nullptr;
+	int32_t passwordLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
+	if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
+	if(User::update(std::string(pName, nameLength), std::string(pPassword, passwordLength))) RETURN_TRUE;
+	RETURN_FALSE;
+}
+
+ZEND_FUNCTION(hg_user_exists)
+{
+	char* pName = nullptr;
+	int32_t nameLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
+	if(nameLength == 0) RETURN_FALSE;
+	if(User::exists(std::string(pName, nameLength))) RETURN_TRUE;
+	RETURN_FALSE;
+}
+
+ZEND_FUNCTION(hg_users)
+{
+	std::map<uint64_t, std::string> users;
+	User::getAll(users);
+	array_init(return_value);
+	for(std::map<uint64_t, std::string>::iterator i = users.begin(); i != users.end(); ++i)
+	{
+		add_next_index_string(return_value, i->second.c_str(), i->second.size());
+	}
+}
 
 ZEND_METHOD(Homegear, __call)
 {
@@ -578,7 +566,13 @@ ZEND_BEGIN_ARG_INFO_EX(php_homegear_two_args, 0, 0, 2)
 ZEND_END_ARG_INFO()
 
 static const zend_function_entry homegear_methods[] = {
-	ZEND_ME(Homegear, __call, php_homegear_two_args, ZEND_ACC_PUBLIC)
+	ZEND_ME(Homegear, __call, php_homegear_two_args, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(auth, hg_auth, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(createUser, hg_create_user, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(deleteUser, hg_delete_user, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(updateUser, hg_update_user, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(userExists, hg_user_exists, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(listUsers, hg_users, NULL, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
