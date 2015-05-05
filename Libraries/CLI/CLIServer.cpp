@@ -736,7 +736,9 @@ std::string Server::handleGlobalCommand(std::string& command)
 				std::string outputString(&scriptOutput->at(0), &scriptOutput->at(0) + scriptOutput->size());
 				stringStream << outputString << std::endl;
 			}
-			stringStream << "Exit code: " << std::dec << exitCode << std::endl;
+			if(!exitCode) stringStream << "Script executed successfully." << std::endl;
+			else stringStream << "Error executing script. Exit code: " << std::dec << exitCode << std::endl;
+
 #else
 			stringStream << "This Homegear binary is compiled without script engine support." << std::endl;
 #endif

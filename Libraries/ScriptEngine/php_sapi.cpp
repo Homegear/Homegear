@@ -37,6 +37,10 @@
 
 static int homegear_globals_id;
 
+static int php_homegear_startup(sapi_module_struct* sapi_module);
+static int php_homegear_activate(TSRMLS_D);
+static int php_homegear_deactivate(TSRMLS_D);
+
 BaseLib::HTTP _http;
 
 zend_homegear_globals* php_homegear_get_globals(TSRMLS_D)
@@ -302,21 +306,6 @@ static void php_homegear_register_variables(zval* track_vars_array TSRMLS_DC)
 	}
 }
 
-static int php_homegear_startup(sapi_module_struct* sapi_module)
-{
-	return php_module_startup(sapi_module, NULL, 0);
-}
-
-static int php_homegear_activate(TSRMLS_D)
-{
-	return SUCCESS;
-}
-
-static int php_homegear_deactivate(TSRMLS_D)
-{
-	return SUCCESS;
-}
-
 sapi_module_struct php_homegear_module = {
 	(char*)"homegear",                       /* name */
 	(char*)"PHP Homegear Library",        /* pretty name */
@@ -348,7 +337,6 @@ sapi_module_struct php_homegear_module = {
 
 	STANDARD_SAPI_MODULE_PROPERTIES
 };
-/* }}} */
 
 static void php_homegear_globals_ctor(zend_homegear_globals* homegear_globals TSRMLS_DC)
 {
@@ -360,7 +348,7 @@ static void php_homegear_globals_dtor(zend_homegear_globals* homegear_globals TS
 
 }
 
-void php_homegear_invoke_rpc(std::string& methodName, std::shared_ptr<BaseLib::RPC::Variable>& parameters, int ht, zval *return_value, zval **return_value_ptr, zval *this_ptr, int return_value_used , void ***tsrm_ls)
+void php_homegear_invoke_rpc(std::string& methodName, std::shared_ptr<BaseLib::RPC::Variable>& parameters, int ht, zval *return_value, zval **return_value_ptr, zval *this_ptr, int return_value_used PTSRMLS_DC)
 {
 	std::shared_ptr<BaseLib::RPC::Variable> result = GD::rpcServers.begin()->second.callMethod(methodName, parameters);
 	if(result->errorStruct)
@@ -373,6 +361,7 @@ void php_homegear_invoke_rpc(std::string& methodName, std::shared_ptr<BaseLib::R
 }
 
 /* Script engine specific functions */
+
 ZEND_FUNCTION(hg_devtest)
 {
 	RETURN_TRUE;
@@ -419,13 +408,9 @@ ZEND_FUNCTION(hg_invoke)
 	char* pMethodName = nullptr;
 	int32_t methodNameLength = 0;
 	int32_t argc = 0;
-	zval*** args = NULL;
+	zval*** args = nullptr;
 	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s*", &pMethodName, &methodNameLength, &args, &argc) != SUCCESS) RETURN_NULL();
-	if(methodNameLength == 0)
-	{
-		if(args) efree(args);
-		RETURN_FALSE;
-	}
+	if(methodNameLength == 0) RETURN_NULL();
 	std::string methodName(std::string(pMethodName, methodNameLength));
 	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 	for(int32_t i = 0; i < argc; i++)
@@ -433,8 +418,7 @@ ZEND_FUNCTION(hg_invoke)
 		std::shared_ptr<BaseLib::RPC::Variable> parameter = PHPVariableConverter::getVariable(*args[i]);
 		if(parameter) parameters->arrayValue->push_back(parameter);
 	}
-	if(args) efree(args);
-	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used, tsrm_ls);
+	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used PTSRMLS_CC);
 }
 
 ZEND_FUNCTION(hg_update_user)
@@ -482,7 +466,7 @@ ZEND_FUNCTION(hg_get_meta)
 	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(id)));
 	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string(pName, nameLength))));
-	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used, tsrm_ls);
+	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used PTSRMLS_CC);
 }
 
 ZEND_FUNCTION(hg_get_system)
@@ -493,7 +477,7 @@ ZEND_FUNCTION(hg_get_system)
 	std::string methodName("getSystemVariable");
 	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string(pName, nameLength))));
-	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used, tsrm_ls);
+	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used PTSRMLS_CC);
 }
 
 ZEND_FUNCTION(hg_get_value)
@@ -508,7 +492,7 @@ ZEND_FUNCTION(hg_get_value)
 	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(id)));
 	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(channel)));
 	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string(pParameterName, parameterNameLength))));
-	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used, tsrm_ls);
+	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used PTSRMLS_CC);
 }
 
 ZEND_FUNCTION(hg_set_meta)
@@ -516,7 +500,7 @@ ZEND_FUNCTION(hg_set_meta)
 	uint32_t id = 0;
 	char* pName = nullptr;
 	int32_t nameLength = 0;
-	zval* newValue;
+	zval* newValue = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lsz", &id, &pName, &nameLength, &newValue) != SUCCESS) RETURN_NULL();
 	std::string methodName("setMetadata");
 	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
@@ -524,21 +508,21 @@ ZEND_FUNCTION(hg_set_meta)
 	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string(pName, nameLength))));
 	std::shared_ptr<BaseLib::RPC::Variable> parameter = PHPVariableConverter::getVariable(newValue);
 	if(parameter) parameters->arrayValue->push_back(parameter);
-	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used, tsrm_ls);
+	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used PTSRMLS_CC);
 }
 
 ZEND_FUNCTION(hg_set_system)
 {
 	char* pName = nullptr;
 	int32_t nameLength = 0;
-	zval* newValue;
+	zval* newValue = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz", &pName, &nameLength, &newValue) != SUCCESS) RETURN_NULL();
 	std::string methodName("setSystemVariable");
 	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string(pName, nameLength))));
 	std::shared_ptr<BaseLib::RPC::Variable> parameter = PHPVariableConverter::getVariable(newValue);
 	if(parameter) parameters->arrayValue->push_back(parameter);
-	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used, tsrm_ls);
+	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used PTSRMLS_CC);
 }
 
 ZEND_FUNCTION(hg_set_value)
@@ -547,7 +531,7 @@ ZEND_FUNCTION(hg_set_value)
 	int32_t channel = -1;
 	char* pParameterName = nullptr;
 	int32_t parameterNameLength = 0;
-	zval* newValue;
+	zval* newValue = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "llsz", &id, &channel, &pParameterName, &parameterNameLength, &newValue) != SUCCESS) RETURN_NULL();
 	std::string methodName("setValue");
 	std::shared_ptr<BaseLib::RPC::Variable> parameters(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
@@ -556,10 +540,10 @@ ZEND_FUNCTION(hg_set_value)
 	parameters->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string(pParameterName, parameterNameLength))));
 	std::shared_ptr<BaseLib::RPC::Variable> parameter = PHPVariableConverter::getVariable(newValue);
 	if(parameter) parameters->arrayValue->push_back(parameter);
-	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used, tsrm_ls);
+	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used PTSRMLS_CC);
 }
 
-static const zend_function_entry additional_functions[] = {
+static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_devtest, NULL)
 	ZEND_FE(hg_auth, NULL)
 	ZEND_FE(hg_create_user, NULL)
@@ -577,17 +561,35 @@ static const zend_function_entry additional_functions[] = {
 	{NULL, NULL, NULL}
 };
 
+ZEND_METHOD(Homegear, __call)
+{
+	char* pMethodName = nullptr;
+	int32_t methodNameLength = 0;
+	zval* args = nullptr;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz", &pMethodName, &methodNameLength, &args) != SUCCESS) RETURN_NULL();
+	std::string methodName(std::string(pMethodName, methodNameLength));
+	std::shared_ptr<BaseLib::RPC::Variable> parameters = PHPVariableConverter::getVariable(args);
+	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used PTSRMLS_CC);
+}
+
+ZEND_BEGIN_ARG_INFO_EX(php_homegear_two_args, 0, 0, 2)
+	ZEND_ARG_INFO(0, arg1)
+	ZEND_ARG_INFO(0, arg2)
+ZEND_END_ARG_INFO()
+
+static const zend_function_entry homegear_methods[] = {
+	ZEND_ME(Homegear, __call, php_homegear_two_args, ZEND_ACC_PUBLIC)
+	{NULL, NULL, NULL}
+};
+
 int php_homegear_init()
 {
 	tsrm_startup(1, 1, 0, NULL);
 	sapi_startup(&php_homegear_module);
-	php_homegear_module.additional_functions = additional_functions;
+	php_homegear_module.additional_functions = homegear_functions;
 	sapi_module.startup(&php_homegear_module);
 
 	ts_allocate_id(&homegear_globals_id, sizeof(zend_homegear_globals), (void(*)(void*, void***))php_homegear_globals_ctor, (void(*)(void*, void***))php_homegear_globals_dtor);
-
-	zend_class_entry ce;
-
 
 	return SUCCESS;
 }
@@ -597,5 +599,23 @@ void php_homegear_shutdown()
 	php_homegear_module.shutdown(&php_homegear_module);
 	sapi_shutdown();
 	tsrm_shutdown();
+}
+
+static int php_homegear_startup(sapi_module_struct* sapi_module)
+{
+	return php_module_startup(sapi_module, NULL, 0);
+}
+
+static int php_homegear_activate(TSRMLS_D)
+{
+	zend_class_entry ce;
+	INIT_CLASS_ENTRY(ce, "Homegear", homegear_methods);
+	zend_register_internal_class(&ce TSRMLS_CC);
+	return SUCCESS;
+}
+
+static int php_homegear_deactivate(TSRMLS_D)
+{
+	return SUCCESS;
 }
 #endif

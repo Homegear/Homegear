@@ -235,6 +235,7 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 		php_homegear_get_globals(TSRMLS_C)->cookiesParsed = true;
 
 		PG(register_argc_argv) = 1;
+		SG(server_context) = (void*)output.get(); //Must be defined! Otherwise php_homegear_activate is not called.
 		SG(options) |= SAPI_OPTION_NO_CHDIR;
 		SG(headers_sent) = 1;
 		SG(request_info).no_headers = 1;

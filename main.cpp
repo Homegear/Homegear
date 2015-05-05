@@ -691,7 +691,7 @@ int main(int argc, char* argv[])
 
         rl_bind_key('\t', rl_abort); //no autocompletion
 
-		char* inputBuffer;
+		char* inputBuffer = nullptr;
         if(_startAsDaemon)
         {
         	//Wait a little more before setting "booting" to false. If "isOpen" of the physical interface is implemented correctly, this is not necessary. But just in case.
