@@ -560,19 +560,31 @@ ZEND_METHOD(Homegear, __call)
 	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used PTSRMLS_CC);
 }
 
+ZEND_METHOD(Homegear, __callStatic)
+{
+	char* pMethodName = nullptr;
+	int32_t methodNameLength = 0;
+	zval* args = nullptr;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz", &pMethodName, &methodNameLength, &args) != SUCCESS) RETURN_NULL();
+	std::string methodName(std::string(pMethodName, methodNameLength));
+	std::shared_ptr<BaseLib::RPC::Variable> parameters = PHPVariableConverter::getVariable(args);
+	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used PTSRMLS_CC);
+}
+
 ZEND_BEGIN_ARG_INFO_EX(php_homegear_two_args, 0, 0, 2)
 	ZEND_ARG_INFO(0, arg1)
 	ZEND_ARG_INFO(0, arg2)
 ZEND_END_ARG_INFO()
 
 static const zend_function_entry homegear_methods[] = {
-	ZEND_ME(Homegear, __call, php_homegear_two_args, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME(Homegear, __call, php_homegear_two_args, ZEND_ACC_PUBLIC)
+	ZEND_ME(Homegear, __callStatic, php_homegear_two_args, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(auth, hg_auth, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(createUser, hg_create_user, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(deleteUser, hg_delete_user, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(updateUser, hg_update_user, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(userExists, hg_user_exists, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	ZEND_ME_MAPPING(listUsers, hg_users, NULL, ZEND_ACC_PUBLIC)
+	ZEND_ME_MAPPING(listUsers, hg_users, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
 };
 

@@ -36,7 +36,7 @@ ifeq ($(config),release)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Release -s -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l rpc -l dl -l pthread -l readline -l gcrypt -l gnutls -l user -l cli -l events -l gd -l upnp -l mqtt -l database -l scriptengine -l base -l gpg-error -l sqlite3 -l paho.mqtt.c -l crypto -l ssl -l php5
+  LDFLAGS   += -Llib/Release -s -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -Wl,-Bstatic -lrpc -Wl,-Bdynamic -ldl -lpthread -lreadline -lgcrypt -lgnutls -luser -lcli -levents -lgd -lupnp -lmqtt -ldatabase -lscriptengine -lbase -lgpg-error -lsqlite3 -lpaho.mqtt.c -lcrypto -lssl -lphp5 -Wl,--as-needed
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -58,7 +58,7 @@ ifeq ($(config),debug)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Debug -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l rpc -l dl -l pthread -l readline -l gcrypt -l gnutls -l user -l cli -l events -l gd -l upnp -l mqtt -l database -l scriptengine -l base -l gpg-error -l sqlite3 -l paho.mqtt.c -l crypto -l ssl -l php5
+  LDFLAGS   += -Llib/Debug -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -Wl,-Bstatic -lrpc -Wl,-Bdynamic -ldl -lpthread -lreadline -lgcrypt -lgnutls -luser -lcli -levents -lgd -lupnp -lmqtt -ldatabase -lscriptengine -lbase -lgpg-error -lsqlite3 -lpaho.mqtt.c -lcrypto -lssl -lphp5 -Wl,--as-needed
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -80,7 +80,7 @@ ifeq ($(config),profiling)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Profiling -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l rpc -l dl -l pthread -l readline -l gcrypt -l gnutls -l user -l cli -l events -l gd -l upnp -l mqtt -l database -l scriptengine -l base -l gpg-error -l sqlite3 -l paho.mqtt.c -l crypto -l ssl -l php5 -pg
+  LDFLAGS   += -Llib/Profiling -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -Wl,-Bstatic -lrpc -Wl,-Bdynamic -ldl -lpthread -lreadline -lgcrypt -lgnutls -luser -lcli -levents -lgd -lupnp -lmqtt -ldatabase -lscriptengine -lbase -lgpg-error -lsqlite3 -lpaho.mqtt.c -lcrypto -lssl -lphp5 -Wl,--as-needed -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
