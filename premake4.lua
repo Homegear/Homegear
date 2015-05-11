@@ -69,7 +69,7 @@ newplatform {
     gcc = {
         cc = "gcc",
         cxx = "g++",
-        cppflags = ""
+        cppflags = "-MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2"
     }
 }
 

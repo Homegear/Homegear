@@ -101,7 +101,7 @@ ifeq ($(config),release_bsd)
   TARGET     = $(TARGETDIR)/libmax.so
   DEFINES   += -D_GLIBCXX_USE_C99 -D_GLIBCXX_USE_C99_MATH -D_GLIBCXX_USE_C99_MATH_TR1 -D_WITH_DPRINTF -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DNDEBUG
   INCLUDES  += 
-  CPPFLAGS  +=  $(DEFINES) $(INCLUDES)
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -fPIC -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
   LDFLAGS   += -Llib/Release -s -shared -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l pthread -l base
@@ -125,7 +125,7 @@ ifeq ($(config),debug_bsd)
   TARGET     = $(TARGETDIR)/libmax.so
   DEFINES   += -D_GLIBCXX_USE_C99 -D_GLIBCXX_USE_C99_MATH -D_GLIBCXX_USE_C99_MATH_TR1 -D_WITH_DPRINTF -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DDEBUG
   INCLUDES  += 
-  CPPFLAGS  +=  $(DEFINES) $(INCLUDES)
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -fPIC -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
   LDFLAGS   += -Llib/Debug -shared -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l pthread -l base
@@ -149,7 +149,7 @@ ifeq ($(config),profiling_bsd)
   TARGET     = $(TARGETDIR)/libmax.so
   DEFINES   += -D_GLIBCXX_USE_C99 -D_GLIBCXX_USE_C99_MATH -D_GLIBCXX_USE_C99_MATH_TR1 -D_WITH_DPRINTF -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DNDEBUG
   INCLUDES  += 
-  CPPFLAGS  +=  $(DEFINES) $(INCLUDES)
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -fPIC -Wall -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
   LDFLAGS   += -Llib/Profiling -shared -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l pthread -l base -pg
