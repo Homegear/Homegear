@@ -615,7 +615,7 @@ static int php_homegear_startup(sapi_module_struct* sapi_module)
 static int php_homegear_activate(TSRMLS_D)
 {
 	zend_class_entry ce;
-	INIT_CLASS_ENTRY(ce, "Homegear", homegear_methods);
+	INIT_CLASS_ENTRY(ce, "Homegear\\Homegear", homegear_methods);
 	zend_register_internal_class(&ce TSRMLS_CC);
 	return SUCCESS;
 }
