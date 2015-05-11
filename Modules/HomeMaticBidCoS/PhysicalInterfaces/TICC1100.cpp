@@ -27,6 +27,7 @@
  * files in the program, then also delete it here.
  */
 
+#ifdef SPIINTERFACES
 #include "TICC1100.h"
 #include "../BidCoSPacket.h"
 #include "../../Base/BaseLib.h"
@@ -1056,3 +1057,4 @@ void TICC1100::mainThread()
     }
 }
 }
+#endif

@@ -27,6 +27,7 @@
  * files in the program, then also delete it here.
  */
 
+#ifdef SPIINTERFACES
 #ifdef BIDCOSTICC1101
 
 #include "TICC1101.h"
@@ -1035,4 +1036,5 @@ void TICC1101::mainThread()
 }
 }
 
+#endif
 #endif
