@@ -3352,6 +3352,13 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setValue(int32_t clientID, u
 				packet->setPosition(i->index, i->size, data);
 				continue;
 			}
+			else if(!i->constValueString.empty())
+			{
+				std::vector<uint8_t> data;
+				data.insert(data.begin(), i->constValueString.begin(), i->constValueString.end());
+				packet->setPosition(i->index, i->size, data);
+				continue;
+			}
 			BaseLib::Systems::RPCConfigurationParameter* additionalParameter = nullptr;
 			//We can't just search for param, because it is ambiguous (see for example LEVEL for HM-CC-TC.
 			if(i->param.empty() && !i->additionalParameter.empty() && valuesCentral[channel].find(i->additionalParameter) != valuesCentral[channel].end())

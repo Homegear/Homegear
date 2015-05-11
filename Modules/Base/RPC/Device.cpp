@@ -1048,7 +1048,11 @@ Parameter::Parameter(BaseLib::Obj* baseLib, xml_node<>* node, bool checkForID) :
 			else if(attributeValue == "le") booleanOperator = BooleanOperator::Enum::le;
 			else _bl->out.printWarning("Warning: Unknown attribute value for \"cond_op\" in node \"parameter\": " + attributeValue);
 		}
-		else if(attributeName == "const_value") constValue = Math::getNumber(attributeValue);
+		else if(attributeName == "const_value")
+		{
+			if(type == PhysicalParameter::Type::Enum::typeString) constValueString = attributeValue;
+			else constValue = Math::getNumber(attributeValue);
+		}
 		else if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "param") param = attributeValue;
 		else if(attributeName == "PARAM") additionalParameter = attributeValue;

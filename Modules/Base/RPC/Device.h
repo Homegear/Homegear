@@ -156,6 +156,7 @@ public:
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
 	PhysicalParameter::Type::Enum type = PhysicalParameter::Type::Enum::none;
 	int32_t constValue = -1;
+	std::string constValueString;
 	std::string id;
 	std::string param;
 	std::string additionalParameter;

@@ -32,8 +32,6 @@
 #include "php_sapi.h"
 #include "../GD/GD.h"
 
-bool inite = false;
-
 ScriptEngine::ScriptEngine()
 {
 	php_homegear_init();
