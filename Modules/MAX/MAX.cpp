@@ -90,7 +90,9 @@ std::shared_ptr<BaseLib::Systems::IPhysicalInterface> MAX::createPhysicalDevice(
 		GD::out.printDebug("Debug: Creating physical device. Type defined in physicalinterfaces.conf is: " + settings->type);
 		if(settings->type == "cul") device.reset(new CUL(settings));
 		else if(settings->type == "coc") device.reset(new COC(settings));
+#ifdef SPIINTERFACES
 		else if(settings->type == "cc1100") device.reset(new TICC1100(settings));
+#endif
 		else GD::out.printError("Error: Unsupported physical device type: " + settings->type);
 		if(device)
 		{

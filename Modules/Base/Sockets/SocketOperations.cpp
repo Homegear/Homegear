@@ -449,21 +449,22 @@ void SocketOperations::getConnection()
 			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 		}
 		optValue = 30;
-		if(setsockopt(_socketDescriptor->descriptor, SOL_TCP, TCP_KEEPIDLE, (void*)&optValue, sizeof(int32_t)) == -1)
+		//Don't use SOL_TCP, as this constant doesn't exists in BSD
+		if(setsockopt(_socketDescriptor->descriptor, getprotobyname("TCP")->p_proto, TCP_KEEPIDLE, (void*)&optValue, sizeof(int32_t)) == -1)
 		{
 			freeaddrinfo(serverInfo);
 			_bl->fileDescriptorManager.shutdown(_socketDescriptor);
 			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 		}
 		optValue = 4;
-		if(setsockopt(_socketDescriptor->descriptor, SOL_TCP, TCP_KEEPCNT, (void*)&optValue, sizeof(int32_t)) == -1)
+		if(setsockopt(_socketDescriptor->descriptor, getprotobyname("TCP")->p_proto, TCP_KEEPCNT, (void*)&optValue, sizeof(int32_t)) == -1)
 		{
 			freeaddrinfo(serverInfo);
 			_bl->fileDescriptorManager.shutdown(_socketDescriptor);
 			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 		}
 		optValue = 15;
-		if(setsockopt(_socketDescriptor->descriptor, SOL_TCP, TCP_KEEPINTVL, (void*)&optValue, sizeof(int32_t)) == -1)
+		if(setsockopt(_socketDescriptor->descriptor, getprotobyname("TCP")->p_proto, TCP_KEEPINTVL, (void*)&optValue, sizeof(int32_t)) == -1)
 		{
 			freeaddrinfo(serverInfo);
 			_bl->fileDescriptorManager.shutdown(_socketDescriptor);

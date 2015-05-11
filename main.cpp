@@ -44,6 +44,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/file.h>
+#include <sys/sysctl.h> //For BSD systems
 
 #include <cmath>
 #include <vector>
@@ -262,13 +263,44 @@ int32_t getHexInput()
 void getExecutablePath()
 {
 	char path[1024];
-	if(!getcwd(path, 1024)) throw BaseLib::Exception("Could not get working directory.");
+	if(!getcwd(path, sizeof(path)))
+	{
+		std::cerr << "Could not get working directory." << std::endl;
+		exit(1);
+	}
 	GD::workingDirectory = std::string(path);
-	ssize_t length = readlink("/proc/self/exe", path, sizeof(path) - 1);
-	if (length == -1) throw BaseLib::Exception("Could not get executable path.");
+#ifdef KERN_PROC //BSD system
+	int mib[4];
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROC;
+	mib[2] = KERN_PROC_PATHNAME;
+	mib[3] = -1;
+	size_t cb = sizeof(path);
+	int result = sysctl(mib, 4, path, &cb, NULL, 0);
+	if(result == -1)
+	{
+		std::cerr << "Could not get executable path." << std::endl;
+		exit(1);
+	}
+	path[sizeof(path) - 1] = '\0';
+	GD::executablePath = std::string(path);
+	GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
+#else
+	int length = readlink("/proc/self/exe", path, sizeof(path) - 1);
+	if (length < 0)
+	{
+		std::cerr << "Could not get executable path." << std::endl;
+		exit(1);
+	}
+	if((unsigned)length > sizeof(path))
+	{
+		std::cerr << "The path the homegear binary is in has more than 1024 characters." << std::endl;
+		exit(1);
+	}
 	path[length] = '\0';
 	GD::executablePath = std::string(path);
 	GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
+#endif
 }
 
 void printHelp()
@@ -490,9 +522,11 @@ int main(int argc, char* argv[])
     	getrlimit(RLIMIT_CORE, &limits);
     	limits.rlim_cur = limits.rlim_max;
     	setrlimit(RLIMIT_CORE, &limits);
+#ifdef RLIMIT_RTPRIO //Not existant on BSD systems
     	getrlimit(RLIMIT_RTPRIO, &limits);
     	limits.rlim_cur = limits.rlim_max;
     	setrlimit(RLIMIT_RTPRIO, &limits);
+#endif
 
     	//Analyze core dump with:
     	//gdb homegear core

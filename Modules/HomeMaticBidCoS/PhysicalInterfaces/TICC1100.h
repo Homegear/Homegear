@@ -27,6 +27,7 @@
  * files in the program, then also delete it here.
  */
 
+#ifdef SPIINTERFACES
 #ifndef TICC1100_H_
 #define TICC1100_H_
 
@@ -232,4 +233,5 @@ protected:
 
 }
 
+#endif
 #endif

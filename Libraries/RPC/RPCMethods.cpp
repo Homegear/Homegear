@@ -31,6 +31,7 @@
 #include "../GD/GD.h"
 #include "../../Version.h"
 #include "../../Modules/Base/BaseLib.h"
+#include <sys/wait.h> //Needed for BSD
 
 namespace RPC
 {

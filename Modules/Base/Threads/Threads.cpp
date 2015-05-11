@@ -43,8 +43,12 @@ int32_t Threads::getThreadPolicyFromString(std::string policy)
 	if(policy == "sched_other") return SCHED_OTHER;
 	else if(policy == "sched_rr") return SCHED_RR;
 	else if(policy == "sched_fifo") return SCHED_FIFO;
+#ifdef SCHED_IDLE
 	else if(policy == "sched_idle") return SCHED_IDLE;
+#endif
+#ifdef SCHED_BATCH
 	else if(policy == "sched_batch") return SCHED_BATCH;
+#endif
     return 0;
 }
 
@@ -72,7 +76,11 @@ void Threads::setThreadPriority(BaseLib::Obj* baseLib, pthread_t thread, int32_t
 		}
 		if(policy == SCHED_OTHER) return;
 		if((policy == SCHED_FIFO || policy == SCHED_RR) && (priority < 1 || priority > 99)) throw Exception("Invalid thread priority for SCHED_FIFO or SCHED_RR: " + std::to_string(priority));
+#ifdef SCHED_IDLE
+#ifdef SCHED_BATCH
 		else if((policy == SCHED_IDLE || policy == SCHED_BATCH) && priority != 0) throw Exception("Invalid thread priority for SCHED_IDLE: " + std::to_string(priority));
+#endif
+#endif
 		sched_param schedParam;
 		schedParam.sched_priority = priority;
 		int32_t error;

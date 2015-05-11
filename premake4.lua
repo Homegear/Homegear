@@ -60,6 +60,19 @@ newplatform {
     }
 }
 
+newplatform {
+    name = "bsd",
+    description = "",
+    -- Needs to be "true" to be able to differentiate between "native" and "bsd"
+    iscrosscompiler = true,
+    -- "iscrosscompiler" does not work without providing gcc
+    gcc = {
+        cc = "gcc",
+        cxx = "g++",
+        cppflags = ""
+    }
+}
+
 solution "homegear"
    configurations { "Release", "Debug", "Profiling" }
 
@@ -73,7 +86,8 @@ solution "homegear"
          "HAVE_SSIZE_T=1",
          "SCRIPTENGINE",
          "EVENTHANDLER",
-         "OPENSSL"
+         "OPENSSL",
+         "SPIINTERFACES"
          --"BIDCOSTICC1101",
          --"BIDCOSRTLSDRLAN",
       }
@@ -88,7 +102,8 @@ solution "homegear"
          "HAVE_SSIZE_T=1",
          "SCRIPTENGINE",
          "EVENTHANDLER",
-         "OPENSSL"
+         "OPENSSL",
+         "SPIINTERFACES"
          --"BIDCOSTICC1101",
          --"BIDCOSRTLSDRLAN",
       }
@@ -100,7 +115,8 @@ solution "homegear"
       {
          "FORTIFY_SOURCE=2",
          "GCRYPT_NO_DEPRECATED",
-         "OPENSSL"
+         "OPENSSL",
+         "SPIINTERFACES"
       }
       linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear" }
 
@@ -111,7 +127,30 @@ solution "homegear"
       {
          "FORTIFY_SOURCE=2",
          "GCRYPT_NO_DEPRECATED",
+         "OPENSSL",
+         "SPIINTERFACES"
+      }
+      linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear" }
+
+   configuration { "bsd", "linux", "gmake" }
+      --GCRYPT_NO_DEPRECATED only works after modifying the header file. See: http://lists.gnupg.org/pipermail/gcrypt-devel/2011-September/001844.html
+      defines
+      {
+         --Options needed to avoid stdlib errors in BSD
+         "_GLIBCXX_USE_C99",
+         "_GLIBCXX_USE_C99_MATH",
+         "_GLIBCXX_USE_C99_MATH_TR1",
+         "_WITH_DPRINTF",
+         "FORTIFY_SOURCE=2",
+         "GCRYPT_NO_DEPRECATED",
+         --Needed because of gnutls.h/php_config.h conflict.
+         "HAVE_SSIZE_T=1",
+         "SCRIPTENGINE",
+         "EVENTHANDLER",
          "OPENSSL"
+         --"SPIINTERFACES"
+         --"BIDCOSTICC1101",
+         --"BIDCOSRTLSDRLAN",
       }
       linkoptions { "-Wl,-rpath=/lib/homegear", "-Wl,-rpath=/usr/lib/homegear" }
 
@@ -449,7 +488,13 @@ solution "homegear"
          "/usr/include/php5/main",
          "/usr/include/php5/sapi",
          "/usr/include/php5/TSRM",
-         "/usr/include/php5/Zend"
+         "/usr/include/php5/Zend",
+         --For FreeBSD:
+         "/usr/local/include/php",
+         "/usr/local/include/php/main",
+         "/usr/local/include/php/sapi",
+         "/usr/local/include/php/TSRM",
+         "/usr/local/include/php/Zend"
       }
       buildoptions { "-Wall", "-std=c++11" }
  
@@ -574,6 +619,10 @@ solution "homegear"
       configuration { "native", "linux", "gmake" }
         linkoptions { "-Wl,-Bstatic", "-lrpc", "-Wl,-Bdynamic", "-ldl", "-lpthread", "-lreadline", "-lgcrypt", "-lgnutls", "-Wl,-Bstatic", "-luser", "-lcli", "-levents", "-lgd", "-lupnp", "-lmqtt", "-ldatabase", "-lscriptengine", "-lbase", "-Wl,-Bdynamic", "-lgpg-error", "-lsqlite3", "-Wl,-Bstatic", "-lpaho.mqtt.c", "-Wl,-Bdynamic", "-lcrypto", "-lssl", "-Wl,-Bdynamic", "-lphp5", "-Wl,--as-needed" }
 
+      configuration { "native", "linux", "gmake" }
+        --No "-ldl"
+        linkoptions { "-Wl,-Bstatic", "-lrpc", "-Wl,-Bdynamic", "-lpthread", "-lreadline", "-lgcrypt", "-lgnutls", "-Wl,-Bstatic", "-luser", "-lcli", "-levents", "-lgd", "-lupnp", "-lmqtt", "-ldatabase", "-lscriptengine", "-lbase", "-Wl,-Bdynamic", "-lgpg-error", "-lsqlite3", "-Wl,-Bstatic", "-lpaho.mqtt.c", "-Wl,-Bdynamic", "-lcrypto", "-lssl", "-Wl,-Bdynamic", "-lphp5", "-Wl,--as-needed" }
+
       configuration { "rpi", "gmake" }
         linkoptions { "-Wl,-Bstatic", "-lrpc", "-Wl,-Bdynamic", "-ldl", "-lpthread", "-lreadline", "-lgcrypt", "-lgnutls", "-Wl,-Bstatic", "-luser", "-lcli", "-levents", "-lgd", "-lupnp", "-lmqtt", "-ldatabase", "-lscriptengine", "-lbase", "-Wl,-Bdynamic", "-lgpg-error", "-lsqlite3", "-Wl,-Bstatic", "-lpaho.mqtt.c", "-Wl,-Bdynamic", "-lcrypto", "-lssl", "-Wl,-Bdynamic", "-lphp5", "-Wl,--as-needed" }
 
@@ -581,7 +630,7 @@ solution "homegear"
         linkoptions { "-Wl,-Bstatic", "-lrpc", "-Wl,-Bdynamic", "-ldl", "-lpthread", "-lreadline", "-lgcrypt", "-lgnutls", "-Wl,-Bstatic", "-luser", "-lcli", "-levents", "-lgd", "-lupnp", "-lmqtt", "-ldatabase", "-lscriptengine", "-lbase", "-Wl,-Bdynamic", "-lgpg-error", "-lsqlite3", "-Wl,-Bstatic", "-lpaho.mqtt.c", "-Wl,-Bdynamic", "-lcrypto", "-lssl", "-Wl,-Bdynamic", "-lphp5", "-Wl,--as-needed" }
 
       configuration { "armel_static", "gmake" }
-        linkoptions { "-Wl,-Bstatic", "-lrpc", "-Wl,-Bdynamic", "-ldl", "-Wl,-Bstatic", "-lpthread", "-lreadline", "-lgcrypt", "-lgnutls", "-luser", "-lcli", "-levents", "-lgd", "-lupnp", "-lmqtt", "-ldatabase", "-lscriptengine", "-lbase", "-lgpg-error", "-lsqlite3", "-lpaho.mqtt.c", "-lssl", "-lcrypto", "-Wl,--as-needed" }
+        linkoptions { "-Wl,-Bstatic", "-lrpc", "-Wl,-Bdynamic", "-ldl", "-Wl,-Bstatic", "-lpthread", "-lreadline", "-lgcrypt", "-lgnutls", "-luser", "-lcli", "-levents", "-lgd", "-lupnp", "-lmqtt", "-ldatabase", "-lscriptengine", "-lbase", "-lgpg-error", "-lsqlite3", "-lpaho.mqtt.c", "-lssl", "-lcrypto", "-Wl,--as-needed" }  
 
       configuration "Debug"
          defines { "DEBUG" }

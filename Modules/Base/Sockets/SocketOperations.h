@@ -53,6 +53,7 @@
 #include <cstring>
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
+#include <netinet/in.h> //Needed for BSD
 #include <netdb.h>
 #include <sys/socket.h>
 #include <errno.h>

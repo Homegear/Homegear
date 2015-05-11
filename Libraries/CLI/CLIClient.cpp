@@ -112,14 +112,15 @@ void Client::start(std::string command)
 			if(GD::bl->debugLevel >= 4 && i == 0) std::cout << "Info: Trying to connect..." << std::endl;
 			sockaddr_un remoteAddress;
 			remoteAddress.sun_family = AF_UNIX;
-			if(GD::socketPath.length() > 107)
+			//104 is the size on BSD systems - slightly smaller than in Linux
+			if(GD::socketPath.length() > 104)
 			{
 				//Check for buffer overflow
 				GD::out.printCritical("Critical: Socket path is too long.");
 				return;
 			}
-			strncpy(remoteAddress.sun_path, GD::socketPath.c_str(), 107);
-			remoteAddress.sun_path[107] = 0; //Just to make sure it is null terminated.
+			strncpy(remoteAddress.sun_path, GD::socketPath.c_str(), 104);
+			remoteAddress.sun_path[103] = 0; //Just to make sure it is null terminated.
 			if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + sizeof(remoteAddress.sun_family)) == -1)
 			{
 				GD::bl->fileDescriptorManager.shutdown(_fileDescriptor);
