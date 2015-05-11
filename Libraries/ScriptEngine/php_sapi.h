@@ -45,6 +45,7 @@
 #include <php_ini.h>
 #include <zend_API.h>
 #include <zend_ini.h>
+#include <zend_exceptions.h>
 
 #define PTSRMLS_D        void ****ptsrm_ls
 #define PTSRMLS_DC       , PTSRMLS_D
@@ -56,6 +57,8 @@ ZEND_BEGIN_MODULE_GLOBALS(homegear)
 	std::vector<char>* output = nullptr;
 	bool commandLine = false;
 	bool cookiesParsed = false;
+	zend_class_entry* homegearExceptionClassEntry = nullptr;
+	zend_class_entry* homegearClassEntry = nullptr;
 ZEND_END_MODULE_GLOBALS(homegear)
 
 zend_homegear_globals* php_homegear_get_globals(TSRMLS_D);

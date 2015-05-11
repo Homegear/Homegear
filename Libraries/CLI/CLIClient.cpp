@@ -102,7 +102,7 @@ void Client::start(std::string command)
 	{
 		for(int32_t i = 0; i < 2; i++)
 		{
-			_fileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_UNIX, SOCK_STREAM, 0));
+			_fileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM, 0));
 			if(!_fileDescriptor || _fileDescriptor->descriptor == -1)
 			{
 				GD::out.printError("Could not create socket.");
@@ -111,7 +111,7 @@ void Client::start(std::string command)
 
 			if(GD::bl->debugLevel >= 4 && i == 0) std::cout << "Info: Trying to connect..." << std::endl;
 			sockaddr_un remoteAddress;
-			remoteAddress.sun_family = AF_UNIX;
+			remoteAddress.sun_family = AF_LOCAL;
 			//104 is the size on BSD systems - slightly smaller than in Linux
 			if(GD::socketPath.length() > 104)
 			{
@@ -121,7 +121,7 @@ void Client::start(std::string command)
 			}
 			strncpy(remoteAddress.sun_path, GD::socketPath.c_str(), 104);
 			remoteAddress.sun_path[103] = 0; //Just to make sure it is null terminated.
-			if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + sizeof(remoteAddress.sun_family)) == -1)
+			if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + 1 + sizeof(remoteAddress.sun_family)) == -1)
 			{
 				GD::bl->fileDescriptorManager.shutdown(_fileDescriptor);
 				if(i == 0)

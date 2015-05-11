@@ -32,24 +32,11 @@
 #include "php_sapi.h"
 #include "../GD/GD.h"
 
+bool inite = false;
+
 ScriptEngine::ScriptEngine()
 {
-	try
-	{
-		php_homegear_init();
-	}
-	catch(const std::exception& ex)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
+	php_homegear_init();
 }
 
 ScriptEngine::~ScriptEngine()
@@ -233,6 +220,8 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 		php_homegear_get_globals(TSRMLS_C)->http = nullptr;
 		php_homegear_get_globals(TSRMLS_C)->commandLine = true;
 		php_homegear_get_globals(TSRMLS_C)->cookiesParsed = true;
+		php_homegear_get_globals(TSRMLS_C)->homegearClassEntry = nullptr;
+		php_homegear_get_globals(TSRMLS_C)->homegearExceptionClassEntry = nullptr;
 
 		PG(register_argc_argv) = 1;
 		SG(server_context) = (void*)output.get(); //Must be defined! Otherwise php_homegear_activate is not called.
@@ -324,6 +313,8 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& 
 		php_homegear_get_globals(TSRMLS_C)->http = &request;
 		php_homegear_get_globals(TSRMLS_C)->commandLine = false;
 		php_homegear_get_globals(TSRMLS_C)->cookiesParsed = false;
+		php_homegear_get_globals(TSRMLS_C)->homegearClassEntry = nullptr;
+		php_homegear_get_globals(TSRMLS_C)->homegearExceptionClassEntry = nullptr;
 
 		SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise POST data is not processed.
 		SG(sapi_headers).http_response_code = 200;
@@ -412,6 +403,8 @@ bool ScriptEngine::checkSessionId(const std::string& sessionId)
 		php_homegear_get_globals(TSRMLS_C)->http = request.get();
 		php_homegear_get_globals(TSRMLS_C)->commandLine = false;
 		php_homegear_get_globals(TSRMLS_C)->cookiesParsed = false;
+		php_homegear_get_globals(TSRMLS_C)->homegearClassEntry = nullptr;
+		php_homegear_get_globals(TSRMLS_C)->homegearExceptionClassEntry = nullptr;
 
 		SG(server_context) = (void*)request.get(); //Must be defined! Otherwise POST data is not processed.
 		SG(sapi_headers).http_response_code = 200;

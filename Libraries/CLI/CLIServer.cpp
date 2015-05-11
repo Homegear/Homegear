@@ -263,7 +263,7 @@ void Server::getFileDescriptor(bool deleteOldSocket)
 		}
 		else if(stat(GD::socketPath.c_str(), &sb) == 0) return;
 
-		_serverFileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0));
+		_serverFileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0));
 		if(_serverFileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't create socket: " + GD::socketPath + ". Error: " + strerror(errno)));
 		int32_t reuseAddress = 1;
 		if(setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (void*)&reuseAddress, sizeof(int32_t)) == -1)
@@ -272,7 +272,7 @@ void Server::getFileDescriptor(bool deleteOldSocket)
 			throw(BaseLib::Exception("Couldn't set socket options: " + GD::socketPath + ". Error: " + strerror(errno)));
 		}
 		sockaddr_un serverAddress;
-		serverAddress.sun_family = AF_UNIX;
+		serverAddress.sun_family = AF_LOCAL;
 		//104 is the size on BSD systems - slightly smaller than in Linux
 		if(GD::socketPath.length() > 104)
 		{
@@ -282,7 +282,7 @@ void Server::getFileDescriptor(bool deleteOldSocket)
 		}
 		strncpy(serverAddress.sun_path, GD::socketPath.c_str(), 104);
 		serverAddress.sun_path[103] = 0; //Just to make sure the string is null terminated.
-		bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*)&serverAddress, strlen(serverAddress.sun_path) + sizeof(serverAddress.sun_family)) != -1);
+		bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*)&serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
 		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
 		{
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);

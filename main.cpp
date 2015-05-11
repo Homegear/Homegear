@@ -645,6 +645,7 @@ int main(int argc, char* argv[])
         GD::out.printInfo("Initializing database...");
         GD::db.convertDatabase();
         GD::db.initializeDatabase();
+
         GD::out.printInfo("Initializing family controller...");
         GD::familyController.init();
         if(GD::deviceFamilies.empty()) exitHomegear(1);
