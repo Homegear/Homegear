@@ -36,12 +36,102 @@
 #define SEG(v) TSRMG(homegear_globals_id, zend_homegear_globals*, v)
 
 static int homegear_globals_id;
+static zend_class_entry* homegear_class_entry = nullptr;
+static zend_class_entry* homegear_exception_class_entry = nullptr;
 
 static int php_homegear_startup(sapi_module_struct* sapi_module);
 static int php_homegear_activate(TSRMLS_D);
 static int php_homegear_deactivate(TSRMLS_D);
+static int php_homegear_ub_write(const char* str, uint32_t length TSRMLS_DC);
+static void php_homegear_flush(void *server_context);
+static int php_homegear_send_headers(sapi_headers_struct* sapi_headers TSRMLS_DC);
+static int php_homegear_read_post(char *buf, uint count_bytes TSRMLS_DC);
+static char* php_homegear_read_cookies(TSRMLS_D);
+static void php_homegear_register_variables(zval* track_vars_array TSRMLS_DC);
+static void php_homegear_log_message(char* message TSRMLS_DC);
+static PHP_MINIT_FUNCTION(homegear);
+static PHP_MSHUTDOWN_FUNCTION(homegear);
+static PHP_RINIT_FUNCTION(homegear);
+static PHP_RSHUTDOWN_FUNCTION(homegear);
+static PHP_MINFO_FUNCTION(homegear);
 
-BaseLib::HTTP _http;
+ZEND_FUNCTION(hg_invoke);
+ZEND_FUNCTION(hg_get_meta);
+ZEND_FUNCTION(hg_get_system);
+ZEND_FUNCTION(hg_get_value);
+ZEND_FUNCTION(hg_set_meta);
+ZEND_FUNCTION(hg_set_system);
+ZEND_FUNCTION(hg_set_value);
+ZEND_FUNCTION(hg_auth);
+ZEND_FUNCTION(hg_create_user);
+ZEND_FUNCTION(hg_delete_user);
+ZEND_FUNCTION(hg_update_user);
+ZEND_FUNCTION(hg_user_exists);
+ZEND_FUNCTION(hg_users);
+
+static BaseLib::HTTP _http;
+
+static const zend_function_entry homegear_functions[] = {
+	ZEND_FE(hg_invoke, NULL)
+	ZEND_FE(hg_get_meta, NULL)
+	ZEND_FE(hg_get_system, NULL)
+	ZEND_FE(hg_get_value, NULL)
+	ZEND_FE(hg_set_meta, NULL)
+	ZEND_FE(hg_set_system, NULL)
+	ZEND_FE(hg_set_value, NULL)
+	ZEND_FE(hg_auth, NULL)
+	ZEND_FE(hg_create_user, NULL)
+	ZEND_FE(hg_delete_user, NULL)
+	ZEND_FE(hg_update_user, NULL)
+	ZEND_FE(hg_user_exists, NULL)
+	ZEND_FE(hg_users, NULL)
+	{NULL, NULL, NULL}
+};
+
+static zend_module_entry homegear_module_entry = {
+        STANDARD_MODULE_HEADER,
+        "homegear",
+        homegear_functions,
+        PHP_MINIT(homegear),
+        PHP_MSHUTDOWN(homegear),
+        PHP_RINIT(homegear),
+        PHP_RSHUTDOWN(homegear),
+        PHP_MINFO(homegear),
+        VERSION,
+        STANDARD_MODULE_PROPERTIES
+};
+
+static sapi_module_struct php_homegear_sapi_module = {
+	(char*)"homegear",                       /* name */
+	(char*)"PHP Homegear Library",        /* pretty name */
+
+	php_homegear_startup,              /* startup == MINIT. Called for each new thread. */
+	php_module_shutdown_wrapper,   /* shutdown == MSHUTDOWN. Called for each new thread. */
+
+	php_homegear_activate,	            /* activate == RINIT. Called for each request. */
+	php_homegear_deactivate,  			/* deactivate == RSHUTDOWN. Called for each request. */
+
+	php_homegear_ub_write,             /* unbuffered write */
+	php_homegear_flush,                /* flush */
+	NULL,                          /* get uid */
+	NULL,                          /* getenv */
+
+	php_error,                     /* error handler */
+
+	NULL,                          /* header handler */
+	php_homegear_send_headers,                          /* send headers handler */
+	NULL,          /* send header handler */
+
+	php_homegear_read_post,            /* read POST data */
+	php_homegear_read_cookies,         /* read Cookies */
+
+	php_homegear_register_variables,   /* register server variables */
+	php_homegear_log_message,          /* Log message */
+	NULL,							/* Get request time */
+	NULL,							/* Child terminate */
+
+	STANDARD_SAPI_MODULE_PROPERTIES
+};
 
 zend_homegear_globals* php_homegear_get_globals(TSRMLS_D)
 {
@@ -306,44 +396,12 @@ static void php_homegear_register_variables(zval* track_vars_array TSRMLS_DC)
 	}
 }
 
-sapi_module_struct php_homegear_module = {
-	(char*)"homegear",                       /* name */
-	(char*)"PHP Homegear Library",        /* pretty name */
-
-	php_homegear_startup,              /* startup == MINIT. Called for each new thread. */
-	php_module_shutdown_wrapper,   /* shutdown == MSHUTDOWN. Called for each new thread. */
-
-	php_homegear_activate,	            /* activate == RINIT. Called for each request. */
-	php_homegear_deactivate,  			/* deactivate == RSHUTDOWN. Called for each request. */
-
-	php_homegear_ub_write,             /* unbuffered write */
-	php_homegear_flush,                /* flush */
-	NULL,                          /* get uid */
-	NULL,                          /* getenv */
-
-	php_error,                     /* error handler */
-
-	NULL,                          /* header handler */
-	php_homegear_send_headers,                          /* send headers handler */
-	NULL,          /* send header handler */
-
-	php_homegear_read_post,            /* read POST data */
-	php_homegear_read_cookies,         /* read Cookies */
-
-	php_homegear_register_variables,   /* register server variables */
-	php_homegear_log_message,          /* Log message */
-	NULL,							/* Get request time */
-	NULL,							/* Child terminate */
-
-	STANDARD_SAPI_MODULE_PROPERTIES
-};
-
 void php_homegear_invoke_rpc(std::string& methodName, std::shared_ptr<BaseLib::RPC::Variable>& parameters, int ht, zval *return_value, zval **return_value_ptr, zval *this_ptr, int return_value_used TSRMLS_DC)
 {
 	std::shared_ptr<BaseLib::RPC::Variable> result = GD::rpcServers.begin()->second.callMethod(methodName, parameters);
 	if(result->errorStruct)
 	{
-		zend_throw_exception(SEG(homegearExceptionClassEntry), result->structValue->at("faultString")->stringValue.c_str(), result->structValue->at("faultCode")->integerValue TSRMLS_CC);
+		zend_throw_exception(homegear_exception_class_entry, result->structValue->at("faultString")->stringValue.c_str(), result->structValue->at("faultCode")->integerValue TSRMLS_CC);
 		RETURN_NULL()
 	}
 	PHPVariableConverter::getPHPVariable(result, return_value);
@@ -455,17 +513,6 @@ ZEND_FUNCTION(hg_set_value)
 	if(parameter) parameters->arrayValue->push_back(parameter);
 	php_homegear_invoke_rpc(methodName, parameters, ht, return_value, return_value_ptr, this_ptr, return_value_used TSRMLS_CC);
 }
-
-static const zend_function_entry homegear_functions[] = {
-	ZEND_FE(hg_invoke, NULL)
-	ZEND_FE(hg_get_meta, NULL)
-	ZEND_FE(hg_get_system, NULL)
-	ZEND_FE(hg_get_value, NULL)
-	ZEND_FE(hg_set_meta, NULL)
-	ZEND_FE(hg_set_system, NULL)
-	ZEND_FE(hg_set_value, NULL)
-	{NULL, NULL, NULL}
-};
 
 /* User functions/methods */
 
@@ -588,9 +635,8 @@ static void php_homegear_globals_dtor(zend_homegear_globals* homegear_globals TS
 int php_homegear_init()
 {
 	tsrm_startup(1, 1, 0, NULL);
-	sapi_startup(&php_homegear_module);
-	php_homegear_module.additional_functions = homegear_functions;
-	sapi_module.startup(&php_homegear_module);
+	sapi_startup(&php_homegear_sapi_module);
+	sapi_module.startup(&php_homegear_sapi_module);
 
 	ts_allocate_id(&homegear_globals_id, sizeof(zend_homegear_globals), (void(*)(void*, void***))php_homegear_globals_ctor, (void(*)(void*, void***))php_homegear_globals_dtor);
 
@@ -599,34 +645,62 @@ int php_homegear_init()
 
 void php_homegear_shutdown()
 {
-	php_homegear_module.shutdown(&php_homegear_module);
+	php_homegear_sapi_module.shutdown(&php_homegear_sapi_module);
 	sapi_shutdown();
 	tsrm_shutdown();
 }
 
 static int php_homegear_startup(sapi_module_struct* sapi_module)
 {
-	if(php_module_startup(sapi_module, NULL, 0) == FAILURE) return FAILURE;
+	if(php_module_startup(sapi_module, &homegear_module_entry, 1) == FAILURE) return FAILURE;
 	return SUCCESS;
 }
 
 static int php_homegear_activate(TSRMLS_D)
 {
-	zend_class_entry homegearExceptionCe;
-	INIT_CLASS_ENTRY(homegearExceptionCe, "Homegear\\HomegearException", NULL);
-	//Register chiled class inherited from Exception (fetched with "zend_exception_get_default")
-	SEG(homegearExceptionClassEntry) = zend_register_internal_class_ex(&homegearExceptionCe, zend_exception_get_default(TSRMLS_C), NULL TSRMLS_CC);
-	zend_declare_class_constant_long(SEG(homegearExceptionClassEntry), "UNKNOWN_DEVICE", sizeof("UNKNOWN_DEVICE"), -2 TSRMLS_CC);
-
-	zend_class_entry homegearCe;
-	INIT_CLASS_ENTRY(homegearCe, "Homegear\\Homegear", homegear_methods);
-	SEG(homegearClassEntry) = zend_register_internal_class(&homegearCe TSRMLS_CC);
-
 	return SUCCESS;
 }
 
 static int php_homegear_deactivate(TSRMLS_D)
 {
 	return SUCCESS;
+}
+
+static PHP_MINIT_FUNCTION(homegear)
+{
+	zend_class_entry homegearExceptionCe;
+	INIT_CLASS_ENTRY(homegearExceptionCe, "Homegear\\HomegearException", NULL);
+	//Register chiled class inherited from Exception (fetched with "zend_exception_get_default")
+	homegear_exception_class_entry = zend_register_internal_class_ex(&homegearExceptionCe, zend_exception_get_default(TSRMLS_C), NULL TSRMLS_CC);
+	zend_declare_class_constant_long(homegear_exception_class_entry, "UNKNOWN_DEVICE", sizeof("UNKNOWN_DEVICE"), -2 TSRMLS_CC);
+
+	zend_class_entry homegearCe;
+	INIT_CLASS_ENTRY(homegearCe, "Homegear\\Homegear", homegear_methods);
+	homegear_class_entry = zend_register_internal_class(&homegearCe TSRMLS_CC);
+
+    return SUCCESS;
+}
+
+static PHP_MSHUTDOWN_FUNCTION(homegear)
+{
+    return SUCCESS;
+}
+
+static PHP_RINIT_FUNCTION(homegear)
+{
+	return SUCCESS;
+}
+
+static PHP_RSHUTDOWN_FUNCTION(homegear)
+{
+	return SUCCESS;
+}
+
+static PHP_MINFO_FUNCTION(homegear)
+{
+    php_info_print_table_start();
+	php_info_print_table_row(2, "Homegear support", "enabled");
+	php_info_print_table_row(2, "Homegear version", VERSION);
+	php_info_print_table_end();
 }
 #endif
