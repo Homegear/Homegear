@@ -70,9 +70,13 @@ void EventHandler::collectGarbage()
 		_eventThreadMutex.lock();
 		try
 		{
-			for(std::map<int32_t, std::future<bool>>::iterator i = _eventThreads.begin(); i != _eventThreads.end(); ++i)
+			for(std::map<int32_t, std::pair<std::thread, bool>>::iterator i = _eventThreads.begin(); i != _eventThreads.end(); ++i)
 			{
-				if(i->second.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) eventsToRemove.push_back(i->first);
+				if(!i->second.second)
+				{
+					i->second.first.join();
+					eventsToRemove.push_back(i->first);
+				}
 			}
 		}
 		catch(const std::exception& ex)
@@ -112,6 +116,27 @@ void EventHandler::collectGarbage()
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_eventThreadMutex.unlock();
+}
+
+void EventHandler::setThreadNotRunning(int32_t threadId)
+{
+	if(threadId != -1)
+	{
+		_eventThreadMutex.lock();
+		try
+		{
+			_eventThreads.at(threadId).second = false;
+		}
+		catch(const std::exception& ex)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+		_eventThreadMutex.unlock();
+	}
 }
 
 bool EventHandler::eventThreadMaxReached()
@@ -176,7 +201,9 @@ void EventHandler::mainThread()
 					_eventThreadMutex.lock();
 					try
 					{
-						_eventThreads.insert(std::pair<int32_t, std::future<bool>>(_currentEventThreadID++, std::async(std::launch::async, &EventHandler::rpcCallThread, this, event->name, event->eventMethod, event->eventMethodParameters)));
+						int32_t threadId = _currentEventThreadID++;
+						if(threadId == -1) threadId = _currentEventThreadID++;
+						_eventThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&EventHandler::rpcCallThread, this, event->name, event->eventMethod, event->eventMethodParameters, threadId), true)));
 						event->lastRaised = currentTime;
 					}
 					catch(const std::exception& ex)
@@ -228,7 +255,9 @@ void EventHandler::mainThread()
 					_eventThreadMutex.lock();
 					try
 					{
-						_eventThreads.insert(std::pair<int32_t, std::future<bool>>(_currentEventThreadID++, std::async(std::launch::async, &EventHandler::rpcCallThread, this, event->name, event->resetMethod, event->resetMethodParameters)));
+						int32_t threadId = _currentEventThreadID++;
+						if(threadId == -1) threadId = _currentEventThreadID++;
+						_eventThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&EventHandler::rpcCallThread, this, event->name, event->resetMethod, event->resetMethodParameters, threadId), true)));
 						event->lastReset = currentTime;
 
 					}
@@ -783,7 +812,9 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::shared_ptr<std
 		if(_disposing) return;
 		if(eventThreadMaxReached()) return;
 		_eventThreadMutex.lock();
-		_eventThreads.insert(std::pair<int32_t, std::future<bool>>(_currentEventThreadID++, std::async(std::launch::async, &EventHandler::triggerThreadMultipleVariables, this, peerID, channel, variables, values)));
+		int32_t threadId = _currentEventThreadID++;
+		if(threadId == -1) threadId = _currentEventThreadID++;
+		_eventThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&EventHandler::triggerThreadMultipleVariables, this, peerID, channel, variables, values, threadId), true)));
 	}
 	catch(const std::exception& ex)
     {
@@ -832,7 +863,9 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::string& variab
 		if(_disposing) return;
 		if(eventThreadMaxReached()) return;
 		_eventThreadMutex.lock();
-		_eventThreads.insert(std::pair<int32_t, std::future<bool>>(_currentEventThreadID++, std::async(std::launch::async, &EventHandler::triggerThread, this, peerID, channel, variable, value)));
+		int32_t threadId = _currentEventThreadID++;
+		if(threadId == -1) threadId = _currentEventThreadID++;
+		_eventThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&EventHandler::triggerThread, this, peerID, channel, variable, value, threadId), true)));
 	}
 	catch(const std::exception& ex)
     {
@@ -849,15 +882,14 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::string& variab
     _eventThreadMutex.unlock();
 }
 
-bool EventHandler::triggerThreadMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values)
+void EventHandler::triggerThreadMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values, int32_t threadId)
 {
 	try
 	{
 		for(uint32_t i = 0; i < variables->size(); i++)
 		{
-			triggerThread(peerID, channel, variables->at(i), values->at(i));
+			triggerThread(peerID, channel, variables->at(i), values->at(i), -1);
 		}
-		return true;
 	}
 	catch(const std::exception& ex)
     {
@@ -871,7 +903,7 @@ bool EventHandler::triggerThreadMultipleVariables(uint64_t peerID, int32_t chann
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return false;
+    setThreadNotRunning(threadId);
 }
 
 void EventHandler::removeEventToReset(uint32_t id)
@@ -1176,7 +1208,7 @@ std::shared_ptr<BaseLib::RPC::Variable> EventHandler::trigger(std::string name)
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-bool EventHandler::rpcCallThread(std::string eventName, std::string eventMethod, std::shared_ptr<BaseLib::RPC::Variable> eventMethodParameters)
+void EventHandler::rpcCallThread(std::string eventName, std::string eventMethod, std::shared_ptr<BaseLib::RPC::Variable> eventMethodParameters, int32_t threadId)
 {
 	try
 	{
@@ -1185,9 +1217,7 @@ bool EventHandler::rpcCallThread(std::string eventName, std::string eventMethod,
 		{
 			GD::out.printError("Could not execute RPC method \"" + eventMethod + "\" for event \"" + eventName + "\". Error struct:");
 			result->print();
-			return false;
 		}
-		return true;
 	}
 	catch(const std::exception& ex)
     {
@@ -1201,10 +1231,10 @@ bool EventHandler::rpcCallThread(std::string eventName, std::string eventMethod,
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return false;
+    setThreadNotRunning(threadId);
 }
 
-bool EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string variable, std::shared_ptr<BaseLib::RPC::Variable> value)
+void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string variable, std::shared_ptr<BaseLib::RPC::Variable> value, int32_t threadId)
 {
 	try
 	{
@@ -1212,19 +1242,22 @@ bool EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 		if(!value || _triggeredEvents.find(peerID) == _triggeredEvents.end())
 		{
 			_eventsMutex.unlock();
-			return false;
+			setThreadNotRunning(threadId);
+			return;
 		}
 		std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>* channels = &_triggeredEvents.at(peerID);
 		if(channels->find(channel) == channels->end())
 		{
 			_eventsMutex.unlock();
-			return false;
+			setThreadNotRunning(threadId);
+			return;
 		}
 		std::map<std::string, std::vector<std::shared_ptr<Event>>>* variables = &channels->at(channel);
 		if(variables->find(variable) == variables->end())
 		{
 			_eventsMutex.unlock();
-			return false;
+			setThreadNotRunning(threadId);
+			return;
 		}
 		std::vector<std::shared_ptr<Event>>* events = &variables->at(variable);
 		std::vector<std::shared_ptr<Event>> triggeredEvents;
@@ -1367,7 +1400,6 @@ bool EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 
 			GD::rpcClient.broadcastUpdateEvent((*i)->name, (int32_t)(*i)->type, (*i)->peerID, (*i)->peerChannel, (*i)->variable);
 		}
-		return true;
 	}
 	catch(const std::exception& ex)
     {
@@ -1384,7 +1416,7 @@ bool EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
     	_eventsMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return false;
+    setThreadNotRunning(threadId);
 }
 
 void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, std::shared_ptr<BaseLib::RPC::Variable>& rpcResult, uint64_t currentTime)

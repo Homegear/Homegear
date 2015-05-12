@@ -39,7 +39,6 @@
 #include <map>
 #include <mutex>
 #include <thread>
-#include <future>
 
 class Event
 {
@@ -124,14 +123,14 @@ protected:
 	//Event thraeds
 	int64_t _lastGargabeCollection = 0;
 	volatile int32_t _currentEventThreadID = 0;
-	std::map<int32_t, std::future<bool>> _eventThreads;
+	std::map<int32_t, std::pair<std::thread, bool>> _eventThreads;
 	std::mutex _eventThreadMutex;
 
 	void collectGarbage();
 	bool eventThreadMaxReached();
-	bool triggerThreadMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values);
-	bool triggerThread(uint64_t peerID, int32_t channel, std::string variable, std::shared_ptr<BaseLib::RPC::Variable> value);
-	bool rpcCallThread(std::string eventName, std::string eventMethod, std::shared_ptr<BaseLib::RPC::Variable> eventMethodParameters);
+	void triggerThreadMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values, int32_t threadId = -1);
+	void triggerThread(uint64_t peerID, int32_t channel, std::string variable, std::shared_ptr<BaseLib::RPC::Variable> value, int32_t threadId = -1);
+	void rpcCallThread(std::string eventName, std::string eventMethod, std::shared_ptr<BaseLib::RPC::Variable> eventMethodParameters, int32_t threadId = -1);
 	void mainThread();
 	uint64_t getNextExecution(uint64_t startTime, uint64_t recurEvery);
 	void removeEventToReset(uint32_t id);
@@ -143,6 +142,7 @@ protected:
 	std::shared_ptr<Event> getEvent(std::string name);
 	void save(std::shared_ptr<Event>);
 	void postTriggerTasks(std::shared_ptr<Event>& event, std::shared_ptr<BaseLib::RPC::Variable>& rpcResult, uint64_t currentTime);
+	void setThreadNotRunning(int32_t threadId);
 };
 #endif
 #endif

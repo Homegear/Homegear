@@ -46,13 +46,13 @@ void ScriptEngine::dispose()
 {
 	if(_disposing) return;
 	_disposing = true;
-	php_homegear_shutdown();
 	while(_scriptThreads.size() > 0)
 	{
 		GD::out.printInfo("Info: Waiting for script threads to finish.");
 		collectGarbage();
 		if(_scriptThreads.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
+	php_homegear_shutdown();
 }
 
 void ScriptEngine::collectGarbage()
@@ -63,9 +63,13 @@ void ScriptEngine::collectGarbage()
 		_scriptThreadMutex.lock();
 		try
 		{
-			for(std::map<int32_t, std::future<int32_t>>::iterator i = _scriptThreads.begin(); i != _scriptThreads.end(); ++i)
+			for(std::map<int32_t, std::pair<std::thread, bool>>::iterator i = _scriptThreads.begin(); i != _scriptThreads.end(); ++i)
 			{
-				if(i->second.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) threadsToRemove.push_back(i->first);
+				if(!i->second.second)
+				{
+					i->second.first.join();
+					threadsToRemove.push_back(i->first);
+				}
 			}
 		}
 		catch(const std::exception& ex)
@@ -158,12 +162,41 @@ std::vector<std::string> ScriptEngine::getArgs(const std::string& path, const st
 	return argv;
 }
 
-int32_t ScriptEngine::execute(const std::string path, const std::string arguments, std::shared_ptr<std::vector<char>> output, bool wait)
+void ScriptEngine::setThreadNotRunning(int32_t threadId)
+{
+	if(threadId != -1)
+	{
+		_scriptThreadMutex.lock();
+		try
+		{
+			_scriptThreads.at(threadId).second = false;
+		}
+		catch(const std::exception& ex)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+		_scriptThreadMutex.unlock();
+	}
+}
+
+void ScriptEngine::execute(const std::string path, const std::string arguments, std::shared_ptr<std::vector<char>> output, int32_t* exitCode, bool wait, int32_t threadId)
 {
 	try
 	{
-		if(_disposing) return 1;
-		if(path.empty()) return -1;
+		if(_disposing)
+		{
+			setThreadNotRunning(threadId);
+			return;
+		}
+		if(path.empty())
+		{
+			//No thread yet
+			return;
+		}
 		if(!output) output.reset(new std::vector<char>());
 		if(!wait)
 		{
@@ -173,7 +206,9 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 				_scriptThreadMutex.lock();
 				try
 				{
-					_scriptThreads.insert(std::pair<int32_t, std::future<int32_t>>(_currentScriptThreadID++, std::async(std::launch::async, &ScriptEngine::execute, this, path, arguments, output, true)));
+					int32_t threadId = _currentScriptThreadID++;
+					if(threadId == -1) threadId = _currentScriptThreadID++;
+					_scriptThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&ScriptEngine::execute, this, path, arguments, output, nullptr, true, threadId), true)));
 				}
 				catch(const std::exception& ex)
 				{
@@ -185,23 +220,35 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 				}
 				_scriptThreadMutex.unlock();
 			}
-			return 0;
+			if(exitCode) *exitCode = 0;
+			//No thread yet
+			return;
 		}
 	}
 	catch(const std::exception& ex)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		return -1;
+		setThreadNotRunning(threadId);
+		return;
 	}
 	catch(BaseLib::Exception& ex)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		return -1;
+		setThreadNotRunning(threadId);
+		return;
 	}
 	catch(...)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		return -1;
+		setThreadNotRunning(threadId);
+		return;
+	}
+	if(exitCode) *exitCode = -1;
+	if(!GD::bl->hf.fileExists(path))
+	{
+		GD::out.printError("Error: PHP script \"" + path + "\" does not exist.");
+		setThreadNotRunning(threadId);
+		return;
 	}
 	TSRMLS_FETCH();
 	try
@@ -230,7 +277,8 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 
 		if (php_request_startup(TSRMLS_C) == FAILURE) {
 			GD::bl->out.printError("Error calling php_request_startup...");
-			return 1;
+			setThreadNotRunning(threadId);
+			return;
 		}
 
 		std::vector<std::string> argv = getArgs(path, arguments);
@@ -244,7 +292,7 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 		SG(request_info).argv[argv.size()] = nullptr;
 
 		php_execute_script(&script TSRMLS_CC);
-		int32_t exitCode = EG(exit_status);
+		if(exitCode) *exitCode = EG(exit_status);
 
 		php_request_shutdown(NULL);
 		if(output->size() > 0)
@@ -252,19 +300,6 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 			std::string outputString(&output->at(0), output->size());
 			if(BaseLib::HelperFunctions::trim(outputString).size() > 0) GD::out.printMessage("Script output:\n" + outputString);
 		}
-
-		if(SG(request_info).path_translated)
-		{
-			efree(SG(request_info).query_string);
-			SG(request_info).query_string = nullptr;
-		}
-		if(SG(request_info).argv)
-		{
-			free(SG(request_info).argv);
-			SG(request_info).argv = nullptr;
-		}
-		SG(request_info).argc = 0;
-		return exitCode;
 	}
 	catch(const std::exception& ex)
 	{
@@ -289,12 +324,18 @@ int32_t ScriptEngine::execute(const std::string path, const std::string argument
 		SG(request_info).argv = nullptr;
 	}
 	SG(request_info).argc = 0;
-	return 1;
+
+	setThreadNotRunning(threadId);
 }
 
 int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& request, std::shared_ptr<RPC::ServerInfo::Info>& serverInfo, std::vector<char>& output)
 {
 	if(_disposing) return 1;
+	if(!GD::bl->hf.fileExists(path))
+	{
+		GD::out.printError("Error: PHP script \"" + path + "\" does not exist.");
+		return -1;
+	}
 	TSRMLS_FETCH();
 	try
 	{

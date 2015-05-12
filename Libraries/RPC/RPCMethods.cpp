@@ -2666,7 +2666,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCRunScript::invoke(int32_t clientID, s
 		{
 			if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Executing script \"" + path + "\" with parameters \"" + arguments + "\" using internal script engine.");
 			std::shared_ptr<std::vector<char>> scriptOutput(new std::vector<char>());
-			exitCode = GD::scriptEngine.execute(path, arguments, scriptOutput, wait);
+			GD::scriptEngine.execute(path, arguments, scriptOutput, &exitCode, wait);
 			if(scriptOutput->size() > 0)
 			{
 				std::string outputString(&scriptOutput->at(0), &scriptOutput->at(0) + scriptOutput->size());

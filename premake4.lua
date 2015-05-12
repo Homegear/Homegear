@@ -115,6 +115,8 @@ solution "homegear"
       {
          "FORTIFY_SOURCE=2",
          "GCRYPT_NO_DEPRECATED",
+         "SCRIPTENGINE",
+         "EVENTHANDLER",
          "OPENSSL",
          "SPIINTERFACES"
       }
@@ -127,6 +129,8 @@ solution "homegear"
       {
          "FORTIFY_SOURCE=2",
          "GCRYPT_NO_DEPRECATED",
+         "SCRIPTENGINE",
+         "EVENTHANDLER",
          "OPENSSL",
          "SPIINTERFACES"
       }
@@ -630,7 +634,7 @@ solution "homegear"
         linkoptions { "-Wl,-Bstatic", "-lrpc", "-Wl,-Bdynamic", "-ldl", "-lpthread", "-lreadline", "-lgcrypt", "-lgnutls", "-Wl,-Bstatic", "-luser", "-lcli", "-levents", "-lgd", "-lupnp", "-lmqtt", "-ldatabase", "-lscriptengine", "-lbase", "-Wl,-Bdynamic", "-lgpg-error", "-lsqlite3", "-Wl,-Bstatic", "-lpaho.mqtt.c", "-Wl,-Bdynamic", "-lcrypto", "-lssl", "-Wl,-Bdynamic", "-lphp5", "-Wl,--as-needed" }
 
       configuration { "armel_static", "gmake" }
-        linkoptions { "-Wl,-Bstatic", "-lrpc", "-Wl,-Bdynamic", "-ldl", "-Wl,-Bstatic", "-lpthread", "-lreadline", "-lgcrypt", "-lgnutls", "-luser", "-lcli", "-levents", "-lgd", "-lupnp", "-lmqtt", "-ldatabase", "-lscriptengine", "-lbase", "-lgpg-error", "-lsqlite3", "-lpaho.mqtt.c", "-lssl", "-lcrypto", "-Wl,--as-needed" }  
+        linkoptions { "-Wl,-Bstatic", "-lrpc", "-Wl,-Bdynamic", "-ldl", "-Wl,-Bstatic", "-lpthread", "-lreadline", "-lgcrypt", "-lgnutls", "-luser", "-lcli", "-levents", "-lgd", "-lupnp", "-lmqtt", "-ldatabase", "-lscriptengine", "-lbase", "-lgpg-error", "-lsqlite3", "-lpaho.mqtt.c", "-lssl", "-lcrypto", "-Wl,-Bdynamic", "-lphp5", "-Wl,--as-needed" }  
 
       configuration "Debug"
          defines { "DEBUG" }

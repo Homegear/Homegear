@@ -35,7 +35,6 @@
 #include "../RPC/ServerInfo.h"
 
 #include <mutex>
-#include <future>
 #include <wordexp.h>
 
 class ScriptEngine
@@ -46,7 +45,7 @@ public:
 	void dispose();
 
 	std::vector<std::string> getArgs(const std::string& path, const std::string& args);
-	int32_t execute(const std::string path, const std::string arguments, std::shared_ptr<std::vector<char>> output = nullptr, bool wait = true);
+	void execute(const std::string path, const std::string arguments, std::shared_ptr<std::vector<char>> output = nullptr, int32_t* exitCode = nullptr, bool wait = true, int32_t threadId = -1);
 	int32_t executeWebRequest(const std::string& path, BaseLib::HTTP& request, std::shared_ptr<RPC::ServerInfo::Info>& serverInfo, std::vector<char>& output);
 
 	bool checkSessionId(const std::string& sessionId);
@@ -55,11 +54,12 @@ public:
 protected:
 	bool _disposing = false;
 	volatile int32_t _currentScriptThreadID = 0;
-	std::map<int32_t, std::future<int32_t>> _scriptThreads;
+	std::map<int32_t, std::pair<std::thread, bool>> _scriptThreads;
 	std::mutex _scriptThreadMutex;
 
 	void collectGarbage();
 	bool scriptThreadMaxReached();
+	void setThreadNotRunning(int32_t threadId);
 };
 #endif
 #endif

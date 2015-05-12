@@ -731,7 +731,8 @@ std::string Server::handleGlobalCommand(std::string& command)
 
 			std::shared_ptr<std::vector<char>> scriptOutput(new std::vector<char>());
 #ifdef SCRIPTENGINE
-			int32_t exitCode = GD::scriptEngine.execute(path, arguments.str(), scriptOutput);
+			int32_t exitCode = 0;
+			GD::scriptEngine.execute(path, arguments.str(), scriptOutput, &exitCode);
 			if(scriptOutput->size() > 0)
 			{
 				std::string outputString(&scriptOutput->at(0), &scriptOutput->at(0) + scriptOutput->size());
