@@ -548,7 +548,7 @@ std::vector<uint8_t> HelperFunctions::getUBinary(std::vector<uint8_t>& hexData)
     return binary;
 }
 
-void HelperFunctions::copyFile(std::string source, std::string dest)
+bool HelperFunctions::copyFile(std::string source, std::string dest)
 {
 	try
 	{
@@ -556,7 +556,7 @@ void HelperFunctions::copyFile(std::string source, std::string dest)
 		if(in_fd == -1)
 		{
 			_bl->out.printError("Error copying file " + source + ": " + strerror(errno));
-			return;
+			return false;
 		}
 
 		unlink(dest.c_str());
@@ -566,7 +566,7 @@ void HelperFunctions::copyFile(std::string source, std::string dest)
 		{
 			close(in_fd);
 			_bl->out.printError("Error copying file " + source + ": " + strerror(errno));
-			return;
+			return false;
 		}
 		char buf[8192];
 
@@ -579,18 +579,19 @@ void HelperFunctions::copyFile(std::string source, std::string dest)
 				close(in_fd);
 				close(out_fd);
 				_bl->out.printError("Error reading file " + source + ": " + strerror(errno));
-				return;
+				return false;
 			}
 			if(write(out_fd, &buf[0], result) != result)
 			{
 				close(in_fd);
 				close(out_fd);
 				_bl->out.printError("Error writing file " + dest + ": " + strerror(errno));
-				return;
+				return false;
 			}
 		}
 		close(in_fd);
 		close(out_fd);
+		return true;
 	}
 	catch(const std::exception& ex)
     {
@@ -604,6 +605,19 @@ void HelperFunctions::copyFile(std::string source, std::string dest)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    return false;
+}
+
+bool HelperFunctions::moveFile(std::string source, std::string dest)
+{
+	if(rename(source.c_str(), dest.c_str()) == 0) return true;
+    return false;
+}
+
+bool HelperFunctions::deleteFile(std::string file)
+{
+	if(remove(file.c_str()) == 0) return true;
+	return false;
 }
 
 int32_t HelperFunctions::userID(std::string username)

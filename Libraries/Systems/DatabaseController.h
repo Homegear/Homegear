@@ -52,6 +52,7 @@ public:
 
 	//General
 	virtual void open(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, std::string backupPath = "");
+	virtual void hotBackup();
 	virtual bool isOpen() { return _db.isOpen(); }
 	virtual void initializeDatabase();
 	virtual void convertDatabase();

@@ -364,8 +364,26 @@ public:
 	 *
 	 * @param source The path to the file.
 	 * @param target The destination path to copy the file to.
+	 * @return Returns true on success
 	 */
-	void copyFile(std::string source, std::string dest);
+	bool copyFile(std::string source, std::string dest);
+
+	/**
+	 * Moves a file.
+	 *
+	 * @param source The path to the file.
+	 * @param target The destination path to move the file to.
+	 * @return Returns true on success
+	 */
+	bool moveFile(std::string source, std::string dest);
+
+	/**
+	 * Deletes a file.
+	 *
+	 * @param file The file to delete.
+	 * @return Returns true on success
+	 */
+	bool deleteFile(std::string file);
 
 	/**
 	 * Generates a random integer.

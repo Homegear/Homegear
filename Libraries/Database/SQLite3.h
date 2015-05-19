@@ -49,6 +49,7 @@ class SQLite3
         virtual ~SQLite3();
         void dispose();
         void init(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, std::string backupPath = "");
+        void hotBackup();
         uint32_t executeWriteCommand(std::shared_ptr<std::pair<std::string, DataRow>> command);
         uint32_t executeWriteCommand(std::string command, DataRow& dataToEscape);
         std::shared_ptr<DataTable> executeCommand(std::string command);
@@ -60,11 +61,16 @@ class SQLite3
         void benchmark4();*/
     protected:
     private:
+        std::string _databasePath;
+        std::string _backupPath;
+        bool _databaseSynchronous;
+        bool _databaseMemoryJournal;
         sqlite3* _database = nullptr;
         std::mutex _databaseMutex;
 
-        void openDatabase(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal);
-        void closeDatabase();
+        bool checkIntegrity(std::string databasePath);
+        void openDatabase(bool lockMutex);
+        void closeDatabase(bool lockMutex);
         void getDataRows(sqlite3_stmt* statement, std::shared_ptr<DataTable>& dataRows);
         void bindData(sqlite3_stmt* statement, DataRow& dataToEscape);
 };

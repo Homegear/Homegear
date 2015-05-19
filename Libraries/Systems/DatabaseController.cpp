@@ -81,6 +81,11 @@ void DatabaseController::open(std::string databasePath, bool databaseSynchronous
 	_db.init(databasePath, databaseSynchronous, databaseMemoryJournal, backupPath);
 }
 
+void DatabaseController::hotBackup()
+{
+	_db.hotBackup();
+}
+
 void DatabaseController::initializeDatabase()
 {
 	try

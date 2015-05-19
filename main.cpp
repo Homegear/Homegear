@@ -163,6 +163,7 @@ void terminate(int32_t signalNumber)
 		}
 		else if(signalNumber == SIGHUP)
 		{
+			GD::out.printInfo("Info: SIGHUP received... Reloading...");
 			if(!_startUpComplete)
 			{
 				GD::out.printError("Error: Cannot reload. Startup is not completed.");
@@ -215,7 +216,14 @@ void terminate(int32_t signalNumber)
 					GD::out.printError("Error: Could not redirect errors to new log file.");
 				}
 			}
+			GD::db.hotBackup();
+			if(!GD::db.isOpen())
+			{
+				GD::out.printCritical("Critical: Can't reopen database. Exiting...");
+				exit(1);
+			}
 			_startUpComplete = true;
+			GD::out.printInfo("Info: Reload complete.");
 		}
 		else
 		{
@@ -486,26 +494,6 @@ int main(int argc, char* argv[])
     		}
     	}
 
-        /*int row,col;
-        WINDOW* mainWindow = initscr();
-        if(!mainWindow) GD::out.printError("Bla" << std::endl;
-
-        getmaxyx(stdscr, row, col);
-        WINDOW* left = newwin(row, col / 2, 0, 0);
-        WINDOW* right = newwin(row, col / 2, 0, col);
-
-        mvwprintw(left, row/2, 0, "%s", "Hallo");
-        refresh();
-        mvwprintw(right, row/2 - 2, 0, "%s", "Hallo2");
-        refresh();
-        //std::string input2 = "";
-        //std::cin >> input2;
-        //mvwprintw(right, row/2 - 4, 0, "%s", input2.c_str());
-        getch();
-        endwin();
-        //delscreen for all screens!!!
-        return 0;*/
-
 		if(GD::configPath.empty()) GD::configPath = "/etc/homegear/";
 		GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");
 		GD::bl->settings.load(GD::configPath + "main.conf");
@@ -528,11 +516,6 @@ int main(int argc, char* argv[])
     	limits.rlim_cur = limits.rlim_max;
     	setrlimit(RLIMIT_RTPRIO, &limits);
 #endif
-
-    	//Analyze core dump with:
-    	//gdb homegear core
-    	//where
-    	//thread apply all bt
 
     	//Enable printing of backtraces
     	signal(SIGHUP, terminate);

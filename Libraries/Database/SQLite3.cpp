@@ -42,45 +42,198 @@ SQLite3::SQLite3()
 
 SQLite3::SQLite3(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal) : SQLite3()
 {
-	if(databasePath.size() == 0) return;
-    openDatabase(databasePath, databaseSynchronous, databaseMemoryJournal);
+	if(databasePath.empty()) return;
+	_databaseSynchronous = databaseSynchronous;
+	_databaseMemoryJournal = databaseMemoryJournal;
+	_databasePath = databasePath;
+	_backupPath = "";
+    openDatabase(true);
 }
 
 void SQLite3::init(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, std::string backupPath)
 {
-	if(_database) closeDatabase();
-	if(!backupPath.empty()) GD::bl->hf.copyFile(databasePath, backupPath);
-	if(databasePath.size() == 0) return;
-    openDatabase(databasePath, databaseSynchronous, databaseMemoryJournal);
+	if(databasePath.empty()) return;
+	_databaseSynchronous = databaseSynchronous;
+	_databaseMemoryJournal = databaseMemoryJournal;
+	_databasePath = databasePath;
+	_backupPath = backupPath;
+	hotBackup();
 }
 
 SQLite3::~SQLite3()
 {
-    closeDatabase();
+    closeDatabase(true);
 }
 
 void SQLite3::dispose()
 {
-	closeDatabase();
+	closeDatabase(true);
 }
 
-void SQLite3::openDatabase(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal)
+void SQLite3::hotBackup()
 {
 	try
 	{
+		if(_databasePath.empty()) return;
 		_databaseMutex.lock();
-		int result = sqlite3_open(databasePath.c_str(), &_database);
+		closeDatabase(false);
+		if(GD::bl->hf.fileExists(_databasePath))
+		{
+			if(!checkIntegrity(_databasePath))
+			{
+				GD::out.printCritical("Critical: Integrity check on database failed.");
+				if(!_backupPath.empty())
+				{
+					bool restored = false;
+					for(int32_t i = 0; i <= 9; i++)
+					{
+						if(GD::bl->hf.fileExists(_backupPath + std::to_string(i)) && checkIntegrity(_backupPath + std::to_string(i)))
+						{
+							GD::out.printCritical("Critical: Restoring database file: " + _backupPath + std::to_string(i));
+							if(GD::bl->hf.copyFile(_backupPath + std::to_string(i), _databasePath))
+							{
+								restored = true;
+								break;
+							}
+						}
+					}
+					if(!restored)
+					{
+						GD::out.printCritical("Critical: Could not restore database.");
+						_databaseMutex.unlock();
+						return;
+					}
+				}
+				else
+				{
+					_databaseMutex.unlock();
+					return;
+				}
+			}
+			else
+			{
+				if(!_backupPath.empty())
+				{
+					GD::out.printInfo("Info: Backing up database...");
+					if(GD::bl->hf.fileExists(_backupPath + '9'))
+					{
+						if(!GD::bl->hf.deleteFile(_backupPath + '9'))
+						{
+							GD::out.printError("Error: Cannot delete file: " + _backupPath + '9');
+						}
+					}
+					for(int32_t i = 8; i >= 0; i--)
+					{
+						if(GD::bl->hf.fileExists(_backupPath + std::to_string(i)))
+						{
+							if(!GD::bl->hf.moveFile(_backupPath + std::to_string(i), _backupPath + std::to_string(i + 1)))
+							{
+								GD::out.printError("Error: Cannot move file: " + _backupPath + std::to_string(i));
+							}
+						}
+					}
+					if(!GD::bl->hf.copyFile(_databasePath, _backupPath + '0'))
+					{
+						GD::out.printError("Error: Cannot copy file: " + _backupPath + '0');
+					}
+				}
+			}
+		}
+		openDatabase(false);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(const Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _databaseMutex.unlock();
+}
+
+bool SQLite3::checkIntegrity(std::string databasePath)
+{
+	sqlite3* database = nullptr;
+	try
+	{
+		int32_t result = sqlite3_open(databasePath.c_str(), &database);
+		if(result || !database)
+		{
+			if(database) sqlite3_close(database);
+			return true;
+		}
+
+		std::shared_ptr<DataTable> integrityResult(new DataTable());
+
+		sqlite3_stmt* statement = nullptr;
+		result = sqlite3_prepare_v2(database, "PRAGMA integrity_check", -1, &statement, NULL);
 		if(result)
 		{
+			sqlite3_close(database);
+			return false;
+		}
+		try
+		{
+			getDataRows(statement, integrityResult);
+		}
+		catch(const Exception& ex)
+		{
+			sqlite3_close(database);
+			return false;
+		}
+		sqlite3_clear_bindings(statement);
+		result = sqlite3_finalize(statement);
+		if(result)
+		{
+			sqlite3_close(database);
+			return false;
+		}
+
+		if(integrityResult->size() != 1 || integrityResult->at(0).size() < 1 || integrityResult->at(0).at(0)->textValue != "ok")
+		{
+			sqlite3_close(database);
+			return false;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(const Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    if(database) sqlite3_close(database);
+    return true;
+}
+
+void SQLite3::openDatabase(bool lockMutex)
+{
+	try
+	{
+		if(lockMutex) _databaseMutex.lock();
+		char* errorMessage = nullptr;
+		int result = sqlite3_open(_databasePath.c_str(), &_database);
+		if(result || !_database)
+		{
 			GD::out.printCritical("Can't open database: " + std::string(sqlite3_errmsg(_database)));
-			sqlite3_close(_database);
+			if(_database) sqlite3_close(_database);
 			_database = nullptr;
-			_databaseMutex.unlock();
+			if(lockMutex) _databaseMutex.unlock();
 			return;
 		}
 		sqlite3_extended_result_codes(_database, 1);
-		char* errorMessage = nullptr;
-		if(!databaseSynchronous)
+
+		if(!_databaseSynchronous)
 		{
 			sqlite3_exec(_database, "PRAGMA synchronous = OFF", 0, 0, &errorMessage);
 			if(errorMessage)
@@ -90,7 +243,7 @@ void SQLite3::openDatabase(std::string databasePath, bool databaseSynchronous, b
 			}
 		}
 
-		if(databaseMemoryJournal)
+		if(_databaseMemoryJournal)
 		{
 			sqlite3_exec(_database, "PRAGMA journal_mode = MEMORY", 0, 0, &errorMessage);
 			if(errorMessage)
@@ -119,34 +272,34 @@ void SQLite3::openDatabase(std::string databasePath, bool databaseSynchronous, b
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _databaseMutex.unlock();
+    if(lockMutex) _databaseMutex.unlock();
 }
 
-void SQLite3::closeDatabase()
+void SQLite3::closeDatabase(bool lockMutex)
 {
 	try
 	{
 		if(!_database) return;
-		_databaseMutex.lock();
+		if(lockMutex) _databaseMutex.lock();
 		GD::out.printInfo("Closing database...");
 		char* errorMessage = nullptr;
 		sqlite3_exec(_database, "COMMIT", 0, 0, &errorMessage); //Release all savepoints
 		if(errorMessage)
 		{
 			//Normally error is: No transaction is active, so no real error
-			GD::out.printInfo("Can't execute \"COMMIT\": " + std::string(errorMessage));
+			GD::out.printDebug("Debug: Can't execute \"COMMIT\": " + std::string(errorMessage));
 			sqlite3_free(errorMessage);
 		}
 		sqlite3_exec(_database, "PRAGMA synchronous = FULL", 0, 0, &errorMessage);
 		if(errorMessage)
 		{
-			GD::out.printError("Can't execute \"PRAGMA synchronous = FULL\": " + std::string(errorMessage));
+			GD::out.printError("Error: Can't execute \"PRAGMA synchronous = FULL\": " + std::string(errorMessage));
 			sqlite3_free(errorMessage);
 		}
 		sqlite3_exec(_database, "PRAGMA journal_mode = DELETE", 0, 0, &errorMessage);
 		if(errorMessage)
 		{
-			GD::out.printError("Can't execute \"PRAGMA journal_mode = DELETE\": " + std::string(errorMessage));
+			GD::out.printError("Error: Can't execute \"PRAGMA journal_mode = DELETE\": " + std::string(errorMessage));
 			sqlite3_free(errorMessage);
 		}
 		sqlite3_close(_database);
@@ -164,7 +317,7 @@ void SQLite3::closeDatabase()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _databaseMutex.unlock();
+    if(lockMutex) _databaseMutex.unlock();
 }
 
 void SQLite3::getDataRows(sqlite3_stmt* statement, std::shared_ptr<DataTable>& dataRows)
