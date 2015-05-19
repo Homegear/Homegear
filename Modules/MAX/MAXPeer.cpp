@@ -838,7 +838,8 @@ void MAXPeer::packetReceived(std::shared_ptr<MAXPacket> packet)
 
 					BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
 					parameter->data = i->second.value;
-					saveParameter(parameter->databaseID, parameter->data);
+					if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+					else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, *j, i->first, parameter->data);
 					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: " + i->first + " on channel " + std::to_string(*j) + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber  + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + ".");
 
 					if(parameter->rpcParameter)
@@ -1069,7 +1070,8 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::putParamset(int32_t clientID, i
 					}
 				}
 				parameter->data = value;
-				saveParameter(parameter->databaseID, parameter->data);
+				if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+				else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::master, channel, i->first, parameter->data);
 				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::configString) continue;
@@ -1271,7 +1273,8 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::setValue(int32_t clientID, uint
 		if(rpcParameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::Enum::store)
 		{
 			rpcParameter->convertToPacket(value, parameter->data);
-			saveParameter(parameter->databaseID, parameter->data);
+			if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+			else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
 			if(!valueKeys->empty())
 			{
 				raiseEvent(_peerID, channel, valueKeys, values);
@@ -1311,7 +1314,8 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::setValue(int32_t clientID, uint
 		if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return BaseLib::RPC::Variable::createError(-6, "No frame was found for parameter " + valueKey);
 		std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
 		rpcParameter->convertToPacket(value, parameter->data);
-		saveParameter(parameter->databaseID, parameter->data);
+		if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+		else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
 		if(_bl->debugLevel > 4) GD::out.printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(parameter->data) + ".");
 
 		std::shared_ptr<MAXCentral> central = std::dynamic_pointer_cast<MAXCentral>(getCentral());
@@ -1392,7 +1396,8 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::setValue(int32_t clientID, uint
 				{
 					BaseLib::Systems::RPCConfigurationParameter* tempParam = &valuesCentral.at(channel).at(*j);
 					tempParam->data = defaultValue;
-					saveParameter(tempParam->databaseID, tempParam->data);
+					if(tempParam->databaseID > 0) saveParameter(tempParam->databaseID, tempParam->data);
+					else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, tempParam->data);
 					GD::out.printInfo( "Info: Parameter \"" + *j + "\" was reset to " + BaseLib::HelperFunctions::getHexString(defaultValue) + ". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 					if((rpcParameter->operations & BaseLib::RPC::Parameter::Operations::read) || (rpcParameter->operations & BaseLib::RPC::Parameter::Operations::event))
 					{

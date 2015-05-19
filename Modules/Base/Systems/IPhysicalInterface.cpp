@@ -133,7 +133,7 @@ void IPhysicalInterface::processPackets()
 				_packetBufferMutex.unlock();
 				_packetProcessingConditionVariable.wait(lock, [&]{ return _packetProcessingPacketAvailable; });
 			}
-			_packetBufferMutex.unlock();
+			else _packetBufferMutex.unlock();
 			if(_stopPacketProcessingThread)
 			{
 				lock.unlock();

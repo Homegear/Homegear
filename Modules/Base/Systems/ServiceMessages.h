@@ -63,7 +63,7 @@ public:
 		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> values) = 0;
 		virtual void onSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data) = 0;
 		virtual std::shared_ptr<Database::DataTable> onGetServiceMessages() = 0;
-		virtual uint64_t onSaveServiceMessage(Database::DataRow data) = 0;
+		virtual void onSaveServiceMessage(Database::DataRow& data) = 0;
 		virtual void onDeleteServiceMessage(uint64_t databaseID) = 0;
 		virtual void onEnqueuePendingQueues() = 0;
 	};
@@ -115,7 +115,7 @@ protected:
 	virtual void raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::Variable>>> values);
 	virtual void raiseSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data);
 	virtual std::shared_ptr<Database::DataTable> raiseGetServiceMessages();
-	virtual uint64_t raiseSaveServiceMessage(Database::DataRow data);
+	virtual void raiseSaveServiceMessage(Database::DataRow& data);
 	virtual void raiseDeleteServiceMessage(uint64_t databaseID);
 	virtual void raiseEnqueuePendingQueues();
 	//End event handling

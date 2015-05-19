@@ -32,6 +32,7 @@
 
 #include <string>
 #include <vector>
+#include <deque>
 #include <map>
 #include <memory>
 
@@ -155,7 +156,7 @@ class DataColumn
          *
          * @param value The column data. The data is copied.
          */
-        DataColumn(std::vector<uint8_t>& value) : DataColumn()
+        DataColumn(const std::vector<uint8_t>& value) : DataColumn()
         {
         	dataType = DataType::Enum::BLOB;
         	binaryValue.reset(new std::vector<char>());
@@ -176,7 +177,7 @@ typedef std::map<uint32_t, std::map<uint32_t, std::shared_ptr<DataColumn>>> Data
 /**
  * Type definition to easily create a DataRow.
  */
-typedef std::vector<std::shared_ptr<DataColumn>> DataRow;
+typedef std::deque<std::shared_ptr<DataColumn>> DataRow;
 
 }
 }

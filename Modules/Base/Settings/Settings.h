@@ -105,8 +105,8 @@ private:
 	std::string _uPnPIpAddress = "";
 	bool _devLog = false;
 	std::string _databasePath;
-	bool _databaseSynchronous = false;
-	bool _databaseMemoryJournal = true;
+	bool _databaseSynchronous = true;
+	bool _databaseMemoryJournal = false;
 	std::string _logfilePath;
 	bool _prioritizeThreads = true;
 	uint32_t _workerThreadWindow = 3000;

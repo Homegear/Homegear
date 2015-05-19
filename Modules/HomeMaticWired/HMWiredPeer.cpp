@@ -2274,7 +2274,9 @@ std::shared_ptr<BaseLib::RPC::Variable> HMWiredPeer::putParamset(int32_t clientI
 					if(configCentral.find(channel) == configCentral.end() || configCentral[channel].find(i->first) == configCentral[channel].end()) continue;
 					BaseLib::Systems::RPCConfigurationParameter* parameter = &configCentral[channel][i->first];
 					parameter->data = value;
-					saveParameter(parameter->databaseID, parameter->data);
+					if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+					else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::master, channel, i->first, parameter->data);
+
 				}
 				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(value) + ".");
 				//Only send to device when parameter is of type eeprom

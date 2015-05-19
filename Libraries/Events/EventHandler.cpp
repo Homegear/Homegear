@@ -1590,7 +1590,9 @@ void EventHandler::load()
 			_eventsMutex.lock();
 			if(event->eventTime > 0)
 			{
-				_timedEvents[getNextExecution(event->eventTime, event->recurEvery)] = event;
+				uint64_t nextExecution = getNextExecution(event->eventTime, event->recurEvery);
+				while(_timedEvents.find(nextExecution) != _timedEvents.end()) nextExecution++;
+				_timedEvents[nextExecution] = event;
 			}
 			else
 			{
@@ -1651,7 +1653,6 @@ void EventHandler::save(std::shared_ptr<Event> event)
 		}
 		BaseLib::Database::DataRow data;
 		if(event->id > 0) data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->id)));
-		else data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->name)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((int32_t)event->type)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->peerID)));
@@ -1681,8 +1682,7 @@ void EventHandler::save(std::shared_ptr<Event> event)
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->lastReset)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->currentTime)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->enabled)));
-		uint64_t result = GD::db.saveEvent(data);
-		if(event->id == 0) event->id = result;
+		GD::db.saveEventAsynchronous(data);
 	}
 	catch(const std::exception& ex)
     {

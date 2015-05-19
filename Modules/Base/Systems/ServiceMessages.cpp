@@ -72,10 +72,10 @@ std::shared_ptr<Database::DataTable> ServiceMessages::raiseGetServiceMessages()
 	return ((IServiceEventSink*)_eventHandler)->onGetServiceMessages();
 }
 
-uint64_t ServiceMessages::raiseSaveServiceMessage(Database::DataRow data)
+void ServiceMessages::raiseSaveServiceMessage(Database::DataRow& data)
 {
-	if(!_eventHandler) return 0;
-	return ((IServiceEventSink*)_eventHandler)->onSaveServiceMessage(data);
+	if(!_eventHandler) return;
+	((IServiceEventSink*)_eventHandler)->onSaveServiceMessage(data);
 }
 
 void ServiceMessages::raiseDeleteServiceMessage(uint64_t databaseID)
@@ -158,7 +158,7 @@ void ServiceMessages::save(uint32_t index, bool value)
 	{
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
 		Database::DataRow data;
-		if(value)
+		if(value || !idIsKnown)
 		{
 			if(idIsKnown)
 			{
@@ -169,14 +169,12 @@ void ServiceMessages::save(uint32_t index, bool value)
 			else
 			{
 				if(_peerID == 0) return;
-				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
 				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_peerID)));
 				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(index)));
 				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn((int32_t)value)));
 				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
 				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
-				uint64_t result = raiseSaveServiceMessage(data);
-				if(result) _variableDatabaseIDs[index] = result;
+				raiseSaveServiceMessage(data);
 			}
 		}
 		else if(idIsKnown)
@@ -209,7 +207,7 @@ void ServiceMessages::save(int32_t channel, std::string id, uint8_t value)
 			index += (int32_t)*i;
 		}
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		if(value > 0)
+		if(value > 0 || !idIsKnown)
 		{
 			std::vector<char> binaryValue{ (char)value };
 			Database::DataRow data;
@@ -224,14 +222,12 @@ void ServiceMessages::save(int32_t channel, std::string id, uint8_t value)
 			else
 			{
 				if(_peerID == 0) return;
-				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
 				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_peerID)));
 				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(index)));
 				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(channel)));
 				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(id)));
 				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(binaryValue)));
-				uint64_t result = raiseSaveServiceMessage(data);
-				if(result) _variableDatabaseIDs[index] = result;
+				raiseSaveServiceMessage(data);
 			}
 		}
 		else if(idIsKnown)

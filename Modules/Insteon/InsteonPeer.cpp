@@ -767,7 +767,8 @@ void InsteonPeer::packetReceived(std::shared_ptr<InsteonPacket> packet)
 
 					BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
 					parameter->data = i->second.value;
-					saveParameter(parameter->databaseID, parameter->data);
+					if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+					else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, *j, i->first, parameter->data);
 					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: " + i->first + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + ".");
 
 					if(parameter->rpcParameter)
@@ -1047,7 +1048,8 @@ std::shared_ptr<BaseLib::RPC::Variable> InsteonPeer::setValue(int32_t clientID, 
 		if(rpcParameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::Enum::store)
 		{
 			rpcParameter->convertToPacket(value, parameter->data);
-			saveParameter(parameter->databaseID, parameter->data);
+			if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+			else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
 			if(!valueKeys->empty())
 			{
 				raiseEvent(_peerID, channel, valueKeys, values);
@@ -1104,7 +1106,8 @@ std::shared_ptr<BaseLib::RPC::Variable> InsteonPeer::setValue(int32_t clientID, 
 		if(setRequests.empty()) return BaseLib::RPC::Variable::createError(-6, "No matching packet found for setting this parameter. Is the parameter read only?");
 
 		parameter->data = physicalValue;
-		saveParameter(parameter->databaseID, physicalValue);
+		if(parameter->databaseID > 0) saveParameter(parameter->databaseID, physicalValue);
+		else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, physicalValue);
 		if(_bl->debugLevel > 4) GD::out.printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(physicalValue) + ".");
 
 		std::shared_ptr<InsteonCentral> central = std::dynamic_pointer_cast<InsteonCentral>(getCentral());
@@ -1195,7 +1198,8 @@ std::shared_ptr<BaseLib::RPC::Variable> InsteonPeer::setValue(int32_t clientID, 
 					{
 						BaseLib::Systems::RPCConfigurationParameter* tempParam = &valuesCentral.at(channel).at(*j);
 						tempParam->data = defaultValue;
-						saveParameter(tempParam->databaseID, tempParam->data);
+						if(tempParam->databaseID > 0) saveParameter(tempParam->databaseID, tempParam->data);
+						else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, *j, tempParam->data);
 						GD::out.printInfo( "Info: Parameter \"" + *j + "\" was reset to " + BaseLib::HelperFunctions::getHexString(defaultValue) + ". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 						if((rpcParameter->operations & BaseLib::RPC::Parameter::Operations::read) || (rpcParameter->operations & BaseLib::RPC::Parameter::Operations::event))
 						{

@@ -651,7 +651,8 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCDeleteMetadata::invoke(int32_t client
 
 		std::string dataID;
 		if(parameters->size() > 1) dataID = parameters->at(1)->stringValue;
-		return GD::db.deleteMetadata(peer->getID(), peer->getSerialNumber(), dataID);
+		serialNumber = peer->getSerialNumber();
+		return GD::db.deleteMetadata(peer->getID(), serialNumber, dataID);
 	}
 	catch(const std::exception& ex)
     {
@@ -762,7 +763,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetAllMetadata::invoke(int32_t client
 		if(!peer) return BaseLib::RPC::Variable::createError(-2, "Device not found.");
 
 		std::string peerName = peer->getName();
-		std::shared_ptr<BaseLib::RPC::Variable> metadata = GD::db.getAllMetadata(peer->getID(), peer->getSerialNumber());
+		std::shared_ptr<BaseLib::RPC::Variable> metadata = GD::db.getAllMetadata(peer->getID());
 		if(!peerName.empty())
 		{
 			if(metadata->structValue->find("NAME") != metadata->structValue->end()) metadata->structValue->at("NAME")->stringValue = peerName;
@@ -1414,15 +1415,16 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCGetMetadata::invoke(int32_t clientID,
 		{
 			std::string peerName = peer->getName();
 			if(peerName.size() > 0) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(peerName));
-			std::shared_ptr<BaseLib::RPC::Variable> rpcName = GD::db.getMetadata(peer->getID(), peer->getSerialNumber(), parameters->at(1)->stringValue);
+			std::shared_ptr<BaseLib::RPC::Variable> rpcName = GD::db.getMetadata(peer->getID(), parameters->at(1)->stringValue);
 			if(peerName.size() == 0 && !rpcName->errorStruct)
 			{
 				peer->setName(rpcName->stringValue);
-				GD::db.deleteMetadata(peer->getID(), peer->getSerialNumber(), parameters->at(1)->stringValue);
+				serialNumber = peer->getSerialNumber();
+				GD::db.deleteMetadata(peer->getID(), serialNumber, parameters->at(1)->stringValue);
 			}
 			return rpcName;
 		}
-		else return GD::db.getMetadata(peer->getID(), peer->getSerialNumber(), parameters->at(1)->stringValue);
+		else return GD::db.getMetadata(peer->getID(), parameters->at(1)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -3031,7 +3033,8 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSetMetadata::invoke(int32_t clientID,
 			peer->setName(parameters->at(2)->stringValue);
 			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		}
-		return GD::db.setMetadata(peer->getID(), peer->getSerialNumber(), parameters->at(1)->stringValue, parameters->at(2));
+		serialNumber = peer->getSerialNumber();
+		return GD::db.setMetadata(peer->getID(), serialNumber, parameters->at(1)->stringValue, parameters->at(2));
 	}
 	catch(const std::exception& ex)
     {

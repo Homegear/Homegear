@@ -1873,12 +1873,12 @@ int32_t HomeMaticDevice::calculateCycleLength(uint8_t messageCounter)
 //BidCoSQueueManager event handling
 void HomeMaticDevice::onQueueCreateSavepoint(std::string name)
 {
-	raiseCreateSavepoint(name);
+	raiseCreateSavepointAsynchronous(name);
 }
 
 void HomeMaticDevice::onQueueReleaseSavepoint(std::string name)
 {
-	raiseReleaseSavepoint(name);
+	raiseReleaseSavepointAsynchronous(name);
 }
 //End BidCoSQueueManager event handling
 

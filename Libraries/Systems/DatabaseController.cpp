@@ -33,16 +33,29 @@
 
 DatabaseController::DatabaseController()
 {
+
 }
 
 DatabaseController::~DatabaseController()
 {
-
+	dispose();
 }
 
 void DatabaseController::dispose()
 {
-	db.dispose();
+	if(_disposing) return;
+	_disposing = true;
+	_queueMutex.lock();
+	//Make sure, bufferedWrite is finished
+	_queueMutex.unlock();
+	_stopQueueProcessingThread = true;
+	_queueEntryAvailable = true;
+	_queueConditionVariable.notify_one();
+	if(_queueProcessingThread.joinable()) _queueProcessingThread.join();
+	for(int32_t i = 0; i < _queueSize; ++i) _queue[i].reset(); //Just to make sure there are no valid shared pointers anymore
+	_db.dispose();
+	_systemVariables.clear();
+	_metadata.clear();
 }
 
 void DatabaseController::init()
@@ -54,44 +67,50 @@ void DatabaseController::init()
 	}
 	_rpcDecoder = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get()));
 	_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
+
+	_stopQueueProcessingThread = false;
+	_queueEntryAvailable = false;
+	_queueHead = 0;
+	_queueTail = 0;
+	_queueProcessingThread = std::thread(&DatabaseController::processQueueEntry, this);
 }
 
 //General
 void DatabaseController::open(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, std::string backupPath)
 {
-	db.init(databasePath, databaseSynchronous, databaseMemoryJournal, backupPath);
+	_db.init(databasePath, databaseSynchronous, databaseMemoryJournal, backupPath);
 }
 
 void DatabaseController::initializeDatabase()
 {
 	try
 	{
-		db.executeCommand("CREATE TABLE IF NOT EXISTS homegearVariables (variableID INTEGER PRIMARY KEY UNIQUE, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
-		db.executeCommand("CREATE INDEX IF NOT EXISTS homegearVariablesIndex ON homegearVariables (variableID, variableIndex)");
-		db.executeCommand("CREATE TABLE IF NOT EXISTS peers (peerID INTEGER PRIMARY KEY UNIQUE, parent INTEGER NOT NULL, address INTEGER NOT NULL, serialNumber TEXT NOT NULL)");
-		db.executeCommand("CREATE INDEX IF NOT EXISTS peersIndex ON peers (peerID, parent, address, serialNumber)");
-		db.executeCommand("CREATE TABLE IF NOT EXISTS peerVariables (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
-		db.executeCommand("CREATE INDEX IF NOT EXISTS peerVariablesIndex ON peerVariables (variableID, peerID, variableIndex)");
-		db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
-		db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON peerVariables (variableID, peerID, variableIndex)");
-		db.executeCommand("CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB)");
-		db.executeCommand("CREATE INDEX IF NOT EXISTS parametersIndex ON parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName)");
-		db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
-		db.executeCommand("CREATE INDEX IF NOT EXISTS metadataIndex ON metadata (objectID, dataID)");
-		db.executeCommand("CREATE TABLE IF NOT EXISTS systemVariables (variableID TEXT, serializedObject BLOB)");
-		db.executeCommand("CREATE INDEX IF NOT EXISTS systemVariablesIndex ON systemVariables (variableID)");
-		db.executeCommand("CREATE TABLE IF NOT EXISTS devices (deviceID INTEGER PRIMARY KEY UNIQUE, address INTEGER NOT NULL, serialNumber TEXT NOT NULL, deviceType INTEGER NOT NULL, deviceFamily INTEGER NOT NULL)");
-		db.executeCommand("CREATE INDEX IF NOT EXISTS devicesIndex ON devices (deviceID, address, deviceType, deviceFamily)");
-		db.executeCommand("CREATE TABLE IF NOT EXISTS deviceVariables (variableID INTEGER PRIMARY KEY UNIQUE, deviceID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
-		db.executeCommand("CREATE INDEX IF NOT EXISTS deviceVariablesIndex ON deviceVariables (variableID, deviceID, variableIndex)");
-		db.executeCommand("CREATE TABLE IF NOT EXISTS users (userID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, password BLOB NOT NULL, salt BLOB NOT NULL)");
-		db.executeCommand("CREATE INDEX IF NOT EXISTS usersIndex ON users (userID, name)");
-		db.executeCommand("CREATE TABLE IF NOT EXISTS events (eventID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, type INTEGER NOT NULL, peerID INTEGER, peerChannel INTEGER, variable TEXT, trigger INTEGER, triggerValue BLOB, eventMethod TEXT, eventMethodParameters BLOB, resetAfter INTEGER, initialTime INTEGER, timeOperation INTEGER, timeFactor REAL, timeLimit INTEGER, resetMethod TEXT, resetMethodParameters BLOB, eventTime INTEGER, endTime INTEGER, recurEvery INTEGER, lastValue BLOB, lastRaised INTEGER, lastReset INTEGER, currentTime INTEGER, enabled INTEGER)");
-		db.executeCommand("CREATE INDEX IF NOT EXISTS eventsIndex ON events (eventID, name, type, peerID, peerChannel)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS homegearVariables (variableID INTEGER PRIMARY KEY UNIQUE, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS homegearVariablesIndex ON homegearVariables (variableID, variableIndex)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS peers (peerID INTEGER PRIMARY KEY UNIQUE, parent INTEGER NOT NULL, address INTEGER NOT NULL, serialNumber TEXT NOT NULL)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS peersIndex ON peers (peerID, parent, address, serialNumber)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS peerVariables (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS peerVariablesIndex ON peerVariables (variableID, peerID, variableIndex)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON peerVariables (variableID, peerID, variableIndex)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS parametersIndex ON parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS metadataIndex ON metadata (objectID, dataID)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS systemVariables (variableID TEXT, serializedObject BLOB)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS systemVariablesIndex ON systemVariables (variableID)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS devices (deviceID INTEGER PRIMARY KEY UNIQUE, address INTEGER NOT NULL, serialNumber TEXT NOT NULL, deviceType INTEGER NOT NULL, deviceFamily INTEGER NOT NULL)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS devicesIndex ON devices (deviceID, address, deviceType, deviceFamily)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS deviceVariables (variableID INTEGER PRIMARY KEY UNIQUE, deviceID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS deviceVariablesIndex ON deviceVariables (variableID, deviceID, variableIndex)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS users (userID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, password BLOB NOT NULL, salt BLOB NOT NULL)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS usersIndex ON users (userID, name)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS events (eventID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, type INTEGER NOT NULL, peerID INTEGER, peerChannel INTEGER, variable TEXT, trigger INTEGER, triggerValue BLOB, eventMethod TEXT, eventMethodParameters BLOB, resetAfter INTEGER, initialTime INTEGER, timeOperation INTEGER, timeFactor REAL, timeLimit INTEGER, resetMethod TEXT, resetMethodParameters BLOB, eventTime INTEGER, endTime INTEGER, recurEvery INTEGER, lastValue BLOB, lastRaised INTEGER, lastReset INTEGER, currentTime INTEGER, enabled INTEGER)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS eventsIndex ON events (eventID, name, type, peerID, peerChannel)");
 
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT 1 FROM homegearVariables WHERE variableIndex=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT 1 FROM homegearVariables WHERE variableIndex=?", data);
 		if(result->empty())
 		{
 			data.clear();
@@ -100,12 +119,13 @@ void DatabaseController::initializeDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.5.1")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-			db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+			_db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
 			std::vector<uint8_t> salt;
 			std::vector<uint8_t> passwordHash = User::generateWHIRLPOOL("homegear", salt);
 
-			createUser("homegear", passwordHash, salt);
+			std::string userName("homegear");
+			createUser(userName, passwordHash, salt);
 		}
 	}
 	catch(const std::exception& ex)
@@ -122,6 +142,93 @@ void DatabaseController::initializeDatabase()
     }
 }
 
+void DatabaseController::bufferedWrite(std::string command, BaseLib::Database::DataRow& data)
+{
+	try
+	{
+		_queueMutex.lock();
+		if(_disposing)
+		{
+			_queueMutex.unlock();
+			return;
+		}
+		int32_t tempHead = _queueHead + 1;
+		if(tempHead >= _queueSize) tempHead = 0;
+		if(tempHead == _queueTail)
+		{
+			GD::out.printError("Error: More than " + std::to_string(_queueSize) + " entries are queued to be written into the database. Your data processing is too slow. Not writing entry.");
+			_queueMutex.unlock();
+			return;
+		}
+
+		_queue[_queueHead] = std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>>(new std::pair<std::string, BaseLib::Database::DataRow>(command, data));
+		_queueHead++;
+		if(_queueHead >= _queueSize)
+		{
+			_queueHead = 0;
+		}
+		_queueEntryAvailable = true;
+		_queueMutex.unlock();
+
+		_queueConditionVariable.notify_one();
+	}
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(const BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void DatabaseController::processQueueEntry()
+{
+	while(!_stopQueueProcessingThread)
+	{
+		std::unique_lock<std::mutex> lock(_queueProcessingThreadMutex);
+		try
+		{
+			_queueMutex.lock();
+			if(_queueHead == _queueTail) //Only lock, when there is really no packet to process. This check is necessary, because the check of the while loop condition is outside of the mutex
+			{
+				_queueMutex.unlock();
+				_queueConditionVariable.wait(lock, [&]{ return _queueEntryAvailable; });
+			}
+			else _queueMutex.unlock();
+
+			while(_queueHead != _queueTail)
+			{
+				_queueMutex.lock();
+				std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>> entry = _queue[_queueTail];
+				_queue[_queueTail].reset();
+				_queueTail++;
+				if(_queueTail >= _queueSize) _queueTail = 0;
+				if(_queueHead == _queueTail) _queueEntryAvailable = false; //Set here, because otherwise it might be set to "true" in raisePacketReceived and then set to false again after the while loop
+				_queueMutex.unlock();
+				if(entry) _db.executeWriteCommand(entry);
+			}
+		}
+		catch(const std::exception& ex)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(const BaseLib::Exception& ex)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+		lock.unlock();
+	}
+}
+
 void DatabaseController::convertDatabase()
 {
 	try
@@ -129,12 +236,12 @@ void DatabaseController::convertDatabase()
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::string("table"))));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::string("homegearVariables"))));
-		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT 1 FROM sqlite_master WHERE type=? AND name=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT 1 FROM sqlite_master WHERE type=? AND name=?", data);
 		//Cannot proceed, because table homegearVariables does not exist
 		if(rows->empty()) return;
 		data.clear();
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data);
 		if(result->empty()) return; //Handled in initializeDatabase
 		std::string version = result->at(0).at(3)->textValue;
 		if(version == "0.5.1") return; //Up to date
@@ -195,9 +302,9 @@ void DatabaseController::convertDatabase()
 		if(version == "0.3.1")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.4.3...");
-			db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".old");
+			_db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".old");
 
-			db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
+			_db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
 
 			data.clear();
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
@@ -206,7 +313,7 @@ void DatabaseController::convertDatabase()
 			//Don't forget to set new version in initializeDatabase!!!
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.4.3")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-			db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
 			GD::out.printMessage("Exiting Homegear after database conversion...");
 			exit(0);
@@ -214,9 +321,9 @@ void DatabaseController::convertDatabase()
 		else if(version == "0.4.3")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.5.0...");
-			db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".old");
+			_db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".old");
 
-			db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
+			_db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
 
 			data.clear();
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
@@ -225,7 +332,7 @@ void DatabaseController::convertDatabase()
 			//Don't forget to set new version in initializeDatabase!!!
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.5.0")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-			db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
 			GD::out.printMessage("Exiting Homegear after database conversion...");
 			exit(0);
@@ -233,15 +340,15 @@ void DatabaseController::convertDatabase()
 		else if(version == "0.5.0")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.5.1...");
-			db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".old");
+			_db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".old");
 
-			db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=15");
+			_db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=15");
 
-			db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
-			db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON peerVariables (variableID, peerID, variableIndex)");
+			_db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
+			_db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON peerVariables (variableID, peerID, variableIndex)");
 
-			db.executeCommand("UPDATE peerVariables SET variableIndex=1001 WHERE variableIndex=0");
-			db.executeCommand("UPDATE peerVariables SET variableIndex=1002 WHERE variableIndex=3");
+			_db.executeCommand("UPDATE peerVariables SET variableIndex=1001 WHERE variableIndex=0");
+			_db.executeCommand("UPDATE peerVariables SET variableIndex=1002 WHERE variableIndex=3");
 
 			data.clear();
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
@@ -250,7 +357,7 @@ void DatabaseController::convertDatabase()
 			//Don't forget to set new version in initializeDatabase!!!
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.5.1")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-			db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
 			GD::out.printMessage("Exiting Homegear after database conversion...");
 			exit(0);
@@ -270,14 +377,32 @@ void DatabaseController::convertDatabase()
     }
 }
 
-void DatabaseController::createSavepoint(std::string name)
+void DatabaseController::createSavepointSynchronous(std::string& name)
 {
-	db.executeCommand("SAVEPOINT " + name);
+	if(GD::bl->debugLevel > 5) GD::out.printDebug("Debug: Creating savepoint (synchronous) " + name);
+	BaseLib::Database::DataRow data;
+	_db.executeWriteCommand("SAVEPOINT " + name, data);
 }
 
-void DatabaseController::releaseSavepoint(std::string name)
+void DatabaseController::releaseSavepointSynchronous(std::string& name)
 {
-	db.executeCommand("RELEASE " + name);
+	if(GD::bl->debugLevel > 5) GD::out.printDebug("Debug: Releasing savepoint (synchronous) " + name);
+	BaseLib::Database::DataRow data;
+	_db.executeWriteCommand("RELEASE " + name, data);
+}
+
+void DatabaseController::createSavepointAsynchronous(std::string& name)
+{
+	if(GD::bl->debugLevel > 5) GD::out.printDebug("Debug: Creating savepoint (asynchronous) " + name);
+	BaseLib::Database::DataRow data;
+	bufferedWrite("SAVEPOINT " + name, data);
+}
+
+void DatabaseController::releaseSavepointAsynchronous(std::string& name)
+{
+	if(GD::bl->debugLevel > 5) GD::out.printDebug("Debug: Releasing savepoint (asynchronous) " + name);
+	BaseLib::Database::DataRow data;
+	bufferedWrite("RELEASE " + name, data);
 }
 //End general
 
@@ -286,17 +411,17 @@ bool DatabaseController::getHomegearVariableString(HomegearVariables::Enum id, s
 {
 	BaseLib::Database::DataRow data;
 	data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((uint64_t)id)));
-	std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT stringValue FROM homegearVariables WHERE variableIndex=?", data);
+	std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT stringValue FROM homegearVariables WHERE variableIndex=?", data);
 	if(result->empty() || result->at(0).empty()) return false;
 	value = result->at(0).at(0)->textValue;
 	return true;
 }
 
-void DatabaseController::setHomegearVariableString(HomegearVariables::Enum id, std::string value)
+void DatabaseController::setHomegearVariableString(HomegearVariables::Enum id, std::string& value)
 {
 	BaseLib::Database::DataRow data;
 	data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((uint64_t)id)));
-	std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT variableID FROM homegearVariables WHERE variableIndex=?", data);
+	std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT variableID FROM homegearVariables WHERE variableIndex=?", data);
 	data.clear();
 	if(result->empty() || result->at(0).empty())
 	{
@@ -306,7 +431,7 @@ void DatabaseController::setHomegearVariableString(HomegearVariables::Enum id, s
 		//Don't forget to set new version in initializeDatabase!!!
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-		db.executeWriteCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+		bufferedWrite("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 	}
 	else
 	{
@@ -316,30 +441,20 @@ void DatabaseController::setHomegearVariableString(HomegearVariables::Enum id, s
 		//Don't forget to set new version in initializeDatabase!!!
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-		db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+		bufferedWrite("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 	}
 }
 //End Homegear variables
 
 //Metadata
-std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::getAllMetadata(uint64_t peerID, std::string serialNumber)
+std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::getAllMetadata(uint64_t peerID)
 {
 	try
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peerID))));
 
-		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT dataID, serializedObject FROM metadata WHERE objectID=?", data);
-		bool idIsSerial = false;
-		if(rows->empty())
-		{
-			//TODO: Delete this compatibility block in version 0.6.0
-			data.clear();
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(serialNumber)));
-			rows = db.executeCommand("SELECT dataID, serializedObject FROM metadata WHERE objectID=?", data);
-			if(rows->empty()) return BaseLib::RPC::Variable::createError(-1, "No metadata found.");
-			idIsSerial = true;
-		}
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT dataID, serializedObject FROM metadata WHERE objectID=?", data);
 
 		std::shared_ptr<BaseLib::RPC::Variable> metadataStruct(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 		for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
@@ -347,12 +462,6 @@ std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::getAllMetadata(uint6
 			if(i->second.size() < 2) continue;
 			std::shared_ptr<BaseLib::RPC::Variable> metadata = _rpcDecoder->decodeResponse(*i->second.at(1)->binaryValue);
 			metadataStruct->structValue->insert(BaseLib::RPC::RPCStructElement(i->second.at(0)->textValue, metadata));
-			//TODO: Delete this compatibility block in version 0.6.0
-			if(idIsSerial)
-			{
-				deleteMetadata(peerID, serialNumber, i->second.at(0)->textValue);
-				setMetadata(peerID, serialNumber, i->second.at(0)->textValue, metadata);
-			}
 		}
 
 		//getAllMetadata is called repetitively for all central peers. That takes a lot of ressources, so we wait a little after each call.
@@ -375,28 +484,32 @@ std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::getAllMetadata(uint6
 	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::getMetadata(uint64_t peerID, std::string serialNumber, std::string dataID)
+std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::getMetadata(uint64_t peerID, std::string& dataID)
 {
 	try
 	{
 		if(dataID.size() > 250) return BaseLib::RPC::Variable::createError(-32602, "dataID has more than 250 characters.");
 
+		std::shared_ptr<BaseLib::RPC::Variable> metadata;
+		_metadataMutex.lock();
+		if(_metadata.find(peerID) != _metadata.end() && _metadata[peerID].find(dataID) != _metadata[peerID].end())
+		{
+			 metadata = _metadata[peerID][dataID];
+			_metadataMutex.unlock();
+			return metadata;
+		}
+		_metadataMutex.unlock();
+
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peerID))));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(dataID)));
 
-		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT serializedObject FROM metadata WHERE objectID=? AND dataID=?", data);
-		if(rows->empty() || rows->at(0).empty())
-		{
-			//TODO: Delete this compatibility block in version 0.6.0
-			data.clear();
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(serialNumber)));
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(dataID)));
-			rows = db.executeCommand("SELECT serializedObject FROM metadata WHERE objectID=? AND dataID=?", data);
-			if(rows->empty() || rows->at(0).empty()) return BaseLib::RPC::Variable::createError(-1, "No metadata found.");
-		}
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT serializedObject FROM metadata WHERE objectID=? AND dataID=?", data);
 
-		std::shared_ptr<BaseLib::RPC::Variable> metadata = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+		metadata = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+		_metadataMutex.lock();
+		_metadata[peerID][dataID] = metadata;
+		_metadataMutex.unlock();
 		return metadata;
 	}
 	catch(const std::exception& ex)
@@ -414,7 +527,7 @@ std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::getMetadata(uint64_t
 	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::setMetadata(uint64_t peerID, std::string serialNumber, std::string dataID, std::shared_ptr<BaseLib::RPC::Variable> metadata)
+std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::setMetadata(uint64_t peerID, std::string& serialNumber, std::string& dataID, std::shared_ptr<BaseLib::RPC::Variable>& metadata)
 {
 	try
 	{
@@ -424,7 +537,7 @@ std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::setMetadata(uint64_t
 		if(metadata->stringValue.size() > 1000) return BaseLib::RPC::Variable::createError(-32602, "Data has more than 1000 characters.");
 		if(metadata->type != BaseLib::RPC::VariableType::rpcBase64 && metadata->type != BaseLib::RPC::VariableType::rpcString && metadata->type != BaseLib::RPC::VariableType::rpcInteger && metadata->type != BaseLib::RPC::VariableType::rpcFloat && metadata->type != BaseLib::RPC::VariableType::rpcBoolean) return BaseLib::RPC::Variable::createError(-32602, "Type " + BaseLib::RPC::Variable::getTypeString(metadata->type) + " is currently not supported.");
 
-		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT COUNT(*) FROM metadata");
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT COUNT(*) FROM metadata");
 		if(rows->size() == 0 || rows->at(0).size() == 0)
 		{
 			return BaseLib::RPC::Variable::createError(-32500, "Error counting metadata in database.");
@@ -434,10 +547,14 @@ std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::setMetadata(uint64_t
 			return BaseLib::RPC::Variable::createError(-32500, "Reached limit of 1000000 metadata entries. Please delete metadata before adding new entries.");
 		}
 
+		_metadataMutex.lock();
+		_metadata[peerID][dataID] = metadata;
+		_metadataMutex.unlock();
+
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peerID))));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(dataID)));
-		db.executeCommand("DELETE FROM metadata WHERE objectID=? AND dataID=?", data);
+		bufferedWrite("DELETE FROM metadata WHERE objectID=? AND dataID=?", data);
 
 		std::vector<char> value;
 		_rpcEncoder->encodeResponse(metadata, value);
@@ -447,7 +564,7 @@ std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::setMetadata(uint64_t
 		}
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
 
-		db.executeCommand("INSERT INTO metadata VALUES(?, ?, ?)", data);
+		bufferedWrite("INSERT INTO metadata VALUES(?, ?, ?)", data);
 
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{dataID});
 		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>{metadata});
@@ -470,11 +587,22 @@ std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::setMetadata(uint64_t
 	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::deleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID)
+std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::deleteMetadata(uint64_t peerID, std::string& serialNumber, std::string& dataID)
 {
 	try
 	{
 		if(dataID.size() > 250) return BaseLib::RPC::Variable::createError(-32602, "dataID has more than 250 characters.");
+
+		_metadataMutex.lock();
+		if(dataID.empty())
+		{
+			if(_metadata.find(peerID) != _metadata.end()) _metadata.erase(peerID);
+		}
+		else
+		{
+			if(_metadata.find(peerID) != _metadata.end() && _metadata[peerID].find(dataID) != _metadata[peerID].end()) _metadata[peerID].erase(dataID);
+		}
+		_metadataMutex.unlock();
 
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peerID))));
@@ -484,13 +612,7 @@ std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::deleteMetadata(uint6
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(dataID)));
 			command.append(" AND dataID=?");
 		}
-		db.executeCommand(command, data);
-
-		//TODO: Delete this compatibility block in version 0.6.0
-		data.clear();
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(serialNumber)));
-		if(!dataID.empty()) data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(dataID)));
-		db.executeCommand(command, data);
+		bufferedWrite(command, data);
 
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{dataID});
 		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>());
@@ -523,7 +645,7 @@ std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::getAllSystemVariable
 {
 	try
 	{
-		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT variableID, serializedObject FROM systemVariables");
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT variableID, serializedObject FROM systemVariables");
 
 		std::shared_ptr<BaseLib::RPC::Variable> systemVariableStruct(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 		if(rows->empty()) return systemVariableStruct;
@@ -551,22 +673,35 @@ std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::getAllSystemVariable
 	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::getSystemVariable(std::string variableID)
+std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::getSystemVariable(std::string& variableID)
 {
 	try
 	{
 		if(variableID.size() > 250) return BaseLib::RPC::Variable::createError(-32602, "variableID has more than 250 characters.");
 
+		std::shared_ptr<BaseLib::RPC::Variable> value;
+		_systemVariableMutex.lock();
+		if(_systemVariables.find(variableID) != _systemVariables.end())
+		{
+			 value = _systemVariables.at(variableID);
+			_systemVariableMutex.unlock();
+			return value;
+		}
+		_systemVariableMutex.unlock();
+
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableID)));
 
-		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT serializedObject FROM systemVariables WHERE variableID=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT serializedObject FROM systemVariables WHERE variableID=?", data);
 		if(rows->empty() || rows->at(0).empty())
 		{
 			return BaseLib::RPC::Variable::createError(-1, "System variable not found.");
 		}
 
-		std::shared_ptr<BaseLib::RPC::Variable> value = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+		value = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+		_systemVariableMutex.lock();
+		_systemVariables[variableID] = value;
+		_systemVariableMutex.unlock();
 		return value;
 	}
 	catch(const std::exception& ex)
@@ -584,7 +719,7 @@ std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::getSystemVariable(st
 	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::setSystemVariable(std::string variableID, std::shared_ptr<BaseLib::RPC::Variable> value)
+std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::setSystemVariable(std::string& variableID, std::shared_ptr<BaseLib::RPC::Variable>& value)
 {
 	try
 	{
@@ -594,7 +729,7 @@ std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::setSystemVariable(st
 		if(value->stringValue.size() > 1000) return BaseLib::RPC::Variable::createError(-32602, "Data has more than 1000 characters.");
 		if(value->type != BaseLib::RPC::VariableType::rpcBase64 && value->type != BaseLib::RPC::VariableType::rpcString && value->type != BaseLib::RPC::VariableType::rpcInteger && value->type != BaseLib::RPC::VariableType::rpcFloat && value->type != BaseLib::RPC::VariableType::rpcBoolean) return BaseLib::RPC::Variable::createError(-32602, "Type " + BaseLib::RPC::Variable::getTypeString(value->type) + " is currently not supported.");
 
-		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT COUNT(*) FROM systemVariables");
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT COUNT(*) FROM systemVariables");
 		if(rows->size() == 0 || rows->at(0).size() == 0)
 		{
 			return BaseLib::RPC::Variable::createError(-32500, "Error counting system variables in database.");
@@ -604,9 +739,13 @@ std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::setSystemVariable(st
 			return BaseLib::RPC::Variable::createError(-32500, "Reached limit of 1000000 system variable entries. Please delete system variables before adding new ones.");
 		}
 
+		_systemVariableMutex.lock();
+		_systemVariables[variableID] = value;
+		_systemVariableMutex.unlock();
+
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableID)));
-		db.executeCommand("DELETE FROM systemVariables WHERE variableID=?", data);
+		bufferedWrite("DELETE FROM systemVariables WHERE variableID=?", data);
 
 		std::vector<char> encodedValue;
 		_rpcEncoder->encodeResponse(value, encodedValue);
@@ -616,7 +755,7 @@ std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::setSystemVariable(st
 		}
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(encodedValue)));
 
-		db.executeCommand("INSERT INTO systemVariables VALUES(?, ?)", data);
+		bufferedWrite("INSERT INTO systemVariables VALUES(?, ?)", data);
 
 #ifdef EVENTHANDLER
 		GD::eventHandler.trigger(0, -1, variableID, value);
@@ -642,16 +781,20 @@ std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::setSystemVariable(st
 	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::deleteSystemVariable(std::string variableID)
+std::shared_ptr<BaseLib::RPC::Variable> DatabaseController::deleteSystemVariable(std::string& variableID)
 {
 	try
 	{
 		if(variableID.size() > 250) return BaseLib::RPC::Variable::createError(-32602, "variableID has more than 250 characters.");
 
+		_systemVariableMutex.lock();
+		if(_systemVariables.find(variableID) != _systemVariables.end()) _systemVariables.erase(variableID);
+		_systemVariableMutex.unlock();
+
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableID)));
 		std::string command("DELETE FROM systemVariables WHERE variableID=?");
-		db.executeCommand(command, data);
+		bufferedWrite(command, data);
 
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableID});
 		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>());
@@ -684,7 +827,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getUsers()
 {
 	try
 	{
-		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT userID, name FROM users");
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT userID, name FROM users");
 		return rows;
 	}
 	catch(const std::exception& ex)
@@ -702,7 +845,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getUsers()
 	return std::shared_ptr<BaseLib::Database::DataTable>();
 }
 
-bool DatabaseController::createUser(std::string name, std::vector<uint8_t>& passwordHash, std::vector<uint8_t>& salt)
+bool DatabaseController::createUser(const std::string& name, const std::vector<uint8_t>& passwordHash, const std::vector<uint8_t>& salt)
 {
 	try
 	{
@@ -710,7 +853,7 @@ bool DatabaseController::createUser(std::string name, std::vector<uint8_t>& pass
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(name)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(passwordHash)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(salt)));
-		db.executeCommand("INSERT INTO users VALUES(NULL, ?, ?, ?)", data);
+		_db.executeCommand("INSERT INTO users VALUES(NULL, ?, ?, ?)", data);
 		if(userNameExists(name)) return true;
 	}
 	catch(const std::exception& ex)
@@ -728,7 +871,7 @@ bool DatabaseController::createUser(std::string name, std::vector<uint8_t>& pass
 	return false;
 }
 
-bool DatabaseController::updateUser(uint64_t id, std::vector<uint8_t>& passwordHash, std::vector<uint8_t>& salt)
+bool DatabaseController::updateUser(uint64_t id, const std::vector<uint8_t>& passwordHash, const std::vector<uint8_t>& salt)
 {
 	try
 	{
@@ -736,9 +879,9 @@ bool DatabaseController::updateUser(uint64_t id, std::vector<uint8_t>& passwordH
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(passwordHash)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(salt)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
-		db.executeCommand("UPDATE users SET password=?, salt=? WHERE userID=?", data);
+		_db.executeCommand("UPDATE users SET password=?, salt=? WHERE userID=?", data);
 
-		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT userID FROM users WHERE password=? AND salt=? AND userID=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT userID FROM users WHERE password=? AND salt=? AND userID=?", data);
 		return !rows->empty();
 	}
 	catch(const std::exception& ex)
@@ -762,9 +905,9 @@ bool DatabaseController::deleteUser(uint64_t id)
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
-		db.executeCommand("DELETE FROM users WHERE userID=?", data);
+		_db.executeCommand("DELETE FROM users WHERE userID=?", data);
 
-		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT userID FROM users WHERE userID=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT userID FROM users WHERE userID=?", data);
 		return rows->empty();
 	}
 	catch(const std::exception& ex)
@@ -782,13 +925,13 @@ bool DatabaseController::deleteUser(uint64_t id)
 	return false;
 }
 
-bool DatabaseController::userNameExists(std::string name)
+bool DatabaseController::userNameExists(const std::string& name)
 {
 	try
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(name)));
-		return !db.executeCommand("SELECT userID FROM users WHERE name=?", data)->empty();
+		return !_db.executeCommand("SELECT userID FROM users WHERE name=?", data)->empty();
 	}
 	catch(const std::exception& ex)
 	{
@@ -805,13 +948,13 @@ bool DatabaseController::userNameExists(std::string name)
 	return false;
 }
 
-uint64_t DatabaseController::getUserID(std::string name)
+uint64_t DatabaseController::getUserID(const std::string& name)
 {
 	try
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(name)));
-		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT userID FROM users WHERE name=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT userID FROM users WHERE name=?", data);
 		if(result->empty()) return 0;
 		return result->at(0).at(0)->intValue;
 	}
@@ -830,13 +973,13 @@ uint64_t DatabaseController::getUserID(std::string name)
 	return 0;
 }
 
-std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPassword(std::string name)
+std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPassword(const std::string& name)
 {
 	try
 	{
 		BaseLib::Database::DataRow dataSelect;
 		dataSelect.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(name)));
-		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT password, salt FROM users WHERE name=?", dataSelect);
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT password, salt FROM users WHERE name=?", dataSelect);
 		return rows;
 	}
 	catch(const std::exception& ex)
@@ -860,7 +1003,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getEvents()
 {
 	try
 	{
-		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT * FROM events");
+		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM events");
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -878,38 +1021,26 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getEvents()
 	return std::shared_ptr<BaseLib::Database::DataTable>();
 }
 
-uint64_t DatabaseController::saveEvent(BaseLib::Database::DataRow event)
+void DatabaseController::saveEventAsynchronous(BaseLib::Database::DataRow& event)
 {
-	try
+	if(event.size() == 24)
 	{
-		createSavepoint("event");
-		uint64_t result = db.executeWriteCommand("REPLACE INTO events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", event);
-		releaseSavepoint("event");
-		return result;
+		event.push_front(event.at(0));
+		bufferedWrite("INSERT OR REPLACE INTO events (eventID, name, type, peerID, peerChannel, variable, trigger, triggerValue, eventMethod, eventMethodParameters, resetAfter, initialTime, timeOperation, timeFactor, timeLimit, resetMethod, resetMethodParameters, eventTime, endTime, recurEvery, lastValue, lastRaised, lastReset, currentTime, enabled) VALUES((SELECT eventID FROM events WHERE name=?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", event);
 	}
-	catch(const std::exception& ex)
+	else if(event.size() == 25 && event.at(0)->intValue != 0)
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		bufferedWrite("REPLACE INTO events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", event);
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	releaseSavepoint("event");
-	return 0;
+	else GD::out.printError("Error: Either eventID is 0 or the number of columns is invalid.");
 }
 
-void DatabaseController::deleteEvent(std::string name)
+void DatabaseController::deleteEvent(std::string& name)
 {
 	try
 	{
-		createSavepoint("eventREMOVE");
 		BaseLib::Database::DataRow data({std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(name))});
-		db.executeCommand("DELETE FROM events WHERE name=?", data);
+		bufferedWrite("DELETE FROM events WHERE name=?", data);
 	}
 	catch(const std::exception& ex)
 	{
@@ -923,7 +1054,6 @@ void DatabaseController::deleteEvent(std::string name)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	releaseSavepoint("eventREMOVE");
 }
 //End events
 
@@ -934,7 +1064,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getDevices(uin
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(family)));
-		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT * FROM devices WHERE deviceFamily=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM devices WHERE deviceFamily=?", data);
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -958,7 +1088,7 @@ void DatabaseController::deleteDevice(uint64_t id)
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
-		db.executeCommand("DELETE FROM devices WHERE deviceID=?", data);
+		bufferedWrite("DELETE FROM devices WHERE deviceID=?", data);
 	}
 	catch(const std::exception& ex)
 	{
@@ -974,7 +1104,7 @@ void DatabaseController::deleteDevice(uint64_t id)
 	}
 }
 
-uint64_t DatabaseController::saveDevice(uint64_t id, int32_t address, std::string serialNumber, uint32_t type, uint32_t family)
+uint64_t DatabaseController::saveDevice(uint64_t id, int32_t address, std::string& serialNumber, uint32_t type, uint32_t family)
 {
 	try
 	{
@@ -985,7 +1115,7 @@ uint64_t DatabaseController::saveDevice(uint64_t id, int32_t address, std::strin
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(serialNumber)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(type)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(family)));
-		int32_t result = db.executeWriteCommand("REPLACE INTO devices VALUES(?, ?, ?, ?, ?)", data);
+		int32_t result = _db.executeWriteCommand("REPLACE INTO devices VALUES(?, ?, ?, ?, ?)", data);
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -1003,28 +1133,27 @@ uint64_t DatabaseController::saveDevice(uint64_t id, int32_t address, std::strin
 	return 0;
 }
 
-uint64_t DatabaseController::saveDeviceVariable(BaseLib::Database::DataRow data)
+void DatabaseController::saveDeviceVariableAsynchronous(BaseLib::Database::DataRow& data)
 {
 	try
 	{
-		uint64_t result = 0;
 		if(data.size() == 2)
 		{
 			if(data.at(1)->intValue == 0)
 			{
 				GD::out.printError("Error: Could not save device variable. Variable ID is \"0\".");
-				return 0;
+				return;
 			}
 			switch(data.at(0)->dataType)
 			{
 			case BaseLib::Database::DataColumn::DataType::INTEGER:
-				result = db.executeWriteCommand("UPDATE deviceVariables SET integerValue=? WHERE variableID=?", data);
+				bufferedWrite("UPDATE deviceVariables SET integerValue=? WHERE variableID=?", data);
 				break;
 			case BaseLib::Database::DataColumn::DataType::TEXT:
-				result = db.executeWriteCommand("UPDATE deviceVariables SET stringValue=? WHERE variableID=?", data);
+				bufferedWrite("UPDATE deviceVariables SET stringValue=? WHERE variableID=?", data);
 				break;
 			case BaseLib::Database::DataColumn::DataType::BLOB:
-				result = db.executeWriteCommand("UPDATE deviceVariables SET binaryValue=? WHERE variableID=?", data);
+				bufferedWrite("UPDATE deviceVariables SET binaryValue=? WHERE variableID=?", data);
 				break;
 			case BaseLib::Database::DataColumn::DataType::NODATA:
 				GD::out.printError("Error: Tried to store data of type NODATA in variable table.");
@@ -1036,9 +1165,16 @@ uint64_t DatabaseController::saveDeviceVariable(BaseLib::Database::DataRow data)
 		}
 		else
 		{
-			result = db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			if(data.size() == 5)
+			{
+				bufferedWrite("INSERT OR REPLACE INTO deviceVariables (variableID, deviceID, variableIndex, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM deviceVariables WHERE deviceID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(1)->intValue) + "), ?, ?, ?, ?, ?)", data);
+			}
+			else if(data.size() == 6 && data.at(0)->intValue != 0)
+			{
+				bufferedWrite("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			}
+			else GD::out.printError("Error: Either variableID is 0 or the number of columns is invalid.");
 		}
-		return result;
 	}
 	catch(const std::exception& ex)
 	{
@@ -1052,7 +1188,6 @@ uint64_t DatabaseController::saveDeviceVariable(BaseLib::Database::DataRow data)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return 0;
 }
 
 void DatabaseController::deletePeers(int32_t deviceID)
@@ -1061,7 +1196,7 @@ void DatabaseController::deletePeers(int32_t deviceID)
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(deviceID)));
-		db.executeCommand("DELETE FROM peers WHERE parent=?", data);
+		bufferedWrite("DELETE FROM peers WHERE parent=?", data);
 	}
 	catch(const std::exception& ex)
 	{
@@ -1083,7 +1218,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPeers(uint6
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(deviceID)));
-		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT * FROM peers WHERE parent=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM peers WHERE parent=?", data);
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -1107,7 +1242,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getDeviceVaria
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(deviceID)));
-		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=?", data);
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -1132,10 +1267,10 @@ void DatabaseController::deletePeer(uint64_t id)
 	try
 	{
 		BaseLib::Database::DataRow data({std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id))});
-		db.executeCommand("DELETE FROM parameters WHERE peerID=?", data);
-		db.executeCommand("DELETE FROM peerVariables WHERE peerID=?", data);
-		db.executeCommand("DELETE FROM peers WHERE peerID=?", data);
-		db.executeCommand("DELETE FROM serviceMessages WHERE peerID=?", data);
+		bufferedWrite("DELETE FROM parameters WHERE peerID=?", data);
+		bufferedWrite("DELETE FROM peerVariables WHERE peerID=?", data);
+		bufferedWrite("DELETE FROM peers WHERE peerID=?", data);
+		bufferedWrite("DELETE FROM serviceMessages WHERE peerID=?", data);
 	}
 	catch(const std::exception& ex)
 	{
@@ -1151,7 +1286,7 @@ void DatabaseController::deletePeer(uint64_t id)
 	}
 }
 
-uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber)
+uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t address, std::string& serialNumber)
 {
 	try
 	{
@@ -1161,7 +1296,7 @@ uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t ad
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(parentID)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(address)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(serialNumber)));
-		uint64_t result = db.executeWriteCommand("REPLACE INTO peers VALUES(?, ?, ?, ?)", data);
+		uint64_t result = _db.executeWriteCommand("REPLACE INTO peers VALUES(?, ?, ?, ?)", data);
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -1179,28 +1314,32 @@ uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t ad
 	return 0;
 }
 
-uint64_t DatabaseController::savePeerParameter(uint64_t peerID, BaseLib::Database::DataRow data)
+void DatabaseController::savePeerParameterAsynchronous(uint64_t peerID, BaseLib::Database::DataRow& data)
 {
 	try
 	{
-		createSavepoint("peerParameter" + std::to_string(peerID));
-		int32_t result;
 		if(data.size() == 2)
 		{
 			if(data.at(1)->intValue == 0)
 			{
 				GD::out.printError("Error: Could not save peer parameter. Parameter ID is \"0\".");
-				releaseSavepoint("peerParameter" + std::to_string(peerID));
-				return 0;
+				return ;
 			}
-			result = db.executeWriteCommand("UPDATE parameters SET value=? WHERE parameterID=?", data);
+			bufferedWrite("UPDATE parameters SET value=? WHERE parameterID=?", data);
 		}
 		else
 		{
-			result = db.executeWriteCommand("REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
+			if(data.size() == 7)
+			{
+				data.push_front(data.at(5));
+				bufferedWrite("INSERT OR REPLACE INTO parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName, value) VALUES((SELECT parameterID FROM parameters WHERE peerID=" + std::to_string(data.at(1)->intValue) + " AND parameterSetType=" + std::to_string(data.at(2)->intValue) + " AND peerChannel=" + std::to_string(data.at(3)->intValue) + " AND remotePeer=" + std::to_string(data.at(4)->intValue) + " AND remoteChannel=" + std::to_string(data.at(5)->intValue) + " AND parameterName=?), ?, ?, ?, ?, ?, ?, ?)", data);
+			}
+			else if(data.size() == 8 && data.at(0)->intValue != 0)
+			{
+				bufferedWrite("REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
+			}
+			else GD::out.printError("Error: Either parameterID is 0 or the number of columns is invalid.");
 		}
-		releaseSavepoint("peerParameter" + std::to_string(peerID));
-		return result;
 	}
 	catch(const std::exception& ex)
 	{
@@ -1214,34 +1353,29 @@ uint64_t DatabaseController::savePeerParameter(uint64_t peerID, BaseLib::Databas
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	releaseSavepoint("peerParameter" + std::to_string(peerID));
-	return 0;
 }
 
-uint64_t DatabaseController::savePeerVariable(uint64_t peerID, BaseLib::Database::DataRow data)
+void DatabaseController::savePeerVariableAsynchronous(uint64_t peerID, BaseLib::Database::DataRow& data)
 {
 	try
 	{
-		createSavepoint("peerVariable" + std::to_string(peerID));
-		uint64_t result = 0;
 		if(data.size() == 2)
 		{
 			if(data.at(1)->intValue == 0)
 			{
 				GD::out.printError("Error: Could not save peer variable. Variable ID is \"0\".");
-				releaseSavepoint("peerVariable" + std::to_string(peerID));
-				return 0;
+				return ;
 			}
 			switch(data.at(0)->dataType)
 			{
 			case BaseLib::Database::DataColumn::DataType::INTEGER:
-				result = db.executeWriteCommand("UPDATE peerVariables SET integerValue=? WHERE variableID=?", data);
+				bufferedWrite("UPDATE peerVariables SET integerValue=? WHERE variableID=?", data);
 				break;
 			case BaseLib::Database::DataColumn::DataType::TEXT:
-				result = db.executeWriteCommand("UPDATE peerVariables SET stringValue=? WHERE variableID=?", data);
+				bufferedWrite("UPDATE peerVariables SET stringValue=? WHERE variableID=?", data);
 				break;
 			case BaseLib::Database::DataColumn::DataType::BLOB:
-				result = db.executeWriteCommand("UPDATE peerVariables SET binaryValue=? WHERE variableID=?", data);
+				bufferedWrite("UPDATE peerVariables SET binaryValue=? WHERE variableID=?", data);
 				break;
 			case BaseLib::Database::DataColumn::DataType::NODATA:
 				GD::out.printError("Error: Tried to store data of type NODATA in peer variable table.");
@@ -1253,10 +1387,16 @@ uint64_t DatabaseController::savePeerVariable(uint64_t peerID, BaseLib::Database
 		}
 		else
 		{
-			result = db.executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			if(data.size() == 5)
+			{
+				bufferedWrite("INSERT OR REPLACE INTO peerVariables (variableID, peerID, variableIndex, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM peerVariables WHERE peerID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(1)->intValue) + "), ?, ?, ?, ?, ?)", data);
+			}
+			else if(data.size() == 6 && data.at(0)->intValue != 0)
+			{
+				bufferedWrite("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			}
+			else GD::out.printError("Error: Either variableID is 0 or the number of columns is invalid.");
 		}
-		releaseSavepoint("peerVariable" + std::to_string(peerID));
-		return result;
 	}
 	catch(const std::exception& ex)
 	{
@@ -1270,8 +1410,6 @@ uint64_t DatabaseController::savePeerVariable(uint64_t peerID, BaseLib::Database
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	releaseSavepoint("peerVariable" + std::to_string(peerID));
-	return 0;
 }
 
 std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPeerParameters(uint64_t peerID)
@@ -1280,7 +1418,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPeerParamet
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(peerID)));
-		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT * FROM parameters WHERE peerID=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM parameters WHERE peerID=?", data);
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -1304,7 +1442,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPeerVariabl
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(peerID)));
-		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT * FROM peerVariables WHERE peerID=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM peerVariables WHERE peerID=?", data);
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -1322,7 +1460,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPeerVariabl
 	return std::shared_ptr<BaseLib::Database::DataTable>();
 }
 
-void DatabaseController::deletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow data)
+void DatabaseController::deletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow& data)
 {
 	try
 	{
@@ -1333,19 +1471,19 @@ void DatabaseController::deletePeerParameter(uint64_t peerID, BaseLib::Database:
 				GD::out.printError("Error: Could not delete parameter. Parameter ID is \"0\".");
 				return;
 			}
-			db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterID=?", data);
+			bufferedWrite("DELETE FROM parameters WHERE peerID=? AND parameterID=?", data);
 		}
 		else if(data.size() == 4)
 		{
-			db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=?", data);
+			bufferedWrite("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=?", data);
 		}
 		else if(data.size() == 5)
 		{
-			db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND remotePeer=? AND remoteChannel=?", data);
+			bufferedWrite("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND remotePeer=? AND remoteChannel=?", data);
 		}
 		else
 		{
-			db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=? AND remotePeer=? AND remoteChannel=?", data);
+			bufferedWrite("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=? AND remotePeer=? AND remoteChannel=?", data);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1368,13 +1506,14 @@ bool DatabaseController::setPeerID(uint64_t oldPeerID, uint64_t newPeerID)
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(newPeerID)));
-		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT 1 FROM peers WHERE peerID=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT 1 FROM peers WHERE peerID=?", data);
 		if(!result->empty()) return false;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(oldPeerID)));
-		db.executeWriteCommand("UPDATE peers SET peerID=? WHERE peerID=?", data);
-		db.executeWriteCommand("UPDATE parameters SET peerID=? WHERE peerID=?", data);
-		db.executeWriteCommand("UPDATE peerVariables SET peerID=? WHERE peerID=?", data);
-		db.executeWriteCommand("UPDATE serviceMessages SET peerID=? WHERE peerID=?", data);
+		bufferedWrite("UPDATE peers SET peerID=? WHERE peerID=?", data);
+		bufferedWrite("UPDATE parameters SET peerID=? WHERE peerID=?", data);
+		bufferedWrite("UPDATE peerVariables SET peerID=? WHERE peerID=?", data);
+		bufferedWrite("UPDATE serviceMessages SET peerID=? WHERE peerID=?", data);
+		//TODO: Update Metadata
 		return true;
 	}
 	catch(const std::exception& ex)
@@ -1400,7 +1539,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getServiceMess
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(peerID)));
-		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT * FROM serviceMessages WHERE peerID=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM serviceMessages WHERE peerID=?", data);
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -1418,30 +1557,27 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getServiceMess
 	return std::shared_ptr<BaseLib::Database::DataTable>();
 }
 
-uint64_t DatabaseController::saveServiceMessage(uint64_t peerID, BaseLib::Database::DataRow data)
+void DatabaseController::saveServiceMessageAsynchronous(uint64_t peerID, BaseLib::Database::DataRow& data)
 {
 	try
 	{
-		createSavepoint("serviceMessage" + std::to_string(peerID));
-		uint64_t result = 0;
 		if(data.size() == 2)
 		{
 			if(data.at(1)->intValue == 0)
 			{
 				GD::out.printError("Error: Could not save service message. Variable ID is \"0\".");
-				releaseSavepoint("serviceMessage" + std::to_string(peerID));
-				return 0;
+				return;
 			}
 			switch(data.at(0)->dataType)
 			{
 			case BaseLib::Database::DataColumn::DataType::INTEGER:
-				result = db.executeWriteCommand("UPDATE serviceMessages SET integerValue=? WHERE variableID=?", data);
+				bufferedWrite("UPDATE serviceMessages SET integerValue=? WHERE variableID=?", data);
 				break;
 			case BaseLib::Database::DataColumn::DataType::TEXT:
-				result = db.executeWriteCommand("UPDATE serviceMessages SET stringValue=? WHERE variableID=?", data);
+				bufferedWrite("UPDATE serviceMessages SET stringValue=? WHERE variableID=?", data);
 				break;
 			case BaseLib::Database::DataColumn::DataType::BLOB:
-				result = db.executeWriteCommand("UPDATE serviceMessages SET binaryValue=? WHERE variableID=?", data);
+				bufferedWrite("UPDATE serviceMessages SET binaryValue=? WHERE variableID=?", data);
 				break;
 			case BaseLib::Database::DataColumn::DataType::NODATA:
 				GD::out.printError("Error: Tried to store data of type NODATA in service message table.");
@@ -1456,17 +1592,19 @@ uint64_t DatabaseController::saveServiceMessage(uint64_t peerID, BaseLib::Databa
 			if(data.at(3)->intValue == 0)
 			{
 				GD::out.printError("Error: Could not save service message. Variable ID is \"0\".");
-				releaseSavepoint("serviceMessage" + std::to_string(peerID));
-				return 0;
+				return;
 			}
-			result = db.executeWriteCommand("UPDATE serviceMessages SET integerValue=?, stringValue=?, binaryValue=? WHERE variableID=?", data);
+			bufferedWrite("UPDATE serviceMessages SET integerValue=?, stringValue=?, binaryValue=? WHERE variableID=?", data);
 		}
-		else
+		else if(data.size() == 5)
 		{
-			result = db.executeWriteCommand("REPLACE INTO serviceMessages VALUES(?, ?, ?, ?, ?, ?)", data);
+			bufferedWrite("INSERT OR REPLACE INTO serviceMessages (variableID, peerID, variableIndex, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM serviceMessages WHERE peerID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(1)->intValue) + "), ?, ?, ?, ?, ?)", data);
 		}
-		releaseSavepoint("serviceMessage" + std::to_string(peerID));
-		return result;
+		else  if(data.size() == 6 && data.at(0)->intValue != 0)
+		{
+			bufferedWrite("REPLACE INTO serviceMessages VALUES(?, ?, ?, ?, ?, ?)", data);
+		}
+		else GD::out.printError("Error: Either variableID is 0 or the number of columns is invalid.");
 	}
 	catch(const std::exception& ex)
 	{
@@ -1480,8 +1618,6 @@ uint64_t DatabaseController::saveServiceMessage(uint64_t peerID, BaseLib::Databa
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	releaseSavepoint("serviceMessage" + std::to_string(peerID));
-	return 0;
 }
 
 void DatabaseController::deleteServiceMessage(uint64_t databaseID)
@@ -1489,7 +1625,7 @@ void DatabaseController::deleteServiceMessage(uint64_t databaseID)
 	try
 	{
 		BaseLib::Database::DataRow data({std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(databaseID))});
-		db.executeCommand("DELETE FROM serviceMessages WHERE variableID=?", data);
+		_db.executeCommand("DELETE FROM serviceMessages WHERE variableID=?", data);
 	}
 	catch(const std::exception& ex)
 	{

@@ -249,6 +249,56 @@ void SQLite3::bindData(sqlite3_stmt* statement, DataRow& dataToEscape)
 	});
 }
 
+uint32_t SQLite3::executeWriteCommand(std::shared_ptr<std::pair<std::string, DataRow>> command)
+{
+	try
+	{
+		if(!command) return 0;
+		_databaseMutex.lock();
+		if(!_database)
+		{
+			GD::out.printError("Error: Could not write to database. No database handle.");
+			_databaseMutex.unlock();
+			return 0;
+		}
+		sqlite3_stmt* statement = nullptr;
+		int32_t result = sqlite3_prepare_v2(_database, command->first.c_str(), -1, &statement, NULL);
+		if(result)
+		{
+			throw(Exception("Can't execute command \"" + command->first + "\": " + std::string(sqlite3_errmsg(_database))));
+		}
+		if(!command->second.empty()) bindData(statement, command->second);
+		result = sqlite3_step(statement);
+		if(result != SQLITE_DONE)
+		{
+			throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
+		}
+		sqlite3_clear_bindings(statement);
+		result = sqlite3_finalize(statement);
+		if(result)
+		{
+			throw(Exception("Can't execute command \"" + command->first + "\": " + std::string(sqlite3_errmsg(_database))));
+		}
+		uint32_t rowID = sqlite3_last_insert_rowid(_database);
+		_databaseMutex.unlock();
+		return rowID;
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(const Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	_databaseMutex.unlock();
+	return 0;
+}
+
 uint32_t SQLite3::executeWriteCommand(std::string command, DataRow& dataToEscape)
 {
 	try
@@ -266,7 +316,7 @@ uint32_t SQLite3::executeWriteCommand(std::string command, DataRow& dataToEscape
 		{
 			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
 		}
-		bindData(statement, dataToEscape);
+		if(!dataToEscape.empty()) bindData(statement, dataToEscape);
 		result = sqlite3_step(statement);
 		if(result != SQLITE_DONE)
 		{
@@ -314,7 +364,9 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command, DataRow&
 		int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
 		if(result)
 		{
-			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
+			GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
+			_databaseMutex.unlock();
+			return dataRows;
 		}
 		bindData(statement, dataToEscape);
 		try
@@ -336,7 +388,7 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command, DataRow&
 		result = sqlite3_finalize(statement);
 		if(result)
 		{
-			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
+			GD::out.printError("Can't execute command \"" + command + "\" (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
 		}
 	}
 	catch(const std::exception& ex)

@@ -386,7 +386,8 @@ void PhilipsHuePeer::packetReceived(std::shared_ptr<PhilipsHuePacket> packet)
 					}
 
 					parameter->data = i->second.value;
-					saveParameter(parameter->databaseID, parameter->data);
+					if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+					else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, *j, i->first, parameter->data);
 					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: " + i->first + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + ".");
 
 					if(parameter->rpcParameter)
@@ -424,27 +425,6 @@ void PhilipsHuePeer::packetReceived(std::shared_ptr<PhilipsHuePacket> packet)
 
 				for(std::vector<std::string>::iterator i = j->second->begin(); i != j->second->end(); ++i)
 				{
-					/*if(*i == "XY" || *i == "BRIGHTNESS") //Calculate RGB
-					{
-						uint8_t brightness = _binaryDecoder->decodeResponse(valuesCentral.at(j->first).at("BRIGHTNESS").data)->integerValue;
-						std::shared_ptr<BaseLib::RPC::Variable> rpcXY = _binaryDecoder->decodeResponse(valuesCentral.at(j->first).at("XY").data);
-						if(rpcXY->arrayValue->size() == 2)
-						{
-							BaseLib::Math::Point2D xy(rpcXY->arrayValue->at(0)->floatValue, rpcXY->arrayValue->at(1)->floatValue);
-
-							std::string rgb;
-							getRGB(xy, brightness, rgb);
-
-							std::shared_ptr<BaseLib::RPC::Variable> rpcRGB(new BaseLib::RPC::Variable(rgb));
-							RPCConfigurationParameter* rgbParameter = &valuesCentral.at(j->first).at("RGB");
-							_binaryEncoder->encodeResponse(rpcRGB, rgbParameter->data);
-							saveParameter(rgbParameter->databaseID, rgbParameter->data);
-
-							j->second->push_back("RGB");
-							rpcValues[j->first]->push_back(rgbParameter->rpcParameter->convertFromPacket(rgbParameter->data, true));
-						}
-						break;
-					}*/
 					if((*i == "HUE" || *i == "SATURATION" || *i == "BRIGHTNESS") //Calculate RGB
 						&& valuesCentral.at(j->first).find("HUE") != valuesCentral.at(j->first).end()) //Does this peer support colors?
 					{
@@ -457,7 +437,8 @@ void PhilipsHuePeer::packetReceived(std::shared_ptr<PhilipsHuePacket> packet)
 						std::shared_ptr<BaseLib::RPC::Variable> rpcRGB(new BaseLib::RPC::Variable(hsv.toRGB().toString()));
 						RPCConfigurationParameter* rgbParameter = &valuesCentral.at(j->first).at("RGB");
 						_binaryEncoder->encodeResponse(rpcRGB, rgbParameter->data);
-						saveParameter(rgbParameter->databaseID, rgbParameter->data);
+						if(rgbParameter->databaseID > 0) saveParameter(rgbParameter->databaseID, rgbParameter->data);
+						else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, j->first, "RGB", rgbParameter->data);
 
 						j->second->push_back("RGB");
 						rpcValues[j->first]->push_back(rgbParameter->rpcParameter->convertFromPacket(rgbParameter->data, true));
@@ -837,25 +818,6 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::setValue(int32_t clientI
 
 		if(valueKey == "RGB") //Special case, because it sets two parameters (XY and BRIGHTNESS)
 		{
-			/*BaseLib::Math::Point2D xy;
-			uint8_t brightness;
-			getXY(value->stringValue, xy, brightness);
-
-			std::shared_ptr<BaseLib::RPC::Variable> result = setValue(channel, "XY", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(xy.toString())));
-			if(result->errorStruct) return result;
-			if(brightness < 10) result = setValue(channel, "STATE", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(false)));
-			else result = setValue(channel, "BRIGHTNESS", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)brightness)));
-			if(result->errorStruct) return result;
-
-			//Convert back, because the value might be different than the passed one.
-			getRGB(xy, brightness, value->stringValue);
-			_binaryEncoder->encodeResponse(value, parameter->data);
-			saveParameter(parameter->databaseID, parameter->data);
-			valueKeys->push_back(valueKey);
-			values->push_back(value);
-			if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
-			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));*/
-
 			BaseLib::Color::RGB cRGB(value->stringValue);
 			BaseLib::Color::NormalizedRGB nRGB(cRGB);
 			BaseLib::Color::HSV hsv = nRGB.toHSV();
@@ -877,7 +839,8 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::setValue(int32_t clientI
 			//Convert back, because the value might be different than the passed one.
 			value->stringValue = hsv.toRGB().toString();
 			_binaryEncoder->encodeResponse(value, parameter->data);
-			saveParameter(parameter->databaseID, parameter->data);
+			if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+			else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
 			valueKeys->push_back(valueKey);
 			values->push_back(value);
 			if(!valueKeys->empty())
@@ -896,7 +859,8 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::setValue(int32_t clientI
 		if(rpcParameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::Enum::store)
 		{
 			rpcParameter->convertToPacket(value, parameter->data);
-			saveParameter(parameter->databaseID, parameter->data);
+			if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+			else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
 			if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
 			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		}
@@ -906,7 +870,8 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::setValue(int32_t clientI
 		if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return BaseLib::RPC::Variable::createError(-6, "No frame was found for parameter " + valueKey);
 		std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
 		rpcParameter->convertToPacket(value, parameter->data);
-		saveParameter(parameter->databaseID, parameter->data);
+		if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+		else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
 		if(_bl->debugLevel > 4) GD::out.printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(parameter->data) + ".");
 
 		if(!noSending)

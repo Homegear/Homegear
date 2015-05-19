@@ -422,7 +422,7 @@ void MQTT::processMessages()
 				_messageBufferMutex.unlock();
 				_messageProcessingConditionVariable.wait(lock, [&]{ return _messageProcessingMessageAvailable; });
 			}
-			_messageBufferMutex.unlock();
+			else _messageBufferMutex.unlock();
 			if(_stopMessageProcessingThread)
 			{
 				lock.unlock();

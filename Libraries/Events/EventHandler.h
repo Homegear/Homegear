@@ -58,7 +58,7 @@ public:
 		enum Enum { none = 0, addition = 1, subtraction = 2, multiplication = 3, division = 4 };
 	};
 
-	uint32_t id = 0;
+	uint64_t id = 0;
 	Type::Enum type = Type::Enum::triggered;
 	std::string name;
 	bool enabled = true;

@@ -52,8 +52,8 @@ void Settings::reset()
 	_uPnPIpAddress = "";
 	_devLog = false;
 	_databasePath = _bl->executablePath + "db.sql";
-	_databaseSynchronous = false;
-	_databaseMemoryJournal = true;
+	_databaseSynchronous = true;
+	_databaseMemoryJournal = false;
 	_logfilePath = "/var/log/homegear/";
 	_prioritizeThreads = true;
 	_workerThreadWindow = 3000;
@@ -192,12 +192,12 @@ void Settings::load(std::string filename)
 				}
 				else if(name == "databasesynchronous")
 				{
-					if(HelperFunctions::toLower(value) == "true") _databaseSynchronous = true;
+					if(HelperFunctions::toLower(value) == "false") _databaseSynchronous = false;
 					_bl->out.printDebug("Debug: databaseSynchronous set to " + std::to_string(_databaseSynchronous));
 				}
 				else if(name == "databasememoryjournal")
 				{
-					if(HelperFunctions::toLower(value) == "false") _databaseMemoryJournal = false;
+					if(HelperFunctions::toLower(value) == "true") _databaseMemoryJournal = true;
 					_bl->out.printDebug("Debug: databaseMemoryJournal set to " + std::to_string(_databaseMemoryJournal));
 				}
 				else if(name == "logfilepath")

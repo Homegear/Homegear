@@ -64,14 +64,24 @@ void LogicalDevice::dispose(bool wait)
 }
 
 //Event handling
-void LogicalDevice::raiseCreateSavepoint(std::string name)
+void LogicalDevice::raiseCreateSavepointSynchronous(std::string name)
 {
-	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onCreateSavepoint(name);
+	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onCreateSavepointSynchronous(name);
 }
 
-void LogicalDevice::raiseReleaseSavepoint(std::string name)
+void LogicalDevice::raiseReleaseSavepointSynchronous(std::string name)
 {
-	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onReleaseSavepoint(name);
+	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onReleaseSavepointSynchronous(name);
+}
+
+void LogicalDevice::raiseCreateSavepointAsynchronous(std::string name)
+{
+	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onCreateSavepointAsynchronous(name);
+}
+
+void LogicalDevice::raiseReleaseSavepointAsynchronous(std::string name)
+{
+	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onReleaseSavepointAsynchronous(name);
 }
 
 void LogicalDevice::raiseDeleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID)
@@ -90,16 +100,16 @@ uint64_t LogicalDevice::raiseSavePeer(uint64_t id, uint32_t parentID, int32_t ad
 	return ((IDeviceEventSink*)_eventHandler)->onSavePeer(id, parentID, address, serialNumber);
 }
 
-uint64_t LogicalDevice::raiseSavePeerParameter(uint64_t peerID, Database::DataRow data)
+void LogicalDevice::raiseSavePeerParameter(uint64_t peerID, Database::DataRow& data)
 {
-	if(!_eventHandler) return 0;
-	return ((IDeviceEventSink*)_eventHandler)->onSavePeerParameter(peerID, data);
+	if(!_eventHandler) return;
+	((IDeviceEventSink*)_eventHandler)->onSavePeerParameter(peerID, data);
 }
 
-uint64_t LogicalDevice::raiseSavePeerVariable(uint64_t peerID, Database::DataRow data)
+void LogicalDevice::raiseSavePeerVariable(uint64_t peerID, Database::DataRow& data)
 {
-	if(!_eventHandler) return 0;
-	return ((IDeviceEventSink*)_eventHandler)->onSavePeerVariable(peerID, data);
+	if(!_eventHandler) return;
+	((IDeviceEventSink*)_eventHandler)->onSavePeerVariable(peerID, data);
 }
 
 std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetPeerParameters(uint64_t peerID)
@@ -114,7 +124,7 @@ std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetPeerVariables(uint64
 	return ((IDeviceEventSink*)_eventHandler)->onGetPeerVariables(peerID);
 }
 
-void LogicalDevice::raiseDeletePeerParameter(uint64_t peerID, Database::DataRow data)
+void LogicalDevice::raiseDeletePeerParameter(uint64_t peerID, Database::DataRow& data)
 {
 	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onDeletePeerParameter(peerID, data);
 }
@@ -131,10 +141,10 @@ std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetServiceMessages(uint
 	return ((IDeviceEventSink*)_eventHandler)->onGetServiceMessages(peerID);
 }
 
-uint64_t LogicalDevice::raiseSaveServiceMessage(uint64_t peerID, Database::DataRow data)
+void LogicalDevice::raiseSaveServiceMessage(uint64_t peerID, Database::DataRow& data)
 {
-	if(!_eventHandler) return 0;
-	return ((IDeviceEventSink*)_eventHandler)->onSaveServiceMessage(peerID, data);
+	if(!_eventHandler) return;
+	((IDeviceEventSink*)_eventHandler)->onSaveServiceMessage(peerID, data);
 }
 
 void LogicalDevice::raiseDeleteServiceMessage(uint64_t databaseID)
@@ -148,10 +158,10 @@ uint64_t LogicalDevice::raiseSaveDevice()
 	return ((IDeviceEventSink*)_eventHandler)->onSaveDevice(_deviceID, _address, _serialNumber, _deviceType, (uint32_t)_deviceFamily);
 }
 
-uint64_t LogicalDevice::raiseSaveDeviceVariable(Database::DataRow data)
+void LogicalDevice::raiseSaveDeviceVariable(Database::DataRow& data)
 {
-	if(!_eventHandler) return 0;
-	return ((IDeviceEventSink*)_eventHandler)->onSaveDeviceVariable(data);
+	if(!_eventHandler) return;
+	((IDeviceEventSink*)_eventHandler)->onSaveDeviceVariable(data);
 }
 
 void LogicalDevice::raiseDeletePeers(int32_t deviceID)
@@ -204,14 +214,24 @@ int32_t LogicalDevice::raiseIsAddonClient(int32_t clientID)
 //End event handling
 
 //Peer event handling
-void LogicalDevice::onCreateSavepoint(std::string name)
+void LogicalDevice::onCreateSavepointSynchronous(std::string name)
 {
-	raiseCreateSavepoint(name);
+	raiseCreateSavepointSynchronous(name);
 }
 
-void LogicalDevice::onReleaseSavepoint(std::string name)
+void LogicalDevice::onReleaseSavepointSynchronous(std::string name)
 {
-	raiseReleaseSavepoint(name);
+	raiseReleaseSavepointSynchronous(name);
+}
+
+void LogicalDevice::onCreateSavepointAsynchronous(std::string name)
+{
+	raiseCreateSavepointAsynchronous(name);
+}
+
+void LogicalDevice::onReleaseSavepointAsynchronous(std::string name)
+{
+	raiseReleaseSavepointAsynchronous(name);
 }
 
 void LogicalDevice::onDeleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID)
@@ -229,14 +249,14 @@ uint64_t LogicalDevice::onSavePeer(uint64_t id, uint32_t parentID, int32_t addre
 	return raiseSavePeer(id, parentID, address, serialNumber);
 }
 
-uint64_t LogicalDevice::onSavePeerParameter(uint64_t peerID, Database::DataRow data)
+void LogicalDevice::onSavePeerParameter(uint64_t peerID, Database::DataRow& data)
 {
-	return raiseSavePeerParameter(peerID, data);
+	raiseSavePeerParameter(peerID, data);
 }
 
-uint64_t LogicalDevice::onSavePeerVariable(uint64_t peerID, Database::DataRow data)
+void LogicalDevice::onSavePeerVariable(uint64_t peerID, Database::DataRow& data)
 {
-	return raiseSavePeerVariable(peerID, data);
+	raiseSavePeerVariable(peerID, data);
 }
 
 std::shared_ptr<BaseLib::Database::DataTable> LogicalDevice::onGetPeerParameters(uint64_t peerID)
@@ -249,7 +269,7 @@ std::shared_ptr<BaseLib::Database::DataTable> LogicalDevice::onGetPeerVariables(
 	return raiseGetPeerVariables(peerID);
 }
 
-void LogicalDevice::onDeletePeerParameter(uint64_t peerID, Database::DataRow data)
+void LogicalDevice::onDeletePeerParameter(uint64_t peerID, Database::DataRow& data)
 {
 	raiseDeletePeerParameter(peerID, data);
 }
@@ -264,9 +284,9 @@ std::shared_ptr<BaseLib::Database::DataTable> LogicalDevice::onGetServiceMessage
 	return raiseGetServiceMessages(peerID);
 }
 
-uint64_t LogicalDevice::onSaveServiceMessage(uint64_t peerID, Database::DataRow data)
+void LogicalDevice::onSaveServiceMessage(uint64_t peerID, Database::DataRow& data)
 {
-	return raiseSaveServiceMessage(peerID, data);
+	raiseSaveServiceMessage(peerID, data);
 }
 
 void LogicalDevice::onDeleteServiceMessage(uint64_t databaseID)
@@ -601,14 +621,12 @@ void LogicalDevice::saveVariable(uint32_t index, int64_t intValue)
 		else
 		{
 			if(_deviceID == 0) return;
-			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
 			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_deviceID)));
 			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(index)));
 			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(intValue)));
 			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
 			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
-			uint64_t result = raiseSaveDeviceVariable(data);
-			if(result) _variableDatabaseIDs[index] = result;
+			raiseSaveDeviceVariable(data);
 		}
 	}
 	catch(const std::exception& ex)
@@ -640,14 +658,12 @@ void LogicalDevice::saveVariable(uint32_t index, std::string& stringValue)
 		else
 		{
 			if(_deviceID == 0) return;
-			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
 			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_deviceID)));
 			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(index)));
 			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
 			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(stringValue)));
 			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
-			uint64_t result = raiseSaveDeviceVariable(data);
-			if(result) _variableDatabaseIDs[index] = result;
+			raiseSaveDeviceVariable(data);
 		}
 	}
 	catch(const std::exception& ex)
@@ -679,14 +695,12 @@ void LogicalDevice::saveVariable(uint32_t index, std::vector<uint8_t>& binaryVal
 		else
 		{
 			if(_deviceID == 0) return;
-			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
 			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_deviceID)));
 			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(index)));
 			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
 			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
 			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(binaryValue)));
-			uint64_t result = raiseSaveDeviceVariable(data);
-			if(result) _variableDatabaseIDs[index] = result;
+			raiseSaveDeviceVariable(data);
 		}
 	}
 	catch(const std::exception& ex)

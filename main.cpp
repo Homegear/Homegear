@@ -146,8 +146,9 @@ void terminate(int32_t signalNumber)
 #ifdef SCRIPTENGINE
 			GD::scriptEngine.dispose();
 #endif
-			GD::familyController.saveAndDispose(false);
-			GD::db.dispose();
+			GD::familyController.save(false);
+			GD::db.dispose(); //Finish database operations before closing modules, otherwise SEGFAULT
+			GD::familyController.dispose();
 			GD::out.printMessage("(Shutdown) => Shutdown complete.");
 			if(_startAsDaemon)
 			{

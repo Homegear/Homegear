@@ -113,14 +113,24 @@ FamilyController::~FamilyController()
 }
 
 //Device event handling
-void FamilyController::onCreateSavepoint(std::string name)
+void FamilyController::onCreateSavepointSynchronous(std::string name)
 {
-	GD::db.createSavepoint(name);
+	GD::db.createSavepointSynchronous(name);
 }
 
-void FamilyController::onReleaseSavepoint(std::string name)
+void FamilyController::onReleaseSavepointSynchronous(std::string name)
 {
-	GD::db.releaseSavepoint(name);
+	GD::db.releaseSavepointSynchronous(name);
+}
+
+void FamilyController::onCreateSavepointAsynchronous(std::string name)
+{
+	GD::db.createSavepointAsynchronous(name);
+}
+
+void FamilyController::onReleaseSavepointAsynchronous(std::string name)
+{
+	GD::db.releaseSavepointAsynchronous(name);
 }
 
 void FamilyController::onDeleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID)
@@ -138,14 +148,14 @@ uint64_t FamilyController::onSavePeer(uint64_t id, uint32_t parentID, int32_t ad
 	return GD::db.savePeer(id, parentID, address, serialNumber);
 }
 
-uint64_t FamilyController::onSavePeerParameter(uint64_t peerID, BaseLib::Database::DataRow data)
+void FamilyController::onSavePeerParameter(uint64_t peerID, BaseLib::Database::DataRow& data)
 {
-	return GD::db.savePeerParameter(peerID, data);
+	GD::db.savePeerParameterAsynchronous(peerID, data);
 }
 
-uint64_t FamilyController::onSavePeerVariable(uint64_t peerID, BaseLib::Database::DataRow data)
+void FamilyController::onSavePeerVariable(uint64_t peerID, BaseLib::Database::DataRow& data)
 {
-	return GD::db.savePeerVariable(peerID, data);
+	GD::db.savePeerVariableAsynchronous(peerID, data);
 }
 
 std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetPeerParameters(uint64_t peerID)
@@ -158,7 +168,7 @@ std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetPeerVariabl
 	return GD::db.getPeerVariables(peerID);
 }
 
-void FamilyController::onDeletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow data)
+void FamilyController::onDeletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow& data)
 {
 	GD::db.deletePeerParameter(peerID, data);
 }
@@ -173,9 +183,9 @@ std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetServiceMess
 	return GD::db.getServiceMessages(peerID);
 }
 
-uint64_t FamilyController::onSaveServiceMessage(uint64_t peerID, BaseLib::Database::DataRow data)
+void FamilyController::onSaveServiceMessage(uint64_t peerID, BaseLib::Database::DataRow& data)
 {
-	return GD::db.saveServiceMessage(peerID, data);
+	GD::db.saveServiceMessageAsynchronous(peerID, data);
 }
 
 void FamilyController::onDeleteServiceMessage(uint64_t databaseID)
@@ -198,9 +208,9 @@ uint64_t FamilyController::onSaveDevice(uint64_t id, int32_t address, std::strin
 	return GD::db.saveDevice(id, address, serialNumber, type, family);
 }
 
-uint64_t FamilyController::onSaveDeviceVariable(BaseLib::Database::DataRow data)
+void FamilyController::onSaveDeviceVariable(BaseLib::Database::DataRow& data)
 {
-	return GD::db.saveDeviceVariable(data);
+	GD::db.saveDeviceVariableAsynchronous(data);
 }
 
 void FamilyController::onDeletePeers(int32_t deviceID)
@@ -466,6 +476,7 @@ void FamilyController::dispose()
 	try
 	{
 		if(_disposed) return;
+		GD::out.printMessage("(Shutdown) => Disposing device families");
 		_disposed = true;
 		_rpcCache.reset();
 		if(!GD::deviceFamilies.empty())
@@ -493,7 +504,7 @@ void FamilyController::dispose()
     }
 }
 
-void FamilyController::saveAndDispose(bool full)
+void FamilyController::save(bool full)
 {
 	try
 	{
@@ -502,8 +513,6 @@ void FamilyController::saveAndDispose(bool full)
 		{
 			if(i->second) i->second->save(full);
 		}
-		GD::out.printMessage("(Shutdown) => Disposing device families");
-		dispose();
 	}
 	catch(const std::exception& ex)
     {

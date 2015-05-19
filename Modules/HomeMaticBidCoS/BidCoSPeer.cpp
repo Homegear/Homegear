@@ -113,7 +113,7 @@ void BidCoSPeer::initializeLinkConfig(int32_t channel, int32_t remoteAddress, in
 {
 	try
 	{
-		raiseCreateSavepoint("bidCoSPeerLinkConfig" + std::to_string(_peerID));
+		raiseCreateSavepointAsynchronous("bidCoSPeerLinkConfig" + std::to_string(_peerID));
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
 		if(rpcDevice->channels[channel]->parameterSets.find(BaseLib::RPC::ParameterSet::Type::link) == rpcDevice->channels[channel]->parameterSets.end()) return;
 		std::shared_ptr<BaseLib::RPC::ParameterSet> linkSet = rpcDevice->channels[channel]->parameterSets[BaseLib::RPC::ParameterSet::Type::link];
@@ -145,7 +145,7 @@ void BidCoSPeer::initializeLinkConfig(int32_t channel, int32_t remoteAddress, in
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    raiseReleaseSavepoint("bidCoSPeerLinkConfig" + std::to_string(_peerID));
+    raiseReleaseSavepointAsynchronous("bidCoSPeerLinkConfig" + std::to_string(_peerID));
 }
 
 void BidCoSPeer::applyConfigFunction(int32_t channel, int32_t peerAddress, int32_t remoteChannel)
@@ -177,7 +177,8 @@ void BidCoSPeer::applyConfigFunction(int32_t channel, int32_t peerAddress, int32
 			BaseLib::Systems::RPCConfigurationParameter* parameter = &linksCentral[channel][peerAddress][remoteChannel][j->first];
 			if(!parameter->rpcParameter) continue;
 			parameter->rpcParameter->convertToPacket(j->second, parameter->data);
-			saveParameter(parameter->databaseID, parameter->data);
+			if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+			else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::link, channel, parameter->rpcParameter->id, parameter->data, peerAddress, remoteChannel);
 		}
 	}
 	catch(const std::exception& ex)
@@ -254,7 +255,8 @@ void BidCoSPeer::setAESKeyIndex(int32_t value)
 			BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[0]["AES_KEY"];
 			parameter->data.clear();
 			parameter->data.push_back(_aesKeyIndex);
-			saveParameter(parameter->databaseID, parameter->data);
+			if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+			else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, 0, "AES_KEY", parameter->data);
 		}
 	}
 	catch(const std::exception& ex)
@@ -368,7 +370,8 @@ void BidCoSPeer::worker()
 				{
 					BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral.at((*i)->channel).at((*i)->key);
 					parameter->data = (*i)->data;
-					saveParameter(parameter->databaseID, parameter->data);
+					if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+					else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, (*i)->channel, (*i)->key, parameter->data);
 					std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> {(*i)->key});
 					std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> rpcValues(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>> { valuesCentral.at((*i)->channel).at((*i)->key).rpcParameter->convertFromPacket((*i)->data) });
 					GD::out.printInfo("Info: Domino event: " + (*i)->key + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string((*i)->channel) + " was reset.");
@@ -2377,7 +2380,8 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 
 					BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
 					parameter->data = i->second.value;
-					saveParameter(parameter->databaseID, parameter->data);
+					if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+					else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, *j, i->first, parameter->data);
 					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: " + i->first + " on channel " + std::to_string(*j) + " of HomeMatic BidCoS peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + ".");
 
 					if(parameter->rpcParameter)
@@ -2421,7 +2425,8 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 						{
 							BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[*i]["SENDERADDRESS"];
 							rpcParameter->convertToPacket(senderPeer->getSerialNumber() + ":" + std::to_string(*i), parameter->data);
-							saveParameter(parameter->databaseID, parameter->data);
+							if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+							else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, *i, "SENDERADDRESS", parameter->data);
 							valueKeys[*i]->push_back("SENDERADDRESS");
 							rpcValues[*i]->push_back(rpcParameter->convertFromPacket(parameter->data, true));
 						}
@@ -2754,7 +2759,8 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::putParamset(int32_t clientID
 					}
 				}
 				parameter->data = value;
-				saveParameter(parameter->databaseID, parameter->data);
+				if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+				else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::master, channel, i->first, parameter->data);
 				if(peerInfoPacketsEnabled && i->first == "AES_ACTIVE" && !aesActivated) _physicalInterface->setAES(getPeerInfo(), channel);
 				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
 				//Only send to device when parameter is of type config;
@@ -2898,7 +2904,8 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::putParamset(int32_t clientID
 					}
 				}
 				parameter->data = value;
-				saveParameter(parameter->databaseID, parameter->data);
+				if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+				else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::link, channel, i->first, parameter->data, remotePeer->address, remotePeer->channel);
 				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::configString) continue;
@@ -3095,7 +3102,8 @@ bool BidCoSPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::s
 				if(!rpcParameter) return false;
 				BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
 				rpcParameter->convertToPacket(value, parameter->data);
-				saveParameter(parameter->databaseID, parameter->data);
+				if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+				else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
 				GD::out.printInfo("Info: Setting valve state of HM-CC-VD with id " + std::to_string(_peerID) + " to " + std::to_string(value->integerValue / 2) + "%.");
 				return true;
 			}
@@ -3108,7 +3116,8 @@ bool BidCoSPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::s
 				if(!rpcParameter) return false;
 				BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
 				rpcParameter->convertToPacket(value, parameter->data);
-				saveParameter(parameter->databaseID, parameter->data);
+				if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+				else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
 
 				std::shared_ptr<HomeMaticCentral> central = std::dynamic_pointer_cast<HomeMaticCentral>(getCentral());
 				std::shared_ptr<BidCoSPeer> associatedPeer = central->getPeer(_address);
@@ -3136,7 +3145,8 @@ bool BidCoSPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::s
 				if(!rpcParameter) return false;
 				BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
 				rpcParameter->convertToPacket(value, parameter->data);
-				saveParameter(parameter->databaseID, parameter->data);
+				if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+				else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
 
 				std::shared_ptr<HomeMaticCentral> central = std::dynamic_pointer_cast<HomeMaticCentral>(getCentral());
 				std::shared_ptr<BidCoSPeer> associatedPeer = central->getPeer(_address);
@@ -3278,7 +3288,8 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setValue(int32_t clientID, u
 		if(rpcParameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::Enum::store)
 		{
 			rpcParameter->convertToPacket(value, parameter->data);
-			saveParameter(parameter->databaseID, parameter->data);
+			if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+			else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
 			if(!valueKeys->empty())
 			{
 				raiseEvent(_peerID, channel, valueKeys, values);
@@ -3318,7 +3329,8 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setValue(int32_t clientID, u
 		if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return BaseLib::RPC::Variable::createError(-6, "No frame was found for parameter " + valueKey);
 		std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
 		rpcParameter->convertToPacket(value, parameter->data);
-		saveParameter(parameter->databaseID, parameter->data);
+		if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+		else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
 		if(_bl->debugLevel > 4) GD::out.printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(parameter->data) + ".");
 
 		pendingBidCoSQueues->remove(BidCoSQueueType::PEER, valueKey, channel);
@@ -3462,7 +3474,8 @@ std::shared_ptr<BaseLib::RPC::Variable> BidCoSPeer::setValue(int32_t clientID, u
 				{
 					BaseLib::Systems::RPCConfigurationParameter* tempParam = &valuesCentral.at(channel).at(*j);
 					tempParam->data = defaultValue;
-					saveParameter(tempParam->databaseID, tempParam->data);
+					if(tempParam->databaseID > 0) saveParameter(tempParam->databaseID, tempParam->data);
+					else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, *j, tempParam->data);
 					GD::out.printInfo( "Info: Parameter \"" + *j + "\" was reset to " + BaseLib::HelperFunctions::getHexString(defaultValue) + ". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 					if((rpcParameter->operations & BaseLib::RPC::Parameter::Operations::read) || (rpcParameter->operations & BaseLib::RPC::Parameter::Operations::event))
 					{

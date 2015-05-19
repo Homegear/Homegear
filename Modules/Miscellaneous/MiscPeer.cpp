@@ -702,7 +702,8 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::putParamset(int32_t clientID, 
 					}
 				}
 				parameter->data = value;
-				saveParameter(parameter->databaseID, parameter->data);
+				if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+				else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::master, channel, i->first, parameter->data);
 				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::configString) continue;
@@ -772,7 +773,8 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::setValue(int32_t clientID, uin
 		if(rpcParameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::Enum::store)
 		{
 			rpcParameter->convertToPacket(value, parameter->data);
-			saveParameter(parameter->databaseID, parameter->data);
+			if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+			else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
 
 			raiseEvent(_peerID, channel, valueKeys, values);
 			raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
