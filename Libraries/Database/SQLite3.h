@@ -45,10 +45,10 @@ class SQLite3
 {
     public:
 		SQLite3();
-        SQLite3(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal);
+        SQLite3(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal);
         virtual ~SQLite3();
         void dispose();
-        void init(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, std::string backupPath = "");
+        void init(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath = "");
         void hotBackup();
         uint32_t executeWriteCommand(std::shared_ptr<std::pair<std::string, DataRow>> command);
         uint32_t executeWriteCommand(std::string command, DataRow& dataToEscape);
@@ -65,6 +65,7 @@ class SQLite3
         std::string _backupPath;
         bool _databaseSynchronous;
         bool _databaseMemoryJournal;
+        bool _databaseWALJournal;
         sqlite3* _database = nullptr;
         std::mutex _databaseMutex;
 

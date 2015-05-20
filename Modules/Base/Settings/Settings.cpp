@@ -54,6 +54,8 @@ void Settings::reset()
 	_databasePath = _bl->executablePath + "db.sql";
 	_databaseSynchronous = true;
 	_databaseMemoryJournal = false;
+	_databaseWALJournal = true;
+	_databaseMaxBackups = 10;
 	_logfilePath = "/var/log/homegear/";
 	_prioritizeThreads = true;
 	_workerThreadWindow = 3000;
@@ -199,6 +201,17 @@ void Settings::load(std::string filename)
 				{
 					if(HelperFunctions::toLower(value) == "true") _databaseMemoryJournal = true;
 					_bl->out.printDebug("Debug: databaseMemoryJournal set to " + std::to_string(_databaseMemoryJournal));
+				}
+				else if(name == "databasewaljournal")
+				{
+					if(HelperFunctions::toLower(value) == "false") _databaseWALJournal = false;
+					_bl->out.printDebug("Debug: databaseWALJournal set to " + std::to_string(_databaseWALJournal));
+				}
+				else if(name == "databasemaxbackups")
+				{
+					_databaseMaxBackups = Math::getNumber(value);
+					if(_databaseMaxBackups > 10000) _databaseMaxBackups = 10000;
+					_bl->out.printDebug("Debug: databaseMaxBackups set to " + std::to_string(_databaseMaxBackups));
 				}
 				else if(name == "logfilepath")
 				{

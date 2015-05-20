@@ -40,21 +40,23 @@ SQLite3::SQLite3()
 {
 }
 
-SQLite3::SQLite3(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal) : SQLite3()
+SQLite3::SQLite3(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal) : SQLite3()
 {
 	if(databasePath.empty()) return;
 	_databaseSynchronous = databaseSynchronous;
 	_databaseMemoryJournal = databaseMemoryJournal;
+	_databaseWALJournal = databaseWALJournal;
 	_databasePath = databasePath;
 	_backupPath = "";
     openDatabase(true);
 }
 
-void SQLite3::init(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, std::string backupPath)
+void SQLite3::init(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath)
 {
 	if(databasePath.empty()) return;
 	_databaseSynchronous = databaseSynchronous;
 	_databaseMemoryJournal = databaseMemoryJournal;
+	_databaseWALJournal = databaseWALJournal;
 	_databasePath = databasePath;
 	_backupPath = backupPath;
 	hotBackup();
@@ -85,7 +87,7 @@ void SQLite3::hotBackup()
 				if(!_backupPath.empty())
 				{
 					bool restored = false;
-					for(int32_t i = 0; i <= 9; i++)
+					for(int32_t i = 0; i <= 10000; i++)
 					{
 						if(GD::bl->hf.fileExists(_backupPath + std::to_string(i)) && checkIntegrity(_backupPath + std::to_string(i)))
 						{
@@ -115,26 +117,32 @@ void SQLite3::hotBackup()
 				if(!_backupPath.empty())
 				{
 					GD::out.printInfo("Info: Backing up database...");
-					if(GD::bl->hf.fileExists(_backupPath + '9'))
+					if(GD::bl->settings.databaseMaxBackups() > 1)
 					{
-						if(!GD::bl->hf.deleteFile(_backupPath + '9'))
+						if(GD::bl->hf.fileExists(_backupPath + std::to_string(GD::bl->settings.databaseMaxBackups() - 1)))
 						{
-							GD::out.printError("Error: Cannot delete file: " + _backupPath + '9');
-						}
-					}
-					for(int32_t i = 8; i >= 0; i--)
-					{
-						if(GD::bl->hf.fileExists(_backupPath + std::to_string(i)))
-						{
-							if(!GD::bl->hf.moveFile(_backupPath + std::to_string(i), _backupPath + std::to_string(i + 1)))
+							if(!GD::bl->hf.deleteFile(_backupPath + std::to_string(GD::bl->settings.databaseMaxBackups() - 1)))
 							{
-								GD::out.printError("Error: Cannot move file: " + _backupPath + std::to_string(i));
+								GD::out.printError("Error: Cannot delete file: " + _backupPath + std::to_string(GD::bl->settings.databaseMaxBackups() - 1));
+							}
+						}
+						for(int32_t i = GD::bl->settings.databaseMaxBackups() - 2; i >= 0; i--)
+						{
+							if(GD::bl->hf.fileExists(_backupPath + std::to_string(i)))
+							{
+								if(!GD::bl->hf.moveFile(_backupPath + std::to_string(i), _backupPath + std::to_string(i + 1)))
+								{
+									GD::out.printError("Error: Cannot move file: " + _backupPath + std::to_string(i));
+								}
 							}
 						}
 					}
-					if(!GD::bl->hf.copyFile(_databasePath, _backupPath + '0'))
+					if(GD::bl->settings.databaseMaxBackups() > 0)
 					{
-						GD::out.printError("Error: Cannot copy file: " + _backupPath + '0');
+						if(!GD::bl->hf.copyFile(_databasePath, _backupPath + '0'))
+						{
+							GD::out.printError("Error: Cannot copy file: " + _backupPath + '0');
+						}
 					}
 				}
 			}
@@ -235,22 +243,21 @@ void SQLite3::openDatabase(bool lockMutex)
 
 		if(!_databaseSynchronous)
 		{
-			sqlite3_exec(_database, "PRAGMA synchronous = OFF", 0, 0, &errorMessage);
+			sqlite3_exec(_database, "PRAGMA synchronous=OFF", 0, 0, &errorMessage);
 			if(errorMessage)
 			{
-				GD::out.printError("Can't execute \"PRAGMA synchronous = OFF\": " + std::string(errorMessage));
+				GD::out.printError("Can't execute \"PRAGMA synchronous=OFF\": " + std::string(errorMessage));
 				sqlite3_free(errorMessage);
 			}
 		}
 
-		if(_databaseMemoryJournal)
+		//Reset to default journal mode, because WAL stays active.
+		//Also I'm not sure if VACUUM works with journal_mode=WAL.
+		sqlite3_exec(_database, "PRAGMA journal_mode=DELETE", 0, 0, &errorMessage);
+		if(errorMessage)
 		{
-			sqlite3_exec(_database, "PRAGMA journal_mode = MEMORY", 0, 0, &errorMessage);
-			if(errorMessage)
-			{
-				GD::out.printError("Can't execute \"PRAGMA journal_mode = MEMORY\": " + std::string(errorMessage));
-				sqlite3_free(errorMessage);
-			}
+			GD::out.printError("Can't execute \"PRAGMA journal_mode=DELETE\": " + std::string(errorMessage));
+			sqlite3_free(errorMessage);
 		}
 
 		sqlite3_exec(_database, "VACUUM", 0, 0, &errorMessage);
@@ -258,6 +265,26 @@ void SQLite3::openDatabase(bool lockMutex)
 		{
 			GD::out.printWarning("Warning: Can't execute \"VACUUM\": " + std::string(errorMessage));
 			sqlite3_free(errorMessage);
+		}
+
+		if(_databaseMemoryJournal)
+		{
+			sqlite3_exec(_database, "PRAGMA journal_mode=MEMORY", 0, 0, &errorMessage);
+			if(errorMessage)
+			{
+				GD::out.printError("Can't execute \"PRAGMA journal_mode=MEMORY\": " + std::string(errorMessage));
+				sqlite3_free(errorMessage);
+			}
+		}
+
+		if(_databaseWALJournal)
+		{
+			sqlite3_exec(_database, "PRAGMA journal_mode=WAL", 0, 0, &errorMessage);
+			if(errorMessage)
+			{
+				GD::out.printError("Can't execute \"PRAGMA journal_mode=WAL\": " + std::string(errorMessage));
+				sqlite3_free(errorMessage);
+			}
 		}
 	}
 	catch(const std::exception& ex)

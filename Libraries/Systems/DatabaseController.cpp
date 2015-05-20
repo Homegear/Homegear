@@ -76,9 +76,9 @@ void DatabaseController::init()
 }
 
 //General
-void DatabaseController::open(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, std::string backupPath)
+void DatabaseController::open(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath)
 {
-	_db.init(databasePath, databaseSynchronous, databaseMemoryJournal, backupPath);
+	_db.init(databasePath, databaseSynchronous, databaseMemoryJournal, databaseWALJournal, backupPath);
 }
 
 void DatabaseController::hotBackup()
@@ -307,7 +307,7 @@ void DatabaseController::convertDatabase()
 		if(version == "0.3.1")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.4.3...");
-			_db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".old");
+			_db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".old");
 
 			_db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
 
@@ -326,7 +326,7 @@ void DatabaseController::convertDatabase()
 		else if(version == "0.4.3")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.5.0...");
-			_db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".old");
+			_db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".old");
 
 			_db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
 
@@ -345,7 +345,7 @@ void DatabaseController::convertDatabase()
 		else if(version == "0.5.0")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.5.1...");
-			_db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".old");
+			_db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".old");
 
 			_db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=15");
 

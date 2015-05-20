@@ -58,6 +58,8 @@ public:
 	std::string databasePath() { return _databasePath; }
 	bool databaseSynchronous() { return _databaseSynchronous; }
 	bool databaseMemoryJournal() { return _databaseMemoryJournal; }
+	bool databaseWALJournal() { return _databaseWALJournal; }
+	uint32_t databaseMaxBackups() { return _databaseMaxBackups; }
 	std::string logfilePath() { return _logfilePath; }
 	bool prioritizeThreads() { return _prioritizeThreads; }
 	void setPrioritizeThreads(bool value) { _prioritizeThreads = value; }
@@ -107,6 +109,8 @@ private:
 	std::string _databasePath;
 	bool _databaseSynchronous = true;
 	bool _databaseMemoryJournal = false;
+	bool _databaseWALJournal = true;
+	uint32_t _databaseMaxBackups = 10;
 	std::string _logfilePath;
 	bool _prioritizeThreads = true;
 	uint32_t _workerThreadWindow = 3000;

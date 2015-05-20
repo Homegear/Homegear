@@ -621,7 +621,7 @@ int main(int argc, char* argv[])
 		if(GD::deviceFamilies.empty()) exitHomegear(1);
 
 		GD::db.init();
-    	GD::db.open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".bak");
+    	GD::db.open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".bak");
     	if(!GD::db.isOpen()) exitHomegear(1);
 
     	GD::physicalInterfaces.load(GD::bl->settings.physicalInterfaceSettingsPath());
