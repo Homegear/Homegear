@@ -3,12 +3,12 @@ Maintainer: Sathya Laufer <sathya@laufers.net>
 Section: misc
 Priority: optional
 Standards-Version: 3.9.5
-Build-Depends: debhelper (>= 8), libsqlite3-dev (>= 3.7.13), libreadline6-dev (>= 6.2), libgcrypt20-dev | libgcrypt11-dev, libgpg-error-dev (>= 1.10), libgnutls28-dev | libgnutls-dev, php5-dev (>= 5.6)
+Build-Depends: debhelper (>= 8), libsqlite3-dev (>= 3.7.13), libreadline6-dev (>= 6.2), libgcrypt20-dev, libgpg-error-dev (>= 1.10), libgnutls28-dev, php5-dev (>= 5.6)
 Homepage: https://homegear.eu
 
 Package: homegear
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libsqlite3-0 (>= 3.7.13), libreadline6 (>= 6.2), adduser (>= 3.113), libgcrypt20 | libgcrypt11, libgnutlsxx28 | libgnutlsxx27, libgpg-error0 (>= 1.10), unzip (>= 6.0), p7zip-full (>= 9.0), libxml2-utils (>= 2.8.0), python-lzo (>= 1.08), patch (>= 2.6.1), libphp5-embed (>= 5.6)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libsqlite3-0 (>= 3.7.13), libreadline6 (>= 6.2), adduser (>= 3.113), libgcrypt20, libgnutlsxx28, libgpg-error0 (>= 1.10), unzip (>= 6.0), p7zip-full (>= 9.0), libxml2-utils (>= 2.8.0), python-lzo (>= 1.08), patch (>= 2.6.1), libphp5-embed (>= 5.6)
 Description: Program to control your HomeMatic devices
  Homegear a program to interface your home automation software 
  with your HomeMatic devices.
