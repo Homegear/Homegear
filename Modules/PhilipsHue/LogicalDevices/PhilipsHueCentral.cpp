@@ -812,7 +812,16 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHueCentral::searchDevices(int32_t
 			if(swversion.size() > 4) swversion = swversion.substr(0, 4);
 			LogicalDeviceType deviceType(BaseLib::Systems::DeviceFamilies::PhilipsHue, (uint32_t)type);
 
-			peer = createPeer((*i)->senderAddress(), BaseLib::Math::getNumber(swversion, true), deviceType, std::string("HUE") +  std::to_string((*i)->senderAddress()), true);
+			std::string serialNumber = "HUE";
+			std::string addressString = std::to_string((*i)->senderAddress());
+			if(addressString.size() > 7)
+			{
+				GD::out.printError("Error: Could not pair device with address " + BaseLib::HelperFunctions::getHexString((*i)->senderAddress(), 6) + ", type " + BaseLib::HelperFunctions::getHexString((uint32_t)type, 4) + " and firmware version " + std::to_string(BaseLib::Math::getNumber(swversion)) + ". Address string is too long.");
+				continue;
+			}
+			serialNumber.resize(10 - addressString.size(), '0');
+			serialNumber.append(addressString);
+			peer = createPeer((*i)->senderAddress(), BaseLib::Math::getNumber(swversion, true), deviceType, serialNumber, true);
 			if(!peer)
 			{
 				GD::out.printError("Error: Could not pair device with address " + BaseLib::HelperFunctions::getHexString((*i)->senderAddress(), 6) + ", type " + BaseLib::HelperFunctions::getHexString((uint32_t)type, 4) + " and firmware version " + std::to_string(BaseLib::Math::getNumber(swversion)) + ". No matching XML file was found.");
