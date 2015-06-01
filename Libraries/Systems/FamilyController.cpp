@@ -476,7 +476,6 @@ void FamilyController::dispose()
 	try
 	{
 		if(_disposed) return;
-		GD::out.printMessage("(Shutdown) => Disposing device families");
 		_disposed = true;
 		_rpcCache.reset();
 		if(!GD::deviceFamilies.empty())

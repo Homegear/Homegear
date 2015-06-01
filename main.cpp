@@ -148,6 +148,7 @@ void terminate(int32_t signalNumber)
 #endif
 			GD::familyController.save(false);
 			GD::db.dispose(); //Finish database operations before closing modules, otherwise SEGFAULT
+			GD::out.printMessage("(Shutdown) => Disposing device families");
 			GD::familyController.dispose();
 			GD::out.printMessage("(Shutdown) => Shutdown complete.");
 			if(_startAsDaemon)
