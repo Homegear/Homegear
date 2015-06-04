@@ -85,8 +85,8 @@ HM_CFG_LAN::HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettin
 
 	if(!_rfKey.empty() && settings->currentRFKeyIndex == 0)
 	{
-		_out.printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is \"0\". That means, the default AES key will be used (not yours!).");
-		_rfKey.clear();
+		_out.printWarning("Warning: currentRFKeyIndex in physicalinterfaces.conf is not set. Setting it to \"1\".");
+		settings->currentRFKeyIndex = 1;
 	}
 
 	if(!_oldRFKey.empty() && settings->currentRFKeyIndex == 1)
