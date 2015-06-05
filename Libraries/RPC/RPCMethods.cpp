@@ -2008,7 +2008,10 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCInit::invoke(int32_t clientID, std::s
 		if(GD::bl->settings.clientAddressesToReplace().find(parameters->at(0)->stringValue) != GD::bl->settings.clientAddressesToReplace().end())
 		{
 			std::string newAddress = GD::bl->settings.clientAddressesToReplace().at(parameters->at(0)->stringValue);
-			GD::out.printInfo("Info: Replacing address " + server.first + " with " + newAddress);
+			std::string remoteIP = RPC::Server::getClientIP(clientID);
+			if(remoteIP.empty()) return BaseLib::RPC::Variable::createError(-32500, "Could not get client's IP address.");
+			GD::bl->hf.stringReplace(newAddress, "$REMOTEIP", remoteIP);
+			GD::out.printInfo("Info: Replacing address " + parameters->at(0)->stringValue + " with " + newAddress);
 			parameters->at(0)->stringValue = newAddress;
 		}
 

@@ -177,4 +177,15 @@ int32_t Server::isAddonClient(int32_t clientID)
 	return -1;
 }
 
+std::string Server::getClientIP(int32_t clientID)
+{
+	std::string ipAddress;
+	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+	{
+		ipAddress = i->second.getClientIP(clientID);
+		if(!ipAddress.empty()) return ipAddress;
+	}
+	return "";
+}
+
 }

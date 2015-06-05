@@ -783,6 +783,34 @@ int32_t RPCServer::isAddonClient(int32_t clientID)
     return -1;
 }
 
+std::string RPCServer::getClientIP(int32_t clientID)
+{
+	try
+	{
+		_stateMutex.lock();
+		if(_clients.find(clientID) != _clients.end())
+		{
+			std::string ipAddress = _clients.at(clientID)->address;
+			_stateMutex.unlock();
+			return ipAddress;
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_stateMutex.unlock();
+	return "";
+}
+
 void RPCServer::collectGarbage()
 {
 	_garbageCollectionMutex.lock();

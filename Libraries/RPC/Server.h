@@ -61,6 +61,14 @@ public:
 	 */
 	static int32_t isAddonClient(int32_t clientID);
 
+	/**
+	 * Searches for a client on all RPC servers and returns the IP address.
+	 *
+	 * @param clientID The id of the client to check.
+	 * @return Returns the IP address or an empty string if the client is unknown.
+	 */
+	static std::string getClientIP(int32_t clientID);
+
 	int32_t checkAddonClient(int32_t clientID);
 protected:
 	std::shared_ptr<RPCServer> _server;

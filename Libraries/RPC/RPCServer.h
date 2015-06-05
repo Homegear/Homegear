@@ -96,6 +96,14 @@ namespace RPC
 			 * @return Returns 1 if the client is known and is an addon, 0 if the client is known and no addon and -1 if the client is unknown.
 			 */
 			int32_t isAddonClient(int32_t clientID);
+
+			/**
+			 * Returns the clients IP address.
+			 *
+			 * @param clientID The id of the client to return the IP address for.
+			 * @return Returns the IP address or an empty string if the client is unknown.
+			 */
+			std::string getClientIP(int32_t clientID);
 		protected:
 		private:
 			BaseLib::Output _out;
