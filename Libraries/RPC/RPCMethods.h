@@ -501,7 +501,7 @@ public:
 	}
 	virtual ~RPCInit();
 
-	std::shared_ptr<BaseLib::RPC::Variable> invoke(int32_t clientID, std::string remoteIP, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::Variable> invoke(int32_t clientID, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
 private:
 	bool _disposing = false;
 	std::mutex _initServerThreadMutex;
