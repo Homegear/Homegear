@@ -89,6 +89,7 @@ public:
 	std::string scriptPath() { return _scriptPath; }
 	std::string firmwarePath() { return _firmwarePath; }
 	std::map<std::string, bool>& tunnelClients() { return _tunnelClients; }
+	std::map<std::string, std::string>& clientAddressesToReplace() { return _clientAddressesToReplace; }
 	std::string gpioPath() { return _gpioPath; }
 private:
 	BaseLib::Obj* _bl = nullptr;
@@ -139,6 +140,7 @@ private:
 	std::string _scriptPath;
 	std::string _firmwarePath;
 	std::map<std::string, bool> _tunnelClients;
+	std::map<std::string, std::string> _clientAddressesToReplace;
 	std::string _gpioPath;
 
 	void reset();

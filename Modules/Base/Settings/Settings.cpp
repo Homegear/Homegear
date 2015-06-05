@@ -84,6 +84,7 @@ void Settings::reset()
 	_scriptPath = "/var/lib/homegear/scripts/";
 	_firmwarePath = "/var/lib/homegear/firmware/";
 	_tunnelClients.clear();
+	_clientAddressesToReplace.clear();
 	_gpioPath = "/sys/class/gpio/";
 }
 
@@ -384,6 +385,11 @@ void Settings::load(std::string filename)
 				else if(name == "redirecttosshtunnel")
 				{
 					if(!value.empty()) _tunnelClients[HelperFunctions::toLower(value)] = true;
+				}
+				else if(name == "replaceclientserveraddress")
+				{
+					std::pair<std::string, std::string> addresses = _bl->hf.split(HelperFunctions::toLower(value), ' ');
+					if(!value.empty()) _clientAddressesToReplace[addresses.first] = addresses.second;
 				}
 				else if(name == "gpiopath")
 				{
