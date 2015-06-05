@@ -388,8 +388,12 @@ void Settings::load(std::string filename)
 				}
 				else if(name == "replaceclientserveraddress")
 				{
-					std::pair<std::string, std::string> addresses = _bl->hf.split(HelperFunctions::toLower(value), ' ');
-					if(!value.empty()) _clientAddressesToReplace[addresses.first] = addresses.second;
+					if(!value.empty())
+					{
+						std::pair<std::string, std::string> addresses = _bl->hf.split(HelperFunctions::toLower(value), ' ');
+						if(!value.empty()) _clientAddressesToReplace[addresses.first] = addresses.second;
+						_bl->out.printDebug("Debug: Added replaceClientServerAddress " + addresses.first + " " + addresses.second);
+					}
 				}
 				else if(name == "gpiopath")
 				{

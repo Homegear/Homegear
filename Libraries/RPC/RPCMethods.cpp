@@ -2005,16 +2005,17 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCInit::invoke(int32_t clientID, std::s
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
+		if(GD::bl->settings.clientAddressesToReplace().find(parameters->at(0)->stringValue) != GD::bl->settings.clientAddressesToReplace().end())
+		{
+			std::string newAddress = GD::bl->settings.clientAddressesToReplace().at(parameters->at(0)->stringValue);
+			GD::out.printInfo("Info: Replacing address " + server.first + " with " + newAddress);
+			parameters->at(0)->stringValue = newAddress;
+		}
+
 		std::pair<std::string, std::string> server = BaseLib::HelperFunctions::split(parameters->at(0)->stringValue, ':');
 		if(server.first.empty() || server.second.empty()) return BaseLib::RPC::Variable::createError(-32602, "Server address or port is empty.");
 		if(server.first.size() < 8) return BaseLib::RPC::Variable::createError(-32602, "Server address too short.");
 		BaseLib::HelperFunctions::toLower(server.first);
-		if(GD::bl->settings.clientAddressesToReplace().find(server.first) != GD::bl->settings.clientAddressesToReplace().end())
-		{
-			std::string newAddress = GD::bl->settings.clientAddressesToReplace().at(server.first);
-			GD::out.printInfo("Info: Replacing address " + server.first + " with " + newAddress);
-			server.first = newAddress;
-		}
 
 		std::string path = "/RPC2";
 		int32_t pos = server.second.find_first_of('/');
