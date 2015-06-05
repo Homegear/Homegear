@@ -9,7 +9,7 @@ override_dh_auto_configure:
 	# All shell commands are supported
 
 override_dh_auto_build:
-	make config=release
+	dh_auto_build -- config=release
 
 override_dh_auto_install:
 	dh_testdir
@@ -92,4 +92,4 @@ override_dh_strip:
 	dh_strip --dbg-package=homegear
 	
 %:
-	dh $@
+	dh $@ --parallel
