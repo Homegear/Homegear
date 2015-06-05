@@ -92,4 +92,4 @@ override_dh_strip:
 	dh_strip --dbg-package=homegear
 	
 %:
-	dh $@
+	dh $@ --parallel
