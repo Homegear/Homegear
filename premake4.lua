@@ -619,6 +619,8 @@ solution "homegear"
       files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
       buildoptions { "-Wall", "-std=c++11" }
 
+      links { "rpc", "user", "cli", "events", "gd", "upnp", "mqtt", "database", "scriptengine", "base", "paho.mqtt.c" }
+
       --Inserted after linkoptions above
       configuration { "native", "linux", "gmake" }
         linkoptions { "-Wl,-Bstatic", "-lrpc", "-Wl,-Bdynamic", "-ldl", "-lpthread", "-lreadline", "-lgcrypt", "-lgnutls", "-Wl,-Bstatic", "-luser", "-lcli", "-levents", "-lgd", "-lupnp", "-lmqtt", "-ldatabase", "-lscriptengine", "-lbase", "-Wl,-Bdynamic", "-lgpg-error", "-lsqlite3", "-Wl,-Bstatic", "-lpaho.mqtt.c", "-Wl,-Bdynamic", "-lcrypto", "-lssl", "-Wl,-Bdynamic", "-lphp5", "-Wl,--as-needed" }
