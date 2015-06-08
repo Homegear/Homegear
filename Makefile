@@ -80,7 +80,7 @@ gd:
 	@echo "==== Building gd ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f gd.make
 
-homegear: 
+homegear: rpc user cli events gd upnp mqtt database scriptengine base paho.mqtt.c
 	@echo "==== Building homegear ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f homegear.make
 
@@ -111,6 +111,9 @@ help:
 	@echo "   release"
 	@echo "   debug"
 	@echo "   profiling"
+	@echo "   release_bsd"
+	@echo "   debug_bsd"
+	@echo "   profiling_bsd"
 	@echo ""
 	@echo "TARGETS:"
 	@echo "   all (default)"
