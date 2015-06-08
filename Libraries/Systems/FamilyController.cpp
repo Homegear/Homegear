@@ -332,7 +332,7 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 
 int32_t FamilyController::onIsAddonClient(int32_t clientID)
 {
-	return RPC::Server::isAddonClient(clientID);
+	return RPC::Server::isAddonClientAll(clientID);
 }
 //End Device event handling
 

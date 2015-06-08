@@ -27,37 +27,49 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef DEVICEFAMILIES_H_
-#define DEVICEFAMILIES_H_
+#ifndef SONOSDEVICE_H
+#define SONOSDEVICE_H
 
-#include <stdint.h>
+#include "../Base/BaseLib.h"
+#include "SonosPeer.h"
+#include "DeviceTypes.h"
 
-namespace BaseLib
+#include <string>
+#include <unordered_map>
+#include <map>
+#include <mutex>
+#include <vector>
+#include <queue>
+#include <thread>
+#include <chrono>
+#include "pthread.h"
+
+namespace Sonos
 {
-namespace Systems
+class SonosDevice : public BaseLib::Systems::LogicalDevice
 {
-enum class DeviceFamilies : uint32_t
-{
-	none = 0xFF,
-	HomeMaticBidCoS = 0x00,
-	HomeMaticWired = 0x01,
-	INSTEON = 0x02,
-	FS20 = 0x03,
-	MAX = 0x04,
-	PhilipsHue = 0x05,
-	Sonos = 0x06,
-	CUSTOM01 = 0xF4,
-	CUSTOM02 = 0xF5,
-	CUSTOM03 = 0xF6,
-	CUSTOM04 = 0xF7,
-	CUSTOM05 = 0xF8,
-	CUSTOM06 = 0xF9,
-	CUSTOM07 = 0xFA,
-	CUSTOM08 = 0xFB,
-	CUSTOM09 = 0xFC,
-	CUSTOM10 = 0xFD,
-	Miscellaneous = 0xFE
+    public:
+		virtual bool isCentral();
+
+        SonosDevice(IDeviceEventSink* eventHandler);
+        SonosDevice(uint32_t deviceID, std::string serialNumber, IDeviceEventSink* eventHandler);
+        virtual ~SonosDevice();
+        virtual void dispose(bool wait = true);
+
+        virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet) { return true; }
+
+        virtual void addPeer(std::shared_ptr<SonosPeer> peer);
+		virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
+		std::shared_ptr<SonosPeer> getPeer(uint64_t id);
+		std::shared_ptr<SonosPeer> getPeer(std::string serialNumber);
+		virtual void loadPeers();
+		virtual void savePeers(bool full);
+        virtual void loadVariables() {}
+        virtual void saveVariables() {}
+    protected:
+
+        virtual void init();
+    private:
 };
 }
-}
-#endif /* DEVICEFAMILIES_H_ */
+#endif

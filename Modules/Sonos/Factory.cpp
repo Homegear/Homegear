@@ -27,37 +27,14 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef DEVICEFAMILIES_H_
-#define DEVICEFAMILIES_H_
+#include "Factory.h"
 
-#include <stdint.h>
+BaseLib::Systems::DeviceFamily* SonosFactory::createDeviceFamily(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
+{
+	return new Sonos::Sonos(bl, eventHandler);
+}
 
-namespace BaseLib
+BaseLib::Systems::SystemFactory* getFactory()
 {
-namespace Systems
-{
-enum class DeviceFamilies : uint32_t
-{
-	none = 0xFF,
-	HomeMaticBidCoS = 0x00,
-	HomeMaticWired = 0x01,
-	INSTEON = 0x02,
-	FS20 = 0x03,
-	MAX = 0x04,
-	PhilipsHue = 0x05,
-	Sonos = 0x06,
-	CUSTOM01 = 0xF4,
-	CUSTOM02 = 0xF5,
-	CUSTOM03 = 0xF6,
-	CUSTOM04 = 0xF7,
-	CUSTOM05 = 0xF8,
-	CUSTOM06 = 0xF9,
-	CUSTOM07 = 0xFA,
-	CUSTOM08 = 0xFB,
-	CUSTOM09 = 0xFC,
-	CUSTOM10 = 0xFD,
-	Miscellaneous = 0xFE
-};
+	return (BaseLib::Systems::SystemFactory*)(new SonosFactory);
 }
-}
-#endif /* DEVICEFAMILIES_H_ */

@@ -2008,9 +2008,9 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCInit::invoke(int32_t clientID, std::s
 		if(GD::bl->settings.clientAddressesToReplace().find(parameters->at(0)->stringValue) != GD::bl->settings.clientAddressesToReplace().end())
 		{
 			std::string newAddress = GD::bl->settings.clientAddressesToReplace().at(parameters->at(0)->stringValue);
-			std::string remoteIP = RPC::Server::getClientIP(clientID);
+			std::string remoteIP = RPC::Server::getClientIPAll(clientID);
 			if(remoteIP.empty()) return BaseLib::RPC::Variable::createError(-32500, "Could not get client's IP address.");
-			GD::bl->hf.stringReplace(newAddress, "$REMOTEIP", remoteIP);
+			GD::bl->hf.stringReplace(newAddress, "$remoteip", remoteIP);
 			GD::out.printInfo("Info: Replacing address " + parameters->at(0)->stringValue + " with " + newAddress);
 			parameters->at(0)->stringValue = newAddress;
 		}
@@ -2058,7 +2058,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCInit::invoke(int32_t clientID, std::s
 				eventServer->reconnectInfinitely = (parameters->at(2)->integerValue & 128);
 			}
 			//Reconnect on CCU2 as it doesn't reconnect automatically
-			if(parameters->at(1)->stringValue == "1008" || parameters->at(1)->stringValue == "Homegear_java") eventServer->reconnectInfinitely = true;
+			if((parameters->at(1)->stringValue.size() == 4 && BaseLib::Math::isNumber(parameters->at(1)->stringValue, false) && server.second == "1999") || parameters->at(1)->stringValue == "Homegear_java") eventServer->reconnectInfinitely = true;
 			_initServerThreadMutex.lock();
 			try
 			{

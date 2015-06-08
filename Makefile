@@ -6,7 +6,7 @@ ifndef config
 endif
 export config
 
-PROJECTS := base homematicbidcos homematicwired max insteon philipshue miscellaneous user rpc cli events database scriptengine upnp paho.mqtt.c mqtt gd homegear
+PROJECTS := base homematicbidcos homematicwired max insteon philipshue sonos miscellaneous user rpc cli events database scriptengine upnp paho.mqtt.c mqtt gd homegear
 
 .PHONY: all clean help $(PROJECTS)
 
@@ -35,6 +35,10 @@ insteon:
 philipshue: 
 	@echo "==== Building philipshue ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f philipshue.make
+
+sonos: 
+	@echo "==== Building sonos ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f sonos.make
 
 miscellaneous: 
 	@echo "==== Building miscellaneous ($(config)) ===="
@@ -91,6 +95,7 @@ clean:
 	@${MAKE} --no-print-directory -C . -f max.make clean
 	@${MAKE} --no-print-directory -C . -f insteon.make clean
 	@${MAKE} --no-print-directory -C . -f philipshue.make clean
+	@${MAKE} --no-print-directory -C . -f sonos.make clean
 	@${MAKE} --no-print-directory -C . -f miscellaneous.make clean
 	@${MAKE} --no-print-directory -C . -f user.make clean
 	@${MAKE} --no-print-directory -C . -f rpc.make clean
@@ -111,9 +116,6 @@ help:
 	@echo "   release"
 	@echo "   debug"
 	@echo "   profiling"
-	@echo "   release_bsd"
-	@echo "   debug_bsd"
-	@echo "   profiling_bsd"
 	@echo ""
 	@echo "TARGETS:"
 	@echo "   all (default)"
@@ -124,6 +126,7 @@ help:
 	@echo "   max"
 	@echo "   insteon"
 	@echo "   philipshue"
+	@echo "   sonos"
 	@echo "   miscellaneous"
 	@echo "   user"
 	@echo "   rpc"

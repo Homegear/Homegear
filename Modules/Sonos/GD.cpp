@@ -27,37 +27,12 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef DEVICEFAMILIES_H_
-#define DEVICEFAMILIES_H_
+#include "GD.h"
 
-#include <stdint.h>
-
-namespace BaseLib
+namespace Sonos
 {
-namespace Systems
-{
-enum class DeviceFamilies : uint32_t
-{
-	none = 0xFF,
-	HomeMaticBidCoS = 0x00,
-	HomeMaticWired = 0x01,
-	INSTEON = 0x02,
-	FS20 = 0x03,
-	MAX = 0x04,
-	PhilipsHue = 0x05,
-	Sonos = 0x06,
-	CUSTOM01 = 0xF4,
-	CUSTOM02 = 0xF5,
-	CUSTOM03 = 0xF6,
-	CUSTOM04 = 0xF7,
-	CUSTOM05 = 0xF8,
-	CUSTOM06 = 0xF9,
-	CUSTOM07 = 0xFA,
-	CUSTOM08 = 0xFB,
-	CUSTOM09 = 0xFC,
-	CUSTOM10 = 0xFD,
-	Miscellaneous = 0xFE
-};
+	BaseLib::Obj* GD::bl = nullptr;
+	Sonos* GD::family = nullptr;
+	BaseLib::Output GD::out;
+	BaseLib::RPC::Devices GD::rpcDevices(BaseLib::Systems::DeviceFamilies::Miscellaneous);
 }
-}
-#endif /* DEVICEFAMILIES_H_ */

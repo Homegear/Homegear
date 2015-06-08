@@ -28,19 +28,19 @@ ifndef RESCOMP
 endif
 
 ifeq ($(config),release)
-  OBJDIR     = obj/Release/database
-  TARGETDIR  = lib/Release
-  TARGET     = $(TARGETDIR)/libdatabase.a
+  OBJDIR     = obj/Release/sonos
+  TARGETDIR  = lib/Modules/Release
+  TARGET     = $(TARGETDIR)/libsonos.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DSPIINTERFACES -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -fPIC -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -s -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear
+  LDFLAGS   += -Llib/Release -s -shared -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l pthread -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -50,19 +50,19 @@ ifeq ($(config),release)
 endif
 
 ifeq ($(config),debug)
-  OBJDIR     = obj/Debug/database
-  TARGETDIR  = lib/Debug
-  TARGET     = $(TARGETDIR)/libdatabase.a
+  OBJDIR     = obj/Debug/sonos
+  TARGETDIR  = lib/Modules/Debug
+  TARGET     = $(TARGETDIR)/libsonos.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DSPIINTERFACES -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -fPIC -Wall -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear
+  LDFLAGS   += -Llib/Debug -shared -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l pthread -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -72,19 +72,19 @@ ifeq ($(config),debug)
 endif
 
 ifeq ($(config),profiling)
-  OBJDIR     = obj/Profiling/database
-  TARGETDIR  = lib/Profiling
-  TARGET     = $(TARGETDIR)/libdatabase.a
+  OBJDIR     = obj/Profiling/sonos
+  TARGETDIR  = lib/Modules/Profiling
+  TARGET     = $(TARGETDIR)/libsonos.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DSPIINTERFACES -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -std=c++11 -pg
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -fPIC -Wall -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -pg
+  LDFLAGS   += -Llib/Profiling -shared -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -l pthread -l base -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -94,7 +94,12 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/SQLite3.o \
+	$(OBJDIR)/GD.o \
+	$(OBJDIR)/SonosPeer.o \
+	$(OBJDIR)/SonosDevice.o \
+	$(OBJDIR)/Sonos.o \
+	$(OBJDIR)/Factory.o \
+	$(OBJDIR)/SonosCentral.o \
 
 RESOURCES := \
 
@@ -112,7 +117,7 @@ all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
 	@:
 
 $(TARGET): $(GCH) $(OBJECTS) $(LDDEPS) $(RESOURCES)
-	@echo Linking database
+	@echo Linking sonos
 	$(SILENT) $(LINKCMD)
 	$(POSTBUILDCMDS)
 
@@ -133,7 +138,7 @@ else
 endif
 
 clean:
-	@echo Cleaning database
+	@echo Cleaning sonos
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) rm -f  $(TARGET)
 	$(SILENT) rm -rf $(OBJDIR)
@@ -159,7 +164,22 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/SQLite3.o: Libraries/Database/SQLite3.cpp
+$(OBJDIR)/GD.o: Modules/Sonos/GD.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/SonosPeer.o: Modules/Sonos/SonosPeer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/SonosDevice.o: Modules/Sonos/SonosDevice.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Sonos.o: Modules/Sonos/Sonos.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Factory.o: Modules/Sonos/Factory.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/SonosCentral.o: Modules/Sonos/LogicalDevices/SonosCentral.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

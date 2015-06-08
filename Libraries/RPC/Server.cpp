@@ -160,24 +160,30 @@ void Server::stop()
 	if(_server) _server->stop();
 }
 
-int32_t Server::checkAddonClient(int32_t clientID)
+int32_t Server::isAddonClient(int32_t clientID)
 {
 	if(!_server) return -1;
 	return _server->isAddonClient(clientID);
 }
 
-int32_t Server::isAddonClient(int32_t clientID)
+int32_t Server::isAddonClientAll(int32_t clientID)
 {
 	int32_t result = -1;
 	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 	{
-		result = i->second.checkAddonClient(clientID);
+		result = i->second.isAddonClient(clientID);
 		if(result != -1) return result;
 	}
 	return -1;
 }
 
 std::string Server::getClientIP(int32_t clientID)
+{
+	if(!_server) return "";
+	return _server->getClientIP(clientID);
+}
+
+std::string Server::getClientIPAll(int32_t clientID)
 {
 	std::string ipAddress;
 	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
