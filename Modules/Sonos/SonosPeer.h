@@ -81,6 +81,8 @@ protected:
 	virtual std::shared_ptr<BaseLib::Systems::LogicalDevice> getDevice(int32_t address);
 
 	virtual std::shared_ptr<BaseLib::RPC::ParameterSet> getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type);
+
+	//virtual void encodeSoapRequest(std::string& schema, std::string& path, std::string& soapAction, std::string& schema, std::string& functionName, BaseLib::RPC::PRPCArray values);
 };
 
 }

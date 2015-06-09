@@ -104,7 +104,7 @@ public:
 	void setFinished();
 	std::shared_ptr<std::vector<char>> getRawHeader() { return _rawHeader; }
 	std::shared_ptr<std::vector<char>> getContent() { return _content; }
-	uint32_t getContentSize() { return _content->size(); }
+	uint32_t getContentSize() { return _content->empty() ? 0 : (_finished ? _content->size() - 1 : _content->size()); }
 	Header* getHeader() { return &_header; }
 	void reset();
 

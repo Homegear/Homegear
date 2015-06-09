@@ -130,6 +130,10 @@ DeviceFrame::DeviceFrame(BaseLib::Obj* baseLib, xml_node<>* node) : DeviceFrame(
 		else if(attributeName == "double_send") { if(attributeValue == "true") doubleSend = true; }
 		else if(attributeName == "max_packets") maxPackets = Math::getNumber(attributeValue);
 		else if(attributeName == "split_after") splitAfter = Math::getNumber(attributeValue);
+		else if(attributeName == "function1") function1 = attributeValue;
+		else if(attributeName == "function2") function2 = attributeValue;
+		else if(attributeName == "meta_string_1") metaString1 = attributeValue;
+		else if(attributeName == "meta_string_2") metaString2 = attributeValue;
 		else _bl->out.printWarning("Warning: Unknown attribute for \"frame\": " + attributeName);
 	}
 	for(xml_node<>* frameNode = node->first_node("parameter"); frameNode; frameNode = frameNode->next_sibling("parameter"))
@@ -1053,6 +1057,7 @@ Parameter::Parameter(BaseLib::Obj* baseLib, xml_node<>* node, bool checkForID) :
 			if(type == PhysicalParameter::Type::Enum::typeString) constValueString = attributeValue;
 			else constValue = Math::getNumber(attributeValue);
 		}
+		else if(attributeName == "const_value_string") constValueString = attributeValue;
 		else if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "param") param = attributeValue;
 		else if(attributeName == "PARAM") additionalParameter = attributeValue;

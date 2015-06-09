@@ -308,7 +308,7 @@ bool SonosPeer::load(BaseLib::Systems::LogicalDevice* device)
 		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, -1);
 		if(!rpcDevice)
 		{
-			GD::out.printError("Error loading Miscellaneous peer " + std::to_string(_peerID) + ": Device type not found: 0x" + BaseLib::HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
+			GD::out.printError("Error loading Sonos peer " + std::to_string(_peerID) + ": Device type not found: 0x" + BaseLib::HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
 			return false;
 		}
 		initializeTypeString();

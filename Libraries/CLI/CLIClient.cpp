@@ -31,6 +31,14 @@
 #include "../GD/GD.h"
 #include "../../Modules/Base/BaseLib.h"
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <readline/readline.h>
+#include <readline/history.h>
+
 namespace CLI {
 
 Client::Client()

@@ -53,6 +53,15 @@ HTTPClient::~HTTPClient()
 	}
 }
 
+void HTTPClient::get(const std::string& path, std::string& data)
+{
+	std::string fixedPath = path;
+	if(fixedPath.empty()) fixedPath = "/";
+	std::string getRequest = "GET " + fixedPath + " HTTP/1.1\r\nUser-Agent: Homegear\r\nHost: " + _hostname + ":" + std::to_string(_port) + "\r\nConnection: " + (_keepAlive ? "Keep-Alive" : "Close") + "\r\n\r\n";
+	if(_bl->debugLevel >= 5) _bl->out.printDebug("Debug: HTTP request: " + getRequest);
+	sendRequest(getRequest, data);
+}
+
 void HTTPClient::sendRequest(const std::string& request, std::string& response)
 {
 	response.clear();
@@ -189,7 +198,7 @@ void HTTPClient::sendRequest(const std::string& request, std::string& response)
 	if(http.isFinished() && http.getContentSize() > 0)
 	{
 		std::shared_ptr<std::vector<char>> content = http.getContent();
-		response.insert(response.end(), content->begin(), content->end());
+		response.insert(response.end(), content->begin(), content->begin() + http.getContentSize());
 	}
 	_socketMutex.unlock();
 }

@@ -176,7 +176,7 @@ void Sonos::load()
 		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
 			uint32_t deviceID = row->second.at(0)->intValue;
-			GD::out.printMessage("Loading Miscellaneous device " + std::to_string(deviceID));
+			GD::out.printMessage("Loading Sonos device " + std::to_string(deviceID));
 			std::string serialNumber = row->second.at(2)->textValue;
 			uint32_t deviceType = row->second.at(3)->intValue;
 
@@ -226,7 +226,7 @@ void Sonos::createCentral()
 
 		_central.reset(new SonosCentral(0, serialNumber, this));
 		add(_central);
-		GD::out.printMessage("Created Miscellaneous central with id " + std::to_string(_central->getID()) + " and serial number " + serialNumber);
+		GD::out.printMessage("Created Sonos central with id " + std::to_string(_central->getID()) + " and serial number " + serialNumber);
 	}
 	catch(const std::exception& ex)
     {

@@ -174,6 +174,7 @@ solution "homegear"
         "./Modules/Base/Sockets/*.h", "./Modules/Base/Sockets/*.cpp",
         "./Modules/Base/Threads/*.h", "./Modules/Base/Threads/*.cpp",
         "./Modules/Base/Settings/*.h", "./Modules/Base/Settings/*.cpp",
+        "./Modules/Base/SSDP/*.h", "./Modules/Base/SSDP/*.cpp"
       }
       buildoptions { "-Wall", "-std=c++11", "-fPIC" }
  
@@ -194,6 +195,7 @@ solution "homegear"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
 
+--[[
    project "homematicbidcos"
       kind "SharedLib"
       language "C++"
@@ -338,6 +340,7 @@ solution "homegear"
          targetdir "./lib/Modules/Profiling"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
+--]]
 
    project "sonos"
       kind "SharedLib"

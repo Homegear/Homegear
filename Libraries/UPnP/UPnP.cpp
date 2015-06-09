@@ -549,6 +549,7 @@ void UPnP::getSocketDescriptor()
 		if(bind(_serverSocketDescriptor->descriptor, (struct sockaddr*)&localSock, sizeof(localSock)) == -1)
 		{
 			GD::out.printError("Error: Binding to address " + _address + " failed: " + std::string(strerror(errno)));
+			GD::bl->fileDescriptorManager.close(_serverSocketDescriptor);
 			return;
 		}
 

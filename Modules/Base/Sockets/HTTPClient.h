@@ -85,13 +85,20 @@ public:
 	void disconnect() { if(_socket) _socket->close(); }
 
 	/*
-	 * Sends an HTTP request and retruns the response.
+	 * Sends an HTTP request and returns the response.
 	 *
 	 * @param[in] request The HTTP request including the full header.
 	 * @param[out] response The HTTP response without the header.
-	 * @return Returns the HTTP result code.
 	 */
 	void sendRequest(const std::string& request, std::string& response);
+
+	/*
+	 * Sends an HTTP GET request and returns the response. This method can be used to download files.
+	 *
+	 * @param[in] url The path of the file to get.
+	 * @param[out] data The data returned.
+	 */
+	void get(const std::string& path, std::string& data);
 protected:
 	/**
 	 * The common base library object.

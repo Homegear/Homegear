@@ -361,7 +361,7 @@ void FamilyController::homegearShuttingDown()
 
 bool FamilyController::familyAvailable(BaseLib::Systems::DeviceFamilies family)
 {
-	return GD::physicalInterfaces.count(family) > 0 || family == BaseLib::Systems::DeviceFamilies::Miscellaneous;
+	return GD::physicalInterfaces.count(family) > 0 || _familiesWithoutPhysicalInterface.find(family) != _familiesWithoutPhysicalInterface.end();
 }
 
 void FamilyController::loadModules()
@@ -388,7 +388,11 @@ void FamilyController::loadModules()
 
 			std::unique_ptr<BaseLib::Systems::DeviceFamily> family = moduleLoaders.at(*i)->createModule(this);
 
-			if(family) GD::deviceFamilies[family->getFamily()].swap(family);
+			if(family)
+			{
+				if(!family->hasPhysicalInterface()) _familiesWithoutPhysicalInterface.insert(family->getFamily());
+				GD::deviceFamilies[family->getFamily()].swap(family);
+			}
 		}
 		if(GD::deviceFamilies.empty())
 		{

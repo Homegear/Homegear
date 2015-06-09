@@ -52,6 +52,7 @@ public:
 	virtual std::string handleCLICommand(std::string& command);
 	virtual std::string getName() { return "Sonos"; }
 	virtual bool skipFamilyCLI() { return true; }
+	virtual bool hasPhysicalInterface() { return false; }
 	virtual std::shared_ptr<BaseLib::RPC::Variable> getPairingMethods();
 private:
 	std::shared_ptr<SonosCentral> _central;

@@ -33,11 +33,11 @@
 namespace Sonos
 {
 
-SonosDevice::SonosDevice(IDeviceEventSink* eventHandler) : LogicalDevice(BaseLib::Systems::DeviceFamilies::Miscellaneous, GD::bl, eventHandler)
+SonosDevice::SonosDevice(IDeviceEventSink* eventHandler) : LogicalDevice(BaseLib::Systems::DeviceFamilies::Sonos, GD::bl, eventHandler)
 {
 }
 
-SonosDevice::SonosDevice(uint32_t deviceID, std::string serialNumber, IDeviceEventSink* eventHandler) : LogicalDevice(BaseLib::Systems::DeviceFamilies::Miscellaneous, GD::bl, deviceID, serialNumber, -1, eventHandler)
+SonosDevice::SonosDevice(uint32_t deviceID, std::string serialNumber, IDeviceEventSink* eventHandler) : LogicalDevice(BaseLib::Systems::DeviceFamilies::Sonos, GD::bl, deviceID, serialNumber, -1, eventHandler)
 {
 }
 
@@ -121,7 +121,7 @@ void SonosDevice::loadPeers()
 		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
 			int32_t peerID = row->second.at(0)->intValue;
-			GD::out.printMessage("Loading Miscellaneous peer " + std::to_string(peerID));
+			GD::out.printMessage("Loading Sonos peer " + std::to_string(peerID));
 			std::shared_ptr<SonosPeer> peer(new SonosPeer(peerID, row->second.at(3)->textValue, _deviceID, isCentral(), this));
 			if(!peer->load(this)) continue;
 			if(!peer->rpcDevice) continue;
@@ -259,7 +259,7 @@ void SonosDevice::savePeers(bool full)
 			//Necessary, because peers can be assigned to multiple virtual devices
 			if(i->second->getParentID() != _deviceID) continue;
 			//We are always printing this, because the init script needs it
-			GD::out.printMessage("(Shutdown) => Saving Miscellaneous peer " + std::to_string(i->second->getID()));
+			GD::out.printMessage("(Shutdown) => Saving Sonos peer " + std::to_string(i->second->getID()));
 			i->second->save(full, full, full);
 		}
 	}

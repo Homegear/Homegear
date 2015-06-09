@@ -436,6 +436,7 @@ void HTTP::reset()
 
 void HTTP::setFinished()
 {
+	if(_finished) return;
 	_finished = true;
 	_content->push_back('\0');
 }
@@ -448,11 +449,7 @@ void HTTP::processContent(char* buffer, int32_t bufferLength)
 	{
 		if(_content->size() + bufferLength > _header.contentLength) bufferLength -= (_content->size() + bufferLength) - _header.contentLength;
 		_content->insert(_content->end(), buffer, buffer + bufferLength);
-		if(_content->size() == _header.contentLength)
-		{
-			_finished = true;
-			_content->push_back('\0');
-		}
+		if(_content->size() == _header.contentLength) setFinished();
 	}
 }
 
@@ -470,8 +467,7 @@ void HTTP::processChunkedContent(char* buffer, int32_t bufferLength)
 		{
 			if(_chunkSize == 0)
 			{
-				_finished = true;
-				_content->push_back('\0');
+				setFinished();
 				break;
 			}
 			if(bufferLength <= 0) break;

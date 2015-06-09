@@ -27,31 +27,51 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef CLICLIENT_H_
-#define CLICLIENT_H_
+#ifndef SSDP_H_
+#define SSDP_H_
 
-#include "../../Modules/Base/BaseLib.h"
+#include "../Encoding/HTTP.h"
 
-#include <thread>
-#include <mutex>
 #include <string>
+#include <vector>
+#include <memory>
 
-namespace CLI {
+namespace BaseLib
+{
 
-class Client {
+class Obj;
+class FileDescriptor;
+
+class SSDPInfo
+{
 public:
-	Client();
-	virtual ~Client();
-
-	void start(std::string command = "");
+	SSDPInfo();
+	virtual ~SSDPInfo();
 private:
-	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
-	bool _stopPingThread = false;
-	std::thread _pingThread;
-	bool _closed = false;
-	std::mutex _sendMutex;
+};
 
-	void ping();
+class SSDP
+{
+public:
+	SSDP(BaseLib::Obj* baseLib);
+	virtual ~SSDP();
+
+	/**
+	 * Searches for SSDP devices and returns the IPv4 addresses.
+	 *
+	 * @param[in] stHeader The ST header with the URN to search for (e. g. urn:schemas-upnp-org:device:basic:1)
+	 * @param[in] timeout The time to wait for responses
+	 * @param[out] ips The found IP addresses
+	 */
+	void searchDevices(const std::string& stHeader, uint32_t timeout, std::vector<std::string>& ips);
+private:
+	BaseLib::Obj* _bl = nullptr;
+	std::string _address;
+
+	void getAddress();
+	void sendSearchBroadcast(std::shared_ptr<FileDescriptor>& serverSocketDescriptor, const std::string& stHeader, uint32_t timeout);
+	void processPacket(HTTP& http, const std::string& stHeader, std::vector<std::string>& ips);
+	std::shared_ptr<FileDescriptor> getSocketDescriptor();
 };
 
 }

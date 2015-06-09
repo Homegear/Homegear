@@ -390,6 +390,10 @@ public:
 	int32_t maxPackets = -1;
 	std::vector<Parameter> parameters;
 	std::vector<std::shared_ptr<Parameter>> associatedValues;
+	std::string function1;
+	std::string function2;
+	std::string metaString1;
+	std::string metaString2;
 
 	DeviceFrame(BaseLib::Obj* baseLib);
 	DeviceFrame(BaseLib::Obj* baseLib, xml_node<>* node);

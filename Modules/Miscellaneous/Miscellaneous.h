@@ -52,6 +52,7 @@ public:
 	virtual std::string handleCLICommand(std::string& command);
 	virtual std::string getName() { return "Miscellaneous"; }
 	virtual bool skipFamilyCLI() { return true; }
+	virtual bool hasPhysicalInterface() { return false; }
 	virtual std::shared_ptr<BaseLib::RPC::Variable> getPairingMethods();
 private:
 	std::shared_ptr<MiscCentral> _central;

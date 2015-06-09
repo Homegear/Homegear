@@ -124,6 +124,7 @@ public:
 	virtual bool peerSelected() { if(!_currentDevice) return false; return _currentDevice->peerSelected(); }
 	virtual bool deviceSelected() { return (bool)_currentDevice; }
 	virtual bool skipFamilyCLI() { return false; }
+	virtual bool hasPhysicalInterface() { return true; }
 
 	/*
      * Executed before Homegear starts shutting down.

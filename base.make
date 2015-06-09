@@ -134,6 +134,7 @@ OBJECTS := \
 	$(OBJDIR)/HTTPClient.o \
 	$(OBJDIR)/Threads.o \
 	$(OBJDIR)/Settings.o \
+	$(OBJDIR)/SSDP.o \
 
 RESOURCES := \
 
@@ -316,6 +317,9 @@ $(OBJDIR)/Threads.o: Modules/Base/Threads/Threads.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Settings.o: Modules/Base/Settings/Settings.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/SSDP.o: Modules/Base/SSDP/SSDP.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

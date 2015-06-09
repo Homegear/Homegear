@@ -128,6 +128,7 @@ private:
 	bool _disposed = false;
 	std::shared_ptr<BaseLib::RPC::Variable> _rpcCache;
 
+	std::set<BaseLib::Systems::DeviceFamilies> _familiesWithoutPhysicalInterface;
 	std::map<std::string, std::unique_ptr<ModuleLoader>> moduleLoaders;
 	BaseLib::Systems::DeviceFamily* _currentFamily = nullptr;
 
