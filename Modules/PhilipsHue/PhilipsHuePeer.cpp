@@ -103,7 +103,7 @@ std::string PhilipsHuePeer::handleCLICommand(std::string command)
 		if(command == "help")
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
-			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "unselect\t\tUnselect this peer" << std::endl;
 			return stringStream.str();
 		}

@@ -195,7 +195,6 @@ solution "homegear"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
 
---[[
    project "homematicbidcos"
       kind "SharedLib"
       language "C++"
@@ -340,7 +339,6 @@ solution "homegear"
          targetdir "./lib/Modules/Profiling"
          buildoptions { "-pg" }
          linkoptions { "-pg" }
---]]
 
    project "sonos"
       kind "SharedLib"

@@ -45,21 +45,25 @@ public:
 	SonosCentral(IDeviceEventSink* eventHandler);
 	SonosCentral(uint32_t deviceType, std::string serialNumber, IDeviceEventSink* eventHandler);
 	virtual ~SonosCentral();
+	virtual void dispose(bool wait = true);
 	std::string handleCLICommand(std::string command);
 	uint64_t getPeerIDFromSerial(std::string serialNumber) { std::shared_ptr<SonosPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
 
 	virtual bool knowsDevice(std::string serialNumber);
 	virtual bool knowsDevice(uint64_t id);
 
-	virtual std::shared_ptr<BaseLib::RPC::Variable> createDevice(int32_t clientID, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion);
 	virtual std::shared_ptr<BaseLib::RPC::Variable> deleteDevice(int32_t clientID, std::string serialNumber, int32_t flags);
 	virtual std::shared_ptr<BaseLib::RPC::Variable> deleteDevice(int32_t clientID, uint64_t peerID, int32_t flags);
 	virtual std::shared_ptr<BaseLib::RPC::Variable> getDeviceInfo(int32_t clientID, uint64_t id, std::map<std::string, bool> fields);
 	virtual std::shared_ptr<BaseLib::RPC::Variable> putParamset(int32_t clientID, std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset);
 	virtual std::shared_ptr<BaseLib::RPC::Variable> putParamset(int32_t clientID, uint64_t peerID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::Variable> paramset);
+	virtual std::shared_ptr<BaseLib::RPC::Variable> searchDevices(int32_t clientID);
 protected:
-	std::shared_ptr<SonosPeer> createPeer(BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
+	std::unique_ptr<BaseLib::SSDP> _ssdp;
+
+	std::shared_ptr<SonosPeer> createPeer(BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, std::string ip, std::string softwareVersion, std::string idString, std::string typeString, bool save = true);
 	void deletePeer(uint64_t id);
+	virtual void worker();
 	virtual void init();
 };
 

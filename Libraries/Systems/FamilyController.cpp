@@ -553,7 +553,7 @@ std::string FamilyController::handleCLICommand(std::string& command)
 		else if(command == "families help" || command == "fh")
 		{
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
-			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "families list (ls)\tList all available device families" << std::endl;
 			stringStream << "families select (fs)\tSelect a device family" << std::endl;
 			return stringStream.str();

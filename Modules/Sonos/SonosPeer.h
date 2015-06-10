@@ -50,6 +50,7 @@ public:
 	virtual bool wireless() { return false; }
 	//End features
 
+	void worker();
 	virtual std::string handleCLICommand(std::string command);
 
 	virtual bool load(BaseLib::Systems::LogicalDevice* device);
@@ -59,7 +60,8 @@ public:
 
 	virtual int32_t getChannelGroupedWith(int32_t channel) { return -1; }
 	virtual int32_t getNewFirmwareVersion() { return 0; }
-	virtual std::string getFirmwareVersionString(int32_t firmwareVersion) { return "1.0"; }
+	virtual std::string getFirmwareVersionString() { return Peer::getFirmwareVersionString(); }
+	virtual std::string getFirmwareVersionString(int32_t firmwareVersion) { return _firmwareVersionString; }
     virtual bool firmwareUpdateAvailable() { return false; }
 
     std::string printConfig();
@@ -82,7 +84,7 @@ protected:
 
 	virtual std::shared_ptr<BaseLib::RPC::ParameterSet> getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type);
 
-	//virtual void encodeSoapRequest(std::string& schema, std::string& path, std::string& soapAction, std::string& schema, std::string& functionName, BaseLib::RPC::PRPCArray values);
+	virtual void encodeSoapRequest(std::string& path, std::string& soapAction, std::string& schema, std::string& functionName, std::vector<std::pair<std::string, std::string>>& values, std::string& soapRequest);
 };
 
 }

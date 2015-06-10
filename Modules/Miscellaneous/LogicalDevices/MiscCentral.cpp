@@ -132,7 +132,7 @@ std::string MiscCentral::handleCLICommand(std::string command)
 		if(command == "help" || command == "h")
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
-			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "peers create (pc)\t\tCreates a new peer" << std::endl;
 			stringStream << "peers list (ls)\t\tList all peers" << std::endl;
 			stringStream << "peers remove (pr)\tRemove a peer" << std::endl;
@@ -390,7 +390,7 @@ std::string MiscCentral::handleCLICommand(std::string command)
 							typeID.resize(typeWidth2 - 3);
 							typeID += "...";
 						}
-						stringStream << std::setw(typeWidth2) << typeID << bar;
+						stringStream << std::setw(typeWidth2) << typeID;
 					}
 					else stringStream << std::setw(typeWidth2);
 					stringStream << std::endl << std::dec;

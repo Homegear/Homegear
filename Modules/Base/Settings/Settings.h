@@ -54,6 +54,7 @@ public:
 	int32_t debugLevel() { return _debugLevel; }
 	bool enableUPnP() { return _enableUPnP; }
 	std::string uPnPIpAddress() { return _uPnPIpAddress; }
+	std::string ssdpIpAddress() { return _ssdpIpAddress; }
 	bool devLog() { return _devLog; }
 	std::string databasePath() { return _databasePath; }
 	bool databaseSynchronous() { return _databaseSynchronous; }
@@ -106,6 +107,7 @@ private:
 	int32_t _debugLevel = 3;
 	bool _enableUPnP = true;
 	std::string _uPnPIpAddress = "";
+	std::string _ssdpIpAddress = "";
 	bool _devLog = false;
 	std::string _databasePath;
 	bool _databaseSynchronous = true;

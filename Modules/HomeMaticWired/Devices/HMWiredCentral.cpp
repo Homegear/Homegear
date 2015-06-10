@@ -251,7 +251,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 		if(command == "help" || command == "h")
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
-			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "peers list (ls)\t\tList all peers" << std::endl;
 			stringStream << "peers reset (pr)\tUnpair a peer and reset it to factory defaults" << std::endl;
 			stringStream << "peers select (ps)\tSelect a peer" << std::endl;

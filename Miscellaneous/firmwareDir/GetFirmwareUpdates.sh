@@ -25,76 +25,69 @@ if test ! -d $FIRMWAREDIR; then
 fi
 
 wget -P $FIRMWAREDIR http://www.eq-3.de/Downloads/Software/Firmware/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.tgz
-[ $? -ne 0 ] && exit 1
-tar -zxf $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.tgz -C $FIRMWAREDIR
-[ $? -ne 0 ] && exit 1
-mv $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.eq3 $SCRIPTDIR/0000.00000022.fw
-[ $? -ne 0 ] && exit 1
-rm $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.tgz
-rm $FIRMWAREDIR/changelog.txt
-rm $FIRMWAREDIR/info
-echo "23" > $SCRIPTDIR/0000.00000022.version
-[ $? -ne 0 ] && exit 1
-
-wget -P $FIRMWAREDIR http://www.eq-3.de/Downloads/Software/Firmware/HM-ES-PMSw1-Pl_update_V1_6_001_140417.tgz
-[ $? -ne 0 ] && exit 1
-tar -zxf $FIRMWAREDIR/HM-ES-PMSw1-Pl_update_V1_6_001_140417.tgz -C $FIRMWAREDIR
-[ $? -ne 0 ] && exit 1
-mv $FIRMWAREDIR/HM-ES-PMSw1-Pl_update_V1_6_001_140417.eq3 $SCRIPTDIR/0000.000000AC.fw
-[ $? -ne 0 ] && exit 1
-rm $FIRMWAREDIR/HM-ES-PMSw1-Pl_update_V1_6_001_140417.tgz
-rm $FIRMWAREDIR/changelog.txt
-rm $FIRMWAREDIR/info
-echo "16" > $SCRIPTDIR/0000.000000AC.version
-[ $? -ne 0 ] && exit 1
+if [ $? -eq 0 ]; then
+	tar -zxf $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.tgz -C $FIRMWAREDIR
+	[ $? -ne 0 ] && exit 1
+	mv $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.eq3 $SCRIPTDIR/0000.00000022.fw
+	[ $? -ne 0 ] && exit 1
+	rm $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.tgz
+	rm $FIRMWAREDIR/changelog.txt
+	rm $FIRMWAREDIR/info
+	echo "23" > $SCRIPTDIR/0000.00000022.version
+	[ $? -ne 0 ] && exit 1
+fi
 
 wget -P $FIRMWAREDIR http://www.eq-3.de/Downloads/Software/Firmware/hm_cc_rt_dn_update_V1_4_001_141020.tgz
-[ $? -ne 0 ] && exit 1
-tar -zxf $FIRMWAREDIR/hm_cc_rt_dn_update_V1_4_001_141020.tgz -C $FIRMWAREDIR
-[ $? -ne 0 ] && exit 1
-mv $FIRMWAREDIR/hm_cc_rt_dn_update_V1_4_001_141020.eq3 $SCRIPTDIR/0000.00000095.fw
-[ $? -ne 0 ] && exit 1
-rm $FIRMWAREDIR/hm_cc_rt_dn_update_V1_4_001_141020.tgz
-rm $FIRMWAREDIR/changelog.txt
-rm $FIRMWAREDIR/info
-echo "14" > $SCRIPTDIR/0000.00000095.version
-[ $? -ne 0 ] && exit 1
+if [ $? -eq 0 ]; then
+	tar -zxf $FIRMWAREDIR/hm_cc_rt_dn_update_V1_4_001_141020.tgz -C $FIRMWAREDIR
+	[ $? -ne 0 ] && exit 1
+	mv $FIRMWAREDIR/hm_cc_rt_dn_update_V1_4_001_141020.eq3 $SCRIPTDIR/0000.00000095.fw
+	[ $? -ne 0 ] && exit 1
+	rm $FIRMWAREDIR/hm_cc_rt_dn_update_V1_4_001_141020.tgz
+	rm $FIRMWAREDIR/changelog.txt
+	rm $FIRMWAREDIR/info
+	echo "14" > $SCRIPTDIR/0000.00000095.version
+	[ $? -ne 0 ] && exit 1
+fi
 
 wget -P $FIRMWAREDIR http://www.eq-3.de/Downloads/Software/Firmware/hm_tc_it_wm_w_eu_update_V1_2_001_141020.tgz
-[ $? -ne 0 ] && exit 1
-tar -zxf $FIRMWAREDIR/hm_tc_it_wm_w_eu_update_V1_2_001_141020.tgz -C $FIRMWAREDIR
-[ $? -ne 0 ] && exit 1
-mv $FIRMWAREDIR/hm_tc_it_wm_w_eu_update_V1_2_001_141020.eq3 $SCRIPTDIR/0000.000000AD.fw
-[ $? -ne 0 ] && exit 1
-rm $FIRMWAREDIR/hm_tc_it_wm_w_eu_update_V1_2_001_141020.tgz
-rm $FIRMWAREDIR/changelog.txt
-rm $FIRMWAREDIR/info
-echo "12" > $SCRIPTDIR/0000.000000AD.version
-[ $? -ne 0 ] && exit 1
+if [ $? -eq 0 ]; then
+	tar -zxf $FIRMWAREDIR/hm_tc_it_wm_w_eu_update_V1_2_001_141020.tgz -C $FIRMWAREDIR
+	[ $? -ne 0 ] && exit 1
+	mv $FIRMWAREDIR/hm_tc_it_wm_w_eu_update_V1_2_001_141020.eq3 $SCRIPTDIR/0000.000000AD.fw
+	[ $? -ne 0 ] && exit 1
+	rm $FIRMWAREDIR/hm_tc_it_wm_w_eu_update_V1_2_001_141020.tgz
+	rm $FIRMWAREDIR/changelog.txt
+	rm $FIRMWAREDIR/info
+	echo "12" > $SCRIPTDIR/0000.000000AD.version
+	[ $? -ne 0 ] && exit 1
+fi
 
 wget -P $FIRMWAREDIR http://www.eq-3.de/Downloads/Software/Firmware/hm-sen-rd-o_update_V1_4_003_130930.tgz
-[ $? -ne 0 ] && exit 1
-tar -zxf $FIRMWAREDIR/hm-sen-rd-o_update_V1_4_003_130930.tgz -C $FIRMWAREDIR
-[ $? -ne 0 ] && exit 1
-mv $FIRMWAREDIR/hm-sen-rd-o_update_V1_4_130930.eq3 $SCRIPTDIR/0000.000000A7.fw
-[ $? -ne 0 ] && exit 1
-rm $FIRMWAREDIR/hm-sen-rd-o_update_V1_4_003_130930.tgz
-rm $FIRMWAREDIR/changelog.txt
-rm $FIRMWAREDIR/info
-echo "14" > $SCRIPTDIR/0000.000000A7.version
-[ $? -ne 0 ] && exit 1
+if [ $? -eq 0 ]; then
+	tar -zxf $FIRMWAREDIR/hm-sen-rd-o_update_V1_4_003_130930.tgz -C $FIRMWAREDIR
+	[ $? -ne 0 ] && exit 1
+	mv $FIRMWAREDIR/hm-sen-rd-o_update_V1_4_130930.eq3 $SCRIPTDIR/0000.000000A7.fw
+	[ $? -ne 0 ] && exit 1
+	rm $FIRMWAREDIR/hm-sen-rd-o_update_V1_4_003_130930.tgz
+	rm $FIRMWAREDIR/changelog.txt
+	rm $FIRMWAREDIR/info
+	echo "14" > $SCRIPTDIR/0000.000000A7.version
+	[ $? -ne 0 ] && exit 1
+fi
 
 wget -P $FIRMWAREDIR http://www.eq-3.de/Downloads/Software/Firmware/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.tgz
-[ $? -ne 0 ] && exit 1
-tar -zxf $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.tgz -C $FIRMWAREDIR
-[ $? -ne 0 ] && exit 1
-mv $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.eq3 $SCRIPTDIR/0000.0000006A.fw
-[ $? -ne 0 ] && exit 1
-rm $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.tgz
-rm $FIRMWAREDIR/changelog.txt
-rm $FIRMWAREDIR/info
-echo "23" > $SCRIPTDIR/0000.0000006A.version
-[ $? -ne 0 ] && exit 1
+if [ $? -eq 0 ]; then
+	tar -zxf $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.tgz -C $FIRMWAREDIR
+	[ $? -ne 0 ] && exit 1
+	mv $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.eq3 $SCRIPTDIR/0000.0000006A.fw
+	[ $? -ne 0 ] && exit 1
+	rm $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.tgz
+	rm $FIRMWAREDIR/changelog.txt
+	rm $FIRMWAREDIR/info
+	echo "23" > $SCRIPTDIR/0000.0000006A.version
+	[ $? -ne 0 ] && exit 1
+fi
 
 mv $FIRMWAREDIR/hmw_io_4_fm_hw0.hex $SCRIPTDIR/0001.00001000.fw
 [ $? -ne 0 ] && exit 1

@@ -237,7 +237,7 @@ std::string HMWiredPeer::handleCLICommand(std::string command)
 		if(command == "help")
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
-			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "unselect\t\tUnselect this peer" << std::endl;
 			stringStream << "channel count\t\tPrint the number of channels of this peer" << std::endl;
 			stringStream << "eeprom print\t\tPrints the known areas of the eeprom" << std::endl;

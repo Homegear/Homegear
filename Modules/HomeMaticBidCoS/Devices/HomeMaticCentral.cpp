@@ -133,6 +133,11 @@ void HomeMaticCentral::worker()
 {
 	try
 	{
+		while(GD::bl->booting && !_stopWorkerThread)
+		{
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+		}
+
 		std::chrono::milliseconds sleepingTime(10);
 		uint32_t counter = 0;
 		int32_t lastPeer;
@@ -399,7 +404,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 		else if(command == "help" || command == "h")
 		{
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
-			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "pairing on (pon)\tEnables pairing mode" << std::endl;
 			stringStream << "pairing off (pof)\tDisables pairing mode" << std::endl;
 			stringStream << "peers list (ls)\t\tList all peers" << std::endl;

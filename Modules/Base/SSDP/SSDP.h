@@ -31,10 +31,12 @@
 #define SSDP_H_
 
 #include "../Encoding/HTTP.h"
+#include "../RPC/Variable.h"
 
 #include <string>
 #include <vector>
 #include <memory>
+#include <set>
 
 namespace BaseLib
 {
@@ -45,9 +47,13 @@ class FileDescriptor;
 class SSDPInfo
 {
 public:
-	SSDPInfo();
+	SSDPInfo(std::string ip, RPC::PVariable info);
 	virtual ~SSDPInfo();
+	std::string ip();
+	const RPC::PVariable info();
 private:
+	std::string _ip;
+	RPC::PVariable _info;
 };
 
 class SSDP
@@ -61,16 +67,17 @@ public:
 	 *
 	 * @param[in] stHeader The ST header with the URN to search for (e. g. urn:schemas-upnp-org:device:basic:1)
 	 * @param[in] timeout The time to wait for responses
-	 * @param[out] ips The found IP addresses
+	 * @param[out] devices The found devices with device information parsed from XML to a Homegear variable struct.
 	 */
-	void searchDevices(const std::string& stHeader, uint32_t timeout, std::vector<std::string>& ips);
+	void searchDevices(const std::string& stHeader, uint32_t timeout, std::vector<SSDPInfo>& devices);
 private:
 	BaseLib::Obj* _bl = nullptr;
 	std::string _address;
 
 	void getAddress();
 	void sendSearchBroadcast(std::shared_ptr<FileDescriptor>& serverSocketDescriptor, const std::string& stHeader, uint32_t timeout);
-	void processPacket(HTTP& http, const std::string& stHeader, std::vector<std::string>& ips);
+	void processPacket(HTTP& http, const std::string& stHeader, std::set<std::string>& locations);
+	void getDeviceInfo(std::set<std::string>& locations, std::vector<SSDPInfo>& devices);
 	std::shared_ptr<FileDescriptor> getSocketDescriptor();
 };
 

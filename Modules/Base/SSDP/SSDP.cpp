@@ -29,19 +29,31 @@
 
 #include "SSDP.h"
 #include "../BaseLib.h"
+#include "../Encoding/RapidXml/rapidxml.hpp"
 #include <ifaddrs.h>
 
 namespace BaseLib
 {
 
-SSDPInfo::SSDPInfo()
+SSDPInfo::SSDPInfo(std::string ip, RPC::PVariable info)
 {
-
+	_ip = ip;
+	_info = info;
 }
 
 SSDPInfo::~SSDPInfo()
 {
 
+}
+
+std::string SSDPInfo::ip()
+{
+	return _ip;
+}
+
+const RPC::PVariable SSDPInfo::info()
+{
+	return _info;
 }
 
 SSDP::SSDP(Obj* baseLib)
@@ -59,7 +71,7 @@ void SSDP::getAddress()
 	try
 	{
 		std::string address;
-		if(_bl->settings.uPnPIpAddress().empty())
+		if(_bl->settings.ssdpIpAddress().empty())
 		{
 			char buffer[101];
 			buffer[100] = 0;
@@ -98,7 +110,7 @@ void SSDP::getAddress()
 				return;
 			}
 		}
-		else _address = _bl->settings.uPnPIpAddress();
+		else _address = _bl->settings.ssdpIpAddress();
 	}
 	catch(const std::exception& ex)
 	{
@@ -131,7 +143,7 @@ std::shared_ptr<FileDescriptor> SSDP::getSocketDescriptor()
 		int32_t reuse = 1;
 		setsockopt(serverSocketDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse));
 
-		_bl->out.printInfo("Info: UPnP server: Binding to address: " + _address);
+		if(_bl->debugLevel >= 5) _bl->out.printInfo("Debug: SSDP server: Binding to address: " + _address);
 
 		char loopch = 0;
 		setsockopt(serverSocketDescriptor->descriptor, IPPROTO_IP, IP_MULTICAST_LOOP, (char *)&loopch, sizeof(loopch));
@@ -188,7 +200,7 @@ void SSDP::sendSearchBroadcast(std::shared_ptr<FileDescriptor>& serverSocketDesc
 	sendto(serverSocketDescriptor->descriptor, &broadcastPacket.at(0), broadcastPacket.size(), 0, (struct sockaddr*)&addessInfo, sizeof(addessInfo));
 }
 
-void SSDP::searchDevices(const std::string& stHeader, uint32_t timeout, std::vector<std::string>& ips)
+void SSDP::searchDevices(const std::string& stHeader, uint32_t timeout, std::vector<SSDPInfo>& devices)
 {
 	try
 	{
@@ -200,8 +212,10 @@ void SSDP::searchDevices(const std::string& stHeader, uint32_t timeout, std::vec
 
 		std::shared_ptr<FileDescriptor> serverSocketDescriptor = getSocketDescriptor();
 		if(!serverSocketDescriptor || serverSocketDescriptor->descriptor == -1) return;
-		_bl->out.printInfo("Info: Searching for UPnP devices .");
+		if(_bl->debugLevel >= 5) _bl->out.printDebug("Debug: Searching for SSDP devices ...");
 
+		sendSearchBroadcast(serverSocketDescriptor, stHeader, timeout);
+		std::this_thread::sleep_for(std::chrono::milliseconds(2));
 		sendSearchBroadcast(serverSocketDescriptor, stHeader, timeout);
 
 		uint64_t startTime = _bl->hf.getTime();
@@ -213,6 +227,7 @@ void SSDP::searchDevices(const std::string& stHeader, uint32_t timeout, std::vec
 		timeval socketTimeout;
 		int32_t nfds = 0;
 		HTTP http;
+		std::set<std::string> locations;
 		while(_bl->hf.getTime() - startTime <= (timeout + 500))
 		{
 			try
@@ -245,7 +260,7 @@ void SSDP::searchDevices(const std::string& stHeader, uint32_t timeout, std::vec
 				if(_bl->debugLevel >= 5)_bl->out.printDebug("Debug: SSDP response received:\n" + std::string(buffer, bytesReceived));
 				http.reset();
 				http.process(buffer, bytesReceived, false);
-				if(http.headerIsFinished()) processPacket(http, stHeader, ips);
+				if(http.headerIsFinished()) processPacket(http, stHeader, locations);
 			}
 			catch(const std::exception& ex)
 			{
@@ -260,6 +275,7 @@ void SSDP::searchDevices(const std::string& stHeader, uint32_t timeout, std::vec
 				_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 		}
+		getDeviceInfo(locations, devices);
 	}
 	catch(const std::exception& ex)
 	{
@@ -275,18 +291,68 @@ void SSDP::searchDevices(const std::string& stHeader, uint32_t timeout, std::vec
 	}
 }
 
-void SSDP::processPacket(HTTP& http, const std::string& stHeader, std::vector<std::string>& ips)
+void SSDP::processPacket(HTTP& http, const std::string& stHeader, std::set<std::string>& locations)
 {
 	try
 	{
 		HTTP::Header* header = http.getHeader();
 		if(!header || header->responseCode != 200 || header->fields.at("st") != stHeader) return;
 
-		std::string ip = HelperFunctions::toLower(header->fields.at("location"));
-		if(ip.size() < 7) return;
-		std::string::size_type pos = ip.find(':', 7);
-		if(pos == std::string::npos) return;
-		ips.push_back(ip.substr(7, pos - 7));
+		std::string location = header->fields.at("location");
+		if(location.size() < 7) return;
+		locations.insert(location);
+	}
+	catch(const std::exception& ex)
+	{
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void SSDP::getDeviceInfo(std::set<std::string>& locations, std::vector<SSDPInfo>& devices)
+{
+	try
+	{
+		for(std::set<std::string>::iterator i = locations.begin(); i != locations.end(); ++i)
+		{
+			std::string::size_type posPort = (*i).find(':', 7);
+			if(posPort == std::string::npos) return;
+			std::string::size_type posPath = (*i).find('/', posPort);
+			if(posPath == std::string::npos) return;
+			std::string ip = (*i).substr(7, posPort - 7);
+			std::string portString = (*i).substr(posPort + 1, posPath - posPort - 1);
+			int32_t port = Math::getNumber(portString, false);
+			if(port <= 0 || port > 65535) return;
+			std::string path = (*i).substr(posPath);
+
+			HTTPClient client(_bl, ip, port, false);
+			std::string xml;
+			client.get(path, xml);
+
+			RPC::PVariable infoStruct;
+			if(!xml.empty())
+			{
+				xml_document<> doc;
+				doc.parse<parse_no_entity_translation | parse_validate_closing_tags>(&xml.at(0));
+				xml_node<>* node = doc.first_node("root");
+				if(node)
+				{
+					node = node->first_node("device");
+					if(node)
+					{
+						infoStruct.reset(new RPC::Variable(node));
+					}
+				}
+			}
+			devices.push_back(SSDPInfo(ip, infoStruct));
+		}
 	}
 	catch(const std::exception& ex)
 	{

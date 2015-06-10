@@ -47,12 +47,19 @@ SonosCentral::~SonosCentral()
 	dispose();
 }
 
+void SonosCentral::dispose(bool wait)
+{
+	SonosDevice::dispose();
+	_ssdp.reset();
+}
+
 void SonosCentral::init()
 {
 	try
 	{
 		SonosDevice::init();
 
+		_ssdp.reset(new BaseLib::SSDP(GD::bl));
 		_deviceType = (uint32_t)DeviceType::CENTRAL;
 	}
 	catch(const std::exception& ex)
@@ -67,6 +74,93 @@ void SonosCentral::init()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+}
+
+void SonosCentral::worker()
+{
+	try
+	{
+		while(GD::bl->booting && !_stopWorkerThread)
+		{
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+		}
+
+		std::chrono::milliseconds sleepingTime(200);
+		uint32_t counter = 0;
+		uint32_t countsPer10Minutes = 100;
+		int32_t lastPeer;
+		lastPeer = 0;
+
+		//One loop on the Raspberry Pi takes about 30µs
+		while(!_stopWorkerThread)
+		{
+			try
+			{
+				std::this_thread::sleep_for(sleepingTime);
+				if(_stopWorkerThread) return;
+				if(counter > countsPer10Minutes)
+				{
+					counter = 0;
+					_peersMutex.lock();
+					if(_peers.size() > 0)
+					{
+						int32_t windowTimePerPeer = _bl->settings.workerThreadWindow() / _peers.size();
+						if(windowTimePerPeer > 2) windowTimePerPeer -= 2;
+						sleepingTime = std::chrono::milliseconds(windowTimePerPeer);
+						countsPer10Minutes = 600000 / windowTimePerPeer;
+					}
+					_peersMutex.unlock();
+					searchDevices(-1);
+				}
+				_peersMutex.lock();
+				if(!_peers.empty())
+				{
+					if(!_peers.empty())
+					{
+						std::unordered_map<int32_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator nextPeer = _peers.find(lastPeer);
+						if(nextPeer != _peers.end())
+						{
+							nextPeer++;
+							if(nextPeer == _peers.end()) nextPeer = _peers.begin();
+						}
+						else nextPeer = _peers.begin();
+						lastPeer = nextPeer->first;
+					}
+				}
+				_peersMutex.unlock();
+				std::shared_ptr<SonosPeer> peer(getPeer(lastPeer));
+				if(peer && !peer->deleting) peer->worker();
+				counter++;
+			}
+			catch(const std::exception& ex)
+			{
+				_peersMutex.unlock();
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				_peersMutex.unlock();
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				_peersMutex.unlock();
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+		}
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void SonosCentral::deletePeer(uint64_t id)
@@ -132,95 +226,16 @@ std::string SonosCentral::handleCLICommand(std::string command)
 		if(command == "help" || command == "h")
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
-			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "peers create (pc)\t\tCreates a new peer" << std::endl;
+			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "peers list (ls)\t\tList all peers" << std::endl;
 			stringStream << "peers remove (pr)\tRemove a peer" << std::endl;
 			stringStream << "peers select (ps)\tSelect a peer" << std::endl;
 			stringStream << "peers setname (pn)\tName a peer" << std::endl;
+			stringStream << "search (sp)\t\tSearches for new devices" << std::endl;
 			stringStream << "unselect (u)\t\tUnselect this device" << std::endl;
 			return stringStream.str();
 		}
-		if(command.compare(0, 12, "peers create") == 0 || command.compare(0, 2, "pc") == 0)
-		{
-			uint32_t deviceType = (uint32_t)DeviceType::none;
-			std::string serialNumber;
-
-			std::stringstream stream(command);
-			std::string element;
-			int32_t offset = (command.at(1) == 'c') ? 0 : 1;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index < 1 + offset)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1 + offset)
-				{
-					if(element == "help") break;
-					int32_t temp = BaseLib::Math::getNumber(element, true);
-					if(temp == 0) return "Invalid device type. Device type has to be provided in hexadecimal format.\n";
-					deviceType = temp;
-				}
-				else if(index == 2 + offset)
-				{
-					if(element.length() != 10) return "Invalid serial number. Please provide a serial number with a length of 10 characters.\n";
-					serialNumber = element;
-				}
-				index++;
-			}
-			if(index < 3 + offset)
-			{
-				stringStream << "Description: This command create a new peer." << std::endl;
-				stringStream << "Usage: peers add DEVICETYPE SERIALNUMBER" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  DEVICETYPE:\t\tThe 2 byte device type of the peer to add in hexadecimal format. Example: 0192" << std::endl;
-				stringStream << "  SERIALNUMBER:\t\tThe 10 character long serial number of the peer to add. Example: 8G647D825Q" << std::endl;
-				return stringStream.str();
-			}
-			if(peerExists(serialNumber)) stringStream << "This peer is already paired to this central." << std::endl;
-			else
-			{
-				std::shared_ptr<SonosPeer> peer = createPeer(BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::Sonos, deviceType), serialNumber, false);
-				if(!peer || !peer->rpcDevice) return "Device type not supported.\n";
-				try
-				{
-					_peersMutex.lock();
-					if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
-					_peersMutex.unlock();
-					peer->save(true, true, false);
-					peer->initializeCentralConfig();
-					_peersMutex.lock();
-					_peersByID[peer->getID()] = peer;
-					_peersMutex.unlock();
-				}
-				catch(const std::exception& ex)
-				{
-					_peersMutex.unlock();
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(BaseLib::Exception& ex)
-				{
-					_peersMutex.unlock();
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(...)
-				{
-					_peersMutex.unlock();
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-				}
-
-				std::shared_ptr<BaseLib::RPC::Variable> deviceDescriptions(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
-				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(-1, true, std::map<std::string, bool>());
-				raiseRPCNewDevices(deviceDescriptions);
-				GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(peer->getID()) + ".");
-				stringStream << "Added peer " + std::to_string(peer->getID()) + " of type 0x" << (int32_t)deviceType << " with serial number " << serialNumber << "." << std::dec << std::endl;
-			}
-			return stringStream.str();
-		}
-		else if(command.compare(0, 12, "peers remove") == 0 || command.compare(0, 2, "pr") == 0)
+		if(command.compare(0, 12, "peers remove") == 0 || command.compare(0, 2, "pr") == 0)
 		{
 			uint64_t peerID = 0;
 
@@ -322,7 +337,7 @@ std::string SonosCentral::handleCLICommand(std::string command)
 				std::string bar(" │ ");
 				const int32_t idWidth = 8;
 				const int32_t nameWidth = 25;
-				const int32_t serialWidth = 13;
+				const int32_t serialWidth = 19;
 				const int32_t typeWidth1 = 4;
 				const int32_t typeWidth2 = 25;
 				std::string nameHeader("Name");
@@ -336,7 +351,7 @@ std::string SonosCentral::handleCLICommand(std::string command)
 					<< std::setw(typeWidth1) << "Type" << bar
 					<< typeStringHeader
 					<< std::endl;
-				stringStream << "─────────┼───────────────────────────┼───────────────┼──────┼───────────────────────────" << std::endl;
+				stringStream << "─────────┼───────────────────────────┼─────────────────────┼──────┼───────────────────────────" << std::endl;
 				stringStream << std::setfill(' ')
 					<< std::setw(idWidth) << " " << bar
 					<< std::setw(nameWidth) << " " << bar
@@ -381,21 +396,19 @@ std::string SonosCentral::handleCLICommand(std::string command)
 						<< std::setw(typeWidth1) << BaseLib::HelperFunctions::getHexString(i->second->getDeviceType().type(), 4) << bar;
 					if(i->second->rpcDevice)
 					{
-						std::shared_ptr<BaseLib::RPC::DeviceType> type = i->second->rpcDevice->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
-						std::string typeID;
-						if(type) typeID = type->id;
-						if(typeID.size() > (unsigned)typeWidth2)
+						std::string typeString = i->second->getTypeString();
+						if(typeString.size() > (unsigned)typeWidth2)
 						{
-							typeID.resize(typeWidth2 - 3);
-							typeID += "...";
+							typeString.resize(typeWidth2 - 3);
+							typeString += "...";
 						}
-						stringStream << std::setw(typeWidth2) << typeID << bar;
+						stringStream << std::setw(typeWidth2) << typeString;
 					}
 					else stringStream << std::setw(typeWidth2);
 					stringStream << std::endl << std::dec;
 				}
 				_peersMutex.unlock();
-				stringStream << "─────────┴───────────────────────────┴───────────────┴──────┴───────────────────────────" << std::endl;
+				stringStream << "─────────┴───────────────────────────┴─────────────────────┴──────┴───────────────────────────" << std::endl;
 
 				return stringStream.str();
 			}
@@ -504,6 +517,38 @@ std::string SonosCentral::handleCLICommand(std::string command)
 			}
 			return stringStream.str();
 		}
+		else if(command.compare(0, 6, "search") == 0 || command.compare(0, 2, "sp") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t offset = (command.at(1) == 'p') ? 0 : 1;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 1 + offset)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1 + offset)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command searches for new devices." << std::endl;
+						stringStream << "Usage: search" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			std::shared_ptr<BaseLib::RPC::Variable> result = searchDevices(-1);
+			if(result->errorStruct) stringStream << "Error: " << result->structValue->at("faultString")->stringValue << std::endl;
+			else stringStream << "Search completed successfully." << std::endl;
+			return stringStream.str();
+		}
 		else return "Unknown command.\n";
 	}
 	catch(const std::exception& ex)
@@ -521,15 +566,20 @@ std::string SonosCentral::handleCLICommand(std::string command)
     return "Error executing command. See log file for more details.\n";
 }
 
-std::shared_ptr<SonosPeer> SonosCentral::createPeer(BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save)
+std::shared_ptr<SonosPeer> SonosCentral::createPeer(BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, std::string ip, std::string softwareVersion, std::string idString, std::string typeString, bool save)
 {
 	try
 	{
 		std::shared_ptr<SonosPeer> peer(new SonosPeer(_deviceID, true, this));
 		peer->setDeviceType(deviceType);
 		peer->setSerialNumber(serialNumber);
+		peer->setIp(ip);
+		peer->setIdString(idString);
+		peer->setTypeString(typeString);
+		peer->setFirmwareVersionString(softwareVersion);
 		peer->rpcDevice = GD::rpcDevices.find(deviceType, 0x10, -1);
 		if(!peer->rpcDevice) return std::shared_ptr<SonosPeer>();
+		peer->initializeCentralConfig();
 		if(save) peer->save(true, true, false); //Save and create peerID
 		return peer;
 	}
@@ -601,65 +651,6 @@ bool SonosCentral::knowsDevice(uint64_t id)
 	}
 	_peersMutex.unlock();
 	return false;
-}
-
-std::shared_ptr<BaseLib::RPC::Variable> SonosCentral::createDevice(int32_t clientID, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion)
-{
-	try
-	{
-		if(serialNumber.size() != 10) return BaseLib::RPC::Variable::createError(-1, "The serial number needs to have a size of 10.");
-		if(peerExists(serialNumber)) return BaseLib::RPC::Variable::createError(-5, "This peer is already paired to this central.");
-
-		std::shared_ptr<SonosPeer> peer = createPeer(BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::Sonos, deviceType), serialNumber, false);
-		if(!peer || !peer->rpcDevice) return BaseLib::RPC::Variable::createError(-6, "Unknown device type.");
-
-		try
-		{
-			_peersMutex.lock();
-			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
-			_peersMutex.unlock();
-			peer->save(true, true, false);
-			peer->initializeCentralConfig();
-			_peersMutex.lock();
-			_peersByID[peer->getID()] = peer;
-			_peersMutex.unlock();
-		}
-		catch(const std::exception& ex)
-		{
-			_peersMutex.unlock();
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(BaseLib::Exception& ex)
-		{
-			_peersMutex.unlock();
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_peersMutex.unlock();
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-
-		std::shared_ptr<BaseLib::RPC::Variable> deviceDescriptions(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
-		deviceDescriptions->arrayValue = peer->getDeviceDescriptions(-1, true, std::map<std::string, bool>());
-		raiseRPCNewDevices(deviceDescriptions);
-		GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(peer->getID()) + ".");
-
-		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((uint32_t)peer->getID()));
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
 std::shared_ptr<BaseLib::RPC::Variable> SonosCentral::deleteDevice(int32_t clientID, std::string serialNumber, int32_t flags)
@@ -819,5 +810,97 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosCentral::putParamset(int32_t client
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::Variable> SonosCentral::searchDevices(int32_t clientID)
+{
+	try
+	{
+		std::string stHeader("urn:schemas-upnp-org:device:ZonePlayer:1");
+		std::vector<BaseLib::SSDPInfo> devices;
+		std::vector<std::shared_ptr<SonosPeer>> newPeers;
+		_ssdp->searchDevices(stHeader, 5000, devices);
+
+		for(std::vector<BaseLib::SSDPInfo>::iterator i = devices.begin(); i != devices.end(); ++i)
+		{
+			BaseLib::RPC::PVariable info = i->info();
+			if(!info ||	info->structValue->find("serialNum") == info->structValue->end())
+			{
+				GD::out.printWarning("Warning: Device does not provide serial number: " + i->ip());
+				continue;
+			}
+			std::string serialNumber = info->structValue->at("serialNum")->stringValue;
+			std::string softwareVersion = (info->structValue->find("softwareVersion") == info->structValue->end()) ? "" : info->structValue->at("softwareVersion")->stringValue;
+			std::string roomName = (info->structValue->find("roomName") == info->structValue->end()) ? "" : info->structValue->at("roomName")->stringValue;
+			std::string idString = (info->structValue->find("modelNumber") == info->structValue->end()) ? "" : info->structValue->at("modelNumber")->stringValue;
+			std::string typeString = (info->structValue->find("modelName") == info->structValue->end()) ? "" : info->structValue->at("modelName")->stringValue;
+			std::shared_ptr<SonosPeer> peer = getPeer(serialNumber);
+			if(peer)
+			{
+				if(peer->getIp() != i->ip()) peer->setIp(i->ip());
+				if(!softwareVersion.empty() && peer->getFirmwareVersionString() != softwareVersion) peer->setFirmwareVersionString(softwareVersion);
+			}
+			else
+			{
+				peer = createPeer(BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::Sonos, 1), serialNumber, i->ip(), softwareVersion, idString, typeString, true);
+				if(!peer)
+				{
+					GD::out.printWarning("Warning: No matching XML file found for device with IP: " + i->ip());
+					continue;
+				}
+				if(peer->getID() == 0) continue;
+				_peersMutex.lock();
+				try
+				{
+					if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
+					_peersByID[peer->getID()] = peer;
+				}
+				catch(const std::exception& ex)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(BaseLib::Exception& ex)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(...)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				}
+				_peersMutex.unlock();
+				GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(peer->getID()) + ".");
+				newPeers.push_back(peer);
+			}
+			if(peer && !roomName.empty()) peer->setValue(-1, 1, "ROOMNAME", BaseLib::RPC::PVariable(new BaseLib::RPC::Variable(roomName)));
+		}
+
+		if(newPeers.size() > 0)
+		{
+			std::shared_ptr<BaseLib::RPC::Variable> deviceDescriptions(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
+			for(std::vector<std::shared_ptr<SonosPeer>>::iterator i = newPeers.begin(); i != newPeers.end(); ++i)
+			{
+				std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> descriptions = (*i)->getDeviceDescriptions(clientID, true, std::map<std::string, bool>());
+				if(!descriptions) continue;
+				for(std::vector<std::shared_ptr<BaseLib::RPC::Variable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
+				{
+					deviceDescriptions->arrayValue->push_back(*j);
+				}
+			}
+			raiseRPCNewDevices(deviceDescriptions);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 }

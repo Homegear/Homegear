@@ -71,6 +71,12 @@ void SonosDevice::dispose(bool wait)
 		if(_disposing) return;
 		_disposing = true;
 		LogicalDevice::dispose(wait);
+		_stopWorkerThread = true;
+		if(_workerThread.joinable())
+		{
+			GD::out.printDebug("Debug: Waiting for worker thread of device " + std::to_string(_deviceID) + "...");
+			_workerThread.join();
+		}
 	}
     catch(const std::exception& ex)
     {
@@ -93,6 +99,9 @@ void SonosDevice::init()
 	{
 		if(_initialized) return; //Prevent running init two times
 		_initialized = true;
+
+		_workerThread = std::thread(&SonosDevice::worker, this);
+		BaseLib::Threads::setThreadPriority(_bl, _workerThread.native_handle(), _bl->settings.workerThreadPriority(), _bl->settings.workerThreadPolicy());
 	}
 	catch(const std::exception& ex)
     {

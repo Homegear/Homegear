@@ -298,7 +298,7 @@ std::string MAXSpyDevice::handleCLICommand(std::string command)
 		if(command == "help")
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
-			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "enable\t\t\tEnables the device if it was disabled" << std::endl;
 			stringStream << "disable\t\t\tDisables the device" << std::endl;
 			stringStream << "filters list\t\tLists all packet filters" << std::endl;

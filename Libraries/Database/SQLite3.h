@@ -63,9 +63,9 @@ class SQLite3
     private:
         std::string _databasePath;
         std::string _backupPath;
-        bool _databaseSynchronous;
-        bool _databaseMemoryJournal;
-        bool _databaseWALJournal;
+        bool _databaseSynchronous = true;
+        bool _databaseMemoryJournal = false;
+        bool _databaseWALJournal = true;
         sqlite3* _database = nullptr;
         std::mutex _databaseMutex;
 

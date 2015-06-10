@@ -776,6 +776,18 @@ void Peer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::shared_pt
 					_bl->out.printError("Error loading peer " + std::to_string(_peerID) + ": Device type unknown: 0x" + BaseLib::HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
 				}
 				break;
+			case 1003:
+				_firmwareVersionString = row->second.at(4)->textValue;
+				break;
+			case 1004:
+				_ip = row->second.at(4)->textValue;
+				break;
+			case 1005:
+				_idString = row->second.at(4)->textValue;
+				break;
+			case 1006:
+				_typeString = row->second.at(4)->textValue;
+				break;
 			}
 		}
 		_databaseMutex.unlock();
@@ -804,6 +816,10 @@ void Peer::saveVariables()
 		saveVariable(1000, _name);
 		saveVariable(1001, _firmwareVersion);
 		saveVariable(1002, (int32_t)_deviceType.type());
+		saveVariable(1003, _firmwareVersionString);
+		saveVariable(1004, _ip);
+		saveVariable(1005, _idString);
+		saveVariable(1006, _typeString);
 	}
 	catch(const std::exception& ex)
     {
@@ -1170,9 +1186,9 @@ void Peer::initializeTypeString()
 	{
 		if(!rpcDevice) return;
 		std::shared_ptr<RPC::DeviceType> rpcDeviceType = rpcDevice->getType(_deviceType, _firmwareVersion);
-		if(rpcDeviceType) _typeString = rpcDeviceType->id;
-		else if(_deviceType.type() == 0) _typeString = "HM-RCV-50"; //Central
-		else if(!rpcDevice->supportedTypes.empty()) _typeString = rpcDevice->supportedTypes.at(0)->id;
+		if(rpcDeviceType) _rpcTypeString = rpcDeviceType->id;
+		else if(_deviceType.type() == 0) _rpcTypeString = "HM-RCV-50"; //Central
+		else if(!rpcDevice->supportedTypes.empty()) _rpcTypeString = rpcDevice->supportedTypes.at(0)->id;
 	}
 	catch(const std::exception& ex)
     {
@@ -1199,7 +1215,7 @@ std::shared_ptr<RPC::Variable> Peer::getAllValues(int32_t clientID, bool returnW
 		values->structValue->insert(RPC::RPCStructElement("FAMILY", std::shared_ptr<RPC::Variable>(new RPC::Variable((uint32_t)_deviceType.family()))));
 		values->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::Variable>(new RPC::Variable((uint32_t)_peerID))));
 		values->structValue->insert(RPC::RPCStructElement("ADDRESS", std::shared_ptr<RPC::Variable>(new RPC::Variable(_serialNumber))));
-		values->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::Variable>(new RPC::Variable(_typeString))));
+		values->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::Variable>(new RPC::Variable(_typeString.empty() ? _rpcTypeString : _typeString))));
 		values->structValue->insert(RPC::RPCStructElement("NAME", std::shared_ptr<RPC::Variable>(new RPC::Variable(_name))));
 		std::shared_ptr<RPC::Variable> channels(new RPC::Variable(RPC::VariableType::rpcArray));
 		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
@@ -1339,7 +1355,8 @@ std::shared_ptr<RPC::Variable> Peer::getDeviceDescription(int32_t clientID, int3
 
 		std::string type;
 		std::shared_ptr<RPC::DeviceType> rpcDeviceType = rpcDevice->getType(_deviceType, _firmwareVersion);
-		if(rpcDeviceType) type = rpcDeviceType->id;
+		if(!_typeString.empty()) type = _typeString;
+		else if(rpcDeviceType) type = rpcDeviceType->id;
 		else if(_deviceType.type() == 0) type = "HM-RCV-50"; //Central
 		else
 		{
@@ -1371,6 +1388,7 @@ std::shared_ptr<RPC::Variable> Peer::getDeviceDescription(int32_t clientID, int3
 			if(fields.empty() || fields.find("FIRMWARE") != fields.end())
 			{
 				if(_firmwareVersion != 0) description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::Variable>(new RPC::Variable(getFirmwareVersionString(_firmwareVersion)))));
+				else if(!_firmwareVersionString.empty()) description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::Variable>(new RPC::Variable(_firmwareVersionString))));
 				else description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::Variable>(new RPC::Variable(std::string("?")))));
 			}
 
@@ -1397,6 +1415,8 @@ std::shared_ptr<RPC::Variable> Peer::getDeviceDescription(int32_t clientID, int3
 			}
 
 			if(fields.empty() || fields.find("PARENT") != fields.end()) description->structValue->insert(RPC::RPCStructElement("PARENT", std::shared_ptr<RPC::Variable>(new RPC::Variable(std::string("")))));
+
+			if(!_ip.empty() && (fields.empty() || fields.find("IP_ADDRESS") != fields.end())) description->structValue->insert(RPC::RPCStructElement("IP_ADDRESS", std::shared_ptr<RPC::Variable>(new RPC::Variable(_ip))));
 
 			if(fields.empty() || fields.find("PHYSICAL_ADDRESS") != fields.end()) description->structValue->insert(RPC::RPCStructElement("PHYSICAL_ADDRESS", std::shared_ptr<RPC::Variable>(new RPC::Variable(_address))));
 

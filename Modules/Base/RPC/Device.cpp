@@ -132,8 +132,8 @@ DeviceFrame::DeviceFrame(BaseLib::Obj* baseLib, xml_node<>* node) : DeviceFrame(
 		else if(attributeName == "split_after") splitAfter = Math::getNumber(attributeValue);
 		else if(attributeName == "function1") function1 = attributeValue;
 		else if(attributeName == "function2") function2 = attributeValue;
-		else if(attributeName == "meta_string_1") metaString1 = attributeValue;
-		else if(attributeName == "meta_string_2") metaString2 = attributeValue;
+		else if(attributeName == "metastring1") metaString1 = attributeValue;
+		else if(attributeName == "metastring2") metaString2 = attributeValue;
 		else _bl->out.printWarning("Warning: Unknown attribute for \"frame\": " + attributeName);
 	}
 	for(xml_node<>* frameNode = node->first_node("parameter"); frameNode; frameNode = frameNode->next_sibling("parameter"))
@@ -918,6 +918,8 @@ void Parameter::convertToPacket(const std::shared_ptr<Variable> value, std::vect
 		{
 			if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat)
 			{
+				if(variable->floatValue == 0 && variable->integerValue != 0) variable->floatValue = variable->integerValue;
+				else if(variable->integerValue == 0 && !variable->stringValue.empty()) variable->floatValue = Math::getDouble(variable->stringValue);
 				LogicalParameterFloat* parameter = (LogicalParameterFloat*)logicalParameter.get();
 				bool specialValue = (variable->floatValue == parameter->defaultValue);
 				if(!specialValue)
@@ -939,6 +941,8 @@ void Parameter::convertToPacket(const std::shared_ptr<Variable> value, std::vect
 			}
 			else if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger)
 			{
+				if(variable->integerValue == 0 && variable->floatValue != 0) variable->integerValue = variable->floatValue;
+				else if(variable->integerValue == 0 && !variable->stringValue.empty()) variable->integerValue = Math::getNumber(variable->stringValue);
 				LogicalParameterInteger* parameter = (LogicalParameterInteger*)logicalParameter.get();
 				bool specialValue = (variable->integerValue == parameter->defaultValue);
 				if(!specialValue)
@@ -957,6 +961,11 @@ void Parameter::convertToPacket(const std::shared_ptr<Variable> value, std::vect
 					if(variable->integerValue > parameter->max) variable->integerValue = parameter->max;
 					else if(variable->integerValue < parameter->min) variable->integerValue = parameter->min;
 				}
+			}
+			else if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean)
+			{
+				if(variable->booleanValue == false && variable->integerValue != 0) variable->booleanValue = true;
+				else if(variable->booleanValue == false && variable->floatValue != 0) variable->booleanValue = true;
 			}
 			if(conversion.empty())
 			{

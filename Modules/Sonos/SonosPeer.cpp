@@ -106,6 +106,26 @@ SonosPeer::~SonosPeer()
 	}
 }
 
+void SonosPeer::worker()
+{
+	try
+	{
+
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 void SonosPeer::homegearShuttingDown()
 {
 	try
@@ -135,7 +155,7 @@ std::string SonosPeer::handleCLICommand(std::string command)
 		if(command == "help")
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
-			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "unselect\t\tUnselect this peer" << std::endl;
 			stringStream << "channel count\t\tPrint the number of channels of this peer" << std::endl;
 			stringStream << "config print\t\tPrints all configuration parameters and their values" << std::endl;
@@ -284,6 +304,17 @@ void SonosPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::shar
 	{
 		if(!rows) rows = raiseGetPeerVariables();
 		Peer::loadVariables(device, rows);
+		_databaseMutex.lock();
+		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
+		{
+			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
+			switch(row->second.at(2)->intValue)
+			{
+			case 1:
+				_ip = row->second.at(4)->textValue;
+				break;
+			}
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -297,6 +328,7 @@ void SonosPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::shar
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _databaseMutex.unlock();
 }
 
 bool SonosPeer::load(BaseLib::Systems::LogicalDevice* device)
@@ -305,7 +337,7 @@ bool SonosPeer::load(BaseLib::Systems::LogicalDevice* device)
 	{
 		loadVariables((SonosDevice*)device);
 
-		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, -1);
+		rpcDevice = GD::rpcDevices.find(_deviceType, 0x10, -1);
 		if(!rpcDevice)
 		{
 			GD::out.printError("Error loading Sonos peer " + std::to_string(_peerID) + ": Device type not found: 0x" + BaseLib::HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
@@ -342,6 +374,7 @@ void SonosPeer::saveVariables()
 	{
 		if(_peerID == 0) return;
 		Peer::saveVariables();
+		saveVariable(1, _ip);
 	}
 	catch(const std::exception& ex)
     {
@@ -614,18 +647,61 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::setValue(int32_t clientID, ui
 		valueKeys->push_back(valueKey);
 		values->push_back(value);
 
-		if(rpcParameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::Enum::store)
+		if(rpcParameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::Enum::command)
 		{
-			rpcParameter->convertToPacket(value, parameter->data);
-			if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
-			else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
+			std::string setRequest = rpcParameter->physicalParameter->setRequest;
+			if(setRequest.empty()) return BaseLib::RPC::Variable::createError(-6, "parameter is read only");
+			if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return BaseLib::RPC::Variable::createError(-6, "No frame was found for parameter " + valueKey);
+			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
 
-			raiseEvent(_peerID, channel, valueKeys, values);
-			raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+			std::vector<std::pair<std::string, std::string>> soapValues;
+			for(std::vector<BaseLib::RPC::Parameter>::iterator i = frame->parameters.begin(); i != frame->parameters.end(); ++i)
+			{
+				if(i->constValue > -1)
+				{
+					if(i->field.empty()) continue;
+					soapValues.push_back(std::pair<std::string, std::string>(i->field, std::to_string(i->constValue)));
+					continue;
+				}
+				//We can't just search for param, because it is ambiguous (see for example LEVEL for HM-CC-TC).
+				if(i->param == rpcParameter->physicalParameter->valueID || i->param == rpcParameter->physicalParameter->id)
+				{
+					if(i->field.empty()) continue;
+					soapValues.push_back(std::pair<std::string, std::string>(i->field, rpcParameter->convertFromPacket(parameter->data)->toString()));
+				}
+				//Search for all other parameters
+				else
+				{
+					bool paramFound = false;
+					for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator j = valuesCentral[channel].begin(); j != valuesCentral[channel].end(); ++j)
+					{
+						if(!j->second.rpcParameter) continue;
+						if(i->param == j->second.rpcParameter->physicalParameter->id)
+						{
+							if(i->field.empty()) continue;
+							soapValues.push_back(std::pair<std::string, std::string>(i->field, rpcParameter->convertFromPacket(parameter->data)->toString()));
+							paramFound = true;
+							break;
+						}
+					}
+					if(!paramFound) GD::out.printError("Error constructing packet. param \"" + i->param + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+				}
+			}
 
-			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
+			std::string soapRequest;
+			encodeSoapRequest(frame->metaString1, frame->function1, frame->metaString2, frame->function2, soapValues, soapRequest);
+			std::cerr << soapRequest << std::endl;
 		}
-		return BaseLib::RPC::Variable::createError(-6, "Only interface type \"store\" is supported for this device family.");
+		else if(rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::store) return BaseLib::RPC::Variable::createError(-6, "Only interface types \"store\" and \"command\" are supported for this device family.");
+
+		rpcParameter->convertToPacket(value, parameter->data);
+		if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+		else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
+
+		raiseEvent(_peerID, channel, valueKeys, values);
+		raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+
+		return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {
@@ -640,6 +716,34 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::setValue(int32_t clientID, ui
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. See error log for more details.");
+}
+
+void SonosPeer::encodeSoapRequest(std::string& path, std::string& soapAction, std::string& schema, std::string& functionName, std::vector<std::pair<std::string, std::string>>& values, std::string& soapRequest)
+{
+	try
+	{
+		soapRequest = "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><u:" + functionName + " xmlns:u=\"" + schema + "\">";
+		for(std::vector<std::pair<std::string, std::string>>::iterator i = values.begin(); i != values.end(); ++i)
+		{
+			soapRequest += '<' + i->first + '>' + i->second + "</" + i->first + '>';
+		}
+		soapRequest += "</u:" + functionName + "></s:Body></s:Envelope>";
+
+		std::string header = "POST /DeviceProperties/Control HTTP/1.1\r\nCONNECTION: close\r\nHOST: " + _ip + ":1400CONTENT-LENGTH: " + std::to_string(soapRequest.size()) + "\r\nCONTENT-TYPE: text/xml; charset=\"utf-8\"\r\nSOAPACTION: \"" + soapAction + "\"\r\n\r\n";
+		soapRequest.insert(soapRequest.begin(), header.begin(), header.end());
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 }

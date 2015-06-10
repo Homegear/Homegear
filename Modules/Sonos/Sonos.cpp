@@ -280,7 +280,7 @@ std::shared_ptr<BaseLib::RPC::Variable> Sonos::getPairingMethods()
 	{
 		if(!_central) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		std::shared_ptr<BaseLib::RPC::Variable> array(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
-		array->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string("createDevice"))));
+		array->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(std::string("searchDevices"))));
 		return array;
 	}
 	catch(const std::exception& ex)

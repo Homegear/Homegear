@@ -293,7 +293,7 @@ std::string PhilipsHue::handleCLICommand(std::string& command)
 		else if(command == "devices help" || command == "dh" || command == "help" || command == "h")
 		{
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
-			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "devices list (ls)\tList all Philips hue devices" << std::endl;
 			stringStream << "devices create (dc)\tCreate a virtual Philips hue device" << std::endl;
 			stringStream << "devices remove (dr)\tRemove a virtual Philips hue device" << std::endl;

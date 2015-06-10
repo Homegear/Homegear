@@ -67,6 +67,10 @@ class SonosDevice : public BaseLib::Systems::LogicalDevice
         virtual void loadVariables() {}
         virtual void saveVariables() {}
     protected:
+        bool _stopWorkerThread = false;
+        std::thread _workerThread;
+
+        virtual void worker() {}
 
         virtual void init();
     private:

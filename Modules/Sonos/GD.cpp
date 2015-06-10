@@ -34,5 +34,5 @@ namespace Sonos
 	BaseLib::Obj* GD::bl = nullptr;
 	Sonos* GD::family = nullptr;
 	BaseLib::Output GD::out;
-	BaseLib::RPC::Devices GD::rpcDevices(BaseLib::Systems::DeviceFamilies::Miscellaneous);
+	BaseLib::RPC::Devices GD::rpcDevices(BaseLib::Systems::DeviceFamilies::Sonos);
 }

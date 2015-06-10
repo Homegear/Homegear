@@ -345,7 +345,7 @@ std::string MAXCentral::handleCLICommand(std::string command)
 		if(command == "help" || command == "h")
 		{
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
-			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "pairing on (pon)\tEnables pairing mode" << std::endl;
 			stringStream << "pairing off (pof)\tDisables pairing mode" << std::endl;
 			stringStream << "peers list (ls)\t\tList all peers" << std::endl;

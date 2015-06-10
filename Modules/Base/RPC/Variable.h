@@ -30,12 +30,16 @@
 #ifndef VARIABLE_H_
 #define VARIABLE_H_
 
+#include "../Encoding/RapidXml/rapidxml.hpp"
+
 #include <vector>
 #include <string>
 #include <memory>
 #include <iostream>
 #include <map>
 #include <list>
+
+using namespace rapidxml;
 
 namespace BaseLib
 {
@@ -75,8 +79,8 @@ public:
 	int32_t integerValue = 0;
 	double floatValue = 0;
 	bool booleanValue = false;
-	std::shared_ptr<std::vector<PVariable>> arrayValue;
-	std::shared_ptr<std::map<std::string, PVariable>> structValue;
+	PRPCArray arrayValue;
+	PRPCStruct structValue;
 
 	Variable() { type = VariableType::rpcVoid; arrayValue = PRPCArray(new RPCArray()); structValue = PRPCStruct(new RPCStruct()); }
 	Variable(VariableType variableType) : Variable() { type = variableType; if(type == VariableType::rpcVariant) type = VariableType::rpcVoid; }
@@ -89,11 +93,13 @@ public:
 	Variable(double floatVal) : Variable() { type = VariableType::rpcFloat; floatValue = floatVal; }
 	Variable(PRPCArray arrayVal) : Variable() { type = VariableType::rpcArray; arrayValue = arrayVal; }
 	Variable(PRPCStruct structVal) : Variable() { type = VariableType::rpcStruct; structValue = structVal; }
+	Variable(xml_node<>* node);
 	virtual ~Variable();
 	static std::shared_ptr<Variable> createError(int32_t faultCode, std::string faultString);
 	void print();
 	static std::string getTypeString(VariableType type);
 	static PVariable fromString(std::string value, VariableType type);
+	std::string toString();
 	bool operator==(const Variable& rhs);
 	bool operator<(const Variable& rhs);
 	bool operator<=(const Variable& rhs);
@@ -104,6 +110,11 @@ private:
 	void print(PVariable, std::string indent);
 	void printStruct(PRPCStruct rpcStruct, std::string indent);
 	void printArray(PRPCArray rpcArray, std::string indent);
+
+	/**
+	 * Converts a XML node to a struct. Important: Multiple usage of the same name on the same level is not possible.
+	 */
+	void parseXmlNode(xml_node<>* node, PRPCStruct& xmlStruct);
 };
 }
 }

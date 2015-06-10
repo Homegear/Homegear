@@ -160,13 +160,21 @@ public:
 	//In table variables:
 	virtual int32_t getFirmwareVersion() { return _firmwareVersion; }
 	virtual void setFirmwareVersion(int32_t value) { _firmwareVersion = value; saveVariable(1001, value); }
+	virtual std::string getFirmwareVersionString() { return _firmwareVersionString; }
+	virtual void setFirmwareVersionString(std::string value) { _firmwareVersionString = value; saveVariable(1003, value); }
 	virtual LogicalDeviceType getDeviceType() { return _deviceType; }
 	virtual void setDeviceType(LogicalDeviceType value) { _deviceType = value; saveVariable(1002, (int32_t)_deviceType.type()); initializeTypeString(); }
     virtual std::string getName() { return _name; }
 	virtual void setName(std::string value) { _name = value; saveVariable(1000, _name); }
+	virtual std::string getIp() { return _ip; }
+	virtual void setIp(std::string value) { _ip = value; saveVariable(1004, value); }
+	virtual std::string getIdString() { return _idString; }
+	virtual void setIdString(std::string value) { _idString = value; saveVariable(1005, value); }
+	virtual std::string getTypeString() { return _typeString; }
+	virtual void setTypeString(std::string value) { _typeString = value; saveVariable(1006, value); }
     //End
 
-	virtual std::string getTypeString() { return _typeString; }
+	virtual std::string getRpcTypeString() { return _rpcTypeString; }
 
 	virtual std::string handleCLICommand(std::string command) = 0;
 	virtual RPC::Device::RXModes::Enum getRXModes();
@@ -260,12 +268,16 @@ protected:
 
 	//In table variables:
 	int32_t _firmwareVersion = 0;
+	std::string _firmwareVersionString;
 	LogicalDeviceType _deviceType;
 	std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>> _peers;
 	std::string _name;
+	std::string _ip;
+	std::string _idString;
+	std::string _typeString;
 	//End
 
-	std::string _typeString;
+	std::string _rpcTypeString;
 	RPC::Device::RXModes::Enum _rxModes = RPC::Device::RXModes::Enum::none;
 
 	bool _disposing = false;

@@ -161,7 +161,7 @@ std::string InsteonPeer::handleCLICommand(std::string command)
 		if(command == "help")
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
-			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "unselect\t\tUnselect this peer" << std::endl;
 			stringStream << "queues info\t\tPrints information about the pending packet queues" << std::endl;
 			stringStream << "queues clear\t\tClears pending packet queues" << std::endl;

@@ -50,6 +50,7 @@ void Settings::reset()
 	_debugLevel = 3;
 	_enableUPnP = true;
 	_uPnPIpAddress = "";
+	_ssdpIpAddress = "";
 	_devLog = false;
 	_databasePath = _bl->executablePath + "db.sql";
 	_databaseSynchronous = true;
@@ -181,6 +182,11 @@ void Settings::load(std::string filename)
 				{
 					_uPnPIpAddress = value;
 					_bl->out.printDebug("Debug: uPnPIpAddress set to " + _uPnPIpAddress);
+				}
+				else if(name == "ssdpipaddress")
+				{
+					_ssdpIpAddress = value;
+					_bl->out.printDebug("Debug: ssdpIpAddress set to " + _ssdpIpAddress);
 				}
 				else if(name == "devlog")
 				{

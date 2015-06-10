@@ -34,8 +34,33 @@ namespace BaseLib
 {
 namespace RPC
 {
+Variable::Variable(xml_node<>* node) : Variable()
+{
+	type = VariableType::rpcStruct;
+	parseXmlNode(node, structValue);
+}
+
 Variable::~Variable()
 {
+}
+
+void Variable::parseXmlNode(xml_node<>* node, PRPCStruct& xmlStruct)
+{
+	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
+	{
+		xmlStruct->insert(std::pair<std::string, PVariable>(std::string(attr->name()), PVariable(new Variable(std::string(attr->value())))));
+	}
+	for(xml_node<>* subNode = node->first_node(); subNode; subNode = subNode->next_sibling())
+	{
+		if(subNode->first_node())
+		{
+			PVariable subStruct(new Variable(VariableType::rpcStruct));
+			parseXmlNode(subNode, subStruct->structValue);
+			if(subStruct->structValue->size() == 1 && subStruct->structValue->begin()->first.empty()) xmlStruct->insert(std::pair<std::string, PVariable>(std::string(subNode->name()), subStruct->structValue->begin()->second));
+			else xmlStruct->insert(std::pair<std::string, PVariable>(std::string(subNode->name()), subStruct));
+		}
+		else xmlStruct->insert(std::pair<std::string, PVariable>(std::string(subNode->name()), PVariable(new Variable(std::string(subNode->value())))));
+	}
 }
 
 std::shared_ptr<Variable> Variable::createError(int32_t faultCode, std::string faultString)
@@ -230,7 +255,7 @@ void Variable::print(std::shared_ptr<Variable> variable, std::string indent)
 	}
 }
 
-void Variable::printArray(std::shared_ptr<std::vector<std::shared_ptr<Variable>>> array, std::string indent)
+void Variable::printArray(PRPCArray array, std::string indent)
 {
 	std::cout << indent << "(Array length=" << array->size() << ")" << std::endl << indent << "{" << std::endl;
 	std::string currentIndent = indent;
@@ -243,7 +268,7 @@ void Variable::printArray(std::shared_ptr<std::vector<std::shared_ptr<Variable>>
 	std::cout << indent << "}" << std::endl;
 }
 
-void Variable::printStruct(std::shared_ptr<std::map<std::string, std::shared_ptr<Variable>>> rpcStruct, std::string indent)
+void Variable::printStruct(PRPCStruct rpcStruct, std::string indent)
 {
 	std::cout << indent << "(Struct length=" << rpcStruct->size() << ")" << std::endl << indent << "{" << std::endl;
 	std::string currentIndent = indent;
@@ -276,6 +301,32 @@ std::shared_ptr<Variable> Variable::fromString(std::string value, VariableType t
 		return variable;
 	}
 	return createError(-1, "Type not supported.");
+}
+
+std::string Variable::toString()
+{
+	switch(type)
+	{
+	case VariableType::rpcArray:
+		return "array";
+	case VariableType::rpcBase64:
+		return stringValue;
+	case VariableType::rpcBoolean:
+		if(booleanValue) return "true"; else return "false";
+	case VariableType::rpcFloat:
+		return std::to_string(floatValue);
+	case VariableType::rpcInteger:
+		return std::to_string(integerValue);
+	case VariableType::rpcString:
+		return stringValue;
+	case VariableType::rpcStruct:
+		return "struct";
+	case VariableType::rpcVoid:
+		return "";
+	case VariableType::rpcVariant:
+		return "valuetype";
+	}
+	return "";
 }
 
 std::string Variable::getTypeString(VariableType type)
