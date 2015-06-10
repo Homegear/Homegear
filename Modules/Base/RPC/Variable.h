@@ -31,6 +31,7 @@
 #define VARIABLE_H_
 
 #include "../Encoding/RapidXml/rapidxml.hpp"
+#include "LogicalParameter.h"
 
 #include <vector>
 #include <string>
@@ -98,7 +99,8 @@ public:
 	static std::shared_ptr<Variable> createError(int32_t faultCode, std::string faultString);
 	void print();
 	static std::string getTypeString(VariableType type);
-	static PVariable fromString(std::string value, VariableType type);
+	static PVariable fromString(std::string& value, LogicalParameter::Type::Enum type);
+	static PVariable fromString(std::string& value, VariableType type);
 	std::string toString();
 	bool operator==(const Variable& rhs);
 	bool operator<(const Variable& rhs);

@@ -37,6 +37,19 @@ if [ $? -eq 0 ]; then
 	[ $? -ne 0 ] && exit 1
 fi
 
+wget -P $FIRMWAREDIR http://www.eq-3.de/Downloads/Software/Firmware/HM-ES-PMSw1-Pl_update_V2_5_0009_150217.tgz
+if [ $? -eq 0 ]; then
+	tar -zxf $FIRMWAREDIR/HM-ES-PMSw1-Pl_update_V2_5_0009_150217.tgz -C $FIRMWAREDIR
+	[ $? -ne 0 ] && exit 1
+	mv $FIRMWAREDIR/HM-ES-PMSw1-Pl_update_V2_5_0009_150217.eq3 $SCRIPTDIR/0000.000000AC.fw
+	[ $? -ne 0 ] && exit 1
+	rm $FIRMWAREDIR/HM-ES-PMSw1-Pl_update_V2_5_0009_150217.tgz
+	rm $FIRMWAREDIR/changelog.txt
+	rm $FIRMWAREDIR/info
+	echo "25" > $SCRIPTDIR/0000.000000AC.version
+	[ $? -ne 0 ] && exit 1
+fi
+
 wget -P $FIRMWAREDIR http://www.eq-3.de/Downloads/Software/Firmware/hm_cc_rt_dn_update_V1_4_001_141020.tgz
 if [ $? -eq 0 ]; then
 	tar -zxf $FIRMWAREDIR/hm_cc_rt_dn_update_V1_4_001_141020.tgz -C $FIRMWAREDIR

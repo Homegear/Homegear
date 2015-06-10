@@ -70,13 +70,13 @@ void SonosDevice::dispose(bool wait)
 	{
 		if(_disposing) return;
 		_disposing = true;
-		LogicalDevice::dispose(wait);
 		_stopWorkerThread = true;
 		if(_workerThread.joinable())
 		{
 			GD::out.printDebug("Debug: Waiting for worker thread of device " + std::to_string(_deviceID) + "...");
 			_workerThread.join();
 		}
+		LogicalDevice::dispose(wait);
 	}
     catch(const std::exception& ex)
     {

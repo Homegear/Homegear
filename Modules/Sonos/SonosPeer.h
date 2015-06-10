@@ -38,6 +38,23 @@ namespace Sonos
 {
 class SonosCentral;
 class SonosDevice;
+class SonosPacket;
+
+class FrameValue
+{
+public:
+	std::list<uint32_t> channels;
+	std::vector<uint8_t> value;
+};
+
+class FrameValues
+{
+public:
+	std::string frameID;
+	std::list<uint32_t> paramsetChannels;
+	BaseLib::RPC::ParameterSet::Type::Enum parameterSetType;
+	std::map<std::string, FrameValue> values;
+};
 
 class SonosPeer : public BaseLib::Systems::Peer
 {
@@ -49,6 +66,10 @@ public:
 	//Features
 	virtual bool wireless() { return false; }
 	//End features
+
+	// {{{ In table variables
+	virtual void setIp(std::string value);
+	// }}}
 
 	void worker();
 	virtual std::string handleCLICommand(std::string command);
@@ -63,6 +84,8 @@ public:
 	virtual std::string getFirmwareVersionString() { return Peer::getFirmwareVersionString(); }
 	virtual std::string getFirmwareVersionString(int32_t firmwareVersion) { return _firmwareVersionString; }
     virtual bool firmwareUpdateAvailable() { return false; }
+
+    void packetReceived(std::shared_ptr<SonosPacket> packet);
 
     std::string printConfig();
 
@@ -79,12 +102,19 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::Variable> setValue(int32_t clientID, uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value);
 	//End RPC methods
 protected:
+	std::shared_ptr<BaseLib::RPC::RPCEncoder> _binaryEncoder;
+	std::shared_ptr<BaseLib::HTTPClient> _httpClient;
+
 	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 	virtual std::shared_ptr<BaseLib::Systems::LogicalDevice> getDevice(int32_t address);
+	void getValuesFromPacket(std::shared_ptr<SonosPacket> packet, std::vector<FrameValues>& frameValue);
+
+	/**
+	 * {@inheritDoc}
+	 */
+	virtual std::shared_ptr<BaseLib::RPC::Variable> getValueFromDevice(std::shared_ptr<BaseLib::RPC::Parameter>& parameter, int32_t channel, bool asynchronous);
 
 	virtual std::shared_ptr<BaseLib::RPC::ParameterSet> getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type);
-
-	virtual void encodeSoapRequest(std::string& path, std::string& soapAction, std::string& schema, std::string& functionName, std::vector<std::pair<std::string, std::string>>& values, std::string& soapRequest);
 };
 
 }

@@ -225,6 +225,12 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::Variable> value)
 			}
 			if(invert) value->booleanValue = !value->booleanValue;
 		}
+		else if(type == Type::Enum::booleanString)
+		{
+			value->type = VariableType::rpcString;
+			value->booleanValue = (value->stringValue == stringValueTrue);
+			if(invert) value->booleanValue = !value->booleanValue;
+		}
 		else if(type == Type::Enum::floatConfigTime)
 		{
 			value->type = VariableType::rpcFloat;
@@ -381,6 +387,15 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::Variable> value)
 			else value->integerValue = valueFalse;
 			value->type = VariableType::rpcInteger;
 		}
+		else if(type == Type::Enum::booleanString)
+		{
+			if(value->stringValue.size() > 0 && value->stringValue == "true") value->booleanValue = true;
+			if(invert) value->booleanValue = !value->booleanValue;
+			if(value->booleanValue) value->stringValue = stringValueTrue;
+			else value->stringValue = stringValueFalse;
+			value->booleanValue = false;
+			value->type = VariableType::rpcString;
+		}
 		else if(type == Type::Enum::floatConfigTime)
 		{
 			if(valueSize > 0 && factors.size() > 0)
@@ -511,6 +526,7 @@ ParameterConversion::ParameterConversion(BaseLib::Obj* baseLib, Parameter* param
 			else if(attributeValue == "integer_integer_scale") type = Type::Enum::integerIntegerScale;
 			else if(attributeValue == "integer_integer_map") type = Type::Enum::integerIntegerMap;
 			else if(attributeValue == "boolean_integer") type = Type::Enum::booleanInteger;
+			else if(attributeValue == "boolean_string") type = Type::Enum::booleanString;
 			else if(attributeValue == "float_configtime") type = Type::Enum::floatConfigTime;
 			else if(attributeValue == "option_integer") type = Type::Enum::optionInteger;
 			else if(attributeValue == "integer_tinyfloat") type = Type::Enum::integerTinyFloat;
@@ -540,6 +556,8 @@ ParameterConversion::ParameterConversion(BaseLib::Obj* baseLib, Parameter* param
 		else if(attributeName == "threshold") threshold = Math::getNumber(attributeValue);
 		else if(attributeName == "false") valueFalse = Math::getNumber(attributeValue);
 		else if(attributeName == "true") valueTrue = Math::getNumber(attributeValue);
+		else if(attributeName == "string_false") stringValueFalse = attributeValue;
+		else if(attributeName == "string_true") stringValueTrue = attributeValue;
 		else if(attributeName == "div") div = Math::getNumber(attributeValue);
 		else if(attributeName == "mul") mul = Math::getNumber(attributeValue);
 		else if(attributeName == "offset") offset = Math::getDouble(attributeValue);
@@ -2167,12 +2185,16 @@ void Device::parseXML(xml_node<>* node)
 				{
 					std::shared_ptr<DeviceFrame> frame(new DeviceFrame(_bl, frameNode));
 					framesByMessageType.insert(std::pair<uint32_t, std::shared_ptr<DeviceFrame>>(frame->type, frame));
+					if(!frame->function1.empty()) framesByFunction1.insert(std::pair<std::string, std::shared_ptr<DeviceFrame>>(frame->function1, frame));
+					if(!frame->function2.empty()) framesByFunction2.insert(std::pair<std::string, std::shared_ptr<DeviceFrame>>(frame->function2, frame));
 					framesByID[frame->id] = frame;
 				}
 				for(xml_node<>* frameNode = node->first_node("packet"); frameNode; frameNode = frameNode->next_sibling("packet"))
 				{
 					std::shared_ptr<DeviceFrame> frame(new DeviceFrame(_bl, frameNode));
 					framesByMessageType.insert(std::pair<uint32_t, std::shared_ptr<DeviceFrame>>(frame->type, frame));
+					if(!frame->function1.empty()) framesByFunction1.insert(std::pair<std::string, std::shared_ptr<DeviceFrame>>(frame->function1, frame));
+					if(!frame->function2.empty()) framesByFunction2.insert(std::pair<std::string, std::shared_ptr<DeviceFrame>>(frame->function2, frame));
 					framesByID[frame->id] = frame;
 				}
 			}

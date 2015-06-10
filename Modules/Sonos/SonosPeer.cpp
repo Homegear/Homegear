@@ -29,6 +29,7 @@
 
 #include "SonosPeer.h"
 #include "LogicalDevices/SonosCentral.h"
+#include "SonosPacket.h"
 #include "GD.h"
 #include "sys/wait.h"
 
@@ -80,10 +81,12 @@ std::shared_ptr<BaseLib::Systems::LogicalDevice> SonosPeer::getDevice(int32_t ad
 
 SonosPeer::SonosPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : BaseLib::Systems::Peer(GD::bl, parentID, centralFeatures, eventHandler)
 {
+	_binaryEncoder.reset(new BaseLib::RPC::RPCEncoder(GD::bl));
 }
 
 SonosPeer::SonosPeer(int32_t id, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : BaseLib::Systems::Peer(GD::bl, id, -1, serialNumber, parentID, centralFeatures, eventHandler)
 {
+	_binaryEncoder.reset(new BaseLib::RPC::RPCEncoder(GD::bl));
 }
 
 SonosPeer::~SonosPeer()
@@ -91,6 +94,27 @@ SonosPeer::~SonosPeer()
 	try
 	{
 
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void SonosPeer::setIp(std::string value)
+{
+	try
+	{
+		Peer::setIp(value);
+		_httpClient.reset(new BaseLib::HTTPClient(GD::bl, _ip, 1400, false));
 	}
 	catch(const std::exception& ex)
 	{
@@ -312,6 +336,7 @@ void SonosPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::shar
 			{
 			case 1:
 				_ip = row->second.at(4)->textValue;
+				_httpClient.reset(new BaseLib::HTTPClient(GD::bl, _ip, 1400, false));
 				break;
 			}
 		}
@@ -388,6 +413,264 @@ void SonosPeer::saveVariables()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+void SonosPeer::getValuesFromPacket(std::shared_ptr<SonosPacket> packet, std::vector<FrameValues>& frameValues)
+{
+	try
+	{
+		if(!rpcDevice) return;
+		//equal_range returns all elements with "0" or an unknown element as argument
+		if(rpcDevice->framesByFunction2.find(packet->functionName()) == rpcDevice->framesByFunction2.end()) return;
+		std::pair<std::multimap<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator,std::multimap<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator> range = rpcDevice->framesByFunction2.equal_range(packet->functionName());
+		if(range.first == rpcDevice->framesByFunction2.end()) return;
+		std::multimap<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator i = range.first;
+		std::shared_ptr<std::map<std::string, std::string>> soapValues = packet->values();
+		do
+		{
+			FrameValues currentFrameValues;
+			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame(i->second);
+			if(!frame) continue;
+			if(frame->direction != BaseLib::RPC::DeviceFrame::Direction::Enum::fromDevice) continue;
+			int32_t channel = -1;
+			if(frame->fixedChannel > -1) channel = frame->fixedChannel;
+			currentFrameValues.frameID = frame->id;
+
+			for(std::vector<BaseLib::RPC::Parameter>::iterator j = frame->parameters.begin(); j != frame->parameters.end(); ++j)
+			{
+				if(soapValues->find(j->field) == soapValues->end()) continue;
+
+				for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator k = frame->associatedValues.begin(); k != frame->associatedValues.end(); ++k)
+				{
+					if((*k)->physicalParameter->valueID != j->param) continue;
+					currentFrameValues.parameterSetType = (*k)->parentParameterSet->type;
+					bool setValues = false;
+					if(currentFrameValues.paramsetChannels.empty()) //Fill paramsetChannels
+					{
+						int32_t startChannel = (channel < 0) ? 0 : channel;
+						int32_t endChannel;
+						//When fixedChannel is -2 (means '*') cycle through all channels
+						if(frame->fixedChannel == -2)
+						{
+							startChannel = 0;
+							endChannel = (rpcDevice->channels.end()--)->first;
+						}
+						else endChannel = startChannel;
+						for(int32_t l = startChannel; l <= endChannel; l++)
+						{
+							if(rpcDevice->channels.find(l) == rpcDevice->channels.end()) continue;
+							if(rpcDevice->channels.at(l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(l)->parameterSets.end()) continue;
+							if(!rpcDevice->channels.at(l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
+							currentFrameValues.paramsetChannels.push_back(l);
+							currentFrameValues.values[(*k)->id].channels.push_back(l);
+							setValues = true;
+						}
+					}
+					else //Use paramsetChannels
+					{
+						for(std::list<uint32_t>::const_iterator l = currentFrameValues.paramsetChannels.begin(); l != currentFrameValues.paramsetChannels.end(); ++l)
+						{
+							if(rpcDevice->channels.find(*l) == rpcDevice->channels.end()) continue;
+							if(rpcDevice->channels.at(*l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(*l)->parameterSets.end()) continue;
+							if(!rpcDevice->channels.at(*l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
+							currentFrameValues.values[(*k)->id].channels.push_back(*l);
+							setValues = true;
+						}
+					}
+
+					if(setValues)
+					{
+						//This is a little nasty and costs a lot of resources, but we need to run the data through the packet converter
+						std::vector<uint8_t> encodedData;
+						_binaryEncoder->encodeResponse(BaseLib::RPC::Variable::fromString(soapValues->at(j->field), (*k)->logicalParameter->type), encodedData);
+						std::shared_ptr<BaseLib::RPC::Variable> data = (*k)->convertFromPacket(encodedData, true);
+						(*k)->convertToPacket(data, currentFrameValues.values[(*k)->id].value);
+					}
+				}
+			}
+			if(!currentFrameValues.values.empty()) frameValues.push_back(currentFrameValues);
+		} while(++i != range.second && i != rpcDevice->framesByFunction2.end());
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void SonosPeer::packetReceived(std::shared_ptr<SonosPacket> packet)
+{
+	try
+	{
+		if(!packet) return;
+		if(!_centralFeatures || _disposing) return;
+		if(!rpcDevice) return;
+		setLastPacketReceived();
+		std::vector<FrameValues> frameValues;
+		getValuesFromPacket(packet, frameValues);
+		std::map<uint32_t, std::shared_ptr<std::vector<std::string>>> valueKeys;
+		std::map<uint32_t, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>>> rpcValues;
+
+		//Loop through all matching frames
+		for(std::vector<FrameValues>::iterator a = frameValues.begin(); a != frameValues.end(); ++a)
+		{
+			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame;
+			if(!a->frameID.empty()) frame = rpcDevice->framesByID.at(a->frameID);
+
+			for(std::map<std::string, FrameValue>::iterator i = a->values.begin(); i != a->values.end(); ++i)
+			{
+				for(std::list<uint32_t>::const_iterator j = a->paramsetChannels.begin(); j != a->paramsetChannels.end(); ++j)
+				{
+					if(std::find(i->second.channels.begin(), i->second.channels.end(), *j) == i->second.channels.end()) continue;
+
+					BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
+					if(parameter->data == i->second.value) continue;
+
+					if(!valueKeys[*j] || !rpcValues[*j])
+					{
+						valueKeys[*j].reset(new std::vector<std::string>());
+						rpcValues[*j].reset(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>());
+					}
+
+					parameter->data = i->second.value;
+					if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+					else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, *j, i->first, parameter->data);
+					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: " + i->first + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + ".");
+
+					if(parameter->rpcParameter)
+					{
+						//Process service messages
+						if((parameter->rpcParameter->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
+						{
+							if(parameter->rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::Enum::typeEnum)
+							{
+								serviceMessages->set(i->first, i->second.value.at(i->second.value.size() - 1), *j);
+							}
+							else if(parameter->rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::Enum::typeBoolean)
+							{
+								serviceMessages->set(i->first, (bool)i->second.value.at(i->second.value.size() - 1));
+							}
+						}
+
+						valueKeys[*j]->push_back(i->first);
+						rpcValues[*j]->push_back(parameter->rpcParameter->convertFromPacket(i->second.value, true));
+					}
+				}
+			}
+		}
+
+		if(!rpcValues.empty())
+		{
+			for(std::map<uint32_t, std::shared_ptr<std::vector<std::string>>>::const_iterator j = valueKeys.begin(); j != valueKeys.end(); ++j)
+			{
+				if(j->second->empty()) continue;
+
+				std::string address(_serialNumber + ":" + std::to_string(j->first));
+				raiseEvent(_peerID, j->first, j->second, rpcValues.at(j->first));
+				raiseRPCEvent(_peerID, j->first, address, j->second, rpcValues.at(j->first));
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::getValueFromDevice(std::shared_ptr<BaseLib::RPC::Parameter>& parameter, int32_t channel, bool asynchronous)
+{
+	try
+	{
+		if(!parameter) return BaseLib::RPC::Variable::createError(-32500, "parameter is nullptr.");
+		std::string getRequestFrame = parameter->physicalParameter->getRequest;
+		std::string getResponseFrame = parameter->physicalParameter->getResponse;
+		if(getRequestFrame.empty()) return BaseLib::RPC::Variable::createError(-6, "Parameter can't be requested actively.");
+		if(rpcDevice->framesByID.find(getRequestFrame) == rpcDevice->framesByID.end()) return BaseLib::RPC::Variable::createError(-6, "No frame was found for parameter " + parameter->id);
+		std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[getRequestFrame];
+		std::shared_ptr<BaseLib::RPC::DeviceFrame> responseFrame;
+		if(rpcDevice->framesByID.find(getResponseFrame) != rpcDevice->framesByID.end()) responseFrame = rpcDevice->framesByID[getResponseFrame];
+
+		if(valuesCentral.find(channel) == valuesCentral.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
+		if(valuesCentral[channel].find(parameter->id) == valuesCentral[channel].end()) return BaseLib::RPC::Variable::createError(-5, "Unknown parameter.");
+
+		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = getParameterSet(channel, BaseLib::RPC::ParameterSet::Type::Enum::values);
+		if(!parameterSet) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
+
+		std::shared_ptr<std::map<std::string, std::string>> soapValues(new std::map<std::string, std::string>());
+		for(std::vector<BaseLib::RPC::Parameter>::iterator i = frame->parameters.begin(); i != frame->parameters.end(); ++i)
+		{
+			if(i->constValue > -1)
+			{
+				if(i->field.empty()) continue;
+				soapValues->insert(std::pair<std::string, std::string>(i->field, std::to_string(i->constValue)));
+				continue;
+			}
+
+			bool paramFound = false;
+			for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator j = parameterSet->parameters.begin(); j != parameterSet->parameters.end(); ++j)
+			{
+				if(i->param == (*j)->physicalParameter->id)
+				{
+					if(i->field.empty()) continue;
+					soapValues->insert(std::pair<std::string, std::string>(i->field, (*j)->convertFromPacket(valuesCentral[channel][(*j)->id].data)->toString()));
+					paramFound = true;
+					break;
+				}
+			}
+			if(!paramFound) GD::out.printError("Error constructing packet. param \"" + i->param + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+		}
+
+		std::string soapRequest;
+		SonosPacket packet(_ip, frame->metaString1, frame->function1, frame->metaString2, frame->function2, soapValues);
+		packet.getSoapRequest(soapRequest);
+		if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Sending SOAP request:\n" + soapRequest);
+		if(_httpClient)
+		{
+			std::string response;
+			try
+			{
+				_httpClient->sendRequest(soapRequest, response);
+				if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: SOAP response:\n" + response);
+				std::shared_ptr<SonosPacket> responsePacket(new SonosPacket(response));
+				packetReceived(responsePacket);
+			}
+			catch(BaseLib::HTTPClientException& ex)
+			{
+				return BaseLib::RPC::Variable::createError(-100, "Error sending value to Sonos device: " + ex.what());
+			}
+
+		}
+
+		return parameter->convertFromPacket(valuesCentral[channel][parameter->id].data, true);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::RPC::Variable::createError(-32500, "Unknown application error.");
 }
 
 std::shared_ptr<BaseLib::RPC::ParameterSet> SonosPeer::getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type)
@@ -647,6 +930,10 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::setValue(int32_t clientID, ui
 		valueKeys->push_back(valueKey);
 		values->push_back(value);
 
+		rpcParameter->convertToPacket(value, parameter->data);
+		if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
+		else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
+
 		if(rpcParameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::Enum::command)
 		{
 			std::string setRequest = rpcParameter->physicalParameter->setRequest;
@@ -654,20 +941,20 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::setValue(int32_t clientID, ui
 			if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return BaseLib::RPC::Variable::createError(-6, "No frame was found for parameter " + valueKey);
 			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
 
-			std::vector<std::pair<std::string, std::string>> soapValues;
+			std::shared_ptr<std::map<std::string, std::string>> soapValues(new std::map<std::string, std::string>());
 			for(std::vector<BaseLib::RPC::Parameter>::iterator i = frame->parameters.begin(); i != frame->parameters.end(); ++i)
 			{
 				if(i->constValue > -1)
 				{
 					if(i->field.empty()) continue;
-					soapValues.push_back(std::pair<std::string, std::string>(i->field, std::to_string(i->constValue)));
+					soapValues->insert(std::pair<std::string, std::string>(i->field, std::to_string(i->constValue)));
 					continue;
 				}
 				//We can't just search for param, because it is ambiguous (see for example LEVEL for HM-CC-TC).
 				if(i->param == rpcParameter->physicalParameter->valueID || i->param == rpcParameter->physicalParameter->id)
 				{
 					if(i->field.empty()) continue;
-					soapValues.push_back(std::pair<std::string, std::string>(i->field, rpcParameter->convertFromPacket(parameter->data)->toString()));
+					soapValues->insert(std::pair<std::string, std::string>(i->field, rpcParameter->convertFromPacket(parameter->data)->toString()));
 				}
 				//Search for all other parameters
 				else
@@ -679,7 +966,7 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::setValue(int32_t clientID, ui
 						if(i->param == j->second.rpcParameter->physicalParameter->id)
 						{
 							if(i->field.empty()) continue;
-							soapValues.push_back(std::pair<std::string, std::string>(i->field, rpcParameter->convertFromPacket(parameter->data)->toString()));
+							soapValues->insert(std::pair<std::string, std::string>(i->field, rpcParameter->convertFromPacket(parameter->data)->toString()));
 							paramFound = true;
 							break;
 						}
@@ -689,14 +976,26 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::setValue(int32_t clientID, ui
 			}
 
 			std::string soapRequest;
-			encodeSoapRequest(frame->metaString1, frame->function1, frame->metaString2, frame->function2, soapValues, soapRequest);
+			SonosPacket packet(_ip, frame->metaString1, frame->function1, frame->metaString2, frame->function2, soapValues);
+			packet.getSoapRequest(soapRequest);
+			if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Sending SOAP request:\n" + soapRequest);
 			std::cerr << soapRequest << std::endl;
+			if(_httpClient)
+			{
+				std::string response;
+				try
+				{
+					_httpClient->sendRequest(soapRequest, response);
+					if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: SOAP response:\n" + response);
+				}
+				catch(BaseLib::HTTPClientException& ex)
+				{
+					return BaseLib::RPC::Variable::createError(-100, "Error sending value to Sonos device: " + ex.what());
+				}
+
+			}
 		}
 		else if(rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::store) return BaseLib::RPC::Variable::createError(-6, "Only interface types \"store\" and \"command\" are supported for this device family.");
-
-		rpcParameter->convertToPacket(value, parameter->data);
-		if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
-		else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
 
 		raiseEvent(_peerID, channel, valueKeys, values);
 		raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
@@ -716,34 +1015,6 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::setValue(int32_t clientID, ui
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. See error log for more details.");
-}
-
-void SonosPeer::encodeSoapRequest(std::string& path, std::string& soapAction, std::string& schema, std::string& functionName, std::vector<std::pair<std::string, std::string>>& values, std::string& soapRequest)
-{
-	try
-	{
-		soapRequest = "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><u:" + functionName + " xmlns:u=\"" + schema + "\">";
-		for(std::vector<std::pair<std::string, std::string>>::iterator i = values.begin(); i != values.end(); ++i)
-		{
-			soapRequest += '<' + i->first + '>' + i->second + "</" + i->first + '>';
-		}
-		soapRequest += "</u:" + functionName + "></s:Body></s:Envelope>";
-
-		std::string header = "POST /DeviceProperties/Control HTTP/1.1\r\nCONNECTION: close\r\nHOST: " + _ip + ":1400CONTENT-LENGTH: " + std::to_string(soapRequest.size()) + "\r\nCONTENT-TYPE: text/xml; charset=\"utf-8\"\r\nSOAPACTION: \"" + soapAction + "\"\r\n\r\n";
-		soapRequest.insert(soapRequest.begin(), header.begin(), header.end());
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 }

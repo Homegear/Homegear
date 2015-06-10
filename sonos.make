@@ -95,6 +95,7 @@ endif
 
 OBJECTS := \
 	$(OBJDIR)/GD.o \
+	$(OBJDIR)/SonosPacket.o \
 	$(OBJDIR)/SonosPeer.o \
 	$(OBJDIR)/SonosDevice.o \
 	$(OBJDIR)/Sonos.o \
@@ -165,6 +166,9 @@ endif
 endif
 
 $(OBJDIR)/GD.o: Modules/Sonos/GD.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/SonosPacket.o: Modules/Sonos/SonosPacket.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/SonosPeer.o: Modules/Sonos/SonosPeer.cpp

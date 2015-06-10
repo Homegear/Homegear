@@ -49,7 +49,7 @@ SonosCentral::~SonosCentral()
 
 void SonosCentral::dispose(bool wait)
 {
-	SonosDevice::dispose();
+	SonosDevice::dispose(wait);
 	_ssdp.reset();
 }
 
@@ -829,7 +829,7 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosCentral::searchDevices(int32_t clie
 				GD::out.printWarning("Warning: Device does not provide serial number: " + i->ip());
 				continue;
 			}
-			std::string serialNumber = info->structValue->at("serialNum")->stringValue;
+			std::string serialNumber = GD::bl->hf.stringReplace(info->structValue->at("serialNum")->stringValue, ":", "-");
 			std::string softwareVersion = (info->structValue->find("softwareVersion") == info->structValue->end()) ? "" : info->structValue->at("softwareVersion")->stringValue;
 			std::string roomName = (info->structValue->find("roomName") == info->structValue->end()) ? "" : info->structValue->at("roomName")->stringValue;
 			std::string idString = (info->structValue->find("modelNumber") == info->structValue->end()) ? "" : info->structValue->at("modelNumber")->stringValue;

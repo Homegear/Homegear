@@ -283,7 +283,36 @@ void Variable::printStruct(PRPCStruct rpcStruct, std::string indent)
 	std::cout << indent << "}" << std::endl;
 }
 
-std::shared_ptr<Variable> Variable::fromString(std::string value, VariableType type)
+PVariable Variable::fromString(std::string& value, LogicalParameter::Type::Enum type)
+{
+	VariableType variableType = VariableType::rpcVoid;
+	switch(type)
+	{
+	case LogicalParameter::Type::Enum::none:
+		break;
+	case LogicalParameter::Type::Enum::typeAction:
+		variableType = VariableType::rpcBoolean;
+		break;
+	case LogicalParameter::Type::Enum::typeBoolean:
+		variableType = VariableType::rpcBoolean;
+		break;
+	case LogicalParameter::Type::Enum::typeEnum:
+		variableType = VariableType::rpcInteger;
+		break;
+	case LogicalParameter::Type::Enum::typeFloat:
+		variableType = VariableType::rpcFloat;
+		break;
+	case LogicalParameter::Type::Enum::typeInteger:
+		variableType = VariableType::rpcInteger;
+		break;
+	case LogicalParameter::Type::Enum::typeString:
+		variableType = VariableType::rpcString;
+		break;
+	}
+	return fromString(value, variableType);
+}
+
+PVariable Variable::fromString(std::string& value, VariableType type)
 {
 	if(type == VariableType::rpcBoolean)
 	{

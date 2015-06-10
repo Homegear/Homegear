@@ -89,7 +89,7 @@ class ParameterConversion
 public:
 	struct Type
 	{
-		enum Enum { none, toggle, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap, floatConfigTime, optionInteger, integerTinyFloat, stringUnsignedInteger, blindTest, cfm, ccrtdnParty, optionString, stringJsonArrayFloat, rpcBinary, hexstringBytearray };
+		enum Enum { none, toggle, floatIntegerScale, integerIntegerScale, booleanInteger, booleanString, integerIntegerMap, floatConfigTime, optionInteger, integerTinyFloat, stringUnsignedInteger, blindTest, cfm, ccrtdnParty, optionString, stringJsonArrayFloat, rpcBinary, hexstringBytearray };
 	};
 	Type::Enum type = Type::Enum::none;
 	std::unordered_map<int32_t, int32_t> integerValueMapDevice;
@@ -101,6 +101,8 @@ public:
 	int32_t threshold = 1;
 	int32_t valueFalse = 0;
 	int32_t valueTrue = 0;
+	std::string stringValueFalse = "false";
+	std::string stringValueTrue = "true";
 	double offset = 0;
 	double valueSize = 0;
 	int32_t mantissaStart = 5;
@@ -444,6 +446,8 @@ public:
 	std::map<uint32_t, std::shared_ptr<DeviceChannel>> channels;
 	std::vector<std::shared_ptr<DeviceType>> supportedTypes;
 	std::multimap<uint32_t, std::shared_ptr<DeviceFrame>> framesByMessageType;
+	std::multimap<std::string, std::shared_ptr<DeviceFrame>> framesByFunction1;
+	std::multimap<std::string, std::shared_ptr<DeviceFrame>> framesByFunction2;
 	std::map<std::string, std::shared_ptr<DeviceFrame>> framesByID;
 	std::map<int32_t, std::map<std::string, std::shared_ptr<DeviceFrame>>> valueRequestFrames;
 	std::shared_ptr<DeviceProgram> runProgram;

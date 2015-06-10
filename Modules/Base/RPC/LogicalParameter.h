@@ -30,7 +30,6 @@
 #ifndef LOGICALPARAMETER_H_
 #define LOGICALPARAMETER_H_
 
-#include "../RPC/Variable.h"
 #include "../Encoding/RapidXml/rapidxml.hpp"
 
 #include <fstream>
@@ -51,6 +50,7 @@ class Obj;
 
 namespace RPC
 {
+class Variable;
 
 class ParameterOption
 {
@@ -79,8 +79,8 @@ public:
 	LogicalParameter(BaseLib::Obj* baseLib);
 	virtual ~LogicalParameter() {}
 	static std::shared_ptr<LogicalParameter> fromXML(BaseLib::Obj* baseLib, xml_node<>* node);
-	virtual std::shared_ptr<Variable> getEnforceValue() { return std::shared_ptr<Variable>(new Variable(VariableType::rpcVoid)); }
-	virtual std::shared_ptr<Variable> getDefaultValue() { return std::shared_ptr<Variable>(new Variable(VariableType::rpcVoid)); }
+	virtual std::shared_ptr<Variable> getEnforceValue();
+	virtual std::shared_ptr<Variable> getDefaultValue();
 protected:
 	BaseLib::Obj* _bl;
 };
@@ -97,8 +97,8 @@ public:
 	LogicalParameterInteger(BaseLib::Obj* baseLib);
 	LogicalParameterInteger(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~LogicalParameterInteger() {}
-	virtual std::shared_ptr<Variable> getEnforceValue() { return std::shared_ptr<Variable>(new Variable(enforceValue)); }
-	virtual std::shared_ptr<Variable> getDefaultValue() { return std::shared_ptr<Variable>(new Variable(defaultValue)); }
+	virtual std::shared_ptr<Variable> getEnforceValue();
+	virtual std::shared_ptr<Variable> getDefaultValue();
 };
 
 class LogicalParameterFloat : public LogicalParameter
@@ -113,8 +113,8 @@ public:
 	LogicalParameterFloat(BaseLib::Obj* baseLib);
 	LogicalParameterFloat(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~LogicalParameterFloat() {}
-	virtual std::shared_ptr<Variable> getEnforceValue() { return std::shared_ptr<Variable>(new Variable(enforceValue)); }
-	virtual std::shared_ptr<Variable> getDefaultValue() { return std::shared_ptr<Variable>(new Variable(defaultValue)); }
+	virtual std::shared_ptr<Variable> getEnforceValue();
+	virtual std::shared_ptr<Variable> getDefaultValue();
 };
 
 class LogicalParameterEnum : public LogicalParameter
@@ -129,8 +129,8 @@ public:
 	LogicalParameterEnum(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~LogicalParameterEnum() {}
 	std::vector<ParameterOption> options;
-	virtual std::shared_ptr<Variable> getEnforceValue() { return std::shared_ptr<Variable>(new Variable(enforceValue)); }
-	virtual std::shared_ptr<Variable> getDefaultValue() { return std::shared_ptr<Variable>(new Variable(defaultValue)); }
+	virtual std::shared_ptr<Variable> getEnforceValue();
+	virtual std::shared_ptr<Variable> getDefaultValue();
 };
 
 class LogicalParameterBoolean : public LogicalParameter
@@ -144,8 +144,8 @@ public:
 	LogicalParameterBoolean(BaseLib::Obj* baseLib);
 	LogicalParameterBoolean(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~LogicalParameterBoolean() {}
-	virtual std::shared_ptr<Variable> getEnforceValue() { return std::shared_ptr<Variable>(new Variable(enforceValue)); }
-	virtual std::shared_ptr<Variable> getDefaultValue() { return std::shared_ptr<Variable>(new Variable(defaultValue)); }
+	virtual std::shared_ptr<Variable> getEnforceValue();
+	virtual std::shared_ptr<Variable> getDefaultValue();
 };
 
 class LogicalParameterString : public LogicalParameter
@@ -159,8 +159,8 @@ public:
 	LogicalParameterString(BaseLib::Obj* baseLib);
 	LogicalParameterString(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~LogicalParameterString() {}
-	virtual std::shared_ptr<Variable> getEnforceValue() { return std::shared_ptr<Variable>(new Variable(enforceValue)); }
-	virtual std::shared_ptr<Variable> getDefaultValue() { return std::shared_ptr<Variable>(new Variable(defaultValue)); }
+	virtual std::shared_ptr<Variable> getEnforceValue();
+	virtual std::shared_ptr<Variable> getDefaultValue();
 };
 
 class LogicalParameterAction : public LogicalParameter
@@ -174,8 +174,8 @@ public:
 	LogicalParameterAction(BaseLib::Obj* baseLib);
 	LogicalParameterAction(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~LogicalParameterAction() {}
-	virtual std::shared_ptr<Variable> getEnforceValue() { return std::shared_ptr<Variable>(new Variable(enforceValue)); }
-	virtual std::shared_ptr<Variable> getDefaultValue() { return std::shared_ptr<Variable>(new Variable(defaultValue)); }
+	virtual std::shared_ptr<Variable> getEnforceValue();
+	virtual std::shared_ptr<Variable> getDefaultValue();
 };
 
 }
