@@ -61,6 +61,7 @@ void SonosCentral::init()
 
 		_ssdp.reset(new BaseLib::SSDP(GD::bl));
 		_deviceType = (uint32_t)DeviceType::CENTRAL;
+		GD::physicalInterface->addEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
 	}
 	catch(const std::exception& ex)
 	{
@@ -88,7 +89,7 @@ void SonosCentral::worker()
 		std::chrono::milliseconds sleepingTime(200);
 		uint32_t counter = 0;
 		uint32_t countsPer10Minutes = 100;
-		int32_t lastPeer;
+		uint64_t lastPeer;
 		lastPeer = 0;
 
 		//One loop on the Raspberry Pi takes about 30µs
@@ -102,9 +103,9 @@ void SonosCentral::worker()
 				{
 					counter = 0;
 					_peersMutex.lock();
-					if(_peers.size() > 0)
+					if(_peersByID.size() > 0)
 					{
-						int32_t windowTimePerPeer = _bl->settings.workerThreadWindow() / _peers.size();
+						int32_t windowTimePerPeer = _bl->settings.workerThreadWindow() / _peersByID.size();
 						if(windowTimePerPeer > 2) windowTimePerPeer -= 2;
 						sleepingTime = std::chrono::milliseconds(windowTimePerPeer);
 						countsPer10Minutes = 600000 / windowTimePerPeer;
@@ -113,17 +114,17 @@ void SonosCentral::worker()
 					searchDevices(-1);
 				}
 				_peersMutex.lock();
-				if(!_peers.empty())
+				if(!_peersByID.empty())
 				{
-					if(!_peers.empty())
+					if(!_peersByID.empty())
 					{
-						std::unordered_map<int32_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator nextPeer = _peers.find(lastPeer);
-						if(nextPeer != _peers.end())
+						std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator nextPeer = _peersByID.find(lastPeer);
+						if(nextPeer != _peersByID.end())
 						{
 							nextPeer++;
-							if(nextPeer == _peers.end()) nextPeer = _peers.begin();
+							if(nextPeer == _peersByID.end()) nextPeer = _peersByID.begin();
 						}
-						else nextPeer = _peers.begin();
+						else nextPeer = _peersByID.begin();
 						lastPeer = nextPeer->first;
 					}
 				}
@@ -161,6 +162,32 @@ void SonosCentral::worker()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+bool SonosCentral::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet)
+{
+	try
+	{
+		if(_disposing) return false;
+		std::shared_ptr<SonosPacket> sonosPacket(std::dynamic_pointer_cast<SonosPacket>(packet));
+		if(!sonosPacket) return false;
+		std::shared_ptr<SonosPeer> peer(getPeer(sonosPacket->serialNumber()));
+		if(!peer) return false;
+		peer->packetReceived(sonosPacket);
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
 }
 
 void SonosCentral::deletePeer(uint64_t id)
@@ -829,7 +856,10 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosCentral::searchDevices(int32_t clie
 				GD::out.printWarning("Warning: Device does not provide serial number: " + i->ip());
 				continue;
 			}
-			std::string serialNumber = GD::bl->hf.stringReplace(info->structValue->at("serialNum")->stringValue, ":", "-");
+			std::string serialNumber = info->structValue->at("serialNum")->stringValue;
+			std::string::size_type pos = serialNumber.find(':');
+			if(pos != std::string::npos) serialNumber = serialNumber.substr(0, pos);
+			GD::bl->hf.stringReplace(serialNumber, "-", "");
 			std::string softwareVersion = (info->structValue->find("softwareVersion") == info->structValue->end()) ? "" : info->structValue->at("softwareVersion")->stringValue;
 			std::string roomName = (info->structValue->find("roomName") == info->structValue->end()) ? "" : info->structValue->at("roomName")->stringValue;
 			std::string idString = (info->structValue->find("modelNumber") == info->structValue->end()) ? "" : info->structValue->at("modelNumber")->stringValue;

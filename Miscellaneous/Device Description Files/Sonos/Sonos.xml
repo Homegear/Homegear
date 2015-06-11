@@ -1,0 +1,129 @@
+<?xml version="1.0"?>
+<device version="1">
+	<types>
+		<type name="Sonos" id="Sonos">
+			<type_id>0x0001</type_id>
+			<firmware cond_op="GE">0x10</firmware>
+		</type>
+	</types>
+	<parameters type="MASTER" id="remote_dev_master">
+	</parameters>
+	<channels>
+		<channel index="0" type="MAINTENANCE" ui_flags="internal" class="maintenance" count="1">
+			<parameters type="MASTER" id="maint_ch_master"/>
+			<parameters type="VALUES" id="maint_ch_values">
+				<parameter id="UNREACH" operations="read,event" ui_flags="service">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="UNREACH"/>
+				</parameter>
+				<parameter id="STICKY_UNREACH" operations="read,write,event" ui_flags="service,sticky">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="STICKY_UNREACH"/>
+				</parameter>
+				<parameter id="CONFIG_PENDING" operations="read,event" ui_flags="service">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="CONFIG_PENDING"/>
+				</parameter>
+				<parameter id="RSSI_DEVICE" operations="read,event">
+					<logical type="integer"/>
+					<physical type="integer" interface="internal" value_id="RSSI_DEVICE"/>
+				</parameter>
+				<parameter id="RSSI_PEER" operations="read,event">
+					<logical type="integer"/>
+					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+				</parameter>
+			</parameters>
+		</channel>
+		<channel index="1" type="SPEAKER">
+			<parameters type="VALUES" id="speaker_valueset">
+				<parameter id="PLAY" operations="write,event">
+					<logical type="action" />
+					<physical interface="command" value_id="PLAY" id="PLAY">
+						<set request="PLAY" />
+					</physical>
+					<conversion type="boolean_string" string_true="On" string_false="Off" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="LED_STATE" operations="read,write,event">
+					<logical type="boolean" />
+					<physical interface="command" value_id="LED_STATE" id="LED_STATE">
+						<set request="LED_SET" />
+						<get request="LED_GET" />
+						<event packet="LED_GET_RESPONSE" />
+					</physical>
+					<conversion type="boolean_string" string_true="On" string_false="Off" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="ROOMNAME" operations="read,event">
+					<logical type="string" />
+				</parameter>
+				<parameter id="VOLUME" operations="read,write,event">
+					<logical type="integer" min="0" max="100" />
+					<physical interface="command" value_id="VOLUME" id="VOLUME">
+						<set request="VOLUME_SET" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="AV_TRANS_PORT_URI" operations="read,write,event">
+					<logical type="string" />
+					<physical interface="command" value_id="AV_TRANS_PORT_URI" id="AV_TRANS_PORT_URI">
+						<set request="AV_TRANS_PORT_URI_SET" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="AV_TRANS_PORT_URI_METADATA" operations="read,write,event">
+					<logical type="string" />
+					<physical interface="store" value_id="AV_TRANS_PORT_URI_METADATA" id="AV_TRANS_PORT_URI_METADATA" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+			</parameters>
+		</channel>
+		<channel index="2" type="SPEAKER_INFO">
+			<parameters type="VALUES" id="speaker_info_valueset">
+				<parameter id="TRANSPORT_STATE" operations="read,event">
+					<logical type="string" default="" />
+					<physical interface="command" value_id="TRANSPORT_STATE" id="TRANSPORT_STATE">
+						<event packet="INFO" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="CURRENT_TITLE" operations="read,event">
+					<logical type="string" default="" />
+					<physical interface="command" value_id="CURRENT_TITLE" id="CURRENT_TITLE">
+						<event packet="INFO" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+			</parameters>
+		</channel>
+	</channels>
+	<packets>
+		<packet id="AV_TRANS_PORT_URI_SET" direction="to_device" function1="urn:schemas-upnp-org:service:AVTransport:1#SetAVTransportURI" function2="SetAVTransportURI" metastring1="/MediaRenderer/AVTransport/Control" metastring2="urn:schemas-upnp-org:service:AVTransport:1">
+			<parameter field="InstanceID" const_value="0"/>			
+			<parameter field="CurrentURI" param="AV_TRANS_PORT_URI"/>
+			<parameter field="CurrentURIMetaData" param="AV_TRANS_PORT_URI_METADATA"/>
+		</packet>
+		<packet id="INFO" direction="from_device" function2="InfoBroadcast" fixed_channel="2">
+			<parameter field="TransportState" param="TRANSPORT_STATE"/>
+			<parameter field="CurrentTrackMetaData" subfield="dc:title" param="CURRENT_TITLE"/>
+		</packet>
+		<packet id="LED_GET" direction="to_device" function1="urn:schemas-upnp-org:service:DeviceProperties:1#GetLEDState" function2="GetLEDState" metastring1="/DeviceProperties/Control" metastring2="urn:schemas-upnp-org:service:DeviceProperties:1">
+			<parameter field="InstanceID" const_value="0"/>
+		</packet>
+		<packet id="LED_GET_RESPONSE" direction="from_device" function2="GetLEDStateResponse" fixed_channel="1">
+			<parameter field="CurrentLEDState" param="LED_STATE"/>
+		</packet>
+		<packet id="LED_SET" direction="to_device" function1="urn:schemas-upnp-org:service:DeviceProperties:1#SetLEDState" function2="SetLEDState" metastring1="/DeviceProperties/Control" metastring2="urn:schemas-upnp-org:service:DeviceProperties:1">
+			<parameter field="DesiredLEDState" param="LED_STATE"/>
+		</packet>
+		<packet id="PLAY" direction="to_device" function1="urn:schemas-upnp-org:service:AVTransport:1#Play" function2="Play" metastring1="/MediaRenderer/AVTransport/Control" metastring2="urn:schemas-upnp-org:service:AVTransport:1">
+			<parameter field="InstanceID" const_value="0"/>
+			<parameter field="Speed" const_value="1"/>
+		</packet>
+		<packet id="VOLUME_SET" direction="to_device" function1="urn:schemas-upnp-org:service:RenderingControl:1#SetVolume" function2="SetVolume" metastring1="/MediaRenderer/RenderingControl/Control" metastring2="urn:schemas-upnp-org:service:RenderingControl:1">
+			<parameter field="InstanceID" const_value="0"/>
+			<parameter field="Channel" const_value_string="MASTER"/>
+			<parameter field="DesiredVolume" param="VOLUME"/>
+		</packet>
+	</packets>
+</device>

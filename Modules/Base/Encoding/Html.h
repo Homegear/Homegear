@@ -27,13 +27,34 @@
  * files in the program, then also delete it here.
  */
 
-#include "GD.h"
+#ifndef HTML_H_
+#define HTML_H_
 
-namespace Sonos
+#include "../Exception.h"
+#include <string>
+#include <map>
+
+namespace BaseLib
 {
-	BaseLib::Obj* GD::bl = nullptr;
-	Sonos* GD::family = nullptr;
-	std::shared_ptr<ISonosInterface> GD::physicalInterface;
-	BaseLib::Output GD::out;
-	BaseLib::RPC::Devices GD::rpcDevices(BaseLib::Systems::DeviceFamilies::Sonos);
+
+class HtmlException : public BaseLib::Exception
+{
+public:
+	HtmlException(std::string message) : BaseLib::Exception(message) {}
+};
+
+class Html
+{
+public:
+	virtual ~Html();
+
+	static void unescapeHtmlEntities(std::string& in, std::string& out);
+private:
+	typedef std::map<std::string, unsigned int> EntityNameMap;
+	typedef std::pair<std::string, unsigned int> EntityNamePair;
+	static EntityNameMap _entityNames;
+
+	Html();
+};
 }
+#endif

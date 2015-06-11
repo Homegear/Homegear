@@ -40,6 +40,9 @@ class ISonosInterface : public BaseLib::Systems::IPhysicalInterface
 public:
 	ISonosInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
 	virtual ~ISonosInterface();
+
+	virtual std::string listenAddress() = 0;
+	virtual int32_t listenPort() = 0;
 protected:
 	BaseLib::Output _out;
 };

@@ -46,6 +46,8 @@ public:
 	SonosCentral(uint32_t deviceType, std::string serialNumber, IDeviceEventSink* eventHandler);
 	virtual ~SonosCentral();
 	virtual void dispose(bool wait = true);
+
+	virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet);
 	std::string handleCLICommand(std::string command);
 	uint64_t getPeerIDFromSerial(std::string serialNumber) { std::shared_ptr<SonosPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
 

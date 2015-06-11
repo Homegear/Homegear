@@ -134,7 +134,27 @@ void SonosPeer::worker()
 {
 	try
 	{
-
+		if(BaseLib::HelperFunctions::getTimeSeconds() - _lastAvTransportSubscription > 60)
+		{
+			_lastAvTransportSubscription = BaseLib::HelperFunctions::getTimeSeconds();
+			if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Peer " + std::to_string(_peerID) + " is calling SubscribeMRAVTransport...");
+			std::string subscriptionPacket = "SUBSCRIBE /MediaRenderer/AVTransport/Event HTTP/1.1\r\nHOST: " + _ip + ":1400\r\nCALLBACK: <http://" + GD::physicalInterface->listenAddress() + ':' + std::to_string(GD::physicalInterface->listenPort()) + ">\r\nNT: upnp:event\r\nTIMEOUT: Second-300\r\nContent-Length: 0\r\n\r\n";
+			if(_httpClient)
+			{
+				std::string response;
+				try
+				{
+					_httpClient->sendRequest(subscriptionPacket, response, true);
+					if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: SOAP response:\n" + response);
+					serviceMessages->setUnreach(false, true);
+				}
+				catch(BaseLib::HTTPClientException& ex)
+				{
+					GD::out.printWarning("Warning: Error sending value to Sonos device: " + ex.what());
+					serviceMessages->setUnreach(true, false);
+				}
+			}
+		}
 	}
 	catch(const std::exception& ex)
 	{
@@ -425,7 +445,8 @@ void SonosPeer::getValuesFromPacket(std::shared_ptr<SonosPacket> packet, std::ve
 		std::pair<std::multimap<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator,std::multimap<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator> range = rpcDevice->framesByFunction2.equal_range(packet->functionName());
 		if(range.first == rpcDevice->framesByFunction2.end()) return;
 		std::multimap<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator i = range.first;
-		std::shared_ptr<std::map<std::string, std::string>> soapValues = packet->values();
+		std::shared_ptr<std::map<std::string, std::string>> soapValues;
+		std::string field;
 		do
 		{
 			FrameValues currentFrameValues;
@@ -438,7 +459,25 @@ void SonosPeer::getValuesFromPacket(std::shared_ptr<SonosPacket> packet, std::ve
 
 			for(std::vector<BaseLib::RPC::Parameter>::iterator j = frame->parameters.begin(); j != frame->parameters.end(); ++j)
 			{
-				if(soapValues->find(j->field) == soapValues->end()) continue;
+				if(j->field == "CurrentTrackMetaData")
+				{
+					soapValues = packet->currentTrackMetadata();
+					if(!soapValues || soapValues->find(j->subfield) == soapValues->end()) continue;
+					field = j->subfield;
+				}
+				else if(j->field == "r:EnqueuedTransportURIMetaData")
+				{
+					soapValues = packet->currentTrackMetadata();
+					if(!soapValues || soapValues->find(j->subfield) == soapValues->end()) continue;
+					field = j->subfield;
+				}
+				else
+				{
+					soapValues = packet->values();
+					if(!soapValues || soapValues->find(j->field) == soapValues->end()) continue;
+					field = j->field;
+				}
+
 
 				for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator k = frame->associatedValues.begin(); k != frame->associatedValues.end(); ++k)
 				{
@@ -482,7 +521,7 @@ void SonosPeer::getValuesFromPacket(std::shared_ptr<SonosPacket> packet, std::ve
 					{
 						//This is a little nasty and costs a lot of resources, but we need to run the data through the packet converter
 						std::vector<uint8_t> encodedData;
-						_binaryEncoder->encodeResponse(BaseLib::RPC::Variable::fromString(soapValues->at(j->field), (*k)->logicalParameter->type), encodedData);
+						_binaryEncoder->encodeResponse(BaseLib::RPC::Variable::fromString(soapValues->at(field), (*k)->logicalParameter->type), encodedData);
 						std::shared_ptr<BaseLib::RPC::Variable> data = (*k)->convertFromPacket(encodedData, true);
 						(*k)->convertToPacket(data, currentFrameValues.values[(*k)->id].value);
 					}
@@ -648,12 +687,13 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::getValueFromDevice(std::share
 				if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: SOAP response:\n" + response);
 				std::shared_ptr<SonosPacket> responsePacket(new SonosPacket(response));
 				packetReceived(responsePacket);
+				serviceMessages->setUnreach(false, true);
 			}
 			catch(BaseLib::HTTPClientException& ex)
 			{
 				return BaseLib::RPC::Variable::createError(-100, "Error sending value to Sonos device: " + ex.what());
+				serviceMessages->setUnreach(true, false);
 			}
-
 		}
 
 		return parameter->convertFromPacket(valuesCentral[channel][parameter->id].data, true);

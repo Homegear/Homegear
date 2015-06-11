@@ -33,6 +33,7 @@
 
 namespace BaseLib
 {
+
 std::string HTTP::getMimeType(std::string extension)
 {
 	if(_extMimeTypeMap.find(extension) != _extMimeTypeMap.end()) return _extMimeTypeMap[extension];
@@ -176,7 +177,7 @@ void HTTP::process(char* buffer, int32_t bufferLength, bool checkForChunkedXML)
 	_headerProcessingStarted = true;
 	if(!_header.parsed) processHeader(&buffer, bufferLength);
 	if(!_header.parsed) return;
-	if(_header.method == "GET" || _header.method == "M-SEARCH" || _header.method == "NOTIFY" || (_contentLengthSet && _header.contentLength == 0))
+	if(_header.method == "GET" || _header.method == "M-SEARCH" || (_header.method == "NOTIFY" && _header.contentLength == 0) || (_contentLengthSet && _header.contentLength == 0))
 	{
 		_dataProcessingStarted = true;
 		setFinished();

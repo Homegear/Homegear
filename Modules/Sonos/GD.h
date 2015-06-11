@@ -32,6 +32,7 @@
 
 #include "../Base/BaseLib.h"
 #include "Sonos.h"
+#include "PhysicalInterfaces/ISonosInterface.h"
 
 namespace Sonos
 {
@@ -43,6 +44,7 @@ public:
 
 	static BaseLib::Obj* bl;
 	static Sonos* family;
+	static std::shared_ptr<ISonosInterface> physicalInterface;
 	static BaseLib::RPC::Devices rpcDevices;
 	static BaseLib::Output out;
 private:

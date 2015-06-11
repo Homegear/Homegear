@@ -9,6 +9,7 @@
 #include "Encoding/JsonDecoder.h"
 #include "Encoding/JsonEncoder.h"
 #include "Encoding/HTTP.h"
+#include "Encoding/Html.h"
 #include "Encoding/WebSocket.h"
 #include "Managers/SerialDeviceManager.h"
 #include "Managers/FileDescriptorManager.h"

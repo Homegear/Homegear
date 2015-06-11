@@ -38,25 +38,112 @@ SonosPacket::SonosPacket()
 	_values.reset(new std::map<std::string, std::string>());
 }
 
-SonosPacket::SonosPacket(std::string soap)
+SonosPacket::SonosPacket(std::string& soap, int64_t timeReceived)
 {
 	try
 	{
+		BaseLib::HelperFunctions::trim(soap);
+		_values.reset(new std::map<std::string, std::string>());
+		_timeReceived = timeReceived;
 		if(soap.empty()) return;
 		xml_document<> doc;
 		doc.parse<parse_no_entity_translation | parse_validate_closing_tags>(&soap.at(0));
 		xml_node<>* node = doc.first_node("s:Envelope");
-		if(!node) return;
-		node = node->first_node("s:Body");
-		if(!node) return;
-		node = node->first_node();
-		if(!node) return;
-		_functionName = std::string(node->name());
-		if(_functionName.size() > 2) _functionName = _functionName.substr(2);
-		_values.reset(new std::map<std::string, std::string>());
-		for(xml_node<>* subNode = node->first_node(); subNode; subNode = subNode->next_sibling())
+		if(!node) //Info packet
 		{
-			_values->operator [](std::string(subNode->name())) = std::string(subNode->value());
+			xml_node<>* node = doc.first_node("Event");
+			if(!node)
+			{
+				GD::out.printWarning("Warning: Tried to parse invalid packet.");
+				return;
+			}
+			_functionName = "InfoBroadcast";
+			node = node->first_node("InstanceID");
+			if(!node)
+			{
+				GD::out.printWarning("Warning: Tried to parse invalid packet.");
+				return;
+			}
+			for(xml_node<>* subNode = node->first_node(); subNode; subNode = subNode->next_sibling())
+			{
+				std::string name(subNode->name());
+				xml_attribute<>* attr = subNode->first_attribute("val");
+				if(!attr)
+				{
+					GD::out.printWarning("Warning: Tried to parse element without attribute: " + name);
+					continue;
+				}
+				std::string value(attr->value());
+				if(name == "CurrentTrackMetaData")
+				{
+					_currentTrackMetadata.reset(new std::map<std::string, std::string>());
+					if(value.empty()) continue;
+					std::string xml;
+					BaseLib::Html::unescapeHtmlEntities(value, xml);
+					xml_document<> metadataDoc;
+					metadataDoc.parse<parse_no_entity_translation | parse_validate_closing_tags>(&xml.at(0));
+					xml_node<>* metadataNode = metadataDoc.first_node("DIDL-Lite");
+					if(!metadataNode) continue;
+					metadataNode = metadataNode->first_node("item");
+					if(!metadataNode) continue;
+					for(xml_node<>* metadataSubNode = metadataNode->first_node(); metadataSubNode; metadataSubNode = metadataSubNode->next_sibling())
+					{
+						std::string metadataName(metadataSubNode->name());
+						if(metadataName == "res")
+						{
+							_currentTrackMetadata->operator [](name) = std::string(metadataSubNode->value());
+							for(xml_attribute<>* metadataAttribute = metadataSubNode->first_attribute(); metadataAttribute; metadataAttribute = metadataAttribute->next_attribute())
+							{
+								_currentTrackMetadata->operator [](std::string(metadataAttribute->name())) = std::string(metadataAttribute->value());
+							}
+						}
+						else
+						{
+							_currentTrackMetadata->operator [](std::string(metadataSubNode->name())) = std::string(metadataSubNode->value());
+						}
+					}
+				}
+				else if(name == "r:EnqueuedTransportURIMetaData")
+				{
+					_enqueuedTransportUriMetaData.reset(new std::map<std::string, std::string>());
+					if(value.empty()) continue;
+					std::string xml;
+					BaseLib::Html::unescapeHtmlEntities(value, xml);
+					xml_document<> metadataDoc;
+					metadataDoc.parse<parse_no_entity_translation | parse_validate_closing_tags>(&xml.at(0));
+					xml_node<>* metadataNode = metadataDoc.first_node("DIDL-Lite");
+					if(!metadataNode) continue;
+					metadataNode = metadataNode->first_node("item");
+					if(!metadataNode) continue;
+					for(xml_attribute<>* metadataAttribute = metadataNode->first_attribute(); metadataAttribute; metadataAttribute = metadataAttribute->next_attribute())
+					{
+						_enqueuedTransportUriMetaData->operator [](std::string(metadataAttribute->name())) = std::string(metadataAttribute->value());
+					}
+					for(xml_node<>* metadataSubNode = metadataNode->first_node(); metadataSubNode; metadataSubNode = metadataSubNode->next_sibling())
+					{
+						std::string metadataName(metadataSubNode->name());
+						_currentTrackMetadata->operator [](std::string(metadataSubNode->name())) = std::string(metadataSubNode->value());
+					}
+				}
+				else
+				{
+					_values->operator [](name) = value;
+				}
+			}
+		}
+		else
+		{
+			node = node->first_node("s:Body");
+			if(!node) return;
+			node = node->first_node();
+			if(!node) return;
+			_functionName = std::string(node->name());
+			if(_functionName.size() > 2) _functionName = _functionName.substr(2);
+			_values.reset(new std::map<std::string, std::string>());
+			for(xml_node<>* subNode = node->first_node(); subNode; subNode = subNode->next_sibling())
+			{
+				_values->operator [](std::string(subNode->name())) = std::string(subNode->value());
+			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -71,6 +158,11 @@ SonosPacket::SonosPacket(std::string soap)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+SonosPacket::SonosPacket(std::string& soap, std::string serialNumber, int64_t timeReceived) : SonosPacket(soap, timeReceived)
+{
+	_serialNumber = serialNumber;
 }
 
 SonosPacket::SonosPacket(std::string& ip, std::string& path, std::string& soapAction, std::string& schema, std::string& functionName, std::shared_ptr<std::map<std::string, std::string>>& values)

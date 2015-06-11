@@ -70,12 +70,17 @@ void SonosDevice::dispose(bool wait)
 	{
 		if(_disposing) return;
 		_disposing = true;
+		GD::out.printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
+		GD::physicalInterface->removeEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
 		_stopWorkerThread = true;
 		if(_workerThread.joinable())
 		{
 			GD::out.printDebug("Debug: Waiting for worker thread of device " + std::to_string(_deviceID) + "...");
 			_workerThread.join();
 		}
+		//Packets might still arrive, after removing this device from the rfDevice, so sleep a little bit
+		//This is not necessary if the rfDevice doesn't listen anymore
+		if(wait) std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 		LogicalDevice::dispose(wait);
 	}
     catch(const std::exception& ex)
@@ -256,6 +261,11 @@ std::shared_ptr<SonosPeer> SonosDevice::getPeer(std::string serialNumber)
     }
     _peersMutex.unlock();
     return std::shared_ptr<SonosPeer>();
+}
+
+bool SonosDevice::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet)
+{
+    return false;
 }
 
 void SonosDevice::savePeers(bool full)

@@ -46,12 +46,21 @@ class EventServer  : public ISonosInterface
         void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet) {}
         int64_t lastAction() { return _lastAction; }
         virtual bool isOpen() { return true; /* Always return true, because there is no continuous connection. */ }
+        std::string listenAddress() { return _listenAddress; }
+        int32_t listenPort() { return _listenPort; }
     protected:
+        bool _stopServer = true;
         int64_t _lastAction = 0;
         std::string _listenAddress;
-        int32_t _listenPort;
+        int32_t _listenPort = 7373;
+        int32_t _backLog = 10;
+        std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
 
-        void listen();
+        void getAddress();
+        void getSocketDescriptor();
+        std::shared_ptr<BaseLib::FileDescriptor> getClientSocketDescriptor();
+        void mainThread();
+        void readClient(std::shared_ptr<BaseLib::SocketOperations> socket);
 };
 
 }

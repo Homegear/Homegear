@@ -104,6 +104,7 @@ public:
 protected:
 	std::shared_ptr<BaseLib::RPC::RPCEncoder> _binaryEncoder;
 	std::shared_ptr<BaseLib::HTTPClient> _httpClient;
+	int32_t _lastAvTransportSubscription = 0;
 
 	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 	virtual std::shared_ptr<BaseLib::Systems::LogicalDevice> getDevice(int32_t address);

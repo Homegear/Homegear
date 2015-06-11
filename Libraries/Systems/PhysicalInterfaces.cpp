@@ -98,6 +98,7 @@ void PhysicalInterfaces::load(std::string filename)
 						else if(name == "fs20") settings->family = BaseLib::Systems::DeviceFamilies::FS20;
 						else if(name == "max") settings->family = BaseLib::Systems::DeviceFamilies::MAX;
 						else if(name == "philipshue") settings->family = BaseLib::Systems::DeviceFamilies::PhilipsHue;
+						else if(name == "sonos") settings->family = BaseLib::Systems::DeviceFamilies::Sonos;
 						if(GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end()) GD::out.printDebug("Debug: Reading config for physical device family " + GD::deviceFamilies.at(settings->family)->getName());
 						else GD::out.printError("Error in physicalinterfaces.conf: No module found for device family: " + name);
 						break;
@@ -321,7 +322,7 @@ void PhysicalInterfaces::load(std::string filename)
 				}
 			}
 		}
-		if((!settings->device.empty() || (!settings->host.empty() && !settings->port.empty())) && !settings->type.empty() && settings->family != BaseLib::Systems::DeviceFamilies::none)
+		if((!settings->device.empty() || !settings->port.empty()) && !settings->type.empty() && settings->family != BaseLib::Systems::DeviceFamilies::none)
 		{
 			if(settings->id.empty()) settings->id = settings->type;
 			std::shared_ptr<BaseLib::Systems::IPhysicalInterface> device = GD::deviceFamilies.at(settings->family)->createPhysicalDevice(settings);

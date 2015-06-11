@@ -29,6 +29,7 @@
 
 #include "Sonos.h"
 #include "DeviceTypes.h"
+#include "PhysicalInterfaces/EventServer.h"
 #include "LogicalDevices/SonosCentral.h"
 #include "GD.h"
 
@@ -66,6 +67,33 @@ void Sonos::dispose()
 
 	_central.reset();
 	GD::rpcDevices.clear();
+}
+
+std::shared_ptr<BaseLib::Systems::IPhysicalInterface> Sonos::createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings)
+{
+	try
+	{
+		std::shared_ptr<ISonosInterface> device;
+		if(!settings) return device;
+		GD::out.printDebug("Debug: Creating physical device. Type defined in physicalinterfaces.conf is: " + settings->type);
+		if(settings->type == "eventserver") device.reset(new EventServer(settings));
+		else GD::out.printError("Error: Unsupported physical device type: " + settings->type);
+		if(device) GD::physicalInterface = device;
+		return device;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::shared_ptr<BaseLib::Systems::IPhysicalInterface>();
 }
 
 std::shared_ptr<BaseLib::Systems::Central> Sonos::getCentral() { return _central; }

@@ -345,6 +345,7 @@ solution "homegear"
       language "C++"
       files { "./Modules/Sonos/*.h", "./Modules/Sonos/*.cpp" }
       files { "./Modules/Sonos/LogicalDevices/*.h", "./Modules/Sonos/LogicalDevices/*.cpp" }
+      files { "./Modules/Sonos/PhysicalInterfaces/*.h", "./Modules/Sonos/PhysicalInterfaces/*.cpp" }
       linkoptions { "-l pthread", "-l base" }
       buildoptions { "-Wall", "-std=c++11" }
       

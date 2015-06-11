@@ -90,7 +90,7 @@ public:
 	 * @param[in] request The HTTP request including the full header.
 	 * @param[out] response The HTTP response without the header.
 	 */
-	void sendRequest(const std::string& request, std::string& response);
+	void sendRequest(const std::string& request, std::string& response, bool responseIsHeaderOnly = false);
 
 	/*
 	 * Sends an HTTP GET request and returns the response. This method can be used to download files.

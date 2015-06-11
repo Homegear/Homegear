@@ -56,7 +56,7 @@ class SonosDevice : public BaseLib::Systems::LogicalDevice
         virtual ~SonosDevice();
         virtual void dispose(bool wait = true);
 
-        virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet) { return true; }
+        virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet);
 
         virtual void addPeer(std::shared_ptr<SonosPeer> peer);
 		virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();

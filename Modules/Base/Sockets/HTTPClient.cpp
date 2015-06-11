@@ -62,7 +62,7 @@ void HTTPClient::get(const std::string& path, std::string& data)
 	sendRequest(getRequest, data);
 }
 
-void HTTPClient::sendRequest(const std::string& request, std::string& response)
+void HTTPClient::sendRequest(const std::string& request, std::string& response, bool responseIsHeaderOnly)
 {
 	response.clear();
 	if(request.empty()) throw HTTPClientException("Request is empty.");
@@ -180,6 +180,11 @@ void HTTPClient::sendRequest(const std::string& request, std::string& response)
 		{
 			if(_bl->debugLevel >= 5) _bl->out.printDebug("Debug: Received packet from HTTP server \"" + _hostname + "\": " + std::string(buffer, receivedBytes));
 			http.process(buffer, receivedBytes);
+			if(http.headerIsFinished() && responseIsHeaderOnly)
+			{
+				http.setFinished();
+				break;
+			}
 		}
 		catch(HTTPException& ex)
 		{
