@@ -203,7 +203,7 @@ void EventHandler::mainThread()
 					{
 						int32_t threadId = _currentEventThreadID++;
 						if(threadId == -1) threadId = _currentEventThreadID++;
-						_eventThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&EventHandler::rpcCallThread, this, event->name, event->eventMethod, event->eventMethodParameters, threadId), true)));
+						_eventThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&EventHandler::rpcCallThread, this, event->name, event->eventMethod,  event->eventMethodParameters, threadId), true)));
 						event->lastRaised = currentTime;
 					}
 					catch(const std::exception& ex)
@@ -1184,7 +1184,9 @@ std::shared_ptr<BaseLib::RPC::Variable> EventHandler::trigger(std::string name)
 		uint64_t currentTime = BaseLib::HelperFunctions::getTime();
 		event->lastRaised = currentTime;
 		GD::out.printInfo("Info: Event \"" + event->name + "\" raised for peer with id " + std::to_string(event->peerID) + ", channel " + std::to_string(event->peerChannel) + " and variable \"" + event->variable + "\". Trigger: \"manual\"");
-		std::shared_ptr<BaseLib::RPC::Variable> result = GD::rpcServers.begin()->second.callMethod(event->eventMethod, event->eventMethodParameters);
+		BaseLib::RPC::PVariable eventMethodParameters(new BaseLib::RPC::Variable());
+		*eventMethodParameters = *event->eventMethodParameters;
+		std::shared_ptr<BaseLib::RPC::Variable> result = GD::rpcServers.begin()->second.callMethod(event->eventMethod, eventMethodParameters);
 
 		postTriggerTasks(event, result, currentTime);
 
@@ -1212,7 +1214,9 @@ void EventHandler::rpcCallThread(std::string eventName, std::string eventMethod,
 {
 	try
 	{
-		std::shared_ptr<BaseLib::RPC::Variable> result = GD::rpcServers.begin()->second.callMethod(eventMethod, eventMethodParameters);
+		BaseLib::RPC::PVariable eventMethodParametersCopy(new BaseLib::RPC::Variable());
+		*eventMethodParametersCopy = *eventMethodParameters;
+		std::shared_ptr<BaseLib::RPC::Variable> result = GD::rpcServers.begin()->second.callMethod(eventMethod, eventMethodParametersCopy);
 		if(result && result->errorStruct)
 		{
 			GD::out.printError("Could not execute RPC method \"" + eventMethod + "\" for event \"" + eventName + "\". Error struct:");
@@ -1271,6 +1275,8 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 		_eventsMutex.unlock();
 		for(std::vector<std::shared_ptr<Event>>::iterator i = triggeredEvents.begin(); i !=  triggeredEvents.end(); ++i)
 		{
+			BaseLib::RPC::PVariable eventMethodParameters(new BaseLib::RPC::Variable());
+			*eventMethodParameters = *(*i)->eventMethodParameters;
 			std::shared_ptr<BaseLib::RPC::Variable> result;
 			if(((int32_t)(*i)->trigger) < 8)
 			{
@@ -1279,7 +1285,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 				{
 					GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"updated\"");
 					(*i)->lastRaised = currentTime;
-					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, eventMethodParameters);
 				}
 				else if((*i)->trigger == Event::Trigger::unchanged)
 				{
@@ -1287,7 +1293,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"unchanged\"");
 						(*i)->lastRaised = currentTime;
-						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, eventMethodParameters);
 					}
 				}
 				else if((*i)->trigger == Event::Trigger::changed)
@@ -1296,7 +1302,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"changed\"");
 						(*i)->lastRaised = currentTime;
-						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, eventMethodParameters);
 					}
 				}
 				else if((*i)->trigger == Event::Trigger::greater)
@@ -1305,7 +1311,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greater\"");
 						(*i)->lastRaised = currentTime;
-						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, eventMethodParameters);
 					}
 				}
 				else if((*i)->trigger == Event::Trigger::less)
@@ -1314,7 +1320,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"less\"");
 						(*i)->lastRaised = currentTime;
-						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, eventMethodParameters);
 					}
 				}
 				else if((*i)->trigger == Event::Trigger::greaterOrUnchanged)
@@ -1323,7 +1329,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greaterOrUnchanged\"");
 						(*i)->lastRaised = currentTime;
-						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, eventMethodParameters);
 					}
 				}
 				else if((*i)->trigger == Event::Trigger::lessOrUnchanged)
@@ -1332,7 +1338,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"lessOrUnchanged\"");
 						(*i)->lastRaised = currentTime;
-						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, eventMethodParameters);
 					}
 				}
 			}
@@ -1345,7 +1351,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"value\"");
 						(*i)->lastRaised = currentTime;
-						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, eventMethodParameters);
 					}
 				}
 				else if((*i)->trigger == Event::Trigger::notValue)
@@ -1354,7 +1360,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"notValue\"");
 						(*i)->lastRaised = currentTime;
-						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, eventMethodParameters);
 					}
 				}
 				else if((*i)->trigger == Event::Trigger::greaterThanValue)
@@ -1363,7 +1369,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greaterThanValue\"");
 						(*i)->lastRaised = currentTime;
-						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, eventMethodParameters);
 					}
 				}
 				else if((*i)->trigger == Event::Trigger::lessThanValue)
@@ -1372,7 +1378,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"lessThanValue\"");
 						(*i)->lastRaised = currentTime;
-						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, eventMethodParameters);
 					}
 				}
 				else if((*i)->trigger == Event::Trigger::greaterOrEqualValue)
@@ -1381,7 +1387,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greaterOrEqualValue\"");
 						(*i)->lastRaised = currentTime;
-						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, eventMethodParameters);
 					}
 				}
 				else if((*i)->trigger == Event::Trigger::lessOrEqualValue)
@@ -1390,7 +1396,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"lessOrEqualValue\"");
 						(*i)->lastRaised = currentTime;
-						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, eventMethodParameters);
 					}
 				}
 			}

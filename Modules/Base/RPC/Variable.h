@@ -32,6 +32,7 @@
 
 #include "../Encoding/RapidXml/rapidxml.hpp"
 #include "LogicalParameter.h"
+#include "PhysicalParameter.h"
 
 #include <vector>
 #include <string>
@@ -100,8 +101,10 @@ public:
 	void print();
 	static std::string getTypeString(VariableType type);
 	static PVariable fromString(std::string& value, LogicalParameter::Type::Enum type);
+	static PVariable fromString(std::string& value, PhysicalParameter::Type::Enum type);
 	static PVariable fromString(std::string& value, VariableType type);
 	std::string toString();
+	Variable& operator=(const Variable& rhs);
 	bool operator==(const Variable& rhs);
 	bool operator<(const Variable& rhs);
 	bool operator<=(const Variable& rhs);

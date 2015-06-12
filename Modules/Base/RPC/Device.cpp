@@ -227,7 +227,7 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::Variable> value)
 		}
 		else if(type == Type::Enum::booleanString)
 		{
-			value->type = VariableType::rpcString;
+			value->type = VariableType::rpcBoolean;
 			value->booleanValue = (value->stringValue == stringValueTrue);
 			if(invert) value->booleanValue = !value->booleanValue;
 		}

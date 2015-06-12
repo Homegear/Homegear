@@ -27,22 +27,15 @@
  * files in the program, then also delete it here.
  */
 
-#include "RPCClient.h"
+#include "RpcClient.h"
 #include "../../Version.h"
 #include "../GD/GD.h"
 #include "../../Modules/Base/BaseLib.h"
 
 namespace RPC
 {
-RemoteRPCServer::RemoteRPCServer()
-{
-	socket = std::shared_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl.get()));
-	knownDevices.reset(new std::set<uint64_t>());
-	fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
-	path = "/RPC2";
-}
 
-RPCClient::RPCClient()
+RpcClient::RpcClient()
 {
 	try
 	{
@@ -70,7 +63,7 @@ RPCClient::RPCClient()
     }
 }
 
-RPCClient::~RPCClient()
+RpcClient::~RpcClient()
 {
 	try
 	{
@@ -90,7 +83,7 @@ RPCClient::~RPCClient()
     }
 }
 
-void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -136,7 +129,6 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 		if(server->removed)
 		{
 			server->sendMutex.unlock();
-			GD::rpcClient.removeServer(server->uid);
 			return;
 		}
 		if(retry && !server->reconnectInfinitely)
@@ -144,7 +136,6 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 			if(!server->webSocket) GD::out.printError("Removing server \"" + server->id + "\". Server has to send \"init\" again.");
 			server->removed = true;
 			server->sendMutex.unlock();
-			GD::rpcClient.removeServer(server->uid);
 			return;
 		}
 		if(responseData.empty())
@@ -153,7 +144,6 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 			{
 				server->removed = true;
 				server->sendMutex.unlock();
-				GD::rpcClient.removeServer(server->uid);
 				GD::out.printInfo("Info: Connection to server closed. Host: " + server->hostname);
 			}
 			else
@@ -194,7 +184,7 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
     server->sendMutex.unlock();
 }
 
-std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
+std::shared_ptr<BaseLib::RPC::Variable> RpcClient::invoke(std::shared_ptr<RemoteRpcServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
 {
 	try
 	{
@@ -230,14 +220,13 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
 		for(uint32_t i = 0; i < 3; ++i)
 		{
 			retry = false;
-			if(i == 0) sendRequest(server, requestData, responseData, true, retry);
-			else sendRequest(server, requestData, responseData, false, retry);
+			if(i == 0) sendRequest(server.get(), requestData, responseData, true, retry);
+			else sendRequest(server.get(), requestData, responseData, false, retry);
 			if(!retry || server->removed || !server->autoConnect) break;
 		}
 		if(server->removed)
 		{
 			server->sendMutex.unlock();
-			GD::rpcClient.removeServer(server->address);
 			return BaseLib::RPC::Variable::createError(-32300, "Server was removed and has to send \"init\" again.");
 		}
 		if(retry && !server->reconnectInfinitely)
@@ -245,7 +234,6 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
 			if(!server->webSocket) GD::out.printError("Removing server \"" + server->id + "\". Server has to send \"init\" again.");
 			server->removed = true;
 			server->sendMutex.unlock();
-			GD::rpcClient.removeServer(server->address);
 			return BaseLib::RPC::Variable::createError(-32300, "Request timed out.");
 		}
 		if(responseData.empty())
@@ -254,7 +242,6 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
 			{
 				server->removed = true;
 				server->sendMutex.unlock();
-				GD::rpcClient.removeServer(server->uid);
 				GD::out.printInfo("Info: Connection to server closed. Host: " + server->hostname);
 			}
 			else server->sendMutex.unlock();
@@ -294,7 +281,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCClient::invoke(std::shared_ptr<Remote
     return BaseLib::RPC::Variable::createError(-32700, "No response data.");
 }
 
-std::string RPCClient::getIPAddress(std::string address)
+std::string RpcClient::getIPAddress(std::string address)
 {
 	try
 	{
@@ -339,7 +326,7 @@ std::string RPCClient::getIPAddress(std::string address)
     return "";
 }
 
-void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector<char>& data, std::vector<char>& responseData, bool insertHeader, bool& retry)
+void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, std::vector<char>& responseData, bool insertHeader, bool& retry)
 {
 	try
 	{
@@ -372,9 +359,9 @@ void RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector
 		}
 
 		_sendCounter++;
-		if(_sendCounter > (signed)GD::bl->settings.rpcClientThreadMax())
+		if(_sendCounter > (signed)GD::bl->settings.rpcClientMaxServers())
 		{
-			GD::out.printCritical("Critical: Could not execute RPC method on server " + server->hostname + ", because there are more than " + std::to_string(GD::bl->settings.rpcClientThreadMax()) + " requests queued. Your server is either not reachable currently or your connection is too slow.", false);
+			GD::out.printCritical("Critical: Could not execute RPC method on server " + server->hostname + ", because there are more than " + std::to_string(GD::bl->settings.rpcClientMaxServers()) + " requests queued. Your server is either not reachable currently or your connection is too slow.", false);
 			_sendCounter--;
 			return;
 		}

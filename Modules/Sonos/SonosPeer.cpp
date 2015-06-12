@@ -82,11 +82,13 @@ std::shared_ptr<BaseLib::Systems::LogicalDevice> SonosPeer::getDevice(int32_t ad
 SonosPeer::SonosPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : BaseLib::Systems::Peer(GD::bl, parentID, centralFeatures, eventHandler)
 {
 	_binaryEncoder.reset(new BaseLib::RPC::RPCEncoder(GD::bl));
+	_binaryDecoder.reset(new BaseLib::RPC::RPCDecoder(GD::bl));
 }
 
 SonosPeer::SonosPeer(int32_t id, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : BaseLib::Systems::Peer(GD::bl, id, -1, serialNumber, parentID, centralFeatures, eventHandler)
 {
 	_binaryEncoder.reset(new BaseLib::RPC::RPCEncoder(GD::bl));
+	_binaryDecoder.reset(new BaseLib::RPC::RPCDecoder(GD::bl));
 }
 
 SonosPeer::~SonosPeer()
@@ -465,6 +467,12 @@ void SonosPeer::getValuesFromPacket(std::shared_ptr<SonosPacket> packet, std::ve
 					if(!soapValues || soapValues->find(j->subfield) == soapValues->end()) continue;
 					field = j->subfield;
 				}
+				else if(j->field == "r:NextTrackMetaData")
+				{
+					soapValues = packet->nextTrackMetadata();
+					if(!soapValues || soapValues->find(j->subfield) == soapValues->end()) continue;
+					field = j->subfield;
+				}
 				else if(j->field == "r:EnqueuedTransportURIMetaData")
 				{
 					soapValues = packet->currentTrackMetadata();
@@ -521,7 +529,7 @@ void SonosPeer::getValuesFromPacket(std::shared_ptr<SonosPacket> packet, std::ve
 					{
 						//This is a little nasty and costs a lot of resources, but we need to run the data through the packet converter
 						std::vector<uint8_t> encodedData;
-						_binaryEncoder->encodeResponse(BaseLib::RPC::Variable::fromString(soapValues->at(field), (*k)->logicalParameter->type), encodedData);
+						_binaryEncoder->encodeResponse(BaseLib::RPC::Variable::fromString(soapValues->at(field), (*k)->physicalParameter->type), encodedData);
 						std::shared_ptr<BaseLib::RPC::Variable> data = (*k)->convertFromPacket(encodedData, true);
 						(*k)->convertToPacket(data, currentFrameValues.values[(*k)->id].value);
 					}
@@ -666,7 +674,7 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::getValueFromDevice(std::share
 				if(i->param == (*j)->physicalParameter->id)
 				{
 					if(i->field.empty()) continue;
-					soapValues->insert(std::pair<std::string, std::string>(i->field, (*j)->convertFromPacket(valuesCentral[channel][(*j)->id].data)->toString()));
+					soapValues->insert(std::pair<std::string, std::string>(i->field, _binaryDecoder->decodeResponse((valuesCentral[channel][(*j)->id].data))->toString()));
 					paramFound = true;
 					break;
 				}
@@ -967,12 +975,13 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::setValue(int32_t clientID, ui
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
 		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>());
 
-		valueKeys->push_back(valueKey);
-		values->push_back(value);
-
 		rpcParameter->convertToPacket(value, parameter->data);
+		value = rpcParameter->convertFromPacket(parameter->data, false);
 		if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
 		else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
+
+		valueKeys->push_back(valueKey);
+		values->push_back(value);
 
 		if(rpcParameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::Enum::command)
 		{
@@ -990,11 +999,17 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::setValue(int32_t clientID, ui
 					soapValues->insert(std::pair<std::string, std::string>(i->field, std::to_string(i->constValue)));
 					continue;
 				}
+				else if(!i->constValueString.empty())
+				{
+					if(i->field.empty()) continue;
+					soapValues->insert(std::pair<std::string, std::string>(i->field, i->constValueString));
+					continue;
+				}
 				//We can't just search for param, because it is ambiguous (see for example LEVEL for HM-CC-TC).
 				if(i->param == rpcParameter->physicalParameter->valueID || i->param == rpcParameter->physicalParameter->id)
 				{
 					if(i->field.empty()) continue;
-					soapValues->insert(std::pair<std::string, std::string>(i->field, rpcParameter->convertFromPacket(parameter->data)->toString()));
+					soapValues->insert(std::pair<std::string, std::string>(i->field, _binaryDecoder->decodeResponse(parameter->data)->toString()));
 				}
 				//Search for all other parameters
 				else
@@ -1006,7 +1021,7 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::setValue(int32_t clientID, ui
 						if(i->param == j->second.rpcParameter->physicalParameter->id)
 						{
 							if(i->field.empty()) continue;
-							soapValues->insert(std::pair<std::string, std::string>(i->field, rpcParameter->convertFromPacket(parameter->data)->toString()));
+							soapValues->insert(std::pair<std::string, std::string>(i->field, _binaryDecoder->decodeResponse(parameter->data)->toString()));
 							paramFound = true;
 							break;
 						}
@@ -1019,7 +1034,7 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::setValue(int32_t clientID, ui
 			SonosPacket packet(_ip, frame->metaString1, frame->function1, frame->metaString2, frame->function2, soapValues);
 			packet.getSoapRequest(soapRequest);
 			if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Sending SOAP request:\n" + soapRequest);
-			std::cerr << soapRequest << std::endl;
+			std::cerr << "Moin: " << soapRequest << std::endl;
 			if(_httpClient)
 			{
 				std::string response;

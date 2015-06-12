@@ -68,7 +68,7 @@ public:
 	uint32_t rpcServerMaxConnections() { return _rpcServerMaxConnections; }
 	int32_t rpcServerThreadPriority() { return _rpcServerThreadPriority; }
 	int32_t rpcServerThreadPolicy() { return _rpcServerThreadPolicy; }
-	uint32_t rpcClientThreadMax() { return _rpcClientThreadMax; }
+	uint32_t rpcClientMaxServers() { return _rpcClientMaxServers; }
 	int32_t rpcClientThreadPriority() { return _rpcClientThreadPriority; }
 	int32_t rpcClientThreadPolicy() { return _rpcClientThreadPolicy; }
 	int32_t workerThreadPriority() { return _workerThreadPriority; }
@@ -120,7 +120,7 @@ private:
 	uint32_t _rpcServerMaxConnections = 50;
 	int32_t _rpcServerThreadPriority = 0;
 	int32_t _rpcServerThreadPolicy = SCHED_OTHER;
-	uint32_t _rpcClientThreadMax = 50;
+	uint32_t _rpcClientMaxServers = 50;
 	int32_t _rpcClientThreadPriority = 0;
 	int32_t _rpcClientThreadPolicy = SCHED_OTHER;
 	int32_t _workerThreadPriority = 0;

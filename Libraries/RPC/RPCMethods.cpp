@@ -2038,7 +2038,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCInit::invoke(int32_t clientID, std::s
 		}
 		else
 		{
-			std::shared_ptr<RemoteRPCServer> eventServer = GD::rpcClient.addServer(server, path, parameters->at(1)->stringValue);
+			std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient.addServer(server, path, parameters->at(1)->stringValue);
 			if(!eventServer)
 			{
 				GD::out.printError("Error: Could not create event server.");
@@ -3287,7 +3287,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCSubscribePeers::invoke(int32_t client
 			if(server.second.empty() || server.second == "0") return BaseLib::RPC::Variable::createError(-32602, "Port number is invalid.");
 		}
 
-		std::shared_ptr<RemoteRPCServer> eventServer = GD::rpcClient.getServer(server);
+		std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient.getServer(server);
 		if(!eventServer) return BaseLib::RPC::Variable::createError(-1, "Event server is unknown.");
 		for(BaseLib::RPC::RPCArray::iterator i = parameters->at(1)->arrayValue->begin(); i != parameters->at(1)->arrayValue->end(); ++i)
 		{
@@ -3404,7 +3404,7 @@ std::shared_ptr<BaseLib::RPC::Variable> RPCUnsubscribePeers::invoke(int32_t clie
 			if(server.second.empty() || server.second == "0") return BaseLib::RPC::Variable::createError(-32602, "Port number is invalid.");
 		}
 
-		std::shared_ptr<RemoteRPCServer> eventServer = GD::rpcClient.getServer(server);
+		std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient.getServer(server);
 		if(!eventServer) return BaseLib::RPC::Variable::createError(-1, "Event server is unknown.");
 		for(BaseLib::RPC::RPCArray::iterator i = parameters->at(1)->arrayValue->begin(); i != parameters->at(1)->arrayValue->end(); ++i)
 		{

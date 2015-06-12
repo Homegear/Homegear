@@ -851,16 +851,17 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::setValue(int32_t clientI
 			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		}
 
-		if((rpcParameter->operations & BaseLib::RPC::Parameter::Operations::read) || (rpcParameter->operations & BaseLib::RPC::Parameter::Operations::event))
-		{
-			valueKeys->push_back(valueKey);
-			values->push_back(value);
-		}
 		if(rpcParameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::Enum::store)
 		{
 			rpcParameter->convertToPacket(value, parameter->data);
 			if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
 			else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
+			value = rpcParameter->convertFromPacket(parameter->data, false);
+			if((rpcParameter->operations & BaseLib::RPC::Parameter::Operations::read) || (rpcParameter->operations & BaseLib::RPC::Parameter::Operations::event))
+			{
+				valueKeys->push_back(valueKey);
+				values->push_back(value);
+			}
 			if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
 			return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 		}
@@ -873,6 +874,13 @@ std::shared_ptr<BaseLib::RPC::Variable> PhilipsHuePeer::setValue(int32_t clientI
 		if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
 		else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
 		if(_bl->debugLevel > 4) GD::out.printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(parameter->data) + ".");
+
+		value = rpcParameter->convertFromPacket(parameter->data, false);
+		if((rpcParameter->operations & BaseLib::RPC::Parameter::Operations::read) || (rpcParameter->operations & BaseLib::RPC::Parameter::Operations::event))
+		{
+			valueKeys->push_back(valueKey);
+			values->push_back(value);
+		}
 
 		if(!noSending)
 		{

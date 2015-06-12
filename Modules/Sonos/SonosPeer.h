@@ -103,6 +103,7 @@ public:
 	//End RPC methods
 protected:
 	std::shared_ptr<BaseLib::RPC::RPCEncoder> _binaryEncoder;
+	std::shared_ptr<BaseLib::RPC::RPCDecoder> _binaryDecoder;
 	std::shared_ptr<BaseLib::HTTPClient> _httpClient;
 	int32_t _lastAvTransportSubscription = 0;
 

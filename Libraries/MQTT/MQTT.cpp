@@ -354,14 +354,17 @@ void MQTT::queueMessage(std::shared_ptr<std::pair<std::string, std::vector<char>
 	catch(const std::exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_messageBufferMutex.unlock();
 	}
 	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_messageBufferMutex.unlock();
 	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		_messageBufferMutex.unlock();
 	}
 }
 

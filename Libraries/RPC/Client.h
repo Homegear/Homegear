@@ -36,7 +36,7 @@
 #include <mutex>
 #include <chrono>
 
-#include "RPCClient.h"
+#include "RpcClient.h"
 #include "../../Modules/Base/BaseLib.h"
 
 namespace RPC
@@ -66,28 +66,23 @@ public:
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, std::string address, Hint::Enum hint);
 	void broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable);
 	void sendUnknownDevices(std::pair<std::string, std::string> address);
-	std::shared_ptr<RemoteRPCServer> addServer(std::pair<std::string, std::string> address, std::string path, std::string id);
-	std::shared_ptr<RemoteRPCServer> addWebSocketServer(std::shared_ptr<BaseLib::SocketOperations> socket, std::string clientId, std::string address);
+	std::shared_ptr<RemoteRpcServer> addServer(std::pair<std::string, std::string> address, std::string path, std::string id);
+	std::shared_ptr<RemoteRpcServer> addWebSocketServer(std::shared_ptr<BaseLib::SocketOperations> socket, std::string clientId, std::string address);
 	void removeServer(std::pair<std::string, std::string> address);
 	void removeServer(int32_t uid);
-	std::shared_ptr<RemoteRPCServer> getServer(std::pair<std::string, std::string>);
+	std::shared_ptr<RemoteRpcServer> getServer(std::pair<std::string, std::string>);
 	std::shared_ptr<BaseLib::RPC::Variable> listClientServers(std::string id);
 	std::shared_ptr<BaseLib::RPC::Variable> clientServerInitialized(std::string id);
 	void reset();
 private:
 	bool _disposing = false;
-	std::unique_ptr<RPCClient> _client;
+	std::shared_ptr<RpcClient> _client;
 	std::mutex _serversMutex;
 	int32_t _serverId = 0;
-	std::shared_ptr<std::vector<std::shared_ptr<RemoteRPCServer>>> _servers;
-	std::mutex _invokeBroadcastThreadsMutex;
-	uint32_t _currentInvokeBroadcastThreadID = 0;
-	std::map<uint32_t, std::shared_ptr<std::thread>> _invokeBroadcastThreads;
+	std::map<int32_t, std::shared_ptr<RemoteRpcServer>> _servers;
 	std::unique_ptr<BaseLib::RPC::JsonEncoder> _jsonEncoder;
 
-	void removeBroadcastThread(uint32_t threadID);
-	void startInvokeBroadcastThread(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
-	void invokeBroadcastThread(uint32_t threadID, std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
+	void collectGarbage();
 };
 
 }

@@ -31,7 +31,7 @@ ifeq ($(config),release)
   OBJDIR     = obj/Release/rpc
   TARGETDIR  = lib/Release
   TARGET     = $(TARGETDIR)/librpc.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DSPIINTERFACES -D_GLIBCXX_USE_C99 -D_GLIBCXX_USE_C99_MATH -D_GLIBCXX_USE_C99_MATH_TR1 -D_WITH_DPRINTF -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DSPIINTERFACES -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall -std=c++11
@@ -53,7 +53,7 @@ ifeq ($(config),debug)
   OBJDIR     = obj/Debug/rpc
   TARGETDIR  = lib/Debug
   TARGET     = $(TARGETDIR)/librpc.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DSPIINTERFACES -D_GLIBCXX_USE_C99 -D_GLIBCXX_USE_C99_MATH -D_GLIBCXX_USE_C99_MATH_TR1 -D_WITH_DPRINTF -DDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DSPIINTERFACES -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++11
@@ -75,81 +75,9 @@ ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/rpc
   TARGETDIR  = lib/Profiling
   TARGET     = $(TARGETDIR)/librpc.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DSPIINTERFACES -D_GLIBCXX_USE_C99 -D_GLIBCXX_USE_C99_MATH -D_GLIBCXX_USE_C99_MATH_TR1 -D_WITH_DPRINTF -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DSPIINTERFACES -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -std=c++11 -pg
-  CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -pg
-  RESFLAGS  += $(DEFINES) $(INCLUDES) 
-  LIBS      += 
-  LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
-  define PREBUILDCMDS
-  endef
-  define PRELINKCMDS
-  endef
-  define POSTBUILDCMDS
-  endef
-endif
-
-ifeq ($(config),release_bsd)
-  CC         = gcc
-  CXX        = g++
-  OBJDIR     = obj/bsd/Release/rpc
-  TARGETDIR  = lib/Release
-  TARGET     = $(TARGETDIR)/librpc.a
-  DEFINES   += -D_GLIBCXX_USE_C99 -D_GLIBCXX_USE_C99_MATH -D_GLIBCXX_USE_C99_MATH_TR1 -D_WITH_DPRINTF -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DNDEBUG
-  INCLUDES  += 
-  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall -std=c++11
-  CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -s -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear
-  RESFLAGS  += $(DEFINES) $(INCLUDES) 
-  LIBS      += 
-  LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
-  define PREBUILDCMDS
-  endef
-  define PRELINKCMDS
-  endef
-  define POSTBUILDCMDS
-  endef
-endif
-
-ifeq ($(config),debug_bsd)
-  CC         = gcc
-  CXX        = g++
-  OBJDIR     = obj/bsd/Debug/rpc
-  TARGETDIR  = lib/Debug
-  TARGET     = $(TARGETDIR)/librpc.a
-  DEFINES   += -D_GLIBCXX_USE_C99 -D_GLIBCXX_USE_C99_MATH -D_GLIBCXX_USE_C99_MATH_TR1 -D_WITH_DPRINTF -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DDEBUG
-  INCLUDES  += 
-  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++11
-  CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear
-  RESFLAGS  += $(DEFINES) $(INCLUDES) 
-  LIBS      += 
-  LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
-  define PREBUILDCMDS
-  endef
-  define PRELINKCMDS
-  endef
-  define POSTBUILDCMDS
-  endef
-endif
-
-ifeq ($(config),profiling_bsd)
-  CC         = gcc
-  CXX        = g++
-  OBJDIR     = obj/bsd/Profiling/rpc
-  TARGETDIR  = lib/Profiling
-  TARGET     = $(TARGETDIR)/librpc.a
-  DEFINES   += -D_GLIBCXX_USE_C99 -D_GLIBCXX_USE_C99_MATH -D_GLIBCXX_USE_C99_MATH_TR1 -D_WITH_DPRINTF -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DNDEBUG
-  INCLUDES  += 
-  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
   LDFLAGS   += -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -pg
@@ -168,12 +96,13 @@ endif
 OBJECTS := \
 	$(OBJDIR)/ClientSettings.o \
 	$(OBJDIR)/RPCMethod.o \
+	$(OBJDIR)/RpcClient.o \
 	$(OBJDIR)/Auth.o \
 	$(OBJDIR)/RPCServer.o \
 	$(OBJDIR)/RPCMethods.o \
-	$(OBJDIR)/RPCClient.o \
 	$(OBJDIR)/Server.o \
 	$(OBJDIR)/ServerInfo.o \
+	$(OBJDIR)/RemoteRpcServer.o \
 	$(OBJDIR)/Webserver.o \
 	$(OBJDIR)/Client.o \
 
@@ -246,6 +175,9 @@ $(OBJDIR)/ClientSettings.o: Libraries/RPC/ClientSettings.cpp
 $(OBJDIR)/RPCMethod.o: Libraries/RPC/RPCMethod.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/RpcClient.o: Libraries/RPC/RpcClient.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Auth.o: Libraries/RPC/Auth.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
@@ -255,13 +187,13 @@ $(OBJDIR)/RPCServer.o: Libraries/RPC/RPCServer.cpp
 $(OBJDIR)/RPCMethods.o: Libraries/RPC/RPCMethods.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCClient.o: Libraries/RPC/RPCClient.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Server.o: Libraries/RPC/Server.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/ServerInfo.o: Libraries/RPC/ServerInfo.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/RemoteRpcServer.o: Libraries/RPC/RemoteRpcServer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Webserver.o: Libraries/RPC/Webserver.cpp

@@ -31,7 +31,7 @@ ifeq ($(config),release)
   OBJDIR     = obj/Release/homegear
   TARGETDIR  = bin/Release
   TARGET     = $(TARGETDIR)/homegear
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DSPIINTERFACES -D_GLIBCXX_USE_C99 -D_GLIBCXX_USE_C99_MATH -D_GLIBCXX_USE_C99_MATH_TR1 -D_WITH_DPRINTF -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DSPIINTERFACES -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall -std=c++11
@@ -53,7 +53,7 @@ ifeq ($(config),debug)
   OBJDIR     = obj/Debug/homegear
   TARGETDIR  = bin/Debug
   TARGET     = $(TARGETDIR)/homegear
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DSPIINTERFACES -D_GLIBCXX_USE_C99 -D_GLIBCXX_USE_C99_MATH -D_GLIBCXX_USE_C99_MATH_TR1 -D_WITH_DPRINTF -DDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DSPIINTERFACES -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++11
@@ -75,84 +75,12 @@ ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/homegear
   TARGETDIR  = bin/Profiling
   TARGET     = $(TARGETDIR)/homegear
-  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DSPIINTERFACES -D_GLIBCXX_USE_C99 -D_GLIBCXX_USE_C99_MATH -D_GLIBCXX_USE_C99_MATH_TR1 -D_WITH_DPRINTF -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DSPIINTERFACES -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
   LDFLAGS   += -Llib/Profiling -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -Wl,-Bstatic -lrpc -Wl,-Bdynamic -ldl -lpthread -lreadline -lgcrypt -lgnutls -luser -lcli -levents -lgd -lupnp -lmqtt -ldatabase -lscriptengine -lbase -lgpg-error -lsqlite3 -lpaho.mqtt.c -lcrypto -lssl -lphp5 -Wl,--as-needed -pg
-  RESFLAGS  += $(DEFINES) $(INCLUDES) 
-  LIBS      += lib/Profiling/librpc.a lib/Profiling/libuser.a lib/Profiling/libcli.a lib/Profiling/libevents.a lib/Profiling/libgd.a lib/Profiling/libupnp.a lib/Profiling/libmqtt.a lib/Profiling/libdatabase.a lib/Profiling/libscriptengine.a lib/Profiling/libbase.a lib/Profiling/libpaho.mqtt.c.a
-  LDDEPS    += lib/Profiling/librpc.a lib/Profiling/libuser.a lib/Profiling/libcli.a lib/Profiling/libevents.a lib/Profiling/libgd.a lib/Profiling/libupnp.a lib/Profiling/libmqtt.a lib/Profiling/libdatabase.a lib/Profiling/libscriptengine.a lib/Profiling/libbase.a lib/Profiling/libpaho.mqtt.c.a
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
-  define PREBUILDCMDS
-  endef
-  define PRELINKCMDS
-  endef
-  define POSTBUILDCMDS
-  endef
-endif
-
-ifeq ($(config),release_bsd)
-  CC         = gcc
-  CXX        = g++
-  OBJDIR     = obj/bsd/Release/homegear
-  TARGETDIR  = bin/Release
-  TARGET     = $(TARGETDIR)/homegear
-  DEFINES   += -D_GLIBCXX_USE_C99 -D_GLIBCXX_USE_C99_MATH -D_GLIBCXX_USE_C99_MATH_TR1 -D_WITH_DPRINTF -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DNDEBUG
-  INCLUDES  += 
-  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -Wall -std=c++11
-  CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Release -s -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -Wl,-Bstatic -lrpc -Wl,-Bdynamic -lpthread -lreadline -lgcrypt -lgnutls -luser -lcli -levents -lgd -lupnp -lmqtt -ldatabase -lscriptengine -lbase -lgpg-error -lsqlite3 -lpaho.mqtt.c -lcrypto -lssl -lphp5 -Wl,--as-needed
-  RESFLAGS  += $(DEFINES) $(INCLUDES) 
-  LIBS      += lib/Release/librpc.a lib/Release/libuser.a lib/Release/libcli.a lib/Release/libevents.a lib/Release/libgd.a lib/Release/libupnp.a lib/Release/libmqtt.a lib/Release/libdatabase.a lib/Release/libscriptengine.a lib/Release/libbase.a lib/Release/libpaho.mqtt.c.a
-  LDDEPS    += lib/Release/librpc.a lib/Release/libuser.a lib/Release/libcli.a lib/Release/libevents.a lib/Release/libgd.a lib/Release/libupnp.a lib/Release/libmqtt.a lib/Release/libdatabase.a lib/Release/libscriptengine.a lib/Release/libbase.a lib/Release/libpaho.mqtt.c.a
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
-  define PREBUILDCMDS
-  endef
-  define PRELINKCMDS
-  endef
-  define POSTBUILDCMDS
-  endef
-endif
-
-ifeq ($(config),debug_bsd)
-  CC         = gcc
-  CXX        = g++
-  OBJDIR     = obj/bsd/Debug/homegear
-  TARGETDIR  = bin/Debug
-  TARGET     = $(TARGETDIR)/homegear
-  DEFINES   += -D_GLIBCXX_USE_C99 -D_GLIBCXX_USE_C99_MATH -D_GLIBCXX_USE_C99_MATH_TR1 -D_WITH_DPRINTF -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DDEBUG
-  INCLUDES  += 
-  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++11
-  CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Debug -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -Wl,-Bstatic -lrpc -Wl,-Bdynamic -lpthread -lreadline -lgcrypt -lgnutls -luser -lcli -levents -lgd -lupnp -lmqtt -ldatabase -lscriptengine -lbase -lgpg-error -lsqlite3 -lpaho.mqtt.c -lcrypto -lssl -lphp5 -Wl,--as-needed
-  RESFLAGS  += $(DEFINES) $(INCLUDES) 
-  LIBS      += lib/Debug/librpc.a lib/Debug/libuser.a lib/Debug/libcli.a lib/Debug/libevents.a lib/Debug/libgd.a lib/Debug/libupnp.a lib/Debug/libmqtt.a lib/Debug/libdatabase.a lib/Debug/libscriptengine.a lib/Debug/libbase.a lib/Debug/libpaho.mqtt.c.a
-  LDDEPS    += lib/Debug/librpc.a lib/Debug/libuser.a lib/Debug/libcli.a lib/Debug/libevents.a lib/Debug/libgd.a lib/Debug/libupnp.a lib/Debug/libmqtt.a lib/Debug/libdatabase.a lib/Debug/libscriptengine.a lib/Debug/libbase.a lib/Debug/libpaho.mqtt.c.a
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
-  define PREBUILDCMDS
-  endef
-  define PRELINKCMDS
-  endef
-  define POSTBUILDCMDS
-  endef
-endif
-
-ifeq ($(config),profiling_bsd)
-  CC         = gcc
-  CXX        = g++
-  OBJDIR     = obj/bsd/Profiling/homegear
-  TARGETDIR  = bin/Profiling
-  TARGET     = $(TARGETDIR)/homegear
-  DEFINES   += -D_GLIBCXX_USE_C99 -D_GLIBCXX_USE_C99_MATH -D_GLIBCXX_USE_C99_MATH_TR1 -D_WITH_DPRINTF -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DHAVE_SSIZE_T=1 -DSCRIPTENGINE -DEVENTHANDLER -DOPENSSL -DNDEBUG
-  INCLUDES  += 
-  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -Wall -std=c++11 -pg
-  CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Profiling -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -Wl,-Bstatic -lrpc -Wl,-Bdynamic -lpthread -lreadline -lgcrypt -lgnutls -luser -lcli -levents -lgd -lupnp -lmqtt -ldatabase -lscriptengine -lbase -lgpg-error -lsqlite3 -lpaho.mqtt.c -lcrypto -lssl -lphp5 -Wl,--as-needed -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += lib/Profiling/librpc.a lib/Profiling/libuser.a lib/Profiling/libcli.a lib/Profiling/libevents.a lib/Profiling/libgd.a lib/Profiling/libupnp.a lib/Profiling/libmqtt.a lib/Profiling/libdatabase.a lib/Profiling/libscriptengine.a lib/Profiling/libbase.a lib/Profiling/libpaho.mqtt.c.a
   LDDEPS    += lib/Profiling/librpc.a lib/Profiling/libuser.a lib/Profiling/libcli.a lib/Profiling/libevents.a lib/Profiling/libgd.a lib/Profiling/libupnp.a lib/Profiling/libmqtt.a lib/Profiling/libdatabase.a lib/Profiling/libscriptengine.a lib/Profiling/libbase.a lib/Profiling/libpaho.mqtt.c.a

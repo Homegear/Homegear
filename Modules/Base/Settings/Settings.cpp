@@ -63,7 +63,7 @@ void Settings::reset()
 	_rpcServerMaxConnections = 50;
 	_rpcServerThreadPriority = 0;
 	_rpcServerThreadPolicy = SCHED_OTHER;
-	_rpcClientThreadMax = 50;
+	_rpcClientMaxServers = 50;
 	_rpcClientThreadPriority = 0;
 	_rpcClientThreadPolicy = SCHED_OTHER;
 	_workerThreadPriority = 0;
@@ -256,10 +256,10 @@ void Settings::load(std::string filename)
 					_rpcServerThreadPriority = Threads::parseThreadPriority(_rpcServerThreadPriority, _rpcServerThreadPolicy);
 					_bl->out.printDebug("Debug: rpcServerThreadPolicy set to " + std::to_string(_rpcServerThreadPolicy));
 				}
-				else if(name == "rpcclientmaxthreads")
+				else if(name == "rpcclientmaxservers")
 				{
-					_rpcClientThreadMax = Math::getNumber(value);
-					_bl->out.printDebug("Debug: rpcClientMaxThreads set to " + std::to_string(_rpcClientThreadMax));
+					_rpcClientMaxServers = Math::getNumber(value);
+					_bl->out.printDebug("Debug: rpcClientMaxThreads set to " + std::to_string(_rpcClientMaxServers));
 				}
 				else if(name == "rpcclientthreadpriority")
 				{

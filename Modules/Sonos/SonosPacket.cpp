@@ -86,12 +86,16 @@ SonosPacket::SonosPacket(std::string& soap, int64_t timeReceived)
 					if(!metadataNode) continue;
 					metadataNode = metadataNode->first_node("item");
 					if(!metadataNode) continue;
+					for(xml_attribute<>* metadataAttribute = metadataNode->first_attribute(); metadataAttribute; metadataAttribute = metadataAttribute->next_attribute())
+					{
+						_currentTrackMetadata->operator [](std::string(metadataAttribute->name())) = std::string(metadataAttribute->value());
+					}
 					for(xml_node<>* metadataSubNode = metadataNode->first_node(); metadataSubNode; metadataSubNode = metadataSubNode->next_sibling())
 					{
 						std::string metadataName(metadataSubNode->name());
 						if(metadataName == "res")
 						{
-							_currentTrackMetadata->operator [](name) = std::string(metadataSubNode->value());
+							_currentTrackMetadata->operator [](metadataName) = std::string(metadataSubNode->value());
 							for(xml_attribute<>* metadataAttribute = metadataSubNode->first_attribute(); metadataAttribute; metadataAttribute = metadataAttribute->next_attribute())
 							{
 								_currentTrackMetadata->operator [](std::string(metadataAttribute->name())) = std::string(metadataAttribute->value());
@@ -101,6 +105,83 @@ SonosPacket::SonosPacket(std::string& soap, int64_t timeReceived)
 						{
 							_currentTrackMetadata->operator [](std::string(metadataSubNode->name())) = std::string(metadataSubNode->value());
 						}
+					}
+				}
+				else if(name == "r:NextTrackMetaData")
+				{
+					_nextTrackMetadata.reset(new std::map<std::string, std::string>());
+					if(value.empty()) continue;
+					std::string xml;
+					BaseLib::Html::unescapeHtmlEntities(value, xml);
+					xml_document<> metadataDoc;
+					metadataDoc.parse<parse_no_entity_translation | parse_validate_closing_tags>(&xml.at(0));
+					xml_node<>* metadataNode = metadataDoc.first_node("DIDL-Lite");
+					if(!metadataNode) continue;
+					metadataNode = metadataNode->first_node("item");
+					if(!metadataNode) continue;
+					for(xml_attribute<>* metadataAttribute = metadataNode->first_attribute(); metadataAttribute; metadataAttribute = metadataAttribute->next_attribute())
+					{
+						_nextTrackMetadata->operator [](std::string(metadataAttribute->name())) = std::string(metadataAttribute->value());
+					}
+					for(xml_node<>* metadataSubNode = metadataNode->first_node(); metadataSubNode; metadataSubNode = metadataSubNode->next_sibling())
+					{
+						std::string metadataName(metadataSubNode->name());
+						if(metadataName == "res")
+						{
+							_nextTrackMetadata->operator [](metadataName) = std::string(metadataSubNode->value());
+							for(xml_attribute<>* metadataAttribute = metadataSubNode->first_attribute(); metadataAttribute; metadataAttribute = metadataAttribute->next_attribute())
+							{
+								_nextTrackMetadata->operator [](std::string(metadataAttribute->name())) = std::string(metadataAttribute->value());
+							}
+						}
+						else
+						{
+							_nextTrackMetadata->operator [](std::string(metadataSubNode->name())) = std::string(metadataSubNode->value());
+						}
+					}
+				}
+				else if(name == "AVTransportURIMetaData")
+				{
+					_avTransportUriMetaData.reset(new std::map<std::string, std::string>());
+					if(value.empty()) continue;
+					std::string xml;
+					BaseLib::Html::unescapeHtmlEntities(value, xml);
+					xml_document<> metadataDoc;
+					metadataDoc.parse<parse_no_entity_translation | parse_validate_closing_tags>(&xml.at(0));
+					xml_node<>* metadataNode = metadataDoc.first_node("DIDL-Lite");
+					if(!metadataNode) continue;
+					metadataNode = metadataNode->first_node("item");
+					if(!metadataNode) continue;
+					for(xml_attribute<>* metadataAttribute = metadataNode->first_attribute(); metadataAttribute; metadataAttribute = metadataAttribute->next_attribute())
+					{
+						_avTransportUriMetaData->operator [](std::string(metadataAttribute->name())) = std::string(metadataAttribute->value());
+					}
+					for(xml_node<>* metadataSubNode = metadataNode->first_node(); metadataSubNode; metadataSubNode = metadataSubNode->next_sibling())
+					{
+						std::string metadataName(metadataSubNode->name());
+						_avTransportUriMetaData->operator [](std::string(metadataSubNode->name())) = std::string(metadataSubNode->value());
+					}
+				}
+				else if(name == "NextAVTransportURIMetaData")
+				{
+					_nextAvTransportUriMetaData.reset(new std::map<std::string, std::string>());
+					if(value.empty()) continue;
+					std::string xml;
+					BaseLib::Html::unescapeHtmlEntities(value, xml);
+					xml_document<> metadataDoc;
+					metadataDoc.parse<parse_no_entity_translation | parse_validate_closing_tags>(&xml.at(0));
+					xml_node<>* metadataNode = metadataDoc.first_node("DIDL-Lite");
+					if(!metadataNode) continue;
+					metadataNode = metadataNode->first_node("item");
+					if(!metadataNode) continue;
+					for(xml_attribute<>* metadataAttribute = metadataNode->first_attribute(); metadataAttribute; metadataAttribute = metadataAttribute->next_attribute())
+					{
+						_nextAvTransportUriMetaData->operator [](std::string(metadataAttribute->name())) = std::string(metadataAttribute->value());
+					}
+					for(xml_node<>* metadataSubNode = metadataNode->first_node(); metadataSubNode; metadataSubNode = metadataSubNode->next_sibling())
+					{
+						std::string metadataName(metadataSubNode->name());
+						_nextAvTransportUriMetaData->operator [](std::string(metadataSubNode->name())) = std::string(metadataSubNode->value());
 					}
 				}
 				else if(name == "r:EnqueuedTransportURIMetaData")
@@ -122,7 +203,7 @@ SonosPacket::SonosPacket(std::string& soap, int64_t timeReceived)
 					for(xml_node<>* metadataSubNode = metadataNode->first_node(); metadataSubNode; metadataSubNode = metadataSubNode->next_sibling())
 					{
 						std::string metadataName(metadataSubNode->name());
-						_currentTrackMetadata->operator [](std::string(metadataSubNode->name())) = std::string(metadataSubNode->value());
+						_enqueuedTransportUriMetaData->operator [](std::string(metadataSubNode->name())) = std::string(metadataSubNode->value());
 					}
 				}
 				else

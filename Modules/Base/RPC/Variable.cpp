@@ -72,6 +72,30 @@ std::shared_ptr<Variable> Variable::createError(int32_t faultCode, std::string f
 	return error;
 }
 
+Variable& Variable::operator=(const Variable& rhs)
+{
+	if(&rhs == this) return *this;
+	errorStruct = rhs.errorStruct;
+	type = rhs.type;
+	stringValue = rhs.stringValue;
+	integerValue = rhs.integerValue;
+	floatValue = rhs.floatValue;
+	booleanValue = rhs.booleanValue;
+	for(RPCArray::const_iterator i = rhs.arrayValue->begin(); i != rhs.arrayValue->end(); ++i)
+	{
+		PVariable lhs(new Variable());
+		*lhs = *(*i);
+		arrayValue->push_back(lhs);
+	}
+	for(RPCStruct::const_iterator i = rhs.structValue->begin(); i != rhs.structValue->end(); ++i)
+	{
+		PVariable lhs(new Variable());
+		*lhs = *(i->second);
+		structValue->insert(std::pair<std::string, PVariable>(i->first, lhs));
+	}
+	return *this;
+}
+
 bool Variable::operator==(const Variable& rhs)
 {
 	if(type != rhs.type) return false;
@@ -306,6 +330,26 @@ PVariable Variable::fromString(std::string& value, LogicalParameter::Type::Enum 
 		variableType = VariableType::rpcInteger;
 		break;
 	case LogicalParameter::Type::Enum::typeString:
+		variableType = VariableType::rpcString;
+		break;
+	}
+	return fromString(value, variableType);
+}
+
+PVariable Variable::fromString(std::string& value, PhysicalParameter::Type::Enum type)
+{
+	VariableType variableType = VariableType::rpcVoid;
+	switch(type)
+	{
+	case PhysicalParameter::Type::Enum::none:
+		break;
+	case PhysicalParameter::Type::Enum::typeBoolean:
+		variableType = VariableType::rpcBoolean;
+		break;
+	case PhysicalParameter::Type::Enum::typeInteger:
+		variableType = VariableType::rpcInteger;
+		break;
+	case PhysicalParameter::Type::Enum::typeString:
 		variableType = VariableType::rpcString;
 		break;
 	}

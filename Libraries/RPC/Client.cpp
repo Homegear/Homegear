@@ -36,7 +36,6 @@ namespace RPC
 {
 Client::Client()
 {
-	_servers.reset(new std::vector<std::shared_ptr<RemoteRPCServer>>());
 }
 
 Client::~Client()
@@ -49,19 +48,12 @@ void Client::dispose()
 	if(_disposing) return;
 	_disposing = true;
 	reset();
-	int32_t i = 0;
-	while(_invokeBroadcastThreads.size() > 0 && i < 300)
-	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		i++;
-		if(i == 299) GD::out.printError("Error: RPC client: Waiting for \"invoke broadcast threads\" timed out.");
-	}
 }
 
 void Client::init()
 {
 	//GD::bl needs to be valid, before _client is created.
-	_client.reset(new RPCClient());
+	_client.reset(new RpcClient());
 	_jsonEncoder = std::unique_ptr<BaseLib::RPC::JsonEncoder>(new BaseLib::RPC::JsonEncoder(GD::bl.get()));
 }
 
@@ -72,7 +64,7 @@ void Client::initServerMethods(std::pair<std::string, std::string> address)
 		//Wait a little before sending these methods
 		std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 		systemListMethods(address);
-		std::shared_ptr<RemoteRPCServer> server = getServer(address);
+		std::shared_ptr<RemoteRpcServer> server = getServer(address);
 		if(!server) return; //server is empty when connection timed out
 		listDevices(address);
 		sendUnknownDevices(address);
@@ -91,84 +83,6 @@ void Client::initServerMethods(std::pair<std::string, std::string> address)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-}
-
-void Client::startInvokeBroadcastThread(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
-{
-	try
-	{
-		_invokeBroadcastThreadsMutex.lock();
-		if(_invokeBroadcastThreads.size() > GD::bl->settings.rpcClientThreadMax())
-		{
-			_invokeBroadcastThreadsMutex.unlock();
-			GD::out.printCritical("Critical: More than " + std::to_string(GD::bl->settings.rpcClientThreadMax()) + " RPC broadcast threads are running. Server processing is too slow for the amount of requests. Dropping packet.", false);
-			return;
-		}
-		int32_t threadID = _currentInvokeBroadcastThreadID++;
-		std::shared_ptr<std::thread> t = std::shared_ptr<std::thread>(new std::thread(&Client::invokeBroadcastThread, this, threadID, server, methodName, parameters));
-		BaseLib::Threads::setThreadPriority(GD::bl.get(), t->native_handle(), GD::bl->settings.rpcClientThreadPriority(), GD::bl->settings.rpcClientThreadPolicy());
-		_invokeBroadcastThreads[threadID] = t;
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _invokeBroadcastThreadsMutex.unlock();
-}
-
-void Client::invokeBroadcastThread(uint32_t threadID, std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters)
-{
-	try
-	{
-		if(_client) _client->invokeBroadcast(server, methodName, parameters);
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    removeBroadcastThread(threadID);
-}
-
-void Client::removeBroadcastThread(uint32_t threadID)
-{
-	try
-	{
-		_invokeBroadcastThreadsMutex.lock();
-		if(_invokeBroadcastThreads.find(threadID) != _invokeBroadcastThreads.end())
-		{
-			_invokeBroadcastThreads.at(threadID)->detach();
-			_invokeBroadcastThreads.erase(threadID);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _invokeBroadcastThreadsMutex.unlock();
 }
 
 void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> values)
@@ -192,25 +106,20 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 			}
 		}
 		std::string methodName("event");
-		std::vector<std::shared_ptr<RemoteRPCServer>> _serversToRemove;
 		_serversMutex.lock();
-		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
+		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
-			if((*server)->removed)
-			{
-				_serversToRemove.push_back(*server);
-				continue;
-			}
-			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && ((*server)->knownMethods.find("event") == (*server)->knownMethods.end() || (*server)->knownMethods.find("system.multicall") == (*server)->knownMethods.end()))) continue;
-			if((*server)->subscribePeers && (*server)->subscribedPeers.find(id) == (*server)->subscribedPeers.end()) continue;
-			if((*server)->webSocket || (*server)->json)
+			if(server->second->removed || (!server->second->socket->connected() && !server->second->reconnectInfinitely) || (!server->second->initialized && BaseLib::HelperFunctions::getTimeSeconds() - server->second->creationTime > 120)) continue;
+			if(!server->second->initialized || (!server->second->knownMethods.empty() && (server->second->knownMethods.find("event") == server->second->knownMethods.end() || server->second->knownMethods.find("system.multicall") == server->second->knownMethods.end()))) continue;
+			if(server->second->subscribePeers && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end()) continue;
+			if(server->second->webSocket || server->second->json)
 			{
 				//No system.multicall
 				for(uint32_t i = 0; i < valueKeys->size(); i++)
 				{
 					std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
-					parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
-					if((*server)->useID)
+					parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(server->second->id)));
+					if(server->second->useID)
 					{
 						parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)id)));
 						parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(channel)));
@@ -218,7 +127,7 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 					else parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(deviceAddress)));
 					parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(valueKeys->at(i))));
 					parameters->push_back(values->at(i));
-					startInvokeBroadcastThread((*server), "event", parameters);
+					server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>>(new std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>("event", parameters)));
 				}
 			}
 			else
@@ -233,8 +142,8 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 					method->structValue->insert(BaseLib::RPC::RPCStructElement("methodName", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(methodName))));
 					std::shared_ptr<BaseLib::RPC::Variable> params(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 					method->structValue->insert(BaseLib::RPC::RPCStructElement("params", params));
-					params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
-					if((*server)->useID)
+					params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(server->second->id)));
+					if(server->second->useID)
 					{
 						params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)id)));
 						params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(channel)));
@@ -245,17 +154,10 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 				}
 				parameters->push_back(array);
 				//Sadly some clients only support multicall and not "event" directly for single events. That's why we use multicall even when there is only one value.
-				startInvokeBroadcastThread((*server), "system.multicall", parameters);
+				server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>>(new std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>("system.multicall", parameters)));
 			}
 		}
 		_serversMutex.unlock();
-		if(!_serversToRemove.empty())
-		{
-			for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _serversToRemove.begin(); server != _serversToRemove.end(); ++server)
-			{
-				removeServer((*server)->address);
-			}
-		}
 		return;
 	}
 	catch(const std::exception& ex)
@@ -277,13 +179,13 @@ void Client::systemListMethods(std::pair<std::string, std::string> address)
 {
 	try
 	{
-		std::shared_ptr<RemoteRPCServer> server = getServer(address);
+		std::shared_ptr<RemoteRpcServer> server = getServer(address);
 		if(!server) return;
 		std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>> { std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(server->id)) });
 		std::shared_ptr<BaseLib::RPC::Variable> result = _client->invoke(server, "system.listMethods", parameters);
 		if(result->errorStruct)
 		{
-			if(server->removed) return;
+			if(server->removed || (!server->socket->connected() && !server->reconnectInfinitely)) return;
 			GD::out.printWarning("Warning: Error calling XML RPC method \"system.listMethods\" on server " + address.first + " with port " + address.second + ". Error struct: ");
 			result->print();
 			return;
@@ -324,14 +226,14 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 {
 	try
 	{
-		std::shared_ptr<RemoteRPCServer> server = getServer(address);
+		std::shared_ptr<RemoteRpcServer> server = getServer(address);
 		if(!server) return;
 		if(!server->knownMethods.empty() && server->knownMethods.find("listDevices") == server->knownMethods.end()) return;
 		std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>> { std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(server->id)) });
 		std::shared_ptr<BaseLib::RPC::Variable> result = _client->invoke(server, "listDevices", parameters);
 		if(result->errorStruct)
 		{
-			if(server->removed) return;
+			if(server->removed || (!server->socket->connected() && !server->reconnectInfinitely)) return;
 			GD::out.printError("Error calling XML RPC method \"listDevices\" on server " + address.first + " with port " + address.second + ". Error struct: ");
 			result->print();
 			return;
@@ -389,7 +291,7 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 {
 	try
 	{
-		std::shared_ptr<RemoteRPCServer> server = getServer(address);
+		std::shared_ptr<RemoteRpcServer> server = getServer(address);
 		if(!server) return;
 		if(!server->knownMethods.empty() && server->knownMethods.find("newDevices") == server->knownMethods.end()) return;
 		std::shared_ptr<BaseLib::RPC::Variable> devices(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
@@ -431,14 +333,14 @@ void Client::broadcastError(int32_t level, std::string message)
 	try
 	{
 		_serversMutex.lock();
-		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
+		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
-			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("error") == (*server)->knownMethods.end())) continue;
+			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("error") == server->second->knownMethods.end())) continue;
 			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(server->second->id)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(level)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(message)));
-			startInvokeBroadcastThread((*server), "error", parameters);
+			server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>>(new std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>("error", parameters)));
 		}
 	}
 	catch(const std::exception& ex)
@@ -463,13 +365,13 @@ void Client::broadcastNewDevices(std::shared_ptr<BaseLib::RPC::Variable> deviceD
 		if(!deviceDescriptions) return;
 		_serversMutex.lock();
 		std::string methodName("newDevices");
-		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
+		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
-			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("newDevices") == (*server)->knownMethods.end())) continue;
+			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("newDevices") == server->second->knownMethods.end())) continue;
 			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(server->second->id)));
 			parameters->push_back(deviceDescriptions);
-			startInvokeBroadcastThread((*server), "newDevices", parameters);
+			server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>>(new std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>("newDevices", parameters)));
 		}
 	}
 	catch(const std::exception& ex)
@@ -493,13 +395,13 @@ void Client::broadcastNewEvent(std::shared_ptr<BaseLib::RPC::Variable> eventDesc
 	{
 		if(!eventDescription) return;
 		_serversMutex.lock();
-		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
+		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
-			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("newEvent") == (*server)->knownMethods.end())) continue;
+			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("newEvent") == server->second->knownMethods.end())) continue;
 			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(server->second->id)));
 			parameters->push_back(eventDescription);
-			startInvokeBroadcastThread((*server), "newEvent", parameters);
+			server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>>(new std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>("newEvent", parameters)));
 		}
 	}
 	catch(const std::exception& ex)
@@ -523,14 +425,14 @@ void Client::broadcastDeleteDevices(std::shared_ptr<BaseLib::RPC::Variable> devi
 	{
 		if(!deviceAddresses || !deviceInfo) return;
 		_serversMutex.lock();
-		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
+		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
-			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("deleteDevices") == (*server)->knownMethods.end())) continue;
+			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("deleteDevices") == server->second->knownMethods.end())) continue;
 			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
-			if((*server)->useID) parameters->push_back(deviceInfo);
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(server->second->id)));
+			if(server->second->useID) parameters->push_back(deviceInfo);
 			else parameters->push_back(deviceAddresses);
-			startInvokeBroadcastThread((*server), "deleteDevices", parameters);
+			server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>>(new std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>("deleteDevices", parameters)));
 		}
 	}
 	catch(const std::exception& ex)
@@ -554,17 +456,17 @@ void Client::broadcastDeleteEvent(std::string id, int32_t type, uint64_t peerID,
 	{
 		if(id.empty()) return;
 		_serversMutex.lock();
-		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
+		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
-			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("deleteEvent") == (*server)->knownMethods.end())) continue;
+			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("deleteEvent") == server->second->knownMethods.end())) continue;
 			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(server->second->id)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(id)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)type)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)peerID)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(channel)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(variable)));
-			startInvokeBroadcastThread((*server), "deleteEvent", parameters);
+			server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>>(new std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>("deleteEvent", parameters)));
 		}
 	}
 	catch(const std::exception& ex)
@@ -588,19 +490,19 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
 	{
 		if(id == 0 || address.empty()) return;
 		_serversMutex.lock();
-		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
+		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
-			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("updateDevice") == (*server)->knownMethods.end())) continue;
+			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("updateDevice") == server->second->knownMethods.end())) continue;
 			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
-			if((*server)->useID)
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(server->second->id)));
+			if(server->second->useID)
 			{
 				parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)id)));
 				parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(channel)));
 			}
 			else parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(address)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)hint)));
-			startInvokeBroadcastThread((*server), "updateDevice", parameters);
+			server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>>(new std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>("updateDevice", parameters)));
 		}
 	}
 	catch(const std::exception& ex)
@@ -624,17 +526,17 @@ void Client::broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID,
 	{
 		if(id.empty()) return;
 		_serversMutex.lock();
-		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
+		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
-			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("updateEvent") == (*server)->knownMethods.end())) continue;
+			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("updateEvent") == server->second->knownMethods.end())) continue;
 			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::Variable>>());
-			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*server)->id)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(server->second->id)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(id)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)type)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)peerID)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)channel)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(variable)));
-			startInvokeBroadcastThread((*server), "updateEvent", parameters);
+			server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>>(new std::pair<std::string, std::shared_ptr<BaseLib::RPC::RPCList>>("updateEvent", parameters)));
 		}
 	}
 	catch(const std::exception& ex)
@@ -657,7 +559,7 @@ void Client::reset()
 	try
 	{
 		_serversMutex.lock();
-		_servers.reset(new std::vector<std::shared_ptr<RemoteRPCServer>>());
+		_servers.clear();
 	}
 	catch(const std::exception& ex)
     {
@@ -674,18 +576,56 @@ void Client::reset()
     _serversMutex.unlock();
 }
 
-std::shared_ptr<RemoteRPCServer> Client::addServer(std::pair<std::string, std::string> address, std::string path, std::string id)
+void Client::collectGarbage()
 {
 	try
 	{
-		removeServer(address);
+		std::vector<int32_t> serversToRemove;
+		int32_t now = BaseLib::HelperFunctions::getTimeSeconds();
 		_serversMutex.lock();
-		std::shared_ptr<RemoteRPCServer> server(new RemoteRPCServer());
+		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator i = _servers.begin(); i != _servers.end(); ++i)
+		{
+			if(i->second->removed || (!i->second->socket->connected() && !i->second->reconnectInfinitely) || (!i->second->initialized && now - i->second->creationTime > 120)) serversToRemove.push_back(i->first);
+		}
+		for(std::vector<int32_t>::iterator i = serversToRemove.begin(); i != serversToRemove.end(); ++i)
+		{
+			_servers.erase(*i);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _serversMutex.unlock();
+}
+
+std::shared_ptr<RemoteRpcServer> Client::addServer(std::pair<std::string, std::string> address, std::string path, std::string id)
+{
+	try
+	{
+		std::shared_ptr<RemoteRpcServer> server(new RemoteRpcServer(_client));
+		removeServer(address);
+		collectGarbage();
+		if(_servers.size() >= GD::bl->settings.rpcClientMaxServers())
+		{
+			GD::out.printCritical("Critical: Cannot connect to more than " + std::to_string(GD::bl->settings.rpcClientMaxServers()) + " RPC servers. You can increase this number in main.conf, if your computer is able to handle more connections.");
+			return server;
+		}
+		_serversMutex.lock();
+		server->creationTime = BaseLib::HelperFunctions::getTimeSeconds();
 		server->address = address;
 		server->path = path;
 		server->id = id;
 		server->uid = _serverId++;
-		_servers->push_back(server);
+		_servers[server->uid] = server;
 		_serversMutex.unlock();
 		return server;
 	}
@@ -702,18 +642,25 @@ std::shared_ptr<RemoteRPCServer> Client::addServer(std::pair<std::string, std::s
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _serversMutex.unlock();
-    return std::shared_ptr<RemoteRPCServer>(new RemoteRPCServer());
+    return std::shared_ptr<RemoteRpcServer>(new RemoteRpcServer(_client));
 }
 
-std::shared_ptr<RemoteRPCServer> Client::addWebSocketServer(std::shared_ptr<BaseLib::SocketOperations> socket, std::string clientId, std::string address)
+std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<BaseLib::SocketOperations> socket, std::string clientId, std::string address)
 {
 	try
 	{
+		std::shared_ptr<RemoteRpcServer> server(new RemoteRpcServer(_client));
 		std::pair<std::string, std::string> serverAddress;
 		serverAddress.first = clientId;
 		removeServer(serverAddress);
+		collectGarbage();
+		if(_servers.size() >= GD::bl->settings.rpcClientMaxServers())
+		{
+			GD::out.printCritical("Critical: Cannot connect to more than " + std::to_string(GD::bl->settings.rpcClientMaxServers()) + " RPC servers. You can increase this number in main.conf, if your computer is able to handle more connections.");
+			return server;
+		}
 		_serversMutex.lock();
-		std::shared_ptr<RemoteRPCServer> server(new RemoteRPCServer());
+		server->creationTime = BaseLib::HelperFunctions::getTimeSeconds();
 		server->address.first = clientId;
 		server->hostname = address;
 		server->uid = _serverId++;
@@ -724,7 +671,7 @@ std::shared_ptr<RemoteRPCServer> Client::addWebSocketServer(std::shared_ptr<Base
 		server->keepAlive = true;
 		server->subscribePeers = true;
 		server->useID = true;
-		_servers->push_back(server);
+		_servers[server->uid] = server;
 		_serversMutex.unlock();
 		return server;
 	}
@@ -741,7 +688,7 @@ std::shared_ptr<RemoteRPCServer> Client::addWebSocketServer(std::shared_ptr<Base
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _serversMutex.unlock();
-    return std::shared_ptr<RemoteRPCServer>(new RemoteRPCServer());
+    return std::shared_ptr<RemoteRpcServer>(new RemoteRpcServer(_client));
 }
 
 void Client::removeServer(std::pair<std::string, std::string> server)
@@ -749,11 +696,11 @@ void Client::removeServer(std::pair<std::string, std::string> server)
 	try
 	{
 		_serversMutex.lock();
-		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
+		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::iterator i = _servers.begin(); i != _servers.end(); ++i)
 		{
-			if((*i)->address == server)
+			if(i->second->address == server)
 			{
-				_servers->erase(i);
+				_servers.erase(i);
 				_serversMutex.unlock();
 				return;
 			}
@@ -779,15 +726,7 @@ void Client::removeServer(int32_t uid)
 	try
 	{
 		_serversMutex.lock();
-		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
-		{
-			if((*i)->uid == uid)
-			{
-				_servers->erase(i);
-				_serversMutex.unlock();
-				return;
-			}
-		}
+		_servers.erase(uid);
 	}
 	catch(const std::exception& ex)
     {
@@ -804,17 +743,17 @@ void Client::removeServer(int32_t uid)
     _serversMutex.unlock();
 }
 
-std::shared_ptr<RemoteRPCServer> Client::getServer(std::pair<std::string, std::string> address)
+std::shared_ptr<RemoteRpcServer> Client::getServer(std::pair<std::string, std::string> address)
 {
 	try
 	{
 		_serversMutex.lock();
-		std::shared_ptr<RemoteRPCServer> server;
-		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
+		std::shared_ptr<RemoteRpcServer> server;
+		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator i = _servers.begin(); i != _servers.end(); ++i)
 		{
-			if((*i)->address == address)
+			if(i->second->address == address)
 			{
-				server = *i;
+				server = i->second;
 				break;
 			}
 		}
@@ -834,24 +773,24 @@ std::shared_ptr<RemoteRPCServer> Client::getServer(std::pair<std::string, std::s
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _serversMutex.unlock();
-    return std::shared_ptr<RemoteRPCServer>();
+    return std::shared_ptr<RemoteRpcServer>();
 }
 
 std::shared_ptr<BaseLib::RPC::Variable> Client::listClientServers(std::string id)
 {
 	try
 	{
-		std::vector<std::shared_ptr<RemoteRPCServer>> servers;
+		std::vector<std::shared_ptr<RemoteRpcServer>> servers;
 		_serversMutex.lock();
-		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
+		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator i = _servers.begin(); i != _servers.end(); ++i)
 		{
-			if(!id.empty() && (*i)->id != id) continue;
-			servers.push_back(*i);
+			if(!id.empty() && i->second->id != id) continue;
+			servers.push_back(i->second);
 		}
 		_serversMutex.unlock();
 		if(servers.empty()) return BaseLib::RPC::Variable::createError(-32602, "Server is unknown.");
 		std::shared_ptr<BaseLib::RPC::Variable> serverInfos(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
-		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = servers.begin(); i != servers.end(); ++i)
+		for(std::vector<std::shared_ptr<RemoteRpcServer>>::iterator i = servers.begin(); i != servers.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::RPC::Variable> serverInfo(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcStruct));
 			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE_ID", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((*i)->id))));
@@ -899,12 +838,12 @@ std::shared_ptr<BaseLib::RPC::Variable> Client::clientServerInitialized(std::str
 	{
 		bool initialized = false;
 		_serversMutex.lock();
-		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
+		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator i = _servers.begin(); i != _servers.end(); ++i)
 		{
-			if((*i)->id == id)
+			if(i->second->id == id)
 			{
 				_serversMutex.unlock();
-				if((*i)->removed) removeServer((*i)->address);
+				if(i->second->removed) continue;
 				else initialized = true;
 				return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(initialized));
 			}

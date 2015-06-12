@@ -53,6 +53,9 @@ class SonosPacket : public BaseLib::Systems::Packet
         std::string functionName() { return _functionName; }
         std::shared_ptr<std::map<std::string, std::string>> values() { return _values; }
         std::shared_ptr<std::map<std::string, std::string>> currentTrackMetadata() { return _currentTrackMetadata; }
+        std::shared_ptr<std::map<std::string, std::string>> nextTrackMetadata() { return _nextTrackMetadata; }
+        std::shared_ptr<std::map<std::string, std::string>>avTransportUriMetaData() { return _avTransportUriMetaData; }
+        std::shared_ptr<std::map<std::string, std::string>> nextAvTransportUriMetaData() { return _nextAvTransportUriMetaData; }
         std::shared_ptr<std::map<std::string, std::string>> enqueuedTransportUriMetaData() { return _enqueuedTransportUriMetaData; }
 
         void getSoapRequest(std::string& request);
@@ -65,6 +68,9 @@ class SonosPacket : public BaseLib::Systems::Packet
         std::string _functionName;
         std::shared_ptr<std::map<std::string, std::string>> _values;
         std::shared_ptr<std::map<std::string, std::string>> _currentTrackMetadata;
+        std::shared_ptr<std::map<std::string, std::string>> _nextTrackMetadata;
+        std::shared_ptr<std::map<std::string, std::string>> _avTransportUriMetaData;
+        std::shared_ptr<std::map<std::string, std::string>> _nextAvTransportUriMetaData;
         std::shared_ptr<std::map<std::string, std::string>> _enqueuedTransportUriMetaData;
 };
 

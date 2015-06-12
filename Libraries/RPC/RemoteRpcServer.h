@@ -27,41 +27,31 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef RPCCLIENT_H_
-#define RPCCLIENT_H_
+#ifndef REMOTERPCSERVER_H_
+#define REMOTERPCSERVER_H_
 
-#include "ClientSettings.h"
 #include "../../Modules/Base/BaseLib.h"
 #include "Auth.h"
+#include "ClientSettings.h"
 
-#include <iostream>
 #include <string>
 #include <memory>
 #include <vector>
 #include <set>
-#include <list>
 #include <mutex>
 #include <map>
 
-#include <unistd.h>
-#include <cstring>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/socket.h>
-#include <errno.h>
-#include <poll.h>
-#include <signal.h>
-
 namespace RPC
 {
-class RemoteRPCServer
+
+class RpcClient;
+
+class RemoteRpcServer
 {
 public:
-	RemoteRPCServer();
-	virtual ~RemoteRPCServer() {}
-
 	std::shared_ptr<ClientSettings::Settings> settings;
 
+	int32_t creationTime = 0;
 	bool removed = false;
 	bool initialized = false;
 	bool useSSL = false;
@@ -77,7 +67,7 @@ public:
 	std::pair<std::string, std::string> address;
 	std::string path;
 	std::string id;
-	int32_t uid;
+	int32_t uid = -1;
 	std::shared_ptr<std::set<uint64_t>> knownDevices;
 	std::map<std::string, bool> knownMethods;
 	std::shared_ptr<BaseLib::SocketOperations> socket;
@@ -86,29 +76,34 @@ public:
 	Auth auth;
 	int32_t lastPacketSent = -1;
 	std::set<uint64_t> subscribedPeers;
+
+	RemoteRpcServer(std::shared_ptr<RpcClient> client);
+	virtual ~RemoteRpcServer();
+
+	/**
+	 * Queues a method for sending to this event server.
+	 *
+	 * @param method The method to queue. The first part of the pair is the method name, the second part the parameters.
+	 */
+	void queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>>>> method);
+private:
+	std::shared_ptr<RpcClient> _client;
+
+	//Method queue
+	static const int32_t _methodBufferSize = 10000;
+	std::mutex _methodBufferMutex;
+	int32_t _methodBufferHead = 0;
+	int32_t _methodBufferTail = 0;
+	std::shared_ptr<std::pair<std::string, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>>>> _methodBuffer[_methodBufferSize];
+	std::mutex _methodProcessingThreadMutex;
+	std::thread _methodProcessingThread;
+	bool _methodProcessingMessageAvailable = false;
+	std::condition_variable _methodProcessingConditionVariable;
+	bool _stopMethodProcessingThread = false;
+
+	void processMethods();
 };
 
-class RPCClient {
-public:
-	RPCClient();
-	virtual ~RPCClient();
+}
 
-	void invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
-	std::shared_ptr<BaseLib::RPC::Variable> invoke(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>> parameters);
-
-	void reset();
-protected:
-	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
-	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
-	std::unique_ptr<BaseLib::RPC::XMLRPCDecoder> _xmlRpcDecoder;
-	std::unique_ptr<BaseLib::RPC::XMLRPCEncoder> _xmlRpcEncoder;
-	std::unique_ptr<BaseLib::RPC::JsonDecoder> _jsonDecoder;
-	std::unique_ptr<BaseLib::RPC::JsonEncoder> _jsonEncoder;
-	int32_t _sendCounter = 0;
-
-	void sendRequest(std::shared_ptr<RemoteRPCServer> server, std::vector<char>& data, std::vector<char>& responseData, bool insertHeader, bool& retry);
-	std::string getIPAddress(std::string address);
-};
-
-} /* namespace RPC */
-#endif /* RPCCLIENT_H_ */
+#endif

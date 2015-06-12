@@ -120,7 +120,7 @@ protected:
 	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
 
-	//Event thraeds
+	//Event threads
 	int64_t _lastGargabeCollection = 0;
 	volatile int32_t _currentEventThreadID = 0;
 	std::map<int32_t, std::pair<std::thread, bool>> _eventThreads;

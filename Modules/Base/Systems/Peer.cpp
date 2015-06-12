@@ -2329,6 +2329,8 @@ std::shared_ptr<RPC::Variable> Peer::setValue(int32_t clientID, uint32_t channel
 				else if(value->stringValue.at(0) == '-') value->floatValue = currentValue->floatValue - factor;
 				else if(value->stringValue.at(0) == '*') value->floatValue = currentValue->floatValue * factor;
 				else if(value->stringValue.at(0) == '/') value->floatValue = currentValue->floatValue / factor;
+				value->type = RPC::VariableType::rpcFloat;
+				value->stringValue.clear();
 			}
 			else if(rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeInteger)
 			{
@@ -2340,6 +2342,8 @@ std::shared_ptr<RPC::Variable> Peer::setValue(int32_t clientID, uint32_t channel
 				else if(value->stringValue.at(0) == '-') value->integerValue = currentValue->integerValue - factor;
 				else if(value->stringValue.at(0) == '*') value->integerValue = currentValue->integerValue * factor;
 				else if(value->stringValue.at(0) == '/') value->integerValue = currentValue->integerValue / factor;
+				value->type = RPC::VariableType::rpcInteger;
+				value->stringValue.clear();
 			}
 		}
 		return std::shared_ptr<RPC::Variable>(new RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
