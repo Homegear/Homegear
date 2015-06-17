@@ -62,6 +62,7 @@ public:
 	FileDescriptorManager();
 	virtual ~FileDescriptorManager() {}
 	void init(BaseLib::Obj* baseLib);
+	void dispose();
 
 	virtual std::shared_ptr<FileDescriptor> add(int32_t fileDescriptor);
 	virtual void remove(std::shared_ptr<FileDescriptor> descriptor);
@@ -73,6 +74,7 @@ public:
 	virtual void lock();
 	virtual void unlock();
 private:
+	bool _disposed = false;
 	BaseLib::Obj* _bl = nullptr;
 	uint32_t _currentID = 0;
 	std::mutex _descriptorsMutex;

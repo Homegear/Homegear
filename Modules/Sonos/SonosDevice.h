@@ -66,7 +66,10 @@ class SonosDevice : public BaseLib::Systems::LogicalDevice
 		virtual void savePeers(bool full);
         virtual void loadVariables() {}
         virtual void saveVariables() {}
+
+        virtual void homegearShuttingDown();
     protected:
+        bool _shuttingDown = false;
         bool _stopWorkerThread = false;
         std::thread _workerThread;
 

@@ -296,4 +296,10 @@ void SonosDevice::savePeers(bool full)
     }
 	_peersMutex.unlock();
 }
+
+void SonosDevice::homegearShuttingDown()
+{
+	_shuttingDown = true;
+	LogicalDevice::homegearShuttingDown();
+}
 }

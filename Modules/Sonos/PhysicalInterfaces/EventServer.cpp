@@ -163,6 +163,7 @@ void EventServer::mainThread()
 
     	std::string ipAddress;
     	int32_t port = -1;
+    	std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor;
 
         while(!_stopServer)
         {
@@ -175,12 +176,11 @@ void EventServer::mainThread()
 					getSocketDescriptor();
 					continue;
 				}
-				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = getClientSocketDescriptor(ipAddress, port);
+				clientFileDescriptor = getClientSocketDescriptor(ipAddress, port);
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
 
 				std::shared_ptr<BaseLib::SocketOperations> socket(new BaseLib::SocketOperations(GD::bl, clientFileDescriptor));
 				readClient(socket, ipAddress, port);
-				GD::bl->fileDescriptorManager.shutdown(clientFileDescriptor);
 			}
 			catch(const std::exception& ex)
 			{
@@ -194,6 +194,7 @@ void EventServer::mainThread()
 			{
 				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
+			GD::bl->fileDescriptorManager.shutdown(clientFileDescriptor);
         }
     }
     catch(const std::exception& ex)

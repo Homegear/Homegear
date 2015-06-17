@@ -93,12 +93,12 @@ void SonosCentral::worker()
 		lastPeer = 0;
 
 		//One loop on the Raspberry Pi takes about 30µs
-		while(!_stopWorkerThread)
+		while(!_stopWorkerThread && !_shuttingDown)
 		{
 			try
 			{
 				std::this_thread::sleep_for(sleepingTime);
-				if(_stopWorkerThread) return;
+				if(_stopWorkerThread || _shuttingDown) return;
 				if(counter > countsPer10Minutes)
 				{
 					counter = 0;

@@ -168,6 +168,7 @@ void SSDP::sendSearchBroadcast(std::shared_ptr<FileDescriptor>& serverSocketDesc
 
 void SSDP::searchDevices(const std::string& stHeader, uint32_t timeout, std::vector<SSDPInfo>& devices)
 {
+	std::shared_ptr<FileDescriptor> serverSocketDescriptor;
 	try
 	{
 		if(stHeader.empty())
@@ -176,7 +177,7 @@ void SSDP::searchDevices(const std::string& stHeader, uint32_t timeout, std::vec
 			return;
 		}
 
-		std::shared_ptr<FileDescriptor> serverSocketDescriptor = getSocketDescriptor();
+		serverSocketDescriptor = getSocketDescriptor();
 		if(!serverSocketDescriptor || serverSocketDescriptor->descriptor == -1) return;
 		if(_bl->debugLevel >= 5) _bl->out.printDebug("Debug: Searching for SSDP devices ...");
 
@@ -255,6 +256,7 @@ void SSDP::searchDevices(const std::string& stHeader, uint32_t timeout, std::vec
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	_bl->fileDescriptorManager.shutdown(serverSocketDescriptor);
 }
 
 void SSDP::processPacket(HTTP& http, const std::string& stHeader, std::set<std::string>& locations)

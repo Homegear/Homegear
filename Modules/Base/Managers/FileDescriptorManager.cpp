@@ -42,11 +42,24 @@ void FileDescriptorManager::init(BaseLib::Obj* baseLib)
 	_bl = baseLib;
 }
 
+void FileDescriptorManager::dispose()
+{
+	_disposed = true;
+	_descriptorsMutex.lock();
+	for(std::map<int32_t, std::shared_ptr<FileDescriptor>>::iterator i = _descriptors.begin(); i != _descriptors.end(); ++i)
+	{
+		if(!i->second) continue;
+		::close(i->second->descriptor);
+	}
+	_descriptors.clear();
+	_descriptorsMutex.unlock();
+}
+
 std::shared_ptr<FileDescriptor> FileDescriptorManager::add(int32_t fileDescriptor)
 {
 	try
 	{
-		if(fileDescriptor < 0) return std::shared_ptr<FileDescriptor>(new FileDescriptor());
+		if(fileDescriptor < 0 || _disposed) return std::shared_ptr<FileDescriptor>(new FileDescriptor());
 		_descriptorsMutex.lock();
 		if(_descriptors.find(fileDescriptor) != _descriptors.end())
 		{
