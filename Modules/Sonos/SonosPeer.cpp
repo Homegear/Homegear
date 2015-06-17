@@ -1125,7 +1125,6 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::setValue(int32_t clientID, ui
 			SonosPacket packet(_ip, frame->metaString1, frame->function1, frame->metaString2, frame->function2, soapValues);
 			packet.getSoapRequest(soapRequest);
 			if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Sending SOAP request:\n" + soapRequest);
-			std::cerr << "Moin: " << soapRequest << std::endl;
 			if(_httpClient)
 			{
 				std::string response;
