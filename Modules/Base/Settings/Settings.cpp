@@ -84,6 +84,7 @@ void Settings::reset()
 	_modulePath = "/var/lib/homegear/modules/";
 	_scriptPath = "/var/lib/homegear/scripts/";
 	_firmwarePath = "/var/lib/homegear/firmware/";
+	_tempPath = "/var/lib/homegear/tmp/";
 	_tunnelClients.clear();
 	_clientAddressesToReplace.clear();
 	_gpioPath = "/sys/class/gpio/";
@@ -91,9 +92,9 @@ void Settings::reset()
 
 bool Settings::changed()
 {
-	if(_bl->hf.getFileLastModifiedTime(_path) != _lastModified ||
-		_bl->hf.getFileLastModifiedTime(_clientSettingsPath) != _clientSettingsLastModified ||
-		_bl->hf.getFileLastModifiedTime(_serverSettingsPath) != _serverSettingsLastModified)
+	if(_bl->io.getFileLastModifiedTime(_path) != _lastModified ||
+		_bl->io.getFileLastModifiedTime(_clientSettingsPath) != _clientSettingsLastModified ||
+		_bl->io.getFileLastModifiedTime(_serverSettingsPath) != _serverSettingsLastModified)
 	{
 		return true;
 	}
@@ -388,6 +389,13 @@ void Settings::load(std::string filename)
 					if(_firmwarePath.back() != '/') _firmwarePath.push_back('/');
 					_bl->out.printDebug("Debug: firmwarePath set to " + _firmwarePath);
 				}
+				else if(name == "temppath")
+				{
+					_tempPath = value;
+					if(_tempPath.empty()) _tempPath = "/var/lib/homegear/tmp/";
+					if(_tempPath.back() != '/') _tempPath.push_back('/');
+					_bl->out.printDebug("Debug: tempPath set to " + _tempPath);
+				}
 				else if(name == "redirecttosshtunnel")
 				{
 					if(!value.empty()) _tunnelClients[HelperFunctions::toLower(value)] = true;
@@ -416,10 +424,10 @@ void Settings::load(std::string filename)
 		}
 
 		fclose(fin);
-		_lastModified = _bl->hf.getFileLastModifiedTime(filename);
-		_clientSettingsLastModified = _bl->hf.getFileLastModifiedTime(_clientSettingsPath);
-		_serverSettingsLastModified = _bl->hf.getFileLastModifiedTime(_serverSettingsPath);
-		_mqttSettingsLastModified = _bl->hf.getFileLastModifiedTime(_mqttSettingsPath);
+		_lastModified = _bl->io.getFileLastModifiedTime(filename);
+		_clientSettingsLastModified = _bl->io.getFileLastModifiedTime(_clientSettingsPath);
+		_serverSettingsLastModified = _bl->io.getFileLastModifiedTime(_serverSettingsPath);
+		_mqttSettingsLastModified = _bl->io.getFileLastModifiedTime(_mqttSettingsPath);
 	}
 	catch(const std::exception& ex)
     {

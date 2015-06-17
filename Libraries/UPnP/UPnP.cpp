@@ -161,45 +161,10 @@ void UPnP::getAddress()
 {
 	try
 	{
-		std::string address;
 		if(GD::bl->settings.uPnPIpAddress().empty())
 		{
-			char buffer[101];
-			buffer[100] = 0;
-			bool addressFound = false;
-			ifaddrs* interfaces = nullptr;
-			if(getifaddrs(&interfaces) != 0)
-			{
-				GD::out.printCritical("Error: Could not get address information: " + std::string(strerror(errno)));
-				return;
-			}
-			for(ifaddrs* info = interfaces; info != 0; info = info->ifa_next)
-			{
-				if (info->ifa_addr == NULL) continue;
-				switch (info->ifa_addr->sa_family)
-				{
-					case AF_INET:
-						inet_ntop (info->ifa_addr->sa_family, &((struct sockaddr_in *)info->ifa_addr)->sin_addr, buffer, 100);
-						address = std::string(buffer);
-						if(address.compare(0, 3, "10.") == 0 || address.compare(0, 4, "172.") == 0 || address.compare(0, 8, "192.168.") == 0) addressFound = true;
-						break;
-					case AF_INET6:
-						//Ignored currently
-						inet_ntop (info->ifa_addr->sa_family, &((struct sockaddr_in6 *)info->ifa_addr)->sin6_addr, buffer, 100);
-						break;
-				}
-				if(addressFound)
-				{
-					_address = address;
-					break;
-				}
-			}
-			freeifaddrs(interfaces);
-			if(!addressFound)
-			{
-				GD::out.printError("Error: No IP address could be found to bind the server to. Please specify the IP address manually in main.conf.");
-				return;
-			}
+			_address = BaseLib::Net::getMyIpAddress();
+			if(_address.empty()) GD::out.printError("Error: No IP address could be found to bind the server to. Please specify the IP address manually in main.conf.");
 		}
 		else _address = GD::bl->settings.uPnPIpAddress();
 	}

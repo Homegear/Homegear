@@ -58,6 +58,7 @@ RemoteRpcServer::~RemoteRpcServer()
 	_methodProcessingMessageAvailable = true;
 	_methodProcessingConditionVariable.notify_one();
 	if(_methodProcessingThread.joinable()) _methodProcessingThread.join();
+	_client.reset();
 }
 
 void RemoteRpcServer::queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::Variable>>>>> method)

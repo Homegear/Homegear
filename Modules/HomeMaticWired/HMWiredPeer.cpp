@@ -1683,8 +1683,8 @@ int32_t HMWiredPeer::getNewFirmwareVersion()
 	{
 		std::string filenamePrefix = BaseLib::HelperFunctions::getHexString((int32_t)BaseLib::Systems::DeviceFamilies::HomeMaticWired, 4) + "." + BaseLib::HelperFunctions::getHexString(_deviceType.type(), 8);
 		std::string versionFile(_bl->settings.firmwarePath() + filenamePrefix + ".version");
-		if(!BaseLib::HelperFunctions::fileExists(versionFile)) return 0;
-		std::string versionHex = BaseLib::HelperFunctions::getFileContent(versionFile);
+		if(!BaseLib::Io::fileExists(versionFile)) return 0;
+		std::string versionHex = BaseLib::Io::getFileContent(versionFile);
 		return BaseLib::Math::getNumber(versionHex, true);
 	}
 	catch(const std::exception& ex)

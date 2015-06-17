@@ -31,6 +31,7 @@
 #include "LogicalDevices/MiscCentral.h"
 #include "GD.h"
 #include "sys/wait.h"
+#include "sys/stat.h"
 
 namespace Misc
 {

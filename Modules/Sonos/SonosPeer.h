@@ -53,7 +53,7 @@ public:
 	std::string frameID;
 	std::list<uint32_t> paramsetChannels;
 	BaseLib::RPC::ParameterSet::Type::Enum parameterSetType;
-	std::map<std::string, FrameValue> values;
+	std::unordered_map<std::string, FrameValue> values;
 };
 
 class SonosPeer : public BaseLib::Systems::Peer
@@ -102,14 +102,18 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::Variable> setValue(int32_t clientID, uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value);
 	//End RPC methods
 protected:
+	bool _shuttingDown = false;
+	bool _getOneMorePositionInfo = true;
 	std::shared_ptr<BaseLib::RPC::RPCEncoder> _binaryEncoder;
 	std::shared_ptr<BaseLib::RPC::RPCDecoder> _binaryDecoder;
 	std::shared_ptr<BaseLib::HTTPClient> _httpClient;
 	int32_t _lastAvTransportSubscription = 0;
+	int32_t _lastPositionInfo = 0;
 
 	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 	virtual std::shared_ptr<BaseLib::Systems::LogicalDevice> getDevice(int32_t address);
 	void getValuesFromPacket(std::shared_ptr<SonosPacket> packet, std::vector<FrameValues>& frameValue);
+	bool setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value);
 
 	/**
 	 * {@inheritDoc}
@@ -117,6 +121,8 @@ protected:
 	virtual std::shared_ptr<BaseLib::RPC::Variable> getValueFromDevice(std::shared_ptr<BaseLib::RPC::Parameter>& parameter, int32_t channel, bool asynchronous);
 
 	virtual std::shared_ptr<BaseLib::RPC::ParameterSet> getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type);
+
+	void getSoapData(std::string& functionName, std::string& service, std::string& path, std::shared_ptr<std::vector<std::pair<std::string, std::string>>>& soapValues, bool ignoreErrors = false);
 };
 
 }

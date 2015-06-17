@@ -79,7 +79,7 @@ void SQLite3::hotBackup()
 		if(_databasePath.empty()) return;
 		_databaseMutex.lock();
 		closeDatabase(false);
-		if(GD::bl->hf.fileExists(_databasePath))
+		if(GD::bl->io.fileExists(_databasePath))
 		{
 			if(!checkIntegrity(_databasePath))
 			{
@@ -89,10 +89,10 @@ void SQLite3::hotBackup()
 					bool restored = false;
 					for(int32_t i = 0; i <= 10000; i++)
 					{
-						if(GD::bl->hf.fileExists(_backupPath + std::to_string(i)) && checkIntegrity(_backupPath + std::to_string(i)))
+						if(GD::bl->io.fileExists(_backupPath + std::to_string(i)) && checkIntegrity(_backupPath + std::to_string(i)))
 						{
 							GD::out.printCritical("Critical: Restoring database file: " + _backupPath + std::to_string(i));
-							if(GD::bl->hf.copyFile(_backupPath + std::to_string(i), _databasePath))
+							if(GD::bl->io.copyFile(_backupPath + std::to_string(i), _databasePath))
 							{
 								restored = true;
 								break;
@@ -119,18 +119,18 @@ void SQLite3::hotBackup()
 					GD::out.printInfo("Info: Backing up database...");
 					if(GD::bl->settings.databaseMaxBackups() > 1)
 					{
-						if(GD::bl->hf.fileExists(_backupPath + std::to_string(GD::bl->settings.databaseMaxBackups() - 1)))
+						if(GD::bl->io.fileExists(_backupPath + std::to_string(GD::bl->settings.databaseMaxBackups() - 1)))
 						{
-							if(!GD::bl->hf.deleteFile(_backupPath + std::to_string(GD::bl->settings.databaseMaxBackups() - 1)))
+							if(!GD::bl->io.deleteFile(_backupPath + std::to_string(GD::bl->settings.databaseMaxBackups() - 1)))
 							{
 								GD::out.printError("Error: Cannot delete file: " + _backupPath + std::to_string(GD::bl->settings.databaseMaxBackups() - 1));
 							}
 						}
 						for(int32_t i = GD::bl->settings.databaseMaxBackups() - 2; i >= 0; i--)
 						{
-							if(GD::bl->hf.fileExists(_backupPath + std::to_string(i)))
+							if(GD::bl->io.fileExists(_backupPath + std::to_string(i)))
 							{
-								if(!GD::bl->hf.moveFile(_backupPath + std::to_string(i), _backupPath + std::to_string(i + 1)))
+								if(!GD::bl->io.moveFile(_backupPath + std::to_string(i), _backupPath + std::to_string(i + 1)))
 								{
 									GD::out.printError("Error: Cannot move file: " + _backupPath + std::to_string(i));
 								}
@@ -139,7 +139,7 @@ void SQLite3::hotBackup()
 					}
 					if(GD::bl->settings.databaseMaxBackups() > 0)
 					{
-						if(!GD::bl->hf.copyFile(_databasePath, _backupPath + '0'))
+						if(!GD::bl->io.copyFile(_databasePath, _backupPath + '0'))
 						{
 							GD::out.printError("Error: Cannot copy file: " + _backupPath + '0');
 						}

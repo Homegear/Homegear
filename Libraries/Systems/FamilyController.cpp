@@ -370,7 +370,7 @@ void FamilyController::loadModules()
 	{
 		GD::out.printDebug("Debug: Loading family modules");
 
-		std::vector<std::string> files = GD::bl->hf.getFiles(GD::bl->settings.modulePath());
+		std::vector<std::string> files = GD::bl->io.getFiles(GD::bl->settings.modulePath());
 		if(files.empty())
 		{
 			GD::out.printCritical("Critical: No family modules found in \"" + GD::bl->settings.modulePath() + "\".");

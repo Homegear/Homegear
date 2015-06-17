@@ -1188,7 +1188,7 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 		_updateMutex.lock();
 		std::string filenamePrefix = BaseLib::HelperFunctions::getHexString((int32_t)BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS, 4) + "." + BaseLib::HelperFunctions::getHexString(peer->getDeviceType().type(), 8);
 		std::string versionFile(_bl->settings.firmwarePath() + filenamePrefix + ".version");
-		if(!BaseLib::HelperFunctions::fileExists(versionFile))
+		if(!BaseLib::Io::fileExists(versionFile))
 		{
 			GD::out.printInfo("Info: Not updating peer with id " + std::to_string(id) + ". No version info file found.");
 			_bl->deviceUpdateInfo.results[id].first = 2;
@@ -1198,7 +1198,7 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 			return;
 		}
 		std::string firmwareFile(_bl->settings.firmwarePath() + filenamePrefix + ".fw");
-		if(!BaseLib::HelperFunctions::fileExists(firmwareFile))
+		if(!BaseLib::Io::fileExists(firmwareFile))
 		{
 			GD::out.printInfo("Info: Not updating peer with id " + std::to_string(id) + ". No firmware file found.");
 			_bl->deviceUpdateInfo.results[id].first = 3;
@@ -1223,7 +1223,7 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 		std::string firmwareHex;
 		try
 		{
-			firmwareHex = BaseLib::HelperFunctions::getFileContent(firmwareFile);
+			firmwareHex = BaseLib::Io::getFileContent(firmwareFile);
 		}
 		catch(const std::exception& ex)
 		{

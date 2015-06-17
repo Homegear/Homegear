@@ -41,7 +41,6 @@
 
 #include <dirent.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
@@ -73,61 +72,11 @@ public:
 	virtual ~HelperFunctions();
 
 	/**
-	 * Initialized the object.
+	 * Initializes the object.
 	 *
 	 * @param baseLib Pointer to the common base library object.
 	 */
 	void init(Obj* baseLib);
-
-	/**
-	 * Checks if a file exists.
-	 *
-	 * @param filename The path to the file.
-	 * @return Returns true when the file exists, or false if the file couldn't be accessed.
-	 */
-	static bool fileExists(std::string filename);
-
-	/**
-	 * Checks if a path is a directory.
-	 *
-	 * @param path The path to check.
-	 * @param[out] result True when the path is a directory otherwise false
-	 * @return Returns 0 on success or -1 on error.
-	 */
-	static int32_t isDirectory(std::string path, bool& result);
-
-	/**
-	 * Reads a file and returns the content as a string.
-	 *
-	 * @param filename The path to the file to read.
-	 * @return Returns the content of the file as a string.
-	 */
-	static std::string getFileContent(std::string filename);
-
-	/**
-	 * Reads a file and returns the content as a signed binary array.
-	 *
-	 * @param filename The path to the file to read.
-	 * @return Returns the content of the file as a char array.
-	 */
-	static std::vector<char> getBinaryFileContent(std::string filename);
-
-	/**
-	 * Reads a file and returns the content as an unsigned binary array.
-	 *
-	 * @param filename The path to the file to read.
-	 * @return Returns the content of the file as an unsigned char array.
-	 */
-	static std::vector<uint8_t> getUBinaryFileContent(std::string filename);
-
-	/**
-	 * Returns an array of all files within a path. The files are not prefixed with "path".
-	 *
-	 * @param path The path to get all files for.
-	 * @param recursive Also return files of subdirectories. The files are prefixed with the subdirectory.
-	 * @return Returns an array of all file names within path.
-	 */
-	std::vector<std::string> getFiles(std::string path, bool recursive = false);
 
 	/**
 	 * Gets the current unix time stamp in milliseconds.
@@ -358,32 +307,6 @@ public:
 	 * @return Returns true if the system is big endian, otherwise false.
 	 */
 	bool getBigEndian() { return _isBigEndian; }
-
-	/**
-	 * Copys a file.
-	 *
-	 * @param source The path to the file.
-	 * @param target The destination path to copy the file to.
-	 * @return Returns true on success
-	 */
-	bool copyFile(std::string source, std::string dest);
-
-	/**
-	 * Moves a file.
-	 *
-	 * @param source The path to the file.
-	 * @param target The destination path to move the file to.
-	 * @return Returns true on success
-	 */
-	bool moveFile(std::string source, std::string dest);
-
-	/**
-	 * Deletes a file.
-	 *
-	 * @param file The file to delete.
-	 * @return Returns true on success
-	 */
-	bool deleteFile(std::string file);
 
 	/**
 	 * Generates a random integer.

@@ -316,6 +316,11 @@ void PhysicalInterfaces::load(std::string filename)
 					settings->listenThreadPriority = BaseLib::Threads::parseThreadPriority(settings->listenThreadPriority, settings->listenThreadPolicy);
 					GD::out.printDebug("Debug: ListenThreadPolicy of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->listenThreadPolicy));
 				}
+				else if(name == "ttsprogram")
+				{
+					settings->ttsProgram = value;
+					GD::out.printDebug("Debug: ttsProgram of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->ttsProgram);
+				}
 				else
 				{
 					GD::out.printWarning("Warning: Unknown physical device setting: " + std::string(input));

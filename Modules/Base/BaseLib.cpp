@@ -37,6 +37,7 @@ Obj::Obj(std::string exePath, std::function<void(int32_t, std::string)>* errorCa
 	fileDescriptorManager.init(this);
 	serialDeviceManager.init(this);
 	hf.init(this);
+	io.init(this);
 	settings.init(this);
 	out.init(this);
 	out.setErrorCallback(errorCallback);

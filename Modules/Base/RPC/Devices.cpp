@@ -55,7 +55,7 @@ void Devices::load()
 		std::vector<std::string> files;
 		try
 		{
-			files = _bl->hf.getFiles(deviceDir);
+			files = _bl->io.getFiles(deviceDir);
 		}
 		catch(const Exception& ex)
 		{

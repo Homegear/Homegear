@@ -71,6 +71,10 @@ override_dh_auto_install:
 	echo "homegear        hard    rtprio          100" >> $(CURDIR)/debian/homegear/etc/security/limits.d/homegear
 	chown root:root $(CURDIR)/debian/homegear/etc/security/limits.d/homegear
 	chmod 644 $(CURDIR)/debian/homegear/etc/security/limits.d/homegear
+	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear/scripts
+	cp -R $(CURDIR)/Miscellaneous/scriptsDir/* $(CURDIR)/debian/homegear/var/lib/homegear/scripts
+	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear/scripts
+	chmod -R 550 $(CURDIR)/debian/homegear/var/lib/homegear/scripts
 	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear/firmware
 	cp $(CURDIR)/Miscellaneous/firmwareDir/GetFirmwareUpdates.sh $(CURDIR)/debian/homegear/var/lib/homegear/firmware
 	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear/firmware

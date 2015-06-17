@@ -117,7 +117,7 @@ void RPCServer::start(std::shared_ptr<ServerInfo::Info>& info)
 				std::vector<uint8_t> binaryData;
 				try
 				{
-					binaryData = GD::bl->hf.getUBinaryFileContent(GD::bl->settings.dhParamPath().c_str());
+					binaryData = GD::bl->io.getUBinaryFileContent(GD::bl->settings.dhParamPath().c_str());
 					binaryData.push_back(0); //gnutls_datum_t.data needs to be null terminated
 				}
 				catch(BaseLib::Exception& ex)
@@ -1555,6 +1555,7 @@ void RPCServer::getSocketDescriptor()
 			_out.printCritical("Error: Server could not start listening on port " + port + ": " + std::string(strerror(errno)));
 			return;
 		}
+		if(_info->address == "0.0.0.0") _info->address = BaseLib::Net::getMyIpAddress();
     }
     catch(const std::exception& ex)
     {

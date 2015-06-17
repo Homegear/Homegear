@@ -31,18 +31,22 @@
 #define SONOSPACKET_H_
 
 #include "../Base/BaseLib.h"
+#include "../Base/Encoding/RapidXml/rapidxml.hpp"
 
-#include <map>
+#include <unordered_map>
 
 namespace Sonos
 {
+
 class SonosPacket : public BaseLib::Systems::Packet
 {
     public:
         SonosPacket();
         SonosPacket(std::string& soap, std::string serialNumber, int64_t timeReceived = 0);
         SonosPacket(std::string& soap, int64_t timeReceived = 0);
-        SonosPacket(std::string& ip, std::string& path, std::string& soapAction, std::string& schema, std::string& functionName, std::shared_ptr<std::map<std::string, std::string>>& values);
+        SonosPacket(xml_node<>* node, std::string serialNumber, int64_t timeReceived = 0);
+        SonosPacket(xml_node<>* node, int64_t timeReceived = 0);
+        SonosPacket(std::string& ip, std::string& path, std::string& soapAction, std::string& schema, std::string& functionName, std::shared_ptr<std::vector<std::pair<std::string, std::string>>>& valuesToSet);
         virtual ~SonosPacket();
 
         std::string ip() { return _ip; }
@@ -51,27 +55,33 @@ class SonosPacket : public BaseLib::Systems::Packet
         std::string soapAction() { return _soapAction; }
         std::string schema() { return _schema; }
         std::string functionName() { return _functionName; }
-        std::shared_ptr<std::map<std::string, std::string>> values() { return _values; }
-        std::shared_ptr<std::map<std::string, std::string>> currentTrackMetadata() { return _currentTrackMetadata; }
-        std::shared_ptr<std::map<std::string, std::string>> nextTrackMetadata() { return _nextTrackMetadata; }
-        std::shared_ptr<std::map<std::string, std::string>>avTransportUriMetaData() { return _avTransportUriMetaData; }
-        std::shared_ptr<std::map<std::string, std::string>> nextAvTransportUriMetaData() { return _nextAvTransportUriMetaData; }
-        std::shared_ptr<std::map<std::string, std::string>> enqueuedTransportUriMetaData() { return _enqueuedTransportUriMetaData; }
+        std::shared_ptr<std::unordered_map<std::string, std::string>> values() { return _values; }
+        std::shared_ptr<std::unordered_map<std::string, std::string>> currentTrackMetadata() { return _currentTrackMetadata; }
+        std::shared_ptr<std::unordered_map<std::string, std::string>> nextTrackMetadata() { return _nextTrackMetadata; }
+        std::shared_ptr<std::unordered_map<std::string, std::string>>avTransportUriMetaData() { return _avTransportUriMetaData; }
+        std::shared_ptr<std::unordered_map<std::string, std::string>> nextAvTransportUriMetaData() { return _nextAvTransportUriMetaData; }
+        std::shared_ptr<std::unordered_map<std::string, std::string>> enqueuedTransportUriMetaData() { return _enqueuedTransportUriMetaData; }
+
+        std::shared_ptr<std::vector<std::pair<std::string, std::string>>> valuesToSet() { return _valuesToSet; }
 
         void getSoapRequest(std::string& request);
     protected:
+        //To device
+        std::shared_ptr<std::vector<std::pair<std::string, std::string>>> _valuesToSet;
+
+        //From device
         std::string _ip;
         std::string _serialNumber;
         std::string _path;
         std::string _soapAction;
         std::string _schema;
         std::string _functionName;
-        std::shared_ptr<std::map<std::string, std::string>> _values;
-        std::shared_ptr<std::map<std::string, std::string>> _currentTrackMetadata;
-        std::shared_ptr<std::map<std::string, std::string>> _nextTrackMetadata;
-        std::shared_ptr<std::map<std::string, std::string>> _avTransportUriMetaData;
-        std::shared_ptr<std::map<std::string, std::string>> _nextAvTransportUriMetaData;
-        std::shared_ptr<std::map<std::string, std::string>> _enqueuedTransportUriMetaData;
+        std::shared_ptr<std::unordered_map<std::string, std::string>> _values;
+        std::shared_ptr<std::unordered_map<std::string, std::string>> _currentTrackMetadata;
+        std::shared_ptr<std::unordered_map<std::string, std::string>> _nextTrackMetadata;
+        std::shared_ptr<std::unordered_map<std::string, std::string>> _avTransportUriMetaData;
+        std::shared_ptr<std::unordered_map<std::string, std::string>> _nextAvTransportUriMetaData;
+        std::shared_ptr<std::unordered_map<std::string, std::string>> _enqueuedTransportUriMetaData;
 };
 
 }

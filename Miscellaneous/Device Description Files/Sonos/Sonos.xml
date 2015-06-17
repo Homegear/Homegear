@@ -66,7 +66,7 @@
 				</parameter>
 				<parameter id="LED_STATE" operations="read,write,event">
 					<logical type="boolean" />
-					<physical interface="command" value_id="LED_STATE" id="LED_STATE">
+					<physical type="string" interface="command" value_id="LED_STATE" id="LED_STATE">
 						<set request="LED_SET" />
 						<get request="LED_GET" />
 						<event packet="LED_GET_RESPONSE" />
@@ -77,33 +77,217 @@
 				<parameter id="ROOMNAME" operations="read,event">
 					<logical type="string" />
 				</parameter>
-				<parameter id="VOLUME" operations="read,write,event">
-					<logical type="integer" min="0" max="100" />
-					<physical type="integer" interface="command" value_id="VOLUME" id="VOLUME">
-						<set request="VOLUME_SET" />
+				<parameter id="ADD_URI_TO_QUEUE" operations="write,event">
+					<logical type="string" />
+					<physical type="string" interface="command" value_id="ADD_URI_TO_QUEUE" id="ADD_URI_TO_QUEUE">
+						<set request="QUEUE_URI" />
 					</physical>
 					<conversion type="rpc_binary"/>
 				</parameter>
-				<parameter id="AV_TRANS_PORT_URI" operations="read,write,event">
+				<parameter id="ADD_URI_TO_QUEUE_METADATA" operations="read,write,event">
+					<logical type="string" />
+					<physical type="string" interface="store" value_id="ADD_URI_TO_QUEUE_METADATA" id="ADD_URI_TO_QUEUE_METADATA" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="ADD_URI_TO_QUEUE_DESIRED_FIRST_TRACK_NUMBER" operations="read,write,event">
+					<logical type="integer" min="0" default="0" />
+					<physical type="integer" interface="store" value_id="ADD_URI_TO_QUEUE_DESIRED_FIRST_TRACK_NUMBER" id="ADD_URI_TO_QUEUE_DESIRED_FIRST_TRACK_NUMBER" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="ADD_URI_TO_QUEUE_ENQUEUE_NEXT" operations="read,write,event">
+					<logical type="boolean" default="true" />
+					<physical type="integer" interface="store" value_id="ADD_URI_TO_QUEUE_ENQUEUE_NEXT" id="ADD_URI_TO_QUEUE_ENQUEUE_NEXT" />
+					<conversion type="boolean_string" string_true="1" string_false="0" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="FIRST_TRACK_NUMBER_ENQUEUED" operations="read,event">
+					<logical type="integer" min="0" />
+					<physical type="integer" interface="command" value_id="FIRST_TRACK_NUMBER_ENQUEUED" id="FIRST_TRACK_NUMBER_ENQUEUED">
+						<event packet="ADD_URI_TO_QUEUE_RESPONSE" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="AV_TRANS_PORT_URI" operations="write,event">
 					<logical type="string" />
 					<physical type="string" interface="command" value_id="AV_TRANS_PORT_URI" id="AV_TRANS_PORT_URI">
 						<set request="AV_TRANS_PORT_URI_SET" />
 					</physical>
 					<conversion type="rpc_binary"/>
 				</parameter>
-				<parameter id="AV_TRANS_PORT_URI_METADATA" operations="read,write,event">
+				<parameter id="AV_TRANS_PORT_URI_METADATA" operations="write,event">
 					<logical type="string" />
 					<physical type="string" interface="store" value_id="AV_TRANS_PORT_URI_METADATA" id="AV_TRANS_PORT_URI_METADATA" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="PLAY_TTS" operations="write,event">
+					<logical type="string" />
+					<physical type="string" interface="command" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="PLAY_TTS_UNMUTE" operations="read,write,event">
+					<logical type="boolean" default="true" />
+					<physical type="boolean" interface="store" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="PLAY_TTS_VOLUME" operations="read,write,event">
+					<logical type="integer" min="-1" max="100" />
+					<physical type="integer" interface="store" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="PLAY_TTS_LANGUAGE" operations="read,write,event">
+					<logical type="string" default="en" />
+					<physical type="string" interface="store" />
 					<conversion type="rpc_binary"/>
 				</parameter>
 			</parameters>
 		</channel>
 		<channel index="2" type="SPEAKER_INFO">
 			<parameters type="VALUES" id="speaker_info_valueset">
+				<parameter id="VOLUME" operations="read,write,event">
+					<logical type="integer" min="0" max="200" />
+					<physical type="integer" interface="command" value_id="VOLUME" id="VOLUME">
+						<set request="VOLUME_SET" />
+						<get request="VOLUME_GET" />
+						<event packet="INFO" />
+						<event packet="VOLUME_GET_RESPONSE" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="VOLUME_LF" operations="read,write,event">
+					<logical type="integer" min="0" max="100" />
+					<physical type="integer" interface="command" value_id="VOLUME_LF" id="VOLUME_LF">
+						<event packet="INFO" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="VOLUME_RF" operations="read,write,event">
+					<logical type="integer" min="0" max="100" />
+					<physical type="integer" interface="command" value_id="VOLUME_RF" id="VOLUME_RF">
+						<event packet="INFO" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="MUTE" operations="read,write,event">
+					<logical type="boolean" />
+					<physical type="string" interface="command" value_id="MUTE" id="MUTE">
+						<set request="MUTE_SET" />
+						<get request="MUTE_GET" />
+						<event packet="INFO" />
+						<event packet="MUTE_GET_RESPONSE" />
+					</physical>
+					<conversion type="boolean_string" string_true="1" string_false="0" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="MUTE_LF" operations="read,write,event">
+					<logical type="boolean" />
+					<physical type="string" interface="command" value_id="MUTE_LF" id="MUTE_LF">
+						<event packet="INFO" />
+					</physical>
+					<conversion type="boolean_string" string_true="1" string_false="0" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="MUTE_RF" operations="read,write,event">
+					<logical type="boolean" />
+					<physical type="string" interface="command" value_id="MUTE_RF" id="MUTE_RF">
+						<event packet="INFO" />
+					</physical>
+					<conversion type="boolean_string" string_true="1" string_false="0" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="BASS" operations="read,write,event">
+					<logical type="integer" min="0" max="100" />
+					<physical type="integer" interface="command" value_id="BASS" id="BASS">
+						<set request="VOLUME_SET" />
+						<event packet="INFO" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="TREBLE" operations="read,write,event">
+					<logical type="integer" min="0" max="100" />
+					<physical type="integer" interface="command" value_id="TREBLE" id="TREBLE">
+						<set request="VOLUME_SET" />
+						<event packet="INFO" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="LOUDNESS" operations="read,write,event">
+					<logical type="integer" min="0" max="100" />
+					<physical type="integer" interface="command" value_id="LOUDNESS" id="LOUDNESS">
+						<set request="VOLUME_SET" />
+						<event packet="INFO" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="OUTPUT_FIXED" operations="read,write,event">
+					<logical type="boolean" />
+					<physical type="string" interface="command" value_id="OUTPUT_FIXED" id="OUTPUT_FIXED">
+						<event packet="INFO" />
+					</physical>
+					<conversion type="boolean_string" string_true="1" string_false="0" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="HEADPHONE_CONNECTED" operations="read,write,event">
+					<logical type="boolean" />
+					<physical type="string" interface="command" value_id="HEADPHONE_CONNECTED" id="HEADPHONE_CONNECTED">
+						<event packet="INFO" />
+					</physical>
+					<conversion type="boolean_string" string_true="1" string_false="0" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="SPEAKER_SIZE" operations="read,write,event">
+					<logical type="integer" min="0" max="100" />
+					<physical type="integer" interface="command" value_id="SPEAKER_SIZE" id="SPEAKER_SIZE">
+						<set request="VOLUME_SET" />
+						<event packet="INFO" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="SUB_GAIN" operations="read,write,event">
+					<logical type="integer" min="0" max="100" />
+					<physical type="integer" interface="command" value_id="SUB_GAIN" id="SUB_GAIN">
+						<set request="VOLUME_SET" />
+						<event packet="INFO" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="SUB_CROSSOVER" operations="read,write,event">
+					<logical type="boolean" />
+					<physical type="string" interface="command" value_id="SUB_CROSSOVER" id="SUB_CROSSOVER">
+						<event packet="INFO" />
+					</physical>
+					<conversion type="boolean_string" string_true="1" string_false="0" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="SUB_POLARITY" operations="read,write,event">
+					<logical type="boolean" />
+					<physical type="string" interface="command" value_id="SUB_POLARITY" id="SUB_POLARITY">
+						<event packet="INFO" />
+					</physical>
+					<conversion type="boolean_string" string_true="1" string_false="0" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="SUB_ENABLED" operations="read,write,event">
+					<logical type="boolean" />
+					<physical type="string" interface="command" value_id="SUB_ENABLED" id="SUB_ENABLED">
+						<event packet="INFO" />
+					</physical>
+					<conversion type="boolean_string" string_true="1" string_false="0" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="PRESET_NAME_LIST" operations="read,write,event">
+					<logical type="string" default="" />
+					<physical type="string" interface="command" value_id="PRESET_NAME_LIST" id="PRESET_NAME_LIST">
+						<event packet="INFO" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+
 				<parameter id="TRANSPORT_STATE" operations="read,event">
 					<logical type="string" default="" />
 					<physical type="string" interface="command" value_id="TRANSPORT_STATE" id="TRANSPORT_STATE">
+						<get request="TRANSPORT_STATE_GET" />
 						<event packet="INFO" />
+						<event packet="TRANSPORT_STATE_GET_RESPONSE" />
 					</physical>
 					<conversion type="rpc_binary"/>
 				</parameter>
@@ -122,16 +306,17 @@
 					<conversion type="rpc_binary"/>
 				</parameter>
 				<parameter id="NUMBER_OF_TRACKS" operations="read,event">
-					<logical type="string" default="" />
+					<logical type="integer" min="0" />
 					<physical type="string" interface="command" value_id="NUMBER_OF_TRACKS" id="NUMBER_OF_TRACKS">
 						<event packet="INFO" />
 					</physical>
 					<conversion type="rpc_binary"/>
 				</parameter>
 				<parameter id="CURRENT_TRACK" operations="read,event">
-					<logical type="string" default="" />
-					<physical type="string" interface="command" value_id="CURRENT_TRACK" id="CURRENT_TRACK">
+					<logical type="integer" min="0" />
+					<physical type="integer" interface="command" value_id="CURRENT_TRACK" id="CURRENT_TRACK">
 						<event packet="INFO" />
+						<event packet="GET_POSITION_INFO_RESPONSE" />
 					</physical>
 					<conversion type="rpc_binary"/>
 				</parameter>
@@ -146,6 +331,35 @@
 					<logical type="string" default="" />
 					<physical type="string" interface="command" value_id="CURRENT_TRACK_URI" id="CURRENT_TRACK_URI">
 						<event packet="INFO" />
+						<event packet="GET_POSITION_INFO_RESPONSE" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="CURRENT_TRACK_RELATIVE_TIME" operations="read,event">
+					<logical type="string" default="" />
+					<physical type="string" interface="command" value_id="CURRENT_TRACK_RELATIVE_TIME" id="CURRENT_TRACK_RELATIVE_TIME">
+						<event packet="GET_POSITION_INFO_RESPONSE" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="CURRENT_TRACK_ABSOLUTE_TIME" operations="read,event">
+					<logical type="string" default="" />
+					<physical type="string" interface="command" value_id="CURRENT_TRACK_ABSOLUTE_TIME" id="CURRENT_TRACK_ABSOLUTE_TIME">
+						<event packet="GET_POSITION_INFO_RESPONSE" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="CURRENT_TRACK_RELATIVE_COUNT" operations="read,event">
+					<logical type="integer" />
+					<physical type="string" interface="command" value_id="CURRENT_TRACK_RELATIVE_COUNT" id="CURRENT_TRACK_RELATIVE_COUNT">
+						<event packet="GET_POSITION_INFO_RESPONSE" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="CURRENT_TRACK_ABSOLUTE_COUNT" operations="read,event">
+					<logical type="integer" />
+					<physical type="string" interface="command" value_id="CURRENT_TRACK_ABSOLUTE_COUNT" id="CURRENT_TRACK_ABSOLUTE_COUNT">
+						<event packet="GET_POSITION_INFO_RESPONSE" />
 					</physical>
 					<conversion type="rpc_binary"/>
 				</parameter>
@@ -153,6 +367,7 @@
 					<logical type="string" default="" />
 					<physical type="string" interface="command" value_id="CURRENT_TRACK_DURATION" id="CURRENT_TRACK_DURATION">
 						<event packet="INFO" />
+						<event packet="GET_POSITION_INFO_RESPONSE" />
 					</physical>
 					<conversion type="rpc_binary"/>
 				</parameter>
@@ -208,7 +423,9 @@
 				<parameter id="TRANSPORT_STATUS" operations="read,event">
 					<logical type="string" default="" />
 					<physical type="string" interface="command" value_id="TRANSPORT_STATUS" id="TRANSPORT_STATUS">
+						<get request="TRANSPORT_STATE_GET" />
 						<event packet="INFO" />
+						<event packet="TRANSPORT_STATE_GET_RESPONSE" />
 					</physical>
 					<conversion type="rpc_binary"/>
 				</parameter>
@@ -243,7 +460,9 @@
 				<parameter id="TRANSPORT_PLAY_SPEED" operations="read,event">
 					<logical type="string" default="" />
 					<physical type="string" interface="command" value_id="TRANSPORT_PLAY_SPEED" id="TRANSPORT_PLAY_SPEED">
+						<get request="TRANSPORT_STATE_GET" />
 						<event packet="INFO" />
+						<event packet="TRANSPORT_STATE_GET_RESPONSE" />
 					</physical>
 					<conversion type="rpc_binary"/>
 				</parameter>
@@ -301,6 +520,7 @@
 						<logical type="string" default="" />
 						<physical type="string" interface="command" value_id="CURRENT_TRACK_ID" id="CURRENT_TRACK_ID">
 							<event packet="INFO" />
+							<event packet="GET_POSITION_INFO_RESPONSE" />
 						</physical>
 						<conversion type="rpc_binary"/>
 					</parameter>
@@ -308,6 +528,7 @@
 						<logical type="string" default="" />
 						<physical type="string" interface="command" value_id="CURRENT_TRACK_PARENT_ID" id="CURRENT_TRACK_PARENT_ID">
 							<event packet="INFO" />
+							<event packet="GET_POSITION_INFO_RESPONSE" />
 						</physical>
 						<conversion type="rpc_binary"/>
 					</parameter>
@@ -315,6 +536,7 @@
 						<logical type="boolean" default="" />
 						<physical type="string" interface="command" value_id="CURRENT_TRACK_RESTRICTED" id="CURRENT_TRACK_RESTRICTED">
 							<event packet="INFO" />
+							<event packet="GET_POSITION_INFO_RESPONSE" />
 						</physical>
 						<conversion type="boolean_string" string_true="true" string_false="false" />
 						<conversion type="rpc_binary"/>
@@ -323,6 +545,7 @@
 						<logical type="string" default="" />
 						<physical type="string" interface="command" value_id="CURRENT_TRACK_DURATION2" id="CURRENT_TRACK_DURATION2">
 							<event packet="INFO" />
+							<event packet="GET_POSITION_INFO_RESPONSE" />
 						</physical>
 						<conversion type="rpc_binary"/>
 					</parameter>
@@ -330,6 +553,7 @@
 						<logical type="string" default="" />
 						<physical type="string" interface="command" value_id="CURRENT_TRACK_RESOURCE" id="CURRENT_TRACK_RESOURCE">
 							<event packet="INFO" />
+							<event packet="GET_POSITION_INFO_RESPONSE" />
 						</physical>
 						<conversion type="rpc_binary"/>
 					</parameter>
@@ -337,6 +561,7 @@
 						<logical type="string" default="" />
 						<physical type="string" interface="command" value_id="CURRENT_TRACK_PROTOCOL" id="CURRENT_TRACK_PROTOCOL">
 							<event packet="INFO" />
+							<event packet="GET_POSITION_INFO_RESPONSE" />
 						</physical>
 						<conversion type="rpc_binary"/>
 					</parameter>
@@ -344,6 +569,7 @@
 						<logical type="string" default="" />
 						<physical type="string" interface="command" value_id="CURRENT_TRACK_CLASS" id="CURRENT_TRACK_CLASS">
 							<event packet="INFO" />
+							<event packet="GET_POSITION_INFO_RESPONSE" />
 						</physical>
 						<conversion type="rpc_binary"/>
 					</parameter>
@@ -351,6 +577,7 @@
 						<logical type="string" default="" />
 						<physical type="string" interface="command" value_id="CURRENT_TRACK_STREAM_CONTENT" id="CURRENT_TRACK_STREAM_CONTENT">
 							<event packet="INFO" />
+							<event packet="GET_POSITION_INFO_RESPONSE" />
 						</physical>
 						<conversion type="rpc_binary"/>
 					</parameter>
@@ -358,6 +585,7 @@
 						<logical type="string" default="" />
 						<physical type="string" interface="command" value_id="CURRENT_TRACK_RADIO_SHOW_MD" id="CURRENT_TRACK_RADIO_SHOW_MD">
 							<event packet="INFO" />
+							<event packet="GET_POSITION_INFO_RESPONSE" />
 						</physical>
 						<conversion type="rpc_binary"/>
 					</parameter>
@@ -365,6 +593,7 @@
 						<logical type="string" default="" />
 						<physical type="string" interface="command" value_id="CURRENT_ALBUM_ART" id="CURRENT_ALBUM_ART">
 							<event packet="INFO" />
+							<event packet="GET_POSITION_INFO_RESPONSE" />
 						</physical>
 						<conversion type="rpc_binary"/>
 					</parameter>
@@ -372,6 +601,7 @@
 						<logical type="string" default="" />
 						<physical type="string" interface="command" value_id="CURRENT_ALBUM" id="CURRENT_ALBUM">
 							<event packet="INFO" />
+							<event packet="GET_POSITION_INFO_RESPONSE" />
 						</physical>
 						<conversion type="rpc_binary"/>
 					</parameter>
@@ -379,6 +609,7 @@
 						<logical type="string" default="" />
 						<physical type="string" interface="command" value_id="CURRENT_ALBUM" id="CURRENT_ALBUM">
 							<event packet="INFO" />
+							<event packet="GET_POSITION_INFO_RESPONSE" />
 						</physical>
 						<conversion type="rpc_binary"/>
 					</parameter>
@@ -386,6 +617,7 @@
 						<logical type="string" default="" />
 						<physical type="string" interface="command" value_id="CURRENT_TITLE" id="CURRENT_TITLE">
 							<event packet="INFO" />
+							<event packet="GET_POSITION_INFO_RESPONSE" />
 						</physical>
 						<conversion type="rpc_binary"/>
 					</parameter>
@@ -393,6 +625,7 @@
 						<logical type="string" default="" />
 						<physical type="string" interface="command" value_id="CURRENT_ARTIST" id="CURRENT_ARTIST">
 							<event packet="INFO" />
+							<event packet="GET_POSITION_INFO_RESPONSE" />
 						</physical>
 						<conversion type="rpc_binary"/>
 					</parameter>
@@ -633,16 +866,130 @@
 						<conversion type="rpc_binary"/>
 					</parameter>
 				<!-- }}} -->
+				<!-- {{{ ContentDirectory events -->
+					<parameter id="SYSTEM_UPDATE_ID" operations="read,event">
+						<logical type="string" default="" />
+						<physical type="string" interface="command" value_id="SYSTEM_UPDATE_ID" id="SYSTEM_UPDATE_ID">
+							<event packet="INFO2" />
+						</physical>
+						<conversion type="rpc_binary"/>
+					</parameter>
+					<parameter id="CONTAINER_UPDATE_IDS" operations="read,event">
+						<logical type="string" default="" />
+						<physical type="string" interface="command" value_id="CONTAINER_UPDATE_IDS" id="CONTAINER_UPDATE_IDS">
+							<event packet="INFO2" />
+						</physical>
+						<conversion type="rpc_binary"/>
+					</parameter>
+					<parameter id="SHARE_LIST_REFRESH_STATE" operations="read,event">
+						<logical type="string" default="" />
+						<physical type="string" interface="command" value_id="SHARE_LIST_REFRESH_STATE" id="SHARE_LIST_REFRESH_STATE">
+							<event packet="INFO2" />
+						</physical>
+						<conversion type="rpc_binary"/>
+					</parameter>
+					<parameter id="SHARE_INDEX_IN_PROGRESS" operations="read,event">
+						<logical type="string" default="" />
+						<physical type="string" interface="command" value_id="SHARE_INDEX_IN_PROGRESS" id="SHARE_INDEX_IN_PROGRESS">
+							<event packet="INFO2" />
+						</physical>
+						<conversion type="rpc_binary"/>
+					</parameter>
+					<parameter id="SHARE_INDEX_LAST_ERROR" operations="read,event">
+						<logical type="string" default="" />
+						<physical type="string" interface="command" value_id="SHARE_INDEX_LAST_ERROR" id="SHARE_INDEX_LAST_ERROR">
+							<event packet="INFO2" />
+						</physical>
+						<conversion type="rpc_binary"/>
+					</parameter>
+					<parameter id="FAVORITES_UPDATE_ID" operations="read,event">
+						<logical type="string" default="" />
+						<physical type="string" interface="command" value_id="FAVORITES_UPDATE_ID" id="FAVORITES_UPDATE_ID">
+							<event packet="INFO2" />
+						</physical>
+						<conversion type="rpc_binary"/>
+					</parameter>
+					<parameter id="FAVORITE_PRESETS_UPDATE_ID" operations="read,event">
+						<logical type="string" default="" />
+						<physical type="string" interface="command" value_id="FAVORITE_PRESETS_UPDATE_ID" id="FAVORITE_PRESETS_UPDATE_ID">
+							<event packet="INFO2" />
+						</physical>
+						<conversion type="rpc_binary"/>
+					</parameter>
+					<parameter id="RADIO_FAVORITES_UPDATE_ID" operations="read,event">
+						<logical type="string" default="" />
+						<physical type="string" interface="command" value_id="RADIO_FAVORITES_UPDATE_ID" id="RADIO_FAVORITES_UPDATE_ID">
+							<event packet="INFO2" />
+						</physical>
+						<conversion type="rpc_binary"/>
+					</parameter>
+					<parameter id="RADIO_LOCATION_UPDATE_ID" operations="read,event">
+						<logical type="string" default="" />
+						<physical type="string" interface="command" value_id="RADIO_LOCATION_UPDATE_ID" id="RADIO_LOCATION_UPDATE_ID">
+							<event packet="INFO2" />
+						</physical>
+						<conversion type="rpc_binary"/>
+					</parameter>
+					<parameter id="SAVED_QUEUES_UPDATE_ID" operations="read,event">
+						<logical type="string" default="" />
+						<physical type="string" interface="command" value_id="SAVED_QUEUES_UPDATE_ID" id="SAVED_QUEUES_UPDATE_ID">
+							<event packet="INFO2" />
+						</physical>
+						<conversion type="rpc_binary"/>
+					</parameter>
+					<parameter id="SHARE_LIST_UPDATE_ID" operations="read,event">
+						<logical type="string" default="" />
+						<physical type="string" interface="command" value_id="SHARE_LIST_UPDATE_ID" id="SHARE_LIST_UPDATE_ID">
+							<event packet="INFO2" />
+						</physical>
+						<conversion type="rpc_binary"/>
+					</parameter>
+					<parameter id="RECENTLY_PLAYED_UPDATE_ID" operations="read,event">
+						<logical type="string" default="" />
+						<physical type="string" interface="command" value_id="RECENTLY_PLAYED_UPDATE_ID" id="RECENTLY_PLAYED_UPDATE_ID">
+							<event packet="INFO2" />
+						</physical>
+						<conversion type="rpc_binary"/>
+					</parameter>
+				<!-- }}} -->
 			</parameters>
 		</channel>
 	</channels>
 	<packets>
+		<packet id="QUEUE_URI" direction="to_device" function1="urn:schemas-upnp-org:service:AVTransport:1#AddURIToQueue" function2="AddURIToQueue" metastring1="/MediaRenderer/AVTransport/Control" metastring2="urn:schemas-upnp-org:service:AVTransport:1">
+			<parameter field="InstanceID" const_value="0"/>			
+			<parameter field="EnqueuedURI" param="ADD_URI_TO_QUEUE"/>
+			<parameter field="EnqueuedURIMetaData" param="ADD_URI_TO_QUEUE_METADATA"/>
+			<parameter field="DesiredFirstTrackNumberEnqueued" param="ADD_URI_TO_QUEUE_DESIRED_FIRST_TRACK_NUMBER"/>
+			<parameter field="EnqueueAsNext" param="ADD_URI_TO_QUEUE_ENQUEUE_NEXT"/>
+		</packet>
+		<packet id="ADD_URI_TO_QUEUE_RESPONSE" direction="from_device" function2="AddURIToQueueResponse" fixed_channel="1">
+			<parameter field="FirstTrackNumberEnqueued" param="FIRST_TRACK_NUMBER_ENQUEUED"/>
+		</packet>
 		<packet id="AV_TRANS_PORT_URI_SET" direction="to_device" function1="urn:schemas-upnp-org:service:AVTransport:1#SetAVTransportURI" function2="SetAVTransportURI" metastring1="/MediaRenderer/AVTransport/Control" metastring2="urn:schemas-upnp-org:service:AVTransport:1">
 			<parameter field="InstanceID" const_value="0"/>			
 			<parameter field="CurrentURI" param="AV_TRANS_PORT_URI"/>
 			<parameter field="CurrentURIMetaData" param="AV_TRANS_PORT_URI_METADATA"/>
 		</packet>
 		<packet id="INFO" direction="from_device" function2="InfoBroadcast" fixed_channel="2">
+			<parameter field="VolumeMaster" param="VOLUME"/>
+			<parameter field="VolumeLF" param="VOLUME_LF"/>
+			<parameter field="VolumeRF" param="VOLUME_RF"/>
+			<parameter field="MuteMaster" param="MUTE"/>
+			<parameter field="MuteLF" param="MUTE_LF"/>
+			<parameter field="MuteRF" param="MUTE_RF"/>
+			<parameter field="Bass" param="BASS"/>
+			<parameter field="Treble" param="TREBLE"/>
+			<parameter field="LoudnessMaster" param="LOUDNESS"/>
+			<parameter field="OutputFixed" param="OUTPUT_FIXED"/>
+			<parameter field="HeadphoneConnected" param="HEADPHONE_CONNECTED"/>
+			<parameter field="SpeakerSize" param="SPEAKER_SIZE"/>
+			<parameter field="SubGain" param="SUB_GAIN"/>
+			<parameter field="SubCrossover" param="SUB_CROSSOVER"/>
+			<parameter field="SubPolarity" param="SUB_POLARITY"/>
+			<parameter field="SubEnabled" param="SUB_ENABLED"/>
+			<parameter field="PresetNameList" param="PRESET_NAME_LIST"/>
+
 			<parameter field="TransportState" param="TRANSPORT_STATE"/>
 			<parameter field="CurrentPlayMode" param="CURRENT_PLAY_MODE"/>
 			<parameter field="CurrentCrossfadeMode" param="CURRENT_CROSSFADE_MODE"/>
@@ -726,6 +1073,54 @@
 				<parameter field="r:EnqueuedTransportURIMetaData" subfield="desc" param="ENQUEUED_TRANSPORT_DESCRIPTION"/>
 			<!-- }}} -->
 		</packet>
+		<packet id="INFO2" direction="from_device" function2="InfoBroadcast2" fixed_channel="2">
+			<parameter field="SystemUpdateID" param="SYSTEM_UPDATE_ID"/>
+			<parameter field="ContainerUpdateIDs" param="CONTAINER_UPDATE_IDS"/>
+			<parameter field="ShareListRefreshState" param="SHARE_LIST_REFRESH_STATE"/>
+			<parameter field="ShareIndexInProgress" param="SHARE_INDEX_IN_PROGRESS"/>
+			<parameter field="ShareIndexLastError" param="SHARE_INDEX_LAST_ERROR"/>
+			<parameter field="FavoritesUpdateID" param="FAVORITES_UPDATE_ID"/>
+			<parameter field="FavoritePresetsUpdateID" param="FAVORITE_PRESETS_UPDATE_ID"/>
+			<parameter field="RadioFavoritesUpdateID" param="RADIO_FAVORITES_UPDATE_ID"/>
+			<parameter field="RadioLocationUpdateID" param="RADIO_LOCATION_UPDATE_ID"/>
+			<parameter field="SavedQueuesUpdateID" param="SAVED_QUEUES_UPDATE_ID"/>
+			<parameter field="ShareListUpdateID" param="SHARE_LIST_UPDATE_ID"/>
+			<parameter field="RecentlyPlayedUpdateID" param="RECENTLY_PLAYED_UPDATE_ID"/>
+		</packet>
+		<packet id="GET_POSITION_INFO_RESPONSE" direction="from_device" function2="GetPositionInfoResponse" fixed_channel="2">
+			<parameter field="Track" param="CURRENT_TRACK"/>
+			<parameter field="TrackDuration" param="CURRENT_TRACK_DURATION"/>
+			<parameter field="TrackURI" param="CURRENT_TRACK_URI"/>
+			<parameter field="RelTime" param="CURRENT_TRACK_RELATIVE_TIME"/>
+			<parameter field="AbsTime" param="CURRENT_TRACK_ABSOLUTE_TIME"/>
+			<parameter field="RelCount" param="CURRENT_TRACK_RELATIVE_COUNT"/>
+			<parameter field="AbsCount" param="CURRENT_TRACK_ABSOLUTE_COUNT"/>
+			<parameter field="ShareIndexInProgress" param="SHARE_INDEX_IN_PROGRESS"/>
+			<parameter field="ShareIndexLastError" param="SHARE_INDEX_LAST_ERROR"/>
+			<parameter field="FavoritesUpdateID" param="FAVORITES_UPDATE_ID"/>
+			<parameter field="FavoritePresetsUpdateID" param="FAVORITE_PRESETS_UPDATE_ID"/>
+			<parameter field="RadioFavoritesUpdateID" param="RADIO_FAVORITES_UPDATE_ID"/>
+			<parameter field="RadioLocationUpdateID" param="RADIO_LOCATION_UPDATE_ID"/>
+			<parameter field="SavedQueuesUpdateID" param="SAVED_QUEUES_UPDATE_ID"/>
+			<parameter field="ShareListUpdateID" param="SHARE_LIST_UPDATE_ID"/>
+			<parameter field="RecentlyPlayedUpdateID" param="RECENTLY_PLAYED_UPDATE_ID"/>
+
+			<!-- {{{ TrackMetaData -->
+				<parameter field="TrackMetaData" subfield="id" param="CURRENT_TRACK_ID"/>
+				<parameter field="TrackMetaData" subfield="parentID" param="CURRENT_TRACK_PARENT_ID"/>
+				<parameter field="TrackMetaData" subfield="restricted" param="CURRENT_TRACK_RESTRICTED"/>
+				<parameter field="TrackMetaData" subfield="res" param="CURRENT_TRACK_RESOURCE"/>
+				<parameter field="TrackMetaData" subfield="duration" param="CURRENT_TRACK_DURATION2"/>
+				<parameter field="TrackMetaData" subfield="protocolInfo" param="CURRENT_TRACK_PROTOCOL"/>
+				<parameter field="TrackMetaData" subfield="upnp:album" param="CURRENT_ALBUM"/>
+				<parameter field="TrackMetaData" subfield="dc:title" param="CURRENT_TITLE"/>
+				<parameter field="TrackMetaData" subfield="dc:creator" param="CURRENT_ARTIST"/>
+				<parameter field="TrackMetaData" subfield="upnp:albumArtURI" param="CURRENT_ALBUM_ART"/>
+				<parameter field="TrackMetaData" subfield="upnp:class" param="CURRENT_TRACK_CLASS"/>
+				<parameter field="TrackMetaData" subfield="r:streamContent" param="CURRENT_TRACK_STREAM_CONTENT"/>
+				<parameter field="TrackMetaData" subfield="r:radioShowMd" param="CURRENT_TRACK_RADIO_SHOW_MD"/>
+			<!-- }}} -->
+		</packet>
 		<packet id="LED_GET" direction="to_device" function1="urn:schemas-upnp-org:service:DeviceProperties:1#GetLEDState" function2="GetLEDState" metastring1="/DeviceProperties/Control" metastring2="urn:schemas-upnp-org:service:DeviceProperties:1">
 			<parameter field="InstanceID" const_value="0"/>
 		</packet>
@@ -748,10 +1143,37 @@
 		<packet id="PREVIOUS" direction="to_device" function1="urn:schemas-upnp-org:service:AVTransport:1#Previous" function2="Previous" metastring1="/MediaRenderer/AVTransport/Control" metastring2="urn:schemas-upnp-org:service:AVTransport:1">
 			<parameter field="InstanceID" const_value="0"/>
 		</packet>
+		<packet id="VOLUME_GET" direction="to_device" function1="urn:schemas-upnp-org:service:RenderingControl:1#GetVolume" function2="GetVolume" metastring1="/MediaRenderer/RenderingControl/Control" metastring2="urn:schemas-upnp-org:service:RenderingControl:1">
+			<parameter field="InstanceID" const_value="0"/>
+			<parameter field="Channel" const_value_string="Master"/>
+		</packet>
+		<packet id="VOLUME_GET_RESPONSE" direction="from_device" function2="GetVolumeResponse" fixed_channel="2">
+			<parameter field="CurrentVolume" param="VOLUME"/>
+		</packet>
 		<packet id="VOLUME_SET" direction="to_device" function1="urn:schemas-upnp-org:service:RenderingControl:1#SetVolume" function2="SetVolume" metastring1="/MediaRenderer/RenderingControl/Control" metastring2="urn:schemas-upnp-org:service:RenderingControl:1">
 			<parameter field="InstanceID" const_value="0"/>
 			<parameter field="Channel" const_value_string="Master"/>
 			<parameter field="DesiredVolume" param="VOLUME"/>
+		</packet>
+		<packet id="MUTE_GET" direction="to_device" function1="urn:schemas-upnp-org:service:RenderingControl:1#GetMute" function2="GetMute" metastring1="/MediaRenderer/RenderingControl/Control" metastring2="urn:schemas-upnp-org:service:RenderingControl:1">
+			<parameter field="InstanceID" const_value="0"/>
+			<parameter field="Channel" const_value_string="Master"/>
+		</packet>
+		<packet id="MUTE_GET_RESPONSE" direction="from_device" function2="GetMuteResponse" fixed_channel="2">
+			<parameter field="CurrentMute" param="MUTE"/>
+		</packet>
+		<packet id="MUTE_SET" direction="to_device" function1="urn:schemas-upnp-org:service:RenderingControl:1#SetMute" function2="SetMute" metastring1="/MediaRenderer/RenderingControl/Control" metastring2="urn:schemas-upnp-org:service:RenderingControl:1">
+			<parameter field="InstanceID" const_value="0"/>
+			<parameter field="Channel" const_value_string="Master"/>
+			<parameter field="DesiredMute" param="MUTE"/>
+		</packet>
+		<packet id="TRANSPORT_STATE_GET" direction="to_device" function1="urn:schemas-upnp-org:service:AVTransport:1#GetTransportInfo" function2="GetTransportInfo" metastring1="/MediaRenderer/AVTransport/Control" metastring2="urn:schemas-upnp-org:service:AVTransport:1">
+			<parameter field="InstanceID" const_value="0"/>
+		</packet>
+		<packet id="TRANSPORT_STATE_GET_RESPONSE" direction="from_device" function2="GetTransportInfoResponse" fixed_channel="2">
+			<parameter field="CurrentTransportState" param="TRANSPORT_STATE"/>
+			<parameter field="CurrentTransportStatus" param="TRANSPORT_STATUS"/>
+			<parameter field="CurrentSpeed" param="TRANSPORT_PLAY_SPEED"/>
 		</packet>
 	</packets>
 </device>

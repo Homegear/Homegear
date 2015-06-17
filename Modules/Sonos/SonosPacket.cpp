@@ -29,13 +29,13 @@
 
 #include "SonosPacket.h"
 #include "GD.h"
-#include "../Base/Encoding/RapidXml/rapidxml.hpp"
 
 namespace Sonos
 {
 SonosPacket::SonosPacket()
 {
-	_values.reset(new std::map<std::string, std::string>());
+	_values.reset(new std::unordered_map<std::string, std::string>());
+	_valuesToSet.reset(new std::vector<std::pair<std::string, std::string>>());
 }
 
 SonosPacket::SonosPacket(std::string& soap, int64_t timeReceived)
@@ -43,7 +43,8 @@ SonosPacket::SonosPacket(std::string& soap, int64_t timeReceived)
 	try
 	{
 		BaseLib::HelperFunctions::trim(soap);
-		_values.reset(new std::map<std::string, std::string>());
+		_values.reset(new std::unordered_map<std::string, std::string>());
+		_valuesToSet.reset(new std::vector<std::pair<std::string, std::string>>());
 		_timeReceived = timeReceived;
 		if(soap.empty()) return;
 		xml_document<> doc;
@@ -68,15 +69,17 @@ SonosPacket::SonosPacket(std::string& soap, int64_t timeReceived)
 			{
 				std::string name(subNode->name());
 				xml_attribute<>* attr = subNode->first_attribute("val");
+				xml_attribute<>* channel = subNode->first_attribute("channel");
+				if(channel) name.append(std::string(channel->value()));
 				if(!attr)
 				{
 					GD::out.printWarning("Warning: Tried to parse element without attribute: " + name);
 					continue;
 				}
 				std::string value(attr->value());
-				if(name == "CurrentTrackMetaData")
+				if(name == "CurrentTrackMetaData" || name == "TrackMetaData")
 				{
-					_currentTrackMetadata.reset(new std::map<std::string, std::string>());
+					_currentTrackMetadata.reset(new std::unordered_map<std::string, std::string>());
 					if(value.empty()) continue;
 					std::string xml;
 					BaseLib::Html::unescapeHtmlEntities(value, xml);
@@ -109,7 +112,7 @@ SonosPacket::SonosPacket(std::string& soap, int64_t timeReceived)
 				}
 				else if(name == "r:NextTrackMetaData")
 				{
-					_nextTrackMetadata.reset(new std::map<std::string, std::string>());
+					_nextTrackMetadata.reset(new std::unordered_map<std::string, std::string>());
 					if(value.empty()) continue;
 					std::string xml;
 					BaseLib::Html::unescapeHtmlEntities(value, xml);
@@ -142,7 +145,7 @@ SonosPacket::SonosPacket(std::string& soap, int64_t timeReceived)
 				}
 				else if(name == "AVTransportURIMetaData")
 				{
-					_avTransportUriMetaData.reset(new std::map<std::string, std::string>());
+					_avTransportUriMetaData.reset(new std::unordered_map<std::string, std::string>());
 					if(value.empty()) continue;
 					std::string xml;
 					BaseLib::Html::unescapeHtmlEntities(value, xml);
@@ -164,7 +167,7 @@ SonosPacket::SonosPacket(std::string& soap, int64_t timeReceived)
 				}
 				else if(name == "NextAVTransportURIMetaData")
 				{
-					_nextAvTransportUriMetaData.reset(new std::map<std::string, std::string>());
+					_nextAvTransportUriMetaData.reset(new std::unordered_map<std::string, std::string>());
 					if(value.empty()) continue;
 					std::string xml;
 					BaseLib::Html::unescapeHtmlEntities(value, xml);
@@ -186,7 +189,7 @@ SonosPacket::SonosPacket(std::string& soap, int64_t timeReceived)
 				}
 				else if(name == "r:EnqueuedTransportURIMetaData")
 				{
-					_enqueuedTransportUriMetaData.reset(new std::map<std::string, std::string>());
+					_enqueuedTransportUriMetaData.reset(new std::unordered_map<std::string, std::string>());
 					if(value.empty()) continue;
 					std::string xml;
 					BaseLib::Html::unescapeHtmlEntities(value, xml);
@@ -220,7 +223,6 @@ SonosPacket::SonosPacket(std::string& soap, int64_t timeReceived)
 			if(!node) return;
 			_functionName = std::string(node->name());
 			if(_functionName.size() > 2) _functionName = _functionName.substr(2);
-			_values.reset(new std::map<std::string, std::string>());
 			for(xml_node<>* subNode = node->first_node(); subNode; subNode = subNode->next_sibling())
 			{
 				_values->operator [](std::string(subNode->name())) = std::string(subNode->value());
@@ -246,15 +248,49 @@ SonosPacket::SonosPacket(std::string& soap, std::string serialNumber, int64_t ti
 	_serialNumber = serialNumber;
 }
 
-SonosPacket::SonosPacket(std::string& ip, std::string& path, std::string& soapAction, std::string& schema, std::string& functionName, std::shared_ptr<std::map<std::string, std::string>>& values)
+SonosPacket::SonosPacket(xml_node<>* node, int64_t timeReceived )
+{
+	try
+	{
+		if(!node) return;
+		_values.reset(new std::unordered_map<std::string, std::string>());
+		_valuesToSet.reset(new std::vector<std::pair<std::string, std::string>>());
+		_timeReceived = timeReceived;
+		_functionName = "InfoBroadcast2";
+		for(xml_node<>* subNode = node->first_node(); subNode; subNode = subNode->next_sibling())
+		{
+			_values->operator [](std::string(subNode->name())) = std::string(subNode->value());
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+SonosPacket::SonosPacket(xml_node<>* node, std::string serialNumber, int64_t timeReceived) : SonosPacket(node, timeReceived)
+{
+	_serialNumber = serialNumber;
+}
+
+SonosPacket::SonosPacket(std::string& ip, std::string& path, std::string& soapAction, std::string& schema, std::string& functionName, std::shared_ptr<std::vector<std::pair<std::string, std::string>>>& valuesToSet)
 {
 	_ip = ip;
 	_path = path;
 	_soapAction = soapAction;
 	_schema = schema;
 	_functionName = functionName;
-	_values = values;
-	if(!_values) _values.reset(new std::map<std::string, std::string>());
+	_valuesToSet = valuesToSet;
+	if(!_valuesToSet) _valuesToSet.reset(new std::vector<std::pair<std::string, std::string>>());
+	_values.reset(new std::unordered_map<std::string, std::string>());
 }
 
 SonosPacket::~SonosPacket()
@@ -266,7 +302,7 @@ void SonosPacket::getSoapRequest(std::string& request)
 	try
 	{
 		request = "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><u:" + _functionName + " xmlns:u=\"" + _schema + "\">";
-		for(std::map<std::string, std::string>::iterator i = _values->begin(); i != _values->end(); ++i)
+		for(std::vector<std::pair<std::string, std::string>>::iterator i = _valuesToSet->begin(); i != _valuesToSet->end(); ++i)
 		{
 			request += '<' + i->first + '>' + i->second + "</" + i->first + '>';
 		}

@@ -171,7 +171,7 @@ void MQTT::connect()
 				disconnect();
 				return;
 			}
-			if(!BaseLib::HelperFunctions::fileExists(_settings.caFile()))
+			if(!BaseLib::Io::fileExists(_settings.caFile()))
 			{
 				_out.printError("Error: CA certificate file does not exist or can't be opened.");
 				disconnect();
@@ -183,7 +183,7 @@ void MQTT::connect()
 				disconnect();
 				return;
 			}
-			if(!BaseLib::HelperFunctions::fileExists(_settings.certPath()))
+			if(!BaseLib::Io::fileExists(_settings.certPath()))
 			{
 				_out.printError("Error: Client certificate file does not exist or can't be opened.");
 				disconnect();
@@ -195,7 +195,7 @@ void MQTT::connect()
 				disconnect();
 				return;
 			}
-			if(!BaseLib::HelperFunctions::fileExists(_settings.keyPath()))
+			if(!BaseLib::Io::fileExists(_settings.keyPath()))
 			{
 				_out.printError("Error: Client key file does not exist or can't be opened.");
 				disconnect();

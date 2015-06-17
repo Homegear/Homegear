@@ -30,6 +30,8 @@
 #include "IPhysicalInterface.h"
 #include "../BaseLib.h"
 
+#include <sys/stat.h>
+
 namespace BaseLib
 {
 namespace Systems

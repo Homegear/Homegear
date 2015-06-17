@@ -244,7 +244,7 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 		return;
 	}
 	if(exitCode) *exitCode = -1;
-	if(!GD::bl->hf.fileExists(path))
+	if(!GD::bl->io.fileExists(path))
 	{
 		GD::out.printError("Error: PHP script \"" + path + "\" does not exist.");
 		setThreadNotRunning(threadId);
@@ -331,7 +331,7 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& request, std::shared_ptr<RPC::ServerInfo::Info>& serverInfo, std::vector<char>& output)
 {
 	if(_disposing) return 1;
-	if(!GD::bl->hf.fileExists(path))
+	if(!GD::bl->io.fileExists(path))
 	{
 		GD::out.printError("Error: PHP script \"" + path + "\" does not exist.");
 		return -1;
@@ -500,7 +500,7 @@ std::shared_ptr<BaseLib::RPC::Variable> ScriptEngine::getAllScripts()
 		BaseLib::RPC::PVariable array(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		if(_disposing) return array;
 
-		std::vector<std::string> scripts = GD::bl->hf.getFiles(GD::bl->settings.scriptPath(), true);
+		std::vector<std::string> scripts = GD::bl->io.getFiles(GD::bl->settings.scriptPath(), true);
 		for(std::vector<std::string>::iterator i = scripts.begin(); i != scripts.end(); ++i)
 		{
 			array->arrayValue->push_back(BaseLib::RPC::PVariable(new BaseLib::RPC::Variable(*i)));

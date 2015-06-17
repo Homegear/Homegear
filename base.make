@@ -98,9 +98,11 @@ OBJECTS := \
 	$(OBJDIR)/IEvents.o \
 	$(OBJDIR)/Crypt.o \
 	$(OBJDIR)/Math.o \
+	$(OBJDIR)/Net.o \
 	$(OBJDIR)/Color.o \
 	$(OBJDIR)/HelperFunctions.o \
 	$(OBJDIR)/Base64.o \
+	$(OBJDIR)/Io.o \
 	$(OBJDIR)/Output.o \
 	$(OBJDIR)/PhysicalParameter.o \
 	$(OBJDIR)/Variable.o \
@@ -212,6 +214,9 @@ $(OBJDIR)/Crypt.o: Modules/Base/HelperFunctions/Crypt.cpp
 $(OBJDIR)/Math.o: Modules/Base/HelperFunctions/Math.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Net.o: Modules/Base/HelperFunctions/Net.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Color.o: Modules/Base/HelperFunctions/Color.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
@@ -219,6 +224,9 @@ $(OBJDIR)/HelperFunctions.o: Modules/Base/HelperFunctions/HelperFunctions.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Base64.o: Modules/Base/HelperFunctions/Base64.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Io.o: Modules/Base/HelperFunctions/Io.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Output.o: Modules/Base/Output/Output.cpp

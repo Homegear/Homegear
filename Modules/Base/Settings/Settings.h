@@ -89,6 +89,7 @@ public:
 	std::string modulePath() { return _modulePath; }
 	std::string scriptPath() { return _scriptPath; }
 	std::string firmwarePath() { return _firmwarePath; }
+	std::string tempPath() { return _tempPath; }
 	std::map<std::string, bool>& tunnelClients() { return _tunnelClients; }
 	std::map<std::string, std::string>& clientAddressesToReplace() { return _clientAddressesToReplace; }
 	std::string gpioPath() { return _gpioPath; }
@@ -141,6 +142,7 @@ private:
 	std::string _modulePath;
 	std::string _scriptPath;
 	std::string _firmwarePath;
+	std::string _tempPath;
 	std::map<std::string, bool> _tunnelClients;
 	std::map<std::string, std::string> _clientAddressesToReplace;
 	std::string _gpioPath;

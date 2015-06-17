@@ -48,19 +48,26 @@ class EventServer  : public ISonosInterface
         virtual bool isOpen() { return true; /* Always return true, because there is no continuous connection. */ }
         std::string listenAddress() { return _listenAddress; }
         int32_t listenPort() { return _listenPort; }
+        std::string ttsProgram() { return _ttsProgram; }
     protected:
         bool _stopServer = true;
         int64_t _lastAction = 0;
         std::string _listenAddress;
+        std::string _ttsProgram;
         int32_t _listenPort = 7373;
         int32_t _backLog = 10;
         std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
+        std::vector<char> _httpOkHeader;
 
         void getAddress();
         void getSocketDescriptor();
-        std::shared_ptr<BaseLib::FileDescriptor> getClientSocketDescriptor();
+        std::shared_ptr<BaseLib::FileDescriptor> getClientSocketDescriptor(std::string& ipAddress, int32_t& port);
         void mainThread();
-        void readClient(std::shared_ptr<BaseLib::SocketOperations> socket);
+        void readClient(std::shared_ptr<BaseLib::SocketOperations> socket, const std::string& ipAddress, int32_t port);
+        std::string getHttpHeader(uint32_t contentLength, std::string contentType, int32_t code, std::string codeDescription, std::vector<std::string>& additionalHeaders);
+        void getHttpError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content);
+        void getHttpError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content, std::vector<std::string>& additionalHeaders);
+        void httpGet(BaseLib::HTTP& http, std::vector<char>& content);
 };
 
 }

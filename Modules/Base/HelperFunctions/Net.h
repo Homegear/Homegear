@@ -27,25 +27,61 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef ISONOSINTERFACE_H_
-#define ISONOSINTERFACE_H_
+#ifndef HOMEGEARNET_H_
+#define HOMEGEARNET_H_
 
-#include "../../Base/BaseLib.h"
-#include "../SonosPacket.h"
+#include "../Exception.h"
 
-namespace Sonos {
+#include <string>
+#include <vector>
+#include <memory>
 
-class ISonosInterface : public BaseLib::Systems::IPhysicalInterface
+namespace BaseLib
+{
+/**
+ * Exception class for the HTTP client.
+ *
+ * @see HTTPClient
+ */
+class NetException : public Exception
 {
 public:
-	ISonosInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
-	virtual ~ISonosInterface();
+	NetException(std::string message) : Exception(message) {}
+};
 
-	virtual std::string listenAddress() = 0;
-	virtual int32_t listenPort() = 0;
-	virtual std::string ttsProgram() = 0;
-protected:
-	BaseLib::Output _out;
+/**
+ * Class with network related helper functions.
+ */
+class Net
+{
+public:
+	struct RouteInfo
+	{
+        uint32_t destinationAddress;
+        uint32_t sourceAddress;
+        uint32_t gateway;
+        std::string interfaceName;
+	};
+
+	typedef std::vector<std::shared_ptr<RouteInfo>> RouteInfoList;
+
+	Net();
+
+	/**
+	 * Destructor.
+	 * Does nothing.
+	 */
+	virtual ~Net();
+
+	/**
+	 * Tries to automatically determine the computers IPv4 address.
+	 *
+	 * @return Returns the computers IPv4 address.
+	 */
+	static std::string getMyIpAddress();
+	static void getRoutes(RouteInfoList& routeInfo);
+private:
+	static int32_t readNlSocket(int32_t sockFd, char* buffer, int32_t bufferLength, uint32_t messageIndex, uint32_t pid);
 };
 
 }

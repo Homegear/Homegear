@@ -78,7 +78,7 @@ void WebServer::get(BaseLib::HTTP& http, std::vector<char>& content)
 
 		if(!path.empty() && path.front() == '/') path = path.substr(1);
 		bool isDirectory = false;
-		BaseLib::HelperFunctions::isDirectory(_serverInfo->contentPath + path, isDirectory);
+		BaseLib::Io::isDirectory(_serverInfo->contentPath + path, isDirectory);
 		if(isDirectory)
 		{
 			if(!path.empty() && path.back() != '/')
@@ -88,10 +88,10 @@ void WebServer::get(BaseLib::HTTP& http, std::vector<char>& content)
 				getError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
 				return;
 			}
-			if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
-			else if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
-			else if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.html")) path += "index.html";
-			else if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.htm")) path += "index.htm";
+			if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
+			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
+			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.html")) path += "index.html";
+			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.htm")) path += "index.htm";
 			else
 			{
 				getError(404, "Not Found", "The requested URL / was not found on this server.", content);
@@ -116,7 +116,7 @@ void WebServer::get(BaseLib::HTTP& http, std::vector<char>& content)
 			std::string contentType = _http.getMimeType(ending);
 			if(contentType.empty()) contentType = "application/octet-stream";
 			//Don't return content when method is "HEAD"
-			if(http.getHeader()->method == "GET") contentString = GD::bl->hf.getFileContent(_serverInfo->contentPath + path);
+			if(http.getHeader()->method == "GET") contentString = GD::bl->io.getFileContent(_serverInfo->contentPath + path);
 			std::string header = getHeader(contentString.size(), contentType, 200, "OK", headers);
 			content.insert(content.end(), header.begin(), header.end());
 			if(!contentString.empty()) content.insert(content.end(), contentString.begin(), contentString.end());
@@ -155,7 +155,7 @@ void WebServer::post(BaseLib::HTTP& http, std::vector<char>& content)
 		if(!path.empty() && path.front() == '/') path = path.substr(1);
 
 		bool isDirectory = false;
-		BaseLib::HelperFunctions::isDirectory(_serverInfo->contentPath + path, isDirectory);
+		BaseLib::Io::isDirectory(_serverInfo->contentPath + path, isDirectory);
 		if(isDirectory)
 		{
 			if(!path.empty() && path.back() != '/')
@@ -165,8 +165,8 @@ void WebServer::post(BaseLib::HTTP& http, std::vector<char>& content)
 				getError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
 				return;
 			}
-			if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
-			else if(GD::bl->hf.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
+			if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
+			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
 			else
 			{
 				getError(404, _http.getStatusText(404), "The requested URL / was not found on this server.", content);

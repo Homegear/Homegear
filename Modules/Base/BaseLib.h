@@ -18,6 +18,8 @@
 #include "HelperFunctions/Math.h"
 #include "HelperFunctions/Crypt.h"
 #include "HelperFunctions/Base64.h"
+#include "HelperFunctions/Net.h"
+#include "HelperFunctions/Io.h"
 #include "Output/Output.h"
 #include "RPC/Devices.h"
 #include "Settings/Settings.h"
@@ -90,6 +92,11 @@ public:
 	 * Functions to ease your life for a lot of standard operations.
 	 */
 	HelperFunctions hf;
+
+	/**
+	 * Functions for io operations.
+	 */
+	Io io;
 
 	/**
 	 * The main output object to print text to the standard and error output.
