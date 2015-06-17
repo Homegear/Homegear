@@ -109,9 +109,13 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 		_serversMutex.lock();
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
-			if(server->second->removed || (!server->second->socket->connected() && !server->second->reconnectInfinitely) || (!server->second->initialized && BaseLib::HelperFunctions::getTimeSeconds() - server->second->creationTime > 120)) continue;
+			std::cerr << "Moin1 " << server->second->address.first << std::endl;
+			if(server->second->removed || (!server->second->socket->connected() && server->second->keepAlive && !server->second->reconnectInfinitely) || (!server->second->initialized && BaseLib::HelperFunctions::getTimeSeconds() - server->second->creationTime > 120)) continue;
+			std::cerr << "Moin2 " << server->second->address.first << std::endl;
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && (server->second->knownMethods.find("event") == server->second->knownMethods.end() || server->second->knownMethods.find("system.multicall") == server->second->knownMethods.end()))) continue;
+			std::cerr << "Moin3 " << server->second->address.first << std::endl;
 			if(server->second->subscribePeers && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end()) continue;
+			std::cerr << "Moin4 " << server->second->address.first << std::endl;
 			if(server->second->webSocket || server->second->json)
 			{
 				//No system.multicall
@@ -185,7 +189,7 @@ void Client::systemListMethods(std::pair<std::string, std::string> address)
 		std::shared_ptr<BaseLib::RPC::Variable> result = _client->invoke(server, "system.listMethods", parameters);
 		if(result->errorStruct)
 		{
-			if(server->removed || (!server->socket->connected() && !server->reconnectInfinitely)) return;
+			if(server->removed || (!server->socket->connected() && server->keepAlive && !server->reconnectInfinitely)) return;
 			GD::out.printWarning("Warning: Error calling XML RPC method \"system.listMethods\" on server " + address.first + " with port " + address.second + ". Error struct: ");
 			result->print();
 			return;
@@ -233,7 +237,7 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 		std::shared_ptr<BaseLib::RPC::Variable> result = _client->invoke(server, "listDevices", parameters);
 		if(result->errorStruct)
 		{
-			if(server->removed || (!server->socket->connected() && !server->reconnectInfinitely)) return;
+			if(server->removed || (!server->socket->connected() && server->keepAlive && !server->reconnectInfinitely)) return;
 			GD::out.printError("Error calling XML RPC method \"listDevices\" on server " + address.first + " with port " + address.second + ". Error struct: ");
 			result->print();
 			return;
@@ -585,7 +589,7 @@ void Client::collectGarbage()
 		_serversMutex.lock();
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator i = _servers.begin(); i != _servers.end(); ++i)
 		{
-			if(i->second->removed || (!i->second->socket->connected() && !i->second->reconnectInfinitely) || (!i->second->initialized && now - i->second->creationTime > 120)) serversToRemove.push_back(i->first);
+			if(i->second->removed || (!i->second->socket->connected() && i->second->keepAlive && !i->second->reconnectInfinitely) || (!i->second->initialized && now - i->second->creationTime > 120)) serversToRemove.push_back(i->first);
 		}
 		for(std::vector<int32_t>::iterator i = serversToRemove.begin(); i != serversToRemove.end(); ++i)
 		{

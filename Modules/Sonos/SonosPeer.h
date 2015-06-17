@@ -62,6 +62,7 @@ public:
 	SonosPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
 	SonosPeer(int32_t id, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
 	virtual ~SonosPeer();
+	void init();
 
 	//Features
 	virtual bool wireless() { return false; }
@@ -102,6 +103,25 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::Variable> setValue(int32_t clientID, uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value);
 	//End RPC methods
 protected:
+	class UpnpFunctionEntry
+	{
+	public:
+		std::string& service() { return _service; }
+		std::string& path() { return _path; }
+		std::shared_ptr<std::vector<std::pair<std::string, std::string>>> soapValues() { return _soapValues; }
+
+		UpnpFunctionEntry(std::string service, std::string path, std::shared_ptr<std::vector<std::pair<std::string, std::string>>> soapValues)
+		{
+			_service = service;
+			_path = path;
+			_soapValues = soapValues;
+		}
+	private:
+		std::string _service;
+		std::string _path;
+		std::shared_ptr<std::vector<std::pair<std::string, std::string>>> _soapValues;
+	};
+
 	bool _shuttingDown = false;
 	bool _getOneMorePositionInfo = true;
 	std::shared_ptr<BaseLib::RPC::RPCEncoder> _binaryEncoder;
@@ -109,6 +129,13 @@ protected:
 	std::shared_ptr<BaseLib::HTTPClient> _httpClient;
 	int32_t _lastAvTransportSubscription = 0;
 	int32_t _lastPositionInfo = 0;
+
+	typedef std::map<std::string, UpnpFunctionEntry> UpnpFunctions;
+	typedef std::pair<std::string, UpnpFunctionEntry> UpnpFunctionPair;
+	typedef std::vector<std::pair<std::string, std::string>> SoapValues;
+	typedef std::shared_ptr<std::vector<std::pair<std::string, std::string>>> PSoapValues;
+	typedef std::pair<std::string, std::string> SoapValuePair;
+	UpnpFunctions _upnpFunctions;
 
 	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 	virtual std::shared_ptr<BaseLib::Systems::LogicalDevice> getDevice(int32_t address);
@@ -122,7 +149,13 @@ protected:
 
 	virtual std::shared_ptr<BaseLib::RPC::ParameterSet> getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type);
 
-	void getSoapData(std::string& functionName, std::string& service, std::string& path, std::shared_ptr<std::vector<std::pair<std::string, std::string>>>& soapValues, bool ignoreErrors = false);
+	void execute(std::string& functionName, std::string& service, std::string& path, PSoapValues& soapValues, bool ignoreErrors = false);
+
+	void execute(std::string functionName, bool ignoreErrors = false);
+
+	void execute(std::string functionName, PSoapValues soapValues, bool ignoreErrors = false);
+
+	void sendSoapRequest(std::string& request, bool ignoreErrors = false);
 };
 
 }

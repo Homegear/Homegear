@@ -281,7 +281,7 @@ SonosPacket::SonosPacket(xml_node<>* node, std::string serialNumber, int64_t tim
 	_serialNumber = serialNumber;
 }
 
-SonosPacket::SonosPacket(std::string& ip, std::string& path, std::string& soapAction, std::string& schema, std::string& functionName, std::shared_ptr<std::vector<std::pair<std::string, std::string>>>& valuesToSet)
+SonosPacket::SonosPacket(std::string& ip, std::string& path, std::string& soapAction, std::string& schema, std::string& functionName, std::shared_ptr<std::vector<std::pair<std::string, std::string>>> valuesToSet)
 {
 	_ip = ip;
 	_path = path;
