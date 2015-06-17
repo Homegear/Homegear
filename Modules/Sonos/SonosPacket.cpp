@@ -79,6 +79,7 @@ SonosPacket::SonosPacket(std::string& soap, int64_t timeReceived)
 				std::string value(attr->value());
 				if(name == "CurrentTrackMetaData" || name == "TrackMetaData")
 				{
+					_values->operator [](name) = value;
 					_currentTrackMetadata.reset(new std::unordered_map<std::string, std::string>());
 					if(value.empty()) continue;
 					std::string xml;
@@ -112,6 +113,7 @@ SonosPacket::SonosPacket(std::string& soap, int64_t timeReceived)
 				}
 				else if(name == "r:NextTrackMetaData")
 				{
+					_values->operator [](name) = value;
 					_nextTrackMetadata.reset(new std::unordered_map<std::string, std::string>());
 					if(value.empty()) continue;
 					std::string xml;
@@ -145,6 +147,7 @@ SonosPacket::SonosPacket(std::string& soap, int64_t timeReceived)
 				}
 				else if(name == "AVTransportURIMetaData")
 				{
+					_values->operator [](name) = value;
 					_avTransportUriMetaData.reset(new std::unordered_map<std::string, std::string>());
 					if(value.empty()) continue;
 					std::string xml;
@@ -167,6 +170,7 @@ SonosPacket::SonosPacket(std::string& soap, int64_t timeReceived)
 				}
 				else if(name == "NextAVTransportURIMetaData")
 				{
+					_values->operator [](name) = value;
 					_nextAvTransportUriMetaData.reset(new std::unordered_map<std::string, std::string>());
 					if(value.empty()) continue;
 					std::string xml;
@@ -189,6 +193,7 @@ SonosPacket::SonosPacket(std::string& soap, int64_t timeReceived)
 				}
 				else if(name == "r:EnqueuedTransportURIMetaData")
 				{
+					_values->operator [](name) = value;
 					_enqueuedTransportUriMetaData.reset(new std::unordered_map<std::string, std::string>());
 					if(value.empty()) continue;
 					std::string xml;

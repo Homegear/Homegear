@@ -1354,13 +1354,16 @@ std::shared_ptr<RPC::Variable> Peer::getDeviceDescription(int32_t clientID, int3
 		std::shared_ptr<RPC::Variable> description(new RPC::Variable(RPC::VariableType::rpcStruct));
 
 		std::string type;
-		std::shared_ptr<RPC::DeviceType> rpcDeviceType = rpcDevice->getType(_deviceType, _firmwareVersion);
 		if(!_typeString.empty()) type = _typeString;
-		else if(rpcDeviceType) type = rpcDeviceType->id;
-		else if(_deviceType.type() == 0) type = "HM-RCV-50"; //Central
 		else
 		{
-			if(!rpcDevice->supportedTypes.empty()) type = rpcDevice->supportedTypes.at(0)->id;
+			std::shared_ptr<RPC::DeviceType> rpcDeviceType = rpcDevice->getType(_deviceType, _firmwareVersion);
+			if(rpcDeviceType) type = rpcDeviceType->id;
+			else if(_deviceType.type() == 0) type = "HM-RCV-50"; //Central
+			else
+			{
+				if(!rpcDevice->supportedTypes.empty()) type = rpcDevice->supportedTypes.at(0)->id;
+			}
 		}
 
 		if(channel == -1) //Base device

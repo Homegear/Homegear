@@ -109,13 +109,9 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 		_serversMutex.lock();
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
-			std::cerr << "Moin1 " << server->second->address.first << std::endl;
 			if(server->second->removed || (!server->second->socket->connected() && server->second->keepAlive && !server->second->reconnectInfinitely) || (!server->second->initialized && BaseLib::HelperFunctions::getTimeSeconds() - server->second->creationTime > 120)) continue;
-			std::cerr << "Moin2 " << server->second->address.first << std::endl;
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && (server->second->knownMethods.find("event") == server->second->knownMethods.end() || server->second->knownMethods.find("system.multicall") == server->second->knownMethods.end()))) continue;
-			std::cerr << "Moin3 " << server->second->address.first << std::endl;
 			if(server->second->subscribePeers && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end()) continue;
-			std::cerr << "Moin4 " << server->second->address.first << std::endl;
 			if(server->second->webSocket || server->second->json)
 			{
 				//No system.multicall

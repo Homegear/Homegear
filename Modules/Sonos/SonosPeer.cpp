@@ -115,12 +115,15 @@ void SonosPeer::init()
 	_binaryDecoder.reset(new BaseLib::RPC::RPCDecoder(GD::bl));
 
 	_upnpFunctions.insert(UpnpFunctionPair("AddURIToQueue", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues()))));
-	_upnpFunctions.insert(UpnpFunctionPair("GetPositionInfo", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0") }))));
 	_upnpFunctions.insert(UpnpFunctionPair("GetMute", UpnpFunctionEntry("urn:schemas-upnp-org:service:RenderingControl:1", "/MediaRenderer/RenderingControl/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master") }))));
+	_upnpFunctions.insert(UpnpFunctionPair("GetPositionInfo", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0") }))));
+	_upnpFunctions.insert(UpnpFunctionPair("GetRemainingSleepTimerDuration", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0") }))));
 	_upnpFunctions.insert(UpnpFunctionPair("GetTransportInfo", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0") }))));
 	_upnpFunctions.insert(UpnpFunctionPair("GetVolume", UpnpFunctionEntry("urn:schemas-upnp-org:service:RenderingControl:1", "/MediaRenderer/RenderingControl/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master") }))));
+	_upnpFunctions.insert(UpnpFunctionPair("Next", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0") }))));
 	_upnpFunctions.insert(UpnpFunctionPair("Pause", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0") }))));
 	_upnpFunctions.insert(UpnpFunctionPair("Play", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Speed", "1") }))));
+	_upnpFunctions.insert(UpnpFunctionPair("Previous", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0") }))));
 	_upnpFunctions.insert(UpnpFunctionPair("Seek", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues()))));
 	_upnpFunctions.insert(UpnpFunctionPair("SetMute", UpnpFunctionEntry("urn:schemas-upnp-org:service:RenderingControl:1", "/MediaRenderer/RenderingControl/Control", PSoapValues(new SoapValues()))));
 	_upnpFunctions.insert(UpnpFunctionPair("SetAVTransportURI", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues()))));
@@ -175,7 +178,7 @@ void SonosPeer::worker()
 				}
 			}
 		}
-		if(BaseLib::HelperFunctions::getTimeSeconds() - _lastAvTransportSubscription > 60)
+		if(BaseLib::HelperFunctions::getTimeSeconds() - _lastAvTransportSubscription > 300)
 		{
 			_lastAvTransportSubscription = BaseLib::HelperFunctions::getTimeSeconds();
 			if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Peer " + std::to_string(_peerID) + " is calling SubscribeMRAVTransport...");
@@ -513,19 +516,31 @@ void SonosPeer::getValuesFromPacket(std::shared_ptr<SonosPacket> packet, std::ve
 
 			for(std::vector<BaseLib::RPC::Parameter>::iterator j = frame->parameters.begin(); j != frame->parameters.end(); ++j)
 			{
-				if(j->field == "CurrentTrackMetaData" || j->field == "TrackMetaData")
+				if(!j->subfield.empty() && (j->field == "CurrentTrackMetaData" || j->field == "TrackMetaData"))
 				{
 					soapValues = packet->currentTrackMetadata();
 					if(!soapValues || soapValues->find(j->subfield) == soapValues->end()) continue;
 					field = j->subfield;
 				}
-				else if(j->field == "r:NextTrackMetaData")
+				else if(!j->subfield.empty() && (j->field == "r:NextTrackMetaData"))
 				{
 					soapValues = packet->nextTrackMetadata();
 					if(!soapValues || soapValues->find(j->subfield) == soapValues->end()) continue;
 					field = j->subfield;
 				}
-				else if(j->field == "r:EnqueuedTransportURIMetaData")
+				else if(!j->subfield.empty() && (j->field == "AVTransportURIMetaData"))
+				{
+					soapValues = packet->avTransportUriMetaData();
+					if(!soapValues || soapValues->find(j->subfield) == soapValues->end()) continue;
+					field = j->subfield;
+				}
+				else if(!j->subfield.empty() && (j->field == "NextAVTransportURIMetaData"))
+				{
+					soapValues = packet->nextAvTransportUriMetaData();
+					if(!soapValues || soapValues->find(j->subfield) == soapValues->end()) continue;
+					field = j->subfield;
+				}
+				else if(!j->subfield.empty() && (j->field == "r:EnqueuedTransportURIMetaData"))
 				{
 					soapValues = packet->currentTrackMetadata();
 					if(!soapValues || soapValues->find(j->subfield) == soapValues->end()) continue;
@@ -1227,6 +1242,8 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::setValue(int32_t clientID, ui
 				}
 				catch(BaseLib::HTTPClientException& ex)
 				{
+					GD::out.printWarning("Warning: Error in UPnP request: " + ex.what());
+					GD::out.printMessage("Request was: \n" + soapRequest);
 					return BaseLib::RPC::Variable::createError(-100, "Error sending value to Sonos device: " + ex.what());
 				}
 
@@ -1334,6 +1351,9 @@ bool SonosPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::sh
 			}
 
 			std::string currentTrackUri;
+			std::string currentTrackMetadata;
+			std::string currentTransportUri;
+			std::string currentTransportMetadata;
 			std::string transportState;
 			int32_t volumeState = -1;
 			bool muteState = false;
@@ -1348,6 +1368,27 @@ bool SonosPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::sh
 				{
 					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
 					if(variable) currentTrackUri = variable->stringValue;
+				}
+
+				parameterIterator = channelTwoIterator->second.find("CURRENT_TRACK_METADATA");
+				if(parameterIterator != channelTwoIterator->second.end())
+				{
+					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+					if(variable) currentTrackMetadata = variable->stringValue;
+				}
+
+				parameterIterator = channelTwoIterator->second.find("AV_TRANSPORT_URI");
+				if(parameterIterator != channelTwoIterator->second.end())
+				{
+					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+					if(variable) currentTransportUri = variable->stringValue;
+				}
+
+				parameterIterator = channelTwoIterator->second.find("AV_TRANSPORT_METADATA");
+				if(parameterIterator != channelTwoIterator->second.end())
+				{
+					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+					if(variable) currentTransportMetadata = variable->stringValue;
 				}
 
 				parameterIterator = channelTwoIterator->second.find("VOLUME");
@@ -1437,6 +1478,7 @@ bool SonosPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::sh
 				execute("Play");
 
 				bool transition = true;
+				std::string currentTransportState;
 				while(!serviceMessages->getUnreach())
 				{
 					execute("GetPositionInfo");
@@ -1445,8 +1487,8 @@ bool SonosPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::sh
 					if(parameterIterator != channelTwoIterator->second.end())
 					{
 						std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-						if(variable) transportState = variable->stringValue;
-						if(transportState == "PLAYING") transition = false;
+						if(variable) currentTransportState = variable->stringValue;
+						if(currentTransportState == "PLAYING") transition = false;
 						else if(!transition) break;
 					}
 					else break;
@@ -1455,7 +1497,10 @@ bool SonosPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::sh
 				execute("Pause", true);
 				execute("SetVolume", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredVolume", std::to_string(volumeState)) }));
 				execute("SetMute", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredMute", std::to_string((int32_t)muteState)) }));
-				execute("SetAVTransportURI", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("CurrentURI", currentTrackUri), SoapValuePair("CurrentURIMetaData", "") }));
+				std::string uri = "x-rincon-queue:RINCON_" + _serialNumber + "01400#0";
+				execute("SetAVTransportURI", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("CurrentURI", uri), SoapValuePair("CurrentURIMetaData", "") }));
+				execute("Seek", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Unit", "TRACK_NR"), SoapValuePair("Target", std::to_string(trackNumberState)) }));
+				execute("Seek", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Unit", "REL_TIME"), SoapValuePair("Target", seekTimeState) }));
 			}
 
 			if(transportState == "PLAYING") execute("Play");
