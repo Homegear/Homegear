@@ -1216,6 +1216,7 @@ std::shared_ptr<RPC::Variable> Peer::getAllValues(int32_t clientID, bool returnW
 		values->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::Variable>(new RPC::Variable((uint32_t)_peerID))));
 		values->structValue->insert(RPC::RPCStructElement("ADDRESS", std::shared_ptr<RPC::Variable>(new RPC::Variable(_serialNumber))));
 		values->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::Variable>(new RPC::Variable(_typeString.empty() ? _rpcTypeString : _typeString))));
+		values->structValue->insert(RPC::RPCStructElement("TYPE_ID", std::shared_ptr<RPC::Variable>(new RPC::Variable(_deviceType.type()))));
 		values->structValue->insert(RPC::RPCStructElement("NAME", std::shared_ptr<RPC::Variable>(new RPC::Variable(_name))));
 		std::shared_ptr<RPC::Variable> channels(new RPC::Variable(RPC::VariableType::rpcArray));
 		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
@@ -1431,6 +1432,8 @@ std::shared_ptr<RPC::Variable> Peer::getDeviceDescription(int32_t clientID, int3
 			if(fields.empty() || fields.find("RX_MODE") != fields.end()) description->structValue->insert(RPC::RPCStructElement("RX_MODE", std::shared_ptr<RPC::Variable>(new RPC::Variable((int32_t)rpcDevice->rxModes))));
 
 			if(!type.empty() && (fields.empty() || fields.find("TYPE") != fields.end())) description->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::Variable>(new RPC::Variable(type))));
+
+			if(!type.empty() && (fields.empty() || fields.find("TYPE_ID") != fields.end())) description->structValue->insert(RPC::RPCStructElement("TYPE_ID", std::shared_ptr<RPC::Variable>(new RPC::Variable(_deviceType.type()))));
 
 			if(fields.empty() || fields.find("VERSION") != fields.end()) description->structValue->insert(RPC::RPCStructElement("VERSION", std::shared_ptr<RPC::Variable>(new RPC::Variable(rpcDevice->version))));
 
