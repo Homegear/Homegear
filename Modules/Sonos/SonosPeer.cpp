@@ -124,6 +124,7 @@ void SonosPeer::init()
 	_upnpFunctions.insert(UpnpFunctionPair("Pause", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0") }))));
 	_upnpFunctions.insert(UpnpFunctionPair("Play", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Speed", "1") }))));
 	_upnpFunctions.insert(UpnpFunctionPair("Previous", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0") }))));
+	_upnpFunctions.insert(UpnpFunctionPair("RemoveTrackFromQueue", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues()))));
 	_upnpFunctions.insert(UpnpFunctionPair("Seek", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues()))));
 	_upnpFunctions.insert(UpnpFunctionPair("SetMute", UpnpFunctionEntry("urn:schemas-upnp-org:service:RenderingControl:1", "/MediaRenderer/RenderingControl/Control", PSoapValues(new SoapValues()))));
 	_upnpFunctions.insert(UpnpFunctionPair("SetAVTransportURI", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues()))));
@@ -1433,75 +1434,43 @@ bool SonosPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::sh
 			if(volume > 0) execute("SetVolume", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredVolume", std::to_string(volume)) }));
 
 			std::string playlistUri("http://" + GD::physicalInterface->listenAddress() + ':' + std::to_string(GD::physicalInterface->listenPort()) + '/' + playlistFilename);
-			if(currentTrackUri.find(".mp3") != std::string::npos || currentTrackUri.compare(0, 14, "x-file-cifs://") == 0)
-			{
-				execute("AddURIToQueue", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("EnqueuedURI", playlistUri), SoapValuePair("EnqueuedURIMetaData", ""), SoapValuePair("DesiredFirstTrackNumberEnqueued", "0"), SoapValuePair("EnqueueAsNext", "0") }));
+			execute("AddURIToQueue", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("EnqueuedURI", playlistUri), SoapValuePair("EnqueuedURIMetaData", ""), SoapValuePair("DesiredFirstTrackNumberEnqueued", "0"), SoapValuePair("EnqueueAsNext", "0") }));
 
-				std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelOneIterator->second.find("FIRST_TRACK_NUMBER_ENQUEUED");
-				int32_t trackNumber = 0;
-				if(parameterIterator != channelOneIterator->second.end())
+			std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelOneIterator->second.find("FIRST_TRACK_NUMBER_ENQUEUED");
+			int32_t trackNumber = 0;
+			if(parameterIterator != channelOneIterator->second.end())
+			{
+				std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+				if(variable) trackNumber = variable->integerValue;
+			}
+
+			execute("Seek", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Unit", "TRACK_NR"), SoapValuePair("Target", std::to_string(trackNumber)) }));
+			execute("Play");
+
+			while(!serviceMessages->getUnreach())
+			{
+				execute("GetPositionInfo");
+
+				std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelTwoIterator->second.find("CURRENT_TRACK");
+				if(parameterIterator != channelTwoIterator->second.end())
 				{
 					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-					if(variable) trackNumber = variable->integerValue;
-				}
-
-				execute("Seek", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Unit", "TRACK_NR"), SoapValuePair("Target", std::to_string(trackNumber)) }));
-				execute("Play");
-
-				while(!serviceMessages->getUnreach())
-				{
-					execute("GetPositionInfo");
-
-					std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelTwoIterator->second.find("CURRENT_TRACK");
-					if(parameterIterator != channelTwoIterator->second.end())
+					if(!variable || trackNumber != variable->integerValue)
 					{
-						std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-						if(!variable || trackNumber != variable->integerValue)
-						{
-							break;
-						}
+						break;
 					}
-					else break;
-					std::this_thread::sleep_for(std::chrono::milliseconds(200));
 				}
-
-				execute("Pause", true);
-				execute("SetVolume", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredVolume", std::to_string(volumeState)) }));
-				execute("SetMute", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredMute", std::to_string((int32_t)muteState)) }));
-				execute("Seek", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Unit", "TRACK_NR"), SoapValuePair("Target", std::to_string(trackNumberState)) }));
-				execute("Seek", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Unit", "REL_TIME"), SoapValuePair("Target", seekTimeState) }));
-				execute("RemoveTrackFromQueue", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("ObjectID", "Q:0/" + std::to_string(trackNumber)) }));
+				else break;
+				std::this_thread::sleep_for(std::chrono::milliseconds(200));
 			}
-			else
-			{
-				execute("SetAVTransportURI", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("CurrentURI", playlistUri), SoapValuePair("CurrentURIMetaData", "") }));
-				execute("Play");
 
-				bool transition = true;
-				std::string currentTransportState;
-				while(!serviceMessages->getUnreach())
-				{
-					execute("GetPositionInfo");
+			execute("Pause", true);
+			execute("SetVolume", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredVolume", std::to_string(volumeState)) }));
+			execute("SetMute", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredMute", std::to_string((int32_t)muteState)) }));
+			execute("Seek", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Unit", "TRACK_NR"), SoapValuePair("Target", std::to_string(trackNumberState)) }));
+			execute("Seek", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Unit", "REL_TIME"), SoapValuePair("Target", seekTimeState) }));
+			execute("RemoveTrackFromQueue", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("ObjectID", "Q:0/" + std::to_string(trackNumber)) }));
 
-					std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelTwoIterator->second.find("TRANSPORT_STATE");
-					if(parameterIterator != channelTwoIterator->second.end())
-					{
-						std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-						if(variable) currentTransportState = variable->stringValue;
-						if(currentTransportState == "PLAYING") transition = false;
-						else if(!transition) break;
-					}
-					else break;
-					std::this_thread::sleep_for(std::chrono::milliseconds(200));
-				}
-				execute("Pause", true);
-				execute("SetVolume", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredVolume", std::to_string(volumeState)) }));
-				execute("SetMute", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredMute", std::to_string((int32_t)muteState)) }));
-				std::string uri = "x-rincon-queue:RINCON_" + _serialNumber + "01400#0";
-				execute("SetAVTransportURI", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("CurrentURI", uri), SoapValuePair("CurrentURIMetaData", "") }));
-				execute("Seek", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Unit", "TRACK_NR"), SoapValuePair("Target", std::to_string(trackNumberState)) }));
-				execute("Seek", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Unit", "REL_TIME"), SoapValuePair("Target", seekTimeState) }));
-			}
 
 			if(transportState == "PLAYING") execute("Play");
 
