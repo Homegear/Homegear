@@ -321,6 +321,12 @@ void PhysicalInterfaces::load(std::string filename)
 					settings->ttsProgram = value;
 					GD::out.printDebug("Debug: ttsProgram of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->ttsProgram);
 				}
+				else if(name == "datapath")
+				{
+					settings->dataPath = value;
+					if(settings->dataPath.back() != '/') settings->dataPath.push_back('/');
+					GD::out.printDebug("Debug: dataPath of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->dataPath);
+				}
 				else
 				{
 					GD::out.printWarning("Warning: Unknown physical device setting: " + std::string(input));

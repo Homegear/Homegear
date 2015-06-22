@@ -115,6 +115,7 @@ void SonosPeer::init()
 	_binaryDecoder.reset(new BaseLib::RPC::RPCDecoder(GD::bl));
 
 	_upnpFunctions.insert(UpnpFunctionPair("AddURIToQueue", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues()))));
+	_upnpFunctions.insert(UpnpFunctionPair("GetCrossfadeMode", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0") }))));
 	_upnpFunctions.insert(UpnpFunctionPair("GetMute", UpnpFunctionEntry("urn:schemas-upnp-org:service:RenderingControl:1", "/MediaRenderer/RenderingControl/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master") }))));
 	_upnpFunctions.insert(UpnpFunctionPair("GetPositionInfo", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0") }))));
 	_upnpFunctions.insert(UpnpFunctionPair("GetRemainingSleepTimerDuration", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0") }))));
@@ -124,8 +125,10 @@ void SonosPeer::init()
 	_upnpFunctions.insert(UpnpFunctionPair("Pause", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0") }))));
 	_upnpFunctions.insert(UpnpFunctionPair("Play", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Speed", "1") }))));
 	_upnpFunctions.insert(UpnpFunctionPair("Previous", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0") }))));
+	_upnpFunctions.insert(UpnpFunctionPair("RampToVolume", UpnpFunctionEntry("urn:schemas-upnp-org:service:RenderingControl:1", "/MediaRenderer/RenderingControl/Control", PSoapValues(new SoapValues()))));
 	_upnpFunctions.insert(UpnpFunctionPair("RemoveTrackFromQueue", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues()))));
 	_upnpFunctions.insert(UpnpFunctionPair("Seek", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues()))));
+	_upnpFunctions.insert(UpnpFunctionPair("SetCrossfadeMode", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues()))));
 	_upnpFunctions.insert(UpnpFunctionPair("SetMute", UpnpFunctionEntry("urn:schemas-upnp-org:service:RenderingControl:1", "/MediaRenderer/RenderingControl/Control", PSoapValues(new SoapValues()))));
 	_upnpFunctions.insert(UpnpFunctionPair("SetAVTransportURI", UpnpFunctionEntry("urn:schemas-upnp-org:service:AVTransport:1", "/MediaRenderer/AVTransport/Control", PSoapValues(new SoapValues()))));
 	_upnpFunctions.insert(UpnpFunctionPair("SetVolume", UpnpFunctionEntry("urn:schemas-upnp-org:service:RenderingControl:1", "/MediaRenderer/RenderingControl/Control", PSoapValues(new SoapValues()))));
@@ -1272,6 +1275,186 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::setValue(int32_t clientID, ui
     return BaseLib::RPC::Variable::createError(-32500, "Unknown application error. See error log for more details.");
 }
 
+void SonosPeer::playLocalFile(std::string filename, bool now, bool unmute, int32_t volume)
+{
+	try
+	{
+		if(filename.size() < 5) return;
+		std::string tempPath = GD::bl->settings.tempPath() + "sonos/";
+
+		if(now)
+		{
+			execute("GetPositionInfo");
+			execute("GetVolume");
+			execute("GetMute");
+			execute("GetTransportInfo");
+		}
+
+		std::string playlistFilename = filename.substr(0, filename.size() - 4) + ".m3u";
+		BaseLib::HelperFunctions::stringReplace(playlistFilename, "/", "_");
+
+		std::string playlistContent = "#EXTM3U\n#EXTINF:0,<Homegear><TTS><TTS>\nhttp://" + GD::physicalInterface->listenAddress() + ':' + std::to_string(GD::physicalInterface->listenPort()) + '/' + filename + '\n';
+		std::string playlistFilepath = tempPath + playlistFilename;
+		BaseLib::Io::writeFile(playlistFilepath, playlistContent);
+		playlistFilename = BaseLib::HTTP::encodeURL(playlistFilename);
+
+		std::string currentTrackUri;
+		std::string currentTrackMetadata;
+		std::string currentTransportUri;
+		std::string currentTransportMetadata;
+		std::string transportState;
+		int32_t volumeState = -1;
+		bool muteState = false;
+		int32_t trackNumberState = -1;
+		std::string seekTimeState;
+
+		std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::iterator channelTwoIterator = valuesCentral.find(2);
+		if(channelTwoIterator == valuesCentral.end())
+		{
+			GD::out.printError("Error: Channel 2 not found.");
+			return;
+		}
+		if(now)
+		{
+			std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelTwoIterator->second.find("CURRENT_TRACK_URI");
+			if(parameterIterator != channelTwoIterator->second.end())
+			{
+				std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+				if(variable) currentTrackUri = variable->stringValue;
+			}
+
+			parameterIterator = channelTwoIterator->second.find("CURRENT_TRACK_METADATA");
+			if(parameterIterator != channelTwoIterator->second.end())
+			{
+				std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+				if(variable) currentTrackMetadata = variable->stringValue;
+			}
+
+			parameterIterator = channelTwoIterator->second.find("AV_TRANSPORT_URI");
+			if(parameterIterator != channelTwoIterator->second.end())
+			{
+				std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+				if(variable) currentTransportUri = variable->stringValue;
+			}
+
+			parameterIterator = channelTwoIterator->second.find("AV_TRANSPORT_METADATA");
+			if(parameterIterator != channelTwoIterator->second.end())
+			{
+				std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+				if(variable) currentTransportMetadata = variable->stringValue;
+			}
+
+			parameterIterator = channelTwoIterator->second.find("VOLUME");
+			if(parameterIterator != channelTwoIterator->second.end())
+			{
+				std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+				if(variable) volumeState = variable->integerValue;
+			}
+
+			parameterIterator = channelTwoIterator->second.find("MUTE");
+			if(parameterIterator != channelTwoIterator->second.end())
+			{
+				std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+				if(variable) muteState = (variable->stringValue == "1");
+			}
+
+			parameterIterator = channelTwoIterator->second.find("CURRENT_TRACK");
+			if(parameterIterator != channelTwoIterator->second.end())
+			{
+				std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+				if(variable) trackNumberState = variable->integerValue;
+			}
+
+			parameterIterator = channelTwoIterator->second.find("CURRENT_TRACK_RELATIVE_TIME");
+			if(parameterIterator != channelTwoIterator->second.end())
+			{
+				std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+				if(variable) seekTimeState = variable->stringValue;
+			}
+
+			parameterIterator = channelTwoIterator->second.find("TRANSPORT_STATE");
+			if(parameterIterator != channelTwoIterator->second.end())
+			{
+				std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+				if(variable) transportState = variable->stringValue;
+			}
+
+			execute("Pause", true);
+
+			if(unmute) execute("SetMute", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredMute", "0") }));
+			if(volume > 0) execute("SetVolume", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredVolume", std::to_string(volume)) }));
+		}
+
+		std::string playlistUri("http://" + GD::physicalInterface->listenAddress() + ':' + std::to_string(GD::physicalInterface->listenPort()) + '/' + playlistFilename);
+		execute("AddURIToQueue", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("EnqueuedURI", playlistUri), SoapValuePair("EnqueuedURIMetaData", ""), SoapValuePair("DesiredFirstTrackNumberEnqueued", "0"), SoapValuePair("EnqueueAsNext", "0") }));
+
+		if(now)
+		{
+			std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::iterator channelOneIterator = valuesCentral.find(1);
+			std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelOneIterator->second.find("FIRST_TRACK_NUMBER_ENQUEUED");
+			int32_t trackNumber = 0;
+			if(parameterIterator != channelOneIterator->second.end())
+			{
+				std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+				if(variable) trackNumber = variable->integerValue;
+			}
+
+			execute("Seek", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Unit", "TRACK_NR"), SoapValuePair("Target", std::to_string(trackNumber)) }));
+			execute("Play");
+
+			while(!serviceMessages->getUnreach())
+			{
+				execute("GetPositionInfo");
+
+				std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelTwoIterator->second.find("CURRENT_TRACK");
+				if(parameterIterator != channelTwoIterator->second.end())
+				{
+					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+					if(!variable || trackNumber != variable->integerValue) break;
+				}
+				else break;
+
+				execute("GetTransportInfo");
+
+				parameterIterator = channelTwoIterator->second.find("TRANSPORT_STATE");
+				if(parameterIterator != channelTwoIterator->second.end())
+				{
+					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+					if(!variable || (variable->stringValue != "PLAYING" && variable->stringValue != "TRANSITIONING")) break;
+				}
+				else break;
+				std::this_thread::sleep_for(std::chrono::milliseconds(200));
+			}
+
+			execute("Pause", true);
+			execute("SetMute", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredMute", std::to_string((int32_t)muteState)) }));
+			execute("Seek", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Unit", "TRACK_NR"), SoapValuePair("Target", std::to_string(trackNumberState)) }));
+			execute("Seek", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Unit", "REL_TIME"), SoapValuePair("Target", seekTimeState) }));
+			execute("RemoveTrackFromQueue", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("ObjectID", "Q:0/" + std::to_string(trackNumber)) }));
+
+			if(transportState == "PLAYING")
+			{
+				execute("SetVolume", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredVolume", "0") }));
+				execute("Play");
+				execute("RampToVolume", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("RampType", "AUTOPLAY_RAMP_TYPE"), SoapValuePair("DesiredVolume", std::to_string(volumeState)), SoapValuePair("ResetVolumeAfter", "false"), SoapValuePair("ProgramURI", "") }));
+			}
+			else execute("SetVolume", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredVolume", std::to_string(volumeState)) }));
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 bool SonosPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::Variable> value)
 {
 	try
@@ -1286,42 +1469,40 @@ bool SonosPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::sh
 				return true;
 			}
 
-			execute("GetPositionInfo");
-			execute("GetVolume");
-			execute("GetMute");
-			execute("GetTransportInfo");
-
 			bool unmute = true;
 			int32_t volume = -1;
 			std::string language;
 
 			std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::iterator channelOneIterator = valuesCentral.find(1);
-			if(channelOneIterator != valuesCentral.end())
+			if(channelOneIterator == valuesCentral.end())
 			{
-				std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelOneIterator->second.find("PLAY_TTS_UNMUTE");
-				if(parameterIterator != channelOneIterator->second.end())
-				{
-					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-					if(variable) unmute = variable->booleanValue;
-				}
+				GD::out.printError("Error: Channel 1 not found.");
+				return true;
+			}
 
-				parameterIterator = channelOneIterator->second.find("PLAY_TTS_VOLUME");
-				if(parameterIterator != channelOneIterator->second.end())
-				{
-					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-					if(variable) volume = variable->integerValue;
-				}
+			std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelOneIterator->second.find("PLAY_TTS_UNMUTE");
+			if(parameterIterator != channelOneIterator->second.end())
+			{
+				std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+				if(variable) unmute = variable->booleanValue;
+			}
 
-				parameterIterator = channelOneIterator->second.find("PLAY_TTS_LANGUAGE");
-				if(parameterIterator != channelOneIterator->second.end())
+			parameterIterator = channelOneIterator->second.find("PLAY_TTS_VOLUME");
+			if(parameterIterator != channelOneIterator->second.end())
+			{
+				std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+				if(variable) volume = variable->integerValue;
+			}
+
+			parameterIterator = channelOneIterator->second.find("PLAY_TTS_LANGUAGE");
+			if(parameterIterator != channelOneIterator->second.end())
+			{
+				std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+				if(variable) language = variable->stringValue;
+				if(!BaseLib::HelperFunctions::isAlphaNumeric(language))
 				{
-					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-					if(variable) language = variable->stringValue;
-					if(!BaseLib::HelperFunctions::isAlphaNumeric(language))
-					{
-						GD::out.printError("Error: Language is not alphanumeric.");
-						language = "en";
-					}
+					GD::out.printError("Error: Language is not alphanumeric.");
+					language = "en";
 				}
 			}
 
@@ -1342,137 +1523,61 @@ bool SonosPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::sh
 			}
 			filename = filename.substr(audioPath.size());
 
-			std::string playlistFilename = filename;
-			BaseLib::HelperFunctions::stringReplace(playlistFilename, ".mp3", ".m3u");
-			if(!BaseLib::Io::fileExists(playlistFilename))
+			playLocalFile(filename, true, unmute, volume);
+
+			return true;
+		}
+		else if(valueKey == "PLAY_AUDIO_FILE")
+		{
+			if(value->stringValue.empty()) return true;
+
+			bool unmute = true;
+			int32_t volume = -1;
+
+			std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::iterator channelOneIterator = valuesCentral.find(1);
+			if(channelOneIterator == valuesCentral.end())
 			{
-				std::string playlistContent = "#EXTM3U\n#EXTINF:0,<Homegear><TTS><TTS>\nhttp://" + GD::physicalInterface->listenAddress() + ':' + std::to_string(GD::physicalInterface->listenPort()) + '/' + filename + '\n';
-				std::string playlistFilepath = audioPath + playlistFilename;
-				BaseLib::Io::writeFile(playlistFilepath, playlistContent);
+				GD::out.printError("Error: Channel 1 not found.");
+				return true;
 			}
 
-			std::string currentTrackUri;
-			std::string currentTrackMetadata;
-			std::string currentTransportUri;
-			std::string currentTransportMetadata;
-			std::string transportState;
-			int32_t volumeState = -1;
-			bool muteState = false;
-			int32_t trackNumberState = -1;
-			std::string seekTimeState;
-
-			std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::iterator channelTwoIterator = valuesCentral.find(2);
-			if(channelTwoIterator != valuesCentral.end())
-			{
-				std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelTwoIterator->second.find("CURRENT_TRACK_URI");
-				if(parameterIterator != channelTwoIterator->second.end())
-				{
-					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-					if(variable) currentTrackUri = variable->stringValue;
-				}
-
-				parameterIterator = channelTwoIterator->second.find("CURRENT_TRACK_METADATA");
-				if(parameterIterator != channelTwoIterator->second.end())
-				{
-					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-					if(variable) currentTrackMetadata = variable->stringValue;
-				}
-
-				parameterIterator = channelTwoIterator->second.find("AV_TRANSPORT_URI");
-				if(parameterIterator != channelTwoIterator->second.end())
-				{
-					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-					if(variable) currentTransportUri = variable->stringValue;
-				}
-
-				parameterIterator = channelTwoIterator->second.find("AV_TRANSPORT_METADATA");
-				if(parameterIterator != channelTwoIterator->second.end())
-				{
-					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-					if(variable) currentTransportMetadata = variable->stringValue;
-				}
-
-				parameterIterator = channelTwoIterator->second.find("VOLUME");
-				if(parameterIterator != channelTwoIterator->second.end())
-				{
-					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-					if(variable) volumeState = variable->integerValue;
-				}
-
-				parameterIterator = channelTwoIterator->second.find("MUTE");
-				if(parameterIterator != channelTwoIterator->second.end())
-				{
-					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-					if(variable) muteState = (variable->stringValue == "1");
-				}
-
-				parameterIterator = channelTwoIterator->second.find("CURRENT_TRACK");
-				if(parameterIterator != channelTwoIterator->second.end())
-				{
-					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-					if(variable) trackNumberState = variable->integerValue;
-				}
-
-				parameterIterator = channelTwoIterator->second.find("CURRENT_TRACK_RELATIVE_TIME");
-				if(parameterIterator != channelTwoIterator->second.end())
-				{
-					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-					if(variable) seekTimeState = variable->stringValue;
-				}
-
-				parameterIterator = channelTwoIterator->second.find("TRANSPORT_STATE");
-				if(parameterIterator != channelTwoIterator->second.end())
-				{
-					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-					if(variable) transportState = variable->stringValue;
-				}
-			}
-
-			execute("Pause", true);
-
-			if(unmute) execute("SetMute", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredMute", "0") }));
-			if(volume > 0) execute("SetVolume", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredVolume", std::to_string(volume)) }));
-
-			std::string playlistUri("http://" + GD::physicalInterface->listenAddress() + ':' + std::to_string(GD::physicalInterface->listenPort()) + '/' + playlistFilename);
-			execute("AddURIToQueue", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("EnqueuedURI", playlistUri), SoapValuePair("EnqueuedURIMetaData", ""), SoapValuePair("DesiredFirstTrackNumberEnqueued", "0"), SoapValuePair("EnqueueAsNext", "0") }));
-
-			std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelOneIterator->second.find("FIRST_TRACK_NUMBER_ENQUEUED");
-			int32_t trackNumber = 0;
+			std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelOneIterator->second.find("PLAY_AUDIO_FILE_UNMUTE");
 			if(parameterIterator != channelOneIterator->second.end())
 			{
 				std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-				if(variable) trackNumber = variable->integerValue;
+				if(variable) unmute = variable->booleanValue;
 			}
 
-			execute("Seek", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Unit", "TRACK_NR"), SoapValuePair("Target", std::to_string(trackNumber)) }));
-			execute("Play");
-
-			while(!serviceMessages->getUnreach())
+			parameterIterator = channelOneIterator->second.find("PLAY_AUDIO_FILE_VOLUME");
+			if(parameterIterator != channelOneIterator->second.end())
 			{
-				execute("GetPositionInfo");
-
-				std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelTwoIterator->second.find("CURRENT_TRACK");
-				if(parameterIterator != channelTwoIterator->second.end())
-				{
-					std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
-					if(!variable || trackNumber != variable->integerValue)
-					{
-						break;
-					}
-				}
-				else break;
-				std::this_thread::sleep_for(std::chrono::milliseconds(200));
+				std::shared_ptr<BaseLib::RPC::Variable> variable = _binaryDecoder->decodeResponse(parameterIterator->second.data);
+				if(variable) volume = variable->integerValue;
 			}
 
-			execute("Pause", true);
-			execute("SetVolume", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredVolume", std::to_string(volumeState)) }));
-			execute("SetMute", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Channel", "Master"), SoapValuePair("DesiredMute", std::to_string((int32_t)muteState)) }));
-			execute("Seek", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Unit", "TRACK_NR"), SoapValuePair("Target", std::to_string(trackNumberState)) }));
-			execute("Seek", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("Unit", "REL_TIME"), SoapValuePair("Target", seekTimeState) }));
-			execute("RemoveTrackFromQueue", PSoapValues(new SoapValues{ SoapValuePair("InstanceID", "0"), SoapValuePair("ObjectID", "Q:0/" + std::to_string(trackNumber)) }));
+			std::string audioPath = GD::physicalInterface->dataPath();
+			if(!BaseLib::Io::fileExists(audioPath + value->stringValue))
+			{
+				GD::out.printError("Error: Can't stream audio file \"" + audioPath + value->stringValue + "\". File not found.");
+				return true;
+			}
 
+			playLocalFile(value->stringValue, true, unmute, volume);
 
-			if(transportState == "PLAYING") execute("Play");
+			return true;
+		}
+		else if(valueKey == "ENQUEUE_AUDIO_FILE")
+		{
+			if(value->stringValue.empty()) return true;
+
+			std::string audioPath = GD::physicalInterface->dataPath();
+			if(!BaseLib::Io::fileExists(audioPath + value->stringValue))
+			{
+				GD::out.printError("Error: Can't stream audio file \"" + audioPath + value->stringValue + "\". File not found.");
+				return true;
+			}
+
+			playLocalFile(value->stringValue, false, false, -1);
 
 			return true;
 		}

@@ -39,6 +39,7 @@
 #include <cstring>
 #include <memory>
 #include <vector>
+#include <iomanip>
 
 namespace BaseLib
 {
@@ -118,7 +119,8 @@ public:
 	void process(char* buffer, int32_t bufferLength, bool checkForChunkedXML = false);
 	bool headerProcessingStarted() { return _headerProcessingStarted; }
 	bool dataProcessingStarted() { return _dataProcessingStarted; }
-	std::string decodeURL(const std::string& url);
+	static std::string encodeURL(const std::string& url);
+	static std::string decodeURL(const std::string& url);
 	size_t readStream(char* buffer, size_t requestLength);
 	size_t readContentStream(char* buffer, size_t requestLength);
 	size_t readFirstContentLine(char* buffer, size_t requestLength);
@@ -140,7 +142,7 @@ private:
 	std::string _partialChunkSize;
 	size_t _streamPos = 0;
 	size_t _contentStreamPos = 0;
-	Math _math;
+	static Math _math;
 	std::map <std::string, std::string> _extMimeTypeMap;
 	std::map <int32_t, std::string> _statusCodeMap;
 

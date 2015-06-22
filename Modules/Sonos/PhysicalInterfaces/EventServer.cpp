@@ -51,8 +51,6 @@ EventServer::EventServer(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSett
 
 	std::string httpOkHeader("HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n");
 	_httpOkHeader.insert(_httpOkHeader.end(), httpOkHeader.begin(), httpOkHeader.end());
-
-	_ttsProgram = _settings->ttsProgram;
 }
 
 EventServer::~EventServer()
@@ -303,7 +301,7 @@ void EventServer::readClient(std::shared_ptr<BaseLib::SocketOperations> socket, 
 					}
 					catch(const BaseLib::SocketOperationException& ex)
 					{
-						_out.printError("Error: " + ex.what());
+						_out.printInfo("Info: " + ex.what());
 					}
 					break;
 				}
@@ -610,28 +608,14 @@ void EventServer::httpGet(BaseLib::HTTP& http, std::vector<char>& content)
 		std::vector<std::string> headers;
 
 		if(!path.empty() && path.front() == '/') path = path.substr(1);
-		bool isDirectory = false;
 		std::string contentPath = _bl->settings.tempPath() + "sonos/" + path;
-		BaseLib::Io::isDirectory(contentPath, isDirectory);
-		if(isDirectory)
+		if(!BaseLib::Io::fileExists(contentPath)) contentPath = _settings->dataPath + path;
+		if(!BaseLib::Io::fileExists(contentPath))
 		{
-			if(!path.empty() && path.back() != '/')
-			{
-				path.push_back('/');
-				std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
-				getHttpError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
-				return;
-			}
-			if(GD::bl->io.fileExists(contentPath + "index.php")) path += "index.php";
-			else if(GD::bl->io.fileExists(contentPath+ "index.php5")) path += "index.php5";
-			else if(GD::bl->io.fileExists(contentPath + "index.html")) path += "index.html";
-			else if(GD::bl->io.fileExists(contentPath + "index.htm")) path += "index.htm";
-			else
-			{
-				getHttpError(404, "Not Found", "The requested URL / was not found on this server.", content);
-				return;
-			}
+			getHttpError(404, http.getStatusText(404), "The requested URL was not found on this server.", content);
+			return;
 		}
+
 		try
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader()->path + " (translated to " + contentPath + ", method: GET)");

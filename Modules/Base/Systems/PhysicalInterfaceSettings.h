@@ -86,6 +86,7 @@ public:
 	int32_t listenThreadPriority = -1;
 	int32_t listenThreadPolicy = SCHED_OTHER;
 	std::string ttsProgram;
+	std::string dataPath;
 };
 
 }

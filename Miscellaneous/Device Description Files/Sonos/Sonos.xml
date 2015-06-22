@@ -107,16 +107,16 @@
 					</physical>
 					<conversion type="rpc_binary"/>
 				</parameter>
-				<parameter id="AV_TRANS_PORT_URI" operations="write,event">
+				<parameter id="AV_TRANSPORT_URI" operations="write,event">
 					<logical type="string" />
-					<physical type="string" interface="command" value_id="AV_TRANS_PORT_URI" id="AV_TRANS_PORT_URI">
-						<set request="AV_TRANS_PORT_URI_SET" />
+					<physical type="string" interface="command" value_id="AV_TRANSPORT_URI" id="AV_TRANSPORT_URI">
+						<set request="AV_TRANSPORT_URI_SET" />
 					</physical>
 					<conversion type="rpc_binary"/>
 				</parameter>
-				<parameter id="AV_TRANS_PORT_URI_METADATA" operations="write,event">
+				<parameter id="AV_TRANSPORT_URI_METADATA" operations="write,event">
 					<logical type="string" />
-					<physical type="string" interface="store" value_id="AV_TRANS_PORT_URI_METADATA" id="AV_TRANS_PORT_URI_METADATA" />
+					<physical type="string" interface="store" value_id="AV_TRANSPORT_URI_METADATA" id="AV_TRANSPORT_URI_METADATA" />
 					<conversion type="rpc_binary"/>
 				</parameter>
 				<parameter id="PLAY_TTS" operations="write,event">
@@ -137,6 +137,33 @@
 				<parameter id="PLAY_TTS_LANGUAGE" operations="read,write,event">
 					<logical type="string" default="en" />
 					<physical type="string" interface="store" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="PLAY_AUDIO_FILE" operations="write,event">
+					<logical type="string" />
+					<physical type="string" interface="command" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="PLAY_AUDIO_FILE_UNMUTE" operations="read,write,event">
+					<logical type="boolean" default="true" />
+					<physical type="boolean" interface="store" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="PLAY_AUDIO_FILE_VOLUME" operations="read,write,event">
+					<logical type="integer" min="-1" max="100" />
+					<physical type="integer" interface="store" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="ENQUEUE_AUDIO_FILE" operations="write,event">
+					<logical type="string" />
+					<physical type="string" interface="command" />
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="REMOVE_ALL_TRACKS_FROM_QUEUE" operations="write,event">
+					<logical type="action" />
+					<physical type="integer" interface="command" value_id="REMOVE_ALL_TRACKS_FROM_QUEUE" id="REMOVE_ALL_TRACKS_FROM_QUEUE">
+						<set request="REMOVE_ALL_TRACKS_FROM_QUEUE" />
+					</physical>
 					<conversion type="rpc_binary"/>
 				</parameter>
 			</parameters>
@@ -299,10 +326,11 @@
 					<conversion type="rpc_binary"/>
 				</parameter>
 				<parameter id="CURRENT_CROSSFADE_MODE" operations="read,event">
-					<logical type="string" default="" />
+					<logical type="boolean" />
 					<physical type="string" interface="command" value_id="CURRENT_CROSSFADE_MODE" id="CURRENT_CROSSFADE_MODE">
 						<event packet="INFO" />
 					</physical>
+					<conversion type="boolean_string" string_true="1" string_false="0" />
 					<conversion type="rpc_binary"/>
 				</parameter>
 				<parameter id="NUMBER_OF_TRACKS" operations="read,event">
@@ -330,6 +358,14 @@
 				<parameter id="CURRENT_TRACK_URI" operations="read,event">
 					<logical type="string" default="" />
 					<physical type="string" interface="command" value_id="CURRENT_TRACK_URI" id="CURRENT_TRACK_URI">
+						<event packet="INFO" />
+						<event packet="GET_POSITION_INFO_RESPONSE" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="CURRENT_TRACK_METADATA" operations="read,event">
+					<logical type="string" default="" />
+					<physical type="string" interface="command" value_id="CURRENT_TRACK_METADATA" id="CURRENT_TRACK_METADATA">
 						<event packet="INFO" />
 						<event packet="GET_POSITION_INFO_RESPONSE" />
 					</physical>
@@ -378,9 +414,23 @@
 					</physical>
 					<conversion type="rpc_binary"/>
 				</parameter>
+				<parameter id="NEXT_TRACK_METADATA" operations="read,event">
+					<logical type="string" default="" />
+					<physical type="string" interface="command" value_id="NEXT_TRACK_METADATA" id="NEXT_TRACK_METADATA">
+						<event packet="INFO" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
 				<parameter id="ENQUEUED_TRANSPORT_URI" operations="read,event">
 					<logical type="string" default="" />
 					<physical type="string" interface="command" value_id="ENQUEUED_TRANSPORT_URI" id="ENQUEUED_TRANSPORT_URI">
+						<event packet="INFO" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="ENQUEUED_TRANSPORT_METADATA" operations="read,event">
+					<logical type="string" default="" />
+					<physical type="string" interface="command" value_id="ENQUEUED_TRANSPORT_METADATA" id="ENQUEUED_TRANSPORT_METADATA">
 						<event packet="INFO" />
 					</physical>
 					<conversion type="rpc_binary"/>
@@ -399,9 +449,23 @@
 					</physical>
 					<conversion type="rpc_binary"/>
 				</parameter>
+				<parameter id="AV_TRANSPORT_METADATA" operations="read,event">
+					<logical type="string" default="" />
+					<physical type="string" interface="command" value_id="AV_TRANSPORT_METADATA" id="AV_TRANSPORT_METADATA">
+						<event packet="INFO" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
 				<parameter id="NEXT_AV_TRANSPORT_URI" operations="read,event">
 					<logical type="string" default="" />
 					<physical type="string" interface="command" value_id="ENQUEUED_TRANSPORT_URI" id="ENQUEUED_TRANSPORT_URI">
+						<event packet="INFO" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
+				<parameter id="NEXT_AV_TRANSPORT_METADATA" operations="read,event">
+					<logical type="string" default="" />
+					<physical type="string" interface="command" value_id="NEXT_AV_TRANSPORT_METADATA" id="NEXT_AV_TRANSPORT_METADATA">
 						<event packet="INFO" />
 					</physical>
 					<conversion type="rpc_binary"/>
@@ -429,10 +493,21 @@
 					</physical>
 					<conversion type="rpc_binary"/>
 				</parameter>
+				<parameter id="REMAINING_SLEEP_TIMER_DURATION" operations="read,event">
+					<logical type="string" default="" />
+					<physical type="string" interface="command" value_id="REMAINING_SLEEP_TIMER_DURATION" id="REMAINING_SLEEP_TIMER_DURATION">
+						<get request="SLEEP_TIMER_GET" />
+						<event packet="INFO" />
+						<event packet="SLEEP_TIMER_GET_RESPONSE" />
+					</physical>
+					<conversion type="rpc_binary"/>
+				</parameter>
 				<parameter id="SLEEP_TIMER_GENERATION" operations="read,event">
 					<logical type="string" default="" />
 					<physical type="string" interface="command" value_id="SLEEP_TIMER_GENERATION" id="SLEEP_TIMER_GENERATION">
+						<get request="SLEEP_TIMER_GET" />
 						<event packet="INFO" />
+						<event packet="SLEEP_TIMER_GET_RESPONSE" />
 					</physical>
 					<conversion type="rpc_binary"/>
 				</parameter>
@@ -966,10 +1041,10 @@
 		<packet id="ADD_URI_TO_QUEUE_RESPONSE" direction="from_device" function2="AddURIToQueueResponse" fixed_channel="1">
 			<parameter field="FirstTrackNumberEnqueued" param="FIRST_TRACK_NUMBER_ENQUEUED"/>
 		</packet>
-		<packet id="AV_TRANS_PORT_URI_SET" direction="to_device" function1="urn:schemas-upnp-org:service:AVTransport:1#SetAVTransportURI" function2="SetAVTransportURI" metastring1="/MediaRenderer/AVTransport/Control" metastring2="urn:schemas-upnp-org:service:AVTransport:1">
+		<packet id="AV_TRANSPORT_URI_SET" direction="to_device" function1="urn:schemas-upnp-org:service:AVTransport:1#SetAVTransportURI" function2="SetAVTransportURI" metastring1="/MediaRenderer/AVTransport/Control" metastring2="urn:schemas-upnp-org:service:AVTransport:1">
 			<parameter field="InstanceID" const_value="0"/>			
-			<parameter field="CurrentURI" param="AV_TRANS_PORT_URI"/>
-			<parameter field="CurrentURIMetaData" param="AV_TRANS_PORT_URI_METADATA"/>
+			<parameter field="CurrentURI" param="AV_TRANSPORT_URI"/>
+			<parameter field="CurrentURIMetaData" param="AV_TRANSPORT_URI_METADATA"/>
 		</packet>
 		<packet id="INFO" direction="from_device" function2="InfoBroadcast" fixed_channel="2">
 			<parameter field="VolumeMaster" param="VOLUME"/>
@@ -1018,6 +1093,11 @@
 			<parameter field="RecordMediumWriteStatus" param="RECORD_MEDIUM_WRITE_STATUS"/>
 			<parameter field="CurrentRecordQualityMode" param="CURRENT_RECORD_QUALITY_MODE"/>
 			<parameter field="PossibleRecordQualityModes" param="POSSIBLE_RECORD_QUALITY_MODES"/>
+			<parameter field="CurrentTrackMetaData" param="CURRENT_TRACK_METADATA"/>
+			<parameter field="r:NextTrackMetaData" param="NEXT_TRACK_METADATA"/>
+			<parameter field="AVTransportURIMetaData" param="AV_TRANSPORT_METADATA"/>
+			<parameter field="NextAVTransportURIMetaData" param="NEXT_AV_TRANSPORT_METADATA"/>
+			<parameter field="r:EnqueuedTransportURIMetaData" param="ENQUEUED_TRANSPORT_METADATA"/>
 			<!-- {{{ CurrentTrackMetaData -->
 				<parameter field="CurrentTrackMetaData" subfield="id" param="CURRENT_TRACK_ID"/>
 				<parameter field="CurrentTrackMetaData" subfield="parentID" param="CURRENT_TRACK_PARENT_ID"/>
@@ -1091,6 +1171,7 @@
 			<parameter field="Track" param="CURRENT_TRACK"/>
 			<parameter field="TrackDuration" param="CURRENT_TRACK_DURATION"/>
 			<parameter field="TrackURI" param="CURRENT_TRACK_URI"/>
+			<parameter field="TrackMetaData" param="CURRENT_TRACK_METADATA"/>
 			<parameter field="RelTime" param="CURRENT_TRACK_RELATIVE_TIME"/>
 			<parameter field="AbsTime" param="CURRENT_TRACK_ABSOLUTE_TIME"/>
 			<parameter field="RelCount" param="CURRENT_TRACK_RELATIVE_COUNT"/>
@@ -1143,6 +1224,13 @@
 		<packet id="PREVIOUS" direction="to_device" function1="urn:schemas-upnp-org:service:AVTransport:1#Previous" function2="Previous" metastring1="/MediaRenderer/AVTransport/Control" metastring2="urn:schemas-upnp-org:service:AVTransport:1">
 			<parameter field="InstanceID" const_value="0"/>
 		</packet>
+		<packet id="SLEEP_TIMER_GET" direction="to_device" function1="urn:schemas-upnp-org:service:AVTransport:1#GetRemainingSleepTimerDuration" function2="GetRemainingSleepTimerDuration" metastring1="/MediaRenderer/AVTransport/Control" metastring2="urn:schemas-upnp-org:service:AVTransport:1">
+			<parameter field="InstanceID" const_value="0"/>
+		</packet>
+		<packet id="SLEEP_TIMER_GET_RESPONSE" direction="from_device" function2="GetRemainingSleepTimerDurationResponse" fixed_channel="2">
+			<parameter field="RemainingSleepTimerDuration" param="SLEEP_TIMER_GENERATION"/>
+			<parameter field="CurrentSleepTimerGeneration" param="REMAINING_SLEEP_TIMER_DURATION"/>
+		</packet>
 		<packet id="VOLUME_GET" direction="to_device" function1="urn:schemas-upnp-org:service:RenderingControl:1#GetVolume" function2="GetVolume" metastring1="/MediaRenderer/RenderingControl/Control" metastring2="urn:schemas-upnp-org:service:RenderingControl:1">
 			<parameter field="InstanceID" const_value="0"/>
 			<parameter field="Channel" const_value_string="Master"/>
@@ -1166,6 +1254,9 @@
 			<parameter field="InstanceID" const_value="0"/>
 			<parameter field="Channel" const_value_string="Master"/>
 			<parameter field="DesiredMute" param="MUTE"/>
+		</packet>
+		<packet id="REMOVE_ALL_TRACKS_FROM_QUEUE" direction="to_device" function1="urn:schemas-upnp-org:service:AVTransport:1#RemoveAllTracksFromQueue" function2="RemoveAllTracksFromQueue" metastring1="/MediaRenderer/AVTransport/Control" metastring2="urn:schemas-upnp-org:service:AVTransport:1">
+			<parameter field="InstanceID" const_value="0"/>
 		</packet>
 		<packet id="TRANSPORT_STATE_GET" direction="to_device" function1="urn:schemas-upnp-org:service:AVTransport:1#GetTransportInfo" function2="GetTransportInfo" metastring1="/MediaRenderer/AVTransport/Control" metastring2="urn:schemas-upnp-org:service:AVTransport:1">
 			<parameter field="InstanceID" const_value="0"/>

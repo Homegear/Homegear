@@ -34,6 +34,8 @@
 namespace BaseLib
 {
 
+Math HTTP::_math;
+
 std::string HTTP::getMimeType(std::string extension)
 {
 	if(_extMimeTypeMap.find(extension) != _extMimeTypeMap.end()) return _extMimeTypeMap[extension];
@@ -284,11 +286,17 @@ void HTTP::processHeader(char** buffer, int32_t& bufferLength)
 		_header.method = std::string(headerBuffer, endPos);
 	}
 
+	char* newlinePos = nullptr;
+
 	if(!_header.method.empty())
 	{
 		int32_t startPos = _header.method.size() + 1;
-		char* endPos = (char*)memchr(headerBuffer + startPos, ' ', _rawHeader->size());
+		newlinePos = (crlfOffset == 2) ? (char*)memchr(headerBuffer, '\r', end - headerBuffer) : (char*)memchr(headerBuffer, '\n', end - headerBuffer);
+		if(!newlinePos || newlinePos > end) throw HTTPException("Could not parse HTTP header.");
+
+		char* endPos = (char*)HelperFunctions::memrchr(headerBuffer + startPos, ' ', newlinePos - (headerBuffer + startPos));
 		if(!endPos) throw HTTPException("Your client sent a request that this server could not understand.");
+
 		_header.path = std::string(headerBuffer + startPos, (int32_t)(endPos - headerBuffer - startPos));
 		int32_t pos = _header.path.find('?');
 		if(pos != (signed)std::string::npos)
@@ -314,7 +322,6 @@ void HTTP::processHeader(char** buffer, int32_t& bufferLength)
 		else throw HTTPException("Your client is using a HTTP protocol version that this server cannot understand.");
 	}
 
-	char* newlinePos = nullptr;
 	char* colonPos = nullptr;
 	newlinePos = (char*)memchr(headerBuffer, '\n', _rawHeader->size());
 	if(!newlinePos || newlinePos > end) throw HTTPException("Could not parse HTTP header.");
@@ -541,6 +548,24 @@ void HTTP::readChunkSize(char** buffer, int32_t& bufferLength)
 		}
 		*buffer = newlinePos + 1;
 	}
+}
+
+std::string HTTP::encodeURL(const std::string& url)
+{
+	std::ostringstream encoded;
+	encoded.fill('0');
+	encoded << std::hex;
+
+	for (std::string::const_iterator i = url.begin(); i != url.end(); ++i) {
+		if (isalnum(*i) || *i == '-' || *i == '_' || *i == '.' || *i == '~') {
+			encoded << *i;
+			continue;
+		}
+
+		encoded << '%' << std::setw(2) << int((unsigned char)(*i));
+	}
+
+	return encoded.str();
 }
 
 std::string HTTP::decodeURL(const std::string& url)

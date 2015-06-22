@@ -156,6 +156,8 @@ protected:
 	void execute(std::string functionName, PSoapValues soapValues, bool ignoreErrors = false);
 
 	void sendSoapRequest(std::string& request, bool ignoreErrors = false);
+
+	void playLocalFile(std::string filename, bool now, bool unmute, int32_t volume);
 };
 
 }

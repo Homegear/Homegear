@@ -501,6 +501,11 @@ public:
 	 * @return Returns "true" when the command is a short command, otherwise "false"
 	 */
 	static bool isShortCLICommand(const std::string& command);
+
+	/**
+	 * Reverse memchr(). Searches the initial n bytes of buffer s for the last occurrence of 'c'.
+	 */
+	static void* memrchr(const void* s, int c, size_t n);
 private:
 	/**
 	 * Pointer to the common base library object.

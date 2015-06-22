@@ -48,12 +48,12 @@ class EventServer  : public ISonosInterface
         virtual bool isOpen() { return true; /* Always return true, because there is no continuous connection. */ }
         std::string listenAddress() { return _listenAddress; }
         int32_t listenPort() { return _listenPort; }
-        std::string ttsProgram() { return _ttsProgram; }
+        std::string ttsProgram() { return _settings->ttsProgram; }
+        std::string dataPath() { return _settings->dataPath; }
     protected:
         bool _stopServer = true;
         int64_t _lastAction = 0;
         std::string _listenAddress;
-        std::string _ttsProgram;
         int32_t _listenPort = 7373;
         int32_t _backLog = 10;
         std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;

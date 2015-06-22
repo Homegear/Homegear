@@ -44,6 +44,7 @@ public:
 	virtual std::string listenAddress() = 0;
 	virtual int32_t listenPort() = 0;
 	virtual std::string ttsProgram() = 0;
+	virtual std::string dataPath() = 0;
 protected:
 	BaseLib::Output _out;
 };

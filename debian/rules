@@ -87,6 +87,10 @@ override_dh_auto_install:
 	cp -R $(CURDIR)/Miscellaneous/www/* $(CURDIR)/debian/homegear/var/lib/homegear/www
 	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear/www
 	chmod -R 550 $(CURDIR)/debian/homegear/var/lib/homegear/www
+	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear/audio
+	cp -R $(CURDIR)/Miscellaneous/audio/* $(CURDIR)/debian/homegear/var/lib/homegear/audio
+	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear/audio
+	chmod -R 550 $(CURDIR)/debian/homegear/var/lib/homegear/audio
 	cp $(CURDIR)/Miscellaneous/GetDeviceFiles.sh $(CURDIR)/debian/homegear/var/lib/homegear
 	chown root:root $(CURDIR)/debian/homegear/var/lib/homegear/GetDeviceFiles.sh
 	chmod 755 $(CURDIR)/debian/homegear/var/lib/homegear/GetDeviceFiles.sh

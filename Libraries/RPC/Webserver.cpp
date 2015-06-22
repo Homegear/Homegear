@@ -77,6 +77,7 @@ void WebServer::get(BaseLib::HTTP& http, std::vector<char>& content)
 		}
 
 		if(!path.empty() && path.front() == '/') path = path.substr(1);
+
 		bool isDirectory = false;
 		BaseLib::Io::isDirectory(_serverInfo->contentPath + path, isDirectory);
 		if(isDirectory)
@@ -98,6 +99,13 @@ void WebServer::get(BaseLib::HTTP& http, std::vector<char>& content)
 				return;
 			}
 		}
+
+		if(!BaseLib::Io::fileExists(_serverInfo->contentPath + path))
+		{
+			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
+			return;
+		}
+
 		try
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader()->path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
@@ -173,6 +181,13 @@ void WebServer::post(BaseLib::HTTP& http, std::vector<char>& content)
 				return;
 			}
 		}
+
+		if(!BaseLib::Io::fileExists(_serverInfo->contentPath + path))
+		{
+			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
+			return;
+		}
+
 		try
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader()->path + " (translated to: \"" + _serverInfo->contentPath + path + "\", method: POST)");

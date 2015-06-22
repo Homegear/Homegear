@@ -33,7 +33,7 @@ if(!file_exists($filename))
 	$data = array();
 	for ($i = 0; $i < count($words); $i++)
 	{
-		$data[$i] = file_get_contents('http://translate.google.com/translate_tts?q='.$words[$i].'&tl='.$language);
+		$data[$i] = file_get_contents('http://translate.google.com/translate_tts?q='.$words[$i].'&tl='.$language.'&ie=UTF-8');
 	}
 	file_put_contents($filename, $data);
 }
