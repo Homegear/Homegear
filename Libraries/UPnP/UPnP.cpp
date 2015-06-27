@@ -161,7 +161,7 @@ void UPnP::getAddress()
 {
 	try
 	{
-		if(GD::bl->settings.uPnPIpAddress().empty())
+		if(GD::bl->settings.uPnPIpAddress().empty() || GD::bl->settings.uPnPIpAddress() == "0.0.0.0" || GD::bl->settings.uPnPIpAddress() == "::")
 		{
 			_address = BaseLib::Net::getMyIpAddress();
 			if(_address.empty()) GD::out.printError("Error: No IP address could be found to bind the server to. Please specify the IP address manually in main.conf.");

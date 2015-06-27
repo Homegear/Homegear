@@ -160,6 +160,11 @@ void SonosPeer::worker()
 	try
 	{
 		if(_shuttingDown) return;
+		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
+		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::Variable>>> rpcValues(new std::vector<std::shared_ptr<BaseLib::RPC::Variable>>());
+		valueKeys->push_back("BLA");
+		rpcValues->push_back(BaseLib::RPC::PVariable(new BaseLib::RPC::Variable(BaseLib::HelperFunctions::getRandomNumber(0, 300000))));
+		raiseRPCEvent(_peerID, 1, "TESTADDR", valueKeys, rpcValues);
 		if( BaseLib::HelperFunctions::getTimeSeconds() - _lastPositionInfo > 5)
 		{
 			_lastPositionInfo = BaseLib::HelperFunctions::getTimeSeconds();

@@ -380,6 +380,7 @@ void CUNO::processData(std::vector<uint8_t>& data)
         	else if(!packetHex.empty())
         	{
         		if(packetHex == "LOVF") _out.printWarning("Warning: CUNO with id " + _settings->id + " reached 1% limit. You need to wait, before sending is allowed again.");
+        		else if(packetHex == "A") continue;
         		else _out.printWarning("Warning: Too short packet received: " + packetHex);
         	}
 		}

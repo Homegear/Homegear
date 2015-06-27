@@ -542,7 +542,7 @@ void HomeMaticDevice::loadPeers()
 			std::shared_ptr<BidCoSPeer> peer(new BidCoSPeer(peerID, address, row->second.at(3)->textValue, _deviceID, isCentral(), this));
 			if(!peer->load(this)) continue;
 			std::shared_ptr<BaseLib::RPC::Device> rpcDevice = peer->getRpcDevice();
-			if(rpcDevice) continue;
+			if(!rpcDevice) continue;
 			_peersMutex.lock();
 			_peers[peer->getAddress()] = peer;
 			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;

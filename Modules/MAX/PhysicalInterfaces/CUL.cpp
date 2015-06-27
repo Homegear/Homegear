@@ -421,6 +421,7 @@ void CUL::listen()
         	else if(!packetHex.empty())
         	{
         		if(packetHex == "LOVF") _out.printWarning("Warning: CUL with id " + _settings->id + " reached 1% limit. You need to wait, before sending is allowed again.");
+        		else if(packetHex == "Z") continue;
         		else _out.printWarning("Warning: Too short packet received: " + packetHex);
         	}
         }

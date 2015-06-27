@@ -71,7 +71,7 @@ void SSDP::getAddress()
 	try
 	{
 		std::string address;
-		if(_bl->settings.ssdpIpAddress().empty())
+		if(_bl->settings.ssdpIpAddress().empty() || _bl->settings.ssdpIpAddress() == "0.0.0.0" || _bl->settings.ssdpIpAddress() == "::")
 		{
 			_address = BaseLib::Net::getMyIpAddress();
 			if(_address.empty()) _bl->out.printError("Error: No IP address could be found to bind the server to. Please specify the IP address manually in main.conf.");
