@@ -94,18 +94,18 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/GD.o \
-	$(OBJDIR)/PacketQueue.o \
-	$(OBJDIR)/PendingQueues.o \
-	$(OBJDIR)/QueueManager.o \
-	$(OBJDIR)/InsteonPacket.o \
-	$(OBJDIR)/InsteonMessages.o \
-	$(OBJDIR)/InsteonPeer.o \
-	$(OBJDIR)/PacketManager.o \
 	$(OBJDIR)/InsteonDevice.o \
-	$(OBJDIR)/Insteon.o \
+	$(OBJDIR)/PendingQueues.o \
 	$(OBJDIR)/Factory.o \
+	$(OBJDIR)/InsteonPeer.o \
+	$(OBJDIR)/InsteonPacket.o \
+	$(OBJDIR)/PacketQueue.o \
+	$(OBJDIR)/InsteonMessages.o \
 	$(OBJDIR)/InsteonMessage.o \
+	$(OBJDIR)/Insteon.o \
+	$(OBJDIR)/GD.o \
+	$(OBJDIR)/PacketManager.o \
+	$(OBJDIR)/QueueManager.o \
 	$(OBJDIR)/InsteonCentral.o \
 	$(OBJDIR)/Insteon-SD.o \
 	$(OBJDIR)/IInsteonInterface.o \
@@ -174,40 +174,40 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/GD.o: Modules/Insteon/GD.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PacketQueue.o: Modules/Insteon/PacketQueue.cpp
+$(OBJDIR)/InsteonDevice.o: Modules/Insteon/InsteonDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PendingQueues.o: Modules/Insteon/PendingQueues.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/QueueManager.o: Modules/Insteon/QueueManager.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/InsteonPacket.o: Modules/Insteon/InsteonPacket.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/InsteonMessages.o: Modules/Insteon/InsteonMessages.cpp
+$(OBJDIR)/Factory.o: Modules/Insteon/Factory.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/InsteonPeer.o: Modules/Insteon/InsteonPeer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PacketManager.o: Modules/Insteon/PacketManager.cpp
+$(OBJDIR)/InsteonPacket.o: Modules/Insteon/InsteonPacket.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/InsteonDevice.o: Modules/Insteon/InsteonDevice.cpp
+$(OBJDIR)/PacketQueue.o: Modules/Insteon/PacketQueue.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/InsteonMessages.o: Modules/Insteon/InsteonMessages.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/InsteonMessage.o: Modules/Insteon/InsteonMessage.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Insteon.o: Modules/Insteon/Insteon.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Factory.o: Modules/Insteon/Factory.cpp
+$(OBJDIR)/GD.o: Modules/Insteon/GD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/InsteonMessage.o: Modules/Insteon/InsteonMessage.cpp
+$(OBJDIR)/PacketManager.o: Modules/Insteon/PacketManager.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/QueueManager.o: Modules/Insteon/QueueManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/InsteonCentral.o: Modules/Insteon/LogicalDevices/InsteonCentral.cpp

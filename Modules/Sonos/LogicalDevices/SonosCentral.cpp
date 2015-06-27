@@ -199,7 +199,7 @@ void SonosCentral::deletePeer(uint64_t id)
 		peer->deleting = true;
 		std::shared_ptr<BaseLib::RPC::Variable> deviceAddresses(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(peer->getSerialNumber())));
-		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->getRpcDevice()->channels.begin(); i != peer->getRpcDevice()->channels.end(); ++i)
 		{
 			deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(peer->getSerialNumber() + ":" + std::to_string(i->first))));
 		}
@@ -207,7 +207,7 @@ void SonosCentral::deletePeer(uint64_t id)
 		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)peer->getID()))));
 		std::shared_ptr<BaseLib::RPC::Variable> channels(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("CHANNELS", channels));
-		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->getRpcDevice()->channels.begin(); i != peer->getRpcDevice()->channels.end(); ++i)
 		{
 			channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(i->first)));
 		}
@@ -421,7 +421,7 @@ std::string SonosCentral::handleCLICommand(std::string command)
 					stringStream << name << bar
 						<< std::setw(serialWidth) << i->second->getSerialNumber() << bar
 						<< std::setw(typeWidth1) << BaseLib::HelperFunctions::getHexString(i->second->getDeviceType().type(), 4) << bar;
-					if(i->second->rpcDevice)
+					if(i->second->getRpcDevice())
 					{
 						std::string typeString = i->second->getTypeString();
 						if(typeString.size() > (unsigned)typeWidth2)
@@ -604,8 +604,8 @@ std::shared_ptr<SonosPeer> SonosCentral::createPeer(BaseLib::Systems::LogicalDev
 		peer->setIdString(idString);
 		peer->setTypeString(typeString);
 		peer->setFirmwareVersionString(softwareVersion);
-		peer->rpcDevice = GD::rpcDevices.find(deviceType, 0x10, -1);
-		if(!peer->rpcDevice) return std::shared_ptr<SonosPeer>();
+		peer->setRpcDevice(GD::rpcDevices.find(deviceType, 0x10, -1));
+		if(!peer->getRpcDevice()) return std::shared_ptr<SonosPeer>();
 		peer->initializeCentralConfig();
 		if(save) peer->save(true, true, false); //Save and create peerID
 		return peer;

@@ -361,14 +361,16 @@ std::shared_ptr<BidCoSPeer> HomeMaticCentral::createPeer(int32_t address, int32_
 		peer->setSerialNumber(serialNumber);
 		peer->setRemoteChannel(remoteChannel);
 		peer->setMessageCounter(messageCounter);
+		std::shared_ptr<BaseLib::RPC::Device> rpcDevice;
 		if(packet)
 		{
-			peer->rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, packet);
+			rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, packet);
 			//if(!peer->rpcDevice) peer->rpcDevice = GD::rpcDevices.find(deviceType.family(), deviceType.name(), packet);
 		}
-		else peer->rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, -1);
-		if(!peer->rpcDevice) return std::shared_ptr<BidCoSPeer>();
-		if(peer->rpcDevice->countFromSysinfoIndex > -1) peer->setCountFromSysinfo(peer->rpcDevice->getCountFromSysinfo());
+		else rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, -1);
+		if(!rpcDevice) return std::shared_ptr<BidCoSPeer>();
+		peer->setRpcDevice(rpcDevice);
+		if(rpcDevice->countFromSysinfoIndex > -1) peer->setCountFromSysinfo(rpcDevice->getCountFromSysinfo());
 		if(save) peer->save(true, true, false); //Save and create peerID
 		return peer;
 	}
@@ -558,7 +560,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			else
 			{
 				std::shared_ptr<BidCoSPeer> peer = createPeer(peerAddress, firmwareVersion, BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS, deviceType), serialNumber, 0, 0, packet, false);
-				if(!peer || !peer->rpcDevice) return "Device type not supported.\n";
+				if(!peer || !peer->getRpcDevice()) return "Device type not supported.\n";
 				try
 				{
 					_peersMutex.lock();
@@ -1002,9 +1004,9 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 						<< std::setw(addressWidth) << BaseLib::HelperFunctions::getHexString(i->second->getAddress(), 6) << bar
 						<< std::setw(serialWidth) << i->second->getSerialNumber() << bar
 						<< std::setw(typeWidth1) << BaseLib::HelperFunctions::getHexString(i->second->getDeviceType().type(), 4) << bar;
-					if(i->second->rpcDevice)
+					if(i->second->getRpcDevice())
 					{
-						std::shared_ptr<BaseLib::RPC::DeviceType> type = i->second->rpcDevice->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
+						std::shared_ptr<BaseLib::RPC::DeviceType> type = i->second->getRpcDevice()->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
 						std::string typeID;
 						if(type) typeID = type->id;
 						if(typeID.size() > (unsigned)typeWidth2)
@@ -1657,7 +1659,7 @@ void HomeMaticCentral::addHomegearFeaturesRemote(std::shared_ptr<BidCoSPeer> pee
 		std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>> channels;
 		if(channel == -1)
 		{
-			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->getRpcDevice()->channels.begin(); i != peer->getRpcDevice()->channels.end(); ++i)
 			{
 				if(!peer->hasPeers(i->first) || peer->getPeer(i->first, _address))
 				{
@@ -1779,7 +1781,7 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<BidCoSPeer> pee
 		std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>> channels;
 		if(channel == -1)
 		{
-			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->getRpcDevice()->channels.begin(); i != peer->getRpcDevice()->channels.end(); ++i)
 			{
 				//Covers the case, that channel numbering is not continuous. A little overdoing, probably.
 				channels[i->first] = i->second;
@@ -2024,7 +2026,8 @@ void HomeMaticCentral::deletePeer(uint64_t id)
 		peer->deleting = true;
 		std::shared_ptr<BaseLib::RPC::Variable> deviceAddresses(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(peer->getSerialNumber())));
-		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+		std::shared_ptr<BaseLib::RPC::Device> rpcDevice = peer->getRpcDevice();
+		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 		{
 			deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(peer->getSerialNumber() + ":" + std::to_string(i->first))));
 		}
@@ -2032,7 +2035,7 @@ void HomeMaticCentral::deletePeer(uint64_t id)
 		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)peer->getID()))));
 		std::shared_ptr<BaseLib::RPC::Variable> channels(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("CHANNELS", channels));
-		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 		{
 			channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(i->first)));
 		}
@@ -2221,6 +2224,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 		std::vector<uint8_t> payload;
 
 		std::shared_ptr<BidCoSQueue> queue;
+		std::shared_ptr<BaseLib::RPC::Device> rpcDevice;
 		if(_pairing)
 		{
 			queue = _bidCoSQueueManager.createQueue(this, getPhysicalInterface(packet->senderAddress()), BidCoSQueueType::PAIRING, packet->senderAddress());
@@ -2235,7 +2239,8 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 					return;
 				}
 				peer = queue->peer;
-				if(peer->rpcDevice && ((peer->rpcDevice->channels.find(0) != peer->rpcDevice->channels.end() && peer->rpcDevice->channels.at(0)->aesAlways) || (peer->rpcDevice->channels.find(1) != peer->rpcDevice->channels.end() && peer->rpcDevice->channels.at(1)->aesAlways)))
+				rpcDevice = peer->getRpcDevice();
+				if(rpcDevice && ((rpcDevice->channels.find(0) != rpcDevice->channels.end() && rpcDevice->channels.at(0)->aesAlways) || (rpcDevice->channels.find(1) != rpcDevice->channels.end() && rpcDevice->channels.at(1)->aesAlways)))
 				{
 					//AES is mandatory try to find AES capable interface, if the default interface has no AES support.
 					if(!peer->getPhysicalInterface()->aesSupported())
@@ -2255,8 +2260,10 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 				}
 				if(peer->getPhysicalInterface()->needsPeers()) peer->getPhysicalInterface()->addPeer(peer->getPeerInfo());
 			}
+			else if(!peer) return;
+			else rpcDevice = peer->getRpcDevice();
 
-			if(!peer->rpcDevice)
+			if(!rpcDevice)
 			{
 				GD::out.printWarning("Warning: Device type not supported. Sender address 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6) + ".");
 				return;
@@ -2280,7 +2287,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			payload.push_back(0);
 			payload.push_back(0x08);
 			payload.push_back(0x02);
-			std::shared_ptr<BaseLib::RPC::Parameter> internalKeysVisible = peer->rpcDevice->parameterSet->getParameter("INTERNAL_KEYS_VISIBLE");
+			std::shared_ptr<BaseLib::RPC::Parameter> internalKeysVisible = rpcDevice->parameterSet->getParameter("INTERNAL_KEYS_VISIBLE");
 			if(internalKeysVisible)
 			{
 				std::vector<uint8_t> data;
@@ -2313,14 +2320,14 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			//Don't check for rxModes here! All rxModes are allowed.
 			//if(!peerExists(packet->senderAddress())) //Only request config when peer is not already paired to central
 			//{
-				for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+				for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 				{
 					std::shared_ptr<BidCoSQueue> pendingQueue;
 					int32_t channel = i->first;
 					//Walk through all lists to request master config if necessary
-					if(peer->rpcDevice->channels.at(channel)->parameterSets.find(BaseLib::RPC::ParameterSet::Type::Enum::master) != peer->rpcDevice->channels.at(channel)->parameterSets.end())
+					if(rpcDevice->channels.at(channel)->parameterSets.find(BaseLib::RPC::ParameterSet::Type::Enum::master) != rpcDevice->channels.at(channel)->parameterSets.end())
 					{
-						std::shared_ptr<BaseLib::RPC::ParameterSet> masterSet = peer->rpcDevice->channels.at(channel)->parameterSets[BaseLib::RPC::ParameterSet::Type::Enum::master];
+						std::shared_ptr<BaseLib::RPC::ParameterSet> masterSet = rpcDevice->channels.at(channel)->parameterSets[BaseLib::RPC::ParameterSet::Type::Enum::master];
 						for(std::map<uint32_t, uint32_t>::iterator k = masterSet->lists.begin(); k != masterSet->lists.end(); ++k)
 						{
 							pendingQueue.reset(new BidCoSQueue(peer->getPhysicalInterface(), BidCoSQueueType::CONFIG));
@@ -2342,7 +2349,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 						}
 					}
 
-					if(peer->rpcDevice->channels[channel]->linkRoles && (!peer->rpcDevice->channels[channel]->linkRoles->sourceNames.empty() || !peer->rpcDevice->channels[channel]->linkRoles->targetNames.empty()))
+					if(rpcDevice->channels[channel]->linkRoles && (!rpcDevice->channels[channel]->linkRoles->sourceNames.empty() || !rpcDevice->channels[channel]->linkRoles->targetNames.empty()))
 					{
 						pendingQueue.reset(new BidCoSQueue(peer->getPhysicalInterface(), BidCoSQueueType::CONFIG));
 						pendingQueue->noSending = true;
@@ -2442,6 +2449,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 	{
 		std::shared_ptr<BidCoSPeer> peer(getPeer(packet->senderAddress()));
 		if(!peer) return;
+		std::shared_ptr<BaseLib::RPC::Device> rpcDevice = peer->getRpcDevice();
 		//Config changed in device
 		if(packet->payload()->size() > 7 && packet->payload()->at(0) == 0x05)
 		{
@@ -2454,13 +2462,13 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 			BaseLib::RPC::ParameterSet::Type::Enum type = (remoteAddress != 0) ? BaseLib::RPC::ParameterSet::Type::link : BaseLib::RPC::ParameterSet::Type::master;
 			int32_t startIndex = packet->payload()->at(7);
 			int32_t endIndex = startIndex + packet->payload()->size() - 9;
-			if(peer->rpcDevice->channels.find(channel) == peer->rpcDevice->channels.end() || peer->rpcDevice->channels[channel]->parameterSets.find(type) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[type])
+			if(rpcDevice->channels.find(channel) == rpcDevice->channels.end() || rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end() || !rpcDevice->channels[channel]->parameterSets[type])
 			{
 				GD::out.printError("Error: Received config for non existant parameter set.");
 			}
 			else
 			{
-				std::vector<std::shared_ptr<BaseLib::RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->parameterSets[type]->getIndices(startIndex, endIndex, list);
+				std::vector<std::shared_ptr<BaseLib::RPC::Parameter>> packetParameters = rpcDevice->channels[channel]->parameterSets[type]->getIndices(startIndex, endIndex, list);
 				for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator i = packetParameters.begin(); i != packetParameters.end(); ++i)
 				{
 					if(!(*i)->id.empty())
@@ -2525,7 +2533,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		if(sentPacket && sentPacket->payload()->size() >= 2 && sentPacket->payload()->at(1) == 0x03)
 		{
 			int32_t localChannel = sentPacket->payload()->at(0);
-			std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = peer->rpcDevice->channels[localChannel];
+			std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels[localChannel];
 			bool peerFound = false;
 			if(packet->payload()->size() >= 5)
 			{
@@ -2551,7 +2559,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 							newPeer->address = peerAddress;
 							newPeer->channel = remoteChannel;
 							peer->addPeer(localChannel, newPeer);
-							if(peer->rpcDevice->channels.find(localChannel) == peer->rpcDevice->channels.end()) continue;
+							if(rpcDevice->channels.find(localChannel) == rpcDevice->channels.end()) continue;
 
 							if(rpcChannel->parameterSets.find(BaseLib::RPC::ParameterSet::Type::Enum::link) == rpcChannel->parameterSets.end()) continue;
 							std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcChannel->parameterSets[BaseLib::RPC::ParameterSet::Type::Enum::link];
@@ -2606,13 +2614,13 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 			{
 				int32_t startIndex = packet->payload()->at(1);
 				int32_t endIndex = startIndex + packet->payload()->size() - 3;
-				if(peer->rpcDevice->channels.find(channel) == peer->rpcDevice->channels.end() || peer->rpcDevice->channels[channel]->parameterSets.find(type) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[type])
+				if(rpcDevice->channels.find(channel) == rpcDevice->channels.end() || rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end() || !rpcDevice->channels[channel]->parameterSets[type])
 				{
 					GD::out.printError("Error: Received config for non existant parameter set.");
 				}
 				else
 				{
-					std::vector<std::shared_ptr<BaseLib::RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->parameterSets[type]->getIndices(startIndex, endIndex, list);
+					std::vector<std::shared_ptr<BaseLib::RPC::Parameter>> packetParameters = rpcDevice->channels[channel]->parameterSets[type]->getIndices(startIndex, endIndex, list);
 					for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator i = packetParameters.begin(); i != packetParameters.end(); ++i)
 					{
 						if(!(*i)->id.empty())
@@ -2676,7 +2684,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 			}
 			else if(!multiPacketEnd)
 			{
-				if(peer->rpcDevice->channels.find(channel) == peer->rpcDevice->channels.end() || peer->rpcDevice->channels[channel]->parameterSets.find(type) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[type])
+				if(rpcDevice->channels.find(channel) == rpcDevice->channels.end() || rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end() || !rpcDevice->channels[channel]->parameterSets[type])
 				{
 					GD::out.printError("Error: Received config for non existant parameter set.");
 				}
@@ -2686,7 +2694,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 					for(int32_t i = 1; i < length; i += 2)
 					{
 						int32_t index = packet->payload()->at(i);
-						std::vector<std::shared_ptr<BaseLib::RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->parameterSets[type]->getIndices(index, index, list);
+						std::vector<std::shared_ptr<BaseLib::RPC::Parameter>> packetParameters = rpcDevice->channels[channel]->parameterSets[type]->getIndices(index, index, list);
 						for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator j = packetParameters.begin(); j != packetParameters.end(); ++j)
 						{
 							if(!(*j)->id.empty())
@@ -2780,10 +2788,11 @@ void HomeMaticCentral::resetTeam(std::shared_ptr<BidCoSPeer> peer, uint32_t chan
 		std::string teamSerialNumber('*' + peer->getSerialNumber());
 		std::shared_ptr<BidCoSPeer> team = getPeer(teamSerialNumber);
 		bool teamCreated = false;
+		std::shared_ptr<BaseLib::RPC::Device> rpcDevice = peer->getRpcDevice();
 		if(!team)
 		{
 			team = createTeam(peer->getAddress(), peer->getDeviceType(), teamSerialNumber);
-			team->rpcDevice = peer->rpcDevice->team;
+			team->setRpcDevice(rpcDevice->team);
 			team->setID(peer->getID() | (1 << 30));
 			team->initializeCentralConfig();
 			_peersMutex.lock();
@@ -2796,9 +2805,11 @@ void HomeMaticCentral::resetTeam(std::shared_ptr<BidCoSPeer> peer, uint32_t chan
 		peer->setTeamRemoteID(team->getID());
 		peer->setTeamRemoteSerialNumber(team->getSerialNumber());
 		peer->setTeamChannel(channel);
-		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator j = team->rpcDevice->channels.begin(); j != team->rpcDevice->channels.end(); ++j)
+
+		std::shared_ptr<BaseLib::RPC::Device> teamRpcDevice = team->getRpcDevice();
+		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator j = teamRpcDevice->channels.begin(); j != teamRpcDevice->channels.end(); ++j)
 		{
-			if(j->second->teamTag == peer->rpcDevice->channels.at(channel)->teamTag)
+			if(j->second->teamTag == rpcDevice->channels.at(channel)->teamTag)
 			{
 				peer->setTeamRemoteChannel(j->first);
 				break;
@@ -2871,8 +2882,9 @@ void HomeMaticCentral::addPeerToTeam(std::shared_ptr<BidCoSPeer> peer, int32_t c
 	{
 		std::shared_ptr<BidCoSPeer> team = getPeer(teamSerialNumber);
 		if(!team) return;
-		if(team->rpcDevice->channels.find(teamChannel) == team->rpcDevice->channels.end()) return;
-		if(team->rpcDevice->channels[teamChannel]->teamTag != peer->rpcDevice->channels[channel]->teamTag) return;
+		std::shared_ptr<BaseLib::RPC::Device> teamRpcDevice = team->getRpcDevice();
+		if(teamRpcDevice->channels.find(teamChannel) == teamRpcDevice->channels.end()) return;
+		if(teamRpcDevice->channels[teamChannel]->teamTag != teamRpcDevice->channels[channel]->teamTag) return;
 
 		removePeerFromTeam(peer);
 
@@ -2940,7 +2952,8 @@ void HomeMaticCentral::removePeerFromTeam(std::shared_ptr<BidCoSPeer> peer)
 
 			std::shared_ptr<BaseLib::RPC::Variable> deviceAddresses(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 			deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(oldTeam->getSerialNumber())));
-			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = oldTeam->rpcDevice->channels.begin(); i != oldTeam->rpcDevice->channels.end(); ++i)
+			std::shared_ptr<BaseLib::RPC::Device> teamRpcDevice = oldTeam->getRpcDevice();
+			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = teamRpcDevice->channels.begin(); i != teamRpcDevice->channels.end(); ++i)
 			{
 				deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(oldTeam->getSerialNumber() + ":" + std::to_string(i->first))));
 			}
@@ -2948,7 +2961,7 @@ void HomeMaticCentral::removePeerFromTeam(std::shared_ptr<BidCoSPeer> peer)
 			deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)oldTeam->getID()))));
 			std::shared_ptr<BaseLib::RPC::Variable> channels(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 			deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("CHANNELS", channels));
-			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = oldTeam->rpcDevice->channels.begin(); i != oldTeam->rpcDevice->channels.end(); ++i)
+			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = teamRpcDevice->channels.begin(); i != teamRpcDevice->channels.end(); ++i)
 			{
 				channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(i->first)));
 			}
@@ -3034,7 +3047,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 					deviceDescriptions->arrayValue = queue->peer->getDeviceDescriptions(-1, true, std::map<std::string, bool>());
 					raiseRPCNewDevices(deviceDescriptions);
 					GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(queue->peer->getAddress()) + ".");
-					for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = queue->peer->rpcDevice->channels.begin(); i != queue->peer->rpcDevice->channels.end(); ++i)
+					for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = queue->peer->getRpcDevice()->channels.begin(); i != queue->peer->getRpcDevice()->channels.end(); ++i)
 					{
 						if(queue->peer->getPhysicalInterface()->aesSupported() && i->second->aesDefault)
 						{
@@ -3290,10 +3303,10 @@ std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::addLink(int32_t client
 		if(!receiver) return BaseLib::RPC::Variable::createError(-2, "Receiver device not found.");
 		if(senderChannelIndex < 0) senderChannelIndex = 0;
 		if(receiverChannelIndex < 0) receiverChannelIndex = 0;
-		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Sender channel not found.");
-		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Receiver channel not found.");
-		std::shared_ptr<BaseLib::RPC::DeviceChannel> senderChannel = sender->rpcDevice->channels.at(senderChannelIndex);
-		std::shared_ptr<BaseLib::RPC::DeviceChannel> receiverChannel = receiver->rpcDevice->channels.at(receiverChannelIndex);
+		if(sender->getRpcDevice()->channels.find(senderChannelIndex) == sender->getRpcDevice()->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Sender channel not found.");
+		if(receiver->getRpcDevice()->channels.find(receiverChannelIndex) == receiver->getRpcDevice()->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Receiver channel not found.");
+		std::shared_ptr<BaseLib::RPC::DeviceChannel> senderChannel = sender->getRpcDevice()->channels.at(senderChannelIndex);
+		std::shared_ptr<BaseLib::RPC::DeviceChannel> receiverChannel = receiver->getRpcDevice()->channels.at(receiverChannelIndex);
 		if(!senderChannel || !receiverChannel || !senderChannel->linkRoles || !receiverChannel->linkRoles || senderChannel->linkRoles->sourceNames.size() == 0 || receiverChannel->linkRoles->targetNames.size() == 0) return BaseLib::RPC::Variable::createError(-6, "Link not supported.");
 		bool validLink = false;
 		for(std::vector<std::string>::iterator i = senderChannel->linkRoles->sourceNames.begin(); i != senderChannel->linkRoles->sourceNames.end(); ++i)
@@ -3582,8 +3595,8 @@ std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::removeLink(int32_t cli
 		if(receiverChannelIndex < 0) receiverChannelIndex = 0;
 		std::string senderSerialNumber = sender->getSerialNumber();
 		std::string receiverSerialNumber = receiver->getSerialNumber();
-		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Sender channel not found.");
-		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Receiver channel not found.");
+		if(sender->getRpcDevice()->channels.find(senderChannelIndex) == sender->getRpcDevice()->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Sender channel not found.");
+		if(receiver->getRpcDevice()->channels.find(receiverChannelIndex) == receiver->getRpcDevice()->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Receiver channel not found.");
 		if(!sender->getPeer(senderChannelIndex, receiver->getAddress()) && !receiver->getPeer(receiverChannelIndex, sender->getAddress())) return BaseLib::RPC::Variable::createError(-6, "Devices are not paired to each other.");
 
 		sender->removePeer(senderChannelIndex, receiver->getAddress(), receiverChannelIndex);
@@ -3848,8 +3861,8 @@ std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::setTeam(int32_t client
 		if(teamChannel < 0) teamChannel = 0;
 		std::shared_ptr<BidCoSPeer> peer(getPeer(peerID));
 		if(!peer) return BaseLib::RPC::Variable::createError(-2, "Unknown device.");
-		if(peer->rpcDevice->channels.find(channel) == peer->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
-		if(!peer->rpcDevice->channels[channel]->hasTeam) return BaseLib::RPC::Variable::createError(-6, "Channel does not support teams.");
+		if(peer->getRpcDevice()->channels.find(channel) == peer->getRpcDevice()->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
+		if(!peer->getRpcDevice()->channels[channel]->hasTeam) return BaseLib::RPC::Variable::createError(-6, "Channel does not support teams.");
 		int32_t oldTeamAddress = peer->getTeamRemoteAddress();
 		int32_t oldTeamChannel = peer->getTeamRemoteChannel();
 		if(oldTeamChannel < 0) oldTeamChannel = 0;
@@ -3862,7 +3875,7 @@ std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::setTeam(int32_t client
 			}
 			int32_t newChannel = -1;
 			//Get first channel which has a team
-			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->getRpcDevice()->channels.begin(); i != peer->getRpcDevice()->channels.end(); ++i)
 			{
 				if(i->second->hasTeam)
 				{
@@ -3883,8 +3896,8 @@ std::shared_ptr<BaseLib::RPC::Variable> HomeMaticCentral::setTeam(int32_t client
 				//Peer already is member of this team
 				return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 			}
-			if(team->rpcDevice->channels.find(teamChannel) == team->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown team channel.");
-			if(team->rpcDevice->channels[teamChannel]->teamTag != peer->rpcDevice->channels[channel]->teamTag) return BaseLib::RPC::Variable::createError(-6, "Peer channel is not compatible to team channel.");
+			if(team->getRpcDevice()->channels.find(teamChannel) == team->getRpcDevice()->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown team channel.");
+			if(team->getRpcDevice()->channels[teamChannel]->teamTag != peer->getRpcDevice()->channels[channel]->teamTag) return BaseLib::RPC::Variable::createError(-6, "Peer channel is not compatible to team channel.");
 
 			addPeerToTeam(peer, channel, teamChannel, team->getSerialNumber());
 		}

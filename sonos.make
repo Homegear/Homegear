@@ -94,12 +94,12 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/GD.o \
 	$(OBJDIR)/SonosPacket.o \
-	$(OBJDIR)/SonosPeer.o \
-	$(OBJDIR)/SonosDevice.o \
 	$(OBJDIR)/Sonos.o \
 	$(OBJDIR)/Factory.o \
+	$(OBJDIR)/SonosPeer.o \
+	$(OBJDIR)/SonosDevice.o \
+	$(OBJDIR)/GD.o \
 	$(OBJDIR)/SonosCentral.o \
 	$(OBJDIR)/ISonosInterface.o \
 	$(OBJDIR)/EventServer.o \
@@ -167,10 +167,13 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/GD.o: Modules/Sonos/GD.cpp
+$(OBJDIR)/SonosPacket.o: Modules/Sonos/SonosPacket.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/SonosPacket.o: Modules/Sonos/SonosPacket.cpp
+$(OBJDIR)/Sonos.o: Modules/Sonos/Sonos.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Factory.o: Modules/Sonos/Factory.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/SonosPeer.o: Modules/Sonos/SonosPeer.cpp
@@ -179,10 +182,7 @@ $(OBJDIR)/SonosPeer.o: Modules/Sonos/SonosPeer.cpp
 $(OBJDIR)/SonosDevice.o: Modules/Sonos/SonosDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Sonos.o: Modules/Sonos/Sonos.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Factory.o: Modules/Sonos/Factory.cpp
+$(OBJDIR)/GD.o: Modules/Sonos/GD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/SonosCentral.o: Modules/Sonos/LogicalDevices/SonosCentral.cpp

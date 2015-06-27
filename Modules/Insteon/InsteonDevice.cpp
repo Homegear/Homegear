@@ -235,7 +235,7 @@ void InsteonDevice::loadPeers()
 			int32_t address = row->second.at(2)->intValue;
 			std::shared_ptr<InsteonPeer> peer(new InsteonPeer(peerID, address, row->second.at(3)->textValue, _deviceID, isCentral(), this));
 			if(!peer->load(this)) continue;
-			if(!peer->rpcDevice) continue;
+			if(!peer->getRpcDevice()) continue;
 			_peersMutex.lock();
 			_peers[peer->getAddress()] = peer;
 			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;

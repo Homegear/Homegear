@@ -94,18 +94,18 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/GD.o \
-	$(OBJDIR)/HMWired.o \
-	$(OBJDIR)/HMWiredDevice.o \
-	$(OBJDIR)/HMWiredPacketManager.o \
-	$(OBJDIR)/HMWiredPeer.o \
-	$(OBJDIR)/HMWiredPacket.o \
 	$(OBJDIR)/Factory.o \
+	$(OBJDIR)/HMWiredPacketManager.o \
+	$(OBJDIR)/HMWiredDevice.o \
+	$(OBJDIR)/GD.o \
+	$(OBJDIR)/HMWiredPacket.o \
+	$(OBJDIR)/HMWired.o \
+	$(OBJDIR)/HMWiredPeer.o \
 	$(OBJDIR)/HMWiredCentral.o \
 	$(OBJDIR)/HMWired-SD.o \
+	$(OBJDIR)/IHMWiredInterface.o \
 	$(OBJDIR)/HMW-LGW.o \
 	$(OBJDIR)/RS485.o \
-	$(OBJDIR)/IHMWiredInterface.o \
 
 RESOURCES := \
 
@@ -170,25 +170,25 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/GD.o: Modules/HomeMaticWired/GD.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HMWired.o: Modules/HomeMaticWired/HMWired.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HMWiredDevice.o: Modules/HomeMaticWired/HMWiredDevice.cpp
+$(OBJDIR)/Factory.o: Modules/HomeMaticWired/Factory.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HMWiredPacketManager.o: Modules/HomeMaticWired/HMWiredPacketManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HMWiredPeer.o: Modules/HomeMaticWired/HMWiredPeer.cpp
+$(OBJDIR)/HMWiredDevice.o: Modules/HomeMaticWired/HMWiredDevice.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/GD.o: Modules/HomeMaticWired/GD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HMWiredPacket.o: Modules/HomeMaticWired/HMWiredPacket.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Factory.o: Modules/HomeMaticWired/Factory.cpp
+$(OBJDIR)/HMWired.o: Modules/HomeMaticWired/HMWired.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HMWiredPeer.o: Modules/HomeMaticWired/HMWiredPeer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HMWiredCentral.o: Modules/HomeMaticWired/Devices/HMWiredCentral.cpp
@@ -197,13 +197,13 @@ $(OBJDIR)/HMWiredCentral.o: Modules/HomeMaticWired/Devices/HMWiredCentral.cpp
 $(OBJDIR)/HMWired-SD.o: Modules/HomeMaticWired/Devices/HMWired-SD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/IHMWiredInterface.o: Modules/HomeMaticWired/PhysicalInterfaces/IHMWiredInterface.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HMW-LGW.o: Modules/HomeMaticWired/PhysicalInterfaces/HMW-LGW.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RS485.o: Modules/HomeMaticWired/PhysicalInterfaces/RS485.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/IHMWiredInterface.o: Modules/HomeMaticWired/PhysicalInterfaces/IHMWiredInterface.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

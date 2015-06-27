@@ -94,27 +94,27 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/MQTTClient.o \
-	$(OBJDIR)/utf-8.o \
-	$(OBJDIR)/MQTTProtocolClient.o \
-	$(OBJDIR)/Tree.o \
-	$(OBJDIR)/Clients.o \
-	$(OBJDIR)/Thread.o \
-	$(OBJDIR)/MQTTPacket.o \
-	$(OBJDIR)/MQTTProtocolOut.o \
-	$(OBJDIR)/MQTTPersistenceDefault.o \
-	$(OBJDIR)/Messages.o \
-	$(OBJDIR)/SSLSocket.o \
-	$(OBJDIR)/MQTTPacketOut.o \
-	$(OBJDIR)/Log.o \
-	$(OBJDIR)/MQTTPersistence.o \
-	$(OBJDIR)/Socket.o \
-	$(OBJDIR)/SocketBuffer.o \
-	$(OBJDIR)/MQTTAsync.o \
-	$(OBJDIR)/MQTTVersion.o \
 	$(OBJDIR)/LinkedList.o \
+	$(OBJDIR)/SSLSocket.o \
+	$(OBJDIR)/MQTTPersistenceDefault.o \
+	$(OBJDIR)/MQTTAsync.o \
+	$(OBJDIR)/Log.o \
+	$(OBJDIR)/Tree.o \
+	$(OBJDIR)/MQTTProtocolClient.o \
+	$(OBJDIR)/MQTTVersion.o \
+	$(OBJDIR)/MQTTPacket.o \
+	$(OBJDIR)/SocketBuffer.o \
+	$(OBJDIR)/MQTTPersistence.o \
+	$(OBJDIR)/Thread.o \
+	$(OBJDIR)/MQTTProtocolOut.o \
+	$(OBJDIR)/utf-8.o \
+	$(OBJDIR)/Socket.o \
 	$(OBJDIR)/StackTrace.o \
+	$(OBJDIR)/Clients.o \
+	$(OBJDIR)/MQTTPacketOut.o \
+	$(OBJDIR)/Messages.o \
 	$(OBJDIR)/Heap.o \
+	$(OBJDIR)/MQTTClient.o \
 
 RESOURCES := \
 
@@ -179,67 +179,67 @@ endif
 	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/MQTTClient.o: Libraries/MQTT/paho.mqtt.c/src/MQTTClient.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/utf-8.o: Libraries/MQTT/paho.mqtt.c/src/utf-8.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/MQTTProtocolClient.o: Libraries/MQTT/paho.mqtt.c/src/MQTTProtocolClient.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Tree.o: Libraries/MQTT/paho.mqtt.c/src/Tree.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Clients.o: Libraries/MQTT/paho.mqtt.c/src/Clients.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Thread.o: Libraries/MQTT/paho.mqtt.c/src/Thread.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/MQTTPacket.o: Libraries/MQTT/paho.mqtt.c/src/MQTTPacket.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/MQTTProtocolOut.o: Libraries/MQTT/paho.mqtt.c/src/MQTTProtocolOut.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/MQTTPersistenceDefault.o: Libraries/MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Messages.o: Libraries/MQTT/paho.mqtt.c/src/Messages.c
+$(OBJDIR)/LinkedList.o: Libraries/MQTT/paho.mqtt.c/src/LinkedList.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/SSLSocket.o: Libraries/MQTT/paho.mqtt.c/src/SSLSocket.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/MQTTPacketOut.o: Libraries/MQTT/paho.mqtt.c/src/MQTTPacketOut.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Log.o: Libraries/MQTT/paho.mqtt.c/src/Log.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/MQTTPersistence.o: Libraries/MQTT/paho.mqtt.c/src/MQTTPersistence.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Socket.o: Libraries/MQTT/paho.mqtt.c/src/Socket.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/SocketBuffer.o: Libraries/MQTT/paho.mqtt.c/src/SocketBuffer.c
+$(OBJDIR)/MQTTPersistenceDefault.o: Libraries/MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/MQTTAsync.o: Libraries/MQTT/paho.mqtt.c/src/MQTTAsync.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Log.o: Libraries/MQTT/paho.mqtt.c/src/Log.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Tree.o: Libraries/MQTT/paho.mqtt.c/src/Tree.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/MQTTProtocolClient.o: Libraries/MQTT/paho.mqtt.c/src/MQTTProtocolClient.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/MQTTVersion.o: Libraries/MQTT/paho.mqtt.c/src/MQTTVersion.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/LinkedList.o: Libraries/MQTT/paho.mqtt.c/src/LinkedList.c
+$(OBJDIR)/MQTTPacket.o: Libraries/MQTT/paho.mqtt.c/src/MQTTPacket.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/SocketBuffer.o: Libraries/MQTT/paho.mqtt.c/src/SocketBuffer.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/MQTTPersistence.o: Libraries/MQTT/paho.mqtt.c/src/MQTTPersistence.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Thread.o: Libraries/MQTT/paho.mqtt.c/src/Thread.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/MQTTProtocolOut.o: Libraries/MQTT/paho.mqtt.c/src/MQTTProtocolOut.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/utf-8.o: Libraries/MQTT/paho.mqtt.c/src/utf-8.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Socket.o: Libraries/MQTT/paho.mqtt.c/src/Socket.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/StackTrace.o: Libraries/MQTT/paho.mqtt.c/src/StackTrace.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Clients.o: Libraries/MQTT/paho.mqtt.c/src/Clients.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/MQTTPacketOut.o: Libraries/MQTT/paho.mqtt.c/src/MQTTPacketOut.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Messages.o: Libraries/MQTT/paho.mqtt.c/src/Messages.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Heap.o: Libraries/MQTT/paho.mqtt.c/src/Heap.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/MQTTClient.o: Libraries/MQTT/paho.mqtt.c/src/MQTTClient.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(CFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

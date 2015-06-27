@@ -94,11 +94,11 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
+	$(OBJDIR)/Miscellaneous.o \
+	$(OBJDIR)/Factory.o \
+	$(OBJDIR)/MiscPeer.o \
 	$(OBJDIR)/GD.o \
 	$(OBJDIR)/MiscDevice.o \
-	$(OBJDIR)/Miscellaneous.o \
-	$(OBJDIR)/MiscPeer.o \
-	$(OBJDIR)/Factory.o \
 	$(OBJDIR)/MiscCentral.o \
 
 RESOURCES := \
@@ -164,19 +164,19 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/GD.o: Modules/Miscellaneous/GD.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/MiscDevice.o: Modules/Miscellaneous/MiscDevice.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Miscellaneous.o: Modules/Miscellaneous/Miscellaneous.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Factory.o: Modules/Miscellaneous/Factory.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/MiscPeer.o: Modules/Miscellaneous/MiscPeer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Factory.o: Modules/Miscellaneous/Factory.cpp
+$(OBJDIR)/GD.o: Modules/Miscellaneous/GD.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/MiscDevice.o: Modules/Miscellaneous/MiscDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/MiscCentral.o: Modules/Miscellaneous/LogicalDevices/MiscCentral.cpp

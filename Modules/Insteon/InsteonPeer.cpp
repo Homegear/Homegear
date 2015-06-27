@@ -288,7 +288,7 @@ void InsteonPeer::addPeer(int32_t channel, std::shared_ptr<BaseLib::Systems::Bas
 {
 	try
 	{
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
+		if(_rpcDevice->channels.find(channel) == _rpcDevice->channels.end()) return;
 		for(std::vector<std::shared_ptr<BaseLib::Systems::BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
 		{
 			if((*i)->address == peer->address && (*i)->channel == peer->channel)
@@ -417,8 +417,8 @@ bool InsteonPeer::load(BaseLib::Systems::LogicalDevice* device)
 	{
 		loadVariables(device);
 
-		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, -1);
-		if(!rpcDevice)
+		_rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, -1);
+		if(!_rpcDevice)
 		{
 			GD::out.printError("Error loading peer " + std::to_string(_peerID) + ": Device type not found: 0x" + BaseLib::HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
 			return false;
@@ -604,11 +604,11 @@ void InsteonPeer::getValuesFromPacket(std::shared_ptr<InsteonPacket> packet, std
 {
 	try
 	{
-		if(!rpcDevice) return;
+		if(!_rpcDevice) return;
 		//equal_range returns all elements with "0" or an unknown element as argument
-		if(rpcDevice->framesByMessageType.find(packet->messageType()) == rpcDevice->framesByMessageType.end()) return;
-		std::pair<std::multimap<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator,std::multimap<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator> range = rpcDevice->framesByMessageType.equal_range((uint32_t)packet->messageType());
-		if(range.first == rpcDevice->framesByMessageType.end()) return;
+		if(_rpcDevice->framesByMessageType.find(packet->messageType()) == _rpcDevice->framesByMessageType.end()) return;
+		std::pair<std::multimap<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator,std::multimap<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator> range = _rpcDevice->framesByMessageType.equal_range((uint32_t)packet->messageType());
+		if(range.first == _rpcDevice->framesByMessageType.end()) return;
 		std::multimap<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator i = range.first;
 		do
 		{
@@ -659,14 +659,14 @@ void InsteonPeer::getValuesFromPacket(std::shared_ptr<InsteonPacket> packet, std
 						if(frame->fixedChannel == -2)
 						{
 							startChannel = 0;
-							endChannel = (rpcDevice->channels.end()--)->first;
+							endChannel = (_rpcDevice->channels.end()--)->first;
 						}
 						else endChannel = startChannel;
 						for(int32_t l = startChannel; l <= endChannel; l++)
 						{
-							if(rpcDevice->channels.find(l) == rpcDevice->channels.end()) continue;
-							if(rpcDevice->channels.at(l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(l)->parameterSets.end()) continue;
-							if(!rpcDevice->channels.at(l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
+							if(_rpcDevice->channels.find(l) == _rpcDevice->channels.end()) continue;
+							if(_rpcDevice->channels.at(l)->parameterSets.find(currentFrameValues.parameterSetType) == _rpcDevice->channels.at(l)->parameterSets.end()) continue;
+							if(!_rpcDevice->channels.at(l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
 							currentFrameValues.paramsetChannels.push_back(l);
 							currentFrameValues.values[(*k)->id].channels.push_back(l);
 							setValues = true;
@@ -676,9 +676,9 @@ void InsteonPeer::getValuesFromPacket(std::shared_ptr<InsteonPacket> packet, std
 					{
 						for(std::list<uint32_t>::const_iterator l = currentFrameValues.paramsetChannels.begin(); l != currentFrameValues.paramsetChannels.end(); ++l)
 						{
-							if(rpcDevice->channels.find(*l) == rpcDevice->channels.end()) continue;
-							if(rpcDevice->channels.at(*l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(*l)->parameterSets.end()) continue;
-							if(!rpcDevice->channels.at(*l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
+							if(_rpcDevice->channels.find(*l) == _rpcDevice->channels.end()) continue;
+							if(_rpcDevice->channels.at(*l)->parameterSets.find(currentFrameValues.parameterSetType) == _rpcDevice->channels.at(*l)->parameterSets.end()) continue;
+							if(!_rpcDevice->channels.at(*l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
 							currentFrameValues.values[(*k)->id].channels.push_back(*l);
 							setValues = true;
 						}
@@ -687,7 +687,7 @@ void InsteonPeer::getValuesFromPacket(std::shared_ptr<InsteonPacket> packet, std
 				}
 			}
 			if(!currentFrameValues.values.empty()) frameValues.push_back(currentFrameValues);
-		} while(++i != range.second && i != rpcDevice->framesByMessageType.end());
+		} while(++i != range.second && i != _rpcDevice->framesByMessageType.end());
 	}
 	catch(const std::exception& ex)
     {
@@ -707,7 +707,7 @@ std::shared_ptr<BaseLib::RPC::ParameterSet> InsteonPeer::getParameterSet(int32_t
 {
 	try
 	{
-		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
+		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = _rpcDevice->channels.at(channel);
 		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end())
 		{
 			GD::out.printDebug("Debug: Parameter set of type " + std::to_string(type) + " not found for channel " + std::to_string(channel));
@@ -737,7 +737,7 @@ void InsteonPeer::packetReceived(std::shared_ptr<InsteonPacket> packet)
 		if(!packet) return;
 		if(!_centralFeatures || _disposing) return;
 		if(packet->senderAddress() != _address) return;
-		if(!rpcDevice) return;
+		if(!_rpcDevice) return;
 		std::shared_ptr<InsteonCentral> central = std::dynamic_pointer_cast<InsteonCentral>(getCentral());
 		if(!central) return;
 		if(packet->messageType() == 0) packet->setMessageType(0xFF);
@@ -751,7 +751,7 @@ void InsteonPeer::packetReceived(std::shared_ptr<InsteonPacket> packet)
 		for(std::vector<FrameValues>::iterator a = frameValues.begin(); a != frameValues.end(); ++a)
 		{
 			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame;
-			if(!a->frameID.empty()) frame = rpcDevice->framesByID.at(a->frameID);
+			if(!a->frameID.empty()) frame = _rpcDevice->framesByID.at(a->frameID);
 
 			for(std::map<std::string, FrameValue>::iterator i = a->values.begin(); i != a->values.end(); ++i)
 			{
@@ -879,9 +879,9 @@ std::shared_ptr<BaseLib::RPC::Variable> InsteonPeer::getParamset(int32_t clientI
 		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
 		if(channel < 0) channel = 0;
 		if(remoteChannel < 0) remoteChannel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
+		if(_rpcDevice->channels.find(channel) == _rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
 		if(type == BaseLib::RPC::ParameterSet::Type::none) type = BaseLib::RPC::ParameterSet::Type::link;
-		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels[channel];
+		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = _rpcDevice->channels[channel];
 		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
 		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcChannel->parameterSets[type];
 		if(!parameterSet) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
@@ -931,15 +931,15 @@ std::shared_ptr<BaseLib::RPC::Variable> InsteonPeer::getParamsetDescription(int3
 	{
 		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
 		if(channel < 0) channel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel");
-		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set");
+		if(_rpcDevice->channels.find(channel) == _rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel");
+		if(_rpcDevice->channels[channel]->parameterSets.find(type) == _rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set");
 		if(type == BaseLib::RPC::ParameterSet::Type::link && remoteID > 0)
 		{
 			std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer = getPeer(channel, remoteID, remoteChannel);
 			if(!remotePeer) return BaseLib::RPC::Variable::createError(-2, "Unknown remote peer.");
 		}
 
-		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets[type];
+		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = _rpcDevice->channels[channel]->parameterSets[type];
 		return Peer::getParamsetDescription(clientID, parameterSet);
 	}
 	catch(const std::exception& ex)
@@ -964,8 +964,8 @@ std::shared_ptr<BaseLib::RPC::Variable> InsteonPeer::putParamset(int32_t clientI
 		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
 		if(!_centralFeatures) return BaseLib::RPC::Variable::createError(-2, "Not a central peer.");
 		if(channel < 0) channel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
-		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
+		if(_rpcDevice->channels.find(channel) == _rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
+		if(_rpcDevice->channels[channel]->parameterSets.find(type) == _rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
 		if(variables->structValue->empty()) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 
 		if(type == BaseLib::RPC::ParameterSet::Type::Enum::values)
@@ -1118,8 +1118,8 @@ std::shared_ptr<BaseLib::RPC::Variable> InsteonPeer::setValue(int32_t clientID, 
 
 		for(std::vector<std::string>::iterator i = setRequests.begin(); i != setRequests.end(); ++i)
 		{
-			if(rpcDevice->framesByID.find(*i) == rpcDevice->framesByID.end()) return BaseLib::RPC::Variable::createError(-6, "Packet \"" + *i + "\" was not found for parameter \"" + valueKey + "\".");
-			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[*i];
+			if(_rpcDevice->framesByID.find(*i) == _rpcDevice->framesByID.end()) return BaseLib::RPC::Variable::createError(-6, "Packet \"" + *i + "\" was not found for parameter \"" + valueKey + "\".");
+			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = _rpcDevice->framesByID[*i];
 			std::shared_ptr<PacketQueue> queue(new PacketQueue(_physicalInterface, PacketQueueType::PEER));
 			queue->peer = peer;
 			queue->noSending = true;

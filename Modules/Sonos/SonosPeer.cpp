@@ -292,7 +292,7 @@ std::string SonosPeer::handleCLICommand(std::string command)
 				index++;
 			}
 
-			stringStream << "Peer has " << rpcDevice->channels.size() << " channels." << std::endl;
+			stringStream << "Peer has " << _rpcDevice->channels.size() << " channels." << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 12, "config print") == 0)
@@ -443,8 +443,8 @@ bool SonosPeer::load(BaseLib::Systems::LogicalDevice* device)
 	{
 		loadVariables((SonosDevice*)device);
 
-		rpcDevice = GD::rpcDevices.find(_deviceType, 0x10, -1);
-		if(!rpcDevice)
+		_rpcDevice = GD::rpcDevices.find(_deviceType, 0x10, -1);
+		if(!_rpcDevice)
 		{
 			GD::out.printError("Error loading Sonos peer " + std::to_string(_peerID) + ": Device type not found: 0x" + BaseLib::HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
 			return false;
@@ -500,11 +500,11 @@ void SonosPeer::getValuesFromPacket(std::shared_ptr<SonosPacket> packet, std::ve
 {
 	try
 	{
-		if(!rpcDevice) return;
+		if(!_rpcDevice) return;
 		//equal_range returns all elements with "0" or an unknown element as argument
-		if(rpcDevice->framesByFunction2.find(packet->functionName()) == rpcDevice->framesByFunction2.end()) return;
-		std::pair<std::multimap<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator,std::multimap<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator> range = rpcDevice->framesByFunction2.equal_range(packet->functionName());
-		if(range.first == rpcDevice->framesByFunction2.end()) return;
+		if(_rpcDevice->framesByFunction2.find(packet->functionName()) == _rpcDevice->framesByFunction2.end()) return;
+		std::pair<std::multimap<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator,std::multimap<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator> range = _rpcDevice->framesByFunction2.equal_range(packet->functionName());
+		if(range.first == _rpcDevice->framesByFunction2.end()) return;
 		std::multimap<std::string, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator i = range.first;
 		std::shared_ptr<std::unordered_map<std::string, std::string>> soapValues;
 		std::string field;
@@ -571,14 +571,14 @@ void SonosPeer::getValuesFromPacket(std::shared_ptr<SonosPacket> packet, std::ve
 						if(frame->fixedChannel == -2)
 						{
 							startChannel = 0;
-							endChannel = (rpcDevice->channels.end()--)->first;
+							endChannel = (_rpcDevice->channels.end()--)->first;
 						}
 						else endChannel = startChannel;
 						for(int32_t l = startChannel; l <= endChannel; l++)
 						{
-							if(rpcDevice->channels.find(l) == rpcDevice->channels.end()) continue;
-							if(rpcDevice->channels.at(l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(l)->parameterSets.end()) continue;
-							if(!rpcDevice->channels.at(l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
+							if(_rpcDevice->channels.find(l) == _rpcDevice->channels.end()) continue;
+							if(_rpcDevice->channels.at(l)->parameterSets.find(currentFrameValues.parameterSetType) == _rpcDevice->channels.at(l)->parameterSets.end()) continue;
+							if(!_rpcDevice->channels.at(l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
 							currentFrameValues.paramsetChannels.push_back(l);
 							currentFrameValues.values[(*k)->id].channels.push_back(l);
 							setValues = true;
@@ -588,9 +588,9 @@ void SonosPeer::getValuesFromPacket(std::shared_ptr<SonosPacket> packet, std::ve
 					{
 						for(std::list<uint32_t>::const_iterator l = currentFrameValues.paramsetChannels.begin(); l != currentFrameValues.paramsetChannels.end(); ++l)
 						{
-							if(rpcDevice->channels.find(*l) == rpcDevice->channels.end()) continue;
-							if(rpcDevice->channels.at(*l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(*l)->parameterSets.end()) continue;
-							if(!rpcDevice->channels.at(*l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
+							if(_rpcDevice->channels.find(*l) == _rpcDevice->channels.end()) continue;
+							if(_rpcDevice->channels.at(*l)->parameterSets.find(currentFrameValues.parameterSetType) == _rpcDevice->channels.at(*l)->parameterSets.end()) continue;
+							if(!_rpcDevice->channels.at(*l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
 							currentFrameValues.values[(*k)->id].channels.push_back(*l);
 							setValues = true;
 						}
@@ -607,7 +607,7 @@ void SonosPeer::getValuesFromPacket(std::shared_ptr<SonosPacket> packet, std::ve
 				}
 			}
 			if(!currentFrameValues.values.empty()) frameValues.push_back(currentFrameValues);
-		} while(++i != range.second && i != rpcDevice->framesByFunction2.end());
+		} while(++i != range.second && i != _rpcDevice->framesByFunction2.end());
 	}
 	catch(const std::exception& ex)
     {
@@ -629,7 +629,7 @@ void SonosPeer::packetReceived(std::shared_ptr<SonosPacket> packet)
 	{
 		if(!packet) return;
 		if(!_centralFeatures || _disposing) return;
-		if(!rpcDevice) return;
+		if(!_rpcDevice) return;
 		setLastPacketReceived();
 		std::vector<FrameValues> frameValues;
 		getValuesFromPacket(packet, frameValues);
@@ -640,7 +640,7 @@ void SonosPeer::packetReceived(std::shared_ptr<SonosPacket> packet)
 		for(std::vector<FrameValues>::iterator a = frameValues.begin(); a != frameValues.end(); ++a)
 		{
 			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame;
-			if(!a->frameID.empty()) frame = rpcDevice->framesByID.at(a->frameID);
+			if(!a->frameID.empty()) frame = _rpcDevice->framesByID.at(a->frameID);
 
 			for(std::unordered_map<std::string, FrameValue>::iterator i = a->values.begin(); i != a->values.end(); ++i)
 			{
@@ -843,10 +843,10 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::getValueFromDevice(std::share
 		std::string getRequestFrame = parameter->physicalParameter->getRequest;
 		std::string getResponseFrame = parameter->physicalParameter->getResponse;
 		if(getRequestFrame.empty()) return BaseLib::RPC::Variable::createError(-6, "Parameter can't be requested actively.");
-		if(rpcDevice->framesByID.find(getRequestFrame) == rpcDevice->framesByID.end()) return BaseLib::RPC::Variable::createError(-6, "No frame was found for parameter " + parameter->id);
-		std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[getRequestFrame];
+		if(_rpcDevice->framesByID.find(getRequestFrame) == _rpcDevice->framesByID.end()) return BaseLib::RPC::Variable::createError(-6, "No frame was found for parameter " + parameter->id);
+		std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = _rpcDevice->framesByID[getRequestFrame];
 		std::shared_ptr<BaseLib::RPC::DeviceFrame> responseFrame;
-		if(rpcDevice->framesByID.find(getResponseFrame) != rpcDevice->framesByID.end()) responseFrame = rpcDevice->framesByID[getResponseFrame];
+		if(_rpcDevice->framesByID.find(getResponseFrame) != _rpcDevice->framesByID.end()) responseFrame = _rpcDevice->framesByID[getResponseFrame];
 
 		if(valuesCentral.find(channel) == valuesCentral.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
 		if(valuesCentral[channel].find(parameter->id) == valuesCentral[channel].end()) return BaseLib::RPC::Variable::createError(-5, "Unknown parameter.");
@@ -927,7 +927,7 @@ std::shared_ptr<BaseLib::RPC::ParameterSet> SonosPeer::getParameterSet(int32_t c
 {
 	try
 	{
-		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
+		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = _rpcDevice->channels.at(channel);
 		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end())
 		{
 			GD::out.printDebug("Debug: Parameter set of type " + std::to_string(type) + " not found for channel " + std::to_string(channel));
@@ -979,9 +979,9 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::getParamset(int32_t clientID,
 		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
 		if(channel < 0) channel = 0;
 		if(remoteChannel < 0) remoteChannel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
+		if(_rpcDevice->channels.find(channel) == _rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
 		if(type == BaseLib::RPC::ParameterSet::Type::none) type = BaseLib::RPC::ParameterSet::Type::link;
-		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels[channel];
+		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = _rpcDevice->channels[channel];
 		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
 		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcChannel->parameterSets[type];
 		if(!parameterSet) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
@@ -1041,15 +1041,15 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::getParamsetDescription(int32_
 	{
 		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
 		if(channel < 0) channel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel");
-		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set");
+		if(_rpcDevice->channels.find(channel) == _rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel");
+		if(_rpcDevice->channels[channel]->parameterSets.find(type) == _rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set");
 		if(type == BaseLib::RPC::ParameterSet::Type::link && remoteID > 0)
 		{
 			std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer = getPeer(channel, remoteID, remoteChannel);
 			if(!remotePeer) return BaseLib::RPC::Variable::createError(-2, "Unknown remote peer.");
 		}
 
-		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets[type];
+		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = _rpcDevice->channels[channel]->parameterSets[type];
 		return Peer::getParamsetDescription(clientID, parameterSet);
 	}
 	catch(const std::exception& ex)
@@ -1075,10 +1075,10 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::putParamset(int32_t clientID,
 		if(!_centralFeatures) return BaseLib::RPC::Variable::createError(-2, "Not a central peer.");
 		if(channel < 0) channel = 0;
 		if(remoteChannel < 0) remoteChannel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
+		if(_rpcDevice->channels.find(channel) == _rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
 		if(type == BaseLib::RPC::ParameterSet::Type::none) type = BaseLib::RPC::ParameterSet::Type::link;
-		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
-		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets.at(type);
+		if(_rpcDevice->channels[channel]->parameterSets.find(type) == _rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
+		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = _rpcDevice->channels[channel]->parameterSets.at(type);
 		if(variables->structValue->empty()) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 
 		if(type == BaseLib::RPC::ParameterSet::Type::Enum::master)
@@ -1190,8 +1190,8 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::setValue(int32_t clientID, ui
 		{
 			std::string setRequest = rpcParameter->physicalParameter->setRequest;
 			if(setRequest.empty()) return BaseLib::RPC::Variable::createError(-6, "parameter is read only");
-			if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return BaseLib::RPC::Variable::createError(-6, "No frame was found for parameter " + valueKey);
-			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
+			if(_rpcDevice->framesByID.find(setRequest) == _rpcDevice->framesByID.end()) return BaseLib::RPC::Variable::createError(-6, "No frame was found for parameter " + valueKey);
+			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = _rpcDevice->framesByID[setRequest];
 
 			std::shared_ptr<std::vector<std::pair<std::string, std::string>>> soapValues(new std::vector<std::pair<std::string, std::string>>());
 			for(std::vector<BaseLib::RPC::Parameter>::iterator i = frame->parameters.begin(); i != frame->parameters.end(); ++i)

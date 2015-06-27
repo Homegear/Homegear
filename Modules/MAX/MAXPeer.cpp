@@ -137,10 +137,10 @@ void MAXPeer::worker()
 	try
 	{
 		time = BaseLib::HelperFunctions::getTime();
-		if(rpcDevice)
+		if(_rpcDevice)
 		{
-			serviceMessages->checkUnreach(rpcDevice->cyclicTimeout, getLastPacketReceived());
-			if(rpcDevice->needsTime && (time - _lastTimePacket) > 43200000)
+			serviceMessages->checkUnreach(_rpcDevice->cyclicTimeout, getLastPacketReceived());
+			if(_rpcDevice->needsTime && (time - _lastTimePacket) > 43200000)
 			{
 				_lastTimePacket = time;
 				std::shared_ptr<MAXCentral> central = std::dynamic_pointer_cast<MAXCentral>(getCentral());
@@ -317,7 +317,7 @@ void MAXPeer::addPeer(int32_t channel, std::shared_ptr<BaseLib::Systems::BasicPe
 {
 	try
 	{
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
+		if(_rpcDevice->channels.find(channel) == _rpcDevice->channels.end()) return;
 		for(std::vector<std::shared_ptr<BaseLib::Systems::BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
 		{
 			if((*i)->address == peer->address && (*i)->channel == peer->channel)
@@ -449,8 +449,8 @@ bool MAXPeer::load(BaseLib::Systems::LogicalDevice* device)
 	{
 		loadVariables(device);
 
-		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, -1);
-		if(!rpcDevice)
+		_rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, -1);
+		if(!_rpcDevice)
 		{
 			GD::out.printError("Error loading peer " + std::to_string(_peerID) + ": Device type not found: 0x" + BaseLib::HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
 			return false;
@@ -637,11 +637,11 @@ void MAXPeer::getValuesFromPacket(std::shared_ptr<MAXPacket> packet, std::vector
 {
 	try
 	{
-		if(!rpcDevice) return;
+		if(!_rpcDevice) return;
 		//equal_range returns all elements with "0" or an unknown element as argument
-		if(rpcDevice->framesByMessageType.find(packet->messageType()) == rpcDevice->framesByMessageType.end()) return;
-		std::pair<std::multimap<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator,std::multimap<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator> range = rpcDevice->framesByMessageType.equal_range((uint32_t)packet->messageType());
-		if(range.first == rpcDevice->framesByMessageType.end()) return;
+		if(_rpcDevice->framesByMessageType.find(packet->messageType()) == _rpcDevice->framesByMessageType.end()) return;
+		std::pair<std::multimap<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator,std::multimap<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator> range = _rpcDevice->framesByMessageType.equal_range((uint32_t)packet->messageType());
+		if(range.first == _rpcDevice->framesByMessageType.end()) return;
 		std::multimap<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator i = range.first;
 		do
 		{
@@ -729,14 +729,14 @@ void MAXPeer::getValuesFromPacket(std::shared_ptr<MAXPacket> packet, std::vector
 						if(frame->fixedChannel == -2)
 						{
 							startChannel = 0;
-							endChannel = (rpcDevice->channels.end()--)->first;
+							endChannel = (_rpcDevice->channels.end()--)->first;
 						}
 						else endChannel = startChannel;
 						for(int32_t l = startChannel; l <= endChannel; l++)
 						{
-							if(rpcDevice->channels.find(l) == rpcDevice->channels.end()) continue;
-							if(rpcDevice->channels.at(l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(l)->parameterSets.end()) continue;
-							if(!rpcDevice->channels.at(l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
+							if(_rpcDevice->channels.find(l) == _rpcDevice->channels.end()) continue;
+							if(_rpcDevice->channels.at(l)->parameterSets.find(currentFrameValues.parameterSetType) == _rpcDevice->channels.at(l)->parameterSets.end()) continue;
+							if(!_rpcDevice->channels.at(l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
 							currentFrameValues.paramsetChannels.push_back(l);
 							currentFrameValues.values[(*k)->id].channels.push_back(l);
 							setValues = true;
@@ -746,9 +746,9 @@ void MAXPeer::getValuesFromPacket(std::shared_ptr<MAXPacket> packet, std::vector
 					{
 						for(std::list<uint32_t>::const_iterator l = currentFrameValues.paramsetChannels.begin(); l != currentFrameValues.paramsetChannels.end(); ++l)
 						{
-							if(rpcDevice->channels.find(*l) == rpcDevice->channels.end()) continue;
-							if(rpcDevice->channels.at(*l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(*l)->parameterSets.end()) continue;
-							if(!rpcDevice->channels.at(*l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
+							if(_rpcDevice->channels.find(*l) == _rpcDevice->channels.end()) continue;
+							if(_rpcDevice->channels.at(*l)->parameterSets.find(currentFrameValues.parameterSetType) == _rpcDevice->channels.at(*l)->parameterSets.end()) continue;
+							if(!_rpcDevice->channels.at(*l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
 							currentFrameValues.values[(*k)->id].channels.push_back(*l);
 							setValues = true;
 						}
@@ -757,7 +757,7 @@ void MAXPeer::getValuesFromPacket(std::shared_ptr<MAXPacket> packet, std::vector
 				}
 			}
 			if(!currentFrameValues.values.empty()) frameValues.push_back(currentFrameValues);
-		} while(++i != range.second && i != rpcDevice->framesByMessageType.end());
+		} while(++i != range.second && i != _rpcDevice->framesByMessageType.end());
 	}
 	catch(const std::exception& ex)
     {
@@ -777,7 +777,7 @@ std::shared_ptr<BaseLib::RPC::ParameterSet> MAXPeer::getParameterSet(int32_t cha
 {
 	try
 	{
-		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
+		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = _rpcDevice->channels.at(channel);
 		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end())
 		{
 			GD::out.printDebug("Debug: Parameter set of type " + std::to_string(type) + " not found for channel " + std::to_string(channel));
@@ -807,7 +807,7 @@ void MAXPeer::packetReceived(std::shared_ptr<MAXPacket> packet)
 		if(!packet) return;
 		if(!_centralFeatures || _disposing) return;
 		if(packet->senderAddress() != _address) return;
-		if(!rpcDevice) return;
+		if(!_rpcDevice) return;
 		std::shared_ptr<MAXCentral> central = std::dynamic_pointer_cast<MAXCentral>(getCentral());
 		if(!central) return;
 		if(packet->messageType() == 0) packet->setMessageType(0xFF);
@@ -822,7 +822,7 @@ void MAXPeer::packetReceived(std::shared_ptr<MAXPacket> packet)
 		for(std::vector<FrameValues>::iterator a = frameValues.begin(); a != frameValues.end(); ++a)
 		{
 			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame;
-			if(!a->frameID.empty()) frame = rpcDevice->framesByID.at(a->frameID);
+			if(!a->frameID.empty()) frame = _rpcDevice->framesByID.at(a->frameID);
 
 			for(std::map<std::string, FrameValue>::iterator i = a->values.begin(); i != a->values.end(); ++i)
 			{
@@ -999,15 +999,15 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::getParamsetDescription(int32_t 
 	{
 		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
 		if(channel < 0) channel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel");
-		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set");
+		if(_rpcDevice->channels.find(channel) == _rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel");
+		if(_rpcDevice->channels[channel]->parameterSets.find(type) == _rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set");
 		if(type == BaseLib::RPC::ParameterSet::Type::link && remoteID > 0)
 		{
 			std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer = getPeer(channel, remoteID, remoteChannel);
 			if(!remotePeer) return BaseLib::RPC::Variable::createError(-2, "Unknown remote peer.");
 		}
 
-		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets[type];
+		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = _rpcDevice->channels[channel]->parameterSets[type];
 		return Peer::getParamsetDescription(clientID, parameterSet);
 	}
 	catch(const std::exception& ex)
@@ -1033,10 +1033,10 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::putParamset(int32_t clientID, i
 		if(!_centralFeatures) return BaseLib::RPC::Variable::createError(-2, "Not a central peer.");
 		if(channel < 0) channel = 0;
 		if(remoteChannel < 0) remoteChannel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
+		if(_rpcDevice->channels.find(channel) == _rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
 		if(type == BaseLib::RPC::ParameterSet::Type::none) type = BaseLib::RPC::ParameterSet::Type::link;
-		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
-		std::shared_ptr<ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets.at(type);
+		if(_rpcDevice->channels[channel]->parameterSets.find(type) == _rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
+		std::shared_ptr<ParameterSet> parameterSet = _rpcDevice->channels[channel]->parameterSets.at(type);
 		if(variables->structValue->empty()) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 
 		if(type == BaseLib::RPC::ParameterSet::Type::Enum::master)
@@ -1158,9 +1158,9 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::getParamset(int32_t clientID, i
 		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
 		if(channel < 0) channel = 0;
 		if(remoteChannel < 0) remoteChannel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
+		if(_rpcDevice->channels.find(channel) == _rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
 		if(type == BaseLib::RPC::ParameterSet::Type::none) type = BaseLib::RPC::ParameterSet::Type::link;
-		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels[channel];
+		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = _rpcDevice->channels[channel];
 		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
 		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcChannel->parameterSets[type];
 		if(!parameterSet) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
@@ -1311,8 +1311,8 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXPeer::setValue(int32_t clientID, uint
 		}
 		std::string setRequest = rpcParameter->physicalParameter->setRequest;
 		if(setRequest.empty()) return BaseLib::RPC::Variable::createError(-6, "parameter is read only");
-		if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return BaseLib::RPC::Variable::createError(-6, "No frame was found for parameter " + valueKey);
-		std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
+		if(_rpcDevice->framesByID.find(setRequest) == _rpcDevice->framesByID.end()) return BaseLib::RPC::Variable::createError(-6, "No frame was found for parameter " + valueKey);
+		std::shared_ptr<BaseLib::RPC::DeviceFrame> frame = _rpcDevice->framesByID[setRequest];
 		rpcParameter->convertToPacket(value, parameter->data);
 		if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
 		else saveParameter(0, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);

@@ -309,7 +309,7 @@ void QueueManager::resetQueue(int32_t address, std::string interfaceID, uint32_t
 			if(!queueData->queue->isEmpty() && queueData->queue->getQueueType() != PacketQueueType::PAIRING)
 			{
 				peer = queueData->queue->peer;
-				if(peer && peer->rpcDevice && ((peer->getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (peer->getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst)))
+				if(peer && peer->getRpcDevice() && ((peer->getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (peer->getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst)))
 				{
 					setUnreach = true;
 				}

@@ -94,17 +94,17 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/ClientSettings.o \
-	$(OBJDIR)/RPCMethod.o \
-	$(OBJDIR)/RpcClient.o \
-	$(OBJDIR)/Auth.o \
-	$(OBJDIR)/RPCServer.o \
-	$(OBJDIR)/RPCMethods.o \
-	$(OBJDIR)/Server.o \
 	$(OBJDIR)/ServerInfo.o \
-	$(OBJDIR)/RemoteRpcServer.o \
-	$(OBJDIR)/Webserver.o \
+	$(OBJDIR)/RPCMethod.o \
 	$(OBJDIR)/Client.o \
+	$(OBJDIR)/Auth.o \
+	$(OBJDIR)/RpcClient.o \
+	$(OBJDIR)/Server.o \
+	$(OBJDIR)/Webserver.o \
+	$(OBJDIR)/RemoteRpcServer.o \
+	$(OBJDIR)/ClientSettings.o \
+	$(OBJDIR)/RPCMethods.o \
+	$(OBJDIR)/RPCServer.o \
 
 RESOURCES := \
 
@@ -169,37 +169,37 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/ClientSettings.o: Libraries/RPC/ClientSettings.cpp
+$(OBJDIR)/ServerInfo.o: Libraries/RPC/ServerInfo.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RPCMethod.o: Libraries/RPC/RPCMethod.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RpcClient.o: Libraries/RPC/RpcClient.cpp
+$(OBJDIR)/Client.o: Libraries/RPC/Client.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Auth.o: Libraries/RPC/Auth.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCServer.o: Libraries/RPC/RPCServer.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCMethods.o: Libraries/RPC/RPCMethods.cpp
+$(OBJDIR)/RpcClient.o: Libraries/RPC/RpcClient.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Server.o: Libraries/RPC/Server.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/ServerInfo.o: Libraries/RPC/ServerInfo.cpp
+$(OBJDIR)/Webserver.o: Libraries/RPC/Webserver.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RemoteRpcServer.o: Libraries/RPC/RemoteRpcServer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Webserver.o: Libraries/RPC/Webserver.cpp
+$(OBJDIR)/ClientSettings.o: Libraries/RPC/ClientSettings.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Client.o: Libraries/RPC/Client.cpp
+$(OBJDIR)/RPCMethods.o: Libraries/RPC/RPCMethods.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/RPCServer.o: Libraries/RPC/RPCServer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

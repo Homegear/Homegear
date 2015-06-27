@@ -84,7 +84,7 @@ void PhilipsHueCentral::deletePeer(uint64_t id)
 		peer->deleting = true;
 		std::shared_ptr<BaseLib::RPC::Variable> deviceAddresses(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(peer->getSerialNumber())));
-		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->getRpcDevice()->channels.begin(); i != peer->getRpcDevice()->channels.end(); ++i)
 		{
 			deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(peer->getSerialNumber() + ":" + std::to_string(i->first))));
 		}
@@ -92,7 +92,7 @@ void PhilipsHueCentral::deletePeer(uint64_t id)
 		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)peer->getID()))));
 		std::shared_ptr<BaseLib::RPC::Variable> channels(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("CHANNELS", channels));
-		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->getRpcDevice()->channels.begin(); i != peer->getRpcDevice()->channels.end(); ++i)
 		{
 			channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(i->first)));
 		}
@@ -349,9 +349,9 @@ std::string PhilipsHueCentral::handleCLICommand(std::string command)
 						<< std::setw(addressWidth) << BaseLib::HelperFunctions::getHexString(i->second->getAddress(), 6) << bar
 						<< std::setw(serialWidth) << i->second->getSerialNumber() << bar
 						<< std::setw(typeWidth1) << BaseLib::HelperFunctions::getHexString(i->second->getDeviceType().type(), 4) << bar;
-					if(i->second->rpcDevice)
+					if(i->second->getRpcDevice())
 					{
-						std::shared_ptr<BaseLib::RPC::DeviceType> type = i->second->rpcDevice->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
+						std::shared_ptr<BaseLib::RPC::DeviceType> type = i->second->getRpcDevice()->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
 						std::string typeID;
 						if(type) typeID = type->id;
 						if(typeID.size() > (unsigned)typeWidth2)
@@ -542,8 +542,8 @@ std::shared_ptr<PhilipsHuePeer> PhilipsHueCentral::createPeer(int32_t address, i
 		peer->setFirmwareVersion(firmwareVersion);
 		peer->setDeviceType(deviceType);
 		peer->setSerialNumber(serialNumber);
-		peer->rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, -1);
-		if(!peer->rpcDevice) return std::shared_ptr<PhilipsHuePeer>();
+		peer->setRpcDevice(GD::rpcDevices.find(deviceType, firmwareVersion, -1));
+		if(!peer->getRpcDevice()) return std::shared_ptr<PhilipsHuePeer>();
 		if(save) peer->save(true, true, false); //Save and create peerID
 		return peer;
 	}

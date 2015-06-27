@@ -148,18 +148,18 @@ void MiscPeer::runProgram()
 {
 	try
 	{
-		if(!rpcDevice->runProgram) return;
+		if(!_rpcDevice->runProgram) return;
 		while(GD::bl->booting && !_stopRunProgramThread) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-		std::string path = rpcDevice->runProgram->path;
+		std::string path = _rpcDevice->runProgram->path;
 		if(path.empty()) return;
 		if(path.front() != '/') path = GD::bl->settings.scriptPath() + path;
-		std::vector<std::string> arguments = rpcDevice->runProgram->arguments;
+		std::vector<std::string> arguments = _rpcDevice->runProgram->arguments;
 		for(std::vector<std::string>::iterator i = arguments.begin(); i != arguments.end(); ++i)
 		{
 			GD::bl->hf.stringReplace(*i, "$PEERID", std::to_string(_peerID));
 			GD::bl->hf.stringReplace(*i, "$RPCPORT", std::to_string(_bl->rpcPort));
 		}
-		if(rpcDevice->runProgram->interval == 0) rpcDevice->runProgram->interval = 10;
+		if(_rpcDevice->runProgram->interval == 0) _rpcDevice->runProgram->interval = 10;
 		while(!_stopRunProgramThread)
 		{
 			_programPID = -1;
@@ -168,9 +168,9 @@ void MiscPeer::runProgram()
 			if(stat(path.c_str(), &statStruct) < 0)
 			{
 				GD::out.printError("Error: Could not execute script: " + std::string(strerror(errno)));
-				std::this_thread::sleep_for(std::chrono::milliseconds(rpcDevice->runProgram->interval));
-				if(rpcDevice->runProgram->startType == BaseLib::RPC::DeviceProgram::StartType::once) return;
-				std::this_thread::sleep_for(std::chrono::milliseconds(rpcDevice->runProgram->interval));
+				std::this_thread::sleep_for(std::chrono::milliseconds(_rpcDevice->runProgram->interval));
+				if(_rpcDevice->runProgram->startType == BaseLib::RPC::DeviceProgram::StartType::once) return;
+				std::this_thread::sleep_for(std::chrono::milliseconds(_rpcDevice->runProgram->interval));
 				continue;
 			}
 
@@ -183,8 +183,8 @@ void MiscPeer::runProgram()
 					if(statStruct.st_uid != uid || (statStruct.st_uid == uid && (statStruct.st_mode & S_IXUSR) == 0))
 					{
 						GD::out.printError("Error: Could not execute script. No permission or executable bit is not set.");
-						std::this_thread::sleep_for(std::chrono::milliseconds(rpcDevice->runProgram->interval));
-						if(rpcDevice->runProgram->startType == BaseLib::RPC::DeviceProgram::StartType::once) return;
+						std::this_thread::sleep_for(std::chrono::milliseconds(_rpcDevice->runProgram->interval));
+						if(_rpcDevice->runProgram->startType == BaseLib::RPC::DeviceProgram::StartType::once) return;
 						continue;
 					}
 				}
@@ -192,31 +192,31 @@ void MiscPeer::runProgram()
 			if((statStruct.st_mode & (S_IXGRP | S_IXUSR)) == 0) //At least in Debian it is not possible to execute scripts, when the execution bit is only set for "other".
 			{
 				GD::out.printError("Error: Could not execute script. Executable bit is not set for user or group.");
-				std::this_thread::sleep_for(std::chrono::milliseconds(rpcDevice->runProgram->interval));
-				if(rpcDevice->runProgram->startType == BaseLib::RPC::DeviceProgram::StartType::once) return;
+				std::this_thread::sleep_for(std::chrono::milliseconds(_rpcDevice->runProgram->interval));
+				if(_rpcDevice->runProgram->startType == BaseLib::RPC::DeviceProgram::StartType::once) return;
 				continue;
 			}
 			if((statStruct.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
 			{
 				GD::out.printError("Error: Could not execute script. The file mode is not set to executable.");
-				std::this_thread::sleep_for(std::chrono::milliseconds(rpcDevice->runProgram->interval));
-				if(rpcDevice->runProgram->startType == BaseLib::RPC::DeviceProgram::StartType::once) return;
+				std::this_thread::sleep_for(std::chrono::milliseconds(_rpcDevice->runProgram->interval));
+				if(_rpcDevice->runProgram->startType == BaseLib::RPC::DeviceProgram::StartType::once) return;
 				continue;
 			}
 			_programPID = GD::bl->hf.system(path, arguments);
 			if(_programPID < 0)
 			{
 				GD::out.printError("Error: Could not execute script.");
-				std::this_thread::sleep_for(std::chrono::milliseconds(rpcDevice->runProgram->interval));
-				if(rpcDevice->runProgram->startType == BaseLib::RPC::DeviceProgram::StartType::once) return;
+				std::this_thread::sleep_for(std::chrono::milliseconds(_rpcDevice->runProgram->interval));
+				if(_rpcDevice->runProgram->startType == BaseLib::RPC::DeviceProgram::StartType::once) return;
 				continue;
 			}
 			GD::out.printInfo("Info: Started program " + path + ". PID is " + std::to_string(_programPID) + ".");
 
-			if(rpcDevice->runProgram->startType == BaseLib::RPC::DeviceProgram::StartType::once) return;
-			else if(rpcDevice->runProgram->startType == BaseLib::RPC::DeviceProgram::StartType::interval)
+			if(_rpcDevice->runProgram->startType == BaseLib::RPC::DeviceProgram::StartType::once) return;
+			else if(_rpcDevice->runProgram->startType == BaseLib::RPC::DeviceProgram::StartType::interval)
 			{
-				int64_t totalTimeToSleep = (rpcDevice->runProgram->interval * 1000) - (GD::bl->hf.getTime() - startTime);
+				int64_t totalTimeToSleep = (_rpcDevice->runProgram->interval * 1000) - (GD::bl->hf.getTime() - startTime);
 				if(totalTimeToSleep < 0) totalTimeToSleep = 0;
 				for(int32_t i = 0; i < (totalTimeToSleep / 100) + 1; i++)
 				{
@@ -293,7 +293,7 @@ std::string MiscPeer::handleCLICommand(std::string command)
 				index++;
 			}
 
-			stringStream << "Peer has " << rpcDevice->channels.size() << " channels." << std::endl;
+			stringStream << "Peer has " << _rpcDevice->channels.size() << " channels." << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 12, "config print") == 0)
@@ -431,8 +431,8 @@ bool MiscPeer::load(BaseLib::Systems::LogicalDevice* device)
 	{
 		loadVariables((MiscDevice*)device);
 
-		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, -1);
-		if(!rpcDevice)
+		_rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, -1);
+		if(!_rpcDevice)
 		{
 			GD::out.printError("Error loading Miscellaneous peer " + std::to_string(_peerID) + ": Device type not found: 0x" + BaseLib::HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
 			return false;
@@ -489,7 +489,7 @@ void MiscPeer::initProgram()
 {
 	try
 	{
-		if(rpcDevice->runProgram)
+		if(_rpcDevice->runProgram)
 		{
 			if(_runProgramThread.joinable())
 			{
@@ -518,7 +518,7 @@ std::shared_ptr<BaseLib::RPC::ParameterSet> MiscPeer::getParameterSet(int32_t ch
 {
 	try
 	{
-		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
+		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = _rpcDevice->channels.at(channel);
 		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end())
 		{
 			GD::out.printDebug("Debug: Parameter set of type " + std::to_string(type) + " not found for channel " + std::to_string(channel));
@@ -570,9 +570,9 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::getParamset(int32_t clientID, 
 		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
 		if(channel < 0) channel = 0;
 		if(remoteChannel < 0) remoteChannel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
+		if(_rpcDevice->channels.find(channel) == _rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
 		if(type == BaseLib::RPC::ParameterSet::Type::none) type = BaseLib::RPC::ParameterSet::Type::link;
-		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels[channel];
+		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = _rpcDevice->channels[channel];
 		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
 		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcChannel->parameterSets[type];
 		if(!parameterSet) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
@@ -632,15 +632,15 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::getParamsetDescription(int32_t
 	{
 		if(_disposing) return BaseLib::RPC::Variable::createError(-32500, "Peer is disposing.");
 		if(channel < 0) channel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel");
-		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set");
+		if(_rpcDevice->channels.find(channel) == _rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel");
+		if(_rpcDevice->channels[channel]->parameterSets.find(type) == _rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set");
 		if(type == BaseLib::RPC::ParameterSet::Type::link && remoteID > 0)
 		{
 			std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer = getPeer(channel, remoteID, remoteChannel);
 			if(!remotePeer) return BaseLib::RPC::Variable::createError(-2, "Unknown remote peer.");
 		}
 
-		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets[type];
+		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = _rpcDevice->channels[channel]->parameterSets[type];
 		return Peer::getParamsetDescription(clientID, parameterSet);
 	}
 	catch(const std::exception& ex)
@@ -666,10 +666,10 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscPeer::putParamset(int32_t clientID, 
 		if(!_centralFeatures) return BaseLib::RPC::Variable::createError(-2, "Not a central peer.");
 		if(channel < 0) channel = 0;
 		if(remoteChannel < 0) remoteChannel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
+		if(_rpcDevice->channels.find(channel) == _rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Unknown channel.");
 		if(type == BaseLib::RPC::ParameterSet::Type::none) type = BaseLib::RPC::ParameterSet::Type::link;
-		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
-		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets.at(type);
+		if(_rpcDevice->channels[channel]->parameterSets.find(type) == _rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::Variable::createError(-3, "Unknown parameter set.");
+		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = _rpcDevice->channels[channel]->parameterSets.at(type);
 		if(variables->structValue->empty()) return std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcVoid));
 
 		if(type == BaseLib::RPC::ParameterSet::Type::Enum::master)

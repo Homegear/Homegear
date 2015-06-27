@@ -138,7 +138,7 @@ void SonosDevice::loadPeers()
 			GD::out.printMessage("Loading Sonos peer " + std::to_string(peerID));
 			std::shared_ptr<SonosPeer> peer(new SonosPeer(peerID, row->second.at(3)->textValue, _deviceID, isCentral(), this));
 			if(!peer->load(this)) continue;
-			if(!peer->rpcDevice) continue;
+			if(!peer->getRpcDevice()) continue;
 			_peersMutex.lock();
 			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
 			_peersByID[peerID] = peer;

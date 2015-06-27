@@ -96,45 +96,45 @@ endif
 OBJECTS := \
 	$(OBJDIR)/BaseLib.o \
 	$(OBJDIR)/IEvents.o \
-	$(OBJDIR)/Crypt.o \
-	$(OBJDIR)/Math.o \
-	$(OBJDIR)/Net.o \
 	$(OBJDIR)/Color.o \
-	$(OBJDIR)/HelperFunctions.o \
 	$(OBJDIR)/Base64.o \
+	$(OBJDIR)/Math.o \
 	$(OBJDIR)/Io.o \
+	$(OBJDIR)/HelperFunctions.o \
+	$(OBJDIR)/Crypt.o \
+	$(OBJDIR)/Net.o \
 	$(OBJDIR)/Output.o \
-	$(OBJDIR)/PhysicalParameter.o \
-	$(OBJDIR)/Variable.o \
-	$(OBJDIR)/Device.o \
 	$(OBJDIR)/LogicalParameter.o \
+	$(OBJDIR)/Device.o \
 	$(OBJDIR)/Devices.o \
+	$(OBJDIR)/Variable.o \
+	$(OBJDIR)/PhysicalParameter.o \
 	$(OBJDIR)/Peer.o \
-	$(OBJDIR)/Central.o \
-	$(OBJDIR)/IPhysicalInterface.o \
-	$(OBJDIR)/DeviceTypes.o \
-	$(OBJDIR)/LogicalDevice.o \
 	$(OBJDIR)/Packet.o \
-	$(OBJDIR)/DeviceFamily.o \
-	$(OBJDIR)/UpdateInfo.o \
 	$(OBJDIR)/ServiceMessages.o \
+	$(OBJDIR)/LogicalDevice.o \
+	$(OBJDIR)/DeviceFamily.o \
+	$(OBJDIR)/DeviceTypes.o \
+	$(OBJDIR)/IPhysicalInterface.o \
+	$(OBJDIR)/UpdateInfo.o \
+	$(OBJDIR)/Central.o \
 	$(OBJDIR)/FileDescriptorManager.o \
 	$(OBJDIR)/SerialDeviceManager.o \
-	$(OBJDIR)/Html.o \
-	$(OBJDIR)/BinaryEncoder.o \
-	$(OBJDIR)/XMLRPCDecoder.o \
 	$(OBJDIR)/BinaryDecoder.o \
-	$(OBJDIR)/HTTP.o \
-	$(OBJDIR)/JsonEncoder.o \
-	$(OBJDIR)/RPCHeader.o \
-	$(OBJDIR)/RPCDecoder.o \
 	$(OBJDIR)/JsonDecoder.o \
-	$(OBJDIR)/XMLRPCEncoder.o \
-	$(OBJDIR)/RPCEncoder.o \
+	$(OBJDIR)/JsonEncoder.o \
 	$(OBJDIR)/WebSocket.o \
+	$(OBJDIR)/HTTP.o \
+	$(OBJDIR)/RPCEncoder.o \
+	$(OBJDIR)/RPCDecoder.o \
+	$(OBJDIR)/XMLRPCDecoder.o \
+	$(OBJDIR)/BinaryEncoder.o \
+	$(OBJDIR)/XMLRPCEncoder.o \
+	$(OBJDIR)/Html.o \
+	$(OBJDIR)/RPCHeader.o \
+	$(OBJDIR)/HTTPClient.o \
 	$(OBJDIR)/SocketOperations.o \
 	$(OBJDIR)/SerialReaderWriter.o \
-	$(OBJDIR)/HTTPClient.o \
 	$(OBJDIR)/Threads.o \
 	$(OBJDIR)/Settings.o \
 	$(OBJDIR)/SSDP.o \
@@ -208,70 +208,70 @@ $(OBJDIR)/BaseLib.o: Modules/Base/BaseLib.cpp
 $(OBJDIR)/IEvents.o: Modules/Base/IEvents.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Crypt.o: Modules/Base/HelperFunctions/Crypt.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Math.o: Modules/Base/HelperFunctions/Math.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Net.o: Modules/Base/HelperFunctions/Net.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Color.o: Modules/Base/HelperFunctions/Color.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HelperFunctions.o: Modules/Base/HelperFunctions/HelperFunctions.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Base64.o: Modules/Base/HelperFunctions/Base64.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Math.o: Modules/Base/HelperFunctions/Math.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Io.o: Modules/Base/HelperFunctions/Io.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HelperFunctions.o: Modules/Base/HelperFunctions/HelperFunctions.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Crypt.o: Modules/Base/HelperFunctions/Crypt.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Net.o: Modules/Base/HelperFunctions/Net.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Output.o: Modules/Base/Output/Output.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PhysicalParameter.o: Modules/Base/RPC/PhysicalParameter.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Variable.o: Modules/Base/RPC/Variable.cpp
+$(OBJDIR)/LogicalParameter.o: Modules/Base/RPC/LogicalParameter.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Device.o: Modules/Base/RPC/Device.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/LogicalParameter.o: Modules/Base/RPC/LogicalParameter.cpp
+$(OBJDIR)/Devices.o: Modules/Base/RPC/Devices.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Devices.o: Modules/Base/RPC/Devices.cpp
+$(OBJDIR)/Variable.o: Modules/Base/RPC/Variable.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/PhysicalParameter.o: Modules/Base/RPC/PhysicalParameter.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Peer.o: Modules/Base/Systems/Peer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Central.o: Modules/Base/Systems/Central.cpp
+$(OBJDIR)/Packet.o: Modules/Base/Systems/Packet.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/IPhysicalInterface.o: Modules/Base/Systems/IPhysicalInterface.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/DeviceTypes.o: Modules/Base/Systems/DeviceTypes.cpp
+$(OBJDIR)/ServiceMessages.o: Modules/Base/Systems/ServiceMessages.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/LogicalDevice.o: Modules/Base/Systems/LogicalDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Packet.o: Modules/Base/Systems/Packet.cpp
+$(OBJDIR)/DeviceFamily.o: Modules/Base/Systems/DeviceFamily.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/DeviceFamily.o: Modules/Base/Systems/DeviceFamily.cpp
+$(OBJDIR)/DeviceTypes.o: Modules/Base/Systems/DeviceTypes.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/IPhysicalInterface.o: Modules/Base/Systems/IPhysicalInterface.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/UpdateInfo.o: Modules/Base/Systems/UpdateInfo.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/ServiceMessages.o: Modules/Base/Systems/ServiceMessages.cpp
+$(OBJDIR)/Central.o: Modules/Base/Systems/Central.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/FileDescriptorManager.o: Modules/Base/Managers/FileDescriptorManager.cpp
@@ -280,49 +280,49 @@ $(OBJDIR)/FileDescriptorManager.o: Modules/Base/Managers/FileDescriptorManager.c
 $(OBJDIR)/SerialDeviceManager.o: Modules/Base/Managers/SerialDeviceManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Html.o: Modules/Base/Encoding/Html.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/BinaryEncoder.o: Modules/Base/Encoding/BinaryEncoder.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/XMLRPCDecoder.o: Modules/Base/Encoding/XMLRPCDecoder.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/BinaryDecoder.o: Modules/Base/Encoding/BinaryDecoder.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HTTP.o: Modules/Base/Encoding/HTTP.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/JsonEncoder.o: Modules/Base/Encoding/JsonEncoder.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCHeader.o: Modules/Base/Encoding/RPCHeader.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCDecoder.o: Modules/Base/Encoding/RPCDecoder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/JsonDecoder.o: Modules/Base/Encoding/JsonDecoder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/XMLRPCEncoder.o: Modules/Base/Encoding/XMLRPCEncoder.cpp
+$(OBJDIR)/JsonEncoder.o: Modules/Base/Encoding/JsonEncoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/WebSocket.o: Modules/Base/Encoding/WebSocket.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HTTP.o: Modules/Base/Encoding/HTTP.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RPCEncoder.o: Modules/Base/Encoding/RPCEncoder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/WebSocket.o: Modules/Base/Encoding/WebSocket.cpp
+$(OBJDIR)/RPCDecoder.o: Modules/Base/Encoding/RPCDecoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/XMLRPCDecoder.o: Modules/Base/Encoding/XMLRPCDecoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/BinaryEncoder.o: Modules/Base/Encoding/BinaryEncoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/XMLRPCEncoder.o: Modules/Base/Encoding/XMLRPCEncoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Html.o: Modules/Base/Encoding/Html.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/RPCHeader.o: Modules/Base/Encoding/RPCHeader.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HTTPClient.o: Modules/Base/Sockets/HTTPClient.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/SocketOperations.o: Modules/Base/Sockets/SocketOperations.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/SerialReaderWriter.o: Modules/Base/Sockets/SerialReaderWriter.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HTTPClient.o: Modules/Base/Sockets/HTTPClient.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Threads.o: Modules/Base/Threads/Threads.cpp

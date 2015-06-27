@@ -131,11 +131,13 @@ public:
 
 	bool deleting = false; //Needed, so the peer gets not saved in central's worker thread while being deleted
 
+	void setRpcDevice(std::shared_ptr<RPC::Device> value) { _rpcDevice = value; initializeTypeString(); }
+	std::shared_ptr<RPC::Device> getRpcDevice() { return _rpcDevice; }
+
 	std::unordered_map<uint32_t, ConfigDataBlock> binaryConfig;
 	std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> configCentral;
 	std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> valuesCentral;
 	std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>> linksCentral;
-	std::shared_ptr<RPC::Device> rpcDevice;
 	std::shared_ptr<ServiceMessages> serviceMessages;
 
 	Peer(BaseLib::Obj* baseLib, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
@@ -256,6 +258,7 @@ public:
     //End RPC methods
 protected:
     BaseLib::Obj* _bl = nullptr;
+    std::shared_ptr<RPC::Device> _rpcDevice;
     std::map<uint32_t, uint32_t> _variableDatabaseIDs;
     std::shared_ptr<Central> _central;
 
@@ -274,9 +277,18 @@ protected:
 	std::string _name;
 	std::string _ip;
 	std::string _idString;
+
+	/*
+	 * Stores a manually set type string. Overrides _rpcTypeString.
+	 * @see _rpcTypeString
+	 */
 	std::string _typeString;
 	//End
 
+	/*
+	 * Stores the type string defined in the device's XML file. Can be overridden by _typeString.
+	 * @see _typeString
+	 */
 	std::string _rpcTypeString;
 	RPC::Device::RXModes::Enum _rxModes = RPC::Device::RXModes::Enum::none;
 

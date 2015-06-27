@@ -95,9 +95,9 @@ endif
 
 OBJECTS := \
 	$(OBJDIR)/main.o \
+	$(OBJDIR)/FamilyController.o \
 	$(OBJDIR)/PhysicalInterfaces.o \
 	$(OBJDIR)/DatabaseController.o \
-	$(OBJDIR)/FamilyController.o \
 
 RESOURCES := \
 
@@ -165,13 +165,13 @@ endif
 $(OBJDIR)/main.o: main.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/FamilyController.o: Libraries/Systems/FamilyController.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PhysicalInterfaces.o: Libraries/Systems/PhysicalInterfaces.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/DatabaseController.o: Libraries/Systems/DatabaseController.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/FamilyController.o: Libraries/Systems/FamilyController.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

@@ -94,13 +94,13 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/GD.o \
 	$(OBJDIR)/PhilipsHue.o \
-	$(OBJDIR)/PhilipsHuePeer.o \
-	$(OBJDIR)/PhilipsHuePacket.o \
-	$(OBJDIR)/PhilipsHueDevice.o \
-	$(OBJDIR)/PacketManager.o \
 	$(OBJDIR)/Factory.o \
+	$(OBJDIR)/PhilipsHuePacket.o \
+	$(OBJDIR)/GD.o \
+	$(OBJDIR)/PhilipsHueDevice.o \
+	$(OBJDIR)/PhilipsHuePeer.o \
+	$(OBJDIR)/PacketManager.o \
 	$(OBJDIR)/PhilipsHueCentral.o \
 	$(OBJDIR)/HueBridge.o \
 	$(OBJDIR)/IPhilipsHueInterface.o \
@@ -168,25 +168,25 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/GD.o: Modules/PhilipsHue/GD.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PhilipsHue.o: Modules/PhilipsHue/PhilipsHue.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PhilipsHuePeer.o: Modules/PhilipsHue/PhilipsHuePeer.cpp
+$(OBJDIR)/Factory.o: Modules/PhilipsHue/Factory.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PhilipsHuePacket.o: Modules/PhilipsHue/PhilipsHuePacket.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/GD.o: Modules/PhilipsHue/GD.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PhilipsHueDevice.o: Modules/PhilipsHue/PhilipsHueDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PacketManager.o: Modules/PhilipsHue/PacketManager.cpp
+$(OBJDIR)/PhilipsHuePeer.o: Modules/PhilipsHue/PhilipsHuePeer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Factory.o: Modules/PhilipsHue/Factory.cpp
+$(OBJDIR)/PacketManager.o: Modules/PhilipsHue/PacketManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PhilipsHueCentral.o: Modules/PhilipsHue/LogicalDevices/PhilipsHueCentral.cpp

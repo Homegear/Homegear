@@ -124,7 +124,7 @@ void MiscDevice::loadPeers()
 			GD::out.printMessage("Loading Miscellaneous peer " + std::to_string(peerID));
 			std::shared_ptr<MiscPeer> peer(new MiscPeer(peerID, row->second.at(3)->textValue, _deviceID, isCentral(), this));
 			if(!peer->load(this)) continue;
-			if(!peer->rpcDevice) continue;
+			if(!peer->getRpcDevice()) continue;
 			_peersMutex.lock();
 			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
 			_peersByID[peerID] = peer;

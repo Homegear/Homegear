@@ -273,7 +273,7 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 			if(!queue->queue->isEmpty() && queue->queue->getQueueType() != BidCoSQueueType::PAIRING)
 			{
 				peer = queue->queue->peer;
-				if(peer && peer->rpcDevice && ((peer->getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (peer->getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst)))
+				if(peer && peer->getRpcDevice() && ((peer->getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (peer->getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst)))
 				{
 					setUnreach = true;
 				}

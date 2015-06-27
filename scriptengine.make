@@ -94,9 +94,9 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/php_sapi.o \
-	$(OBJDIR)/PHPVariableConverter.o \
 	$(OBJDIR)/ScriptEngine.o \
+	$(OBJDIR)/PHPVariableConverter.o \
+	$(OBJDIR)/php_sapi.o \
 
 RESOURCES := \
 
@@ -161,13 +161,13 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/php_sapi.o: Libraries/ScriptEngine/php_sapi.cpp
+$(OBJDIR)/ScriptEngine.o: Libraries/ScriptEngine/ScriptEngine.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PHPVariableConverter.o: Libraries/ScriptEngine/PHPVariableConverter.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/ScriptEngine.o: Libraries/ScriptEngine/ScriptEngine.cpp
+$(OBJDIR)/php_sapi.o: Libraries/ScriptEngine/php_sapi.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

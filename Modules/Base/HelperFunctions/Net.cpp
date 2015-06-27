@@ -60,7 +60,7 @@ int32_t Net::readNlSocket(int32_t sockFd, char* buffer, int32_t bufferLength, ui
 		if((readLength = recv(sockFd, buffer, bufferLength - messageLength, 0)) < 0) throw NetException("Read from socket failed: " + std::string(strerror(errno)));
 		nlHeader = (struct nlmsghdr *)buffer;
 
-		if((0 == NLMSG_OK(nlHeader, readLength)) || (NLMSG_ERROR == nlHeader->nlmsg_type)) throw NetException("Error in received packet: " + std::string(strerror(errno)));
+		if((0 == NLMSG_OK(nlHeader, (uint32_t)readLength)) || (NLMSG_ERROR == nlHeader->nlmsg_type)) throw NetException("Error in received packet: " + std::string(strerror(errno)));
 		if (NLMSG_DONE == nlHeader->nlmsg_type) break;
 
 		buffer += readLength;
@@ -111,7 +111,7 @@ void Net::getRoutes(RouteInfoList& routeInfo)
     struct rtattr* routeAttribute = nullptr;
     int32_t routeLength = 0;
     char interfaceNameBuffer[IF_NAMESIZE + 1];
-	for(; NLMSG_OK(nlMessage, length); nlMessage = NLMSG_NEXT(nlMessage, length))
+	for(; NLMSG_OK(nlMessage, (uint32_t)length); nlMessage = NLMSG_NEXT(nlMessage, length))
 	{
 		info.reset(new RouteInfo());
         routeMessage = (struct rtmsg *)NLMSG_DATA(nlMessage);

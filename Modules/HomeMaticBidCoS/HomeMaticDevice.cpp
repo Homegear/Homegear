@@ -541,7 +541,8 @@ void HomeMaticDevice::loadPeers()
 			int32_t address = row->second.at(2)->intValue;
 			std::shared_ptr<BidCoSPeer> peer(new BidCoSPeer(peerID, address, row->second.at(3)->textValue, _deviceID, isCentral(), this));
 			if(!peer->load(this)) continue;
-			if(!peer->rpcDevice) continue;
+			std::shared_ptr<BaseLib::RPC::Device> rpcDevice = peer->getRpcDevice();
+			if(rpcDevice) continue;
 			_peersMutex.lock();
 			_peers[peer->getAddress()] = peer;
 			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
@@ -554,7 +555,7 @@ void HomeMaticDevice::loadPeers()
 				if(_peersBySerial.find(peer->getTeamRemoteSerialNumber()) == _peersBySerial.end())
 				{
 					std::shared_ptr<BidCoSPeer> team = createTeam(peer->getTeamRemoteAddress(), peer->getDeviceType(), peer->getTeamRemoteSerialNumber());
-					team->rpcDevice = peer->rpcDevice->team;
+					team->setRpcDevice(rpcDevice->team);
 					team->initializeCentralConfig();
 					team->setID(peer->getID() | (1 << 30));
 					team->setInterface(-1, peer->getPhysicalInterfaceID());
@@ -562,7 +563,7 @@ void HomeMaticDevice::loadPeers()
 					_peersByID[team->getID()] = team;
 				}
 				_peersMutex.unlock();
-				for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+				for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 				{
 					if(i->second->hasTeam)
 					{

@@ -94,22 +94,22 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/MAXMessage.o \
-	$(OBJDIR)/GD.o \
-	$(OBJDIR)/PacketQueue.o \
-	$(OBJDIR)/PendingQueues.o \
-	$(OBJDIR)/MAXPacket.o \
-	$(OBJDIR)/QueueManager.o \
-	$(OBJDIR)/MAXPeer.o \
 	$(OBJDIR)/MAXDevice.o \
 	$(OBJDIR)/MAXMessages.o \
-	$(OBJDIR)/PacketManager.o \
+	$(OBJDIR)/MAXPacket.o \
+	$(OBJDIR)/PendingQueues.o \
 	$(OBJDIR)/Factory.o \
+	$(OBJDIR)/MAXMessage.o \
+	$(OBJDIR)/MAXPeer.o \
+	$(OBJDIR)/PacketQueue.o \
+	$(OBJDIR)/GD.o \
 	$(OBJDIR)/MAX.o \
+	$(OBJDIR)/PacketManager.o \
+	$(OBJDIR)/QueueManager.o \
 	$(OBJDIR)/MAXCentral.o \
 	$(OBJDIR)/MAXSpyDevice.o \
-	$(OBJDIR)/TICC1100.o \
 	$(OBJDIR)/CUL.o \
+	$(OBJDIR)/TICC1100.o \
 	$(OBJDIR)/COC.o \
 
 RESOURCES := \
@@ -175,40 +175,40 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/MAXMessage.o: Modules/MAX/MAXMessage.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/GD.o: Modules/MAX/GD.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PacketQueue.o: Modules/MAX/PacketQueue.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PendingQueues.o: Modules/MAX/PendingQueues.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/MAXPacket.o: Modules/MAX/MAXPacket.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/QueueManager.o: Modules/MAX/QueueManager.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/MAXPeer.o: Modules/MAX/MAXPeer.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/MAXDevice.o: Modules/MAX/MAXDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/MAXMessages.o: Modules/MAX/MAXMessages.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PacketManager.o: Modules/MAX/PacketManager.cpp
+$(OBJDIR)/MAXPacket.o: Modules/MAX/MAXPacket.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/PendingQueues.o: Modules/MAX/PendingQueues.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Factory.o: Modules/MAX/Factory.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/MAXMessage.o: Modules/MAX/MAXMessage.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/MAXPeer.o: Modules/MAX/MAXPeer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/PacketQueue.o: Modules/MAX/PacketQueue.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/GD.o: Modules/MAX/GD.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/MAX.o: Modules/MAX/MAX.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/PacketManager.o: Modules/MAX/PacketManager.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/QueueManager.o: Modules/MAX/QueueManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/MAXCentral.o: Modules/MAX/LogicalDevices/MAXCentral.cpp
@@ -217,10 +217,10 @@ $(OBJDIR)/MAXCentral.o: Modules/MAX/LogicalDevices/MAXCentral.cpp
 $(OBJDIR)/MAXSpyDevice.o: Modules/MAX/LogicalDevices/MAXSpyDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/TICC1100.o: Modules/MAX/PhysicalInterfaces/TICC1100.cpp
+$(OBJDIR)/CUL.o: Modules/MAX/PhysicalInterfaces/CUL.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/CUL.o: Modules/MAX/PhysicalInterfaces/CUL.cpp
+$(OBJDIR)/TICC1100.o: Modules/MAX/PhysicalInterfaces/TICC1100.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/COC.o: Modules/MAX/PhysicalInterfaces/COC.cpp

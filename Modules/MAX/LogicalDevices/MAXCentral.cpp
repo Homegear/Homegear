@@ -290,7 +290,7 @@ void MAXCentral::deletePeer(uint64_t id)
 		peer->deleting = true;
 		std::shared_ptr<BaseLib::RPC::Variable> deviceAddresses(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(peer->getSerialNumber())));
-		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->getRpcDevice()->channels.begin(); i != peer->getRpcDevice()->channels.end(); ++i)
 		{
 			deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(peer->getSerialNumber() + ":" + std::to_string(i->first))));
 		}
@@ -298,7 +298,7 @@ void MAXCentral::deletePeer(uint64_t id)
 		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)peer->getID()))));
 		std::shared_ptr<BaseLib::RPC::Variable> channels(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("CHANNELS", channels));
-		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->getRpcDevice()->channels.begin(); i != peer->getRpcDevice()->channels.end(); ++i)
 		{
 			channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(i->first)));
 		}
@@ -696,9 +696,9 @@ std::string MAXCentral::handleCLICommand(std::string command)
 						<< std::setw(addressWidth) << BaseLib::HelperFunctions::getHexString(i->second->getAddress(), 6) << bar
 						<< std::setw(serialWidth) << i->second->getSerialNumber() << bar
 						<< std::setw(typeWidth1) << BaseLib::HelperFunctions::getHexString(i->second->getDeviceType().type(), 4) << bar;
-					if(i->second->rpcDevice)
+					if(i->second->getRpcDevice())
 					{
-						std::shared_ptr<BaseLib::RPC::DeviceType> type = i->second->rpcDevice->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
+						std::shared_ptr<BaseLib::RPC::DeviceType> type = i->second->getRpcDevice()->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
 						std::string typeID;
 						if(type) typeID = type->id;
 						if(typeID.size() > (unsigned)typeWidth2)
@@ -846,8 +846,8 @@ std::shared_ptr<MAXPeer> MAXCentral::createPeer(int32_t address, int32_t firmwar
 		peer->setFirmwareVersion(firmwareVersion);
 		peer->setDeviceType(deviceType);
 		peer->setSerialNumber(serialNumber);
-		peer->rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, -1);
-		if(!peer->rpcDevice) return std::shared_ptr<MAXPeer>();
+		peer->setRpcDevice(GD::rpcDevices.find(deviceType, firmwareVersion, -1));
+		if(!peer->getRpcDevice()) return std::shared_ptr<MAXPeer>();
 		if(save) peer->save(true, true, false); //Save and create peerID
 		return peer;
 	}
@@ -1072,7 +1072,7 @@ void MAXCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<MA
 				peer = queue->peer;
 			}
 
-			if(!peer->rpcDevice)
+			if(!peer->getRpcDevice())
 			{
 				GD::out.printWarning("Warning: Device type not supported. Sender address 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6) + ".");
 				return;
@@ -1097,7 +1097,7 @@ void MAXCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<MA
 			payload.clear();
 			_messageCounter[0]++;*/
 
-			if(peer->rpcDevice->needsTime)
+			if(peer->getRpcDevice()->needsTime)
 			{
 				//TIME
 				queue->push(getTimePacket(_messageCounter[0], packet->senderAddress(), false));
@@ -1162,10 +1162,10 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXCentral::addLink(int32_t clientID, ui
 		if(!receiver) return BaseLib::RPC::Variable::createError(-2, "Receiver device not found.");
 		if(senderChannelIndex < 0) senderChannelIndex = 0;
 		if(receiverChannelIndex < 0) receiverChannelIndex = 0;
-		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Sender channel not found.");
-		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Receiver channel not found.");
-		std::shared_ptr<BaseLib::RPC::DeviceChannel> senderChannel = sender->rpcDevice->channels.at(senderChannelIndex);
-		std::shared_ptr<BaseLib::RPC::DeviceChannel> receiverChannel = receiver->rpcDevice->channels.at(receiverChannelIndex);
+		if(sender->getRpcDevice()->channels.find(senderChannelIndex) == sender->getRpcDevice()->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Sender channel not found.");
+		if(receiver->getRpcDevice()->channels.find(receiverChannelIndex) == receiver->getRpcDevice()->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Receiver channel not found.");
+		std::shared_ptr<BaseLib::RPC::DeviceChannel> senderChannel = sender->getRpcDevice()->channels.at(senderChannelIndex);
+		std::shared_ptr<BaseLib::RPC::DeviceChannel> receiverChannel = receiver->getRpcDevice()->channels.at(receiverChannelIndex);
 		if(!senderChannel || !receiverChannel || !senderChannel->linkRoles || !receiverChannel->linkRoles || senderChannel->linkRoles->sourceNames.size() == 0 || receiverChannel->linkRoles->targetNames.size() == 0) return BaseLib::RPC::Variable::createError(-6, "Link not supported.");
 		bool validLink = false;
 		for(std::vector<std::string>::iterator i = senderChannel->linkRoles->sourceNames.begin(); i != senderChannel->linkRoles->sourceNames.end(); ++i)
@@ -1551,8 +1551,8 @@ std::shared_ptr<BaseLib::RPC::Variable> MAXCentral::removeLink(int32_t clientID,
 		if(receiverChannelIndex < 0) receiverChannelIndex = 0;
 		std::string senderSerialNumber = sender->getSerialNumber();
 		std::string receiverSerialNumber = receiver->getSerialNumber();
-		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Sender channel not found.");
-		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Receiver channel not found.");
+		if(sender->getRpcDevice()->channels.find(senderChannelIndex) == sender->getRpcDevice()->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Sender channel not found.");
+		if(receiver->getRpcDevice()->channels.find(receiverChannelIndex) == receiver->getRpcDevice()->channels.end()) return BaseLib::RPC::Variable::createError(-2, "Receiver channel not found.");
 		if(!sender->getPeer(senderChannelIndex, receiver->getAddress()) && !receiver->getPeer(receiverChannelIndex, sender->getAddress())) return BaseLib::RPC::Variable::createError(-6, "Devices are not paired to each other.");
 
 		sender->removePeer(senderChannelIndex, receiver->getID(), receiverChannelIndex);

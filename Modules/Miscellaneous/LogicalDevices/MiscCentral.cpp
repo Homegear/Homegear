@@ -78,7 +78,7 @@ void MiscCentral::deletePeer(uint64_t id)
 		peer->deleting = true;
 		std::shared_ptr<BaseLib::RPC::Variable> deviceAddresses(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(peer->getSerialNumber())));
-		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->getRpcDevice()->channels.begin(); i != peer->getRpcDevice()->channels.end(); ++i)
 		{
 			deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(peer->getSerialNumber() + ":" + std::to_string(i->first))));
 		}
@@ -86,7 +86,7 @@ void MiscCentral::deletePeer(uint64_t id)
 		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable((int32_t)peer->getID()))));
 		std::shared_ptr<BaseLib::RPC::Variable> channels(new BaseLib::RPC::Variable(BaseLib::RPC::VariableType::rpcArray));
 		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("CHANNELS", channels));
-		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->getRpcDevice()->channels.begin(); i != peer->getRpcDevice()->channels.end(); ++i)
 		{
 			channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::Variable>(new BaseLib::RPC::Variable(i->first)));
 		}
@@ -184,7 +184,7 @@ std::string MiscCentral::handleCLICommand(std::string command)
 			else
 			{
 				std::shared_ptr<MiscPeer> peer = createPeer(BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::Miscellaneous, deviceType), serialNumber, false);
-				if(!peer || !peer->rpcDevice) return "Device type not supported.\n";
+				if(!peer || !peer->getRpcDevice()) return "Device type not supported.\n";
 				try
 				{
 					_peersMutex.lock();
@@ -380,9 +380,9 @@ std::string MiscCentral::handleCLICommand(std::string command)
 					stringStream << name << bar
 						<< std::setw(serialWidth) << i->second->getSerialNumber() << bar
 						<< std::setw(typeWidth1) << BaseLib::HelperFunctions::getHexString(i->second->getDeviceType().type(), 4) << bar;
-					if(i->second->rpcDevice)
+					if(i->second->getRpcDevice())
 					{
-						std::shared_ptr<BaseLib::RPC::DeviceType> type = i->second->rpcDevice->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
+						std::shared_ptr<BaseLib::RPC::DeviceType> type = i->second->getRpcDevice()->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
 						std::string typeID;
 						if(type) typeID = type->id;
 						if(typeID.size() > (unsigned)typeWidth2)
@@ -529,8 +529,8 @@ std::shared_ptr<MiscPeer> MiscCentral::createPeer(BaseLib::Systems::LogicalDevic
 		std::shared_ptr<MiscPeer> peer(new MiscPeer(_deviceID, true, this));
 		peer->setDeviceType(deviceType);
 		peer->setSerialNumber(serialNumber);
-		peer->rpcDevice = GD::rpcDevices.find(deviceType, 0x10, -1);
-		if(!peer->rpcDevice) return std::shared_ptr<MiscPeer>();
+		peer->setRpcDevice(GD::rpcDevices.find(deviceType, 0x10, -1));
+		if(!peer->getRpcDevice()) return std::shared_ptr<MiscPeer>();
 		if(save) peer->save(true, true, false); //Save and create peerID
 		return peer;
 	}
@@ -612,7 +612,7 @@ std::shared_ptr<BaseLib::RPC::Variable> MiscCentral::createDevice(int32_t client
 		if(peerExists(serialNumber)) return BaseLib::RPC::Variable::createError(-5, "This peer is already paired to this central.");
 
 		std::shared_ptr<MiscPeer> peer = createPeer(BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::Miscellaneous, deviceType), serialNumber, false);
-		if(!peer || !peer->rpcDevice) return BaseLib::RPC::Variable::createError(-6, "Unknown device type.");
+		if(!peer || !peer->getRpcDevice()) return BaseLib::RPC::Variable::createError(-6, "Unknown device type.");
 
 		try
 		{
