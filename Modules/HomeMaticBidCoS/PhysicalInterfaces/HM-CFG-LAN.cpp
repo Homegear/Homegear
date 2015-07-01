@@ -953,10 +953,10 @@ void HM_CFG_LAN::processInit(std::string& packet)
 	if(_initCommandQueue.front().at(0) == 'A') //No init packet has been sent yet
 	{
 		std::vector<std::string> parts = BaseLib::HelperFunctions::splitAll(packet, ',');
-		if(parts.size() < 7 || parts.at(0) != "HHM-LAN-IF")
+		if(parts.size() < 7 || (parts.at(0) != "HHM-LAN-IF" && parts.at(0) != "HHM-USB-IF"))
 		{
 			_stopCallbackThread = true;
-			_out.printError("Error: First packet from HM-CFG-LAN does not start with \"HHM-LAN-IF\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening. Packet was: " + packet);
+			_out.printError("Error: First packet from HM-CFG-LAN does not start with \"HHM-LAN-IF\", \"HHM-USB-IF\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening. Packet was: " + packet);
 			return;
 		}
 		_startUpTime = BaseLib::HelperFunctions::getTime() - (int64_t)BaseLib::Math::getNumber(parts.at(5), true);
