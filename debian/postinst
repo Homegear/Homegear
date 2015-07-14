@@ -34,7 +34,7 @@ case $1 in
 			unzip -d /tmp/HomegearScriptsDir /tmp/HomegearScriptsDir/Homegear_PHP_XMLRPC_Client.zip
 			[ $? -ne 0 ] && exit 1
 			rm /tmp/HomegearScriptsDir/Homegear_PHP_XMLRPC_Client.zip
-			mkdir /var/lib/homegear/scripts
+			mkdir -p /var/lib/homegear/scripts
 			[ $? -ne 0 ] && exit 1
 			mv /tmp/HomegearScriptsDir/* /var/lib/homegear/scripts
 			[ $? -ne 0 ] && exit 1

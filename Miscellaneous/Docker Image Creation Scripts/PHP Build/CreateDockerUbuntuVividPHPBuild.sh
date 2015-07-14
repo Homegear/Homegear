@@ -4,18 +4,38 @@
 
 set -x
 
+print_usage() {
+	echo "Usage: CreateDockerUbuntuVividPHPBuild.sh ARCH"
+	echo "  ARCH:           The CPU architecture. E. g. armhf"
+}
+
 if [ $EUID -ne 0 ]; then
 	echo "ERROR: This tool must be run as Root"
 	exit 1
 fi
 
-arch=armhf
+if test -z $1; then
+	echo "Please provide a valid CPU architecture."	
+	print_usage
+	exit 0;
+fi
 
+arch=$1
+repository="http://archive.ubuntu.com/ubuntu"
+if [ "$arch" == "armhf" ]; then
+	repository="http://ports.ubuntu.com/ubuntu-ports"
+elif [ "$arch" == "armel" ]; then
+	repository="http://ports.ubuntu.com/ubuntu-ports"
+elif [ "$arch" == "arm64" ]; then
+	repository="http://ports.ubuntu.com/ubuntu-ports"
+elif [ "$arch" == "mips" ]; then
+	repository="http://ports.ubuntu.com/ubuntu-ports"
+fi
 dir="$(mktemp -d ${TMPDIR:-/var/tmp}/docker-mkimage.XXXXXXXXXX)"
 rootfs=$dir/rootfs
 mkdir $rootfs
 
-debootstrap --no-check-gpg --foreign --arch=$arch jessie $rootfs http://mirrordirector.raspbian.org/raspbian/
+debootstrap --no-check-gpg --foreign --arch=$arch vivid $rootfs $repository
 if [ "$arch" == "armhf" ]; then
 	cp /usr/bin/qemu-arm-static $rootfs/usr/bin/
 elif [ "$arch" == "armel" ]; then
@@ -27,7 +47,7 @@ elif [ "$arch" == "mips" ]; then
 fi
 LANG=C chroot $rootfs /debootstrap/debootstrap --second-stage
 
-echo "deb http://mirrordirector.raspbian.org/raspbian/ jessie main contrib non-free
+echo "deb $repository vivid main restricted universe multiverse
 " > $rootfs/etc/apt/sources.list
 echo "deb-src http://packages.dotdeb.org wheezy-php56-zts all
 " > $rootfs/etc/apt/sources.list.d/php5-zts-src.list
@@ -69,6 +89,8 @@ wget -P $rootfs http://www.dotdeb.org/dotdeb.gpg
 chroot $rootfs apt-key add dotdeb.gpg
 rm $rootfs/dotdeb.gpg
 chroot $rootfs apt-get update
+#Fix debootstrap base package errors
+chroot $rootfs apt-get -y -f install
 chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs
 
 mkdir $rootfs/PHPBuild
@@ -213,7 +235,7 @@ set -x
 cd /PHPBuild
 if [ \$(ls /PHPBuild | grep -c \"\\.changes\$\") -ne 0 ]; then
 	path=\`mktemp -p / -u\`".tar.gz"
-	echo \"Raspbian\" > distribution
+	echo \"Ubuntu\" > distribution
 	tar -zcpf \${path} php* lib* distribution
 	if test -f \${path}; then
 		mv \${path} \${path}.uploading
@@ -262,6 +284,6 @@ EOF
 
 rm -Rf $rootfs
 
-docker build -t homegear/phpbuild:raspbian-jessie "$dir"
+docker build -t homegear/phpbuild:ubuntu-vivid-$arch "$dir"
 
 rm -Rf $dir

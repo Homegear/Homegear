@@ -4,18 +4,29 @@
 
 set -x
 
+print_usage() {
+	echo "Usage: CreateDockerDebianStretchPHPBuild.sh ARCH"
+	echo "  ARCH:           The CPU architecture. E. g. armhf"
+}
+
 if [ $EUID -ne 0 ]; then
 	echo "ERROR: This tool must be run as Root"
 	exit 1
 fi
 
-arch=armhf
+if test -z $1; then
+	echo "Please provide a valid CPU architecture."	
+	print_usage
+	exit 0;
+fi
+
+arch=$1
 
 dir="$(mktemp -d ${TMPDIR:-/var/tmp}/docker-mkimage.XXXXXXXXXX)"
 rootfs=$dir/rootfs
 mkdir $rootfs
 
-debootstrap --no-check-gpg --foreign --arch=$arch jessie $rootfs http://mirrordirector.raspbian.org/raspbian/
+debootstrap --no-check-gpg --foreign --arch=$arch stretch $rootfs http://ftp.debian.org/debian
 if [ "$arch" == "armhf" ]; then
 	cp /usr/bin/qemu-arm-static $rootfs/usr/bin/
 elif [ "$arch" == "armel" ]; then
@@ -27,7 +38,7 @@ elif [ "$arch" == "mips" ]; then
 fi
 LANG=C chroot $rootfs /debootstrap/debootstrap --second-stage
 
-echo "deb http://mirrordirector.raspbian.org/raspbian/ jessie main contrib non-free
+echo "deb http://ftp.debian.org/debian stretch main contrib non-free
 " > $rootfs/etc/apt/sources.list
 echo "deb-src http://packages.dotdeb.org wheezy-php56-zts all
 " > $rootfs/etc/apt/sources.list.d/php5-zts-src.list
@@ -93,7 +104,9 @@ if [[ $1 -lt 1 ]]; then
         exit 1
 fi
 
-distribution=`lsb_release -a 2>/dev/null | grep "^Codename:" | cut -d $'\t' -f 2`
+# Hard coded, because lsb_release doesn't work currently
+distribution="stretch"
+# distribution=`lsb_release -a 2>/dev/null | grep "^Codename:" | cut -d $'\t' -f 2`
 
 rm -Rf /PHPBuild/php*
 rm -Rf /PHPBuild/lib*
@@ -213,7 +226,7 @@ set -x
 cd /PHPBuild
 if [ \$(ls /PHPBuild | grep -c \"\\.changes\$\") -ne 0 ]; then
 	path=\`mktemp -p / -u\`".tar.gz"
-	echo \"Raspbian\" > distribution
+	echo \"Debian\" > distribution
 	tar -zcpf \${path} php* lib* distribution
 	if test -f \${path}; then
 		mv \${path} \${path}.uploading
@@ -262,6 +275,6 @@ EOF
 
 rm -Rf $rootfs
 
-docker build -t homegear/phpbuild:raspbian-jessie "$dir"
+docker build -t homegear/phpbuild:debian-stretch-$arch "$dir"
 
 rm -Rf $dir

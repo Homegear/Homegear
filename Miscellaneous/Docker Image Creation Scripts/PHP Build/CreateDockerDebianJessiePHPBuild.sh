@@ -139,70 +139,84 @@ chmod 755 $rootfs/PHPBuild/CreatePHPPackages.sh
 cat > "$rootfs/FirstStart.sh" <<-'EOF'
 #!/bin/bash
 sed -i '$ d' /root/.bashrc >/dev/null
-while :
-do
-	echo "Setting up SSH package uploading:"
+if [[ -z "$PHPBUILD_SERVERNAME" || -z "$PHPBUILD_SERVERPORT" || -z "$PHPBUILD_SERVERUSER" || -z "$PHPBUILD_SERVERPATH" || -z "$PHPBUILD_SERVERCERT" ]]; then
 	while :
 	do
-		read -p "Please specify the server name to upload to: " servername
-		if [ -n "$servername" ]; then
+		echo "Setting up SSH package uploading:"
+		while :
+		do
+			read -p "Please specify the server name to upload to: " PHPBUILD_SERVERNAME
+			if [ -n "$PHPBUILD_SERVERNAME" ]; then
+				break
+			fi
+		done
+		while :
+		do
+			read -p "Please specify the SSH port number of the server: " PHPBUILD_SERVERPORT
+			if [ -n "$PHPBUILD_SERVERPORT" ]; then
+				break
+			fi
+		done
+		while :
+		do
+			read -p "Please specify the user name to use to login into the server: " PHPBUILD_SERVERUSER
+			if [ -n "$PHPBUILD_SERVERUSER" ]; then
+				break
+			fi
+		done
+		while :
+		do
+			read -p "Please specify the path on the server to upload packages to: " PHPBUILD_SERVERPATH
+			PHPBUILD_SERVERPATH=${PHPBUILD_SERVERPATH%/}
+			if [ -n "$PHPBUILD_SERVERPATH" ]; then
+				break
+			fi
+		done
+		echo "Paste your certificate:"
+		IFS= read -d '' -n 1 PHPBUILD_SERVERCERT
+		while IFS= read -d '' -n 1 -t 2 c
+		do
+		    PHPBUILD_SERVERCERT+=$c
+		done
+		echo
+		echo
+		echo "Testing connection..."
+		mkdir -p /root/.ssh
+		echo "$PHPBUILD_SERVERCERT" > /root/.ssh/id_rsa
+		chmod 400 /root/.ssh/id_rsa
+		ssh -p $PHPBUILD_SERVERPORT ${PHPBUILD_SERVERUSER}@${PHPBUILD_SERVERNAME} "echo \"It works :-)\""
+		echo
+		echo -e "Server name:\t$PHPBUILD_SERVERNAME"
+		echo -e "Server port:\t$PHPBUILD_SERVERPORT"
+		echo -e "Server user:\t$PHPBUILD_SERVERUSER"
+		echo -e "Server path:\t$PHPBUILD_SERVERPATH"
+		echo -e "Certificate:\t"
+		echo "$PHPBUILD_SERVERCERT"
+		while :
+		do
+			read -p "Is this information correct [y/n]: " correct
+			if [ -n "$correct" ]; then
+				break
+			fi
+		done
+		if [ "$correct" = "y" ]; then
 			break
 		fi
 	done
-	while :
-	do
-		read -p "Please specify the SSH port number of the server: " serverport
-		if [ -n "$serverport" ]; then
-			break
-		fi
-	done
-	while :
-	do
-		read -p "Please specify the user name to use to login into the server: " serveruser
-		if [ -n "$serveruser" ]; then
-			break
-		fi
-	done
-	while :
-	do
-		read -p "Please specify the path on the server to upload packages to: " serverpath
-		serverpath=${serverpath%/}
-		if [ -n "$serverpath" ]; then
-			break
-		fi
-	done
-	echo "Paste your certificate:"
-	IFS= read -d '' -n 1 certificate
-	while IFS= read -d '' -n 1 -t 2 c
-	do
-	    certificate+=$c
-	done
-	echo
-	echo
+else
+	PHPBUILD_SERVERPATH=${PHPBUILD_SERVERPATH%/}
 	echo "Testing connection..."
 	mkdir -p /root/.ssh
-	echo "$certificate" > /root/.ssh/id_rsa
+	echo "$PHPBUILD_SERVERCERT" > /root/.ssh/id_rsa
 	chmod 400 /root/.ssh/id_rsa
-	ssh -p $serverport ${serveruser}@${servername} "echo \"It works :-)\""
-	sleep 3
-	echo
-	echo -e "Server name:\t$servername"
-	echo -e "Server port:\t$serverport"
-	echo -e "Server user:\t$serveruser"
-	echo -e "Server path:\t$serverpath"
-	echo -e "Certificate:\t"
-	echo "$certificate"
-	while :
-	do
-		read -p "Is this information correct [y/n]: " correct
-		if [ -n "$correct" ]; then
-			break
-		fi
-	done
-	if [ "$correct" = "y" ]; then
-		break
+	sed -i -- 's/\\n/\n/g' /root/.ssh/id_rsa
+	if [ -n "$PHPBUILD_SERVER_KNOWNHOST_ENTRY" ]; then
+		echo "$PHPBUILD_SERVER_KNOWNHOST_ENTRY" > /root/.ssh/known_hosts
+		sed -i -- 's/\\n/\n/g' /root/.ssh/known_hosts
 	fi
-done
+	ssh -p $PHPBUILD_SERVERPORT ${PHPBUILD_SERVERUSER}@${PHPBUILD_SERVERNAME} "echo \"It works :-)\""
+fi
+
 echo "#!/bin/bash
 
 set -x
@@ -215,11 +229,14 @@ if [ \$(ls /PHPBuild | grep -c \"\\.changes\$\") -ne 0 ]; then
 	if test -f \${path}; then
 		mv \${path} \${path}.uploading
 		filename=\$(basename \$path)
-		scp -P $serverport \${path}.uploading ${serveruser}@${servername}:${serverpath}
+		scp -P $PHPBUILD_SERVERPORT \${path}.uploading ${PHPBUILD_SERVERUSER}@${PHPBUILD_SERVERNAME}:${PHPBUILD_SERVERPATH}
 		if [ \$? -eq 0 ]; then
-			ssh -p $serverport ${serveruser}@${servername} \"mv ${serverpath}/\${filename}.uploading ${serverpath}/\${filename}\"
+			ssh -p $PHPBUILD_SERVERPORT ${PHPBUILD_SERVERUSER}@${PHPBUILD_SERVERNAME} \"mv ${PHPBUILD_SERVERPATH}/\${filename}.uploading ${PHPBUILD_SERVERPATH}/\${filename}\"
 			if [ \$? -eq 0 ]; then
 				echo "Packages uploaded successfully."
+				exit 0
+			else
+				exit \$?
 			fi
 		fi
 	fi
@@ -228,10 +245,14 @@ fi
 chmod 755 /PHPBuild/Upload.sh
 rm /FirstStart.sh
 echo
-echo "Container setup successful. You can now execute \"/PHPBuild/CreatePHPPackages.sh\"."
+if [ -n "$PHPBUILD_REVISION" ]; then
+	/PHPBuild/CreatePHPPackages.sh $PHPBUILD_REVISION
+else
+	echo "Container setup successful. You can now execute \"/PHPBuild/CreatePHPPackages.sh\"."
+	/bin/bash
+fi
 EOF
 chmod 755 $rootfs/FirstStart.sh
-echo "/FirstStart.sh" >> $rootfs/root/.bashrc
 
 read -p "Copy additional files into ${rootfs} and check that all packages were installed ok then hit [Enter] to continue..."
 
@@ -247,7 +268,7 @@ tar --numeric-owner -caf "$dir/rootfs.tar.xz" -C "$rootfs" --transform='s,^./,,'
 cat > "$dir/Dockerfile" <<'EOF'
 FROM scratch
 ADD rootfs.tar.xz /
-CMD ["/bin/bash"]
+CMD ["/FirstStart.sh"]
 EOF
 
 rm -Rf $rootfs

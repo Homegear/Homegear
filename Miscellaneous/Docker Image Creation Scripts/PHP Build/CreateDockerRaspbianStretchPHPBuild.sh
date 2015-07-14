@@ -15,7 +15,7 @@ dir="$(mktemp -d ${TMPDIR:-/var/tmp}/docker-mkimage.XXXXXXXXXX)"
 rootfs=$dir/rootfs
 mkdir $rootfs
 
-debootstrap --no-check-gpg --foreign --arch=$arch jessie $rootfs http://mirrordirector.raspbian.org/raspbian/
+debootstrap --no-check-gpg --foreign --arch=$arch stretch $rootfs http://mirrordirector.raspbian.org/raspbian/
 if [ "$arch" == "armhf" ]; then
 	cp /usr/bin/qemu-arm-static $rootfs/usr/bin/
 elif [ "$arch" == "armel" ]; then
@@ -27,7 +27,7 @@ elif [ "$arch" == "mips" ]; then
 fi
 LANG=C chroot $rootfs /debootstrap/debootstrap --second-stage
 
-echo "deb http://mirrordirector.raspbian.org/raspbian/ jessie main contrib non-free
+echo "deb http://mirrordirector.raspbian.org/raspbian/ stretch main contrib non-free
 " > $rootfs/etc/apt/sources.list
 echo "deb-src http://packages.dotdeb.org wheezy-php56-zts all
 " > $rootfs/etc/apt/sources.list.d/php5-zts-src.list
@@ -93,8 +93,6 @@ if [[ $1 -lt 1 ]]; then
         exit 1
 fi
 
-distribution=`lsb_release -a 2>/dev/null | grep "^Codename:" | cut -d $'\t' -f 2`
-
 rm -Rf /PHPBuild/php*
 rm -Rf /PHPBuild/lib*
 
@@ -108,7 +106,7 @@ cd php-5*
 version=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d "+" -f 1 | cut -d "-" -f 1`
 revision=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d "+" -f 1 | cut -d "-" -f 2 | cut -d "~" -f 1`
 date=`LANG=en_US.UTF-8 date +"%a, %d %b %Y %T %z"`
-echo "php5 (${version}-${revision}~homegear.${1}) ${distribution}; urgency=medium
+echo "php5 (${version}-${revision}~homegear.${1}) stretch; urgency=medium
 
   * Rebuild for Homegear.
 
@@ -262,6 +260,6 @@ EOF
 
 rm -Rf $rootfs
 
-docker build -t homegear/phpbuild:raspbian-jessie "$dir"
+docker build -t homegear/phpbuild:raspbian-stretch "$dir"
 
 rm -Rf $dir
