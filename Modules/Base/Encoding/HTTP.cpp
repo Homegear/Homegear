@@ -34,8 +34,6 @@
 namespace BaseLib
 {
 
-Math HTTP::_math;
-
 std::string HTTP::getMimeType(std::string extension)
 {
 	if(_extMimeTypeMap.find(extension) != _extMimeTypeMap.end()) return _extMimeTypeMap[extension];
@@ -570,6 +568,7 @@ std::string HTTP::encodeURL(const std::string& url)
 
 std::string HTTP::decodeURL(const std::string& url)
 {
+	Math math;
 	std::ostringstream decoded;
 	char character;
 	for(std::string::const_iterator i = url.begin(); i != url.end(); ++i)
@@ -578,10 +577,10 @@ std::string HTTP::decodeURL(const std::string& url)
 		{
 			i++;
 			if(i == url.end()) return decoded.str();
-			character = (char)(_math.getNumber(*i) << 4);
+			character = (char)(math.getNumber(*i) << 4);
 			i++;
 			if(i == url.end()) return decoded.str();
-			character += (char)_math.getNumber(*i);
+			character += (char)math.getNumber(*i);
 			decoded << character;
 		}
 		else decoded << *i;

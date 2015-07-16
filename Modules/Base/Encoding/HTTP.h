@@ -142,7 +142,6 @@ private:
 	std::string _partialChunkSize;
 	size_t _streamPos = 0;
 	size_t _contentStreamPos = 0;
-	static Math _math;
 	std::map <std::string, std::string> _extMimeTypeMap;
 	std::map <int32_t, std::string> _statusCodeMap;
 
