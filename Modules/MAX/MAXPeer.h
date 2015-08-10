@@ -99,6 +99,7 @@ public:
 	virtual int32_t getNewFirmwareVersion() { return 0; }
 	virtual std::string getFirmwareVersionString(int32_t firmwareVersion);
     virtual bool firmwareUpdateAvailable() { return false; }
+    std::string printConfig();
 
     std::shared_ptr<IPhysicalInterface> getPhysicalInterface() { return _physicalInterface; }
     void setRSSIDevice(uint8_t rssi);

@@ -191,13 +191,72 @@ std::string MAXPeer::handleCLICommand(std::string command)
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "channel count\t\tPrint the number of channels of this peer" << std::endl;
+			stringStream << "config print\t\tPrints all configuration parameters and their values" << std::endl;
 			stringStream << "unselect\t\tUnselect this peer" << std::endl;
 			stringStream << "queues info\t\tPrints information about the pending MAX! packet queues" << std::endl;
 			stringStream << "queues clear\t\tClears pending MAX! packet queues" << std::endl;
 			stringStream << "peers list\t\tLists all peers paired to this peer" << std::endl;
 			return stringStream.str();
 		}
-		if(command.compare(0, 11, "queues info") == 0)
+		if(command.compare(0, 13, "channel count") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command prints this peer's number of channels." << std::endl;
+						stringStream << "Usage: channel count" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			stringStream << "Peer has " << _rpcDevice->channels.size() << " channels." << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 12, "config print") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command prints all configuration parameters of this peer. The values are in BidCoS packet format." << std::endl;
+						stringStream << "Usage: config print" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			return printConfig();
+		}
+		else if(command.compare(0, 11, "queues info") == 0)
 		{
 			std::stringstream stream(command);
 			std::string element;
@@ -631,6 +690,99 @@ void MAXPeer::unserializePeers(std::shared_ptr<std::vector<char>> serializedData
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+std::string MAXPeer::printConfig()
+{
+	try
+	{
+		std::ostringstream stringStream;
+		stringStream << "MASTER" << std::endl;
+		stringStream << "{" << std::endl;
+		for(std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::const_iterator i = configCentral.begin(); i != configCentral.end(); ++i)
+		{
+			stringStream << "\t" << "Channel: " << std::dec << i->first << std::endl;
+			stringStream << "\t{" << std::endl;
+			for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+			{
+				stringStream << "\t\t[" << j->first << "]: ";
+				if(!j->second.rpcParameter) stringStream << "(No RPC parameter) ";
+				for(std::vector<uint8_t>::const_iterator k = j->second.data.begin(); k != j->second.data.end(); ++k)
+				{
+					stringStream << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*k << " ";
+				}
+				stringStream << std::endl;
+			}
+			stringStream << "\t}" << std::endl;
+		}
+		stringStream << "}" << std::endl << std::endl;
+
+		stringStream << "VALUES" << std::endl;
+		stringStream << "{" << std::endl;
+		for(std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::const_iterator i = valuesCentral.begin(); i != valuesCentral.end(); ++i)
+		{
+			stringStream << "\t" << "Channel: " << std::dec << i->first << std::endl;
+			stringStream << "\t{" << std::endl;
+			for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+			{
+				stringStream << "\t\t[" << j->first << "]: ";
+				if(!j->second.rpcParameter) stringStream << "(No RPC parameter) ";
+				for(std::vector<uint8_t>::const_iterator k = j->second.data.begin(); k != j->second.data.end(); ++k)
+				{
+					stringStream << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*k << " ";
+				}
+				stringStream << std::endl;
+			}
+			stringStream << "\t}" << std::endl;
+		}
+		stringStream << "}" << std::endl << std::endl;
+
+		stringStream << "LINK" << std::endl;
+		stringStream << "{" << std::endl;
+		for(std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>>>::const_iterator i = linksCentral.begin(); i != linksCentral.end(); ++i)
+		{
+			stringStream << "\t" << "Channel: " << std::dec << i->first << std::endl;
+			stringStream << "\t{" << std::endl;
+			for(std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+			{
+				stringStream << "\t\t" << "Address: " << std::hex << "0x" << j->first << std::endl;
+				stringStream << "\t\t{" << std::endl;
+				for(std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::const_iterator k = j->second.begin(); k != j->second.end(); ++k)
+				{
+					stringStream << "\t\t\t" << "Remote channel: " << std::dec << k->first << std::endl;
+					stringStream << "\t\t\t{" << std::endl;
+					for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::const_iterator l = k->second.begin(); l != k->second.end(); ++l)
+					{
+						stringStream << "\t\t\t\t[" << l->first << "]: ";
+						if(!l->second.rpcParameter) stringStream << "(No RPC parameter) ";
+						for(std::vector<uint8_t>::const_iterator m = l->second.data.begin(); m != l->second.data.end(); ++m)
+						{
+							stringStream << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*m << " ";
+						}
+						stringStream << std::endl;
+					}
+					stringStream << "\t\t\t}" << std::endl;
+				}
+				stringStream << "\t\t}" << std::endl;
+			}
+			stringStream << "\t}" << std::endl;
+		}
+		stringStream << "}" << std::endl << std::endl;
+		return stringStream.str();
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "";
 }
 
 void MAXPeer::getValuesFromPacket(std::shared_ptr<MAXPacket> packet, std::vector<FrameValues>& frameValues)
