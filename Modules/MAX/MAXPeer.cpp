@@ -244,7 +244,7 @@ std::string MAXPeer::handleCLICommand(std::string command)
 				{
 					if(element == "help")
 					{
-						stringStream << "Description: This command prints all configuration parameters of this peer. The values are in BidCoS packet format." << std::endl;
+						stringStream << "Description: This command prints all configuration parameters of this peer. The values are in MAX! packet format." << std::endl;
 						stringStream << "Usage: config print" << std::endl << std::endl;
 						stringStream << "Parameters:" << std::endl;
 						stringStream << "  There are no parameters." << std::endl;
