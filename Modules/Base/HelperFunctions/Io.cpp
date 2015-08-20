@@ -136,38 +136,29 @@ std::vector<std::string> Io::getFiles(std::string path, bool recursive)
 	std::vector<std::string> files;
 	DIR* directory;
 	struct dirent* entry;
+	struct stat statStruct;
+
+	if(path.back() != '/') path += '/';
 	if((directory = opendir(path.c_str())) != 0)
 	{
 		while((entry = readdir(directory)) != 0)
 		{
-			if(entry->d_type == DT_REG)
+			std::string name(entry->d_name);
+			if(name == "." || name == "..") continue;
+			if(stat((path + name).c_str(), &statStruct) == -1)
 			{
-				try
-				{
-					files.push_back(std::string(entry->d_name));
-				}
-				catch(const std::exception& ex)
-				{
-					_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(const Exception& ex)
-				{
-					_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(...)
-				{
-					_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-				}
+				_bl->out.printWarning("Warning: Could not stat file \"" + path + name + "\": " + std::string(strerror(errno)));
+				continue;
 			}
-			else if(entry->d_type == DT_DIR && recursive)
+			//Don't use dirent::d_type as it is not supported on all file systems. See http://nerdfortress.com/2008/09/19/linux-xfs-does-not-support-direntd_type/
+			//Thanks to telkamp (https://github.com/Homegear/Homegear/issues/223)
+			if(S_ISREG(statStruct.st_mode)) files.push_back(name);
+			else if(S_ISDIR(statStruct.st_mode))
 			{
-				std::string subdirName(entry->d_name);
-				if(subdirName == "." || subdirName == "..") continue;
-				std::string subdir = path + ((path.back() == '/') ? "" : "/") + subdirName;
-				std::vector<std::string> subdirFiles = getFiles(subdir, recursive);
+				std::vector<std::string> subdirFiles = getFiles(path + name, recursive);
 				for(std::vector<std::string>::iterator i = subdirFiles.begin(); i != subdirFiles.end(); ++i)
 				{
-					files.push_back(subdirName + '/' + *i);
+					files.push_back(name + '/' + *i);
 				}
 			}
 		}
