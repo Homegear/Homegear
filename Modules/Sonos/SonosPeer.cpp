@@ -1177,7 +1177,7 @@ std::shared_ptr<BaseLib::RPC::Variable> SonosPeer::setValue(int32_t clientID, ui
 			}
 			else if(value->type == BaseLib::RPC::VariableType::rpcInteger) serviceMessages->set(valueKey, value->integerValue, channel);
 		}
-		if(rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::typeAction && !value->booleanValue) return BaseLib::RPC::Variable::createError(-5, "Parameter of type action cannot be set to \"false\".");
+		//if(rpcParameter->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::typeAction && !value->booleanValue) return BaseLib::RPC::Variable::createError(-5, "Parameter of type action cannot be set to \"false\".");
 		if(!(rpcParameter->operations & BaseLib::RPC::Parameter::Operations::write) && clientID != -1 && !((rpcParameter->operations & BaseLib::RPC::Parameter::Operations::addonWrite) && raiseIsAddonClient(clientID) == 1)) return BaseLib::RPC::Variable::createError(-6, "parameter is read only");
 		BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
@@ -1521,9 +1521,14 @@ bool SonosPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::sh
 				return true;
 			}
 			BaseLib::HelperFunctions::trim(filename);
-			if(filename.size() <= audioPath.size() || filename.compare(0, audioPath.size(), audioPath) != 0 || !BaseLib::Io::fileExists(filename))
+			if(!BaseLib::Io::fileExists(filename))
 			{
-				GD::out.printError("Error: Error executing program to generate TTS audio file. Output needs to be the full path to the TTS audio file, but was: \"" + filename + "\"");
+				GD::out.printError("Error: Error executing program to generate TTS audio file: File not found. Output needs to be the full path to the TTS audio file, but was: \"" + filename + "\"");
+				return true;
+			}
+			if(filename.size() <= audioPath.size() || filename.compare(0, audioPath.size(), audioPath) != 0)
+			{
+				GD::out.printError("Error: Error executing program to generate TTS audio file. Output needs to be the full path to the TTS audio file and the file needs to be within \"" + audioPath + "\". Returned path was: \"" + filename + "\"");
 				return true;
 			}
 			filename = filename.substr(audioPath.size());

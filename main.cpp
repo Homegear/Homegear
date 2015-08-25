@@ -480,8 +480,7 @@ int main(int argc, char* argv[])
     				else command << " " << argv[j];
     			}
 
-    			GD::cliClient.start(command.str());
-    			exit(0);
+    			exit(GD::cliClient.start(command.str()));
     		}
     		else if(arg == "-v")
     		{

@@ -43,7 +43,13 @@ public:
 	Client();
 	virtual ~Client();
 
-	void start(std::string command = "");
+	/**
+	 * Starts the CLI client.
+	 *
+	 * @param command A CLI command to execute. After this command is executed the function returns. If "command" is empty the function listens for input until "exit" or "quit" is entered.
+	 * @return Returns the exit code. If a script is executed the script exit code is returned.
+	 */
+	int32_t start(std::string command = "");
 private:
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
 	bool _stopPingThread = false;

@@ -104,7 +104,7 @@ void Client::ping()
     }
 }
 
-void Client::start(std::string command)
+int32_t Client::start(std::string command)
 {
 	try
 	{
@@ -114,7 +114,7 @@ void Client::start(std::string command)
 			if(!_fileDescriptor || _fileDescriptor->descriptor == -1)
 			{
 				GD::out.printError("Could not create socket.");
-				return;
+				return 1;
 			}
 
 			if(GD::bl->debugLevel >= 4 && i == 0) std::cout << "Info: Trying to connect..." << std::endl;
@@ -125,7 +125,7 @@ void Client::start(std::string command)
 			{
 				//Check for buffer overflow
 				GD::out.printCritical("Critical: Socket path is too long.");
-				return;
+				return 2;
 			}
 			strncpy(remoteAddress.sun_path, GD::socketPath.c_str(), 104);
 			remoteAddress.sun_path[103] = 0; //Just to make sure it is null terminated.
@@ -142,7 +142,7 @@ void Client::start(std::string command)
 				else
 				{
 					GD::out.printError("Could not connect to socket. Error: " + std::string(strerror(errno)));
-					return;
+					return 3;
 				}
 			}
 			else break;
@@ -172,7 +172,7 @@ void Client::start(std::string command)
 					//If we close the socket, the socket file gets deleted. We don't want that
 					//GD::bl->fileDescriptorManager.close(_fileDescriptor);
 					free(sendBuffer);
-					return;
+					return 4;
 				}
 				_sendMutex.lock();
 				if(_closed)
@@ -187,7 +187,7 @@ void Client::start(std::string command)
 					//If we close the socket, the socket file gets deleted. We don't want that
 					//GD::bl->fileDescriptorManager.close(_fileDescriptor);
 					free(sendBuffer);
-					return;
+					return 5;
 				}
 				currentCommand = std::string(sendBuffer);
 				if(currentCommand != lastCommand)
@@ -213,7 +213,7 @@ void Client::start(std::string command)
 				{
 					_sendMutex.unlock();
 					GD::out.printError("Error sending to socket.");
-					return;
+					return 6;
 				}
 			}
 
@@ -248,7 +248,7 @@ void Client::start(std::string command)
 								level = "(Device)";
 							}
 						}
-						else if(response.compare(0,4, "Peer") == 0)
+						else if(response.compare(0, 4, "Peer") == 0)
 						{
 							if((signed)response.find("unselected") != (signed)std::string::npos)
 							{
@@ -260,16 +260,47 @@ void Client::start(std::string command)
 							}
 						}
 					}
-					std::cout << response;
+
 					if(bytes < 1024 || (bytes == 1024 && receiveBuffer[bytes - 1] == 0))
 					{
 						if(!command.empty())
 						{
 							_sendMutex.unlock();
-							return;
+
+							// {{{ Get last line and check if it contains the exit code.
+							if(response.size() > 2)
+							{
+								const char* pos = response.c_str() + response.size() - 2; // -2, because last line ends with new line
+
+								while(pos > response.c_str())
+								{
+									if(*pos == '\n')
+									{
+										pos++;
+										break;
+									}
+									pos--;
+								}
+
+								int32_t count = (response.c_str() + response.size()) - pos - 1;
+								std::string lastLine(pos, count);
+								if(lastLine.compare(0, 11, "Exit code: ") == 0 && lastLine.size() > 11)
+								{
+									count = pos - response.c_str();
+									response = response.substr(0, count);
+									std::cout << response;
+									std::string exitCode = lastLine.substr(11);
+									return BaseLib::Math::getNumber(exitCode);
+								}
+								else std::cout << response;
+							}
+							// }}}
+
+							return 0;
 						}
 						break;
 					}
+					else std::cout << response;
 				}
 				else
 				{
@@ -278,7 +309,7 @@ void Client::start(std::string command)
 					else std::cout << "Connection closed." << std::endl;
 					//If we close the socket, the socket file gets deleted. We don't want that
 					//GD::bl->fileDescriptorManager.close(_fileDescriptor);
-					return;
+					return 8;
 				}
 			}
 			_sendMutex.unlock();
@@ -296,6 +327,7 @@ void Client::start(std::string command)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    return 0;
 }
 
 } /* namespace CLI */
