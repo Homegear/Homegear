@@ -298,6 +298,7 @@ int32_t Client::start(std::string command)
 
 							return 0;
 						}
+						else std::cout << response;
 						break;
 					}
 					else std::cout << response;
