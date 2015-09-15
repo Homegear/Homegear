@@ -48,3 +48,6 @@ local.properties
 .target
 # TeXlipse plugin
 .texlipse
+autom4te.cache
+*.in~
+config.log

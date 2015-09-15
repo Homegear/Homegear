@@ -1,0 +1,4 @@
+MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SSLSocket.o: \
+ MQTT/paho.mqtt.c/src/SSLSocket.c /usr/include/stdc-predef.h
+
+/usr/include/stdc-predef.h:
