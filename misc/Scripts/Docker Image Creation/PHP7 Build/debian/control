@@ -1,0 +1,17 @@
+Source: php7-homegear-dev
+Maintainer: Sathya Laufer <sathya@laufers.net>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.6
+Build-Depends: debhelper (>= 8)
+Homepage: https://homegear.eu
+
+Package: php7-homegear-dev
+Architecture: any
+Section: libdevel
+Priority: optional
+Homepage: https://homegear.eu
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Provides the php7 library and headers needed to compile Homegear.
+ This packet provides the php7 library and header files need to compile
+ Homegear.

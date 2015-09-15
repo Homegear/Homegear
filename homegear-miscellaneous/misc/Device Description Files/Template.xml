@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<device version="1">
+	<supported_types>
+		<!-- change name and id as you like-->
+		<type name="MyVirtualDevice" id="HM-Virtual">
+			<!-- const_value contains the device type. It is mandatory to change that to an unused value. -->
+			<type_id>0x0001</type_id>
+		</type>
+	</supported_types>
+	<!-- Define a program or script that is being started either once on start up, in intervals or that runs permanently. -->
+	<!-- This can for example be used, to poll a server for data or run your own server for example written in PHP. -->  
+	<run_program>
+		<!-- Either a relative path to a subdirectory of Homegear's script path (default: /var/lib/homegear/scripts) or the full path to the program -->
+		<path>DeviceScripts/MyTCPServerDevice/MyTCPServerDevice.php</path>
+		<!-- Arguments that should be passed to the program -->
+		<arguments>
+			<!-- $PEERID is replaced by the id of the calling peer -->
+			<!-- $RPCPORT is replaced by the port, Homegear's non ssl RPC server listens on -->
+			<argument>$PEERID</argument>
+			<argument>$RPCPORT</argument>
+		</arguments>
+		<!-- once, interval or permanent -->
+		<!-- "once" and "permanent" are equivalent except when "permanent" is used, the program is being restarted when it is closed. -->
+		<!-- If "permanent" is used, Homegear sends signal 15 (SIGTERM) to the process on shutting down (equivalent to "kill pid"). -->
+		<start_type>permanent</start_type>
+		<!-- Start interval in seconds. Only used if "start_type" is "interval". -->
+		<!-- Homegear always waits until the program has finished before starting a new instance. -->
+		<interval>300</interval>
+	</run_program>
+	<channels>
+		<!-- Add as many channels as you like. -->
+		<!-- Set "index" to the channel number. -->
+		<!-- Set "type" to whatever you want, just not an empty value. -->
+		<channel index="1" type="CUSTOM">
+			<!-- Allowed parameter set types are: MASTER for configuration parameters and VALUES for variables with dynamic values. -->
+			<paramset type="MASTER" id="custom_ch1_master">
+				<!-- Add as many parameters as you like. -->
+				<!-- "id" is the name of the parameter. -->
+				<parameter id="MY_FLOAT_CONFIG">
+					<!-- Allowed types are "integer", "float", "boolean", "option" or "string". -->
+					<!-- Additional attributes are "min", "max" (both for numbers and option), "default" and "unit". -->
+					<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+					<!-- Always use "config". -->
+					<physical interface="config"/>
+					<!-- Always use "rpc_binary". -->
+					<conversion type="rpc_binary" />
+				</parameter>
+			</paramset>
+			<paramset type="VALUES" id="custom_ch1_values">
+				<!-- Add as many parameters as you like. -->
+				<!-- "id" is the name of the parameter. -->
+				<!-- Always set operations to "read,write,event" -->
+				<parameter id="MY_BOOLEAN" operations="read,write,event">
+					<!-- Allowed types are "integer", "float", "boolean", "option" or "string". -->
+					<logical type="boolean" default="false" />
+					<!-- Always use "store". -->
+					<physical interface="store" />
+					<!-- Always use "rpc_binary". -->
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="MY_INTEGER" operations="read,write,event">
+					<logical type="integer" default="0" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="MY_FLOAT" operations="read,write,event">
+					<logical type="float" default="0.0" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="MY_STRING" operations="read,write,event">
+					<logical type="string" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="MY_OPTION">
+					<logical type="option">
+						<option id="Option1"/>
+						<option id="Option2"/>
+						<option id="Option3" default="true"/>
+					</logical>
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+			</paramset>
+		</channel>
+		<channel index="2" type="CUSTOM">
+			<paramset type="VALUES" id="custom_ch2_values">
+				<parameter id="MY_BOOLEAN" operations="read,write,event">
+					<logical type="boolean" default="false" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="MY_INTEGER" operations="read,write,event">
+					<logical type="integer" default="0" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="MY_FLOAT" operations="read,write,event">
+					<logical type="float" default="0.0" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+				<parameter id="MY_STRING" operations="read,write,event">
+					<logical type="string" />
+					<physical interface="store" />
+					<conversion type="rpc_binary" />
+				</parameter>
+			</paramset>
+		</channel>
+	</channels>
+</device>

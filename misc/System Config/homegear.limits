@@ -1,0 +1,3 @@
+homegear        soft    rtprio          100
+homegear        hard    rtprio          100
+*               soft    core            unlimited
