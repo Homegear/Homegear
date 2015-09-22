@@ -264,4 +264,11 @@ double Math::getDouble(const std::string& s)
 	try { number = std::stod(s); } catch(...) {}
 	return number;
 }
+
+std::string Math::toString(double number, int32_t precision)
+{
+	std::ostringstream out;
+    out << std::setprecision(precision + 1) << number;
+    return out.str();
+}
 }

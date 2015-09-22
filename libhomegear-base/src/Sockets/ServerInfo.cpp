@@ -187,6 +187,14 @@ void ServerInfo::load(std::string filename)
 					if(value == "true") info->webSocket = true;
 					_bl->out.printDebug("Debug: webSocket of server " + info->name + " set to " + std::to_string(info->webSocket));
 				}
+				else if(name == "websocketauthtype")
+				{
+					HelperFunctions::toLower(value);
+					if(value == "none") info->websocketAuthType = Info::AuthType::none;
+					else if(value == "basic") info->websocketAuthType = Info::AuthType::basic;
+					else if(value == "session") info->websocketAuthType = Info::AuthType::session;
+					_bl->out.printDebug("Debug: websocketauthtype of server " + info->name + " set to " + std::to_string(info->websocketAuthType));
+				}
 				else if(name == "redirectto")
 				{
 					info->redirectTo = value;

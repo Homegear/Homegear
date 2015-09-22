@@ -63,14 +63,16 @@ public:
 
 	bool loaded() { return _loaded; }
 
-	//Shortcuts
+	// {{{ Shortcuts
 	int32_t dynamicChannelCountIndex = -1;
 	double dynamicChannelCountSize = 1;
+	// }}}
 
-	//Attributes
+	// {{{ Attributes
 	int32_t version = 0;
+	// }}}
 
-	//Properties
+	// {{{ Properties
 	ReceiveModes::Enum receiveModes = ReceiveModes::always;
 	bool encryption = false;
 	uint32_t timeout = 0;
@@ -80,8 +82,9 @@ public:
 	bool internal = false;
 	bool needsTime = false;
 	bool hasBattery = false;
+	// }}}
 
-	//Elements
+	// {{{ Elements
 	SupportedDevices supportedDevices;
 	PRunProgram runProgram;
 	Functions functions;
@@ -91,21 +94,31 @@ public:
 	PacketsByFunction packetsByFunction2;
 	ValueRequestPackets valueRequestPackets;
 	PHomegearDevice group;
+	// }}}
 
-	//Helpers
+	// {{{ Helpers
 	int32_t getDynamicChannelCount();
 	void setDynamicChannelCount(int32_t value);
 	PSupportedDevice getType(Systems::LogicalDeviceType deviceType, int32_t firmwareVersion);
-	void safe(std::string& filename);
+	void save(std::string& filename);
+	// }}}
 protected:
 	BaseLib::Obj* _bl = nullptr;
 	bool _loaded = false;
 
-	//Helpers
+	// {{{ Helpers
 	int32_t _dynamicChannelCount = -1;
+	// }}}
 
 	virtual void load(std::string xmlFilename, bool& oldFormat);
 	virtual void parseXML(xml_node<>* node);
+
+	// {{{ Helpers
+	void saveDevice(xml_document<>* doc, xml_node<>* parentNode, HomegearDevice* device, std::vector<std::string>& tempStrings);
+	void saveFunction(xml_document<>* doc, xml_node<>* parentNode, PFunction& function, std::vector<std::string>& tempStrings, std::map<std::string, PConfigParameters>& configParameters, std::map<std::string, PVariables>& variables, std::map<std::string, PLinkParameters>& linkParameters);
+	void saveParameter(xml_document<>* doc, xml_node<>* parentNode, PParameter& parameter, std::vector<std::string>& tempStrings);
+	void saveScenario(xml_document<>* doc, xml_node<>* parentNode, PScenario& scenario, std::vector<std::string>& tempStrings);
+	// }}}
 };
 }
 }

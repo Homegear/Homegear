@@ -65,6 +65,7 @@ public:
 
 	void reset();
 protected:
+	BaseLib::WebSocket webSocket;
 	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
 	std::unique_ptr<BaseLib::RPC::XMLRPCDecoder> _xmlRpcDecoder;

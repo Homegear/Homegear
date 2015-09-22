@@ -958,7 +958,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 				header.append("\r\n");
 				std::vector<char> data(&header[0], &header[0] + header.size());
 				sendRPCResponseToClient(client, data, true);
-				if(_info->authType != BaseLib::Rpc::ServerInfo::Info::AuthType::basic)
+				if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::none)
 				{
 					_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
 					GD::rpcClient.addWebSocketServer(client->socket, client->webSocketClientId, client->address);
@@ -1088,7 +1088,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 							_out.printError("Error: Authorization failed. Closing connection.");
 							break;
 						}
-						else _out.printDebug("Client successfully authorized using basic authentification.");
+						else _out.printDebug("Client successfully authorized using basic authentication.");
 					}
 					catch(AuthException& ex)
 					{
@@ -1231,14 +1231,22 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					sendRPCResponseToClient(client, response, false);
 					closeClientConnection(client);
 				}
-				else if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic && !client->webSocketAuthorized)
+				else if((_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic || _info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session) && !client->webSocketAuthorized)
 				{
 					if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
 					try
 					{
-						if(!client->auth.basicServer(webSocket))
+						if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic && !client->auth.basicServer(webSocket))
 						{
-							_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection.");
+							_out.printError("Error: Basic authentication failed for host " + http.getHeader()->host + ". Closing connection.");
+							std::vector <char> output;
+							BaseLib::WebSocket::encodeClose(output);
+							sendRPCResponseToClient(client, output, false);
+							break;
+						}
+						else if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session && !client->auth.sessionServer(webSocket))
+						{
+							_out.printError("Error: Session authentication failed for host " + http.getHeader()->host + ". Closing connection.");
 							std::vector <char> output;
 							BaseLib::WebSocket::encodeClose(output);
 							sendRPCResponseToClient(client, output, false);
@@ -1247,7 +1255,8 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						else
 						{
 							client->webSocketAuthorized = true;
-							_out.printInfo("Client successfully authorized using basic authentification.");
+							if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic) _out.printInfo(std::string("Client ") + (client->webSocketClient ? "(direction browser => Homegear)" : "(direction Homegear => browser)") + " successfully authorized using basic authentication.");
+							else if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session) _out.printInfo(std::string("Client ") + (client->webSocketClient ? "(direction browser => Homegear)" : "(direction Homegear => browser)") + " successfully authorized using session authentication.");
 							if(client->webSocketClient)
 							{
 								_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
@@ -1299,7 +1308,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 							_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection.");
 							break;
 						}
-						else _out.printInfo("Info: Client successfully authorized using basic authentification.");
+						else _out.printInfo("Info: Client successfully authorized using basic authentication.");
 					}
 					catch(AuthException& ex)
 					{

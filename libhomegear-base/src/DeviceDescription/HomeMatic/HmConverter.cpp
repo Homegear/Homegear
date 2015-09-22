@@ -265,6 +265,7 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 			convertParameter(*i, parameter, !parameterSet->second->subsetReference.empty());
 			if(parameter->id.empty()) continue;
 			homegearFunction->configParameters->parameters[parameter->id] = parameter;
+			homegearFunction->configParameters->parametersOrdered.push_back(parameter);
 			if(parameter->physical->list > -1) homegearFunction->configParameters->lists[parameter->physical->list].push_back(parameter);
 		}
 		for(std::map<std::string, DefaultValue>::iterator i = parameterSet->second->defaultValues.begin(); i != parameterSet->second->defaultValues.end(); ++i)
@@ -291,6 +292,7 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 			convertParameter(*i, parameter, !parameterSet->second->subsetReference.empty());
 			if(parameter->id.empty()) continue;
 			homegearFunction->variables->parameters[parameter->id] = parameter;
+			homegearFunction->variables->parametersOrdered.push_back(parameter);
 			if(parameter->physical->list > -1) homegearFunction->variables->lists[parameter->physical->list].push_back(parameter);
 		}
 		for(std::map<std::string, DefaultValue>::iterator i = parameterSet->second->defaultValues.begin(); i != parameterSet->second->defaultValues.end(); ++i)
@@ -321,6 +323,7 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 			convertParameter(*i, parameter, !parameterSet->second->subsetReference.empty());
 			if(parameter->id.empty()) continue;
 			homegearFunction->linkParameters->parameters[parameter->id] = parameter;
+			homegearFunction->linkParameters->parametersOrdered.push_back(parameter);
 			if(parameter->physical->list > -1) homegearFunction->linkParameters->lists[parameter->physical->list].push_back(parameter);
 		}
 		for(std::map<std::string, DefaultValue>::iterator i = parameterSet->second->defaultValues.begin(); i != parameterSet->second->defaultValues.end(); ++i)
@@ -353,7 +356,7 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 
 void HmConverter::convertParameter(std::shared_ptr<HomeMaticParameter> homematicParameter, PParameter parameter, bool isGroupSelector)
 {
-	parameter->addonWriteable = homematicParameter->operations & HomeMaticParameter::Operations::addonWrite;
+	parameter->addonWriteable = true;
 	parameter->control = homematicParameter->control;
 	parameter->hasDelayedAutoResetParameters = homematicParameter->hasDominoEvents;
 	parameter->id = homematicParameter->id;

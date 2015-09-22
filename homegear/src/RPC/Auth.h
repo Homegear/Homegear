@@ -59,6 +59,7 @@ public:
 	bool basicServer(std::shared_ptr<BaseLib::RPC::RPCHeader>& binaryHeader);
 	bool basicServer(BaseLib::HTTP& httpPacket);
 	bool basicServer(BaseLib::WebSocket& webSocket);
+	bool sessionServer(BaseLib::WebSocket& webSocket);
 protected:
 	bool _initialized = false;
 	std::string _hostname;

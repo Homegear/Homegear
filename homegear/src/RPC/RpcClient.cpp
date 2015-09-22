@@ -615,6 +615,32 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 					_sendCounter--;
 					return;
 				}
+				if(webSocket.isFinished() && webSocket.getHeader()->opcode == BaseLib::WebSocket::Header::Opcode::ping)
+				{
+					GD::out.printInfo("Info: Websocket ping received.");
+					std::vector<char> pong;
+					webSocket.encode(*webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::pong, pong);
+					try
+					{
+						server->socket->proofwrite(pong);
+					}
+					catch(BaseLib::SocketDataLimitException& ex)
+					{
+						GD::out.printWarning("Warning: " + ex.what());
+						server->socket->close();
+						_sendCounter--;
+						return;
+					}
+					catch(const BaseLib::SocketOperationException& ex)
+					{
+						GD::out.printError("Error: Could not send data to XML RPC server " + server->hostname + ": " + ex.what() + ".");
+						retry = true;
+						server->socket->close();
+						_sendCounter--;
+						return;
+					}
+					webSocket = BaseLib::WebSocket();
+				}
 			}
 			else
 			{

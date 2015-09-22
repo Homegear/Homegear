@@ -134,7 +134,14 @@ Encoding/JsonDecoder.lo: Encoding/JsonDecoder.cpp \
  /usr/include/c++/4.8/bits/stl_tree.h /usr/include/c++/4.8/bits/stl_map.h \
  /usr/include/c++/4.8/bits/stl_multimap.h /usr/include/c++/4.8/list \
  /usr/include/c++/4.8/bits/stl_list.h /usr/include/c++/4.8/bits/list.tcc \
- Encoding/../HelperFunctions/Math.h Encoding/../BaseLib.h \
+ Encoding/../HelperFunctions/Math.h /usr/include/c++/4.8/iomanip \
+ /usr/include/c++/4.8/locale \
+ /usr/include/c++/4.8/bits/locale_facets_nonio.h \
+ /usr/include/c++/4.8/ctime \
+ /usr/include/x86_64-linux-gnu/c++/4.8/bits/time_members.h \
+ /usr/include/x86_64-linux-gnu/c++/4.8/bits/messages_members.h \
+ /usr/include/libintl.h /usr/include/c++/4.8/bits/codecvt.h \
+ /usr/include/c++/4.8/bits/locale_facets_nonio.tcc Encoding/../BaseLib.h \
  Encoding/../Database/DatabaseTypes.h /usr/include/c++/4.8/deque \
  /usr/include/c++/4.8/bits/stl_deque.h \
  /usr/include/c++/4.8/bits/deque.tcc Encoding/../Encoding/XMLRPCDecoder.h \
@@ -143,13 +150,6 @@ Encoding/JsonDecoder.lo: Encoding/JsonDecoder.cpp \
  Encoding/../Encoding/XMLRPCEncoder.h Encoding/../Encoding/../Exception.h \
  Encoding/../Encoding/../Output/Output.h \
  Encoding/../Encoding/../Output/../Exception.h \
- /usr/include/c++/4.8/iomanip /usr/include/c++/4.8/locale \
- /usr/include/c++/4.8/bits/locale_facets_nonio.h \
- /usr/include/c++/4.8/ctime \
- /usr/include/x86_64-linux-gnu/c++/4.8/bits/time_members.h \
- /usr/include/x86_64-linux-gnu/c++/4.8/bits/messages_members.h \
- /usr/include/libintl.h /usr/include/c++/4.8/bits/codecvt.h \
- /usr/include/c++/4.8/bits/locale_facets_nonio.tcc \
  /usr/include/c++/4.8/sstream /usr/include/c++/4.8/bits/sstream.tcc \
  /usr/include/c++/4.8/chrono /usr/include/c++/4.8/ratio \
  /usr/include/c++/4.8/limits \
@@ -659,6 +659,24 @@ Encoding/../DeviceDescription/Physical.h:
 
 Encoding/../HelperFunctions/Math.h:
 
+/usr/include/c++/4.8/iomanip:
+
+/usr/include/c++/4.8/locale:
+
+/usr/include/c++/4.8/bits/locale_facets_nonio.h:
+
+/usr/include/c++/4.8/ctime:
+
+/usr/include/x86_64-linux-gnu/c++/4.8/bits/time_members.h:
+
+/usr/include/x86_64-linux-gnu/c++/4.8/bits/messages_members.h:
+
+/usr/include/libintl.h:
+
+/usr/include/c++/4.8/bits/codecvt.h:
+
+/usr/include/c++/4.8/bits/locale_facets_nonio.tcc:
+
 Encoding/../BaseLib.h:
 
 Encoding/../Database/DatabaseTypes.h:
@@ -682,24 +700,6 @@ Encoding/../Encoding/../Exception.h:
 Encoding/../Encoding/../Output/Output.h:
 
 Encoding/../Encoding/../Output/../Exception.h:
-
-/usr/include/c++/4.8/iomanip:
-
-/usr/include/c++/4.8/locale:
-
-/usr/include/c++/4.8/bits/locale_facets_nonio.h:
-
-/usr/include/c++/4.8/ctime:
-
-/usr/include/x86_64-linux-gnu/c++/4.8/bits/time_members.h:
-
-/usr/include/x86_64-linux-gnu/c++/4.8/bits/messages_members.h:
-
-/usr/include/libintl.h:
-
-/usr/include/c++/4.8/bits/codecvt.h:
-
-/usr/include/c++/4.8/bits/locale_facets_nonio.tcc:
 
 /usr/include/c++/4.8/sstream:
 

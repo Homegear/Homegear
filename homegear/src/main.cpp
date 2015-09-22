@@ -73,7 +73,7 @@ void startRPCServers()
 		std::string info = "Starting XML RPC server " + settings->name + " listening on " + settings->interface + ":" + std::to_string(settings->port);
 		if(settings->ssl) info += ", SSL enabled";
 		else GD::bl->rpcPort = settings->port;
-		if(settings->authType != BaseLib::Rpc::ServerInfo::Info::AuthType::none) info += ", authentification enabled";
+		if(settings->authType != BaseLib::Rpc::ServerInfo::Info::AuthType::none) info += ", authentication enabled";
 		info += "...";
 		GD::out.printInfo(info);
 		GD::rpcServers[i].start(settings);
@@ -459,7 +459,7 @@ int main(int argc, char* argv[])
     				devices.init(GD::bl.get());
 					std::shared_ptr<HomegearDevice> device = devices.load(inputFile);
 					if(!device) exit(1);
-					device->safe(outputFile);
+					device->save(outputFile);
     				exit(0);
     			}
     			else

@@ -32,6 +32,7 @@
 
 #include <string>
 #include <map>
+#include <iomanip>
 
 namespace BaseLib
 {
@@ -236,6 +237,15 @@ public:
 	 * @return Returns the number or "0" if the conversion was not successful.
 	 */
 	static double getDouble(const std::string& s);
+
+	/**
+	 * Converts a double to string.
+	 *
+	 * @param number The number to convert
+	 * @param precision The precision
+	 * @return Returns the number.
+	 */
+	static std::string toString(double number, int32_t precision);
 
 	/**
 	 * Calculates powers to the base 10.
