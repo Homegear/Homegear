@@ -86,6 +86,8 @@ void SQLite3::hotBackup()
 				GD::out.printCritical("Critical: Integrity check on database failed.");
 				if(!_backupPath.empty())
 				{
+					GD::out.printCritical("Critical: Backing up corrupted database file to: " + _databasePath + ".broken");
+					GD::bl->io.copyFile(_databasePath, _databasePath + ".broken");
 					bool restored = false;
 					for(int32_t i = 0; i <= 10000; i++)
 					{

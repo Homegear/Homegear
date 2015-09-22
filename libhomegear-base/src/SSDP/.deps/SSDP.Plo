@@ -98,19 +98,25 @@ SSDP/SSDP.lo: SSDP/SSDP.cpp /usr/include/stdc-predef.h SSDP/SSDP.h \
  /usr/include/c++/4.8/utility /usr/include/c++/4.8/bits/stl_relops.h \
  /usr/include/c++/4.8/array /usr/include/c++/4.8/stdexcept \
  /usr/include/c++/4.8/bits/uses_allocator.h \
- /usr/include/c++/4.8/bits/stl_multimap.h /usr/include/c++/4.8/iostream \
- /usr/include/c++/4.8/ostream /usr/include/c++/4.8/ios \
+ /usr/include/c++/4.8/bits/stl_multimap.h /usr/include/c++/4.8/iomanip \
  /usr/include/c++/4.8/bits/ios_base.h \
  /usr/include/c++/4.8/bits/locale_classes.h \
- /usr/include/c++/4.8/bits/locale_classes.tcc \
- /usr/include/c++/4.8/streambuf /usr/include/c++/4.8/bits/streambuf.tcc \
- /usr/include/c++/4.8/bits/basic_ios.h \
+ /usr/include/c++/4.8/bits/locale_classes.tcc /usr/include/c++/4.8/locale \
  /usr/include/c++/4.8/bits/locale_facets.h /usr/include/c++/4.8/cwctype \
  /usr/include/wctype.h \
  /usr/include/x86_64-linux-gnu/c++/4.8/bits/ctype_base.h \
+ /usr/include/c++/4.8/streambuf /usr/include/c++/4.8/bits/streambuf.tcc \
  /usr/include/c++/4.8/bits/streambuf_iterator.h \
  /usr/include/x86_64-linux-gnu/c++/4.8/bits/ctype_inline.h \
  /usr/include/c++/4.8/bits/locale_facets.tcc \
+ /usr/include/c++/4.8/bits/locale_facets_nonio.h \
+ /usr/include/c++/4.8/ctime \
+ /usr/include/x86_64-linux-gnu/c++/4.8/bits/time_members.h \
+ /usr/include/x86_64-linux-gnu/c++/4.8/bits/messages_members.h \
+ /usr/include/libintl.h /usr/include/c++/4.8/bits/codecvt.h \
+ /usr/include/c++/4.8/bits/locale_facets_nonio.tcc \
+ /usr/include/c++/4.8/iostream /usr/include/c++/4.8/ostream \
+ /usr/include/c++/4.8/ios /usr/include/c++/4.8/bits/basic_ios.h \
  /usr/include/c++/4.8/bits/basic_ios.tcc \
  /usr/include/c++/4.8/bits/ostream.tcc /usr/include/c++/4.8/istream \
  /usr/include/c++/4.8/bits/istream.tcc /usr/include/c++/4.8/cstring \
@@ -127,14 +133,7 @@ SSDP/SSDP.lo: SSDP/SSDP.cpp /usr/include/stdc-predef.h SSDP/SSDP.h \
  /usr/include/c++/4.8/backward/auto_ptr.h /usr/include/c++/4.8/vector \
  /usr/include/c++/4.8/bits/stl_vector.h \
  /usr/include/c++/4.8/bits/stl_bvector.h \
- /usr/include/c++/4.8/bits/vector.tcc /usr/include/c++/4.8/iomanip \
- /usr/include/c++/4.8/locale \
- /usr/include/c++/4.8/bits/locale_facets_nonio.h \
- /usr/include/c++/4.8/ctime \
- /usr/include/x86_64-linux-gnu/c++/4.8/bits/time_members.h \
- /usr/include/x86_64-linux-gnu/c++/4.8/bits/messages_members.h \
- /usr/include/libintl.h /usr/include/c++/4.8/bits/codecvt.h \
- /usr/include/c++/4.8/bits/locale_facets_nonio.tcc SSDP/../Variable.h \
+ /usr/include/c++/4.8/bits/vector.tcc SSDP/../Variable.h \
  SSDP/../Encoding/RapidXml/rapidxml.hpp /usr/include/c++/4.8/cassert \
  /usr/include/assert.h SSDP/../DeviceDescription/Logical.h \
  SSDP/../DeviceDescription/../Encoding/RapidXml/rapidxml.hpp \
@@ -548,11 +547,7 @@ SSDP/../Encoding/../HelperFunctions/Math.h:
 
 /usr/include/c++/4.8/bits/stl_multimap.h:
 
-/usr/include/c++/4.8/iostream:
-
-/usr/include/c++/4.8/ostream:
-
-/usr/include/c++/4.8/ios:
+/usr/include/c++/4.8/iomanip:
 
 /usr/include/c++/4.8/bits/ios_base.h:
 
@@ -560,11 +555,7 @@ SSDP/../Encoding/../HelperFunctions/Math.h:
 
 /usr/include/c++/4.8/bits/locale_classes.tcc:
 
-/usr/include/c++/4.8/streambuf:
-
-/usr/include/c++/4.8/bits/streambuf.tcc:
-
-/usr/include/c++/4.8/bits/basic_ios.h:
+/usr/include/c++/4.8/locale:
 
 /usr/include/c++/4.8/bits/locale_facets.h:
 
@@ -574,11 +565,37 @@ SSDP/../Encoding/../HelperFunctions/Math.h:
 
 /usr/include/x86_64-linux-gnu/c++/4.8/bits/ctype_base.h:
 
+/usr/include/c++/4.8/streambuf:
+
+/usr/include/c++/4.8/bits/streambuf.tcc:
+
 /usr/include/c++/4.8/bits/streambuf_iterator.h:
 
 /usr/include/x86_64-linux-gnu/c++/4.8/bits/ctype_inline.h:
 
 /usr/include/c++/4.8/bits/locale_facets.tcc:
+
+/usr/include/c++/4.8/bits/locale_facets_nonio.h:
+
+/usr/include/c++/4.8/ctime:
+
+/usr/include/x86_64-linux-gnu/c++/4.8/bits/time_members.h:
+
+/usr/include/x86_64-linux-gnu/c++/4.8/bits/messages_members.h:
+
+/usr/include/libintl.h:
+
+/usr/include/c++/4.8/bits/codecvt.h:
+
+/usr/include/c++/4.8/bits/locale_facets_nonio.tcc:
+
+/usr/include/c++/4.8/iostream:
+
+/usr/include/c++/4.8/ostream:
+
+/usr/include/c++/4.8/ios:
+
+/usr/include/c++/4.8/bits/basic_ios.h:
 
 /usr/include/c++/4.8/bits/basic_ios.tcc:
 
@@ -627,24 +644,6 @@ SSDP/../Encoding/../HelperFunctions/Math.h:
 /usr/include/c++/4.8/bits/stl_bvector.h:
 
 /usr/include/c++/4.8/bits/vector.tcc:
-
-/usr/include/c++/4.8/iomanip:
-
-/usr/include/c++/4.8/locale:
-
-/usr/include/c++/4.8/bits/locale_facets_nonio.h:
-
-/usr/include/c++/4.8/ctime:
-
-/usr/include/x86_64-linux-gnu/c++/4.8/bits/time_members.h:
-
-/usr/include/x86_64-linux-gnu/c++/4.8/bits/messages_members.h:
-
-/usr/include/libintl.h:
-
-/usr/include/c++/4.8/bits/codecvt.h:
-
-/usr/include/c++/4.8/bits/locale_facets_nonio.tcc:
 
 SSDP/../Variable.h:
 

@@ -229,24 +229,11 @@ bool Auth::basicServer(BaseLib::WebSocket& webSocket)
 		sendWebSocketUnauthorized(webSocket, "Received data is no json object.");
 		return false;
 	}
-#ifdef SCRIPTENGINE
 	if(variable->structValue->find("user") == variable->structValue->end() || variable->structValue->find("password") == variable->structValue->end())
 	{
-		if(variable->structValue->find("user") != variable->structValue->end() && GD::scriptEngine.checkSessionId(variable->structValue->at("user")->stringValue))
-		{
-			sendWebSocketAuthorized(webSocket);
-			return true;
-		}
-		else
-		{
-			sendWebSocketUnauthorized(webSocket, "Either \"user\" or \"password\" is not specified.");
-			return false;
-		}
+		sendWebSocketUnauthorized(webSocket, "Either \"user\" or \"password\" is not specified.");
+		return false;
 	}
-#else
-	sendWebSocketUnauthorized(webSocket, "Either \"user\" or \"password\" is not specified.");
-	return false;
-#endif
 	if(User::verify(variable->structValue->at("user")->stringValue, variable->structValue->at("password")->stringValue))
 	{
 		sendWebSocketAuthorized(webSocket);
@@ -254,6 +241,46 @@ bool Auth::basicServer(BaseLib::WebSocket& webSocket)
 	}
 	sendWebSocketUnauthorized(webSocket, "Wrong user name or password.");
 	return false;
+}
+
+bool Auth::sessionServer(BaseLib::WebSocket& webSocket)
+{
+	if(!_initialized) throw AuthException("Not initialized.");
+	if(webSocket.getContent()->empty())
+	{
+		sendWebSocketUnauthorized(webSocket, "No data received.");
+		return false;
+	}
+	BaseLib::PVariable variable;
+	try
+	{
+		variable = _jsonDecoder->decode(*webSocket.getContent());
+	}
+	catch(BaseLib::RPC::JsonDecoderException& ex)
+	{
+		sendWebSocketUnauthorized(webSocket, "Error decoding json (is packet in json format?).");
+		return false;
+	}
+	if(variable->type != BaseLib::VariableType::tStruct)
+	{
+		sendWebSocketUnauthorized(webSocket, "Received data is no json object.");
+		return false;
+	}
+#ifdef SCRIPTENGINE
+	if(variable->structValue->find("user") != variable->structValue->end() && GD::scriptEngine.checkSessionId(variable->structValue->at("user")->stringValue))
+	{
+		sendWebSocketAuthorized(webSocket);
+		return true;
+	}
+	else
+	{
+		sendWebSocketUnauthorized(webSocket, "No session id specified.");
+		return false;
+	}
+#else
+	sendWebSocketUnauthorized(webSocket, "Session authentication is not supported as Homegear is compiled without script engine.");
+	return false;
+#endif
 }
 
 void Auth::sendWebSocketAuthorized(BaseLib::WebSocket& webSocket)

@@ -99,7 +99,7 @@ public:
 	bool isSigned = false;
 	std::string control;
 	std::string unit;
-	std::vector<PICast> casts;
+	Casts casts;
 
 	//Elements
 	std::shared_ptr<ILogical> logical;

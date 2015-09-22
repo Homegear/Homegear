@@ -74,6 +74,7 @@ public:
 
 	//Elements
 	Parameters parameters;
+	std::vector<PParameter> parametersOrdered; //Needed for saving as the ordering of the parameters matters on some systems (e. g. HomeMatic CCU)
 	Scenarios scenarios;
 
 	//Helpers

@@ -51,7 +51,7 @@ public:
 	class Info
 	{
 	public:
-		enum AuthType { none, basic };
+		enum AuthType { none, basic, session };
 
 		Info()
 		{
@@ -70,6 +70,7 @@ public:
 		std::string contentPath;
 		bool webServer = false;
 		bool webSocket = false;
+		AuthType websocketAuthType = AuthType::basic;
 		bool xmlrpcServer = true;
 		bool jsonrpcServer = true;
 		std::string redirectTo;

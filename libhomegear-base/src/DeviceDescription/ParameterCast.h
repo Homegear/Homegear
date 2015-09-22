@@ -309,6 +309,7 @@ public:
 };
 
 typedef std::shared_ptr<ICast> PICast;
+typedef std::vector<PICast> Casts;
 typedef std::shared_ptr<BlindTest> PBlindTest;
 typedef std::shared_ptr<BooleanInteger> PBooleanInteger;
 typedef std::shared_ptr<BooleanString> PBooleanString;

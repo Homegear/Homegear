@@ -71,7 +71,11 @@ void ParameterGroup::parseElements(xml_node<>* node)
 		if(nodeName == "parameter")
 		{
 			PParameter parameter(new Parameter(_bl, subNode, this));
-			if(!parameter->id.empty()) parameters.insert(std::pair<std::string, PParameter>(parameter->id, parameter));
+			if(!parameter->id.empty())
+			{
+				parameters.insert(std::pair<std::string, PParameter>(parameter->id, parameter));
+				parametersOrdered.push_back(parameter);
+			}
 			if(parameter->physical->list > -1) lists[parameter->physical->list].push_back(parameter);
 			if(parameter->parameterGroupSelector) _parent->parameterGroupSelector = parameter;
 		}
