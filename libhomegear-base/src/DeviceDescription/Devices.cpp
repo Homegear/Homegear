@@ -100,39 +100,160 @@ void Devices::load()
     }
 }
 
-std::shared_ptr<HomegearDevice> Devices::load(std::string& filename)
+std::shared_ptr<HomegearDevice> Devices::load(std::string& filepath)
 {
 	try
 	{
-		if(!Io::fileExists(filename))
+		if(!Io::fileExists(filepath))
 		{
 			_bl->out.printError("Error: Could not load device description file: File does not exist.");
 			return std::shared_ptr<HomegearDevice>();
 		}
-		if(filename.size() < 5)
+		if(filepath.size() < 5)
 		{
 			_bl->out.printError("Error: Could not load device description file: File does not end with \".xml\".");
 			return std::shared_ptr<HomegearDevice>();
 		}
-		std::string extension = filename.substr(filename.size() - 4, 4);
+		std::string extension = filepath.substr(filepath.size() - 4, 4);
 		HelperFunctions::toLower(extension);
 		if(extension != ".xml")
 		{
 			_bl->out.printError("Error: Could not load device description file: File does not end with \".xml\".");
 			return std::shared_ptr<HomegearDevice>();
 		}
-		_bl->out.printDebug("Loading XML RPC device " + filename);
+		_bl->out.printDebug("Loading XML RPC device " + filepath);
 		bool oldFormat = false;
-		std::shared_ptr<HomegearDevice> device(new HomegearDevice(_bl, _family, filename, oldFormat));
-		if(oldFormat)
-		{
-			std::shared_ptr<HmDeviceDescription::Device> homeMaticDevice(new HmDeviceDescription::Device(_bl, _family, filename));
-			if(!homeMaticDevice || !homeMaticDevice->loaded()) return std::shared_ptr<HomegearDevice>();
-			HmDeviceDescription::HmConverter converter(_bl);
-			converter.convert(homeMaticDevice, device);
-			return device;
-		}
+		std::shared_ptr<HomegearDevice> device(new HomegearDevice(_bl, _family, filepath, oldFormat));
+		if(oldFormat) return loadHomeMatic(filepath);
 		else if(device && device->loaded()) return device;
+	}
+    catch(const std::exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(const Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::shared_ptr<HomegearDevice>();
+}
+
+std::shared_ptr<HomegearDevice> Devices::loadHomeMatic(std::string& filepath)
+{
+	try
+	{
+		if(filepath.empty()) return std::shared_ptr<HomegearDevice>();
+		std::string filename = (filepath.find('/') == std::string::npos) ? filepath : filepath.substr(filepath.find_last_of('/') + 1);
+		if(filename == "rf_cmm.xml" || filename == "hmw_central.xml" || filename == "hmw_generic.xml")
+		{
+			_bl->out.printInfo("Info: Skipping file " + filename + ": File is not needed.");
+			return std::shared_ptr<HomegearDevice>();
+		}
+
+		std::shared_ptr<HmDeviceDescription::Device> homeMaticDevice(new HmDeviceDescription::Device(_bl, _family, filepath));
+		if(!homeMaticDevice || !homeMaticDevice->loaded()) return std::shared_ptr<HomegearDevice>();
+
+		if(filename.compare(0, 3, "rf_") == 0)
+		{
+			_bl->out.printInfo("Info: Adding parameter ROAMING and variable CENTRAL_ADDRESS_SPOOFED.");
+			std::map<uint32_t, std::shared_ptr<HmDeviceDescription::DeviceChannel>>::iterator channelIterator = homeMaticDevice->channels.find(0);
+			if(channelIterator != homeMaticDevice->channels.end() && channelIterator->second)
+			{
+				std::map<HmDeviceDescription::ParameterSet::Type::Enum, std::shared_ptr<HmDeviceDescription::ParameterSet>>::iterator paramsetIterator = channelIterator->second->parameterSets.find(HmDeviceDescription::ParameterSet::Type::Enum::master);
+				if(paramsetIterator != channelIterator->second->parameterSets.end() && paramsetIterator->second)
+				{
+					if(!paramsetIterator->second->getParameter("ROAMING"))
+					{
+						std::shared_ptr<HmDeviceDescription::HomeMaticParameter> parameter(new HmDeviceDescription::HomeMaticParameter(_bl));
+						parameter->id = "ROAMING";
+						parameter->uiFlags = (HmDeviceDescription::HomeMaticParameter::UIFlags::Enum)(HmDeviceDescription::HomeMaticParameter::UIFlags::Enum::visible | HmDeviceDescription::HomeMaticParameter::UIFlags::Enum::internal);
+						parameter->logicalParameter.reset(new HmDeviceDescription::LogicalParameterBoolean(_bl));
+						parameter->logicalParameter->type = HmDeviceDescription::LogicalParameter::Type::Enum::typeBoolean;
+						parameter->logicalParameter->defaultValueExists = true;
+						parameter->physicalParameter->interface = HmDeviceDescription::PhysicalParameter::Interface::Enum::store;
+						parameter->physicalParameter->type = HmDeviceDescription::PhysicalParameter::Type::Enum::typeInteger;
+						paramsetIterator->second->parameters.push_back(parameter);
+					}
+				}
+
+				paramsetIterator = channelIterator->second->parameterSets.find(HmDeviceDescription::ParameterSet::Type::Enum::values);
+				if(paramsetIterator != channelIterator->second->parameterSets.end() && paramsetIterator->second)
+				{
+					if(!paramsetIterator->second->getParameter("CENTRAL_ADDRESS_SPOOFED"))
+					{
+						std::shared_ptr<HmDeviceDescription::HomeMaticParameter> parameter(new HmDeviceDescription::HomeMaticParameter(_bl));
+						parameter->id = "CENTRAL_ADDRESS_SPOOFED";
+						parameter->uiFlags = (HmDeviceDescription::HomeMaticParameter::UIFlags::Enum)(HmDeviceDescription::HomeMaticParameter::UIFlags::Enum::visible | HmDeviceDescription::HomeMaticParameter::UIFlags::Enum::service | HmDeviceDescription::HomeMaticParameter::UIFlags::Enum::sticky);
+						parameter->operations = (HmDeviceDescription::HomeMaticParameter::Operations::Enum)(HmDeviceDescription::HomeMaticParameter::Operations::Enum::read | HmDeviceDescription::HomeMaticParameter::Operations::Enum::write | HmDeviceDescription::HomeMaticParameter::Operations::Enum::event);
+						parameter->control = "NONE";
+						parameter->logicalParameter.reset(new HmDeviceDescription::LogicalParameterEnum(_bl));
+						parameter->logicalParameter->type = HmDeviceDescription::LogicalParameter::Type::Enum::typeEnum;
+						HmDeviceDescription::LogicalParameterEnum* logical = (HmDeviceDescription::LogicalParameterEnum*)parameter->logicalParameter.get();
+						logical->defaultValueExists = true;
+						HmDeviceDescription::ParameterOption option;
+						option.id = "UNSET";
+						option.index = 0;
+						option.isDefault = true;
+						logical->options.push_back(option);
+						option = HmDeviceDescription::ParameterOption();
+						option.id = "CENTRAL_ADDRESS_SPOOFED";
+						option.index = 1;
+						logical->options.push_back(option);
+						parameter->physicalParameter->interface = HmDeviceDescription::PhysicalParameter::Interface::Enum::internal;
+						parameter->physicalParameter->type = HmDeviceDescription::PhysicalParameter::Type::Enum::typeInteger;
+						parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_SPOOFED";
+						paramsetIterator->second->parameters.push_back(parameter);
+					}
+				}
+			}
+		}
+		if(filename == "rf_4dis.xml")
+		{
+			std::map<std::string, std::shared_ptr<HmDeviceDescription::DeviceFrame>>::iterator frameIterator = homeMaticDevice->framesByID.find("KEY_EVENT_SHORT");
+			if(frameIterator != homeMaticDevice->framesByID.end() && frameIterator->second)
+			{
+				HmDeviceDescription::HomeMaticParameter parameter(_bl);
+				parameter.type = HmDeviceDescription::PhysicalParameter::Type::Enum::typeInteger;
+				parameter.index = 1.2;
+				parameter.size = 0.1;
+				parameter.constValue = 1;
+				frameIterator->second->parameters.push_front(parameter);
+			}
+
+			frameIterator = homeMaticDevice->framesByID.find("KEY_EVENT_LONG");
+			if(frameIterator != homeMaticDevice->framesByID.end() && frameIterator->second)
+			{
+				HmDeviceDescription::HomeMaticParameter parameter(_bl);
+				parameter.type = HmDeviceDescription::PhysicalParameter::Type::Enum::typeInteger;
+				parameter.index = 1.2;
+				parameter.size = 0.1;
+				parameter.constValue = 1;
+				frameIterator->second->parameters.push_front(parameter);
+			}
+
+			frameIterator = homeMaticDevice->framesByID.find("KEY_EVENT_LONG_BIDI");
+			if(frameIterator != homeMaticDevice->framesByID.end() && frameIterator->second)
+			{
+				for(std::list<HmDeviceDescription::HomeMaticParameter>::iterator i = frameIterator->second->parameters.begin(); i != frameIterator->second->parameters.end(); ++i)
+				{
+					if(i->index == 1.5)
+					{
+						i->index = 1.2;
+						i->constValue = 0;
+						break;
+					}
+				}
+			}
+		}
+
+		HmDeviceDescription::HmConverter converter(_bl);
+		std::shared_ptr<HomegearDevice> device(new HomegearDevice(_bl, _family));
+		converter.convert(homeMaticDevice, device);
+		return device;
 	}
     catch(const std::exception& ex)
     {

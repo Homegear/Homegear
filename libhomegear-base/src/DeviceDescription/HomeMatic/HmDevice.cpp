@@ -1598,6 +1598,8 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 		else if(attributeName == "channel_offset") channelOffset = Math::getNumber(attributeValue);
 		else if(attributeName == "peer_address_offset") peerAddressOffset = Math::getNumber(attributeValue);
 		else if(attributeName == "peer_channel_offset") peerChannelOffset = Math::getNumber(attributeValue);
+		else if(attributeName == "peer_param") peerParam = attributeValue;
+		else if(attributeName == "channel_param") channelParam = attributeValue;
 		else if(attributeName == "link") {} //Ignored
 		else _bl->out.printWarning("Warning: Unknown attribute for \"paramset\": " + attributeName);
 	}
@@ -1607,6 +1609,146 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 		std::string nodeName(parameterNode->name());
 		if(nodeName == "parameter")
 		{
+			if(!peerParam.empty() || !channelParam.empty())
+			{
+				xml_attribute<>* attr = parameterNode->first_attribute("id");
+				if(attr)
+				{
+					std::string id(attr->value());
+					if(id == peerParam)
+					{
+						xml_node<>* peerParamElement = parameterNode->first_node("physical");
+						if(peerParamElement)
+						{
+							peerParamElement = peerParamElement->first_node("physical");
+							if(peerParamElement)
+							{
+								xml_attribute<>* attr1 = peerParamElement->first_attribute("type");
+								xml_attribute<>* attr2 = peerParamElement->first_attribute("size");
+								if(attr1 && attr2)
+								{
+									std::string addressSize(attr2->value());
+									if(std::string(attr1->value()) != "integer" || Math::getDouble(addressSize) != 4.0)
+									{
+										_bl->out.printWarning("Warning: size or type have wrong values for peer_param parameter.");
+									}
+									else
+									{
+										xml_node<>* address = peerParamElement->first_node("address");
+										if(address)
+										{
+											attr = address->first_attribute("index");
+											if(attr)
+											{
+												std::string index(attr->value());
+												if(index == "+1") peerAddressOffset = 1;
+												else if(index == "+0") peerAddressOffset = 0;
+												else _bl->out.printWarning("Warning: Unknown value for index: " + index);
+											}
+											else _bl->out.printWarning("Warning: index is not defined for address of peer_param parameter.");
+										}
+										else _bl->out.printWarning("Warning: address is not defined for peer_param parameter.");
+									}
+								}
+								else _bl->out.printWarning("Warning: size or type is not defined for peer_param parameter.");
+							}
+							else _bl->out.printWarning("Warning: Array physical is not defined for peer_param.");
+
+							peerParamElement = peerParamElement->next_sibling("physical");
+							if(peerParamElement)
+							{
+								xml_attribute<>* attr1 = peerParamElement->first_attribute("type");
+								xml_attribute<>* attr2 = peerParamElement->first_attribute("size");
+								if(attr1 && attr2)
+								{
+									std::string addressSize(attr2->value());
+									if(std::string(attr1->value()) != "integer" || Math::getDouble(addressSize) != 1.0)
+									{
+										_bl->out.printWarning("Warning: size or type have wrong values for peer_param parameter.");
+									}
+									else
+									{
+										xml_node<>* address = peerParamElement->first_node("address");
+										if(address)
+										{
+											attr = address->first_attribute("index");
+											if(attr)
+											{
+												std::string index(attr->value());
+												if(index == "+5")
+												{
+													peerChannelOffset = 5;
+													peerParam = "";
+												}
+												else if(index == "+4")
+												{
+													peerChannelOffset = 4;
+													peerParam = "";
+												}
+												else _bl->out.printWarning("Warning: Unknown value for index: " + index);
+
+											}
+											else _bl->out.printWarning("Warning: index is not defined for address of peer_param parameter.");
+										}
+										else _bl->out.printWarning("Warning: address is not defined for peer_param parameter.");
+									}
+								}
+								else _bl->out.printWarning("Warning: size or type is not defined for peer_param parameter.");
+							}
+							else _bl->out.printWarning("Warning: Second array physical is not defined for peer_param.");
+						}
+						else _bl->out.printWarning("Warning: physical is not defined for peer_param.");
+						continue;
+					}
+					else if(id == channelParam)
+					{
+						xml_node<>* peerParamElement = parameterNode->first_node("physical");
+						if(peerParamElement)
+						{
+							xml_attribute<>* attr1 = peerParamElement->first_attribute("type");
+							xml_attribute<>* attr2 = peerParamElement->first_attribute("size");
+							if(attr1 && attr2)
+							{
+								std::string addressSize(attr2->value());
+								if(std::string(attr1->value()) != "integer" || Math::getDouble(addressSize) != 1.0)
+								{
+									_bl->out.printWarning("Warning: size or type have wrong values for peer_param parameter.");
+								}
+								else
+								{
+									xml_node<>* address = peerParamElement->first_node("address");
+									if(address)
+									{
+										attr = address->first_attribute("index");
+										if(attr)
+										{
+											std::string index(attr->value());
+											if(index == "+0")
+											{
+												channelOffset = 0;
+												channelParam = "";
+											}
+											else if(index == "+5")
+											{
+												channelOffset = 5;
+												channelParam = "";
+											}
+											else _bl->out.printWarning("Warning: Unknown value for index: " + index);
+
+										}
+										else _bl->out.printWarning("Warning: index is not defined for address of peer_param parameter.");
+									}
+									else _bl->out.printWarning("Warning: address is not defined for peer_param parameter.");
+								}
+							}
+							else _bl->out.printWarning("Warning: size or type is not defined for peer_param parameter.");
+						}
+						else _bl->out.printWarning("Warning: Array physical is not defined for peer_param.");
+						continue;
+					}
+				}
+			}
+
 			std::shared_ptr<HomeMaticParameter> parameter(new HomeMaticParameter(_bl, parameterNode, true));
 			parameters.push_back(parameter);
 			parameter->parentParameterSet = this;
@@ -2297,7 +2439,7 @@ void Device::parseXML(xml_node<>* node)
 						frame->associatedValues.push_back(*j);
 						frame->channelIndexOffset = i->second->physicalIndexOffset;
 						//For float variables the frame is the only location to find out if it is signed
-						for(std::vector<HomeMaticParameter>::iterator l = frame->parameters.begin(); l != frame->parameters.end(); l++)
+						for(std::list<HomeMaticParameter>::iterator l = frame->parameters.begin(); l != frame->parameters.end(); l++)
 						{
 							if((l->param == (*j)->id || l->additionalParameter == (*j)->id))
 							{

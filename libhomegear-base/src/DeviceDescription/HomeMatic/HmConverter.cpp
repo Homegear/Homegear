@@ -368,7 +368,7 @@ void HmConverter::convertParameter(std::shared_ptr<HomeMaticParameter> homematic
 	parameter->sticky = homematicParameter->uiFlags & HomeMaticParameter::UIFlags::sticky;
 	parameter->transform = homematicParameter->uiFlags & HomeMaticParameter::UIFlags::transform;
 	parameter->unit = homematicParameter->logicalParameter->unit;
-	parameter->visible = (homematicParameter->uiFlags & HomeMaticParameter::UIFlags::visible) && !(homematicParameter->uiFlags & HomeMaticParameter::UIFlags::invisible);
+	parameter->visible = !(homematicParameter->uiFlags & HomeMaticParameter::UIFlags::invisible) && !homematicParameter->hidden;
 	parameter->writeable = homematicParameter->operations & HomeMaticParameter::Operations::write;
 
 	for(std::vector<std::shared_ptr<ParameterConversion>>::iterator i = homematicParameter->conversion.begin(); i != homematicParameter->conversion.end(); ++i)
@@ -658,7 +658,7 @@ void HmConverter::convertPacket(std::shared_ptr<DeviceFrame> homematicFrame, PPa
 	packet->subtypeIndex = homematicFrame->subtypeIndex;
 	packet->subtypeSize = homematicFrame->subtypeFieldSize;
 	packet->type = homematicFrame->type;
-	for(std::vector<HomeMaticParameter>::iterator i = homematicFrame->parameters.begin(); i != homematicFrame->parameters.end(); ++i)
+	for(std::list<HomeMaticParameter>::iterator i = homematicFrame->parameters.begin(); i != homematicFrame->parameters.end(); ++i)
 	{
 		if(i->field.empty())
 		{

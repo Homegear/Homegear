@@ -1,7 +1,6 @@
 # Compiled Object files
 *.slo
 *.lo
-*.Po
 *.o
 *.obj
 # Precompiled Headers
@@ -52,4 +51,4 @@ local.properties
 autom4te.cache
 *.in~
 config.log
-/homegear
+homegear

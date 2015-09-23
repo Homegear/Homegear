@@ -268,6 +268,8 @@ public:
 	int32_t addressStart = -1;
 	int32_t addressStep = -1;
 	int32_t count = -1;
+	std::string peerParam;
+	std::string channelParam;
 	int32_t channelOffset = -1;
 	int32_t peerAddressOffset = -1;
 	int32_t peerChannelOffset = -1;
@@ -390,7 +392,7 @@ public:
 	int32_t size = -1;
 	int32_t splitAfter = -1;
 	int32_t maxPackets = -1;
-	std::vector<HomeMaticParameter> parameters;
+	std::list<HomeMaticParameter> parameters;
 	std::vector<std::shared_ptr<HomeMaticParameter>> associatedValues;
 	std::string function1;
 	std::string function2;
