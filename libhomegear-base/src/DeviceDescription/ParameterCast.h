@@ -225,6 +225,20 @@ public:
 	void toPacket(PVariable value);
 };
 
+class OptionInteger : public ICast
+{
+public:
+	OptionInteger(BaseLib::Obj* baseLib);
+	OptionInteger(BaseLib::Obj* baseLib, xml_node<>* node, Parameter* parameter);
+	virtual ~OptionInteger() {}
+
+	void fromPacket(PVariable value);
+	void toPacket(PVariable value);
+
+	//Elements
+	std::map<int32_t, int32_t> valueMapFromDevice;
+	std::map<int32_t, int32_t> valueMapToDevice;
+};
 
 class StringJsonArrayDecimal : public ICast
 {
@@ -321,6 +335,7 @@ typedef std::shared_ptr<IntegerIntegerMap> PIntegerIntegerMap;
 typedef std::shared_ptr<IntegerIntegerScale> PIntegerIntegerScale;
 typedef std::shared_ptr<IntegerTinyFloat> PIntegerTinyFloat;
 typedef std::shared_ptr<OptionString> POptionString;
+typedef std::shared_ptr<OptionInteger> POptionInteger;
 typedef std::shared_ptr<RpcBinary> PRpcBinary;
 typedef std::shared_ptr<StringJsonArrayDecimal> PStringJsonArrayDecimal;
 typedef std::shared_ptr<StringUnsignedInteger> PStringUnsignedInteger;

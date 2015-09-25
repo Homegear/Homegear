@@ -59,7 +59,7 @@ void ParameterGroup::parseAttributes(xml_node<>* node)
 		}
 		else if(attributeName == "memoryAddressStart") memoryAddressStart = Math::getNumber(attributeValue);
 		else if(attributeName == "memoryAddressStep") memoryAddressStep = Math::getNumber(attributeValue);
-		else _bl->out.printWarning("Warning: Unknown attribute for \"parameterGroup\": " + attributeName);
+		else if(attributeName != "memoryAddressStart" && attributeName != "memoryAddressStep" && attributeName != "peerChannelMemoryOffset" && attributeName != "channelMemoryOffset" && attributeName != "peerAddressMemoryOffset" && attributeName != "maxLinkCount") _bl->out.printWarning("Warning: Unknown attribute for \"parameterGroup\": " + attributeName);
 	}
 }
 
@@ -77,7 +77,7 @@ void ParameterGroup::parseElements(xml_node<>* node)
 				parametersOrdered.push_back(parameter);
 			}
 			if(parameter->physical->list > -1) lists[parameter->physical->list].push_back(parameter);
-			if(parameter->parameterGroupSelector) _parent->parameterGroupSelector = parameter;
+			if(parameter->parameterGroupSelector && _parent) _parent->parameterGroupSelector = parameter;
 		}
 		else if(nodeName == "scenario")
 		{
@@ -180,15 +180,6 @@ LinkParameters::LinkParameters(BaseLib::Obj* baseLib, Function* parent, xml_node
 		else _bl->out.printWarning("Warning: Unknown attribute for \"linkParameters\": " + attributeName);
 	}
 	parseElements(node);
-	for(xml_node<>* subNode = node->first_node(); subNode; subNode = subNode->next_sibling())
-	{
-		std::string nodeName(subNode->name());
-		if(nodeName == "linkScenario")
-		{
-			PScenario scenario(new Scenario(_bl, subNode));
-			if(!scenario->id.empty()) linkScenarios.insert(std::pair<std::string, PScenario>(scenario->id, scenario));
-		}
-	}
 }
 
 }

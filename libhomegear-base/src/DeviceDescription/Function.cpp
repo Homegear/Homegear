@@ -92,6 +92,7 @@ Function::Function(BaseLib::Obj* baseLib, xml_node<>* node, uint32_t& channelInd
 				else if(propertyName == "defaultGroupedLinkScenarioElementId1") defaultGroupedLinkScenarioElementId1 = propertyValue;
 				else if(propertyName == "defaultGroupedLinkScenarioElementId2") defaultGroupedLinkScenarioElementId2 = propertyValue;
 				else if(propertyName == "hasGroup") { if(propertyValue == "true") hasGroup = true; }
+				else if(propertyName == "groupId") groupId = propertyValue;
 				else if(propertyName == "linkSenderFunctionTypes")
 				{
 					for(xml_node<>* functionTypeNode = propertyNode->first_node("type"); functionTypeNode; functionTypeNode = functionTypeNode->next_sibling())

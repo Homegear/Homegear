@@ -436,8 +436,7 @@ void IntegerTinyFloat::fromPacket(PVariable value)
 {
 	if(!value) return;
 	value->type = VariableType::tInteger;
-	int32_t mantissa = (value->integerValue >> mantissaStart) & ((1 << mantissaSize) - 1);
-	if(mantissaSize == 0) mantissa = 1;
+	int32_t mantissa = (mantissaSize == 0) ? 1 : ((value->integerValue >> mantissaStart) & ((1 << mantissaSize) - 1));
 	int32_t exponent = (value->integerValue >> exponentStart) & ((1 << exponentSize) - 1);
 	value->integerValue = mantissa * (1 << exponent);
 }
@@ -581,6 +580,59 @@ void OptionString::toPacket(PVariable value)
 		else _bl->out.printWarning("Warning: Cannot convert variable, because enum index is not valid.");
 		value->integerValue = 0;
 	}
+}
+
+OptionInteger::OptionInteger(BaseLib::Obj* baseLib) : ICast(baseLib)
+{
+}
+
+OptionInteger::OptionInteger(BaseLib::Obj* baseLib, xml_node<>* node, Parameter* parameter) : ICast(baseLib, node, parameter)
+{
+	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
+	{
+		_bl->out.printWarning("Warning: Unknown attribute for \"optionInteger\": " + std::string(attr->name()));
+	}
+	for(xml_node<>* subNode = node->first_node(); subNode; subNode = subNode->next_sibling())
+	{
+		std::string name(subNode->name());
+		std::string value(subNode->value());
+		if(name == "value")
+		{
+			for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
+			{
+				_bl->out.printWarning("Warning: Unknown attribute for \"optionInteger\\value\": " + std::string(attr->name()));
+			}
+			int32_t physicalValue = 0;
+			int32_t logicalValue = 0;
+			for(xml_node<>* valueNode = subNode->first_node(); valueNode; valueNode = valueNode->next_sibling())
+			{
+				std::string valueName(valueNode->name());
+				std::string valueValue(valueNode->value());
+				if(valueName == "physical") physicalValue = Math::getNumber(valueValue);
+				else if(valueName == "logical") logicalValue = Math::getNumber(valueValue);
+				else _bl->out.printWarning("Warning: Unknown element in \"optionInteger\\value\": " + valueName);
+			}
+			valueMapFromDevice[physicalValue] = logicalValue;
+			valueMapToDevice[logicalValue] = physicalValue;
+		}
+		else _bl->out.printWarning("Warning: Unknown node in \"optionInteger\": " + name);
+	}
+}
+
+void OptionInteger::fromPacket(PVariable value)
+{
+	if(!value) return;
+	value->type = VariableType::tInteger;
+	std::map<int32_t, int32_t>::const_iterator element = valueMapFromDevice.find(value->integerValue);
+	if(element != valueMapFromDevice.end()) value->integerValue = element->second;
+}
+
+void OptionInteger::toPacket(PVariable value)
+{
+	if(!value) return;
+	value->type = VariableType::tInteger;
+	std::map<int32_t, int32_t>::const_iterator element = valueMapToDevice.find(value->integerValue);
+	if(element != valueMapToDevice.end()) value->integerValue = element->second;
 }
 
 StringJsonArrayDecimal::StringJsonArrayDecimal(BaseLib::Obj* baseLib) : ICast(baseLib)

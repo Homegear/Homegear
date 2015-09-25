@@ -73,10 +73,10 @@ IPhysical::IPhysical(BaseLib::Obj* baseLib, Type::Enum type, xml_node<>* node) :
 				else baseLib->out.printWarning("Warning: Unknown endianess for \"parameter\\physical*\": " + nodeValue);
 			}
 			else if(nodeName == "list") list = Math::getNumber(nodeValue);
-			else if(nodeName == "index") Math::getDouble(nodeValue);
+			else if(nodeName == "index") index = Math::getDouble(nodeValue);
 			else if(nodeName == "size")
 			{
-				Math::getDouble(nodeValue);
+				size = Math::getDouble(nodeValue);
 				sizeDefined = true;
 			}
 			else if(nodeName == "mask") mask = Math::getNumber(nodeValue);
