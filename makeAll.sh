@@ -16,3 +16,5 @@ cd $SCRIPTDIR/../homegear-sonos
 CPPFLAGS=-DDEBUG CXXFLAGS="-g -O0" && make -j8 && make install
 cd $SCRIPTDIR/../homegear-homematicbidcos
 CPPFLAGS=-DDEBUG CXXFLAGS="-g -O0" && make -j8 && make install
+cd $SCRIPTDIR/../homegear-homematicwired
+CPPFLAGS=-DDEBUG CXXFLAGS="-g -O0" && make -j8 && make install

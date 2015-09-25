@@ -114,6 +114,7 @@ Parameter::Parameter(BaseLib::Obj* baseLib, xml_node<>* node, ParameterGroup* pa
 						else if(castName == "stringUnsignedInteger") casts.push_back(PStringUnsignedInteger(new StringUnsignedInteger(_bl, castNode, this)));
 						else if(castName == "blindTest") casts.push_back(PBlindTest(new BlindTest(_bl, castNode, this)));
 						else if(castName == "optionString") casts.push_back(POptionString(new OptionString(_bl, castNode, this)));
+						else if(castName == "optionInteger") casts.push_back(POptionInteger(new OptionInteger(_bl, castNode, this)));
 						else if(castName == "stringJsonArrayDecimal") casts.push_back(PStringJsonArrayDecimal(new StringJsonArrayDecimal(_bl, castNode, this)));
 						else if(castName == "rpcBinary") casts.push_back(PRpcBinary(new RpcBinary(_bl, castNode, this)));
 						else if(castName == "toggle") casts.push_back(PToggle(new Toggle(_bl, castNode, this)));

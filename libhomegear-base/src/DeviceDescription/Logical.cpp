@@ -91,7 +91,7 @@ LogicalEnumeration::LogicalEnumeration(BaseLib::Obj* baseLib, xml_node<>* node) 
 				values.push_back(value);
 				index++;
 			}
-			else if(nodeName == "dafaultValue")
+			else if(nodeName == "defaultValue")
 			{
 				defaultValueExists = true;
 				defaultValue = Math::getNumber(nodeValue);
@@ -158,7 +158,7 @@ LogicalInteger::LogicalInteger(BaseLib::Obj* baseLib, xml_node<>* node) : Logica
 				setToValueOnPairingExists = true;
 				setToValueOnPairing = Math::getNumber(nodeValue);
 			}
-			else if(nodeName == "specialValue")
+			else if(nodeName == "specialValues")
 			{
 				for(xml_node<>* specialValueNode = subNode->first_node(); specialValueNode; specialValueNode = specialValueNode->next_sibling())
 				{
@@ -167,7 +167,7 @@ LogicalInteger::LogicalInteger(BaseLib::Obj* baseLib, xml_node<>* node) : Logica
 					if(specialValueName == "specialValue")
 					{
 						std::string id;
-						for(xml_attribute<>* attr = subNode->first_attribute(); attr; attr = attr->next_attribute())
+						for(xml_attribute<>* attr = specialValueNode->first_attribute(); attr; attr = attr->next_attribute())
 						{
 							std::string attributeName(attr->name());
 							if(attributeName == "id") id = std::string(attr->value());
@@ -238,7 +238,7 @@ LogicalDecimal::LogicalDecimal(BaseLib::Obj* baseLib, xml_node<>* node) : Logica
 				setToValueOnPairingExists = true;
 				setToValueOnPairing = Math::getDouble(nodeValue);
 			}
-			else if(nodeName == "specialValue")
+			else if(nodeName == "specialValues")
 			{
 				for(xml_node<>* specialValueNode = subNode->first_node(); specialValueNode; specialValueNode = specialValueNode->next_sibling())
 				{
@@ -247,7 +247,7 @@ LogicalDecimal::LogicalDecimal(BaseLib::Obj* baseLib, xml_node<>* node) : Logica
 					if(specialValueName == "specialValue")
 					{
 						std::string id;
-						for(xml_attribute<>* attr = subNode->first_attribute(); attr; attr = attr->next_attribute())
+						for(xml_attribute<>* attr = specialValueNode->first_attribute(); attr; attr = attr->next_attribute())
 						{
 							std::string attributeName(attr->name());
 							if(attributeName == "id") id = std::string(attr->value());

@@ -268,7 +268,7 @@ double Math::getDouble(const std::string& s)
 std::string Math::toString(double number, int32_t precision)
 {
 	std::ostringstream out;
-    out << std::setprecision(precision + 1) << number;
+    out << std::setiosflags(std::ios_base::fixed | std::ios_base::dec) << std::setprecision(precision) << number;
     return out.str();
 }
 }

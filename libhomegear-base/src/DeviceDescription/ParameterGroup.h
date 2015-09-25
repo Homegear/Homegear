@@ -134,9 +134,6 @@ public:
 	int32_t channelMemoryOffset = -1;
 	int32_t peerAddressMemoryOffset = -1;
 	int32_t maxLinkCount = -1;
-
-	//Elements
-	Scenarios linkScenarios;
 };
 
 }

@@ -84,14 +84,60 @@ void HmConverter::convert(std::shared_ptr<Device> homematicDevice, std::shared_p
 				//When the device type is not at index 10 of the pairing packet, the device is not supported
 				//The "priority" attribute is ignored, for the standard devices "priority" seems not important
 				if(j->index == 10.0) { typeId = j->constValue; }
-				else if(j->index == 9.0)
+				else if(j->index == 9.0 && (*i)->firmware == -1)
 				{
-					(*i)->booleanOperator = (DeviceType::BooleanOperator::Enum)j->booleanOperator;
-					if((*i)->firmware == -1) (*i)->firmware = j->constValue;
+					switch((DeviceType::BooleanOperator::Enum)j->booleanOperator)
+					{
+						case DeviceType::BooleanOperator::Enum::e:
+							supportedDevice->minFirmwareVersion = j->constValue;
+							supportedDevice->maxFirmwareVersion = j->constValue;
+							break;
+						case DeviceType::BooleanOperator::Enum::g:
+							supportedDevice->minFirmwareVersion = j->constValue + 1;
+							break;
+						case DeviceType::BooleanOperator::Enum::l:
+							supportedDevice->maxFirmwareVersion = j->constValue - 1;
+							break;
+						case DeviceType::BooleanOperator::Enum::ge:
+							supportedDevice->minFirmwareVersion = j->constValue;
+							break;
+						case DeviceType::BooleanOperator::Enum::le:
+							supportedDevice->maxFirmwareVersion = j->constValue;
+							break;
+					}
 				}
-				else if(j->index == 0) { typeId += (j->constValue << 8); }
-				else if(j->index == 1.0) { typeId += j->constValue; }
-				else if(j->index == 2.0) { if((*i)->firmware == -1) (*i)->firmware = j->constValue; }
+				else if(j->index == 0)
+				{
+					if(typeId == -1) typeId = 0;
+					typeId += (j->constValue << 8);
+				}
+				else if(j->index == 1.0)
+				{
+					if(typeId == -1) typeId = 0;
+					typeId += j->constValue;
+				}
+				else if(j->index == 2.0 && (*i)->firmware == -1)
+				{
+					switch((DeviceType::BooleanOperator::Enum)j->booleanOperator)
+					{
+						case DeviceType::BooleanOperator::Enum::e:
+							supportedDevice->minFirmwareVersion = j->constValue;
+							supportedDevice->maxFirmwareVersion = j->constValue;
+							break;
+						case DeviceType::BooleanOperator::Enum::g:
+							supportedDevice->minFirmwareVersion = j->constValue + 1;
+							break;
+						case DeviceType::BooleanOperator::Enum::l:
+							supportedDevice->maxFirmwareVersion = j->constValue - 1;
+							break;
+						case DeviceType::BooleanOperator::Enum::ge:
+							supportedDevice->minFirmwareVersion = j->constValue;
+							break;
+						case DeviceType::BooleanOperator::Enum::le:
+							supportedDevice->maxFirmwareVersion = j->constValue;
+							break;
+					}
+				}
 				else if(j->index == 22.0) ignore = true;
 			}
 			(*i)->typeID = typeId;
@@ -203,6 +249,7 @@ void HmConverter::convert(std::shared_ptr<Device> homematicDevice, std::shared_p
 	{
 		homegearDevice->group.reset(new HomegearDevice(_bl, homegearDevice->family));
 		convert(homematicDevice->team, homegearDevice->group);
+		if(homegearDevice->group->receiveModes == HomegearDevice::ReceiveModes::Enum::always) homegearDevice->group->receiveModes = homegearDevice->receiveModes;
 	}
 }
 
@@ -303,7 +350,7 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 			{
 				scenario->scenarioEntries[j->first] = j->second;
 			}
-			homegearFunction->configParameters->scenarios[i->first] = scenario;
+			homegearFunction->variables->scenarios[i->first] = scenario;
 		}
 	}
 	parameterSet = homematicChannel->parameterSets.find(ParameterSet::Type::link);
@@ -334,7 +381,7 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 			{
 				scenario->scenarioEntries[j->first] = j->second;
 			}
-			homegearFunction->configParameters->scenarios[i->first] = scenario;
+			homegearFunction->linkParameters->scenarios[i->first] = scenario;
 		}
 		if(!homematicChannel->enforceLinks.empty())
 		{
@@ -344,7 +391,7 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 			{
 				scenario->scenarioEntries[(*i)->id] = (*i)->value;
 			}
-			homegearFunction->configParameters->scenarios[scenario->id] = scenario;
+			homegearFunction->linkParameters->scenarios[scenario->id] = scenario;
 		}
 	}
 	if(homematicChannel->specialParameter && !homematicChannel->specialParameter->id.empty())
@@ -382,18 +429,20 @@ void HmConverter::convertParameter(std::shared_ptr<HomeMaticParameter> homematic
 		}
 		else if((*i)->type == ParameterConversion::Type::integerIntegerScale)
 		{
-			PIntegerIntegerScale cast(new IntegerIntegerScale(_bl));
-			if((*i)->div > 0)
+			if((*i)->mul > 0)
 			{
-				cast->operation = IntegerIntegerScale::Operation::division;
-				cast->factor = (*i)->div;
-			}
-			else
-			{
+				PIntegerIntegerScale cast(new IntegerIntegerScale(_bl));
 				cast->operation = IntegerIntegerScale::Operation::multiplication;
 				cast->factor = (*i)->mul;
+				parameter->casts.push_back(cast);
 			}
-			parameter->casts.push_back(cast);
+			if((*i)->div > 0)
+			{
+				PIntegerIntegerScale cast(new IntegerIntegerScale(_bl));
+				cast->operation = IntegerIntegerScale::Operation::division;
+				cast->factor = (*i)->div;
+				parameter->casts.push_back(cast);
+			}
 		}
 		else if((*i)->type == ParameterConversion::Type::integerIntegerMap)
 		{
@@ -458,6 +507,19 @@ void HmConverter::convertParameter(std::shared_ptr<HomeMaticParameter> homematic
 		else if((*i)->type == ParameterConversion::Type::optionString)
 		{
 			POptionString cast(new OptionString(_bl));
+			parameter->casts.push_back(cast);
+		}
+		else if((*i)->type == ParameterConversion::Type::optionInteger)
+		{
+			POptionInteger cast(new OptionInteger(_bl));
+			for(std::unordered_map<int32_t, int32_t>::iterator j = (*i)->integerValueMapDevice.begin(); j != (*i)->integerValueMapDevice.end(); ++j)
+			{
+				cast->valueMapFromDevice[j->first] = j->second;
+			}
+			for(std::unordered_map<int32_t, int32_t>::iterator j = (*i)->integerValueMapParameter.begin(); j != (*i)->integerValueMapParameter.end(); ++j)
+			{
+				cast->valueMapToDevice[j->first] = j->second;
+			}
 			parameter->casts.push_back(cast);
 		}
 		else if((*i)->type == ParameterConversion::Type::stringJsonArrayFloat)

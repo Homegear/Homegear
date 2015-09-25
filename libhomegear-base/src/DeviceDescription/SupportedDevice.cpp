@@ -58,9 +58,9 @@ SupportedDevice::SupportedDevice(BaseLib::Obj* baseLib, xml_node<>* node, Homege
 		std::string nodeName(subNode->name());
 		std::string value(subNode->value());
 		if(nodeName == "description") description = value;
-		else if(nodeName == "typeNumber") typeNumber = Math::getUnsignedNumber(value, true);
-		else if(nodeName == "minFirmwareVersion") minFirmwareVersion = Math::getUnsignedNumber(value, true);
-		else if(nodeName == "maxFirmwareVersion") maxFirmwareVersion = Math::getUnsignedNumber(value, true);
+		else if(nodeName == "typeNumber") typeNumber = Math::getUnsignedNumber(value);
+		else if(nodeName == "minFirmwareVersion") minFirmwareVersion = Math::getUnsignedNumber(value);
+		else if(nodeName == "maxFirmwareVersion") maxFirmwareVersion = Math::getUnsignedNumber(value);
 		else _bl->out.printWarning("Warning: Unknown node in \"supportedDevice\": " + nodeName);
 	}
 }

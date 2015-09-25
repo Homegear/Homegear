@@ -8,6 +8,7 @@
 *.pch
 # Compiled Dynamic libraries
 *.so
+*.so.1.0.0
 *.dylib
 *.dll
 # Fortran module files
