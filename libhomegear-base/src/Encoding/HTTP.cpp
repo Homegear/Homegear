@@ -393,6 +393,7 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 	{
 		_header.contentType = std::string(value, valueSize);
 		HelperFunctions::toLower(_header.contentType);
+		_header.contentType = HelperFunctions::split(_header.contentType, ';').first;
 	}
 	else if(!strnaicmp(name, "transfer-encoding", nameSize) || !strnaicmp(name, "te", nameSize))
 	{

@@ -53,3 +53,4 @@ autom4te.cache
 *.in~
 config.log
 homegear
+core
