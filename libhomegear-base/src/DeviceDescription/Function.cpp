@@ -38,9 +38,9 @@ namespace DeviceDescription
 Function::Function(BaseLib::Obj* baseLib)
 {
 	_bl = baseLib;
-	configParameters.reset(new ConfigParameters(baseLib, this));
-	linkParameters.reset(new LinkParameters(baseLib, this));
-	variables.reset(new Variables(baseLib, this));
+	configParameters.reset(new ConfigParameters(baseLib));
+	linkParameters.reset(new LinkParameters(baseLib));
+	variables.reset(new Variables(baseLib));
 }
 
 Function::Function(BaseLib::Obj* baseLib, xml_node<>* node, uint32_t& channelIndex) : Function(baseLib)

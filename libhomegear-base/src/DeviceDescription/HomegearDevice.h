@@ -111,6 +111,7 @@ protected:
 	// }}}
 
 	virtual void load(std::string xmlFilename, bool& oldFormat);
+	virtual void postProcessFunction(PFunction& function, std::map<std::string, PConfigParameters>& configParameters, std::map<std::string, PVariables>& variables, std::map<std::string, PLinkParameters>& linkParameters);
 	virtual void parseXML(xml_node<>* node);
 
 	// {{{ Helpers

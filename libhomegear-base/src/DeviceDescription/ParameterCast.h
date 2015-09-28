@@ -79,7 +79,7 @@ public:
 	void toPacket(PVariable value);
 
 	//Elements
-	double factor = 0;
+	double factor = 1.0;
 	double offset = 0;
 };
 

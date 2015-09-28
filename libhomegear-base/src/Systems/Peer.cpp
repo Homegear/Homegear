@@ -2105,7 +2105,6 @@ std::shared_ptr<Variable> Peer::getParamsetId(int32_t clientID, uint32_t channel
 		if(_disposing) return Variable::createError(-32500, "Peer is disposing.");
 		if(_rpcDevice->functions.find(channel) == _rpcDevice->functions.end()) return Variable::createError(-2, "Unknown channel.");
 		PFunction rpcFunction = _rpcDevice->functions.at(channel);
-		if((type == ParameterGroup::Type::Enum::config && rpcFunction->configParameters->parameters.empty()) || (type == ParameterGroup::Type::Enum::variables && rpcFunction->variables->parameters.empty()) || (type == ParameterGroup::Type::Enum::link && rpcFunction->linkParameters->parameters.empty())) return Variable::createError(-3, "Unknown parameter set.");
 		std::shared_ptr<BasicPeer> remotePeer;
 		if(type == ParameterGroup::Type::link && remoteID > 0)
 		{
@@ -2152,7 +2151,6 @@ std::shared_ptr<Variable> Peer::getValue(int32_t clientID, uint32_t channel, std
 		if(_rpcDevice->functions.find(channel) == _rpcDevice->functions.end()) return Variable::createError(-2, "Unknown channel.");
 		PFunction rpcFunction = _rpcDevice->functions.at(channel);
 		PParameterGroup parameterGroup = getParameterSet(channel, ParameterGroup::Type::Enum::variables);
-		if(parameterGroup->parameters.empty()) return Variable::createError(-3, "Unknown parameter set.");
 		PParameter parameter = parameterGroup->parameters.at(valueKey);
 		if(!parameter) return Variable::createError(-5, "Unknown parameter.");
 		if(!parameter->readable) return Variable::createError(-6, "Parameter is not readable.");

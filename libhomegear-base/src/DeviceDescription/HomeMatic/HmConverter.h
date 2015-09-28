@@ -51,7 +51,7 @@ protected:
 	BaseLib::Obj* _bl = nullptr;
 
 	void convertChannel(std::shared_ptr<DeviceChannel> homematicChannel, PFunction function);
-	void convertParameter(std::shared_ptr<HomeMaticParameter> homematicParameter, PParameter parameter, bool isGroupSelector);
+	void convertParameter(std::shared_ptr<HomeMaticParameter> homematicParameter, PParameter parameter);
 	void convertPacket(std::shared_ptr<DeviceFrame> homematicFrame, PPacket packet);
 };
 

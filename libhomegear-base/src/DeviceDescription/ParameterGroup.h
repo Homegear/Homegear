@@ -63,8 +63,8 @@ public:
 		enum Enum { none = 0, config = 1, variables = 2, link = 3 };
 	};
 
-	ParameterGroup(BaseLib::Obj* baseLib, Function* parent);
-	ParameterGroup(BaseLib::Obj* baseLib, Function* parent, xml_node<>* node);
+	ParameterGroup(BaseLib::Obj* baseLib);
+	ParameterGroup(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~ParameterGroup() {}
 
 	//Attributes
@@ -79,19 +79,14 @@ public:
 
 	//Helpers
 	Lists lists;
+	PParameter parameterGroupSelector;
 
-	Function* parent();
-	void setParent(Function* parent);
 	virtual Type::Enum type() = 0;
 	static Type::Enum typeFromString(std::string& type);
 	PParameter getParameter(std::string id);
 	void getIndices(uint32_t startIndex, uint32_t endIndex, int32_t list, std::vector<PParameter>& result);
 protected:
 	BaseLib::Obj* _bl = nullptr;
-
-	// {{{ Helpers
-		Function* _parent = nullptr;
-	// }}}
 
 	void parseAttributes(xml_node<>* node);
 	void parseElements(xml_node<>* node);
@@ -100,8 +95,8 @@ protected:
 class ConfigParameters : public ParameterGroup
 {
 public:
-	ConfigParameters(BaseLib::Obj* baseLib, Function* parent);
-	ConfigParameters(BaseLib::Obj* baseLib, Function* parent, xml_node<>* node);
+	ConfigParameters(BaseLib::Obj* baseLib);
+	ConfigParameters(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~ConfigParameters() {}
 
 	//Helpers
@@ -111,8 +106,8 @@ public:
 class Variables : public ParameterGroup
 {
 public:
-	Variables(BaseLib::Obj* baseLib, Function* parent);
-	Variables(BaseLib::Obj* baseLib, Function* parent, xml_node<>* node);
+	Variables(BaseLib::Obj* baseLib);
+	Variables(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~Variables() {}
 
 	//Helpers
@@ -122,8 +117,8 @@ public:
 class LinkParameters : public ParameterGroup
 {
 public:
-	LinkParameters(BaseLib::Obj* baseLib, Function* parent);
-	LinkParameters(BaseLib::Obj* baseLib, Function* parent, xml_node<>* node);
+	LinkParameters(BaseLib::Obj* baseLib);
+	LinkParameters(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~LinkParameters() {}
 
 	//Helpers

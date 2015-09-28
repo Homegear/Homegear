@@ -267,6 +267,9 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 	if(homematicChannel->subconfig)
 	{
 		homegearFunction->alternativeFunction.reset(new Function(_bl));
+		homematicChannel->subconfig->startIndex = homematicChannel->startIndex;
+		homematicChannel->subconfig->type = homematicChannel->type;
+		homematicChannel->subconfig->count = homematicChannel->count;
 		convertChannel(homematicChannel->subconfig, homegearFunction->alternativeFunction);
 	}
 	homegearFunction->channel = homematicChannel->startIndex;
@@ -309,8 +312,14 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 		for(std::vector<std::shared_ptr<HmDeviceDescription::HomeMaticParameter>>::iterator i = parameterSet->second->parameters.begin(); i != parameterSet->second->parameters.end(); ++i)
 		{
 			PParameter parameter(new BaseLib::DeviceDescription::Parameter(_bl, homegearFunction->configParameters.get()));
-			convertParameter(*i, parameter, !parameterSet->second->subsetReference.empty());
+			convertParameter(*i, parameter);
 			if(parameter->id.empty()) continue;
+			if(parameter->parameterGroupSelector)
+			{
+				//HomeMatic Wired transform parameter sets need to be unique as the physical parameter settings of the transform parameter differ
+				homegearFunction->configParametersId += "-t" + std::to_string(homegearFunction->channel);
+				homegearFunction->configParameters->id += "-t" + std::to_string(homegearFunction->channel);
+			}
 			homegearFunction->configParameters->parameters[parameter->id] = parameter;
 			homegearFunction->configParameters->parametersOrdered.push_back(parameter);
 			if(parameter->physical->list > -1) homegearFunction->configParameters->lists[parameter->physical->list].push_back(parameter);
@@ -336,7 +345,7 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 		for(std::vector<std::shared_ptr<HmDeviceDescription::HomeMaticParameter>>::iterator i = parameterSet->second->parameters.begin(); i != parameterSet->second->parameters.end(); ++i)
 		{
 			PParameter parameter(new BaseLib::DeviceDescription::Parameter(_bl, homegearFunction->variables.get()));
-			convertParameter(*i, parameter, !parameterSet->second->subsetReference.empty());
+			convertParameter(*i, parameter);
 			if(parameter->id.empty()) continue;
 			homegearFunction->variables->parameters[parameter->id] = parameter;
 			homegearFunction->variables->parametersOrdered.push_back(parameter);
@@ -367,7 +376,7 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 		for(std::vector<std::shared_ptr<HmDeviceDescription::HomeMaticParameter>>::iterator i = parameterSet->second->parameters.begin(); i != parameterSet->second->parameters.end(); ++i)
 		{
 			PParameter parameter(new BaseLib::DeviceDescription::Parameter(_bl, homegearFunction->linkParameters.get()));
-			convertParameter(*i, parameter, !parameterSet->second->subsetReference.empty());
+			convertParameter(*i, parameter);
 			if(parameter->id.empty()) continue;
 			homegearFunction->linkParameters->parameters[parameter->id] = parameter;
 			homegearFunction->linkParameters->parametersOrdered.push_back(parameter);
@@ -401,7 +410,7 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 	}
 }
 
-void HmConverter::convertParameter(std::shared_ptr<HomeMaticParameter> homematicParameter, PParameter parameter, bool isGroupSelector)
+void HmConverter::convertParameter(std::shared_ptr<HomeMaticParameter> homematicParameter, PParameter parameter)
 {
 	parameter->addonWriteable = true;
 	parameter->control = homematicParameter->control;
@@ -409,11 +418,10 @@ void HmConverter::convertParameter(std::shared_ptr<HomeMaticParameter> homematic
 	parameter->id = homematicParameter->id;
 	parameter->internal = homematicParameter->uiFlags & HomeMaticParameter::UIFlags::internal;
 	parameter->isSigned = homematicParameter->isSigned;
-	parameter->parameterGroupSelector = isGroupSelector;
+	parameter->parameterGroupSelector = homematicParameter->uiFlags & HomeMaticParameter::UIFlags::transform;
 	parameter->readable = (homematicParameter->operations & HomeMaticParameter::Operations::read) || (homematicParameter->operations & HomeMaticParameter::Operations::event);
 	parameter->service = homematicParameter->uiFlags & HomeMaticParameter::UIFlags::service;
 	parameter->sticky = homematicParameter->uiFlags & HomeMaticParameter::UIFlags::sticky;
-	parameter->transform = homematicParameter->uiFlags & HomeMaticParameter::UIFlags::transform;
 	parameter->unit = homematicParameter->logicalParameter->unit;
 	parameter->visible = !(homematicParameter->uiFlags & HomeMaticParameter::UIFlags::invisible) && !homematicParameter->hidden;
 	parameter->writeable = homematicParameter->operations & HomeMaticParameter::Operations::write;

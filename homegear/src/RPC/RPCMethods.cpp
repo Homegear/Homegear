@@ -2058,8 +2058,13 @@ BaseLib::PVariable RPCInit::invoke(int32_t clientID, std::shared_ptr<std::vector
 				eventServer->json = (parameters->at(2)->integerValue & 16);
 				eventServer->reconnectInfinitely = (parameters->at(2)->integerValue & 128);
 			}
-			//Reconnect on CCU2 as it doesn't reconnect automatically
+			// {{{ Reconnect on CCU2 as it doesn't reconnect automatically
 			if((parameters->at(1)->stringValue.size() == 4 && BaseLib::Math::isNumber(parameters->at(1)->stringValue, false) && server.second == "1999") || parameters->at(1)->stringValue == "Homegear_java") eventServer->reconnectInfinitely = true;
+			// }}}
+			// {{{ Keep connection to IP-Symcon
+			if(server.second == "5544" && parameters->at(1)->stringValue == "IPS") eventServer->reconnectInfinitely = true;
+			// }}}
+
 			_initServerThreadMutex.lock();
 			try
 			{

@@ -35,13 +35,12 @@ namespace BaseLib
 namespace DeviceDescription
 {
 
-ParameterGroup::ParameterGroup(BaseLib::Obj* baseLib, Function* parent)
+ParameterGroup::ParameterGroup(BaseLib::Obj* baseLib)
 {
 	_bl = baseLib;
-	_parent = parent;
 }
 
-ParameterGroup::ParameterGroup(BaseLib::Obj* baseLib, Function* parent, xml_node<>* node) : ParameterGroup(baseLib, parent)
+ParameterGroup::ParameterGroup(BaseLib::Obj* baseLib, xml_node<>* node) : ParameterGroup(baseLib)
 {
 	parseAttributes(node);
 	parseElements(node);
@@ -77,7 +76,7 @@ void ParameterGroup::parseElements(xml_node<>* node)
 				parametersOrdered.push_back(parameter);
 			}
 			if(parameter->physical->list > -1) lists[parameter->physical->list].push_back(parameter);
-			if(parameter->parameterGroupSelector && _parent) _parent->parameterGroupSelector = parameter;
+			if(parameter->parameterGroupSelector) parameterGroupSelector = parameter;
 		}
 		else if(nodeName == "scenario")
 		{
@@ -86,16 +85,6 @@ void ParameterGroup::parseElements(xml_node<>* node)
 		}
 		else if(nodeName != "linkScenario") _bl->out.printWarning("Warning: Unknown node in \"parameterGroup\": " + nodeName);
 	}
-}
-
-Function* ParameterGroup::parent()
-{
-	return _parent;
-}
-
-void ParameterGroup::setParent(Function* parent)
-{
-	_parent = parent;
 }
 
 ParameterGroup::Type::Enum ParameterGroup::typeFromString(std::string& type)
@@ -141,27 +130,27 @@ void ParameterGroup::getIndices(uint32_t startIndex, uint32_t endIndex, int32_t 
     }
 }
 
-ConfigParameters::ConfigParameters(BaseLib::Obj* baseLib, Function* parent) : ParameterGroup(baseLib, parent)
+ConfigParameters::ConfigParameters(BaseLib::Obj* baseLib) : ParameterGroup(baseLib)
 {
 }
 
-ConfigParameters::ConfigParameters(BaseLib::Obj* baseLib, Function* parent, xml_node<>* node) : ParameterGroup(baseLib, parent, node)
+ConfigParameters::ConfigParameters(BaseLib::Obj* baseLib, xml_node<>* node) : ParameterGroup(baseLib, node)
 {
 }
 
-Variables::Variables(BaseLib::Obj* baseLib, Function* parent) : ParameterGroup(baseLib, parent)
+Variables::Variables(BaseLib::Obj* baseLib) : ParameterGroup(baseLib)
 {
 }
 
-Variables::Variables(BaseLib::Obj* baseLib, Function* parent, xml_node<>* node) : ParameterGroup(baseLib, parent, node)
+Variables::Variables(BaseLib::Obj* baseLib, xml_node<>* node) : ParameterGroup(baseLib, node)
 {
 }
 
-LinkParameters::LinkParameters(BaseLib::Obj* baseLib, Function* parent) : ParameterGroup(baseLib, parent)
+LinkParameters::LinkParameters(BaseLib::Obj* baseLib) : ParameterGroup(baseLib)
 {
 }
 
-LinkParameters::LinkParameters(BaseLib::Obj* baseLib, Function* parent, xml_node<>* node) : ParameterGroup(baseLib, parent, node)
+LinkParameters::LinkParameters(BaseLib::Obj* baseLib, xml_node<>* node) : ParameterGroup(baseLib, node)
 {
 	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 	{

@@ -2133,17 +2133,17 @@ void HomegearDevice::parseXML(xml_node<>* node)
 					std::string parameterGroupName(parameterGroupNode->name());
 					if(parameterGroupName == "configParameters")
 					{
-						PConfigParameters config(new ConfigParameters(_bl, nullptr, parameterGroupNode));
+						PConfigParameters config(new ConfigParameters(_bl, parameterGroupNode));
 						configParameters[config->id] = config;
 					}
 					else if(parameterGroupName == "variables")
 					{
-						PVariables config(new Variables(_bl, nullptr, parameterGroupNode));
+						PVariables config(new Variables(_bl, parameterGroupNode));
 						variables[config->id] = config;
 					}
 					else if(parameterGroupName == "linkParameters")
 					{
-						PLinkParameters config(new LinkParameters(_bl, nullptr, parameterGroupNode));
+						PLinkParameters config(new LinkParameters(_bl, parameterGroupNode));
 						linkParameters[config->id] = config;
 					}
 					else _bl->out.printWarning("Warning: Unknown parameter group: " + parameterGroupName);
@@ -2169,29 +2169,48 @@ void HomegearDevice::parseXML(xml_node<>* node)
 		}
 		for(Functions::iterator i = functions.begin(); i != functions.end(); ++i)
 		{
-			if(!i->second->configParametersId.empty())
-			{
-				std::map<std::string, PConfigParameters>::iterator configIterator = configParameters.find(i->second->configParametersId);
-				if(configIterator == configParameters.end())
-				{
-					_bl->out.printWarning("Warning: configParameters with id \"" + i->second->configParametersId + "\" does not exist.");
-					continue;
-				}
-				i->second->configParameters = configIterator->second;
-				configIterator->second->setParent(i->second.get());
-			}
-			if(!i->second->variablesId.empty())
-			{
-				std::map<std::string, PVariables>::iterator configIterator = variables.find(i->second->variablesId);
-				if(configIterator == variables.end())
-				{
-					_bl->out.printWarning("Warning: variables with id \"" + i->second->variablesId + "\" does not exist.");
-					continue;
-				}
-				i->second->variables = configIterator->second;
-				configIterator->second->setParent(i->second.get());
+			postProcessFunction(i->second, configParameters, variables, linkParameters);
+			if(i->second->alternativeFunction) postProcessFunction(i->second->alternativeFunction, configParameters, variables, linkParameters);
+		}
+	}
+    catch(const std::exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(const Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
 
-				for(Parameters::iterator j = i->second->variables->parameters.begin(); j != i->second->variables->parameters.end(); ++j)
+void HomegearDevice::postProcessFunction(PFunction& function, std::map<std::string, PConfigParameters>& configParameters, std::map<std::string, PVariables>& variables, std::map<std::string, PLinkParameters>& linkParameters)
+{
+	try
+	{
+		if(!function->configParametersId.empty())
+		{
+			std::map<std::string, PConfigParameters>::iterator configIterator = configParameters.find(function->configParametersId);
+			if(configIterator == configParameters.end()) _bl->out.printWarning("Warning: configParameters with id \"" + function->configParametersId + "\" does not exist.");
+			else
+			{
+				function->configParameters = configIterator->second;
+				if(configIterator->second->parameterGroupSelector) function->parameterGroupSelector = configIterator->second->parameterGroupSelector;
+			}
+		}
+		if(!function->variablesId.empty())
+		{
+			std::map<std::string, PVariables>::iterator configIterator = variables.find(function->variablesId);
+			if(configIterator == variables.end()) _bl->out.printWarning("Warning: variables with id \"" + function->variablesId + "\" does not exist.");
+			else
+			{
+				function->variables = configIterator->second;
+				if(configIterator->second->parameterGroupSelector) function->parameterGroupSelector = configIterator->second->parameterGroupSelector;
+
+				for(Parameters::iterator j = function->variables->parameters.begin(); j != function->variables->parameters.end(); ++j)
 				{
 					for(std::vector<std::shared_ptr<Parameter::Packet>>::iterator k = j->second->getPackets.begin(); k != j->second->getPackets.end(); ++k)
 					{
@@ -2199,7 +2218,7 @@ void HomegearDevice::parseXML(xml_node<>* node)
 						if(packetIterator != packetsById.end())
 						{
 							packetIterator->second->associatedVariables.push_back(j->second);
-							valueRequestPackets[i->first][(*k)->id] = packetIterator->second;
+							valueRequestPackets[function->channel][(*k)->id] = packetIterator->second;
 						}
 					}
 					for(std::vector<std::shared_ptr<Parameter::Packet>>::iterator k = j->second->setPackets.begin(); k != j->second->setPackets.end(); ++k)
@@ -2214,16 +2233,15 @@ void HomegearDevice::parseXML(xml_node<>* node)
 					}
 				}
 			}
-			if(!i->second->linkParametersId.empty())
+		}
+		if(!function->linkParametersId.empty())
+		{
+			std::map<std::string, PLinkParameters>::iterator configIterator = linkParameters.find(function->linkParametersId);
+			if(configIterator == linkParameters.end()) _bl->out.printWarning("Warning: linkParameters with id \"" + function->linkParametersId + "\" does not exist.");
+			else
 			{
-				std::map<std::string, PLinkParameters>::iterator configIterator = linkParameters.find(i->second->linkParametersId);
-				if(configIterator == linkParameters.end())
-				{
-					_bl->out.printWarning("Warning: linkParameters with id \"" + i->second->linkParametersId + "\" does not exist.");
-					continue;
-				}
-				i->second->linkParameters = configIterator->second;
-				configIterator->second->setParent(i->second.get());
+				function->linkParameters = configIterator->second;
+				if(configIterator->second->parameterGroupSelector) function->parameterGroupSelector = configIterator->second->parameterGroupSelector;
 			}
 		}
 	}
