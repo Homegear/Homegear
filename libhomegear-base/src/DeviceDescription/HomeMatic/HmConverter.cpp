@@ -305,8 +305,8 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 	std::map<ParameterSet::Type::Enum, std::shared_ptr<ParameterSet>>::iterator parameterSet = homematicChannel->parameterSets.find(ParameterSet::Type::master);
 	if(parameterSet != homematicChannel->parameterSets.end() && parameterSet->second)
 	{
-		homegearFunction->configParametersId = parameterSet->second->id;
-		homegearFunction->configParameters->id = parameterSet->second->id;
+		homegearFunction->configParametersId = parameterSet->second->id + '-' + std::to_string(homegearFunction->channel);
+		homegearFunction->configParameters->id = parameterSet->second->id + '-' + std::to_string(homegearFunction->channel);
 		homegearFunction->configParameters->memoryAddressStart = parameterSet->second->addressStart;
 		homegearFunction->configParameters->memoryAddressStep = parameterSet->second->addressStep;
 		for(std::vector<std::shared_ptr<HmDeviceDescription::HomeMaticParameter>>::iterator i = parameterSet->second->parameters.begin(); i != parameterSet->second->parameters.end(); ++i)
@@ -316,7 +316,6 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 			if(parameter->id.empty()) continue;
 			if(parameter->parameterGroupSelector)
 			{
-				//HomeMatic Wired transform parameter sets need to be unique as the physical parameter settings of the transform parameter differ
 				homegearFunction->configParametersId += "-t" + std::to_string(homegearFunction->channel);
 				homegearFunction->configParameters->id += "-t" + std::to_string(homegearFunction->channel);
 			}
@@ -338,8 +337,8 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 	parameterSet = homematicChannel->parameterSets.find(ParameterSet::Type::values);
 	if(parameterSet != homematicChannel->parameterSets.end() && parameterSet->second)
 	{
-		homegearFunction->variablesId = parameterSet->second->id;
-		homegearFunction->variables->id = parameterSet->second->id;
+		homegearFunction->variablesId = parameterSet->second->id + '-' + std::to_string(homegearFunction->channel);
+		homegearFunction->variables->id = parameterSet->second->id + '-' + std::to_string(homegearFunction->channel);
 		homegearFunction->variables->memoryAddressStart = parameterSet->second->addressStart;
 		homegearFunction->variables->memoryAddressStep = parameterSet->second->addressStep;
 		for(std::vector<std::shared_ptr<HmDeviceDescription::HomeMaticParameter>>::iterator i = parameterSet->second->parameters.begin(); i != parameterSet->second->parameters.end(); ++i)
@@ -365,8 +364,8 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 	parameterSet = homematicChannel->parameterSets.find(ParameterSet::Type::link);
 	if(parameterSet != homematicChannel->parameterSets.end() && parameterSet->second)
 	{
-		homegearFunction->linkParametersId = parameterSet->second->id;
-		homegearFunction->linkParameters->id = parameterSet->second->id;
+		homegearFunction->linkParametersId = parameterSet->second->id + '-' + std::to_string(homegearFunction->channel);
+		homegearFunction->linkParameters->id = parameterSet->second->id + '-' + std::to_string(homegearFunction->channel);
 		homegearFunction->linkParameters->memoryAddressStart = parameterSet->second->addressStart;
 		homegearFunction->linkParameters->memoryAddressStep = parameterSet->second->addressStep;
 		homegearFunction->linkParameters->peerChannelMemoryOffset = parameterSet->second->peerChannelOffset;

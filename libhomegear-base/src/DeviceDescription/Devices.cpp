@@ -447,6 +447,108 @@ std::shared_ptr<HomegearDevice> Devices::loadHomeMatic(std::string& filepath)
 				}
 			}
 		}
+		else if(filename == "rf_wds30_ot2.xml")
+		{
+			std::map<std::string, std::shared_ptr<HmDeviceDescription::DeviceFrame>>::iterator frameIterator = homeMaticDevice->framesByID.find("WEATHER_EVENT");
+			if(frameIterator != homeMaticDevice->framesByID.end()) frameIterator->second->id = "WEATHER_EVENT5";
+
+			frameIterator = homeMaticDevice->framesByID.find("MEASURE_EVENT");
+			while(frameIterator != homeMaticDevice->framesByID.end())
+			{
+				if(frameIterator->second->channelField == 10)
+				{
+					frameIterator->second->id = "MEASURE_EVENT1";
+					homeMaticDevice->framesByID["MEASURE_EVENT1"] = frameIterator->second;
+					homeMaticDevice->framesByID.erase(frameIterator);
+				}
+				else if(frameIterator->second->channelField == 13)
+				{
+					frameIterator->second->id = "MEASURE_EVENT2";
+					homeMaticDevice->framesByID["MEASURE_EVENT2"] = frameIterator->second;
+					homeMaticDevice->framesByID.erase(frameIterator);
+				}
+				else if(frameIterator->second->channelField == 16)
+				{
+					frameIterator->second->id = "MEASURE_EVENT3";
+					homeMaticDevice->framesByID["MEASURE_EVENT3"] = frameIterator->second;
+					homeMaticDevice->framesByID.erase(frameIterator);
+				}
+				else if(frameIterator->second->channelField == 19)
+				{
+					frameIterator->second->id = "MEASURE_EVENT4";
+					homeMaticDevice->framesByID["MEASURE_EVENT4"] = frameIterator->second;
+					homeMaticDevice->framesByID.erase(frameIterator);
+				}
+				frameIterator = homeMaticDevice->framesByID.find("MEASURE_EVENT");
+			}
+
+			std::map<uint32_t, std::shared_ptr<HmDeviceDescription::DeviceChannel>>::iterator channelIterator = homeMaticDevice->channels.find(1);
+			if(channelIterator != homeMaticDevice->channels.end())
+			{
+				std::map<HmDeviceDescription::ParameterSet::Type::Enum, std::shared_ptr<HmDeviceDescription::ParameterSet>>::iterator paramsetIterator = channelIterator->second->parameterSets.find(HmDeviceDescription::ParameterSet::Type::Enum::values);
+				if(paramsetIterator != channelIterator->second->parameterSets.end())
+				{
+					std::shared_ptr<HmDeviceDescription::HomeMaticParameter> parameter = paramsetIterator->second->getParameter("TEMPERATURE");if(parameter)
+					{
+						for(int32_t i = 1; i <= 4; i++)
+						{
+							std::shared_ptr<HmDeviceDescription::PhysicalParameterEvent> eventFrame(new HmDeviceDescription::PhysicalParameterEvent());
+							eventFrame->frame = "MEASURE_EVENT" + std::to_string(i);
+							bool frameExists = false;
+							for(std::vector<std::shared_ptr<HmDeviceDescription::PhysicalParameterEvent>>::iterator j = parameter->physicalParameter->eventFrames.begin(); j != parameter->physicalParameter->eventFrames.end(); ++j)
+							{
+								if(i == 1 && (*j)->frame == "MEASURE_EVENT")
+								{
+									(*j)->frame = "MEASURE_EVENT1";
+								}
+								else if((*j)->frame == "MEASURE_EVENT" + std::to_string(i))
+								{
+									frameExists = true;
+									break;
+								}
+							}
+							if(!frameExists) parameter->physicalParameter->eventFrames.push_back(eventFrame);
+						}
+					}
+				}
+			}
+
+			channelIterator = homeMaticDevice->channels.find(5);
+			if(channelIterator != homeMaticDevice->channels.end())
+			{
+				std::map<HmDeviceDescription::ParameterSet::Type::Enum, std::shared_ptr<HmDeviceDescription::ParameterSet>>::iterator paramsetIterator = channelIterator->second->parameterSets.find(HmDeviceDescription::ParameterSet::Type::Enum::values);
+				if(paramsetIterator != channelIterator->second->parameterSets.end())
+				{
+					std::shared_ptr<HmDeviceDescription::HomeMaticParameter> parameter = paramsetIterator->second->getParameter("TEMPERATURE");if(parameter)
+					{
+						for(std::vector<std::shared_ptr<HmDeviceDescription::PhysicalParameterEvent>>::iterator j = parameter->physicalParameter->eventFrames.begin(); j != parameter->physicalParameter->eventFrames.end(); ++j)
+						{
+							if((*j)->frame == "WEATHER_EVENT")
+							{
+								(*j)->frame = "WEATHER_EVENT5";
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+		else if(filename == "rf_bl.xml" || filename == "rf_bl_644.xml" || filename == "rf_bl_conf_644.xml" || filename == "rf_bl_conf_644_e_v2_0.xml" || filename == "rf_bl_conf_644_e_v2_1.xml" || filename == "rf_bl_le_v2_3.xml")
+		{
+			std::map<std::string, std::shared_ptr<HmDeviceDescription::DeviceFrame>>::iterator frameIterator = homeMaticDevice->framesByID.find("INSTALL_TEST");
+			if(frameIterator != homeMaticDevice->framesByID.end())
+			{
+				for(std::list<HmDeviceDescription::HomeMaticParameter>::iterator i = frameIterator->second->parameters.begin(); i != frameIterator->second->parameters.end(); ++i)
+				{
+					if(i->param == "IT_COMMAND")
+					{
+						i->param = "";
+						i->constValue = 2;
+						break;
+					}
+				}
+			}
+		}
 
 		HmDeviceDescription::HmConverter converter(_bl);
 		std::shared_ptr<HomegearDevice> device(new HomegearDevice(_bl, _family));

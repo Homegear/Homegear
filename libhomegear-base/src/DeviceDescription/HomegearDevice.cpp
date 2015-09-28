@@ -653,6 +653,12 @@ void HomegearDevice::saveDevice(xml_document<>* doc, xml_node<>* parentNode, Hom
 						payloadNode->append_node(payloadElementNode);
 					}
 
+					if(!(*j)->parameterId.empty())
+					{
+						xml_node<>* payloadElementNode = doc->allocate_node(node_element, "parameterId", (*j)->parameterId.c_str());
+						payloadNode->append_node(payloadElementNode);
+					}
+
 					if((*j)->constValueInteger != -1)
 					{
 						tempStrings.push_back(std::to_string((*j)->constValueInteger));
@@ -686,9 +692,6 @@ void HomegearDevice::saveDevice(xml_document<>* doc, xml_node<>* parentNode, Hom
 						xml_node<>* payloadElementNode = doc->allocate_node(node_element, "omitIf", tempStrings.back().c_str());
 						payloadNode->append_node(payloadElementNode);
 					}
-
-					xml_node<>* payloadElementNode = doc->allocate_node(node_element, "parameterId", (*j)->parameterId.c_str());
-					payloadNode->append_node(payloadElementNode);
 				}
 			}
 
@@ -711,8 +714,11 @@ void HomegearDevice::saveDevice(xml_document<>* doc, xml_node<>* parentNode, Hom
 						payloadNode->append_node(payloadElementNode);
 					}
 
-					payloadElementNode = doc->allocate_node(node_element, "parameterId", (*j)->parameterId.c_str());
-					payloadNode->append_node(payloadElementNode);
+					if(!(*j)->parameterId.empty())
+					{
+						payloadElementNode = doc->allocate_node(node_element, "parameterId", (*j)->parameterId.c_str());
+						payloadNode->append_node(payloadElementNode);
+					}
 
 					if((*j)->constValueBooleanSet)
 					{
@@ -756,8 +762,11 @@ void HomegearDevice::saveDevice(xml_document<>* doc, xml_node<>* parentNode, Hom
 					xml_node<>* payloadElementNode = doc->allocate_node(node_element, "key", (*j)->key.c_str());
 					payloadNode->append_node(payloadElementNode);
 
-					payloadElementNode = doc->allocate_node(node_element, "parameterId", (*j)->parameterId.c_str());
-					payloadNode->append_node(payloadElementNode);
+					if(!(*j)->parameterId.empty())
+					{
+						payloadElementNode = doc->allocate_node(node_element, "parameterId", (*j)->parameterId.c_str());
+						payloadNode->append_node(payloadElementNode);
+					}
 
 					if((*j)->constValueBooleanSet)
 					{
