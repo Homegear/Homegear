@@ -322,6 +322,17 @@ public:
 	std::string replace;
 };
 
+class HexStringByteArray : public ICast
+{
+public:
+	HexStringByteArray(BaseLib::Obj* baseLib);
+	HexStringByteArray(BaseLib::Obj* baseLib, xml_node<>* node, Parameter* parameter);
+	virtual ~HexStringByteArray() {}
+
+	void fromPacket(PVariable value);
+	void toPacket(PVariable value);
+};
+
 typedef std::shared_ptr<ICast> PICast;
 typedef std::vector<PICast> Casts;
 typedef std::shared_ptr<BlindTest> PBlindTest;
@@ -341,6 +352,7 @@ typedef std::shared_ptr<StringJsonArrayDecimal> PStringJsonArrayDecimal;
 typedef std::shared_ptr<StringUnsignedInteger> PStringUnsignedInteger;
 typedef std::shared_ptr<Toggle> PToggle;
 typedef std::shared_ptr<StringReplace> PStringReplace;
+typedef std::shared_ptr<HexStringByteArray> PHexStringByteArray;
 
 }
 }

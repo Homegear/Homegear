@@ -1,5 +1,6 @@
 #!/bin/bash
 SCRIPTDIR="$( cd "$(dirname $0)" && pwd )"
+rm -f /usr/share/homegear/modules/*
 if [ "$1" = "--with-base" ]; then
 	cd $SCRIPTDIR/libhomegear-base
 	CPPFLAGS=-DDEBUG CXXFLAGS="-g -O0" && make -j8 && sudo make install

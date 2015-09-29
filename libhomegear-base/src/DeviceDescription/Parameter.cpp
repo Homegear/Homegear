@@ -121,6 +121,7 @@ Parameter::Parameter(BaseLib::Obj* baseLib, xml_node<>* node, ParameterGroup* pa
 						else if(castName == "cfm") casts.push_back(PCfm(new Cfm(_bl, castNode, this)));
 						else if(castName == "ccrtdnParty") casts.push_back(PCcrtdnParty(new CcrtdnParty(_bl, castNode, this)));
 						else if(castName == "stringReplace") casts.push_back(PStringReplace(new StringReplace(_bl, castNode, this)));
+						else if(castName == "hexStringByteArray") casts.push_back(PHexStringByteArray(new HexStringByteArray(_bl, castNode, this)));
 						else _bl->out.printWarning("Warning: Unknown cast: " + castName);
 					}
 				}

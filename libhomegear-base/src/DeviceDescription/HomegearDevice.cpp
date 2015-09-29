@@ -323,21 +323,21 @@ void HomegearDevice::saveDevice(xml_document<>* doc, xml_node<>* parentNode, Hom
 
 			if((*i)->typeNumber != (uint32_t)-1)
 			{
-				tempStrings.push_back(std::to_string((*i)->typeNumber));
+				tempStrings.push_back("0x" + BaseLib::HelperFunctions::getHexString((*i)->typeNumber));
 				deviceNode = doc->allocate_node(node_element, "typeNumber", tempStrings.back().c_str());
 				subnode->append_node(deviceNode);
 			}
 
 			if((*i)->minFirmwareVersion != 0)
 			{
-				tempStrings.push_back(std::to_string((*i)->minFirmwareVersion));
+				tempStrings.push_back("0x" + BaseLib::HelperFunctions::getHexString((*i)->minFirmwareVersion));
 				deviceNode = doc->allocate_node(node_element, "minFirmwareVersion", tempStrings.back().c_str());
 				subnode->append_node(deviceNode);
 			}
 
 			if((*i)->maxFirmwareVersion != 0)
 			{
-				tempStrings.push_back(std::to_string((*i)->maxFirmwareVersion));
+				tempStrings.push_back("0x" + BaseLib::HelperFunctions::getHexString((*i)->maxFirmwareVersion));
 				deviceNode = doc->allocate_node(node_element, "maxFirmwareVersion", tempStrings.back().c_str());
 				subnode->append_node(deviceNode);
 			}
@@ -1440,6 +1440,17 @@ void HomegearDevice::saveParameter(xml_document<>* doc, xml_node<>* parentNode, 
 							castNode->append_node(subnode);
 						}
 
+						continue;
+					}
+				}
+
+				{
+					PHexStringByteArray hexStringByteArray;
+					hexStringByteArray = std::dynamic_pointer_cast<HexStringByteArray>(*i);
+					if(hexStringByteArray)
+					{
+						xml_node<>* castNode = doc->allocate_node(node_element, "hexStringByteArray");
+						node->append_node(castNode);
 						continue;
 					}
 				}

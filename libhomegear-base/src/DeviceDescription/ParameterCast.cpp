@@ -893,6 +893,34 @@ void StringReplace::toPacket(PVariable value)
 	HelperFunctions::stringReplace(value->stringValue, search, replace);
 }
 
+HexStringByteArray::HexStringByteArray(BaseLib::Obj* baseLib) : ICast(baseLib)
+{
+}
+
+HexStringByteArray::HexStringByteArray(BaseLib::Obj* baseLib, xml_node<>* node, Parameter* parameter) : ICast(baseLib, node, parameter)
+{
+	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
+	{
+		_bl->out.printWarning("Warning: Unknown attribute for \"hexStringByteArray\": " + std::string(attr->name()));
+	}
+	for(xml_node<>* subNode = node->first_node(); subNode; subNode = subNode->next_sibling())
+	{
+		_bl->out.printWarning("Warning: Unknown node in \"hexStringByteArray\": " + std::string(node->name()));
+	}
+}
+
+void HexStringByteArray::fromPacket(PVariable value)
+{
+	if(!value) return;
+	value->stringValue = _bl->hf.getHexString(value->stringValue);
+}
+
+void HexStringByteArray::toPacket(PVariable value)
+{
+	if(!value) return;
+	value->stringValue = _bl->hf.getBinaryString(value->stringValue);
+}
+
 }
 }
 }

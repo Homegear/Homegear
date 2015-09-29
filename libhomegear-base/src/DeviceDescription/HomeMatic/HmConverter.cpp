@@ -51,6 +51,7 @@ void HmConverter::convert(std::shared_ptr<Device> homematicDevice, std::shared_p
 	 */
 
 	if(!homematicDevice || !homegearDevice) return;
+	homegearDevice->version = homematicDevice->version;
 	homegearDevice->hasBattery = homematicDevice->hasBattery;
 	homegearDevice->timeout = homematicDevice->cyclicTimeout;
 	homegearDevice->memorySize = (uint32_t)homematicDevice->eepSize;
@@ -305,6 +306,7 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 	std::map<ParameterSet::Type::Enum, std::shared_ptr<ParameterSet>>::iterator parameterSet = homematicChannel->parameterSets.find(ParameterSet::Type::master);
 	if(parameterSet != homematicChannel->parameterSets.end() && parameterSet->second)
 	{
+		if(parameterSet->second->id.empty()) parameterSet->second->id = "config";
 		homegearFunction->configParametersId = parameterSet->second->id + '-' + std::to_string(homegearFunction->channel);
 		homegearFunction->configParameters->id = parameterSet->second->id + '-' + std::to_string(homegearFunction->channel);
 		homegearFunction->configParameters->memoryAddressStart = parameterSet->second->addressStart;
@@ -337,6 +339,7 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 	parameterSet = homematicChannel->parameterSets.find(ParameterSet::Type::values);
 	if(parameterSet != homematicChannel->parameterSets.end() && parameterSet->second)
 	{
+
 		homegearFunction->variablesId = parameterSet->second->id + '-' + std::to_string(homegearFunction->channel);
 		homegearFunction->variables->id = parameterSet->second->id + '-' + std::to_string(homegearFunction->channel);
 		homegearFunction->variables->memoryAddressStart = parameterSet->second->addressStart;
@@ -364,6 +367,7 @@ void HmConverter::convertChannel(std::shared_ptr<DeviceChannel> homematicChannel
 	parameterSet = homematicChannel->parameterSets.find(ParameterSet::Type::link);
 	if(parameterSet != homematicChannel->parameterSets.end() && parameterSet->second)
 	{
+		if(parameterSet->second->id.empty()) parameterSet->second->id = "link-config";
 		homegearFunction->linkParametersId = parameterSet->second->id + '-' + std::to_string(homegearFunction->channel);
 		homegearFunction->linkParameters->id = parameterSet->second->id + '-' + std::to_string(homegearFunction->channel);
 		homegearFunction->linkParameters->memoryAddressStart = parameterSet->second->addressStart;
@@ -555,6 +559,11 @@ void HmConverter::convertParameter(std::shared_ptr<HomeMaticParameter> homematic
 		else if((*i)->type == ParameterConversion::Type::ccrtdnParty)
 		{
 			PCcrtdnParty cast(new CcrtdnParty(_bl));
+			parameter->casts.push_back(cast);
+		}
+		else if((*i)->type == ParameterConversion::Type::hexstringBytearray)
+		{
+			PHexStringByteArray cast(new HexStringByteArray(_bl));
 			parameter->casts.push_back(cast);
 		}
 	}

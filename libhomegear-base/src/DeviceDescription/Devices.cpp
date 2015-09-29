@@ -549,6 +549,115 @@ std::shared_ptr<HomegearDevice> Devices::loadHomeMatic(std::string& filepath)
 				}
 			}
 		}
+		else if(filename == "rf_cc_rt_dn.xml" || filename == "rf_cc_rt_dn_bom.xml")
+		{
+			std::map<std::string, std::shared_ptr<HmDeviceDescription::DeviceFrame>>::iterator frameIterator = homeMaticDevice->framesByID.find("WINDOW_STATE_SET");
+			if(frameIterator == homeMaticDevice->framesByID.end())
+			{
+				std::shared_ptr<HmDeviceDescription::DeviceFrame> frame(new HmDeviceDescription::DeviceFrame(_bl));
+				frame->id = "WINDOW_STATE_SET";
+				frame->direction = HmDeviceDescription::DeviceFrame::Direction::Enum::toDevice;
+				frame->type = 0x41;
+				frame->subtype = 0x01;
+				frame->subtypeIndex = 9;
+				HmDeviceDescription::HomeMaticParameter parameter(_bl);
+				parameter.type = HmDeviceDescription::PhysicalParameter::Type::Enum::typeInteger;
+				parameter.index = 10.0;
+				parameter.size = 1.0;
+				parameter.constValue = 1;
+				frame->parameters.push_back(parameter);
+				parameter = HmDeviceDescription::HomeMaticParameter(_bl);
+				parameter.type = HmDeviceDescription::PhysicalParameter::Type::Enum::typeInteger;
+				parameter.index = 11.0;
+				parameter.size = 1.0;
+				parameter.param = "WINDOW_STATE";
+				frame->parameters.push_back(parameter);
+				homeMaticDevice->framesByID["WINDOW_STATE_SET"] = frame;
+			}
+
+			std::map<uint32_t, std::shared_ptr<HmDeviceDescription::DeviceChannel>>::iterator channelIterator = homeMaticDevice->channels.find(3);
+			if(channelIterator != homeMaticDevice->channels.end() && channelIterator->second)
+			{
+				std::map<HmDeviceDescription::ParameterSet::Type::Enum, std::shared_ptr<HmDeviceDescription::ParameterSet>>::iterator paramsetIterator = channelIterator->second->parameterSets.find(HmDeviceDescription::ParameterSet::Type::Enum::values);
+				if(paramsetIterator != channelIterator->second->parameterSets.end() && paramsetIterator->second)
+				{
+					if(!paramsetIterator->second->getParameter("WINDOW_STATE"))
+					{
+						std::shared_ptr<HmDeviceDescription::HomeMaticParameter> parameter(new HmDeviceDescription::HomeMaticParameter(_bl));
+						parameter->id = "WINDOW_STATE";
+						parameter->control = "SWITCH.STATE";
+						parameter->logicalParameter.reset(new HmDeviceDescription::LogicalParameterBoolean(_bl));
+						parameter->logicalParameter->type = HmDeviceDescription::LogicalParameter::Type::Enum::typeBoolean;
+						parameter->logicalParameter->defaultValueExists = true;
+						parameter->physicalParameter->interface = HmDeviceDescription::PhysicalParameter::Interface::Enum::command;
+						parameter->physicalParameter->type = HmDeviceDescription::PhysicalParameter::Type::Enum::typeInteger;
+						parameter->physicalParameter->valueID = "WINDOW_STATE";
+						parameter->physicalParameter->setRequest = "WINDOW_STATE_SET";
+						std::shared_ptr<HmDeviceDescription::ParameterConversion> conversion(new HmDeviceDescription::ParameterConversion(_bl, parameter.get()));
+						conversion->type = HmDeviceDescription::ParameterConversion::Type::Enum::booleanInteger;
+						conversion->threshold = 1;
+						conversion->valueFalse = 0;
+						conversion->valueTrue = 200;
+						parameter->conversion.push_back(conversion);
+						paramsetIterator->second->parameters.push_back(parameter);
+					}
+				}
+			}
+		}
+		else if(filename == "rf_dis_wm55.xml")
+		{
+			homeMaticDevice->rxModes = (HmDeviceDescription::Device::RXModes::Enum)(homeMaticDevice->rxModes | HmDeviceDescription::Device::RXModes::Enum::wakeUp2);
+
+			std::map<std::string, std::shared_ptr<HmDeviceDescription::DeviceFrame>>::iterator frameIterator = homeMaticDevice->framesByID.find("SEND_TEXT");
+			if(frameIterator == homeMaticDevice->framesByID.end())
+			{
+				std::shared_ptr<HmDeviceDescription::DeviceFrame> frame(new HmDeviceDescription::DeviceFrame(_bl));
+				frame->id = "SEND_TEXT";
+				frame->maxPackets = 8;
+				frame->splitAfter = 17;
+				frame->direction = HmDeviceDescription::DeviceFrame::Direction::Enum::toDevice;
+				frame->type = 0x11;
+				frame->subtype = 0x80;
+				frame->subtypeIndex = 9;
+				frame->channelField = 10;
+				HmDeviceDescription::HomeMaticParameter parameter(_bl);
+				parameter.type = HmDeviceDescription::PhysicalParameter::Type::Enum::typeString;
+				parameter.index = 11.0;
+				parameter.size = 15.0;
+				parameter.param = "SUBMIT";
+				frame->parameters.push_back(parameter);
+				homeMaticDevice->framesByID["SEND_TEXT"] = frame;
+			}
+
+			std::map<uint32_t, std::shared_ptr<HmDeviceDescription::DeviceChannel>>::iterator channelIterator = homeMaticDevice->channels.find(0);
+			if(channelIterator != homeMaticDevice->channels.end()) channelIterator->second->aesAlways = true;
+
+			for(int32_t i = 1; i <= 2; ++i)
+			{
+				std::map<uint32_t, std::shared_ptr<HmDeviceDescription::DeviceChannel>>::iterator channelIterator = homeMaticDevice->channels.find(i);
+				if(channelIterator != homeMaticDevice->channels.end() && channelIterator->second)
+				{
+					std::map<HmDeviceDescription::ParameterSet::Type::Enum, std::shared_ptr<HmDeviceDescription::ParameterSet>>::iterator paramsetIterator = channelIterator->second->parameterSets.find(HmDeviceDescription::ParameterSet::Type::Enum::values);
+					if(paramsetIterator != channelIterator->second->parameterSets.end() && paramsetIterator->second)
+					{
+						std::shared_ptr<HmDeviceDescription::HomeMaticParameter> parameter = paramsetIterator->second->getParameter("SUBMIT");
+						if(parameter)
+						{
+							parameter->physicalParameter->interface = HmDeviceDescription::PhysicalParameter::Interface::Enum::command;
+							parameter->physicalParameter->id = "SUBMIT";
+							parameter->physicalParameter->valueID = "SUBMIT";
+							parameter->physicalParameter->setRequest = "SEND_TEXT";
+							if(parameter->conversion.empty())
+							{
+								std::shared_ptr<HmDeviceDescription::ParameterConversion> conversion(new HmDeviceDescription::ParameterConversion(_bl, parameter.get()));
+								conversion->type = HmDeviceDescription::ParameterConversion::Type::Enum::hexstringBytearray;
+								parameter->conversion.push_back(conversion);
+							}
+						}
+					}
+				}
+			}
+		}
 
 		HmDeviceDescription::HmConverter converter(_bl);
 		std::shared_ptr<HomegearDevice> device(new HomegearDevice(_bl, _family));

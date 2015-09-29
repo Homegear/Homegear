@@ -2085,75 +2085,78 @@ Device::Device(BaseLib::Obj* baseLib, Systems::DeviceFamilies deviceFamily, std:
 
 		if(!_loaded || channels.empty()) return; //Happens when file couldn't be read
 
-		std::shared_ptr<HomeMaticParameter> parameter(new HomeMaticParameter(baseLib));
-		parameter->id = "PAIRED_TO_CENTRAL";
-		parameter->uiFlags = HomeMaticParameter::UIFlags::Enum::invisible;
-		parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeBoolean;
-		parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
-		parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeBoolean;
-		parameter->physicalParameter->valueID = "PAIRED_TO_CENTRAL";
-		parameter->physicalParameter->list = 0;
-		parameter->physicalParameter->index = 2;
-		channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
-
-		parameter.reset(new HomeMaticParameter(baseLib));
-		parameter->id = "CENTRAL_ADDRESS_BYTE_1";
-		parameter->uiFlags = HomeMaticParameter::UIFlags::Enum::invisible;
-		parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
-		parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
-		parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
-		parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_1";
-		parameter->physicalParameter->list = 0;
-		parameter->physicalParameter->index = 10;
-		channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
-
-		parameter.reset(new HomeMaticParameter(baseLib));
-		parameter->id = "CENTRAL_ADDRESS_BYTE_2";
-		parameter->uiFlags = HomeMaticParameter::UIFlags::Enum::invisible;
-		parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
-		parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
-		parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
-		parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_2";
-		parameter->physicalParameter->list = 0;
-		parameter->physicalParameter->index = 11;
-		channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
-
-		parameter.reset(new HomeMaticParameter(baseLib));
-		parameter->id = "CENTRAL_ADDRESS_BYTE_3";
-		parameter->uiFlags = HomeMaticParameter::UIFlags::Enum::invisible;
-		parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
-		parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
-		parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
-		parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_3";
-		parameter->physicalParameter->list = 0;
-		parameter->physicalParameter->index = 12;
-		channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
-
-		if(!supportsAES) return;
-		//For HomeMatic BidCoS: Set AES default value to "false", so a new AES key is set on pairing
-		for(std::map<uint32_t, std::shared_ptr<DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
+		if(xmlFilename.compare(0, 3, "rf_") == 0)
 		{
-			if(!i->second || i->second->parameterSets.find(ParameterSet::Type::Enum::master) == i->second->parameterSets.end() || !i->second->parameterSets.at(ParameterSet::Type::Enum::master) || i->first == 0) continue;
-			parameter = i->second->parameterSets[ParameterSet::Type::Enum::master]->getParameter("AES_ACTIVE");
-			if(!parameter)
-			{
-				parameter.reset(new HomeMaticParameter(baseLib));
-				i->second->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
-			}
-			parameter->id = "AES_ACTIVE";
-			parameter->uiFlags = HomeMaticParameter::UIFlags::Enum::internal;
-			parameter->conversion.clear();
-			parameter->conversion.push_back(std::shared_ptr<ParameterConversion>(new ParameterConversion(baseLib, parameter.get())));
-			parameter->conversion.back()->type = ParameterConversion::Type::Enum::booleanInteger;
-			std::shared_ptr<LogicalParameterBoolean> logicalParameter(new LogicalParameterBoolean(baseLib));
-			logicalParameter->defaultValueExists = true;
-			logicalParameter->defaultValue = false;
-			parameter->logicalParameter = logicalParameter;
-			parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::config;
+			std::shared_ptr<HomeMaticParameter> parameter(new HomeMaticParameter(baseLib));
+			parameter->id = "PAIRED_TO_CENTRAL";
+			parameter->uiFlags = HomeMaticParameter::UIFlags::Enum::invisible;
+			parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeBoolean;
+			parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
+			parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeBoolean;
+			parameter->physicalParameter->valueID = "PAIRED_TO_CENTRAL";
+			parameter->physicalParameter->list = 0;
+			parameter->physicalParameter->index = 2;
+			channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
+
+			parameter.reset(new HomeMaticParameter(baseLib));
+			parameter->id = "CENTRAL_ADDRESS_BYTE_1";
+			parameter->uiFlags = HomeMaticParameter::UIFlags::Enum::invisible;
+			parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
+			parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
 			parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
-			parameter->physicalParameter->valueID = "AES_ACTIVE";
-			parameter->physicalParameter->list = 1;
-			parameter->physicalParameter->index = 8;
+			parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_1";
+			parameter->physicalParameter->list = 0;
+			parameter->physicalParameter->index = 10;
+			channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
+
+			parameter.reset(new HomeMaticParameter(baseLib));
+			parameter->id = "CENTRAL_ADDRESS_BYTE_2";
+			parameter->uiFlags = HomeMaticParameter::UIFlags::Enum::invisible;
+			parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
+			parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
+			parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
+			parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_2";
+			parameter->physicalParameter->list = 0;
+			parameter->physicalParameter->index = 11;
+			channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
+
+			parameter.reset(new HomeMaticParameter(baseLib));
+			parameter->id = "CENTRAL_ADDRESS_BYTE_3";
+			parameter->uiFlags = HomeMaticParameter::UIFlags::Enum::invisible;
+			parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
+			parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
+			parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
+			parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_3";
+			parameter->physicalParameter->list = 0;
+			parameter->physicalParameter->index = 12;
+			channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
+
+			if(!supportsAES) return;
+			//For HomeMatic BidCoS: Set AES default value to "false", so a new AES key is set on pairing
+			for(std::map<uint32_t, std::shared_ptr<DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
+			{
+				if(!i->second || i->second->parameterSets.find(ParameterSet::Type::Enum::master) == i->second->parameterSets.end() || !i->second->parameterSets.at(ParameterSet::Type::Enum::master) || i->first == 0) continue;
+				parameter = i->second->parameterSets[ParameterSet::Type::Enum::master]->getParameter("AES_ACTIVE");
+				if(!parameter)
+				{
+					parameter.reset(new HomeMaticParameter(baseLib));
+					i->second->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
+				}
+				parameter->id = "AES_ACTIVE";
+				parameter->uiFlags = HomeMaticParameter::UIFlags::Enum::internal;
+				parameter->conversion.clear();
+				parameter->conversion.push_back(std::shared_ptr<ParameterConversion>(new ParameterConversion(baseLib, parameter.get())));
+				parameter->conversion.back()->type = ParameterConversion::Type::Enum::booleanInteger;
+				std::shared_ptr<LogicalParameterBoolean> logicalParameter(new LogicalParameterBoolean(baseLib));
+				logicalParameter->defaultValueExists = true;
+				logicalParameter->defaultValue = false;
+				parameter->logicalParameter = logicalParameter;
+				parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::config;
+				parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
+				parameter->physicalParameter->valueID = "AES_ACTIVE";
+				parameter->physicalParameter->list = 1;
+				parameter->physicalParameter->index = 8;
+			}
 		}
 	}
 	catch(const std::exception& ex)
