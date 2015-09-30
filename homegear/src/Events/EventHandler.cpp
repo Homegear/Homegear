@@ -47,7 +47,7 @@ void EventHandler::dispose()
 	if(_disposing) return;
 	_disposing = true;
 	_stopThread = true;
-	GD::out.printInfo("Info: Waiting for event threads to finish.");
+	GD::out.printDebug("Debug: Waiting for event threads to finish.");
 	while(_eventThreads.size() > 0)
 	{
 		collectGarbage();

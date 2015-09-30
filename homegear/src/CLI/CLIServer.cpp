@@ -132,7 +132,7 @@ void Server::stop()
 	{
 		_stopServer = true;
 		if(_mainThread.joinable()) _mainThread.join();
-		GD::out.printInfo("Info: Waiting for CLI client threads to finish.");
+		GD::out.printDebug("Debug: Waiting for CLI client threads to finish.");
 		_stateMutex.lock();
 		for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 		{

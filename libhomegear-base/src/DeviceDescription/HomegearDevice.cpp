@@ -516,21 +516,21 @@ void HomegearDevice::saveDevice(xml_document<>* doc, xml_node<>* parentNode, Hom
 
 			if(i->second->type != -1)
 			{
-				tempStrings.push_back(std::to_string(i->second->type));
+				tempStrings.push_back("0x" + BaseLib::HelperFunctions::getHexString(i->second->type));
 				packetNode = doc->allocate_node(node_element, "type", tempStrings.back().c_str());
 				subnode->append_node(packetNode);
 			}
 
 			if(i->second->subtype != -1)
 			{
-				tempStrings.push_back(std::to_string(i->second->subtype));
+				tempStrings.push_back("0x" + BaseLib::HelperFunctions::getHexString(i->second->subtype));
 				packetNode = doc->allocate_node(node_element, "subtype", tempStrings.back().c_str());
 				subnode->append_node(packetNode);
 			}
 
 			if(i->second->subtypeIndex != -1)
 			{
-				tempStrings.push_back(std::to_string(i->second->subtypeIndex));
+				tempStrings.push_back((i->second->subtypeSize == 1.0 || i->second->subtypeSize == -1) ? std::to_string(i->second->subtypeIndex) : std::to_string(i->second->subtypeIndex) + ':' + Math::toString(i->second->subtypeSize, 1));
 				packetNode = doc->allocate_node(node_element, "subtypeIndex", tempStrings.back().c_str());
 				subnode->append_node(packetNode);
 			}
@@ -582,7 +582,7 @@ void HomegearDevice::saveDevice(xml_document<>* doc, xml_node<>* parentNode, Hom
 
 			if(i->second->channelIndex != -1)
 			{
-				tempStrings.push_back(std::to_string(i->second->channelIndex));
+				tempStrings.push_back(i->second->channelSize == 1.0 ? std::to_string(i->second->channelIndex) : std::to_string(i->second->channelIndex) + ':' + Math::toString(i->second->channelSize, 1));
 				packetNode = doc->allocate_node(node_element, "channelIndex", tempStrings.back().c_str());
 				subnode->append_node(packetNode);
 			}
@@ -625,7 +625,7 @@ void HomegearDevice::saveDevice(xml_document<>* doc, xml_node<>* parentNode, Hom
 						payloadNode->append_node(payloadElementNode);
 					}
 
-					if((*j)->size != 1.0)
+					if((*j)->index != 0 && (*j)->size != 1.0)
 					{
 						tempStrings.push_back(Math::toString((*j)->size, 1));
 						xml_node<>* payloadElementNode = doc->allocate_node(node_element, "size", tempStrings.back().c_str());
@@ -639,7 +639,7 @@ void HomegearDevice::saveDevice(xml_document<>* doc, xml_node<>* parentNode, Hom
 						payloadNode->append_node(payloadElementNode);
 					}
 
-					if((*j)->size2 != 0)
+					if((*j)->index2 != 0 && (*j)->size2 != 0)
 					{
 						tempStrings.push_back(Math::toString((*j)->size2, 1));
 						xml_node<>* payloadElementNode = doc->allocate_node(node_element, "size2", tempStrings.back().c_str());
