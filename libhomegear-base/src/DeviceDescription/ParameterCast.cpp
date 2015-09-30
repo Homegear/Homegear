@@ -69,7 +69,11 @@ DecimalIntegerScale::DecimalIntegerScale(BaseLib::Obj* baseLib, xml_node<>* node
 	{
 		std::string name(subNode->name());
 		std::string value(subNode->value());
-		if(name == "factor") factor = Math::getDouble(value);
+		if(name == "factor")
+		{
+			factor = Math::getDouble(value);
+			if(factor == 0) factor = 1;
+		}
 		else if(name == "offset") offset = Math::getDouble(value);
 		else _bl->out.printWarning("Warning: Unknown node in \"decimalIntegerScale\": " + name);
 	}
@@ -105,13 +109,18 @@ IntegerIntegerScale::IntegerIntegerScale(BaseLib::Obj* baseLib, xml_node<>* node
 	{
 		std::string name(subNode->name());
 		std::string value(subNode->value());
-		if(name == "factor") factor = Math::getNumber(value);
+		if(name == "factor")
+		{
+			factor = Math::getDouble(value);
+			if(factor == 0) factor = 1;
+		}
 		else if(name == "operation")
 		{
 			if(value == "division") operation = Operation::Enum::division;
 			else if(value == "multiplication") operation = Operation::Enum::multiplication;
 			else _bl->out.printWarning("Warning: Unknown value for \"integerIntegerScale\\operation\": " + value);
 		}
+		else if(name == "offset") offset = Math::getNumber(value);
 		else _bl->out.printWarning("Warning: Unknown node in \"integerIntegerScale\": " + name);
 	}
 }
@@ -120,8 +129,8 @@ void IntegerIntegerScale::fromPacket(PVariable value)
 {
 	if(!value) return;
 	value->type = VariableType::tInteger;
-	if(operation == Operation::Enum::division) value->integerValue *= factor;
-	else if(operation == Operation::Enum::multiplication) value->integerValue /= factor;
+	if(operation == Operation::Enum::division) value->integerValue = std::lround((double)value->integerValue * factor) - offset;
+	else if(operation == Operation::Enum::multiplication) value->integerValue = std::lround((double)value->integerValue / factor) - offset;
 	else _bl->out.printWarning("Warning: Operation is not set for parameter conversion integerIntegerScale.");
 }
 
@@ -129,8 +138,8 @@ void IntegerIntegerScale::toPacket(PVariable value)
 {
 	if(!value) return;
 	value->type = VariableType::tInteger;
-	if(operation == Operation::Enum::multiplication) value->integerValue *= factor;
-	else if(operation == Operation::Enum::division) value->integerValue /= factor;
+	if(operation == Operation::Enum::multiplication) value->integerValue = std::lround((double)(value->integerValue + offset) * factor);
+	else if(operation == Operation::Enum::division) value->integerValue = std::lround((double)(value->integerValue + offset) / factor);
 	else _bl->out.printWarning("Warning: Operation is not set for parameter conversion integerIntegerScale.");
 }
 
@@ -315,7 +324,11 @@ DecimalConfigTime::DecimalConfigTime(BaseLib::Obj* baseLib, xml_node<>* node, Pa
 			{
 				std::string factorName(factorNode->name());
 				std::string factorValue(factorNode->value());
-				if(factorName == "factor") factors.push_back(Math::getDouble(factorValue));
+				if(factorName == "factor")
+				{
+					factors.push_back(Math::getDouble(factorValue));
+					if(factors.back() == 0) factors.back() = 1;
+				}
 				else _bl->out.printWarning("Warning: Unknown element in \"decimalConfigTime\\factors\": " + factorName);
 			}
 		}

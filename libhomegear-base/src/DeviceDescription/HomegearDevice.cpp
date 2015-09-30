@@ -378,41 +378,44 @@ void HomegearDevice::saveDevice(xml_document<>* doc, xml_node<>* parentNode, Hom
 			node = doc->allocate_node(node_element, "properties");
 			parentNode->append_node(node);
 
-			if((device->receiveModes & ReceiveModes::Enum::always) && device->receiveModes != ReceiveModes::Enum::always)
+			if(device->receiveModes != ReceiveModes::Enum::always)
 			{
-				tempStrings.push_back("always");
-				xml_node<>* subnode = doc->allocate_node(node_element, "receiveMode", tempStrings.back().c_str());
-				node->append_node(subnode);
-			}
-			else if(device->receiveModes & ReceiveModes::Enum::wakeOnRadio)
-			{
-				tempStrings.push_back("wakeOnRadio");
-				xml_node<>* subnode = doc->allocate_node(node_element, "receiveMode", tempStrings.back().c_str());
-				node->append_node(subnode);
-			}
-			else if(device->receiveModes & ReceiveModes::Enum::config)
-			{
-				tempStrings.push_back("config");
-				xml_node<>* subnode = doc->allocate_node(node_element, "receiveMode", tempStrings.back().c_str());
-				node->append_node(subnode);
-			}
-			else if(device->receiveModes & ReceiveModes::Enum::wakeUp)
-			{
-				tempStrings.push_back("wakeUp");
-				xml_node<>* subnode = doc->allocate_node(node_element, "receiveMode", tempStrings.back().c_str());
-				node->append_node(subnode);
-			}
-			else if(device->receiveModes & ReceiveModes::Enum::wakeUp2)
-			{
-				tempStrings.push_back("wakeUp2");
-				xml_node<>* subnode = doc->allocate_node(node_element, "receiveMode", tempStrings.back().c_str());
-				node->append_node(subnode);
-			}
-			else if(device->receiveModes & ReceiveModes::Enum::lazyConfig)
-			{
-				tempStrings.push_back("lazyConfig");
-				xml_node<>* subnode = doc->allocate_node(node_element, "receiveMode", tempStrings.back().c_str());
-				node->append_node(subnode);
+				if(device->receiveModes & ReceiveModes::Enum::always)
+				{
+					tempStrings.push_back("always");
+					xml_node<>* subnode = doc->allocate_node(node_element, "receiveMode", tempStrings.back().c_str());
+					node->append_node(subnode);
+				}
+				if(device->receiveModes & ReceiveModes::Enum::wakeOnRadio)
+				{
+					tempStrings.push_back("wakeOnRadio");
+					xml_node<>* subnode = doc->allocate_node(node_element, "receiveMode", tempStrings.back().c_str());
+					node->append_node(subnode);
+				}
+				if(device->receiveModes & ReceiveModes::Enum::config)
+				{
+					tempStrings.push_back("config");
+					xml_node<>* subnode = doc->allocate_node(node_element, "receiveMode", tempStrings.back().c_str());
+					node->append_node(subnode);
+				}
+				if(device->receiveModes & ReceiveModes::Enum::wakeUp)
+				{
+					tempStrings.push_back("wakeUp");
+					xml_node<>* subnode = doc->allocate_node(node_element, "receiveMode", tempStrings.back().c_str());
+					node->append_node(subnode);
+				}
+				if(device->receiveModes & ReceiveModes::Enum::wakeUp2)
+				{
+					tempStrings.push_back("wakeUp2");
+					xml_node<>* subnode = doc->allocate_node(node_element, "receiveMode", tempStrings.back().c_str());
+					node->append_node(subnode);
+				}
+				if(device->receiveModes & ReceiveModes::Enum::lazyConfig)
+				{
+					tempStrings.push_back("lazyConfig");
+					xml_node<>* subnode = doc->allocate_node(node_element, "receiveMode", tempStrings.back().c_str());
+					node->append_node(subnode);
+				}
 			}
 
 			if(device->encryption)
@@ -1058,400 +1061,411 @@ void HomegearDevice::saveParameter(xml_document<>* doc, xml_node<>* parentNode, 
 				propertiesNode->append_node(node);
 			}
 
-			xml_node<>* node = doc->allocate_node(node_element, "casts");
-			propertiesNode->append_node(node);
-			for(Casts::iterator i = parameter->casts.begin(); i != parameter->casts.end(); ++i)
+			xml_node<>* node = nullptr;
+			if(!parameter->casts.empty())
 			{
+				node = doc->allocate_node(node_element, "casts");
+				propertiesNode->append_node(node);
+				for(Casts::iterator i = parameter->casts.begin(); i != parameter->casts.end(); ++i)
 				{
-					PDecimalIntegerScale decimalIntegerScale;
-					decimalIntegerScale = std::dynamic_pointer_cast<DecimalIntegerScale>(*i);
-					if(decimalIntegerScale)
 					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "decimalIntegerScale");
-						node->append_node(castNode);
-						if(decimalIntegerScale->factor != 0)
+						PDecimalIntegerScale decimalIntegerScale;
+						decimalIntegerScale = std::dynamic_pointer_cast<DecimalIntegerScale>(*i);
+						if(decimalIntegerScale)
 						{
-							tempStrings.push_back(Math::toString(decimalIntegerScale->factor, 6));
-							xml_node<>* subnode = doc->allocate_node(node_element, "factor", tempStrings.back().c_str());
-							castNode->append_node(subnode);
-						}
+							xml_node<>* castNode = doc->allocate_node(node_element, "decimalIntegerScale");
+							node->append_node(castNode);
+							if(decimalIntegerScale->factor != 0)
+							{
+								tempStrings.push_back(Math::toString(decimalIntegerScale->factor, 6));
+								xml_node<>* subnode = doc->allocate_node(node_element, "factor", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
 
-						if(decimalIntegerScale->offset != 0)
-						{
-							tempStrings.push_back(Math::toString(decimalIntegerScale->offset, 6));
-							xml_node<>* subnode = doc->allocate_node(node_element, "offset", tempStrings.back().c_str());
-							castNode->append_node(subnode);
+							if(decimalIntegerScale->offset != 0)
+							{
+								tempStrings.push_back(Math::toString(decimalIntegerScale->offset, 6));
+								xml_node<>* subnode = doc->allocate_node(node_element, "offset", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
+							continue;
 						}
-						continue;
 					}
-				}
 
-				{
-					PIntegerIntegerScale integerIntegerScale;
-					integerIntegerScale = std::dynamic_pointer_cast<IntegerIntegerScale>(*i);
-					if(integerIntegerScale)
 					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "integerIntegerScale");
-						node->append_node(castNode);
-						if(integerIntegerScale->operation != IntegerIntegerScale::Operation::Enum::none)
+						PIntegerIntegerScale integerIntegerScale;
+						integerIntegerScale = std::dynamic_pointer_cast<IntegerIntegerScale>(*i);
+						if(integerIntegerScale)
 						{
-							tempStrings.push_back(integerIntegerScale->operation == IntegerIntegerScale::Operation::Enum::division ? "division" : "multiplication");
-							xml_node<>* subnode = doc->allocate_node(node_element, "operation", tempStrings.back().c_str());
-							castNode->append_node(subnode);
-						}
+							xml_node<>* castNode = doc->allocate_node(node_element, "integerIntegerScale");
+							node->append_node(castNode);
+							if(integerIntegerScale->operation != IntegerIntegerScale::Operation::Enum::none)
+							{
+								tempStrings.push_back(integerIntegerScale->operation == IntegerIntegerScale::Operation::Enum::division ? "division" : "multiplication");
+								xml_node<>* subnode = doc->allocate_node(node_element, "operation", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
 
-						if(integerIntegerScale->factor != 10)
-						{
-							tempStrings.push_back(std::to_string(integerIntegerScale->factor));
-							xml_node<>* subnode = doc->allocate_node(node_element, "factor", tempStrings.back().c_str());
-							castNode->append_node(subnode);
+							if(integerIntegerScale->factor != 10)
+							{
+								tempStrings.push_back(std::to_string(integerIntegerScale->factor));
+								xml_node<>* subnode = doc->allocate_node(node_element, "factor", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
+
+							if(integerIntegerScale->offset != 0)
+							{
+								tempStrings.push_back(std::to_string(integerIntegerScale->offset));
+								xml_node<>* subnode = doc->allocate_node(node_element, "offset", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
+							continue;
 						}
-						continue;
 					}
-				}
 
-				{
-					PIntegerIntegerMap integerIntegerMap;
-					integerIntegerMap = std::dynamic_pointer_cast<IntegerIntegerMap>(*i);
-					if(integerIntegerMap)
 					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "integerIntegerMap");
-						node->append_node(castNode);
-						if(integerIntegerMap->direction != IntegerIntegerMap::Direction::Enum::none)
+						PIntegerIntegerMap integerIntegerMap;
+						integerIntegerMap = std::dynamic_pointer_cast<IntegerIntegerMap>(*i);
+						if(integerIntegerMap)
 						{
-							tempStrings.push_back(integerIntegerMap->direction == IntegerIntegerMap::Direction::Enum::fromDevice ? "fromDevice" : (integerIntegerMap->direction == IntegerIntegerMap::Direction::Enum::toDevice ? "toDevice" : "both"));
-							xml_node<>* subnode = doc->allocate_node(node_element, "direction", tempStrings.back().c_str());
-							castNode->append_node(subnode);
-						}
-						for(std::map<int32_t, int32_t>::iterator j = integerIntegerMap->integerValueMapFromDevice.begin(); j != integerIntegerMap->integerValueMapFromDevice.end(); ++j)
-						{
-							xml_node<>* subnode = doc->allocate_node(node_element, "value");
-							castNode->append_node(subnode);
+							xml_node<>* castNode = doc->allocate_node(node_element, "integerIntegerMap");
+							node->append_node(castNode);
+							if(integerIntegerMap->direction != IntegerIntegerMap::Direction::Enum::none)
+							{
+								tempStrings.push_back(integerIntegerMap->direction == IntegerIntegerMap::Direction::Enum::fromDevice ? "fromDevice" : (integerIntegerMap->direction == IntegerIntegerMap::Direction::Enum::toDevice ? "toDevice" : "both"));
+								xml_node<>* subnode = doc->allocate_node(node_element, "direction", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
+							for(std::map<int32_t, int32_t>::iterator j = integerIntegerMap->integerValueMapFromDevice.begin(); j != integerIntegerMap->integerValueMapFromDevice.end(); ++j)
+							{
+								xml_node<>* subnode = doc->allocate_node(node_element, "value");
+								castNode->append_node(subnode);
 
-							tempStrings.push_back(std::to_string(j->first));
-							xml_node<>* valueNode = doc->allocate_node(node_element, "physical", tempStrings.back().c_str());
-							subnode->append_node(valueNode);
+								tempStrings.push_back(std::to_string(j->first));
+								xml_node<>* valueNode = doc->allocate_node(node_element, "physical", tempStrings.back().c_str());
+								subnode->append_node(valueNode);
 
-							tempStrings.push_back(std::to_string(j->second));
-							valueNode = doc->allocate_node(node_element, "logical", tempStrings.back().c_str());
-							subnode->append_node(valueNode);
+								tempStrings.push_back(std::to_string(j->second));
+								valueNode = doc->allocate_node(node_element, "logical", tempStrings.back().c_str());
+								subnode->append_node(valueNode);
+							}
+							continue;
 						}
-						continue;
 					}
-				}
 
-				{
-					PBooleanInteger booleanInteger;
-					booleanInteger = std::dynamic_pointer_cast<BooleanInteger>(*i);
-					if(booleanInteger)
 					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "booleanInteger");
-						node->append_node(castNode);
-
-						if(booleanInteger->trueValue != 0)
+						PBooleanInteger booleanInteger;
+						booleanInteger = std::dynamic_pointer_cast<BooleanInteger>(*i);
+						if(booleanInteger)
 						{
-							tempStrings.push_back(std::to_string(booleanInteger->trueValue));
-							xml_node<>* subnode = doc->allocate_node(node_element, "trueValue", tempStrings.back().c_str());
-							castNode->append_node(subnode);
-						}
+							xml_node<>* castNode = doc->allocate_node(node_element, "booleanInteger");
+							node->append_node(castNode);
 
-						if(booleanInteger->falseValue != 0)
-						{
-							tempStrings.push_back(std::to_string(booleanInteger->falseValue));
-							xml_node<>* subnode = doc->allocate_node(node_element, "falseValue", tempStrings.back().c_str());
-							castNode->append_node(subnode);
-						}
+							if(booleanInteger->trueValue != 0)
+							{
+								tempStrings.push_back(std::to_string(booleanInteger->trueValue));
+								xml_node<>* subnode = doc->allocate_node(node_element, "trueValue", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
 
-						if(booleanInteger->invert)
-						{
-							tempStrings.push_back("true");
-							xml_node<>* subnode = doc->allocate_node(node_element, "invert", tempStrings.back().c_str());
-							castNode->append_node(subnode);
-						}
+							if(booleanInteger->falseValue != 0)
+							{
+								tempStrings.push_back(std::to_string(booleanInteger->falseValue));
+								xml_node<>* subnode = doc->allocate_node(node_element, "falseValue", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
 
-						if(booleanInteger->threshold != 1)
-						{
-							tempStrings.push_back(std::to_string(booleanInteger->threshold));
-							xml_node<>* subnode = doc->allocate_node(node_element, "threshold", tempStrings.back().c_str());
-							castNode->append_node(subnode);
+							if(booleanInteger->invert)
+							{
+								tempStrings.push_back("true");
+								xml_node<>* subnode = doc->allocate_node(node_element, "invert", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
+
+							if(booleanInteger->threshold != 1)
+							{
+								tempStrings.push_back(std::to_string(booleanInteger->threshold));
+								xml_node<>* subnode = doc->allocate_node(node_element, "threshold", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
+							continue;
 						}
-						continue;
 					}
-				}
 
-				{
-					PBooleanString booleanString;
-					booleanString = std::dynamic_pointer_cast<BooleanString>(*i);
-					if(booleanString)
 					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "booleanString");
-						node->append_node(castNode);
-
-						if(!booleanString->trueValue.empty())
+						PBooleanString booleanString;
+						booleanString = std::dynamic_pointer_cast<BooleanString>(*i);
+						if(booleanString)
 						{
-							xml_node<>* subnode = doc->allocate_node(node_element, "trueValue", booleanString->trueValue.c_str());
-							castNode->append_node(subnode);
-						}
+							xml_node<>* castNode = doc->allocate_node(node_element, "booleanString");
+							node->append_node(castNode);
 
-						if(!booleanString->falseValue.empty())
-						{
-							xml_node<>* subnode = doc->allocate_node(node_element, "falseValue", booleanString->falseValue.c_str());
-							castNode->append_node(subnode);
-						}
+							if(!booleanString->trueValue.empty())
+							{
+								xml_node<>* subnode = doc->allocate_node(node_element, "trueValue", booleanString->trueValue.c_str());
+								castNode->append_node(subnode);
+							}
 
-						if(booleanString->invert)
-						{
-							tempStrings.push_back("true");
-							xml_node<>* subnode = doc->allocate_node(node_element, "invert", tempStrings.back().c_str());
-							castNode->append_node(subnode);
-						}
+							if(!booleanString->falseValue.empty())
+							{
+								xml_node<>* subnode = doc->allocate_node(node_element, "falseValue", booleanString->falseValue.c_str());
+								castNode->append_node(subnode);
+							}
 
-						continue;
+							if(booleanString->invert)
+							{
+								tempStrings.push_back("true");
+								xml_node<>* subnode = doc->allocate_node(node_element, "invert", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
+
+							continue;
+						}
 					}
-				}
 
-				{
-					PDecimalConfigTime decimalConfigTime;
-					decimalConfigTime = std::dynamic_pointer_cast<DecimalConfigTime>(*i);
-					if(decimalConfigTime)
 					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "decimalConfigTime");
-						node->append_node(castNode);
-
-						for(std::vector<double>::iterator j = decimalConfigTime->factors.begin(); j != decimalConfigTime->factors.end(); ++j)
+						PDecimalConfigTime decimalConfigTime;
+						decimalConfigTime = std::dynamic_pointer_cast<DecimalConfigTime>(*i);
+						if(decimalConfigTime)
 						{
-							xml_node<>* subnode = doc->allocate_node(node_element, "factors");
+							xml_node<>* castNode = doc->allocate_node(node_element, "decimalConfigTime");
+							node->append_node(castNode);
+
+							for(std::vector<double>::iterator j = decimalConfigTime->factors.begin(); j != decimalConfigTime->factors.end(); ++j)
+							{
+								xml_node<>* subnode = doc->allocate_node(node_element, "factors");
+								castNode->append_node(subnode);
+
+								tempStrings.push_back(std::to_string(*j));
+								xml_node<>* factorNode = doc->allocate_node(node_element, "factor", tempStrings.back().c_str());
+								subnode->append_node(factorNode);
+							}
+
+							if(decimalConfigTime->valueSize != 0)
+							{
+								tempStrings.push_back(Math::toString(decimalConfigTime->valueSize, 6));
+								xml_node<>* subnode = doc->allocate_node(node_element, "valueSize", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
+							continue;
+						}
+					}
+
+					{
+						PIntegerTinyFloat integerTinyFloat;
+						integerTinyFloat = std::dynamic_pointer_cast<IntegerTinyFloat>(*i);
+						if(integerTinyFloat)
+						{
+							xml_node<>* castNode = doc->allocate_node(node_element, "integerTinyFloat");
+							node->append_node(castNode);
+
+							if(integerTinyFloat->mantissaStart != 5)
+							{
+								tempStrings.push_back(std::to_string(integerTinyFloat->mantissaStart));
+								xml_node<>* subnode = doc->allocate_node(node_element, "mantissaStart", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
+
+							if(integerTinyFloat->mantissaSize != 11)
+							{
+								tempStrings.push_back(std::to_string(integerTinyFloat->mantissaSize));
+								xml_node<>* subnode = doc->allocate_node(node_element, "mantissaSize", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
+
+							if(integerTinyFloat->exponentStart != 0)
+							{
+								tempStrings.push_back(std::to_string(integerTinyFloat->exponentStart));
+								xml_node<>* subnode = doc->allocate_node(node_element, "exponentStart", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
+
+							if(integerTinyFloat->exponentSize != 5)
+							{
+								tempStrings.push_back(std::to_string(integerTinyFloat->exponentSize));
+								xml_node<>* subnode = doc->allocate_node(node_element, "exponentSize", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
+							continue;
+						}
+					}
+
+					{
+						PStringUnsignedInteger stringUnsignedInteger;
+						stringUnsignedInteger = std::dynamic_pointer_cast<StringUnsignedInteger>(*i);
+						if(stringUnsignedInteger)
+						{
+							xml_node<>* castNode = doc->allocate_node(node_element, "stringUnsignedInteger");
+							node->append_node(castNode);
+
+							continue;
+						}
+					}
+
+					{
+						PBlindTest blindTest;
+						blindTest = std::dynamic_pointer_cast<BlindTest>(*i);
+						if(blindTest)
+						{
+							xml_node<>* castNode = doc->allocate_node(node_element, "blindTest");
+							node->append_node(castNode);
+
+							if(blindTest->value != 0)
+							{
+								tempStrings.push_back(std::to_string(blindTest->value));
+								xml_node<>* subnode = doc->allocate_node(node_element, "value", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
+
+							continue;
+						}
+					}
+
+					{
+						POptionString optionString;
+						optionString = std::dynamic_pointer_cast<OptionString>(*i);
+						if(optionString)
+						{
+							xml_node<>* castNode = doc->allocate_node(node_element, "optionString");
+							node->append_node(castNode);
+
+							continue;
+						}
+					}
+
+					{
+						POptionInteger optionInteger;
+						optionInteger = std::dynamic_pointer_cast<OptionInteger>(*i);
+						if(optionInteger)
+						{
+							xml_node<>* castNode = doc->allocate_node(node_element, "optionInteger");
+							node->append_node(castNode);
+							for(std::map<int32_t, int32_t>::iterator j = optionInteger->valueMapFromDevice.begin(); j != optionInteger->valueMapFromDevice.end(); ++j)
+							{
+								xml_node<>* subnode = doc->allocate_node(node_element, "value");
+								castNode->append_node(subnode);
+
+								tempStrings.push_back(std::to_string(j->first));
+								xml_node<>* valueNode = doc->allocate_node(node_element, "physical", tempStrings.back().c_str());
+								subnode->append_node(valueNode);
+
+								tempStrings.push_back(std::to_string(j->second));
+								valueNode = doc->allocate_node(node_element, "logical", tempStrings.back().c_str());
+								subnode->append_node(valueNode);
+							}
+							continue;
+						}
+					}
+
+					{
+						PStringJsonArrayDecimal stringJsonArrayDecimal;
+						stringJsonArrayDecimal = std::dynamic_pointer_cast<StringJsonArrayDecimal>(*i);
+						if(stringJsonArrayDecimal)
+						{
+							xml_node<>* castNode = doc->allocate_node(node_element, "stringJsonArrayDecimal");
+							node->append_node(castNode);
+
+							continue;
+						}
+					}
+
+					{
+						PRpcBinary rpcBinary;
+						rpcBinary = std::dynamic_pointer_cast<RpcBinary>(*i);
+						if(rpcBinary)
+						{
+							xml_node<>* castNode = doc->allocate_node(node_element, "rpcBinary");
+							node->append_node(castNode);
+
+							continue;
+						}
+					}
+
+					{
+						PToggle toggleCast;
+						toggleCast = std::dynamic_pointer_cast<Toggle>(*i);
+						if(toggleCast)
+						{
+							xml_node<>* castNode = doc->allocate_node(node_element, "toggle");
+							node->append_node(castNode);
+
+							xml_node<>* subnode = doc->allocate_node(node_element, "parameter", toggleCast->parameter.c_str());
 							castNode->append_node(subnode);
 
-							tempStrings.push_back(std::to_string(*j));
-							xml_node<>* factorNode = doc->allocate_node(node_element, "factor", tempStrings.back().c_str());
-							subnode->append_node(factorNode);
-						}
+							if(toggleCast->on != 200)
+							{
+								tempStrings.push_back(std::to_string(toggleCast->on));
+								subnode = doc->allocate_node(node_element, "on", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
 
-						if(decimalConfigTime->valueSize != 0)
+							if(toggleCast->off != 0)
+							{
+								tempStrings.push_back(std::to_string(toggleCast->off));
+								subnode = doc->allocate_node(node_element, "off", tempStrings.back().c_str());
+								castNode->append_node(subnode);
+							}
+							continue;
+						}
+					}
+
+					{
+						PCfm cfm;
+						cfm = std::dynamic_pointer_cast<Cfm>(*i);
+						if(cfm)
 						{
-							tempStrings.push_back(Math::toString(decimalConfigTime->valueSize, 6));
-							xml_node<>* subnode = doc->allocate_node(node_element, "valueSize", tempStrings.back().c_str());
-							castNode->append_node(subnode);
+							xml_node<>* castNode = doc->allocate_node(node_element, "cfm");
+							node->append_node(castNode);
+
+							continue;
 						}
-						continue;
 					}
-				}
 
-				{
-					PIntegerTinyFloat integerTinyFloat;
-					integerTinyFloat = std::dynamic_pointer_cast<IntegerTinyFloat>(*i);
-					if(integerTinyFloat)
 					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "integerTinyFloat");
-						node->append_node(castNode);
-
-						if(integerTinyFloat->mantissaStart != 5)
+						PCcrtdnParty ccrtdnParty;
+						ccrtdnParty = std::dynamic_pointer_cast<CcrtdnParty>(*i);
+						if(ccrtdnParty)
 						{
-							tempStrings.push_back(std::to_string(integerTinyFloat->mantissaStart));
-							xml_node<>* subnode = doc->allocate_node(node_element, "mantissaStart", tempStrings.back().c_str());
-							castNode->append_node(subnode);
-						}
+							xml_node<>* castNode = doc->allocate_node(node_element, "ccrtdnParty");
+							node->append_node(castNode);
 
-						if(integerTinyFloat->mantissaSize != 11)
+							continue;
+						}
+					}
+
+					{
+						PStringReplace stringReplace;
+						stringReplace = std::dynamic_pointer_cast<StringReplace>(*i);
+						if(stringReplace)
 						{
-							tempStrings.push_back(std::to_string(integerTinyFloat->mantissaSize));
-							xml_node<>* subnode = doc->allocate_node(node_element, "mantissaSize", tempStrings.back().c_str());
-							castNode->append_node(subnode);
-						}
+							xml_node<>* castNode = doc->allocate_node(node_element, "stringReplace");
+							node->append_node(castNode);
 
-						if(integerTinyFloat->exponentStart != 0)
+							if(!stringReplace->search.empty())
+							{
+								xml_node<>* subnode = doc->allocate_node(node_element, "search", stringReplace->search.c_str());
+								castNode->append_node(subnode);
+							}
+
+							if(!stringReplace->replace.empty())
+							{
+								xml_node<>* subnode = doc->allocate_node(node_element, "replace", stringReplace->replace.c_str());
+								castNode->append_node(subnode);
+							}
+
+							continue;
+						}
+					}
+
+					{
+						PHexStringByteArray hexStringByteArray;
+						hexStringByteArray = std::dynamic_pointer_cast<HexStringByteArray>(*i);
+						if(hexStringByteArray)
 						{
-							tempStrings.push_back(std::to_string(integerTinyFloat->exponentStart));
-							xml_node<>* subnode = doc->allocate_node(node_element, "exponentStart", tempStrings.back().c_str());
-							castNode->append_node(subnode);
+							xml_node<>* castNode = doc->allocate_node(node_element, "hexStringByteArray");
+							node->append_node(castNode);
+							continue;
 						}
-
-						if(integerTinyFloat->exponentSize != 5)
-						{
-							tempStrings.push_back(std::to_string(integerTinyFloat->exponentSize));
-							xml_node<>* subnode = doc->allocate_node(node_element, "exponentSize", tempStrings.back().c_str());
-							castNode->append_node(subnode);
-						}
-						continue;
-					}
-				}
-
-				{
-					PStringUnsignedInteger stringUnsignedInteger;
-					stringUnsignedInteger = std::dynamic_pointer_cast<StringUnsignedInteger>(*i);
-					if(stringUnsignedInteger)
-					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "stringUnsignedInteger");
-						node->append_node(castNode);
-
-						continue;
-					}
-				}
-
-				{
-					PBlindTest blindTest;
-					blindTest = std::dynamic_pointer_cast<BlindTest>(*i);
-					if(blindTest)
-					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "blindTest");
-						node->append_node(castNode);
-
-						if(blindTest->value != 0)
-						{
-							tempStrings.push_back(std::to_string(blindTest->value));
-							xml_node<>* subnode = doc->allocate_node(node_element, "value", tempStrings.back().c_str());
-							castNode->append_node(subnode);
-						}
-
-						continue;
-					}
-				}
-
-				{
-					POptionString optionString;
-					optionString = std::dynamic_pointer_cast<OptionString>(*i);
-					if(optionString)
-					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "optionString");
-						node->append_node(castNode);
-
-						continue;
-					}
-				}
-
-				{
-					POptionInteger optionInteger;
-					optionInteger = std::dynamic_pointer_cast<OptionInteger>(*i);
-					if(optionInteger)
-					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "optionInteger");
-						node->append_node(castNode);
-						for(std::map<int32_t, int32_t>::iterator j = optionInteger->valueMapFromDevice.begin(); j != optionInteger->valueMapFromDevice.end(); ++j)
-						{
-							xml_node<>* subnode = doc->allocate_node(node_element, "value");
-							castNode->append_node(subnode);
-
-							tempStrings.push_back(std::to_string(j->first));
-							xml_node<>* valueNode = doc->allocate_node(node_element, "physical", tempStrings.back().c_str());
-							subnode->append_node(valueNode);
-
-							tempStrings.push_back(std::to_string(j->second));
-							valueNode = doc->allocate_node(node_element, "logical", tempStrings.back().c_str());
-							subnode->append_node(valueNode);
-						}
-						continue;
-					}
-				}
-
-				{
-					PStringJsonArrayDecimal stringJsonArrayDecimal;
-					stringJsonArrayDecimal = std::dynamic_pointer_cast<StringJsonArrayDecimal>(*i);
-					if(stringJsonArrayDecimal)
-					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "stringJsonArrayDecimal");
-						node->append_node(castNode);
-
-						continue;
-					}
-				}
-
-				{
-					PRpcBinary rpcBinary;
-					rpcBinary = std::dynamic_pointer_cast<RpcBinary>(*i);
-					if(rpcBinary)
-					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "rpcBinary");
-						node->append_node(castNode);
-
-						continue;
-					}
-				}
-
-				{
-					PToggle toggleCast;
-					toggleCast = std::dynamic_pointer_cast<Toggle>(*i);
-					if(toggleCast)
-					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "toggle");
-						node->append_node(castNode);
-
-						xml_node<>* subnode = doc->allocate_node(node_element, "parameter", toggleCast->parameter.c_str());
-						castNode->append_node(subnode);
-
-						if(toggleCast->on != 200)
-						{
-							tempStrings.push_back(std::to_string(toggleCast->on));
-							subnode = doc->allocate_node(node_element, "on", tempStrings.back().c_str());
-							castNode->append_node(subnode);
-						}
-
-						if(toggleCast->off != 0)
-						{
-							tempStrings.push_back(std::to_string(toggleCast->off));
-							subnode = doc->allocate_node(node_element, "off", tempStrings.back().c_str());
-							castNode->append_node(subnode);
-						}
-						continue;
-					}
-				}
-
-				{
-					PCfm cfm;
-					cfm = std::dynamic_pointer_cast<Cfm>(*i);
-					if(cfm)
-					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "cfm");
-						node->append_node(castNode);
-
-						continue;
-					}
-				}
-
-				{
-					PCcrtdnParty ccrtdnParty;
-					ccrtdnParty = std::dynamic_pointer_cast<CcrtdnParty>(*i);
-					if(ccrtdnParty)
-					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "ccrtdnParty");
-						node->append_node(castNode);
-
-						continue;
-					}
-				}
-
-				{
-					PStringReplace stringReplace;
-					stringReplace = std::dynamic_pointer_cast<StringReplace>(*i);
-					if(stringReplace)
-					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "stringReplace");
-						node->append_node(castNode);
-
-						if(!stringReplace->search.empty())
-						{
-							xml_node<>* subnode = doc->allocate_node(node_element, "search", stringReplace->search.c_str());
-							castNode->append_node(subnode);
-						}
-
-						if(!stringReplace->replace.empty())
-						{
-							xml_node<>* subnode = doc->allocate_node(node_element, "replace", stringReplace->replace.c_str());
-							castNode->append_node(subnode);
-						}
-
-						continue;
-					}
-				}
-
-				{
-					PHexStringByteArray hexStringByteArray;
-					hexStringByteArray = std::dynamic_pointer_cast<HexStringByteArray>(*i);
-					if(hexStringByteArray)
-					{
-						xml_node<>* castNode = doc->allocate_node(node_element, "hexStringByteArray");
-						node->append_node(castNode);
-						continue;
 					}
 				}
 			}

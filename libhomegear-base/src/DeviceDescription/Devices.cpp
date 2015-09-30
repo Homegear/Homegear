@@ -358,7 +358,7 @@ std::shared_ptr<HomegearDevice> Devices::loadHomeMatic(std::string& filepath)
 				}
 			}
 		}
-		else if(filename == "rf_sen_mdir.xml" || filename == "rf_sen_mdir_v1_5.xml" || filename == "rf_sen_mdir_wm55.xml" || filename == "rf_sec_mdir.xml" || filename == "rf_sec_mdir_v1_5.xml")
+		else if(filename == "rf_sen_mdir.xml" || filename == "rf_sen_mdir_v1_5.xml" || filename == "rf_sen_mdir_wm55.xml" || filename == "rf_sec_mdir.xml" || filename == "rf_sec_mdir_v1_5.xml" || filename == "rf_sen_mdir_wm55.xml")
 		{
 			std::map<uint32_t, std::shared_ptr<HmDeviceDescription::DeviceChannel>>::iterator channelIterator = homeMaticDevice->channels.find(1);
 			if(channelIterator != homeMaticDevice->channels.end())
@@ -761,7 +761,7 @@ std::shared_ptr<HomegearDevice> Devices::loadHomeMatic(std::string& filepath)
 		{
 			_bl->out.printInfo("Info: Please ignore the warnings regarding the unknown node name \"parameter\" for \"paramset_defs\".");
 		}
-		else if(filename == "rf_rc.xml" || filename == "rf_rc_12.xml" || filename == "rf_rc_19.xml" || filename == "rf_rc-4-2.xml" || filename == "rf_rc-key4-2.xml" || filename == "rf_rc-sec4-2.xml")
+		else if(filename == "rf_rc.xml" || filename == "rf_rc_12.xml" || filename == "rf_rc_19.xml" || filename == "rf_rc-4-2.xml" || filename == "rf_rc-key4-2.xml" || filename == "rf_rc-sec4-2.xml" || filename == "rf_rc-4-3_single_on.xml" || filename == "rf_rc_2_fm.xml" || filename == "rf_rc_dis.xml" || filename == "rf_rc_single_on.xml")
 		{
 			for(std::map<uint32_t, std::shared_ptr<HmDeviceDescription::DeviceChannel>>::iterator i = homeMaticDevice->channels.begin(); i != homeMaticDevice->channels.end(); ++i)
 			{

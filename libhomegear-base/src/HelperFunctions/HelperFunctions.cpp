@@ -479,7 +479,7 @@ pid_t HelperFunctions::system(std::string command, std::vector<std::string> argu
     	if(getrlimit(RLIMIT_NOFILE, &limits) == -1)
     	{
     		_bl->out.printError("Error: Couldn't read rlimits.");
-    		return -1;
+    		_exit(1);
     	}
         // Close all other descriptors for the safety sake.
         for(uint32_t i = 3; i < limits.rlim_cur; ++i) ::close(i);
@@ -494,7 +494,10 @@ pid_t HelperFunctions::system(std::string command, std::vector<std::string> argu
         	argv[i + 1] = &arguments[i][0];
         }
         argv[arguments.size() + 1] = nullptr;
-        execv(command.c_str(), argv);
+        if(execv(command.c_str(), argv) == -1)
+        {
+        	_bl->out.printError("Error: Could not start program: " + std::string(strerror(errno)));
+        }
         _exit(1);
     }
 

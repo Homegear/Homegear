@@ -333,17 +333,20 @@ HomegearDevice::ReceiveModes::Enum Peer::getRXModes()
 		if(_rpcDevice)
 		{
 			_rxModes = _rpcDevice->receiveModes;
-			if(configCentral.find(0) != configCentral.end() && configCentral.at(0).find("BURST_RX") != configCentral.at(0).end())
+			if(configCentral.find(0) != configCentral.end())
 			{
-				RPCConfigurationParameter* parameter = &configCentral.at(0).at("BURST_RX");
-				if(!parameter->rpcParameter) return _rxModes;
-				if(parameter->rpcParameter->convertFromPacket(parameter->data)->booleanValue)
+				std::unordered_map<std::string, RPCConfigurationParameter>::iterator parameterIterator = configCentral.at(0).find("WAKE_ON_RADIO");
+				if(parameterIterator != configCentral.at(0).end())
 				{
-					_rxModes = (HomegearDevice::ReceiveModes::Enum)(_rxModes | HomegearDevice::ReceiveModes::Enum::wakeOnRadio);
-				}
-				else
-				{
-					_rxModes = (HomegearDevice::ReceiveModes::Enum)(_rxModes & (~HomegearDevice::ReceiveModes::Enum::wakeOnRadio));
+					if(!parameterIterator->second.rpcParameter) return _rxModes;
+					if(parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->booleanValue)
+					{
+						_rxModes = (HomegearDevice::ReceiveModes::Enum)(_rxModes | HomegearDevice::ReceiveModes::Enum::wakeOnRadio);
+					}
+					else
+					{
+						_rxModes = (HomegearDevice::ReceiveModes::Enum)(_rxModes & (~HomegearDevice::ReceiveModes::Enum::wakeOnRadio));
+					}
 				}
 			}
 		}

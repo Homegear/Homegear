@@ -100,7 +100,8 @@ public:
 
 	//Elements
 	Operation::Enum operation = Operation::none;
-	int32_t factor = 10;
+	double factor = 10;
+	int32_t offset = 0;
 };
 
 class IntegerIntegerMap : public ICast

@@ -552,6 +552,14 @@ ParameterConversion::ParameterConversion(BaseLib::Obj* baseLib, HomeMaticParamet
 			else if(attributeValue == "option_string") type = Type::Enum::optionString;
 			else if(attributeValue == "string_json_array_float") type = Type::Enum::stringJsonArrayFloat;
 			else if(attributeValue == "hexstring_bytearray") type = Type::Enum::hexstringBytearray;
+			else if(attributeValue == "sint4_sintx")
+			{
+				type = Type::Enum::integerIntegerScale;
+				LogicalParameterInteger* logicalParameter = (LogicalParameterInteger*)(parameter->logicalParameter.get());
+				offset = logicalParameter->min * -1;
+				if(offset < 0) _bl->out.printWarning("Warning: Unknown min value for \"conversion\\type\\sint4_sintx\": " + std::to_string(logicalParameter->min));
+				factor = 255 / (logicalParameter->max + offset);
+			}
 			else _bl->out.printWarning("Warning: Unknown type for \"conversion\": " + attributeValue);
 		}
 		else if(attributeName == "factor") factor = Math::getDouble(attributeValue);
@@ -578,6 +586,11 @@ ParameterConversion::ParameterConversion(BaseLib::Obj* baseLib, HomeMaticParamet
 		else if(attributeName == "exponent_size") exponentSize = Math::getNumber(attributeValue);
 		else if(attributeName == "sim_counter") {}
 		else if(attributeName == "counter_size") {}
+		else if(attributeName == "physical_bytes")
+		{
+			int32_t value = Math::getNumber(attributeValue);
+			if(Math::getNumber(attributeValue) != 1) _bl->out.printWarning("Warning: Unknown value for \"conversion\\physical_bytes\": " + std::to_string(value));
+		}
 		else if(attributeName == "on") on = Math::getNumber(attributeValue);
 		else if(attributeName == "off") off = Math::getNumber(attributeValue);
 		else if(attributeName == "invert") { if(attributeValue == "true") invert = true; }
@@ -1158,6 +1171,7 @@ HomeMaticParameter::HomeMaticParameter(BaseLib::Obj* baseLib, xml_node<>* node, 
 		else if(attributeName == "mask") mask = Math::getNumber(attributeValue);
 		else if(attributeName == "field") field = attributeValue;
 		else if(attributeName == "subfield") subfield = attributeValue;
+		else if(attributeName == "has_write_dependencies") {}
 		else _bl->out.printWarning("Warning: Unknown attribute for \"parameter\": " + attributeName);
 	}
 	if(checkForID && id.empty()) _bl->out.printError("Error: Parameter has no id. Index: " + std::to_string(index));
@@ -1190,6 +1204,7 @@ HomeMaticParameter::HomeMaticParameter(BaseLib::Obj* baseLib, xml_node<>* node, 
 		{
 			description = ParameterDescription(parameterNode);
 		}
+		else if(nodeName == "write_dependencies") {} //ignore
 		else _bl->out.printWarning("Warning: Unknown subnode for \"parameter\": " + nodeName);
 	}
 	if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat)
@@ -2239,7 +2254,7 @@ void Device::parseXML(xml_node<>* node)
 					if(element == "wakeup") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::wakeUp);
 					else if(element == "wakeup2") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::wakeUp2);
 					else if(element == "config") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::config);
-					else if(element == "burst") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::burst);
+					else if(element == "burst" || element == "triple_burst") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::burst);
 					else if(element == "always") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::always);
 					else if(element == "lazy_config") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::lazyConfig);
 					else _bl->out.printWarning("Warning: Unknown rx mode for \"device\": " + element);
@@ -2267,6 +2282,7 @@ void Device::parseXML(xml_node<>* node)
 			else if(attributeName == "supports_aes") { if(attributeValue == "true") supportsAES = true; }
 			else if(attributeName == "peering_sysinfo_expect_channel") { if(attributeValue == "false") peeringSysinfoExpectChannel = false; }
 			else if(attributeName == "needs_time") { if(attributeValue == "true") needsTime = true; }
+			else if(attributeName == "default") {}
 			else _bl->out.printWarning("Warning: Unknown attribute for \"device\": " + attributeName);
 		}
 
