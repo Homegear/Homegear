@@ -5,8 +5,10 @@
 set -x
 
 print_usage() {
-	echo "Usage: CreateDockerUbuntuTrustyPHPBuild.sh ARCH"
-	echo "  ARCH:           The CPU architecture. E. g. armhf"
+	echo "Usage: CreateDockerPHPBuild.sh DIST DISTVER ARCH"
+	echo "  DIST:           The Linux distribution (debian, raspbian or ubuntu)"
+	echo "  DISTVER:		The version of the distribution (e. g. for Ubuntu: trusty, utopic or vivid)"
+	echo "  ARCH:           The CPU architecture (armhf, armel, arm64, i386, amd64 or mips)"
 }
 
 if [ $EUID -ne 0 ]; then
@@ -15,28 +17,47 @@ if [ $EUID -ne 0 ]; then
 fi
 
 if test -z $1; then
+	echo "Please provide a valid Linux distribution (debian, raspbian or ubuntu)."	
+	print_usage
+	exit 1
+fi
+
+if test -z $2; then
 	echo "Please provide a valid CPU architecture."	
 	print_usage
-	exit 0;
+	exit 1
 fi
 
 scriptdir="$( cd "$(dirname $0)" && pwd )"
-arch=$1
-repository="http://archive.ubuntu.com/ubuntu"
-if [ "$arch" == "armhf" ]; then
-	repository="http://ports.ubuntu.com/ubuntu-ports"
-elif [ "$arch" == "armel" ]; then
-	repository="http://ports.ubuntu.com/ubuntu-ports"
-elif [ "$arch" == "arm64" ]; then
-	repository="http://ports.ubuntu.com/ubuntu-ports"
-elif [ "$arch" == "mips" ]; then
-	repository="http://ports.ubuntu.com/ubuntu-ports"
+dist=$1
+dist="$(tr '[:lower:]' '[:upper:]' <<< ${dist:0:1})${dist:1}"
+distver=$2
+arch=$3
+if [ "$dist" == "Ubuntu" ]; then
+	repository="http://archive.ubuntu.com/ubuntu"
+	if [ "$arch" == "armhf" ]; then
+		repository="http://ports.ubuntu.com/ubuntu-ports"
+	elif [ "$arch" == "armel" ]; then
+		repository="http://ports.ubuntu.com/ubuntu-ports"
+	elif [ "$arch" == "arm64" ]; then
+		repository="http://ports.ubuntu.com/ubuntu-ports"
+	elif [ "$arch" == "mips" ]; then
+		repository="http://ports.ubuntu.com/ubuntu-ports"
+	fi
+elif [ "$dist" == "Debian" ]; then
+	repository="http://ftp.debian.org/debian"
+elif [ "$dist" == "Raspbian" ]; then
+	repository="http://mirrordirector.raspbian.org/raspbian/"
+else
+	echo "Unknown distribution."
+	print_usage
+	exit 1
 fi
 dir="$(mktemp -d ${TMPDIR:-/var/tmp}/docker-mkimage.XXXXXXXXXX)"
 rootfs=$dir/rootfs
 mkdir $rootfs
 
-debootstrap --no-check-gpg --foreign --arch=$arch trusty $rootfs $repository
+debootstrap --no-check-gpg --foreign --arch=$arch $distver $rootfs $repository
 if [ "$arch" == "armhf" ]; then
 	cp /usr/bin/qemu-arm-static $rootfs/usr/bin/
 elif [ "$arch" == "armel" ]; then
@@ -48,11 +69,19 @@ elif [ "$arch" == "mips" ]; then
 fi
 LANG=C chroot $rootfs /debootstrap/debootstrap --second-stage
 
-echo "deb $repository trusty main restricted universe multiverse
-" > $rootfs/etc/apt/sources.list
-echo "deb-src http://packages.dotdeb.org jessie all
-" > $rootfs/etc/apt/sources.list.d/php7-src.list
+if [ "$dist" == "Ubuntu" ]; then
+	echo "deb $repository $distver main restricted universe multiverse
+	" > $rootfs/etc/apt/sources.list
+elif [ "$dist" == "Debian" ]; then
+	echo "deb http://ftp.debian.org/debian $distver main contrib
+	" > $rootfs/etc/apt/sources.list
+elif [ "$dist" == "Raspbian" ]; then
+	echo "deb http://mirrordirector.raspbian.org/raspbian/ $distver main contrib
+	" > $rootfs/etc/apt/sources.list
+fi
 
+echo "deb-src http://packages.dotdeb.org jessie all
+	" > $rootfs/etc/apt/sources.list.d/php7-src.list
 
 # prevent init scripts from running during install/update
 cat > "$rootfs/usr/sbin/policy-rc.d" <<'EOF'
@@ -90,6 +119,8 @@ wget -P $rootfs http://www.dotdeb.org/dotdeb.gpg
 chroot $rootfs apt-key add dotdeb.gpg
 rm $rootfs/dotdeb.gpg
 chroot $rootfs apt-get update
+#Fix debootstrap base package errors
+chroot $rootfs apt-get -y -f install
 chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano
 
 mkdir $rootfs/PHPBuild
@@ -98,8 +129,15 @@ cd $rootfs/PHPBuild
 tar -xf php7*debian.tar.xz
 cd ..
 sed -i '/.*libcurl4-openssl-dev | libcurl-dev,.*/d' $rootfs/PHPBuild/debian/control
-sed -i '/.*libgcrypt11-dev,.*/d' $rootfs/PHPBuild/debian/control
-sed -i '/.*libxml2-dev/a\\t       libgcrypt20-dev,' $rootfs/PHPBuild/debian/control
+if [ "$distver" == "wheezy" ]; then
+	sed -i 's/apache2-dev.*,//g' $rootfs/PHPBuild/debian/control
+	sed -i '/.*dh-apache2,.*/d' $rootfs/PHPBuild/debian/control
+	sed -i '/.*dh-systemd.*,.*/d' $rootfs/PHPBuild/debian/control
+	sed -i '/.*libc-client-dev,.*/d' $rootfs/PHPBuild/debian/control
+else
+	sed -i '/.*libgcrypt11-dev,.*/d' $rootfs/PHPBuild/debian/control
+	sed -i '/.*libxml2-dev/a\\t       libgcrypt20-dev,' $rootfs/PHPBuild/debian/control
+fi
 chroot $rootfs bash -c "cd /PHPBuild && mk-build-deps debian/control"
 chroot $rootfs bash -c "cd /PHPBuild && dpkg -i php*-build-deps_*.deb"
 chroot $rootfs apt-get -y -f install
@@ -131,7 +169,7 @@ if [[ $1 -lt 1 ]]; then
         exit 1
 fi
 
-distribution=`lsb_release -a 2>/dev/null | grep "^Codename:" | cut -d $'\t' -f 2`
+distribution="<DISTVER>"
 
 rm -Rf /PHPBuild/php*
 rm -Rf /PHPBuild/lib*
@@ -182,6 +220,7 @@ if test -f /PHPBuild/Upload.sh; then
 fi
 EOF
 chmod 755 $rootfs/PHPBuild/CreatePHPPackages.sh
+sed -i "s/<DISTVER>/${distver}/g" $rootfs/PHPBuild/CreatePHPPackages.sh
 
 cat > "$rootfs/FirstStart.sh" <<-'EOF'
 #!/bin/bash
@@ -275,7 +314,7 @@ set -x
 cd /PHPBuild
 if [ \$(ls /PHPBuild | grep -c \"\\.changes\$\") -ne 0 ]; then
 	path=\`mktemp -p / -u\`".tar.gz"
-	echo \"Ubuntu\" > distribution
+	echo \"<DIST>\" > distribution
 	tar -zcpf \${path} php* lib* distribution
 	if test -f \${path}; then
 		mv \${path} \${path}.uploading
@@ -304,6 +343,7 @@ else
 fi
 EOF
 chmod 755 $rootfs/FirstStart.sh
+sed -i "s/<DIST>/${dist}/g" $rootfs/FirstStart.sh
 
 read -p "Copy additional files into ${rootfs} and check that all packages were installed ok then hit [Enter] to continue..."
 
@@ -324,6 +364,7 @@ EOF
 
 rm -Rf $rootfs
 
-docker build -t homegear/phpbuild:ubuntu-trusty-$arch "$dir"
+dist="$(tr '[:upper:]' '[:lower:]' <<< ${dist:0:1})${dist:1}"
+docker build -t homegear/phpbuild:${dist}-${distver}-$arch "$dir"
 
 rm -Rf $dir

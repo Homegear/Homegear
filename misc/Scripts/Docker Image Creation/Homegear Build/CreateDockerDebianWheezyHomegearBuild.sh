@@ -87,7 +87,7 @@ chroot $rootfs apt-key add Release.key
 rm $rootfs/Release.key
 
 chroot $rootfs apt-get update
-chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgcrypt11-dev libgpg-error-dev libgnutls-dev php5-dev libphp5-embed libssl-dev libcrypto++-dev g++-4.7 gcc-4.7
+chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgcrypt11-dev libgpg-error-dev libgnutls-dev php7-homegear-dev libssl-dev libcrypto++-dev g++-4.7 gcc-4.7
 
 rm $rootfs/usr/bin/g++
 rm $rootfs/usr/bin/gcc
@@ -157,6 +157,10 @@ chmod 755 $rootfs/build/CreateDebianPackageNightly.sh
 cat > "$rootfs/FirstStart.sh" <<-'EOF'
 #!/bin/bash
 sed -i '$ d' /root/.bashrc >/dev/null
+if [ -n "$PHPBUILD_SHELL" ]; then
+	/bin/bash
+	exit 0
+fi
 if [[ -z "$HOMEGEARBUILD_SERVERNAME" || -z "$HOMEGEARBUILD_SERVERPORT" || -z "$HOMEGEARBUILD_SERVERUSER" || -z "$HOMEGEARBUILD_SERVERPATH" || -z "$HOMEGEARBUILD_SERVERCERT" ]]; then
 	while :
 	do
