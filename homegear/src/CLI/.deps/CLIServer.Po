@@ -320,7 +320,8 @@ CLI/CLIServer.o: CLI/CLIServer.cpp /usr/include/stdc-predef.h \
  /usr/include/homegear-base/Output/Output.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
- /usr/include/homegear-base/Variable.h CLI/../User/User.h \
+ /usr/include/homegear-base/Variable.h \
+ /usr/include/homegear-base/IQueue.h CLI/../User/User.h \
  CLI/../Systems/FamilyController.h /usr/include/dlfcn.h \
  /usr/include/x86_64-linux-gnu/bits/dlfcn.h \
  /usr/include/x86_64-linux-gnu/sys/stat.h \
@@ -1131,6 +1132,8 @@ CLI/CLIServer.h:
 /usr/include/homegear-base/Encoding/HTTP.h:
 
 /usr/include/homegear-base/Variable.h:
+
+/usr/include/homegear-base/IQueue.h:
 
 CLI/../User/User.h:
 

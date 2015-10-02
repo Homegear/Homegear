@@ -300,7 +300,8 @@ Encoding/JsonEncoder.lo: Encoding/JsonEncoder.cpp \
  Encoding/../Systems/DeviceFamily.h Encoding/../Systems/UpdateInfo.h \
  Encoding/../Threads/Threads.h Encoding/../Threads/../Exception.h \
  Encoding/../Threads/../Output/Output.h Encoding/../SSDP/SSDP.h \
- Encoding/../SSDP/../Encoding/HTTP.h Encoding/../SSDP/../Variable.h
+ Encoding/../SSDP/../Encoding/HTTP.h Encoding/../SSDP/../Variable.h \
+ Encoding/../IQueue.h
 
 /usr/include/stdc-predef.h:
 
@@ -1097,3 +1098,5 @@ Encoding/../SSDP/SSDP.h:
 Encoding/../SSDP/../Encoding/HTTP.h:
 
 Encoding/../SSDP/../Variable.h:
+
+Encoding/../IQueue.h:

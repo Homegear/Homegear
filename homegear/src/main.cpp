@@ -523,6 +523,7 @@ int main(int argc, char* argv[])
 		GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
 		GD::out.printInfo("Loading RPC client settings from " + GD::bl->settings.clientSettingsPath());
 		GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
+		GD::mqtt.reset(new MQTT());
 		GD::mqtt->loadSettings();
 
     	if(_startAsDaemon) startDaemon();

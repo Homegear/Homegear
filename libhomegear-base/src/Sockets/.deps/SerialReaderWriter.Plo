@@ -295,7 +295,7 @@ Sockets/SerialReaderWriter.lo: Sockets/SerialReaderWriter.cpp \
  Sockets/../Systems/UpdateInfo.h Sockets/../Threads/Threads.h \
  Sockets/../Threads/../Exception.h Sockets/../Threads/../Output/Output.h \
  Sockets/../SSDP/SSDP.h Sockets/../SSDP/../Encoding/HTTP.h \
- Sockets/../SSDP/../Variable.h
+ Sockets/../SSDP/../Variable.h Sockets/../IQueue.h
 
 /usr/include/stdc-predef.h:
 
@@ -1088,3 +1088,5 @@ Sockets/../SSDP/SSDP.h:
 Sockets/../SSDP/../Encoding/HTTP.h:
 
 Sockets/../SSDP/../Variable.h:
+
+Sockets/../IQueue.h:

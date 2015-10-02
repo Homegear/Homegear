@@ -47,27 +47,16 @@ case $1 in
 		chown homegear:homegear /var/log/homegear
 		chmod 750 /var/log/homegear
 
-		chown -R homegear:homegear /var/lib/homegear/firmware
-		chmod -R 550 /var/lib/homegear/firmware
-		FILES=/var/lib/homegear/modules/*
-		for f in $FILES; do
-			f2=`echo $f | sed 's#.*/##' | sed 's/^lib/mod_/'`
-			mv $f /var/lib/homegear/modules/$f2
-		done
-		chown -R homegear:homegear /var/lib/homegear/modules
-		chmod -R 550 /var/lib/homegear/modules
+		chown -R homegear:homegear /usr/share/homegear/firmware
+		chmod -R 550 /usr/share/homegear/firmware
+		chown -R homegear:homegear /usr/share/homegear/modules
+		chmod -R 550 /usr/share/homegear/modules
 		find /var/lib/homegear/www -type d -exec chmod 550 {} \;
 		find /var/lib/homegear/www -type f -exec chmod 440 {} \;
 
-		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION; then
-			if test ! -e /etc/homegear/devices/0/rf_s.xml; then
-				echo "Downloading device description files..."
-				/var/lib/homegear/GetDeviceFiles.sh 1
-				[ $? -ne 0 ] && exit 1
-			fi
-			
+		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION; then			
 			echo "Downloading current firmware updates..."
-			/var/lib/homegear/firmware/GetFirmwareUpdates.sh
+			/usr/share/homegear/firmware/GetFirmwareUpdates.sh
 			[ $? -ne 0 ] && exit 1
 	
 			if test ! -e /etc/homegear/homegear.crt; then

@@ -300,7 +300,8 @@ Settings/Settings.lo: Settings/Settings.cpp /usr/include/stdc-predef.h \
  Settings/../Systems/DeviceFamily.h Settings/../Systems/UpdateInfo.h \
  Settings/../Threads/Threads.h Settings/../Threads/../Exception.h \
  Settings/../Threads/../Output/Output.h Settings/../SSDP/SSDP.h \
- Settings/../SSDP/../Encoding/HTTP.h Settings/../SSDP/../Variable.h
+ Settings/../SSDP/../Encoding/HTTP.h Settings/../SSDP/../Variable.h \
+ Settings/../IQueue.h
 
 /usr/include/stdc-predef.h:
 
@@ -1095,3 +1096,5 @@ Settings/../SSDP/SSDP.h:
 Settings/../SSDP/../Encoding/HTTP.h:
 
 Settings/../SSDP/../Variable.h:
+
+Settings/../IQueue.h:

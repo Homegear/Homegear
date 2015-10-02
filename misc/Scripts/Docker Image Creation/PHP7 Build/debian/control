@@ -11,7 +11,7 @@ Architecture: any
 Section: libdevel
 Priority: optional
 Homepage: https://homegear.eu
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: libxslt1-dev, libedit-dev, libmcrypt-dev, libenchant-dev, libqdbm-dev, ${shlibs:Depends}, ${misc:Depends}
 Description: Provides the php7 library and headers needed to compile Homegear.
  This packet provides the php7 library and header files need to compile
  Homegear.

@@ -319,7 +319,8 @@ User/User.o: User/User.cpp /usr/include/stdc-predef.h User/User.h \
  /usr/include/homegear-base/Output/Output.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
- /usr/include/homegear-base/Variable.h /usr/include/wordexp.h \
+ /usr/include/homegear-base/Variable.h \
+ /usr/include/homegear-base/IQueue.h /usr/include/wordexp.h \
  User/../GD/../CLI/CLIServer.h User/../GD/../CLI/../User/User.h \
  User/../GD/../CLI/../Systems/FamilyController.h /usr/include/dlfcn.h \
  /usr/include/x86_64-linux-gnu/bits/dlfcn.h \
@@ -1137,6 +1138,8 @@ User/../GD/../ScriptEngine/php_config_fixes.h:
 /usr/include/homegear-base/Encoding/HTTP.h:
 
 /usr/include/homegear-base/Variable.h:
+
+/usr/include/homegear-base/IQueue.h:
 
 /usr/include/wordexp.h:
 

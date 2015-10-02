@@ -320,9 +320,9 @@ MQTT/MQTT.o: MQTT/MQTT.cpp /usr/include/stdc-predef.h MQTT/MQTT.h \
  /usr/include/homegear-base/Output/Output.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
- /usr/include/homegear-base/Variable.h MQTT/MQTTSettings.h \
- MQTT/../GD/GD.h MQTT/../GD/../../config.h \
- MQTT/../GD/../ScriptEngine/ScriptEngine.h \
+ /usr/include/homegear-base/Variable.h \
+ /usr/include/homegear-base/IQueue.h MQTT/MQTTSettings.h MQTT/../GD/GD.h \
+ MQTT/../GD/../../config.h MQTT/../GD/../ScriptEngine/ScriptEngine.h \
  MQTT/../GD/../ScriptEngine/php_config_fixes.h /usr/include/wordexp.h \
  MQTT/../GD/../CLI/CLIServer.h MQTT/../GD/../CLI/../User/User.h \
  MQTT/../GD/../CLI/../Systems/FamilyController.h /usr/include/dlfcn.h \
@@ -1134,6 +1134,8 @@ MQTT/MQTT.h:
 /usr/include/homegear-base/Encoding/HTTP.h:
 
 /usr/include/homegear-base/Variable.h:
+
+/usr/include/homegear-base/IQueue.h:
 
 MQTT/MQTTSettings.h:
 

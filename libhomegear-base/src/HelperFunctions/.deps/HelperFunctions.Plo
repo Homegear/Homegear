@@ -321,7 +321,7 @@ HelperFunctions/HelperFunctions.lo: HelperFunctions/HelperFunctions.cpp \
  HelperFunctions/../Threads/../Output/Output.h \
  HelperFunctions/../SSDP/SSDP.h \
  HelperFunctions/../SSDP/../Encoding/HTTP.h \
- HelperFunctions/../SSDP/../Variable.h \
+ HelperFunctions/../SSDP/../Variable.h HelperFunctions/../IQueue.h \
  /usr/include/x86_64-linux-gnu/sys/resource.h \
  /usr/include/x86_64-linux-gnu/bits/resource.h
 
@@ -1118,6 +1118,8 @@ HelperFunctions/../SSDP/SSDP.h:
 HelperFunctions/../SSDP/../Encoding/HTTP.h:
 
 HelperFunctions/../SSDP/../Variable.h:
+
+HelperFunctions/../IQueue.h:
 
 /usr/include/x86_64-linux-gnu/sys/resource.h:
 

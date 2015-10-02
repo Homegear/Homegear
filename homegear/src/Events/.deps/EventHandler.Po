@@ -321,7 +321,8 @@ Events/EventHandler.o: Events/EventHandler.cpp /usr/include/stdc-predef.h \
  /usr/include/homegear-base/Output/Output.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
- /usr/include/homegear-base/Variable.h Events/../RPC/Server.h \
+ /usr/include/homegear-base/Variable.h \
+ /usr/include/homegear-base/IQueue.h Events/../RPC/Server.h \
  Events/../RPC/RPCServer.h Events/../RPC/RPCMethod.h Events/../RPC/Auth.h \
  Events/../RPC/../User/User.h Events/../RPC/Webserver.h \
  Events/../RPC/RPCMethods.h Events/../RPC/../Events/EventHandler.h \
@@ -1131,6 +1132,8 @@ Events/../../config.h:
 /usr/include/homegear-base/Encoding/HTTP.h:
 
 /usr/include/homegear-base/Variable.h:
+
+/usr/include/homegear-base/IQueue.h:
 
 Events/../RPC/Server.h:
 

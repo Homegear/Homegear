@@ -320,7 +320,8 @@ UPnP/UPnP.o: UPnP/UPnP.cpp /usr/include/stdc-predef.h UPnP/UPnP.h \
  /usr/include/homegear-base/Output/Output.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
- /usr/include/homegear-base/Variable.h UPnP/../GD/GD.h \
+ /usr/include/homegear-base/Variable.h \
+ /usr/include/homegear-base/IQueue.h UPnP/../GD/GD.h \
  UPnP/../GD/../../config.h UPnP/../GD/../ScriptEngine/ScriptEngine.h \
  UPnP/../GD/../ScriptEngine/php_config_fixes.h /usr/include/wordexp.h \
  UPnP/../GD/../CLI/CLIServer.h UPnP/../GD/../CLI/../User/User.h \
@@ -1132,6 +1133,8 @@ UPnP/UPnP.h:
 /usr/include/homegear-base/Encoding/HTTP.h:
 
 /usr/include/homegear-base/Variable.h:
+
+/usr/include/homegear-base/IQueue.h:
 
 UPnP/../GD/GD.h:
 

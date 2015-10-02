@@ -320,7 +320,8 @@ RPC/Client.o: RPC/Client.cpp /usr/include/stdc-predef.h RPC/Client.h \
  /usr/include/homegear-base/Output/Output.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
- /usr/include/homegear-base/Variable.h RPC/Auth.h RPC/../User/User.h \
+ /usr/include/homegear-base/Variable.h \
+ /usr/include/homegear-base/IQueue.h RPC/Auth.h RPC/../User/User.h \
  RPC/RemoteRpcServer.h RPC/../GD/GD.h RPC/../GD/../../config.h \
  RPC/../GD/../ScriptEngine/ScriptEngine.h \
  RPC/../GD/../ScriptEngine/php_config_fixes.h /usr/include/wordexp.h \
@@ -1133,6 +1134,8 @@ RPC/ClientSettings.h:
 /usr/include/homegear-base/Encoding/HTTP.h:
 
 /usr/include/homegear-base/Variable.h:
+
+/usr/include/homegear-base/IQueue.h:
 
 RPC/Auth.h:
 

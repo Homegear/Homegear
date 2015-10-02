@@ -298,7 +298,8 @@ Systems/IPhysicalInterface.lo: Systems/IPhysicalInterface.cpp \
  Systems/../Systems/UpdateInfo.h Systems/../Threads/Threads.h \
  Systems/../Threads/../Exception.h Systems/../Threads/../Output/Output.h \
  Systems/../SSDP/SSDP.h Systems/../SSDP/../Encoding/HTTP.h \
- Systems/../SSDP/../Variable.h /usr/include/x86_64-linux-gnu/sys/stat.h
+ Systems/../SSDP/../Variable.h Systems/../IQueue.h \
+ /usr/include/x86_64-linux-gnu/sys/stat.h
 
 /usr/include/stdc-predef.h:
 
@@ -1095,5 +1096,7 @@ Systems/../SSDP/SSDP.h:
 Systems/../SSDP/../Encoding/HTTP.h:
 
 Systems/../SSDP/../Variable.h:
+
+Systems/../IQueue.h:
 
 /usr/include/x86_64-linux-gnu/sys/stat.h:

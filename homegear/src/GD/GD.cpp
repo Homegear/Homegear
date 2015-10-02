@@ -51,7 +51,7 @@ RPC::ClientSettings GD::clientSettings;
 PhysicalInterfaces GD::physicalInterfaces;
 std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>> GD::deviceFamilies;
 std::unique_ptr<UPnP> GD::uPnP(new UPnP());
-std::unique_ptr<MQTT> GD::mqtt(new MQTT());
+std::unique_ptr<MQTT> GD::mqtt;
 #ifdef EVENTHANDLER
 EventHandler GD::eventHandler;
 #endif

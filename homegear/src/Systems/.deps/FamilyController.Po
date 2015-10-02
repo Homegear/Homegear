@@ -321,7 +321,8 @@ Systems/FamilyController.o: Systems/FamilyController.cpp \
  /usr/include/homegear-base/Output/Output.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
- /usr/include/homegear-base/Variable.h /usr/include/dlfcn.h \
+ /usr/include/homegear-base/Variable.h \
+ /usr/include/homegear-base/IQueue.h /usr/include/dlfcn.h \
  /usr/include/x86_64-linux-gnu/bits/dlfcn.h Systems/../GD/GD.h \
  Systems/../GD/../../config.h \
  Systems/../GD/../ScriptEngine/ScriptEngine.h \
@@ -1135,6 +1136,8 @@ Systems/FamilyController.h:
 /usr/include/homegear-base/Encoding/HTTP.h:
 
 /usr/include/homegear-base/Variable.h:
+
+/usr/include/homegear-base/IQueue.h:
 
 /usr/include/dlfcn.h:
 

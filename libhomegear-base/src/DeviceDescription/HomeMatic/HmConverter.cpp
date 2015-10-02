@@ -668,7 +668,6 @@ void HmConverter::convertParameter(std::shared_ptr<HomeMaticParameter> homematic
 		if(!homematicParameter->physicalParameter->valueID.empty() && !homematicParameter->physicalParameter->id.empty() && homematicParameter->physicalParameter->id != homematicParameter->id) _bl->out.printWarning("Warning: id and value_id of physical are set. That's not allowed.");
 		parameter->physical->groupId = homematicParameter->physicalParameter->valueID;
 		if(parameter->physical->groupId.empty()) parameter->physical->groupId = homematicParameter->physicalParameter->id;
-		if(parameter->physical->groupId.empty()) parameter->physical->groupId = homematicParameter->id;
 		parameter->physical->index = homematicParameter->physicalParameter->index;
 		if(homematicParameter->physicalParameter->list != 9999) parameter->physical->list = homematicParameter->physicalParameter->list;
 		parameter->physical->mask = homematicParameter->physicalParameter->mask;

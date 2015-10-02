@@ -296,7 +296,7 @@ Systems/Peer.lo: Systems/Peer.cpp /usr/include/stdc-predef.h \
  Systems/../Systems/UpdateInfo.h Systems/../Threads/Threads.h \
  Systems/../Threads/../Exception.h Systems/../Threads/../Output/Output.h \
  Systems/../SSDP/SSDP.h Systems/../SSDP/../Encoding/HTTP.h \
- Systems/../SSDP/../Variable.h
+ Systems/../SSDP/../Variable.h Systems/../IQueue.h
 
 /usr/include/stdc-predef.h:
 
@@ -1097,3 +1097,5 @@ Systems/../SSDP/SSDP.h:
 Systems/../SSDP/../Encoding/HTTP.h:
 
 Systems/../SSDP/../Variable.h:
+
+Systems/../IQueue.h:

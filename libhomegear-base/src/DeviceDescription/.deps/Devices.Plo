@@ -316,7 +316,7 @@ DeviceDescription/Devices.lo: DeviceDescription/Devices.cpp \
  DeviceDescription/../Threads/../Output/Output.h \
  DeviceDescription/../SSDP/SSDP.h \
  DeviceDescription/../SSDP/../Encoding/HTTP.h \
- DeviceDescription/../SSDP/../Variable.h \
+ DeviceDescription/../SSDP/../Variable.h DeviceDescription/../IQueue.h \
  DeviceDescription/HomeMatic/HmConverter.h \
  DeviceDescription/HomeMatic/HmDevice.h \
  DeviceDescription/HomeMatic/../../Systems/Packet.h \
@@ -1121,6 +1121,8 @@ DeviceDescription/../SSDP/SSDP.h:
 DeviceDescription/../SSDP/../Encoding/HTTP.h:
 
 DeviceDescription/../SSDP/../Variable.h:
+
+DeviceDescription/../IQueue.h:
 
 DeviceDescription/HomeMatic/HmConverter.h:
 

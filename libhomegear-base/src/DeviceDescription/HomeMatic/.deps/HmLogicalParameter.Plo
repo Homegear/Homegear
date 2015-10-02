@@ -326,7 +326,8 @@ DeviceDescription/HomeMatic/HmLogicalParameter.lo: \
  DeviceDescription/HomeMatic/../../Threads/../Output/Output.h \
  DeviceDescription/HomeMatic/../../SSDP/SSDP.h \
  DeviceDescription/HomeMatic/../../SSDP/../Encoding/HTTP.h \
- DeviceDescription/HomeMatic/../../SSDP/../Variable.h
+ DeviceDescription/HomeMatic/../../SSDP/../Variable.h \
+ DeviceDescription/HomeMatic/../../IQueue.h
 
 /usr/include/stdc-predef.h:
 
@@ -1123,3 +1124,5 @@ DeviceDescription/HomeMatic/../../SSDP/SSDP.h:
 DeviceDescription/HomeMatic/../../SSDP/../Encoding/HTTP.h:
 
 DeviceDescription/HomeMatic/../../SSDP/../Variable.h:
+
+DeviceDescription/HomeMatic/../../IQueue.h:

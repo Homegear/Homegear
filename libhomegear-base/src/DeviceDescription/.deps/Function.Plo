@@ -320,7 +320,7 @@ DeviceDescription/Function.lo: DeviceDescription/Function.cpp \
  DeviceDescription/../Threads/../Output/Output.h \
  DeviceDescription/../SSDP/SSDP.h \
  DeviceDescription/../SSDP/../Encoding/HTTP.h \
- DeviceDescription/../SSDP/../Variable.h
+ DeviceDescription/../SSDP/../Variable.h DeviceDescription/../IQueue.h
 
 /usr/include/stdc-predef.h:
 
@@ -1117,3 +1117,5 @@ DeviceDescription/../SSDP/SSDP.h:
 DeviceDescription/../SSDP/../Encoding/HTTP.h:
 
 DeviceDescription/../SSDP/../Variable.h:
+
+DeviceDescription/../IQueue.h:

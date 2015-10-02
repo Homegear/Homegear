@@ -320,7 +320,8 @@ RPC/RPCMethods.o: RPC/RPCMethods.cpp /usr/include/stdc-predef.h \
  /usr/include/homegear-base/Output/Output.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
- /usr/include/homegear-base/Variable.h RPC/RPCMethod.h RPC/Auth.h \
+ /usr/include/homegear-base/Variable.h \
+ /usr/include/homegear-base/IQueue.h RPC/RPCMethod.h RPC/Auth.h \
  RPC/../User/User.h RPC/Webserver.h RPC/../Events/EventHandler.h \
  RPC/../Events/../../config.h RPC/../Events/../RPC/Server.h \
  RPC/../Events/../RPC/RPCServer.h RPC/../Events/../RPC/RPCMethods.h \
@@ -1130,6 +1131,8 @@ RPC/RPCServer.h:
 /usr/include/homegear-base/Encoding/HTTP.h:
 
 /usr/include/homegear-base/Variable.h:
+
+/usr/include/homegear-base/IQueue.h:
 
 RPC/RPCMethod.h:
 

@@ -317,7 +317,8 @@ RPC/Server.o: RPC/Server.cpp /usr/include/stdc-predef.h RPC/Server.h \
  /usr/include/homegear-base/Output/Output.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
- /usr/include/homegear-base/Variable.h RPC/RPCServer.h RPC/RPCMethod.h \
+ /usr/include/homegear-base/Variable.h \
+ /usr/include/homegear-base/IQueue.h RPC/RPCServer.h RPC/RPCMethod.h \
  RPC/Auth.h RPC/../User/User.h RPC/Webserver.h RPC/RPCMethods.h \
  RPC/../Events/EventHandler.h RPC/../Events/../../config.h \
  RPC/../Events/../RPC/Server.h RPC/../GD/GD.h RPC/../GD/../../config.h \
@@ -1124,6 +1125,8 @@ RPC/Server.h:
 /usr/include/homegear-base/Encoding/HTTP.h:
 
 /usr/include/homegear-base/Variable.h:
+
+/usr/include/homegear-base/IQueue.h:
 
 RPC/RPCServer.h:
 

@@ -296,7 +296,7 @@ Output/Output.lo: Output/Output.cpp /usr/include/stdc-predef.h \
  Output/../Systems/UpdateInfo.h Output/../Threads/Threads.h \
  Output/../Threads/../Exception.h Output/../Threads/../Output/Output.h \
  Output/../SSDP/SSDP.h Output/../SSDP/../Encoding/HTTP.h \
- Output/../SSDP/../Variable.h
+ Output/../SSDP/../Variable.h Output/../IQueue.h
 
 /usr/include/stdc-predef.h:
 
@@ -1091,3 +1091,5 @@ Output/../SSDP/SSDP.h:
 Output/../SSDP/../Encoding/HTTP.h:
 
 Output/../SSDP/../Variable.h:
+
+Output/../IQueue.h:

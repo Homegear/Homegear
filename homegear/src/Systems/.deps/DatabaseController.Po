@@ -327,7 +327,8 @@ Systems/DatabaseController.o: Systems/DatabaseController.cpp \
  /usr/include/homegear-base/Output/Output.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
- /usr/include/homegear-base/Variable.h /usr/include/wordexp.h \
+ /usr/include/homegear-base/Variable.h \
+ /usr/include/homegear-base/IQueue.h /usr/include/wordexp.h \
  Systems/../GD/../CLI/CLIServer.h Systems/../GD/../CLI/../User/User.h \
  Systems/../GD/../CLI/../Systems/FamilyController.h /usr/include/dlfcn.h \
  /usr/include/x86_64-linux-gnu/bits/dlfcn.h \
@@ -1153,6 +1154,8 @@ Systems/../GD/../ScriptEngine/php_config_fixes.h:
 /usr/include/homegear-base/Encoding/HTTP.h:
 
 /usr/include/homegear-base/Variable.h:
+
+/usr/include/homegear-base/IQueue.h:
 
 /usr/include/wordexp.h:
 

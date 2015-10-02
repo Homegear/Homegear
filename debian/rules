@@ -1,105 +1,49 @@
 #!/usr/bin/make -f
 
-override_dh_auto_clean:
-	rm -Rf bin
-	rm -Rf obj
-
-override_dh_auto_configure:
-	# We can for example download needed files here.
-	# All shell commands are supported
-
 override_dh_auto_build:
-	dh_auto_build -- config=release
+	dh_auto_build -- -j4
 
 override_dh_auto_install:
-	dh_testdir
-	dh_testroot
-	dh_prep
-	dh_installdirs
-	mkdir -p $(CURDIR)/debian/homegear/usr/bin
-	cp $(CURDIR)/bin/Release/homegear $(CURDIR)/debian/homegear/usr/bin
-	chown root:root $(CURDIR)/debian/homegear/usr/bin/homegear
-	chmod 750 $(CURDIR)/debian/homegear/usr/bin/homegear
+	dh_auto_install
 	
 	mkdir -p $(CURDIR)/debian/homegear/etc/homegear
-	cp $(CURDIR)/Miscellaneous/main.conf $(CURDIR)/debian/homegear/etc/homegear
-	cp $(CURDIR)/Miscellaneous/rpcclients.conf $(CURDIR)/debian/homegear/etc/homegear
-	cp $(CURDIR)/Miscellaneous/rpcservers.conf $(CURDIR)/debian/homegear/etc/homegear
-	cp $(CURDIR)/Miscellaneous/mqtt.conf $(CURDIR)/debian/homegear/etc/homegear
-	cp $(CURDIR)/Miscellaneous/physicalinterfaces.conf $(CURDIR)/debian/homegear/etc/homegear
+	cp $(CURDIR)/../misc/Config\ Directory/* $(CURDIR)/debian/homegear/etc/homegear
 	chmod 755 $(CURDIR)/debian/homegear/etc/homegear
 	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/*
-	
-	mkdir -p $(CURDIR)/debian/homegear/etc/homegear/devices/2
-	cp $(CURDIR)/Miscellaneous/Device\ Description\ Files/INSTEON/* $(CURDIR)/debian/homegear/etc/homegear/devices/2
-	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/devices
-	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/devices/2
-	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/devices/2/*
-	
-	mkdir -p $(CURDIR)/debian/homegear/etc/homegear/devices/4
-	cp $(CURDIR)/Miscellaneous/Device\ Description\ Files/MAX/* $(CURDIR)/debian/homegear/etc/homegear/devices/4
-	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/devices/4
-	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/devices/4/*
-	
-	mkdir -p $(CURDIR)/debian/homegear/etc/homegear/devices/5
-	cp $(CURDIR)/Miscellaneous/Device\ Description\ Files/Philips\ hue/* $(CURDIR)/debian/homegear/etc/homegear/devices/5
-	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/devices/5
-	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/devices/5/*
-	
-	mkdir -p $(CURDIR)/debian/homegear/etc/homegear/devices/6
-	cp $(CURDIR)/Miscellaneous/Device\ Description\ Files/Sonos/* $(CURDIR)/debian/homegear/etc/homegear/devices/6
-	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/devices/6
-	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/devices/6/*
-	
+		
 	mkdir -p $(CURDIR)/debian/homegear/etc/homegear/devices/254
-	cp $(CURDIR)/Miscellaneous/Device\ Description\ Files/Miscellaneous/* $(CURDIR)/debian/homegear/etc/homegear/devices/254
+	cp $(CURDIR)/../homegear-miscellaneous/misc/Device\ Description\ Files/* $(CURDIR)/debian/homegear/etc/homegear/devices/254
 	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/devices/254
 	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/devices/254/*
-	
+
 	chown -R root:root $(CURDIR)/debian/homegear/etc/homegear
+	
 	mkdir -p $(CURDIR)/debian/homegear/etc/init.d
 	cp $(CURDIR)/Miscellaneous/homegear $(CURDIR)/debian/homegear/etc/init.d
 	chown root:root $(CURDIR)/debian/homegear/etc/init.d/homegear
 	chmod 755 $(CURDIR)/debian/homegear/etc/init.d/homegear
+	
 	mkdir -p $(CURDIR)/debian/homegear/etc/logrotate.d
-	cp $(CURDIR)/Miscellaneous/logrotate $(CURDIR)/debian/homegear/etc/logrotate.d/homegear
+	cp $(CURDIR)/../misc/System\ Config/logrotate $(CURDIR)/debian/homegear/etc/logrotate.d/homegear
 	chown root:root $(CURDIR)/debian/homegear/etc/logrotate.d/homegear
 	chmod 644 $(CURDIR)/debian/homegear/etc/logrotate.d/homegear
+	
 	mkdir -p $(CURDIR)/debian/homegear/etc/security/limits.d
 	chown root:root $(CURDIR)/debian/homegear/etc/security/limits.d
 	echo "homegear        soft    rtprio          100" > $(CURDIR)/debian/homegear/etc/security/limits.d/homegear
 	echo "homegear        hard    rtprio          100" >> $(CURDIR)/debian/homegear/etc/security/limits.d/homegear
 	chown root:root $(CURDIR)/debian/homegear/etc/security/limits.d/homegear
 	chmod 644 $(CURDIR)/debian/homegear/etc/security/limits.d/homegear
-	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear/scripts
-	cp -R $(CURDIR)/Miscellaneous/scriptsDir/* $(CURDIR)/debian/homegear/var/lib/homegear/scripts
-	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear/scripts
-	chmod -R 550 $(CURDIR)/debian/homegear/var/lib/homegear/scripts
-	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear/firmware
-	cp $(CURDIR)/Miscellaneous/firmwareDir/GetFirmwareUpdates.sh $(CURDIR)/debian/homegear/var/lib/homegear/firmware
-	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear/firmware
-	chmod -R 550 $(CURDIR)/debian/homegear/var/lib/homegear/firmware
-	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear/modules
-	cp $(CURDIR)/lib/Modules/Release/*.so $(CURDIR)/debian/homegear/var/lib/homegear/modules
-	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear/modules
-	chmod -R 550 $(CURDIR)/debian/homegear/var/lib/homegear/modules
-	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear/www
-	cp -R $(CURDIR)/Miscellaneous/www/* $(CURDIR)/debian/homegear/var/lib/homegear/www
-	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear/www
-	chmod -R 550 $(CURDIR)/debian/homegear/var/lib/homegear/www
-	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear/audio
-	cp -R $(CURDIR)/Miscellaneous/audio/* $(CURDIR)/debian/homegear/var/lib/homegear/audio
-	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear/audio
-	chmod -R 550 $(CURDIR)/debian/homegear/var/lib/homegear/audio
-	cp $(CURDIR)/Miscellaneous/GetDeviceFiles.sh $(CURDIR)/debian/homegear/var/lib/homegear
-	chown root:root $(CURDIR)/debian/homegear/var/lib/homegear/GetDeviceFiles.sh
-	chmod 755 $(CURDIR)/debian/homegear/var/lib/homegear/GetDeviceFiles.sh
-	cp $(CURDIR)/Miscellaneous/DeviceTypePatch.patch $(CURDIR)/debian/homegear/var/lib/homegear
-	chown root:root $(CURDIR)/debian/homegear/var/lib/homegear/DeviceTypePatch.patch
-	chmod 644 $(CURDIR)/debian/homegear/var/lib/homegear/DeviceTypePatch.patch
-	
-# override_dh_shlibdeps:
-#	dh_shlibdeps -l/usr/lib/php5 --dpkg-shlibdeps-params=--ignore-missing-info
+
+	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear
+	cp -R $(CURDIR)/../misc/State\ Directory/* $(CURDIR)/debian/homegear/var/lib/homegear
+	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear
+	chmod -R 550 $(CURDIR)/debian/homegear/var/lib/homegear
+
+	mkdir -p $(CURDIR)/debian/homegear/usr/share/homegear
+	cp $(CURDIR)/../misc/Data\ Directory/* $(CURDIR)/debian/homegear/usr/share/homegear
+	chown -R root:root $(CURDIR)/debian/homegear/usr/share/homegear
+	chmod -R 550 $(CURDIR)/debian/homegear/usr/share/homegear
 
 override_dh_strip:
 	dh_strip --dbg-package=homegear

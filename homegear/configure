@@ -586,7 +586,6 @@ PACKAGE_BUGREPORT='sathya@laufers.net'
 PACKAGE_URL=''
 
 ac_unique_file="src/main.cpp"
-ac_default_prefix=/usr
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>
@@ -3020,7 +3019,6 @@ END
 fi
 
 ac_config_headers="$ac_config_headers config.h"
-
 
 
 

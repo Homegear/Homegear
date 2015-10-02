@@ -321,7 +321,8 @@ Systems/PhysicalInterfaces.o: Systems/PhysicalInterfaces.cpp \
  /usr/include/homegear-base/Output/Output.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
- /usr/include/homegear-base/Variable.h Systems/../GD/GD.h \
+ /usr/include/homegear-base/Variable.h \
+ /usr/include/homegear-base/IQueue.h Systems/../GD/GD.h \
  Systems/../GD/../../config.h \
  Systems/../GD/../ScriptEngine/ScriptEngine.h \
  Systems/../GD/../ScriptEngine/php_config_fixes.h /usr/include/wordexp.h \
@@ -1135,6 +1136,8 @@ Systems/PhysicalInterfaces.h:
 /usr/include/homegear-base/Encoding/HTTP.h:
 
 /usr/include/homegear-base/Variable.h:
+
+/usr/include/homegear-base/IQueue.h:
 
 Systems/../GD/GD.h:
 

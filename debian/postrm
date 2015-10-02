@@ -7,17 +7,18 @@ case "$1" in
 
 		;;
 
-        purge)
-                rm -Rf /etc/homegear > /dev/null 2>&1
-                rm -Rf /var/lib/homegear > /dev/null 2>&1
-                rm -Rf /var/log/homegear > /dev/null 2>&1
-                rm -Rf /var/run/homegear > /dev/null 2>&1
-                insserv -rf homegear >/dev/null 2>&1
-                rm -f /etc/init.d/homegear > /dev/null 2>&1
-                rm -f /etc/logrotate.d/homegear > /dev/null 2>&1
-                rm -f /etc/security/limits.d/homegear > /dev/null 2>&1
+	purge)
+		insserv -rf homegear >/dev/null 2>&1
+		rm -Rf /etc/homegear > /dev/null 2>&1
+		rm -Rf /var/lib/homegear > /dev/null 2>&1
+		rm -Rf /usr/share/homegear > /dev/null 2>&1
+		rm -Rf /var/log/homegear > /dev/null 2>&1
+		rm -Rf /var/run/homegear > /dev/null 2>&1
+		rm -f /etc/init.d/homegear > /dev/null 2>&1
+		rm -f /etc/logrotate.d/homegear > /dev/null 2>&1
+		rm -f /etc/security/limits.d/homegear > /dev/null 2>&1
 		deluser homegear > /dev/null 2>&1
-                ;;
+        ;;
 
 	disappear)
 		;;

@@ -297,7 +297,7 @@ Threads/Threads.lo: Threads/Threads.cpp /usr/include/stdc-predef.h \
  Threads/../Systems/SystemFactory.h Threads/../Systems/DeviceFamily.h \
  Threads/../Systems/UpdateInfo.h Threads/../Threads/Threads.h \
  Threads/../SSDP/SSDP.h Threads/../SSDP/../Encoding/HTTP.h \
- Threads/../SSDP/../Variable.h
+ Threads/../SSDP/../Variable.h Threads/../IQueue.h
 
 /usr/include/stdc-predef.h:
 
@@ -1092,3 +1092,5 @@ Threads/../SSDP/SSDP.h:
 Threads/../SSDP/../Encoding/HTTP.h:
 
 Threads/../SSDP/../Variable.h:
+
+Threads/../IQueue.h:

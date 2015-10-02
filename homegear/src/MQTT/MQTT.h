@@ -33,7 +33,7 @@
 #include "homegear-base/BaseLib.h"
 #include "MQTTSettings.h"
 
-class MQTT
+class MQTT : public BaseLib::IQueue
 {
 public:
 	MQTT();
@@ -58,23 +58,22 @@ public:
 	 */
 	void messageReceived(std::vector<char>& payload);
 private:
+	class QueueEntry : public BaseLib::IQueueEntry
+	{
+	public:
+		QueueEntry() {}
+		QueueEntry(std::shared_ptr<std::pair<std::string, std::vector<char>>>& message) { this->message = message; }
+		virtual ~QueueEntry() {}
+
+		std::shared_ptr<std::pair<std::string, std::vector<char>>> message;
+	};
+
 	BaseLib::Output _out;
 	MQTTSettings _settings;
 	std::unique_ptr<BaseLib::RPC::JsonEncoder> _jsonEncoder;
 	std::unique_ptr<BaseLib::RPC::JsonDecoder> _jsonDecoder;
 
-	static const int32_t _messageBufferSize = 1000;
-	std::mutex _messageBufferMutex;
-	int32_t _messageBufferHead = 0;
-	int32_t _messageBufferTail = 0;
-	std::shared_ptr<std::pair<std::string, std::vector<char>>> _messageBuffer[_messageBufferSize];
-	std::mutex _messageProcessingThreadMutex;
-	std::thread _messageProcessingThread;
-	bool _messageProcessingMessageAvailable = false;
-	std::condition_variable _messageProcessingConditionVariable;
-	bool _stopMessageProcessingThread = false;
 	bool _started = false;
-
 	void* _connectionOptions = nullptr;
 	void* _sslOptions = nullptr;
 	void* _client = nullptr;
@@ -84,6 +83,7 @@ private:
 	void connect();
 	void disconnect();
 	void processMessages();
+	void processQueueEntry(std::shared_ptr<BaseLib::IQueueEntry>& entry);
 
 	/**
 	 * Publishes data to the MQTT broker.

@@ -271,7 +271,7 @@ BaseLib.lo: BaseLib.cpp /usr/include/stdc-predef.h BaseLib.h \
  Systems/Peer.h Systems/SystemFactory.h Systems/DeviceFamily.h \
  Systems/UpdateInfo.h Threads/Threads.h Threads/../Exception.h \
  Threads/../Output/Output.h SSDP/SSDP.h SSDP/../Encoding/HTTP.h \
- SSDP/../Variable.h
+ SSDP/../Variable.h IQueue.h
 
 /usr/include/stdc-predef.h:
 
@@ -1064,3 +1064,5 @@ SSDP/SSDP.h:
 SSDP/../Encoding/HTTP.h:
 
 SSDP/../Variable.h:
+
+IQueue.h:

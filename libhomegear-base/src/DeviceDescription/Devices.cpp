@@ -403,8 +403,59 @@ std::shared_ptr<HomegearDevice> Devices::loadHomeMatic(std::string& filepath)
 				frame->parameters.push_back(parameter);
 				homeMaticDevice->framesByID["SET_TEMPERATURE_INFO"] = frame;
 			}
+			frameIterator = homeMaticDevice->framesByID.find("WINDOW_STATE_SET");
+			if(frameIterator == homeMaticDevice->framesByID.end())
+			{
+				std::shared_ptr<HmDeviceDescription::DeviceFrame> frame(new HmDeviceDescription::DeviceFrame(_bl));
+				frame->id = "WINDOW_STATE_SET";
+				frame->direction = HmDeviceDescription::DeviceFrame::Direction::Enum::toDevice;
+				frame->type = 0x41;
+				frame->subtype = 0x01;
+				frame->subtypeIndex = 9;
+				HmDeviceDescription::HomeMaticParameter parameter(_bl);
+				parameter.type = HmDeviceDescription::PhysicalParameter::Type::Enum::typeInteger;
+				parameter.index = 10.0;
+				parameter.size = 1.0;
+				parameter.constValue = 1;
+				frame->parameters.push_back(parameter);
+				parameter = HmDeviceDescription::HomeMaticParameter(_bl);
+				parameter.type = HmDeviceDescription::PhysicalParameter::Type::Enum::typeInteger;
+				parameter.index = 11.0;
+				parameter.size = 1.0;
+				parameter.param = "WINDOW_STATE";
+				frame->parameters.push_back(parameter);
+				homeMaticDevice->framesByID["WINDOW_STATE_SET"] = frame;
+			}
 
-			std::map<uint32_t, std::shared_ptr<HmDeviceDescription::DeviceChannel>>::iterator channelIterator = homeMaticDevice->channels.find(2);
+			std::map<uint32_t, std::shared_ptr<HmDeviceDescription::DeviceChannel>>::iterator channelIterator = homeMaticDevice->channels.find(3);
+			if(channelIterator != homeMaticDevice->channels.end() && channelIterator->second)
+			{
+				std::map<HmDeviceDescription::ParameterSet::Type::Enum, std::shared_ptr<HmDeviceDescription::ParameterSet>>::iterator paramsetIterator = channelIterator->second->parameterSets.find(HmDeviceDescription::ParameterSet::Type::Enum::values);
+				if(paramsetIterator != channelIterator->second->parameterSets.end() && paramsetIterator->second)
+				{
+					if(!paramsetIterator->second->getParameter("WINDOW_STATE"))
+					{
+						std::shared_ptr<HmDeviceDescription::HomeMaticParameter> parameter(new HmDeviceDescription::HomeMaticParameter(_bl));
+						parameter->id = "WINDOW_STATE";
+						parameter->control = "SWITCH.STATE";
+						parameter->logicalParameter.reset(new HmDeviceDescription::LogicalParameterBoolean(_bl));
+						parameter->logicalParameter->type = HmDeviceDescription::LogicalParameter::Type::Enum::typeBoolean;
+						parameter->logicalParameter->defaultValueExists = true;
+						parameter->physicalParameter->interface = HmDeviceDescription::PhysicalParameter::Interface::Enum::command;
+						parameter->physicalParameter->type = HmDeviceDescription::PhysicalParameter::Type::Enum::typeInteger;
+						parameter->physicalParameter->valueID = "WINDOW_STATE";
+						parameter->physicalParameter->setRequest = "WINDOW_STATE_SET";
+						std::shared_ptr<HmDeviceDescription::ParameterConversion> conversion(new HmDeviceDescription::ParameterConversion(_bl, parameter.get()));
+						conversion->type = HmDeviceDescription::ParameterConversion::Type::Enum::booleanInteger;
+						conversion->threshold = 1;
+						conversion->valueFalse = 0;
+						conversion->valueTrue = 200;
+						parameter->conversion.push_back(conversion);
+						paramsetIterator->second->parameters.push_back(parameter);
+					}
+				}
+			}
+			channelIterator = homeMaticDevice->channels.find(2);
 			if(channelIterator != homeMaticDevice->channels.end())
 			{
 				std::map<HmDeviceDescription::ParameterSet::Type::Enum, std::shared_ptr<HmDeviceDescription::ParameterSet>>::iterator paramsetIterator = channelIterator->second->parameterSets.find(HmDeviceDescription::ParameterSet::Type::Enum::values);
@@ -982,6 +1033,50 @@ std::shared_ptr<HomegearDevice> Devices::loadHomeMatic(std::string& filepath)
 						{
 							std::shared_ptr<HmDeviceDescription::PhysicalParameterEvent> eventFrame(new HmDeviceDescription::PhysicalParameterEvent());
 							eventFrame->frame = "INFO_POWERON";
+							parameter->physicalParameter->eventFrames.push_back(eventFrame);
+						}
+					}
+				}
+			}
+		}
+		else if(filename == "rf_sec_sco.xml")
+		{
+			std::map<std::string, std::shared_ptr<HmDeviceDescription::DeviceFrame>>::iterator frameIterator = homeMaticDevice->framesByID.find("INFO_LEVEL_LOWBAT");
+			if(frameIterator == homeMaticDevice->framesByID.end())
+			{
+				std::shared_ptr<HmDeviceDescription::DeviceFrame> frame(new HmDeviceDescription::DeviceFrame(_bl));
+				frame->id = "INFO_LEVEL_LOWBAT";
+				frame->direction = HmDeviceDescription::DeviceFrame::Direction::Enum::fromDevice;
+				frame->allowedReceivers = HmDeviceDescription::DeviceFrame::AllowedReceivers::Enum::central;
+				frame->isEvent = true;
+				frame->type = 0x10;
+				frame->subtype = 0x06;
+				frame->subtypeIndex = 9;
+				frame->fixedChannel = 0;
+				HmDeviceDescription::HomeMaticParameter parameter(_bl);
+				parameter.type = HmDeviceDescription::PhysicalParameter::Type::Enum::typeInteger;
+				parameter.index = 12.7;
+				parameter.size = 0.1;
+				parameter.param = "LOWBAT";
+				frame->parameters.push_back(parameter);
+				homeMaticDevice->framesByID["INFO_LEVEL_LOWBAT"] = frame;
+			}
+
+			std::map<uint32_t, std::shared_ptr<HmDeviceDescription::DeviceChannel>>::iterator channelIterator = homeMaticDevice->channels.find(0);
+			if(channelIterator != homeMaticDevice->channels.end() && channelIterator->second)
+			{
+				channelIterator->second->aesAlways = true;
+
+				std::map<HmDeviceDescription::ParameterSet::Type::Enum, std::shared_ptr<HmDeviceDescription::ParameterSet>>::iterator paramsetIterator = channelIterator->second->parameterSets.find(HmDeviceDescription::ParameterSet::Type::Enum::values);
+				if(paramsetIterator != channelIterator->second->parameterSets.end() && paramsetIterator->second)
+				{
+					std::shared_ptr<HmDeviceDescription::HomeMaticParameter> parameter = paramsetIterator->second->getParameter("LOWBAT");
+					if(parameter)
+					{
+						if(parameter->physicalParameter->eventFrames.empty())
+						{
+							std::shared_ptr<HmDeviceDescription::PhysicalParameterEvent> eventFrame(new HmDeviceDescription::PhysicalParameterEvent());
+							eventFrame->frame = "INFO_LEVEL_LOWBAT";
 							parameter->physicalParameter->eventFrames.push_back(eventFrame);
 						}
 					}

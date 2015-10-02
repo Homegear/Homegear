@@ -288,8 +288,8 @@ SSDP/SSDP.lo: SSDP/SSDP.cpp /usr/include/stdc-predef.h SSDP/SSDP.h \
  SSDP/../Systems/SystemFactory.h SSDP/../Systems/DeviceFamily.h \
  SSDP/../Systems/UpdateInfo.h SSDP/../Threads/Threads.h \
  SSDP/../Threads/../Exception.h SSDP/../Threads/../Output/Output.h \
- SSDP/../SSDP/SSDP.h SSDP/../Encoding/RapidXml/rapidxml.hpp \
- /usr/include/ifaddrs.h
+ SSDP/../SSDP/SSDP.h SSDP/../IQueue.h \
+ SSDP/../Encoding/RapidXml/rapidxml.hpp /usr/include/ifaddrs.h
 
 /usr/include/stdc-predef.h:
 
@@ -1082,6 +1082,8 @@ SSDP/../Threads/../Exception.h:
 SSDP/../Threads/../Output/Output.h:
 
 SSDP/../SSDP/SSDP.h:
+
+SSDP/../IQueue.h:
 
 SSDP/../Encoding/RapidXml/rapidxml.hpp:
 

@@ -298,7 +298,8 @@ Managers/FileDescriptorManager.lo: Managers/FileDescriptorManager.cpp \
  Managers/../Systems/DeviceFamily.h Managers/../Systems/UpdateInfo.h \
  Managers/../Threads/Threads.h Managers/../Threads/../Exception.h \
  Managers/../Threads/../Output/Output.h Managers/../SSDP/SSDP.h \
- Managers/../SSDP/../Encoding/HTTP.h Managers/../SSDP/../Variable.h
+ Managers/../SSDP/../Encoding/HTTP.h Managers/../SSDP/../Variable.h \
+ Managers/../IQueue.h
 
 /usr/include/stdc-predef.h:
 
@@ -1093,3 +1094,5 @@ Managers/../SSDP/SSDP.h:
 Managers/../SSDP/../Encoding/HTTP.h:
 
 Managers/../SSDP/../Variable.h:
+
+Managers/../IQueue.h:

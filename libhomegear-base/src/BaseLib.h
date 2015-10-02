@@ -33,6 +33,7 @@
 #include "Systems/UpdateInfo.h"
 #include "Threads/Threads.h"
 #include "SSDP/SSDP.h"
+#include "IQueue.h"
 
 namespace BaseLib
 {
