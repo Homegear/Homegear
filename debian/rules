@@ -35,8 +35,8 @@ override_dh_auto_install:
 	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear
 	cp -R $(CURDIR)/misc/State\ Directory/* $(CURDIR)/debian/homegear/var/lib/homegear
 	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear
-	find /var/lib/homegear -type d -exec chmod 550 {} \;
-	find /var/lib/homegear -type f -exec chmod 440 {} \;
+	find $(CURDIR)/debian/homegear/var/lib/homegear -type d -exec chmod 550 {} \;
+	find $(CURDIR)/debian/homegear/var/lib/homegear -type f -exec chmod 440 {} \;
 
 	mkdir -p $(CURDIR)/debian/homegear/usr/share/homegear
 	cp -R $(CURDIR)/misc/Data\ Directory/* $(CURDIR)/debian/homegear/usr/share/homegear
