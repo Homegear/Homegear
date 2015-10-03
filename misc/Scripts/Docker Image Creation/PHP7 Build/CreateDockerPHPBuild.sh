@@ -23,6 +23,12 @@ if test -z $1; then
 fi
 
 if test -z $2; then
+	echo "Please provide a valid Linux distribution version (wheezy, trusty, ...)."	
+	print_usage
+	exit 1
+fi
+
+if test -z $3; then
 	echo "Please provide a valid CPU architecture."	
 	print_usage
 	exit 1
@@ -31,6 +37,7 @@ fi
 scriptdir="$( cd "$(dirname $0)" && pwd )"
 dist=$1
 dist="$(tr '[:lower:]' '[:upper:]' <<< ${dist:0:1})${dist:1}"
+distlc="$(tr '[:upper:]' '[:lower:]' <<< ${dist:0:1})${dist:1}"
 distver=$2
 arch=$3
 if [ "$dist" == "Ubuntu" ]; then
@@ -364,7 +371,6 @@ EOF
 
 rm -Rf $rootfs
 
-dist="$(tr '[:upper:]' '[:lower:]' <<< ${dist:0:1})${dist:1}"
-docker build -t homegear/phpbuild:${dist}-${distver}-$arch "$dir"
+docker build -t homegear/phpbuild:${distlc}-${distver}-$arch "$dir"
 
 rm -Rf $dir
