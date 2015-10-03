@@ -87,7 +87,7 @@ chroot $rootfs apt-key add Release.key
 rm $rootfs/Release.key
 
 chroot $rootfs apt-get update
-chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgcrypt11-dev libgpg-error-dev libgnutls-dev php7-homegear-dev libssl-dev libcrypto++-dev g++-4.7 gcc-4.7
+chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgcrypt11-dev libgpg-error-dev libgnutls-dev php7-homegear-dev libssl-dev libxslt1-dev libedit-dev libmcrypt-dev libenchant-dev libqdbm-dev libcrypto++-dev g++-4.7 gcc-4.7 libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev
 
 rm $rootfs/usr/bin/g++
 rm $rootfs/usr/bin/gcc
@@ -99,13 +99,7 @@ cat > "$rootfs/build/CreateDebianPackageNightly.sh" <<-'EOF'
 #!/bin/bash
 
 cd /build
-wget https://github.com/Homegear/Homegear/archive/master.zip
-unzip master.zip
-rm master.zip
-version=$(head -n 1 Homegear-master/Version.h | cut -d " " -f3 | tr -d '"')
-sourcePath=homegear-$version
-mv Homegear-master $sourcePath
-cd $sourcePath
+
 revision=0
 wgetCount=0
 while [ $revision -eq 0 ] && [ $wgetCount -le 5 ]; do
@@ -123,13 +117,62 @@ if [ $revision -eq 0 ]; then
 	echo "Error: Could not get revision from GitHub."
 	exit 1
 fi
+
+# {{{ libhomegear-base
+wget https://github.com/Homegear/libhomegear-base/archive/master.zip
+unzip master.zip
+rm master.zip
+version=$(cat libhomegear-base-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
+sourcePath=libhomegear-base-$version
+mv libhomegear-base-master $sourcePath
+cd $sourcePath
+rm -Rf .* m4 cfg 1>/dev/null 2>&2
+libtoolize
+aclocal
+autoconf
+automake --add-missing
+rm -f config.status config.log
 cd ..
-rm -Rf $sourcePath/.* 1>/dev/null 2>&2
-rm -Rf $sourcePath/obj
-rm -Rf $sourcePath/bin
-sed -i 's/dh_auto_build -- config=release/dh_auto_build -- config=debug/g' $sourcePath/debian/rules
-sed -i 's/$(CURDIR)\/bin\/Release\/homegear/$(CURDIR)\/bin\/Debug\/homegear/g' $sourcePath/debian/rules
-sed -i 's/$(CURDIR)\/lib\/Modules\/Release\//$(CURDIR)\/lib\/Modules\/Debug\//g' $sourcePath/debian/rules
+sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
+sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
+sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
+sed -i 's/libgnutlsxx28/libgnutlsxx27/g' $sourcePath/debian/control
+tar -zcpf libhomegear-base_$version.orig.tar.gz $sourcePath
+cd $sourcePath
+dch -v $version-$revision -M "Version $version."
+debuild -us -uc
+cd ..
+rm -Rf $sourcePath
+rm libhomegear-base_$version-$revision_*.build
+rm libhomegear-base_$version-$revision_*.changes
+rm libhomegear-base_$version-$revision.debian.tar.?z
+rm libhomegear-base_$version-$revision.dsc
+rm libhomegear-base_$version.orig.tar.gz
+mv libhomegear-base*.deb libhomegear-base.deb
+if test -f libhomegear-base.deb; then
+	dpkg -i libhomegear-base.deb
+else
+	echo "Error building libhomegear-base."
+	exit 1
+fi
+# }}}
+
+# {{{ homegear
+wget https://github.com/Homegear/Homegear/archive/master.zip
+unzip master.zip
+rm master.zip
+version=$(cat Homegear-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
+sourcePath=homegear-$version
+mv Homegear-master $sourcePath
+cd $sourcePath
+rm -Rf .* m4 cfg homegear-miscellaneous/m4 homegear-miscellaneous/cfg 1>/dev/null 2>&2
+libtoolize
+aclocal
+autoconf
+automake --add-missing
+rm -f config.status config.log homegear-miscellaneous/config.status homegear-miscellaneous/config.log
+cd ..
+sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
 sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
 sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
@@ -146,10 +189,48 @@ rm homegear_$version-$revision.debian.tar.?z
 rm homegear_$version-$revision.dsc
 rm homegear_$version.orig.tar.gz
 mv homegear_$version-$revision_*.deb homegear.deb
+# }}}
+
+# {{{ homegear-homematicbidcos
+wget https://github.com/Homegear/Homegear-HomeMaticBidCoS/archive/master.zip
+unzip master.zip
+rm master.zip
+version=$(cat Homegear-HomeMaticBidCoS-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
+sourcePath=homegear-homematicbidcos-$version
+mv Homegear-HomeMaticBidCoS-master $sourcePath
+cd $sourcePath
+rm -Rf .* m4 cfg 1>/dev/null 2>&2
+libtoolize
+aclocal
+autoconf
+automake --add-missing
+rm -f config.status config.log
+cd ..
+sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
+sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
+sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
+sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
+sed -i 's/libgnutlsxx28/libgnutlsxx27/g' $sourcePath/debian/control
+tar -zcpf homegear-homematicbidcos_$version.orig.tar.gz $sourcePath
+cd $sourcePath
+dch -v $version-$revision -M "Version $version."
+debuild -us -uc
+cd ..
+rm -Rf $sourcePath
+rm homegear-homematicbidcos_$version-$revision_*.build
+rm homegear-homematicbidcos_$version-$revision_*.changes
+rm homegear-homematicbidcos_$version-$revision.debian.tar.?z
+rm homegear-homematicbidcos_$version-$revision.dsc
+rm homegear-homematicbidcos_$version.orig.tar.gz
+mv homegear-homematicbidcos*.deb homegear-homematicbidcos.deb
+# }}}
+
 if test -f homegear.deb; then
 	isodate=`date +%Y%m%d`
 EOF
-echo "	mv homegear.deb homegear_\$[isodate]_debian_wheezy_$arch.deb
+echo "	mv libhomegear-base.deb libhomegear-base_\$[isodate]_debian_wheezy_$arch.deb
+	mv homegear.deb homegear_\$[isodate]_debian_wheezy_$arch.deb
+	mv homegear-homematicbidcos.deb homegear-homematicbidcos_\$[isodate]_debian_wheezy_$arch.deb
 	/build/Upload.sh
 fi" >> $rootfs/build/CreateDebianPackageNightly.sh
 chmod 755 $rootfs/build/CreateDebianPackageNightly.sh
