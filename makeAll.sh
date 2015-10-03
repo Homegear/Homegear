@@ -9,10 +9,8 @@ elif [ -n "$1" ]; then
 	echo "  --with-base:	Compile base lib"
 	exit 0
 fi
-cd $SCRIPTDIR/homegear
+cd $SCRIPTDIR
 CPPFLAGS=-DDEBUG CXXFLAGS="-g -O0" && make -j8
-cd $SCRIPTDIR/homegear-miscellaneous
-CPPFLAGS=-DDEBUG CXXFLAGS="-g -O0" && make -j8 && make install
 cd $SCRIPTDIR/../homegear-sonos
 CPPFLAGS=-DDEBUG CXXFLAGS="-g -O0" && make -j8 && make install
 cd $SCRIPTDIR/../homegear-homematicbidcos

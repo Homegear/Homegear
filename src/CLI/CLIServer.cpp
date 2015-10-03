@@ -1,0 +1,940 @@
+/* Copyright 2013-2015 Sathya Laufer
+ *
+ * Homegear is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Homegear is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Homegear.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * In addition, as a special exception, the copyright holders give
+ * permission to link the code of portions of this program with the
+ * OpenSSL library under certain conditions as described in each
+ * individual source file, and distribute linked combinations
+ * including the two.
+ * You must obey the GNU General Public License in all respects
+ * for all of the code used other than OpenSSL.  If you modify
+ * file(s) with this exception, you may extend this exception to your
+ * version of the file(s), but you are not obligated to do so.  If you
+ * do not wish to do so, delete this exception statement from your
+ * version.  If you delete this exception statement from all source
+ * files in the program, then also delete it here.
+ */
+
+#include "CLIServer.h"
+#include "../GD/GD.h"
+#include "homegear-base/BaseLib.h"
+
+namespace CLI {
+
+int32_t Server::_currentClientID = 0;
+
+Server::Server()
+{
+}
+
+Server::~Server()
+{
+	stop();
+}
+
+void Server::collectGarbage()
+{
+	_garbageCollectionMutex.lock();
+	try
+	{
+		_lastGargabeCollection = GD::bl->hf.getTime();
+		std::vector<std::shared_ptr<ClientData>> clientsToRemove;
+		_stateMutex.lock();
+		try
+		{
+			for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) clientsToRemove.push_back(i->second);
+			}
+		}
+		catch(const std::exception& ex)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+		_stateMutex.unlock();
+		for(std::vector<std::shared_ptr<ClientData>>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
+		{
+			GD::out.printDebug("Debug: Joining read thread of CLI client " + std::to_string((*i)->id));
+			if((*i)->readThread.joinable()) (*i)->readThread.join();
+			_stateMutex.lock();
+			try
+			{
+				_clients.erase((*i)->id);
+			}
+			catch(const std::exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			_stateMutex.unlock();
+			GD::out.printDebug("Debug: CLI client " + std::to_string((*i)->id) + " removed.");
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _garbageCollectionMutex.unlock();
+}
+
+void Server::start()
+{
+	try
+	{
+		stop();
+		_stopServer = false;
+		_mainThread = std::thread(&Server::mainThread, this);
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void Server::stop()
+{
+	try
+	{
+		_stopServer = true;
+		if(_mainThread.joinable()) _mainThread.join();
+		GD::out.printDebug("Debug: Waiting for CLI client threads to finish.");
+		_stateMutex.lock();
+		for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+		{
+			closeClientConnection(i->second);
+		}
+		_stateMutex.unlock();
+		while(_clients.size() > 0)
+		{
+			collectGarbage();
+			if(_clients.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		unlink(GD::socketPath.c_str());
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void Server::closeClientConnection(std::shared_ptr<ClientData> client)
+{
+	try
+	{
+		if(!client) return;
+		GD::bl->fileDescriptorManager.close(client->fileDescriptor);
+		client->closed = true;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void Server::mainThread()
+{
+	try
+	{
+		getFileDescriptor(true); //Deletes an existing socket file
+		std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor;
+		while(!_stopServer)
+		{
+			try
+			{
+				_stateMutex.lock();
+				if(_clients.size() > GD::bl->settings.cliServerMaxConnections())
+				{
+					_stateMutex.unlock();
+					collectGarbage();
+					if(_clients.size() > GD::bl->settings.cliServerMaxConnections())
+					{
+						GD::out.printError("Error in CLI server: There are too many clients connected to me. Waiting for connections to close. You can increase the number of allowed connections in main.conf.");
+						std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+						continue;
+					}
+				}
+				_stateMutex.unlock();
+				getFileDescriptor();
+				if(!_serverFileDescriptor || _serverFileDescriptor->descriptor == -1)
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					continue;
+				}
+				clientFileDescriptor = getClientFileDescriptor();
+				if(!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
+			}
+			catch(const std::exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				continue;
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				continue;
+			}
+			catch(...)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				continue;
+			}
+			try
+			{
+				std::shared_ptr<ClientData> clientData = std::shared_ptr<ClientData>(new ClientData(clientFileDescriptor));
+				_stateMutex.lock();
+				clientData->id = _currentClientID++;
+				_clients[clientData->id] = clientData;
+				clientData->readThread = std::thread(&Server::readClient, this, clientData);
+			}
+			catch(const std::exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			_stateMutex.unlock();
+		}
+		GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+std::shared_ptr<BaseLib::FileDescriptor> Server::getClientFileDescriptor()
+{
+	std::shared_ptr<BaseLib::FileDescriptor> descriptor;
+	try
+	{
+		timeval timeout;
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
+		fd_set readFileDescriptor;
+		FD_ZERO(&readFileDescriptor);
+		GD::bl->fileDescriptorManager.lock();
+		int32_t nfds = _serverFileDescriptor->descriptor + 1;
+		if(nfds <= 0)
+		{
+			GD::bl->fileDescriptorManager.unlock();
+			GD::out.printError("Error: CLI server socket descriptor is invalid.");
+			return descriptor;
+		}
+		FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
+		GD::bl->fileDescriptorManager.unlock();
+		if(!select(nfds, &readFileDescriptor, NULL, NULL, &timeout))
+		{
+			if(GD::bl->hf.getTime() - _lastGargabeCollection > 60000 || _clients.size() > GD::bl->settings.cliServerMaxConnections() * 100 / 112) collectGarbage();
+			return descriptor;
+		}
+
+		sockaddr_un clientAddress;
+		socklen_t addressSize = sizeof(addressSize);
+		descriptor = GD::bl->fileDescriptorManager.add(accept(_serverFileDescriptor->descriptor, (struct sockaddr *) &clientAddress, &addressSize));
+		if(descriptor->descriptor == -1) return descriptor;
+		GD::out.printInfo("Info: CLI connection accepted. Client number: " + std::to_string(descriptor->id));
+
+		return descriptor;
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return descriptor;
+}
+
+void Server::getFileDescriptor(bool deleteOldSocket)
+{
+	try
+	{
+		struct stat sb;
+		if(stat(GD::runDir.c_str(), &sb) == -1)
+		{
+			if(errno == ENOENT) GD::out.printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear otherwise the command line interface won't work.");
+			else throw BaseLib::Exception("Error reading information of directory " + GD::runDir + ": " + strerror(errno));
+			_stopServer = true;
+			return;
+		}
+		if(!S_ISDIR(sb.st_mode))
+		{
+			GD::out.printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear otherwise the command line interface won't work.");
+			_stopServer = true;
+			return;
+		}
+		if(deleteOldSocket)
+		{
+			if(unlink(GD::socketPath.c_str()) == -1 && errno != ENOENT) throw(BaseLib::Exception("Couldn't delete existing socket: " + GD::socketPath + ". Error: " + strerror(errno)));
+		}
+		else if(stat(GD::socketPath.c_str(), &sb) == 0) return;
+
+		_serverFileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0));
+		if(_serverFileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't create socket: " + GD::socketPath + ". Error: " + strerror(errno)));
+		int32_t reuseAddress = 1;
+		if(setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (void*)&reuseAddress, sizeof(int32_t)) == -1)
+		{
+			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
+			throw(BaseLib::Exception("Couldn't set socket options: " + GD::socketPath + ". Error: " + strerror(errno)));
+		}
+		sockaddr_un serverAddress;
+		serverAddress.sun_family = AF_LOCAL;
+		//104 is the size on BSD systems - slightly smaller than in Linux
+		if(GD::socketPath.length() > 104)
+		{
+			//Check for buffer overflow
+			GD::out.printCritical("Critical: Socket path is too long.");
+			return;
+		}
+		strncpy(serverAddress.sun_path, GD::socketPath.c_str(), 104);
+		serverAddress.sun_path[103] = 0; //Just to make sure the string is null terminated.
+		bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*)&serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
+		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
+		{
+			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
+			throw BaseLib::Exception("Error: CLI server could not start listening. Error: " + std::string(strerror(errno)));
+		}
+		if(chmod(GD::socketPath.c_str(), S_IRWXU | S_IRGRP | S_IXGRP) == -1)
+		{
+			GD::out.printError("Error: chmod failed on unix socket \"" + GD::socketPath + "\".");
+		}
+		return;
+    }
+    catch(const std::exception& ex)
+    {
+    	GD::out.printError("Couldn't create socket file " + GD::socketPath + ": " + ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
+}
+
+void Server::readClient(std::shared_ptr<ClientData> clientData)
+{
+	try
+	{
+		std::string unselect = "unselect";
+		GD::familyController.handleCLICommand(unselect);
+		GD::familyController.handleCLICommand(unselect);
+		GD::familyController.handleCLICommand(unselect);
+		GD::familyController.handleCLICommand(unselect);
+
+		int32_t bufferMax = 1024;
+		char buffer[bufferMax + 1];
+		std::shared_ptr<std::vector<char>> packet(new std::vector<char>());
+		int32_t bytesRead;
+		GD::out.printDebug("Listening for incoming commands from client number " + std::to_string(clientData->fileDescriptor->id) + ".");
+		while(!_stopServer)
+		{
+			//Timeout needs to be set every time, so don't put it outside of the while loop
+			timeval timeout;
+			timeout.tv_sec = 2;
+			timeout.tv_usec = 0;
+			fd_set readFileDescriptor;
+			FD_ZERO(&readFileDescriptor);
+			GD::bl->fileDescriptorManager.lock();
+			int32_t nfds = clientData->fileDescriptor->descriptor + 1;
+			if(nfds <= 0)
+			{
+				GD::bl->fileDescriptorManager.unlock();
+				GD::out.printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
+				closeClientConnection(clientData);
+				return;
+			}
+			FD_SET(clientData->fileDescriptor->descriptor, &readFileDescriptor);
+			GD::bl->fileDescriptorManager.unlock();
+			bytesRead = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
+			if(bytesRead == 0) continue;
+			if(bytesRead != 1)
+			{
+				GD::out.printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
+				closeClientConnection(clientData);
+				return;
+			}
+
+			bytesRead = read(clientData->fileDescriptor->descriptor, buffer, bufferMax);
+			if(bytesRead <= 0)
+			{
+				GD::out.printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
+				closeClientConnection(clientData);
+				//If we close the socket, the socket file gets deleted. We don't want that
+				//GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
+				return;
+			}
+
+			std::string command;
+			command.insert(command.end(), buffer, buffer + bytesRead);
+			handleCommand(command, clientData);
+		}
+		closeClientConnection(clientData);
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+std::string Server::handleUserCommand(std::string& command)
+{
+	try
+	{
+		std::ostringstream stringStream;
+		if(command.compare(0, 10, "users help") == 0 || command.compare(0, 2, "uh") == 0)
+		{
+			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
+			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "users list (ul)\t\tLists all users." << std::endl;
+			stringStream << "users create (uc)\tCreate a new user." << std::endl;
+			stringStream << "users update (uu)\tChange the password of an existing user." << std::endl;
+			stringStream << "users delete (ud)\tDelete an existing user." << std::endl;
+			return stringStream.str();
+		}
+		if(command.compare(0, 10, "users list") == 0 || command.compare(0, 2, "ul") == 0 || command.compare(0, 2, "ls") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t offset = (command.at(1) == 'l') ? 0 : 1;
+			int32_t index = 0;
+			bool printHelp = false;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 1 + offset)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1 + offset && element == "help") printHelp = true;
+				else
+				{
+					printHelp = true;
+					break;
+				}
+				index++;
+			}
+			if(printHelp)
+			{
+				stringStream << "Description: This command lists all known users." << std::endl;
+				stringStream << "Usage: users list" << std::endl << std::endl;
+				return stringStream.str();
+			}
+
+			std::map<uint64_t, std::string> users;
+			User::getAll(users);
+			if(users.size() == 0) return "No users exist.\n";
+
+			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(30) << "Name" << std::endl;
+			for(std::map<uint64_t, std::string>::iterator i = users.begin(); i != users.end(); ++i)
+			{
+				if(i->second.size() < 2 || !i->second.at(0) || !i->second.at(1)) continue;
+				stringStream << std::setw(6) << i->first << std::setw(30) << i->second << std::endl;
+			}
+
+			return stringStream.str();
+		}
+		else if(command.compare(0, 12, "users create") == 0 || command.compare(0, 2, "uc") == 0)
+		{
+			std::string userName;
+			std::string password;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t offset = (command.at(1) == 'c') ? 0 : 1;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 1 + offset)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1 + offset)
+				{
+					if(element == "help") break;
+					else
+					{
+						userName = BaseLib::HelperFunctions::toLower(BaseLib::HelperFunctions::trim(element));
+						if(userName.empty() || !BaseLib::HelperFunctions::isAlphaNumeric(userName))
+						{
+							stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;
+							return stringStream.str();
+						}
+					}
+				}
+				else if(index == 2 + offset)
+				{
+					password = BaseLib::HelperFunctions::trim(element);
+
+					if(password.front() == '"' && password.back() == '"')
+					{
+						password = password.substr(1, password.size() - 2);
+						BaseLib::HelperFunctions::stringReplace(password, "\\\"", "\"");
+						BaseLib::HelperFunctions::stringReplace(password, "\\\\", "\\");
+					}
+					if(password.size() < 8)
+					{
+						stringStream << "The password is too short. Please choose a password with at least 8 characters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+			if(index < 3 + offset)
+			{
+				stringStream << "Description: This command creates a new user." << std::endl;
+				stringStream << "Usage: users create USERNAME \"PASSWORD\"" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  USERNAME:\tThe user name of the new user to create. It may contain alphanumeric characters, \"_\"" << std::endl;
+				stringStream << "           \tand \"-\". Example: foo" << std::endl;
+				stringStream << "  PASSWORD:\tThe password for the new user. All characters are allowed. If the password contains spaces," << std::endl;
+				stringStream << "           \twrap it in double quotes." << std::endl;
+				stringStream << "           \tExample: MyPassword" << std::endl;
+				stringStream << "           \tExample with spaces and escape characters: \"My_\\\\\\\"Password\" (Translates to: My_\\\"Password)" << std::endl;
+				return stringStream.str();
+			}
+
+			if(User::exists(userName)) return "A user with that name already exists.\n";
+
+			if(User::create(userName, password)) stringStream << "User successfully created." << std::endl;
+			else stringStream << "Error creating user. See log for more details." << std::endl;
+
+			return stringStream.str();
+		}
+		else if(command.compare(0, 12, "users update") == 0 || command.compare(0, 2, "uu") == 0)
+		{
+			std::string userName;
+			std::string password;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t offset = (command.at(1) == 'u') ? 0 : 1;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 1 + offset)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1 + offset)
+				{
+					if(element == "help") break;
+					else
+					{
+						userName = BaseLib::HelperFunctions::trim(element);
+						if(userName.empty() || !BaseLib::HelperFunctions::isAlphaNumeric(userName))
+						{
+							stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;
+							return stringStream.str();
+						}
+					}
+				}
+				else if(index == 2 + offset)
+				{
+					password = BaseLib::HelperFunctions::trim(element);
+
+					if(password.front() == '"' && password.back() == '"')
+					{
+						password = password.substr(1, password.size() - 2);
+						BaseLib::HelperFunctions::stringReplace(password, "\\\"", "\"");
+						BaseLib::HelperFunctions::stringReplace(password, "\\\\", "\\");
+					}
+					if(password.size() < 8)
+					{
+						stringStream << "The password is too short. Please choose a password with at least 8 characters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+			if(index < 3 + offset)
+			{
+				stringStream << "Description: This command sets a new password for an existing user." << std::endl;
+				stringStream << "Usage: users update USERNAME \"PASSWORD\"" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  USERNAME:\tThe user name of an existing user. Example: foo" << std::endl;
+				stringStream << "  PASSWORD:\tThe new password for the user. All characters are allowed. If the password contains spaces," << std::endl;
+				stringStream << "           \twrap it in double quotes." << std::endl;
+				stringStream << "           \tExample: MyPassword" << std::endl;
+				stringStream << "           \tExample with spaces and escape characters: \"My_\\\\\\\"Password\" (Translates to: My_\\\"Password)" << std::endl;
+				return stringStream.str();
+			}
+
+			if(!User::exists(userName)) return "The user doesn't exist.\n";
+
+			if(User::update(userName, password)) stringStream << "User successfully updated." << std::endl;
+			else stringStream << "Error updating user. See log for more details." << std::endl;
+
+			return stringStream.str();
+		}
+		else if(command.compare(0, 12, "users delete") == 0 || command.compare(0, 2, "ud") == 0)
+		{
+			std::string userName;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t offset = (command.at(1) == 'd') ? 0 : 1;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 1 + offset)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1 + offset)
+				{
+					if(element == "help") break;
+					else
+					{
+						userName = BaseLib::HelperFunctions::trim(element);
+						if(userName.empty() || !BaseLib::HelperFunctions::isAlphaNumeric(userName))
+						{
+							stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;
+							return stringStream.str();
+						}
+					}
+				}
+				index++;
+			}
+			if(index == 1 + offset)
+			{
+				stringStream << "Description: This command deletes an existing user." << std::endl;
+				stringStream << "Usage: users delete USERNAME" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  USERNAME:\tThe user name of the user to delete. Example: foo" << std::endl;
+				return stringStream.str();
+			}
+
+			if(!User::exists(userName)) return "The user doesn't exist.\n";
+
+			if(User::remove(userName)) stringStream << "User successfully deleted." << std::endl;
+			else stringStream << "Error deleting user. See log for more details." << std::endl;
+
+			return stringStream.str();
+		}
+		else return "Unknown command.\n";
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "Error executing command. See log file for more details.\n";
+}
+
+std::string Server::handleGlobalCommand(std::string& command)
+{
+	try
+	{
+		std::ostringstream stringStream;
+		if((command == "help" || command == "h") && !GD::familyController.familySelected())
+		{
+			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
+			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "debuglevel (dl)\t\tChanges the debug level" << std::endl;
+			stringStream << "runscript (rs)\t\tExecutes a script with the internal PHP engine" << std::endl;
+			stringStream << "rpcservers (rpc)\t\tLists all active RPC servers" << std::endl;
+			stringStream << "users [COMMAND]\t\tExecute user commands. Type \"users help\" for more information." << std::endl;
+			stringStream << "families [COMMAND]\tExecute device family commands. Type \"families help\" for more information." << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 10, "debuglevel") == 0 || (command.compare(0, 2, "dl") == 0 && !GD::familyController.familySelected()))
+		{
+			int32_t debugLevel = 3;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index == 0)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1)
+				{
+					if(element == "help") break;
+					debugLevel = BaseLib::Math::getNumber(element);
+					if(debugLevel < 0 || debugLevel > 10) return "Invalid debug level. Please provide a debug level between 0 and 10.\n";
+				}
+				index++;
+			}
+			if(index == 1)
+			{
+				stringStream << "Description: This command changes the current debug level temporarily until Homegear is restarted." << std::endl;
+				stringStream << "Usage: debuglevel DEBUGLEVEL" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  DEBUGLEVEL:\tThe debug level between 0 and 10." << std::endl;
+				return stringStream.str();
+			}
+
+			GD::bl->debugLevel = debugLevel;
+			stringStream << "Debug level set to " << debugLevel << "." << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 9, "runscript") == 0 || command.compare(0, 2, "rs") == 0)
+		{
+			std::string path;
+
+			std::stringstream stream(command);
+			std::string element;
+			std::stringstream arguments;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index == 0)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1)
+				{
+					if(element == "help" || element.empty()) break;
+					path = GD::bl->settings.scriptPath() + element;
+				}
+				else
+				{
+					arguments << element << " ";
+				}
+				index++;
+			}
+			if(index < 2)
+			{
+				stringStream << "Description: This command executes a script in the Homegear script folder using the internal PHP engine." << std::endl;
+				stringStream << "Usage: runscript PATH [ARGUMENTS]" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  PATH:\t\tPath relative to the Homegear scripts folder." << std::endl;
+				stringStream << "  ARGUMENTS:\tParameters passed to the script." << std::endl;
+				return stringStream.str();
+			}
+
+			std::shared_ptr<std::vector<char>> scriptOutput(new std::vector<char>());
+#ifdef SCRIPTENGINE
+			int32_t exitCode = 0;
+			GD::scriptEngine.execute(path, arguments.str(), scriptOutput, &exitCode);
+			if(scriptOutput->size() > 0)
+			{
+				std::string outputString(&scriptOutput->at(0), &scriptOutput->at(0) + scriptOutput->size());
+				stringStream << outputString << std::endl;
+			}
+			stringStream << "Exit code: " << std::dec << exitCode << std::endl;
+#else
+			stringStream << "This Homegear binary is compiled without script engine support." << std::endl;
+#endif
+			return stringStream.str();
+		}
+		else if(command.compare(0, 10, "rpcservers") == 0 || command.compare(0, 3, "rpc") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index == 0)
+				{
+					index++;
+					continue;
+				}
+				else
+				{
+					index++;
+					break;
+				}
+			}
+			if(index > 1)
+			{
+				stringStream << "Description: This command lists all active RPC servers." << std::endl;
+				stringStream << "Usage: rpcservers" << std::endl << std::endl;
+				return stringStream.str();
+			}
+
+			int32_t nameWidth = 20;
+			int32_t interfaceWidth = 20;
+			int32_t portWidth = 6;
+			int32_t sslWidth = 5;
+			int32_t authWidth = 5;
+			std::string nameCaption("Name");
+			std::string interfaceCaption("Interface");
+			nameCaption.resize(nameWidth, ' ');
+			interfaceCaption.resize(interfaceWidth, ' ');
+			stringStream << std::setfill(' ')
+				<< nameCaption << "  "
+				<< interfaceCaption << "  "
+				<< std::setw(portWidth) << "Port" << "  "
+				<< std::setw(sslWidth) << "SSL" << "  "
+				<< std::setw(authWidth) << "Auth" << "  "
+				<< std::endl;
+
+			//Safe to use without mutex
+			for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+			{
+				if(!i->second.isRunning()) continue;
+				const BaseLib::Rpc::PServerInfo settings = i->second.getInfo();
+				std::string name = settings->name;
+				if(name.size() > (unsigned)nameWidth)
+				{
+					name.resize(nameWidth - 3);
+					name += "...";
+				}
+				else name.resize(nameWidth, ' ');
+				std::string interface = settings->interface;
+				if(interface.size() > (unsigned)interfaceWidth)
+				{
+					interface.resize(interfaceWidth - 3);
+					interface += "...";
+				}
+				else interface.resize(interfaceWidth, ' ');
+				stringStream
+					<< name << "  "
+					<< interface << "  "
+					<< std::setw(portWidth) << settings->port << "  "
+					<< std::setw(sslWidth) << (settings->ssl ? "true" : "false") << "  "
+					<< std::setw(authWidth) << (settings->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic ? "basic" : "none") << "  "
+					<< std::endl;
+
+			}
+			return stringStream.str();
+		}
+		return "";
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "Error executing command. See log file for more details.\n";
+}
+
+void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> clientData)
+{
+	try
+	{
+		if(!command.empty() && command.at(0) == 0) return;
+		std::string response = handleGlobalCommand(command);
+		if(response.empty())
+		{
+			if(command.compare(0, 5, "users") == 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'u' && !GD::familyController.familySelected())) response = handleUserCommand(command);
+			else response = GD::familyController.handleCLICommand(command);
+		}
+		response.push_back(0);
+		if(send(clientData->fileDescriptor->descriptor, response.c_str(), response.size(), MSG_NOSIGNAL) == -1)
+		{
+			GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
+		}
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+} /* namespace CLI */

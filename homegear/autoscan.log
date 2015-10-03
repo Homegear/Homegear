@@ -1,5 +1,0 @@
-autoscan: warning: missing AC_PROG_LN_S wanted by: 
-	src/Libraries/MQTT/paho.mqtt.c/Makefile:231
-	src/Libraries/MQTT/paho.mqtt.c/Makefile:232
-	src/Libraries/MQTT/paho.mqtt.c/Makefile:233
-	src/Libraries/MQTT/paho.mqtt.c/Makefile:234
