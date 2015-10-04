@@ -356,7 +356,7 @@ void FamilyController::homegearStarted()
 {
 	try
 	{
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			if(i->second) i->second->homegearStarted();
 		}
@@ -379,7 +379,7 @@ void FamilyController::homegearShuttingDown()
 {
 	try
 	{
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			if(i->second) i->second->homegearShuttingDown();
 		}
@@ -398,7 +398,7 @@ void FamilyController::homegearShuttingDown()
     }
 }
 
-bool FamilyController::familyAvailable(BaseLib::Systems::DeviceFamilies family)
+bool FamilyController::familyAvailable(int32_t family)
 {
 	return GD::physicalInterfaces.count(family) > 0 || _familiesWithoutPhysicalInterface.find(family) != _familiesWithoutPhysicalInterface.end();
 }
@@ -430,6 +430,10 @@ void FamilyController::loadModules()
 			if(family)
 			{
 				if(!family->hasPhysicalInterface()) _familiesWithoutPhysicalInterface.insert(family->getFamily());
+				std::string name = family->getName();
+				BaseLib::HelperFunctions::toLower(name);
+				BaseLib::HelperFunctions::stringReplace(name, " ", "");
+				GD::deviceFamiliesByName[name] = family->getFamily();
 				GD::deviceFamilies[family->getFamily()].swap(family);
 			}
 		}
@@ -457,8 +461,8 @@ void FamilyController::init()
 {
 	try
 	{
-		std::vector<BaseLib::Systems::DeviceFamilies> familiesToRemove;
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::vector<int32_t> familiesToRemove;
+		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			if(!familyAvailable(i->first) || !i->second->init())
 			{
@@ -468,7 +472,7 @@ void FamilyController::init()
 				GD::physicalInterfaces.clear(i->first);
 			}
 		}
-		for(std::vector<BaseLib::Systems::DeviceFamilies>::iterator i = familiesToRemove.begin(); i != familiesToRemove.end(); ++i)
+		for(std::vector<int32_t>::iterator i = familiesToRemove.begin(); i != familiesToRemove.end(); ++i)
 		{
 			GD::deviceFamilies.at(*i)->dispose(); //Calls dispose
 			GD::deviceFamilies.erase(*i);
@@ -492,7 +496,7 @@ void FamilyController::load()
 {
 	try
 	{
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			if(familyAvailable(i->first))
 			{
@@ -523,7 +527,7 @@ void FamilyController::dispose()
 		_rpcCache.reset();
 		if(!GD::deviceFamilies.empty())
 		{
-			for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+			for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 			{
 				if(!i->second) continue;
 				i->second->dispose();
@@ -551,7 +555,7 @@ void FamilyController::save(bool full)
 	try
 	{
 		GD::out.printMessage("(Shutdown) => Saving devices");
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			if(i->second) i->second->save(full);
 		}
@@ -609,9 +613,9 @@ std::string FamilyController::handleCLICommand(std::string& command)
 				<< nameHeader
 				<< std::endl;
 			stringStream << "──────┼───────────────────────────────" << std::endl;
-			for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+			for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 			{
-				if(i->first == BaseLib::Systems::DeviceFamilies::none || !familyAvailable(i->first)) continue;
+				if(i->first == -1 || !familyAvailable(i->first)) continue;
 				std::string name = i->second->getName();
 				name.resize(nameWidth, ' ');
 				stringStream
@@ -623,7 +627,7 @@ std::string FamilyController::handleCLICommand(std::string& command)
 		}
 		else if(command.compare(0, 15, "families select") == 0 || command.compare(0, 2, "fs") == 0)
 		{
-			BaseLib::Systems::DeviceFamilies family = BaseLib::Systems::DeviceFamilies::none;
+			int32_t family = -1;
 
 			std::stringstream stream(command);
 			std::string element;
@@ -639,8 +643,8 @@ std::string FamilyController::handleCLICommand(std::string& command)
 				else if(index == 1 + offset)
 				{
 					if(element == "help") break;
-					family = (BaseLib::Systems::DeviceFamilies)BaseLib::Math::getNumber(element, false);
-					if(family == BaseLib::Systems::DeviceFamilies::none) return "Invalid family id.\n";
+					family = BaseLib::Math::getNumber(element, false);
+					if(family == -1) return "Invalid family id.\n";
 				}
 				index++;
 			}
@@ -651,9 +655,9 @@ std::string FamilyController::handleCLICommand(std::string& command)
 				stringStream << "Parameters:" << std::endl;
 				stringStream << "  FAMILYID:\tThe id of the family to select. Example: 1" << std::endl;
 				stringStream << "Supported families:" << std::endl;
-				for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+				for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 				{
-					if(i->first == BaseLib::Systems::DeviceFamilies::none || !familyAvailable(i->first)) continue;
+					if(i->first == -1 || !familyAvailable(i->first)) continue;
 					stringStream << "  FAMILYID: 0x" << std::hex << std::setfill('0') << std::setw(2) << (uint32_t)i->first << ":\t" << i->second->getName() << std::endl << std::dec;
 				}
 				return stringStream.str();
@@ -700,7 +704,7 @@ BaseLib::PVariable FamilyController::listFamilies()
 		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::VariableType::tArray));
 		if(_disposed) return array;
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = GD::deviceFamilies.at(i->first)->getCentral();
 			if(!central) continue;

@@ -455,7 +455,7 @@ int main(int argc, char* argv[])
     				GD::bl->settings.load(GD::configPath + "main.conf");
     				std::string inputFile(argv[i + 1]);
     				std::string outputFile(argv[i + 2]);
-    				BaseLib::DeviceDescription::Devices devices(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS);
+    				BaseLib::DeviceDescription::Devices devices(0);
     				devices.init(GD::bl.get());
 					std::shared_ptr<HomegearDevice> device = devices.load(inputFile);
 					if(!device) exit(1);
@@ -693,7 +693,7 @@ int main(int argc, char* argv[])
         //Wait for all interfaces to connect before setting booting to false
         {
 			std::vector<std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> interfaces;
-			for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+			for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 			{
 				std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> familyInterfaces = GD::physicalInterfaces.get(i->first);
 				for(std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>::iterator j = familyInterfaces.begin(); j != familyInterfaces.end(); ++j)

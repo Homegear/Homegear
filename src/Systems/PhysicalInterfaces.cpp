@@ -81,7 +81,7 @@ void PhysicalInterfaces::load(std::string filename)
 					if (input[ptr] == ']')
 					{
 						input[ptr] = '\0';
-						if(!settings->type.empty() && settings->family != BaseLib::Systems::DeviceFamilies::none)
+						if(!settings->type.empty() && settings->family != -1)
 						{
 							if(settings->id.empty()) settings->id = settings->type;
 							std::shared_ptr<BaseLib::Systems::IPhysicalInterface> device = GD::deviceFamilies.at(settings->family)->createPhysicalDevice(settings);
@@ -92,16 +92,13 @@ void PhysicalInterfaces::load(std::string filename)
 						settings.reset(new BaseLib::Systems::PhysicalInterfaceSettings());
 						std::string name(&input[1]);
 						BaseLib::HelperFunctions::toLower(name);
-						if(name == "homematicbidcos") settings->family = BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS;
-						else if(name == "homematicwired") settings->family = BaseLib::Systems::DeviceFamilies::HomeMaticWired;
-						else if(name == "insteon") settings->family = BaseLib::Systems::DeviceFamilies::INSTEON;
-						else if(name == "fs20") settings->family = BaseLib::Systems::DeviceFamilies::FS20;
-						else if(name == "max") settings->family = BaseLib::Systems::DeviceFamilies::MAX;
-						else if(name == "philipshue") settings->family = BaseLib::Systems::DeviceFamilies::PhilipsHue;
-						else if(name == "sonos") settings->family = BaseLib::Systems::DeviceFamilies::Sonos;
-						else if(name == "easycam") settings->family = BaseLib::Systems::DeviceFamilies::EASYCam;
-						if(GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end()) GD::out.printDebug("Debug: Reading config for physical device family " + GD::deviceFamilies.at(settings->family)->getName());
-						else GD::out.printError("Error in physicalinterfaces.conf: No module found for device family: " + name);
+						std::map<std::string, int32_t>::iterator familyIterator = GD::deviceFamiliesByName.find(name);
+						if(familyIterator == GD::deviceFamiliesByName.end()) GD::out.printError("Error in physicalinterfaces.conf: No module found for device family: " + name);
+						else
+						{
+							settings->family = familyIterator->second;
+							GD::out.printDebug("Debug: Reading config for physical device family " + GD::deviceFamilies.at(settings->family)->getName());
+						}
 						break;
 					}
 					ptr++;
@@ -143,7 +140,7 @@ void PhysicalInterfaces::load(std::string filename)
 				else if(name == "devicetype")
 				{
 					if(settings->type.length() > 0) GD::out.printWarning("Warning: deviceType in \"physicalinterfaces.conf\" is set multiple times within one device block. Is the family header missing (e. g. \"[HomeMaticBidCoS]\")?");
-					if(settings->family == BaseLib::Systems::DeviceFamilies::none) GD::out.printWarning("Warning: deviceType is set in \"physicalinterfaces.conf\" without defining the device family. Is the family header missing (e. g. \"[HomeMaticBidCoS]\")?");
+					if(settings->family == -1) GD::out.printWarning("Warning: deviceType is set in \"physicalinterfaces.conf\" without defining the device family. Is the family header missing (e. g. \"[HomeMaticBidCoS]\")?");
 					BaseLib::HelperFunctions::toLower(value);
 					settings->type = value;
 					GD::out.printDebug("Debug: deviceType of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->type);
@@ -334,7 +331,7 @@ void PhysicalInterfaces::load(std::string filename)
 				}
 			}
 		}
-		if(!settings->type.empty() && settings->family != BaseLib::Systems::DeviceFamilies::none)
+		if(!settings->type.empty() && settings->family != -1)
 		{
 			if(settings->id.empty()) settings->id = settings->type;
 			std::shared_ptr<BaseLib::Systems::IPhysicalInterface> device = GD::deviceFamilies.at(settings->family)->createPhysicalDevice(settings);
@@ -362,7 +359,7 @@ void PhysicalInterfaces::load(std::string filename)
     }
 }
 
-std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> PhysicalInterfaces::get(BaseLib::Systems::DeviceFamilies family)
+std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> PhysicalInterfaces::get(int32_t family)
 {
 	std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> devices;
 	try
@@ -386,7 +383,7 @@ std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> Phy
     return devices;
 }
 
-void PhysicalInterfaces::clear(BaseLib::Systems::DeviceFamilies family)
+void PhysicalInterfaces::clear(int32_t family)
 {
 	try
 	{
@@ -439,7 +436,7 @@ uint32_t PhysicalInterfaces::count()
     return size;
 }
 
-uint32_t PhysicalInterfaces::count(BaseLib::Systems::DeviceFamilies family)
+uint32_t PhysicalInterfaces::count(int32_t family)
 {
 	uint32_t size = 0;
 	try
@@ -469,7 +466,7 @@ bool PhysicalInterfaces::isOpen()
 	{
 		if(_physicalInterfaces.empty()) return true;
 		_physicalInterfacesMutex.lock();
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>>::iterator i = _physicalInterfaces.begin(); i != _physicalInterfaces.end(); ++i)
+		for(std::map<int32_t, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>>::iterator i = _physicalInterfaces.begin(); i != _physicalInterfaces.end(); ++i)
 		{
 			for(std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
@@ -504,7 +501,7 @@ void PhysicalInterfaces::startListening()
 	try
 	{
 		_physicalInterfacesMutex.lock();
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>>::iterator i = _physicalInterfaces.begin(); i != _physicalInterfaces.end(); ++i)
+		for(std::map<int32_t, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>>::iterator i = _physicalInterfaces.begin(); i != _physicalInterfaces.end(); ++i)
 		{
 			for(std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
@@ -532,7 +529,7 @@ void PhysicalInterfaces::stopListening()
 	try
 	{
 		_physicalInterfacesMutex.lock();
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>>::iterator i = _physicalInterfaces.begin(); i != _physicalInterfaces.end(); ++i)
+		for(std::map<int32_t, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>>::iterator i = _physicalInterfaces.begin(); i != _physicalInterfaces.end(); ++i)
 		{
 			for(std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
@@ -560,7 +557,7 @@ void PhysicalInterfaces::setup(int32_t userID, int32_t groupID)
 	try
 	{
 		_physicalInterfacesMutex.lock();
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>>::iterator i = _physicalInterfaces.begin(); i != _physicalInterfaces.end(); ++i)
+		for(std::map<int32_t, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>>::iterator i = _physicalInterfaces.begin(); i != _physicalInterfaces.end(); ++i)
 		{
 			for(std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
@@ -595,7 +592,7 @@ BaseLib::PVariable PhysicalInterfaces::listInterfaces(int32_t familyID)
 	{
 		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::VariableType::tArray));
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>>::iterator i = _physicalInterfaces.begin(); i != _physicalInterfaces.end(); ++i)
+		for(std::map<int32_t, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>>::iterator i = _physicalInterfaces.begin(); i != _physicalInterfaces.end(); ++i)
 		{
 			for(std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{

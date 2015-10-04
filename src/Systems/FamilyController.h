@@ -120,7 +120,7 @@ public:
 	void save(bool full);
 	bool familySelected() { return (bool)_currentFamily; }
 	std::string handleCLICommand(std::string& command);
-	bool familyAvailable(BaseLib::Systems::DeviceFamilies family);
+	bool familyAvailable(int32_t family);
 
 	/*
      * Executed when Homegear is fully started.
@@ -137,7 +137,7 @@ private:
 	bool _disposed = false;
 	BaseLib::PVariable _rpcCache;
 
-	std::set<BaseLib::Systems::DeviceFamilies> _familiesWithoutPhysicalInterface;
+	std::set<int32_t> _familiesWithoutPhysicalInterface;
 	std::map<std::string, std::unique_ptr<ModuleLoader>> moduleLoaders;
 	BaseLib::Systems::DeviceFamily* _currentFamily = nullptr;
 

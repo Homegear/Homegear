@@ -74,7 +74,8 @@ public:
 	static RPC::ClientSettings clientSettings;
 	static int32_t rpcLogLevel;
 	static PhysicalInterfaces physicalInterfaces;
-	static std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>> deviceFamilies;
+	static std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>> deviceFamilies;
+	static std::map<std::string, int32_t> deviceFamiliesByName;
 	static std::unique_ptr<UPnP> uPnP;
 	static std::unique_ptr<MQTT> mqtt;
 #ifdef EVENTHANDLER

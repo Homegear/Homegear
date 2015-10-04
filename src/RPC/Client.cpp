@@ -259,7 +259,7 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 				if(device == 0) //Client doesn't support ID's
 				{
 					if(serialNumber.empty()) break;
-					for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+					for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 					{
 						std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 						if(central)
@@ -295,7 +295,7 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 		if(!server) return;
 		if(!server->knownMethods.empty() && server->knownMethods.find("newDevices") == server->knownMethods.end()) return;
 		BaseLib::PVariable devices(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
