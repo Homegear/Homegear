@@ -80,13 +80,17 @@ host_triplet = x86_64-unknown-linux-gnu
 subdir = .
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/configure $(am__configure_deps) \
-	$(srcdir)/config.h.in cfg/compile cfg/config.guess \
+	$(srcdir)/config.h.in COPYING cfg/compile cfg/config.guess \
 	cfg/config.sub cfg/depcomp cfg/install-sh cfg/missing \
-	$(top_srcdir)/cfg/compile $(top_srcdir)/cfg/config.guess \
-	$(top_srcdir)/cfg/config.sub $(top_srcdir)/cfg/install-sh \
+	cfg/ltmain.sh $(top_srcdir)/cfg/compile \
+	$(top_srcdir)/cfg/config.guess $(top_srcdir)/cfg/config.sub \
+	$(top_srcdir)/cfg/install-sh $(top_srcdir)/cfg/ltmain.sh \
 	$(top_srcdir)/cfg/missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
+	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
+	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
@@ -194,12 +198,13 @@ distuninstallcheck_listfiles = find . -type f -print
 am__distuninstallcheck_listfiles = $(distuninstallcheck_listfiles) \
   | sed 's|^\./|$(prefix)/|' | grep -v '$(infodir)/dir$$'
 distcleancheck_listfiles = find . -type f -print
-ACLOCAL = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear/cfg/missing aclocal-1.14
+ACLOCAL = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing aclocal-1.14
 AMTAR = $${TAR-tar}
 AM_DEFAULT_VERBOSITY = 1
-AUTOCONF = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear/cfg/missing autoconf
-AUTOHEADER = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear/cfg/missing autoheader
-AUTOMAKE = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear/cfg/missing automake-1.14
+AR = ar
+AUTOCONF = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing autoconf
+AUTOHEADER = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing autoheader
+AUTOMAKE = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing automake-1.14
 AWK = gawk
 CC = gcc
 CCDEPMODE = depmode=gcc3
@@ -207,29 +212,44 @@ CFLAGS = -g -O2
 CPP = gcc -E
 CPPFLAGS =  -DLINUXSYSTEM
 CXX = g++
+CXXCPP = g++ -E
 CXXDEPMODE = depmode=gcc3
 CXXFLAGS = -g -O2
 CYGPATH_W = echo
 DEFS = -DHAVE_CONFIG_H
 DEPDIR = .deps
+DLLTOOL = false
+DSYMUTIL = 
+DUMPBIN = 
 ECHO_C = 
 ECHO_N = -n
 ECHO_T = 
 EGREP = /bin/grep -E
 EXEEXT = 
+FGREP = /bin/grep -F
 GREP = /bin/grep
 INSTALL = /usr/bin/install -c
 INSTALL_DATA = ${INSTALL} -m 644
 INSTALL_PROGRAM = ${INSTALL}
 INSTALL_SCRIPT = ${INSTALL}
 INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
+LD = /usr/bin/ld -m elf_x86_64
 LDFLAGS = 
 LIBOBJS = 
 LIBS = 
+LIBTOOL = $(SHELL) $(top_builddir)/libtool
+LIPO = 
+LN_S = ln -s
 LTLIBOBJS = 
-MAKEINFO = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear/cfg/missing makeinfo
+MAKEINFO = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing makeinfo
+MANIFEST_TOOL = :
 MKDIR_P = /bin/mkdir -p
+NM = /usr/bin/nm -B
+NMEDIT = 
+OBJDUMP = objdump
 OBJEXT = o
+OTOOL = 
+OTOOL64 = 
 PACKAGE = homegear
 PACKAGE_BUGREPORT = sathya@laufers.net
 PACKAGE_NAME = homegear
@@ -239,16 +259,19 @@ PACKAGE_URL =
 PACKAGE_VERSION = 0.6.0
 PATH_SEPARATOR = :
 RANLIB = ranlib
+SED = /bin/sed
 SET_MAKE = 
 SHELL = /bin/bash
-STRIP = 
+STRIP = strip
 VERSION = 0.6.0
-abs_builddir = /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear
-abs_srcdir = /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear
-abs_top_builddir = /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear
-abs_top_srcdir = /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear
+abs_builddir = /home/PREETZ/sathya/GitHub/Homegear/Homegear
+abs_srcdir = /home/PREETZ/sathya/GitHub/Homegear/Homegear
+abs_top_builddir = /home/PREETZ/sathya/GitHub/Homegear/Homegear
+abs_top_srcdir = /home/PREETZ/sathya/GitHub/Homegear/Homegear
+ac_ct_AR = ar
 ac_ct_CC = gcc
 ac_ct_CXX = g++
+ac_ct_DUMPBIN = 
 am__include = include
 am__leading_dot = .
 am__quote = 
@@ -274,29 +297,29 @@ host_vendor = unknown
 htmldir = ${docdir}
 includedir = ${prefix}/include
 infodir = ${datarootdir}/info
-install_sh = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear/cfg/install-sh
+install_sh = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/install-sh
 libdir = ${exec_prefix}/lib
 libexecdir = ${exec_prefix}/libexec
 localedir = ${datarootdir}/locale
-localstatedir = ${prefix}/var
+localstatedir = /var
 mandir = ${datarootdir}/man
 mkdir_p = $(MKDIR_P)
 oldincludedir = /usr/include
 pdfdir = ${docdir}
-prefix = /usr/local
+prefix = /usr
 program_transform_name = s,x,x,
 psdir = ${docdir}
 sbindir = ${exec_prefix}/sbin
 sharedstatedir = ${prefix}/com
 srcdir = .
-sysconfdir = ${prefix}/etc
+sysconfdir = /etc
 target_alias = 
 top_build_prefix = 
 top_builddir = .
 top_srcdir = .
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = -I m4 -I cfg
-SUBDIRS = ../libhomegear-base/src src ../homegear-miscellaneous/src
+SUBDIRS = src homegear-miscellaneous/src
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -350,6 +373,15 @@ $(srcdir)/config.h.in:  $(am__configure_deps)
 
 distclean-hdr:
 	-rm -f config.h stamp-h1
+
+mostlyclean-libtool:
+	-rm -f *.lo
+
+clean-libtool:
+	-rm -rf .libs _libs
+
+distclean-libtool:
+	-rm -f libtool config.lt
 
 # This directory's subdirectories are mostly independent; you can cd
 # into them and run 'make' without going through this Makefile.
@@ -682,12 +714,13 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-recursive
 
-clean-am: clean-generic mostlyclean-am
+clean-am: clean-generic clean-libtool mostlyclean-am
 
 distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -f Makefile
-distclean-am: clean-am distclean-generic distclean-hdr distclean-tags
+distclean-am: clean-am distclean-generic distclean-hdr \
+	distclean-libtool distclean-tags
 
 dvi: dvi-recursive
 
@@ -737,7 +770,7 @@ maintainer-clean-am: distclean-am maintainer-clean-generic
 
 mostlyclean: mostlyclean-recursive
 
-mostlyclean-am: mostlyclean-generic
+mostlyclean-am: mostlyclean-generic mostlyclean-libtool
 
 pdf: pdf-recursive
 
@@ -753,18 +786,19 @@ uninstall-am:
 
 .PHONY: $(am__recursive_targets) CTAGS GTAGS TAGS all all-am \
 	am--refresh check check-am clean clean-cscope clean-generic \
-	cscope cscopelist-am ctags ctags-am dist dist-all dist-bzip2 \
-	dist-gzip dist-lzip dist-shar dist-tarZ dist-xz dist-zip \
-	distcheck distclean distclean-generic distclean-hdr \
-	distclean-tags distcleancheck distdir distuninstallcheck dvi \
-	dvi-am html html-am info info-am install install-am \
-	install-data install-data-am install-dvi install-dvi-am \
-	install-exec install-exec-am install-html install-html-am \
-	install-info install-info-am install-man install-pdf \
-	install-pdf-am install-ps install-ps-am install-strip \
-	installcheck installcheck-am installdirs installdirs-am \
-	maintainer-clean maintainer-clean-generic mostlyclean \
-	mostlyclean-generic pdf pdf-am ps ps-am tags tags-am uninstall \
+	clean-libtool cscope cscopelist-am ctags ctags-am dist \
+	dist-all dist-bzip2 dist-gzip dist-lzip dist-shar dist-tarZ \
+	dist-xz dist-zip distcheck distclean distclean-generic \
+	distclean-hdr distclean-libtool distclean-tags distcleancheck \
+	distdir distuninstallcheck dvi dvi-am html html-am info \
+	info-am install install-am install-data install-data-am \
+	install-dvi install-dvi-am install-exec install-exec-am \
+	install-html install-html-am install-info install-info-am \
+	install-man install-pdf install-pdf-am install-ps \
+	install-ps-am install-strip installcheck installcheck-am \
+	installdirs installdirs-am maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-generic \
+	mostlyclean-libtool pdf pdf-am ps ps-am tags tags-am uninstall \
 	uninstall-am
 
 

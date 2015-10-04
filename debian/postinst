@@ -54,11 +54,7 @@ case $1 in
 		find /var/lib/homegear/www -type d -exec chmod 550 {} \;
 		find /var/lib/homegear/www -type f -exec chmod 440 {} \;
 
-		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION; then			
-			echo "Downloading current firmware updates..."
-			/usr/share/homegear/firmware/GetFirmwareUpdates.sh
-			[ $? -ne 0 ] && exit 1
-	
+		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION; then
 			if test ! -e /etc/homegear/homegear.crt; then
 				openssl genrsa -out /etc/homegear/homegear.key 2048
 				openssl req -batch -new -key /etc/homegear/homegear.key -out /etc/homegear/homegear.csr

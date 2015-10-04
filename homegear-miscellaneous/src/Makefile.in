@@ -78,7 +78,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-subdir = src
+subdir = homegear-miscellaneous/src
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/cfg/depcomp
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -313,7 +313,7 @@ htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
-libdir = $(datadir)/homegear/modules
+libdir = $(localstatedir)/lib/homegear/modules
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
@@ -351,9 +351,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu src/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu homegear-miscellaneous/src/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu src/Makefile
+	  $(AUTOMAKE) --gnu homegear-miscellaneous/src/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \

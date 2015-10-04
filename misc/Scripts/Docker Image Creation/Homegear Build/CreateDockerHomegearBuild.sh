@@ -86,7 +86,7 @@ elif [ "$dist" == "Raspbian" ]; then
 	" > $rootfs/etc/apt/sources.list
 fi
 
-echo "deb http://homegear.eu/packages/Debian/ wheezy/
+echo "deb http://homegear.eu/packages/$dist/ $distver/
 " > $rootfs/etc/apt/sources.list.d/homegear.list
 
 # prevent init scripts from running during install/update
@@ -170,10 +170,48 @@ if [ $revision -eq 0 ]; then
 	exit 1
 fi
 
-# {{{ libhomegear-base
 wget https://github.com/Homegear/libhomegear-base/archive/master.zip
+[ $? -ne 0 ] && exit 1
 unzip master.zip
+[ $? -ne 0 ] && exit 1
 rm master.zip
+wget https://github.com/Homegear/Homegear/archive/master.zip
+[ $? -ne 0 ] && exit 1
+unzip master.zip
+[ $? -ne 0 ] && exit 1
+rm master.zip
+wget https://github.com/Homegear/Homegear-HomeMaticBidCoS/archive/master.zip
+[ $? -ne 0 ] && exit 1
+unzip master.zip
+[ $? -ne 0 ] && exit 1
+rm master.zip
+wget https://github.com/Homegear/Homegear-HomeMaticWired/archive/master.zip
+[ $? -ne 0 ] && exit 1
+unzip master.zip
+[ $? -ne 0 ] && exit 1
+rm master.zip
+wget https://github.com/Homegear/Homegear-Insteon/archive/master.zip
+[ $? -ne 0 ] && exit 1
+unzip master.zip
+[ $? -ne 0 ] && exit 1
+rm master.zip
+wget https://github.com/Homegear/Homegear-MAX/archive/master.zip
+[ $? -ne 0 ] && exit 1
+unzip master.zip
+[ $? -ne 0 ] && exit 1
+rm master.zip
+wget https://github.com/Homegear/Homegear-PhilipsHue/archive/master.zip
+[ $? -ne 0 ] && exit 1
+unzip master.zip
+[ $? -ne 0 ] && exit 1
+rm master.zip
+wget https://github.com/Homegear/Homegear-Sonos/archive/master.zip
+[ $? -ne 0 ] && exit 1
+unzip master.zip
+[ $? -ne 0 ] && exit 1
+rm master.zip
+
+# {{{ libhomegear-base
 version=$(cat libhomegear-base-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
 sourcePath=libhomegear-base-$version
 mv libhomegear-base-master $sourcePath
@@ -183,7 +221,7 @@ libtoolize
 aclocal
 autoconf
 automake --add-missing
-rm -f config.status config.log
+make distclean
 cd ..
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
@@ -193,6 +231,7 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf libhomegear-base_$version.orig.tar.gz $sourcePath
 cd $sourcePath
+./configure
 dch -v $version-$revision -M "Version $version."
 debuild -us -uc
 cd ..
@@ -212,9 +251,6 @@ fi
 # }}}
 
 # {{{ homegear
-wget https://github.com/Homegear/Homegear/archive/master.zip
-unzip master.zip
-rm master.zip
 version=$(cat Homegear-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
 sourcePath=homegear-$version
 mv Homegear-master $sourcePath
@@ -224,7 +260,8 @@ libtoolize
 aclocal
 autoconf
 automake --add-missing
-rm -f config.status config.log homegear-miscellaneous/config.status homegear-miscellaneous/config.log
+make distclean
+rm -f homegear-miscellaneous/config.status homegear-miscellaneous/config.log
 cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
@@ -235,6 +272,7 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear_$version.orig.tar.gz $sourcePath
 cd $sourcePath
+./configure
 dch -v $version-$revision -M "Version $version."
 debuild -us -uc
 cd ..
@@ -248,9 +286,6 @@ mv homegear_$version-$revision_*.deb homegear.deb
 # }}}
 
 # {{{ homegear-homematicbidcos
-wget https://github.com/Homegear/Homegear-HomeMaticBidCoS/archive/master.zip
-unzip master.zip
-rm master.zip
 version=$(cat Homegear-HomeMaticBidCoS-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
 sourcePath=homegear-homematicbidcos-$version
 mv Homegear-HomeMaticBidCoS-master $sourcePath
@@ -260,7 +295,7 @@ libtoolize
 aclocal
 autoconf
 automake --add-missing
-rm -f config.status config.log
+make distclean
 cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
@@ -271,6 +306,7 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-homematicbidcos_$version.orig.tar.gz $sourcePath
 cd $sourcePath
+./configure
 dch -v $version-$revision -M "Version $version."
 debuild -us -uc
 cd ..
@@ -284,9 +320,6 @@ mv homegear-homematicbidcos*.deb homegear-homematicbidcos.deb
 # }}}
 
 # {{{ homegear-homematicwired
-wget https://github.com/Homegear/Homegear-HomeMaticWired/archive/master.zip
-unzip master.zip
-rm master.zip
 version=$(cat Homegear-HomeMaticWired-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
 sourcePath=homegear-homematicwired-$version
 mv Homegear-HomeMaticWired-master $sourcePath
@@ -296,7 +329,7 @@ libtoolize
 aclocal
 autoconf
 automake --add-missing
-rm -f config.status config.log
+make distclean
 cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
@@ -307,6 +340,7 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-homematicwired_$version.orig.tar.gz $sourcePath
 cd $sourcePath
+./configure
 dch -v $version-$revision -M "Version $version."
 debuild -us -uc
 cd ..
@@ -320,9 +354,6 @@ mv homegear-homematicwired*.deb homegear-homematicwired.deb
 # }}}
 
 # {{{ homegear-insteon
-wget https://github.com/Homegear/Homegear-Insteon/archive/master.zip
-unzip master.zip
-rm master.zip
 version=$(cat Homegear-Insteon-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
 sourcePath=homegear-insteon-$version
 mv Homegear-Insteon-master $sourcePath
@@ -332,7 +363,7 @@ libtoolize
 aclocal
 autoconf
 automake --add-missing
-rm -f config.status config.log
+make distclean
 cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
@@ -343,6 +374,7 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-insteon_$version.orig.tar.gz $sourcePath
 cd $sourcePath
+./configure
 dch -v $version-$revision -M "Version $version."
 debuild -us -uc
 cd ..
@@ -356,9 +388,6 @@ mv homegear-insteon*.deb homegear-insteon.deb
 # }}}
 
 # {{{ homegear-max
-wget https://github.com/Homegear/Homegear-MAX/archive/master.zip
-unzip master.zip
-rm master.zip
 version=$(cat Homegear-MAX-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
 sourcePath=homegear-max-$version
 mv Homegear-MAX-master $sourcePath
@@ -368,7 +397,7 @@ libtoolize
 aclocal
 autoconf
 automake --add-missing
-rm -f config.status config.log
+make distclean
 cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
@@ -379,6 +408,7 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-max_$version.orig.tar.gz $sourcePath
 cd $sourcePath
+./configure
 dch -v $version-$revision -M "Version $version."
 debuild -us -uc
 cd ..
@@ -392,9 +422,6 @@ mv homegear-max*.deb homegear-max.deb
 # }}}
 
 # {{{ homegear-philipshue
-wget https://github.com/Homegear/Homegear-PhilipsHue/archive/master.zip
-unzip master.zip
-rm master.zip
 version=$(cat Homegear-PhilipsHue-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
 sourcePath=homegear-philipshue-$version
 mv Homegear-PhilipsHue-master $sourcePath
@@ -404,7 +431,7 @@ libtoolize
 aclocal
 autoconf
 automake --add-missing
-rm -f config.status config.log
+make distclean
 cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
@@ -415,6 +442,7 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-philipshue_$version.orig.tar.gz $sourcePath
 cd $sourcePath
+./configure
 dch -v $version-$revision -M "Version $version."
 debuild -us -uc
 cd ..
@@ -428,9 +456,6 @@ mv homegear-philipshue*.deb homegear-philipshue.deb
 # }}}
 
 # {{{ homegear-sonos
-wget https://github.com/Homegear/Homegear-Sonos/archive/master.zip
-unzip master.zip
-rm master.zip
 version=$(cat Homegear-Sonos-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
 sourcePath=homegear-sonos-$version
 mv Homegear-Sonos-master $sourcePath
@@ -440,7 +465,7 @@ libtoolize
 aclocal
 autoconf
 automake --add-missing
-rm -f config.status config.log
+make distclean
 cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
@@ -451,6 +476,7 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-sonos_$version.orig.tar.gz $sourcePath
 cd $sourcePath
+./configure
 dch -v $version-$revision -M "Version $version."
 debuild -us -uc
 cd ..
@@ -463,7 +489,7 @@ rm homegear-sonos_$version.orig.tar.gz
 mv homegear-sonos*.deb homegear-sonos.deb
 # }}}
 
-if test -f homegear.deb; then
+if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb; then
 	isodate=`date +%Y%m%d`
 EOF
 echo "	mv libhomegear-base.deb libhomegear-base_\$[isodate]_${distlc}_${distver}_${arch}.deb
