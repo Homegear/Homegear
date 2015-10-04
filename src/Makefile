@@ -16,7 +16,6 @@
 
 
 
-
 am__is_gnu_make = test -n '$(MAKEFILE_LIST)' && test -n '$(MAKELEVEL)'
 am__make_running_with_option = \
   case $${target_option-} in \
@@ -91,7 +90,10 @@ subdir = src
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/cfg/depcomp
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
+	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
+	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -99,7 +101,6 @@ CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 LIBRARIES = $(noinst_LIBRARIES)
-AR = ar
 ARFLAGS = cru
 AM_V_AR = $(am__v_AR_$(V))
 am__v_AR_ = $(am__v_AR_$(AM_DEFAULT_VERBOSITY))
@@ -141,8 +142,7 @@ am_libscriptengine_a_OBJECTS = ScriptEngine/libscriptengine_a-php_sapi.$(OBJEXT)
 	ScriptEngine/libscriptengine_a-PHPVariableConverter.$(OBJEXT) \
 	ScriptEngine/libscriptengine_a-ScriptEngine.$(OBJEXT)
 libscriptengine_a_OBJECTS = $(am_libscriptengine_a_OBJECTS)
-am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(homegearlogdir)" \
-	"$(DESTDIR)$(sysconfdir)"
+am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_homegear_OBJECTS = main.$(OBJEXT) CLI/CLIClient.$(OBJEXT) \
 	CLI/CLIServer.$(OBJEXT) Database/SQLite3.$(OBJEXT) \
@@ -161,6 +161,10 @@ homegear_OBJECTS = $(am_homegear_OBJECTS)
 am__DEPENDENCIES_1 =
 homegear_DEPENDENCIES = libpaho-mqtt.a $(am__DEPENDENCIES_1) \
 	$(am__append_3) $(am__DEPENDENCIES_1)
+AM_V_lt = $(am__v_lt_$(V))
+am__v_lt_ = $(am__v_lt_$(AM_DEFAULT_VERBOSITY))
+am__v_lt_0 = --silent
+am__v_lt_1 = 
 AM_V_P = $(am__v_P_$(V))
 am__v_P_ = $(am__v_P_$(AM_DEFAULT_VERBOSITY))
 am__v_P_0 = false
@@ -177,31 +181,38 @@ DEFAULT_INCLUDES = -I. -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/cfg/depcomp
 am__depfiles_maybe = depfiles
 am__mv = mv -f
-AM_V_lt = $(am__v_lt_$(V))
-am__v_lt_ = $(am__v_lt_$(AM_DEFAULT_VERBOSITY))
-am__v_lt_0 = --silent
-am__v_lt_1 = 
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+LTCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) \
+	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
+	$(AM_CFLAGS) $(CFLAGS)
 AM_V_CC = $(am__v_CC_$(V))
 am__v_CC_ = $(am__v_CC_$(AM_DEFAULT_VERBOSITY))
 am__v_CC_0 = @echo "  CC      " $@;
 am__v_CC_1 = 
 CCLD = $(CC)
-LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_CCLD = $(am__v_CCLD_$(V))
 am__v_CCLD_ = $(am__v_CCLD_$(AM_DEFAULT_VERBOSITY))
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
+LTCXXCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) \
+	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
+	$(AM_CXXFLAGS) $(CXXFLAGS)
 AM_V_CXX = $(am__v_CXX_$(V))
 am__v_CXX_ = $(am__v_CXX_$(AM_DEFAULT_VERBOSITY))
 am__v_CXX_0 = @echo "  CXX     " $@;
 am__v_CXX_1 = 
 CXXLD = $(CXX)
-CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
-	-o $@
+CXXLINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_CXXLD = $(am__v_CXXLD_$(V))
 am__v_CXXLD_ = $(am__v_CXXLD_$(AM_DEFAULT_VERBOSITY))
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
@@ -215,34 +226,6 @@ am__can_run_installinfo = \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
-am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
-am__vpath_adj = case $$p in \
-    $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
-    *) f=$$p;; \
-  esac;
-am__strip_dir = f=`echo $$p | sed -e 's|^.*/||'`;
-am__install_max = 40
-am__nobase_strip_setup = \
-  srcdirstrip=`echo "$(srcdir)" | sed 's/[].[^$$\\*|]/\\\\&/g'`
-am__nobase_strip = \
-  for p in $$list; do echo "$$p"; done | sed -e "s|$$srcdirstrip/||"
-am__nobase_list = $(am__nobase_strip_setup); \
-  for p in $$list; do echo "$$p $$p"; done | \
-  sed "s| $$srcdirstrip/| |;"' / .*\//!s/ .*/ ./; s,\( .*\)/[^/]*$$,\1,' | \
-  $(AWK) 'BEGIN { files["."] = "" } { files[$$2] = files[$$2] " " $$1; \
-    if (++n[$$2] == $(am__install_max)) \
-      { print $$2, files[$$2]; n[$$2] = 0; files[$$2] = "" } } \
-    END { for (dir in files) print dir, files[dir] }'
-am__base_list = \
-  sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
-  sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
-am__uninstall_files_from_dir = { \
-  test -z "$$files" \
-    || { test ! -d "$$dir" && test ! -f "$$dir" && test ! -r "$$dir"; } \
-    || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
-         $(am__cd) "$$dir" && rm -f $$files; }; \
-  }
-DATA = $(homegearlog_DATA) $(sysconf_DATA)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
 # and print each of them once, without duplicates.  Input order is
@@ -263,12 +246,13 @@ am__define_uniq_tagged_files = \
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-ACLOCAL = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear/cfg/missing aclocal-1.14
+ACLOCAL = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing aclocal-1.14
 AMTAR = $${TAR-tar}
 AM_DEFAULT_VERBOSITY = 1
-AUTOCONF = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear/cfg/missing autoconf
-AUTOHEADER = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear/cfg/missing autoheader
-AUTOMAKE = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear/cfg/missing automake-1.14
+AR = ar
+AUTOCONF = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing autoconf
+AUTOHEADER = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing autoheader
+AUTOMAKE = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing automake-1.14
 AWK = gawk
 CC = gcc
 CCDEPMODE = depmode=gcc3
@@ -276,32 +260,47 @@ CFLAGS = -g -O2
 CPP = gcc -E
 CPPFLAGS =  -DLINUXSYSTEM
 CXX = g++
+CXXCPP = g++ -E
 CXXDEPMODE = depmode=gcc3
 CXXFLAGS = -g -O2
 CYGPATH_W = echo
 DEFS = -DHAVE_CONFIG_H
 DEPDIR = .deps
+DLLTOOL = false
+DSYMUTIL = 
+DUMPBIN = 
 ECHO_C = 
 ECHO_N = -n
 ECHO_T = 
 EGREP = /bin/grep -E
 EXEEXT = 
+FGREP = /bin/grep -F
 GREP = /bin/grep
 INSTALL = /usr/bin/install -c
 INSTALL_DATA = ${INSTALL} -m 644
 INSTALL_PROGRAM = ${INSTALL}
 INSTALL_SCRIPT = ${INSTALL}
 INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
+LD = /usr/bin/ld -m elf_x86_64
 LDFLAGS = 
 LIBOBJS = 
 # {{{ PHP libraries
 LIBS =  -Wl,-Bstatic -lphp7-homegear -Wl,-Bdynamic -lz -lexslt \
 	-lresolv -ltermcap -ledit -lrt -lmcrypt -lltdl -lgmp -lenchant \
 	-lqdbm -lrt -lm -lnsl -lxml2 -lxslt -lcrypt -lcrypto -lssl
+LIBTOOL = $(SHELL) $(top_builddir)/libtool
+LIPO = 
+LN_S = ln -s
 LTLIBOBJS = 
-MAKEINFO = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear/cfg/missing makeinfo
+MAKEINFO = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing makeinfo
+MANIFEST_TOOL = :
 MKDIR_P = /bin/mkdir -p
+NM = /usr/bin/nm -B
+NMEDIT = 
+OBJDUMP = objdump
 OBJEXT = o
+OTOOL = 
+OTOOL64 = 
 PACKAGE = homegear
 PACKAGE_BUGREPORT = sathya@laufers.net
 PACKAGE_NAME = homegear
@@ -311,16 +310,19 @@ PACKAGE_URL =
 PACKAGE_VERSION = 0.6.0
 PATH_SEPARATOR = :
 RANLIB = ranlib
+SED = /bin/sed
 SET_MAKE = 
 SHELL = /bin/bash
-STRIP = 
+STRIP = strip
 VERSION = 0.6.0
-abs_builddir = /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear/src
-abs_srcdir = /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear/src
-abs_top_builddir = /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear
-abs_top_srcdir = /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear
+abs_builddir = /home/PREETZ/sathya/GitHub/Homegear/Homegear/src
+abs_srcdir = /home/PREETZ/sathya/GitHub/Homegear/Homegear/src
+abs_top_builddir = /home/PREETZ/sathya/GitHub/Homegear/Homegear
+abs_top_srcdir = /home/PREETZ/sathya/GitHub/Homegear/Homegear
+ac_ct_AR = ar
 ac_ct_CC = gcc
 ac_ct_CXX = g++
+ac_ct_DUMPBIN = 
 am__include = include
 am__leading_dot = .
 am__quote = 
@@ -346,22 +348,22 @@ host_vendor = unknown
 htmldir = ${docdir}
 includedir = ${prefix}/include
 infodir = ${datarootdir}/info
-install_sh = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear/cfg/install-sh
+install_sh = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/install-sh
 libdir = ${exec_prefix}/lib
 libexecdir = ${exec_prefix}/libexec
 localedir = ${datarootdir}/locale
-localstatedir = ${prefix}/var
+localstatedir = /var
 mandir = ${datarootdir}/man
 mkdir_p = $(MKDIR_P)
 oldincludedir = /usr/include
 pdfdir = ${docdir}
-prefix = /usr/local
+prefix = /usr
 program_transform_name = s,x,x,
 psdir = ${docdir}
 sbindir = ${exec_prefix}/sbin
 sharedstatedir = ${prefix}/com
 srcdir = .
-sysconfdir = ${prefix}/etc
+sysconfdir = /etc
 target_alias = 
 top_build_prefix = ../
 top_builddir = ..
@@ -415,15 +417,10 @@ libscriptengine_a_CPPFLAGS = -Wall -std=c++11 \
 	-DFORTIFY_SOURCE=2 \
 	-DGCRYPT_NO_DEPRECATED $(am__append_4) \
 	$(am__append_5)
-
-#homegearconfdir = $(sysconfdir)/homegear
-sysconf_DATA = ../../misc/Config_Directory/main.conf
-homegearlogdir = $(localstatedir)/log/homegear
-homegearlog_DATA = 
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .c .cpp .o .obj
+.SUFFIXES: .c .cpp .lo .o .obj
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -561,6 +558,7 @@ install-binPROGRAMS: $(bin_PROGRAMS)
 	for p in $$list; do echo "$$p $$p"; done | \
 	sed 's/$(EXEEXT)$$//' | \
 	while read p p1; do if test -f $$p \
+	 || test -f $$p1 \
 	  ; then echo "$$p"; echo "$$p"; else :; fi; \
 	done | \
 	sed -e 'p;s,.*/,,;n;h' \
@@ -575,8 +573,8 @@ install-binPROGRAMS: $(bin_PROGRAMS)
 	while read type dir files; do \
 	    if test "$$dir" = .; then dir=; else dir=/$$dir; fi; \
 	    test -z "$$files" || { \
-	      echo " $(INSTALL_PROGRAM_ENV) $(INSTALL_PROGRAM) $$files '$(DESTDIR)$(bindir)$$dir'"; \
-	      $(INSTALL_PROGRAM_ENV) $(INSTALL_PROGRAM) $$files "$(DESTDIR)$(bindir)$$dir" || exit $$?; \
+	    echo " $(INSTALL_PROGRAM_ENV) $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL_PROGRAM) $$files '$(DESTDIR)$(bindir)$$dir'"; \
+	    $(INSTALL_PROGRAM_ENV) $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL_PROGRAM) $$files "$(DESTDIR)$(bindir)$$dir" || exit $$?; \
 	    } \
 	; done
 
@@ -592,7 +590,13 @@ uninstall-binPROGRAMS:
 	cd "$(DESTDIR)$(bindir)" && rm -f $$files
 
 clean-binPROGRAMS:
-	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
+	@list='$(bin_PROGRAMS)'; test -n "$$list" || exit 0; \
+	echo " rm -f" $$list; \
+	rm -f $$list || exit $$?; \
+	test -n "$(EXEEXT)" || exit 0; \
+	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
+	echo " rm -f" $$list; \
+	rm -f $$list
 CLI/$(am__dirstamp):
 	@$(MKDIR_P) CLI
 	@: > CLI/$(am__dirstamp)
@@ -774,6 +778,14 @@ include User/$(DEPDIR)/User.Po
 #	$(AM_V_CC)source='$<' object='$@' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
 #	$(AM_V_CC_no)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+.c.lo:
+	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.lo$$||'`;\
+	$(LTCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+	$(am__mv) $$depbase.Tpo $$depbase.Plo
+#	$(AM_V_CC)source='$<' object='$@' libtool=yes \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(LTCOMPILE) -c -o $@ $<
 
 MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Clients.o: MQTT/paho.mqtt.c/src/Clients.c
 	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Clients.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Clients.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Clients.o `test -f 'MQTT/paho.mqtt.c/src/Clients.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/Clients.c
@@ -1085,6 +1097,14 @@ MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolClient.obj: MQTT/paho.mqtt.c/src
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
 #	$(AM_V_CXX_no)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
+.cpp.lo:
+	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.lo$$||'`;\
+	$(LTCXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+	$(am__mv) $$depbase.Tpo $$depbase.Plo
+#	$(AM_V_CXX)source='$<' object='$@' libtool=yes \
+#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
+#	$(AM_V_CXX_no)$(LTCXXCOMPILE) -c -o $@ $<
+
 ScriptEngine/libscriptengine_a-php_sapi.o: ScriptEngine/php_sapi.cpp
 	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libscriptengine_a_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ScriptEngine/libscriptengine_a-php_sapi.o -MD -MP -MF ScriptEngine/$(DEPDIR)/libscriptengine_a-php_sapi.Tpo -c -o ScriptEngine/libscriptengine_a-php_sapi.o `test -f 'ScriptEngine/php_sapi.cpp' || echo '$(srcdir)/'`ScriptEngine/php_sapi.cpp
 	$(AM_V_at)$(am__mv) ScriptEngine/$(DEPDIR)/libscriptengine_a-php_sapi.Tpo ScriptEngine/$(DEPDIR)/libscriptengine_a-php_sapi.Po
@@ -1126,48 +1146,12 @@ ScriptEngine/libscriptengine_a-ScriptEngine.obj: ScriptEngine/ScriptEngine.cpp
 #	$(AM_V_CXX)source='ScriptEngine/ScriptEngine.cpp' object='ScriptEngine/libscriptengine_a-ScriptEngine.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
 #	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libscriptengine_a_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ScriptEngine/libscriptengine_a-ScriptEngine.obj `if test -f 'ScriptEngine/ScriptEngine.cpp'; then $(CYGPATH_W) 'ScriptEngine/ScriptEngine.cpp'; else $(CYGPATH_W) '$(srcdir)/ScriptEngine/ScriptEngine.cpp'; fi`
-install-homegearlogDATA: $(homegearlog_DATA)
-	@$(NORMAL_INSTALL)
-	@list='$(homegearlog_DATA)'; test -n "$(homegearlogdir)" || list=; \
-	if test -n "$$list"; then \
-	  echo " $(MKDIR_P) '$(DESTDIR)$(homegearlogdir)'"; \
-	  $(MKDIR_P) "$(DESTDIR)$(homegearlogdir)" || exit 1; \
-	fi; \
-	for p in $$list; do \
-	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
-	  echo "$$d$$p"; \
-	done | $(am__base_list) | \
-	while read files; do \
-	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(homegearlogdir)'"; \
-	  $(INSTALL_DATA) $$files "$(DESTDIR)$(homegearlogdir)" || exit $$?; \
-	done
 
-uninstall-homegearlogDATA:
-	@$(NORMAL_UNINSTALL)
-	@list='$(homegearlog_DATA)'; test -n "$(homegearlogdir)" || list=; \
-	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
-	dir='$(DESTDIR)$(homegearlogdir)'; $(am__uninstall_files_from_dir)
-install-sysconfDATA: $(sysconf_DATA)
-	@$(NORMAL_INSTALL)
-	@list='$(sysconf_DATA)'; test -n "$(sysconfdir)" || list=; \
-	if test -n "$$list"; then \
-	  echo " $(MKDIR_P) '$(DESTDIR)$(sysconfdir)'"; \
-	  $(MKDIR_P) "$(DESTDIR)$(sysconfdir)" || exit 1; \
-	fi; \
-	for p in $$list; do \
-	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
-	  echo "$$d$$p"; \
-	done | $(am__base_list) | \
-	while read files; do \
-	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(sysconfdir)'"; \
-	  $(INSTALL_DATA) $$files "$(DESTDIR)$(sysconfdir)" || exit $$?; \
-	done
+mostlyclean-libtool:
+	-rm -f *.lo
 
-uninstall-sysconfDATA:
-	@$(NORMAL_UNINSTALL)
-	@list='$(sysconf_DATA)'; test -n "$(sysconfdir)" || list=; \
-	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
-	dir='$(DESTDIR)$(sysconfdir)'; $(am__uninstall_files_from_dir)
+clean-libtool:
+	-rm -rf .libs _libs
 
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
@@ -1253,9 +1237,9 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(LIBRARIES) $(PROGRAMS) $(DATA)
+all-am: Makefile $(LIBRARIES) $(PROGRAMS)
 installdirs:
-	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(homegearlogdir)" "$(DESTDIR)$(sysconfdir)"; do \
+	for dir in "$(DESTDIR)$(bindir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -1312,8 +1296,8 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-binPROGRAMS clean-generic clean-noinstLIBRARIES \
-	mostlyclean-am
+clean-am: clean-binPROGRAMS clean-generic clean-libtool \
+	clean-noinstLIBRARIES mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR) CLI/$(DEPDIR) Database/$(DEPDIR) Events/$(DEPDIR) GD/$(DEPDIR) MQTT/$(DEPDIR) MQTT/paho.mqtt.c/src/$(DEPDIR) RPC/$(DEPDIR) ScriptEngine/$(DEPDIR) Systems/$(DEPDIR) UPnP/$(DEPDIR) User/$(DEPDIR)
@@ -1333,13 +1317,13 @@ info: info-am
 
 info-am:
 
-install-data-am: install-homegearlogDATA
+install-data-am:
 
 install-dvi: install-dvi-am
 
 install-dvi-am:
 
-install-exec-am: install-binPROGRAMS install-sysconfDATA
+install-exec-am: install-binPROGRAMS
 
 install-html: install-html-am
 
@@ -1368,7 +1352,8 @@ maintainer-clean-am: distclean-am maintainer-clean-generic
 
 mostlyclean: mostlyclean-am
 
-mostlyclean-am: mostlyclean-compile mostlyclean-generic
+mostlyclean-am: mostlyclean-compile mostlyclean-generic \
+	mostlyclean-libtool
 
 pdf: pdf-am
 
@@ -1378,26 +1363,24 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-binPROGRAMS uninstall-homegearlogDATA \
-	uninstall-sysconfDATA
+uninstall-am: uninstall-binPROGRAMS
 
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS TAGS all all-am check check-am clean \
-	clean-binPROGRAMS clean-generic clean-noinstLIBRARIES \
-	cscopelist-am ctags ctags-am distclean distclean-compile \
-	distclean-generic distclean-tags distdir dvi dvi-am html \
-	html-am info info-am install install-am install-binPROGRAMS \
-	install-data install-data-am install-dvi install-dvi-am \
-	install-exec install-exec-am install-homegearlogDATA \
-	install-html install-html-am install-info install-info-am \
-	install-man install-pdf install-pdf-am install-ps \
-	install-ps-am install-strip install-sysconfDATA installcheck \
+	clean-binPROGRAMS clean-generic clean-libtool \
+	clean-noinstLIBRARIES cscopelist-am ctags ctags-am distclean \
+	distclean-compile distclean-generic distclean-libtool \
+	distclean-tags distdir dvi dvi-am html html-am info info-am \
+	install install-am install-binPROGRAMS install-data \
+	install-data-am install-dvi install-dvi-am install-exec \
+	install-exec-am install-html install-html-am install-info \
+	install-info-am install-man install-pdf install-pdf-am \
+	install-ps install-ps-am install-strip installcheck \
 	installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic pdf pdf-am ps ps-am tags tags-am uninstall \
-	uninstall-am uninstall-binPROGRAMS uninstall-homegearlogDATA \
-	uninstall-sysconfDATA
+	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
+	tags tags-am uninstall uninstall-am uninstall-binPROGRAMS
 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
