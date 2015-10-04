@@ -49,7 +49,8 @@ int32_t GD::rpcLogLevel = 1;
 BaseLib::Rpc::ServerInfo GD::serverInfo;
 RPC::ClientSettings GD::clientSettings;
 PhysicalInterfaces GD::physicalInterfaces;
-std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>> GD::deviceFamilies;
+std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>> GD::deviceFamilies;
+std::map<std::string, int32_t> GD::deviceFamiliesByName;
 std::unique_ptr<UPnP> GD::uPnP(new UPnP());
 std::unique_ptr<MQTT> GD::mqtt;
 #ifdef EVENTHANDLER

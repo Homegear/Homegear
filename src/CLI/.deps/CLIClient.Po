@@ -222,7 +222,6 @@ CLI/CLIClient.o: CLI/CLIClient.cpp /usr/include/stdc-predef.h \
  /usr/include/x86_64-linux-gnu/bits/sigthread.h \
  /usr/include/homegear-base/Managers/FileDescriptorManager.h \
  /usr/include/homegear-base/HelperFunctions/HelperFunctions.h \
- /usr/include/homegear-base/Systems/DeviceFamilies.h \
  /usr/include/c++/4.8/algorithm /usr/include/c++/4.8/bits/stl_algo.h \
  /usr/include/c++/4.8/bits/algorithmfwd.h \
  /usr/include/c++/4.8/bits/stl_heap.h /usr/include/c++/4.8/random \
@@ -259,7 +258,6 @@ CLI/CLIClient.o: CLI/CLIClient.cpp /usr/include/stdc-predef.h \
  /usr/include/homegear-base/DeviceDescription/Devices.h \
  /usr/include/homegear-base/Systems/Packet.h \
  /usr/include/homegear-base/Systems/DeviceTypes.h \
- /usr/include/homegear-base/Systems/DeviceFamilies.h \
  /usr/include/homegear-base/DeviceDescription/HomegearDevice.h \
  /usr/include/homegear-base/DeviceDescription/DevicePacket.h \
  /usr/include/homegear-base/DeviceDescription/JsonPayload.h \
@@ -271,7 +269,6 @@ CLI/CLIClient.o: CLI/CLIClient.cpp /usr/include/stdc-predef.h \
  /usr/include/homegear-base/DeviceDescription/Logical.h \
  /usr/include/homegear-base/DeviceDescription/Physical.h \
  /usr/include/homegear-base/DeviceDescription/SupportedDevice.h \
- /usr/include/homegear-base/Systems/DeviceFamilies.h \
  /usr/include/homegear-base/DeviceDescription/RunProgram.h \
  /usr/include/homegear-base/DeviceDescription/Function.h \
  /usr/include/homegear-base/DeviceDescription/ParameterGroup.h \
@@ -303,7 +300,6 @@ CLI/CLIClient.o: CLI/CLIClient.cpp /usr/include/stdc-predef.h \
  /usr/include/homegear-base/Systems/IPhysicalInterface.h \
  /usr/include/homegear-base/IEvents.h \
  /usr/include/homegear-base/Systems/PhysicalInterfaceSettings.h \
- /usr/include/homegear-base/Systems/DeviceFamilies.h \
  /usr/include/homegear-base/Managers/FileDescriptorManager.h \
  /usr/include/c++/4.8/condition_variable \
  /usr/include/homegear-base/Systems/Packet.h \
@@ -910,8 +906,6 @@ CLI/CLIClient.h:
 
 /usr/include/homegear-base/HelperFunctions/HelperFunctions.h:
 
-/usr/include/homegear-base/Systems/DeviceFamilies.h:
-
 /usr/include/c++/4.8/algorithm:
 
 /usr/include/c++/4.8/bits/stl_algo.h:
@@ -1000,8 +994,6 @@ CLI/CLIClient.h:
 
 /usr/include/homegear-base/Systems/DeviceTypes.h:
 
-/usr/include/homegear-base/Systems/DeviceFamilies.h:
-
 /usr/include/homegear-base/DeviceDescription/HomegearDevice.h:
 
 /usr/include/homegear-base/DeviceDescription/DevicePacket.h:
@@ -1023,8 +1015,6 @@ CLI/CLIClient.h:
 /usr/include/homegear-base/DeviceDescription/Physical.h:
 
 /usr/include/homegear-base/DeviceDescription/SupportedDevice.h:
-
-/usr/include/homegear-base/Systems/DeviceFamilies.h:
 
 /usr/include/homegear-base/DeviceDescription/RunProgram.h:
 
@@ -1099,8 +1089,6 @@ CLI/CLIClient.h:
 /usr/include/homegear-base/IEvents.h:
 
 /usr/include/homegear-base/Systems/PhysicalInterfaceSettings.h:
-
-/usr/include/homegear-base/Systems/DeviceFamilies.h:
 
 /usr/include/homegear-base/Managers/FileDescriptorManager.h:
 

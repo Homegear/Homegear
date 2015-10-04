@@ -510,7 +510,7 @@ sed -i "s/<DISTVER>/${distver}/g" $rootfs/build/CreateDebianPackageNightly.sh
 cat > "$rootfs/FirstStart.sh" <<-'EOF'
 #!/bin/bash
 sed -i '$ d' /root/.bashrc >/dev/null
-if [ -n "$BUILD_SHELL" ]; then
+if [ -n "$HOMEGEARBUILD_SHELL" ]; then
 	/bin/bash
 	exit 0
 fi

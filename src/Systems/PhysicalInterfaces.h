@@ -49,9 +49,9 @@ public:
 	void load(std::string filename);
 
 	uint32_t count();
-	uint32_t count(BaseLib::Systems::DeviceFamilies family);
-	std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> get(BaseLib::Systems::DeviceFamilies family);
-	void clear(BaseLib::Systems::DeviceFamilies family);
+	uint32_t count(int32_t family);
+	std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> get(int32_t family);
+	void clear(int32_t family);
 	void stopListening();
 	void startListening();
 	bool isOpen();
@@ -60,7 +60,7 @@ public:
 private:
 	bool _disposing = false;
 	std::mutex _physicalInterfacesMutex;
-	std::map<BaseLib::Systems::DeviceFamilies, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>> _physicalInterfaces;
+	std::map<int32_t, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>> _physicalInterfaces;
 
 	void reset();
 };
