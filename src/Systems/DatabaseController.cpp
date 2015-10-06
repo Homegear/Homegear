@@ -497,13 +497,18 @@ BaseLib::PVariable DatabaseController::getMetadata(uint64_t peerID, std::string&
 
 		BaseLib::PVariable metadata;
 		_metadataMutex.lock();
-		if(_metadata.find(peerID) != _metadata.end() && _metadata[peerID].find(dataID) != _metadata[peerID].end())
+		std::map<uint64_t, std::map<std::string, BaseLib::PVariable>>::iterator peerIterator = _metadata.find(peerID);
+		if(peerIterator != _metadata.end())
 		{
-			 metadata = _metadata[peerID][dataID];
+			std::map<std::string, BaseLib::PVariable>::iterator dataIterator = peerIterator->second.find(dataID);
+			if(dataIterator != peerIterator->second.end())
+			{
+				 metadata = dataIterator->second;
+				_metadataMutex.unlock();
+				return metadata;
+			}
 			_metadataMutex.unlock();
-			return metadata;
 		}
-		_metadataMutex.unlock();
 
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peerID))));
@@ -1515,14 +1520,19 @@ bool DatabaseController::setPeerID(uint64_t oldPeerID, uint64_t newPeerID)
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(newPeerID)));
-		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT 1 FROM peers WHERE peerID=?", data);
-		if(!result->empty()) return false;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(oldPeerID)));
 		bufferedWrite("UPDATE peers SET peerID=? WHERE peerID=?", data);
 		bufferedWrite("UPDATE parameters SET peerID=? WHERE peerID=?", data);
 		bufferedWrite("UPDATE peerVariables SET peerID=? WHERE peerID=?", data);
 		bufferedWrite("UPDATE serviceMessages SET peerID=? WHERE peerID=?", data);
-		//TODO: Update Metadata
+		bufferedWrite("UPDATE events SET peerID=? WHERE peerID=?", data);
+		_metadataMutex.lock();
+		_metadata.erase(oldPeerID);
+		_metadataMutex.unlock();
+		data.clear();
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(newPeerID))));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(oldPeerID))));
+		bufferedWrite("UPDATE metadata SET objectID=? WHERE objectID=?", data);
 		return true;
 	}
 	catch(const std::exception& ex)
