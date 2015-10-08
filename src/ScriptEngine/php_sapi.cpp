@@ -35,6 +35,12 @@ static std::shared_ptr<BaseLib::HTTP> _http;
 static pthread_key_t pthread_key;
 static zend_class_entry* homegear_class_entry = nullptr;
 static zend_class_entry* homegear_exception_class_entry = nullptr;
+static char* ini_path_override = nullptr;
+static char* ini_entries = nullptr;
+static const char HARDCODED_INI[] =
+	"register_argc_argv=1\n"
+	"max_execution_time=0\n"
+	"max_input_time=-1\n\0";
 
 static int php_homegear_startup(sapi_module_struct* sapi_module);
 static int php_homegear_activate(TSRMLS_D);
@@ -84,6 +90,17 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_users, NULL)
 	{NULL, NULL, NULL}
 };
+
+#define INI_DEFAULT(name,value)\
+	ZVAL_NEW_STR(&tmp, zend_string_init(value, sizeof(value)-1, 1));\
+	zend_hash_str_update(configuration_hash, name, sizeof(name)-1, &tmp);\
+
+static void homegear_ini_defaults(HashTable *configuration_hash)
+{
+	zval tmp;
+	INI_DEFAULT("report_zend_debug", "0");
+	INI_DEFAULT("display_errors", "1");
+}
 
 static zend_module_entry homegear_module_entry = {
         STANDARD_MODULE_HEADER,
@@ -706,7 +723,17 @@ int php_homegear_init()
 	_http.reset(new BaseLib::HTTP());
 	pthread_key_create(&pthread_key, pthread_data_destructor);
 	tsrm_startup(20, 1, 0, NULL);
+	php_homegear_sapi_module.ini_defaults = homegear_ini_defaults;
+	ini_path_override = strndup(GD::bl->settings.phpIniPath().c_str(), GD::bl->settings.phpIniPath().size());
+	php_homegear_sapi_module.php_ini_path_override = ini_path_override;
+	php_homegear_sapi_module.phpinfo_as_text = 1;
+	php_homegear_sapi_module.php_ini_ignore_cwd = 1;
 	sapi_startup(&php_homegear_sapi_module);
+
+	ini_entries = (char*)malloc(sizeof(HARDCODED_INI));
+	memcpy(ini_entries, HARDCODED_INI, sizeof(HARDCODED_INI));
+	php_homegear_sapi_module.ini_entries = ini_entries;
+
 	sapi_module.startup(&php_homegear_sapi_module);
 
 	return SUCCESS;
@@ -721,6 +748,8 @@ void php_homegear_shutdown()
 
 	tsrm_shutdown();
 	_http.reset();
+	if(ini_path_override) free(ini_path_override);
+	if(ini_entries) free(ini_entries);
 }
 
 static int php_homegear_startup(sapi_module_struct* sapi_module)
