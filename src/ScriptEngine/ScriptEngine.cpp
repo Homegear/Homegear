@@ -264,6 +264,7 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 		if(!globals)
 		{
 			ts_free_thread();
+			setThreadNotRunning(threadId);
 			return;
 		}
 		globals->output = output.get();
@@ -274,6 +275,7 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 		{
 			GD::out.printCritical("Critical: Error in PHP: No thread safe resource exists.");
 			ts_free_thread();
+			setThreadNotRunning(threadId);
 			return;
 		}
 		PG(register_argc_argv) = 1;
