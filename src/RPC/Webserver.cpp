@@ -86,7 +86,7 @@ void WebServer::get(BaseLib::HTTP& http, std::shared_ptr<BaseLib::SocketOperatio
 #ifdef SCRIPTENGINE
 			if(ending == "php" || ending == "php5" || ending == "php7")
 			{
-				GD::scriptEngine.executeWebRequest(_serverInfo->contentPath + path, http, _serverInfo, socket);
+				GD::scriptEngine->executeWebRequest(_serverInfo->contentPath + path, http, _serverInfo, socket);
 				socket->close();
 				return;
 			}
@@ -187,7 +187,7 @@ void WebServer::post(BaseLib::HTTP& http, std::shared_ptr<BaseLib::SocketOperati
 		try
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader()->path + " (translated to: \"" + _serverInfo->contentPath + path + "\", method: POST)");
-			GD::scriptEngine.executeWebRequest(_serverInfo->contentPath + path, http, _serverInfo, socket);
+			GD::scriptEngine->executeWebRequest(_serverInfo->contentPath + path, http, _serverInfo, socket);
 			socket->close();
 		}
 		catch(const std::exception& ex)

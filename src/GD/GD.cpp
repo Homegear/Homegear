@@ -33,29 +33,29 @@
 
 std::unique_ptr<BaseLib::Obj> GD::bl;
 BaseLib::Output GD::out;
-DatabaseController GD::db;
+std::unique_ptr<DatabaseController> GD::db;
 std::string GD::configPath = "/etc/homegear/";
 std::string GD::pidfilePath = "";
 std::string GD::runDir = "/var/run/homegear/";
 std::string GD::socketPath = GD::runDir + "homegear.sock";
 std::string GD::workingDirectory = "";
 std::string GD::executablePath = "";
-FamilyController GD::familyController;
+std::unique_ptr<FamilyController> GD::familyController;
 std::map<int32_t, RPC::Server> GD::rpcServers;
-RPC::Client GD::rpcClient;
-CLI::Server GD::cliServer;
-CLI::Client GD::cliClient;
+std::unique_ptr<RPC::Client> GD::rpcClient;
+std::unique_ptr<CLI::Server> GD::cliServer;
+std::unique_ptr<CLI::Client> GD::cliClient;
 int32_t GD::rpcLogLevel = 1;
 BaseLib::Rpc::ServerInfo GD::serverInfo;
 RPC::ClientSettings GD::clientSettings;
-PhysicalInterfaces GD::physicalInterfaces;
+std::unique_ptr<PhysicalInterfaces> GD::physicalInterfaces;
 std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>> GD::deviceFamilies;
 std::map<std::string, int32_t> GD::deviceFamiliesByName;
 std::unique_ptr<UPnP> GD::uPnP(new UPnP());
 std::unique_ptr<MQTT> GD::mqtt;
 #ifdef EVENTHANDLER
-EventHandler GD::eventHandler;
+std::unique_ptr<EventHandler> GD::eventHandler;
 #endif
 #ifdef SCRIPTENGINE
-ScriptEngine GD::scriptEngine;
+std::unique_ptr<ScriptEngine> GD::scriptEngine;
 #endif

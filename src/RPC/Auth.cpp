@@ -267,7 +267,7 @@ bool Auth::sessionServer(BaseLib::WebSocket& webSocket)
 		return false;
 	}
 #ifdef SCRIPTENGINE
-	if(variable->structValue->find("user") != variable->structValue->end() && GD::scriptEngine.checkSessionId(variable->structValue->at("user")->stringValue))
+	if(variable->structValue->find("user") != variable->structValue->end() && GD::scriptEngine->checkSessionId(variable->structValue->at("user")->stringValue))
 	{
 		sendWebSocketAuthorized(webSocket);
 		return true;

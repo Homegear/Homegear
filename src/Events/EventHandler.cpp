@@ -241,7 +241,7 @@ void EventHandler::mainThread()
 					while(_timedEvents.find(nextExecution) != _timedEvents.end()) nextExecution++;
 					_timedEvents[nextExecution] = event;
 					_eventsMutex.unlock();
-					GD::rpcClient.broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
+					GD::rpcClient->broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
 				}
 				else removeTimedEvent(event->id);
 			}
@@ -273,7 +273,7 @@ void EventHandler::mainThread()
 					_eventThreadMutex.unlock();
 					removeEventToReset(event->id);
 					save(event);
-					GD::rpcClient.broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
+					GD::rpcClient->broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
 				}
 			}
 			else if(!_timesToReset.empty() && _timesToReset.begin()->first <= currentTime)
@@ -285,7 +285,7 @@ void EventHandler::mainThread()
 				event->lastReset = currentTime;
 				event->currentTime = 0;
 				save(event);
-				GD::rpcClient.broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
+				GD::rpcClient->broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
 			}
 			else
 			{
@@ -422,7 +422,7 @@ BaseLib::PVariable EventHandler::add(BaseLib::PVariable eventDescription)
 			_mainThreadMutex.unlock();
 		}
 		save(event);
-		GD::rpcClient.broadcastNewEvent(get(event->name));
+		GD::rpcClient->broadcastNewEvent(get(event->name));
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
 	catch(const std::exception& ex)
@@ -661,9 +661,9 @@ BaseLib::PVariable EventHandler::remove(std::string name)
 		}
 
 		_databaseMutex.lock();
-		GD::db.deleteEvent(name);
+		GD::db->deleteEvent(name);
 		_databaseMutex.unlock();
-		GD::rpcClient.broadcastDeleteEvent(name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
+		GD::rpcClient->broadcastDeleteEvent(name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
 	catch(const std::exception& ex)
@@ -728,7 +728,7 @@ BaseLib::PVariable EventHandler::enable(std::string name, bool enabled)
 			removeEventToReset(event->id);
 		}
 		save(event);
-		GD::rpcClient.broadcastUpdateEvent(name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
+		GD::rpcClient->broadcastUpdateEvent(name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
 	catch(const std::exception& ex)
@@ -983,7 +983,7 @@ void EventHandler::removeTimedEvent(uint32_t id)
 				std::string variable = i->second->variable;
 				_timedEvents.erase(i); //erase invalidates the iterator.
 				_eventsMutex.unlock();
-				GD::rpcClient.broadcastDeleteEvent(name, type, peerID, peerChannel, variable);
+				GD::rpcClient->broadcastDeleteEvent(name, type, peerID, peerChannel, variable);
 				return;
 			}
 		}
@@ -1191,7 +1191,7 @@ BaseLib::PVariable EventHandler::trigger(std::string name)
 
 		postTriggerTasks(event, result, currentTime);
 
-		GD::rpcClient.broadcastUpdateEvent(name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
+		GD::rpcClient->broadcastUpdateEvent(name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
 	catch(const std::exception& ex)
@@ -1405,7 +1405,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 
 			postTriggerTasks(*i, result, currentTime);
 
-			GD::rpcClient.broadcastUpdateEvent((*i)->name, (int32_t)(*i)->type, (*i)->peerID, (*i)->peerChannel, (*i)->variable);
+			GD::rpcClient->broadcastUpdateEvent((*i)->name, (int32_t)(*i)->type, (*i)->peerID, (*i)->peerChannel, (*i)->variable);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1564,7 +1564,7 @@ void EventHandler::load()
 		}
 
 		_databaseMutex.lock();
-		std::shared_ptr<BaseLib::Database::DataTable> rows = GD::db.getEvents();
+		std::shared_ptr<BaseLib::Database::DataTable> rows = GD::db->getEvents();
 		_databaseMutex.unlock();
 		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
@@ -1689,7 +1689,7 @@ void EventHandler::save(std::shared_ptr<Event> event)
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->lastReset)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->currentTime)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->enabled)));
-		GD::db.saveEventAsynchronous(data);
+		GD::db->saveEventAsynchronous(data);
 	}
 	catch(const std::exception& ex)
     {

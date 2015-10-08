@@ -391,10 +391,10 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 	try
 	{
 		std::string unselect = "unselect";
-		GD::familyController.handleCLICommand(unselect);
-		GD::familyController.handleCLICommand(unselect);
-		GD::familyController.handleCLICommand(unselect);
-		GD::familyController.handleCLICommand(unselect);
+		GD::familyController->handleCLICommand(unselect);
+		GD::familyController->handleCLICommand(unselect);
+		GD::familyController->handleCLICommand(unselect);
+		GD::familyController->handleCLICommand(unselect);
 
 		int32_t bufferMax = 1024;
 		char buffer[bufferMax + 1];
@@ -719,7 +719,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 	try
 	{
 		std::ostringstream stringStream;
-		if((command == "help" || command == "h") && !GD::familyController.familySelected())
+		if((command == "help" || command == "h") && !GD::familyController->familySelected())
 		{
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
@@ -730,7 +730,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "families [COMMAND]\tExecute device family commands. Type \"families help\" for more information." << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 10, "debuglevel") == 0 || (command.compare(0, 2, "dl") == 0 && !GD::familyController.familySelected()))
+		else if(command.compare(0, 10, "debuglevel") == 0 || (command.compare(0, 2, "dl") == 0 && !GD::familyController->familySelected()))
 		{
 			int32_t debugLevel = 3;
 
@@ -804,7 +804,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			std::shared_ptr<std::vector<char>> scriptOutput(new std::vector<char>());
 #ifdef SCRIPTENGINE
 			int32_t exitCode = 0;
-			GD::scriptEngine.execute(path, arguments.str(), scriptOutput, &exitCode);
+			GD::scriptEngine->execute(path, arguments.str(), scriptOutput, &exitCode);
 			if(scriptOutput->size() > 0)
 			{
 				std::string outputString(&scriptOutput->at(0), &scriptOutput->at(0) + scriptOutput->size());
@@ -914,8 +914,8 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
 		std::string response = handleGlobalCommand(command);
 		if(response.empty())
 		{
-			if(command.compare(0, 5, "users") == 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'u' && !GD::familyController.familySelected())) response = handleUserCommand(command);
-			else response = GD::familyController.handleCLICommand(command);
+			if(command.compare(0, 5, "users") == 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'u' && !GD::familyController->familySelected())) response = handleUserCommand(command);
+			else response = GD::familyController->handleCLICommand(command);
 		}
 		response.push_back(0);
 		if(send(clientData->fileDescriptor->descriptor, response.c_str(), response.size(), MSG_NOSIGNAL) == -1)

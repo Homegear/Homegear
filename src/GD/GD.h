@@ -57,32 +57,32 @@ class GD
 public:
 	static std::unique_ptr<BaseLib::Obj> bl;
 	static BaseLib::Output out;
-	static DatabaseController db;
+	static std::unique_ptr<DatabaseController> db;
 	static std::string configPath;
 	static std::string runDir;
 	static std::string pidfilePath;
 	static std::string socketPath;
 	static std::string workingDirectory;
 	static std::string executablePath;
-	static FamilyController familyController;
+	static std::unique_ptr<FamilyController> familyController;
 	//We can work with rpcServers without Mutex, because elements are never deleted and iterators are not invalidated upon insertion of new elements.
 	static std::map<int32_t, RPC::Server> rpcServers;
-	static RPC::Client rpcClient;
-	static CLI::Server cliServer;
-	static CLI::Client cliClient;
+	static std::unique_ptr<RPC::Client> rpcClient;
+	static std::unique_ptr<CLI::Server> cliServer;
+	static std::unique_ptr<CLI::Client> cliClient;
 	static BaseLib::Rpc::ServerInfo serverInfo;
 	static RPC::ClientSettings clientSettings;
 	static int32_t rpcLogLevel;
-	static PhysicalInterfaces physicalInterfaces;
+	static std::unique_ptr<PhysicalInterfaces> physicalInterfaces;
 	static std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>> deviceFamilies;
 	static std::map<std::string, int32_t> deviceFamiliesByName;
 	static std::unique_ptr<UPnP> uPnP;
 	static std::unique_ptr<MQTT> mqtt;
 #ifdef EVENTHANDLER
-	static EventHandler eventHandler;
+	static std::unique_ptr<EventHandler> eventHandler;
 #endif
 #ifdef SCRIPTENGINE
-	static ScriptEngine scriptEngine;
+	static std::unique_ptr<ScriptEngine> scriptEngine;
 #endif
 
 	virtual ~GD() {}
