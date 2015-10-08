@@ -47,8 +47,6 @@ case $1 in
 		chown homegear:homegear /var/log/homegear
 		chmod 750 /var/log/homegear
 
-		chown -R homegear:homegear /usr/share/homegear/firmware
-		chmod -R 550 /usr/share/homegear/firmware
 		chown -R homegear:homegear /var/lib/homegear/modules
 		chmod -R 550 /var/lib/homegear/modules
 		find /var/lib/homegear/www -type d -exec chmod 550 {} \;
