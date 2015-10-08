@@ -115,82 +115,82 @@ FamilyController::~FamilyController()
 //Device event handling
 void FamilyController::onCreateSavepointSynchronous(std::string name)
 {
-	GD::db.createSavepointSynchronous(name);
+	GD::db->createSavepointSynchronous(name);
 }
 
 void FamilyController::onReleaseSavepointSynchronous(std::string name)
 {
-	GD::db.releaseSavepointSynchronous(name);
+	GD::db->releaseSavepointSynchronous(name);
 }
 
 void FamilyController::onCreateSavepointAsynchronous(std::string name)
 {
-	GD::db.createSavepointAsynchronous(name);
+	GD::db->createSavepointAsynchronous(name);
 }
 
 void FamilyController::onReleaseSavepointAsynchronous(std::string name)
 {
-	GD::db.releaseSavepointAsynchronous(name);
+	GD::db->releaseSavepointAsynchronous(name);
 }
 
 void FamilyController::onDeleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID)
 {
-	GD::db.deleteMetadata(peerID, serialNumber, dataID);
+	GD::db->deleteMetadata(peerID, serialNumber, dataID);
 }
 
 void FamilyController::onDeletePeer(uint64_t id)
 {
-	GD::db.deletePeer(id);
+	GD::db->deletePeer(id);
 }
 
 uint64_t FamilyController::onSavePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber)
 {
-	return GD::db.savePeer(id, parentID, address, serialNumber);
+	return GD::db->savePeer(id, parentID, address, serialNumber);
 }
 
 void FamilyController::onSavePeerParameter(uint64_t peerID, BaseLib::Database::DataRow& data)
 {
-	GD::db.savePeerParameterAsynchronous(peerID, data);
+	GD::db->savePeerParameterAsynchronous(peerID, data);
 }
 
 void FamilyController::onSavePeerVariable(uint64_t peerID, BaseLib::Database::DataRow& data)
 {
-	GD::db.savePeerVariableAsynchronous(peerID, data);
+	GD::db->savePeerVariableAsynchronous(peerID, data);
 }
 
 std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetPeerParameters(uint64_t peerID)
 {
-	return GD::db.getPeerParameters(peerID);
+	return GD::db->getPeerParameters(peerID);
 }
 
 std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetPeerVariables(uint64_t peerID)
 {
-	return GD::db.getPeerVariables(peerID);
+	return GD::db->getPeerVariables(peerID);
 }
 
 void FamilyController::onDeletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow& data)
 {
-	GD::db.deletePeerParameter(peerID, data);
+	GD::db->deletePeerParameter(peerID, data);
 }
 
 bool FamilyController::onSetPeerID(uint64_t oldPeerID, uint64_t newPeerID)
 {
-	return GD::db.setPeerID(oldPeerID, newPeerID);
+	return GD::db->setPeerID(oldPeerID, newPeerID);
 }
 
 std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetServiceMessages(uint64_t peerID)
 {
-	return GD::db.getServiceMessages(peerID);
+	return GD::db->getServiceMessages(peerID);
 }
 
 void FamilyController::onSaveServiceMessage(uint64_t peerID, BaseLib::Database::DataRow& data)
 {
-	GD::db.saveServiceMessageAsynchronous(peerID, data);
+	GD::db->saveServiceMessageAsynchronous(peerID, data);
 }
 
 void FamilyController::onDeleteServiceMessage(uint64_t databaseID)
 {
-	GD::db.deleteServiceMessage(databaseID);
+	GD::db->deleteServiceMessage(databaseID);
 }
 
 void FamilyController::onAddWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler, std::map<int32_t, BaseLib::PEventHandler>& eventHandlers)
@@ -211,44 +211,44 @@ void FamilyController::onRemoveWebserverEventHandler(std::map<int32_t, BaseLib::
 
 std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetDevices(uint32_t family)
 {
-	return GD::db.getDevices(family);
+	return GD::db->getDevices(family);
 }
 
 void FamilyController::onDeleteDevice(uint64_t deviceID)
 {
-	GD::db.deleteDevice(deviceID);
+	GD::db->deleteDevice(deviceID);
 }
 
 uint64_t FamilyController::onSaveDevice(uint64_t id, int32_t address, std::string serialNumber, uint32_t type, uint32_t family)
 {
-	return GD::db.saveDevice(id, address, serialNumber, type, family);
+	return GD::db->saveDevice(id, address, serialNumber, type, family);
 }
 
 void FamilyController::onSaveDeviceVariable(BaseLib::Database::DataRow& data)
 {
-	GD::db.saveDeviceVariableAsynchronous(data);
+	GD::db->saveDeviceVariableAsynchronous(data);
 }
 
 void FamilyController::onDeletePeers(int32_t deviceID)
 {
-	GD::db.deletePeers(deviceID);
+	GD::db->deletePeers(deviceID);
 }
 
 std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetPeers(uint64_t deviceID)
 {
-	return GD::db.getPeers(deviceID);
+	return GD::db->getPeers(deviceID);
 }
 
 std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetDeviceVariables(uint64_t deviceID)
 {
-	return GD::db.getDeviceVariables(deviceID);
+	return GD::db->getDeviceVariables(deviceID);
 }
 
 void FamilyController::onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>> values)
 {
 	try
 	{
-		GD::rpcClient.broadcastEvent(id, channel, deviceAddress, valueKeys, values);
+		GD::rpcClient->broadcastEvent(id, channel, deviceAddress, valueKeys, values);
 	}
 	catch(const std::exception& ex)
 	{
@@ -268,7 +268,7 @@ void FamilyController::onRPCUpdateDevice(uint64_t id, int32_t channel, std::stri
 {
 	try
 	{
-		GD::rpcClient.broadcastUpdateDevice(id, channel, address, (RPC::Client::Hint::Enum)hint);
+		GD::rpcClient->broadcastUpdateDevice(id, channel, address, (RPC::Client::Hint::Enum)hint);
 	}
 	catch(const std::exception& ex)
 	{
@@ -288,7 +288,7 @@ void FamilyController::onRPCNewDevices(BaseLib::PVariable deviceDescriptions)
 {
 	try
 	{
-		GD::rpcClient.broadcastNewDevices(deviceDescriptions);
+		GD::rpcClient->broadcastNewDevices(deviceDescriptions);
 	}
 	catch(const std::exception& ex)
 	{
@@ -308,7 +308,7 @@ void FamilyController::onRPCDeleteDevices(BaseLib::PVariable deviceAddresses, Ba
 {
 	try
 	{
-		GD::rpcClient.broadcastDeleteDevices(deviceAddresses, deviceInfo);
+		GD::rpcClient->broadcastDeleteDevices(deviceAddresses, deviceInfo);
 	}
 	catch(const std::exception& ex)
 	{
@@ -329,7 +329,7 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 	try
 	{
 #ifdef EVENTHANDLER
-		GD::eventHandler.trigger(peerID, channel, variables, values);
+		GD::eventHandler->trigger(peerID, channel, variables, values);
 #endif
 	}
 	catch(const std::exception& ex)
@@ -400,7 +400,7 @@ void FamilyController::homegearShuttingDown()
 
 bool FamilyController::familyAvailable(int32_t family)
 {
-	return GD::physicalInterfaces.count(family) > 0 || _familiesWithoutPhysicalInterface.find(family) != _familiesWithoutPhysicalInterface.end();
+	return GD::physicalInterfaces->count(family) > 0 || _familiesWithoutPhysicalInterface.find(family) != _familiesWithoutPhysicalInterface.end();
 }
 
 void FamilyController::loadModules()
@@ -469,7 +469,7 @@ void FamilyController::init()
 				familiesToRemove.push_back(i->first);
 				if(familyAvailable(i->first)) GD::out.printError("Error: Could not initialize device family " + i->second->getName() + ".");
 				else GD::out.printInfo("Info: Not initializing device family " + i->second->getName() + ", because no physical interface was found.");
-				GD::physicalInterfaces.clear(i->first);
+				GD::physicalInterfaces->clear(i->first);
 			}
 		}
 		for(std::vector<int32_t>::iterator i = familiesToRemove.begin(); i != familiesToRemove.end(); ++i)

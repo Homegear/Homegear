@@ -243,7 +243,7 @@ BaseLib::PVariable RPCAbortEventReset::invoke(int32_t clientID, std::shared_ptr<
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::eventHandler.abortReset(parameters->at(0)->stringValue);
+		return GD::eventHandler->abortReset(parameters->at(0)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -400,7 +400,7 @@ BaseLib::PVariable RPCAddEvent::invoke(int32_t clientID, std::shared_ptr<std::ve
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tStruct }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::eventHandler.add(parameters->at(0));
+		return GD::eventHandler->add(parameters->at(0));
 	}
 	catch(const std::exception& ex)
     {
@@ -516,7 +516,7 @@ BaseLib::PVariable RPCClientServerInitialized::invoke(int32_t clientID, std::sha
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 		std::string id = parameters->at(0)->stringValue;
-		return GD::rpcClient.clientServerInitialized(id);
+		return GD::rpcClient->clientServerInitialized(id);
 	}
 	catch(const std::exception& ex)
     {
@@ -653,7 +653,7 @@ BaseLib::PVariable RPCDeleteMetadata::invoke(int32_t clientID, std::shared_ptr<s
 		std::string dataID;
 		if(parameters->size() > 1) dataID = parameters->at(1)->stringValue;
 		serialNumber = peer->getSerialNumber();
-		return GD::db.deleteMetadata(peer->getID(), serialNumber, dataID);
+		return GD::db->deleteMetadata(peer->getID(), serialNumber, dataID);
 	}
 	catch(const std::exception& ex)
     {
@@ -677,7 +677,7 @@ BaseLib::PVariable RPCDeleteSystemVariable::invoke(int32_t clientID, std::shared
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::db.deleteSystemVariable(parameters->at(0)->stringValue);
+		return GD::db->deleteSystemVariable(parameters->at(0)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -702,7 +702,7 @@ BaseLib::PVariable RPCEnableEvent::invoke(int32_t clientID, std::shared_ptr<std:
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::eventHandler.enable(parameters->at(0)->stringValue, parameters->at(1)->booleanValue);
+		return GD::eventHandler->enable(parameters->at(0)->stringValue, parameters->at(1)->booleanValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -764,7 +764,7 @@ BaseLib::PVariable RPCGetAllMetadata::invoke(int32_t clientID, std::shared_ptr<s
 		if(!peer) return BaseLib::Variable::createError(-2, "Device not found.");
 
 		std::string peerName = peer->getName();
-		BaseLib::PVariable metadata = GD::db.getAllMetadata(peer->getID());
+		BaseLib::PVariable metadata = GD::db->getAllMetadata(peer->getID());
 		if(!peerName.empty())
 		{
 			if(metadata->structValue->find("NAME") != metadata->structValue->end()) metadata->structValue->at("NAME")->stringValue = peerName;
@@ -798,7 +798,7 @@ BaseLib::PVariable RPCGetAllScripts::invoke(int32_t clientID, std::shared_ptr<st
 	{
 		if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
 
-		return GD::scriptEngine.getAllScripts();
+		return GD::scriptEngine->getAllScripts();
 	}
 	catch(const std::exception& ex)
     {
@@ -824,7 +824,7 @@ BaseLib::PVariable RPCGetAllSystemVariables::invoke(int32_t clientID, std::share
 	{
 		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
 
-		return GD::db.getAllSystemVariables();
+		return GD::db->getAllSystemVariables();
 	}
 	catch(const std::exception& ex)
     {
@@ -1057,7 +1057,7 @@ BaseLib::PVariable RPCGetEvent::invoke(int32_t clientID, std::shared_ptr<std::ve
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::eventHandler.get(parameters->at(0)->stringValue);
+		return GD::eventHandler->get(parameters->at(0)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -1416,16 +1416,16 @@ BaseLib::PVariable RPCGetMetadata::invoke(int32_t clientID, std::shared_ptr<std:
 		{
 			std::string peerName = peer->getName();
 			if(peerName.size() > 0) return BaseLib::PVariable(new BaseLib::Variable(peerName));
-			BaseLib::PVariable rpcName = GD::db.getMetadata(peer->getID(), parameters->at(1)->stringValue);
+			BaseLib::PVariable rpcName = GD::db->getMetadata(peer->getID(), parameters->at(1)->stringValue);
 			if(peerName.size() == 0 && !rpcName->errorStruct)
 			{
 				peer->setName(rpcName->stringValue);
 				serialNumber = peer->getSerialNumber();
-				GD::db.deleteMetadata(peer->getID(), serialNumber, parameters->at(1)->stringValue);
+				GD::db->deleteMetadata(peer->getID(), serialNumber, parameters->at(1)->stringValue);
 			}
 			return rpcName;
 		}
-		else return GD::db.getMetadata(peer->getID(), parameters->at(1)->stringValue);
+		else return GD::db->getMetadata(peer->getID(), parameters->at(1)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -1818,7 +1818,7 @@ BaseLib::PVariable RPCGetSystemVariable::invoke(int32_t clientID, std::shared_pt
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::db.getSystemVariable(parameters->at(0)->stringValue);
+		return GD::db->getSystemVariable(parameters->at(0)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -2035,11 +2035,11 @@ BaseLib::PVariable RPCInit::invoke(int32_t clientID, std::shared_ptr<std::vector
 
 		if(parameters->size() == 1 || parameters->at(1)->stringValue.empty())
 		{
-			GD::rpcClient.removeServer(server);
+			GD::rpcClient->removeServer(server);
 		}
 		else
 		{
-			std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient.addServer(server, path, parameters->at(1)->stringValue);
+			std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient->addServer(server, path, parameters->at(1)->stringValue);
 			if(!eventServer)
 			{
 				GD::out.printError("Error: Could not create event server.");
@@ -2074,7 +2074,7 @@ BaseLib::PVariable RPCInit::invoke(int32_t clientID, std::shared_ptr<std::vector
 					return BaseLib::Variable::createError(-32500, "I'm disposing.");
 				}
 				if(_initServerThread.joinable()) _initServerThread.join();
-				_initServerThread = std::thread(&RPC::Client::initServerMethods, &GD::rpcClient, server);
+				_initServerThread = std::thread(&RPC::Client::initServerMethods, GD::rpcClient.get(), server);
 			}
 			catch(const std::exception& ex)
 			{
@@ -2139,7 +2139,7 @@ BaseLib::PVariable RPCListClientServers::invoke(int32_t clientID, std::shared_pt
 			if(error != ParameterError::Enum::noError) return getError(error);
 			id = parameters->at(0)->stringValue;
 		}
-		return GD::rpcClient.listClientServers(id);
+		return GD::rpcClient->listClientServers(id);
 	}
 	catch(const std::exception& ex)
     {
@@ -2242,7 +2242,7 @@ BaseLib::PVariable RPCListEvents::invoke(int32_t clientID, std::shared_ptr<std::
 			}
 			if(parameters->size() == 3) variable = parameters->at(2)->stringValue;
 		}
-		return GD::eventHandler.list(type, peerID, channel, variable);
+		return GD::eventHandler->list(type, peerID, channel, variable);
 	}
 	catch(const std::exception& ex)
     {
@@ -2268,7 +2268,7 @@ BaseLib::PVariable RPCListFamilies::invoke(int32_t clientID, std::shared_ptr<std
 	{
 		if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
 
-		return GD::familyController.listFamilies();
+		return GD::familyController->listFamilies();
 	}
 	catch(const std::exception& ex)
     {
@@ -2300,7 +2300,7 @@ BaseLib::PVariable RPCListInterfaces::invoke(int32_t clientID, std::shared_ptr<s
 			familyID = parameters->at(0)->integerValue;
 		}
 
-		return GD::physicalInterfaces.listInterfaces(familyID);
+		return GD::physicalInterfaces->listInterfaces(familyID);
 	}
 	catch(const std::exception& ex)
     {
@@ -2473,7 +2473,7 @@ BaseLib::PVariable RPCRemoveEvent::invoke(int32_t clientID, std::shared_ptr<std:
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::eventHandler.remove(parameters->at(0)->stringValue);
+		return GD::eventHandler->remove(parameters->at(0)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -2684,7 +2684,7 @@ BaseLib::PVariable RPCRunScript::invoke(int32_t clientID, std::shared_ptr<std::v
 		{
 			if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Executing script \"" + path + "\" with parameters \"" + arguments + "\" using internal script engine.");
 			std::shared_ptr<std::vector<char>> scriptOutput(new std::vector<char>());
-			GD::scriptEngine.execute(path, arguments, scriptOutput, &exitCode, wait);
+			GD::scriptEngine->execute(path, arguments, scriptOutput, &exitCode, wait);
 			if(scriptOutput->size() > 0)
 			{
 				std::string outputString(&scriptOutput->at(0), &scriptOutput->at(0) + scriptOutput->size());
@@ -3050,7 +3050,7 @@ BaseLib::PVariable RPCSetMetadata::invoke(int32_t clientID, std::shared_ptr<std:
 			return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 		}
 		serialNumber = peer->getSerialNumber();
-		return GD::db.setMetadata(peer->getID(), serialNumber, parameters->at(1)->stringValue, parameters->at(2));
+		return GD::db->setMetadata(peer->getID(), serialNumber, parameters->at(1)->stringValue, parameters->at(2));
 	}
 	catch(const std::exception& ex)
     {
@@ -3109,7 +3109,7 @@ BaseLib::PVariable RPCSetSystemVariable::invoke(int32_t clientID, std::shared_pt
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tVariant }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::db.setSystemVariable(parameters->at(0)->stringValue, parameters->at(1));
+		return GD::db->setSystemVariable(parameters->at(0)->stringValue, parameters->at(1));
 	}
 	catch(const std::exception& ex)
     {
@@ -3293,7 +3293,7 @@ BaseLib::PVariable RPCSubscribePeers::invoke(int32_t clientID, std::shared_ptr<s
 			if(server.second.empty() || server.second == "0") return BaseLib::Variable::createError(-32602, "Port number is invalid.");
 		}
 
-		std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient.getServer(server);
+		std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient->getServer(server);
 		if(!eventServer) return BaseLib::Variable::createError(-1, "Event server is unknown.");
 		for(BaseLib::Array::iterator i = parameters->at(1)->arrayValue->begin(); i != parameters->at(1)->arrayValue->end(); ++i)
 		{
@@ -3325,7 +3325,7 @@ BaseLib::PVariable RPCTriggerEvent::invoke(int32_t clientID, std::shared_ptr<std
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::eventHandler.trigger(parameters->at(0)->stringValue);
+		return GD::eventHandler->trigger(parameters->at(0)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -3355,16 +3355,16 @@ BaseLib::PVariable RPCTriggerRPCEvent::invoke(int32_t clientID, std::shared_ptr<
 		if(parameters->at(0)->stringValue == "deleteDevices")
 		{
 			if(parameters->at(1)->arrayValue->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count. You need to pass (in this order): Array deviceAddresses, Struct deviceInfo");
-			GD::rpcClient.broadcastDeleteDevices(parameters->at(1)->arrayValue->at(0), parameters->at(1)->arrayValue->at(1));
+			GD::rpcClient->broadcastDeleteDevices(parameters->at(1)->arrayValue->at(0), parameters->at(1)->arrayValue->at(1));
 		}
 		else if(parameters->at(0)->stringValue == "newDevices")
 		{
-			GD::rpcClient.broadcastNewDevices(parameters->at(1));
+			GD::rpcClient->broadcastNewDevices(parameters->at(1));
 		}
 		else if(parameters->at(0)->stringValue == "updateDevice")
 		{
 			if(parameters->at(1)->arrayValue->size() != 4) return BaseLib::Variable::createError(-1, "Wrong parameter count. You need to pass (in this order): Integer peerID, Integer channel, String address, Integer flags");
-			GD::rpcClient.broadcastUpdateDevice(parameters->at(1)->arrayValue->at(0)->integerValue, parameters->at(1)->arrayValue->at(1)->integerValue, parameters->at(1)->arrayValue->at(2)->stringValue, (RPC::Client::Hint::Enum)parameters->at(1)->arrayValue->at(3)->integerValue);
+			GD::rpcClient->broadcastUpdateDevice(parameters->at(1)->arrayValue->at(0)->integerValue, parameters->at(1)->arrayValue->at(1)->integerValue, parameters->at(1)->arrayValue->at(2)->stringValue, (RPC::Client::Hint::Enum)parameters->at(1)->arrayValue->at(3)->integerValue);
 		}
 		else return BaseLib::Variable::createError(-1, "Invalid function.");
 
@@ -3410,7 +3410,7 @@ BaseLib::PVariable RPCUnsubscribePeers::invoke(int32_t clientID, std::shared_ptr
 			if(server.second.empty() || server.second == "0") return BaseLib::Variable::createError(-32602, "Port number is invalid.");
 		}
 
-		std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient.getServer(server);
+		std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient->getServer(server);
 		if(!eventServer) return BaseLib::Variable::createError(-1, "Event server is unknown.");
 		for(BaseLib::Array::iterator i = parameters->at(1)->arrayValue->begin(); i != parameters->at(1)->arrayValue->end(); ++i)
 		{

@@ -648,5 +648,8 @@ EOF
 rm -Rf $rootfs
 
 docker build -t homegear/build:${distlc}-${distver}-${arch} "$dir"
+if [ "$dist" == "Raspbian" ]; then
+	docker tab homegear/build:${distlc}-${distver}-${arch} homegear/build:${distlc}-${distver}
+fi
 
 rm -Rf $dir

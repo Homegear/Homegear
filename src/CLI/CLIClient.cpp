@@ -149,7 +149,7 @@ int32_t Client::start(std::string command)
 		}
 		if(GD::bl->debugLevel >= 4) std::cout << "Info: Connected." << std::endl;
 
-		_pingThread = std::thread(&CLI::Client::ping, this);
+		if(command.empty()) _pingThread = std::thread(&CLI::Client::ping, this);
 
 		rl_bind_key('\t', rl_abort); //no autocompletion
 

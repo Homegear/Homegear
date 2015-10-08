@@ -60,8 +60,8 @@ std::shared_ptr<std::function<void(int32_t, std::string)>> _errorCallback;
 
 void exitHomegear(int exitCode)
 {
-	GD::physicalInterfaces.dispose();
-    GD::familyController.dispose();
+	if(GD::physicalInterfaces) GD::physicalInterfaces->dispose();
+    if(GD::familyController) GD::familyController->dispose();
     exit(exitCode);
 }
 
@@ -108,14 +108,14 @@ void terminate(int32_t signalNumber)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			}
-			GD::familyController.homegearShuttingDown();
+			if(GD::familyController) GD::familyController->homegearShuttingDown();
 			GD::bl->shuttingDown = true;
 			_disposing = true;
 			GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
 			if(_startAsDaemon)
 			{
 				GD::out.printInfo("(Shutdown) => Stopping CLI server");
-				GD::cliServer.stop();
+				if(GD::cliServer) GD::cliServer->stop();
 			}
 			if(GD::bl->settings.enableUPnP())
 			{
@@ -123,29 +123,32 @@ void terminate(int32_t signalNumber)
 				GD::uPnP->stop();
 			}
 #ifdef EVENTHANDLER
-			GD::eventHandler.dispose();
+			if(GD::eventHandler) GD::eventHandler->dispose();
 #endif
 			stopRPCServers(true);
 			GD::rpcServers.clear();
 			GD::out.printInfo( "(Shutdown) => Stopping Event handler");
 
-			if(GD::mqtt->enabled())
+			if(GD::mqtt && GD::mqtt->enabled())
 			{
 				GD::out.printInfo( "(Shutdown) => Stopping MQTT client");;
 				GD::mqtt->stop();
 			}
 			GD::out.printInfo( "(Shutdown) => Stopping RPC client");;
-			GD::rpcClient.dispose();
+			if(GD::rpcClient) GD::rpcClient->dispose();
 			GD::out.printInfo( "(Shutdown) => Closing physical devices");
-			GD::physicalInterfaces.stopListening();
-			GD::physicalInterfaces.dispose();
+			if(GD::physicalInterfaces)
+			{
+				GD::physicalInterfaces->stopListening();
+				GD::physicalInterfaces->dispose();
+			}
 #ifdef SCRIPTENGINE
-			GD::scriptEngine.dispose();
+			if(GD::scriptEngine) GD::scriptEngine->dispose();
 #endif
-			GD::familyController.save(false);
-			GD::db.dispose(); //Finish database operations before closing modules, otherwise SEGFAULT
+			if(GD::familyController) GD::familyController->save(false);
+			if(GD::db) GD::db->dispose(); //Finish database operations before closing modules, otherwise SEGFAULT
 			GD::out.printMessage("(Shutdown) => Disposing device families");
-			GD::familyController.dispose();
+			if(GD::familyController) GD::familyController->dispose();
 			GD::bl->fileDescriptorManager.dispose();
 			GD::out.printMessage("(Shutdown) => Shutdown complete.");
 			if(_startAsDaemon)
@@ -181,7 +184,7 @@ void terminate(int32_t signalNumber)
 					GD::out.printInfo( "(Shutdown) => Stopping MQTT client");;
 					GD::mqtt->stop();
 				}
-				GD::physicalInterfaces.stopListening();
+				if(GD::physicalInterfaces) GD::physicalInterfaces->stopListening();
 				//Binding fails sometimes with "address is already in use" without waiting.
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				GD::out.printMessage("Reloading settings...");
@@ -194,7 +197,7 @@ void terminate(int32_t signalNumber)
 					GD::out.printInfo("Starting MQTT client");;
 					GD::mqtt->start();
 				}
-				GD::physicalInterfaces.startListening();
+				if(GD::physicalInterfaces) GD::physicalInterfaces->startListening();
 				startRPCServers();
 				if(GD::bl->settings.enableUPnP())
 				{
@@ -214,8 +217,8 @@ void terminate(int32_t signalNumber)
 					GD::out.printError("Error: Could not redirect errors to new log file.");
 				}
 			}
-			GD::db.hotBackup();
-			if(!GD::db.isOpen())
+			GD::db->hotBackup();
+			if(!GD::db->isOpen())
 			{
 				GD::out.printCritical("Critical: Can't reopen database. Exiting...");
 				exit(1);
@@ -246,7 +249,7 @@ void terminate(int32_t signalNumber)
 
 void errorCallback(int32_t level, std::string message)
 {
-	GD::rpcClient.broadcastError(level, message);
+	if(GD::rpcClient) GD::rpcClient->broadcastError(level, message);
 }
 
 int32_t getIntInput()
@@ -425,21 +428,23 @@ int main(int argc, char* argv[])
     				}
     				GD::bl->settings.load(GD::configPath + "main.conf");
     				GD::bl->debugLevel = 3; //Only output warnings.
-    				GD::familyController.loadModules();
-    				GD::physicalInterfaces.load(GD::bl->settings.physicalInterfaceSettingsPath());
+    				GD::familyController.reset(new FamilyController());
+    				GD::physicalInterfaces.reset(new PhysicalInterfaces());
+    				GD::familyController->loadModules();
+    				GD::physicalInterfaces->load(GD::bl->settings.physicalInterfaceSettingsPath());
     				int32_t userID = GD::bl->hf.userID(std::string(argv[i + 1]));
     				int32_t groupID = GD::bl->hf.groupID(std::string(argv[i + 2]));
     				GD::out.printDebug("Debug: User ID set to " + std::to_string(userID) + " group ID set to " + std::to_string(groupID));
     				if(userID == -1 || groupID == -1)
     				{
     					GD::out.printCritical("Could not setup physical devices. Username or group name is not valid.");
-    					GD::physicalInterfaces.dispose();
-    					GD::familyController.dispose();
+    					GD::physicalInterfaces->dispose();
+    					GD::familyController->dispose();
     					exit(1);
     				}
-    				GD::physicalInterfaces.setup(userID, groupID);
-    				GD::physicalInterfaces.dispose();
-    				GD::familyController.dispose();
+    				GD::physicalInterfaces->setup(userID, groupID);
+    				GD::physicalInterfaces->dispose();
+    				GD::familyController->dispose();
     				exit(0);
     			}
     			else
@@ -474,7 +479,8 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-r")
     		{
-    			GD::cliClient.start();
+    			GD::cliClient.reset(new CLI::Client());
+    			GD::cliClient->start();
     			exit(0);
     		}
     		else if(arg == "-e")
@@ -497,7 +503,8 @@ int main(int argc, char* argv[])
     				else command << " " << argv[j];
     			}
 
-    			exit(GD::cliClient.start(command.str()));
+    			GD::cliClient.reset(new CLI::Client());
+    			exit(GD::cliClient->start(command.str()));
     		}
     		else if(arg == "-v")
     		{
@@ -513,6 +520,17 @@ int main(int argc, char* argv[])
     			exit(1);
     		}
     	}
+
+    	#ifdef EVENTHANDLER
+		GD::eventHandler.reset(new EventHandler());
+		#endif
+		#ifdef SCRIPTENGINE
+		GD::scriptEngine.reset(new ScriptEngine());
+		#endif
+		GD::familyController.reset(new FamilyController());
+		GD::physicalInterfaces.reset(new PhysicalInterfaces());
+		GD::db.reset(new DatabaseController());
+		GD::rpcClient.reset(new RPC::Client());
 
 		if(GD::configPath.empty()) GD::configPath = "/etc/homegear/";
 		GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");
@@ -639,36 +657,36 @@ int main(int argc, char* argv[])
 		}
 		//End init gcrypt
 
-		GD::familyController.loadModules();
+		GD::familyController->loadModules();
 		if(GD::deviceFamilies.empty()) exitHomegear(1);
 
-		GD::db.init();
-    	GD::db.open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".bak");
-    	if(!GD::db.isOpen()) exitHomegear(1);
+		GD::db->init();
+    	GD::db->open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".bak");
+    	if(!GD::db->isOpen()) exitHomegear(1);
 
-    	GD::physicalInterfaces.load(GD::bl->settings.physicalInterfaceSettingsPath());
+    	GD::physicalInterfaces->load(GD::bl->settings.physicalInterfaceSettingsPath());
 
         GD::out.printInfo("Initializing database...");
-        GD::db.convertDatabase();
-        GD::db.initializeDatabase();
+        GD::db->convertDatabase();
+        GD::db->initializeDatabase();
 
         GD::out.printInfo("Initializing family controller...");
-        GD::familyController.init();
+        GD::familyController->init();
         if(GD::deviceFamilies.empty()) exitHomegear(1);
         GD::out.printInfo("Loading devices...");
-        GD::familyController.load(); //Don't load before database is open!
+        GD::familyController->load(); //Don't load before database is open!
 
         GD::out.printInfo("Start listening for packets...");
-        GD::physicalInterfaces.startListening();
-        if(!GD::physicalInterfaces.isOpen())
+        GD::physicalInterfaces->startListening();
+        if(!GD::physicalInterfaces->isOpen())
         {
         	GD::out.printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
-        	GD::physicalInterfaces.stopListening();
+        	GD::physicalInterfaces->stopListening();
         	exitHomegear(1);
         }
 
         GD::out.printInfo("Initializing RPC client...");
-        GD::rpcClient.init();
+        GD::rpcClient->init();
 
         if(GD::mqtt->enabled())
 		{
@@ -679,13 +697,14 @@ int main(int argc, char* argv[])
         startRPCServers();
 
 		GD::out.printInfo("Starting CLI server...");
-		GD::cliServer.start();
+		GD::cliServer.reset(new CLI::Server());
+		GD::cliServer->start();
 
 #ifdef EVENTHANDLER
         GD::out.printInfo("Initializing event handler...");
-        GD::eventHandler.init();
+        GD::eventHandler->init();
         GD::out.printInfo("Loading events...");
-        GD::eventHandler.load();
+        GD::eventHandler->load();
 #endif
         _startUpComplete = true;
         GD::out.printMessage("Startup complete. Waiting for physical interfaces to connect.");
@@ -695,7 +714,7 @@ int main(int argc, char* argv[])
 			std::vector<std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> interfaces;
 			for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 			{
-				std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> familyInterfaces = GD::physicalInterfaces.get(i->first);
+				std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> familyInterfaces = GD::physicalInterfaces->get(i->first);
 				for(std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>::iterator j = familyInterfaces.begin(); j != familyInterfaces.end(); ++j)
 				{
 					interfaces.push_back(j->second);
@@ -731,7 +750,7 @@ int main(int argc, char* argv[])
 		}
 
         GD::bl->booting = false;
-        GD::familyController.homegearStarted();
+        GD::familyController->homegearStarted();
 
 		char* inputBuffer = nullptr;
         if(_startAsDaemon)
@@ -771,7 +790,7 @@ int main(int argc, char* argv[])
 					//GD::physicalInterfaces.get(DeviceFamily::HomeMaticBidCoS)->sendPacket(packet);
 				//}
 				std::string input(inputBuffer);
-				std::cout << GD::familyController.handleCLICommand(input);
+				std::cout << GD::familyController->handleCLICommand(input);
 			}
 			clear_history();
         }

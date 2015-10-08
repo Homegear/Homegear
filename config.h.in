@@ -175,9 +175,6 @@
 /* Enables compilation of the PHP script engine */
 #undef SCRIPTENGINE
 
-/* Enables compilation of all SPI interfaces */
-#undef SPIINTERFACES
-
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 

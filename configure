@@ -780,7 +780,6 @@ enable_libtool_lock
 with_scriptengine
 with_eventhandler
 with_openssl
-with_spi
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1437,8 +1436,6 @@ Optional Packages:
                           requirement for PHP)
   --without-eventhandler  Compile without event handler
   --without-openssl       Compile without OpenSSL (disables SSL in MQTT)
-  --without-spi           Compile without SPI support (disables all SPI
-                          interfaces)
 
 Some influential environment variables:
   CXX         C++ compiler command
@@ -16315,20 +16312,6 @@ fi
 
 
 $as_echo "#define OPENSSL /**/" >>confdefs.h
-
-
-fi
-
-
-# Check whether --with-spi was given.
-if test "${with_spi+set}" = set; then :
-  withval=$with_spi; with_spi=no
-fi
-
-if test "x$with_spi" != "xno"; then :
-
-
-$as_echo "#define SPIINTERFACES /**/" >>confdefs.h
 
 
 fi

@@ -108,6 +108,7 @@ void UPnP::stop()
 {
 	try
 	{
+		if(_stopServer) return;
 		for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 		{
 			i->second.removeWebserverEventHandler(_webserverEventHandler);
@@ -135,7 +136,7 @@ void UPnP::getUDN()
 {
 	try
 	{
-		if(!GD::db.getHomegearVariableString(DatabaseController::HomegearVariables::upnpusn, _udn) || _udn.size() != 36)
+		if(!GD::db->getHomegearVariableString(DatabaseController::HomegearVariables::upnpusn, _udn) || _udn.size() != 36)
 		{
 			_udn = BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(-2147483648, 2147483647), 8) + "-";
 			_udn.append(BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(0, 65535), 4) + "-");
@@ -143,7 +144,7 @@ void UPnP::getUDN()
 			_udn.append(BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(0, 65535), 4) + "-");
 			_udn.append(BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(-2147483648, 2147483647), 8));
 			_udn.append(BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(0, 65535), 4));
-			GD::db.setHomegearVariableString(DatabaseController::HomegearVariables::upnpusn, _udn);
+			GD::db->setHomegearVariableString(DatabaseController::HomegearVariables::upnpusn, _udn);
 			GD::out.printInfo("Info: Created new UPnP UDN: " + _udn);
 		}
 		_st = "uuid:" + _udn;

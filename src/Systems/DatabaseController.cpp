@@ -507,8 +507,8 @@ BaseLib::PVariable DatabaseController::getMetadata(uint64_t peerID, std::string&
 				_metadataMutex.unlock();
 				return metadata;
 			}
-			_metadataMutex.unlock();
 		}
+		_metadataMutex.unlock();
 
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peerID))));
@@ -582,7 +582,7 @@ BaseLib::PVariable DatabaseController::setMetadata(uint64_t peerID, std::string&
 
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{dataID});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{metadata});
-		GD::rpcClient.broadcastEvent(peerID, -1, serialNumber, valueKeys, values);
+		GD::rpcClient->broadcastEvent(peerID, -1, serialNumber, valueKeys, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
@@ -634,7 +634,7 @@ BaseLib::PVariable DatabaseController::deleteMetadata(uint64_t peerID, std::stri
 		value->structValue->insert(BaseLib::StructElement("TYPE", BaseLib::PVariable(new BaseLib::Variable(1))));
 		value->structValue->insert(BaseLib::StructElement("CODE", BaseLib::PVariable(new BaseLib::Variable(1))));
 		values->push_back(value);
-		GD::rpcClient.broadcastEvent(peerID, -1, serialNumber, valueKeys, values);
+		GD::rpcClient->broadcastEvent(peerID, -1, serialNumber, valueKeys, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
@@ -772,11 +772,11 @@ BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableID
 		bufferedWrite("INSERT INTO systemVariables VALUES(?, ?)", data);
 
 #ifdef EVENTHANDLER
-		GD::eventHandler.trigger(0, -1, variableID, value);
+		GD::eventHandler->trigger(0, -1, variableID, value);
 #endif
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableID});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{value});
-		GD::rpcClient.broadcastEvent(0, -1, "", valueKeys, values);
+		GD::rpcClient->broadcastEvent(0, -1, "", valueKeys, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
@@ -816,7 +816,7 @@ BaseLib::PVariable DatabaseController::deleteSystemVariable(std::string& variabl
 		value->structValue->insert(BaseLib::StructElement("TYPE", BaseLib::PVariable(new BaseLib::Variable(0))));
 		value->structValue->insert(BaseLib::StructElement("CODE", BaseLib::PVariable(new BaseLib::Variable(1))));
 		values->push_back(value);
-		GD::rpcClient.broadcastEvent(0, -1, "", valueKeys, values);
+		GD::rpcClient->broadcastEvent(0, -1, "", valueKeys, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
