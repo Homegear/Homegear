@@ -521,17 +521,6 @@ int main(int argc, char* argv[])
     		}
     	}
 
-    	#ifdef EVENTHANDLER
-		GD::eventHandler.reset(new EventHandler());
-		#endif
-		#ifdef SCRIPTENGINE
-		GD::scriptEngine.reset(new ScriptEngine());
-		#endif
-		GD::familyController.reset(new FamilyController());
-		GD::physicalInterfaces.reset(new PhysicalInterfaces());
-		GD::db.reset(new DatabaseController());
-		GD::rpcClient.reset(new RPC::Client());
-
 		if(GD::configPath.empty()) GD::configPath = "/etc/homegear/";
 		GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");
 		GD::bl->settings.load(GD::configPath + "main.conf");
@@ -543,6 +532,17 @@ int main(int argc, char* argv[])
 		GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
 		GD::mqtt.reset(new MQTT());
 		GD::mqtt->loadSettings();
+
+		#ifdef EVENTHANDLER
+		GD::eventHandler.reset(new EventHandler());
+		#endif
+		#ifdef SCRIPTENGINE
+		GD::scriptEngine.reset(new ScriptEngine());
+		#endif
+		GD::familyController.reset(new FamilyController());
+		GD::physicalInterfaces.reset(new PhysicalInterfaces());
+		GD::db.reset(new DatabaseController());
+		GD::rpcClient.reset(new RPC::Client());
 
     	if(_startAsDaemon) startDaemon();
 
