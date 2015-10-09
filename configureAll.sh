@@ -3,6 +3,8 @@ SCRIPTDIR="$( cd "$(dirname $0)" && pwd )"
 rm -f /var/lib/homegear/modules/*
 cd $SCRIPTDIR
 ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc
+cd $SCRIPTDIR/../libhomegear-base
+./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc
 cd $SCRIPTDIR/../homegear-homematicbidcos
 ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc
 cd $SCRIPTDIR/../homegear-homematicwired

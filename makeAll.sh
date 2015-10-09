@@ -20,5 +20,5 @@ CPPFLAGS=-DDEBUG CXXFLAGS="-g -O0" && make -j8 && make install
 #cd $SCRIPTDIR/../homegear-philipshue
 #CPPFLAGS=-DDEBUG CXXFLAGS="-g -O0" && make -j8 && make install
 
-#cd $SCRIPTDIR/../homegear-sonos
-#CPPFLAGS=-DDEBUG CXXFLAGS="-g -O0" && make -j8 && make install
+cd $SCRIPTDIR/../homegear-sonos
+CPPFLAGS=-DDEBUG CXXFLAGS="-g -O0" && make -j8 && make install
