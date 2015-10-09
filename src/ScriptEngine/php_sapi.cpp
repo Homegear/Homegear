@@ -255,7 +255,7 @@ void php_homegear_build_argv(std::vector<std::string>& arguments)
 	for(std::vector<std::string>::const_iterator i = arguments.begin(); i != arguments.end(); ++i)
 	{
 		zval arg;
-		ZVAL_STR(&arg, zend_string_init(i->c_str(), i->size() - 1, 0));
+		ZVAL_STR(&arg, zend_string_init(i->c_str(), i->size(), 0));
 		if (zend_hash_next_index_insert(Z_ARRVAL_P(&argv), &arg) == NULL) {
 			if (Z_TYPE(arg) == IS_STRING) {
 				zend_string_release(Z_STR(arg));
