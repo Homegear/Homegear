@@ -255,14 +255,13 @@ void php_homegear_build_argv(std::vector<std::string>& arguments)
 	for(std::vector<std::string>::const_iterator i = arguments.begin(); i != arguments.end(); ++i)
 	{
 		zval arg;
-		ZVAL_STR(&arg, zend_string_init(i->c_str(), i->size(), 0));
+		ZVAL_STR(&arg, zend_string_init(i->c_str(), i->size(), 0)); //i->size does not contain \0, so no "-1"
 		if (zend_hash_next_index_insert(Z_ARRVAL_P(&argv), &arg) == NULL) {
 			if (Z_TYPE(arg) == IS_STRING) {
 				zend_string_release(Z_STR(arg));
 			}
 		}
 	}
-
 
 	ZVAL_LONG(&argc, arguments.size());
 	zend_hash_update(&EG(symbol_table), zend_string_init("argv", sizeof("argv") - 1, 0), &argv);
