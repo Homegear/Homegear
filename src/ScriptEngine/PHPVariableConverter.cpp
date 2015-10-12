@@ -163,7 +163,7 @@ void PHPVariableConverter::getPHPVariable(BaseLib::PVariable input, zval* output
 		else if(input->type == BaseLib::VariableType::tString || input->type == BaseLib::VariableType::tBase64)
 		{
 			if(input->stringValue.empty()) ZVAL_STRINGL(output, "", 0); //At least once, input->stringValue.c_str() on a empty string was a nullptr causing a segementation fault, so check for empty string
-			else ZVAL_STRINGL(output, input->stringValue.c_str(), input->stringValue.size() - 1);
+			else ZVAL_STRINGL(output, input->stringValue.c_str(), input->stringValue.size());
 		}
 		else
 		{
