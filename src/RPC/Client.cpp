@@ -206,6 +206,12 @@ void Client::systemListMethods(std::pair<std::string, std::string> address)
 				server->knownMethods.insert(method);
 			}
 		}
+		if(server->knownMethods.empty() && server->path == "/fhem/HMRPC_hmrf/request") //fhem
+		{
+			server->knownMethods.insert(std::pair<std::string, bool>("system.multicall", true));
+			server->knownMethods.insert(std::pair<std::string, bool>("newDevices", true));
+			server->knownMethods.insert(std::pair<std::string, bool>("event", true));
+		}
 		return;
 	}
     catch(const std::exception& ex)
