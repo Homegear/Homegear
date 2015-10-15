@@ -78,7 +78,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = x86_64-unknown-linux-gnu
 host_triplet = x86_64-unknown-linux-gnu
-subdir = src
+subdir = homegear-miscellaneous/src
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/cfg/depcomp
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -213,13 +213,13 @@ am__define_uniq_tagged_files = \
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-ACLOCAL = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing aclocal-1.14
+ACLOCAL = ${SHELL} /home/sathya/GitHub/Homegear/cfg/missing aclocal-1.14
 AMTAR = $${TAR-tar}
 AM_DEFAULT_VERBOSITY = 1
 AR = ar
-AUTOCONF = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing autoconf
-AUTOHEADER = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing autoheader
-AUTOMAKE = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing automake-1.14
+AUTOCONF = ${SHELL} /home/sathya/GitHub/Homegear/cfg/missing autoconf
+AUTOHEADER = ${SHELL} /home/sathya/GitHub/Homegear/cfg/missing autoheader
+AUTOMAKE = ${SHELL} /home/sathya/GitHub/Homegear/cfg/missing automake-1.14
 AWK = gawk
 CC = gcc
 CCDEPMODE = depmode=gcc3
@@ -256,7 +256,7 @@ LIBTOOL = $(SHELL) $(top_builddir)/libtool
 LIPO = 
 LN_S = ln -s
 LTLIBOBJS = 
-MAKEINFO = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing makeinfo
+MAKEINFO = ${SHELL} /home/sathya/GitHub/Homegear/cfg/missing makeinfo
 MANIFEST_TOOL = :
 MKDIR_P = /bin/mkdir -p
 NM = /usr/bin/nm -B
@@ -279,10 +279,10 @@ SET_MAKE =
 SHELL = /bin/bash
 STRIP = strip
 VERSION = 0.6.0
-abs_builddir = /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear-miscellaneous/src
-abs_srcdir = /home/PREETZ/sathya/GitHub/Homegear/Homegear/homegear-miscellaneous/src
-abs_top_builddir = /home/PREETZ/sathya/GitHub/Homegear/Homegear
-abs_top_srcdir = /home/PREETZ/sathya/GitHub/Homegear/Homegear
+abs_builddir = /home/sathya/GitHub/Homegear/homegear-miscellaneous/src
+abs_srcdir = /home/sathya/GitHub/Homegear/homegear-miscellaneous/src
+abs_top_builddir = /home/sathya/GitHub/Homegear
+abs_top_srcdir = /home/sathya/GitHub/Homegear
 ac_ct_AR = ar
 ac_ct_CC = gcc
 ac_ct_CXX = g++
@@ -312,7 +312,7 @@ host_vendor = unknown
 htmldir = ${docdir}
 includedir = ${prefix}/include
 infodir = ${datarootdir}/info
-install_sh = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/install-sh
+install_sh = ${SHELL} /home/sathya/GitHub/Homegear/cfg/install-sh
 libdir = $(localstatedir)/lib/homegear/modules
 libexecdir = ${exec_prefix}/libexec
 localedir = ${datarootdir}/locale
@@ -351,9 +351,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu src/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign homegear-miscellaneous/src/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu src/Makefile
+	  $(AUTOMAKE) --foreign homegear-miscellaneous/src/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \

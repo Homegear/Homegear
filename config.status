@@ -437,7 +437,7 @@ Copyright (C) 2012 Free Software Foundation, Inc.
 This config.status script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it."
 
-ac_pwd='/home/PREETZ/sathya/GitHub/Homegear/Homegear'
+ac_pwd='/home/sathya/GitHub/Homegear'
 srcdir='.'
 INSTALL='/usr/bin/install -c'
 MKDIR_P='/bin/mkdir -p'
@@ -572,7 +572,7 @@ FGREP='/bin/grep -F'
 LD='/usr/bin/ld -m elf_x86_64'
 NM='/usr/bin/nm -B'
 LN_S='ln -s'
-max_cmd_len='1572864'
+max_cmd_len='3458764513820540925'
 ac_objext='o'
 exeext=''
 lt_unset='unset'
@@ -953,12 +953,12 @@ S["mkdir_p"]="$(MKDIR_P)"
 S["MKDIR_P"]="/bin/mkdir -p"
 S["INSTALL_STRIP_PROGRAM"]="$(install_sh) -c -s"
 S["STRIP"]="strip"
-S["install_sh"]="${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/install-sh"
-S["MAKEINFO"]="${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing makeinfo"
-S["AUTOHEADER"]="${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing autoheader"
-S["AUTOMAKE"]="${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing automake-1.14"
-S["AUTOCONF"]="${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing autoconf"
-S["ACLOCAL"]="${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/missing aclocal-1.14"
+S["install_sh"]="${SHELL} /home/sathya/GitHub/Homegear/cfg/install-sh"
+S["MAKEINFO"]="${SHELL} /home/sathya/GitHub/Homegear/cfg/missing makeinfo"
+S["AUTOHEADER"]="${SHELL} /home/sathya/GitHub/Homegear/cfg/missing autoheader"
+S["AUTOMAKE"]="${SHELL} /home/sathya/GitHub/Homegear/cfg/missing automake-1.14"
+S["AUTOCONF"]="${SHELL} /home/sathya/GitHub/Homegear/cfg/missing autoconf"
+S["ACLOCAL"]="${SHELL} /home/sathya/GitHub/Homegear/cfg/missing aclocal-1.14"
 S["VERSION"]="0.6.0"
 S["PACKAGE"]="homegear"
 S["CYGPATH_W"]="echo"

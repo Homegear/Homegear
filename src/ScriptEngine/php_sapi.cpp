@@ -1,31 +1,32 @@
 /* Copyright 2013-2015 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Homegear.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with Homegear.  If not, see
+ * <http://www.gnu.org/licenses/>.
+ * 
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
  * individual source file, and distribute linked combinations
  * including the two.
- * You must obey the GNU General Public License in all respects
+ * You must obey the GNU Lesser General Public License in all respects
  * for all of the code used other than OpenSSL.  If you modify
  * file(s) with this exception, you may extend this exception to your
  * version of the file(s), but you are not obligated to do so.  If you
  * do not wish to do so, delete this exception statement from your
  * version.  If you delete this exception statement from all source
  * files in the program, then also delete it here.
- */
+*/
 
 #include "../GD/GD.h"
 #include "php_sapi.h"
@@ -73,6 +74,7 @@ ZEND_FUNCTION(hg_delete_user);
 ZEND_FUNCTION(hg_update_user);
 ZEND_FUNCTION(hg_user_exists);
 ZEND_FUNCTION(hg_users);
+ZEND_FUNCTION(hg_shutting_down);
 
 static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_invoke, NULL)
@@ -88,6 +90,7 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_update_user, NULL)
 	ZEND_FE(hg_user_exists, NULL)
 	ZEND_FE(hg_users, NULL)
+	ZEND_FE(hg_shutting_down, NULL)
 	{NULL, NULL, NULL}
 };
 
@@ -663,7 +666,7 @@ ZEND_FUNCTION(hg_user_exists)
 	int32_t nameLength = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
 	if(nameLength == 0) RETURN_FALSE;
-	if(User::exists(std::string(pName, nameLength))) RETURN_TRUE;
+	if(User::exists(std::string(pName, nameLength))) RETURN_TRUE
 	RETURN_FALSE
 }
 
@@ -676,6 +679,12 @@ ZEND_FUNCTION(hg_users)
 	{
 		add_next_index_stringl(return_value, i->second.c_str(), i->second.size());
 	}
+}
+
+ZEND_FUNCTION(hg_shutting_down)
+{
+	if(GD::bl->shuttingDown) RETURN_TRUE
+	RETURN_FALSE
 }
 
 ZEND_METHOD(Homegear, __call)
@@ -714,6 +723,7 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME_MAPPING(updateUser, hg_update_user, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(userExists, hg_user_exists, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(listUsers, hg_users, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(shuttingDown, hg_shutting_down, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
 };
 
