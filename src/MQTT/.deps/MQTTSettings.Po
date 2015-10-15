@@ -1,6 +1,6 @@
 MQTT/MQTTSettings.o: MQTT/MQTTSettings.cpp /usr/include/stdc-predef.h \
- MQTT/MQTTSettings.h /usr/include/homegear-base/BaseLib.h \
- /usr/include/homegear-base/Database/DatabaseTypes.h \
+ MQTT/MQTTSettings.h /usr/local/include/homegear-base/BaseLib.h \
+ /usr/local/include/homegear-base/Database/DatabaseTypes.h \
  /usr/include/c++/4.8/string \
  /usr/include/x86_64-linux-gnu/c++/4.8/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/4.8/bits/os_defines.h \
@@ -114,16 +114,16 @@ MQTT/MQTTSettings.o: MQTT/MQTTSettings.cpp /usr/include/stdc-predef.h \
  /usr/include/c++/4.8/bits/shared_ptr.h \
  /usr/include/c++/4.8/bits/shared_ptr_base.h \
  /usr/include/c++/4.8/backward/auto_ptr.h \
- /usr/include/homegear-base/Encoding/XMLRPCDecoder.h \
- /usr/include/homegear-base/Variable.h \
- /usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
+ /usr/local/include/homegear-base/Encoding/XMLRPCDecoder.h \
+ /usr/local/include/homegear-base/Variable.h \
+ /usr/local/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
  /usr/include/c++/4.8/cassert /usr/include/assert.h \
- /usr/include/homegear-base/DeviceDescription/Logical.h \
- /usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
+ /usr/local/include/homegear-base/DeviceDescription/Logical.h \
+ /usr/local/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
  /usr/include/c++/4.8/unordered_map /usr/include/c++/4.8/bits/hashtable.h \
  /usr/include/c++/4.8/bits/hashtable_policy.h \
  /usr/include/c++/4.8/bits/unordered_map.h \
- /usr/include/homegear-base/DeviceDescription/Physical.h \
+ /usr/local/include/homegear-base/DeviceDescription/Physical.h \
  /usr/include/c++/4.8/iostream /usr/include/c++/4.8/ostream \
  /usr/include/c++/4.8/ios /usr/include/c++/4.8/bits/ios_base.h \
  /usr/include/c++/4.8/bits/locale_classes.h \
@@ -140,12 +140,12 @@ MQTT/MQTTSettings.o: MQTT/MQTTSettings.cpp /usr/include/stdc-predef.h \
  /usr/include/c++/4.8/bits/ostream.tcc /usr/include/c++/4.8/istream \
  /usr/include/c++/4.8/bits/istream.tcc /usr/include/c++/4.8/list \
  /usr/include/c++/4.8/bits/stl_list.h /usr/include/c++/4.8/bits/list.tcc \
- /usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
- /usr/include/homegear-base/Encoding/XMLRPCEncoder.h \
- /usr/include/homegear-base/Exception.h \
- /usr/include/homegear-base/Output/Output.h \
- /usr/include/homegear-base/Exception.h /usr/include/c++/4.8/iomanip \
- /usr/include/c++/4.8/locale \
+ /usr/local/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
+ /usr/local/include/homegear-base/Encoding/XMLRPCEncoder.h \
+ /usr/local/include/homegear-base/Exception.h \
+ /usr/local/include/homegear-base/Output/Output.h \
+ /usr/local/include/homegear-base/Exception.h \
+ /usr/include/c++/4.8/iomanip /usr/include/c++/4.8/locale \
  /usr/include/c++/4.8/bits/locale_facets_nonio.h \
  /usr/include/c++/4.8/ctime \
  /usr/include/x86_64-linux-gnu/c++/4.8/bits/time_members.h \
@@ -155,11 +155,11 @@ MQTT/MQTTSettings.o: MQTT/MQTTSettings.cpp /usr/include/stdc-predef.h \
  /usr/include/c++/4.8/sstream /usr/include/c++/4.8/bits/sstream.tcc \
  /usr/include/c++/4.8/chrono /usr/include/c++/4.8/ratio \
  /usr/include/c++/4.8/limits \
- /usr/include/homegear-base/Encoding/RapidXml/rapidxml_print.hpp \
- /usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
+ /usr/local/include/homegear-base/Encoding/RapidXml/rapidxml_print.hpp \
+ /usr/local/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
  /usr/include/c++/4.8/iterator \
  /usr/include/c++/4.8/bits/stream_iterator.h \
- /usr/include/homegear-base/Encoding/RPCDecoder.h \
+ /usr/local/include/homegear-base/Encoding/RPCDecoder.h \
  /usr/include/c++/4.8/cstring /usr/include/string.h \
  /usr/include/x86_64-linux-gnu/bits/string3.h /usr/include/c++/4.8/cmath \
  /usr/include/math.h /usr/include/x86_64-linux-gnu/bits/huge_val.h \
@@ -170,20 +170,20 @@ MQTT/MQTTSettings.o: MQTT/MQTTSettings.cpp /usr/include/stdc-predef.h \
  /usr/include/x86_64-linux-gnu/bits/mathdef.h \
  /usr/include/x86_64-linux-gnu/bits/mathcalls.h \
  /usr/include/x86_64-linux-gnu/bits/mathinline.h \
- /usr/include/homegear-base/Encoding/BinaryDecoder.h \
- /usr/include/homegear-base/Encoding/RPCHeader.h \
- /usr/include/homegear-base/Encoding/RPCEncoder.h \
- /usr/include/homegear-base/Encoding/BinaryEncoder.h \
- /usr/include/homegear-base/Encoding/JsonDecoder.h \
- /usr/include/homegear-base/Encoding/JsonEncoder.h \
- /usr/include/homegear-base/Encoding/HTTP.h \
- /usr/include/homegear-base/HelperFunctions/Math.h \
- /usr/include/homegear-base/Encoding/Html.h \
- /usr/include/homegear-base/Encoding/WebSocket.h \
- /usr/include/homegear-base/Managers/SerialDeviceManager.h \
- /usr/include/homegear-base/Sockets/SerialReaderWriter.h \
- /usr/include/homegear-base/Exception.h \
- /usr/include/homegear-base/Managers/FileDescriptorManager.h \
+ /usr/local/include/homegear-base/Encoding/BinaryDecoder.h \
+ /usr/local/include/homegear-base/Encoding/RPCHeader.h \
+ /usr/local/include/homegear-base/Encoding/RPCEncoder.h \
+ /usr/local/include/homegear-base/Encoding/BinaryEncoder.h \
+ /usr/local/include/homegear-base/Encoding/JsonDecoder.h \
+ /usr/local/include/homegear-base/Encoding/JsonEncoder.h \
+ /usr/local/include/homegear-base/Encoding/HTTP.h \
+ /usr/local/include/homegear-base/HelperFunctions/Math.h \
+ /usr/local/include/homegear-base/Encoding/Html.h \
+ /usr/local/include/homegear-base/Encoding/WebSocket.h \
+ /usr/local/include/homegear-base/Managers/SerialDeviceManager.h \
+ /usr/local/include/homegear-base/Sockets/SerialReaderWriter.h \
+ /usr/local/include/homegear-base/Exception.h \
+ /usr/local/include/homegear-base/Managers/FileDescriptorManager.h \
  /usr/include/c++/4.8/mutex /usr/include/c++/4.8/system_error \
  /usr/include/x86_64-linux-gnu/c++/4.8/bits/error_constants.h \
  /usr/include/unistd.h /usr/include/x86_64-linux-gnu/bits/posix_opt.h \
@@ -202,8 +202,8 @@ MQTT/MQTTSettings.o: MQTT/MQTTSettings.cpp /usr/include/stdc-predef.h \
  /usr/include/asm-generic/sockios.h \
  /usr/include/x86_64-linux-gnu/bits/socket2.h \
  /usr/include/gnutls/gnutls.h /usr/include/gnutls/compat.h \
- /usr/include/homegear-base/IEvents.h \
- /usr/include/homegear-base/Output/Output.h \
+ /usr/local/include/homegear-base/IEvents.h \
+ /usr/local/include/homegear-base/Output/Output.h \
  /usr/include/c++/4.8/forward_list \
  /usr/include/c++/4.8/bits/forward_list.h \
  /usr/include/c++/4.8/bits/forward_list.tcc /usr/include/c++/4.8/thread \
@@ -220,8 +220,8 @@ MQTT/MQTTSettings.o: MQTT/MQTTSettings.cpp /usr/include/stdc-predef.h \
  /usr/include/x86_64-linux-gnu/bits/sigstack.h \
  /usr/include/x86_64-linux-gnu/sys/ucontext.h \
  /usr/include/x86_64-linux-gnu/bits/sigthread.h \
- /usr/include/homegear-base/Managers/FileDescriptorManager.h \
- /usr/include/homegear-base/HelperFunctions/HelperFunctions.h \
+ /usr/local/include/homegear-base/Managers/FileDescriptorManager.h \
+ /usr/local/include/homegear-base/HelperFunctions/HelperFunctions.h \
  /usr/include/c++/4.8/algorithm /usr/include/c++/4.8/bits/stl_algo.h \
  /usr/include/c++/4.8/bits/algorithmfwd.h \
  /usr/include/c++/4.8/bits/stl_heap.h /usr/include/c++/4.8/random \
@@ -246,38 +246,38 @@ MQTT/MQTTSettings.o: MQTT/MQTTSettings.cpp /usr/include/stdc-predef.h \
  /usr/include/x86_64-linux-gnu/bits/local_lim.h \
  /usr/include/linux/limits.h /usr/include/pwd.h /usr/include/grp.h \
  /usr/include/gcrypt.h /usr/include/gpg-error.h \
- /usr/include/x86_64-linux-gnu/sys/time.h \
- /usr/include/homegear-base/HelperFunctions/Color.h \
- /usr/include/homegear-base/HelperFunctions/Math.h \
- /usr/include/homegear-base/HelperFunctions/Math.h \
- /usr/include/homegear-base/HelperFunctions/Crypt.h \
- /usr/include/homegear-base/HelperFunctions/Base64.h \
- /usr/include/homegear-base/HelperFunctions/Net.h \
- /usr/include/homegear-base/Exception.h \
- /usr/include/homegear-base/HelperFunctions/Io.h \
- /usr/include/homegear-base/DeviceDescription/Devices.h \
- /usr/include/homegear-base/Systems/Packet.h \
- /usr/include/homegear-base/Systems/DeviceTypes.h \
- /usr/include/homegear-base/DeviceDescription/HomegearDevice.h \
- /usr/include/homegear-base/DeviceDescription/DevicePacket.h \
- /usr/include/homegear-base/DeviceDescription/JsonPayload.h \
- /usr/include/homegear-base/DeviceDescription/BinaryPayload.h \
- /usr/include/homegear-base/DeviceDescription/HttpPayload.h \
- /usr/include/homegear-base/DeviceDescription/Parameter.h \
- /usr/include/homegear-base/DeviceDescription/ParameterCast.h \
- /usr/include/homegear-base/Variable.h \
- /usr/include/homegear-base/DeviceDescription/Logical.h \
- /usr/include/homegear-base/DeviceDescription/Physical.h \
- /usr/include/homegear-base/DeviceDescription/SupportedDevice.h \
- /usr/include/homegear-base/DeviceDescription/RunProgram.h \
- /usr/include/homegear-base/DeviceDescription/Function.h \
- /usr/include/homegear-base/DeviceDescription/ParameterGroup.h \
- /usr/include/homegear-base/DeviceDescription/Scenario.h \
+ /usr/include/x86_64-linux-gnu/sys/time.h /usr/include/gcrypt-module.h \
+ /usr/local/include/homegear-base/HelperFunctions/Color.h \
+ /usr/local/include/homegear-base/HelperFunctions/Math.h \
+ /usr/local/include/homegear-base/HelperFunctions/Math.h \
+ /usr/local/include/homegear-base/HelperFunctions/Crypt.h \
+ /usr/local/include/homegear-base/HelperFunctions/Base64.h \
+ /usr/local/include/homegear-base/HelperFunctions/Net.h \
+ /usr/local/include/homegear-base/Exception.h \
+ /usr/local/include/homegear-base/HelperFunctions/Io.h \
+ /usr/local/include/homegear-base/DeviceDescription/Devices.h \
+ /usr/local/include/homegear-base/Systems/Packet.h \
+ /usr/local/include/homegear-base/Systems/DeviceTypes.h \
+ /usr/local/include/homegear-base/DeviceDescription/HomegearDevice.h \
+ /usr/local/include/homegear-base/DeviceDescription/DevicePacket.h \
+ /usr/local/include/homegear-base/DeviceDescription/JsonPayload.h \
+ /usr/local/include/homegear-base/DeviceDescription/BinaryPayload.h \
+ /usr/local/include/homegear-base/DeviceDescription/HttpPayload.h \
+ /usr/local/include/homegear-base/DeviceDescription/Parameter.h \
+ /usr/local/include/homegear-base/DeviceDescription/ParameterCast.h \
+ /usr/local/include/homegear-base/Variable.h \
+ /usr/local/include/homegear-base/DeviceDescription/Logical.h \
+ /usr/local/include/homegear-base/DeviceDescription/Physical.h \
+ /usr/local/include/homegear-base/DeviceDescription/SupportedDevice.h \
+ /usr/local/include/homegear-base/DeviceDescription/RunProgram.h \
+ /usr/local/include/homegear-base/DeviceDescription/Function.h \
+ /usr/local/include/homegear-base/DeviceDescription/ParameterGroup.h \
+ /usr/local/include/homegear-base/DeviceDescription/Scenario.h \
  /usr/include/c++/4.8/set /usr/include/c++/4.8/bits/stl_set.h \
  /usr/include/c++/4.8/bits/stl_multiset.h \
- /usr/include/homegear-base/Settings/Settings.h \
- /usr/include/homegear-base/Sockets/HTTPClient.h \
- /usr/include/homegear-base/Sockets/SocketOperations.h \
+ /usr/local/include/homegear-base/Settings/Settings.h \
+ /usr/local/include/homegear-base/Sockets/HTTPClient.h \
+ /usr/local/include/homegear-base/Sockets/SocketOperations.h \
  /usr/include/arpa/inet.h /usr/include/netinet/in.h \
  /usr/include/x86_64-linux-gnu/bits/in.h /usr/include/netinet/tcp.h \
  /usr/include/netdb.h /usr/include/rpc/netdb.h \
@@ -285,39 +285,39 @@ MQTT/MQTTSettings.o: MQTT/MQTTSettings.cpp /usr/include/stdc-predef.h \
  /usr/include/x86_64-linux-gnu/sys/poll.h \
  /usr/include/x86_64-linux-gnu/bits/poll.h \
  /usr/include/x86_64-linux-gnu/bits/poll2.h /usr/include/gnutls/x509.h \
- /usr/include/homegear-base/Encoding/HTTP.h \
- /usr/include/homegear-base/Sockets/SocketOperations.h \
- /usr/include/homegear-base/Sockets/IWebserverEventSink.h \
- /usr/include/homegear-base/Sockets/ServerInfo.h \
- /usr/include/homegear-base/Sockets/ServerInfo.h \
- /usr/include/homegear-base/Systems/DeviceFamily.h \
- /usr/include/homegear-base/Database/DatabaseTypes.h \
- /usr/include/homegear-base/Systems/Central.h \
- /usr/include/homegear-base/Variable.h \
- /usr/include/homegear-base/DeviceDescription/HomegearDevice.h \
- /usr/include/homegear-base/Systems/LogicalDevice.h \
- /usr/include/homegear-base/HelperFunctions/HelperFunctions.h \
- /usr/include/homegear-base/Systems/IPhysicalInterface.h \
- /usr/include/homegear-base/IEvents.h \
- /usr/include/homegear-base/Systems/PhysicalInterfaceSettings.h \
- /usr/include/homegear-base/Managers/FileDescriptorManager.h \
+ /usr/local/include/homegear-base/Encoding/HTTP.h \
+ /usr/local/include/homegear-base/Sockets/SocketOperations.h \
+ /usr/local/include/homegear-base/Sockets/IWebserverEventSink.h \
+ /usr/local/include/homegear-base/Sockets/ServerInfo.h \
+ /usr/local/include/homegear-base/Sockets/ServerInfo.h \
+ /usr/local/include/homegear-base/Systems/DeviceFamily.h \
+ /usr/local/include/homegear-base/Database/DatabaseTypes.h \
+ /usr/local/include/homegear-base/Systems/Central.h \
+ /usr/local/include/homegear-base/Variable.h \
+ /usr/local/include/homegear-base/DeviceDescription/HomegearDevice.h \
+ /usr/local/include/homegear-base/Systems/LogicalDevice.h \
+ /usr/local/include/homegear-base/HelperFunctions/HelperFunctions.h \
+ /usr/local/include/homegear-base/Systems/IPhysicalInterface.h \
+ /usr/local/include/homegear-base/IEvents.h \
+ /usr/local/include/homegear-base/Systems/PhysicalInterfaceSettings.h \
+ /usr/local/include/homegear-base/Managers/FileDescriptorManager.h \
  /usr/include/c++/4.8/condition_variable \
- /usr/include/homegear-base/Systems/Packet.h \
- /usr/include/homegear-base/Systems/Peer.h \
- /usr/include/homegear-base/Systems/ServiceMessages.h \
- /usr/include/homegear-base/Encoding/BinaryEncoder.h \
- /usr/include/homegear-base/Encoding/BinaryDecoder.h \
- /usr/include/homegear-base/Systems/Peer.h \
- /usr/include/homegear-base/Systems/SystemFactory.h \
- /usr/include/homegear-base/Systems/DeviceFamily.h \
- /usr/include/homegear-base/Systems/UpdateInfo.h \
- /usr/include/homegear-base/Threads/Threads.h \
- /usr/include/homegear-base/Exception.h \
- /usr/include/homegear-base/Output/Output.h \
- /usr/include/homegear-base/SSDP/SSDP.h \
- /usr/include/homegear-base/Encoding/HTTP.h \
- /usr/include/homegear-base/Variable.h \
- /usr/include/homegear-base/IQueue.h MQTT/../GD/GD.h \
+ /usr/local/include/homegear-base/Systems/Packet.h \
+ /usr/local/include/homegear-base/Systems/Peer.h \
+ /usr/local/include/homegear-base/Systems/ServiceMessages.h \
+ /usr/local/include/homegear-base/Encoding/BinaryEncoder.h \
+ /usr/local/include/homegear-base/Encoding/BinaryDecoder.h \
+ /usr/local/include/homegear-base/Systems/Peer.h \
+ /usr/local/include/homegear-base/Systems/SystemFactory.h \
+ /usr/local/include/homegear-base/Systems/DeviceFamily.h \
+ /usr/local/include/homegear-base/Systems/UpdateInfo.h \
+ /usr/local/include/homegear-base/Threads/Threads.h \
+ /usr/local/include/homegear-base/Exception.h \
+ /usr/local/include/homegear-base/Output/Output.h \
+ /usr/local/include/homegear-base/SSDP/SSDP.h \
+ /usr/local/include/homegear-base/Encoding/HTTP.h \
+ /usr/local/include/homegear-base/Variable.h \
+ /usr/local/include/homegear-base/IQueue.h MQTT/../GD/GD.h \
  MQTT/../GD/../../config.h MQTT/../GD/../ScriptEngine/ScriptEngine.h \
  MQTT/../GD/../ScriptEngine/php_config_fixes.h /usr/include/wordexp.h \
  MQTT/../GD/../CLI/CLIServer.h MQTT/../GD/../CLI/../User/User.h \
@@ -337,10 +337,10 @@ MQTT/MQTTSettings.o: MQTT/MQTTSettings.cpp /usr/include/stdc-predef.h \
  MQTT/../GD/../Systems/FamilyController.h \
  MQTT/../GD/../Systems/PhysicalInterfaces.h \
  MQTT/../GD/../Systems/DatabaseController.h \
- /usr/include/homegear-base/Encoding/RPCEncoder.h \
- /usr/include/homegear-base/Encoding/RPCDecoder.h \
+ /usr/local/include/homegear-base/Encoding/RPCEncoder.h \
+ /usr/local/include/homegear-base/Encoding/RPCDecoder.h \
  MQTT/../GD/../Systems/../Database/SQLite3.h \
- /usr/include/homegear-base/Database/DatabaseTypes.h \
+ /usr/local/include/homegear-base/Database/DatabaseTypes.h \
  /usr/include/sqlite3.h MQTT/../GD/../RPC/Server.h \
  MQTT/../GD/../RPC/Client.h MQTT/../GD/../RPC/RpcClient.h \
  MQTT/../GD/../RPC/ClientSettings.h MQTT/../GD/../RPC/Auth.h \
@@ -350,9 +350,9 @@ MQTT/MQTTSettings.o: MQTT/MQTTSettings.cpp /usr/include/stdc-predef.h \
 
 MQTT/MQTTSettings.h:
 
-/usr/include/homegear-base/BaseLib.h:
+/usr/local/include/homegear-base/BaseLib.h:
 
-/usr/include/homegear-base/Database/DatabaseTypes.h:
+/usr/local/include/homegear-base/Database/DatabaseTypes.h:
 
 /usr/include/c++/4.8/string:
 
@@ -640,19 +640,19 @@ MQTT/MQTTSettings.h:
 
 /usr/include/c++/4.8/backward/auto_ptr.h:
 
-/usr/include/homegear-base/Encoding/XMLRPCDecoder.h:
+/usr/local/include/homegear-base/Encoding/XMLRPCDecoder.h:
 
-/usr/include/homegear-base/Variable.h:
+/usr/local/include/homegear-base/Variable.h:
 
-/usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
+/usr/local/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
 
 /usr/include/c++/4.8/cassert:
 
 /usr/include/assert.h:
 
-/usr/include/homegear-base/DeviceDescription/Logical.h:
+/usr/local/include/homegear-base/DeviceDescription/Logical.h:
 
-/usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
+/usr/local/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
 
 /usr/include/c++/4.8/unordered_map:
 
@@ -662,7 +662,7 @@ MQTT/MQTTSettings.h:
 
 /usr/include/c++/4.8/bits/unordered_map.h:
 
-/usr/include/homegear-base/DeviceDescription/Physical.h:
+/usr/local/include/homegear-base/DeviceDescription/Physical.h:
 
 /usr/include/c++/4.8/iostream:
 
@@ -710,15 +710,15 @@ MQTT/MQTTSettings.h:
 
 /usr/include/c++/4.8/bits/list.tcc:
 
-/usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
+/usr/local/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
 
-/usr/include/homegear-base/Encoding/XMLRPCEncoder.h:
+/usr/local/include/homegear-base/Encoding/XMLRPCEncoder.h:
 
-/usr/include/homegear-base/Exception.h:
+/usr/local/include/homegear-base/Exception.h:
 
-/usr/include/homegear-base/Output/Output.h:
+/usr/local/include/homegear-base/Output/Output.h:
 
-/usr/include/homegear-base/Exception.h:
+/usr/local/include/homegear-base/Exception.h:
 
 /usr/include/c++/4.8/iomanip:
 
@@ -748,15 +748,15 @@ MQTT/MQTTSettings.h:
 
 /usr/include/c++/4.8/limits:
 
-/usr/include/homegear-base/Encoding/RapidXml/rapidxml_print.hpp:
+/usr/local/include/homegear-base/Encoding/RapidXml/rapidxml_print.hpp:
 
-/usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
+/usr/local/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
 
 /usr/include/c++/4.8/iterator:
 
 /usr/include/c++/4.8/bits/stream_iterator.h:
 
-/usr/include/homegear-base/Encoding/RPCDecoder.h:
+/usr/local/include/homegear-base/Encoding/RPCDecoder.h:
 
 /usr/include/c++/4.8/cstring:
 
@@ -784,33 +784,33 @@ MQTT/MQTTSettings.h:
 
 /usr/include/x86_64-linux-gnu/bits/mathinline.h:
 
-/usr/include/homegear-base/Encoding/BinaryDecoder.h:
+/usr/local/include/homegear-base/Encoding/BinaryDecoder.h:
 
-/usr/include/homegear-base/Encoding/RPCHeader.h:
+/usr/local/include/homegear-base/Encoding/RPCHeader.h:
 
-/usr/include/homegear-base/Encoding/RPCEncoder.h:
+/usr/local/include/homegear-base/Encoding/RPCEncoder.h:
 
-/usr/include/homegear-base/Encoding/BinaryEncoder.h:
+/usr/local/include/homegear-base/Encoding/BinaryEncoder.h:
 
-/usr/include/homegear-base/Encoding/JsonDecoder.h:
+/usr/local/include/homegear-base/Encoding/JsonDecoder.h:
 
-/usr/include/homegear-base/Encoding/JsonEncoder.h:
+/usr/local/include/homegear-base/Encoding/JsonEncoder.h:
 
-/usr/include/homegear-base/Encoding/HTTP.h:
+/usr/local/include/homegear-base/Encoding/HTTP.h:
 
-/usr/include/homegear-base/HelperFunctions/Math.h:
+/usr/local/include/homegear-base/HelperFunctions/Math.h:
 
-/usr/include/homegear-base/Encoding/Html.h:
+/usr/local/include/homegear-base/Encoding/Html.h:
 
-/usr/include/homegear-base/Encoding/WebSocket.h:
+/usr/local/include/homegear-base/Encoding/WebSocket.h:
 
-/usr/include/homegear-base/Managers/SerialDeviceManager.h:
+/usr/local/include/homegear-base/Managers/SerialDeviceManager.h:
 
-/usr/include/homegear-base/Sockets/SerialReaderWriter.h:
+/usr/local/include/homegear-base/Sockets/SerialReaderWriter.h:
 
-/usr/include/homegear-base/Exception.h:
+/usr/local/include/homegear-base/Exception.h:
 
-/usr/include/homegear-base/Managers/FileDescriptorManager.h:
+/usr/local/include/homegear-base/Managers/FileDescriptorManager.h:
 
 /usr/include/c++/4.8/mutex:
 
@@ -856,9 +856,9 @@ MQTT/MQTTSettings.h:
 
 /usr/include/gnutls/compat.h:
 
-/usr/include/homegear-base/IEvents.h:
+/usr/local/include/homegear-base/IEvents.h:
 
-/usr/include/homegear-base/Output/Output.h:
+/usr/local/include/homegear-base/Output/Output.h:
 
 /usr/include/c++/4.8/forward_list:
 
@@ -900,9 +900,9 @@ MQTT/MQTTSettings.h:
 
 /usr/include/x86_64-linux-gnu/bits/sigthread.h:
 
-/usr/include/homegear-base/Managers/FileDescriptorManager.h:
+/usr/local/include/homegear-base/Managers/FileDescriptorManager.h:
 
-/usr/include/homegear-base/HelperFunctions/HelperFunctions.h:
+/usr/local/include/homegear-base/HelperFunctions/HelperFunctions.h:
 
 /usr/include/c++/4.8/algorithm:
 
@@ -970,57 +970,59 @@ MQTT/MQTTSettings.h:
 
 /usr/include/x86_64-linux-gnu/sys/time.h:
 
-/usr/include/homegear-base/HelperFunctions/Color.h:
+/usr/include/gcrypt-module.h:
 
-/usr/include/homegear-base/HelperFunctions/Math.h:
+/usr/local/include/homegear-base/HelperFunctions/Color.h:
 
-/usr/include/homegear-base/HelperFunctions/Math.h:
+/usr/local/include/homegear-base/HelperFunctions/Math.h:
 
-/usr/include/homegear-base/HelperFunctions/Crypt.h:
+/usr/local/include/homegear-base/HelperFunctions/Math.h:
 
-/usr/include/homegear-base/HelperFunctions/Base64.h:
+/usr/local/include/homegear-base/HelperFunctions/Crypt.h:
 
-/usr/include/homegear-base/HelperFunctions/Net.h:
+/usr/local/include/homegear-base/HelperFunctions/Base64.h:
 
-/usr/include/homegear-base/Exception.h:
+/usr/local/include/homegear-base/HelperFunctions/Net.h:
 
-/usr/include/homegear-base/HelperFunctions/Io.h:
+/usr/local/include/homegear-base/Exception.h:
 
-/usr/include/homegear-base/DeviceDescription/Devices.h:
+/usr/local/include/homegear-base/HelperFunctions/Io.h:
 
-/usr/include/homegear-base/Systems/Packet.h:
+/usr/local/include/homegear-base/DeviceDescription/Devices.h:
 
-/usr/include/homegear-base/Systems/DeviceTypes.h:
+/usr/local/include/homegear-base/Systems/Packet.h:
 
-/usr/include/homegear-base/DeviceDescription/HomegearDevice.h:
+/usr/local/include/homegear-base/Systems/DeviceTypes.h:
 
-/usr/include/homegear-base/DeviceDescription/DevicePacket.h:
+/usr/local/include/homegear-base/DeviceDescription/HomegearDevice.h:
 
-/usr/include/homegear-base/DeviceDescription/JsonPayload.h:
+/usr/local/include/homegear-base/DeviceDescription/DevicePacket.h:
 
-/usr/include/homegear-base/DeviceDescription/BinaryPayload.h:
+/usr/local/include/homegear-base/DeviceDescription/JsonPayload.h:
 
-/usr/include/homegear-base/DeviceDescription/HttpPayload.h:
+/usr/local/include/homegear-base/DeviceDescription/BinaryPayload.h:
 
-/usr/include/homegear-base/DeviceDescription/Parameter.h:
+/usr/local/include/homegear-base/DeviceDescription/HttpPayload.h:
 
-/usr/include/homegear-base/DeviceDescription/ParameterCast.h:
+/usr/local/include/homegear-base/DeviceDescription/Parameter.h:
 
-/usr/include/homegear-base/Variable.h:
+/usr/local/include/homegear-base/DeviceDescription/ParameterCast.h:
 
-/usr/include/homegear-base/DeviceDescription/Logical.h:
+/usr/local/include/homegear-base/Variable.h:
 
-/usr/include/homegear-base/DeviceDescription/Physical.h:
+/usr/local/include/homegear-base/DeviceDescription/Logical.h:
 
-/usr/include/homegear-base/DeviceDescription/SupportedDevice.h:
+/usr/local/include/homegear-base/DeviceDescription/Physical.h:
 
-/usr/include/homegear-base/DeviceDescription/RunProgram.h:
+/usr/local/include/homegear-base/DeviceDescription/SupportedDevice.h:
 
-/usr/include/homegear-base/DeviceDescription/Function.h:
+/usr/local/include/homegear-base/DeviceDescription/RunProgram.h:
 
-/usr/include/homegear-base/DeviceDescription/ParameterGroup.h:
+/usr/local/include/homegear-base/DeviceDescription/Function.h:
 
-/usr/include/homegear-base/DeviceDescription/Scenario.h:
+/usr/local/include/homegear-base/DeviceDescription/ParameterGroup.h:
+
+/usr/local/include/homegear-base/DeviceDescription/Scenario.h:
 
 /usr/include/c++/4.8/set:
 
@@ -1028,11 +1030,11 @@ MQTT/MQTTSettings.h:
 
 /usr/include/c++/4.8/bits/stl_multiset.h:
 
-/usr/include/homegear-base/Settings/Settings.h:
+/usr/local/include/homegear-base/Settings/Settings.h:
 
-/usr/include/homegear-base/Sockets/HTTPClient.h:
+/usr/local/include/homegear-base/Sockets/HTTPClient.h:
 
-/usr/include/homegear-base/Sockets/SocketOperations.h:
+/usr/local/include/homegear-base/Sockets/SocketOperations.h:
 
 /usr/include/arpa/inet.h:
 
@@ -1058,71 +1060,71 @@ MQTT/MQTTSettings.h:
 
 /usr/include/gnutls/x509.h:
 
-/usr/include/homegear-base/Encoding/HTTP.h:
+/usr/local/include/homegear-base/Encoding/HTTP.h:
 
-/usr/include/homegear-base/Sockets/SocketOperations.h:
+/usr/local/include/homegear-base/Sockets/SocketOperations.h:
 
-/usr/include/homegear-base/Sockets/IWebserverEventSink.h:
+/usr/local/include/homegear-base/Sockets/IWebserverEventSink.h:
 
-/usr/include/homegear-base/Sockets/ServerInfo.h:
+/usr/local/include/homegear-base/Sockets/ServerInfo.h:
 
-/usr/include/homegear-base/Sockets/ServerInfo.h:
+/usr/local/include/homegear-base/Sockets/ServerInfo.h:
 
-/usr/include/homegear-base/Systems/DeviceFamily.h:
+/usr/local/include/homegear-base/Systems/DeviceFamily.h:
 
-/usr/include/homegear-base/Database/DatabaseTypes.h:
+/usr/local/include/homegear-base/Database/DatabaseTypes.h:
 
-/usr/include/homegear-base/Systems/Central.h:
+/usr/local/include/homegear-base/Systems/Central.h:
 
-/usr/include/homegear-base/Variable.h:
+/usr/local/include/homegear-base/Variable.h:
 
-/usr/include/homegear-base/DeviceDescription/HomegearDevice.h:
+/usr/local/include/homegear-base/DeviceDescription/HomegearDevice.h:
 
-/usr/include/homegear-base/Systems/LogicalDevice.h:
+/usr/local/include/homegear-base/Systems/LogicalDevice.h:
 
-/usr/include/homegear-base/HelperFunctions/HelperFunctions.h:
+/usr/local/include/homegear-base/HelperFunctions/HelperFunctions.h:
 
-/usr/include/homegear-base/Systems/IPhysicalInterface.h:
+/usr/local/include/homegear-base/Systems/IPhysicalInterface.h:
 
-/usr/include/homegear-base/IEvents.h:
+/usr/local/include/homegear-base/IEvents.h:
 
-/usr/include/homegear-base/Systems/PhysicalInterfaceSettings.h:
+/usr/local/include/homegear-base/Systems/PhysicalInterfaceSettings.h:
 
-/usr/include/homegear-base/Managers/FileDescriptorManager.h:
+/usr/local/include/homegear-base/Managers/FileDescriptorManager.h:
 
 /usr/include/c++/4.8/condition_variable:
 
-/usr/include/homegear-base/Systems/Packet.h:
+/usr/local/include/homegear-base/Systems/Packet.h:
 
-/usr/include/homegear-base/Systems/Peer.h:
+/usr/local/include/homegear-base/Systems/Peer.h:
 
-/usr/include/homegear-base/Systems/ServiceMessages.h:
+/usr/local/include/homegear-base/Systems/ServiceMessages.h:
 
-/usr/include/homegear-base/Encoding/BinaryEncoder.h:
+/usr/local/include/homegear-base/Encoding/BinaryEncoder.h:
 
-/usr/include/homegear-base/Encoding/BinaryDecoder.h:
+/usr/local/include/homegear-base/Encoding/BinaryDecoder.h:
 
-/usr/include/homegear-base/Systems/Peer.h:
+/usr/local/include/homegear-base/Systems/Peer.h:
 
-/usr/include/homegear-base/Systems/SystemFactory.h:
+/usr/local/include/homegear-base/Systems/SystemFactory.h:
 
-/usr/include/homegear-base/Systems/DeviceFamily.h:
+/usr/local/include/homegear-base/Systems/DeviceFamily.h:
 
-/usr/include/homegear-base/Systems/UpdateInfo.h:
+/usr/local/include/homegear-base/Systems/UpdateInfo.h:
 
-/usr/include/homegear-base/Threads/Threads.h:
+/usr/local/include/homegear-base/Threads/Threads.h:
 
-/usr/include/homegear-base/Exception.h:
+/usr/local/include/homegear-base/Exception.h:
 
-/usr/include/homegear-base/Output/Output.h:
+/usr/local/include/homegear-base/Output/Output.h:
 
-/usr/include/homegear-base/SSDP/SSDP.h:
+/usr/local/include/homegear-base/SSDP/SSDP.h:
 
-/usr/include/homegear-base/Encoding/HTTP.h:
+/usr/local/include/homegear-base/Encoding/HTTP.h:
 
-/usr/include/homegear-base/Variable.h:
+/usr/local/include/homegear-base/Variable.h:
 
-/usr/include/homegear-base/IQueue.h:
+/usr/local/include/homegear-base/IQueue.h:
 
 MQTT/../GD/GD.h:
 
@@ -1176,13 +1178,13 @@ MQTT/../GD/../Systems/PhysicalInterfaces.h:
 
 MQTT/../GD/../Systems/DatabaseController.h:
 
-/usr/include/homegear-base/Encoding/RPCEncoder.h:
+/usr/local/include/homegear-base/Encoding/RPCEncoder.h:
 
-/usr/include/homegear-base/Encoding/RPCDecoder.h:
+/usr/local/include/homegear-base/Encoding/RPCDecoder.h:
 
 MQTT/../GD/../Systems/../Database/SQLite3.h:
 
-/usr/include/homegear-base/Database/DatabaseTypes.h:
+/usr/local/include/homegear-base/Database/DatabaseTypes.h:
 
 /usr/include/sqlite3.h:
 
