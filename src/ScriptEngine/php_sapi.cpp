@@ -311,7 +311,11 @@ static size_t php_homegear_ub_write(const char* str, size_t length)
 			if(out->size() + length > out->capacity()) out->reserve(out->capacity() + 1024);
 			out->insert(out->end(), str, str + length);
 		}
-		else GD::out.printMessage("Script output: " + std::string(str, length));
+		else
+		{
+			if(SEG(peerId) != 0) GD::out.printMessage("Script output (peer id: " + std::to_string(SEG(peerId)) + "): " + std::string(str, length));
+			else GD::out.printMessage("Script output: " + std::string(str, length));
+		}
 	}
 	return length;
 }

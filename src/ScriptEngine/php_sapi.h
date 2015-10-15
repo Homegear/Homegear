@@ -56,6 +56,7 @@ typedef struct _zend_homegear_globals
 	std::vector<char>* output = nullptr;
 	bool commandLine = false;
 	bool cookiesParsed = false;
+	int64_t peerId = 0;
 } zend_homegear_globals;
 
 zend_homegear_globals* php_homegear_get_globals();

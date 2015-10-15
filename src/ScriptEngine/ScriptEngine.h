@@ -45,6 +45,7 @@ public:
 	void dispose();
 
 	std::vector<std::string> getArgs(const std::string& path, const std::string& args);
+	void executeScript(const std::string& script, uint64_t peerId, const std::string& args);
 	void execute(const std::string path, const std::string arguments, std::shared_ptr<std::vector<char>> output = nullptr, int32_t* exitCode = nullptr, bool wait = true, int32_t threadId = -1);
 	int32_t executeWebRequest(const std::string& path, BaseLib::HTTP& request, std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo, std::shared_ptr<BaseLib::SocketOperations>& socket);
 
