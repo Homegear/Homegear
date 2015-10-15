@@ -215,6 +215,8 @@ void ScriptEngine::executeScript(const std::string& script, uint64_t peerId, con
 			return;
 		}
 		PG(register_argc_argv) = 1;
+		PG(implicit_flush) = 1;
+		PG(html_errors) = 0;
 		SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
 		SG(options) |= SAPI_OPTION_NO_CHDIR;
 		SG(headers_sent) = 1;
@@ -374,6 +376,8 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 			return;
 		}
 		PG(register_argc_argv) = 1;
+		PG(implicit_flush) = 1;
+		PG(html_errors) = 0;
 		SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
 		SG(options) |= SAPI_OPTION_NO_CHDIR;
 		SG(headers_sent) = 1;
