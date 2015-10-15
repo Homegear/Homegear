@@ -347,6 +347,28 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 	}
 }
 
+void FamilyController::onRunScript(std::string& script, uint64_t peerId, const std::string& args)
+{
+	try
+	{
+#ifdef SCRIPTENGINE
+		GD::scriptEngine->executeScript(script, peerId, args);
+#endif
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 int32_t FamilyController::onIsAddonClient(int32_t clientID)
 {
 	return RPC::Server::isAddonClientAll(clientID);

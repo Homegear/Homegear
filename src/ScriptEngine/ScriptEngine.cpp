@@ -182,6 +182,103 @@ void ScriptEngine::setThreadNotRunning(int32_t threadId)
 	}
 }
 
+void ScriptEngine::executeScript(const std::string& script, uint64_t peerId, const std::string& args)
+{
+	if(_disposing || script.empty()) return;
+	std::shared_ptr<BaseLib::Rpc::ServerInfo::Info> serverInfo(new BaseLib::Rpc::ServerInfo::Info());
+	ts_resource_ex(0, NULL); //Replaces TSRMLS_FETCH()
+	try
+	{
+		zend_homegear_globals* globals = php_homegear_get_globals();
+		if(!globals)
+		{
+			ts_free_thread();
+			return;
+		}
+
+		zend_file_handle zendHandle;
+		zendHandle.type = ZEND_HANDLE_MAPPED;
+		zendHandle.handle.stream.mmap.buf = (char*)script.c_str(); //String is not modified
+		zendHandle.handle.stream.mmap.len = script.size();
+		zendHandle.filename = "";
+		zendHandle.opened_path = nullptr;
+		zendHandle.free_filename = 0;
+
+		globals->output = nullptr;
+		globals->commandLine = true;
+		globals->cookiesParsed = true;
+
+		if(!tsrm_get_ls_cache() || !((sapi_globals_struct *) (*((void ***) tsrm_get_ls_cache()))[((sapi_globals_id)-1)]))
+		{
+			GD::out.printCritical("Critical: Error in PHP: No thread safe resource exists.");
+			ts_free_thread();
+			return;
+		}
+		PG(register_argc_argv) = 1;
+		SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
+		SG(options) |= SAPI_OPTION_NO_CHDIR;
+		SG(headers_sent) = 1;
+		SG(request_info).no_headers = 1;
+		SG(default_mimetype) = nullptr;
+		SG(default_charset) = nullptr;
+
+		if (php_request_startup(TSRMLS_C) == FAILURE) {
+			GD::bl->out.printError("Error calling php_request_startup...");
+			ts_free_thread();
+			return;
+		}
+
+		std::vector<std::string> argv = getArgs("", args);
+		argv[0] = std::to_string(peerId);
+		php_homegear_build_argv(argv);
+		SG(request_info).argc = argv.size();
+		SG(request_info).argv = (char**)malloc((argv.size() + 1) * sizeof(char*));
+		for(uint32_t i = 0; i < argv.size(); ++i)
+		{
+			SG(request_info).argv[i] = (char*)argv[i].c_str(); //Value is not modified.
+		}
+		SG(request_info).argv[argv.size()] = nullptr;
+
+		/*zval returnValue;
+		zval function;
+		zval params[1];
+
+		std::string script2 = "<?php \\Homegear\\Homegear::logLevel(); ?>";
+		ZVAL_STRINGL(&function, "eval", sizeof("eval") - 1);
+		ZVAL_STRINGL(&params[0], script2.c_str(), script2.size());
+		call_user_function(EG(function_table), NULL, &function, &returnValue, 1, params);
+		if(Z_TYPE(returnValue) == IS_FALSE)
+		{
+			GD::bl->out.printError("Script engine (peer id: " + std::to_string(peerId) + "): Script exited with errors.");
+		}*/
+
+		php_execute_script(&zendHandle);
+		if(EG(exit_status) != 0)
+		{
+			GD::bl->out.printError("Error: Script engine (peer id: " + std::to_string(peerId) + "): Script exited with exit code " + std::to_string(EG(exit_status)));
+		}
+
+		php_request_shutdown(NULL);
+
+		ts_free_thread();
+
+		return;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	ts_free_thread();
+}
+
 void ScriptEngine::execute(const std::string path, const std::string arguments, std::shared_ptr<std::vector<char>> output, int32_t* exitCode, bool wait, int32_t threadId)
 {
 	try
@@ -196,7 +293,6 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 			//No thread yet
 			return;
 		}
-		if(!output) output.reset(new std::vector<char>());
 		if(!wait)
 		{
 			collectGarbage();
@@ -249,12 +345,11 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 		setThreadNotRunning(threadId);
 		return;
 	}
+	std::shared_ptr<BaseLib::Rpc::ServerInfo::Info> serverInfo(new BaseLib::Rpc::ServerInfo::Info());
 	ts_resource_ex(0, NULL); //Replaces TSRMLS_FETCH()
 	try
 	{
 		zend_file_handle script;
-
-		/* Set up a File Handle structure */
 		script.type = ZEND_HANDLE_FILENAME;
 		script.filename = path.c_str();
 		script.opened_path = NULL;
@@ -267,7 +362,7 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 			setThreadNotRunning(threadId);
 			return;
 		}
-		globals->output = output.get();
+		if(output) globals->output = output.get();
 		globals->commandLine = true;
 		globals->cookiesParsed = true;
 
@@ -279,7 +374,7 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 			return;
 		}
 		PG(register_argc_argv) = 1;
-		SG(server_context) = (void*)output.get(); //Must be defined! Otherwise php_homegear_activate is not called.
+		SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
 		SG(options) |= SAPI_OPTION_NO_CHDIR;
 		SG(headers_sent) = 1;
 		SG(request_info).no_headers = 1;
@@ -308,7 +403,7 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 		if(exitCode) *exitCode = EG(exit_status);
 
 		php_request_shutdown(NULL);
-		if(output->size() > 0)
+		if(output && output->size() > 0)
 		{
 			std::string outputString(&output->at(0), output->size());
 			if(BaseLib::HelperFunctions::trim(outputString).size() > 0) GD::out.printMessage("Script output:\n" + outputString);
@@ -463,6 +558,7 @@ bool ScriptEngine::checkSessionId(const std::string& sessionId)
 {
 	if(_disposing) return false;
 	std::unique_ptr<BaseLib::HTTP> request(new BaseLib::HTTP());
+	std::shared_ptr<BaseLib::Rpc::ServerInfo::Info> serverInfo(new BaseLib::Rpc::ServerInfo::Info());
 	ts_resource_ex(0, NULL); //Replaces TSRMLS_FETCH()
 	try
 	{
@@ -480,7 +576,7 @@ bool ScriptEngine::checkSessionId(const std::string& sessionId)
 			ts_free_thread();
 			return false;
 		}
-		SG(server_context) = (void*)request.get(); //Must be defined! Otherwise POST data is not processed.
+		SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise POST data is not processed.
 		SG(sapi_headers).http_response_code = 200;
 		SG(default_mimetype) = nullptr;
 		SG(default_charset) = nullptr;
@@ -498,7 +594,7 @@ bool ScriptEngine::checkSessionId(const std::string& sessionId)
 		zval returnValue;
 		zval function;
 
-		ZVAL_STRING(&function, "session_start");
+		ZVAL_STRINGL(&function, "session_start", sizeof("session_start") - 1);
 		call_user_function(EG(function_table), NULL, &function, &returnValue, 0, nullptr);
 
 		bool result = false;
@@ -532,7 +628,6 @@ bool ScriptEngine::checkSessionId(const std::string& sessionId)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	std::string error("Error executing script. Check Homegear log for more details.");
 	ts_free_thread();
 	return false;
 }
