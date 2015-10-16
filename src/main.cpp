@@ -522,22 +522,49 @@ int main(int argc, char* argv[])
     		}
     	}
 
-		if(GD::configPath.empty()) GD::configPath = "/etc/homegear/";
-		GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");
-		GD::bl->settings.load(GD::configPath + "main.conf");
+    	// {{{ Load settings
+			if(GD::configPath.empty()) GD::configPath = "/etc/homegear/";
+			GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");
+			GD::bl->settings.load(GD::configPath + "main.conf");
 
-		GD::out.printInfo("Loading RPC server settings from " + GD::bl->settings.serverSettingsPath());
-		GD::serverInfo.init(GD::bl.get());
-		GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
-		GD::out.printInfo("Loading RPC client settings from " + GD::bl->settings.clientSettingsPath());
-		GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
-		GD::mqtt.reset(new MQTT());
-		GD::mqtt->loadSettings();
+			GD::out.printInfo("Loading RPC server settings from " + GD::bl->settings.serverSettingsPath());
+			GD::serverInfo.init(GD::bl.get());
+			GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
+			GD::out.printInfo("Loading RPC client settings from " + GD::bl->settings.clientSettingsPath());
+			GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
+			GD::mqtt.reset(new MQTT());
+			GD::mqtt->loadSettings();
+		// }}}
+
+		if(!GD::bl->io.directoryExists(GD::bl->settings.tempPath()))
+		{
+			if(!GD::bl->io.createDirectory(GD::bl->settings.tempPath(), S_IRWXU | S_IRWXG))
+			{
+				GD::out.printError("Error: Cannot create temp directory \"" + GD::bl->settings.tempPath());
+				exit(1);
+			}
+		}
+		std::vector<std::string> tempFiles = GD::bl->io.getFiles(GD::bl->settings.tempPath(), true);
+		for(std::vector<std::string>::iterator i = tempFiles.begin(); i != tempFiles.end(); ++i)
+		{
+			if(!GD::bl->io.deleteFile(GD::bl->settings.tempPath() + *i))
+			{
+				GD::out.printError("Error deleting temporary file \"" + GD::bl->settings.tempPath() + *i + "\": " + strerror(errno));
+			}
+		}
 
 		#ifdef EVENTHANDLER
 		GD::eventHandler.reset(new EventHandler());
 		#endif
 		#ifdef SCRIPTENGINE
+		if(!GD::bl->io.directoryExists(GD::bl->settings.tempPath() + "php"))
+		{
+			if(!GD::bl->io.createDirectory(GD::bl->settings.tempPath() + "php", S_IRWXU | S_IRWXG))
+			{
+				GD::out.printError("Error: Cannot create temp directory \"" + GD::bl->settings.tempPath() + "php");
+				exit(1);
+			}
+		}
 		GD::scriptEngine.reset(new ScriptEngine());
 		#endif
 		GD::familyController.reset(new FamilyController());

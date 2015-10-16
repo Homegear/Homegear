@@ -207,6 +207,7 @@ void ScriptEngine::executeScript(const std::string& script, uint64_t peerId, con
 		globals->output = nullptr;
 		globals->commandLine = true;
 		globals->cookiesParsed = true;
+		globals->peerId = peerId;
 
 		if(!tsrm_get_ls_cache() || !((sapi_globals_struct *) (*((void ***) tsrm_get_ls_cache()))[((sapi_globals_id)-1)]))
 		{
