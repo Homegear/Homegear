@@ -74,6 +74,7 @@ ZEND_FUNCTION(hg_delete_user);
 ZEND_FUNCTION(hg_update_user);
 ZEND_FUNCTION(hg_user_exists);
 ZEND_FUNCTION(hg_users);
+ZEND_FUNCTION(hg_log);
 ZEND_FUNCTION(hg_shutting_down);
 
 static const zend_function_entry homegear_functions[] = {
@@ -90,6 +91,7 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_update_user, NULL)
 	ZEND_FE(hg_user_exists, NULL)
 	ZEND_FE(hg_users, NULL)
+	ZEND_FE(hg_log, NULL)
 	ZEND_FE(hg_shutting_down, NULL)
 	{NULL, NULL, NULL}
 };
@@ -685,6 +687,17 @@ ZEND_FUNCTION(hg_users)
 	}
 }
 
+ZEND_FUNCTION(hg_log)
+{
+	int32_t debugLevel = 3;
+	char* pMessage = nullptr;
+	int32_t messageLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ls", &debugLevel, &pMessage, &messageLength) != SUCCESS) RETURN_NULL();
+	if(messageLength == 0) RETURN_FALSE;
+	if(SEG(peerId) != 0) GD::out.printMessage("Script log (peer id: " + std::to_string(SEG(peerId)) + "): " + std::string(pMessage, messageLength), debugLevel, true);
+	else GD::out.printMessage("Script log: " + std::string(pMessage, messageLength), debugLevel, true);
+}
+
 ZEND_FUNCTION(hg_shutting_down)
 {
 	if(GD::bl->shuttingDown) RETURN_TRUE
@@ -727,6 +740,7 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME_MAPPING(updateUser, hg_update_user, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(userExists, hg_user_exists, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(listUsers, hg_users, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(log, hg_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(shuttingDown, hg_shutting_down, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
 };
