@@ -30,7 +30,7 @@
 
 #include "../GD/GD.h"
 #include "php_sapi.h"
-#include "PHPVariableConverter.h"
+#include "PhpVariableConverter.h"
 
 static std::shared_ptr<BaseLib::HTTP> _http;
 static pthread_key_t pthread_key;
@@ -61,6 +61,7 @@ static PHP_MINFO_FUNCTION(homegear);
 
 #define SEG(v) php_homegear_get_globals()->v
 
+ZEND_FUNCTION(get_thread_id);
 ZEND_FUNCTION(hg_invoke);
 ZEND_FUNCTION(hg_get_meta);
 ZEND_FUNCTION(hg_get_system);
@@ -75,9 +76,11 @@ ZEND_FUNCTION(hg_update_user);
 ZEND_FUNCTION(hg_user_exists);
 ZEND_FUNCTION(hg_users);
 ZEND_FUNCTION(hg_log);
+ZEND_FUNCTION(hg_poll_event);
 ZEND_FUNCTION(hg_shutting_down);
 
 static const zend_function_entry homegear_functions[] = {
+	ZEND_FE(get_thread_id, NULL)
 	ZEND_FE(hg_invoke, NULL)
 	ZEND_FE(hg_get_meta, NULL)
 	ZEND_FE(hg_get_system, NULL)
@@ -92,6 +95,7 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_user_exists, NULL)
 	ZEND_FE(hg_users, NULL)
 	ZEND_FE(hg_log, NULL)
+	ZEND_FE(hg_poll_event, NULL)
 	ZEND_FE(hg_shutting_down, NULL)
 	{NULL, NULL, NULL}
 };
@@ -272,7 +276,7 @@ void php_homegear_build_argv(std::vector<std::string>& arguments)
 	zend_hash_update(&EG(symbol_table), zend_string_init("argv", sizeof("argv") - 1, 0), &argv);
 	zend_hash_update(&EG(symbol_table), zend_string_init("argc", sizeof("argc") - 1, 0), &argc);
 
-	//zval_ptr_dtor(&argc);
+	//zval_ptr_dtor(&argc); //Not needed
 	//zval_ptr_dtor(&argv);
 }
 
@@ -506,10 +510,15 @@ void php_homegear_invoke_rpc(std::string& methodName, BaseLib::PVariable& parame
 		zend_throw_exception(homegear_exception_class_entry, result->structValue->at("faultString")->stringValue.c_str(), result->structValue->at("faultCode")->integerValue);
 		RETURN_NULL()
 	}
-	PHPVariableConverter::getPHPVariable(result, return_value);
+	PhpVariableConverter::getPHPVariable(result, return_value);
 }
 
 /* RPC functions */
+
+ZEND_FUNCTION(get_thread_id)
+{
+	ZVAL_LONG(return_value, pthread_self());
+}
 
 ZEND_FUNCTION(hg_invoke)
 {
@@ -523,7 +532,7 @@ ZEND_FUNCTION(hg_invoke)
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 	for(int32_t i = 0; i < argc; i++)
 	{
-		BaseLib::PVariable parameter = PHPVariableConverter::getVariable(&args[i]);
+		BaseLib::PVariable parameter = PhpVariableConverter::getVariable(&args[i]);
 		if(parameter) parameters->arrayValue->push_back(parameter);
 	}
 	php_homegear_invoke_rpc(methodName, parameters, return_value);
@@ -579,7 +588,7 @@ ZEND_FUNCTION(hg_set_meta)
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(id)));
 	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
-	BaseLib::PVariable parameter = PHPVariableConverter::getVariable(newValue);
+	BaseLib::PVariable parameter = PhpVariableConverter::getVariable(newValue);
 	if(parameter) parameters->arrayValue->push_back(parameter);
 	php_homegear_invoke_rpc(methodName, parameters, return_value);
 }
@@ -593,7 +602,7 @@ ZEND_FUNCTION(hg_set_system)
 	std::string methodName("setSystemVariable");
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
-	BaseLib::PVariable parameter = PHPVariableConverter::getVariable(newValue);
+	BaseLib::PVariable parameter = PhpVariableConverter::getVariable(newValue);
 	if(parameter) parameters->arrayValue->push_back(parameter);
 	php_homegear_invoke_rpc(methodName, parameters, return_value);
 }
@@ -611,7 +620,7 @@ ZEND_FUNCTION(hg_set_value)
 	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(id)));
 	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
 	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pParameterName, parameterNameLength))));
-	BaseLib::PVariable parameter = PHPVariableConverter::getVariable(newValue);
+	BaseLib::PVariable parameter = PhpVariableConverter::getVariable(newValue);
 	if(parameter) parameters->arrayValue->push_back(parameter);
 	php_homegear_invoke_rpc(methodName, parameters, return_value);
 }
@@ -687,6 +696,44 @@ ZEND_FUNCTION(hg_users)
 	}
 }
 
+ZEND_FUNCTION(hg_poll_event)
+{
+	int64_t threadId = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &threadId) != SUCCESS) RETURN_NULL();
+	PhpEvents::eventsMapMutex.lock();
+	std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(threadId);
+	if(eventsIterator == PhpEvents::eventsMap.end())
+	{
+		PhpEvents::eventsMapMutex.unlock();
+		zend_throw_exception(homegear_exception_class_entry, "Thread id is invalid.", -1);
+		RETURN_FALSE
+	}
+	std::shared_ptr<PhpEvents> phpEvents;
+	if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents());
+	phpEvents = eventsIterator->second;
+	PhpEvents::eventsMapMutex.unlock();
+	std::shared_ptr<PhpEvents::EventData> eventData = phpEvents->poll();
+	if(eventData)
+	{
+		array_init(return_value);
+		zval element;
+
+		ZVAL_LONG(&element, eventData->id);
+		add_assoc_zval_ex(return_value, "PEERID", sizeof("PEERID") - 1, &element);
+
+		ZVAL_LONG(&element, eventData->channel);
+		add_assoc_zval_ex(return_value, "CHANNEL", sizeof("CHANNEL") - 1, &element);
+
+		if(eventData->variable.empty()) ZVAL_STRINGL(&element, "", 0); //At least once, c_str() on an empty string was a nullptr causing a segementation fault, so check for empty string
+		else ZVAL_STRINGL(&element, eventData->variable.c_str(), eventData->variable.size());
+		add_assoc_zval_ex(return_value, "VARIABLE", sizeof("VARIABLE") - 1, &element);
+
+		PhpVariableConverter::getPHPVariable(eventData->value, &element);
+		add_assoc_zval_ex(return_value, "VALUE", sizeof("VALUE") - 1, &element);
+	}
+	else RETURN_FALSE
+}
+
 ZEND_FUNCTION(hg_log)
 {
 	int32_t debugLevel = 3;
@@ -711,7 +758,7 @@ ZEND_METHOD(Homegear, __call)
 	zval* args = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "sz", &pMethodName, &methodNameLength, &args) != SUCCESS) RETURN_NULL();
 	std::string methodName(std::string(pMethodName, methodNameLength));
-	BaseLib::PVariable parameters = PHPVariableConverter::getVariable(args);
+	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args);
 	php_homegear_invoke_rpc(methodName, parameters, return_value);
 }
 
@@ -722,7 +769,7 @@ ZEND_METHOD(Homegear, __callStatic)
 	zval* args = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "sz", &pMethodName, &methodNameLength, &args) != SUCCESS) RETURN_NULL();
 	std::string methodName(std::string(pMethodName, methodNameLength));
-	BaseLib::PVariable parameters = PHPVariableConverter::getVariable(args);
+	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args);
 	php_homegear_invoke_rpc(methodName, parameters, return_value);
 }
 
@@ -741,6 +788,7 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME_MAPPING(userExists, hg_user_exists, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(listUsers, hg_users, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(log, hg_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(pollEvent, hg_poll_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(shuttingDown, hg_shutting_down, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
 };

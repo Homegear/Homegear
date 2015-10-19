@@ -262,7 +262,36 @@ void MiscPeer::runScript()
 		std::string script = _rpcDevice->runProgram->script;
 		if(script.empty()) return;
 		std::string args;
-		raiseRunScript(script, args);
+		std::vector<std::string> arguments = _rpcDevice->runProgram->arguments;
+		for(std::vector<std::string>::iterator i = arguments.begin(); i != arguments.end(); ++i)
+		{
+			GD::bl->hf.stringReplace(*i, "$PEERID", std::to_string(_peerID));
+			GD::bl->hf.stringReplace(*i, "$RPCPORT", std::to_string(_bl->rpcPort));
+			args += *i + " ";
+		}
+		BaseLib::HelperFunctions::trim(args);
+
+		if(_rpcDevice->runProgram->interval == 0) _rpcDevice->runProgram->interval = 10;
+		while(!_stopRunProgramThread)
+		{
+			int64_t startTime = GD::bl->hf.getTime();
+
+			GD::out.printInfo("Info: Starting internal script of peer " + std::to_string(_peerID) + ".");
+			raiseRunScript(script, args);
+			GD::out.printInfo("Info: Internal script of peer " + std::to_string(_peerID) + " exited.");
+
+			if(_rpcDevice->runProgram->startType == RunProgram::StartType::once) return;
+			else if(_rpcDevice->runProgram->startType == RunProgram::StartType::interval)
+			{
+				int64_t totalTimeToSleep = (_rpcDevice->runProgram->interval * 1000) - (GD::bl->hf.getTime() - startTime);
+				if(totalTimeToSleep < 0) totalTimeToSleep = 0;
+				for(int32_t i = 0; i < (totalTimeToSleep / 100) + 1; i++)
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				}
+			}
+			break;
+		}
 	}
 	catch(const std::exception& ex)
 	{

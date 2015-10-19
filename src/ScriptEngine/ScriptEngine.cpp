@@ -30,6 +30,7 @@
 #include "../GD/GD.h"
 #include "ScriptEngine.h"
 #include "php_sapi.h"
+#include "PhpEvents.h"
 
 ScriptEngine::ScriptEngine()
 {
@@ -41,6 +42,16 @@ ScriptEngine::~ScriptEngine()
 	dispose();
 }
 
+void ScriptEngine::stopEventThreads()
+{
+	PhpEvents::eventsMapMutex.lock();
+	for(std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
+	{
+		if(i->second) i->second->stop();
+	}
+	PhpEvents::eventsMapMutex.unlock();
+}
+
 void ScriptEngine::dispose()
 {
 	if(_disposing) return;
@@ -48,6 +59,7 @@ void ScriptEngine::dispose()
 	while(_scriptThreads.size() > 0)
 	{
 		GD::out.printInfo("Info: Waiting for script threads to finish.");
+		stopEventThreads();
 		collectGarbage();
 		if(_scriptThreads.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
@@ -242,6 +254,10 @@ void ScriptEngine::executeScript(const std::string& script, uint64_t peerId, con
 		}
 		SG(request_info).argv[argv.size()] = nullptr;
 
+		PhpEvents::eventsMapMutex.lock();
+		PhpEvents::eventsMap.insert(std::pair<int64_t, std::shared_ptr<PhpEvents>>(pthread_self(), std::shared_ptr<PhpEvents>()));
+		PhpEvents::eventsMapMutex.unlock();
+
 		/*zval returnValue;
 		zval function;
 		zval params[1];
@@ -264,6 +280,10 @@ void ScriptEngine::executeScript(const std::string& script, uint64_t peerId, con
 		php_request_shutdown(NULL);
 
 		ts_free_thread();
+
+		PhpEvents::eventsMapMutex.lock();
+		PhpEvents::eventsMap.erase(pthread_self());
+		PhpEvents::eventsMapMutex.unlock();
 
 		return;
 	}
@@ -557,6 +577,42 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& 
 	}
 	ts_free_thread();
 	return 1;
+}
+
+void ScriptEngine::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values)
+{
+	PhpEvents::eventsMapMutex.lock();
+	try
+	{
+		for(std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
+		{
+			if(i->second)
+			{
+				for(uint32_t j = 0; j < variables->size(); j++)
+				{
+					std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
+					eventData->id = id;
+					eventData->channel = channel;
+					eventData->variable = variables->at(j);
+					eventData->value = values->at(j);
+					i->second->enqueue(eventData);
+				}
+			}
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	PhpEvents::eventsMapMutex.unlock();
 }
 
 bool ScriptEngine::checkSessionId(const std::string& sessionId)

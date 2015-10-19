@@ -197,10 +197,11 @@ rm php7*.tar.xz
 rm php7*.dsc
 cd php7*
 cd ext
-wget https://github.com/krakjoe/pthreads/archive/v3.0.0.tar.gz
-tar -zxf v3.0.0.tar.gz
-rm v3.0.0.tar.gz
-mv pthreads-3.0.0 pthreads
+wget https://github.com/krakjoe/pthreads/archive/v3.0.8.tar.gz
+tar -zxf v3.0.8.tar.gz
+rm v3.0.8.tar.gz
+mv pthreads-3.0.8 pthreads
+sed -i 's/{ZEND_STRL("cli")}/{ZEND_STRL("homegear")}/g' pthreads/php_pthreads.c
 cd ..
 autoconf
 version=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d "+" -f 1 | cut -d "-" -f 1`
@@ -233,6 +234,7 @@ cat > "$rootfs/FirstStart.sh" <<-'EOF'
 #!/bin/bash
 sed -i '$ d' /root/.bashrc >/dev/null
 if [ -n "$PHPBUILD_SHELL" ]; then
+	echo "Container setup successful. You can now execute \"/PHPBuild/CreatePHPPackages.sh\"."
 	/bin/bash
 	exit 0
 fi

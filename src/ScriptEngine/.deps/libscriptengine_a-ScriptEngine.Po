@@ -352,7 +352,7 @@ ScriptEngine/libscriptengine_a-ScriptEngine.o: \
  ScriptEngine/../GD/../RPC/Auth.h \
  ScriptEngine/../GD/../RPC/RemoteRpcServer.h ScriptEngine/ScriptEngine.h \
  ScriptEngine/php_sapi.h ScriptEngine/php_config_fixes.h \
- /usr/include/php7-homegear/main/php.h \
+ ScriptEngine/PhpEvents.h /usr/include/php7-homegear/main/php.h \
  /usr/include/php7-homegear/main/php_version.h \
  /usr/include/php7-homegear/Zend/zend.h \
  /usr/include/php7-homegear/Zend/zend_types.h \
@@ -1304,6 +1304,8 @@ ScriptEngine/ScriptEngine.h:
 ScriptEngine/php_sapi.h:
 
 ScriptEngine/php_config_fixes.h:
+
+ScriptEngine/PhpEvents.h:
 
 /usr/include/php7-homegear/main/php.h:
 

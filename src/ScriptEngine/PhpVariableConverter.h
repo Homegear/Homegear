@@ -38,11 +38,11 @@
 #include <stdlib.h>
 #include <zend_API.h>
 
-class PHPVariableConverter
+class PhpVariableConverter
 {
 public:
-	PHPVariableConverter();
-	virtual ~PHPVariableConverter();
+	PhpVariableConverter();
+	virtual ~PhpVariableConverter();
 
 	static BaseLib::PVariable getVariable(zval* value);
 	static void getPHPVariable(BaseLib::PVariable input, zval* output);

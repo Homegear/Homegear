@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -28,40 +28,37 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef SCRIPTENGINE_H_
-#define SCRIPTENGINE_H_
+#ifndef PHPEVENTS_H_
+#define PHPEVENTS_H_
 
-#include "php_config_fixes.h"
-#include "homegear-base/BaseLib.h"
-
-#include <mutex>
-#include <wordexp.h>
-
-class ScriptEngine
+class PhpEvents
 {
 public:
-	ScriptEngine();
-	virtual ~ScriptEngine();
-	void stopEventThreads();
-	void dispose();
+	class EventData
+	{
+	public:
+		uint64_t id = 0;
+		int32_t channel = -1;
+		std::string variable;
+		BaseLib::PVariable value;
+	};
 
-	std::vector<std::string> getArgs(const std::string& path, const std::string& args);
-	void executeScript(const std::string& script, uint64_t peerId, const std::string& args);
-	void execute(const std::string path, const std::string arguments, std::shared_ptr<std::vector<char>> output = nullptr, int32_t* exitCode = nullptr, bool wait = true, int32_t threadId = -1);
-	int32_t executeWebRequest(const std::string& path, BaseLib::HTTP& request, std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo, std::shared_ptr<BaseLib::SocketOperations>& socket);
+	static std::mutex eventsMapMutex;
+	static std::map<int64_t, std::shared_ptr<PhpEvents>> eventsMap;
 
-	void broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
-	bool checkSessionId(const std::string& sessionId);
-
-	BaseLib::PVariable getAllScripts();
-protected:
-	bool _disposing = false;
-	volatile int32_t _currentScriptThreadID = 0;
-	std::map<int32_t, std::pair<std::thread, bool>> _scriptThreads;
-	std::mutex _scriptThreadMutex;
-
-	void collectGarbage();
-	bool scriptThreadMaxReached();
-	void setThreadNotRunning(int32_t threadId);
+	PhpEvents();
+	virtual ~PhpEvents();
+	void stop();
+	bool enqueue(std::shared_ptr<EventData>& entry);
+	std::shared_ptr<EventData> poll();
+private:
+	static const int32_t _bufferSize = 100;
+	std::mutex _bufferMutex;
+	int32_t _bufferHead = 0;
+	int32_t _bufferTail = 0;
+	std::shared_ptr<EventData> _buffer[_bufferSize];
+	std::mutex _processingThreadMutex;
+	bool _processingEntryAvailable = false;
+	std::condition_variable _processingConditionVariable;
 };
 #endif
