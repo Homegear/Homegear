@@ -71,10 +71,7 @@ case $1 in
 		echo "####################################################################"
 		echo "####################################################################"
 		echo "### Please modify the file /etc/homegear/physicalinterfaces.conf ###"
-		echo "### according to your needs. By default the \"CUL\" stick is       ###"
-		echo "### enabled. When you're not using a \"CUL\" stick, Homegear       ###"
-		echo "### will not work, until you added the hardware you use to       ###"
-		echo "### communicate with your home automation devices.               ###"
+		echo "### according to your needs.                                     ###"
 		echo "####################################################################"
 		echo "####################################################################"
 		;;
