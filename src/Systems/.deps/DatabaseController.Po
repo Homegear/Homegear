@@ -1,7 +1,7 @@
 Systems/DatabaseController.o: Systems/DatabaseController.cpp \
  /usr/include/stdc-predef.h Systems/DatabaseController.h \
- /usr/local/include/homegear-base/Encoding/RPCEncoder.h \
- /usr/local/include/homegear-base/Encoding/RPCHeader.h \
+ /usr/include/homegear-base/Encoding/RPCEncoder.h \
+ /usr/include/homegear-base/Encoding/RPCHeader.h \
  /usr/include/c++/4.8/string \
  /usr/include/x86_64-linux-gnu/c++/4.8/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/4.8/bits/os_defines.h \
@@ -92,11 +92,11 @@ Systems/DatabaseController.o: Systems/DatabaseController.cpp \
  /usr/include/c++/4.8/bits/functional_hash.h \
  /usr/include/c++/4.8/bits/hash_bytes.h \
  /usr/include/c++/4.8/bits/basic_string.tcc \
- /usr/local/include/homegear-base/Variable.h \
- /usr/local/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
+ /usr/include/homegear-base/Variable.h \
+ /usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
  /usr/include/c++/4.8/cassert /usr/include/assert.h \
- /usr/local/include/homegear-base/DeviceDescription/Logical.h \
- /usr/local/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
+ /usr/include/homegear-base/DeviceDescription/Logical.h \
+ /usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
  /usr/include/c++/4.8/memory /usr/include/c++/4.8/bits/stl_construct.h \
  /usr/include/c++/4.8/ext/alloc_traits.h \
  /usr/include/c++/4.8/bits/alloc_traits.h \
@@ -119,7 +119,7 @@ Systems/DatabaseController.o: Systems/DatabaseController.cpp \
  /usr/include/c++/4.8/bits/stl_vector.h \
  /usr/include/c++/4.8/bits/stl_bvector.h \
  /usr/include/c++/4.8/bits/vector.tcc \
- /usr/local/include/homegear-base/DeviceDescription/Physical.h \
+ /usr/include/homegear-base/DeviceDescription/Physical.h \
  /usr/include/c++/4.8/iostream /usr/include/c++/4.8/ostream \
  /usr/include/c++/4.8/ios /usr/include/c++/4.8/bits/ios_base.h \
  /usr/include/c++/4.8/bits/locale_classes.h \
@@ -138,10 +138,10 @@ Systems/DatabaseController.o: Systems/DatabaseController.cpp \
  /usr/include/c++/4.8/bits/stl_tree.h /usr/include/c++/4.8/bits/stl_map.h \
  /usr/include/c++/4.8/bits/stl_multimap.h /usr/include/c++/4.8/list \
  /usr/include/c++/4.8/bits/stl_list.h /usr/include/c++/4.8/bits/list.tcc \
- /usr/local/include/homegear-base/Encoding/BinaryEncoder.h \
+ /usr/include/homegear-base/Encoding/BinaryEncoder.h \
  /usr/include/c++/4.8/cstring /usr/include/string.h \
  /usr/include/x86_64-linux-gnu/bits/string3.h \
- /usr/local/include/homegear-base/Encoding/RPCDecoder.h \
+ /usr/include/homegear-base/Encoding/RPCDecoder.h \
  /usr/include/c++/4.8/cmath /usr/include/math.h \
  /usr/include/x86_64-linux-gnu/bits/huge_val.h \
  /usr/include/x86_64-linux-gnu/bits/huge_valf.h \
@@ -151,9 +151,9 @@ Systems/DatabaseController.o: Systems/DatabaseController.cpp \
  /usr/include/x86_64-linux-gnu/bits/mathdef.h \
  /usr/include/x86_64-linux-gnu/bits/mathcalls.h \
  /usr/include/x86_64-linux-gnu/bits/mathinline.h \
- /usr/local/include/homegear-base/Encoding/BinaryDecoder.h \
+ /usr/include/homegear-base/Encoding/BinaryDecoder.h \
  Systems/../Database/SQLite3.h \
- /usr/local/include/homegear-base/Database/DatabaseTypes.h \
+ /usr/include/homegear-base/Database/DatabaseTypes.h \
  /usr/include/c++/4.8/deque /usr/include/c++/4.8/bits/stl_deque.h \
  /usr/include/c++/4.8/bits/deque.tcc /usr/include/c++/4.8/mutex \
  /usr/include/c++/4.8/chrono /usr/include/c++/4.8/ratio \
@@ -186,47 +186,47 @@ Systems/DatabaseController.o: Systems/DatabaseController.cpp \
  /usr/include/x86_64-linux-gnu/asm/sockios.h \
  /usr/include/asm-generic/sockios.h \
  /usr/include/x86_64-linux-gnu/bits/socket2.h \
- /usr/include/x86_64-linux-gnu/sys/time.h /usr/include/gcrypt-module.h \
- Systems/../GD/GD.h Systems/../GD/../../config.h \
+ /usr/include/x86_64-linux-gnu/sys/time.h Systems/../GD/GD.h \
+ Systems/../GD/../../config.h \
  Systems/../GD/../ScriptEngine/ScriptEngine.h \
  Systems/../GD/../ScriptEngine/php_config_fixes.h \
- /usr/local/include/homegear-base/BaseLib.h \
- /usr/local/include/homegear-base/Database/DatabaseTypes.h \
- /usr/local/include/homegear-base/Encoding/XMLRPCDecoder.h \
- /usr/local/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
- /usr/local/include/homegear-base/Encoding/XMLRPCEncoder.h \
- /usr/local/include/homegear-base/Exception.h \
- /usr/local/include/homegear-base/Output/Output.h \
- /usr/local/include/homegear-base/Exception.h \
- /usr/include/c++/4.8/iomanip /usr/include/c++/4.8/locale \
+ /usr/include/homegear-base/BaseLib.h \
+ /usr/include/homegear-base/Database/DatabaseTypes.h \
+ /usr/include/homegear-base/Encoding/XMLRPCDecoder.h \
+ /usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
+ /usr/include/homegear-base/Encoding/XMLRPCEncoder.h \
+ /usr/include/homegear-base/Exception.h \
+ /usr/include/homegear-base/Output/Output.h \
+ /usr/include/homegear-base/Exception.h /usr/include/c++/4.8/iomanip \
+ /usr/include/c++/4.8/locale \
  /usr/include/c++/4.8/bits/locale_facets_nonio.h \
  /usr/include/x86_64-linux-gnu/c++/4.8/bits/time_members.h \
  /usr/include/x86_64-linux-gnu/c++/4.8/bits/messages_members.h \
  /usr/include/libintl.h /usr/include/c++/4.8/bits/codecvt.h \
  /usr/include/c++/4.8/bits/locale_facets_nonio.tcc \
  /usr/include/c++/4.8/sstream /usr/include/c++/4.8/bits/sstream.tcc \
- /usr/local/include/homegear-base/Encoding/RapidXml/rapidxml_print.hpp \
- /usr/local/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
+ /usr/include/homegear-base/Encoding/RapidXml/rapidxml_print.hpp \
+ /usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
  /usr/include/c++/4.8/iterator \
  /usr/include/c++/4.8/bits/stream_iterator.h \
- /usr/local/include/homegear-base/Encoding/RPCDecoder.h \
- /usr/local/include/homegear-base/Encoding/RPCEncoder.h \
- /usr/local/include/homegear-base/Encoding/JsonDecoder.h \
- /usr/local/include/homegear-base/Encoding/JsonEncoder.h \
- /usr/local/include/homegear-base/Encoding/HTTP.h \
- /usr/local/include/homegear-base/HelperFunctions/Math.h \
- /usr/local/include/homegear-base/Encoding/Html.h \
- /usr/local/include/homegear-base/Encoding/WebSocket.h \
- /usr/local/include/homegear-base/Managers/SerialDeviceManager.h \
- /usr/local/include/homegear-base/Sockets/SerialReaderWriter.h \
- /usr/local/include/homegear-base/Exception.h \
- /usr/local/include/homegear-base/Managers/FileDescriptorManager.h \
+ /usr/include/homegear-base/Encoding/RPCDecoder.h \
+ /usr/include/homegear-base/Encoding/RPCEncoder.h \
+ /usr/include/homegear-base/Encoding/JsonDecoder.h \
+ /usr/include/homegear-base/Encoding/JsonEncoder.h \
+ /usr/include/homegear-base/Encoding/HTTP.h \
+ /usr/include/homegear-base/HelperFunctions/Math.h \
+ /usr/include/homegear-base/Encoding/Html.h \
+ /usr/include/homegear-base/Encoding/WebSocket.h \
+ /usr/include/homegear-base/Managers/SerialDeviceManager.h \
+ /usr/include/homegear-base/Sockets/SerialReaderWriter.h \
+ /usr/include/homegear-base/Exception.h \
+ /usr/include/homegear-base/Managers/FileDescriptorManager.h \
  /usr/include/unistd.h /usr/include/x86_64-linux-gnu/bits/posix_opt.h \
  /usr/include/x86_64-linux-gnu/bits/environments.h \
  /usr/include/x86_64-linux-gnu/bits/confname.h /usr/include/getopt.h \
  /usr/include/x86_64-linux-gnu/bits/unistd.h /usr/include/gnutls/gnutls.h \
- /usr/include/gnutls/compat.h /usr/local/include/homegear-base/IEvents.h \
- /usr/local/include/homegear-base/Output/Output.h \
+ /usr/include/gnutls/compat.h /usr/include/homegear-base/IEvents.h \
+ /usr/include/homegear-base/Output/Output.h \
  /usr/include/c++/4.8/forward_list \
  /usr/include/c++/4.8/bits/forward_list.h \
  /usr/include/c++/4.8/bits/forward_list.tcc /usr/include/fcntl.h \
@@ -243,8 +243,8 @@ Systems/DatabaseController.o: Systems/DatabaseController.cpp \
  /usr/include/x86_64-linux-gnu/bits/sigstack.h \
  /usr/include/x86_64-linux-gnu/sys/ucontext.h \
  /usr/include/x86_64-linux-gnu/bits/sigthread.h \
- /usr/local/include/homegear-base/Managers/FileDescriptorManager.h \
- /usr/local/include/homegear-base/HelperFunctions/HelperFunctions.h \
+ /usr/include/homegear-base/Managers/FileDescriptorManager.h \
+ /usr/include/homegear-base/HelperFunctions/HelperFunctions.h \
  /usr/include/c++/4.8/algorithm /usr/include/c++/4.8/bits/stl_algo.h \
  /usr/include/c++/4.8/bits/algorithmfwd.h \
  /usr/include/c++/4.8/bits/stl_heap.h /usr/include/c++/4.8/fstream \
@@ -255,37 +255,37 @@ Systems/DatabaseController.o: Systems/DatabaseController.cpp \
  /usr/include/x86_64-linux-gnu/bits/posix1_lim.h \
  /usr/include/x86_64-linux-gnu/bits/local_lim.h \
  /usr/include/linux/limits.h /usr/include/pwd.h /usr/include/grp.h \
- /usr/local/include/homegear-base/HelperFunctions/Color.h \
- /usr/local/include/homegear-base/HelperFunctions/Math.h \
- /usr/local/include/homegear-base/HelperFunctions/Math.h \
- /usr/local/include/homegear-base/HelperFunctions/Crypt.h \
- /usr/local/include/homegear-base/HelperFunctions/Base64.h \
- /usr/local/include/homegear-base/HelperFunctions/Net.h \
- /usr/local/include/homegear-base/Exception.h \
- /usr/local/include/homegear-base/HelperFunctions/Io.h \
- /usr/local/include/homegear-base/DeviceDescription/Devices.h \
- /usr/local/include/homegear-base/Systems/Packet.h \
- /usr/local/include/homegear-base/Systems/DeviceTypes.h \
- /usr/local/include/homegear-base/DeviceDescription/HomegearDevice.h \
- /usr/local/include/homegear-base/DeviceDescription/DevicePacket.h \
- /usr/local/include/homegear-base/DeviceDescription/JsonPayload.h \
- /usr/local/include/homegear-base/DeviceDescription/BinaryPayload.h \
- /usr/local/include/homegear-base/DeviceDescription/HttpPayload.h \
- /usr/local/include/homegear-base/DeviceDescription/Parameter.h \
- /usr/local/include/homegear-base/DeviceDescription/ParameterCast.h \
- /usr/local/include/homegear-base/Variable.h \
- /usr/local/include/homegear-base/DeviceDescription/Logical.h \
- /usr/local/include/homegear-base/DeviceDescription/Physical.h \
- /usr/local/include/homegear-base/DeviceDescription/SupportedDevice.h \
- /usr/local/include/homegear-base/DeviceDescription/RunProgram.h \
- /usr/local/include/homegear-base/DeviceDescription/Function.h \
- /usr/local/include/homegear-base/DeviceDescription/ParameterGroup.h \
- /usr/local/include/homegear-base/DeviceDescription/Scenario.h \
+ /usr/include/homegear-base/HelperFunctions/Color.h \
+ /usr/include/homegear-base/HelperFunctions/Math.h \
+ /usr/include/homegear-base/HelperFunctions/Math.h \
+ /usr/include/homegear-base/HelperFunctions/Crypt.h \
+ /usr/include/homegear-base/HelperFunctions/Base64.h \
+ /usr/include/homegear-base/HelperFunctions/Net.h \
+ /usr/include/homegear-base/Exception.h \
+ /usr/include/homegear-base/HelperFunctions/Io.h \
+ /usr/include/homegear-base/DeviceDescription/Devices.h \
+ /usr/include/homegear-base/Systems/Packet.h \
+ /usr/include/homegear-base/Systems/DeviceTypes.h \
+ /usr/include/homegear-base/DeviceDescription/HomegearDevice.h \
+ /usr/include/homegear-base/DeviceDescription/DevicePacket.h \
+ /usr/include/homegear-base/DeviceDescription/JsonPayload.h \
+ /usr/include/homegear-base/DeviceDescription/BinaryPayload.h \
+ /usr/include/homegear-base/DeviceDescription/HttpPayload.h \
+ /usr/include/homegear-base/DeviceDescription/Parameter.h \
+ /usr/include/homegear-base/DeviceDescription/ParameterCast.h \
+ /usr/include/homegear-base/Variable.h \
+ /usr/include/homegear-base/DeviceDescription/Logical.h \
+ /usr/include/homegear-base/DeviceDescription/Physical.h \
+ /usr/include/homegear-base/DeviceDescription/SupportedDevice.h \
+ /usr/include/homegear-base/DeviceDescription/RunProgram.h \
+ /usr/include/homegear-base/DeviceDescription/Function.h \
+ /usr/include/homegear-base/DeviceDescription/ParameterGroup.h \
+ /usr/include/homegear-base/DeviceDescription/Scenario.h \
  /usr/include/c++/4.8/set /usr/include/c++/4.8/bits/stl_set.h \
  /usr/include/c++/4.8/bits/stl_multiset.h \
- /usr/local/include/homegear-base/Settings/Settings.h \
- /usr/local/include/homegear-base/Sockets/HTTPClient.h \
- /usr/local/include/homegear-base/Sockets/SocketOperations.h \
+ /usr/include/homegear-base/Settings/Settings.h \
+ /usr/include/homegear-base/Sockets/HTTPClient.h \
+ /usr/include/homegear-base/Sockets/SocketOperations.h \
  /usr/include/arpa/inet.h /usr/include/netinet/in.h \
  /usr/include/x86_64-linux-gnu/bits/in.h /usr/include/netinet/tcp.h \
  /usr/include/netdb.h /usr/include/rpc/netdb.h \
@@ -293,38 +293,38 @@ Systems/DatabaseController.o: Systems/DatabaseController.cpp \
  /usr/include/x86_64-linux-gnu/sys/poll.h \
  /usr/include/x86_64-linux-gnu/bits/poll.h \
  /usr/include/x86_64-linux-gnu/bits/poll2.h /usr/include/gnutls/x509.h \
- /usr/local/include/homegear-base/Encoding/HTTP.h \
- /usr/local/include/homegear-base/Sockets/SocketOperations.h \
- /usr/local/include/homegear-base/Sockets/IWebserverEventSink.h \
- /usr/local/include/homegear-base/Sockets/ServerInfo.h \
- /usr/local/include/homegear-base/Sockets/ServerInfo.h \
- /usr/local/include/homegear-base/Systems/DeviceFamily.h \
- /usr/local/include/homegear-base/Database/DatabaseTypes.h \
- /usr/local/include/homegear-base/Systems/Central.h \
- /usr/local/include/homegear-base/Variable.h \
- /usr/local/include/homegear-base/DeviceDescription/HomegearDevice.h \
- /usr/local/include/homegear-base/Systems/LogicalDevice.h \
- /usr/local/include/homegear-base/HelperFunctions/HelperFunctions.h \
- /usr/local/include/homegear-base/Systems/IPhysicalInterface.h \
- /usr/local/include/homegear-base/IEvents.h \
- /usr/local/include/homegear-base/Systems/PhysicalInterfaceSettings.h \
- /usr/local/include/homegear-base/Managers/FileDescriptorManager.h \
- /usr/local/include/homegear-base/Systems/Packet.h \
- /usr/local/include/homegear-base/Systems/Peer.h \
- /usr/local/include/homegear-base/Systems/ServiceMessages.h \
- /usr/local/include/homegear-base/Encoding/BinaryEncoder.h \
- /usr/local/include/homegear-base/Encoding/BinaryDecoder.h \
- /usr/local/include/homegear-base/Systems/Peer.h \
- /usr/local/include/homegear-base/Systems/SystemFactory.h \
- /usr/local/include/homegear-base/Systems/DeviceFamily.h \
- /usr/local/include/homegear-base/Systems/UpdateInfo.h \
- /usr/local/include/homegear-base/Threads/Threads.h \
- /usr/local/include/homegear-base/Exception.h \
- /usr/local/include/homegear-base/Output/Output.h \
- /usr/local/include/homegear-base/SSDP/SSDP.h \
- /usr/local/include/homegear-base/Encoding/HTTP.h \
- /usr/local/include/homegear-base/Variable.h \
- /usr/local/include/homegear-base/IQueue.h /usr/include/wordexp.h \
+ /usr/include/homegear-base/Encoding/HTTP.h \
+ /usr/include/homegear-base/Sockets/SocketOperations.h \
+ /usr/include/homegear-base/Sockets/IWebserverEventSink.h \
+ /usr/include/homegear-base/Sockets/ServerInfo.h \
+ /usr/include/homegear-base/Sockets/ServerInfo.h \
+ /usr/include/homegear-base/Systems/DeviceFamily.h \
+ /usr/include/homegear-base/Database/DatabaseTypes.h \
+ /usr/include/homegear-base/Systems/Central.h \
+ /usr/include/homegear-base/Variable.h \
+ /usr/include/homegear-base/DeviceDescription/HomegearDevice.h \
+ /usr/include/homegear-base/Systems/LogicalDevice.h \
+ /usr/include/homegear-base/HelperFunctions/HelperFunctions.h \
+ /usr/include/homegear-base/Systems/IPhysicalInterface.h \
+ /usr/include/homegear-base/IEvents.h \
+ /usr/include/homegear-base/Systems/PhysicalInterfaceSettings.h \
+ /usr/include/homegear-base/Managers/FileDescriptorManager.h \
+ /usr/include/homegear-base/Systems/Packet.h \
+ /usr/include/homegear-base/Systems/Peer.h \
+ /usr/include/homegear-base/Systems/ServiceMessages.h \
+ /usr/include/homegear-base/Encoding/BinaryEncoder.h \
+ /usr/include/homegear-base/Encoding/BinaryDecoder.h \
+ /usr/include/homegear-base/Systems/Peer.h \
+ /usr/include/homegear-base/Systems/SystemFactory.h \
+ /usr/include/homegear-base/Systems/DeviceFamily.h \
+ /usr/include/homegear-base/Systems/UpdateInfo.h \
+ /usr/include/homegear-base/Threads/Threads.h \
+ /usr/include/homegear-base/Exception.h \
+ /usr/include/homegear-base/Output/Output.h \
+ /usr/include/homegear-base/SSDP/SSDP.h \
+ /usr/include/homegear-base/Encoding/HTTP.h \
+ /usr/include/homegear-base/Variable.h \
+ /usr/include/homegear-base/IQueue.h /usr/include/wordexp.h \
  Systems/../GD/../CLI/CLIServer.h Systems/../GD/../CLI/../User/User.h \
  Systems/../GD/../CLI/../Systems/FamilyController.h /usr/include/dlfcn.h \
  /usr/include/x86_64-linux-gnu/bits/dlfcn.h \
@@ -351,9 +351,9 @@ Systems/DatabaseController.o: Systems/DatabaseController.cpp \
 
 Systems/DatabaseController.h:
 
-/usr/local/include/homegear-base/Encoding/RPCEncoder.h:
+/usr/include/homegear-base/Encoding/RPCEncoder.h:
 
-/usr/local/include/homegear-base/Encoding/RPCHeader.h:
+/usr/include/homegear-base/Encoding/RPCHeader.h:
 
 /usr/include/c++/4.8/string:
 
@@ -577,17 +577,17 @@ Systems/DatabaseController.h:
 
 /usr/include/c++/4.8/bits/basic_string.tcc:
 
-/usr/local/include/homegear-base/Variable.h:
+/usr/include/homegear-base/Variable.h:
 
-/usr/local/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
+/usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
 
 /usr/include/c++/4.8/cassert:
 
 /usr/include/assert.h:
 
-/usr/local/include/homegear-base/DeviceDescription/Logical.h:
+/usr/include/homegear-base/DeviceDescription/Logical.h:
 
-/usr/local/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
+/usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
 
 /usr/include/c++/4.8/memory:
 
@@ -647,7 +647,7 @@ Systems/DatabaseController.h:
 
 /usr/include/c++/4.8/bits/vector.tcc:
 
-/usr/local/include/homegear-base/DeviceDescription/Physical.h:
+/usr/include/homegear-base/DeviceDescription/Physical.h:
 
 /usr/include/c++/4.8/iostream:
 
@@ -703,7 +703,7 @@ Systems/DatabaseController.h:
 
 /usr/include/c++/4.8/bits/list.tcc:
 
-/usr/local/include/homegear-base/Encoding/BinaryEncoder.h:
+/usr/include/homegear-base/Encoding/BinaryEncoder.h:
 
 /usr/include/c++/4.8/cstring:
 
@@ -711,7 +711,7 @@ Systems/DatabaseController.h:
 
 /usr/include/x86_64-linux-gnu/bits/string3.h:
 
-/usr/local/include/homegear-base/Encoding/RPCDecoder.h:
+/usr/include/homegear-base/Encoding/RPCDecoder.h:
 
 /usr/include/c++/4.8/cmath:
 
@@ -733,11 +733,11 @@ Systems/DatabaseController.h:
 
 /usr/include/x86_64-linux-gnu/bits/mathinline.h:
 
-/usr/local/include/homegear-base/Encoding/BinaryDecoder.h:
+/usr/include/homegear-base/Encoding/BinaryDecoder.h:
 
 Systems/../Database/SQLite3.h:
 
-/usr/local/include/homegear-base/Database/DatabaseTypes.h:
+/usr/include/homegear-base/Database/DatabaseTypes.h:
 
 /usr/include/c++/4.8/deque:
 
@@ -825,8 +825,6 @@ Systems/../User/User.h:
 
 /usr/include/x86_64-linux-gnu/sys/time.h:
 
-/usr/include/gcrypt-module.h:
-
 Systems/../GD/GD.h:
 
 Systems/../GD/../../config.h:
@@ -835,21 +833,21 @@ Systems/../GD/../ScriptEngine/ScriptEngine.h:
 
 Systems/../GD/../ScriptEngine/php_config_fixes.h:
 
-/usr/local/include/homegear-base/BaseLib.h:
+/usr/include/homegear-base/BaseLib.h:
 
-/usr/local/include/homegear-base/Database/DatabaseTypes.h:
+/usr/include/homegear-base/Database/DatabaseTypes.h:
 
-/usr/local/include/homegear-base/Encoding/XMLRPCDecoder.h:
+/usr/include/homegear-base/Encoding/XMLRPCDecoder.h:
 
-/usr/local/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
+/usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
 
-/usr/local/include/homegear-base/Encoding/XMLRPCEncoder.h:
+/usr/include/homegear-base/Encoding/XMLRPCEncoder.h:
 
-/usr/local/include/homegear-base/Exception.h:
+/usr/include/homegear-base/Exception.h:
 
-/usr/local/include/homegear-base/Output/Output.h:
+/usr/include/homegear-base/Output/Output.h:
 
-/usr/local/include/homegear-base/Exception.h:
+/usr/include/homegear-base/Exception.h:
 
 /usr/include/c++/4.8/iomanip:
 
@@ -871,37 +869,37 @@ Systems/../GD/../ScriptEngine/php_config_fixes.h:
 
 /usr/include/c++/4.8/bits/sstream.tcc:
 
-/usr/local/include/homegear-base/Encoding/RapidXml/rapidxml_print.hpp:
+/usr/include/homegear-base/Encoding/RapidXml/rapidxml_print.hpp:
 
-/usr/local/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
+/usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
 
 /usr/include/c++/4.8/iterator:
 
 /usr/include/c++/4.8/bits/stream_iterator.h:
 
-/usr/local/include/homegear-base/Encoding/RPCDecoder.h:
+/usr/include/homegear-base/Encoding/RPCDecoder.h:
 
-/usr/local/include/homegear-base/Encoding/RPCEncoder.h:
+/usr/include/homegear-base/Encoding/RPCEncoder.h:
 
-/usr/local/include/homegear-base/Encoding/JsonDecoder.h:
+/usr/include/homegear-base/Encoding/JsonDecoder.h:
 
-/usr/local/include/homegear-base/Encoding/JsonEncoder.h:
+/usr/include/homegear-base/Encoding/JsonEncoder.h:
 
-/usr/local/include/homegear-base/Encoding/HTTP.h:
+/usr/include/homegear-base/Encoding/HTTP.h:
 
-/usr/local/include/homegear-base/HelperFunctions/Math.h:
+/usr/include/homegear-base/HelperFunctions/Math.h:
 
-/usr/local/include/homegear-base/Encoding/Html.h:
+/usr/include/homegear-base/Encoding/Html.h:
 
-/usr/local/include/homegear-base/Encoding/WebSocket.h:
+/usr/include/homegear-base/Encoding/WebSocket.h:
 
-/usr/local/include/homegear-base/Managers/SerialDeviceManager.h:
+/usr/include/homegear-base/Managers/SerialDeviceManager.h:
 
-/usr/local/include/homegear-base/Sockets/SerialReaderWriter.h:
+/usr/include/homegear-base/Sockets/SerialReaderWriter.h:
 
-/usr/local/include/homegear-base/Exception.h:
+/usr/include/homegear-base/Exception.h:
 
-/usr/local/include/homegear-base/Managers/FileDescriptorManager.h:
+/usr/include/homegear-base/Managers/FileDescriptorManager.h:
 
 /usr/include/unistd.h:
 
@@ -919,9 +917,9 @@ Systems/../GD/../ScriptEngine/php_config_fixes.h:
 
 /usr/include/gnutls/compat.h:
 
-/usr/local/include/homegear-base/IEvents.h:
+/usr/include/homegear-base/IEvents.h:
 
-/usr/local/include/homegear-base/Output/Output.h:
+/usr/include/homegear-base/Output/Output.h:
 
 /usr/include/c++/4.8/forward_list:
 
@@ -961,9 +959,9 @@ Systems/../GD/../ScriptEngine/php_config_fixes.h:
 
 /usr/include/x86_64-linux-gnu/bits/sigthread.h:
 
-/usr/local/include/homegear-base/Managers/FileDescriptorManager.h:
+/usr/include/homegear-base/Managers/FileDescriptorManager.h:
 
-/usr/local/include/homegear-base/HelperFunctions/HelperFunctions.h:
+/usr/include/homegear-base/HelperFunctions/HelperFunctions.h:
 
 /usr/include/c++/4.8/algorithm:
 
@@ -995,57 +993,57 @@ Systems/../GD/../ScriptEngine/php_config_fixes.h:
 
 /usr/include/grp.h:
 
-/usr/local/include/homegear-base/HelperFunctions/Color.h:
+/usr/include/homegear-base/HelperFunctions/Color.h:
 
-/usr/local/include/homegear-base/HelperFunctions/Math.h:
+/usr/include/homegear-base/HelperFunctions/Math.h:
 
-/usr/local/include/homegear-base/HelperFunctions/Math.h:
+/usr/include/homegear-base/HelperFunctions/Math.h:
 
-/usr/local/include/homegear-base/HelperFunctions/Crypt.h:
+/usr/include/homegear-base/HelperFunctions/Crypt.h:
 
-/usr/local/include/homegear-base/HelperFunctions/Base64.h:
+/usr/include/homegear-base/HelperFunctions/Base64.h:
 
-/usr/local/include/homegear-base/HelperFunctions/Net.h:
+/usr/include/homegear-base/HelperFunctions/Net.h:
 
-/usr/local/include/homegear-base/Exception.h:
+/usr/include/homegear-base/Exception.h:
 
-/usr/local/include/homegear-base/HelperFunctions/Io.h:
+/usr/include/homegear-base/HelperFunctions/Io.h:
 
-/usr/local/include/homegear-base/DeviceDescription/Devices.h:
+/usr/include/homegear-base/DeviceDescription/Devices.h:
 
-/usr/local/include/homegear-base/Systems/Packet.h:
+/usr/include/homegear-base/Systems/Packet.h:
 
-/usr/local/include/homegear-base/Systems/DeviceTypes.h:
+/usr/include/homegear-base/Systems/DeviceTypes.h:
 
-/usr/local/include/homegear-base/DeviceDescription/HomegearDevice.h:
+/usr/include/homegear-base/DeviceDescription/HomegearDevice.h:
 
-/usr/local/include/homegear-base/DeviceDescription/DevicePacket.h:
+/usr/include/homegear-base/DeviceDescription/DevicePacket.h:
 
-/usr/local/include/homegear-base/DeviceDescription/JsonPayload.h:
+/usr/include/homegear-base/DeviceDescription/JsonPayload.h:
 
-/usr/local/include/homegear-base/DeviceDescription/BinaryPayload.h:
+/usr/include/homegear-base/DeviceDescription/BinaryPayload.h:
 
-/usr/local/include/homegear-base/DeviceDescription/HttpPayload.h:
+/usr/include/homegear-base/DeviceDescription/HttpPayload.h:
 
-/usr/local/include/homegear-base/DeviceDescription/Parameter.h:
+/usr/include/homegear-base/DeviceDescription/Parameter.h:
 
-/usr/local/include/homegear-base/DeviceDescription/ParameterCast.h:
+/usr/include/homegear-base/DeviceDescription/ParameterCast.h:
 
-/usr/local/include/homegear-base/Variable.h:
+/usr/include/homegear-base/Variable.h:
 
-/usr/local/include/homegear-base/DeviceDescription/Logical.h:
+/usr/include/homegear-base/DeviceDescription/Logical.h:
 
-/usr/local/include/homegear-base/DeviceDescription/Physical.h:
+/usr/include/homegear-base/DeviceDescription/Physical.h:
 
-/usr/local/include/homegear-base/DeviceDescription/SupportedDevice.h:
+/usr/include/homegear-base/DeviceDescription/SupportedDevice.h:
 
-/usr/local/include/homegear-base/DeviceDescription/RunProgram.h:
+/usr/include/homegear-base/DeviceDescription/RunProgram.h:
 
-/usr/local/include/homegear-base/DeviceDescription/Function.h:
+/usr/include/homegear-base/DeviceDescription/Function.h:
 
-/usr/local/include/homegear-base/DeviceDescription/ParameterGroup.h:
+/usr/include/homegear-base/DeviceDescription/ParameterGroup.h:
 
-/usr/local/include/homegear-base/DeviceDescription/Scenario.h:
+/usr/include/homegear-base/DeviceDescription/Scenario.h:
 
 /usr/include/c++/4.8/set:
 
@@ -1053,11 +1051,11 @@ Systems/../GD/../ScriptEngine/php_config_fixes.h:
 
 /usr/include/c++/4.8/bits/stl_multiset.h:
 
-/usr/local/include/homegear-base/Settings/Settings.h:
+/usr/include/homegear-base/Settings/Settings.h:
 
-/usr/local/include/homegear-base/Sockets/HTTPClient.h:
+/usr/include/homegear-base/Sockets/HTTPClient.h:
 
-/usr/local/include/homegear-base/Sockets/SocketOperations.h:
+/usr/include/homegear-base/Sockets/SocketOperations.h:
 
 /usr/include/arpa/inet.h:
 
@@ -1083,69 +1081,69 @@ Systems/../GD/../ScriptEngine/php_config_fixes.h:
 
 /usr/include/gnutls/x509.h:
 
-/usr/local/include/homegear-base/Encoding/HTTP.h:
+/usr/include/homegear-base/Encoding/HTTP.h:
 
-/usr/local/include/homegear-base/Sockets/SocketOperations.h:
+/usr/include/homegear-base/Sockets/SocketOperations.h:
 
-/usr/local/include/homegear-base/Sockets/IWebserverEventSink.h:
+/usr/include/homegear-base/Sockets/IWebserverEventSink.h:
 
-/usr/local/include/homegear-base/Sockets/ServerInfo.h:
+/usr/include/homegear-base/Sockets/ServerInfo.h:
 
-/usr/local/include/homegear-base/Sockets/ServerInfo.h:
+/usr/include/homegear-base/Sockets/ServerInfo.h:
 
-/usr/local/include/homegear-base/Systems/DeviceFamily.h:
+/usr/include/homegear-base/Systems/DeviceFamily.h:
 
-/usr/local/include/homegear-base/Database/DatabaseTypes.h:
+/usr/include/homegear-base/Database/DatabaseTypes.h:
 
-/usr/local/include/homegear-base/Systems/Central.h:
+/usr/include/homegear-base/Systems/Central.h:
 
-/usr/local/include/homegear-base/Variable.h:
+/usr/include/homegear-base/Variable.h:
 
-/usr/local/include/homegear-base/DeviceDescription/HomegearDevice.h:
+/usr/include/homegear-base/DeviceDescription/HomegearDevice.h:
 
-/usr/local/include/homegear-base/Systems/LogicalDevice.h:
+/usr/include/homegear-base/Systems/LogicalDevice.h:
 
-/usr/local/include/homegear-base/HelperFunctions/HelperFunctions.h:
+/usr/include/homegear-base/HelperFunctions/HelperFunctions.h:
 
-/usr/local/include/homegear-base/Systems/IPhysicalInterface.h:
+/usr/include/homegear-base/Systems/IPhysicalInterface.h:
 
-/usr/local/include/homegear-base/IEvents.h:
+/usr/include/homegear-base/IEvents.h:
 
-/usr/local/include/homegear-base/Systems/PhysicalInterfaceSettings.h:
+/usr/include/homegear-base/Systems/PhysicalInterfaceSettings.h:
 
-/usr/local/include/homegear-base/Managers/FileDescriptorManager.h:
+/usr/include/homegear-base/Managers/FileDescriptorManager.h:
 
-/usr/local/include/homegear-base/Systems/Packet.h:
+/usr/include/homegear-base/Systems/Packet.h:
 
-/usr/local/include/homegear-base/Systems/Peer.h:
+/usr/include/homegear-base/Systems/Peer.h:
 
-/usr/local/include/homegear-base/Systems/ServiceMessages.h:
+/usr/include/homegear-base/Systems/ServiceMessages.h:
 
-/usr/local/include/homegear-base/Encoding/BinaryEncoder.h:
+/usr/include/homegear-base/Encoding/BinaryEncoder.h:
 
-/usr/local/include/homegear-base/Encoding/BinaryDecoder.h:
+/usr/include/homegear-base/Encoding/BinaryDecoder.h:
 
-/usr/local/include/homegear-base/Systems/Peer.h:
+/usr/include/homegear-base/Systems/Peer.h:
 
-/usr/local/include/homegear-base/Systems/SystemFactory.h:
+/usr/include/homegear-base/Systems/SystemFactory.h:
 
-/usr/local/include/homegear-base/Systems/DeviceFamily.h:
+/usr/include/homegear-base/Systems/DeviceFamily.h:
 
-/usr/local/include/homegear-base/Systems/UpdateInfo.h:
+/usr/include/homegear-base/Systems/UpdateInfo.h:
 
-/usr/local/include/homegear-base/Threads/Threads.h:
+/usr/include/homegear-base/Threads/Threads.h:
 
-/usr/local/include/homegear-base/Exception.h:
+/usr/include/homegear-base/Exception.h:
 
-/usr/local/include/homegear-base/Output/Output.h:
+/usr/include/homegear-base/Output/Output.h:
 
-/usr/local/include/homegear-base/SSDP/SSDP.h:
+/usr/include/homegear-base/SSDP/SSDP.h:
 
-/usr/local/include/homegear-base/Encoding/HTTP.h:
+/usr/include/homegear-base/Encoding/HTTP.h:
 
-/usr/local/include/homegear-base/Variable.h:
+/usr/include/homegear-base/Variable.h:
 
-/usr/local/include/homegear-base/IQueue.h:
+/usr/include/homegear-base/IQueue.h:
 
 /usr/include/wordexp.h:
 
