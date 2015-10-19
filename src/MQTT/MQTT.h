@@ -84,7 +84,7 @@ private:
 	void connect();
 	void disconnect();
 	void processMessages();
-	void processQueueEntry(std::shared_ptr<BaseLib::IQueueEntry>& entry);
+	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 
 	/**
 	 * Publishes data to the MQTT broker.

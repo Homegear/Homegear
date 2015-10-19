@@ -43,7 +43,7 @@ int MQTTMessageArrived(void* context, char* topicName, int topicLength, MQTTClie
     return 1;
 }
 
-MQTT::MQTT() : BaseLib::IQueue(GD::bl.get(), 0, SCHED_OTHER)
+MQTT::MQTT() : BaseLib::IQueue(GD::bl.get())
 {
 	try
 	{
@@ -93,6 +93,8 @@ void MQTT::start()
 	{
 		if(_started) return;
 
+		startQueue(0, 0, SCHED_OTHER);
+
 		signal(SIGPIPE, SIG_IGN);
 
 		_out.init(GD::bl.get());
@@ -120,6 +122,7 @@ void MQTT::stop()
 	try
 	{
 		_started = false;
+		stopQueue(0);
 		disconnect();
 	}
 	catch(const std::exception& ex)
@@ -322,7 +325,7 @@ void MQTT::queueMessage(std::shared_ptr<std::pair<std::string, std::vector<char>
 	{
 		if(!_started || !message) return;
 		std::shared_ptr<BaseLib::IQueueEntry> entry(new QueueEntry(message));
-		if(!enqueue(entry)) _out.printError("Error: Too many packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
+		if(!enqueue(0, entry)) _out.printError("Error: Too many packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
 	}
 	catch(const std::exception& ex)
 	{
@@ -385,7 +388,7 @@ void MQTT::publish(const std::string& topic, const std::vector<char>& data)
 	}
 }
 
-void MQTT::processQueueEntry(std::shared_ptr<BaseLib::IQueueEntry>& entry)
+void MQTT::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry)
 {
 	try
 	{
