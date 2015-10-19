@@ -33,6 +33,7 @@
 
 #include "php_config_fixes.h"
 #include "homegear-base/BaseLib.h"
+#include "PhpEvents.h"
 
 #include <iostream>
 #include <string>

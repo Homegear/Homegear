@@ -135,11 +135,13 @@ libpaho_mqtt_a_OBJECTS = $(am_libpaho_mqtt_a_OBJECTS)
 libscriptengine_a_AR = $(AR) $(ARFLAGS)
 libscriptengine_a_LIBADD =
 am__libscriptengine_a_SOURCES_DIST = ScriptEngine/php_sapi.cpp \
-	ScriptEngine/php_sapi.h ScriptEngine/PHPVariableConverter.cpp \
-	ScriptEngine/PHPVariableConverter.h \
-	ScriptEngine/ScriptEngine.cpp ScriptEngine/ScriptEngine.h
+	ScriptEngine/php_sapi.h ScriptEngine/PhpVariableConverter.cpp \
+	ScriptEngine/PhpVariableConverter.h ScriptEngine/PhpEvents.cpp \
+	ScriptEngine/PhpEvents.h ScriptEngine/ScriptEngine.cpp \
+	ScriptEngine/ScriptEngine.h
 am_libscriptengine_a_OBJECTS = ScriptEngine/libscriptengine_a-php_sapi.$(OBJEXT) \
-	ScriptEngine/libscriptengine_a-PHPVariableConverter.$(OBJEXT) \
+	ScriptEngine/libscriptengine_a-PhpVariableConverter.$(OBJEXT) \
+	ScriptEngine/libscriptengine_a-PhpEvents.$(OBJEXT) \
 	ScriptEngine/libscriptengine_a-ScriptEngine.$(OBJEXT)
 libscriptengine_a_OBJECTS = $(am_libscriptengine_a_OBJECTS)
 am__installdirs = "$(DESTDIR)$(bindir)"
@@ -352,18 +354,18 @@ install_sh = ${SHELL} /home/PREETZ/sathya/GitHub/Homegear/Homegear/cfg/install-s
 libdir = ${exec_prefix}/lib
 libexecdir = ${exec_prefix}/libexec
 localedir = ${datarootdir}/locale
-localstatedir = /var
+localstatedir = ${prefix}/var
 mandir = ${datarootdir}/man
 mkdir_p = $(MKDIR_P)
 oldincludedir = /usr/include
 pdfdir = ${docdir}
-prefix = /usr
+prefix = /usr/local
 program_transform_name = s,x,x,
 psdir = ${docdir}
 sbindir = ${exec_prefix}/sbin
 sharedstatedir = ${prefix}/com
 srcdir = .
-sysconfdir = /etc
+sysconfdir = ${prefix}/etc
 target_alias = 
 top_build_prefix = ../
 top_builddir = ..
@@ -412,7 +414,7 @@ homegear_SOURCES = main.cpp CLI/CLIClient.cpp CLI/CLIClient.h CLI/CLIServer.cpp 
 homegear_LDADD = -lpthread -lreadline -lgcrypt -lgnutls \
 	-lhomegear-base -lgpg-error -lsqlite3 libpaho-mqtt.a \
 	$(am__append_1) $(am__append_3) $(am__append_6)
-libscriptengine_a_SOURCES = ScriptEngine/php_sapi.cpp ScriptEngine/php_sapi.h ScriptEngine/PHPVariableConverter.cpp ScriptEngine/PHPVariableConverter.h ScriptEngine/ScriptEngine.cpp ScriptEngine/ScriptEngine.h
+libscriptengine_a_SOURCES = ScriptEngine/php_sapi.cpp ScriptEngine/php_sapi.h ScriptEngine/PhpVariableConverter.cpp ScriptEngine/PhpVariableConverter.h ScriptEngine/PhpEvents.cpp ScriptEngine/PhpEvents.h ScriptEngine/ScriptEngine.cpp ScriptEngine/ScriptEngine.h
 libscriptengine_a_CPPFLAGS = -Wall -std=c++11 \
 	-DFORTIFY_SOURCE=2 \
 	-DGCRYPT_NO_DEPRECATED $(am__append_4) \
@@ -430,9 +432,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign src/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu src/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --foreign src/Makefile
+	  $(AUTOMAKE) --gnu src/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
@@ -537,7 +539,10 @@ ScriptEngine/$(DEPDIR)/$(am__dirstamp):
 ScriptEngine/libscriptengine_a-php_sapi.$(OBJEXT):  \
 	ScriptEngine/$(am__dirstamp) \
 	ScriptEngine/$(DEPDIR)/$(am__dirstamp)
-ScriptEngine/libscriptengine_a-PHPVariableConverter.$(OBJEXT):  \
+ScriptEngine/libscriptengine_a-PhpVariableConverter.$(OBJEXT):  \
+	ScriptEngine/$(am__dirstamp) \
+	ScriptEngine/$(DEPDIR)/$(am__dirstamp)
+ScriptEngine/libscriptengine_a-PhpEvents.$(OBJEXT):  \
 	ScriptEngine/$(am__dirstamp) \
 	ScriptEngine/$(DEPDIR)/$(am__dirstamp)
 ScriptEngine/libscriptengine_a-ScriptEngine.$(OBJEXT):  \
@@ -754,7 +759,8 @@ include RPC/$(DEPDIR)/RemoteRpcServer.Po
 include RPC/$(DEPDIR)/RpcClient.Po
 include RPC/$(DEPDIR)/Server.Po
 include RPC/$(DEPDIR)/Webserver.Po
-include ScriptEngine/$(DEPDIR)/libscriptengine_a-PHPVariableConverter.Po
+include ScriptEngine/$(DEPDIR)/libscriptengine_a-PhpEvents.Po
+include ScriptEngine/$(DEPDIR)/libscriptengine_a-PhpVariableConverter.Po
 include ScriptEngine/$(DEPDIR)/libscriptengine_a-ScriptEngine.Po
 include ScriptEngine/$(DEPDIR)/libscriptengine_a-php_sapi.Po
 include Systems/$(DEPDIR)/DatabaseController.Po
@@ -1119,19 +1125,33 @@ ScriptEngine/libscriptengine_a-php_sapi.obj: ScriptEngine/php_sapi.cpp
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
 #	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libscriptengine_a_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ScriptEngine/libscriptengine_a-php_sapi.obj `if test -f 'ScriptEngine/php_sapi.cpp'; then $(CYGPATH_W) 'ScriptEngine/php_sapi.cpp'; else $(CYGPATH_W) '$(srcdir)/ScriptEngine/php_sapi.cpp'; fi`
 
-ScriptEngine/libscriptengine_a-PHPVariableConverter.o: ScriptEngine/PHPVariableConverter.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libscriptengine_a_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ScriptEngine/libscriptengine_a-PHPVariableConverter.o -MD -MP -MF ScriptEngine/$(DEPDIR)/libscriptengine_a-PHPVariableConverter.Tpo -c -o ScriptEngine/libscriptengine_a-PHPVariableConverter.o `test -f 'ScriptEngine/PHPVariableConverter.cpp' || echo '$(srcdir)/'`ScriptEngine/PHPVariableConverter.cpp
-	$(AM_V_at)$(am__mv) ScriptEngine/$(DEPDIR)/libscriptengine_a-PHPVariableConverter.Tpo ScriptEngine/$(DEPDIR)/libscriptengine_a-PHPVariableConverter.Po
-#	$(AM_V_CXX)source='ScriptEngine/PHPVariableConverter.cpp' object='ScriptEngine/libscriptengine_a-PHPVariableConverter.o' libtool=no \
+ScriptEngine/libscriptengine_a-PhpVariableConverter.o: ScriptEngine/PhpVariableConverter.cpp
+	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libscriptengine_a_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ScriptEngine/libscriptengine_a-PhpVariableConverter.o -MD -MP -MF ScriptEngine/$(DEPDIR)/libscriptengine_a-PhpVariableConverter.Tpo -c -o ScriptEngine/libscriptengine_a-PhpVariableConverter.o `test -f 'ScriptEngine/PhpVariableConverter.cpp' || echo '$(srcdir)/'`ScriptEngine/PhpVariableConverter.cpp
+	$(AM_V_at)$(am__mv) ScriptEngine/$(DEPDIR)/libscriptengine_a-PhpVariableConverter.Tpo ScriptEngine/$(DEPDIR)/libscriptengine_a-PhpVariableConverter.Po
+#	$(AM_V_CXX)source='ScriptEngine/PhpVariableConverter.cpp' object='ScriptEngine/libscriptengine_a-PhpVariableConverter.o' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libscriptengine_a_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ScriptEngine/libscriptengine_a-PHPVariableConverter.o `test -f 'ScriptEngine/PHPVariableConverter.cpp' || echo '$(srcdir)/'`ScriptEngine/PHPVariableConverter.cpp
+#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libscriptengine_a_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ScriptEngine/libscriptengine_a-PhpVariableConverter.o `test -f 'ScriptEngine/PhpVariableConverter.cpp' || echo '$(srcdir)/'`ScriptEngine/PhpVariableConverter.cpp
 
-ScriptEngine/libscriptengine_a-PHPVariableConverter.obj: ScriptEngine/PHPVariableConverter.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libscriptengine_a_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ScriptEngine/libscriptengine_a-PHPVariableConverter.obj -MD -MP -MF ScriptEngine/$(DEPDIR)/libscriptengine_a-PHPVariableConverter.Tpo -c -o ScriptEngine/libscriptengine_a-PHPVariableConverter.obj `if test -f 'ScriptEngine/PHPVariableConverter.cpp'; then $(CYGPATH_W) 'ScriptEngine/PHPVariableConverter.cpp'; else $(CYGPATH_W) '$(srcdir)/ScriptEngine/PHPVariableConverter.cpp'; fi`
-	$(AM_V_at)$(am__mv) ScriptEngine/$(DEPDIR)/libscriptengine_a-PHPVariableConverter.Tpo ScriptEngine/$(DEPDIR)/libscriptengine_a-PHPVariableConverter.Po
-#	$(AM_V_CXX)source='ScriptEngine/PHPVariableConverter.cpp' object='ScriptEngine/libscriptengine_a-PHPVariableConverter.obj' libtool=no \
+ScriptEngine/libscriptengine_a-PhpVariableConverter.obj: ScriptEngine/PhpVariableConverter.cpp
+	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libscriptengine_a_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ScriptEngine/libscriptengine_a-PhpVariableConverter.obj -MD -MP -MF ScriptEngine/$(DEPDIR)/libscriptengine_a-PhpVariableConverter.Tpo -c -o ScriptEngine/libscriptengine_a-PhpVariableConverter.obj `if test -f 'ScriptEngine/PhpVariableConverter.cpp'; then $(CYGPATH_W) 'ScriptEngine/PhpVariableConverter.cpp'; else $(CYGPATH_W) '$(srcdir)/ScriptEngine/PhpVariableConverter.cpp'; fi`
+	$(AM_V_at)$(am__mv) ScriptEngine/$(DEPDIR)/libscriptengine_a-PhpVariableConverter.Tpo ScriptEngine/$(DEPDIR)/libscriptengine_a-PhpVariableConverter.Po
+#	$(AM_V_CXX)source='ScriptEngine/PhpVariableConverter.cpp' object='ScriptEngine/libscriptengine_a-PhpVariableConverter.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libscriptengine_a_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ScriptEngine/libscriptengine_a-PHPVariableConverter.obj `if test -f 'ScriptEngine/PHPVariableConverter.cpp'; then $(CYGPATH_W) 'ScriptEngine/PHPVariableConverter.cpp'; else $(CYGPATH_W) '$(srcdir)/ScriptEngine/PHPVariableConverter.cpp'; fi`
+#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libscriptengine_a_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ScriptEngine/libscriptengine_a-PhpVariableConverter.obj `if test -f 'ScriptEngine/PhpVariableConverter.cpp'; then $(CYGPATH_W) 'ScriptEngine/PhpVariableConverter.cpp'; else $(CYGPATH_W) '$(srcdir)/ScriptEngine/PhpVariableConverter.cpp'; fi`
+
+ScriptEngine/libscriptengine_a-PhpEvents.o: ScriptEngine/PhpEvents.cpp
+	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libscriptengine_a_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ScriptEngine/libscriptengine_a-PhpEvents.o -MD -MP -MF ScriptEngine/$(DEPDIR)/libscriptengine_a-PhpEvents.Tpo -c -o ScriptEngine/libscriptengine_a-PhpEvents.o `test -f 'ScriptEngine/PhpEvents.cpp' || echo '$(srcdir)/'`ScriptEngine/PhpEvents.cpp
+	$(AM_V_at)$(am__mv) ScriptEngine/$(DEPDIR)/libscriptengine_a-PhpEvents.Tpo ScriptEngine/$(DEPDIR)/libscriptengine_a-PhpEvents.Po
+#	$(AM_V_CXX)source='ScriptEngine/PhpEvents.cpp' object='ScriptEngine/libscriptengine_a-PhpEvents.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
+#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libscriptengine_a_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ScriptEngine/libscriptengine_a-PhpEvents.o `test -f 'ScriptEngine/PhpEvents.cpp' || echo '$(srcdir)/'`ScriptEngine/PhpEvents.cpp
+
+ScriptEngine/libscriptengine_a-PhpEvents.obj: ScriptEngine/PhpEvents.cpp
+	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libscriptengine_a_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ScriptEngine/libscriptengine_a-PhpEvents.obj -MD -MP -MF ScriptEngine/$(DEPDIR)/libscriptengine_a-PhpEvents.Tpo -c -o ScriptEngine/libscriptengine_a-PhpEvents.obj `if test -f 'ScriptEngine/PhpEvents.cpp'; then $(CYGPATH_W) 'ScriptEngine/PhpEvents.cpp'; else $(CYGPATH_W) '$(srcdir)/ScriptEngine/PhpEvents.cpp'; fi`
+	$(AM_V_at)$(am__mv) ScriptEngine/$(DEPDIR)/libscriptengine_a-PhpEvents.Tpo ScriptEngine/$(DEPDIR)/libscriptengine_a-PhpEvents.Po
+#	$(AM_V_CXX)source='ScriptEngine/PhpEvents.cpp' object='ScriptEngine/libscriptengine_a-PhpEvents.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
+#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libscriptengine_a_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ScriptEngine/libscriptengine_a-PhpEvents.obj `if test -f 'ScriptEngine/PhpEvents.cpp'; then $(CYGPATH_W) 'ScriptEngine/PhpEvents.cpp'; else $(CYGPATH_W) '$(srcdir)/ScriptEngine/PhpEvents.cpp'; fi`
 
 ScriptEngine/libscriptengine_a-ScriptEngine.o: ScriptEngine/ScriptEngine.cpp
 	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libscriptengine_a_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ScriptEngine/libscriptengine_a-ScriptEngine.o -MD -MP -MF ScriptEngine/$(DEPDIR)/libscriptengine_a-ScriptEngine.Tpo -c -o ScriptEngine/libscriptengine_a-ScriptEngine.o `test -f 'ScriptEngine/ScriptEngine.cpp' || echo '$(srcdir)/'`ScriptEngine/ScriptEngine.cpp

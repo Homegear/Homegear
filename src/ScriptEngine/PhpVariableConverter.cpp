@@ -29,18 +29,18 @@
 
 
 #include "../GD/GD.h"
-#include "PHPVariableConverter.h"
+#include "PhpVariableConverter.h"
 
-PHPVariableConverter::PHPVariableConverter()
+PhpVariableConverter::PhpVariableConverter()
 {
 }
 
-PHPVariableConverter::~PHPVariableConverter()
+PhpVariableConverter::~PhpVariableConverter()
 {
 }
 
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-BaseLib::PVariable PHPVariableConverter::getVariable(zval* value)
+BaseLib::PVariable PhpVariableConverter::getVariable(zval* value)
 {
 	try
 	{
@@ -115,7 +115,7 @@ BaseLib::PVariable PHPVariableConverter::getVariable(zval* value)
 }
 #pragma GCC diagnostic warning "-Wunused-but-set-variable"
 
-void PHPVariableConverter::getPHPVariable(BaseLib::PVariable input, zval* output)
+void PhpVariableConverter::getPHPVariable(BaseLib::PVariable input, zval* output)
 {
 	try
 	{
@@ -162,7 +162,7 @@ void PHPVariableConverter::getPHPVariable(BaseLib::PVariable input, zval* output
 		}
 		else if(input->type == BaseLib::VariableType::tString || input->type == BaseLib::VariableType::tBase64)
 		{
-			if(input->stringValue.empty()) ZVAL_STRINGL(output, "", 0); //At least once, input->stringValue.c_str() on a empty string was a nullptr causing a segementation fault, so check for empty string
+			if(input->stringValue.empty()) ZVAL_STRINGL(output, "", 0); //At least once, input->stringValue.c_str() on an empty string was a nullptr causing a segementation fault, so check for empty string
 			else ZVAL_STRINGL(output, input->stringValue.c_str(), input->stringValue.size());
 		}
 		else

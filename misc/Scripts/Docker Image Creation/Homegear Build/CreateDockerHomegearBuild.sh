@@ -515,6 +515,7 @@ cat > "$rootfs/FirstStart.sh" <<-'EOF'
 #!/bin/bash
 sed -i '$ d' /root/.bashrc >/dev/null
 if [ -n "$HOMEGEARBUILD_SHELL" ]; then
+	echo "Container setup successful. You can now execute \"/build/CreateDebianPackageNightly.sh\"."
 	/bin/bash
 	exit 0
 fi

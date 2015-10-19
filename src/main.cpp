@@ -109,10 +109,13 @@ void terminate(int32_t signalNumber)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			}
+			GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
 			GD::bl->shuttingDown = true;
+#ifdef SCRIPTENGINE
+			if(GD::scriptEngine) GD::scriptEngine->stopEventThreads();
+#endif
 			if(GD::familyController) GD::familyController->homegearShuttingDown();
 			_disposing = true;
-			GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
 			if(_startAsDaemon)
 			{
 				GD::out.printInfo("(Shutdown) => Stopping CLI server");

@@ -1,6 +1,6 @@
-ScriptEngine/libscriptengine_a-php_sapi.o: ScriptEngine/php_sapi.cpp \
- /usr/include/stdc-predef.h ScriptEngine/../GD/GD.h \
- ScriptEngine/../GD/../../config.h \
+ScriptEngine/libscriptengine_a-PhpVariableConverter.o: \
+ ScriptEngine/PhpVariableConverter.cpp /usr/include/stdc-predef.h \
+ ScriptEngine/../GD/GD.h ScriptEngine/../GD/../../config.h \
  ScriptEngine/../GD/../ScriptEngine/ScriptEngine.h \
  ScriptEngine/../GD/../ScriptEngine/php_config_fixes.h \
  /usr/include/homegear-base/BaseLib.h \
@@ -350,10 +350,10 @@ ScriptEngine/libscriptengine_a-php_sapi.o: ScriptEngine/php_sapi.cpp \
  ScriptEngine/../GD/../RPC/Client.h ScriptEngine/../GD/../RPC/RpcClient.h \
  ScriptEngine/../GD/../RPC/ClientSettings.h \
  ScriptEngine/../GD/../RPC/Auth.h \
- ScriptEngine/../GD/../RPC/RemoteRpcServer.h ScriptEngine/php_sapi.h \
- ScriptEngine/php_config_fixes.h ScriptEngine/PhpEvents.h \
- /usr/include/php7-homegear/main/php.h \
- /usr/include/php7-homegear/main/php_version.h \
+ ScriptEngine/../GD/../RPC/RemoteRpcServer.h \
+ ScriptEngine/PhpVariableConverter.h ScriptEngine/php_config_fixes.h \
+ /usr/include/php7-homegear/Zend/zend_API.h \
+ /usr/include/php7-homegear/Zend/zend_modules.h \
  /usr/include/php7-homegear/Zend/zend.h \
  /usr/include/php7-homegear/Zend/zend_types.h \
  /usr/include/php7-homegear/Zend/zend_portability.h \
@@ -371,7 +371,6 @@ ScriptEngine/libscriptengine_a-php_sapi.o: ScriptEngine/php_sapi.cpp \
  /usr/include/php7-homegear/Zend/zend_long.h \
  /usr/include/php7-homegear/Zend/zend_errors.h \
  /usr/include/php7-homegear/Zend/zend_alloc.h \
- /usr/include/php7-homegear/Zend/zend.h \
  /usr/include/php7-homegear/Zend/zend_alloc_sizes.h \
  /usr/include/php7-homegear/Zend/zend_llist.h \
  /usr/include/php7-homegear/Zend/zend_string.h \
@@ -384,12 +383,8 @@ ScriptEngine/libscriptengine_a-php_sapi.o: ScriptEngine/php_sapi.cpp \
  /usr/include/php7-homegear/Zend/zend_object_handlers.h \
  /usr/include/php7-homegear/Zend/zend_operators.h \
  /usr/include/php7-homegear/Zend/zend_strtod.h \
+ /usr/include/php7-homegear/Zend/zend.h \
  /usr/include/php7-homegear/Zend/zend_multiply.h \
- /usr/include/php7-homegear/Zend/zend_sort.h \
- /usr/include/php7-homegear/main/php_compat.h \
- /usr/include/php7-homegear/main/php_config.h \
- /usr/include/php7-homegear/Zend/zend_API.h \
- /usr/include/php7-homegear/Zend/zend_modules.h \
  /usr/include/php7-homegear/Zend/zend_compile.h \
  /usr/include/php7-homegear/Zend/zend_globals.h /usr/include/setjmp.h \
  /usr/include/x86_64-linux-gnu/bits/setjmp2.h \
@@ -405,50 +400,7 @@ ScriptEngine/libscriptengine_a-php_sapi.o: ScriptEngine/php_sapi.cpp \
  /usr/include/php7-homegear/Zend/zend_vm_opcodes.h \
  /usr/include/php7-homegear/Zend/zend_build.h \
  /usr/include/php7-homegear/Zend/zend_list.h \
- /usr/include/php7-homegear/Zend/zend_execute.h \
- /usr/include/php7-homegear/main/build-defs.h \
- /usr/include/php7-homegear/main/php_stdint.h \
- /usr/include/php7-homegear/Zend/zend_hash.h \
- /usr/include/php7-homegear/Zend/zend_alloc.h \
- /usr/include/php7-homegear/Zend/zend_stack.h \
- /usr/include/x86_64-linux-gnu/sys/param.h \
- /usr/include/x86_64-linux-gnu/bits/param.h /usr/include/linux/param.h \
- /usr/include/x86_64-linux-gnu/asm/param.h \
- /usr/include/asm-generic/param.h \
- /usr/include/php7-homegear/main/snprintf.h \
- /usr/include/php7-homegear/main/spprintf.h \
- /usr/include/php7-homegear/main/php_output.h \
- /usr/include/php7-homegear/main/php_streams.h \
- /usr/include/php7-homegear/Zend/zend_stream.h \
- /usr/include/php7-homegear/main/streams/php_stream_context.h \
- /usr/include/php7-homegear/main/streams/php_stream_filter_api.h \
- /usr/include/php7-homegear/main/streams/php_stream_transport.h \
- /usr/include/php7-homegear/main/streams/php_stream_plain_wrapper.h \
- /usr/include/php7-homegear/main/streams/php_stream_glob_wrapper.h \
- /usr/include/php7-homegear/main/streams/php_stream_userspace.h \
- /usr/include/php7-homegear/main/streams/php_stream_mmap.h \
- /usr/include/php7-homegear/main/php_memory_streams.h \
- /usr/include/php7-homegear/main/fopen_wrappers.h \
- /usr/include/php7-homegear/main/php_globals.h \
- /usr/include/php7-homegear/Zend/zend_globals.h \
- /usr/include/php7-homegear/main/php_ini.h \
- /usr/include/php7-homegear/Zend/zend_ini.h \
- /usr/include/php7-homegear/Zend/zend_virtual_cwd.h \
- /usr/include/php7-homegear/TSRM/TSRM.h \
- /usr/include/php7-homegear/TSRM/tsrm_config_common.h \
- /usr/include/utime.h /usr/include/php7-homegear/Zend/zend_constants.h \
- /usr/include/php7-homegear/main/php_reentrancy.h \
- /usr/include/php7-homegear/main/php.h \
- /usr/include/php7-homegear/main/SAPI.h \
- /usr/include/php7-homegear/Zend/zend_llist.h \
- /usr/include/php7-homegear/Zend/zend_operators.h \
- /usr/include/php7-homegear/main/php_main.h \
- /usr/include/php7-homegear/main/SAPI.h \
- /usr/include/php7-homegear/main/php_variables.h \
- /usr/include/php7-homegear/main/php_ini.h \
- /usr/include/php7-homegear/Zend/zend_exceptions.h \
- /usr/include/php7-homegear/ext/standard/info.h \
- ScriptEngine/PhpVariableConverter.h
+ /usr/include/php7-homegear/Zend/zend_execute.h
 
 /usr/include/stdc-predef.h:
 
@@ -1300,15 +1252,13 @@ ScriptEngine/../GD/../RPC/Auth.h:
 
 ScriptEngine/../GD/../RPC/RemoteRpcServer.h:
 
-ScriptEngine/php_sapi.h:
+ScriptEngine/PhpVariableConverter.h:
 
 ScriptEngine/php_config_fixes.h:
 
-ScriptEngine/PhpEvents.h:
+/usr/include/php7-homegear/Zend/zend_API.h:
 
-/usr/include/php7-homegear/main/php.h:
-
-/usr/include/php7-homegear/main/php_version.h:
+/usr/include/php7-homegear/Zend/zend_modules.h:
 
 /usr/include/php7-homegear/Zend/zend.h:
 
@@ -1348,8 +1298,6 @@ ScriptEngine/PhpEvents.h:
 
 /usr/include/php7-homegear/Zend/zend_alloc.h:
 
-/usr/include/php7-homegear/Zend/zend.h:
-
 /usr/include/php7-homegear/Zend/zend_alloc_sizes.h:
 
 /usr/include/php7-homegear/Zend/zend_llist.h:
@@ -1374,17 +1322,9 @@ ScriptEngine/PhpEvents.h:
 
 /usr/include/php7-homegear/Zend/zend_strtod.h:
 
+/usr/include/php7-homegear/Zend/zend.h:
+
 /usr/include/php7-homegear/Zend/zend_multiply.h:
-
-/usr/include/php7-homegear/Zend/zend_sort.h:
-
-/usr/include/php7-homegear/main/php_compat.h:
-
-/usr/include/php7-homegear/main/php_config.h:
-
-/usr/include/php7-homegear/Zend/zend_API.h:
-
-/usr/include/php7-homegear/Zend/zend_modules.h:
 
 /usr/include/php7-homegear/Zend/zend_compile.h:
 
@@ -1419,93 +1359,3 @@ ScriptEngine/PhpEvents.h:
 /usr/include/php7-homegear/Zend/zend_list.h:
 
 /usr/include/php7-homegear/Zend/zend_execute.h:
-
-/usr/include/php7-homegear/main/build-defs.h:
-
-/usr/include/php7-homegear/main/php_stdint.h:
-
-/usr/include/php7-homegear/Zend/zend_hash.h:
-
-/usr/include/php7-homegear/Zend/zend_alloc.h:
-
-/usr/include/php7-homegear/Zend/zend_stack.h:
-
-/usr/include/x86_64-linux-gnu/sys/param.h:
-
-/usr/include/x86_64-linux-gnu/bits/param.h:
-
-/usr/include/linux/param.h:
-
-/usr/include/x86_64-linux-gnu/asm/param.h:
-
-/usr/include/asm-generic/param.h:
-
-/usr/include/php7-homegear/main/snprintf.h:
-
-/usr/include/php7-homegear/main/spprintf.h:
-
-/usr/include/php7-homegear/main/php_output.h:
-
-/usr/include/php7-homegear/main/php_streams.h:
-
-/usr/include/php7-homegear/Zend/zend_stream.h:
-
-/usr/include/php7-homegear/main/streams/php_stream_context.h:
-
-/usr/include/php7-homegear/main/streams/php_stream_filter_api.h:
-
-/usr/include/php7-homegear/main/streams/php_stream_transport.h:
-
-/usr/include/php7-homegear/main/streams/php_stream_plain_wrapper.h:
-
-/usr/include/php7-homegear/main/streams/php_stream_glob_wrapper.h:
-
-/usr/include/php7-homegear/main/streams/php_stream_userspace.h:
-
-/usr/include/php7-homegear/main/streams/php_stream_mmap.h:
-
-/usr/include/php7-homegear/main/php_memory_streams.h:
-
-/usr/include/php7-homegear/main/fopen_wrappers.h:
-
-/usr/include/php7-homegear/main/php_globals.h:
-
-/usr/include/php7-homegear/Zend/zend_globals.h:
-
-/usr/include/php7-homegear/main/php_ini.h:
-
-/usr/include/php7-homegear/Zend/zend_ini.h:
-
-/usr/include/php7-homegear/Zend/zend_virtual_cwd.h:
-
-/usr/include/php7-homegear/TSRM/TSRM.h:
-
-/usr/include/php7-homegear/TSRM/tsrm_config_common.h:
-
-/usr/include/utime.h:
-
-/usr/include/php7-homegear/Zend/zend_constants.h:
-
-/usr/include/php7-homegear/main/php_reentrancy.h:
-
-/usr/include/php7-homegear/main/php.h:
-
-/usr/include/php7-homegear/main/SAPI.h:
-
-/usr/include/php7-homegear/Zend/zend_llist.h:
-
-/usr/include/php7-homegear/Zend/zend_operators.h:
-
-/usr/include/php7-homegear/main/php_main.h:
-
-/usr/include/php7-homegear/main/SAPI.h:
-
-/usr/include/php7-homegear/main/php_variables.h:
-
-/usr/include/php7-homegear/main/php_ini.h:
-
-/usr/include/php7-homegear/Zend/zend_exceptions.h:
-
-/usr/include/php7-homegear/ext/standard/info.h:
-
-ScriptEngine/PhpVariableConverter.h:
