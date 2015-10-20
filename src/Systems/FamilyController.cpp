@@ -332,9 +332,6 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 #ifdef EVENTHANDLER
 		GD::eventHandler->trigger(peerID, channel, variables, values);
 #endif
-#ifdef SCRIPTENGINE
-		GD::scriptEngine->broadcastEvent(peerID, channel, variables, values);
-#endif
 	}
 	catch(const std::exception& ex)
 	{
@@ -350,12 +347,12 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 	}
 }
 
-void FamilyController::onRunScript(std::string& script, uint64_t peerId, const std::string& args)
+void FamilyController::onRunScript(std::string& script, uint64_t peerId, const std::string& args, bool keepAlive, int32_t interval)
 {
 	try
 	{
 #ifdef SCRIPTENGINE
-		GD::scriptEngine->executeScript(script, peerId, args);
+		GD::scriptEngine->executeScript(script, peerId, args, keepAlive, interval);
 #endif
 	}
 	catch(const std::exception& ex)
@@ -598,6 +595,34 @@ void FamilyController::save(bool full)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+bool FamilyController::peerExists(uint64_t peerId)
+{
+	try
+	{
+		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
+			if(central)
+			{
+				if(central->logicalDevice()->peerExists(peerId)) return true;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
 }
 
 std::string FamilyController::handleCLICommand(std::string& command)

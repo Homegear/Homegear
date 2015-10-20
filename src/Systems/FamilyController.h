@@ -106,7 +106,7 @@ public:
 	virtual void onRPCNewDevices(BaseLib::PVariable deviceDescriptions);
 	virtual void onRPCDeleteDevices(BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo);
 	virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
-	virtual void onRunScript(std::string& script, uint64_t peerId, const std::string& args);
+	virtual void onRunScript(std::string& script, uint64_t peerId, const std::string& args, bool keepAlive, int32_t interval);
 	virtual int32_t onIsAddonClient(int32_t clientID);
 	//End Family event handling
 
@@ -123,6 +123,7 @@ public:
 	bool familySelected() { return (bool)_currentFamily; }
 	std::string handleCLICommand(std::string& command);
 	bool familyAvailable(int32_t family);
+	static bool peerExists(uint64_t peerId);
 
 	/*
      * Executed when Homegear is fully started.

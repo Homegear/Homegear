@@ -96,6 +96,9 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 			return;
 		}
 		if(!valueKeys || !values || valueKeys->size() != values->size()) return;
+#ifdef SCRIPTENGINE
+		GD::scriptEngine->broadcastEvent(id, channel, valueKeys, values);
+#endif
 		if(GD::mqtt->enabled())
 		{
 			for(uint32_t i = 0; i < valueKeys->size(); i++)
@@ -370,6 +373,9 @@ void Client::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
 	try
 	{
 		if(!deviceDescriptions) return;
+#ifdef SCRIPTENGINE
+		GD::scriptEngine->broadcastNewDevices(deviceDescriptions);
+#endif
 		_serversMutex.lock();
 		std::string methodName("newDevices");
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
@@ -431,6 +437,9 @@ void Client::broadcastDeleteDevices(BaseLib::PVariable deviceAddresses, BaseLib:
 	try
 	{
 		if(!deviceAddresses || !deviceInfo) return;
+#ifdef SCRIPTENGINE
+		GD::scriptEngine->broadcastDeleteDevices(deviceInfo);
+#endif
 		_serversMutex.lock();
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
@@ -496,10 +505,14 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
 	try
 	{
 		if(id == 0 || address.empty()) return;
+#ifdef SCRIPTENGINE
+		GD::scriptEngine->broadcastUpdateDevice(id, channel, hint);
+#endif
 		_serversMutex.lock();
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("updateDevice") == server->second->knownMethods.end())) continue;
+			if(id > 0 && server->second->subscribePeers && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end()) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
 			if(server->second->useID)

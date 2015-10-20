@@ -134,3 +134,74 @@ std::shared_ptr<PhpEvents::EventData> PhpEvents::poll()
 	lock.unlock();
 	return eventData;
 }
+
+void PhpEvents::addPeer(uint64_t peerId)
+{
+	_peersMutex.lock();
+	try
+	{
+		_peers.insert(peerId);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_peersMutex.unlock();
+}
+
+void PhpEvents::removePeer(uint64_t peerId)
+{
+	_peersMutex.lock();
+	try
+	{
+		_peers.erase(peerId);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_peersMutex.unlock();
+}
+
+bool PhpEvents::peerSubscribed(uint64_t peerId)
+{
+	_peersMutex.lock();
+	try
+	{
+		if(_peers.find(peerId) != _peers.end())
+		{
+			_peersMutex.unlock();
+			return true;
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_peersMutex.unlock();
+	return false;
+}

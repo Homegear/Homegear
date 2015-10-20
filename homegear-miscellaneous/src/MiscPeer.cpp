@@ -272,26 +272,12 @@ void MiscPeer::runScript()
 		BaseLib::HelperFunctions::trim(args);
 
 		if(_rpcDevice->runProgram->interval == 0) _rpcDevice->runProgram->interval = 10;
-		while(!_stopRunProgramThread)
-		{
-			int64_t startTime = GD::bl->hf.getTime();
+		bool keepAlive = true;
+		int32_t interval = -1;
+		if(_rpcDevice->runProgram->startType == RunProgram::StartType::once) keepAlive = false;
+		if(_rpcDevice->runProgram->startType == RunProgram::StartType::interval) interval = _rpcDevice->runProgram->interval * 1000;
 
-			GD::out.printInfo("Info: Starting internal script of peer " + std::to_string(_peerID) + ".");
-			raiseRunScript(script, args);
-			GD::out.printInfo("Info: Internal script of peer " + std::to_string(_peerID) + " exited.");
-
-			if(_rpcDevice->runProgram->startType == RunProgram::StartType::once) return;
-			else if(_rpcDevice->runProgram->startType == RunProgram::StartType::interval)
-			{
-				int64_t totalTimeToSleep = (_rpcDevice->runProgram->interval * 1000) - (GD::bl->hf.getTime() - startTime);
-				if(totalTimeToSleep < 0) totalTimeToSleep = 0;
-				for(int32_t i = 0; i < (totalTimeToSleep / 100) + 1; i++)
-				{
-					std::this_thread::sleep_for(std::chrono::milliseconds(100));
-				}
-			}
-			break;
-		}
+		raiseRunScript(script, args, keepAlive, interval);
 	}
 	catch(const std::exception& ex)
 	{

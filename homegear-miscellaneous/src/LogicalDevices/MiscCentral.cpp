@@ -91,12 +91,12 @@ void MiscCentral::deletePeer(uint64_t id)
 			channels->arrayValue->push_back(PVariable(new Variable(i->first)));
 		}
 
-		raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
 		peer->deleteFromDatabase();
 		_peersMutex.lock();
 		if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
 		if(_peersByID.find(id) != _peersByID.end()) _peersByID.erase(id);
 		_peersMutex.unlock();
+		raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
 		GD::out.printMessage("Removed Miscellaneous peer " + std::to_string(peer->getID()));
 	}
 	catch(const std::exception& ex)

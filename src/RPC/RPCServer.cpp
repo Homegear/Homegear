@@ -1383,7 +1383,7 @@ std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientSocketDescriptor(st
 		_stateMutex.unlock();
 
 		timeval timeout;
-		timeout.tv_sec = 5;
+		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
 		fd_set readFileDescriptor;
 		FD_ZERO(&readFileDescriptor);
