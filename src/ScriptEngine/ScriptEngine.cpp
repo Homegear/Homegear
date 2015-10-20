@@ -194,7 +194,7 @@ void ScriptEngine::setThreadNotRunning(int32_t threadId)
 	}
 }
 
-void ScriptEngine::executeScript(const std::string& script, uint64_t peerId, const std::string& args)
+void ScriptEngine::executeScript(const std::string& script, uint64_t peerId, const std::string& args, bool keepAlive, int32_t interval)
 {
 	if(_disposing || script.empty()) return;
 	std::shared_ptr<BaseLib::Rpc::ServerInfo::Info> serverInfo(new BaseLib::Rpc::ServerInfo::Info());
@@ -227,32 +227,6 @@ void ScriptEngine::executeScript(const std::string& script, uint64_t peerId, con
 			ts_free_thread();
 			return;
 		}
-		PG(register_argc_argv) = 1;
-		PG(implicit_flush) = 1;
-		PG(html_errors) = 0;
-		SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
-		SG(options) |= SAPI_OPTION_NO_CHDIR;
-		SG(headers_sent) = 1;
-		SG(request_info).no_headers = 1;
-		SG(default_mimetype) = nullptr;
-		SG(default_charset) = nullptr;
-
-		if (php_request_startup(TSRMLS_C) == FAILURE) {
-			GD::bl->out.printError("Error calling php_request_startup...");
-			ts_free_thread();
-			return;
-		}
-
-		std::vector<std::string> argv = getArgs("", args);
-		argv[0] = std::to_string(peerId);
-		php_homegear_build_argv(argv);
-		SG(request_info).argc = argv.size();
-		SG(request_info).argv = (char**)malloc((argv.size() + 1) * sizeof(char*));
-		for(uint32_t i = 0; i < argv.size(); ++i)
-		{
-			SG(request_info).argv[i] = (char*)argv[i].c_str(); //Value is not modified.
-		}
-		SG(request_info).argv[argv.size()] = nullptr;
 
 		PhpEvents::eventsMapMutex.lock();
 		PhpEvents::eventsMap.insert(std::pair<int64_t, std::shared_ptr<PhpEvents>>(pthread_self(), std::shared_ptr<PhpEvents>()));
@@ -271,13 +245,64 @@ void ScriptEngine::executeScript(const std::string& script, uint64_t peerId, con
 			GD::bl->out.printError("Script engine (peer id: " + std::to_string(peerId) + "): Script exited with errors.");
 		}*/
 
-		php_execute_script(&zendHandle);
-		if(EG(exit_status) != 0)
+		while(keepAlive && !GD::bl->shuttingDown && (peerId == 0 || GD::familyController->peerExists(peerId)))
 		{
-			GD::bl->out.printError("Error: Script engine (peer id: " + std::to_string(peerId) + "): Script exited with exit code " + std::to_string(EG(exit_status)));
-		}
+			PG(register_argc_argv) = 1;
+			PG(implicit_flush) = 1;
+			PG(html_errors) = 0;
+			SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
+			SG(options) |= SAPI_OPTION_NO_CHDIR;
+			SG(headers_sent) = 1;
+			SG(request_info).no_headers = 1;
+			SG(default_mimetype) = nullptr;
+			SG(default_charset) = nullptr;
 
-		php_request_shutdown(NULL);
+			if (php_request_startup(TSRMLS_C) == FAILURE) {
+				GD::bl->out.printError("Error calling php_request_startup...");
+				ts_free_thread();
+
+				PhpEvents::eventsMapMutex.lock();
+				PhpEvents::eventsMap.erase(pthread_self());
+				PhpEvents::eventsMapMutex.unlock();
+
+				return;
+			}
+
+			std::vector<std::string> argv = getArgs("", args);
+			argv[0] = std::to_string(peerId);
+			php_homegear_build_argv(argv);
+			SG(request_info).argc = argv.size();
+			SG(request_info).argv = (char**)malloc((argv.size() + 1) * sizeof(char*));
+			for(uint32_t i = 0; i < argv.size(); ++i)
+			{
+				SG(request_info).argv[i] = (char*)argv[i].c_str(); //Value is not modified.
+			}
+			SG(request_info).argv[argv.size()] = nullptr;
+
+			int64_t startTime = GD::bl->hf.getTime();
+
+			if(peerId > 0) GD::out.printInfo("Info: Starting PHP script of peer " + std::to_string(peerId) + ".");
+			php_execute_script(&zendHandle);
+			if(EG(exit_status) != 0)
+			{
+				GD::bl->out.printError("Error: Script engine (peer id: " + std::to_string(peerId) + "): Script exited with exit code " + std::to_string(EG(exit_status)));
+			}
+			if(peerId > 0) GD::out.printInfo("Info: PHP script of peer " + std::to_string(peerId) + " exited.");
+
+			if(interval > 0)
+			{
+				int64_t totalTimeToSleep = interval - (GD::bl->hf.getTime() - startTime);
+				if(totalTimeToSleep < 0) totalTimeToSleep = 0;
+				for(int32_t i = 0; i < (totalTimeToSleep / 100) + 1; i++)
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(100));
+					if(!(keepAlive && !GD::bl->shuttingDown && (peerId == 0 || GD::familyController->peerExists(peerId)))) break;
+				}
+			}
+			else std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+
+			php_request_shutdown(NULL);
+		}
 
 		ts_free_thread();
 
@@ -586,17 +611,112 @@ void ScriptEngine::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<
 	{
 		for(std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
 		{
-			if(i->second)
+			if(i->second && i->second->peerSubscribed(id))
 			{
 				for(uint32_t j = 0; j < variables->size(); j++)
 				{
 					std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
+					eventData->type = "event";
 					eventData->id = id;
 					eventData->channel = channel;
 					eventData->variable = variables->at(j);
 					eventData->value = values->at(j);
 					i->second->enqueue(eventData);
 				}
+			}
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	PhpEvents::eventsMapMutex.unlock();
+}
+
+void ScriptEngine::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
+{
+	PhpEvents::eventsMapMutex.lock();
+	try
+	{
+		for(std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
+		{
+			if(i->second)
+			{
+				std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
+				eventData->type = "newDevices";
+				eventData->value = deviceDescriptions;
+				i->second->enqueue(eventData);
+			}
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	PhpEvents::eventsMapMutex.unlock();
+}
+
+void ScriptEngine::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
+{
+	PhpEvents::eventsMapMutex.lock();
+	try
+	{
+		for(std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
+		{
+			if(i->second)
+			{
+				std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
+				eventData->type = "deleteDevices";
+				eventData->value = deviceInfo;
+				i->second->enqueue(eventData);
+			}
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	PhpEvents::eventsMapMutex.unlock();
+}
+void ScriptEngine::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint)
+{
+	PhpEvents::eventsMapMutex.lock();
+	try
+	{
+		for(std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
+		{
+			if(i->second && i->second->peerSubscribed(id))
+			{
+				std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
+				eventData->type = "updateDevice";
+				eventData->id = id;
+				eventData->channel = channel;
+				eventData->hint = hint;
+				i->second->enqueue(eventData);
 			}
 		}
 	}

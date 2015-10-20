@@ -77,6 +77,9 @@ ZEND_FUNCTION(hg_user_exists);
 ZEND_FUNCTION(hg_users);
 ZEND_FUNCTION(hg_log);
 ZEND_FUNCTION(hg_poll_event);
+ZEND_FUNCTION(hg_peer_exists);
+ZEND_FUNCTION(hg_subscribe_peer);
+ZEND_FUNCTION(hg_unsubscribe_peer);
 ZEND_FUNCTION(hg_shutting_down);
 
 static const zend_function_entry homegear_functions[] = {
@@ -96,6 +99,9 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_users, NULL)
 	ZEND_FE(hg_log, NULL)
 	ZEND_FE(hg_poll_event, NULL)
+	ZEND_FE(hg_peer_exists, NULL)
+	ZEND_FE(hg_subscribe_peer, NULL)
+	ZEND_FE(hg_unsubscribe_peer, NULL)
 	ZEND_FE(hg_shutting_down, NULL)
 	{NULL, NULL, NULL}
 };
@@ -718,20 +724,91 @@ ZEND_FUNCTION(hg_poll_event)
 		array_init(return_value);
 		zval element;
 
-		ZVAL_LONG(&element, eventData->id);
-		add_assoc_zval_ex(return_value, "PEERID", sizeof("PEERID") - 1, &element);
+		if(!eventData->type.empty())
+		{
+			ZVAL_STRINGL(&element, eventData->type.c_str(), eventData->type.size());
+			add_assoc_zval_ex(return_value, "TYPE", sizeof("TYPE") - 1, &element);
+		}
 
-		ZVAL_LONG(&element, eventData->channel);
-		add_assoc_zval_ex(return_value, "CHANNEL", sizeof("CHANNEL") - 1, &element);
+		if(eventData->id != 0)
+		{
+			ZVAL_LONG(&element, eventData->id);
+			add_assoc_zval_ex(return_value, "PEERID", sizeof("PEERID") - 1, &element);
+		}
 
-		if(eventData->variable.empty()) ZVAL_STRINGL(&element, "", 0); //At least once, c_str() on an empty string was a nullptr causing a segementation fault, so check for empty string
-		else ZVAL_STRINGL(&element, eventData->variable.c_str(), eventData->variable.size());
-		add_assoc_zval_ex(return_value, "VARIABLE", sizeof("VARIABLE") - 1, &element);
+		if(eventData->channel > -1)
+		{
+			ZVAL_LONG(&element, eventData->channel);
+			add_assoc_zval_ex(return_value, "CHANNEL", sizeof("CHANNEL") - 1, &element);
+		}
 
-		PhpVariableConverter::getPHPVariable(eventData->value, &element);
-		add_assoc_zval_ex(return_value, "VALUE", sizeof("VALUE") - 1, &element);
+		if(!eventData->variable.empty())
+		{
+			ZVAL_STRINGL(&element, eventData->variable.c_str(), eventData->variable.size());
+			add_assoc_zval_ex(return_value, "VARIABLE", sizeof("VARIABLE") - 1, &element);
+		}
+
+		if(eventData->hint != -1)
+		{
+			ZVAL_LONG(&element, eventData->hint);
+			add_assoc_zval_ex(return_value, "HINT", sizeof("HINT") - 1, &element);
+		}
+
+		if(eventData->value)
+		{
+			PhpVariableConverter::getPHPVariable(eventData->value, &element);
+			add_assoc_zval_ex(return_value, "VALUE", sizeof("VALUE") - 1, &element);
+		}
 	}
 	else RETURN_FALSE
+}
+
+ZEND_FUNCTION(hg_peer_exists)
+{
+	uint64_t peerId = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &peerId) != SUCCESS) RETURN_NULL();
+	if(GD::familyController->peerExists(peerId)) RETURN_TRUE
+	RETURN_FALSE
+}
+
+ZEND_FUNCTION(hg_subscribe_peer)
+{
+	int64_t threadId = 0;
+	int64_t peerId = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &threadId, &peerId) != SUCCESS) RETURN_NULL();
+	PhpEvents::eventsMapMutex.lock();
+	std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(threadId);
+	if(eventsIterator == PhpEvents::eventsMap.end())
+	{
+		PhpEvents::eventsMapMutex.unlock();
+		zend_throw_exception(homegear_exception_class_entry, "Thread id is invalid.", -1);
+		RETURN_FALSE
+	}
+	std::shared_ptr<PhpEvents> phpEvents;
+	if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents());
+	phpEvents = eventsIterator->second;
+	PhpEvents::eventsMapMutex.unlock();
+	phpEvents->addPeer(peerId);
+}
+
+ZEND_FUNCTION(hg_unsubscribe_peer)
+{
+	int64_t threadId = 0;
+	int64_t peerId = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &threadId, &peerId) != SUCCESS) RETURN_NULL();
+	PhpEvents::eventsMapMutex.lock();
+	std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(threadId);
+	if(eventsIterator == PhpEvents::eventsMap.end())
+	{
+		PhpEvents::eventsMapMutex.unlock();
+		zend_throw_exception(homegear_exception_class_entry, "Thread id is invalid.", -1);
+		RETURN_FALSE
+	}
+	std::shared_ptr<PhpEvents> phpEvents;
+	if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents());
+	phpEvents = eventsIterator->second;
+	PhpEvents::eventsMapMutex.unlock();
+	phpEvents->removePeer(peerId);
 }
 
 ZEND_FUNCTION(hg_log)
@@ -789,6 +866,9 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME_MAPPING(listUsers, hg_users, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(log, hg_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(pollEvent, hg_poll_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(peerExists, hg_peer_exists, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(subscribePeer, hg_subscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(unsubscribePeer, hg_unsubscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(shuttingDown, hg_shutting_down, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
 };
@@ -801,7 +881,7 @@ int php_homegear_init()
 	php_homegear_sapi_module.ini_defaults = homegear_ini_defaults;
 	ini_path_override = strndup(GD::bl->settings.phpIniPath().c_str(), GD::bl->settings.phpIniPath().size());
 	php_homegear_sapi_module.php_ini_path_override = ini_path_override;
-	php_homegear_sapi_module.phpinfo_as_text = 1;
+	php_homegear_sapi_module.phpinfo_as_text = 0;
 	php_homegear_sapi_module.php_ini_ignore_cwd = 1;
 	sapi_startup(&php_homegear_sapi_module);
 

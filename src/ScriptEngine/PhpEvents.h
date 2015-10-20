@@ -37,8 +37,10 @@ public:
 	class EventData
 	{
 	public:
+		std::string type;
 		uint64_t id = 0;
 		int32_t channel = -1;
+		int32_t hint = -1;
 		std::string variable;
 		BaseLib::PVariable value;
 	};
@@ -51,6 +53,9 @@ public:
 	void stop();
 	bool enqueue(std::shared_ptr<EventData>& entry);
 	std::shared_ptr<EventData> poll();
+	void addPeer(uint64_t peerId);
+	void removePeer(uint64_t peerId);
+	bool peerSubscribed(uint64_t peerId);
 private:
 	static const int32_t _bufferSize = 100;
 	std::mutex _bufferMutex;
@@ -60,5 +65,7 @@ private:
 	std::mutex _processingThreadMutex;
 	bool _processingEntryAvailable = false;
 	std::condition_variable _processingConditionVariable;
+	std::mutex _peersMutex;
+	std::set<uint64_t> _peers;
 };
 #endif
