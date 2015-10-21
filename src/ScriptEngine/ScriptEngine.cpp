@@ -208,10 +208,12 @@ void ScriptEngine::executeScript(const std::string& script, uint64_t peerId, con
 			return;
 		}
 
+		std::string scriptCopy = script;
 		zend_file_handle zendHandle;
 		zendHandle.type = ZEND_HANDLE_MAPPED;
-		zendHandle.handle.stream.mmap.buf = (char*)script.c_str(); //String is not modified
-		zendHandle.handle.stream.mmap.len = script.size();
+		zendHandle.handle.stream.closer = nullptr;
+		zendHandle.handle.stream.mmap.buf = (char*)scriptCopy.c_str(); //String is not modified
+		zendHandle.handle.stream.mmap.len = scriptCopy.size();
 		zendHandle.filename = "";
 		zendHandle.opened_path = nullptr;
 		zendHandle.free_filename = 0;
