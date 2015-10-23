@@ -162,11 +162,6 @@ void PhysicalInterfaces::load(std::string filename)
 					settings->txPowerSetting = BaseLib::Math::getNumber(value);
 					GD::out.printDebug("Debug: txPowerSetting of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->txPowerSetting));
 				}
-				else if(name == "highgainmodegpio")
-				{
-					settings->highGainModeGpio = BaseLib::Math::getNumber(value);
-					GD::out.printDebug("Debug: highGainModeGpio of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->highGainModeGpio));
-				}
 				else if(name == "oscillatorfrequency")
 				{
 					settings->oscillatorFrequency = BaseLib::Math::getNumber(value);
