@@ -620,7 +620,7 @@ PVariable MiscPeer::getParamset(int32_t clientID, int32_t channel, ParameterGrou
 
 		for(Parameters::iterator i = parameterGroup->parameters.begin(); i != parameterGroup->parameters.end(); ++i)
 		{
-			if(i->second->id.empty() || !i->second->visible) continue;
+			if(!i->second || i->second->id.empty() || !i->second->visible) continue;
 			if(!i->second->visible && !i->second->service && !i->second->internal && !i->second->transform)
 			{
 				GD::out.printDebug("Debug: Omitting parameter " + i->second->id + " because of it's ui flag.");
