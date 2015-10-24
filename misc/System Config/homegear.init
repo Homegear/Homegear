@@ -18,6 +18,7 @@ DAEMON=/usr/bin/homegear
 PIDPATH=/var/run/homegear
 PIDFILE=$PIDPATH/homegear.pid
 DBPATH=/var/lib/homegear
+STATICPATH=/usr/share/homegear
 LOGPATH=/var/log/homegear
 
 test -x $DAEMON || exit 5
@@ -68,9 +69,10 @@ case $1 in
 				chmod 750 $DBPATH
 				chmod 640 $DBPATH/db.sql
 				chmod 550 $DBPATH/scripts
-				chmod 550 $DBPATH/firmware
-				chmod 440 $DBPATH/firmware/*
-				chmod 550 $DBPATH/firmware/GetFirmwareUpdates.sh
+                chmod 550 $STATICPATH
+				chmod 550 $STATICPATH/firmware
+				chmod 440 $STATICPATH/firmware/*
+				chmod 550 $STATICPATH/firmware/GetFirmwareUpdates*.sh
 				chmod -R 550 $DBPATH/modules
 				
 				if test ! -d $LOGPATH; then
