@@ -447,6 +447,8 @@ int main(int argc, char* argv[])
     					exit(1);
     				}
     				GD::physicalInterfaces->setup(userID, groupID);
+    				BaseLib::Gpio gpio(GD::bl.get());
+    				gpio.setup(userID, groupID);
     				GD::physicalInterfaces->dispose();
     				GD::familyController->dispose();
     				exit(0);

@@ -33,6 +33,7 @@
 #include "PhpVariableConverter.h"
 
 static std::shared_ptr<BaseLib::HTTP> _http;
+static std::shared_ptr<BaseLib::Gpio> _gpio;
 static pthread_key_t pthread_key;
 static zend_class_entry* homegear_class_entry = nullptr;
 static zend_class_entry* homegear_exception_class_entry = nullptr;
@@ -81,6 +82,13 @@ ZEND_FUNCTION(hg_peer_exists);
 ZEND_FUNCTION(hg_subscribe_peer);
 ZEND_FUNCTION(hg_unsubscribe_peer);
 ZEND_FUNCTION(hg_shutting_down);
+ZEND_FUNCTION(hg_gpio_open);
+ZEND_FUNCTION(hg_gpio_close);
+ZEND_FUNCTION(hg_gpio_set_direction);
+ZEND_FUNCTION(hg_gpio_set_edge);
+ZEND_FUNCTION(hg_gpio_get);
+ZEND_FUNCTION(hg_gpio_set);
+ZEND_FUNCTION(hg_gpio_poll);
 
 static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(get_thread_id, NULL)
@@ -103,6 +111,13 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_subscribe_peer, NULL)
 	ZEND_FE(hg_unsubscribe_peer, NULL)
 	ZEND_FE(hg_shutting_down, NULL)
+	ZEND_FE(hg_gpio_open, NULL)
+	ZEND_FE(hg_gpio_close, NULL)
+	ZEND_FE(hg_gpio_set_direction, NULL)
+	ZEND_FE(hg_gpio_set_edge, NULL)
+	ZEND_FE(hg_gpio_get, NULL)
+	ZEND_FE(hg_gpio_set, NULL)
+	ZEND_FE(hg_gpio_poll, NULL)
 	{NULL, NULL, NULL}
 };
 
@@ -113,6 +128,7 @@ static const zend_function_entry homegear_functions[] = {
 static void homegear_ini_defaults(HashTable *configuration_hash)
 {
 	zval tmp;
+	INI_DEFAULT("date.timezone", "Europe/Berlin");
 	INI_DEFAULT("report_zend_debug", "0");
 	INI_DEFAULT("display_errors", "1");
 }
@@ -828,6 +844,120 @@ ZEND_FUNCTION(hg_shutting_down)
 	RETURN_FALSE
 }
 
+ZEND_FUNCTION(hg_gpio_open)
+{
+	int32_t gpio = -1;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
+	_gpio->openDevice(gpio, false);
+}
+
+ZEND_FUNCTION(hg_gpio_close)
+{
+	int32_t gpio = -1;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
+	_gpio->closeDevice(gpio);
+}
+
+ZEND_FUNCTION(hg_gpio_set_direction)
+{
+	int32_t gpio = -1;
+	int32_t direction = -1;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &direction) != SUCCESS) RETURN_NULL();
+	_gpio->setDirection(gpio, (BaseLib::Gpio::GpioDirection::Enum)direction);
+}
+
+ZEND_FUNCTION(hg_gpio_set_edge)
+{
+	int32_t gpio = -1;
+	int32_t edge = -1;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &edge) != SUCCESS) RETURN_NULL();
+	_gpio->setEdge(gpio, (BaseLib::Gpio::GpioEdge::Enum)edge);
+}
+
+ZEND_FUNCTION(hg_gpio_get)
+{
+	int32_t gpio = -1;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
+	if(_gpio->get(gpio))
+	{
+		RETURN_TRUE;
+	}
+	else
+	{
+		RETURN_FALSE;
+	}
+}
+
+ZEND_FUNCTION(hg_gpio_set)
+{
+	int32_t gpio = -1;
+	zend_bool value = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "lb", &gpio, &value) != SUCCESS) RETURN_NULL();
+	_gpio->set(gpio, (bool)value);
+}
+
+ZEND_FUNCTION(hg_gpio_poll)
+{
+	int32_t gpio = -1;
+	int32_t timeout = -1;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &timeout) != SUCCESS) RETURN_NULL();
+	if(timeout > 5000) timeout = 5000;
+	if(gpio < 0 || timeout < 0)
+	{
+		ZVAL_LONG(return_value, -1);
+		return;
+	}
+	BaseLib::PFileDescriptor fileDescriptor = _gpio->getFileDescriptor(gpio);
+	if(!fileDescriptor)
+	{
+		ZVAL_LONG(return_value, -1);
+		return;
+	}
+
+	pollfd pollstruct
+	{
+		(int)fileDescriptor->descriptor,
+		(short)(POLLPRI | POLLERR),
+		(short)0
+	};
+
+	int32_t pollResult = poll(&pollstruct, 1, timeout);
+	if(pollResult == 0)
+	{
+		ZVAL_LONG(return_value, -2);
+		return;
+	}
+	else if(pollResult == -1)
+	{
+		_gpio->closeDevice(gpio);
+		ZVAL_LONG(return_value, -1);
+		return;
+	}
+
+	if(lseek(fileDescriptor->descriptor, 0, SEEK_SET) == -1)
+	{
+		_gpio->closeDevice(gpio);
+		ZVAL_LONG(return_value, -1);
+		return;
+	}
+
+	std::vector<char> readBuffer({'0'});
+	int32_t bytesRead = read(fileDescriptor->descriptor, &readBuffer[0], 1);
+	if(!bytesRead)
+	{
+		ZVAL_LONG(return_value, -1);
+		return;
+	}
+	if(readBuffer.at(0) == 0x30)
+	{
+		ZVAL_LONG(return_value, 1);
+	}
+	else
+	{
+		ZVAL_LONG(return_value, 0);
+	}
+}
+
 ZEND_METHOD(Homegear, __call)
 {
 	char* pMethodName = nullptr;
@@ -870,12 +1000,20 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME_MAPPING(subscribePeer, hg_subscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(unsubscribePeer, hg_unsubscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(shuttingDown, hg_shutting_down, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(gpioOpen, hg_gpio_open, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(gpioClose, hg_gpio_close, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(gpioSetDirection, hg_gpio_set_direction, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(gpioSetEdge, hg_gpio_set_edge, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(gpioGet, hg_gpio_get, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(gpioSet, hg_gpio_set, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(gpioPoll, hg_gpio_poll, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
 };
 
 int php_homegear_init()
 {
 	_http.reset(new BaseLib::HTTP());
+	_gpio.reset(new BaseLib::Gpio(GD::bl.get()));
 	pthread_key_create(&pthread_key, pthread_data_destructor);
 	tsrm_startup(20, 1, 0, NULL);
 	php_homegear_sapi_module.ini_defaults = homegear_ini_defaults;

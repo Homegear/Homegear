@@ -255,6 +255,7 @@ MiscPeer.lo: MiscPeer.cpp /usr/include/stdc-predef.h MiscPeer.h \
  /usr/include/homegear-base/HelperFunctions/Net.h \
  /usr/include/homegear-base/Exception.h \
  /usr/include/homegear-base/HelperFunctions/Io.h \
+ /usr/include/homegear-base/LowLevel/Gpio.h \
  /usr/include/homegear-base/DeviceDescription/Devices.h \
  /usr/include/homegear-base/Systems/Packet.h \
  /usr/include/homegear-base/Systems/DeviceTypes.h \
@@ -963,6 +964,8 @@ MiscPeer.h:
 /usr/include/homegear-base/Exception.h:
 
 /usr/include/homegear-base/HelperFunctions/Io.h:
+
+/usr/include/homegear-base/LowLevel/Gpio.h:
 
 /usr/include/homegear-base/DeviceDescription/Devices.h:
 
