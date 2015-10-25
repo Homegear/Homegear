@@ -32,10 +32,11 @@
 #include "php_sapi.h"
 #include "PhpVariableConverter.h"
 
-static std::shared_ptr<BaseLib::HTTP> _http;
-static std::shared_ptr<BaseLib::Gpio> _gpio;
+static BaseLib::HTTP* _http;
+static BaseLib::Gpio* _gpio;
 static pthread_key_t pthread_key;
 static zend_class_entry* homegear_class_entry = nullptr;
+static zend_class_entry* homegear_gpio_class_entry = nullptr;
 static zend_class_entry* homegear_exception_class_entry = nullptr;
 static char* ini_path_override = nullptr;
 static char* ini_entries = nullptr;
@@ -562,13 +563,13 @@ ZEND_FUNCTION(hg_invoke)
 
 ZEND_FUNCTION(hg_get_meta)
 {
-	uint32_t id = 0;
+	int64_t id = 0;
 	char* pName = nullptr;
 	int32_t nameLength = 0;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "ls", &id, &pName, &nameLength) != SUCCESS) RETURN_NULL();
 	std::string methodName("getMetadata");
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(id)));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)id)));
 	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
 	php_homegear_invoke_rpc(methodName, parameters, return_value);
 }
@@ -586,29 +587,29 @@ ZEND_FUNCTION(hg_get_system)
 
 ZEND_FUNCTION(hg_get_value)
 {
-	uint32_t id = 0;
-	int32_t channel = -1;
+	int64_t id = 0;
+	int64_t channel = -1;
 	char* pParameterName = nullptr;
 	int32_t parameterNameLength = 0;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lls", &id, &channel, &pParameterName, &parameterNameLength) != SUCCESS) RETURN_NULL();
 	std::string methodName("getValue");
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(id)));
-	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)id)));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)channel)));
 	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pParameterName, parameterNameLength))));
 	php_homegear_invoke_rpc(methodName, parameters, return_value);
 }
 
 ZEND_FUNCTION(hg_set_meta)
 {
-	uint32_t id = 0;
+	int64_t id = 0;
 	char* pName = nullptr;
 	int32_t nameLength = 0;
 	zval* newValue = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lsz", &id, &pName, &nameLength, &newValue) != SUCCESS) RETURN_NULL();
 	std::string methodName("setMetadata");
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(id)));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)id)));
 	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
 	BaseLib::PVariable parameter = PhpVariableConverter::getVariable(newValue);
 	if(parameter) parameters->arrayValue->push_back(parameter);
@@ -631,16 +632,16 @@ ZEND_FUNCTION(hg_set_system)
 
 ZEND_FUNCTION(hg_set_value)
 {
-	uint32_t id = 0;
-	int32_t channel = -1;
+	int64_t id = 0;
+	int64_t channel = -1;
 	char* pParameterName = nullptr;
 	int32_t parameterNameLength = 0;
 	zval* newValue = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "llsz", &id, &channel, &pParameterName, &parameterNameLength, &newValue) != SUCCESS) RETURN_NULL();
 	std::string methodName("setValue");
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(id)));
-	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)id)));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)channel)));
 	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pParameterName, parameterNameLength))));
 	BaseLib::PVariable parameter = PhpVariableConverter::getVariable(newValue);
 	if(parameter) parameters->arrayValue->push_back(parameter);
@@ -829,7 +830,7 @@ ZEND_FUNCTION(hg_unsubscribe_peer)
 
 ZEND_FUNCTION(hg_log)
 {
-	int32_t debugLevel = 3;
+	int64_t debugLevel = 3;
 	char* pMessage = nullptr;
 	int32_t messageLength = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ls", &debugLevel, &pMessage, &messageLength) != SUCCESS) RETURN_NULL();
@@ -846,37 +847,37 @@ ZEND_FUNCTION(hg_shutting_down)
 
 ZEND_FUNCTION(hg_gpio_open)
 {
-	int32_t gpio = -1;
+	int64_t gpio = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
 	_gpio->openDevice(gpio, false);
 }
 
 ZEND_FUNCTION(hg_gpio_close)
 {
-	int32_t gpio = -1;
+	int64_t gpio = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
 	_gpio->closeDevice(gpio);
 }
 
 ZEND_FUNCTION(hg_gpio_set_direction)
 {
-	int32_t gpio = -1;
-	int32_t direction = -1;
+	int64_t gpio = -1;
+	int64_t direction = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &direction) != SUCCESS) RETURN_NULL();
 	_gpio->setDirection(gpio, (BaseLib::Gpio::GpioDirection::Enum)direction);
 }
 
 ZEND_FUNCTION(hg_gpio_set_edge)
 {
-	int32_t gpio = -1;
-	int32_t edge = -1;
+	int64_t gpio = -1;
+	int64_t edge = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &edge) != SUCCESS) RETURN_NULL();
 	_gpio->setEdge(gpio, (BaseLib::Gpio::GpioEdge::Enum)edge);
 }
 
 ZEND_FUNCTION(hg_gpio_get)
 {
-	int32_t gpio = -1;
+	int64_t gpio = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
 	if(_gpio->get(gpio))
 	{
@@ -890,7 +891,7 @@ ZEND_FUNCTION(hg_gpio_get)
 
 ZEND_FUNCTION(hg_gpio_set)
 {
-	int32_t gpio = -1;
+	int64_t gpio = -1;
 	zend_bool value = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "lb", &gpio, &value) != SUCCESS) RETURN_NULL();
 	_gpio->set(gpio, (bool)value);
@@ -898,8 +899,8 @@ ZEND_FUNCTION(hg_gpio_set)
 
 ZEND_FUNCTION(hg_gpio_poll)
 {
-	int32_t gpio = -1;
-	int32_t timeout = -1;
+	int64_t gpio = -1;
+	int64_t timeout = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &timeout) != SUCCESS) RETURN_NULL();
 	if(timeout > 5000) timeout = 5000;
 	if(gpio < 0 || timeout < 0)
@@ -1000,20 +1001,23 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME_MAPPING(subscribePeer, hg_subscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(unsubscribePeer, hg_unsubscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(shuttingDown, hg_shutting_down, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	ZEND_ME_MAPPING(gpioOpen, hg_gpio_open, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	ZEND_ME_MAPPING(gpioClose, hg_gpio_close, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	ZEND_ME_MAPPING(gpioSetDirection, hg_gpio_set_direction, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	ZEND_ME_MAPPING(gpioSetEdge, hg_gpio_set_edge, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	ZEND_ME_MAPPING(gpioGet, hg_gpio_get, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	ZEND_ME_MAPPING(gpioSet, hg_gpio_set, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	ZEND_ME_MAPPING(gpioPoll, hg_gpio_poll, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
+};
+
+static const zend_function_entry homegear_gpio_methods[] = {
+	ZEND_ME_MAPPING(open, hg_gpio_open, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(close, hg_gpio_close, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(setDirection, hg_gpio_set_direction, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(setEdge, hg_gpio_set_edge, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(get, hg_gpio_get, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(set, hg_gpio_set, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(poll, hg_gpio_poll, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 };
 
 int php_homegear_init()
 {
-	_http.reset(new BaseLib::HTTP());
-	_gpio.reset(new BaseLib::Gpio(GD::bl.get()));
+	_http = new BaseLib::HTTP();
+	_gpio = new BaseLib::Gpio(GD::bl.get());
 	pthread_key_create(&pthread_key, pthread_data_destructor);
 	tsrm_startup(20, 1, 0, NULL);
 	php_homegear_sapi_module.ini_defaults = homegear_ini_defaults;
@@ -1040,9 +1044,18 @@ void php_homegear_shutdown()
 	ts_free_worker_threads();
 
 	tsrm_shutdown();
-	_http.reset();
 	if(ini_path_override) free(ini_path_override);
 	if(ini_entries) free(ini_entries);
+	if(_http)
+	{
+		delete(_http);
+		_http = nullptr;
+	}
+	if(_gpio)
+	{
+		delete(_gpio);
+		_gpio = nullptr;
+	}
 }
 
 static int php_homegear_startup(sapi_module_struct* sapi_module)
@@ -1072,6 +1085,10 @@ static PHP_MINIT_FUNCTION(homegear)
 	zend_class_entry homegearCe;
 	INIT_CLASS_ENTRY(homegearCe, "Homegear\\Homegear", homegear_methods);
 	homegear_class_entry = zend_register_internal_class(&homegearCe);
+
+	zend_class_entry homegearGpioCe;
+	INIT_CLASS_ENTRY(homegearGpioCe, "Homegear\\HomegearGpio", homegear_gpio_methods);
+	homegear_gpio_class_entry = zend_register_internal_class(&homegearGpioCe);
 
     return SUCCESS;
 }
