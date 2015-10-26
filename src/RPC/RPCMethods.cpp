@@ -301,6 +301,11 @@ BaseLib::PVariable RPCActivateLinkParamset::invoke(int32_t clientID, std::shared
 				if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
 			}
 			else remoteSerialNumber = parameters->at(0)->stringValue;
+			// {{{ HomeMatic-Konfigurator Bugfix
+			std::string copy = remoteSerialNumber;
+			BaseLib::HelperFunctions::toUpper(copy);
+			if(copy == serialNumber) remoteSerialNumber = copy;
+			// }}}
 
 			if(parameters->size() > 2) longPress = parameters->at(2)->booleanValue;
 		}
@@ -1522,6 +1527,11 @@ BaseLib::PVariable RPCGetParamsetDescription::invoke(int32_t clientID, std::shar
 					if(parameters->at(parameterSetIndex)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(parameterSetIndex)->stringValue.substr(pos + 1));
 				}
 				else remoteSerialNumber = parameters->at(parameterSetIndex)->stringValue;
+				// {{{ HomeMatic-Konfigurator Bugfix
+				std::string copy = remoteSerialNumber;
+				BaseLib::HelperFunctions::toUpper(copy);
+				if(copy == serialNumber) remoteSerialNumber = copy;
+				// }}}
 			}
 		}
 		else
@@ -1606,6 +1616,11 @@ BaseLib::PVariable RPCGetParamsetId::invoke(int32_t clientID, std::shared_ptr<st
 					if(parameters->at(parameterSetIndex)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(parameterSetIndex)->stringValue.substr(pos + 1));
 				}
 				else remoteSerialNumber = parameters->at(parameterSetIndex)->stringValue;
+				// {{{ HomeMatic-Konfigurator Bugfix
+				std::string copy = remoteSerialNumber;
+				BaseLib::HelperFunctions::toUpper(copy);
+				if(copy == serialNumber) remoteSerialNumber = copy;
+				// }}}
 			}
 		}
 		else
@@ -1691,6 +1706,11 @@ BaseLib::PVariable RPCGetParamset::invoke(int32_t clientID, std::shared_ptr<std:
 					if(parameters->at(parameterSetIndex)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(parameterSetIndex)->stringValue.substr(pos + 1));
 				}
 				else remoteSerialNumber = parameters->at(parameterSetIndex)->stringValue;
+				// {{{ HomeMatic-Konfigurator Bugfix
+				std::string copy = remoteSerialNumber;
+				BaseLib::HelperFunctions::toUpper(copy);
+				if(copy == serialNumber) remoteSerialNumber = copy;
+				// }}}
 			}
 		}
 		else
@@ -2426,6 +2446,11 @@ BaseLib::PVariable RPCPutParamset::invoke(int32_t clientID, std::shared_ptr<std:
 					if(parameters->at(parameterSetIndex)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(parameterSetIndex)->stringValue.substr(pos + 1));
 				}
 				else remoteSerialNumber = parameters->at(parameterSetIndex)->stringValue;
+				// {{{ HomeMatic-Konfigurator Bugfix
+				std::string copy = remoteSerialNumber;
+				BaseLib::HelperFunctions::toUpper(copy);
+				if(copy == serialNumber) remoteSerialNumber = copy;
+				// }}}
 			}
 		}
 		else

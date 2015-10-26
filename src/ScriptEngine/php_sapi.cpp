@@ -546,8 +546,8 @@ ZEND_FUNCTION(get_thread_id)
 ZEND_FUNCTION(hg_invoke)
 {
 	char* pMethodName = nullptr;
-	int32_t methodNameLength = 0;
-	int32_t argc = 0;
+	int methodNameLength = 0;
+	int argc = 0;
 	zval* args = nullptr;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s*", &pMethodName, &methodNameLength, &args, &argc) != SUCCESS) RETURN_NULL();
 	if(methodNameLength == 0) RETURN_NULL();
@@ -563,9 +563,9 @@ ZEND_FUNCTION(hg_invoke)
 
 ZEND_FUNCTION(hg_get_meta)
 {
-	int64_t id = 0;
+	unsigned long id = 0;
 	char* pName = nullptr;
-	int32_t nameLength = 0;
+	int nameLength = 0;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "ls", &id, &pName, &nameLength) != SUCCESS) RETURN_NULL();
 	std::string methodName("getMetadata");
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
@@ -577,7 +577,7 @@ ZEND_FUNCTION(hg_get_meta)
 ZEND_FUNCTION(hg_get_system)
 {
 	char* pName = nullptr;
-	int32_t nameLength = 0;
+	int nameLength = 0;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s",&pName, &nameLength) != SUCCESS) RETURN_NULL();
 	std::string methodName("getSystemVariable");
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
@@ -587,10 +587,10 @@ ZEND_FUNCTION(hg_get_system)
 
 ZEND_FUNCTION(hg_get_value)
 {
-	int64_t id = 0;
-	int64_t channel = -1;
+	unsigned long id = 0;
+	long channel = -1;
 	char* pParameterName = nullptr;
-	int32_t parameterNameLength = 0;
+	int parameterNameLength = 0;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lls", &id, &channel, &pParameterName, &parameterNameLength) != SUCCESS) RETURN_NULL();
 	std::string methodName("getValue");
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
@@ -602,9 +602,9 @@ ZEND_FUNCTION(hg_get_value)
 
 ZEND_FUNCTION(hg_set_meta)
 {
-	int64_t id = 0;
+	unsigned long id = 0;
 	char* pName = nullptr;
-	int32_t nameLength = 0;
+	int nameLength = 0;
 	zval* newValue = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lsz", &id, &pName, &nameLength, &newValue) != SUCCESS) RETURN_NULL();
 	std::string methodName("setMetadata");
@@ -619,7 +619,7 @@ ZEND_FUNCTION(hg_set_meta)
 ZEND_FUNCTION(hg_set_system)
 {
 	char* pName = nullptr;
-	int32_t nameLength = 0;
+	int nameLength = 0;
 	zval* newValue = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "sz", &pName, &nameLength, &newValue) != SUCCESS) RETURN_NULL();
 	std::string methodName("setSystemVariable");
@@ -632,10 +632,10 @@ ZEND_FUNCTION(hg_set_system)
 
 ZEND_FUNCTION(hg_set_value)
 {
-	int64_t id = 0;
-	int64_t channel = -1;
+	unsigned long id = 0;
+	long channel = -1;
 	char* pParameterName = nullptr;
-	int32_t parameterNameLength = 0;
+	int parameterNameLength = 0;
 	zval* newValue = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "llsz", &id, &channel, &pParameterName, &parameterNameLength, &newValue) != SUCCESS) RETURN_NULL();
 	std::string methodName("setValue");
@@ -653,9 +653,9 @@ ZEND_FUNCTION(hg_set_value)
 ZEND_FUNCTION(hg_auth)
 {
 	char* pName = nullptr;
-	int32_t nameLength = 0;
+	int nameLength = 0;
 	char* pPassword = nullptr;
-	int32_t passwordLength = 0;
+	int passwordLength = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
 	if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
 	if(User::verify(std::string(pName, nameLength), std::string(pPassword, passwordLength))) RETURN_TRUE;
@@ -665,9 +665,9 @@ ZEND_FUNCTION(hg_auth)
 ZEND_FUNCTION(hg_create_user)
 {
 	char* pName = nullptr;
-	int32_t nameLength = 0;
+	int nameLength = 0;
 	char* pPassword = nullptr;
-	int32_t passwordLength = 0;
+	int passwordLength = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
 	if(nameLength == 0 || passwordLength < 8) RETURN_FALSE;
 	std::string userName(pName, nameLength);
@@ -679,7 +679,7 @@ ZEND_FUNCTION(hg_create_user)
 ZEND_FUNCTION(hg_delete_user)
 {
 	char* pName = nullptr;
-	int32_t nameLength = 0;
+	int nameLength = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
 	if(nameLength == 0) RETURN_FALSE;
 	if(User::remove(std::string(pName, nameLength))) RETURN_TRUE;
@@ -689,9 +689,9 @@ ZEND_FUNCTION(hg_delete_user)
 ZEND_FUNCTION(hg_update_user)
 {
 	char* pName = nullptr;
-	int32_t nameLength = 0;
+	int nameLength = 0;
 	char* pPassword = nullptr;
-	int32_t passwordLength = 0;
+	int passwordLength = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
 	if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
 	if(User::update(std::string(pName, nameLength), std::string(pPassword, passwordLength))) RETURN_TRUE;
@@ -701,7 +701,7 @@ ZEND_FUNCTION(hg_update_user)
 ZEND_FUNCTION(hg_user_exists)
 {
 	char* pName = nullptr;
-	int32_t nameLength = 0;
+	int nameLength = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
 	if(nameLength == 0) RETURN_FALSE;
 	if(User::exists(std::string(pName, nameLength))) RETURN_TRUE
@@ -721,7 +721,7 @@ ZEND_FUNCTION(hg_users)
 
 ZEND_FUNCTION(hg_poll_event)
 {
-	int64_t threadId = 0;
+	long threadId = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &threadId) != SUCCESS) RETURN_NULL();
 	PhpEvents::eventsMapMutex.lock();
 	std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(threadId);
@@ -782,7 +782,7 @@ ZEND_FUNCTION(hg_poll_event)
 
 ZEND_FUNCTION(hg_peer_exists)
 {
-	uint64_t peerId = 0;
+	unsigned long peerId = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &peerId) != SUCCESS) RETURN_NULL();
 	if(GD::familyController->peerExists(peerId)) RETURN_TRUE
 	RETURN_FALSE
@@ -790,8 +790,8 @@ ZEND_FUNCTION(hg_peer_exists)
 
 ZEND_FUNCTION(hg_subscribe_peer)
 {
-	int64_t threadId = 0;
-	int64_t peerId = 0;
+	long threadId = 0;
+	long peerId = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &threadId, &peerId) != SUCCESS) RETURN_NULL();
 	PhpEvents::eventsMapMutex.lock();
 	std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(threadId);
@@ -810,8 +810,8 @@ ZEND_FUNCTION(hg_subscribe_peer)
 
 ZEND_FUNCTION(hg_unsubscribe_peer)
 {
-	int64_t threadId = 0;
-	int64_t peerId = 0;
+	long threadId = 0;
+	long peerId = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &threadId, &peerId) != SUCCESS) RETURN_NULL();
 	PhpEvents::eventsMapMutex.lock();
 	std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(threadId);
@@ -830,9 +830,9 @@ ZEND_FUNCTION(hg_unsubscribe_peer)
 
 ZEND_FUNCTION(hg_log)
 {
-	int64_t debugLevel = 3;
+	long debugLevel = 3;
 	char* pMessage = nullptr;
-	int32_t messageLength = 0;
+	int messageLength = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ls", &debugLevel, &pMessage, &messageLength) != SUCCESS) RETURN_NULL();
 	if(messageLength == 0) RETURN_FALSE;
 	if(SEG(peerId) != 0) GD::out.printMessage("Script log (peer id: " + std::to_string(SEG(peerId)) + "): " + std::string(pMessage, messageLength), debugLevel, true);
@@ -847,37 +847,37 @@ ZEND_FUNCTION(hg_shutting_down)
 
 ZEND_FUNCTION(hg_gpio_open)
 {
-	int64_t gpio = -1;
+	long gpio = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
 	_gpio->openDevice(gpio, false);
 }
 
 ZEND_FUNCTION(hg_gpio_close)
 {
-	int64_t gpio = -1;
+	long gpio = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
 	_gpio->closeDevice(gpio);
 }
 
 ZEND_FUNCTION(hg_gpio_set_direction)
 {
-	int64_t gpio = -1;
-	int64_t direction = -1;
+	long gpio = -1;
+	long direction = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &direction) != SUCCESS) RETURN_NULL();
 	_gpio->setDirection(gpio, (BaseLib::Gpio::GpioDirection::Enum)direction);
 }
 
 ZEND_FUNCTION(hg_gpio_set_edge)
 {
-	int64_t gpio = -1;
-	int64_t edge = -1;
+	long gpio = -1;
+	long edge = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &edge) != SUCCESS) RETURN_NULL();
 	_gpio->setEdge(gpio, (BaseLib::Gpio::GpioEdge::Enum)edge);
 }
 
 ZEND_FUNCTION(hg_gpio_get)
 {
-	int64_t gpio = -1;
+	long gpio = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
 	if(_gpio->get(gpio))
 	{
@@ -891,7 +891,7 @@ ZEND_FUNCTION(hg_gpio_get)
 
 ZEND_FUNCTION(hg_gpio_set)
 {
-	int64_t gpio = -1;
+	long gpio = -1;
 	zend_bool value = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "lb", &gpio, &value) != SUCCESS) RETURN_NULL();
 	_gpio->set(gpio, (bool)value);
@@ -899,8 +899,8 @@ ZEND_FUNCTION(hg_gpio_set)
 
 ZEND_FUNCTION(hg_gpio_poll)
 {
-	int64_t gpio = -1;
-	int64_t timeout = -1;
+	long gpio = -1;
+	long timeout = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &timeout) != SUCCESS) RETURN_NULL();
 	if(timeout > 5000) timeout = 5000;
 	if(gpio < 0 || timeout < 0)
@@ -962,7 +962,7 @@ ZEND_FUNCTION(hg_gpio_poll)
 ZEND_METHOD(Homegear, __call)
 {
 	char* pMethodName = nullptr;
-	int32_t methodNameLength = 0;
+	int methodNameLength = 0;
 	zval* args = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "sz", &pMethodName, &methodNameLength, &args) != SUCCESS) RETURN_NULL();
 	std::string methodName(std::string(pMethodName, methodNameLength));
@@ -973,7 +973,7 @@ ZEND_METHOD(Homegear, __call)
 ZEND_METHOD(Homegear, __callStatic)
 {
 	char* pMethodName = nullptr;
-	int32_t methodNameLength = 0;
+	int methodNameLength = 0;
 	zval* args = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "sz", &pMethodName, &methodNameLength, &args) != SUCCESS) RETURN_NULL();
 	std::string methodName(std::string(pMethodName, methodNameLength));
