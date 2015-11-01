@@ -51,7 +51,7 @@
 #include <memory>
 
 class UPnP;
-class MQTT;
+class Mqtt;
 
 class GD
 {
@@ -78,7 +78,7 @@ public:
 	static std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>> deviceFamilies;
 	static std::map<std::string, int32_t> deviceFamiliesByName;
 	static std::unique_ptr<UPnP> uPnP;
-	static std::unique_ptr<MQTT> mqtt;
+	static std::unique_ptr<Mqtt> mqtt;
 #ifdef EVENTHANDLER
 	static std::unique_ptr<EventHandler> eventHandler;
 #endif

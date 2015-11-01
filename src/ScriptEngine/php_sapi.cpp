@@ -1012,6 +1012,7 @@ static const zend_function_entry homegear_gpio_methods[] = {
 	ZEND_ME_MAPPING(get, hg_gpio_get, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(set, hg_gpio_set, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(poll, hg_gpio_poll, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	{NULL, NULL, NULL}
 };
 
 int php_homegear_init()

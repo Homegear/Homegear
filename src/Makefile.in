@@ -82,10 +82,9 @@ host_triplet = @host@
 bin_PROGRAMS = homegear$(EXEEXT)
 @BSDSYSTEM_FALSE@am__append_1 = -ldl
 @WITH_SCRIPTENGINE_TRUE@am__append_2 = libscriptengine.a
-@WITH_SCRIPTENGINE_TRUE@am__append_3 = libscriptengine.a
-@BSDSYSTEM_TRUE@@WITH_SCRIPTENGINE_TRUE@am__append_4 = -I/usr/include/php7-homegear -I/usr/include/php7-homegear/main -I/usr/include/php7-homegear/sapi -I/usr/include/php7-homegear/TSRM -I/usr/include/php7-homegear/Zend
-@BSDSYSTEM_FALSE@@WITH_SCRIPTENGINE_TRUE@am__append_5 = -I/usr/include/php7-homegear -I/usr/include/php7-homegear/main -I/usr/include/php7-homegear/sapi -I/usr/include/php7-homegear/TSRM -I/usr/include/php7-homegear/Zend
-@WITH_OPENSSL_TRUE@am__append_6 = -lcrypto -lssl
+@BSDSYSTEM_TRUE@@WITH_SCRIPTENGINE_TRUE@am__append_3 = -I/usr/include/php7-homegear -I/usr/include/php7-homegear/main -I/usr/include/php7-homegear/sapi -I/usr/include/php7-homegear/TSRM -I/usr/include/php7-homegear/Zend
+@BSDSYSTEM_FALSE@@WITH_SCRIPTENGINE_TRUE@am__append_4 = -I/usr/include/php7-homegear -I/usr/include/php7-homegear/main -I/usr/include/php7-homegear/sapi -I/usr/include/php7-homegear/TSRM -I/usr/include/php7-homegear/Zend
+@WITH_OPENSSL_TRUE@am__append_5 = -lcrypto -lssl
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/cfg/depcomp
@@ -106,32 +105,6 @@ AM_V_AR = $(am__v_AR_@AM_V@)
 am__v_AR_ = $(am__v_AR_@AM_DEFAULT_V@)
 am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 = 
-libpaho_mqtt_a_AR = $(AR) $(ARFLAGS)
-libpaho_mqtt_a_LIBADD =
-am__dirstamp = $(am__leading_dot)dirstamp
-am_libpaho_mqtt_a_OBJECTS =  \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Clients.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Heap.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-LinkedList.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Log.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Messages.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTAsync.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTClient.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistenceDefault.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolOut.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTVersion.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SocketBuffer.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Socket.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SSLSocket.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-StackTrace.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Thread.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Tree.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-utf-8.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacket.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacketOut.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistence.$(OBJEXT) \
-	MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolClient.$(OBJEXT)
-libpaho_mqtt_a_OBJECTS = $(am_libpaho_mqtt_a_OBJECTS)
 libscriptengine_a_AR = $(AR) $(ARFLAGS)
 libscriptengine_a_LIBADD =
 am__libscriptengine_a_SOURCES_DIST = ScriptEngine/php_sapi.cpp \
@@ -139,6 +112,7 @@ am__libscriptengine_a_SOURCES_DIST = ScriptEngine/php_sapi.cpp \
 	ScriptEngine/PhpVariableConverter.h ScriptEngine/PhpEvents.cpp \
 	ScriptEngine/PhpEvents.h ScriptEngine/ScriptEngine.cpp \
 	ScriptEngine/ScriptEngine.h
+am__dirstamp = $(am__leading_dot)dirstamp
 @WITH_SCRIPTENGINE_TRUE@am_libscriptengine_a_OBJECTS = ScriptEngine/libscriptengine_a-php_sapi.$(OBJEXT) \
 @WITH_SCRIPTENGINE_TRUE@	ScriptEngine/libscriptengine_a-PhpVariableConverter.$(OBJEXT) \
 @WITH_SCRIPTENGINE_TRUE@	ScriptEngine/libscriptengine_a-PhpEvents.$(OBJEXT) \
@@ -149,7 +123,7 @@ PROGRAMS = $(bin_PROGRAMS)
 am_homegear_OBJECTS = main.$(OBJEXT) CLI/CLIClient.$(OBJEXT) \
 	CLI/CLIServer.$(OBJEXT) Database/SQLite3.$(OBJEXT) \
 	Events/EventHandler.$(OBJEXT) GD/GD.$(OBJEXT) \
-	MQTT/MQTT.$(OBJEXT) MQTT/MQTTSettings.$(OBJEXT) \
+	MQTT/Mqtt.$(OBJEXT) MQTT/MqttSettings.$(OBJEXT) \
 	RPC/Auth.$(OBJEXT) RPC/Client.$(OBJEXT) \
 	RPC/ClientSettings.$(OBJEXT) RPC/RemoteRpcServer.$(OBJEXT) \
 	RPC/RpcClient.$(OBJEXT) RPC/RPCMethod.$(OBJEXT) \
@@ -161,8 +135,8 @@ am_homegear_OBJECTS = main.$(OBJEXT) CLI/CLIClient.$(OBJEXT) \
 	User/User.$(OBJEXT)
 homegear_OBJECTS = $(am_homegear_OBJECTS)
 am__DEPENDENCIES_1 =
-homegear_DEPENDENCIES = libpaho-mqtt.a $(am__DEPENDENCIES_1) \
-	$(am__append_3) $(am__DEPENDENCIES_1)
+homegear_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__append_2) \
+	$(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -183,24 +157,6 @@ DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/cfg/depcomp
 am__depfiles_maybe = depfiles
 am__mv = mv -f
-COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
-	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
-LTCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) \
-	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
-	$(AM_CFLAGS) $(CFLAGS)
-AM_V_CC = $(am__v_CC_@AM_V@)
-am__v_CC_ = $(am__v_CC_@AM_DEFAULT_V@)
-am__v_CC_0 = @echo "  CC      " $@;
-am__v_CC_1 = 
-CCLD = $(CC)
-LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-AM_V_CCLD = $(am__v_CCLD_@AM_V@)
-am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
-am__v_CCLD_0 = @echo "  CCLD    " $@;
-am__v_CCLD_1 = 
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
 LTCXXCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
@@ -219,10 +175,27 @@ AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
 am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(libpaho_mqtt_a_SOURCES) $(libscriptengine_a_SOURCES) \
+COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
+	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+LTCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) \
+	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
+	$(AM_CFLAGS) $(CFLAGS)
+AM_V_CC = $(am__v_CC_@AM_V@)
+am__v_CC_ = $(am__v_CC_@AM_DEFAULT_V@)
+am__v_CC_0 = @echo "  CC      " $@;
+am__v_CC_1 = 
+CCLD = $(CC)
+LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_CCLD = $(am__v_CCLD_@AM_V@)
+am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
+am__v_CCLD_0 = @echo "  CCLD    " $@;
+am__v_CCLD_1 = 
+SOURCES = $(libscriptengine_a_SOURCES) $(homegear_SOURCES)
+DIST_SOURCES = $(am__libscriptengine_a_SOURCES_DIST) \
 	$(homegear_SOURCES)
-DIST_SOURCES = $(libpaho_mqtt_a_SOURCES) \
-	$(am__libscriptengine_a_SOURCES_DIST) $(homegear_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -373,56 +346,20 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 AM_CPPFLAGS = -Wall -std=c++11 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
 AM_LDFLAGS = -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear
-# }}}
-noinst_LIBRARIES = libpaho-mqtt.a $(am__append_2)
-libpaho_mqtt_a_SOURCES = MQTT/paho.mqtt.c/src/Clients.c \
-	MQTT/paho.mqtt.c/src/Heap.c MQTT/paho.mqtt.c/src/LinkedList.c \
-	MQTT/paho.mqtt.c/src/Log.c MQTT/paho.mqtt.c/src/Messages.c \
-	MQTT/paho.mqtt.c/src/MQTTAsync.c \
-	MQTT/paho.mqtt.c/src/MQTTClient.c \
-	MQTT/paho.mqtt.c/src/MQTTClientPersistence.h \
-	MQTT/paho.mqtt.c/src/MQTTPacket.h \
-	MQTT/paho.mqtt.c/src/MQTTPacketOut.h \
-	MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.c \
-	MQTT/paho.mqtt.c/src/MQTTPersistence.h \
-	MQTT/paho.mqtt.c/src/MQTTProtocolClient.h \
-	MQTT/paho.mqtt.c/src/MQTTProtocolOut.c \
-	MQTT/paho.mqtt.c/src/MQTTVersion.c \
-	MQTT/paho.mqtt.c/src/SocketBuffer.c \
-	MQTT/paho.mqtt.c/src/Socket.c MQTT/paho.mqtt.c/src/SSLSocket.c \
-	MQTT/paho.mqtt.c/src/StackTrace.c \
-	MQTT/paho.mqtt.c/src/Thread.c MQTT/paho.mqtt.c/src/Tree.c \
-	MQTT/paho.mqtt.c/src/utf-8.c MQTT/paho.mqtt.c/src/Clients.h \
-	MQTT/paho.mqtt.c/src/Heap.h MQTT/paho.mqtt.c/src/LinkedList.h \
-	MQTT/paho.mqtt.c/src/Log.h MQTT/paho.mqtt.c/src/Messages.h \
-	MQTT/paho.mqtt.c/src/MQTTAsync.h \
-	MQTT/paho.mqtt.c/src/MQTTClient.h \
-	MQTT/paho.mqtt.c/src/MQTTPacket.c \
-	MQTT/paho.mqtt.c/src/MQTTPacketOut.c \
-	MQTT/paho.mqtt.c/src/MQTTPersistence.c \
-	MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.h \
-	MQTT/paho.mqtt.c/src/MQTTProtocolClient.c \
-	MQTT/paho.mqtt.c/src/MQTTProtocol.h \
-	MQTT/paho.mqtt.c/src/MQTTProtocolOut.h \
-	MQTT/paho.mqtt.c/src/SocketBuffer.h \
-	MQTT/paho.mqtt.c/src/Socket.h MQTT/paho.mqtt.c/src/SSLSocket.h \
-	MQTT/paho.mqtt.c/src/StackTrace.h \
-	MQTT/paho.mqtt.c/src/Thread.h MQTT/paho.mqtt.c/src/Tree.h \
-	MQTT/paho.mqtt.c/src/utf-8.h
-libpaho_mqtt_a_CPPFLAGS = -Wall -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
-homegear_SOURCES = main.cpp CLI/CLIClient.cpp CLI/CLIClient.h CLI/CLIServer.cpp CLI/CLIServer.h Database/SQLite3.cpp Database/SQLite3.h Events/EventHandler.cpp Events/EventHandler.h GD/GD.cpp GD/GD.h MQTT/MQTT.cpp MQTT/MQTT.h MQTT/MQTTSettings.cpp MQTT/MQTTSettings.h RPC/Auth.cpp RPC/Auth.h RPC/Client.cpp RPC/Client.h RPC/ClientSettings.cpp RPC/ClientSettings.h RPC/RemoteRpcServer.cpp RPC/RemoteRpcServer.h RPC/RpcClient.cpp RPC/RpcClient.h RPC/RPCMethod.cpp RPC/RPCMethod.h RPC/RPCMethods.cpp RPC/RPCMethods.h RPC/RPCServer.cpp RPC/RPCServer.h RPC/Server.cpp RPC/Server.h RPC/Webserver.cpp RPC/Webserver.h Systems/DatabaseController.cpp Systems/DatabaseController.h Systems/FamilyController.cpp Systems/FamilyController.h Systems/PhysicalInterfaces.cpp Systems/PhysicalInterfaces.h UPnP/UPnP.cpp UPnP/UPnP.h User/User.cpp User/User.h
+homegear_SOURCES = main.cpp CLI/CLIClient.cpp CLI/CLIClient.h CLI/CLIServer.cpp CLI/CLIServer.h Database/SQLite3.cpp Database/SQLite3.h Events/EventHandler.cpp Events/EventHandler.h GD/GD.cpp GD/GD.h MQTT/Mqtt.cpp MQTT/Mqtt.h MQTT/MqttSettings.cpp MQTT/MqttSettings.h RPC/Auth.cpp RPC/Auth.h RPC/Client.cpp RPC/Client.h RPC/ClientSettings.cpp RPC/ClientSettings.h RPC/RemoteRpcServer.cpp RPC/RemoteRpcServer.h RPC/RpcClient.cpp RPC/RpcClient.h RPC/RPCMethod.cpp RPC/RPCMethod.h RPC/RPCMethods.cpp RPC/RPCMethods.h RPC/RPCServer.cpp RPC/RPCServer.h RPC/Server.cpp RPC/Server.h RPC/Webserver.cpp RPC/Webserver.h Systems/DatabaseController.cpp Systems/DatabaseController.h Systems/FamilyController.cpp Systems/FamilyController.h Systems/PhysicalInterfaces.cpp Systems/PhysicalInterfaces.h UPnP/UPnP.cpp UPnP/UPnP.h User/User.cpp User/User.h
 homegear_LDADD = -lpthread -lreadline -lgcrypt -lgnutls \
-	-lhomegear-base -lgpg-error -lsqlite3 libpaho-mqtt.a \
-	$(am__append_1) $(am__append_3) $(am__append_6)
+	-lhomegear-base -lgpg-error -lsqlite3 $(am__append_1) \
+	$(am__append_2) $(am__append_5)
+@WITH_SCRIPTENGINE_TRUE@noinst_LIBRARIES = libscriptengine.a
 @WITH_SCRIPTENGINE_TRUE@libscriptengine_a_SOURCES = ScriptEngine/php_sapi.cpp ScriptEngine/php_sapi.h ScriptEngine/PhpVariableConverter.cpp ScriptEngine/PhpVariableConverter.h ScriptEngine/PhpEvents.cpp ScriptEngine/PhpEvents.h ScriptEngine/ScriptEngine.cpp ScriptEngine/ScriptEngine.h
 @WITH_SCRIPTENGINE_TRUE@libscriptengine_a_CPPFLAGS = -Wall -std=c++11 \
 @WITH_SCRIPTENGINE_TRUE@	-DFORTIFY_SOURCE=2 \
-@WITH_SCRIPTENGINE_TRUE@	-DGCRYPT_NO_DEPRECATED $(am__append_4) \
-@WITH_SCRIPTENGINE_TRUE@	$(am__append_5)
+@WITH_SCRIPTENGINE_TRUE@	-DGCRYPT_NO_DEPRECATED $(am__append_3) \
+@WITH_SCRIPTENGINE_TRUE@	$(am__append_4)
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .c .cpp .lo .o .obj
+.SUFFIXES: .cpp .lo .o .obj
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -456,80 +393,6 @@ $(am__aclocal_m4_deps):
 
 clean-noinstLIBRARIES:
 	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
-MQTT/paho.mqtt.c/src/$(am__dirstamp):
-	@$(MKDIR_P) MQTT/paho.mqtt.c/src
-	@: > MQTT/paho.mqtt.c/src/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) MQTT/paho.mqtt.c/src/$(DEPDIR)
-	@: > MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Clients.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Heap.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-LinkedList.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Log.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Messages.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTAsync.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTClient.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistenceDefault.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolOut.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTVersion.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SocketBuffer.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Socket.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SSLSocket.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-StackTrace.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Thread.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Tree.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-utf-8.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacket.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacketOut.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistence.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolClient.$(OBJEXT):  \
-	MQTT/paho.mqtt.c/src/$(am__dirstamp) \
-	MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-
-libpaho-mqtt.a: $(libpaho_mqtt_a_OBJECTS) $(libpaho_mqtt_a_DEPENDENCIES) $(EXTRA_libpaho_mqtt_a_DEPENDENCIES) 
-	$(AM_V_at)-rm -f libpaho-mqtt.a
-	$(AM_V_AR)$(libpaho_mqtt_a_AR) libpaho-mqtt.a $(libpaho_mqtt_a_OBJECTS) $(libpaho_mqtt_a_LIBADD)
-	$(AM_V_at)$(RANLIB) libpaho-mqtt.a
 ScriptEngine/$(am__dirstamp):
 	@$(MKDIR_P) ScriptEngine
 	@: > ScriptEngine/$(am__dirstamp)
@@ -641,9 +504,9 @@ MQTT/$(am__dirstamp):
 MQTT/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) MQTT/$(DEPDIR)
 	@: > MQTT/$(DEPDIR)/$(am__dirstamp)
-MQTT/MQTT.$(OBJEXT): MQTT/$(am__dirstamp) \
+MQTT/Mqtt.$(OBJEXT): MQTT/$(am__dirstamp) \
 	MQTT/$(DEPDIR)/$(am__dirstamp)
-MQTT/MQTTSettings.$(OBJEXT): MQTT/$(am__dirstamp) \
+MQTT/MqttSettings.$(OBJEXT): MQTT/$(am__dirstamp) \
 	MQTT/$(DEPDIR)/$(am__dirstamp)
 RPC/$(am__dirstamp):
 	@$(MKDIR_P) RPC
@@ -710,7 +573,6 @@ mostlyclean-compile:
 	-rm -f Events/*.$(OBJEXT)
 	-rm -f GD/*.$(OBJEXT)
 	-rm -f MQTT/*.$(OBJEXT)
-	-rm -f MQTT/paho.mqtt.c/src/*.$(OBJEXT)
 	-rm -f RPC/*.$(OBJEXT)
 	-rm -f ScriptEngine/*.$(OBJEXT)
 	-rm -f Systems/*.$(OBJEXT)
@@ -726,29 +588,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@Database/$(DEPDIR)/SQLite3.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@Events/$(DEPDIR)/EventHandler.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@GD/$(DEPDIR)/GD.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/$(DEPDIR)/MQTT.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/$(DEPDIR)/MQTTSettings.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Clients.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Heap.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-LinkedList.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Log.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTAsync.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTClient.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPacket.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPacketOut.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPersistence.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPersistenceDefault.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTProtocolClient.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTProtocolOut.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTVersion.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Messages.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-SSLSocket.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Socket.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-SocketBuffer.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-StackTrace.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Thread.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Tree.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-utf-8.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@MQTT/$(DEPDIR)/Mqtt.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@MQTT/$(DEPDIR)/MqttSettings.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@RPC/$(DEPDIR)/Auth.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@RPC/$(DEPDIR)/Client.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@RPC/$(DEPDIR)/ClientSettings.Po@am__quote@
@@ -768,324 +609,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@Systems/$(DEPDIR)/PhysicalInterfaces.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@UPnP/$(DEPDIR)/UPnP.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@User/$(DEPDIR)/User.Po@am__quote@
-
-.c.o:
-@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
-@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
-@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ $<
-
-.c.obj:
-@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
-@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
-@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
-
-.c.lo:
-@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.lo$$||'`;\
-@am__fastdepCC_TRUE@	$(LTCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
-@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Clients.o: MQTT/paho.mqtt.c/src/Clients.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Clients.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Clients.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Clients.o `test -f 'MQTT/paho.mqtt.c/src/Clients.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/Clients.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Clients.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Clients.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/Clients.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Clients.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Clients.o `test -f 'MQTT/paho.mqtt.c/src/Clients.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/Clients.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Clients.obj: MQTT/paho.mqtt.c/src/Clients.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Clients.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Clients.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Clients.obj `if test -f 'MQTT/paho.mqtt.c/src/Clients.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/Clients.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/Clients.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Clients.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Clients.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/Clients.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Clients.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Clients.obj `if test -f 'MQTT/paho.mqtt.c/src/Clients.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/Clients.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/Clients.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Heap.o: MQTT/paho.mqtt.c/src/Heap.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Heap.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Heap.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Heap.o `test -f 'MQTT/paho.mqtt.c/src/Heap.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/Heap.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Heap.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Heap.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/Heap.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Heap.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Heap.o `test -f 'MQTT/paho.mqtt.c/src/Heap.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/Heap.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Heap.obj: MQTT/paho.mqtt.c/src/Heap.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Heap.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Heap.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Heap.obj `if test -f 'MQTT/paho.mqtt.c/src/Heap.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/Heap.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/Heap.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Heap.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Heap.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/Heap.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Heap.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Heap.obj `if test -f 'MQTT/paho.mqtt.c/src/Heap.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/Heap.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/Heap.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-LinkedList.o: MQTT/paho.mqtt.c/src/LinkedList.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-LinkedList.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-LinkedList.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-LinkedList.o `test -f 'MQTT/paho.mqtt.c/src/LinkedList.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/LinkedList.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-LinkedList.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-LinkedList.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/LinkedList.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-LinkedList.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-LinkedList.o `test -f 'MQTT/paho.mqtt.c/src/LinkedList.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/LinkedList.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-LinkedList.obj: MQTT/paho.mqtt.c/src/LinkedList.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-LinkedList.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-LinkedList.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-LinkedList.obj `if test -f 'MQTT/paho.mqtt.c/src/LinkedList.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/LinkedList.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/LinkedList.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-LinkedList.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-LinkedList.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/LinkedList.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-LinkedList.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-LinkedList.obj `if test -f 'MQTT/paho.mqtt.c/src/LinkedList.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/LinkedList.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/LinkedList.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Log.o: MQTT/paho.mqtt.c/src/Log.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Log.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Log.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Log.o `test -f 'MQTT/paho.mqtt.c/src/Log.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/Log.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Log.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Log.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/Log.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Log.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Log.o `test -f 'MQTT/paho.mqtt.c/src/Log.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/Log.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Log.obj: MQTT/paho.mqtt.c/src/Log.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Log.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Log.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Log.obj `if test -f 'MQTT/paho.mqtt.c/src/Log.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/Log.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/Log.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Log.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Log.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/Log.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Log.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Log.obj `if test -f 'MQTT/paho.mqtt.c/src/Log.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/Log.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/Log.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Messages.o: MQTT/paho.mqtt.c/src/Messages.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Messages.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Messages.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Messages.o `test -f 'MQTT/paho.mqtt.c/src/Messages.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/Messages.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Messages.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Messages.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/Messages.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Messages.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Messages.o `test -f 'MQTT/paho.mqtt.c/src/Messages.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/Messages.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Messages.obj: MQTT/paho.mqtt.c/src/Messages.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Messages.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Messages.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Messages.obj `if test -f 'MQTT/paho.mqtt.c/src/Messages.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/Messages.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/Messages.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Messages.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Messages.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/Messages.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Messages.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Messages.obj `if test -f 'MQTT/paho.mqtt.c/src/Messages.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/Messages.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/Messages.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTAsync.o: MQTT/paho.mqtt.c/src/MQTTAsync.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTAsync.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTAsync.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTAsync.o `test -f 'MQTT/paho.mqtt.c/src/MQTTAsync.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTAsync.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTAsync.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTAsync.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTAsync.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTAsync.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTAsync.o `test -f 'MQTT/paho.mqtt.c/src/MQTTAsync.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTAsync.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTAsync.obj: MQTT/paho.mqtt.c/src/MQTTAsync.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTAsync.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTAsync.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTAsync.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTAsync.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTAsync.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTAsync.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTAsync.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTAsync.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTAsync.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTAsync.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTAsync.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTAsync.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTAsync.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTAsync.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTClient.o: MQTT/paho.mqtt.c/src/MQTTClient.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTClient.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTClient.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTClient.o `test -f 'MQTT/paho.mqtt.c/src/MQTTClient.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTClient.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTClient.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTClient.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTClient.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTClient.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTClient.o `test -f 'MQTT/paho.mqtt.c/src/MQTTClient.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTClient.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTClient.obj: MQTT/paho.mqtt.c/src/MQTTClient.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTClient.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTClient.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTClient.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTClient.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTClient.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTClient.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTClient.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTClient.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTClient.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTClient.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTClient.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTClient.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTClient.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTClient.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistenceDefault.o: MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistenceDefault.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPersistenceDefault.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistenceDefault.o `test -f 'MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPersistenceDefault.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPersistenceDefault.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistenceDefault.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistenceDefault.o `test -f 'MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistenceDefault.obj: MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistenceDefault.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPersistenceDefault.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistenceDefault.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPersistenceDefault.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPersistenceDefault.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistenceDefault.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistenceDefault.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTPersistenceDefault.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolOut.o: MQTT/paho.mqtt.c/src/MQTTProtocolOut.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolOut.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTProtocolOut.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolOut.o `test -f 'MQTT/paho.mqtt.c/src/MQTTProtocolOut.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTProtocolOut.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTProtocolOut.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTProtocolOut.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTProtocolOut.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolOut.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolOut.o `test -f 'MQTT/paho.mqtt.c/src/MQTTProtocolOut.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTProtocolOut.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolOut.obj: MQTT/paho.mqtt.c/src/MQTTProtocolOut.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolOut.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTProtocolOut.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolOut.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTProtocolOut.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTProtocolOut.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTProtocolOut.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTProtocolOut.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTProtocolOut.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTProtocolOut.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolOut.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolOut.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTProtocolOut.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTProtocolOut.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTProtocolOut.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTVersion.o: MQTT/paho.mqtt.c/src/MQTTVersion.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTVersion.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTVersion.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTVersion.o `test -f 'MQTT/paho.mqtt.c/src/MQTTVersion.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTVersion.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTVersion.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTVersion.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTVersion.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTVersion.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTVersion.o `test -f 'MQTT/paho.mqtt.c/src/MQTTVersion.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTVersion.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTVersion.obj: MQTT/paho.mqtt.c/src/MQTTVersion.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTVersion.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTVersion.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTVersion.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTVersion.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTVersion.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTVersion.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTVersion.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTVersion.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTVersion.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTVersion.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTVersion.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTVersion.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTVersion.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTVersion.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SocketBuffer.o: MQTT/paho.mqtt.c/src/SocketBuffer.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SocketBuffer.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-SocketBuffer.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SocketBuffer.o `test -f 'MQTT/paho.mqtt.c/src/SocketBuffer.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/SocketBuffer.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-SocketBuffer.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-SocketBuffer.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/SocketBuffer.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SocketBuffer.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SocketBuffer.o `test -f 'MQTT/paho.mqtt.c/src/SocketBuffer.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/SocketBuffer.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SocketBuffer.obj: MQTT/paho.mqtt.c/src/SocketBuffer.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SocketBuffer.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-SocketBuffer.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SocketBuffer.obj `if test -f 'MQTT/paho.mqtt.c/src/SocketBuffer.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/SocketBuffer.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/SocketBuffer.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-SocketBuffer.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-SocketBuffer.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/SocketBuffer.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SocketBuffer.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SocketBuffer.obj `if test -f 'MQTT/paho.mqtt.c/src/SocketBuffer.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/SocketBuffer.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/SocketBuffer.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Socket.o: MQTT/paho.mqtt.c/src/Socket.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Socket.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Socket.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Socket.o `test -f 'MQTT/paho.mqtt.c/src/Socket.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/Socket.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Socket.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Socket.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/Socket.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Socket.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Socket.o `test -f 'MQTT/paho.mqtt.c/src/Socket.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/Socket.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Socket.obj: MQTT/paho.mqtt.c/src/Socket.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Socket.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Socket.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Socket.obj `if test -f 'MQTT/paho.mqtt.c/src/Socket.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/Socket.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/Socket.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Socket.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Socket.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/Socket.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Socket.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Socket.obj `if test -f 'MQTT/paho.mqtt.c/src/Socket.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/Socket.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/Socket.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SSLSocket.o: MQTT/paho.mqtt.c/src/SSLSocket.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SSLSocket.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-SSLSocket.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SSLSocket.o `test -f 'MQTT/paho.mqtt.c/src/SSLSocket.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/SSLSocket.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-SSLSocket.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-SSLSocket.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/SSLSocket.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SSLSocket.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SSLSocket.o `test -f 'MQTT/paho.mqtt.c/src/SSLSocket.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/SSLSocket.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SSLSocket.obj: MQTT/paho.mqtt.c/src/SSLSocket.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SSLSocket.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-SSLSocket.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SSLSocket.obj `if test -f 'MQTT/paho.mqtt.c/src/SSLSocket.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/SSLSocket.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/SSLSocket.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-SSLSocket.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-SSLSocket.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/SSLSocket.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SSLSocket.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-SSLSocket.obj `if test -f 'MQTT/paho.mqtt.c/src/SSLSocket.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/SSLSocket.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/SSLSocket.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-StackTrace.o: MQTT/paho.mqtt.c/src/StackTrace.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-StackTrace.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-StackTrace.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-StackTrace.o `test -f 'MQTT/paho.mqtt.c/src/StackTrace.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/StackTrace.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-StackTrace.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-StackTrace.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/StackTrace.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-StackTrace.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-StackTrace.o `test -f 'MQTT/paho.mqtt.c/src/StackTrace.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/StackTrace.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-StackTrace.obj: MQTT/paho.mqtt.c/src/StackTrace.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-StackTrace.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-StackTrace.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-StackTrace.obj `if test -f 'MQTT/paho.mqtt.c/src/StackTrace.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/StackTrace.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/StackTrace.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-StackTrace.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-StackTrace.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/StackTrace.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-StackTrace.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-StackTrace.obj `if test -f 'MQTT/paho.mqtt.c/src/StackTrace.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/StackTrace.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/StackTrace.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Thread.o: MQTT/paho.mqtt.c/src/Thread.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Thread.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Thread.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Thread.o `test -f 'MQTT/paho.mqtt.c/src/Thread.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/Thread.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Thread.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Thread.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/Thread.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Thread.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Thread.o `test -f 'MQTT/paho.mqtt.c/src/Thread.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/Thread.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Thread.obj: MQTT/paho.mqtt.c/src/Thread.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Thread.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Thread.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Thread.obj `if test -f 'MQTT/paho.mqtt.c/src/Thread.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/Thread.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/Thread.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Thread.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Thread.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/Thread.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Thread.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Thread.obj `if test -f 'MQTT/paho.mqtt.c/src/Thread.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/Thread.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/Thread.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Tree.o: MQTT/paho.mqtt.c/src/Tree.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Tree.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Tree.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Tree.o `test -f 'MQTT/paho.mqtt.c/src/Tree.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/Tree.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Tree.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Tree.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/Tree.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Tree.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Tree.o `test -f 'MQTT/paho.mqtt.c/src/Tree.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/Tree.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Tree.obj: MQTT/paho.mqtt.c/src/Tree.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Tree.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Tree.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Tree.obj `if test -f 'MQTT/paho.mqtt.c/src/Tree.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/Tree.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/Tree.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Tree.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-Tree.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/Tree.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Tree.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-Tree.obj `if test -f 'MQTT/paho.mqtt.c/src/Tree.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/Tree.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/Tree.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-utf-8.o: MQTT/paho.mqtt.c/src/utf-8.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-utf-8.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-utf-8.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-utf-8.o `test -f 'MQTT/paho.mqtt.c/src/utf-8.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/utf-8.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-utf-8.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-utf-8.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/utf-8.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-utf-8.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-utf-8.o `test -f 'MQTT/paho.mqtt.c/src/utf-8.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/utf-8.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-utf-8.obj: MQTT/paho.mqtt.c/src/utf-8.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-utf-8.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-utf-8.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-utf-8.obj `if test -f 'MQTT/paho.mqtt.c/src/utf-8.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/utf-8.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/utf-8.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-utf-8.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-utf-8.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/utf-8.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-utf-8.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-utf-8.obj `if test -f 'MQTT/paho.mqtt.c/src/utf-8.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/utf-8.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/utf-8.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacket.o: MQTT/paho.mqtt.c/src/MQTTPacket.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacket.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPacket.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacket.o `test -f 'MQTT/paho.mqtt.c/src/MQTTPacket.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTPacket.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPacket.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPacket.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTPacket.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacket.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacket.o `test -f 'MQTT/paho.mqtt.c/src/MQTTPacket.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTPacket.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacket.obj: MQTT/paho.mqtt.c/src/MQTTPacket.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacket.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPacket.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacket.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTPacket.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTPacket.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTPacket.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPacket.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPacket.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTPacket.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacket.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacket.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTPacket.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTPacket.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTPacket.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacketOut.o: MQTT/paho.mqtt.c/src/MQTTPacketOut.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacketOut.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPacketOut.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacketOut.o `test -f 'MQTT/paho.mqtt.c/src/MQTTPacketOut.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTPacketOut.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPacketOut.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPacketOut.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTPacketOut.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacketOut.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacketOut.o `test -f 'MQTT/paho.mqtt.c/src/MQTTPacketOut.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTPacketOut.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacketOut.obj: MQTT/paho.mqtt.c/src/MQTTPacketOut.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacketOut.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPacketOut.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacketOut.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTPacketOut.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTPacketOut.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTPacketOut.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPacketOut.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPacketOut.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTPacketOut.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacketOut.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPacketOut.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTPacketOut.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTPacketOut.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTPacketOut.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistence.o: MQTT/paho.mqtt.c/src/MQTTPersistence.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistence.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPersistence.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistence.o `test -f 'MQTT/paho.mqtt.c/src/MQTTPersistence.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTPersistence.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPersistence.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPersistence.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTPersistence.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistence.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistence.o `test -f 'MQTT/paho.mqtt.c/src/MQTTPersistence.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTPersistence.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistence.obj: MQTT/paho.mqtt.c/src/MQTTPersistence.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistence.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPersistence.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistence.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTPersistence.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTPersistence.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTPersistence.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPersistence.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTPersistence.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTPersistence.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistence.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTPersistence.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTPersistence.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTPersistence.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTPersistence.c'; fi`
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolClient.o: MQTT/paho.mqtt.c/src/MQTTProtocolClient.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolClient.o -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTProtocolClient.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolClient.o `test -f 'MQTT/paho.mqtt.c/src/MQTTProtocolClient.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTProtocolClient.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTProtocolClient.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTProtocolClient.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTProtocolClient.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolClient.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolClient.o `test -f 'MQTT/paho.mqtt.c/src/MQTTProtocolClient.c' || echo '$(srcdir)/'`MQTT/paho.mqtt.c/src/MQTTProtocolClient.c
-
-MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolClient.obj: MQTT/paho.mqtt.c/src/MQTTProtocolClient.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolClient.obj -MD -MP -MF MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTProtocolClient.Tpo -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolClient.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTProtocolClient.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTProtocolClient.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTProtocolClient.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTProtocolClient.Tpo MQTT/paho.mqtt.c/src/$(DEPDIR)/libpaho_mqtt_a-MQTTProtocolClient.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='MQTT/paho.mqtt.c/src/MQTTProtocolClient.c' object='MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolClient.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpaho_mqtt_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o MQTT/paho.mqtt.c/src/libpaho_mqtt_a-MQTTProtocolClient.obj `if test -f 'MQTT/paho.mqtt.c/src/MQTTProtocolClient.c'; then $(CYGPATH_W) 'MQTT/paho.mqtt.c/src/MQTTProtocolClient.c'; else $(CYGPATH_W) '$(srcdir)/MQTT/paho.mqtt.c/src/MQTTProtocolClient.c'; fi`
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -1298,8 +821,6 @@ distclean-generic:
 	-rm -f GD/$(am__dirstamp)
 	-rm -f MQTT/$(DEPDIR)/$(am__dirstamp)
 	-rm -f MQTT/$(am__dirstamp)
-	-rm -f MQTT/paho.mqtt.c/src/$(DEPDIR)/$(am__dirstamp)
-	-rm -f MQTT/paho.mqtt.c/src/$(am__dirstamp)
 	-rm -f RPC/$(DEPDIR)/$(am__dirstamp)
 	-rm -f RPC/$(am__dirstamp)
 	-rm -f ScriptEngine/$(DEPDIR)/$(am__dirstamp)
@@ -1320,7 +841,7 @@ clean-am: clean-binPROGRAMS clean-generic clean-libtool \
 	clean-noinstLIBRARIES mostlyclean-am
 
 distclean: distclean-am
-	-rm -rf ./$(DEPDIR) CLI/$(DEPDIR) Database/$(DEPDIR) Events/$(DEPDIR) GD/$(DEPDIR) MQTT/$(DEPDIR) MQTT/paho.mqtt.c/src/$(DEPDIR) RPC/$(DEPDIR) ScriptEngine/$(DEPDIR) Systems/$(DEPDIR) UPnP/$(DEPDIR) User/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) CLI/$(DEPDIR) Database/$(DEPDIR) Events/$(DEPDIR) GD/$(DEPDIR) MQTT/$(DEPDIR) RPC/$(DEPDIR) ScriptEngine/$(DEPDIR) Systems/$(DEPDIR) UPnP/$(DEPDIR) User/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -1366,7 +887,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -rf ./$(DEPDIR) CLI/$(DEPDIR) Database/$(DEPDIR) Events/$(DEPDIR) GD/$(DEPDIR) MQTT/$(DEPDIR) MQTT/paho.mqtt.c/src/$(DEPDIR) RPC/$(DEPDIR) ScriptEngine/$(DEPDIR) Systems/$(DEPDIR) UPnP/$(DEPDIR) User/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) CLI/$(DEPDIR) Database/$(DEPDIR) Events/$(DEPDIR) GD/$(DEPDIR) MQTT/$(DEPDIR) RPC/$(DEPDIR) ScriptEngine/$(DEPDIR) Systems/$(DEPDIR) UPnP/$(DEPDIR) User/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

@@ -192,7 +192,6 @@ ln -s /usr/include/$target/ /usr/include/$target/include
 cd /PHPBuild
 apt-get update
 apt-get source php7.0
-tar -xf php7*.orig.tar.gz
 rm php7*.tar.xz
 rm php7*.dsc
 cd php7*

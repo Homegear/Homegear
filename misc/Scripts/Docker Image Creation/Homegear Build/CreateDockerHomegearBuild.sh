@@ -237,7 +237,7 @@ tar -zcpf libhomegear-base_$version.orig.tar.gz $sourcePath
 cd $sourcePath
 ./configure
 dch -v $version-$revision -M "Version $version."
-debuild -eDEB_BUILD_OPTIONS="parallel=4" -us -uc
+debuild -j4 -us -uc
 cd ..
 rm -Rf $sourcePath
 rm libhomegear-base_$version-$revision_*.build
@@ -278,7 +278,7 @@ tar -zcpf homegear_$version.orig.tar.gz $sourcePath
 cd $sourcePath
 ./configure
 dch -v $version-$revision -M "Version $version."
-debuild -eDEB_BUILD_OPTIONS="parallel=4" -us -uc
+debuild -j4 -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear_$version-$revision_*.build
@@ -312,7 +312,7 @@ tar -zcpf homegear-homematicbidcos_$version.orig.tar.gz $sourcePath
 cd $sourcePath
 ./configure
 dch -v $version-$revision -M "Version $version."
-debuild -eDEB_BUILD_OPTIONS="parallel=4" -us -uc
+debuild -j4 -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-homematicbidcos_$version-$revision_*.build
@@ -346,7 +346,7 @@ tar -zcpf homegear-homematicwired_$version.orig.tar.gz $sourcePath
 cd $sourcePath
 ./configure
 dch -v $version-$revision -M "Version $version."
-debuild -eDEB_BUILD_OPTIONS="parallel=4" -us -uc
+debuild -j4 -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-homematicwired_$version-$revision_*.build
@@ -380,7 +380,7 @@ tar -zcpf homegear-insteon_$version.orig.tar.gz $sourcePath
 cd $sourcePath
 ./configure
 dch -v $version-$revision -M "Version $version."
-debuild -eDEB_BUILD_OPTIONS="parallel=4" -us -uc
+debuild -j4 -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-insteon_$version-$revision_*.build
@@ -414,7 +414,7 @@ tar -zcpf homegear-max_$version.orig.tar.gz $sourcePath
 cd $sourcePath
 ./configure
 dch -v $version-$revision -M "Version $version."
-debuild -eDEB_BUILD_OPTIONS="parallel=4" -us -uc
+debuild -j4 -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-max_$version-$revision_*.build
@@ -448,7 +448,7 @@ tar -zcpf homegear-philipshue_$version.orig.tar.gz $sourcePath
 cd $sourcePath
 ./configure
 dch -v $version-$revision -M "Version $version."
-debuild -eDEB_BUILD_OPTIONS="parallel=4" -us -uc
+debuild -j4 -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-philipshue_$version-$revision_*.build
@@ -482,7 +482,7 @@ tar -zcpf homegear-sonos_$version.orig.tar.gz $sourcePath
 cd $sourcePath
 ./configure
 dch -v $version-$revision -M "Version $version."
-debuild -eDEB_BUILD_OPTIONS="parallel=4" -us -uc
+debuild -j4 -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-sonos_$version-$revision_*.build

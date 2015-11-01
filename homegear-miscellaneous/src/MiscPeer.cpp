@@ -613,7 +613,6 @@ PVariable MiscPeer::getParamset(int32_t clientID, int32_t channel, ParameterGrou
 		if(functionIterator == _rpcDevice->functions.end()) return Variable::createError(-2, "Unknown channel.");
 		if(type == ParameterGroup::Type::none) type = ParameterGroup::Type::link;
 		PFunction rpcFunction = functionIterator->second;
-		if(!rpcFunction->parameterSetDefined(type)) return Variable::createError(-3, "Unknown parameter set.");
 		PParameterGroup parameterGroup = rpcFunction->getParameterGroup(type);
 		if(!parameterGroup) return Variable::createError(-3, "Unknown parameter set.");
 		PVariable variables(new Variable(VariableType::tStruct));

@@ -342,7 +342,7 @@ RPC/Client.o: RPC/Client.cpp /usr/include/stdc-predef.h RPC/Client.h \
  RPC/../GD/../Systems/../Database/SQLite3.h \
  /usr/include/homegear-base/Database/DatabaseTypes.h \
  /usr/include/sqlite3.h RPC/../GD/../RPC/Server.h \
- RPC/../GD/../RPC/Client.h RPC/../MQTT/MQTT.h RPC/../MQTT/MQTTSettings.h
+ RPC/../GD/../RPC/Client.h RPC/../MQTT/Mqtt.h RPC/../MQTT/MqttSettings.h
 
 /usr/include/stdc-predef.h:
 
@@ -1198,6 +1198,6 @@ RPC/../GD/../RPC/Server.h:
 
 RPC/../GD/../RPC/Client.h:
 
-RPC/../MQTT/MQTT.h:
+RPC/../MQTT/Mqtt.h:
 
-RPC/../MQTT/MQTTSettings.h:
+RPC/../MQTT/MqttSettings.h:

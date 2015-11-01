@@ -28,36 +28,50 @@
  * files in the program, then also delete it here.
 */
 
-#include "GD.h"
+#ifndef MQTTSETTINGS_H_
+#define MQTTSETTINGS_H_
 
-#include "../MQTT/Mqtt.h"
-#include "../UPnP/UPnP.h"
+#include "homegear-base/BaseLib.h"
 
-std::unique_ptr<BaseLib::Obj> GD::bl;
-BaseLib::Output GD::out;
-std::unique_ptr<DatabaseController> GD::db;
-std::string GD::configPath = "/etc/homegear/";
-std::string GD::pidfilePath = "";
-std::string GD::runDir = "/var/run/homegear/";
-std::string GD::socketPath = GD::runDir + "homegear.sock";
-std::string GD::workingDirectory = "";
-std::string GD::executablePath = "";
-std::unique_ptr<FamilyController> GD::familyController;
-std::map<int32_t, RPC::Server> GD::rpcServers;
-std::unique_ptr<RPC::Client> GD::rpcClient;
-std::unique_ptr<CLI::Server> GD::cliServer;
-std::unique_ptr<CLI::Client> GD::cliClient;
-int32_t GD::rpcLogLevel = 1;
-BaseLib::Rpc::ServerInfo GD::serverInfo;
-RPC::ClientSettings GD::clientSettings;
-std::unique_ptr<PhysicalInterfaces> GD::physicalInterfaces;
-std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>> GD::deviceFamilies;
-std::map<std::string, int32_t> GD::deviceFamiliesByName;
-std::unique_ptr<UPnP> GD::uPnP(new UPnP());
-std::unique_ptr<Mqtt> GD::mqtt;
-#ifdef EVENTHANDLER
-std::unique_ptr<EventHandler> GD::eventHandler;
-#endif
-#ifdef SCRIPTENGINE
-std::unique_ptr<ScriptEngine> GD::scriptEngine;
+#include <memory>
+#include <iostream>
+#include <string>
+#include <map>
+#include <cstring>
+
+class MqttSettings
+{
+public:
+	MqttSettings();
+	virtual ~MqttSettings() {}
+	void load(std::string filename);
+
+	bool enabled() { return _enabled; }
+	std::string brokerHostname() { return _brokerHostname; }
+	std::string brokerPort() { return _brokerPort; }
+	std::string clientName() { return _clientName; }
+	std::string homegearId() { return _homegearId; }
+	std::string username() { return _username; }
+	std::string password() { return _password; }
+	bool enableSSL() { return _enableSSL; }
+	std::string caFile() { return _caFile; }
+	bool verifyCertificate() { return _verifyCertificate; }
+	std::string certPath() { return _certPath; }
+	std::string keyPath() { return _keyPath; }
+private:
+	bool _enabled = false;
+	std::string _brokerHostname;
+	std::string _brokerPort;
+	std::string _clientName;
+	std::string _homegearId;
+	std::string _username;
+	std::string _password;
+	bool _enableSSL = false;
+	std::string _caFile;
+	bool _verifyCertificate = true;
+	std::string _certPath;
+	std::string _keyPath;
+
+	void reset();
+};
 #endif
