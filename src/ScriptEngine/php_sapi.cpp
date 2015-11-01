@@ -32,6 +32,7 @@
 #include "php_sapi.h"
 #include "PhpVariableConverter.h"
 
+static bool _disposed = true;
 static BaseLib::HTTP* _http;
 static BaseLib::Gpio* _gpio;
 static pthread_key_t pthread_key;
@@ -183,7 +184,7 @@ bool php_homegear_write_socket(BaseLib::SocketOperations* socket, std::vector<ch
 {
 	try
 	{
-		if(!socket) return false;
+		if(!socket || _disposed) return false;
 		if(data.empty()) return true;
 		try
 		{
@@ -222,7 +223,7 @@ bool php_homegear_write_socket(BaseLib::SocketOperations* socket, const char* bu
 {
 	try
 	{
-		if(!socket || !buffer) return false;
+		if(!socket || !buffer || _disposed) return false;
 		if(length == 0) return true;
 		try
 		{
@@ -280,6 +281,7 @@ zend_homegear_globals* php_homegear_get_globals()
 
 void php_homegear_build_argv(std::vector<std::string>& arguments)
 {
+	if(_disposed) return;
 	zval argc;
 	zval argv;
 	array_init(&argv);
@@ -305,7 +307,7 @@ void php_homegear_build_argv(std::vector<std::string>& arguments)
 
 static size_t php_homegear_read_post(char *buf, size_t count_bytes)
 {
-	if(SEG(commandLine)) return 0;
+	if(_disposed || SEG(commandLine)) return 0;
 	BaseLib::HTTP* http = SEG(http);
 	if(!http || http->getContentSize() == 0) return 0;
 	size_t bytesRead = http->readContentStream(buf, count_bytes);
@@ -315,7 +317,7 @@ static size_t php_homegear_read_post(char *buf, size_t count_bytes)
 
 static char* php_homegear_read_cookies()
 {
-	if(SEG(commandLine)) return 0;
+	if(_disposed || SEG(commandLine)) return 0;
 	BaseLib::HTTP* http = SEG(http);
 	if(!http || !http->getHeader()) return 0;
 	if(!SEG(cookiesParsed))
@@ -329,7 +331,7 @@ static char* php_homegear_read_cookies()
 
 static size_t php_homegear_ub_write(const char* str, size_t length)
 {
-	if(length == 0) return 0;
+	if(length == 0 || _disposed) return 0;
 	BaseLib::SocketOperations* socket = SEG(socket);
 	if(socket) php_homegear_write_socket(socket, str, length);
 	else
@@ -356,7 +358,7 @@ static void php_homegear_flush(void *server_context)
 
 static int php_homegear_send_headers(sapi_headers_struct* sapi_headers)
 {
-	if(SEG(commandLine)) return SAPI_HEADER_SENT_SUCCESSFULLY;
+	if(_disposed || SEG(commandLine)) return SAPI_HEADER_SENT_SUCCESSFULLY;
 	if(!sapi_headers) return SAPI_HEADER_SEND_FAILED;
 	std::vector<char> out;
 	BaseLib::SocketOperations* socket = SEG(socket);
@@ -445,6 +447,7 @@ static int php_homegear_send_headers(sapi_headers_struct* sapi_headers)
 
 static void php_homegear_log_message(char* message)
 {
+	if(_disposed) return;
 	std::string pathTranslated;
 	if(SG(request_info).path_translated) pathTranslated = SG(request_info).path_translated;
 	GD::out.printError("Scriptengine" + (SG(request_info).path_translated ? std::string(" (") + std::string(SG(request_info).path_translated) + "): " : ": ") + std::string(message));
@@ -452,6 +455,7 @@ static void php_homegear_log_message(char* message)
 
 static void php_homegear_register_variables(zval* track_vars_array)
 {
+	if(_disposed) return;
 	if(SEG(commandLine))
 	{
 		if(SG(request_info).path_translated)
@@ -545,6 +549,7 @@ ZEND_FUNCTION(get_thread_id)
 
 ZEND_FUNCTION(hg_invoke)
 {
+	if(_disposed) RETURN_NULL();
 	char* pMethodName = nullptr;
 	int methodNameLength = 0;
 	int argc = 0;
@@ -563,6 +568,7 @@ ZEND_FUNCTION(hg_invoke)
 
 ZEND_FUNCTION(hg_get_meta)
 {
+	if(_disposed) RETURN_NULL();
 	unsigned long id = 0;
 	char* pName = nullptr;
 	int nameLength = 0;
@@ -576,6 +582,7 @@ ZEND_FUNCTION(hg_get_meta)
 
 ZEND_FUNCTION(hg_get_system)
 {
+	if(_disposed) RETURN_NULL();
 	char* pName = nullptr;
 	int nameLength = 0;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s",&pName, &nameLength) != SUCCESS) RETURN_NULL();
@@ -587,6 +594,7 @@ ZEND_FUNCTION(hg_get_system)
 
 ZEND_FUNCTION(hg_get_value)
 {
+	if(_disposed) RETURN_NULL();
 	unsigned long id = 0;
 	long channel = -1;
 	char* pParameterName = nullptr;
@@ -602,6 +610,7 @@ ZEND_FUNCTION(hg_get_value)
 
 ZEND_FUNCTION(hg_set_meta)
 {
+	if(_disposed) RETURN_NULL();
 	unsigned long id = 0;
 	char* pName = nullptr;
 	int nameLength = 0;
@@ -618,6 +627,7 @@ ZEND_FUNCTION(hg_set_meta)
 
 ZEND_FUNCTION(hg_set_system)
 {
+	if(_disposed) RETURN_NULL();
 	char* pName = nullptr;
 	int nameLength = 0;
 	zval* newValue = nullptr;
@@ -632,6 +642,7 @@ ZEND_FUNCTION(hg_set_system)
 
 ZEND_FUNCTION(hg_set_value)
 {
+	if(_disposed) RETURN_NULL();
 	unsigned long id = 0;
 	long channel = -1;
 	char* pParameterName = nullptr;
@@ -652,6 +663,7 @@ ZEND_FUNCTION(hg_set_value)
 
 ZEND_FUNCTION(hg_auth)
 {
+	if(_disposed) RETURN_NULL();
 	char* pName = nullptr;
 	int nameLength = 0;
 	char* pPassword = nullptr;
@@ -664,6 +676,7 @@ ZEND_FUNCTION(hg_auth)
 
 ZEND_FUNCTION(hg_create_user)
 {
+	if(_disposed) RETURN_NULL();
 	char* pName = nullptr;
 	int nameLength = 0;
 	char* pPassword = nullptr;
@@ -678,6 +691,7 @@ ZEND_FUNCTION(hg_create_user)
 
 ZEND_FUNCTION(hg_delete_user)
 {
+	if(_disposed) RETURN_NULL();
 	char* pName = nullptr;
 	int nameLength = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
@@ -688,6 +702,7 @@ ZEND_FUNCTION(hg_delete_user)
 
 ZEND_FUNCTION(hg_update_user)
 {
+	if(_disposed) RETURN_NULL();
 	char* pName = nullptr;
 	int nameLength = 0;
 	char* pPassword = nullptr;
@@ -700,6 +715,7 @@ ZEND_FUNCTION(hg_update_user)
 
 ZEND_FUNCTION(hg_user_exists)
 {
+	if(_disposed) RETURN_NULL();
 	char* pName = nullptr;
 	int nameLength = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
@@ -710,6 +726,7 @@ ZEND_FUNCTION(hg_user_exists)
 
 ZEND_FUNCTION(hg_users)
 {
+	if(_disposed) RETURN_NULL();
 	std::map<uint64_t, std::string> users;
 	User::getAll(users);
 	array_init(return_value);
@@ -721,6 +738,7 @@ ZEND_FUNCTION(hg_users)
 
 ZEND_FUNCTION(hg_poll_event)
 {
+	if(_disposed) RETURN_NULL();
 	long threadId = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &threadId) != SUCCESS) RETURN_NULL();
 	PhpEvents::eventsMapMutex.lock();
@@ -782,6 +800,7 @@ ZEND_FUNCTION(hg_poll_event)
 
 ZEND_FUNCTION(hg_peer_exists)
 {
+	if(_disposed) RETURN_NULL();
 	unsigned long peerId = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &peerId) != SUCCESS) RETURN_NULL();
 	if(GD::familyController->peerExists(peerId)) RETURN_TRUE
@@ -790,6 +809,7 @@ ZEND_FUNCTION(hg_peer_exists)
 
 ZEND_FUNCTION(hg_subscribe_peer)
 {
+	if(_disposed) RETURN_NULL();
 	long threadId = 0;
 	long peerId = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &threadId, &peerId) != SUCCESS) RETURN_NULL();
@@ -810,6 +830,7 @@ ZEND_FUNCTION(hg_subscribe_peer)
 
 ZEND_FUNCTION(hg_unsubscribe_peer)
 {
+	if(_disposed) RETURN_NULL();
 	long threadId = 0;
 	long peerId = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &threadId, &peerId) != SUCCESS) RETURN_NULL();
@@ -830,6 +851,7 @@ ZEND_FUNCTION(hg_unsubscribe_peer)
 
 ZEND_FUNCTION(hg_log)
 {
+	if(_disposed) RETURN_NULL();
 	long debugLevel = 3;
 	char* pMessage = nullptr;
 	int messageLength = 0;
@@ -841,12 +863,13 @@ ZEND_FUNCTION(hg_log)
 
 ZEND_FUNCTION(hg_shutting_down)
 {
-	if(GD::bl->shuttingDown) RETURN_TRUE
+	if(_disposed || GD::bl->shuttingDown) RETURN_TRUE
 	RETURN_FALSE
 }
 
 ZEND_FUNCTION(hg_gpio_open)
 {
+	if(_disposed) RETURN_NULL();
 	long gpio = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
 	_gpio->openDevice(gpio, false);
@@ -854,6 +877,7 @@ ZEND_FUNCTION(hg_gpio_open)
 
 ZEND_FUNCTION(hg_gpio_close)
 {
+	if(_disposed) RETURN_NULL();
 	long gpio = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
 	_gpio->closeDevice(gpio);
@@ -861,6 +885,7 @@ ZEND_FUNCTION(hg_gpio_close)
 
 ZEND_FUNCTION(hg_gpio_set_direction)
 {
+	if(_disposed) RETURN_NULL();
 	long gpio = -1;
 	long direction = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &direction) != SUCCESS) RETURN_NULL();
@@ -869,6 +894,7 @@ ZEND_FUNCTION(hg_gpio_set_direction)
 
 ZEND_FUNCTION(hg_gpio_set_edge)
 {
+	if(_disposed) RETURN_NULL();
 	long gpio = -1;
 	long edge = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &edge) != SUCCESS) RETURN_NULL();
@@ -877,6 +903,7 @@ ZEND_FUNCTION(hg_gpio_set_edge)
 
 ZEND_FUNCTION(hg_gpio_get)
 {
+	if(_disposed) RETURN_NULL();
 	long gpio = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
 	if(_gpio->get(gpio))
@@ -891,6 +918,7 @@ ZEND_FUNCTION(hg_gpio_get)
 
 ZEND_FUNCTION(hg_gpio_set)
 {
+	if(_disposed) RETURN_NULL();
 	long gpio = -1;
 	zend_bool value = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "lb", &gpio, &value) != SUCCESS) RETURN_NULL();
@@ -899,6 +927,7 @@ ZEND_FUNCTION(hg_gpio_set)
 
 ZEND_FUNCTION(hg_gpio_poll)
 {
+	if(_disposed) RETURN_NULL();
 	long gpio = -1;
 	long timeout = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &timeout) != SUCCESS) RETURN_NULL();
@@ -961,6 +990,7 @@ ZEND_FUNCTION(hg_gpio_poll)
 
 ZEND_METHOD(Homegear, __call)
 {
+	if(_disposed) RETURN_NULL();
 	char* pMethodName = nullptr;
 	int methodNameLength = 0;
 	zval* args = nullptr;
@@ -972,6 +1002,7 @@ ZEND_METHOD(Homegear, __call)
 
 ZEND_METHOD(Homegear, __callStatic)
 {
+	if(_disposed) RETURN_NULL();
 	char* pMethodName = nullptr;
 	int methodNameLength = 0;
 	zval* args = nullptr;
@@ -1019,6 +1050,7 @@ int php_homegear_init()
 {
 	_http = new BaseLib::HTTP();
 	_gpio = new BaseLib::Gpio(GD::bl.get());
+	_disposed = false;
 	pthread_key_create(&pthread_key, pthread_data_destructor);
 	tsrm_startup(20, 1, 0, NULL);
 	php_homegear_sapi_module.ini_defaults = homegear_ini_defaults;
@@ -1039,6 +1071,7 @@ int php_homegear_init()
 
 void php_homegear_shutdown()
 {
+	_disposed = true;
 	php_homegear_sapi_module.shutdown(&php_homegear_sapi_module);
 	sapi_shutdown();
 
