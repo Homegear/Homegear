@@ -339,8 +339,8 @@ GD/GD.o: GD/GD.cpp /usr/include/stdc-predef.h GD/GD.h GD/../../config.h \
  /usr/include/homegear-base/Database/DatabaseTypes.h \
  /usr/include/sqlite3.h GD/../RPC/Server.h GD/../RPC/Client.h \
  GD/../RPC/RpcClient.h GD/../RPC/ClientSettings.h GD/../RPC/Auth.h \
- GD/../RPC/RemoteRpcServer.h GD/../UPnP/UPnP.h GD/../MQTT/MQTT.h \
- GD/../MQTT/MQTTSettings.h
+ GD/../RPC/RemoteRpcServer.h GD/../MQTT/Mqtt.h GD/../MQTT/MqttSettings.h \
+ GD/../UPnP/UPnP.h
 
 /usr/include/stdc-predef.h:
 
@@ -1194,8 +1194,8 @@ GD/../RPC/Auth.h:
 
 GD/../RPC/RemoteRpcServer.h:
 
+GD/../MQTT/Mqtt.h:
+
+GD/../MQTT/MqttSettings.h:
+
 GD/../UPnP/UPnP.h:
-
-GD/../MQTT/MQTT.h:
-
-GD/../MQTT/MQTTSettings.h:

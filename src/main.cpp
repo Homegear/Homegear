@@ -30,7 +30,6 @@
 
 #include "GD/GD.h"
 #include "UPnP/UPnP.h"
-#include "MQTT/MQTT.h"
 #include "homegear-base/BaseLib.h"
 #include "homegear-base/HelperFunctions/HelperFunctions.h"
 
@@ -51,6 +50,7 @@
 #include <algorithm>
 
 #include <gcrypt.h>
+#include "MQTT/Mqtt.h"
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
@@ -537,7 +537,7 @@ int main(int argc, char* argv[])
 			GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
 			GD::out.printInfo("Loading RPC client settings from " + GD::bl->settings.clientSettingsPath());
 			GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
-			GD::mqtt.reset(new MQTT());
+			GD::mqtt.reset(new Mqtt());
 			GD::mqtt->loadSettings();
 		// }}}
 

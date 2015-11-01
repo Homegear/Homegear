@@ -1,5 +1,7 @@
-main.o: main.cpp /usr/include/stdc-predef.h GD/GD.h GD/../../config.h \
- GD/../ScriptEngine/ScriptEngine.h GD/../ScriptEngine/php_config_fixes.h \
+MQTT/MqttSettings.o: MQTT/MqttSettings.cpp /usr/include/stdc-predef.h \
+ MQTT/../GD/GD.h MQTT/../GD/../../config.h \
+ MQTT/../GD/../ScriptEngine/ScriptEngine.h \
+ MQTT/../GD/../ScriptEngine/php_config_fixes.h \
  /usr/include/homegear-base/BaseLib.h \
  /usr/include/homegear-base/Database/DatabaseTypes.h \
  /usr/include/c++/4.8/string \
@@ -320,48 +322,41 @@ main.o: main.cpp /usr/include/stdc-predef.h GD/GD.h GD/../../config.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
  /usr/include/homegear-base/Variable.h \
  /usr/include/homegear-base/IQueue.h /usr/include/wordexp.h \
- GD/../CLI/CLIServer.h GD/../CLI/../User/User.h \
- GD/../CLI/../Systems/FamilyController.h /usr/include/dlfcn.h \
+ MQTT/../GD/../CLI/CLIServer.h MQTT/../GD/../CLI/../User/User.h \
+ MQTT/../GD/../CLI/../Systems/FamilyController.h /usr/include/dlfcn.h \
  /usr/include/x86_64-linux-gnu/bits/dlfcn.h \
  /usr/include/x86_64-linux-gnu/sys/stat.h \
- /usr/include/x86_64-linux-gnu/sys/un.h GD/../CLI/CLIClient.h \
- GD/../Events/EventHandler.h GD/../Events/../../config.h \
- GD/../Events/../RPC/Server.h GD/../Events/../RPC/RPCServer.h \
- GD/../Events/../RPC/RPCMethod.h GD/../Events/../RPC/Auth.h \
- GD/../Events/../RPC/../User/User.h GD/../Events/../RPC/Webserver.h \
- GD/../Events/../RPC/RPCMethods.h \
- GD/../Events/../RPC/../Events/EventHandler.h \
- GD/../Systems/FamilyController.h GD/../Systems/PhysicalInterfaces.h \
- GD/../Systems/DatabaseController.h \
+ /usr/include/x86_64-linux-gnu/sys/un.h MQTT/../GD/../CLI/CLIClient.h \
+ MQTT/../GD/../Events/EventHandler.h MQTT/../GD/../Events/../../config.h \
+ MQTT/../GD/../Events/../RPC/Server.h \
+ MQTT/../GD/../Events/../RPC/RPCServer.h \
+ MQTT/../GD/../Events/../RPC/RPCMethod.h \
+ MQTT/../GD/../Events/../RPC/Auth.h \
+ MQTT/../GD/../Events/../RPC/../User/User.h \
+ MQTT/../GD/../Events/../RPC/Webserver.h \
+ MQTT/../GD/../Events/../RPC/RPCMethods.h \
+ MQTT/../GD/../Events/../RPC/../Events/EventHandler.h \
+ MQTT/../GD/../Systems/FamilyController.h \
+ MQTT/../GD/../Systems/PhysicalInterfaces.h \
+ MQTT/../GD/../Systems/DatabaseController.h \
  /usr/include/homegear-base/Encoding/RPCEncoder.h \
  /usr/include/homegear-base/Encoding/RPCDecoder.h \
- GD/../Systems/../Database/SQLite3.h \
+ MQTT/../GD/../Systems/../Database/SQLite3.h \
  /usr/include/homegear-base/Database/DatabaseTypes.h \
- /usr/include/sqlite3.h GD/../RPC/Server.h GD/../RPC/Client.h \
- GD/../RPC/RpcClient.h GD/../RPC/ClientSettings.h GD/../RPC/Auth.h \
- GD/../RPC/RemoteRpcServer.h UPnP/UPnP.h \
- /usr/include/homegear-base/HelperFunctions/HelperFunctions.h \
- /usr/include/readline/readline.h /usr/include/readline/rlstdc.h \
- /usr/include/readline/rltypedefs.h /usr/include/readline/keymaps.h \
- /usr/include/readline/chardefs.h /usr/include/readline/tilde.h \
- /usr/include/readline/history.h /usr/include/execinfo.h \
- /usr/include/x86_64-linux-gnu/sys/resource.h \
- /usr/include/x86_64-linux-gnu/bits/resource.h \
- /usr/include/x86_64-linux-gnu/sys/file.h \
- /usr/include/x86_64-linux-gnu/sys/sysctl.h /usr/include/linux/sysctl.h \
- /usr/include/linux/kernel.h /usr/include/linux/types.h \
- /usr/include/x86_64-linux-gnu/bits/sysctl.h MQTT/Mqtt.h \
- MQTT/MqttSettings.h
+ /usr/include/sqlite3.h MQTT/../GD/../RPC/Server.h \
+ MQTT/../GD/../RPC/Client.h MQTT/../GD/../RPC/RpcClient.h \
+ MQTT/../GD/../RPC/ClientSettings.h MQTT/../GD/../RPC/Auth.h \
+ MQTT/../GD/../RPC/RemoteRpcServer.h MQTT/MqttSettings.h
 
 /usr/include/stdc-predef.h:
 
-GD/GD.h:
+MQTT/../GD/GD.h:
 
-GD/../../config.h:
+MQTT/../GD/../../config.h:
 
-GD/../ScriptEngine/ScriptEngine.h:
+MQTT/../GD/../ScriptEngine/ScriptEngine.h:
 
-GD/../ScriptEngine/php_config_fixes.h:
+MQTT/../GD/../ScriptEngine/php_config_fixes.h:
 
 /usr/include/homegear-base/BaseLib.h:
 
@@ -1141,11 +1136,11 @@ GD/../ScriptEngine/php_config_fixes.h:
 
 /usr/include/wordexp.h:
 
-GD/../CLI/CLIServer.h:
+MQTT/../GD/../CLI/CLIServer.h:
 
-GD/../CLI/../User/User.h:
+MQTT/../GD/../CLI/../User/User.h:
 
-GD/../CLI/../Systems/FamilyController.h:
+MQTT/../GD/../CLI/../Systems/FamilyController.h:
 
 /usr/include/dlfcn.h:
 
@@ -1155,92 +1150,54 @@ GD/../CLI/../Systems/FamilyController.h:
 
 /usr/include/x86_64-linux-gnu/sys/un.h:
 
-GD/../CLI/CLIClient.h:
+MQTT/../GD/../CLI/CLIClient.h:
 
-GD/../Events/EventHandler.h:
+MQTT/../GD/../Events/EventHandler.h:
 
-GD/../Events/../../config.h:
+MQTT/../GD/../Events/../../config.h:
 
-GD/../Events/../RPC/Server.h:
+MQTT/../GD/../Events/../RPC/Server.h:
 
-GD/../Events/../RPC/RPCServer.h:
+MQTT/../GD/../Events/../RPC/RPCServer.h:
 
-GD/../Events/../RPC/RPCMethod.h:
+MQTT/../GD/../Events/../RPC/RPCMethod.h:
 
-GD/../Events/../RPC/Auth.h:
+MQTT/../GD/../Events/../RPC/Auth.h:
 
-GD/../Events/../RPC/../User/User.h:
+MQTT/../GD/../Events/../RPC/../User/User.h:
 
-GD/../Events/../RPC/Webserver.h:
+MQTT/../GD/../Events/../RPC/Webserver.h:
 
-GD/../Events/../RPC/RPCMethods.h:
+MQTT/../GD/../Events/../RPC/RPCMethods.h:
 
-GD/../Events/../RPC/../Events/EventHandler.h:
+MQTT/../GD/../Events/../RPC/../Events/EventHandler.h:
 
-GD/../Systems/FamilyController.h:
+MQTT/../GD/../Systems/FamilyController.h:
 
-GD/../Systems/PhysicalInterfaces.h:
+MQTT/../GD/../Systems/PhysicalInterfaces.h:
 
-GD/../Systems/DatabaseController.h:
+MQTT/../GD/../Systems/DatabaseController.h:
 
 /usr/include/homegear-base/Encoding/RPCEncoder.h:
 
 /usr/include/homegear-base/Encoding/RPCDecoder.h:
 
-GD/../Systems/../Database/SQLite3.h:
+MQTT/../GD/../Systems/../Database/SQLite3.h:
 
 /usr/include/homegear-base/Database/DatabaseTypes.h:
 
 /usr/include/sqlite3.h:
 
-GD/../RPC/Server.h:
+MQTT/../GD/../RPC/Server.h:
 
-GD/../RPC/Client.h:
+MQTT/../GD/../RPC/Client.h:
 
-GD/../RPC/RpcClient.h:
+MQTT/../GD/../RPC/RpcClient.h:
 
-GD/../RPC/ClientSettings.h:
+MQTT/../GD/../RPC/ClientSettings.h:
 
-GD/../RPC/Auth.h:
+MQTT/../GD/../RPC/Auth.h:
 
-GD/../RPC/RemoteRpcServer.h:
-
-UPnP/UPnP.h:
-
-/usr/include/homegear-base/HelperFunctions/HelperFunctions.h:
-
-/usr/include/readline/readline.h:
-
-/usr/include/readline/rlstdc.h:
-
-/usr/include/readline/rltypedefs.h:
-
-/usr/include/readline/keymaps.h:
-
-/usr/include/readline/chardefs.h:
-
-/usr/include/readline/tilde.h:
-
-/usr/include/readline/history.h:
-
-/usr/include/execinfo.h:
-
-/usr/include/x86_64-linux-gnu/sys/resource.h:
-
-/usr/include/x86_64-linux-gnu/bits/resource.h:
-
-/usr/include/x86_64-linux-gnu/sys/file.h:
-
-/usr/include/x86_64-linux-gnu/sys/sysctl.h:
-
-/usr/include/linux/sysctl.h:
-
-/usr/include/linux/kernel.h:
-
-/usr/include/linux/types.h:
-
-/usr/include/x86_64-linux-gnu/bits/sysctl.h:
-
-MQTT/Mqtt.h:
+MQTT/../GD/../RPC/RemoteRpcServer.h:
 
 MQTT/MqttSettings.h:
