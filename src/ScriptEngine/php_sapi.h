@@ -39,6 +39,7 @@
 #include <string>
 #include <vector>
 #include <iterator>
+#include <map>
 
 #include <php.h>
 #include <SAPI.h>
@@ -50,6 +51,7 @@
 #include <zend_exceptions.h>
 #include <ext/standard/info.h>
 
+
 typedef struct _zend_homegear_globals
 {
 	BaseLib::HTTP* http = nullptr;
@@ -59,6 +61,14 @@ typedef struct _zend_homegear_globals
 	bool cookiesParsed = false;
 	int64_t peerId = 0;
 } zend_homegear_globals;
+
+typedef struct _zend_homegear_superglobals
+{
+	BaseLib::HTTP* http;
+	BaseLib::Gpio* gpio;
+	std::mutex serialDevicesMutex;
+	std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>> serialDevices;
+} zend_homegear_superglobals;
 
 zend_homegear_globals* php_homegear_get_globals();
 void php_homegear_build_argv(std::vector<std::string>& arguments);
