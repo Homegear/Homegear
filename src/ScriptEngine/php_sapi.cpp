@@ -33,11 +33,11 @@
 #include "PhpVariableConverter.h"
 
 static bool _disposed = true;
-static BaseLib::HTTP* _http;
-static BaseLib::Gpio* _gpio;
+static zend_homegear_superglobals _superglobals;
 static pthread_key_t pthread_key;
 static zend_class_entry* homegear_class_entry = nullptr;
 static zend_class_entry* homegear_gpio_class_entry = nullptr;
+static zend_class_entry* homegear_serial_class_entry = nullptr;
 static zend_class_entry* homegear_exception_class_entry = nullptr;
 static char* ini_path_override = nullptr;
 static char* ini_entries = nullptr;
@@ -91,6 +91,10 @@ ZEND_FUNCTION(hg_gpio_set_edge);
 ZEND_FUNCTION(hg_gpio_get);
 ZEND_FUNCTION(hg_gpio_set);
 ZEND_FUNCTION(hg_gpio_poll);
+ZEND_FUNCTION(hg_serial_open);
+ZEND_FUNCTION(hg_serial_close);
+ZEND_FUNCTION(hg_serial_read);
+ZEND_FUNCTION(hg_serial_write);
 
 static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(get_thread_id, NULL)
@@ -120,6 +124,10 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_gpio_get, NULL)
 	ZEND_FE(hg_gpio_set, NULL)
 	ZEND_FE(hg_gpio_poll, NULL)
+	ZEND_FE(hg_serial_open, NULL)
+	ZEND_FE(hg_serial_close, NULL)
+	ZEND_FE(hg_serial_read, NULL)
+	ZEND_FE(hg_serial_write, NULL)
 	{NULL, NULL, NULL}
 };
 
@@ -372,7 +380,7 @@ static int php_homegear_send_headers(sapi_headers_struct* sapi_headers)
 	}
 	else
 	{
-		std::string status = "HTTP/1.1 " + std::to_string(sapi_headers->http_response_code) + " " + _http->getStatusText(sapi_headers->http_response_code) + "\r\n";
+		std::string status = "HTTP/1.1 " + std::to_string(sapi_headers->http_response_code) + " " + _superglobals.http->getStatusText(sapi_headers->http_response_code) + "\r\n";
 		out.insert(out.end(), &status[0], &status[0] + status.size());
 	}
 	zend_llist_element* element = sapi_headers->headers.head;
@@ -872,7 +880,7 @@ ZEND_FUNCTION(hg_gpio_open)
 	if(_disposed) RETURN_NULL();
 	long gpio = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
-	_gpio->openDevice(gpio, false);
+	_superglobals.gpio->openDevice(gpio, false);
 }
 
 ZEND_FUNCTION(hg_gpio_close)
@@ -880,7 +888,7 @@ ZEND_FUNCTION(hg_gpio_close)
 	if(_disposed) RETURN_NULL();
 	long gpio = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
-	_gpio->closeDevice(gpio);
+	_superglobals.gpio->closeDevice(gpio);
 }
 
 ZEND_FUNCTION(hg_gpio_set_direction)
@@ -889,7 +897,7 @@ ZEND_FUNCTION(hg_gpio_set_direction)
 	long gpio = -1;
 	long direction = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &direction) != SUCCESS) RETURN_NULL();
-	_gpio->setDirection(gpio, (BaseLib::Gpio::GpioDirection::Enum)direction);
+	_superglobals.gpio->setDirection(gpio, (BaseLib::Gpio::GpioDirection::Enum)direction);
 }
 
 ZEND_FUNCTION(hg_gpio_set_edge)
@@ -898,7 +906,7 @@ ZEND_FUNCTION(hg_gpio_set_edge)
 	long gpio = -1;
 	long edge = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &edge) != SUCCESS) RETURN_NULL();
-	_gpio->setEdge(gpio, (BaseLib::Gpio::GpioEdge::Enum)edge);
+	_superglobals.gpio->setEdge(gpio, (BaseLib::Gpio::GpioEdge::Enum)edge);
 }
 
 ZEND_FUNCTION(hg_gpio_get)
@@ -906,7 +914,7 @@ ZEND_FUNCTION(hg_gpio_get)
 	if(_disposed) RETURN_NULL();
 	long gpio = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
-	if(_gpio->get(gpio))
+	if(_superglobals.gpio->get(gpio))
 	{
 		RETURN_TRUE;
 	}
@@ -922,7 +930,7 @@ ZEND_FUNCTION(hg_gpio_set)
 	long gpio = -1;
 	zend_bool value = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "lb", &gpio, &value) != SUCCESS) RETURN_NULL();
-	_gpio->set(gpio, (bool)value);
+	_superglobals.gpio->set(gpio, (bool)value);
 }
 
 ZEND_FUNCTION(hg_gpio_poll)
@@ -937,7 +945,7 @@ ZEND_FUNCTION(hg_gpio_poll)
 		ZVAL_LONG(return_value, -1);
 		return;
 	}
-	BaseLib::PFileDescriptor fileDescriptor = _gpio->getFileDescriptor(gpio);
+	BaseLib::PFileDescriptor fileDescriptor = _superglobals.gpio->getFileDescriptor(gpio);
 	if(!fileDescriptor)
 	{
 		ZVAL_LONG(return_value, -1);
@@ -959,14 +967,14 @@ ZEND_FUNCTION(hg_gpio_poll)
 	}
 	else if(pollResult == -1)
 	{
-		_gpio->closeDevice(gpio);
+		_superglobals.gpio->closeDevice(gpio);
 		ZVAL_LONG(return_value, -1);
 		return;
 	}
 
 	if(lseek(fileDescriptor->descriptor, 0, SEEK_SET) == -1)
 	{
-		_gpio->closeDevice(gpio);
+		_superglobals.gpio->closeDevice(gpio);
 		ZVAL_LONG(return_value, -1);
 		return;
 	}
@@ -985,6 +993,143 @@ ZEND_FUNCTION(hg_gpio_poll)
 	else
 	{
 		ZVAL_LONG(return_value, 0);
+	}
+}
+
+ZEND_FUNCTION(hg_serial_open)
+{
+	try
+	{
+		if(_disposed) RETURN_NULL();
+		char* pDevice = nullptr;
+		int deviceLength = 0;
+		long baudrate = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "sl", &pDevice, &deviceLength, &baudrate) != SUCCESS) RETURN_NULL();
+		std::string device(pDevice, deviceLength);
+		std::shared_ptr<BaseLib::SerialReaderWriter> serialDevice(new BaseLib::SerialReaderWriter(GD::bl.get(), device, baudrate, 0, true, -1));
+		serialDevice->openDevice(false);
+		if(serialDevice->isOpen())
+		{
+			int32_t descriptor = serialDevice->fileDescriptor()->descriptor;
+			_superglobals.serialDevicesMutex.lock();
+			_superglobals.serialDevices.insert(std::pair<int, std::shared_ptr<BaseLib::SerialReaderWriter>>(descriptor, serialDevice));
+			_superglobals.serialDevicesMutex.unlock();
+			ZVAL_LONG(return_value, descriptor);
+		}
+		else
+		{
+			ZVAL_LONG(return_value, -1);
+		}
+	}
+	catch(BaseLib::SerialReaderWriterException& ex)
+	{
+		GD::out.printError("Script engine: " + ex.what());
+		ZVAL_LONG(return_value, -1);
+	}
+}
+
+ZEND_FUNCTION(hg_serial_close)
+{
+	try
+	{
+		if(_disposed) RETURN_NULL();
+		long id = -1;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &id) != SUCCESS) RETURN_NULL();
+		_superglobals.serialDevicesMutex.lock();
+		std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>>::iterator deviceIterator = _superglobals.serialDevices.find(id);
+		if(deviceIterator != _superglobals.serialDevices.end())
+		{
+			if(deviceIterator->second) deviceIterator->second->closeDevice();
+			_superglobals.serialDevices.erase(id);
+		}
+		_superglobals.serialDevicesMutex.unlock();
+	}
+	catch(BaseLib::SerialReaderWriterException& ex)
+	{
+		GD::out.printError("Script engine: " + ex.what());
+		ZVAL_LONG(return_value, -1);
+	}
+}
+
+ZEND_FUNCTION(hg_serial_read)
+{
+	try
+	{
+		if(_disposed) RETURN_NULL();
+		long id = -1;
+		long timeout = -1;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &id, &timeout) != SUCCESS) RETURN_NULL();
+		if(timeout < 0)
+		{
+			ZVAL_LONG(return_value, -1);
+			return;
+		}
+		if(timeout > 5000) timeout = 5000;
+		std::shared_ptr<BaseLib::SerialReaderWriter> serialReaderWriter;
+		_superglobals.serialDevicesMutex.lock();
+		std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>>::iterator deviceIterator = _superglobals.serialDevices.find(id);
+		if(deviceIterator != _superglobals.serialDevices.end())
+		{
+			if(deviceIterator->second) serialReaderWriter = deviceIterator->second;
+		}
+		_superglobals.serialDevicesMutex.unlock();
+		if(!serialReaderWriter)
+		{
+			ZVAL_LONG(return_value, -1);
+			return;
+		}
+		std::string data;
+		int32_t result = serialReaderWriter->readLine(data, timeout * 1000);
+		if(result == -1)
+		{
+			ZVAL_LONG(return_value, -1);
+			return;
+		}
+		else if(result == 1)
+		{
+			ZVAL_LONG(return_value, -2);
+			return;
+		}
+		if(data.empty()) ZVAL_STRINGL(return_value, "", 0); //At least once, input->stringValue.c_str() on an empty string was a nullptr causing a segementation fault, so check for empty string
+		else ZVAL_STRINGL(return_value, data.c_str(), data.size());
+	}
+	catch(BaseLib::SerialReaderWriterException& ex)
+	{
+		GD::out.printError("Script engine: " + ex.what());
+		ZVAL_LONG(return_value, -1);
+	}
+}
+
+ZEND_FUNCTION(hg_serial_write)
+{
+	try
+	{
+		if(_disposed) RETURN_NULL();
+		long id = -1;
+		char* pData = nullptr;
+		int dataLength = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "ls", &id, &pData, &dataLength) != SUCCESS) RETURN_NULL();
+		std::shared_ptr<BaseLib::SerialReaderWriter> serialReaderWriter;
+		_superglobals.serialDevicesMutex.lock();
+		std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>>::iterator deviceIterator = _superglobals.serialDevices.find(id);
+		if(deviceIterator != _superglobals.serialDevices.end())
+		{
+			if(deviceIterator->second) serialReaderWriter = deviceIterator->second;
+		}
+		_superglobals.serialDevicesMutex.unlock();
+		if(!serialReaderWriter)
+		{
+			ZVAL_LONG(return_value, -1);
+			return;
+		}
+		std::string data(pData, dataLength);
+		if(data.size() > 0) serialReaderWriter->writeLine(data);
+		ZVAL_LONG(return_value, 0);
+	}
+	catch(BaseLib::SerialReaderWriterException& ex)
+	{
+		GD::out.printError("Script engine: " + ex.what());
+		ZVAL_LONG(return_value, -1);
 	}
 }
 
@@ -1046,10 +1191,18 @@ static const zend_function_entry homegear_gpio_methods[] = {
 	{NULL, NULL, NULL}
 };
 
+static const zend_function_entry homegear_serial_methods[] = {
+	ZEND_ME_MAPPING(open, hg_serial_open, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(close, hg_serial_close, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(read, hg_serial_read, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(write, hg_serial_write, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	{NULL, NULL, NULL}
+};
+
 int php_homegear_init()
 {
-	_http = new BaseLib::HTTP();
-	_gpio = new BaseLib::Gpio(GD::bl.get());
+	_superglobals.http = new BaseLib::HTTP();
+	_superglobals.gpio = new BaseLib::Gpio(GD::bl.get());
 	_disposed = false;
 	pthread_key_create(&pthread_key, pthread_data_destructor);
 	tsrm_startup(20, 1, 0, NULL);
@@ -1072,6 +1225,7 @@ int php_homegear_init()
 void php_homegear_shutdown()
 {
 	_disposed = true;
+	if(_disposed) return;
 	php_homegear_sapi_module.shutdown(&php_homegear_sapi_module);
 	sapi_shutdown();
 
@@ -1080,16 +1234,19 @@ void php_homegear_shutdown()
 	tsrm_shutdown();
 	if(ini_path_override) free(ini_path_override);
 	if(ini_entries) free(ini_entries);
-	if(_http)
+	if(_superglobals.http)
 	{
-		delete(_http);
-		_http = nullptr;
+		delete(_superglobals.http);
+		_superglobals.http = nullptr;
 	}
-	if(_gpio)
+	if(_superglobals.gpio)
 	{
-		delete(_gpio);
-		_gpio = nullptr;
+		delete(_superglobals.gpio);
+		_superglobals.gpio = nullptr;
 	}
+	_superglobals.serialDevicesMutex.lock();
+	_superglobals.serialDevices.clear();
+	_superglobals.serialDevicesMutex.unlock();
 }
 
 static int php_homegear_startup(sapi_module_struct* sapi_module)
@@ -1123,6 +1280,10 @@ static PHP_MINIT_FUNCTION(homegear)
 	zend_class_entry homegearGpioCe;
 	INIT_CLASS_ENTRY(homegearGpioCe, "Homegear\\HomegearGpio", homegear_gpio_methods);
 	homegear_gpio_class_entry = zend_register_internal_class(&homegearGpioCe);
+
+	zend_class_entry homegearSerialCe;
+	INIT_CLASS_ENTRY(homegearSerialCe, "Homegear\\HomegearSerial", homegear_serial_methods);
+	homegear_serial_class_entry = zend_register_internal_class(&homegearSerialCe);
 
     return SUCCESS;
 }
