@@ -90,6 +90,9 @@ void Mqtt::start()
 		_out.setPrefix("MQTT Client: ");
 		_jsonEncoder = std::unique_ptr<BaseLib::RPC::JsonEncoder>(new BaseLib::RPC::JsonEncoder(GD::bl.get()));
 		_jsonDecoder = std::unique_ptr<BaseLib::RPC::JsonDecoder>(new BaseLib::RPC::JsonDecoder(GD::bl.get()));
+		_socket.reset(new BaseLib::SocketOperations(GD::bl.get(), _settings.brokerHostname(), _settings.brokerPort(), _settings.enableSSL(), _settings.caFile(), _settings.verifyCertificate()));
+		if(_listenThread.joinable()) _listenThread.join();
+		_listenThread = std::thread(&Mqtt::listen, this);
 		connect();
 		if(_pingThread.joinable()) _pingThread.join();
 		_pingThread = std::thread(&Mqtt::ping, this);
@@ -116,6 +119,11 @@ void Mqtt::stop()
 		stopQueue(0);
 		disconnect();
 		if(_pingThread.joinable()) _pingThread.join();
+		if(_listenThread.joinable()) _listenThread.join();
+		_reconnectThreadMutex.lock();
+		if(_reconnectThread.joinable()) _reconnectThread.join();
+		_reconnectThreadMutex.unlock();
+		_socket.reset(new BaseLib::SocketOperations(GD::bl.get()));
 	}
 	catch(const std::exception& ex)
 	{
@@ -129,6 +137,27 @@ void Mqtt::stop()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+}
+
+uint32_t Mqtt::getLength(std::vector<char> packet, uint32_t& lengthBytes)
+{
+	// From section 2.2.3 of the MQTT specification version 3.1.1
+	uint32_t multiplier = 1;
+	uint32_t value = 0;
+	uint32_t pos = 1;
+	char encodedByte = 0;
+	lengthBytes = 0;
+	do
+	{
+		if(pos >= packet.size()) return 0;
+		encodedByte = packet[pos];
+		lengthBytes++;
+		value += ((uint32_t)(encodedByte & 127)) * multiplier;
+		multiplier *= 128;
+		pos++;
+		if(multiplier > 128 * 128 * 128) return 0;
+	} while ((encodedByte & 128) != 0);
+	return value;
 }
 
 std::vector<char> Mqtt::getLengthBytes(uint32_t length)
@@ -172,54 +201,108 @@ void Mqtt::printConnectionError(char resultCode)
 	}
 }
 
-uint32_t Mqtt::getResponse(const std::vector<char>& packet, std::vector<char>& responseBuffer, bool reconnect, bool errors)
+void Mqtt::getResponseByType(const std::vector<char>& packet, std::vector<char>& responseBuffer, uint8_t responseType, bool errors)
 {
-	_getResponseMutex.lock();
 	try
 	{
-		for(int32_t i = 0; i < 5; i++)
+		if(!_socket->connected())
 		{
-			if(!_socket->connected() && reconnect)
-			{
-				_getResponseMutex.unlock();
-				connect();
-				_getResponseMutex.lock();
-			}
-			if(!_socket->connected())
-			{
-				if(errors) _out.printError("Error: Could not send packet to MQTT server, because we are not connected.");
-				_getResponseMutex.unlock();
-				return 0;
-			}
-			try
-			{
-				_socket->proofwrite(packet);
-
-				uint32_t bytes = _socket->proofread(&responseBuffer.at(0), responseBuffer.size());
-				_getResponseMutex.unlock();
-				return bytes;
-			}
-			catch(BaseLib::SocketClosedException&)
-			{
-				if(errors) _out.printError("Error: Socket closed while sending packet.");
-			}
-			catch(BaseLib::SocketTimeOutException& ex) { _socket->close(); }
+			if(errors) _out.printError("Error: Could not send packet to MQTT server, because we are not connected.");
+			return;
 		}
+		std::shared_ptr<RequestByType> request(new RequestByType());
+		_requestsByTypeMutex.lock();
+		_requestsByType[responseType] = request;
+		_requestsByTypeMutex.unlock();
+		std::unique_lock<std::mutex> lock(request->mutex);
+		try
+		{
+			_socket->proofwrite(packet);
+
+			if(!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(5000), [&] { return request->mutexReady; }))
+			{
+				if(errors) _out.printError("Error: No response received to packet: " + GD::bl->hf.getHexString(packet));
+			}
+			responseBuffer = request->response;
+
+			_requestsByTypeMutex.lock();
+			_requestsByType.erase(responseType);
+			_requestsByTypeMutex.unlock();
+			return;
+		}
+		catch(BaseLib::SocketClosedException&)
+		{
+			if(errors) _out.printError("Error: Socket closed while sending packet.");
+		}
+		catch(BaseLib::SocketTimeOutException& ex) { _socket->close(); }
 	}
 	catch(const std::exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_requestsByTypeMutex.unlock();
 	}
 	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_requestsByTypeMutex.unlock();
 	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		_requestsByTypeMutex.unlock();
 	}
-	_getResponseMutex.unlock();
-	return 0;
+}
+
+void Mqtt::getResponse(const std::vector<char>& packet, std::vector<char>& responseBuffer, uint8_t responseType, int16_t packetId, bool errors)
+{
+	try
+	{
+		if(!_socket->connected())
+		{
+			_out.printError("Error: Could not send packet to MQTT server, because we are not connected.");
+			return;
+		}
+		std::shared_ptr<Request> request(new Request(responseType));
+		_requestsMutex.lock();
+		_requests[packetId] = request;
+		_requestsMutex.unlock();
+		std::unique_lock<std::mutex> lock(request->mutex);
+		try
+		{
+			send(packet);
+
+			if(!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(5000), [&] { return request->mutexReady; }))
+			{
+				if(errors) _out.printError("Error: No response received to packet: " + GD::bl->hf.getHexString(packet));
+			}
+			responseBuffer = request->response;
+
+			_requestsMutex.lock();
+			_requests.erase(packetId);
+			_requestsMutex.unlock();
+			return;
+		}
+		catch(BaseLib::SocketClosedException&)
+		{
+			_out.printError("Error: Socket closed while sending packet.");
+		}
+		catch(BaseLib::SocketTimeOutException& ex) { _socket->close(); }
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_requestsMutex.unlock();
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_requestsMutex.unlock();
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		_requestsMutex.unlock();
+	}
 }
 
 void Mqtt::ping()
@@ -228,17 +311,15 @@ void Mqtt::ping()
 	{
 		std::vector<char> ping { (char)0xC0, 0 };
 		std::vector<char> pong(5);
-		uint32_t bytes = 0;
 		int32_t i = 0;
 		while(_started)
 		{
 			if(_connected)
 			{
-				bytes = getResponse(ping, pong);
-				if(bytes != 2 || pong[0] != (char)0xD0 || pong[1] != 0)
+				getResponseByType(ping, pong, 0xD0);
+				if(pong.empty())
 				{
-					if(bytes != 2) _out.printError("Error: PINGRESP packet has wrong size.");
-					else _out.printError("Error: PINGRESP packet has wrong content.");
+					_out.printError("Error: No PINGRESP received.");
 					_socket->close();
 				}
 			}
@@ -265,8 +346,398 @@ void Mqtt::ping()
 	}
 }
 
+void Mqtt::listen()
+{
+	std::vector<char> data;
+	int32_t bufferMax = 2048;
+	std::vector<char> buffer(bufferMax);
+	uint32_t bytesReceived = 0;
+	uint32_t length = 0;
+	uint32_t dataLength = 0;
+	uint32_t lengthBytes = 0;
+	while(_started)
+	{
+		try
+		{
+			if(!_socket->connected())
+			{
+				if(!_started) return;
+				reconnect();
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				continue;
+			}
+			try
+			{
+				do
+				{
+					bytesReceived = _socket->proofread(&buffer[0], bufferMax);
+					if(bytesReceived > 0)
+					{
+						data.insert(data.end(), &buffer.at(0), &buffer.at(0) + bytesReceived);
+						if(data.size() > 1000000)
+						{
+							_out.printError("Could not read packet: Too much data.");
+							break;
+						}
+					}
+					if(length == 0)
+					{
+						length = getLength(data, lengthBytes);
+						dataLength = length + lengthBytes + 1;
+					}
+
+					if(dataLength > 0 && data.size() > dataLength)
+					{
+						//Multiple MQTT packets in one TCP packet
+						std::vector<char> data2(&data.at(0), &data.at(dataLength - 1));
+						processData(data2);
+						data2 = std::vector<char>(&data.at(dataLength), &data.at(dataLength + (data.size() - dataLength - 1)));
+						data = data2;
+					}
+					if(bytesReceived == (unsigned)bufferMax)
+					{
+						//Check if packet size is exactly a multiple of bufferMax
+						if(data.size() == dataLength) break;
+					}
+				} while(bytesReceived == (unsigned)bufferMax);
+			}
+			catch(BaseLib::SocketClosedException& ex)
+			{
+				_out.printWarning("Warning: Subscriber connection to MQTT server closed.");
+				connect();
+				continue;
+			}
+			catch(BaseLib::SocketTimeOutException& ex)
+			{
+				continue;
+			}
+			catch(BaseLib::SocketOperationException& ex)
+			{
+				_out.printError("Error: " + ex.what());
+				connect();
+				continue;
+			}
+
+			if(data.empty()) continue;
+			if(data.size() > 1000000)
+			{
+				data.clear();
+				length = 0;
+				continue;
+			}
+
+			processData(data);
+			data.clear();
+			length = 0;
+		}
+		catch(const std::exception& ex)
+		{
+			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(BaseLib::Exception& ex)
+		{
+			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+		data.clear();
+		length = 0;
+	}
+}
+
+void Mqtt::processData(std::vector<char>& data)
+{
+	try
+	{
+		int16_t id = 0;
+		uint8_t type = 0;
+		if(data.size() == 2 && data.at(0) == (char)0xD0 && data.at(1) == 0)
+		{
+			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Received ping response.");
+			type = 0xD0;
+		}
+		else if(data.size() == 4 && data[0] == 0x20 && data[1] == 2 && data[2] == 0 && data[3] == 0) //CONNACK
+		{
+			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Received CONNACK.");
+			type = 0x20;
+		}
+		else if(data.size() == 4 && data[0] == 0x40 && data[1] == 2) //PUBACK
+		{
+			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Received PUBACK.");
+			id = (data[2] << 8) + data[3];
+		}
+		else if(data.size() == 5 && data[0] == (char)0x90 && data[1] == 3) //SUBACK
+		{
+			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Received SUBACK.");
+			id = (data[2] << 8) + data[3];
+		}
+		if(type != 0)
+		{
+			_requestsByTypeMutex.lock();
+			std::map<uint8_t, std::shared_ptr<RequestByType>>::iterator requestIterator = _requestsByType.find(type);
+			if(requestIterator != _requestsByType.end())
+			{
+				std::shared_ptr<RequestByType> request = requestIterator->second;
+				_requestsByTypeMutex.unlock();
+				request->response = data;
+				{
+					std::lock_guard<std::mutex> lock(request->mutex);
+					request->mutexReady = true;
+				}
+				request->conditionVariable.notify_one();
+				return;
+			}
+			else _requestsByTypeMutex.unlock();
+		}
+		if(id != 0)
+		{
+			_requestsMutex.lock();
+			std::map<int16_t, std::shared_ptr<Request>>::iterator requestIterator = _requests.find(id);
+			if(requestIterator != _requests.end())
+			{
+				std::shared_ptr<Request> request = requestIterator->second;
+				_requestsMutex.unlock();
+				if(data[0] == (char)request->getResponseControlByte())
+				{
+					request->response = data;
+					{
+						std::lock_guard<std::mutex> lock(request->mutex);
+						request->mutexReady = true;
+					}
+					request->conditionVariable.notify_one();
+					return;
+				}
+			}
+			else _requestsMutex.unlock();
+		}
+		if(data.size() > 4 && (data[0] & 0xF0) == 0x30) //PUBLISH
+		{
+			processPublish(data);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void Mqtt::processPublish(std::vector<char>& data)
+{
+	try
+	{
+		uint32_t lengthBytes = 0;
+		getLength(data, lengthBytes);
+		if(1 + lengthBytes >= data.size() - 1)
+		{
+			_out.printError("Error: Invalid packet format: " + BaseLib::HelperFunctions::getHexString(data));
+			return;
+		}
+		uint32_t idPos = 1 + lengthBytes + 2 + (data[1 + lengthBytes] << 8) + data[1 + lengthBytes + 1];
+		if(idPos >= data.size())
+		{
+			_out.printError("Error: Invalid packet format: " + BaseLib::HelperFunctions::getHexString(data));
+			return;
+		}
+		if((data[0] & 0x06) == 4)
+		{
+			_out.printError("Error: Received publish packet with QoS 2. That was not requested.");
+		}
+		else if((data[0] & 0x06) == 2)
+		{
+			std::vector<char> puback { 0x40, 2, data[idPos], data[idPos + 1] };
+			send(puback);
+		}
+		std::string topic(&data[1 + lengthBytes + 2], idPos - (1 + lengthBytes + 2));
+		if(idPos + 2 >= data.size())
+		{
+			_out.printError("Error: Packet has no data: " + BaseLib::HelperFunctions::getHexString(data));
+			return;
+		}
+		std::string payload(&data[idPos + 2], data.size() - (idPos + 2));
+		std::vector<std::string> parts = BaseLib::HelperFunctions::splitAll(topic, '/');
+		if(parts.size() == 6 && parts.at(2) == "value")
+		{
+			uint64_t peerId = BaseLib::Math::getNumber(parts.at(3));
+			int32_t channel = BaseLib::Math::getNumber(parts.at(4));
+			GD::out.printInfo("Info: MQTT RPC call received. Method: setValue");
+			BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
+			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
+			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));
+			BaseLib::PVariable value = _jsonDecoder->decode(payload);
+			if(value && value->arrayValue->size() > 0)
+			{
+				parameters->arrayValue->push_back(value->arrayValue->at(0));
+			}
+			BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("setValue", parameters);
+		}
+		else if(parts.size() == 3 && parts.at(2) == "rpc")
+		{
+			BaseLib::PVariable result = _jsonDecoder->decode(payload);
+			std::string methodName;
+			std::string clientId;
+			int32_t messageId = 0;
+			BaseLib::PVariable parameters;
+			if(result->type == BaseLib::VariableType::tStruct)
+			{
+				if(result->structValue->find("method") == result->structValue->end())
+				{
+					_out.printWarning("Warning: Could not decode JSON RPC packet from MQTT payload.");
+					return;
+				}
+				methodName = result->structValue->at("method")->stringValue;
+				if(result->structValue->find("id") != result->structValue->end()) messageId = result->structValue->at("id")->integerValue;
+				if(result->structValue->find("clientid") != result->structValue->end()) clientId = result->structValue->at("clientid")->stringValue;
+				if(result->structValue->find("params") != result->structValue->end()) parameters = result->structValue->at("params");
+				else parameters.reset(new BaseLib::Variable());
+			}
+			else
+			{
+				_out.printWarning("Warning: Could not decode MQTT RPC packet.");
+				return;
+			}
+			GD::out.printInfo("Info: MQTT RPC call received. Method: " + methodName);
+			BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(methodName, parameters);
+			std::shared_ptr<std::pair<std::string, std::vector<char>>> responseData(new std::pair<std::string, std::vector<char>>());
+			_jsonEncoder->encodeMQTTResponse(methodName, response, messageId, responseData->second);
+			responseData->first = (!clientId.empty()) ? clientId + "/rpcResult" : "rpcResult";
+			queueMessage(responseData);
+		}
+		else
+		{
+			_out.printWarning("Unknown topic: " + topic);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void Mqtt::send(const std::vector<char>& data)
+{
+	try
+	{
+		if(GD::bl->debugLevel >= 5) GD::bl->out.printDebug("Debug: Sending: " + BaseLib::HelperFunctions::getHexString(data));
+		_socket->proofwrite(data);
+	}
+	catch(BaseLib::SocketClosedException&)
+	{
+		_out.printError("Error: Socket closed while sending packet.");
+	}
+	catch(BaseLib::SocketTimeOutException& ex) { _socket->close(); }
+	catch(BaseLib::SocketOperationException& ex) { _socket->close(); }
+}
+
+void Mqtt::subscribe(std::string topic)
+{
+	try
+	{
+		std::vector<char> payload;
+		payload.reserve(200);
+		int16_t id = 0;
+		while(id == 0) id = _packetId++;
+		payload.push_back(id >> 8);
+		payload.push_back(id & 0xFF);
+		payload.push_back(topic.size() >> 8);
+		payload.push_back(topic.size() & 0xFF);
+		payload.insert(payload.end(), topic.begin(), topic.end());
+		payload.push_back(1); //QoS
+		std::vector<char> lengthBytes = getLengthBytes(payload.size());
+		std::vector<char> subscribePacket;
+		subscribePacket.reserve(1 + lengthBytes.size() + payload.size());
+		subscribePacket.push_back(0x82); //Control packet type
+		subscribePacket.insert(subscribePacket.end(), lengthBytes.begin(), lengthBytes.end());
+		subscribePacket.insert(subscribePacket.end(), payload.begin(), payload.end());
+		for(int32_t i = 0; i < 3; i++)
+		{
+			try
+			{
+				std::vector<char> response;
+				getResponse(subscribePacket, response, 0x90, id, false);
+				if(response.size() == 0 || (response.at(4) != 0 && response.at(4) != 1))
+				{
+					//Ignore => mosquitto does not send SUBACK
+				}
+				else break;
+			}
+			catch(BaseLib::SocketClosedException&)
+			{
+				_out.printError("Error: Socket closed while sending packet.");
+				break;
+			}
+			catch(BaseLib::SocketTimeOutException& ex)
+			{
+				_socket->close();
+				break;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void Mqtt::reconnect()
+{
+	if(!_started) return;
+	_reconnectThreadMutex.lock();
+	try
+	{
+		if(_reconnecting)
+		{
+			_reconnectThreadMutex.unlock();
+			return;
+		}
+		_reconnecting = true;
+		if(_reconnectThread.joinable())	_reconnectThread.join();
+		_reconnectThread = std::thread(&Mqtt::connect, this);
+	}
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _reconnectThreadMutex.unlock();
+}
+
 void Mqtt::connect()
 {
+	_reconnecting = true;
 	_connectMutex.lock();
 	for(int32_t i = 0; i < 5; i++)
 	{
@@ -275,10 +746,10 @@ void Mqtt::connect()
 			if(_socket->connected())
 			{
 				_connectMutex.unlock();
+				_reconnecting = false;
 				return;
 			}
 			_connected = false;
-			_socket.reset(new BaseLib::SocketOperations(GD::bl.get(), _settings.brokerHostname(), _settings.brokerPort(), _settings.enableSSL(), _settings.caFile(), _settings.verifyCertificate()));
 			_socket->setReadTimeout(5000000);
 			_socket->open();
 			std::vector<char> payload;
@@ -321,21 +792,25 @@ void Mqtt::connect()
 			connectPacket.insert(connectPacket.end(), lengthBytes.begin(), lengthBytes.end());
 			connectPacket.insert(connectPacket.end(), payload.begin(), payload.end());
 			std::vector<char> response(10);
-			uint32_t bytes = getResponse(connectPacket, response, false, false);
+			getResponseByType(connectPacket, response, 0x20, false);
 			bool retry = false;
-			if(bytes != 4 || response[0] != 0x20 || response[1] != 0x02 || response[2] != 0 || response[3] != 0)
+			if(response.size() != 4)
 			{
-				if(bytes == 0) {}
-				else if(bytes != 4) _out.printError("Error: CONNACK packet has wrong size.");
+				if(response.size() == 0) {}
+				else if(response.size() != 4) _out.printError("Error: CONNACK packet has wrong size.");
 				else if(response[0] != 0x20 || response[1] != 0x02 || response[2] != 0) _out.printError("Error: CONNACK has wrong content.");
 				else if(response[3] != 1) printConnectionError(response[3]);
 				retry = true;
 			}
 			else
 			{
-				_connected = true;
 				_out.printInfo("Info: Successfully connected to MQTT server using protocol version 4.");
+				_connected = true;
 				_connectMutex.unlock();
+				subscribe("homegear/" + _settings.homegearId() + "/rpc/#");
+				subscribe("homegear/" + _settings.homegearId() + "/value/#");
+				subscribe("homegear/" + _settings.homegearId() + "/config/#");
+				_reconnecting = false;
 				return;
 			}
 			if(retry)
@@ -357,7 +832,7 @@ void Mqtt::connect()
 				if(!_settings.password().empty()) payload.at(7) |= 0x40;
 				payload.push_back(0); //Keep alive MSB (in seconds)
 				payload.push_back(0x3C); //Keep alive LSB
-				std::string temp = _settings.clientName();
+				temp = _settings.clientName();
 				if(temp.empty()) temp = "Homegear";
 				payload.push_back(temp.size() >> 8);
 				payload.push_back(temp.size() & 0xFF);
@@ -382,19 +857,23 @@ void Mqtt::connect()
 				connectPacket.push_back(0x10); //Control packet type
 				connectPacket.insert(connectPacket.end(), lengthBytes.begin(), lengthBytes.end());
 				connectPacket.insert(connectPacket.end(), payload.begin(), payload.end());
-				bytes = getResponse(connectPacket, response, false);
-				if(bytes != 4 || response[0] != 0x20 || response[1] != 0x02 || response[2] != 0 || response[3] != 0)
+				getResponseByType(connectPacket, response, 0x20);
+				if(response.size() != 4)
 				{
-					if(bytes == 0) _out.printError("Error: Connection to MQTT server with protocol version 3 failed.");
-					else if(bytes != 4) _out.printError("Error: CONNACK packet has wrong size.");
+					if(response.size() == 0) _out.printError("Error: Connection to MQTT server with protocol version 3 failed.");
+					else if(response.size() != 4) _out.printError("Error: CONNACK packet has wrong size.");
 					else if(response[0] != 0x20 || response[1] != 0x02 || response[2] != 0) _out.printError("Error: CONNACK has wrong content.");
 					else printConnectionError(response[3]);
 				}
 				else
 				{
-					_connected = true;
 					_out.printInfo("Info: Successfully connected to MQTT server using protocol version 3.");
+					_connected = true;
 					_connectMutex.unlock();
+					subscribe("homegear/" + _settings.homegearId() + "/rpc/#");
+					subscribe("homegear/" + _settings.homegearId() + "/value/#");
+					subscribe("homegear/" + _settings.homegearId() + "/config/#");
+					_reconnecting = false;
 					return;
 				}
 			}
@@ -415,11 +894,11 @@ void Mqtt::connect()
 		std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 	}
 	_connectMutex.unlock();
+	_reconnecting = false;
 }
 
 void Mqtt::disconnect()
 {
-	_getResponseMutex.lock();
 	try
 	{
 		_connected = false;
@@ -439,7 +918,6 @@ void Mqtt::disconnect()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_getResponseMutex.unlock();
 }
 
 void Mqtt::messageReceived(std::vector<char>& message)
@@ -520,10 +998,10 @@ void Mqtt::publish(const std::string& topic, const std::vector<char>& data)
 		std::string fullTopic = "homegear/" + _settings.homegearId() + "/" + topic;
 		std::vector<char> packet;
 		std::vector<char> payload;
-		payload.reserve(topic.size() + 2 + 2 + data.size());
-		payload.push_back(topic.size() >> 8);
-		payload.push_back(topic.size() & 0xFF);
-		payload.insert(payload.end(), topic.begin(), topic.end());
+		payload.reserve(fullTopic.size() + 2 + 2 + data.size());
+		payload.push_back(fullTopic.size() >> 8);
+		payload.push_back(fullTopic.size() & 0xFF);
+		payload.insert(payload.end(), fullTopic.begin(), fullTopic.end());
 		int16_t id = 0;
 		while(id == 0) id = _packetId++;
 		payload.push_back(id >> 8);
@@ -534,26 +1012,22 @@ void Mqtt::publish(const std::string& topic, const std::vector<char>& data)
 		packet.push_back(0x32);
 		packet.insert(packet.end(), lengthBytes.begin(), lengthBytes.end());
 		packet.insert(packet.end(), payload.begin(), payload.end());
-		uint32_t bytes = 0;
 		int32_t j = 0;
 		std::vector<char> response(7);
-		for(int32_t i = 0; i < 10; i++)
+		for(int32_t i = 0; i < 20; i++)
 		{
 			if(!_socket->connected()) connect();
 			if(!_started) break;
 			if(i == 1) packet[0] |= 8;
-			bytes = getResponse(packet, response);
-			if(bytes != 4 || response[0] != 0x40 || response[1] != 2 || response[2] != (id >> 8) || response[3] != (id & 0xFF))
+			getResponse(packet, response, 0x40, id, true);
+			if(response.empty())
 			{
-				if(bytes != 4) _out.printError("Error: PUBACK packet has wrong size.");
-				else if(response[2] != (id >> 8) || response[3] != (id & 0xFF)) _out.printError("Error: PUBACK packet has wrong packet id.");
-				else _out.printError("Error: PUBACK packet has wrong content.");
-				_socket->close();
+				_out.printWarning("Warning: No PUBACK received.");
 			}
 			else return;
 
 			j = 0;
-			while(_started && j < 20)
+			while(_started && j < 5)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 				j++;
