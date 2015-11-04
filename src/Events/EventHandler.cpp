@@ -76,7 +76,7 @@ void EventHandler::collectGarbage()
 			{
 				if(!i->second.second)
 				{
-					i->second.first.join();
+					if(i->second.first.joinable()) i->second.first.join();
 					eventsToRemove.push_back(i->first);
 				}
 			}

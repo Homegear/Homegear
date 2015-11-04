@@ -90,7 +90,7 @@ void Mqtt::start()
 		_out.setPrefix("MQTT Client: ");
 		_jsonEncoder = std::unique_ptr<BaseLib::RPC::JsonEncoder>(new BaseLib::RPC::JsonEncoder(GD::bl.get()));
 		_jsonDecoder = std::unique_ptr<BaseLib::RPC::JsonDecoder>(new BaseLib::RPC::JsonDecoder(GD::bl.get()));
-		_socket.reset(new BaseLib::SocketOperations(GD::bl.get(), _settings.brokerHostname(), _settings.brokerPort(), _settings.enableSSL(), _settings.caFile(), _settings.verifyCertificate()));
+		_socket.reset(new BaseLib::SocketOperations(GD::bl.get(), _settings.brokerHostname(), _settings.brokerPort(), _settings.enableSSL(), _settings.caFile(), _settings.verifyCertificate(), _settings.certPath(), _settings.keyPath()));
 		if(_listenThread.joinable()) _listenThread.join();
 		_listenThread = std::thread(&Mqtt::listen, this);
 		connect();
@@ -403,8 +403,8 @@ void Mqtt::listen()
 			}
 			catch(BaseLib::SocketClosedException& ex)
 			{
-				_out.printWarning("Warning: Subscriber connection to MQTT server closed.");
-				connect();
+				_socket->close();
+				_out.printWarning("Warning: Connection to MQTT server closed.");
 				continue;
 			}
 			catch(BaseLib::SocketTimeOutException& ex)
@@ -413,8 +413,8 @@ void Mqtt::listen()
 			}
 			catch(BaseLib::SocketOperationException& ex)
 			{
+				_socket->close();
 				_out.printError("Error: " + ex.what());
-				connect();
 				continue;
 			}
 
@@ -451,6 +451,8 @@ void Mqtt::processData(std::vector<char>& data)
 {
 	try
 	{
+		std::cerr << "Moin MQTT packet received: " << BaseLib::HelperFunctions::getHexString(data) << std::endl;
+
 		int16_t id = 0;
 		uint8_t type = 0;
 		if(data.size() == 2 && data.at(0) == (char)0xD0 && data.at(1) == 0)
@@ -636,7 +638,7 @@ void Mqtt::send(const std::vector<char>& data)
 {
 	try
 	{
-		if(GD::bl->debugLevel >= 5) GD::bl->out.printDebug("Debug: Sending: " + BaseLib::HelperFunctions::getHexString(data));
+		if(GD::bl->debugLevel >= 3) GD::bl->out.printWarning("Debug: Sending: " + BaseLib::HelperFunctions::getHexString(data));
 		_socket->proofwrite(data);
 	}
 	catch(BaseLib::SocketClosedException&)
@@ -743,7 +745,7 @@ void Mqtt::connect()
 	{
 		try
 		{
-			if(_socket->connected())
+			if(_socket->connected() || !_started)
 			{
 				_connectMutex.unlock();
 				_reconnecting = false;
@@ -813,7 +815,7 @@ void Mqtt::connect()
 				_reconnecting = false;
 				return;
 			}
-			if(retry)
+			if(retry && _started)
 			{
 				_socket->open();
 				payload.clear();

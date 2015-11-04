@@ -322,17 +322,11 @@ void php_homegear_build_argv(std::vector<std::string>& arguments)
 
 static size_t php_homegear_read_post(char *buf, size_t count_bytes)
 {
-	if(GD::bl->settings.devLog()) GD::out.printInfo("Dev: Reading post data 1.");
 	if(_disposed || SEG(commandLine)) return 0;
-	if(GD::bl->settings.devLog()) GD::out.printInfo("Dev: Reading post data 2.");
 	BaseLib::HTTP* http = SEG(http);
-	if(GD::bl->settings.devLog()) GD::out.printInfo("Dev: Reading post data 3.");
 	if(!http || http->getContentSize() == 0) return 0;
-	if(GD::bl->settings.devLog()) GD::out.printInfo("Dev: Reading post data 4.");
 	size_t bytesRead = http->readContentStream(buf, count_bytes);
-	if(GD::bl->settings.devLog()) GD::out.printInfo("Dev: Reading post data 5.");
 	if(GD::bl->debugLevel >= 5 && bytesRead > 0) GD::out.printDebug("Debug: Raw post data: " + std::string(buf, bytesRead));
-	if(GD::bl->settings.devLog()) GD::out.printInfo("Dev: Reading post data 6.");
 	return bytesRead;
 }
 
