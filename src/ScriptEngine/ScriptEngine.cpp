@@ -78,7 +78,7 @@ void ScriptEngine::collectGarbage()
 			{
 				if(!i->second.second)
 				{
-					i->second.first.join();
+					if(i->second.first.joinable()) i->second.first.join();
 					threadsToRemove.push_back(i->first);
 				}
 			}
@@ -329,31 +329,48 @@ void ScriptEngine::executeScript(const std::string& script, uint64_t peerId, con
 	ts_free_thread();
 }
 
-void ScriptEngine::execute(const std::string path, const std::string arguments, std::shared_ptr<std::vector<char>> output, int32_t* exitCode, bool wait, int32_t threadId)
+void ScriptEngine::execute(const std::string path, const std::string arguments, std::shared_ptr<std::vector<char>> output, int32_t* exitCode, bool wait)
 {
 	try
 	{
-		if(_disposing)
+		if(_disposing || path.empty()) return;
+
+		collectGarbage();
+		if(!scriptThreadMaxReached())
 		{
-			setThreadNotRunning(threadId);
-			return;
-		}
-		if(path.empty())
-		{
-			//No thread yet
-			return;
-		}
-		if(!wait)
-		{
-			collectGarbage();
-			if(!scriptThreadMaxReached())
+			if(wait)
+			{
+				std::shared_ptr<std::mutex> lockMutex(new std::mutex());
+				std::shared_ptr<bool> mutexReady(new bool());
+				*mutexReady = false;
+				std::shared_ptr<std::condition_variable> conditionVariable(new std::condition_variable());
+				std::unique_lock<std::mutex> lock(*lockMutex);
+				_scriptThreadMutex.lock();
+				try
+				{
+					int32_t threadId = _currentScriptThreadID++;
+					if(threadId == -1) threadId = _currentScriptThreadID++;
+					_scriptThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&ScriptEngine::executeThread, this, path, arguments, output, exitCode, threadId, lockMutex, mutexReady, conditionVariable), true)));
+				}
+				catch(const std::exception& ex)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(...)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				}
+				_scriptThreadMutex.unlock();
+				conditionVariable->wait(lock, [&] { return *mutexReady; });
+			}
+			else
 			{
 				_scriptThreadMutex.lock();
 				try
 				{
 					int32_t threadId = _currentScriptThreadID++;
 					if(threadId == -1) threadId = _currentScriptThreadID++;
-					_scriptThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&ScriptEngine::execute, this, path, arguments, output, nullptr, true, threadId), true)));
+					_scriptThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&ScriptEngine::executeThread, this, path, arguments, output, exitCode, threadId, std::shared_ptr<std::mutex>(), std::shared_ptr<bool>(), std::shared_ptr<std::condition_variable>()), true)));
 				}
 				catch(const std::exception& ex)
 				{
@@ -365,26 +382,36 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 				}
 				_scriptThreadMutex.unlock();
 			}
-			if(exitCode) *exitCode = 0;
-			//No thread yet
-			return;
 		}
+		if(exitCode) *exitCode = 0;
 	}
 	catch(const std::exception& ex)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		setThreadNotRunning(threadId);
-		return;
 	}
 	catch(BaseLib::Exception& ex)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		setThreadNotRunning(threadId);
-		return;
 	}
 	catch(...)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void ScriptEngine::executeThread(const std::string path, const std::string arguments, std::shared_ptr<std::vector<char>> output, int32_t* exitCode, int32_t threadId, std::shared_ptr<std::mutex> lockMutex, std::shared_ptr<bool> mutexReady, std::shared_ptr<std::condition_variable> conditionVariable)
+{
+	//Must run in a separate Thread, because a Script might call runScript, which would start it on the same thread and causes a segmentation fault.
+	if(_disposing)
+	{
+		if(lockMutex)
+		{
+			{
+				std::lock_guard<std::mutex> lock(*lockMutex);
+				*mutexReady = true;
+			}
+			conditionVariable->notify_one();
+		}
 		setThreadNotRunning(threadId);
 		return;
 	}
@@ -392,6 +419,14 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 	if(!GD::bl->io.fileExists(path))
 	{
 		GD::out.printError("Error: PHP script \"" + path + "\" does not exist.");
+		if(lockMutex)
+		{
+			{
+				std::lock_guard<std::mutex> lock(*lockMutex);
+				*mutexReady = true;
+			}
+			conditionVariable->notify_one();
+		}
 		setThreadNotRunning(threadId);
 		return;
 	}
@@ -409,6 +444,14 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 		if(!globals)
 		{
 			ts_free_thread();
+			if(lockMutex)
+			{
+				{
+					std::lock_guard<std::mutex> lock(*lockMutex);
+					*mutexReady = true;
+				}
+				conditionVariable->notify_one();
+			}
 			setThreadNotRunning(threadId);
 			return;
 		}
@@ -420,6 +463,14 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 		{
 			GD::out.printCritical("Critical: Error in PHP: No thread safe resource exists.");
 			ts_free_thread();
+			if(lockMutex)
+			{
+				{
+					std::lock_guard<std::mutex> lock(*lockMutex);
+					*mutexReady = true;
+				}
+				conditionVariable->notify_one();
+			}
 			setThreadNotRunning(threadId);
 			return;
 		}
@@ -437,6 +488,14 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 		if (php_request_startup(TSRMLS_C) == FAILURE) {
 			GD::bl->out.printError("Error calling php_request_startup...");
 			ts_free_thread();
+			if(lockMutex)
+			{
+				{
+					std::lock_guard<std::mutex> lock(*lockMutex);
+					*mutexReady = true;
+				}
+				conditionVariable->notify_one();
+			}
 			setThreadNotRunning(threadId);
 			return;
 		}
@@ -485,6 +544,14 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 	}
 	SG(request_info).argc = 0;
 	ts_free_thread();
+	if(lockMutex)
+	{
+		{
+			std::lock_guard<std::mutex> lock(*lockMutex);
+			*mutexReady = true;
+		}
+		conditionVariable->notify_one();
+	}
 	setThreadNotRunning(threadId);
 }
 
