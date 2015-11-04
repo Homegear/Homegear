@@ -70,25 +70,61 @@ private:
 		std::shared_ptr<std::pair<std::string, std::vector<char>>> message;
 	};
 
+	class Request
+	{
+	public:
+		std::mutex mutex;
+		std::condition_variable conditionVariable;
+		bool mutexReady = false;
+		std::vector<char> response;
+		uint8_t getResponseControlByte() { return _responseControlByte; }
+
+		Request(uint8_t responseControlByte) { _responseControlByte = responseControlByte; };
+		virtual ~Request() {};
+	private:
+		uint8_t _responseControlByte;
+	};
+
+	class RequestByType
+	{
+	public:
+		std::mutex mutex;
+		std::condition_variable conditionVariable;
+		bool mutexReady = false;
+		std::vector<char> response;
+
+		RequestByType() {};
+		virtual ~RequestByType() {};
+	};
+
 	BaseLib::Output _out;
 	MqttSettings _settings;
 	std::unique_ptr<BaseLib::RPC::JsonEncoder> _jsonEncoder;
 	std::unique_ptr<BaseLib::RPC::JsonDecoder> _jsonDecoder;
 	std::unique_ptr<BaseLib::SocketOperations> _socket;
 	std::thread _pingThread;
+	std::thread _listenThread;
+	bool _reconnecting = false;
+	std::mutex _reconnectThreadMutex;
+	std::thread _reconnectThread;
 	std::mutex _connectMutex;
-	std::mutex _getResponseMutex;
 	bool _started = false;
 	bool _connected = false;
 	int16_t _packetId = 1;
+	std::mutex _requestsMutex;
+	std::map<int16_t, std::shared_ptr<Request>> _requests;
+	std::mutex _requestsByTypeMutex;
+	std::map<uint8_t, std::shared_ptr<RequestByType>> _requestsByType;
 
 	Mqtt(const Mqtt&);
 	Mqtt& operator=(const Mqtt&);
 	void connect();
+	void reconnect();
 	void disconnect();
 	void processMessages();
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 	std::vector<char> getLengthBytes(uint32_t length);
+	uint32_t getLength(std::vector<char> packet, uint32_t& lengthBytes);
 	void printConnectionError(char resultCode);
 
 	/**
@@ -99,7 +135,13 @@ private:
 	 */
 	void publish(const std::string& topic, const std::vector<char>& data);
 	void ping();
-	uint32_t getResponse(const std::vector<char>& packet, std::vector<char>& responseBuffer, bool reconnect = true, bool errors = true);
+	void getResponseByType(const std::vector<char>& packet, std::vector<char>& responseBuffer, uint8_t responseType, bool errors = true);
+	void getResponse(const std::vector<char>& packet, std::vector<char>& responseBuffer, uint8_t responseType, int16_t packetId, bool errors = true);
+	void listen();
+	void processData(std::vector<char>& data);
+	void processPublish(std::vector<char>& data);
+	void subscribe(std::string topic);
+	void send(const std::vector<char>& data);
 };
 
 #endif
