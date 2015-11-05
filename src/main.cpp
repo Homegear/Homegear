@@ -660,35 +660,35 @@ int main(int argc, char* argv[])
 			exit(1);
 		}
 
-		//Init gcrypt and GnuTLS
-		gcry_error_t gcryResult;
-		if((gcryResult = gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread)) != GPG_ERR_NO_ERROR)
-		{
-			GD::out.printCritical("Critical: Could not enable thread support for gcrypt.");
-			exit(2);
-		}
+		// {{{ Init gcrypt and GnuTLS
+			gcry_error_t gcryResult;
+			if((gcryResult = gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread)) != GPG_ERR_NO_ERROR)
+			{
+				GD::out.printCritical("Critical: Could not enable thread support for gcrypt.");
+				exit(2);
+			}
 
-		if (!gcry_check_version(GCRYPT_VERSION))
-		{
-			GD::out.printCritical("Critical: Wrong gcrypt version.");
-			exit(2);
-		}
-		gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
-		if((gcryResult = gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0)) != GPG_ERR_NO_ERROR)
-		{
-			GD::out.printCritical("Critical: Could not allocate secure memory.");
-			exit(2);
-		}
-		gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
-		gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
+			if (!gcry_check_version(GCRYPT_VERSION))
+			{
+				GD::out.printCritical("Critical: Wrong gcrypt version.");
+				exit(2);
+			}
+			gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
+			if((gcryResult = gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0)) != GPG_ERR_NO_ERROR)
+			{
+				GD::out.printCritical("Critical: Could not allocate secure memory.");
+				exit(2);
+			}
+			gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
+			gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
-		int32_t gnutlsResult = 0;
-		if((gnutlsResult = gnutls_global_init()) != GNUTLS_E_SUCCESS)
-		{
-			GD::out.printCritical("Critical: Could not initialize GnuTLS: " + std::string(gnutls_strerror(gnutlsResult)));
-			exit(2);
-		}
-		//End init gcrypt
+			int32_t gnutlsResult = 0;
+			if((gnutlsResult = gnutls_global_init()) != GNUTLS_E_SUCCESS)
+			{
+				GD::out.printCritical("Critical: Could not initialize GnuTLS: " + std::string(gnutls_strerror(gnutlsResult)));
+				exit(2);
+			}
+		// }}}
 
 		GD::familyController->loadModules();
 		if(GD::deviceFamilies.empty()) exitHomegear(1);

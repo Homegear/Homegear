@@ -133,7 +133,7 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::RPC::RPCHeader>& binaryHeader)
 	if(std::find(_validUsers.begin(), _validUsers.end(), credentials.first) == _validUsers.end())
 	{
 		sendBasicUnauthorized(true);
-		throw AuthException("User name " + credentials.first + " is not in the list of valid users.");
+		throw AuthException("User name " + credentials.first + " is not in the list of valid users in /etc/homegear/rpcservers.conf.");
 	}
 	if(User::verify(credentials.first, credentials.second)) return true;
 	sendBasicUnauthorized(true);
@@ -200,7 +200,7 @@ bool Auth::basicServer(BaseLib::HTTP& httpPacket)
 	if(std::find(_validUsers.begin(), _validUsers.end(), credentials.first) == _validUsers.end())
 	{
 		sendBasicUnauthorized(false);
-		throw AuthException("User name " + credentials.first + " is not in the list of valid users.");
+		throw AuthException("User name " + credentials.first + " is not in the list of valid users in /etc/homegear/rpcservers.conf.");
 	}
 	if(User::verify(credentials.first, credentials.second)) return true;
 	sendBasicUnauthorized(false);
