@@ -451,8 +451,6 @@ void Mqtt::processData(std::vector<char>& data)
 {
 	try
 	{
-		std::cerr << "Moin MQTT packet received: " << BaseLib::HelperFunctions::getHexString(data) << std::endl;
-
 		int16_t id = 0;
 		uint8_t type = 0;
 		if(data.size() == 2 && data.at(0) == (char)0xD0 && data.at(1) == 0)
@@ -638,7 +636,7 @@ void Mqtt::send(const std::vector<char>& data)
 {
 	try
 	{
-		if(GD::bl->debugLevel >= 3) GD::bl->out.printWarning("Debug: Sending: " + BaseLib::HelperFunctions::getHexString(data));
+		if(GD::bl->debugLevel >= 5) GD::bl->out.printDebug("Debug: Sending: " + BaseLib::HelperFunctions::getHexString(data));
 		_socket->proofwrite(data);
 	}
 	catch(BaseLib::SocketClosedException&)
