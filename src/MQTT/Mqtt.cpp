@@ -1014,7 +1014,7 @@ void Mqtt::publish(const std::string& topic, const std::vector<char>& data)
 		packet.insert(packet.end(), payload.begin(), payload.end());
 		int32_t j = 0;
 		std::vector<char> response(7);
-		if(GD::bl->debugLevel >= 4) GD::out.printInfo("Publishing topic: " + fullTopic);
+		if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Publishing topic " + fullTopic);
 		for(int32_t i = 0; i < 20; i++)
 		{
 			if(!_socket->connected()) connect();
