@@ -196,7 +196,7 @@ rm php7*.tar.xz
 rm php7*.dsc
 cd php7*
 cd ext
-if [ test ! -f ext_skel.in ]; then
+if test ! -f ext_skel.in; then
 	touch ext_skel.in
 fi
 wget https://github.com/krakjoe/pthreads/archive/v3.0.8.tar.gz
