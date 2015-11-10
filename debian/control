@@ -8,7 +8,7 @@ Homepage: https://homegear.eu
 
 Package: homegear
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libhomegear-base (= <BASELIBVER>), wget, libsqlite3-0 (>= 3.7.13), libreadline6 (>= 6.2), adduser (>= 3.113), libgcrypt20, libgnutlsxx28, libgpg-error0 (>= 1.10), unzip (>= 6.0), p7zip-full (>= 9.0), php5-cli (>= 5.6), libxslt1.1, libedit2, libmcrypt4, libenchant1c2a, libqdbm14, libltdl7, zlib1g, libtinfo5, libgmp10, libxml2, libssl1.0.0
+Depends: ${shlibs:Depends}, ${misc:Depends}, libhomegear-base (= <BASELIBVER>), wget, libsqlite3-0 (>= 3.7.13), libreadline6 (>= 6.2), adduser (>= 3.113), libgcrypt20, libgnutlsxx28, libgpg-error0 (>= 1.10), unzip (>= 6.0), p7zip-full (>= 9.0), php5-cli (>= 5.4), libxslt1.1, libedit2, libmcrypt4, libenchant1c2a, libqdbm14, libltdl7, zlib1g, libtinfo5, libgmp10, libxml2, libssl1.0.0
 Description: Program to control your HomeMatic devices
  Homegear a program to interface your home automation software 
  with your HomeMatic devices.
