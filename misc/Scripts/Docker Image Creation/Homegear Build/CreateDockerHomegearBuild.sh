@@ -132,7 +132,7 @@ chroot $rootfs apt-key add Release.key
 rm $rootfs/Release.key
 
 chroot $rootfs apt-get update
-if [ "$distver" == "vivid" ]; then
+if [ "$distver" == "vivid" ] || [ "$distver" == "wily" ]; then
 	chroot $rootfs apt-get -y install python3
 	chroot $rootfs apt-get -y -f install
 fi

@@ -466,12 +466,12 @@ void Mqtt::processData(std::vector<char>& data)
 		else if(data.size() == 4 && data[0] == 0x40 && data[1] == 2) //PUBACK
 		{
 			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Received PUBACK.");
-			id = (data[2] << 8) + data[3];
+			id = (((uint16_t)data[2]) << 8) + (uint8_t)data[3];
 		}
 		else if(data.size() == 5 && data[0] == (char)0x90 && data[1] == 3) //SUBACK
 		{
 			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Received SUBACK.");
-			id = (data[2] << 8) + data[3];
+			id = (((uint16_t)data[2]) << 8) + (uint8_t)data[3];
 		}
 		if(type != 0)
 		{
@@ -636,7 +636,7 @@ void Mqtt::send(const std::vector<char>& data)
 {
 	try
 	{
-		if(GD::bl->debugLevel >= 5) GD::bl->out.printDebug("Debug: Sending: " + BaseLib::HelperFunctions::getHexString(data));
+		if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Sending: " + BaseLib::HelperFunctions::getHexString(data));
 		_socket->proofwrite(data);
 	}
 	catch(BaseLib::SocketClosedException&)
@@ -1015,7 +1015,7 @@ void Mqtt::publish(const std::string& topic, const std::vector<char>& data)
 		int32_t j = 0;
 		std::vector<char> response(7);
 		if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Publishing topic " + fullTopic);
-		for(int32_t i = 0; i < 20; i++)
+		for(int32_t i = 0; i < 25; i++)
 		{
 			if(!_socket->connected()) connect();
 			if(!_started) break;
@@ -1023,15 +1023,26 @@ void Mqtt::publish(const std::string& topic, const std::vector<char>& data)
 			getResponse(packet, response, 0x40, id, true);
 			if(response.empty())
 			{
-				_out.printWarning("Warning: No PUBACK received.");
+				//_socket->close();
+				//reconnect();
+				if(i >= 5) _out.printWarning("Warning: No PUBACK received.");
 			}
 			else return;
 
 			j = 0;
 			while(_started && j < 5)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-				j++;
+
+				if(i < 5)
+				{
+					j += 5;
+					std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				}
+				else
+				{
+					j++;
+					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+				}
 			}
 		}
 	}
