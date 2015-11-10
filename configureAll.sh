@@ -4,7 +4,7 @@ rm -f /var/lib/homegear/modules/*
 cd $SCRIPTDIR
 ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc
 cd $SCRIPTDIR/../libhomegear-base
-./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc
+./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --libdir=/usr/lib
 cd $SCRIPTDIR/../homegear-homematicbidcos
 ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc
 cd $SCRIPTDIR/../homegear-homematicwired

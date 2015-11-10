@@ -159,7 +159,7 @@ cd /build
 revision=0
 wgetCount=0
 while [ $revision -eq 0 ] && [ $wgetCount -le 5 ]; do
-	rm -f contributors
+	rm -f contributors*
 	wget https://api.github.com/repos/Homegear/Homegear/stats/contributors
 	lines=`grep -Po '"total":.*[0-9]' contributors`
 	for l in $lines; do
