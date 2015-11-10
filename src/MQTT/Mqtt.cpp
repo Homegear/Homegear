@@ -426,6 +426,8 @@ void Mqtt::listen()
 				continue;
 			}
 
+			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Packet received: " + BaseLib::HelperFunctions::getHexString(data));
+
 			processData(data);
 			data.clear();
 			length = 0;
@@ -542,7 +544,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 			_out.printError("Error: Invalid packet format: " + BaseLib::HelperFunctions::getHexString(data));
 			return;
 		}
-		uint32_t idPos = 1 + lengthBytes + 2 + (data[1 + lengthBytes] << 8) + data[1 + lengthBytes + 1];
+		uint32_t idPos = 1 + lengthBytes + 2 + (((uint16_t)data[1 + lengthBytes]) << 8) + (uint8_t)data[1 + lengthBytes + 1];
 		if(idPos >= data.size())
 		{
 			_out.printError("Error: Invalid packet format: " + BaseLib::HelperFunctions::getHexString(data));
@@ -574,7 +576,15 @@ void Mqtt::processPublish(std::vector<char>& data)
 			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
 			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
 			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));
-			BaseLib::PVariable value = _jsonDecoder->decode(payload);
+			BaseLib::PVariable value;
+			try
+			{
+				value = _jsonDecoder->decode(payload);
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what() + " Payload was: " + BaseLib::HelperFunctions::getHexString(payload));
+			}
 			if(value && value->arrayValue->size() > 0)
 			{
 				parameters->arrayValue->push_back(value->arrayValue->at(0));
@@ -583,7 +593,15 @@ void Mqtt::processPublish(std::vector<char>& data)
 		}
 		else if(parts.size() == 3 && parts.at(2) == "rpc")
 		{
-			BaseLib::PVariable result = _jsonDecoder->decode(payload);
+			BaseLib::PVariable result;
+			try
+			{
+				result = _jsonDecoder->decode(payload);
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what() + " Payload was: " + BaseLib::HelperFunctions::getHexString(payload));
+			}
 			std::string methodName;
 			std::string clientId;
 			int32_t messageId = 0;
