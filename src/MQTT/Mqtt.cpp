@@ -544,28 +544,25 @@ void Mqtt::processPublish(std::vector<char>& data)
 			_out.printError("Error: Invalid packet format: " + BaseLib::HelperFunctions::getHexString(data));
 			return;
 		}
-		uint32_t idPos = 1 + lengthBytes + 2 + (((uint16_t)data[1 + lengthBytes]) << 8) + (uint8_t)data[1 + lengthBytes + 1];
-		if(idPos >= data.size())
+		uint8_t qos = data[0] & 6;
+		uint32_t topicLength = 1 + lengthBytes + 2 + (((uint16_t)data[1 + lengthBytes]) << 8) + (uint8_t)data[1 + lengthBytes + 1];
+		uint32_t payloadPos = (qos > 0) ? topicLength + 2 : topicLength;
+		if(payloadPos >= data.size())
 		{
-			_out.printError("Error: Invalid packet format: " + BaseLib::HelperFunctions::getHexString(data));
+			_out.printError("Error: Packet has no payload: " + BaseLib::HelperFunctions::getHexString(data));
 			return;
 		}
-		if((data[0] & 0x06) == 4)
+		if(qos == 4)
 		{
 			_out.printError("Error: Received publish packet with QoS 2. That was not requested.");
 		}
-		else if((data[0] & 0x06) == 2)
+		else if(qos == 2)
 		{
-			std::vector<char> puback { 0x40, 2, data[idPos], data[idPos + 1] };
+			std::vector<char> puback { 0x40, 2, data[topicLength], data[topicLength + 1] };
 			send(puback);
 		}
-		std::string topic(&data[1 + lengthBytes + 2], idPos - (1 + lengthBytes + 2));
-		if(idPos + 2 >= data.size())
-		{
-			_out.printError("Error: Packet has no data: " + BaseLib::HelperFunctions::getHexString(data));
-			return;
-		}
-		std::string payload(&data[idPos + 2], data.size() - (idPos + 2));
+		std::string topic(&data[1 + lengthBytes + 2], topicLength - (1 + lengthBytes + 2));
+		std::string payload(&data[payloadPos], data.size() - payloadPos);
 		std::vector<std::string> parts = BaseLib::HelperFunctions::splitAll(topic, '/');
 		if(parts.size() == 6 && parts.at(2) == "value")
 		{
@@ -584,6 +581,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 			catch(BaseLib::Exception& ex)
 			{
 				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what() + " Payload was: " + BaseLib::HelperFunctions::getHexString(payload));
+				return;
 			}
 			if(value && value->arrayValue->size() > 0)
 			{
@@ -601,6 +599,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 			catch(BaseLib::Exception& ex)
 			{
 				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what() + " Payload was: " + BaseLib::HelperFunctions::getHexString(payload));
+				return;
 			}
 			std::string methodName;
 			std::string clientId;
