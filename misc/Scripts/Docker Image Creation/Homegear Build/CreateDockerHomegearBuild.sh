@@ -216,7 +216,7 @@ unzip master.zip
 rm master.zip
 
 # {{{ libhomegear-base
-version=$(cat libhomegear-base-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
+version=$(./getVersion.sh | cut -d "-" -f 1)
 sourcePath=libhomegear-base-$version
 mv libhomegear-base-master $sourcePath
 cd $sourcePath
@@ -255,7 +255,7 @@ fi
 # }}}
 
 # {{{ homegear
-version=$(cat Homegear-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
+version=$(./getVersion.sh | cut -d "-" -f 1)
 sourcePath=homegear-$version
 mv Homegear-master $sourcePath
 cd $sourcePath
@@ -290,7 +290,7 @@ mv homegear_$version-$revision_*.deb homegear.deb
 # }}}
 
 # {{{ homegear-homematicbidcos
-version=$(cat Homegear-HomeMaticBidCoS-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
+version=$(./getVersion.sh | cut -d "-" -f 1)
 sourcePath=homegear-homematicbidcos-$version
 mv Homegear-HomeMaticBidCoS-master $sourcePath
 cd $sourcePath
@@ -324,7 +324,7 @@ mv homegear-homematicbidcos*.deb homegear-homematicbidcos.deb
 # }}}
 
 # {{{ homegear-homematicwired
-version=$(cat Homegear-HomeMaticWired-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
+version=$(./getVersion.sh | cut -d "-" -f 1)
 sourcePath=homegear-homematicwired-$version
 mv Homegear-HomeMaticWired-master $sourcePath
 cd $sourcePath
@@ -358,7 +358,7 @@ mv homegear-homematicwired*.deb homegear-homematicwired.deb
 # }}}
 
 # {{{ homegear-insteon
-version=$(cat Homegear-Insteon-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
+version=$(./getVersion.sh | cut -d "-" -f 1)
 sourcePath=homegear-insteon-$version
 mv Homegear-Insteon-master $sourcePath
 cd $sourcePath
@@ -392,7 +392,7 @@ mv homegear-insteon*.deb homegear-insteon.deb
 # }}}
 
 # {{{ homegear-max
-version=$(cat Homegear-MAX-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
+version=$(./getVersion.sh | cut -d "-" -f 1)
 sourcePath=homegear-max-$version
 mv Homegear-MAX-master $sourcePath
 cd $sourcePath
@@ -426,7 +426,7 @@ mv homegear-max*.deb homegear-max.deb
 # }}}
 
 # {{{ homegear-philipshue
-version=$(cat Homegear-PhilipsHue-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
+version=$(./getVersion.sh | cut -d "-" -f 1)
 sourcePath=homegear-philipshue-$version
 mv Homegear-PhilipsHue-master $sourcePath
 cd $sourcePath
@@ -460,7 +460,7 @@ mv homegear-philipshue*.deb homegear-philipshue.deb
 # }}}
 
 # {{{ homegear-sonos
-version=$(cat Homegear-Sonos-master/configure.ac | grep AC_INIT | cut -d " " -f 2 | tr -d ",")
+version=$(./getVersion.sh | cut -d "-" -f 1)
 sourcePath=homegear-sonos-$version
 mv Homegear-Sonos-master $sourcePath
 cd $sourcePath
