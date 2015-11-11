@@ -339,8 +339,8 @@ main.o: main.cpp /usr/include/stdc-predef.h GD/GD.h GD/../../config.h \
  /usr/include/homegear-base/Database/DatabaseTypes.h \
  /usr/include/sqlite3.h GD/../RPC/Server.h GD/../RPC/Client.h \
  GD/../RPC/RpcClient.h GD/../RPC/ClientSettings.h GD/../RPC/Auth.h \
- GD/../RPC/RemoteRpcServer.h UPnP/UPnP.h \
- /usr/include/homegear-base/HelperFunctions/HelperFunctions.h \
+ GD/../RPC/RemoteRpcServer.h UPnP/UPnP.h MQTT/Mqtt.h MQTT/MqttSettings.h \
+ /usr/include/homegear-base/HelperFunctions/HelperFunctions.h ../config.h \
  /usr/include/readline/readline.h /usr/include/readline/rlstdc.h \
  /usr/include/readline/rltypedefs.h /usr/include/readline/keymaps.h \
  /usr/include/readline/chardefs.h /usr/include/readline/tilde.h \
@@ -350,8 +350,7 @@ main.o: main.cpp /usr/include/stdc-predef.h GD/GD.h GD/../../config.h \
  /usr/include/x86_64-linux-gnu/sys/file.h \
  /usr/include/x86_64-linux-gnu/sys/sysctl.h /usr/include/linux/sysctl.h \
  /usr/include/linux/kernel.h /usr/include/linux/types.h \
- /usr/include/x86_64-linux-gnu/bits/sysctl.h MQTT/Mqtt.h \
- MQTT/MqttSettings.h
+ /usr/include/x86_64-linux-gnu/bits/sysctl.h
 
 /usr/include/stdc-predef.h:
 
@@ -1207,7 +1206,13 @@ GD/../RPC/RemoteRpcServer.h:
 
 UPnP/UPnP.h:
 
+MQTT/Mqtt.h:
+
+MQTT/MqttSettings.h:
+
 /usr/include/homegear-base/HelperFunctions/HelperFunctions.h:
+
+../config.h:
 
 /usr/include/readline/readline.h:
 
@@ -1240,7 +1245,3 @@ UPnP/UPnP.h:
 /usr/include/linux/types.h:
 
 /usr/include/x86_64-linux-gnu/bits/sysctl.h:
-
-MQTT/Mqtt.h:
-
-MQTT/MqttSettings.h:

@@ -318,7 +318,7 @@ Factory.lo: Factory.cpp /usr/include/stdc-predef.h Factory.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
  /usr/include/homegear-base/Variable.h \
- /usr/include/homegear-base/IQueue.h Miscellaneous.h
+ /usr/include/homegear-base/IQueue.h Miscellaneous.h ../../config.h
 
 /usr/include/stdc-predef.h:
 
@@ -1101,3 +1101,5 @@ Factory.h:
 /usr/include/homegear-base/IQueue.h:
 
 Miscellaneous.h:
+
+../../config.h:

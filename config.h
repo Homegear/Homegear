@@ -162,7 +162,7 @@
 #define PACKAGE_NAME "homegear"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "homegear 0.6.0"
+#define PACKAGE_STRING "homegear 0.6.0-1032"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "homegear"
@@ -171,7 +171,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "0.6.0"
+#define PACKAGE_VERSION "0.6.0-1032"
 
 /* Enables compilation of the PHP script engine */
 #define SCRIPTENGINE /**/
@@ -180,7 +180,7 @@
 #define STDC_HEADERS 1
 
 /* Version number of package */
-#define VERSION "0.6.0"
+#define VERSION "0.6.0-1032"
 
 /* Define for Solaris 2.5.1 so the uint32_t typedef from <sys/synch.h>,
    <pthread.h>, or <semaphore.h> is not used. If the typedef were allowed, the
