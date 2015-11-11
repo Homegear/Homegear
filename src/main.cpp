@@ -30,8 +30,10 @@
 
 #include "GD/GD.h"
 #include "UPnP/UPnP.h"
+#include "MQTT/Mqtt.h"
 #include "homegear-base/BaseLib.h"
 #include "homegear-base/HelperFunctions/HelperFunctions.h"
+#include "../config.h"
 
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -50,7 +52,6 @@
 #include <algorithm>
 
 #include <gcrypt.h>
-#include "MQTT/Mqtt.h"
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
@@ -381,10 +382,17 @@ int main(int argc, char* argv[])
 {
     try
     {
+
     	getExecutablePath();
     	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
     	GD::bl.reset(new BaseLib::Obj(GD::executablePath, _errorCallback.get()));
     	GD::out.init(GD::bl.get());
+
+    	if(std::string(VERSION) != GD::bl->version())
+    	{
+    		GD::out.printCritical(std::string("Base library has wrong version. Expected version ") + VERSION + " but got version " + GD::bl->version());
+    		exit(1);
+    	}
 
     	for(int32_t i = 1; i < argc; i++)
     	{
@@ -645,7 +653,7 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		for(uint32_t i = 0; i < 10; ++i)
+		for(uint32_t i = 0; i < 100; ++i)
 		{
 			if(BaseLib::HelperFunctions::getTime() < 1000000000000)
 			{

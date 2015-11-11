@@ -29,10 +29,16 @@
 */
 
 #include "Factory.h"
+#include "../../config.h"
 
 BaseLib::Systems::DeviceFamily* MiscellaneousFactory::createDeviceFamily(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
 {
 	return new Misc::Miscellaneous(bl, eventHandler);
+}
+
+std::string getVersion()
+{
+	return VERSION;
 }
 
 BaseLib::Systems::SystemFactory* getFactory()

@@ -1,19 +1,21 @@
 #!/bin/bash
+function configure()
+{
+	cd $1
+	libtoolize
+	aclocal
+	autoconf
+	automake --add-missing
+	./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --libdir=/usr/lib
+}
+
 SCRIPTDIR="$( cd "$(dirname $0)" && pwd )"
 rm -f /var/lib/homegear/modules/*
-cd $SCRIPTDIR
-./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc
-cd $SCRIPTDIR/../libhomegear-base
-./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --libdir=/usr/lib
-cd $SCRIPTDIR/../homegear-homematicbidcos
-./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc
-cd $SCRIPTDIR/../homegear-homematicwired
-./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc
-cd $SCRIPTDIR/../homegear-insteon
-./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc
-cd $SCRIPTDIR/../homegear-max
-./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc
-cd $SCRIPTDIR/../homegear-philipshue
-./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc
-cd $SCRIPTDIR/../homegear-sonos
-./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc
+configure $SCRIPTDIR
+configure $SCRIPTDIR/../libhomegear-base
+configure $SCRIPTDIR/../homegear-homematicbidcos
+configure $SCRIPTDIR/../homegear-homematicwired
+configure $SCRIPTDIR/../homegear-insteon
+configure $SCRIPTDIR/../homegear-max
+configure $SCRIPTDIR/../homegear-philipshue
+configure $SCRIPTDIR/../homegear-sonos

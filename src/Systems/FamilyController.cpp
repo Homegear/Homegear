@@ -46,6 +46,23 @@ ModuleLoader::ModuleLoader(std::string name, std::string path)
 			return;
 		}
 
+		std::string (*getVersion)();
+		getVersion = (std::string (*)())dlsym(moduleHandle, "getVersion");
+		if(!getVersion)
+		{
+			GD::out.printCritical("Critical: Could not open module \"" + path + "\". Symbol \"getVersion\" not found.");
+			dlclose(moduleHandle);
+			return;
+		}
+		std::string version = getVersion();
+		if(GD::bl->version() != version)
+		{
+			GD::out.printCritical("Critical: Could not open module \"" + path + "\". Module is compiled for Homegear version " + version);
+			dlclose(moduleHandle);
+			return;
+		}
+
+
 		BaseLib::Systems::SystemFactory* (*getFactory)();
 		getFactory = (BaseLib::Systems::SystemFactory* (*)())dlsym(moduleHandle, "getFactory");
 		if(!getFactory)
