@@ -81,13 +81,11 @@ case $1 in
 				chown -R $RUNASUSER:$RUNASGROUP $LOGPATH
 				chmod -R 750 $LOGPATH
 				
-				$DAEMON -c $CONFIGPATH -s $RUNASUSER $RUNASGROUP
-				
                 log_daemon_msg "Starting Homegear" "homegear"
                 lock_homegear
                 #Probably has no effect at all...
                 ulimit -r 100
-                start-stop-daemon --start --quiet --oknodo -c $RUNASUSER -g $RUNASGROUP --pidfile $PIDFILE --startas $DAEMON -- -p $PIDFILE $HOMEGEAR_OPTS
+                start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --startas $DAEMON -- -p $PIDFILE -u $RUNASUSER -g $RUNASGROUP $HOMEGEAR_OPTS
                 status=$?
                 unlock_homegear
                 log_end_msg $status
