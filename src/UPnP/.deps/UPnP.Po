@@ -315,6 +315,8 @@ UPnP/UPnP.o: UPnP/UPnP.cpp /usr/include/stdc-predef.h UPnP/UPnP.h \
  /usr/include/homegear-base/Threads/Threads.h \
  /usr/include/homegear-base/Exception.h \
  /usr/include/homegear-base/Output/Output.h \
+ /usr/include/homegear-base/Licensing/LicensingFactory.h \
+ /usr/include/homegear-base/Licensing/Licensing.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
  /usr/include/homegear-base/Variable.h \
@@ -335,6 +337,7 @@ UPnP/UPnP.o: UPnP/UPnP.cpp /usr/include/stdc-predef.h UPnP/UPnP.h \
  UPnP/../GD/../Events/../RPC/Webserver.h \
  UPnP/../GD/../Events/../RPC/RPCMethods.h \
  UPnP/../GD/../Events/../RPC/../Events/EventHandler.h \
+ UPnP/../GD/../Licensing/LicensingController.h \
  UPnP/../GD/../Systems/FamilyController.h \
  UPnP/../GD/../Systems/PhysicalInterfaces.h \
  UPnP/../GD/../Systems/DatabaseController.h \
@@ -1119,6 +1122,10 @@ UPnP/UPnP.h:
 
 /usr/include/homegear-base/Output/Output.h:
 
+/usr/include/homegear-base/Licensing/LicensingFactory.h:
+
+/usr/include/homegear-base/Licensing/Licensing.h:
+
 /usr/include/homegear-base/SSDP/SSDP.h:
 
 /usr/include/homegear-base/Encoding/HTTP.h:
@@ -1172,6 +1179,8 @@ UPnP/../GD/../Events/../RPC/Webserver.h:
 UPnP/../GD/../Events/../RPC/RPCMethods.h:
 
 UPnP/../GD/../Events/../RPC/../Events/EventHandler.h:
+
+UPnP/../GD/../Licensing/LicensingController.h:
 
 UPnP/../GD/../Systems/FamilyController.h:
 

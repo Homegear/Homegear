@@ -1146,6 +1146,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			}
 			else if(!http.headerProcessingStarted() && !webSocket.dataProcessingStarted() && (!strncmp(&buffer[0], "POST", 4) || !strncmp(&buffer[0], "HTTP/1.", 7)))
 			{
+				if(bytesRead < 8) continue;
 				buffer[bytesRead] = '\0';
 				packetType = (!strncmp(&buffer[0], "POST", 4)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
 

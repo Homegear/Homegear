@@ -315,6 +315,8 @@ MQTT/Mqtt.o: MQTT/Mqtt.cpp /usr/include/stdc-predef.h MQTT/Mqtt.h \
  /usr/include/homegear-base/Threads/Threads.h \
  /usr/include/homegear-base/Exception.h \
  /usr/include/homegear-base/Output/Output.h \
+ /usr/include/homegear-base/Licensing/LicensingFactory.h \
+ /usr/include/homegear-base/Licensing/Licensing.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
  /usr/include/homegear-base/Variable.h \
@@ -335,6 +337,7 @@ MQTT/Mqtt.o: MQTT/Mqtt.cpp /usr/include/stdc-predef.h MQTT/Mqtt.h \
  MQTT/../GD/../Events/../RPC/Webserver.h \
  MQTT/../GD/../Events/../RPC/RPCMethods.h \
  MQTT/../GD/../Events/../RPC/../Events/EventHandler.h \
+ MQTT/../GD/../Licensing/LicensingController.h \
  MQTT/../GD/../Systems/FamilyController.h \
  MQTT/../GD/../Systems/PhysicalInterfaces.h \
  MQTT/../GD/../Systems/DatabaseController.h \
@@ -1119,6 +1122,10 @@ MQTT/Mqtt.h:
 
 /usr/include/homegear-base/Output/Output.h:
 
+/usr/include/homegear-base/Licensing/LicensingFactory.h:
+
+/usr/include/homegear-base/Licensing/Licensing.h:
+
 /usr/include/homegear-base/SSDP/SSDP.h:
 
 /usr/include/homegear-base/Encoding/HTTP.h:
@@ -1174,6 +1181,8 @@ MQTT/../GD/../Events/../RPC/Webserver.h:
 MQTT/../GD/../Events/../RPC/RPCMethods.h:
 
 MQTT/../GD/../Events/../RPC/../Events/EventHandler.h:
+
+MQTT/../GD/../Licensing/LicensingController.h:
 
 MQTT/../GD/../Systems/FamilyController.h:
 

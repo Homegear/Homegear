@@ -316,6 +316,8 @@ main.o: main.cpp /usr/include/stdc-predef.h GD/GD.h GD/../../config.h \
  /usr/include/homegear-base/Threads/Threads.h \
  /usr/include/homegear-base/Exception.h \
  /usr/include/homegear-base/Output/Output.h \
+ /usr/include/homegear-base/Licensing/LicensingFactory.h \
+ /usr/include/homegear-base/Licensing/Licensing.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
  /usr/include/homegear-base/Variable.h \
@@ -331,8 +333,8 @@ main.o: main.cpp /usr/include/stdc-predef.h GD/GD.h GD/../../config.h \
  GD/../Events/../RPC/../User/User.h GD/../Events/../RPC/Webserver.h \
  GD/../Events/../RPC/RPCMethods.h \
  GD/../Events/../RPC/../Events/EventHandler.h \
- GD/../Systems/FamilyController.h GD/../Systems/PhysicalInterfaces.h \
- GD/../Systems/DatabaseController.h \
+ GD/../Licensing/LicensingController.h GD/../Systems/FamilyController.h \
+ GD/../Systems/PhysicalInterfaces.h GD/../Systems/DatabaseController.h \
  /usr/include/homegear-base/Encoding/RPCEncoder.h \
  /usr/include/homegear-base/Encoding/RPCDecoder.h \
  GD/../Systems/../Database/SQLite3.h \
@@ -345,6 +347,7 @@ main.o: main.cpp /usr/include/stdc-predef.h GD/GD.h GD/../../config.h \
  /usr/include/readline/rltypedefs.h /usr/include/readline/keymaps.h \
  /usr/include/readline/chardefs.h /usr/include/readline/tilde.h \
  /usr/include/readline/history.h /usr/include/execinfo.h \
+ /usr/include/wait.h /usr/include/x86_64-linux-gnu/sys/wait.h \
  /usr/include/x86_64-linux-gnu/sys/resource.h \
  /usr/include/x86_64-linux-gnu/bits/resource.h \
  /usr/include/x86_64-linux-gnu/sys/file.h \
@@ -1130,6 +1133,10 @@ GD/../ScriptEngine/php_config_fixes.h:
 
 /usr/include/homegear-base/Output/Output.h:
 
+/usr/include/homegear-base/Licensing/LicensingFactory.h:
+
+/usr/include/homegear-base/Licensing/Licensing.h:
+
 /usr/include/homegear-base/SSDP/SSDP.h:
 
 /usr/include/homegear-base/Encoding/HTTP.h:
@@ -1175,6 +1182,8 @@ GD/../Events/../RPC/Webserver.h:
 GD/../Events/../RPC/RPCMethods.h:
 
 GD/../Events/../RPC/../Events/EventHandler.h:
+
+GD/../Licensing/LicensingController.h:
 
 GD/../Systems/FamilyController.h:
 
@@ -1229,6 +1238,10 @@ MQTT/MqttSettings.h:
 /usr/include/readline/history.h:
 
 /usr/include/execinfo.h:
+
+/usr/include/wait.h:
+
+/usr/include/x86_64-linux-gnu/sys/wait.h:
 
 /usr/include/x86_64-linux-gnu/sys/resource.h:
 

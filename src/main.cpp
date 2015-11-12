@@ -39,6 +39,7 @@
 #include <readline/history.h>
 #include <execinfo.h>
 #include <signal.h>
+#include <wait.h>
 #include <sys/resource.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -53,8 +54,15 @@
 
 #include <gcrypt.h>
 
+void startMainProcess();
+void startUp();
+
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
+std::mutex _shuttingDownMutex;
+bool _reloading = false;
+bool _monitorProcess = false;
+pid_t _mainProcessId = 0;
 bool _startAsDaemon = false;
 bool _startUpComplete = false;
 bool _disposing = false;
@@ -64,6 +72,7 @@ void exitHomegear(int exitCode)
 {
 	if(GD::physicalInterfaces) GD::physicalInterfaces->dispose();
     if(GD::familyController) GD::familyController->dispose();
+    if(GD::licensingController) GD::licensingController->dispose();
     exit(exitCode);
 }
 
@@ -100,6 +109,54 @@ void stopRPCServers(bool dispose)
 	//Don't clear map!!! Server is still accessed i. e. by the event handler!
 }
 
+void sigchld_handler(int32_t signalNumber)
+{
+	try
+	{
+		if(_mainProcessId == 0) return;
+
+		pid_t pid;
+		int status;
+
+		while ((pid = waitpid(-1, &status, WNOHANG)) != -1)
+		{
+			if(pid == _mainProcessId)
+			{
+				bool stop = false;
+				int32_t exitStatus = WEXITSTATUS(status);
+				if(WIFSIGNALED(status))
+				{
+					int32_t signal = WTERMSIG(status);
+					if(signal == SIGTERM || signal == SIGINT || signal == SIGQUIT || signal == SIGKILL) stop = true;
+					if(signal == SIGKILL) GD::out.printWarning("Warning: SIGKILL (signal 9) used to stop Homegear. Please shutdown Homegear properly to avoid database corruption.");
+					if(WCOREDUMP(status)) GD::out.printError("Error: Core was dumped.");
+				}
+				else stop = true;
+				if(stop)
+				{
+					GD::out.printInfo("Info: Homegear exited with exit code " + std::to_string(exitStatus) + ". Stopping monitor process.");
+					exit(0);
+				}
+
+				GD::out.printError("Homegear was terminated. Restarting...");
+				startMainProcess();
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void terminate(int32_t signalNumber)
 {
 	try
@@ -110,8 +167,15 @@ void terminate(int32_t signalNumber)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			}
+			_shuttingDownMutex.lock();
+			if(GD::bl->shuttingDown)
+			{
+				_shuttingDownMutex.unlock();
+				return;
+			}
 			GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
 			GD::bl->shuttingDown = true;
+			_shuttingDownMutex.unlock();
 #ifdef SCRIPTENGINE
 			if(GD::scriptEngine) GD::scriptEngine->stopEventThreads();
 #endif
@@ -154,6 +218,8 @@ void terminate(int32_t signalNumber)
 			if(GD::db) GD::db->dispose(); //Finish database operations before closing modules, otherwise SEGFAULT
 			GD::out.printMessage("(Shutdown) => Disposing device families");
 			if(GD::familyController) GD::familyController->dispose();
+			GD::out.printMessage("(Shutdown) => Disposing licensing modules");
+			if(GD::licensingController) GD::licensingController->dispose();
 			GD::bl->fileDescriptorManager.dispose();
 			GD::out.printMessage("(Shutdown) => Shutdown complete.");
 			if(_startAsDaemon)
@@ -169,13 +235,16 @@ void terminate(int32_t signalNumber)
 		}
 		else if(signalNumber == SIGHUP)
 		{
+			_shuttingDownMutex.lock();
 			GD::out.printInfo("Info: SIGHUP received... Reloading...");
 			if(!_startUpComplete)
 			{
 				GD::out.printError("Error: Cannot reload. Startup is not completed.");
+				_shuttingDownMutex.unlock();
 				return;
 			}
 			_startUpComplete = false;
+			_shuttingDownMutex.unlock();
 			if(GD::bl->settings.changed())
 			{
 				if(GD::bl->settings.enableUPnP())
@@ -323,6 +392,8 @@ void printHelp()
 	std::cout << "Usage: homegear [OPTIONS]" << std::endl << std::endl;
 	std::cout << "Option\t\t\tMeaning" << std::endl;
 	std::cout << "-h\t\t\tShow this help" << std::endl;
+	std::cout << "-u\t\t\tRun as user" << std::endl;
+	std::cout << "-g\t\t\tRun as group" << std::endl;
 	std::cout << "-c <path>\t\tSpecify path to config file" << std::endl;
 	std::cout << "-d\t\t\tRun as daemon" << std::endl;
 	std::cout << "-p <pid path>\t\tSpecify path to process id file" << std::endl;
@@ -331,6 +402,60 @@ void printHelp()
 	std::cout << "-e <command>\t\tExecute CLI command" << std::endl;
 	std::cout << "-o <input> <output>\tConvert old device description file into new format." << std::endl;
 	std::cout << "-v\t\t\tPrint program version" << std::endl;
+}
+
+void startMainProcess()
+{
+	try
+	{
+		_monitorProcess = false;
+
+		pid_t pid, sid;
+		pid = fork();
+		if(pid < 0)
+		{
+			exitHomegear(1);
+		}
+		if(pid > 0)
+		{
+			_monitorProcess = true;
+			_mainProcessId = pid;
+		}
+		else
+		{
+			//Set process permission
+			umask(S_IWGRP | S_IWOTH);
+
+			//Set child processe's id
+			sid = setsid();
+			if(sid < 0)
+			{
+				exitHomegear(1);
+			}
+		}
+
+		close(STDIN_FILENO);
+
+		if((chdir(GD::bl->settings.logfilePath().c_str())) < 0)
+		{
+			GD::out.printError("Could not change working directory to " + GD::bl->settings.logfilePath() + ".");
+			exitHomegear(1);
+		}
+
+		if(pid == 0) startUp();
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void startDaemon()
@@ -347,22 +472,18 @@ void startDaemon()
 		{
 			exitHomegear(0);
 		}
+
 		//Set process permission
 		umask(S_IWGRP | S_IWOTH);
+
 		//Set child processe's id
 		sid = setsid();
 		if(sid < 0)
 		{
 			exitHomegear(1);
 		}
-		//Set root directory as working directory (always available)
-		if((chdir(GD::bl->settings.logfilePath().c_str())) < 0)
-		{
-			GD::out.printError("Could not change working directory to " + GD::bl->settings.logfilePath() + ".");
-			exitHomegear(1);
-		}
 
-		close(STDIN_FILENO);
+		startMainProcess();
 	}
 	catch(const std::exception& ex)
     {
@@ -378,216 +499,11 @@ void startDaemon()
     }
 }
 
-int main(int argc, char* argv[])
+void startUp()
 {
-    try
-    {
-
-    	getExecutablePath();
-    	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
-    	GD::bl.reset(new BaseLib::Obj(GD::executablePath, _errorCallback.get()));
-    	GD::out.init(GD::bl.get());
-
-    	if(std::string(VERSION) != GD::bl->version())
-    	{
-    		GD::out.printCritical(std::string("Base library has wrong version. Expected version ") + VERSION + " but got version " + GD::bl->version());
-    		exit(1);
-    	}
-
-    	for(int32_t i = 1; i < argc; i++)
-    	{
-    		std::string arg(argv[i]);
-    		if(arg == "-h" || arg == "--help")
-    		{
-    			printHelp();
-    			exit(0);
-    		}
-    		else if(arg == "-c")
-    		{
-    			if(i + 1 < argc)
-    			{
-    				GD::configPath = std::string(argv[i + 1]);
-    				if(!GD::configPath.empty() && GD::configPath[GD::configPath.size() - 1] != '/') GD::configPath.push_back('/');
-    				i++;
-    			}
-    			else
-    			{
-    				printHelp();
-    				exit(1);
-    			}
-    		}
-    		else if(arg == "-p")
-    		{
-    			if(i + 1 < argc)
-    			{
-    				GD::pidfilePath = std::string(argv[i + 1]);
-    				i++;
-    			}
-    			else
-    			{
-    				printHelp();
-    				exit(1);
-    			}
-    		}
-    		else if(arg == "-s")
-    		{
-    			if(i + 2 < argc)
-    			{
-    				if(getuid() != 0)
-    				{
-    					std::cout <<  "Please run Homegear as root to set the device permissions." << std::endl;
-    					exit(1);
-    				}
-    				GD::bl->settings.load(GD::configPath + "main.conf");
-    				GD::bl->debugLevel = 3; //Only output warnings.
-    				GD::familyController.reset(new FamilyController());
-    				GD::physicalInterfaces.reset(new PhysicalInterfaces());
-    				GD::familyController->loadModules();
-    				GD::physicalInterfaces->load(GD::bl->settings.physicalInterfaceSettingsPath());
-    				int32_t userID = GD::bl->hf.userID(std::string(argv[i + 1]));
-    				int32_t groupID = GD::bl->hf.groupID(std::string(argv[i + 2]));
-    				GD::out.printDebug("Debug: User ID set to " + std::to_string(userID) + " group ID set to " + std::to_string(groupID));
-    				if(userID == -1 || groupID == -1)
-    				{
-    					GD::out.printCritical("Could not setup physical devices. Username or group name is not valid.");
-    					GD::physicalInterfaces->dispose();
-    					GD::familyController->dispose();
-    					exit(1);
-    				}
-    				GD::physicalInterfaces->setup(userID, groupID);
-    				BaseLib::Gpio gpio(GD::bl.get());
-    				gpio.setup(userID, groupID);
-    				GD::physicalInterfaces->dispose();
-    				GD::familyController->dispose();
-    				exit(0);
-    			}
-    			else
-    			{
-    				printHelp();
-    				exit(1);
-    			}
-    		}
-    		else if(arg == "-o")
-    		{
-    			if(i + 2 < argc)
-    			{
-    				GD::bl->settings.load(GD::configPath + "main.conf");
-    				std::string inputFile(argv[i + 1]);
-    				std::string outputFile(argv[i + 2]);
-    				BaseLib::DeviceDescription::Devices devices(0);
-    				devices.init(GD::bl.get());
-					std::shared_ptr<HomegearDevice> device = devices.load(inputFile);
-					if(!device) exit(1);
-					device->save(outputFile);
-    				exit(0);
-    			}
-    			else
-    			{
-    				printHelp();
-    				exit(1);
-    			}
-    		}
-    		else if(arg == "-d")
-    		{
-    			_startAsDaemon = true;
-    		}
-    		else if(arg == "-r")
-    		{
-    			GD::cliClient.reset(new CLI::Client());
-    			GD::cliClient->start();
-    			exit(0);
-    		}
-    		else if(arg == "-e")
-    		{
-    			std::stringstream command;
-    			if(i + 1 < argc)
-    			{
-    				command << std::string(argv[i + 1]);
-    			}
-    			else
-    			{
-    				printHelp();
-    				exit(1);
-    			}
-
-    			for(int32_t j = i + 2; j < argc; j++)
-    			{
-    				std::string element(argv[j]);
-    				if(element.find(' ') != std::string::npos) command << " \"" << element << "\"";
-    				else command << " " << argv[j];
-    			}
-
-    			GD::cliClient.reset(new CLI::Client());
-    			exit(GD::cliClient->start(command.str()));
-    		}
-    		else if(arg == "-v")
-    		{
-    			std::cout <<  "Homegear version " << VERSION << std::endl;
-    			std::cout << "Copyright (C) 2013-2015 Sathya Laufer" << std::endl << std::endl;
-    			std::cout << "This product includes PHP software, freely available from <http://www.php.net/software/>" << std::endl;
-    			std::cout << "Copyright (c) 1999 - 2015 The PHP Group. All rights reserved." << std::endl;
-    			exit(0);
-    		}
-    		else
-    		{
-    			printHelp();
-    			exit(1);
-    		}
-    	}
-
-    	// {{{ Load settings
-			if(GD::configPath.empty()) GD::configPath = "/etc/homegear/";
-			GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");
-			GD::bl->settings.load(GD::configPath + "main.conf");
-
-			GD::out.printInfo("Loading RPC server settings from " + GD::bl->settings.serverSettingsPath());
-			GD::serverInfo.init(GD::bl.get());
-			GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
-			GD::out.printInfo("Loading RPC client settings from " + GD::bl->settings.clientSettingsPath());
-			GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
-			GD::mqtt.reset(new Mqtt());
-			GD::mqtt->loadSettings();
-		// }}}
-
-		if(!GD::bl->io.directoryExists(GD::bl->settings.tempPath()))
-		{
-			if(!GD::bl->io.createDirectory(GD::bl->settings.tempPath(), S_IRWXU | S_IRWXG))
-			{
-				GD::out.printError("Error: Cannot create temp directory \"" + GD::bl->settings.tempPath());
-				exit(1);
-			}
-		}
-		std::vector<std::string> tempFiles = GD::bl->io.getFiles(GD::bl->settings.tempPath(), true);
-		for(std::vector<std::string>::iterator i = tempFiles.begin(); i != tempFiles.end(); ++i)
-		{
-			if(!GD::bl->io.deleteFile(GD::bl->settings.tempPath() + *i))
-			{
-				GD::out.printError("Error deleting temporary file \"" + GD::bl->settings.tempPath() + *i + "\": " + strerror(errno));
-			}
-		}
-
-		#ifdef EVENTHANDLER
-		GD::eventHandler.reset(new EventHandler());
-		#endif
-		#ifdef SCRIPTENGINE
-		if(!GD::bl->io.directoryExists(GD::bl->settings.tempPath() + "php"))
-		{
-			if(!GD::bl->io.createDirectory(GD::bl->settings.tempPath() + "php", S_IRWXU | S_IRWXG))
-			{
-				GD::out.printError("Error: Cannot create temp directory \"" + GD::bl->settings.tempPath() + "php");
-				exit(1);
-			}
-		}
-		GD::scriptEngine.reset(new ScriptEngine());
-		#endif
-		GD::familyController.reset(new FamilyController());
-		GD::physicalInterfaces.reset(new PhysicalInterfaces());
-		GD::db.reset(new DatabaseController());
-		GD::rpcClient.reset(new RPC::Client());
-
-    	if(_startAsDaemon) startDaemon();
-
-    	//Set rlimit for core dumps
+	try
+	{
+		//Set rlimit for core dumps
     	struct rlimit limits;
     	getrlimit(RLIMIT_CORE, &limits);
     	limits.rlim_cur = limits.rlim_max;
@@ -598,11 +514,111 @@ int main(int argc, char* argv[])
     	setrlimit(RLIMIT_RTPRIO, &limits);
 #endif
 
+    	struct sigaction sa;
+		memset(&sa, 0, sizeof(sa));
+		sa.sa_handler = terminate;
+
     	//Enable printing of backtraces
-    	signal(SIGHUP, terminate);
-    	signal(SIGABRT, terminate);
-    	signal(SIGSEGV, terminate);
-    	signal(SIGTERM, terminate);
+		//Use sigaction over signal because of different behavior in Linux and BSD
+    	sigaction(SIGHUP, &sa, NULL);
+    	sigaction(SIGABRT, &sa, NULL);
+    	sigaction(SIGSEGV, &sa, NULL);
+    	sigaction(SIGTERM, &sa, NULL);
+
+    	if(_startAsDaemon)
+		{
+			if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
+			{
+				GD::out.printError("Error: Could not redirect output to log file.");
+			}
+			if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
+			{
+				GD::out.printError("Error: Could not redirect errors to log file.");
+			}
+		}
+
+    	if(_monitorProcess)
+    	{
+    		sa.sa_handler = sigchld_handler;
+    		sigaction(SIGCHLD, &sa, NULL);
+
+    		while(true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    	}
+
+    	// {{{ Init gcrypt and GnuTLS
+			gcry_error_t gcryResult;
+			if((gcryResult = gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread)) != GPG_ERR_NO_ERROR)
+			{
+				GD::out.printCritical("Critical: Could not enable thread support for gcrypt.");
+				exit(2);
+			}
+
+			if (!gcry_check_version(GCRYPT_VERSION))
+			{
+				GD::out.printCritical("Critical: Wrong gcrypt version.");
+				exit(2);
+			}
+			gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
+			if((gcryResult = gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0)) != GPG_ERR_NO_ERROR)
+			{
+				GD::out.printCritical("Critical: Could not allocate secure memory.");
+				exit(2);
+			}
+			gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
+			gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
+
+			int32_t gnutlsResult = 0;
+			if((gnutlsResult = gnutls_global_init()) != GNUTLS_E_SUCCESS)
+			{
+				GD::out.printCritical("Critical: Could not initialize GnuTLS: " + std::string(gnutls_strerror(gnutlsResult)));
+				exit(2);
+			}
+		// }}}
+
+    	GD::licensingController->loadModules();
+
+		GD::familyController->loadModules();
+		if(GD::deviceFamilies.empty()) exitHomegear(1);
+
+		GD::physicalInterfaces->load(GD::bl->settings.physicalInterfaceSettingsPath());
+
+    	if(getuid() == 0 && !GD::runAsUser.empty() && !GD::runAsGroup.empty())
+    	{
+    		uid_t userId = GD::bl->hf.userId(GD::runAsUser);
+			gid_t groupId = GD::bl->hf.groupId(GD::runAsGroup);
+			if((signed)userId == -1 || (signed)groupId == -1)
+			{
+				GD::out.printCritical("Could not drop privileges. User name or group name is not valid.");
+				exitHomegear(1);
+			}
+			GD::out.printInfo("Info: Settings up physical interfaces and GPIOs...");
+			GD::physicalInterfaces->setup(userId, groupId);
+			BaseLib::Gpio gpio(GD::bl.get());
+			gpio.setup(userId, groupId);
+			GD::out.printInfo("Info: Dropping privileges to user " + GD::runAsUser + " (" + std::to_string(userId) + ") and group " + GD::runAsGroup + " (" + std::to_string(groupId) + ")");
+
+			if(setgid(groupId) != 0)
+			{
+				GD::out.printCritical("Critical: Could not drop group privileges.");
+				exitHomegear(1);
+			}
+			if(setuid(userId) != 0)
+			{
+				GD::out.printCritical("Critical: Could not drop user privileges.");
+				exitHomegear(1);
+			}
+    	}
+
+    	if(getuid() == 0) GD::out.printWarning("Warning: Running as root. The authors of Homegear recommend running Homegear as user.");
+    	else
+    	{
+    		if(setuid(0) != -1)
+			{
+				GD::out.printCritical("Critical: Regaining root privileges succeded. Exiting Homegear as this is a security risk.");
+				exit(1);
+			}
+    		GD::out.printInfo("Info: Homegear is (now) running as user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
+    	}
 
     	//Create PID file
     	try
@@ -641,17 +657,37 @@ int main(int argc, char* argv[])
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
 
-		if(_startAsDaemon)
+		if(!GD::bl->io.directoryExists(GD::bl->settings.tempPath()))
 		{
-			if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
+			if(!GD::bl->io.createDirectory(GD::bl->settings.tempPath(), S_IRWXU | S_IRWXG))
 			{
-				GD::out.printError("Error: Could not redirect output to log file.");
-			}
-			if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
-			{
-				GD::out.printError("Error: Could not redirect errors to log file.");
+				GD::out.printCritical("Critical: Cannot create temp directory \"" + GD::bl->settings.tempPath());
+				exit(1);
 			}
 		}
+		std::vector<std::string> tempFiles = GD::bl->io.getFiles(GD::bl->settings.tempPath(), true);
+		for(std::vector<std::string>::iterator i = tempFiles.begin(); i != tempFiles.end(); ++i)
+		{
+			if(!GD::bl->io.deleteFile(GD::bl->settings.tempPath() + *i))
+			{
+				GD::out.printCritical("Critical: deleting temporary file \"" + GD::bl->settings.tempPath() + *i + "\": " + strerror(errno));
+			}
+		}
+
+		#ifdef EVENTHANDLER
+		GD::eventHandler.reset(new EventHandler());
+		#endif
+		#ifdef SCRIPTENGINE
+		if(!GD::bl->io.directoryExists(GD::bl->settings.tempPath() + "php"))
+		{
+			if(!GD::bl->io.createDirectory(GD::bl->settings.tempPath() + "php", S_IRWXU | S_IRWXG))
+			{
+				GD::out.printCritical("Critical: Cannot create temp directory \"" + GD::bl->settings.tempPath() + "php");
+				exit(1);
+			}
+		}
+		GD::scriptEngine.reset(new ScriptEngine());
+		#endif
 
 		for(uint32_t i = 0; i < 100; ++i)
 		{
@@ -668,48 +704,16 @@ int main(int argc, char* argv[])
 			exit(1);
 		}
 
-		// {{{ Init gcrypt and GnuTLS
-			gcry_error_t gcryResult;
-			if((gcryResult = gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread)) != GPG_ERR_NO_ERROR)
-			{
-				GD::out.printCritical("Critical: Could not enable thread support for gcrypt.");
-				exit(2);
-			}
-
-			if (!gcry_check_version(GCRYPT_VERSION))
-			{
-				GD::out.printCritical("Critical: Wrong gcrypt version.");
-				exit(2);
-			}
-			gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
-			if((gcryResult = gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0)) != GPG_ERR_NO_ERROR)
-			{
-				GD::out.printCritical("Critical: Could not allocate secure memory.");
-				exit(2);
-			}
-			gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
-			gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
-
-			int32_t gnutlsResult = 0;
-			if((gnutlsResult = gnutls_global_init()) != GNUTLS_E_SUCCESS)
-			{
-				GD::out.printCritical("Critical: Could not initialize GnuTLS: " + std::string(gnutls_strerror(gnutlsResult)));
-				exit(2);
-			}
-		// }}}
-
-		GD::familyController->loadModules();
-		if(GD::deviceFamilies.empty()) exitHomegear(1);
-
 		GD::db->init();
     	GD::db->open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".bak");
     	if(!GD::db->isOpen()) exitHomegear(1);
 
-    	GD::physicalInterfaces->load(GD::bl->settings.physicalInterfaceSettingsPath());
-
         GD::out.printInfo("Initializing database...");
         GD::db->convertDatabase();
         GD::db->initializeDatabase();
+
+        GD::out.printInfo("Initializing licensing controller...");
+        GD::licensingController->init();
 
         GD::out.printInfo("Initializing family controller...");
         GD::familyController->init();
@@ -796,7 +800,7 @@ int main(int argc, char* argv[])
 		char* inputBuffer = nullptr;
         if(_startAsDaemon)
         {
-        	while(true) std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+        	while(true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
         else
         {
@@ -834,9 +838,240 @@ int main(int argc, char* argv[])
 				std::cout << GD::familyController->handleCLICommand(input);
 			}
 			clear_history();
-        }
 
-        terminate(SIGTERM);
+			terminate(SIGTERM);
+        }
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+int main(int argc, char* argv[])
+{
+    try
+    {
+
+    	getExecutablePath();
+    	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
+    	GD::bl.reset(new BaseLib::Obj(GD::executablePath, _errorCallback.get()));
+    	GD::out.init(GD::bl.get());
+
+    	if(std::string(VERSION) != GD::bl->version())
+    	{
+    		GD::out.printCritical(std::string("Base library has wrong version. Expected version ") + VERSION + " but got version " + GD::bl->version());
+    		exit(1);
+    	}
+
+    	for(int32_t i = 1; i < argc; i++)
+    	{
+    		std::string arg(argv[i]);
+    		if(arg == "-h" || arg == "--help")
+    		{
+    			printHelp();
+    			exit(0);
+    		}
+    		else if(arg == "-c")
+    		{
+    			if(i + 1 < argc)
+    			{
+    				GD::configPath = std::string(argv[i + 1]);
+    				if(!GD::configPath.empty() && GD::configPath[GD::configPath.size() - 1] != '/') GD::configPath.push_back('/');
+    				i++;
+    			}
+    			else
+    			{
+    				printHelp();
+    				exit(1);
+    			}
+    		}
+    		else if(arg == "-p")
+    		{
+    			if(i + 1 < argc)
+    			{
+    				GD::pidfilePath = std::string(argv[i + 1]);
+    				i++;
+    			}
+    			else
+    			{
+    				printHelp();
+    				exit(1);
+    			}
+    		}
+    		else if(arg == "-u")
+    		{
+    			if(i + 1 < argc)
+    			{
+    				GD::runAsUser = std::string(argv[i + 1]);
+    				i++;
+    			}
+    			else
+    			{
+    				printHelp();
+    				exit(1);
+    			}
+    		}
+    		else if(arg == "-g")
+    		{
+    			if(i + 1 < argc)
+    			{
+    				GD::runAsGroup = std::string(argv[i + 1]);
+    				i++;
+    			}
+    			else
+    			{
+    				printHelp();
+    				exit(1);
+    			}
+    		}
+    		else if(arg == "-s")
+    		{
+    			if(i + 2 < argc)
+    			{
+    				if(getuid() != 0)
+    				{
+    					std::cout <<  "Please run Homegear as root to set the device permissions." << std::endl;
+    					exit(1);
+    				}
+    				GD::bl->settings.load(GD::configPath + "main.conf");
+    				GD::bl->debugLevel = 3; //Only output warnings.
+    				GD::licensingController.reset(new LicensingController());
+    				GD::familyController.reset(new FamilyController());
+    				GD::physicalInterfaces.reset(new PhysicalInterfaces());
+    				GD::licensingController->loadModules();
+    				GD::familyController->loadModules();
+    				GD::physicalInterfaces->load(GD::bl->settings.physicalInterfaceSettingsPath());
+    				uid_t userId = GD::bl->hf.userId(std::string(argv[i + 1]));
+    				gid_t groupId = GD::bl->hf.groupId(std::string(argv[i + 2]));
+    				GD::out.printDebug("Debug: User ID set to " + std::to_string(userId) + " group ID set to " + std::to_string(groupId));
+    				if((signed)userId == -1 || (signed)groupId == -1)
+    				{
+    					GD::out.printCritical("Could not setup physical devices. Username or group name is not valid.");
+    					GD::physicalInterfaces->dispose();
+    					GD::familyController->dispose();
+    					GD::licensingController->dispose();
+    					exit(1);
+    				}
+    				GD::physicalInterfaces->setup(userId, groupId);
+    				BaseLib::Gpio gpio(GD::bl.get());
+    				gpio.setup(userId, groupId);
+    				GD::physicalInterfaces->dispose();
+    				GD::familyController->dispose();
+    				GD::licensingController->dispose();
+    				exit(0);
+    			}
+    			else
+    			{
+    				printHelp();
+    				exit(1);
+    			}
+    		}
+    		else if(arg == "-o")
+    		{
+    			if(i + 2 < argc)
+    			{
+    				GD::bl->settings.load(GD::configPath + "main.conf");
+    				std::string inputFile(argv[i + 1]);
+    				std::string outputFile(argv[i + 2]);
+    				BaseLib::DeviceDescription::Devices devices(0);
+    				devices.init(GD::bl.get());
+					std::shared_ptr<HomegearDevice> device = devices.load(inputFile);
+					if(!device) exit(1);
+					device->save(outputFile);
+    				exit(0);
+    			}
+    			else
+    			{
+    				printHelp();
+    				exit(1);
+    			}
+    		}
+    		else if(arg == "-d")
+    		{
+    			_startAsDaemon = true;
+    		}
+    		else if(arg == "-r")
+    		{
+    			GD::cliClient.reset(new CLI::Client());
+    			GD::cliClient->start();
+    			exit(0);
+    		}
+    		else if(arg == "-e")
+    		{
+    			std::stringstream command;
+    			if(i + 1 < argc)
+    			{
+    				command << std::string(argv[i + 1]);
+    			}
+    			else
+    			{
+    				printHelp();
+    				exit(1);
+    			}
+
+    			for(int32_t j = i + 2; j < argc; j++)
+    			{
+    				std::string element(argv[j]);
+    				if(element.find(' ') != std::string::npos) command << " \"" << element << "\"";
+    				else command << " " << argv[j];
+    			}
+
+    			GD::cliClient.reset(new CLI::Client());
+    			exit(GD::cliClient->start(command.str()));
+    		}
+    		else if(arg == "-v")
+    		{
+    			std::cout <<  "Homegear version " << VERSION << std::endl;
+    			std::cout << "Copyright (C) 2013-2015 Sathya Laufer" << std::endl << std::endl;
+    			std::cout << "This product includes PHP software, freely available from <http://www.php.net/software/>" << std::endl;
+    			std::cout << "Copyright (c) 1999 - 2015 The PHP Group. All rights reserved." << std::endl;
+    			exit(0);
+    		}
+    		else
+    		{
+    			printHelp();
+    			exit(1);
+    		}
+    	}
+
+    	// {{{ Load settings
+			if(GD::configPath.empty()) GD::configPath = "/etc/homegear/";
+			GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");
+			GD::bl->settings.load(GD::configPath + "main.conf");
+			if(GD::runAsUser.empty()) GD::runAsUser = GD::bl->settings.runAsUser();
+			if(GD::runAsGroup.empty()) GD::runAsGroup = GD::bl->settings.runAsGroup();
+			if((!GD::runAsUser.empty() && GD::runAsGroup.empty()) || (!GD::runAsGroup.empty() && GD::runAsUser.empty()))
+			{
+				GD::out.printCritical("Critical: You only provided a user OR a group for Homegear to run as. Please specify both.");
+				exit(1);
+			}
+
+			GD::out.printInfo("Loading RPC server settings from " + GD::bl->settings.serverSettingsPath());
+			GD::serverInfo.init(GD::bl.get());
+			GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
+			GD::out.printInfo("Loading RPC client settings from " + GD::bl->settings.clientSettingsPath());
+			GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
+			GD::mqtt.reset(new Mqtt());
+			GD::mqtt->loadSettings();
+		// }}}
+
+		GD::licensingController.reset(new LicensingController());
+		GD::familyController.reset(new FamilyController());
+		GD::physicalInterfaces.reset(new PhysicalInterfaces());
+		GD::db.reset(new DatabaseController());
+		GD::rpcClient.reset(new RPC::Client());
+
+    	if(_startAsDaemon) startDaemon();
+    	startUp();
 
         return 0;
     }

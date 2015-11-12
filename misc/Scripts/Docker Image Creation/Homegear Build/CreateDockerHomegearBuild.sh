@@ -156,24 +156,6 @@ distribution="<DISTVER>"
 
 cd /build
 
-revision=0
-wgetCount=0
-while [ $revision -eq 0 ] && [ $wgetCount -le 5 ]; do
-	rm -f contributors*
-	wget https://api.github.com/repos/Homegear/Homegear/stats/contributors
-	lines=`grep -Po '"total":.*[0-9]' contributors`
-	for l in $lines; do
-		    if [ "$l" != "\"total\":" ]; then
-		            revision=$(($revision + $l))
-		    fi
-	done
-	wgetCount=$(($wgetCount + 1))
-done
-if [ $revision -eq 0 ]; then
-	echo "Error: Could not get revision from GitHub."
-	exit 1
-fi
-
 wget https://github.com/Homegear/libhomegear-base/archive/master.zip
 [ $? -ne 0 ] && exit 1
 unzip master.zip
@@ -216,7 +198,13 @@ unzip master.zip
 rm master.zip
 
 # {{{ libhomegear-base
-version=$(./getVersion.sh | cut -d "-" -f 1)
+fullversion=$(libhomegear-base-master/getVersion.sh)
+version=$(echo $fullversion | cut -d "-" -f 1)
+revision=$(echo $fullversion | cut -d "-" -f 2)
+if [ $revision -eq 0 ]; then
+	echo "Error: Could not get revision from GitHub."
+	exit 1
+fi
 sourcePath=libhomegear-base-$version
 mv libhomegear-base-master $sourcePath
 cd $sourcePath
@@ -255,7 +243,9 @@ fi
 # }}}
 
 # {{{ homegear
-version=$(./getVersion.sh | cut -d "-" -f 1)
+fullversion=$(Homegear-master/getVersion.sh)
+version=$(echo $fullversion | cut -d "-" -f 1)
+revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-$version
 mv Homegear-master $sourcePath
 cd $sourcePath
@@ -290,7 +280,9 @@ mv homegear_$version-$revision_*.deb homegear.deb
 # }}}
 
 # {{{ homegear-homematicbidcos
-version=$(./getVersion.sh | cut -d "-" -f 1)
+fullversion=$(Homegear-HomeMaticBidCoS-master/getVersion.sh)
+version=$(echo $fullversion | cut -d "-" -f 1)
+revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-homematicbidcos-$version
 mv Homegear-HomeMaticBidCoS-master $sourcePath
 cd $sourcePath
@@ -324,7 +316,9 @@ mv homegear-homematicbidcos*.deb homegear-homematicbidcos.deb
 # }}}
 
 # {{{ homegear-homematicwired
-version=$(./getVersion.sh | cut -d "-" -f 1)
+fullversion=$(Homegear-HomeMaticWired-master/getVersion.sh)
+version=$(echo $fullversion | cut -d "-" -f 1)
+revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-homematicwired-$version
 mv Homegear-HomeMaticWired-master $sourcePath
 cd $sourcePath
@@ -358,7 +352,9 @@ mv homegear-homematicwired*.deb homegear-homematicwired.deb
 # }}}
 
 # {{{ homegear-insteon
-version=$(./getVersion.sh | cut -d "-" -f 1)
+fullversion=$(Homegear-Insteon-master/getVersion.sh)
+version=$(echo $fullversion | cut -d "-" -f 1)
+revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-insteon-$version
 mv Homegear-Insteon-master $sourcePath
 cd $sourcePath
@@ -392,7 +388,9 @@ mv homegear-insteon*.deb homegear-insteon.deb
 # }}}
 
 # {{{ homegear-max
-version=$(./getVersion.sh | cut -d "-" -f 1)
+fullversion=$(Homegear-MAX-master/getVersion.sh)
+version=$(echo $fullversion | cut -d "-" -f 1)
+revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-max-$version
 mv Homegear-MAX-master $sourcePath
 cd $sourcePath
@@ -426,7 +424,9 @@ mv homegear-max*.deb homegear-max.deb
 # }}}
 
 # {{{ homegear-philipshue
-version=$(./getVersion.sh | cut -d "-" -f 1)
+fullversion=$(Homegear-PhilipsHue-master/getVersion.sh)
+version=$(echo $fullversion | cut -d "-" -f 1)
+revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-philipshue-$version
 mv Homegear-PhilipsHue-master $sourcePath
 cd $sourcePath
@@ -460,7 +460,9 @@ mv homegear-philipshue*.deb homegear-philipshue.deb
 # }}}
 
 # {{{ homegear-sonos
-version=$(./getVersion.sh | cut -d "-" -f 1)
+fullversion=$(Homegear-Sonos-master/getVersion.sh)
+version=$(echo $fullversion | cut -d "-" -f 1)
+revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-sonos-$version
 mv Homegear-Sonos-master $sourcePath
 cd $sourcePath

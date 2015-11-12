@@ -123,13 +123,13 @@ PROGRAMS = $(bin_PROGRAMS)
 am_homegear_OBJECTS = main.$(OBJEXT) CLI/CLIClient.$(OBJEXT) \
 	CLI/CLIServer.$(OBJEXT) Database/SQLite3.$(OBJEXT) \
 	Events/EventHandler.$(OBJEXT) GD/GD.$(OBJEXT) \
-	MQTT/Mqtt.$(OBJEXT) MQTT/MqttSettings.$(OBJEXT) \
-	RPC/Auth.$(OBJEXT) RPC/Client.$(OBJEXT) \
-	RPC/ClientSettings.$(OBJEXT) RPC/RemoteRpcServer.$(OBJEXT) \
-	RPC/RpcClient.$(OBJEXT) RPC/RPCMethod.$(OBJEXT) \
-	RPC/RPCMethods.$(OBJEXT) RPC/RPCServer.$(OBJEXT) \
-	RPC/Server.$(OBJEXT) RPC/Webserver.$(OBJEXT) \
-	Systems/DatabaseController.$(OBJEXT) \
+	Licensing/LicensingController.$(OBJEXT) MQTT/Mqtt.$(OBJEXT) \
+	MQTT/MqttSettings.$(OBJEXT) RPC/Auth.$(OBJEXT) \
+	RPC/Client.$(OBJEXT) RPC/ClientSettings.$(OBJEXT) \
+	RPC/RemoteRpcServer.$(OBJEXT) RPC/RpcClient.$(OBJEXT) \
+	RPC/RPCMethod.$(OBJEXT) RPC/RPCMethods.$(OBJEXT) \
+	RPC/RPCServer.$(OBJEXT) RPC/Server.$(OBJEXT) \
+	RPC/Webserver.$(OBJEXT) Systems/DatabaseController.$(OBJEXT) \
 	Systems/FamilyController.$(OBJEXT) \
 	Systems/PhysicalInterfaces.$(OBJEXT) UPnP/UPnP.$(OBJEXT) \
 	User/User.$(OBJEXT)
@@ -345,8 +345,8 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 AM_CPPFLAGS = -Wall -std=c++11 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
-AM_LDFLAGS = -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear
-homegear_SOURCES = main.cpp CLI/CLIClient.cpp CLI/CLIClient.h CLI/CLIServer.cpp CLI/CLIServer.h Database/SQLite3.cpp Database/SQLite3.h Events/EventHandler.cpp Events/EventHandler.h GD/GD.cpp GD/GD.h MQTT/Mqtt.cpp MQTT/Mqtt.h MQTT/MqttSettings.cpp MQTT/MqttSettings.h RPC/Auth.cpp RPC/Auth.h RPC/Client.cpp RPC/Client.h RPC/ClientSettings.cpp RPC/ClientSettings.h RPC/RemoteRpcServer.cpp RPC/RemoteRpcServer.h RPC/RpcClient.cpp RPC/RpcClient.h RPC/RPCMethod.cpp RPC/RPCMethod.h RPC/RPCMethods.cpp RPC/RPCMethods.h RPC/RPCServer.cpp RPC/RPCServer.h RPC/Server.cpp RPC/Server.h RPC/Webserver.cpp RPC/Webserver.h Systems/DatabaseController.cpp Systems/DatabaseController.h Systems/FamilyController.cpp Systems/FamilyController.h Systems/PhysicalInterfaces.cpp Systems/PhysicalInterfaces.h UPnP/UPnP.cpp UPnP/UPnP.h User/User.cpp User/User.h
+AM_LDFLAGS = -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -Wl,-rpath=/usr/local/lib/homegear
+homegear_SOURCES = main.cpp CLI/CLIClient.cpp CLI/CLIClient.h CLI/CLIServer.cpp CLI/CLIServer.h Database/SQLite3.cpp Database/SQLite3.h Events/EventHandler.cpp Events/EventHandler.h GD/GD.cpp GD/GD.h Licensing/LicensingController.cpp Licensing/LicensingController.h MQTT/Mqtt.cpp MQTT/Mqtt.h MQTT/MqttSettings.cpp MQTT/MqttSettings.h RPC/Auth.cpp RPC/Auth.h RPC/Client.cpp RPC/Client.h RPC/ClientSettings.cpp RPC/ClientSettings.h RPC/RemoteRpcServer.cpp RPC/RemoteRpcServer.h RPC/RpcClient.cpp RPC/RpcClient.h RPC/RPCMethod.cpp RPC/RPCMethod.h RPC/RPCMethods.cpp RPC/RPCMethods.h RPC/RPCServer.cpp RPC/RPCServer.h RPC/Server.cpp RPC/Server.h RPC/Webserver.cpp RPC/Webserver.h Systems/DatabaseController.cpp Systems/DatabaseController.h Systems/FamilyController.cpp Systems/FamilyController.h Systems/PhysicalInterfaces.cpp Systems/PhysicalInterfaces.h UPnP/UPnP.cpp UPnP/UPnP.h User/User.cpp User/User.h
 homegear_LDADD = -lpthread -lreadline -lgcrypt -lgnutls \
 	-lhomegear-base -lgpg-error -lsqlite3 $(am__append_1) \
 	$(am__append_2) $(am__append_5)
@@ -498,6 +498,14 @@ GD/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) GD/$(DEPDIR)
 	@: > GD/$(DEPDIR)/$(am__dirstamp)
 GD/GD.$(OBJEXT): GD/$(am__dirstamp) GD/$(DEPDIR)/$(am__dirstamp)
+Licensing/$(am__dirstamp):
+	@$(MKDIR_P) Licensing
+	@: > Licensing/$(am__dirstamp)
+Licensing/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) Licensing/$(DEPDIR)
+	@: > Licensing/$(DEPDIR)/$(am__dirstamp)
+Licensing/LicensingController.$(OBJEXT): Licensing/$(am__dirstamp) \
+	Licensing/$(DEPDIR)/$(am__dirstamp)
 MQTT/$(am__dirstamp):
 	@$(MKDIR_P) MQTT
 	@: > MQTT/$(am__dirstamp)
@@ -572,6 +580,7 @@ mostlyclean-compile:
 	-rm -f Database/*.$(OBJEXT)
 	-rm -f Events/*.$(OBJEXT)
 	-rm -f GD/*.$(OBJEXT)
+	-rm -f Licensing/*.$(OBJEXT)
 	-rm -f MQTT/*.$(OBJEXT)
 	-rm -f RPC/*.$(OBJEXT)
 	-rm -f ScriptEngine/*.$(OBJEXT)
@@ -588,6 +597,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@Database/$(DEPDIR)/SQLite3.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@Events/$(DEPDIR)/EventHandler.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@GD/$(DEPDIR)/GD.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@Licensing/$(DEPDIR)/LicensingController.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@MQTT/$(DEPDIR)/Mqtt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@MQTT/$(DEPDIR)/MqttSettings.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@RPC/$(DEPDIR)/Auth.Po@am__quote@
@@ -819,6 +829,8 @@ distclean-generic:
 	-rm -f Events/$(am__dirstamp)
 	-rm -f GD/$(DEPDIR)/$(am__dirstamp)
 	-rm -f GD/$(am__dirstamp)
+	-rm -f Licensing/$(DEPDIR)/$(am__dirstamp)
+	-rm -f Licensing/$(am__dirstamp)
 	-rm -f MQTT/$(DEPDIR)/$(am__dirstamp)
 	-rm -f MQTT/$(am__dirstamp)
 	-rm -f RPC/$(DEPDIR)/$(am__dirstamp)
@@ -841,7 +853,7 @@ clean-am: clean-binPROGRAMS clean-generic clean-libtool \
 	clean-noinstLIBRARIES mostlyclean-am
 
 distclean: distclean-am
-	-rm -rf ./$(DEPDIR) CLI/$(DEPDIR) Database/$(DEPDIR) Events/$(DEPDIR) GD/$(DEPDIR) MQTT/$(DEPDIR) RPC/$(DEPDIR) ScriptEngine/$(DEPDIR) Systems/$(DEPDIR) UPnP/$(DEPDIR) User/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) CLI/$(DEPDIR) Database/$(DEPDIR) Events/$(DEPDIR) GD/$(DEPDIR) Licensing/$(DEPDIR) MQTT/$(DEPDIR) RPC/$(DEPDIR) ScriptEngine/$(DEPDIR) Systems/$(DEPDIR) UPnP/$(DEPDIR) User/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -887,7 +899,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -rf ./$(DEPDIR) CLI/$(DEPDIR) Database/$(DEPDIR) Events/$(DEPDIR) GD/$(DEPDIR) MQTT/$(DEPDIR) RPC/$(DEPDIR) ScriptEngine/$(DEPDIR) Systems/$(DEPDIR) UPnP/$(DEPDIR) User/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) CLI/$(DEPDIR) Database/$(DEPDIR) Events/$(DEPDIR) GD/$(DEPDIR) Licensing/$(DEPDIR) MQTT/$(DEPDIR) RPC/$(DEPDIR) ScriptEngine/$(DEPDIR) Systems/$(DEPDIR) UPnP/$(DEPDIR) User/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

@@ -115,8 +115,6 @@ public:
 	void init();
 	void dispose();
 
-	static void create();
-	static void destroy();
 	void loadModules();
 	void load();
 	void save(bool full);
