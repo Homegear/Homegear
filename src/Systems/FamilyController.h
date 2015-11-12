@@ -108,6 +108,9 @@ public:
 	virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
 	virtual void onRunScript(std::string& script, uint64_t peerId, const std::string& args, bool keepAlive, int32_t interval);
 	virtual int32_t onIsAddonClient(int32_t clientID);
+
+	//Device description
+	virtual void onDecryptDeviceDescription(int32_t moduleId, const std::vector<char>& input, std::vector<char>& output);
 	//End Family event handling
 
 	FamilyController();

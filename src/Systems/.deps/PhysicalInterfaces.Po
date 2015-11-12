@@ -277,6 +277,7 @@ Systems/PhysicalInterfaces.o: Systems/PhysicalInterfaces.cpp \
  /usr/include/homegear-base/DeviceDescription/Scenario.h \
  /usr/include/c++/4.8/set /usr/include/c++/4.8/bits/stl_set.h \
  /usr/include/c++/4.8/bits/stl_multiset.h \
+ /usr/include/homegear-base/IEvents.h \
  /usr/include/homegear-base/Settings/Settings.h \
  /usr/include/homegear-base/Sockets/HTTPClient.h \
  /usr/include/homegear-base/Sockets/SocketOperations.h \
@@ -309,6 +310,7 @@ Systems/PhysicalInterfaces.o: Systems/PhysicalInterfaces.cpp \
  /usr/include/homegear-base/Systems/ServiceMessages.h \
  /usr/include/homegear-base/Encoding/BinaryEncoder.h \
  /usr/include/homegear-base/Encoding/BinaryDecoder.h \
+ /usr/include/homegear-base/DeviceDescription/Devices.h \
  /usr/include/homegear-base/Systems/Peer.h \
  /usr/include/homegear-base/Systems/SystemFactory.h \
  /usr/include/homegear-base/Systems/DeviceFamily.h \
@@ -1037,6 +1039,8 @@ Systems/PhysicalInterfaces.h:
 
 /usr/include/c++/4.8/bits/stl_multiset.h:
 
+/usr/include/homegear-base/IEvents.h:
+
 /usr/include/homegear-base/Settings/Settings.h:
 
 /usr/include/homegear-base/Sockets/HTTPClient.h:
@@ -1110,6 +1114,8 @@ Systems/PhysicalInterfaces.h:
 /usr/include/homegear-base/Encoding/BinaryEncoder.h:
 
 /usr/include/homegear-base/Encoding/BinaryDecoder.h:
+
+/usr/include/homegear-base/DeviceDescription/Devices.h:
 
 /usr/include/homegear-base/Systems/Peer.h:
 
