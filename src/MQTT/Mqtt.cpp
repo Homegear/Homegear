@@ -389,7 +389,7 @@ void Mqtt::listen()
 					if(dataLength > 0 && data.size() > dataLength)
 					{
 						//Multiple MQTT packets in one TCP packet
-						std::vector<char> data2(&data.at(0), &data.at(dataLength - 1));
+						std::vector<char> data2(&data.at(0), &data.at(0) + dataLength);
 						processData(data2);
 						data2 = std::vector<char>(&data.at(dataLength), &data.at(dataLength + (data.size() - dataLength - 1)));
 						data = data2;
