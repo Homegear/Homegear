@@ -983,7 +983,7 @@ int main(int argc, char* argv[])
     				std::string inputFile(argv[i + 1]);
     				std::string outputFile(argv[i + 2]);
     				BaseLib::DeviceDescription::Devices devices(0);
-    				devices.init(GD::bl.get());
+    				devices.init(GD::bl.get(), nullptr);
 					std::shared_ptr<HomegearDevice> device = devices.load(inputFile);
 					if(!device) exit(1);
 					device->save(outputFile);
@@ -1027,6 +1027,24 @@ int main(int argc, char* argv[])
 
     			GD::cliClient.reset(new CLI::Client());
     			exit(GD::cliClient->start(command.str()));
+    		}
+    		else if(arg == "-t")
+    		{
+    			if(i + 2 < argc)
+    			{
+    				GD::licensingController.reset(new LicensingController());
+    				GD::licensingController->loadModules();
+    				std::string inputFile(argv[i + 1]);
+    				std::string outputFile(argv[i + 2]);
+
+					GD::licensingController->dispose();
+    				exit(0);
+    			}
+    			else
+    			{
+    				printHelp();
+    				exit(1);
+    			}
     		}
     		else if(arg == "-v")
     		{

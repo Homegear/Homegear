@@ -44,7 +44,7 @@ Miscellaneous::Miscellaneous(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::I
 	GD::out.setPrefix("Module Miscellaneous: ");
 	GD::out.printDebug("Debug: Loading module...");
 	_family = 254;
-	GD::rpcDevices.init(_bl);
+	GD::rpcDevices.init(_bl, this);
 }
 
 Miscellaneous::~Miscellaneous()

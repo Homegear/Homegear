@@ -390,6 +390,11 @@ int32_t FamilyController::onIsAddonClient(int32_t clientID)
 {
 	return RPC::Server::isAddonClientAll(clientID);
 }
+
+void FamilyController::onDecryptDeviceDescription(int32_t moduleId, const std::vector<char>& input, std::vector<char>& output)
+{
+	std::cerr << "Decrypt " << BaseLib::HelperFunctions::getHexString(moduleId) << std::endl;
+}
 //End Device event handling
 
 void FamilyController::homegearStarted()
