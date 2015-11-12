@@ -65,6 +65,7 @@ bool _monitorProcess = false;
 pid_t _mainProcessId = 0;
 bool _startAsDaemon = false;
 bool _startUpComplete = false;
+bool _shutdownQueued = false;
 bool _disposing = false;
 std::shared_ptr<std::function<void(int32_t, std::string)>> _errorCallback;
 
@@ -163,11 +164,13 @@ void terminate(int32_t signalNumber)
 	{
 		if(signalNumber == SIGTERM)
 		{
-			while(!_startUpComplete)
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-			}
 			_shuttingDownMutex.lock();
+			if(!_startUpComplete)
+			{
+				_shutdownQueued = true;
+				_shuttingDownMutex.unlock();
+				return;
+			}
 			if(GD::bl->shuttingDown)
 			{
 				_shuttingDownMutex.unlock();
@@ -297,7 +300,14 @@ void terminate(int32_t signalNumber)
 				GD::out.printCritical("Critical: Can't reopen database. Exiting...");
 				exit(1);
 			}
+			_shuttingDownMutex.lock();
 			_startUpComplete = true;
+			if(_shutdownQueued)
+			{
+				_shuttingDownMutex.unlock();
+				terminate(SIGTERM);
+			}
+			_shuttingDownMutex.unlock();
 			GD::out.printInfo("Info: Reload complete.");
 		}
 		else
@@ -751,7 +761,14 @@ void startUp()
         GD::out.printInfo("Loading events...");
         GD::eventHandler->load();
 #endif
-        _startUpComplete = true;
+        _shuttingDownMutex.lock();
+		_startUpComplete = true;
+		if(_shutdownQueued)
+		{
+			_shuttingDownMutex.unlock();
+			terminate(SIGTERM);
+		}
+		_shuttingDownMutex.unlock();
         GD::out.printMessage("Startup complete. Waiting for physical interfaces to connect.");
 
         //Wait for all interfaces to connect before setting booting to false
