@@ -393,7 +393,28 @@ int32_t FamilyController::onIsAddonClient(int32_t clientID)
 
 void FamilyController::onDecryptDeviceDescription(int32_t moduleId, const std::vector<char>& input, std::vector<char>& output)
 {
-	std::cerr << "Decrypt " << BaseLib::HelperFunctions::getHexString(moduleId) << std::endl;
+	try
+	{
+		std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
+		if(i == GD::licensingModules.end() || !i->second)
+		{
+			GD::out.printError("Error: Could not decrypt device description file. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
+			return;
+		}
+		i->second->decryptDeviceDescription(input, output);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 //End Device event handling
 
