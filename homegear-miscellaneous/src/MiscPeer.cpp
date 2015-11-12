@@ -258,7 +258,12 @@ void MiscPeer::runScript()
 	try
 	{
 		if(!_rpcDevice->runProgram) return;
-		while(GD::bl->booting && !_stopRunProgramThread) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		while(GD::bl->booting && !_stopRunProgramThread)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			continue;
+		}
+		if(_stopRunProgramThread) return;
 		std::string script = _rpcDevice->runProgram->script;
 		if(script.empty()) return;
 		std::string args;

@@ -318,6 +318,8 @@ Database/SQLite3.o: Database/SQLite3.cpp /usr/include/stdc-predef.h \
  /usr/include/homegear-base/Threads/Threads.h \
  /usr/include/homegear-base/Exception.h \
  /usr/include/homegear-base/Output/Output.h \
+ /usr/include/homegear-base/Licensing/LicensingFactory.h \
+ /usr/include/homegear-base/Licensing/Licensing.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
  /usr/include/homegear-base/Variable.h \
@@ -337,6 +339,7 @@ Database/SQLite3.o: Database/SQLite3.cpp /usr/include/stdc-predef.h \
  Database/../GD/../Events/../RPC/Webserver.h \
  Database/../GD/../Events/../RPC/RPCMethods.h \
  Database/../GD/../Events/../RPC/../Events/EventHandler.h \
+ Database/../GD/../Licensing/LicensingController.h \
  Database/../GD/../Systems/FamilyController.h \
  Database/../GD/../Systems/PhysicalInterfaces.h \
  Database/../GD/../Systems/DatabaseController.h \
@@ -1131,6 +1134,10 @@ Database/../GD/../ScriptEngine/php_config_fixes.h:
 
 /usr/include/homegear-base/Output/Output.h:
 
+/usr/include/homegear-base/Licensing/LicensingFactory.h:
+
+/usr/include/homegear-base/Licensing/Licensing.h:
+
 /usr/include/homegear-base/SSDP/SSDP.h:
 
 /usr/include/homegear-base/Encoding/HTTP.h:
@@ -1176,6 +1183,8 @@ Database/../GD/../Events/../RPC/Webserver.h:
 Database/../GD/../Events/../RPC/RPCMethods.h:
 
 Database/../GD/../Events/../RPC/../Events/EventHandler.h:
+
+Database/../GD/../Licensing/LicensingController.h:
 
 Database/../GD/../Systems/FamilyController.h:
 

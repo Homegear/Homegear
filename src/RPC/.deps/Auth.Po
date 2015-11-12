@@ -315,6 +315,8 @@ RPC/Auth.o: RPC/Auth.cpp /usr/include/stdc-predef.h RPC/Auth.h \
  /usr/include/homegear-base/Threads/Threads.h \
  /usr/include/homegear-base/Exception.h \
  /usr/include/homegear-base/Output/Output.h \
+ /usr/include/homegear-base/Licensing/LicensingFactory.h \
+ /usr/include/homegear-base/Licensing/Licensing.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
  /usr/include/homegear-base/Variable.h \
@@ -333,6 +335,7 @@ RPC/Auth.o: RPC/Auth.cpp /usr/include/stdc-predef.h RPC/Auth.h \
  RPC/../GD/../Events/../RPC/Webserver.h \
  RPC/../GD/../Events/../RPC/RPCMethods.h \
  RPC/../GD/../Events/../RPC/../Events/EventHandler.h \
+ RPC/../GD/../Licensing/LicensingController.h \
  RPC/../GD/../Systems/FamilyController.h \
  RPC/../GD/../Systems/PhysicalInterfaces.h \
  RPC/../GD/../Systems/DatabaseController.h \
@@ -1117,6 +1120,10 @@ RPC/Auth.h:
 
 /usr/include/homegear-base/Output/Output.h:
 
+/usr/include/homegear-base/Licensing/LicensingFactory.h:
+
+/usr/include/homegear-base/Licensing/Licensing.h:
+
 /usr/include/homegear-base/SSDP/SSDP.h:
 
 /usr/include/homegear-base/Encoding/HTTP.h:
@@ -1170,6 +1177,8 @@ RPC/../GD/../Events/../RPC/Webserver.h:
 RPC/../GD/../Events/../RPC/RPCMethods.h:
 
 RPC/../GD/../Events/../RPC/../Events/EventHandler.h:
+
+RPC/../GD/../Licensing/LicensingController.h:
 
 RPC/../GD/../Systems/FamilyController.h:
 

@@ -125,8 +125,12 @@ EOF
 wget -P $rootfs http://www.dotdeb.org/dotdeb.gpg
 chroot $rootfs apt-key add dotdeb.gpg
 rm $rootfs/dotdeb.gpg
-chroot $rootfs apt-get update
 #Fix debootstrap base package errors
+chroot $rootfs apt-get update
+if [ "$distver" == "vivid" ] || [ "$distver" == "wily" ]; then
+	chroot $rootfs apt-get -y install python3
+	chroot $rootfs apt-get -y -f install
+fi
 chroot $rootfs apt-get -y -f install
 chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano
 
@@ -143,6 +147,7 @@ if [ "$distver" == "wheezy" ]; then
 	sed -i '/.*libc-client-dev,.*/d' $rootfs/PHPBuild/debian/control
 else
 	sed -i '/.*libgcrypt11-dev,.*/d' $rootfs/PHPBuild/debian/control
+	sed -i '/.*libsystemd-daemon-dev,.*/d' $rootfs/PHPBuild/debian/control
 	sed -i '/.*libxml2-dev/a\\t       libgcrypt20-dev,' $rootfs/PHPBuild/debian/control
 fi
 chroot $rootfs bash -c "cd /PHPBuild && mk-build-deps debian/control"

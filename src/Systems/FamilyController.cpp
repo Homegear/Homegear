@@ -460,7 +460,9 @@ void FamilyController::loadModules()
 			if(i->size() < 9) continue; //mod_?*.so
 			std::string prefix = i->substr(0, 4);
 			std::string extension = i->substr(i->size() - 3, 3);
-			if(extension != ".so" || prefix != "mod_") continue;
+			std::string licensingPostfix;
+			if(i->size() > 15) licensingPostfix = i->substr(i->size() - 12, 9);
+			if(extension != ".so" || prefix != "mod_" || licensingPostfix == "licensing") continue;
 			std::string path(GD::bl->settings.modulePath() + *i);
 
 			moduleLoaders.insert(std::pair<std::string, std::unique_ptr<ModuleLoader>>(*i, std::unique_ptr<ModuleLoader>(new ModuleLoader(*i, path))));

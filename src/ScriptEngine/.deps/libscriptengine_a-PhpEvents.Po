@@ -319,6 +319,8 @@ ScriptEngine/libscriptengine_a-PhpEvents.o: ScriptEngine/PhpEvents.cpp \
  /usr/include/homegear-base/Threads/Threads.h \
  /usr/include/homegear-base/Exception.h \
  /usr/include/homegear-base/Output/Output.h \
+ /usr/include/homegear-base/Licensing/LicensingFactory.h \
+ /usr/include/homegear-base/Licensing/Licensing.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
  /usr/include/homegear-base/Variable.h \
@@ -340,6 +342,7 @@ ScriptEngine/libscriptengine_a-PhpEvents.o: ScriptEngine/PhpEvents.cpp \
  ScriptEngine/../GD/../Events/../RPC/Webserver.h \
  ScriptEngine/../GD/../Events/../RPC/RPCMethods.h \
  ScriptEngine/../GD/../Events/../RPC/../Events/EventHandler.h \
+ ScriptEngine/../GD/../Licensing/LicensingController.h \
  ScriptEngine/../GD/../Systems/FamilyController.h \
  ScriptEngine/../GD/../Systems/PhysicalInterfaces.h \
  ScriptEngine/../GD/../Systems/DatabaseController.h \
@@ -1131,6 +1134,10 @@ ScriptEngine/../GD/../ScriptEngine/php_config_fixes.h:
 
 /usr/include/homegear-base/Output/Output.h:
 
+/usr/include/homegear-base/Licensing/LicensingFactory.h:
+
+/usr/include/homegear-base/Licensing/Licensing.h:
+
 /usr/include/homegear-base/SSDP/SSDP.h:
 
 /usr/include/homegear-base/Encoding/HTTP.h:
@@ -1176,6 +1183,8 @@ ScriptEngine/../GD/../Events/../RPC/Webserver.h:
 ScriptEngine/../GD/../Events/../RPC/RPCMethods.h:
 
 ScriptEngine/../GD/../Events/../RPC/../Events/EventHandler.h:
+
+ScriptEngine/../GD/../Licensing/LicensingController.h:
 
 ScriptEngine/../GD/../Systems/FamilyController.h:
 

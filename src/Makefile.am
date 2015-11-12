@@ -1,13 +1,13 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
 AM_CPPFLAGS = -Wall -std=c++11 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
-AM_LDFLAGS = -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear
+AM_LDFLAGS = -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -Wl,-rpath=/usr/local/lib/homegear
 # {{{ PHP libraries
 LIBS += -Wl,-Bstatic -lphp7-homegear -Wl,-Bdynamic -lz -lexslt -lresolv -ltermcap -ledit -lrt -lmcrypt -lltdl -lgmp -lenchant -lqdbm -lrt -lm -lnsl -lxml2 -lxslt -lcrypt -lcrypto -lssl
 # }}}
 
 bin_PROGRAMS = homegear
-homegear_SOURCES = main.cpp CLI/CLIClient.cpp CLI/CLIClient.h CLI/CLIServer.cpp CLI/CLIServer.h Database/SQLite3.cpp Database/SQLite3.h Events/EventHandler.cpp Events/EventHandler.h GD/GD.cpp GD/GD.h MQTT/Mqtt.cpp MQTT/Mqtt.h MQTT/MqttSettings.cpp MQTT/MqttSettings.h RPC/Auth.cpp RPC/Auth.h RPC/Client.cpp RPC/Client.h RPC/ClientSettings.cpp RPC/ClientSettings.h RPC/RemoteRpcServer.cpp RPC/RemoteRpcServer.h RPC/RpcClient.cpp RPC/RpcClient.h RPC/RPCMethod.cpp RPC/RPCMethod.h RPC/RPCMethods.cpp RPC/RPCMethods.h RPC/RPCServer.cpp RPC/RPCServer.h RPC/Server.cpp RPC/Server.h RPC/Webserver.cpp RPC/Webserver.h Systems/DatabaseController.cpp Systems/DatabaseController.h Systems/FamilyController.cpp Systems/FamilyController.h Systems/PhysicalInterfaces.cpp Systems/PhysicalInterfaces.h UPnP/UPnP.cpp UPnP/UPnP.h User/User.cpp User/User.h
+homegear_SOURCES = main.cpp CLI/CLIClient.cpp CLI/CLIClient.h CLI/CLIServer.cpp CLI/CLIServer.h Database/SQLite3.cpp Database/SQLite3.h Events/EventHandler.cpp Events/EventHandler.h GD/GD.cpp GD/GD.h Licensing/LicensingController.cpp Licensing/LicensingController.h MQTT/Mqtt.cpp MQTT/Mqtt.h MQTT/MqttSettings.cpp MQTT/MqttSettings.h RPC/Auth.cpp RPC/Auth.h RPC/Client.cpp RPC/Client.h RPC/ClientSettings.cpp RPC/ClientSettings.h RPC/RemoteRpcServer.cpp RPC/RemoteRpcServer.h RPC/RpcClient.cpp RPC/RpcClient.h RPC/RPCMethod.cpp RPC/RPCMethod.h RPC/RPCMethods.cpp RPC/RPCMethods.h RPC/RPCServer.cpp RPC/RPCServer.h RPC/Server.cpp RPC/Server.h RPC/Webserver.cpp RPC/Webserver.h Systems/DatabaseController.cpp Systems/DatabaseController.h Systems/FamilyController.cpp Systems/FamilyController.h Systems/PhysicalInterfaces.cpp Systems/PhysicalInterfaces.h UPnP/UPnP.cpp UPnP/UPnP.h User/User.cpp User/User.h
 homegear_LDADD = -lpthread -lreadline -lgcrypt -lgnutls -lhomegear-base -lgpg-error -lsqlite3
 
 if BSDSYSTEM

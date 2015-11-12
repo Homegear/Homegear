@@ -316,6 +316,8 @@ Systems/PhysicalInterfaces.o: Systems/PhysicalInterfaces.cpp \
  /usr/include/homegear-base/Threads/Threads.h \
  /usr/include/homegear-base/Exception.h \
  /usr/include/homegear-base/Output/Output.h \
+ /usr/include/homegear-base/Licensing/LicensingFactory.h \
+ /usr/include/homegear-base/Licensing/Licensing.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
  /usr/include/homegear-base/Variable.h \
@@ -338,6 +340,7 @@ Systems/PhysicalInterfaces.o: Systems/PhysicalInterfaces.cpp \
  Systems/../GD/../Events/../RPC/Webserver.h \
  Systems/../GD/../Events/../RPC/RPCMethods.h \
  Systems/../GD/../Events/../RPC/../Events/EventHandler.h \
+ Systems/../GD/../Licensing/LicensingController.h \
  Systems/../GD/../Systems/FamilyController.h \
  Systems/../GD/../Systems/PhysicalInterfaces.h \
  Systems/../GD/../Systems/DatabaseController.h \
@@ -1122,6 +1125,10 @@ Systems/PhysicalInterfaces.h:
 
 /usr/include/homegear-base/Output/Output.h:
 
+/usr/include/homegear-base/Licensing/LicensingFactory.h:
+
+/usr/include/homegear-base/Licensing/Licensing.h:
+
 /usr/include/homegear-base/SSDP/SSDP.h:
 
 /usr/include/homegear-base/Encoding/HTTP.h:
@@ -1175,6 +1182,8 @@ Systems/../GD/../Events/../RPC/Webserver.h:
 Systems/../GD/../Events/../RPC/RPCMethods.h:
 
 Systems/../GD/../Events/../RPC/../Events/EventHandler.h:
+
+Systems/../GD/../Licensing/LicensingController.h:
 
 Systems/../GD/../Systems/FamilyController.h:
 

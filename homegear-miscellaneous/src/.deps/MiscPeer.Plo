@@ -315,6 +315,8 @@ MiscPeer.lo: MiscPeer.cpp /usr/include/stdc-predef.h MiscPeer.h \
  /usr/include/homegear-base/Threads/Threads.h \
  /usr/include/homegear-base/Exception.h \
  /usr/include/homegear-base/Output/Output.h \
+ /usr/include/homegear-base/Licensing/LicensingFactory.h \
+ /usr/include/homegear-base/Licensing/Licensing.h \
  /usr/include/homegear-base/SSDP/SSDP.h \
  /usr/include/homegear-base/Encoding/HTTP.h \
  /usr/include/homegear-base/Variable.h \
@@ -1096,6 +1098,10 @@ MiscPeer.h:
 /usr/include/homegear-base/Exception.h:
 
 /usr/include/homegear-base/Output/Output.h:
+
+/usr/include/homegear-base/Licensing/LicensingFactory.h:
+
+/usr/include/homegear-base/Licensing/Licensing.h:
 
 /usr/include/homegear-base/SSDP/SSDP.h:
 

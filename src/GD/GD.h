@@ -38,6 +38,7 @@
 #include "../CLI/CLIServer.h"
 #include "../CLI/CLIClient.h"
 #include "../Events/EventHandler.h"
+#include "../Licensing/LicensingController.h"
 #include "../Systems/FamilyController.h"
 #include "../Systems/PhysicalInterfaces.h"
 #include "../Systems/DatabaseController.h"
@@ -59,6 +60,8 @@ public:
 	static std::unique_ptr<BaseLib::Obj> bl;
 	static BaseLib::Output out;
 	static std::unique_ptr<DatabaseController> db;
+	static std::string runAsUser;
+	static std::string runAsGroup;
 	static std::string configPath;
 	static std::string runDir;
 	static std::string pidfilePath;
@@ -66,6 +69,7 @@ public:
 	static std::string workingDirectory;
 	static std::string executablePath;
 	static std::unique_ptr<FamilyController> familyController;
+	static std::unique_ptr<LicensingController> licensingController;
 	//We can work with rpcServers without Mutex, because elements are never deleted and iterators are not invalidated upon insertion of new elements.
 	static std::map<int32_t, RPC::Server> rpcServers;
 	static std::unique_ptr<RPC::Client> rpcClient;
@@ -76,6 +80,7 @@ public:
 	static int32_t rpcLogLevel;
 	static std::unique_ptr<PhysicalInterfaces> physicalInterfaces;
 	static std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>> deviceFamilies;
+	static std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>> licensingModules;
 	static std::map<std::string, int32_t> deviceFamiliesByName;
 	static std::unique_ptr<UPnP> uPnP;
 	static std::unique_ptr<Mqtt> mqtt;
