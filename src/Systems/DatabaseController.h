@@ -31,6 +31,7 @@
 #ifndef DATABASECONTROLLER_H_
 #define DATABASECONTROLLER_H_
 
+#include "homegear-base/Database/IDatabaseController.h"
 #include "homegear-base/Encoding/RPCEncoder.h"
 #include "homegear-base/Encoding/RPCDecoder.h"
 #include "../Database/SQLite3.h"
@@ -38,18 +39,13 @@
 #include <thread>
 #include <condition_variable>
 
-class DatabaseController
+class DatabaseController : public BaseLib::Database::IDatabaseController
 {
 public:
-	struct HomegearVariables
-	{
-		enum Enum { version = 0, upnpusn = 1 };
-	};
-
 	DatabaseController();
 	virtual ~DatabaseController();
-	void dispose();
-	void init();
+	virtual void dispose();
+	virtual void init();
 
 	//General
 	virtual void open(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath = "");
@@ -118,11 +114,7 @@ public:
 	virtual void deletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow& data);
 
 	/**
-	 * Changes the ID of a peer.
-	 *
-	 * @param oldPeerID The old ID of the peer.
-	 * @param newPeerID The new ID of the peer.
-	 * @return Returns "true" on success or "false" when the new ID is already in use.
+	 * {@inheritDoc}
 	 */
 	virtual bool setPeerID(uint64_t oldPeerID, uint64_t newPeerID);
 	//End Peer
@@ -132,6 +124,11 @@ public:
 	virtual void saveServiceMessageAsynchronous(uint64_t peerID, BaseLib::Database::DataRow& data);
 	virtual void deleteServiceMessage(uint64_t databaseID);
 	//End service messages
+
+	// {{{ License modules
+	virtual std::shared_ptr<BaseLib::Database::DataTable> getLicenseVariables(int32_t moduleId);
+	virtual void saveLicenseVariable(int32_t moduleId, BaseLib::Database::DataRow& data);
+	// }}}
 protected:
 	bool _disposing = false;
 

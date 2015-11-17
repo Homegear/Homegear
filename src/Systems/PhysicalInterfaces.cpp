@@ -205,6 +205,12 @@ void PhysicalInterfaces::load(std::string filename)
 					if(settings->timeout > 100000) settings->timeout = 100000;
 					GD::out.printDebug("Debug: timeout of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->timeout));
 				}
+				else if(name == "sendfix")
+				{
+					BaseLib::HelperFunctions::toLower(value);
+					if(value == "true") settings->sendFix = true;
+					GD::out.printDebug("Debug: sendFix of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->sendFix));
+				}
 				else if(name == "interruptpin")
 				{
 					int32_t number = BaseLib::Math::getNumber(value);

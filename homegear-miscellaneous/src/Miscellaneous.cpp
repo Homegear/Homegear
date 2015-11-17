@@ -173,7 +173,7 @@ void Miscellaneous::load()
 	try
 	{
 		_devices.clear();
-		std::shared_ptr<BaseLib::Database::DataTable> rows = raiseGetDevices();
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _bl->db->getDevices((uint32_t)_family);
 		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
 			uint32_t deviceID = row->second.at(0)->intValue;

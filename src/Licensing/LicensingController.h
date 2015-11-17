@@ -65,6 +65,7 @@ public:
 	void init();
 	void dispose();
 
+	void load();
 	void loadModules();
 
 	bool moduleAvailable(int32_t moduleId);

@@ -5,8 +5,8 @@ cd $SCRIPTDIR
 CPPFLAGS=-DDEBUG CXXFLAGS="-g -O0" && make -j8
 cp homegear-miscellaneous/src/.libs/mod_miscellaneous.so /var/lib/homegear/modules
 
-#cd $SCRIPTDIR/../homegear-homematicbidcos
-#CPPFLAGS=-DDEBUG CXXFLAGS="-g -O0" && make -j8 && make install
+cd $SCRIPTDIR/../homegear-homematicbidcos
+CPPFLAGS=-DDEBUG CXXFLAGS="-g -O0" && make -j8 && make install
 
 #cd $SCRIPTDIR/../homegear-homematicwired
 #CPPFLAGS=-DDEBUG CXXFLAGS="-g -O0" && make -j8 && make install

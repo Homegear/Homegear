@@ -71,7 +71,7 @@ bool User::verify(const std::string& userName, const std::string& password)
 {
 	try
 	{
-		std::shared_ptr<BaseLib::Database::DataTable> rows = GD::db->getPassword(userName);
+		std::shared_ptr<BaseLib::Database::DataTable> rows = GD::bl->db->getPassword(userName);
 		if(rows->empty() || rows->at(0).empty() || rows->at(0).size() != 2) return false;
 		std::vector<unsigned char> salt;
 		salt.insert(salt.begin(), rows->at(0).at(1)->binaryValue->begin(), rows->at(0).at(1)->binaryValue->end());
@@ -95,23 +95,23 @@ bool User::verify(const std::string& userName, const std::string& password)
 
 uint64_t User::getID(const std::string& userName)
 {
-	uint64_t userID = GD::db->getUserID(userName);
+	uint64_t userID = GD::bl->db->getUserID(userName);
 	return userID;
 }
 
 bool User::exists(const std::string& userName)
 {
-	return GD::db->userNameExists(userName);
+	return GD::bl->db->userNameExists(userName);
 }
 
 bool User::remove(const std::string& userName)
 {
 	try
 	{
-		uint64_t userID = GD::db->getUserID(userName);
+		uint64_t userID = GD::bl->db->getUserID(userName);
 		if(userID == 0) return false;
 
-		if(GD::db->deleteUser(userID)) return true;
+		if(GD::bl->db->deleteUser(userID)) return true;
 		return false;
 	}
 	catch(std::exception& ex)
@@ -134,7 +134,7 @@ bool User::create(const std::string& userName, const std::string& password)
 		std::vector<uint8_t> salt;
 		std::vector<uint8_t> passwordHash = generateWHIRLPOOL(password, salt);
 
-		if(GD::db->createUser(userName, passwordHash, salt)) return true;
+		if(GD::bl->db->createUser(userName, passwordHash, salt)) return true;
 	}
 	catch(std::exception& ex)
 	{
@@ -151,13 +151,13 @@ bool User::update(const std::string& userName, const std::string& password)
 {
 	try
 	{
-		uint64_t userID = GD::db->getUserID(userName);
+		uint64_t userID = GD::bl->db->getUserID(userName);
 		if(userID == 0) return false;
 
 		std::vector<uint8_t> salt;
 		std::vector<uint8_t> passwordHash = User::generateWHIRLPOOL(password, salt);
 
-		if(GD::db->updateUser(userID, passwordHash, salt)) return true;
+		if(GD::bl->db->updateUser(userID, passwordHash, salt)) return true;
 	}
 	catch(std::exception& ex)
 	{
@@ -175,7 +175,7 @@ bool User::getAll(std::map<uint64_t, std::string>& users)
 	try
 	{
 		users.clear();
-		std::shared_ptr<BaseLib::Database::DataTable> rows = GD::db->getUsers();
+		std::shared_ptr<BaseLib::Database::DataTable> rows = GD::bl->db->getUsers();
 		if(rows->size() == 0) return true;
 
 		for(BaseLib::Database::DataTable::const_iterator i = rows->begin(); i != rows->end(); ++i)

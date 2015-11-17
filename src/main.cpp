@@ -29,6 +29,7 @@
 */
 
 #include "GD/GD.h"
+#include "Monitor.h"
 #include "UPnP/UPnP.h"
 #include "MQTT/Mqtt.h"
 #include "homegear-base/BaseLib.h"
@@ -59,6 +60,7 @@ void startUp();
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
+Monitor _monitor;
 std::mutex _shuttingDownMutex;
 bool _reloading = false;
 bool _monitorProcess = false;
@@ -72,8 +74,16 @@ std::shared_ptr<std::function<void(int32_t, std::string)>> _errorCallback;
 void exitHomegear(int exitCode)
 {
 	if(GD::physicalInterfaces) GD::physicalInterfaces->dispose();
+	if(GD::familyController) GD::familyController->disposeDeviceFamilies();
+	if(GD::bl->db)
+	{
+		//Finish database operations before closing modules, otherwise SEGFAULT
+		GD::bl->db->dispose();
+		GD::bl->db.reset();
+	}
     if(GD::familyController) GD::familyController->dispose();
     if(GD::licensingController) GD::licensingController->dispose();
+    _monitor.stop();
     exit(exitCode);
 }
 
@@ -179,6 +189,7 @@ void terminate(int32_t signalNumber)
 			GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
 			GD::bl->shuttingDown = true;
 			_shuttingDownMutex.unlock();
+			_monitor.stop();
 #ifdef SCRIPTENGINE
 			if(GD::scriptEngine) GD::scriptEngine->stopEventThreads();
 #endif
@@ -218,9 +229,17 @@ void terminate(int32_t signalNumber)
 			if(GD::scriptEngine) GD::scriptEngine->dispose();
 #endif
 			if(GD::familyController) GD::familyController->save(false);
-			if(GD::db) GD::db->dispose(); //Finish database operations before closing modules, otherwise SEGFAULT
 			GD::out.printMessage("(Shutdown) => Disposing device families");
-			if(GD::familyController) GD::familyController->dispose();
+			if(GD::familyController) GD::familyController->disposeDeviceFamilies();
+			GD::out.printMessage("(Shutdown) => Disposing database");
+			if(GD::bl->db)
+			{
+				//Finish database operations before closing modules, otherwise SEGFAULT
+				GD::bl->db->dispose();
+				GD::bl->db.reset();
+			}
+			GD::out.printMessage("(Shutdown) => Disposing family modules");
+			GD::familyController->dispose();
 			GD::out.printMessage("(Shutdown) => Disposing licensing modules");
 			if(GD::licensingController) GD::licensingController->dispose();
 			GD::bl->fileDescriptorManager.dispose();
@@ -294,8 +313,8 @@ void terminate(int32_t signalNumber)
 					GD::out.printError("Error: Could not redirect errors to new log file.");
 				}
 			}
-			GD::db->hotBackup();
-			if(!GD::db->isOpen())
+			GD::bl->db->hotBackup();
+			if(!GD::bl->db->isOpen())
 			{
 				GD::out.printCritical("Critical: Can't reopen database. Exiting...");
 				exit(1);
@@ -419,6 +438,7 @@ void startMainProcess()
 	try
 	{
 		_monitorProcess = false;
+		//_monitor.init();
 
 		pid_t pid, sid;
 		pid = fork();
@@ -430,6 +450,7 @@ void startMainProcess()
 		{
 			_monitorProcess = true;
 			_mainProcessId = pid;
+			//_monitor.prepareParent();
 		}
 		else
 		{
@@ -442,9 +463,11 @@ void startMainProcess()
 			{
 				exitHomegear(1);
 			}
+
+			//_monitor.prepareChild();
 		}
 
-		close(STDIN_FILENO);
+		//close(STDIN_FILENO);
 
 		if((chdir(GD::bl->settings.logfilePath().c_str())) < 0)
 		{
@@ -552,7 +575,11 @@ void startUp()
     		sa.sa_handler = sigchld_handler;
     		sigaction(SIGCHLD, &sa, NULL);
 
-    		while(true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    		while(true)
+    		{
+    			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    			//_monitor.checkHealth();
+    		}
     	}
 
     	// {{{ Init gcrypt and GnuTLS
@@ -714,16 +741,19 @@ void startUp()
 			exit(1);
 		}
 
-		GD::db->init();
-    	GD::db->open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".bak");
-    	if(!GD::db->isOpen()) exitHomegear(1);
+		GD::bl->db->init();
+    	GD::bl->db->open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".bak");
+    	if(!GD::bl->db->isOpen()) exitHomegear(1);
 
         GD::out.printInfo("Initializing database...");
-        GD::db->convertDatabase();
-        GD::db->initializeDatabase();
+        GD::bl->db->convertDatabase();
+        GD::bl->db->initializeDatabase();
 
         GD::out.printInfo("Initializing licensing controller...");
         GD::licensingController->init();
+
+        GD::out.printInfo("Loading licensing controller data...");
+        GD::licensingController->load();
 
         GD::out.printInfo("Initializing family controller...");
         GD::familyController->init();
@@ -1102,7 +1132,7 @@ int main(int argc, char* argv[])
 		GD::licensingController.reset(new LicensingController());
 		GD::familyController.reset(new FamilyController());
 		GD::physicalInterfaces.reset(new PhysicalInterfaces());
-		GD::db.reset(new DatabaseController());
+		GD::bl->db.reset(new DatabaseController());
 		GD::rpcClient.reset(new RPC::Client());
 
     	if(_startAsDaemon) startDaemon();

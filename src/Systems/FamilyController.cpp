@@ -130,87 +130,6 @@ FamilyController::~FamilyController()
 	dispose();
 }
 
-//Device event handling
-void FamilyController::onCreateSavepointSynchronous(std::string name)
-{
-	GD::db->createSavepointSynchronous(name);
-}
-
-void FamilyController::onReleaseSavepointSynchronous(std::string name)
-{
-	GD::db->releaseSavepointSynchronous(name);
-}
-
-void FamilyController::onCreateSavepointAsynchronous(std::string name)
-{
-	GD::db->createSavepointAsynchronous(name);
-}
-
-void FamilyController::onReleaseSavepointAsynchronous(std::string name)
-{
-	GD::db->releaseSavepointAsynchronous(name);
-}
-
-void FamilyController::onDeleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID)
-{
-	GD::db->deleteMetadata(peerID, serialNumber, dataID);
-}
-
-void FamilyController::onDeletePeer(uint64_t id)
-{
-	GD::db->deletePeer(id);
-}
-
-uint64_t FamilyController::onSavePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber)
-{
-	return GD::db->savePeer(id, parentID, address, serialNumber);
-}
-
-void FamilyController::onSavePeerParameter(uint64_t peerID, BaseLib::Database::DataRow& data)
-{
-	GD::db->savePeerParameterAsynchronous(peerID, data);
-}
-
-void FamilyController::onSavePeerVariable(uint64_t peerID, BaseLib::Database::DataRow& data)
-{
-	GD::db->savePeerVariableAsynchronous(peerID, data);
-}
-
-std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetPeerParameters(uint64_t peerID)
-{
-	return GD::db->getPeerParameters(peerID);
-}
-
-std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetPeerVariables(uint64_t peerID)
-{
-	return GD::db->getPeerVariables(peerID);
-}
-
-void FamilyController::onDeletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow& data)
-{
-	GD::db->deletePeerParameter(peerID, data);
-}
-
-bool FamilyController::onSetPeerID(uint64_t oldPeerID, uint64_t newPeerID)
-{
-	return GD::db->setPeerID(oldPeerID, newPeerID);
-}
-
-std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetServiceMessages(uint64_t peerID)
-{
-	return GD::db->getServiceMessages(peerID);
-}
-
-void FamilyController::onSaveServiceMessage(uint64_t peerID, BaseLib::Database::DataRow& data)
-{
-	GD::db->saveServiceMessageAsynchronous(peerID, data);
-}
-
-void FamilyController::onDeleteServiceMessage(uint64_t databaseID)
-{
-	GD::db->deleteServiceMessage(databaseID);
-}
-
 void FamilyController::onAddWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler, std::map<int32_t, BaseLib::PEventHandler>& eventHandlers)
 {
 	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
@@ -225,41 +144,6 @@ void FamilyController::onRemoveWebserverEventHandler(std::map<int32_t, BaseLib::
 	{
 		i->second.removeWebserverEventHandler(eventHandlers[i->first]);
 	}
-}
-
-std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetDevices(uint32_t family)
-{
-	return GD::db->getDevices(family);
-}
-
-void FamilyController::onDeleteDevice(uint64_t deviceID)
-{
-	GD::db->deleteDevice(deviceID);
-}
-
-uint64_t FamilyController::onSaveDevice(uint64_t id, int32_t address, std::string serialNumber, uint32_t type, uint32_t family)
-{
-	return GD::db->saveDevice(id, address, serialNumber, type, family);
-}
-
-void FamilyController::onSaveDeviceVariable(BaseLib::Database::DataRow& data)
-{
-	GD::db->saveDeviceVariableAsynchronous(data);
-}
-
-void FamilyController::onDeletePeers(int32_t deviceID)
-{
-	GD::db->deletePeers(deviceID);
-}
-
-std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetPeers(uint64_t deviceID)
-{
-	return GD::db->getPeers(deviceID);
-}
-
-std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetDeviceVariables(uint64_t deviceID)
-{
-	return GD::db->getDeviceVariables(deviceID);
 }
 
 void FamilyController::onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>> values)
@@ -389,6 +273,33 @@ void FamilyController::onRunScript(std::string& script, uint64_t peerId, const s
 int32_t FamilyController::onIsAddonClient(int32_t clientID)
 {
 	return RPC::Server::isAddonClientAll(clientID);
+}
+
+int32_t FamilyController::onCheckLicense(int32_t moduleId, int32_t familyId, int32_t deviceId, const std::string& licenseKey)
+{
+	try
+	{
+		std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
+		if(i == GD::licensingModules.end() || !i->second)
+		{
+			GD::out.printError("Error: Could not check license. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
+			return -2;
+		}
+		return i->second->checkLicense(familyId, deviceId, licenseKey);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return -1;
 }
 
 void FamilyController::onDecryptDeviceDescription(int32_t moduleId, const std::vector<char>& input, std::vector<char>& output)
@@ -586,13 +497,10 @@ void FamilyController::load()
     }
 }
 
-void FamilyController::dispose()
+void FamilyController::disposeDeviceFamilies()
 {
 	try
 	{
-		if(_disposed) return;
-		_disposed = true;
-		_rpcCache.reset();
 		if(!GD::deviceFamilies.empty())
 		{
 			for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
@@ -602,6 +510,28 @@ void FamilyController::dispose()
 			}
 		}
 		GD::deviceFamilies.clear();
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void FamilyController::dispose()
+{
+	try
+	{
+		if(_disposed) return;
+		_disposed = true;
+		_rpcCache.reset();
 		moduleLoaders.clear();
 	}
 	catch(const std::exception& ex)

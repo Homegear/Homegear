@@ -404,7 +404,7 @@ void Mqtt::listen()
 			catch(BaseLib::SocketClosedException& ex)
 			{
 				_socket->close();
-				_out.printWarning("Warning: Connection to MQTT server closed.");
+				if(_started) _out.printWarning("Warning: Connection to MQTT server closed.");
 				continue;
 			}
 			catch(BaseLib::SocketTimeOutException& ex)

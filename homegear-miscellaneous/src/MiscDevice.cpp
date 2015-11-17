@@ -118,7 +118,7 @@ void MiscDevice::loadPeers()
 {
 	try
 	{
-		std::shared_ptr<BaseLib::Database::DataTable> rows = raiseGetPeers();
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _bl->db->getPeers(_deviceID);
 		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
 			int32_t peerID = row->second.at(0)->intValue;

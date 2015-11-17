@@ -136,7 +136,7 @@ void UPnP::getUDN()
 {
 	try
 	{
-		if(!GD::db->getHomegearVariableString(DatabaseController::HomegearVariables::upnpusn, _udn) || _udn.size() != 36)
+		if(!GD::bl->db->getHomegearVariableString(DatabaseController::HomegearVariables::upnpusn, _udn) || _udn.size() != 36)
 		{
 			_udn = BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(-2147483648, 2147483647), 8) + "-";
 			_udn.append(BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(0, 65535), 4) + "-");
@@ -144,7 +144,7 @@ void UPnP::getUDN()
 			_udn.append(BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(0, 65535), 4) + "-");
 			_udn.append(BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(-2147483648, 2147483647), 8));
 			_udn.append(BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(0, 65535), 4));
-			GD::db->setHomegearVariableString(DatabaseController::HomegearVariables::upnpusn, _udn);
+			GD::bl->db->setHomegearVariableString(DatabaseController::HomegearVariables::upnpusn, _udn);
 			GD::out.printInfo("Info: Created new UPnP UDN: " + _udn);
 		}
 		_st = "uuid:" + _udn;

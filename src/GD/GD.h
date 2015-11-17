@@ -59,7 +59,6 @@ class GD
 public:
 	static std::unique_ptr<BaseLib::Obj> bl;
 	static BaseLib::Output out;
-	static std::unique_ptr<DatabaseController> db;
 	static std::string runAsUser;
 	static std::string runAsGroup;
 	static std::string configPath;
