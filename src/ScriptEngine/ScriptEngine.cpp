@@ -211,6 +211,8 @@ void ScriptEngine::executeScript(const std::string& script, uint64_t peerId, con
 		std::string scriptCopy = script;
 		zend_file_handle zendHandle;
 		zendHandle.type = ZEND_HANDLE_MAPPED;
+		zendHandle.handle.fp = nullptr;
+		zendHandle.handle.stream.handle = nullptr;
 		zendHandle.handle.stream.closer = nullptr;
 		zendHandle.handle.stream.mmap.buf = (char*)scriptCopy.c_str(); //String is not modified
 		zendHandle.handle.stream.mmap.len = scriptCopy.size();
@@ -249,61 +251,82 @@ void ScriptEngine::executeScript(const std::string& script, uint64_t peerId, con
 
 		while(keepAlive && !GD::bl->shuttingDown && (peerId == 0 || GD::familyController->peerExists(peerId)))
 		{
-			PG(register_argc_argv) = 1;
-			PG(implicit_flush) = 1;
-			PG(html_errors) = 0;
-			SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
-			SG(options) |= SAPI_OPTION_NO_CHDIR;
-			SG(headers_sent) = 1;
-			SG(request_info).no_headers = 1;
-			SG(default_mimetype) = nullptr;
-			SG(default_charset) = nullptr;
-
-			if (php_request_startup(TSRMLS_C) == FAILURE) {
-				GD::bl->out.printError("Error calling php_request_startup...");
-				ts_free_thread();
-
-				PhpEvents::eventsMapMutex.lock();
-				PhpEvents::eventsMap.erase(pthread_self());
-				PhpEvents::eventsMapMutex.unlock();
-
-				return;
-			}
-
-			std::vector<std::string> argv = getArgs("", args);
-			argv[0] = std::to_string(peerId);
-			php_homegear_build_argv(argv);
-			SG(request_info).argc = argv.size();
-			SG(request_info).argv = (char**)malloc((argv.size() + 1) * sizeof(char*));
-			for(uint32_t i = 0; i < argv.size(); ++i)
+			try
 			{
-				SG(request_info).argv[i] = (char*)argv[i].c_str(); //Value is not modified.
-			}
-			SG(request_info).argv[argv.size()] = nullptr;
+				PG(register_argc_argv) = 1;
+				PG(implicit_flush) = 1;
+				PG(html_errors) = 0;
+				SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
+				SG(options) |= SAPI_OPTION_NO_CHDIR;
+				SG(headers_sent) = 1;
+				SG(request_info).no_headers = 1;
+				SG(default_mimetype) = nullptr;
+				SG(default_charset) = nullptr;
 
-			int64_t startTime = GD::bl->hf.getTime();
+				if (php_request_startup(TSRMLS_C) == FAILURE) {
+					GD::bl->out.printError("Error calling php_request_startup...");
+					ts_free_thread();
 
-			if(peerId > 0) GD::out.printInfo("Info: Starting PHP script of peer " + std::to_string(peerId) + ".");
-			php_execute_script(&zendHandle);
-			if(EG(exit_status) != 0)
-			{
-				GD::bl->out.printError("Error: Script engine (peer id: " + std::to_string(peerId) + "): Script exited with exit code " + std::to_string(EG(exit_status)));
-			}
-			if(peerId > 0) GD::out.printInfo("Info: PHP script of peer " + std::to_string(peerId) + " exited.");
+					PhpEvents::eventsMapMutex.lock();
+					PhpEvents::eventsMap.erase(pthread_self());
+					PhpEvents::eventsMapMutex.unlock();
 
-			if(interval > 0)
-			{
-				int64_t totalTimeToSleep = interval - (GD::bl->hf.getTime() - startTime);
-				if(totalTimeToSleep < 0) totalTimeToSleep = 0;
-				for(int32_t i = 0; i < (totalTimeToSleep / 100) + 1; i++)
-				{
-					std::this_thread::sleep_for(std::chrono::milliseconds(100));
-					if(!(keepAlive && !GD::bl->shuttingDown && (peerId == 0 || GD::familyController->peerExists(peerId)))) break;
+					return;
 				}
-			}
-			else std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
-			php_request_shutdown(NULL);
+				std::vector<std::string> argv = getArgs("", args);
+				argv[0] = std::to_string(peerId);
+				php_homegear_build_argv(argv);
+				SG(request_info).argc = argv.size();
+				SG(request_info).argv = (char**)malloc((argv.size() + 1) * sizeof(char*));
+				for(uint32_t i = 0; i < argv.size(); ++i)
+				{
+					SG(request_info).argv[i] = (char*)argv[i].c_str(); //Value is not modified.
+				}
+				SG(request_info).argv[argv.size()] = nullptr;
+
+				int64_t startTime = GD::bl->hf.getTime();
+
+				if(peerId > 0) GD::out.printInfo("Info: Starting PHP script of peer " + std::to_string(peerId) + ".");
+				php_execute_script(&zendHandle);
+				if(EG(exit_status) != 0)
+				{
+					GD::bl->out.printError("Error: Script engine (peer id: " + std::to_string(peerId) + "): Script exited with exit code " + std::to_string(EG(exit_status)));
+				}
+				if(peerId > 0) GD::out.printInfo("Info: PHP script of peer " + std::to_string(peerId) + " exited.");
+
+				if(interval > 0)
+				{
+					int64_t totalTimeToSleep = interval - (GD::bl->hf.getTime() - startTime);
+					if(totalTimeToSleep < 0) totalTimeToSleep = 0;
+					for(int32_t i = 0; i < (totalTimeToSleep / 100) + 1; i++)
+					{
+						std::this_thread::sleep_for(std::chrono::milliseconds(100));
+						if(!(keepAlive && !GD::bl->shuttingDown && (peerId == 0 || GD::familyController->peerExists(peerId)))) break;
+					}
+				}
+				else std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+
+				php_request_shutdown(NULL);
+			}
+			catch(const std::exception& ex)
+			{
+				GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			if(SG(request_info).argv)
+			{
+				free(SG(request_info).argv);
+				SG(request_info).argv = nullptr;
+			}
+			SG(request_info).argc = 0;
 		}
 
 		ts_free_thread();

@@ -662,7 +662,7 @@ BaseLib::PVariable EventHandler::remove(std::string name)
 		}
 
 		_databaseMutex.lock();
-		GD::db->deleteEvent(name);
+		GD::bl->db->deleteEvent(name);
 		_databaseMutex.unlock();
 		GD::rpcClient->broadcastDeleteEvent(name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
@@ -1565,7 +1565,7 @@ void EventHandler::load()
 		}
 
 		_databaseMutex.lock();
-		std::shared_ptr<BaseLib::Database::DataTable> rows = GD::db->getEvents();
+		std::shared_ptr<BaseLib::Database::DataTable> rows = GD::bl->db->getEvents();
 		_databaseMutex.unlock();
 		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
@@ -1690,7 +1690,7 @@ void EventHandler::save(std::shared_ptr<Event> event)
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->lastReset)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->currentTime)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->enabled)));
-		GD::db->saveEventAsynchronous(data);
+		GD::bl->db->saveEventAsynchronous(data);
 	}
 	catch(const std::exception& ex)
     {

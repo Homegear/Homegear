@@ -659,7 +659,7 @@ BaseLib::PVariable RPCDeleteMetadata::invoke(int32_t clientID, std::shared_ptr<s
 		std::string dataID;
 		if(parameters->size() > 1) dataID = parameters->at(1)->stringValue;
 		serialNumber = peer->getSerialNumber();
-		return GD::db->deleteMetadata(peer->getID(), serialNumber, dataID);
+		return GD::bl->db->deleteMetadata(peer->getID(), serialNumber, dataID);
 	}
 	catch(const std::exception& ex)
     {
@@ -683,7 +683,7 @@ BaseLib::PVariable RPCDeleteSystemVariable::invoke(int32_t clientID, std::shared
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::db->deleteSystemVariable(parameters->at(0)->stringValue);
+		return GD::bl->db->deleteSystemVariable(parameters->at(0)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -770,7 +770,7 @@ BaseLib::PVariable RPCGetAllMetadata::invoke(int32_t clientID, std::shared_ptr<s
 		if(!peer) return BaseLib::Variable::createError(-2, "Device not found.");
 
 		std::string peerName = peer->getName();
-		BaseLib::PVariable metadata = GD::db->getAllMetadata(peer->getID());
+		BaseLib::PVariable metadata = GD::bl->db->getAllMetadata(peer->getID());
 		if(!peerName.empty())
 		{
 			if(metadata->structValue->find("NAME") != metadata->structValue->end()) metadata->structValue->at("NAME")->stringValue = peerName;
@@ -830,7 +830,7 @@ BaseLib::PVariable RPCGetAllSystemVariables::invoke(int32_t clientID, std::share
 	{
 		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
 
-		return GD::db->getAllSystemVariables();
+		return GD::bl->db->getAllSystemVariables();
 	}
 	catch(const std::exception& ex)
     {
@@ -1422,16 +1422,16 @@ BaseLib::PVariable RPCGetMetadata::invoke(int32_t clientID, std::shared_ptr<std:
 		{
 			std::string peerName = peer->getName();
 			if(peerName.size() > 0) return BaseLib::PVariable(new BaseLib::Variable(peerName));
-			BaseLib::PVariable rpcName = GD::db->getMetadata(peer->getID(), parameters->at(1)->stringValue);
+			BaseLib::PVariable rpcName = GD::bl->db->getMetadata(peer->getID(), parameters->at(1)->stringValue);
 			if(peerName.size() == 0 && !rpcName->errorStruct)
 			{
 				peer->setName(rpcName->stringValue);
 				serialNumber = peer->getSerialNumber();
-				GD::db->deleteMetadata(peer->getID(), serialNumber, parameters->at(1)->stringValue);
+				GD::bl->db->deleteMetadata(peer->getID(), serialNumber, parameters->at(1)->stringValue);
 			}
 			return rpcName;
 		}
-		else return GD::db->getMetadata(peer->getID(), parameters->at(1)->stringValue);
+		else return GD::bl->db->getMetadata(peer->getID(), parameters->at(1)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -1839,7 +1839,7 @@ BaseLib::PVariable RPCGetSystemVariable::invoke(int32_t clientID, std::shared_pt
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::db->getSystemVariable(parameters->at(0)->stringValue);
+		return GD::bl->db->getSystemVariable(parameters->at(0)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -2131,8 +2131,20 @@ BaseLib::PVariable RPCListBidcosInterfaces::invoke(int32_t clientID, std::shared
 	{
 		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
 
-		if(GD::deviceFamilies.find(0) != GD::deviceFamilies.end() && GD::deviceFamilies.at(0)) return GD::deviceFamilies.at(0)->listBidcosInterfaces();
-		else return BaseLib::Variable::createError(-32601, "Family HomeMatic BidCoS does not exist.");
+		//Return dummy data
+		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
+			if(!central) continue;
+			BaseLib::PVariable array(new BaseLib::Variable(BaseLib::VariableType::tArray));
+			BaseLib::PVariable interface(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+			array->arrayValue->push_back(interface);
+			interface->structValue->insert(BaseLib::StructElement("ADDRESS", BaseLib::PVariable(new BaseLib::Variable(central->logicalDevice()->getSerialNumber()))));
+			interface->structValue->insert(BaseLib::StructElement("DESCRIPTION", BaseLib::PVariable(new BaseLib::Variable(std::string("Homegear default BidCoS interface")))));
+			interface->structValue->insert(BaseLib::StructElement("CONNECTED", BaseLib::PVariable(new BaseLib::Variable(true))));
+			interface->structValue->insert(BaseLib::StructElement("DEFAULT", BaseLib::PVariable(new BaseLib::Variable(true))));
+			return array;
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -3076,7 +3088,7 @@ BaseLib::PVariable RPCSetMetadata::invoke(int32_t clientID, std::shared_ptr<std:
 			return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 		}
 		serialNumber = peer->getSerialNumber();
-		return GD::db->setMetadata(peer->getID(), serialNumber, parameters->at(1)->stringValue, parameters->at(2));
+		return GD::bl->db->setMetadata(peer->getID(), serialNumber, parameters->at(1)->stringValue, parameters->at(2));
 	}
 	catch(const std::exception& ex)
     {
@@ -3135,7 +3147,7 @@ BaseLib::PVariable RPCSetSystemVariable::invoke(int32_t clientID, std::shared_pt
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tVariant }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::db->setSystemVariable(parameters->at(0)->stringValue, parameters->at(1));
+		return GD::bl->db->setSystemVariable(parameters->at(0)->stringValue, parameters->at(1));
 	}
 	catch(const std::exception& ex)
     {

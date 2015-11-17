@@ -79,6 +79,7 @@ ZEND_FUNCTION(hg_update_user);
 ZEND_FUNCTION(hg_user_exists);
 ZEND_FUNCTION(hg_users);
 ZEND_FUNCTION(hg_log);
+ZEND_FUNCTION(hg_check_license);
 ZEND_FUNCTION(hg_poll_event);
 ZEND_FUNCTION(hg_peer_exists);
 ZEND_FUNCTION(hg_subscribe_peer);
@@ -112,6 +113,7 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_user_exists, NULL)
 	ZEND_FE(hg_users, NULL)
 	ZEND_FE(hg_log, NULL)
+	ZEND_FE(hg_check_license, NULL)
 	ZEND_FE(hg_poll_event, NULL)
 	ZEND_FE(hg_peer_exists, NULL)
 	ZEND_FE(hg_subscribe_peer, NULL)
@@ -876,6 +878,26 @@ ZEND_FUNCTION(hg_log)
 	else GD::out.printMessage("Script log: " + std::string(pMessage, messageLength), debugLevel, true);
 }
 
+ZEND_FUNCTION(hg_check_license)
+{
+	if(_disposed) RETURN_NULL();
+	long moduleId = -1;
+	long familyId = -1;
+	long deviceId = -1;
+	char* pLicenseKey = nullptr;
+	int licenseKeyLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "llls", &moduleId, &familyId, &deviceId, &pLicenseKey, &licenseKeyLength) != SUCCESS) RETURN_NULL();
+	std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
+	if(i == GD::licensingModules.end() || !i->second)
+	{
+		GD::out.printError("Error: Could not check license. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
+		ZVAL_LONG(return_value, -2);
+		return;
+	}
+	std::string licenseKey(pLicenseKey, licenseKeyLength);
+	ZVAL_LONG(return_value, i->second->checkLicense(familyId, deviceId, licenseKey));
+}
+
 ZEND_FUNCTION(hg_shutting_down)
 {
 	if(_disposed || GD::bl->shuttingDown) RETURN_TRUE
@@ -1179,6 +1201,7 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME_MAPPING(userExists, hg_user_exists, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(listUsers, hg_users, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(log, hg_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(checkLicense, hg_check_license, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(pollEvent, hg_poll_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(peerExists, hg_peer_exists, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(subscribePeer, hg_subscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)

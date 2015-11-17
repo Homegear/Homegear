@@ -1,5 +1,6 @@
 MiscPeer.lo: MiscPeer.cpp /usr/include/stdc-predef.h MiscPeer.h \
  /usr/include/homegear-base/BaseLib.h \
+ /usr/include/homegear-base/Database/IDatabaseController.h \
  /usr/include/homegear-base/Database/DatabaseTypes.h \
  /usr/include/c++/4.8/string \
  /usr/include/x86_64-linux-gnu/c++/4.8/bits/c++config.h \
@@ -114,7 +115,6 @@ MiscPeer.lo: MiscPeer.cpp /usr/include/stdc-predef.h MiscPeer.h \
  /usr/include/c++/4.8/bits/shared_ptr.h \
  /usr/include/c++/4.8/bits/shared_ptr_base.h \
  /usr/include/c++/4.8/backward/auto_ptr.h \
- /usr/include/homegear-base/Encoding/XMLRPCDecoder.h \
  /usr/include/homegear-base/Variable.h \
  /usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
  /usr/include/c++/4.8/cassert /usr/include/assert.h \
@@ -140,6 +140,8 @@ MiscPeer.lo: MiscPeer.cpp /usr/include/stdc-predef.h MiscPeer.h \
  /usr/include/c++/4.8/bits/ostream.tcc /usr/include/c++/4.8/istream \
  /usr/include/c++/4.8/bits/istream.tcc /usr/include/c++/4.8/list \
  /usr/include/c++/4.8/bits/stl_list.h /usr/include/c++/4.8/bits/list.tcc \
+ /usr/include/homegear-base/Encoding/XMLRPCDecoder.h \
+ /usr/include/homegear-base/Variable.h \
  /usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
  /usr/include/homegear-base/Encoding/XMLRPCEncoder.h \
  /usr/include/homegear-base/Exception.h \
@@ -334,6 +336,8 @@ MiscPeer.lo: MiscPeer.cpp /usr/include/stdc-predef.h MiscPeer.h \
 MiscPeer.h:
 
 /usr/include/homegear-base/BaseLib.h:
+
+/usr/include/homegear-base/Database/IDatabaseController.h:
 
 /usr/include/homegear-base/Database/DatabaseTypes.h:
 
@@ -623,8 +627,6 @@ MiscPeer.h:
 
 /usr/include/c++/4.8/backward/auto_ptr.h:
 
-/usr/include/homegear-base/Encoding/XMLRPCDecoder.h:
-
 /usr/include/homegear-base/Variable.h:
 
 /usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
@@ -692,6 +694,10 @@ MiscPeer.h:
 /usr/include/c++/4.8/bits/stl_list.h:
 
 /usr/include/c++/4.8/bits/list.tcc:
+
+/usr/include/homegear-base/Encoding/XMLRPCDecoder.h:
+
+/usr/include/homegear-base/Variable.h:
 
 /usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
 

@@ -207,6 +207,30 @@ void LicensingController::init()
     }
 }
 
+void LicensingController::load()
+{
+	try
+	{
+		for(std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.begin(); i != GD::licensingModules.end(); ++i)
+		{
+			i->second->load();
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+
 void LicensingController::dispose()
 {
 	try

@@ -60,62 +60,28 @@ private:
 class FamilyController : public BaseLib::Systems::DeviceFamily::IFamilyEventSink
 {
 public:
-	//Family event handling
-
-	//Database
-		//General
-		virtual void onCreateSavepointSynchronous(std::string name);
-		virtual void onReleaseSavepointSynchronous(std::string name);
-		virtual void onCreateSavepointAsynchronous(std::string name);
-		virtual void onReleaseSavepointAsynchronous(std::string name);
-
-		//Metadata
-		virtual void onDeleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID = "");
-
-		//Device
-		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetDevices(uint32_t family);
-		virtual void onDeleteDevice(uint64_t deviceID);
-		virtual uint64_t onSaveDevice(uint64_t id, int32_t address, std::string serialNumber, uint32_t type, uint32_t family);
-		virtual void onSaveDeviceVariable(BaseLib::Database::DataRow& data);
-		virtual void onDeletePeers(int32_t deviceID);
-		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetPeers(uint64_t deviceID);
-		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetDeviceVariables(uint64_t deviceID);
-
-		//Peer
-		virtual void onDeletePeer(uint64_t id);
-		virtual uint64_t onSavePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber);
-		virtual void onSavePeerParameter(uint64_t peerID, BaseLib::Database::DataRow& data);
-		virtual void onSavePeerVariable(uint64_t peerID, BaseLib::Database::DataRow& data);
-		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetPeerParameters(uint64_t peerID);
-		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetPeerVariables(uint64_t peerID);
-		virtual void onDeletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow& data);
-		virtual bool onSetPeerID(uint64_t oldPeerID, uint64_t newPeerID);
-
-		//Service messages
-		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetServiceMessages(uint64_t peerID);
-		virtual void onSaveServiceMessage(uint64_t peerID, BaseLib::Database::DataRow& data);
-		virtual void onDeleteServiceMessage(uint64_t databaseID);
-
+	// {{{ Family event handling
 		//Hooks
 		virtual void onAddWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler, std::map<int32_t, BaseLib::PEventHandler>& eventHandlers);
 		virtual void onRemoveWebserverEventHandler(std::map<int32_t, BaseLib::PEventHandler>& eventHandlers);
-	//End database
 
-	virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
-	virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint);
-	virtual void onRPCNewDevices(BaseLib::PVariable deviceDescriptions);
-	virtual void onRPCDeleteDevices(BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo);
-	virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
-	virtual void onRunScript(std::string& script, uint64_t peerId, const std::string& args, bool keepAlive, int32_t interval);
-	virtual int32_t onIsAddonClient(int32_t clientID);
+		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
+		virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint);
+		virtual void onRPCNewDevices(BaseLib::PVariable deviceDescriptions);
+		virtual void onRPCDeleteDevices(BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo);
+		virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
+		virtual void onRunScript(std::string& script, uint64_t peerId, const std::string& args, bool keepAlive, int32_t interval);
+		virtual int32_t onIsAddonClient(int32_t clientID);
+		virtual int32_t onCheckLicense(int32_t moduleId, int32_t familyId, int32_t deviceId, const std::string& licenseKey);
 
-	//Device description
-	virtual void onDecryptDeviceDescription(int32_t moduleId, const std::vector<char>& input, std::vector<char>& output);
-	//End Family event handling
+		//Device description
+		virtual void onDecryptDeviceDescription(int32_t moduleId, const std::vector<char>& input, std::vector<char>& output);
+	// }}}
 
 	FamilyController();
 	virtual ~FamilyController();
 	void init();
+	void disposeDeviceFamilies();
 	void dispose();
 
 	void loadModules();

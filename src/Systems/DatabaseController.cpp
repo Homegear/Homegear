@@ -109,6 +109,8 @@ void DatabaseController::initializeDatabase()
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS devicesIndex ON devices (deviceID, address, deviceType, deviceFamily)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS deviceVariables (variableID INTEGER PRIMARY KEY UNIQUE, deviceID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS deviceVariablesIndex ON deviceVariables (variableID, deviceID, variableIndex)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS licenseVariables (variableID INTEGER PRIMARY KEY UNIQUE, moduleID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS licenseVariablesIndex ON licenseVariables (variableID, moduleID, variableIndex)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS users (userID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, password BLOB NOT NULL, salt BLOB NOT NULL)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS usersIndex ON users (userID, name)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS events (eventID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, type INTEGER NOT NULL, peerID INTEGER, peerChannel INTEGER, variable TEXT, trigger INTEGER, triggerValue BLOB, eventMethod TEXT, eventMethodParameters BLOB, resetAfter INTEGER, initialTime INTEGER, timeOperation INTEGER, timeFactor REAL, timeLimit INTEGER, resetMethod TEXT, resetMethodParameters BLOB, eventTime INTEGER, endTime INTEGER, recurEvery INTEGER, lastValue BLOB, lastRaised INTEGER, lastReset INTEGER, currentTime INTEGER, enabled INTEGER)");
@@ -1661,3 +1663,86 @@ void DatabaseController::deleteServiceMessage(uint64_t databaseID)
 	}
 }
 //End service messages
+
+// {{{ License modules
+std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getLicenseVariables(int32_t moduleId)
+{
+	try
+	{
+		BaseLib::Database::DataRow data;
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(moduleId)));
+		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM licenseVariables WHERE moduleID=?", data);
+		return result;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::shared_ptr<BaseLib::Database::DataTable>();
+}
+
+void DatabaseController::saveLicenseVariable(int32_t moduleId, BaseLib::Database::DataRow& data)
+{
+	try
+	{
+		if(data.size() == 2)
+		{
+			if(data.at(1)->intValue == 0)
+			{
+				GD::out.printError("Error: Could not save license module variable. Variable ID is \"0\".");
+				return ;
+			}
+			switch(data.at(0)->dataType)
+			{
+			case BaseLib::Database::DataColumn::DataType::INTEGER:
+				bufferedWrite("UPDATE licenseVariables SET integerValue=? WHERE variableID=?", data);
+				break;
+			case BaseLib::Database::DataColumn::DataType::TEXT:
+				bufferedWrite("UPDATE licenseVariables SET stringValue=? WHERE variableID=?", data);
+				break;
+			case BaseLib::Database::DataColumn::DataType::BLOB:
+				bufferedWrite("UPDATE licenseVariables SET binaryValue=? WHERE variableID=?", data);
+				break;
+			case BaseLib::Database::DataColumn::DataType::NODATA:
+				GD::out.printError("Error: Tried to store data of type NODATA in license module variable table.");
+				break;
+			case BaseLib::Database::DataColumn::DataType::FLOAT:
+				GD::out.printError("Error: Tried to store data of type FLOAT in license module variable table.");
+				break;
+			}
+		}
+		else
+		{
+			if(data.size() == 5)
+			{
+				bufferedWrite("INSERT OR REPLACE INTO licenseVariables (variableID, moduleID, variableIndex, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM licenseVariables WHERE moduleID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(1)->intValue) + "), ?, ?, ?, ?, ?)", data);
+			}
+			else if(data.size() == 6 && data.at(0)->intValue != 0)
+			{
+				bufferedWrite("REPLACE INTO licenseVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			}
+			else GD::out.printError("Error: Either variableID is 0 or the number of columns is invalid.");
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+// }}}

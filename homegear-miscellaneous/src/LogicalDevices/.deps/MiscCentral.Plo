@@ -1,6 +1,7 @@
 LogicalDevices/MiscCentral.lo: LogicalDevices/MiscCentral.cpp \
  /usr/include/stdc-predef.h LogicalDevices/MiscCentral.h \
  LogicalDevices/../MiscDevice.h /usr/include/homegear-base/BaseLib.h \
+ /usr/include/homegear-base/Database/IDatabaseController.h \
  /usr/include/homegear-base/Database/DatabaseTypes.h \
  /usr/include/c++/4.8/string \
  /usr/include/x86_64-linux-gnu/c++/4.8/bits/c++config.h \
@@ -115,7 +116,6 @@ LogicalDevices/MiscCentral.lo: LogicalDevices/MiscCentral.cpp \
  /usr/include/c++/4.8/bits/shared_ptr.h \
  /usr/include/c++/4.8/bits/shared_ptr_base.h \
  /usr/include/c++/4.8/backward/auto_ptr.h \
- /usr/include/homegear-base/Encoding/XMLRPCDecoder.h \
  /usr/include/homegear-base/Variable.h \
  /usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
  /usr/include/c++/4.8/cassert /usr/include/assert.h \
@@ -141,6 +141,8 @@ LogicalDevices/MiscCentral.lo: LogicalDevices/MiscCentral.cpp \
  /usr/include/c++/4.8/bits/ostream.tcc /usr/include/c++/4.8/istream \
  /usr/include/c++/4.8/bits/istream.tcc /usr/include/c++/4.8/list \
  /usr/include/c++/4.8/bits/stl_list.h /usr/include/c++/4.8/bits/list.tcc \
+ /usr/include/homegear-base/Encoding/XMLRPCDecoder.h \
+ /usr/include/homegear-base/Variable.h \
  /usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp \
  /usr/include/homegear-base/Encoding/XMLRPCEncoder.h \
  /usr/include/homegear-base/Exception.h \
@@ -335,6 +337,8 @@ LogicalDevices/MiscCentral.h:
 LogicalDevices/../MiscDevice.h:
 
 /usr/include/homegear-base/BaseLib.h:
+
+/usr/include/homegear-base/Database/IDatabaseController.h:
 
 /usr/include/homegear-base/Database/DatabaseTypes.h:
 
@@ -624,8 +628,6 @@ LogicalDevices/../MiscDevice.h:
 
 /usr/include/c++/4.8/backward/auto_ptr.h:
 
-/usr/include/homegear-base/Encoding/XMLRPCDecoder.h:
-
 /usr/include/homegear-base/Variable.h:
 
 /usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
@@ -693,6 +695,10 @@ LogicalDevices/../MiscDevice.h:
 /usr/include/c++/4.8/bits/stl_list.h:
 
 /usr/include/c++/4.8/bits/list.tcc:
+
+/usr/include/homegear-base/Encoding/XMLRPCDecoder.h:
+
+/usr/include/homegear-base/Variable.h:
 
 /usr/include/homegear-base/Encoding/RapidXml/rapidxml.hpp:
 
