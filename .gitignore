@@ -68,6 +68,7 @@ depcomp
 install-sh
 libtool
 ltmain.sh
+cfg/
 m4/
 missing
 stamp-h?
