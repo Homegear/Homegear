@@ -207,14 +207,6 @@ if [ $revision -eq 0 ]; then
 fi
 sourcePath=libhomegear-base-$version
 mv libhomegear-base-master $sourcePath
-cd $sourcePath
-rm -Rf .* m4 cfg 1>/dev/null 2>&2
-libtoolize
-aclocal
-autoconf
-automake --add-missing
-make distclean
-cd ..
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
 	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
@@ -223,7 +215,7 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf libhomegear-base_$version.orig.tar.gz $sourcePath
 cd $sourcePath
-./configure
+./autogen.sh
 dch -v $version-$revision -M "Version $version."
 debuild -j4 -us -uc
 cd ..
@@ -248,15 +240,6 @@ version=$(echo $fullversion | cut -d "-" -f 1)
 revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-$version
 mv Homegear-master $sourcePath
-cd $sourcePath
-rm -Rf .* m4 cfg homegear-miscellaneous/m4 homegear-miscellaneous/cfg 1>/dev/null 2>&2
-libtoolize
-aclocal
-autoconf
-automake --add-missing
-make distclean
-rm -f homegear-miscellaneous/config.status homegear-miscellaneous/config.log
-cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
@@ -266,7 +249,7 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear_$version.orig.tar.gz $sourcePath
 cd $sourcePath
-./configure
+./autogen.sh
 dch -v $version-$revision -M "Version $version."
 debuild -j4 -us -uc
 cd ..
@@ -285,14 +268,6 @@ version=$(echo $fullversion | cut -d "-" -f 1)
 revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-homematicbidcos-$version
 mv Homegear-HomeMaticBidCoS-master $sourcePath
-cd $sourcePath
-rm -Rf .* m4 cfg 1>/dev/null 2>&2
-libtoolize
-aclocal
-autoconf
-automake --add-missing
-make distclean
-cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
@@ -302,7 +277,7 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-homematicbidcos_$version.orig.tar.gz $sourcePath
 cd $sourcePath
-./configure
+./autogen.sh
 dch -v $version-$revision -M "Version $version."
 debuild -j4 -us -uc
 cd ..
@@ -321,14 +296,6 @@ version=$(echo $fullversion | cut -d "-" -f 1)
 revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-homematicwired-$version
 mv Homegear-HomeMaticWired-master $sourcePath
-cd $sourcePath
-rm -Rf .* m4 cfg 1>/dev/null 2>&2
-libtoolize
-aclocal
-autoconf
-automake --add-missing
-make distclean
-cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
@@ -338,7 +305,7 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-homematicwired_$version.orig.tar.gz $sourcePath
 cd $sourcePath
-./configure
+./autogen.sh
 dch -v $version-$revision -M "Version $version."
 debuild -j4 -us -uc
 cd ..
@@ -357,14 +324,6 @@ version=$(echo $fullversion | cut -d "-" -f 1)
 revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-insteon-$version
 mv Homegear-Insteon-master $sourcePath
-cd $sourcePath
-rm -Rf .* m4 cfg 1>/dev/null 2>&2
-libtoolize
-aclocal
-autoconf
-automake --add-missing
-make distclean
-cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
@@ -374,7 +333,7 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-insteon_$version.orig.tar.gz $sourcePath
 cd $sourcePath
-./configure
+./autogen.sh
 dch -v $version-$revision -M "Version $version."
 debuild -j4 -us -uc
 cd ..
@@ -393,14 +352,6 @@ version=$(echo $fullversion | cut -d "-" -f 1)
 revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-max-$version
 mv Homegear-MAX-master $sourcePath
-cd $sourcePath
-rm -Rf .* m4 cfg 1>/dev/null 2>&2
-libtoolize
-aclocal
-autoconf
-automake --add-missing
-make distclean
-cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
@@ -410,7 +361,7 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-max_$version.orig.tar.gz $sourcePath
 cd $sourcePath
-./configure
+./autogen.sh
 dch -v $version-$revision -M "Version $version."
 debuild -j4 -us -uc
 cd ..
@@ -429,14 +380,6 @@ version=$(echo $fullversion | cut -d "-" -f 1)
 revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-philipshue-$version
 mv Homegear-PhilipsHue-master $sourcePath
-cd $sourcePath
-rm -Rf .* m4 cfg 1>/dev/null 2>&2
-libtoolize
-aclocal
-autoconf
-automake --add-missing
-make distclean
-cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
@@ -446,7 +389,7 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-philipshue_$version.orig.tar.gz $sourcePath
 cd $sourcePath
-./configure
+./autogen.sh
 dch -v $version-$revision -M "Version $version."
 debuild -j4 -us -uc
 cd ..
@@ -465,14 +408,6 @@ version=$(echo $fullversion | cut -d "-" -f 1)
 revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-sonos-$version
 mv Homegear-Sonos-master $sourcePath
-cd $sourcePath
-rm -Rf .* m4 cfg 1>/dev/null 2>&2
-libtoolize
-aclocal
-autoconf
-automake --add-missing
-make distclean
-cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
@@ -482,7 +417,7 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-sonos_$version.orig.tar.gz $sourcePath
 cd $sourcePath
-./configure
+./autogen.sh
 dch -v $version-$revision -M "Version $version."
 debuild -j4 -us -uc
 cd ..
