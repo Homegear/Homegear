@@ -31,6 +31,8 @@
 #ifndef GD_H_
 #define GD_H_
 
+#define MISC_FAMILY_ID 254
+
 #include "homegear-base/BaseLib.h"
 #include "Miscellaneous.h"
 

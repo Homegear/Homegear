@@ -34,11 +34,11 @@
 namespace Misc
 {
 
-MiscDevice::MiscDevice(IDeviceEventSink* eventHandler) : LogicalDevice(254, GD::bl, eventHandler)
+MiscDevice::MiscDevice(IDeviceEventSink* eventHandler) : LogicalDevice(MISC_FAMILY_ID, GD::bl, eventHandler)
 {
 }
 
-MiscDevice::MiscDevice(uint32_t deviceID, std::string serialNumber, IDeviceEventSink* eventHandler) : LogicalDevice(254, GD::bl, deviceID, serialNumber, -1, eventHandler)
+MiscDevice::MiscDevice(uint32_t deviceID, std::string serialNumber, IDeviceEventSink* eventHandler) : LogicalDevice(MISC_FAMILY_ID, GD::bl, deviceID, serialNumber, -1, eventHandler)
 {
 }
 

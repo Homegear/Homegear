@@ -53,7 +53,6 @@ public:
 	virtual std::shared_ptr<MiscDevice> getDevice(std::string serialNumber);
 	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 	virtual std::string handleCLICommand(std::string& command);
-	virtual std::string getName() { return "Miscellaneous"; }
 	virtual bool skipFamilyCLI() { return true; }
 	virtual bool hasPhysicalInterface() { return false; }
 	virtual PVariable getPairingMethods();

@@ -45,13 +45,9 @@ class PhysicalInterfaces
 {
 public:
 	PhysicalInterfaces();
-	virtual ~PhysicalInterfaces() { dispose(); }
-	virtual void dispose();
-	void load(std::string filename);
+	virtual ~PhysicalInterfaces();
 
-	uint32_t count();
 	uint32_t count(int32_t family);
-	std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> get(int32_t family);
 	void clear(int32_t family);
 	void stopListening();
 	void startListening();
@@ -59,11 +55,6 @@ public:
 	void setup(int32_t userID, int32_t groupID);
 	BaseLib::PVariable listInterfaces(int32_t familyID);
 private:
-	bool _disposing = false;
-	std::mutex _physicalInterfacesMutex;
-	std::map<int32_t, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>> _physicalInterfaces;
-
-	void reset();
 };
 
-#endif /* PHYSICALDEVICES_H_ */
+#endif
