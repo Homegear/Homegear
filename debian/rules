@@ -4,7 +4,7 @@ override_dh_auto_install:
 	dh_auto_install
 
 	mkdir -p $(CURDIR)/debian/homegear/etc/homegear
-	cp $(CURDIR)/misc/Config\ Directory/* $(CURDIR)/debian/homegear/etc/homegear
+	cp -R $(CURDIR)/misc/Config\ Directory/* $(CURDIR)/debian/homegear/etc/homegear
 	chmod 755 $(CURDIR)/debian/homegear/etc/homegear
 	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/*
 

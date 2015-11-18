@@ -35,5 +35,5 @@ namespace Misc
 	BaseLib::Obj* GD::bl = nullptr;
 	Miscellaneous* GD::family = nullptr;
 	BaseLib::Output GD::out;
-	BaseLib::DeviceDescription::Devices GD::rpcDevices(254);
+	BaseLib::DeviceDescription::Devices GD::rpcDevices(MISC_FAMILY_ID);
 }

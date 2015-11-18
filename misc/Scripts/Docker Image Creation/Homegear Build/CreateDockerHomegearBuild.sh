@@ -207,6 +207,9 @@ if [ $revision -eq 0 ]; then
 fi
 sourcePath=libhomegear-base-$version
 mv libhomegear-base-master $sourcePath
+cd $sourcePath
+./autogen.sh
+cd ..
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
 	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
@@ -215,9 +218,8 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf libhomegear-base_$version.orig.tar.gz $sourcePath
 cd $sourcePath
-./autogen.sh
 dch -v $version-$revision -M "Version $version."
-debuild -j4 -us -uc
+debuild -j2 -us -uc
 cd ..
 rm -Rf $sourcePath
 rm libhomegear-base_$version-$revision_*.build
@@ -240,6 +242,9 @@ version=$(echo $fullversion | cut -d "-" -f 1)
 revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-$version
 mv Homegear-master $sourcePath
+cd $sourcePath
+./autogen.sh
+cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
@@ -249,9 +254,8 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear_$version.orig.tar.gz $sourcePath
 cd $sourcePath
-./autogen.sh
 dch -v $version-$revision -M "Version $version."
-debuild -j4 -us -uc
+debuild -j2 -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear_$version-$revision_*.build
@@ -268,6 +272,9 @@ version=$(echo $fullversion | cut -d "-" -f 1)
 revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-homematicbidcos-$version
 mv Homegear-HomeMaticBidCoS-master $sourcePath
+cd $sourcePath
+./autogen.sh
+cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
@@ -277,9 +284,8 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-homematicbidcos_$version.orig.tar.gz $sourcePath
 cd $sourcePath
-./autogen.sh
 dch -v $version-$revision -M "Version $version."
-debuild -j4 -us -uc
+debuild -j2 -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-homematicbidcos_$version-$revision_*.build
@@ -296,6 +302,9 @@ version=$(echo $fullversion | cut -d "-" -f 1)
 revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-homematicwired-$version
 mv Homegear-HomeMaticWired-master $sourcePath
+cd $sourcePath
+./autogen.sh
+cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
@@ -305,9 +314,8 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-homematicwired_$version.orig.tar.gz $sourcePath
 cd $sourcePath
-./autogen.sh
 dch -v $version-$revision -M "Version $version."
-debuild -j4 -us -uc
+debuild -j2 -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-homematicwired_$version-$revision_*.build
@@ -324,6 +332,9 @@ version=$(echo $fullversion | cut -d "-" -f 1)
 revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-insteon-$version
 mv Homegear-Insteon-master $sourcePath
+cd $sourcePath
+./autogen.sh
+cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
@@ -333,9 +344,8 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-insteon_$version.orig.tar.gz $sourcePath
 cd $sourcePath
-./autogen.sh
 dch -v $version-$revision -M "Version $version."
-debuild -j4 -us -uc
+debuild -j2 -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-insteon_$version-$revision_*.build
@@ -352,6 +362,9 @@ version=$(echo $fullversion | cut -d "-" -f 1)
 revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-max-$version
 mv Homegear-MAX-master $sourcePath
+cd $sourcePath
+./autogen.sh
+cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
@@ -361,9 +374,8 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-max_$version.orig.tar.gz $sourcePath
 cd $sourcePath
-./autogen.sh
 dch -v $version-$revision -M "Version $version."
-debuild -j4 -us -uc
+debuild -j2 -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-max_$version-$revision_*.build
@@ -380,6 +392,9 @@ version=$(echo $fullversion | cut -d "-" -f 1)
 revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-philipshue-$version
 mv Homegear-PhilipsHue-master $sourcePath
+cd $sourcePath
+./autogen.sh
+cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
@@ -389,9 +404,8 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-philipshue_$version.orig.tar.gz $sourcePath
 cd $sourcePath
-./autogen.sh
 dch -v $version-$revision -M "Version $version."
-debuild -j4 -us -uc
+debuild -j2 -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-philipshue_$version-$revision_*.build
@@ -408,6 +422,9 @@ version=$(echo $fullversion | cut -d "-" -f 1)
 revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-sonos-$version
 mv Homegear-Sonos-master $sourcePath
+cd $sourcePath
+./autogen.sh
+cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
@@ -417,9 +434,8 @@ if [ "$distribution" == "wheezy" ]; then
 fi
 tar -zcpf homegear-sonos_$version.orig.tar.gz $sourcePath
 cd $sourcePath
-./autogen.sh
 dch -v $version-$revision -M "Version $version."
-debuild -j4 -us -uc
+debuild -j2 -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-sonos_$version-$revision_*.build

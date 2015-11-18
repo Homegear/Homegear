@@ -36,14 +36,13 @@
 namespace Misc
 {
 
-Miscellaneous::Miscellaneous(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(bl, eventHandler)
+Miscellaneous::Miscellaneous(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(bl, eventHandler, MISC_FAMILY_ID, "Miscellaneous")
 {
 	GD::bl = bl;
 	GD::family = this;
 	GD::out.init(bl);
 	GD::out.setPrefix("Module Miscellaneous: ");
 	GD::out.printDebug("Debug: Loading module...");
-	_family = 254;
 	GD::rpcDevices.init(_bl, this);
 }
 
@@ -173,7 +172,7 @@ void Miscellaneous::load()
 	try
 	{
 		_devices.clear();
-		std::shared_ptr<BaseLib::Database::DataTable> rows = _bl->db->getDevices((uint32_t)_family);
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _bl->db->getDevices((uint32_t)getFamily());
 		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
 			uint32_t deviceID = row->second.at(0)->intValue;

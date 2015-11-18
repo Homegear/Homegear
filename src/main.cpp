@@ -73,7 +73,6 @@ std::shared_ptr<std::function<void(int32_t, std::string)>> _errorCallback;
 
 void exitHomegear(int exitCode)
 {
-	if(GD::physicalInterfaces) GD::physicalInterfaces->dispose();
 	if(GD::familyController) GD::familyController->disposeDeviceFamilies();
 	if(GD::bl->db)
 	{
@@ -219,12 +218,8 @@ void terminate(int32_t signalNumber)
 			}
 			GD::out.printInfo( "(Shutdown) => Stopping RPC client");;
 			if(GD::rpcClient) GD::rpcClient->dispose();
-			GD::out.printInfo( "(Shutdown) => Closing physical devices");
-			if(GD::physicalInterfaces)
-			{
-				GD::physicalInterfaces->stopListening();
-				GD::physicalInterfaces->dispose();
-			}
+			GD::out.printInfo( "(Shutdown) => Closing physical interfaces");
+			if(GD::physicalInterfaces) GD::physicalInterfaces->stopListening();
 #ifdef SCRIPTENGINE
 			if(GD::scriptEngine) GD::scriptEngine->dispose();
 #endif
@@ -617,8 +612,6 @@ void startUp()
 		GD::familyController->loadModules();
 		if(GD::deviceFamilies.empty()) exitHomegear(1);
 
-		GD::physicalInterfaces->load(GD::bl->settings.physicalInterfaceSettingsPath());
-
     	if(getuid() == 0 && !GD::runAsUser.empty() && !GD::runAsGroup.empty())
     	{
     		uid_t userId = GD::bl->hf.userId(GD::runAsUser);
@@ -756,6 +749,7 @@ void startUp()
         GD::licensingController->load();
 
         GD::out.printInfo("Initializing family controller...");
+        if(BaseLib::Io::fileExists(GD::configPath + "physicalinterfaces.conf")) GD::out.printWarning("Warning: File physicalinterfaces.conf exists in config directory. Interface configuration has been moved to " + GD::bl->settings.familyConfigPath());
         GD::familyController->init();
         if(GD::deviceFamilies.empty()) exitHomegear(1);
         GD::out.printInfo("Loading devices...");
@@ -803,28 +797,9 @@ void startUp()
 
         //Wait for all interfaces to connect before setting booting to false
         {
-			std::vector<std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> interfaces;
-			for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
-			{
-				std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> familyInterfaces = GD::physicalInterfaces->get(i->first);
-				for(std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>::iterator j = familyInterfaces.begin(); j != familyInterfaces.end(); ++j)
-				{
-					interfaces.push_back(j->second);
-				}
-			}
-
 			for(int32_t i = 0; i < 300; i++)
 			{
-				bool continueLoop = false;
-				for(std::vector<std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>::iterator j = interfaces.begin(); j != interfaces.end(); ++j)
-				{
-					if(!(*j)->isOpen())
-					{
-						continueLoop = true;
-						break;
-					}
-				}
-				if(!continueLoop)
+				if(GD::physicalInterfaces->isOpen())
 				{
 					GD::out.printMessage("All physical interfaces are connected now.");
 					break;
@@ -832,7 +807,6 @@ void startUp()
 				if(i == 299) GD::out.printError("Error: At least one physical interface is not connected.");
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			}
-			interfaces.clear();
         }
 
         if(GD::bl->settings.enableUPnP())
@@ -996,14 +970,12 @@ int main(int argc, char* argv[])
     				GD::physicalInterfaces.reset(new PhysicalInterfaces());
     				GD::licensingController->loadModules();
     				GD::familyController->loadModules();
-    				GD::physicalInterfaces->load(GD::bl->settings.physicalInterfaceSettingsPath());
     				uid_t userId = GD::bl->hf.userId(std::string(argv[i + 1]));
     				gid_t groupId = GD::bl->hf.groupId(std::string(argv[i + 2]));
     				GD::out.printDebug("Debug: User ID set to " + std::to_string(userId) + " group ID set to " + std::to_string(groupId));
     				if((signed)userId == -1 || (signed)groupId == -1)
     				{
     					GD::out.printCritical("Could not setup physical devices. Username or group name is not valid.");
-    					GD::physicalInterfaces->dispose();
     					GD::familyController->dispose();
     					GD::licensingController->dispose();
     					exit(1);
@@ -1011,7 +983,6 @@ int main(int argc, char* argv[])
     				GD::physicalInterfaces->setup(userId, groupId);
     				BaseLib::Gpio gpio(GD::bl.get());
     				gpio.setup(userId, groupId);
-    				GD::physicalInterfaces->dispose();
     				GD::familyController->dispose();
     				GD::licensingController->dispose();
     				exit(0);

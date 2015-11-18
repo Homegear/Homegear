@@ -184,7 +184,7 @@ std::string MiscCentral::handleCLICommand(std::string command)
 			if(peerExists(serialNumber)) stringStream << "This peer is already paired to this central." << std::endl;
 			else
 			{
-				std::shared_ptr<MiscPeer> peer = createPeer(BaseLib::Systems::LogicalDeviceType(254, deviceType), serialNumber, false);
+				std::shared_ptr<MiscPeer> peer = createPeer(BaseLib::Systems::LogicalDeviceType(MISC_FAMILY_ID, deviceType), serialNumber, false);
 				if(!peer || !peer->getRpcDevice()) return "Device type not supported.\n";
 				try
 				{
@@ -612,7 +612,7 @@ PVariable MiscCentral::createDevice(int32_t clientID, int32_t deviceType, std::s
 		if(serialNumber.size() != 10) return Variable::createError(-1, "The serial number needs to have a size of 10.");
 		if(peerExists(serialNumber)) return Variable::createError(-5, "This peer is already paired to this central.");
 
-		std::shared_ptr<MiscPeer> peer = createPeer(BaseLib::Systems::LogicalDeviceType(254, deviceType), serialNumber, false);
+		std::shared_ptr<MiscPeer> peer = createPeer(BaseLib::Systems::LogicalDeviceType(MISC_FAMILY_ID, deviceType), serialNumber, false);
 		if(!peer || !peer->getRpcDevice()) return Variable::createError(-6, "Unknown device type.");
 
 		try
