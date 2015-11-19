@@ -253,7 +253,7 @@ void FamilyController::onRunScript(std::string& script, uint64_t peerId, const s
 	try
 	{
 #ifdef SCRIPTENGINE
-		GD::scriptEngine->executeScript(script, peerId, args, keepAlive, interval);
+		GD::scriptEngine->executeDeviceScript(script, peerId, args, keepAlive, interval);
 #endif
 	}
 	catch(const std::exception& ex)

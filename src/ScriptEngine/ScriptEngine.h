@@ -46,7 +46,8 @@ public:
 	void dispose();
 
 	std::vector<std::string> getArgs(const std::string& path, const std::string& args);
-	void executeScript(const std::string& script, uint64_t peerId, const std::string& args, bool keepAlive = false, int32_t interval = -1);
+	void executeDeviceScript(const std::string& script, uint64_t peerId, const std::string& args, bool keepAlive = false, int32_t interval = -1);
+	int32_t executeWebScript(const std::string& script, BaseLib::HTTP& request, std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo, std::shared_ptr<BaseLib::SocketOperations>& socket);
 	void execute(const std::string path, const std::string arguments, std::shared_ptr<std::vector<char>> output = nullptr, int32_t* exitCode = nullptr, bool wait = true);
 	int32_t executeWebRequest(const std::string& path, BaseLib::HTTP& request, std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo, std::shared_ptr<BaseLib::SocketOperations>& socket);
 
@@ -58,14 +59,22 @@ public:
 
 	BaseLib::PVariable getAllScripts();
 protected:
+	struct CacheInfo
+	{
+		int32_t lastModified;
+		std::string script;
+	};
+
 	bool _disposing = false;
 	volatile int32_t _currentScriptThreadID = 0;
 	std::map<int32_t, std::pair<std::thread, bool>> _scriptThreads;
 	std::mutex _scriptThreadMutex;
+	std::map<std::string, std::shared_ptr<CacheInfo>> _scriptCache;
 
 	void collectGarbage();
 	bool scriptThreadMaxReached();
 	void setThreadNotRunning(int32_t threadId);
 	void executeThread(const std::string path, const std::string arguments, std::shared_ptr<std::vector<char>> output = nullptr, int32_t* exitCode = nullptr, int32_t threadId = -1, std::shared_ptr<std::mutex> lockMutex = std::shared_ptr<std::mutex>(), std::shared_ptr<bool> mutexReady = std::shared_ptr<bool>(), std::shared_ptr<std::condition_variable> conditionVariable = std::shared_ptr<std::condition_variable>());
+	void executeScriptThread(const std::string script, const std::string path, const std::string arguments, std::shared_ptr<std::vector<char>> output = nullptr, int32_t* exitCode = nullptr, int32_t threadId = -1, std::shared_ptr<std::mutex> lockMutex = std::shared_ptr<std::mutex>(), std::shared_ptr<bool> mutexReady = std::shared_ptr<bool>(), std::shared_ptr<std::condition_variable> conditionVariable = std::shared_ptr<std::condition_variable>());
 };
 #endif

@@ -2702,7 +2702,7 @@ BaseLib::PVariable RPCRunScript::invoke(int32_t clientID, std::shared_ptr<std::v
 		int32_t pos = filename.find_last_of('.');
 		if(pos != (signed)std::string::npos) ending = filename.substr(pos);
 		GD::bl->hf.toLower(ending);
-		if(ending == ".php" || ending == ".php5") internalEngine = true;
+		if(ending == ".php" || ending == ".php5" || ending == ".php7" || ending == ".hgs") internalEngine = true;
 
 		if((signed)parameters->size() == 2)
 		{
@@ -2744,7 +2744,7 @@ BaseLib::PVariable RPCRunScript::invoke(int32_t clientID, std::shared_ptr<std::v
 			{
 				if(statStruct.st_gid != gid || (statStruct.st_gid == gid && (statStruct.st_mode & S_IXGRP) == 0))
 				{
-					if(statStruct.st_uid != uid || (statStruct.st_uid == uid && (statStruct.st_mode & S_IXUSR) == 0)) return BaseLib::Variable::createError(-32400, "Could not execute script. No permission or executable bit is not set.");
+					if(statStruct.st_uid != uid || (statStruct.st_uid == uid && (statStruct.st_mode & S_IXUSR) == 0)) return BaseLib::Variable::createError(-32400, "Could not execute script. No permission - or executable bit is not set.");
 				}
 			}
 			if((statStruct.st_mode & (S_IXGRP | S_IXUSR)) == 0) //At least in Debian it is not possible to execute scripts, when the execution bit is only set for "other".

@@ -58,6 +58,7 @@ void WebServer::get(BaseLib::HTTP& http, std::shared_ptr<BaseLib::SocketOperatio
 			if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
+			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.hgs")) path += "index.hgs";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.html")) path += "index.html";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.htm")) path += "index.htm";
 			else
@@ -84,7 +85,7 @@ void WebServer::get(BaseLib::HTTP& http, std::shared_ptr<BaseLib::SocketOperatio
 			GD::bl->hf.toLower(ending);
 			std::string contentString;
 #ifdef SCRIPTENGINE
-			if(ending == "php" || ending == "php5" || ending == "php7")
+			if(ending == "php" || ending == "php5" || ending == "php7" || ending == "hgs")
 			{
 				GD::scriptEngine->executeWebRequest(_serverInfo->contentPath + path, http, _serverInfo, socket);
 				socket->close();
@@ -169,6 +170,7 @@ void WebServer::post(BaseLib::HTTP& http, std::shared_ptr<BaseLib::SocketOperati
 			if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
+			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.hgs")) path += "index.hgs";
 			else
 			{
 				getError(404, _http.getStatusText(404), "The requested URL / was not found on this server.", content);
