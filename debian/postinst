@@ -68,12 +68,6 @@ case $1 in
 
 		insserv homegear
 		service homegear start
-		echo "####################################################################"
-		echo "####################################################################"
-		echo "### Please modify the file /etc/homegear/physicalinterfaces.conf ###"
-		echo "### according to your needs.                                     ###"
-		echo "####################################################################"
-		echo "####################################################################"
 		;;
 
 	# Back out of an attempt to upgrade this package FROM THIS VERSION
