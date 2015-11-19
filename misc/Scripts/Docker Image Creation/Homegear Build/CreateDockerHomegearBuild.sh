@@ -208,7 +208,7 @@ fi
 sourcePath=libhomegear-base-$version
 mv libhomegear-base-master $sourcePath
 cd $sourcePath
-./autogen.sh
+./bootstrap
 cd ..
 if [ "$distribution" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
@@ -243,7 +243,7 @@ revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-$version
 mv Homegear-master $sourcePath
 cd $sourcePath
-./autogen.sh
+./bootstrap
 cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
@@ -273,7 +273,7 @@ revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-homematicbidcos-$version
 mv Homegear-HomeMaticBidCoS-master $sourcePath
 cd $sourcePath
-./autogen.sh
+./bootstrap
 cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
@@ -303,7 +303,7 @@ revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-homematicwired-$version
 mv Homegear-HomeMaticWired-master $sourcePath
 cd $sourcePath
-./autogen.sh
+./bootstrap
 cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
@@ -333,7 +333,7 @@ revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-insteon-$version
 mv Homegear-Insteon-master $sourcePath
 cd $sourcePath
-./autogen.sh
+./bootstrap
 cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
@@ -363,7 +363,7 @@ revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-max-$version
 mv Homegear-MAX-master $sourcePath
 cd $sourcePath
-./autogen.sh
+./bootstrap
 cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
@@ -393,7 +393,7 @@ revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-philipshue-$version
 mv Homegear-PhilipsHue-master $sourcePath
 cd $sourcePath
-./autogen.sh
+./bootstrap
 cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
@@ -423,7 +423,7 @@ revision=$(echo $fullversion | cut -d "-" -f 2)
 sourcePath=homegear-sonos-$version
 mv Homegear-Sonos-master $sourcePath
 cd $sourcePath
-./autogen.sh
+./bootstrap
 cd ..
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distribution" == "wheezy" ]; then
