@@ -64,6 +64,7 @@ void ScriptEngine::dispose()
 		if(_scriptThreads.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
 	php_homegear_shutdown();
+	_scriptCache.clear();
 }
 
 void ScriptEngine::collectGarbage()
