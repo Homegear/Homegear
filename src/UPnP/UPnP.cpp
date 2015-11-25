@@ -287,7 +287,7 @@ void UPnP::processPacket(BaseLib::HTTP& http)
 		if(header->fields.at("st") == "urn:schemas-upnp-org:device:basic:1" || header->fields.at("st") == "urn:schemas-upnp-org:device:basic:1.0" || header->fields.at("st") == "ssdp:all" || header->fields.at("st") == "upnp:rootdevice" || header->fields.at("st") == _st)
 		{
 			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Discovery packet received from " + header->host);
-			std::pair<std::string, std::string> address = BaseLib::HelperFunctions::split(header->host, ':');
+			std::pair<std::string, std::string> address = BaseLib::HelperFunctions::splitLast(header->host, ':');
 			int32_t port = BaseLib::Math::getNumber(address.second, false);
 			if(!address.first.empty() && port > 0)
 			{

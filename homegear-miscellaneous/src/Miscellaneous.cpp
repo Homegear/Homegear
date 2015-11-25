@@ -29,8 +29,7 @@
 */
 
 #include "Miscellaneous.h"
-#include "DeviceTypes.h"
-#include "LogicalDevices/MiscCentral.h"
+#include "MiscCentral.h"
 #include "GD.h"
 
 namespace Misc
@@ -68,136 +67,25 @@ void Miscellaneous::dispose()
 	GD::rpcDevices.clear();
 }
 
-std::shared_ptr<BaseLib::Systems::Central> Miscellaneous::getCentral() { return _central; }
-
-uint32_t Miscellaneous::getUniqueAddress(uint32_t seed)
-{
-	uint32_t prefix = seed;
-	seed = BaseLib::HelperFunctions::getRandomNumber(1, 999999);
-	uint32_t i = 0;
-	while(getDevice(prefix + seed) && i++ < 10000)
-	{
-		seed += 131;
-		if(seed > 999999) seed -= 1000000;
-	}
-	return prefix + seed;
-}
-
-std::string Miscellaneous::getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber)
-{
-	if(seedPrefix.size() != 3) throw BaseLib::Exception("seedPrefix must have a size of 3.");
-	uint32_t i = 0;
-	std::ostringstream stringstream;
-	stringstream << seedPrefix << std::setw(7) << std::setfill('0') << std::dec << seedNumber;
-	std::string temp2 = stringstream.str();
-	while((getDevice(temp2)) && i++ < 100000)
-	{
-		stringstream.str(std::string());
-		stringstream.clear();
-		seedNumber += 73;
-		if(seedNumber > 9999999) seedNumber -= 10000000;
-		std::ostringstream stringstream;
-		stringstream << seedPrefix << std::setw(7) << std::setfill('0') << std::dec << seedNumber;
-		temp2 = stringstream.str();
-	}
-	return temp2;
-}
-
-std::shared_ptr<MiscDevice> Miscellaneous::getDevice(uint32_t address)
-{
-	try
-	{
-		_devicesMutex.lock();
-		for(std::vector<std::shared_ptr<BaseLib::Systems::LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
-		{
-			if((uint32_t)(*i)->getAddress() == address)
-			{
-				std::shared_ptr<MiscDevice> device(std::dynamic_pointer_cast<MiscDevice>(*i));
-				if(!device) continue;
-				_devicesMutex.unlock();
-				return device;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _devicesMutex.unlock();
-	return std::shared_ptr<MiscDevice>();
-}
-
-std::shared_ptr<MiscDevice> Miscellaneous::getDevice(std::string serialNumber)
-{
-	try
-	{
-		_devicesMutex.lock();
-		for(std::vector<std::shared_ptr<BaseLib::Systems::LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
-		{
-			if((*i)->getSerialNumber() == serialNumber)
-			{
-				std::shared_ptr<MiscDevice> device(std::dynamic_pointer_cast<MiscDevice>(*i));
-				if(!device) continue;
-				_devicesMutex.unlock();
-				return device;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _devicesMutex.unlock();
-	return std::shared_ptr<MiscDevice>();
-}
+std::shared_ptr<BaseLib::Systems::ICentral> Miscellaneous::getCentral() { return _central; }
 
 void Miscellaneous::load()
 {
 	try
 	{
-		_devices.clear();
 		std::shared_ptr<BaseLib::Database::DataTable> rows = _bl->db->getDevices((uint32_t)getFamily());
 		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
-			uint32_t deviceID = row->second.at(0)->intValue;
-			GD::out.printMessage("Loading Miscellaneous device " + std::to_string(deviceID));
+			uint32_t deviceId = row->second.at(0)->intValue;
+			GD::out.printMessage("Loading Miscellaneous central " + std::to_string(deviceId));
 			std::string serialNumber = row->second.at(2)->textValue;
 			uint32_t deviceType = row->second.at(3)->intValue;
 
-			std::shared_ptr<BaseLib::Systems::LogicalDevice> device;
-			switch((DeviceType)deviceType)
+			if(deviceType == 0xFEFFFFFD || deviceType == 0xFFFFFFFD) //Test for device type in case there are devices from older Homegear versions in the database
 			{
-			case DeviceType::CENTRAL:
-				_central = std::shared_ptr<MiscCentral>(new MiscCentral(deviceID, serialNumber, this));
-				device = _central;
-				break;
-			default:
-				break;
-			}
-
-			if(device)
-			{
-				device->load();
-				device->loadPeers();
-				_devicesMutex.lock();
-				_devices.push_back(device);
-				_devicesMutex.unlock();
+				_central = std::shared_ptr<MiscCentral>(new MiscCentral(deviceId, serialNumber, this));
+				_central->load();
+				_central->loadPeers();
 			}
 		}
 		if(!_central) createCentral();
@@ -222,11 +110,8 @@ void Miscellaneous::createCentral()
 	{
 		if(_central) return;
 
-		std::string serialNumber(getUniqueSerialNumber("VMC", BaseLib::HelperFunctions::getRandomNumber(1, 9999999)));
-
-		_central.reset(new MiscCentral(0, serialNumber, this));
-		add(_central);
-		GD::out.printMessage("Created Miscellaneous central with id " + std::to_string(_central->getID()) + " and serial number " + serialNumber);
+		_central.reset(new MiscCentral(0, "VMC0000001", this));
+		GD::out.printMessage("Created Miscellaneous central with id " + std::to_string(_central->getId()) + ".");
 	}
 	catch(const std::exception& ex)
     {
@@ -242,22 +127,13 @@ void Miscellaneous::createCentral()
     }
 }
 
-std::string Miscellaneous::handleCLICommand(std::string& command)
+std::string Miscellaneous::handleCliCommand(std::string& command)
 {
 	try
 	{
 		std::ostringstream stringStream;
-		if((command == "unselect" || command == "u") && _currentDevice && !_currentDevice->peerSelected())
-		{
-			_currentDevice.reset();
-			return "Device unselected.\n";
-		}
-		else
-		{
-			if(!_central) return "Error: No central exists.\n";
-			if(!_currentDevice) _currentDevice = _central;
-			return _currentDevice->handleCLICommand(command);
-		}
+		if(!_central) return "Error: No central exists.\n";
+		return _central->handleCliCommand(command);
 	}
 	catch(const std::exception& ex)
     {

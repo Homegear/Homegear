@@ -31,7 +31,8 @@
 #ifndef MISCCENTRAL_H_
 #define MISCCENTRAL_H_
 
-#include "../MiscDevice.h"
+#include "homegear-base/BaseLib.h"
+#include "MiscPeer.h"
 
 #include <memory>
 #include <mutex>
@@ -40,24 +41,33 @@
 namespace Misc
 {
 
-class MiscCentral : public MiscDevice, public BaseLib::Systems::Central
+class MiscCentral : public BaseLib::Systems::ICentral
 {
 public:
-	MiscCentral(IDeviceEventSink* eventHandler);
-	MiscCentral(uint32_t deviceType, std::string serialNumber, IDeviceEventSink* eventHandler);
+	MiscCentral(ICentralEventSink* eventHandler);
+	MiscCentral(uint32_t deviceType, std::string serialNumber, ICentralEventSink* eventHandler);
 	virtual ~MiscCentral();
-	std::string handleCLICommand(std::string command);
-	uint64_t getPeerIDFromSerial(std::string serialNumber) { std::shared_ptr<MiscPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
+	virtual void dispose(bool wait = true);
 
-	virtual bool knowsDevice(std::string serialNumber);
-	virtual bool knowsDevice(uint64_t id);
+	std::string handleCliCommand(std::string command);
+	uint64_t getPeerIdFromSerial(std::string serialNumber) { std::shared_ptr<MiscPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
 
-	virtual PVariable createDevice(int32_t clientID, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion);
-	virtual PVariable deleteDevice(int32_t clientID, std::string serialNumber, int32_t flags);
-	virtual PVariable deleteDevice(int32_t clientID, uint64_t peerID, int32_t flags);
-	virtual PVariable getDeviceInfo(int32_t clientID, uint64_t id, std::map<std::string, bool> fields);
-	virtual PVariable putParamset(int32_t clientID, std::string serialNumber, int32_t channel, ParameterGroup::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, PVariable paramset);
-	virtual PVariable putParamset(int32_t clientID, uint64_t peerID, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, PVariable paramset);
+	virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet) { return true; }
+
+	virtual void addPeer(std::shared_ptr<MiscPeer> peer);
+	std::shared_ptr<MiscPeer> getPeer(uint64_t id);
+	std::shared_ptr<MiscPeer> getPeer(std::string serialNumber);
+	virtual void loadPeers();
+	virtual void savePeers(bool full);
+	virtual void loadVariables() {}
+	virtual void saveVariables() {}
+
+	virtual BaseLib::PVariable createDevice(int32_t clientID, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion);
+	virtual BaseLib::PVariable deleteDevice(int32_t clientID, std::string serialNumber, int32_t flags);
+	virtual BaseLib::PVariable deleteDevice(int32_t clientID, uint64_t peerID, int32_t flags);
+	virtual BaseLib::PVariable getDeviceInfo(int32_t clientID, uint64_t id, std::map<std::string, bool> fields);
+	virtual BaseLib::PVariable putParamset(int32_t clientID, std::string serialNumber, int32_t channel, ParameterGroup::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, BaseLib::PVariable paramset);
+	virtual BaseLib::PVariable putParamset(int32_t clientID, uint64_t peerID, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, BaseLib::PVariable paramset);
 protected:
 	std::shared_ptr<MiscPeer> createPeer(BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
 	void deletePeer(uint64_t id);

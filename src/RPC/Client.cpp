@@ -271,10 +271,10 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 					if(serialNumber.empty()) break;
 					for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 					{
-						std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
+						std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 						if(central)
 						{
-							device = central->getPeerIDFromSerial(serialNumber);
+							device = central->getPeerIdFromSerial(serialNumber);
 							if(device > 0) break;
 						}
 					}
@@ -307,7 +307,7 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 		BaseLib::PVariable devices(new BaseLib::Variable(BaseLib::VariableType::tArray));
 		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
-			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
 			BaseLib::PVariable result = central->listDevices(-1, true, std::map<std::string, bool>(), server->knownDevices);

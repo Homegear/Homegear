@@ -165,9 +165,9 @@ BaseLib::PVariable PhysicalInterfaces::listInterfaces(int32_t familyID)
 
 		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
-			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
-			BaseLib::PVariable tempArray = i->second->physicalInterfaces()->listInterfaces(central->physicalAddress());
+			BaseLib::PVariable tempArray = i->second->physicalInterfaces()->listInterfaces(central->getAddress());
 			array->arrayValue->insert(array->arrayValue->end(), tempArray->arrayValue->begin(), tempArray->arrayValue->end());
 		}
 

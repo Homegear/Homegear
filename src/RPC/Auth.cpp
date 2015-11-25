@@ -119,7 +119,7 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::RPC::RPCHeader>& binaryHeader)
 		sendBasicUnauthorized(true);
 		throw AuthException("No header field \"Authorization\"");
 	}
-	std::pair<std::string, std::string> authData = BaseLib::HelperFunctions::split(binaryHeader->authorization, ' ');
+	std::pair<std::string, std::string> authData = BaseLib::HelperFunctions::splitLast(binaryHeader->authorization, ' ');
 	BaseLib::HelperFunctions::toLower(authData.first);
 	if(authData.first != "basic")
 	{
@@ -128,7 +128,7 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::RPC::RPCHeader>& binaryHeader)
 	}
 	std::string decodedData;
 	BaseLib::Base64::decode(authData.second, decodedData);
-	std::pair<std::string, std::string> credentials = BaseLib::HelperFunctions::split(decodedData, ':');
+	std::pair<std::string, std::string> credentials = BaseLib::HelperFunctions::splitLast(decodedData, ':');
 	BaseLib::HelperFunctions::toLower(credentials.first);
 	if(std::find(_validUsers.begin(), _validUsers.end(), credentials.first) == _validUsers.end())
 	{
@@ -186,7 +186,7 @@ bool Auth::basicServer(BaseLib::HTTP& httpPacket)
 		sendBasicUnauthorized(false);
 		throw AuthException("No header field \"Authorization\"");
 	}
-	std::pair<std::string, std::string> authData = BaseLib::HelperFunctions::split(_http.getHeader()->authorization, ' ');
+	std::pair<std::string, std::string> authData = BaseLib::HelperFunctions::splitLast(_http.getHeader()->authorization, ' ');
 	BaseLib::HelperFunctions::toLower(authData.first);
 	if(authData.first != "basic")
 	{
@@ -195,7 +195,7 @@ bool Auth::basicServer(BaseLib::HTTP& httpPacket)
 	}
 	std::string decodedData;
 	BaseLib::Base64::decode(authData.second, decodedData);
-	std::pair<std::string, std::string> credentials = BaseLib::HelperFunctions::split(decodedData, ':');
+	std::pair<std::string, std::string> credentials = BaseLib::HelperFunctions::splitLast(decodedData, ':');
 	BaseLib::HelperFunctions::toLower(credentials.first);
 	if(std::find(_validUsers.begin(), _validUsers.end(), credentials.first) == _validUsers.end())
 	{

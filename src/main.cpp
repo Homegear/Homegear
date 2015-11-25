@@ -464,12 +464,6 @@ void startMainProcess()
 
 		//close(STDIN_FILENO);
 
-		if((chdir(GD::bl->settings.logfilePath().c_str())) < 0)
-		{
-			GD::out.printError("Could not change working directory to " + GD::bl->settings.logfilePath() + ".");
-			exitHomegear(1);
-		}
-
 		if(pid == 0) startUp();
 	}
 	catch(const std::exception& ex)
@@ -739,7 +733,7 @@ void startUp()
     	if(!GD::bl->db->isOpen()) exitHomegear(1);
 
         GD::out.printInfo("Initializing database...");
-        GD::bl->db->convertDatabase();
+        if(GD::bl->db->convertDatabase()) exitHomegear(0);
         GD::bl->db->initializeDatabase();
 
         GD::out.printInfo("Initializing licensing controller...");
@@ -856,7 +850,7 @@ void startUp()
 					//GD::physicalInterfaces.get(DeviceFamily::HomeMaticBidCoS)->sendPacket(packet);
 				//}
 				std::string input(inputBuffer);
-				std::cout << GD::familyController->handleCLICommand(input);
+				std::cout << GD::familyController->handleCliCommand(input);
 			}
 			clear_history();
 
@@ -881,7 +875,6 @@ int main(int argc, char* argv[])
 {
     try
     {
-
     	getExecutablePath();
     	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
     	GD::bl.reset(new BaseLib::Obj(GD::executablePath, _errorCallback.get()));
@@ -1099,6 +1092,12 @@ int main(int argc, char* argv[])
 			GD::mqtt.reset(new Mqtt());
 			GD::mqtt->loadSettings();
 		// }}}
+
+		if((chdir(GD::bl->settings.logfilePath().c_str())) < 0)
+		{
+			GD::out.printError("Could not change working directory to " + GD::bl->settings.logfilePath() + ".");
+			exitHomegear(1);
+		}
 
 		GD::licensingController.reset(new LicensingController());
 		GD::familyController.reset(new FamilyController());

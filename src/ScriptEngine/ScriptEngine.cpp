@@ -45,7 +45,7 @@ ScriptEngine::~ScriptEngine()
 void ScriptEngine::stopEventThreads()
 {
 	PhpEvents::eventsMapMutex.lock();
-	for(std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
+	for(std::map<pthread_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
 	{
 		if(i->second) i->second->stop();
 	}
@@ -351,7 +351,7 @@ void ScriptEngine::executeDeviceScript(const std::string& script, uint64_t peerI
 		}
 
 		PhpEvents::eventsMapMutex.lock();
-		PhpEvents::eventsMap.insert(std::pair<int64_t, std::shared_ptr<PhpEvents>>(pthread_self(), std::shared_ptr<PhpEvents>()));
+		PhpEvents::eventsMap.insert(std::pair<pthread_t, std::shared_ptr<PhpEvents>>(pthread_self(), std::shared_ptr<PhpEvents>()));
 		PhpEvents::eventsMapMutex.unlock();
 
 		while(keepAlive && !GD::bl->shuttingDown && (peerId == 0 || GD::familyController->peerExists(peerId)))
@@ -646,7 +646,7 @@ void ScriptEngine::executeScriptThread(const std::string script, const std::stri
 		}
 
 		PhpEvents::eventsMapMutex.lock();
-		PhpEvents::eventsMap.insert(std::pair<int64_t, std::shared_ptr<PhpEvents>>(pthread_self(), std::shared_ptr<PhpEvents>()));
+		PhpEvents::eventsMap.insert(std::pair<pthread_t, std::shared_ptr<PhpEvents>>(pthread_self(), std::shared_ptr<PhpEvents>()));
 		PhpEvents::eventsMapMutex.unlock();
 
 		PG(register_argc_argv) = 1;
@@ -1079,7 +1079,7 @@ void ScriptEngine::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<
 	PhpEvents::eventsMapMutex.lock();
 	try
 	{
-		for(std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
+		for(std::map<pthread_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
 		{
 			if(i->second && i->second->peerSubscribed(id))
 			{
@@ -1116,7 +1116,7 @@ void ScriptEngine::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
 	PhpEvents::eventsMapMutex.lock();
 	try
 	{
-		for(std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
+		for(std::map<pthread_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
 		{
 			if(i->second)
 			{
@@ -1147,7 +1147,7 @@ void ScriptEngine::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
 	PhpEvents::eventsMapMutex.lock();
 	try
 	{
-		for(std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
+		for(std::map<pthread_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
 		{
 			if(i->second)
 			{
@@ -1177,7 +1177,7 @@ void ScriptEngine::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t h
 	PhpEvents::eventsMapMutex.lock();
 	try
 	{
-		for(std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
+		for(std::map<pthread_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
 		{
 			if(i->second && i->second->peerSubscribed(id))
 			{

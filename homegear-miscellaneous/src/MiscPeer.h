@@ -41,7 +41,6 @@ using namespace BaseLib::DeviceDescription;
 namespace Misc
 {
 class MiscCentral;
-class MiscDevice;
 
 class MiscPeer : public BaseLib::Systems::Peer
 {
@@ -54,10 +53,10 @@ public:
 	virtual bool wireless() { return false; }
 	//End features
 
-	virtual std::string handleCLICommand(std::string command);
+	virtual std::string handleCliCommand(std::string command);
 
-	virtual bool load(BaseLib::Systems::LogicalDevice* device);
-    virtual void loadVariables(BaseLib::Systems::LogicalDevice* device = nullptr, std::shared_ptr<BaseLib::Database::DataTable> rows = std::shared_ptr<BaseLib::Database::DataTable>());
+	virtual bool load(BaseLib::Systems::ICentral* central);
+    virtual void loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<BaseLib::Database::DataTable>& rows);
     virtual void saveVariables();
     virtual void savePeers() {}
     void initProgram();
@@ -89,8 +88,7 @@ protected:
 	void runProgram();
 	void runScript();
 
-	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
-	virtual std::shared_ptr<BaseLib::Systems::LogicalDevice> getDevice(int32_t address);
+	virtual std::shared_ptr<BaseLib::Systems::ICentral> getCentral();
 
 	virtual PParameterGroup getParameterSet(int32_t channel, ParameterGroup::Type::Enum type);
 };

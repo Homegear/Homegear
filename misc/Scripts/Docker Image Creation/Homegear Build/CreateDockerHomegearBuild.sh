@@ -153,6 +153,7 @@ cat > "$rootfs/build/CreateDebianPackageNightly.sh" <<-'EOF'
 #!/bin/bash
 
 distribution="<DISTVER>"
+buildthreads="<BUILDTHREADS>"
 
 cd /build
 
@@ -219,7 +220,7 @@ fi
 tar -zcpf libhomegear-base_$version.orig.tar.gz $sourcePath
 cd $sourcePath
 dch -v $version-$revision -M "Version $version."
-debuild -j2 -us -uc
+debuild -j${buildthreads} -us -uc
 cd ..
 rm -Rf $sourcePath
 rm libhomegear-base_$version-$revision_*.build
@@ -255,7 +256,7 @@ fi
 tar -zcpf homegear_$version.orig.tar.gz $sourcePath
 cd $sourcePath
 dch -v $version-$revision -M "Version $version."
-debuild -j2 -us -uc
+debuild -j${buildthreads} -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear_$version-$revision_*.build
@@ -285,7 +286,7 @@ fi
 tar -zcpf homegear-homematicbidcos_$version.orig.tar.gz $sourcePath
 cd $sourcePath
 dch -v $version-$revision -M "Version $version."
-debuild -j2 -us -uc
+debuild -j${buildthreads} -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-homematicbidcos_$version-$revision_*.build
@@ -315,7 +316,7 @@ fi
 tar -zcpf homegear-homematicwired_$version.orig.tar.gz $sourcePath
 cd $sourcePath
 dch -v $version-$revision -M "Version $version."
-debuild -j2 -us -uc
+debuild -j${buildthreads} -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-homematicwired_$version-$revision_*.build
@@ -345,7 +346,7 @@ fi
 tar -zcpf homegear-insteon_$version.orig.tar.gz $sourcePath
 cd $sourcePath
 dch -v $version-$revision -M "Version $version."
-debuild -j2 -us -uc
+debuild -j${buildthreads} -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-insteon_$version-$revision_*.build
@@ -375,7 +376,7 @@ fi
 tar -zcpf homegear-max_$version.orig.tar.gz $sourcePath
 cd $sourcePath
 dch -v $version-$revision -M "Version $version."
-debuild -j2 -us -uc
+debuild -j${buildthreads} -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-max_$version-$revision_*.build
@@ -405,7 +406,7 @@ fi
 tar -zcpf homegear-philipshue_$version.orig.tar.gz $sourcePath
 cd $sourcePath
 dch -v $version-$revision -M "Version $version."
-debuild -j2 -us -uc
+debuild -j${buildthreads} -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-philipshue_$version-$revision_*.build
@@ -435,7 +436,7 @@ fi
 tar -zcpf homegear-sonos_$version.orig.tar.gz $sourcePath
 cd $sourcePath
 dch -v $version-$revision -M "Version $version."
-debuild -j2 -us -uc
+debuild -j${buildthreads} -us -uc
 cd ..
 rm -Rf $sourcePath
 rm homegear-sonos_$version-$revision_*.build
@@ -467,6 +468,11 @@ sed -i "s/<DISTVER>/${distver}/g" $rootfs/build/CreateDebianPackageNightly.sh
 cat > "$rootfs/FirstStart.sh" <<-'EOF'
 #!/bin/bash
 sed -i '$ d' /root/.bashrc >/dev/null
+if [ -n "$HOMEGEARBUILD_THREADS" ]; then
+	sed -i "s/<BUILDTHREADS>/${HOMEGEARBUILD_THREADS}/g" /build/CreateDebianPackageNightly.sh
+else
+	sed -i "s/<BUILDTHREADS>/1/g" /build/CreateDebianPackageNightly.sh
+fi
 if [ -n "$HOMEGEARBUILD_SHELL" ]; then
 	echo "Container setup successful. You can now execute \"/build/CreateDebianPackageNightly.sh\"."
 	/bin/bash
@@ -576,7 +582,6 @@ fi
 " > /build/Upload.sh
 chmod 755 /build/Upload.sh
 rm /FirstStart.sh
-echo
 if [ -n "$HOMEGEARBUILD_REVISION" ]; then
 	/build/CreateDebianPackageNightly.sh $HOMEGEARBUILD_REVISION
 else
@@ -607,7 +612,7 @@ rm -Rf $rootfs
 
 docker build -t homegear/build:${distlc}-${distver}-${arch} "$dir"
 if [ "$dist" == "Raspbian" ]; then
-	docker tab homegear/build:${distlc}-${distver}-${arch} homegear/build:${distlc}-${distver}
+	docker tag homegear/build:${distlc}-${distver}-${arch} homegear/build:${distlc}-${distver}
 fi
 
 rm -Rf $dir

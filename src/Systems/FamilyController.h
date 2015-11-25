@@ -88,7 +88,7 @@ public:
 	void load();
 	void save(bool full);
 	bool familySelected() { return (bool)_currentFamily; }
-	std::string handleCLICommand(std::string& command);
+	std::string handleCliCommand(std::string& command);
 	bool familyAvailable(int32_t family);
 	static bool peerExists(uint64_t peerId);
 

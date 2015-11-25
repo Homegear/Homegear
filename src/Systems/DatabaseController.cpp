@@ -93,8 +93,8 @@ void DatabaseController::initializeDatabase()
 	{
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS homegearVariables (variableID INTEGER PRIMARY KEY UNIQUE, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS homegearVariablesIndex ON homegearVariables (variableID, variableIndex)");
-		_db.executeCommand("CREATE TABLE IF NOT EXISTS peers (peerID INTEGER PRIMARY KEY UNIQUE, parent INTEGER NOT NULL, address INTEGER NOT NULL, serialNumber TEXT NOT NULL)");
-		_db.executeCommand("CREATE INDEX IF NOT EXISTS peersIndex ON peers (peerID, parent, address, serialNumber)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS peers (peerID INTEGER PRIMARY KEY UNIQUE, parent INTEGER NOT NULL, address INTEGER NOT NULL, serialNumber TEXT NOT NULL, type INTEGER NOT NULL)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS peersIndex ON peers (peerID, parent, address, serialNumber, type)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS peerVariables (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS peerVariablesIndex ON peerVariables (variableID, peerID, variableIndex)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
@@ -125,7 +125,7 @@ void DatabaseController::initializeDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.5.1")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.6.0")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
@@ -237,7 +237,7 @@ void DatabaseController::processQueueEntry()
 	}
 }
 
-void DatabaseController::convertDatabase()
+bool DatabaseController::convertDatabase()
 {
 	try
 	{
@@ -246,17 +246,17 @@ void DatabaseController::convertDatabase()
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::string("homegearVariables"))));
 		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT 1 FROM sqlite_master WHERE type=? AND name=?", data);
 		//Cannot proceed, because table homegearVariables does not exist
-		if(rows->empty()) return;
+		if(rows->empty()) return false;
 		data.clear();
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data);
-		if(result->empty()) return; //Handled in initializeDatabase
+		if(result->empty()) return false; //Handled in initializeDatabase
 		std::string version = result->at(0).at(3)->textValue;
-		if(version == "0.5.1") return; //Up to date
-		if(version != "0.3.1" && version != "0.4.3" && version != "0.5.0")
+		if(version == "0.6.0") return false; //Up to date
+		if(version != "0.3.1" && version != "0.4.3" && version != "0.5.0" && version != "0.5.1")
 		{
-			GD::out.printCritical("Unknown database version: " + version);
-			exit(1); //Don't know, what to do
+			GD::out.printCritical("Critical: Unknown database version: " + version);
+			return true; //Don't know, what to do
 		}
 		/*if(version == "0.0.7")
 		{
@@ -324,7 +324,7 @@ void DatabaseController::convertDatabase()
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
 			GD::out.printMessage("Exiting Homegear after database conversion...");
-			exit(0);
+			return true;
 		}
 		else if(version == "0.4.3")
 		{
@@ -343,7 +343,7 @@ void DatabaseController::convertDatabase()
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
 			GD::out.printMessage("Exiting Homegear after database conversion...");
-			exit(0);
+			return true;
 		}
 		else if(version == "0.5.0")
 		{
@@ -368,7 +368,29 @@ void DatabaseController::convertDatabase()
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
 			GD::out.printMessage("Exiting Homegear after database conversion...");
-			exit(0);
+			return true;
+		}
+		else if(version == "0.5.1")
+		{
+			GD::out.printMessage("Converting database from version " + version + " to version 0.6.0...");
+			_db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".0.5.1.old");
+
+			_db.executeCommand("DELETE FROM devices WHERE deviceType!=4294967293 AND deviceType!=4278190077");
+			_db.executeCommand("ALTER TABLE peers ADD COLUMN type INTEGER NOT NULL DEFAULT 0");
+			_db.executeCommand("DROP INDEX IF EXISTS peersIndex");
+			_db.executeCommand("CREATE INDEX peersIndex ON peers (peerID, parent, address, serialNumber, type)");
+
+			data.clear();
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			//Don't forget to set new version in initializeDatabase!!!
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.6.0")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+			GD::out.printMessage("Exiting Homegear after database conversion...");
+			return true;
 		}
 	}
 	catch(const std::exception& ex)
@@ -383,6 +405,7 @@ void DatabaseController::convertDatabase()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    return true;
 }
 
 void DatabaseController::createSavepointSynchronous(std::string& name)
@@ -1303,7 +1326,7 @@ void DatabaseController::deletePeer(uint64_t id)
 	}
 }
 
-uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t address, std::string& serialNumber)
+uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t address, std::string& serialNumber, uint32_t type)
 {
 	try
 	{
@@ -1313,7 +1336,8 @@ uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t ad
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(parentID)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(address)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(serialNumber)));
-		uint64_t result = _db.executeWriteCommand("REPLACE INTO peers VALUES(?, ?, ?, ?)", data);
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(type)));
+		uint64_t result = _db.executeWriteCommand("REPLACE INTO peers VALUES(?, ?, ?, ?, ?)", data);
 		return result;
 	}
 	catch(const std::exception& ex)

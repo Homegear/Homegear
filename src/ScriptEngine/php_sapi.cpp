@@ -759,7 +759,7 @@ ZEND_FUNCTION(hg_poll_event)
 	long threadId = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &threadId) != SUCCESS) RETURN_NULL();
 	PhpEvents::eventsMapMutex.lock();
-	std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(threadId);
+	std::map<pthread_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find((unsigned)threadId);
 	if(eventsIterator == PhpEvents::eventsMap.end())
 	{
 		PhpEvents::eventsMapMutex.unlock();
@@ -831,7 +831,7 @@ ZEND_FUNCTION(hg_subscribe_peer)
 	long peerId = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &threadId, &peerId) != SUCCESS) RETURN_NULL();
 	PhpEvents::eventsMapMutex.lock();
-	std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(threadId);
+	std::map<pthread_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find((unsigned)threadId);
 	if(eventsIterator == PhpEvents::eventsMap.end())
 	{
 		PhpEvents::eventsMapMutex.unlock();
@@ -852,7 +852,7 @@ ZEND_FUNCTION(hg_unsubscribe_peer)
 	long peerId = 0;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &threadId, &peerId) != SUCCESS) RETURN_NULL();
 	PhpEvents::eventsMapMutex.lock();
-	std::map<int64_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(threadId);
+	std::map<pthread_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find((unsigned)threadId);
 	if(eventsIterator == PhpEvents::eventsMap.end())
 	{
 		PhpEvents::eventsMapMutex.unlock();

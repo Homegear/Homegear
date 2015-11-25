@@ -238,7 +238,18 @@ int32_t Client::start(std::string command)
 								level = "(Family)";
 							}
 						}
-						else if(response.compare(0, 6, "Device") == 0)
+						else if(response.compare(0, 4, "Peer") == 0)
+						{
+							if((signed)response.find("unselected") != (signed)std::string::npos)
+							{
+								level = "(Family)";
+							}
+							else if((signed)response.find("selected") != (signed)std::string::npos)
+							{
+								level = "(Peer)";
+							}
+						}
+						/*else if(response.compare(0, 6, "Device") == 0)
 						{
 							if((signed)response.find("unselected") != (signed)std::string::npos)
 							{
@@ -248,18 +259,7 @@ int32_t Client::start(std::string command)
 							{
 								level = "(Device)";
 							}
-						}
-						else if(response.compare(0, 4, "Peer") == 0)
-						{
-							if((signed)response.find("unselected") != (signed)std::string::npos)
-							{
-								level = "(Device)";
-							}
-							else if((signed)response.find("selected") != (signed)std::string::npos)
-							{
-								level = "(Peer)";
-							}
-						}
+						}*/
 					}
 
 					if(bytes < 1024 || (bytes == 1024 && receiveBuffer[bytes - 1] == 0))

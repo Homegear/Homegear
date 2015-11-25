@@ -32,7 +32,7 @@
 #include "PhpEvents.h"
 
 std::mutex PhpEvents::eventsMapMutex;
-std::map<int64_t, std::shared_ptr<PhpEvents>> PhpEvents::eventsMap;
+std::map<pthread_t, std::shared_ptr<PhpEvents>> PhpEvents::eventsMap;
 
 PhpEvents::PhpEvents()
 {
