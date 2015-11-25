@@ -29,16 +29,16 @@
 */
 
 #include "MiscCentral.h"
-#include "../GD.h"
+#include "GD.h"
 
 namespace Misc {
 
-MiscCentral::MiscCentral(IDeviceEventSink* eventHandler) : MiscDevice(eventHandler), BaseLib::Systems::Central(GD::bl, this)
+MiscCentral::MiscCentral(ICentralEventSink* eventHandler) : BaseLib::Systems::ICentral(MISC_FAMILY_ID, GD::bl, eventHandler)
 {
 	init();
 }
 
-MiscCentral::MiscCentral(uint32_t deviceID, std::string serialNumber, IDeviceEventSink* eventHandler) : MiscDevice(deviceID, serialNumber, eventHandler), Central(GD::bl, this)
+MiscCentral::MiscCentral(uint32_t deviceId, std::string serialNumber, ICentralEventSink* eventHandler) : BaseLib::Systems::ICentral(MISC_FAMILY_ID, GD::bl, deviceId, serialNumber, -1, eventHandler)
 {
 	init();
 }
@@ -50,24 +50,72 @@ MiscCentral::~MiscCentral()
 
 void MiscCentral::init()
 {
+	if(_initialized) return; //Prevent running init two times
+	_initialized = true;
+}
+
+void MiscCentral::dispose(bool wait)
+{
+	if(_disposing) return;
+	_disposing = true;
+	_disposed = true;
+}
+
+void MiscCentral::loadPeers()
+{
 	try
 	{
-		MiscDevice::init();
-
-		_deviceType = (uint32_t)DeviceType::CENTRAL;
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _bl->db->getPeers(_deviceId);
+		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
+		{
+			int32_t peerId = row->second.at(0)->intValue;
+			GD::out.printMessage("Loading Miscellaneous peer " + std::to_string(peerId));
+			std::shared_ptr<MiscPeer> peer(new MiscPeer(peerId, row->second.at(3)->textValue, _deviceId, true, this));
+			if(!peer->load(this)) continue;
+			if(!peer->getRpcDevice()) continue;
+			_peersMutex.lock();
+			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
+			_peersById[peerId] = peer;
+			_peersMutex.unlock();
+		}
 	}
 	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_peersMutex.unlock();
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_peersMutex.unlock();
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_peersMutex.unlock();
+    }
+}
+
+void MiscCentral::addPeer(std::shared_ptr<MiscPeer> peer)
+{
+	try
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_peersMutex.lock();
+		if(_peersById.find(peer->getID()) == _peersById.end()) _peersById[peer->getID()] = peer;
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peersMutex.unlock();
 }
 
 void MiscCentral::deletePeer(uint64_t id)
@@ -94,7 +142,7 @@ void MiscCentral::deletePeer(uint64_t id)
 		peer->deleteFromDatabase();
 		_peersMutex.lock();
 		if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
-		if(_peersByID.find(id) != _peersByID.end()) _peersByID.erase(id);
+		if(_peersById.find(id) != _peersById.end()) _peersById.erase(id);
 		_peersMutex.unlock();
 		raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
 		GD::out.printMessage("Removed Miscellaneous peer " + std::to_string(peer->getID()));
@@ -116,7 +164,92 @@ void MiscCentral::deletePeer(uint64_t id)
     }
 }
 
-std::string MiscCentral::handleCLICommand(std::string command)
+std::shared_ptr<MiscPeer> MiscCentral::getPeer(uint64_t id)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(_peersById.find(id) != _peersById.end())
+		{
+			std::shared_ptr<MiscPeer> peer(std::dynamic_pointer_cast<MiscPeer>(_peersById.at(id)));
+			_peersMutex.unlock();
+			return peer;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peersMutex.unlock();
+    return std::shared_ptr<MiscPeer>();
+}
+
+std::shared_ptr<MiscPeer> MiscCentral::getPeer(std::string serialNumber)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(_peersBySerial.find(serialNumber) != _peersBySerial.end())
+		{
+			std::shared_ptr<MiscPeer> peer(std::dynamic_pointer_cast<MiscPeer>(_peersBySerial.at(serialNumber)));
+			_peersMutex.unlock();
+			return peer;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peersMutex.unlock();
+    return std::shared_ptr<MiscPeer>();
+}
+
+void MiscCentral::savePeers(bool full)
+{
+	try
+	{
+		_peersMutex.lock();
+		for(std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peersById.begin(); i != _peersById.end(); ++i)
+		{
+			//Necessary, because peers can be assigned to multiple virtual devices
+			if(i->second->getParentID() != _deviceId) continue;
+			//We are always printing this, because the init script needs it
+			GD::out.printMessage("(Shutdown) => Saving Miscellaneous peer " + std::to_string(i->second->getID()));
+			i->second->save(full, full, full);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	_peersMutex.unlock();
+}
+
+std::string MiscCentral::handleCliCommand(std::string command)
 {
 	try
 	{
@@ -128,7 +261,7 @@ std::string MiscCentral::handleCLICommand(std::string command)
 				_currentPeer.reset();
 				return "Peer unselected.\n";
 			}
-			return _currentPeer->handleCLICommand(command);
+			return _currentPeer->handleCliCommand(command);
 		}
 		if(command == "help" || command == "h")
 		{
@@ -144,7 +277,7 @@ std::string MiscCentral::handleCLICommand(std::string command)
 		}
 		if(command.compare(0, 12, "peers create") == 0 || command.compare(0, 2, "pc") == 0)
 		{
-			uint32_t deviceType = (uint32_t)DeviceType::none;
+			uint32_t deviceType = 0;
 			std::string serialNumber;
 
 			std::stringstream stream(command);
@@ -194,7 +327,7 @@ std::string MiscCentral::handleCLICommand(std::string command)
 					peer->save(true, true, false);
 					peer->initializeCentralConfig();
 					_peersMutex.lock();
-					_peersByID[peer->getID()] = peer;
+					_peersById[peer->getID()] = peer;
 					_peersMutex.unlock();
 				}
 				catch(const std::exception& ex)
@@ -316,7 +449,7 @@ std::string MiscCentral::handleCLICommand(std::string command)
 					return stringStream.str();
 				}
 
-				if(_peersByID.empty())
+				if(_peersById.empty())
 				{
 					stringStream << "No peers are paired to this central." << std::endl;
 					return stringStream.str();
@@ -347,7 +480,7 @@ std::string MiscCentral::handleCLICommand(std::string command)
 					<< std::setw(typeWidth2)
 					<< std::endl;
 				_peersMutex.lock();
-				for(std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+				for(std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peersById.begin(); i != _peersById.end(); ++i)
 				{
 					if(filterType == "id")
 					{
@@ -527,7 +660,7 @@ std::shared_ptr<MiscPeer> MiscCentral::createPeer(BaseLib::Systems::LogicalDevic
 {
 	try
 	{
-		std::shared_ptr<MiscPeer> peer(new MiscPeer(_deviceID, true, this));
+		std::shared_ptr<MiscPeer> peer(new MiscPeer(_deviceId, true, this));
 		peer->setDeviceType(deviceType);
 		peer->setSerialNumber(serialNumber);
 		peer->setRpcDevice(GD::rpcDevices.find(deviceType, 0x10, -1));
@@ -550,61 +683,6 @@ std::shared_ptr<MiscPeer> MiscCentral::createPeer(BaseLib::Systems::LogicalDevic
     return std::shared_ptr<MiscPeer>();
 }
 
-bool MiscCentral::knowsDevice(std::string serialNumber)
-{
-	if(serialNumber == _serialNumber) return true;
-	_peersMutex.lock();
-	try
-	{
-		if(_peersBySerial.find(serialNumber) != _peersBySerial.end())
-		{
-			_peersMutex.unlock();
-			return true;
-		}
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	_peersMutex.unlock();
-	return false;
-}
-
-bool MiscCentral::knowsDevice(uint64_t id)
-{
-	_peersMutex.lock();
-	try
-	{
-		if(_peersByID.find(id) != _peersByID.end())
-		{
-			_peersMutex.unlock();
-			return true;
-		}
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	_peersMutex.unlock();
-	return false;
-}
-
 PVariable MiscCentral::createDevice(int32_t clientID, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion)
 {
 	try
@@ -623,7 +701,7 @@ PVariable MiscCentral::createDevice(int32_t clientID, int32_t deviceType, std::s
 			peer->save(true, true, false);
 			peer->initializeCentralConfig();
 			_peersMutex.lock();
-			_peersByID[peer->getID()] = peer;
+			_peersById[peer->getID()] = peer;
 			_peersMutex.unlock();
 		}
 		catch(const std::exception& ex)
@@ -701,7 +779,7 @@ PVariable MiscCentral::deleteDevice(int32_t clientID, uint64_t peerID, int32_t f
 
 		deletePeer(id);
 
-		if(knowsDevice(id)) return Variable::createError(-1, "Error deleting peer. See log for more details.");
+		if(peerExists(id)) return Variable::createError(-1, "Error deleting peer. See log for more details.");
 
 		return PVariable(new Variable(VariableType::tVoid));
 	}
@@ -738,7 +816,7 @@ PVariable MiscCentral::getDeviceInfo(int32_t clientID, uint64_t id, std::map<std
 			std::vector<std::shared_ptr<MiscPeer>> peers;
 			//Copy all peers first, because listDevices takes very long and we don't want to lock _peersMutex too long
 			_peersMutex.lock();
-			for(std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+			for(std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peersById.begin(); i != _peersById.end(); ++i)
 			{
 				peers.push_back(std::dynamic_pointer_cast<MiscPeer>(i->second));
 			}

@@ -46,7 +46,7 @@ public:
 	};
 
 	static std::mutex eventsMapMutex;
-	static std::map<int64_t, std::shared_ptr<PhpEvents>> eventsMap;
+	static std::map<pthread_t, std::shared_ptr<PhpEvents>> eventsMap;
 
 	PhpEvents();
 	virtual ~PhpEvents();

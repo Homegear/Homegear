@@ -29,14 +29,14 @@
 */
 
 #include "MiscPeer.h"
-#include "LogicalDevices/MiscCentral.h"
+#include "MiscCentral.h"
 #include "GD.h"
 #include "sys/wait.h"
 #include "sys/stat.h"
 
 namespace Misc
 {
-std::shared_ptr<BaseLib::Systems::Central> MiscPeer::getCentral()
+std::shared_ptr<BaseLib::Systems::ICentral> MiscPeer::getCentral()
 {
 	try
 	{
@@ -56,28 +56,7 @@ std::shared_ptr<BaseLib::Systems::Central> MiscPeer::getCentral()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return std::shared_ptr<BaseLib::Systems::Central>();
-}
-
-std::shared_ptr<BaseLib::Systems::LogicalDevice> MiscPeer::getDevice(int32_t address)
-{
-	try
-	{
-		return GD::family->get(address);
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	return std::shared_ptr<BaseLib::Systems::LogicalDevice>();
+	return std::shared_ptr<BaseLib::Systems::ICentral>();
 }
 
 MiscPeer::MiscPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : BaseLib::Systems::Peer(GD::bl, parentID, centralFeatures, eventHandler)
@@ -298,7 +277,7 @@ void MiscPeer::runScript()
 	}
 }
 
-std::string MiscPeer::handleCLICommand(std::string command)
+std::string MiscPeer::handleCliCommand(std::string command)
 {
 	try
 	{
@@ -450,12 +429,12 @@ std::string MiscPeer::printConfig()
 }
 
 
-void MiscPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::shared_ptr<BaseLib::Database::DataTable> rows)
+void MiscPeer::loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<BaseLib::Database::DataTable>& rows)
 {
 	try
 	{
 		if(!rows) rows = _bl->db->getPeerVariables(_peerID);
-		Peer::loadVariables(device, rows);
+		Peer::loadVariables(central, rows);
 	}
 	catch(const std::exception& ex)
     {
@@ -471,11 +450,12 @@ void MiscPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::share
     }
 }
 
-bool MiscPeer::load(BaseLib::Systems::LogicalDevice* device)
+bool MiscPeer::load(BaseLib::Systems::ICentral* central)
 {
 	try
 	{
-		loadVariables((MiscDevice*)device);
+		std::shared_ptr<BaseLib::Database::DataTable> rows;
+		loadVariables(central, rows);
 
 		_rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, -1);
 		if(!_rpcDevice)

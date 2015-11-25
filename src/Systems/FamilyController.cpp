@@ -576,10 +576,10 @@ bool FamilyController::peerExists(uint64_t peerId)
 	{
 		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
-			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
 			{
-				if(central->logicalDevice()->peerExists(peerId)) return true;
+				if(central->peerExists(peerId)) return true;
 			}
 		}
 	}
@@ -598,24 +598,19 @@ bool FamilyController::peerExists(uint64_t peerId)
     return false;
 }
 
-std::string FamilyController::handleCLICommand(std::string& command)
+std::string FamilyController::handleCliCommand(std::string& command)
 {
 	try
 	{
 		std::ostringstream stringStream;
-		if((command == "unselect" || command == "u") && _currentFamily && !_currentFamily->deviceSelected())
+		if((command == "unselect" || command == "u") && _currentFamily && !_currentFamily->peerSelected())
 		{
 			_currentFamily = nullptr;
 			return "Device family unselected.\n";
 		}
 		else if((command.compare(0, 8, "families") || BaseLib::HelperFunctions::isShortCLICommand(command)) && _currentFamily)
 		{
-			if((command == "unselect" || command == "u") && _currentFamily && _currentFamily->skipFamilyCLI() && !_currentFamily->peerSelected())
-			{
-				_currentFamily = nullptr;
-				return "Device family unselected.\n";
-			}
-			return _currentFamily->handleCLICommand(command);
+			return _currentFamily->handleCliCommand(command);
 		}
 		else if(command == "families help" || command == "fh")
 		{
@@ -730,7 +725,7 @@ BaseLib::PVariable FamilyController::listFamilies()
 
 		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
-			std::shared_ptr<BaseLib::Systems::Central> central = GD::deviceFamilies.at(i->first)->getCentral();
+			std::shared_ptr<BaseLib::Systems::ICentral> central = GD::deviceFamilies.at(i->first)->getCentral();
 			if(!central) continue;
 
 			BaseLib::PVariable familyDescription(new BaseLib::Variable(BaseLib::VariableType::tStruct));

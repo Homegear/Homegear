@@ -392,10 +392,10 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 	try
 	{
 		std::string unselect = "unselect";
-		GD::familyController->handleCLICommand(unselect);
-		GD::familyController->handleCLICommand(unselect);
-		GD::familyController->handleCLICommand(unselect);
-		GD::familyController->handleCLICommand(unselect);
+		GD::familyController->handleCliCommand(unselect);
+		GD::familyController->handleCliCommand(unselect);
+		GD::familyController->handleCliCommand(unselect);
+		GD::familyController->handleCliCommand(unselect);
 
 		int32_t bufferMax = 1024;
 		char buffer[bufferMax + 1];
@@ -916,7 +916,7 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
 		if(response.empty())
 		{
 			if(command.compare(0, 5, "users") == 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'u' && !GD::familyController->familySelected())) response = handleUserCommand(command);
-			else response = GD::familyController->handleCLICommand(command);
+			else response = GD::familyController->handleCliCommand(command);
 		}
 		response.push_back(0);
 		if(send(clientData->fileDescriptor->descriptor, response.c_str(), response.size(), MSG_NOSIGNAL) == -1)

@@ -37,7 +37,6 @@ using namespace BaseLib;
 
 namespace Misc
 {
-class MiscDevice;
 class MiscCentral;
 
 class Miscellaneous : public BaseLib::Systems::DeviceFamily
@@ -49,20 +48,12 @@ public:
 	virtual void dispose();
 
 	virtual void load();
-	virtual std::shared_ptr<MiscDevice> getDevice(uint32_t address);
-	virtual std::shared_ptr<MiscDevice> getDevice(std::string serialNumber);
-	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
-	virtual std::string handleCLICommand(std::string& command);
-	virtual bool skipFamilyCLI() { return true; }
+	virtual std::shared_ptr<BaseLib::Systems::ICentral> getCentral();
+	virtual std::string handleCliCommand(std::string& command);
 	virtual bool hasPhysicalInterface() { return false; }
 	virtual PVariable getPairingMethods();
 private:
-	std::shared_ptr<MiscCentral> _central;
-
 	void createCentral();
-	void createSpyDevice();
-	uint32_t getUniqueAddress(uint32_t seed);
-	std::string getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber);
 };
 
 }
