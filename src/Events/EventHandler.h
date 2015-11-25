@@ -109,6 +109,13 @@ public:
 	BaseLib::PVariable trigger(std::string name);
 	void trigger(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
 	void trigger(uint64_t peerID, int32_t channel, std::string& variable, BaseLib::PVariable& value);
+
+	/**
+	 * Event trigger for system variables.
+	 * @param variable The name of the system variable.
+	 * @param value The new value of the system variable.
+	 */
+	void trigger(std::string& variable, BaseLib::PVariable& value);
 protected:
 	bool _disposing = false;
 	std::mutex _eventsMutex;
