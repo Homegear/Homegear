@@ -606,6 +606,9 @@ BaseLib::PVariable DatabaseController::setMetadata(uint64_t peerID, std::string&
 
 		bufferedWrite("INSERT INTO metadata VALUES(?, ?, ?)", data);
 
+#ifdef EVENTHANDLER
+		GD::eventHandler->trigger(peerID, -1, dataID, metadata);
+#endif
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{dataID});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{metadata});
 		GD::rpcClient->broadcastEvent(peerID, -1, serialNumber, valueKeys, values);
@@ -798,7 +801,7 @@ BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableID
 		bufferedWrite("INSERT INTO systemVariables VALUES(?, ?)", data);
 
 #ifdef EVENTHANDLER
-		GD::eventHandler->trigger(0, -1, variableID, value);
+		GD::eventHandler->trigger(variableID, value);
 #endif
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableID});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{value});

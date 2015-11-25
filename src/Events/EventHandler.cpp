@@ -858,6 +858,32 @@ uint64_t EventHandler::getNextExecution(uint64_t startTime, uint64_t recurEvery)
     return -1;
 }
 
+void EventHandler::trigger(std::string& variable, BaseLib::PVariable& value)
+{
+	try
+	{
+		if(_disposing) return;
+		if(eventThreadMaxReached()) return;
+		_eventThreadMutex.lock();
+		int32_t threadId = _currentEventThreadID++;
+		if(threadId == -1) threadId = _currentEventThreadID++;
+		_eventThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&EventHandler::triggerThread, this, 0, -1, variable, value, threadId), true)));
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventThreadMutex.unlock();
+}
+
 void EventHandler::trigger(uint64_t peerID, int32_t channel, std::string& variable, BaseLib::PVariable& value)
 {
 	try
