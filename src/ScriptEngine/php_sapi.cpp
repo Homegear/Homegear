@@ -73,6 +73,9 @@ ZEND_FUNCTION(hg_set_meta);
 ZEND_FUNCTION(hg_set_system);
 ZEND_FUNCTION(hg_set_value);
 ZEND_FUNCTION(hg_auth);
+ZEND_FUNCTION(hg_load_module);
+ZEND_FUNCTION(hg_unload_module);
+ZEND_FUNCTION(hg_reload_module);
 ZEND_FUNCTION(hg_create_user);
 ZEND_FUNCTION(hg_delete_user);
 ZEND_FUNCTION(hg_update_user);
@@ -107,6 +110,9 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_set_system, NULL)
 	ZEND_FE(hg_set_value, NULL)
 	ZEND_FE(hg_auth, NULL)
+	ZEND_FE(hg_load_module, NULL)
+	ZEND_FE(hg_unload_module, NULL)
+	ZEND_FE(hg_reload_module, NULL)
 	ZEND_FE(hg_create_user, NULL)
 	ZEND_FE(hg_delete_user, NULL)
 	ZEND_FE(hg_update_user, NULL)
@@ -691,6 +697,36 @@ ZEND_FUNCTION(hg_auth)
 	RETURN_FALSE
 }
 
+ZEND_FUNCTION(hg_load_module)
+{
+	if(_disposed) RETURN_NULL();
+	char* pFilename = nullptr;
+	int filenameLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pFilename, &filenameLength) != SUCCESS) RETURN_NULL();
+	if(filenameLength == 0) RETURN_FALSE;
+	ZVAL_LONG(return_value, GD::familyController->loadModule(std::string(pFilename, filenameLength)));
+}
+
+ZEND_FUNCTION(hg_unload_module)
+{
+	if(_disposed) RETURN_NULL();
+	char* pFilename = nullptr;
+	int filenameLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pFilename, &filenameLength) != SUCCESS) RETURN_NULL();
+	if(filenameLength == 0) RETURN_FALSE;
+	ZVAL_LONG(return_value, GD::familyController->unloadModule(std::string(pFilename, filenameLength)));
+}
+
+ZEND_FUNCTION(hg_reload_module)
+{
+	if(_disposed) RETURN_NULL();
+	char* pFilename = nullptr;
+	int filenameLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pFilename, &filenameLength) != SUCCESS) RETURN_NULL();
+	if(filenameLength == 0) RETURN_FALSE;
+	ZVAL_LONG(return_value, GD::familyController->reloadModule(std::string(pFilename, filenameLength)));
+}
+
 ZEND_FUNCTION(hg_create_user)
 {
 	if(_disposed) RETURN_NULL();
@@ -1195,6 +1231,9 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME(Homegear, __call, php_homegear_two_args, ZEND_ACC_PUBLIC)
 	ZEND_ME(Homegear, __callStatic, php_homegear_two_args, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(auth, hg_auth, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(loadModule, hg_load_module, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(unloadModule, hg_unload_module, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(reloadModule, hg_reload_module, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(createUser, hg_create_user, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(deleteUser, hg_delete_user, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(updateUser, hg_update_user, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
