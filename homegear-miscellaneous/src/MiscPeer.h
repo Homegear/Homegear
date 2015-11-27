@@ -56,9 +56,6 @@ public:
 	virtual std::string handleCliCommand(std::string command);
 
 	virtual bool load(BaseLib::Systems::ICentral* central);
-    virtual void loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<BaseLib::Database::DataTable>& rows);
-    virtual void saveVariables();
-    virtual void savePeers() {}
     void initProgram();
 
 	virtual int32_t getChannelGroupedWith(int32_t channel) { return -1; }
@@ -84,6 +81,10 @@ protected:
 	bool _stopRunProgramThread = true;
 	std::thread _runProgramThread;
 	pid_t _programPID = -1;
+
+	virtual void loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<BaseLib::Database::DataTable>& rows);
+    virtual void saveVariables();
+    virtual void savePeers() {}
 
 	void runProgram();
 	void runScript();

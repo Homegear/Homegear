@@ -62,6 +62,21 @@ ModuleLoader::ModuleLoader(std::string name, std::string path)
 			return;
 		}
 
+		int32_t (*getFamilyId)();
+		getFamilyId = (int32_t (*)())dlsym(moduleHandle, "getFamilyId");
+		if(!getFamilyId)
+		{
+			GD::out.printCritical("Critical: Could not open module \"" + path + "\". Symbol \"getFamilyId\" not found.");
+			dlclose(moduleHandle);
+			return;
+		}
+		_familyId = getFamilyId();
+		if(_familyId < 0)
+		{
+			GD::out.printCritical("Critical: Could not open module \"" + path + "\". Got invalid family id.");
+			dlclose(moduleHandle);
+			return;
+		}
 
 		BaseLib::Systems::SystemFactory* (*getFactory)();
 		getFactory = (BaseLib::Systems::SystemFactory* (*)())dlsym(moduleHandle, "getFactory");
@@ -91,8 +106,15 @@ ModuleLoader::ModuleLoader(std::string name, std::string path)
 
 ModuleLoader::~ModuleLoader()
 {
+	dispose();
+}
+
+void ModuleLoader::dispose()
+{
 	try
 	{
+		if(_disposing) return;
+		_disposing = true;
 		GD::out.printInfo("Info: Disposing family module " + _name);
 		GD::out.printDebug("Debug: Deleting factory pointer of module " + _name);
 		if(_factory) delete _factory.release();
@@ -113,6 +135,11 @@ ModuleLoader::~ModuleLoader()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+}
+
+int32_t ModuleLoader::getFamilyId()
+{
+	return _familyId;
 }
 
 std::unique_ptr<BaseLib::Systems::DeviceFamily> ModuleLoader::createModule(BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
@@ -333,9 +360,10 @@ void FamilyController::homegearStarted()
 {
 	try
 	{
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
-			if(i->second) i->second->homegearStarted();
+			i->second->homegearStarted();
 		}
 	}
 	catch(const std::exception& ex)
@@ -356,9 +384,10 @@ void FamilyController::homegearShuttingDown()
 {
 	try
 	{
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
-			if(i->second) i->second->homegearShuttingDown();
+			i->second->homegearShuttingDown();
 		}
 	}
 	catch(const std::exception& ex)
@@ -377,49 +406,24 @@ void FamilyController::homegearShuttingDown()
 
 bool FamilyController::familyAvailable(int32_t family)
 {
-	return GD::physicalInterfaces->count(family) > 0 || _familiesWithoutPhysicalInterface.find(family) != _familiesWithoutPhysicalInterface.end();
+	return physicalInterfaceCount(family) > 0 || _familiesWithoutPhysicalInterface.find(family) != _familiesWithoutPhysicalInterface.end();
 }
 
-void FamilyController::loadModules()
+std::vector<std::pair<std::string, int32_t>> FamilyController::getModuleNames()
 {
+	std::vector<std::pair<std::string, int32_t>> moduleNames;
+	_moduleLoadersMutex.lock();
 	try
 	{
-		GD::out.printDebug("Debug: Loading family modules");
-
-		std::vector<std::string> files = GD::bl->io.getFiles(GD::bl->settings.modulePath());
-		if(files.empty())
+		if(_disposed)
 		{
-			GD::out.printCritical("Critical: No family modules found in \"" + GD::bl->settings.modulePath() + "\".");
-			return;
+			_moduleLoadersMutex.unlock();
+			return moduleNames;
 		}
-		for(std::vector<std::string>::iterator i = files.begin(); i != files.end(); ++i)
+		for(std::map<std::string, std::unique_ptr<ModuleLoader>>::iterator i = _moduleLoaders.begin(); i != _moduleLoaders.end(); ++i)
 		{
-			if(i->size() < 9) continue; //mod_?*.so
-			std::string prefix = i->substr(0, 4);
-			std::string extension = i->substr(i->size() - 3, 3);
-			std::string licensingPostfix;
-			if(i->size() > 15) licensingPostfix = i->substr(i->size() - 12, 9);
-			if(extension != ".so" || prefix != "mod_" || licensingPostfix == "licensing") continue;
-			std::string path(GD::bl->settings.modulePath() + *i);
-
-			moduleLoaders.insert(std::pair<std::string, std::unique_ptr<ModuleLoader>>(*i, std::unique_ptr<ModuleLoader>(new ModuleLoader(*i, path))));
-
-			std::unique_ptr<BaseLib::Systems::DeviceFamily> family = moduleLoaders.at(*i)->createModule(this);
-
-			if(family)
-			{
-				if(!family->hasPhysicalInterface()) _familiesWithoutPhysicalInterface.insert(family->getFamily());
-				std::string name = family->getName();
-				BaseLib::HelperFunctions::toLower(name);
-				BaseLib::HelperFunctions::stringReplace(name, " ", "");
-				GD::deviceFamiliesByName[name] = family->getFamily();
-				GD::deviceFamilies[family->getFamily()].swap(family);
-			}
-		}
-		if(GD::deviceFamilies.empty())
-		{
-			GD::out.printCritical("Critical: Could not load any family modules from \"" + GD::bl->settings.modulePath() + "\".");
-			return;
+			if(!i->second) continue;
+			moduleNames.push_back(std::pair<std::string, int32_t>(i->first, i->second->getFamilyId()));
 		}
 	}
 	catch(const std::exception& ex)
@@ -434,26 +438,236 @@ void FamilyController::loadModules()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _moduleLoadersMutex.unlock();
+    return moduleNames;
+}
+
+int32_t FamilyController::loadModule(std::string filename)
+{
+	_moduleLoadersMutex.lock();
+	try
+	{
+		if(_disposed)
+		{
+			_moduleLoadersMutex.unlock();
+			return -1;
+		}
+		std::string path(GD::bl->settings.modulePath() + filename);
+		if(!BaseLib::Io::fileExists(path))
+		{
+			_moduleLoadersMutex.unlock();
+			return -2;
+		}
+		if(_moduleLoaders.find(filename) != _moduleLoaders.end())
+		{
+			_moduleLoadersMutex.unlock();
+			return 1;
+		}
+		_moduleLoaders.insert(std::pair<std::string, std::unique_ptr<ModuleLoader>>(filename, std::unique_ptr<ModuleLoader>(new ModuleLoader(filename, path))));
+
+		std::shared_ptr<BaseLib::Systems::DeviceFamily> family = _moduleLoaders.at(filename)->createModule(this);
+
+		if(family)
+		{
+			if(!family->hasPhysicalInterface()) _familiesWithoutPhysicalInterface.insert(family->getFamily());
+			std::string name = family->getName();
+			BaseLib::HelperFunctions::toLower(name);
+			BaseLib::HelperFunctions::stringReplace(name, " ", "");
+			_families[family->getFamily()] = family;
+			if(!familyAvailable(family->getFamily()) || !family->init())
+			{
+				if(familyAvailable(family->getFamily())) GD::out.printError("Error: Could not initialize device family " + family->getName() + ".");
+				else GD::out.printInfo("Info: Not initializing device family " + family->getName() + ", because no physical interface was found.");
+				_families[family->getFamily()]->dispose();
+				_families[family->getFamily()].reset();
+				_moduleLoaders.at(filename)->dispose();
+				_moduleLoaders.erase(filename);
+				_moduleLoadersMutex.unlock();
+				return -4;
+			}
+			family->load();
+		}
+		_moduleLoadersMutex.unlock();
+		return 0;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _moduleLoadersMutex.unlock();
+    return -1;
+}
+
+int32_t FamilyController::unloadModule(std::string filename)
+{
+	_moduleLoadersMutex.lock();
+	try
+	{
+		if(_disposed)
+		{
+			_moduleLoadersMutex.unlock();
+			return -1;
+		}
+		std::string path(GD::bl->settings.modulePath() + filename);
+		if(!BaseLib::Io::fileExists(path))
+		{
+			_moduleLoadersMutex.unlock();
+			return -2;
+		}
+
+		std::map<std::string, std::unique_ptr<ModuleLoader>>::iterator moduleLoaderIterator = _moduleLoaders.find(filename);
+		if(moduleLoaderIterator == _moduleLoaders.end())
+		{
+			_moduleLoadersMutex.unlock();
+			return 1;
+		}
+
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator familyIterator = _families.find(moduleLoaderIterator->second->getFamilyId());
+		if(familyIterator != _families.end() && familyIterator->second)
+		{
+			_familiesMutex.lock();
+			familyIterator->second->lock();
+			_familiesMutex.unlock();
+			while(familyIterator->second.use_count() > 1)
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+			}
+			familyIterator->second->save(false);
+			familyIterator->second->dispose();
+			familyIterator->second.reset();
+		}
+
+		moduleLoaderIterator->second->dispose();
+		moduleLoaderIterator->second.reset();
+		_moduleLoaders.erase(moduleLoaderIterator);
+
+		_moduleLoadersMutex.unlock();
+		return 0;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _moduleLoadersMutex.unlock();
+    return -1;
+}
+
+int32_t FamilyController::reloadModule(std::string filename)
+{
+	try
+	{
+		if(_disposed) return -1;
+		int32_t result = unloadModule(filename);
+		if(result < 0) return result;
+		return loadModule(filename);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return -1;
+}
+
+void FamilyController::loadModules()
+{
+	_moduleLoadersMutex.lock();
+	try
+	{
+		GD::out.printDebug("Debug: Loading family modules");
+
+		std::vector<std::string> files = GD::bl->io.getFiles(GD::bl->settings.modulePath());
+		if(files.empty())
+		{
+			GD::out.printCritical("Critical: No family modules found in \"" + GD::bl->settings.modulePath() + "\".");
+			_moduleLoadersMutex.unlock();
+			return;
+		}
+		for(std::vector<std::string>::iterator i = files.begin(); i != files.end(); ++i)
+		{
+			if(i->size() < 9) continue; //mod_?*.so
+			std::string prefix = i->substr(0, 4);
+			std::string extension = i->substr(i->size() - 3, 3);
+			std::string licensingPostfix;
+			if(i->size() > 15) licensingPostfix = i->substr(i->size() - 12, 9);
+			if(extension != ".so" || prefix != "mod_" || licensingPostfix == "licensing") continue;
+			std::string path(GD::bl->settings.modulePath() + *i);
+
+			_moduleLoaders.insert(std::pair<std::string, std::unique_ptr<ModuleLoader>>(*i, std::unique_ptr<ModuleLoader>(new ModuleLoader(*i, path))));
+
+			std::shared_ptr<BaseLib::Systems::DeviceFamily> family = _moduleLoaders.at(*i)->createModule(this);
+
+			if(family)
+			{
+				if(!family->hasPhysicalInterface()) _familiesWithoutPhysicalInterface.insert(family->getFamily());
+				std::string name = family->getName();
+				BaseLib::HelperFunctions::toLower(name);
+				BaseLib::HelperFunctions::stringReplace(name, " ", "");
+				_families[family->getFamily()] = family;
+			}
+			else
+			{
+				_moduleLoaders.at(*i)->dispose();
+				_moduleLoaders.erase(*i);
+			}
+		}
+		if(_families.empty())
+		{
+			GD::out.printCritical("Critical: Could not load any family modules from \"" + GD::bl->settings.modulePath() + "\".");
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _moduleLoadersMutex.unlock();
 }
 
 void FamilyController::init()
 {
 	try
 	{
-		std::vector<int32_t> familiesToRemove;
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			if(!familyAvailable(i->first) || !i->second->init())
 			{
-				familiesToRemove.push_back(i->first);
 				if(familyAvailable(i->first)) GD::out.printError("Error: Could not initialize device family " + i->second->getName() + ".");
 				else GD::out.printInfo("Info: Not initializing device family " + i->second->getName() + ", because no physical interface was found.");
+				i->second->dispose();
+				i->second.reset();
 			}
-		}
-		for(std::vector<int32_t>::iterator i = familiesToRemove.begin(); i != familiesToRemove.end(); ++i)
-		{
-			GD::deviceFamilies.at(*i)->dispose(); //Calls dispose
-			GD::deviceFamilies.erase(*i);
 		}
 	}
 	catch(const std::exception& ex)
@@ -474,7 +688,8 @@ void FamilyController::load()
 {
 	try
 	{
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			if(familyAvailable(i->first))
 			{
@@ -500,15 +715,14 @@ void FamilyController::disposeDeviceFamilies()
 {
 	try
 	{
-		if(!GD::deviceFamilies.empty())
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
-			for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
-			{
-				if(!i->second) continue;
-				i->second->dispose();
-			}
+			if(!i->second) continue;
+			i->second->dispose();
+			i->second.reset();
 		}
-		GD::deviceFamilies.clear();
+		families.clear();
 	}
 	catch(const std::exception& ex)
     {
@@ -531,7 +745,9 @@ void FamilyController::dispose()
 		if(_disposed) return;
 		_disposed = true;
 		_rpcCache.reset();
-		moduleLoaders.clear();
+		_moduleLoadersMutex.lock();
+		_moduleLoaders.clear();
+		_moduleLoadersMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
@@ -551,9 +767,10 @@ void FamilyController::save(bool full)
 {
 	try
 	{
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
-			if(i->second) i->second->save(full);
+			if(i->second && !i->second->locked()) i->second->save(full);
 		}
 	}
 	catch(const std::exception& ex)
@@ -570,16 +787,79 @@ void FamilyController::save(bool full)
     }
 }
 
+std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> FamilyController::getFamilies()
+{
+	std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families;
+	try
+	{
+		_familiesMutex.lock();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = _families.begin(); i != _families.end(); ++i)
+		{
+			if(!i->second || i->second->locked()) continue;
+			families.insert(*i);
+		}
+		_familiesMutex.unlock();
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return families;
+}
+
+std::shared_ptr<BaseLib::Systems::DeviceFamily> FamilyController::getFamily(int32_t familyId)
+{
+	try
+	{
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator familyIterator = _families.find(familyId);
+		std::shared_ptr<BaseLib::Systems::DeviceFamily> family;
+		if(familyIterator != _families.end()) family = familyIterator->second;
+		if(!family) return std::shared_ptr<BaseLib::Systems::DeviceFamily>();
+		_familiesMutex.lock();
+		if(!family->locked())
+		{
+			_familiesMutex.unlock();
+			return family;
+		}
+		_familiesMutex.unlock();
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::shared_ptr<BaseLib::Systems::DeviceFamily>();
+}
+
 bool FamilyController::peerExists(uint64_t peerId)
 {
 	try
 	{
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
 			{
-				if(central->peerExists(peerId)) return true;
+				if(central->peerExists(peerId))
+				{
+					return true;
+				}
 			}
 		}
 	}
@@ -605,12 +885,13 @@ std::string FamilyController::handleCliCommand(std::string& command)
 		std::ostringstream stringStream;
 		if((command == "unselect" || command == "u") && _currentFamily && !_currentFamily->peerSelected())
 		{
-			_currentFamily = nullptr;
+			_currentFamily.reset();
 			return "Device family unselected.\n";
 		}
 		else if((command.compare(0, 8, "families") || BaseLib::HelperFunctions::isShortCLICommand(command)) && _currentFamily)
 		{
-			return _currentFamily->handleCliCommand(command);
+			std::string result = _currentFamily->handleCliCommand(command);
+			return result;
 		}
 		else if(command == "families help" || command == "fh")
 		{
@@ -632,7 +913,8 @@ std::string FamilyController::handleCliCommand(std::string& command)
 				<< nameHeader
 				<< std::endl;
 			stringStream << "──────┼───────────────────────────────" << std::endl;
-			for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
+			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 			{
 				if(i->first == -1 || !familyAvailable(i->first)) continue;
 				std::string name = i->second->getName();
@@ -663,7 +945,10 @@ std::string FamilyController::handleCliCommand(std::string& command)
 				{
 					if(element == "help") break;
 					family = BaseLib::Math::getNumber(element, false);
-					if(family == -1) return "Invalid family id.\n";
+					if(family == -1)
+					{
+						return "Invalid family id.\n";
+					}
 				}
 				index++;
 			}
@@ -674,26 +959,23 @@ std::string FamilyController::handleCliCommand(std::string& command)
 				stringStream << "Parameters:" << std::endl;
 				stringStream << "  FAMILYID:\tThe id of the family to select. Example: 1" << std::endl;
 				stringStream << "Supported families:" << std::endl;
-				for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+				std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
+				for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 				{
 					if(i->first == -1 || !familyAvailable(i->first)) continue;
 					stringStream << "  FAMILYID: 0x" << std::hex << std::setfill('0') << std::setw(2) << (uint32_t)i->first << ":\t" << i->second->getName() << std::endl << std::dec;
 				}
 				return stringStream.str();
 			}
-			if(GD::deviceFamilies.find(family) == GD::deviceFamilies.end())
+			_currentFamily = getFamily(family);
+			if(!_currentFamily)
 			{
 				stringStream << "Device family not found." << std::endl;
 				return stringStream.str();
 			}
 
-			_currentFamily = GD::deviceFamilies.at(family).get();
-			if(!_currentFamily) stringStream << "Device family not found." << std::endl;
-			else
-			{
-				stringStream << "Device family \"" << _currentFamily->getName() << "\" selected." << std::endl;
-				stringStream << "For information about the family's commands type: \"help\"" << std::endl;
-			}
+			stringStream << "Device family \"" << _currentFamily->getName() << "\" selected." << std::endl;
+			stringStream << "For information about the family's commands type: \"help\"" << std::endl;
 
 			return stringStream.str();
 		}
@@ -723,9 +1005,10 @@ BaseLib::PVariable FamilyController::listFamilies()
 		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::VariableType::tArray));
 		if(_disposed) return array;
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
-			std::shared_ptr<BaseLib::Systems::ICentral> central = GD::deviceFamilies.at(i->first)->getCentral();
+			std::shared_ptr<BaseLib::Systems::ICentral> central = families.at(i->first)->getCentral();
 			if(!central) continue;
 
 			BaseLib::PVariable familyDescription(new BaseLib::Variable(BaseLib::VariableType::tStruct));
@@ -736,6 +1019,160 @@ BaseLib::PVariable FamilyController::listFamilies()
 			array->arrayValue->push_back(familyDescription);
 		}
 		_rpcCache = array;
+		return array;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+uint32_t FamilyController::physicalInterfaceCount(int32_t family)
+{
+	uint32_t size = 0;
+	try
+	{
+		std::shared_ptr<BaseLib::Systems::DeviceFamily> pFamily = getFamily(family);
+		if(pFamily) size = pFamily->physicalInterfaces()->count();
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return size;
+}
+
+bool FamilyController::physicalInterfaceIsOpen()
+{
+	try
+	{
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::PhysicalInterfaces> interface = i->second->physicalInterfaces();
+			if(!interface->isOpen()) return false;
+		}
+		return true;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	return false;
+}
+
+void FamilyController::physicalInterfaceStartListening()
+{
+	try
+	{
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			i->second->physicalInterfaces()->startListening();
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void FamilyController::physicalInterfaceStopListening()
+{
+	try
+	{
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			i->second->physicalInterfaces()->stopListening();
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void FamilyController::physicalInterfaceSetup(int32_t userID, int32_t groupID)
+{
+	try
+	{
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			i->second->physicalInterfaces()->setup(userID, groupID);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+BaseLib::PVariable FamilyController::listInterfaces(int32_t familyID)
+{
+	try
+	{
+		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::VariableType::tArray));
+
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+			if(!central) continue;
+			BaseLib::PVariable tempArray = i->second->physicalInterfaces()->listInterfaces(central->getAddress());
+			array->arrayValue->insert(array->arrayValue->end(), tempArray->arrayValue->begin(), tempArray->arrayValue->end());
+		}
+
 		return array;
 	}
 	catch(const std::exception& ex)

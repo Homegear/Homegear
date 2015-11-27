@@ -311,7 +311,8 @@ BaseLib::PVariable RPCActivateLinkParamset::invoke(int32_t clientID, std::shared
 		}
 		else if(parameters->size() > 4) longPress = parameters->at(4)->booleanValue;
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central)continue;
@@ -363,18 +364,19 @@ BaseLib::PVariable RPCAddDevice::invoke(int32_t clientID, std::shared_ptr<std::v
 		}
 		else serialNumber = parameters->at(serialNumberIndex)->stringValue;
 
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
 		if(familyID > -1)
 		{
-			if(GD::deviceFamilies.find(familyID) == GD::deviceFamilies.end())
+			if(families.find(familyID) == families.end())
 			{
 				return BaseLib::Variable::createError(-2, "Device family is unknown.");
 			}
-			return GD::deviceFamilies.at(familyID)->getCentral()->addDevice(clientID, serialNumber);
+			return families.at(familyID)->getCentral()->addDevice(clientID, serialNumber);
 		}
 
 		BaseLib::PVariable result;
 		BaseLib::PVariable returnResult;
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central) result = central->addDevice(clientID, serialNumber);
@@ -482,7 +484,8 @@ BaseLib::PVariable RPCAddLink::invoke(int32_t clientID, std::shared_ptr<std::vec
 		}
 
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
@@ -548,11 +551,12 @@ BaseLib::PVariable RPCCreateDevice::invoke(int32_t clientID, std::shared_ptr<std
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		if(GD::deviceFamilies.find(parameters->at(0)->integerValue) == GD::deviceFamilies.end())
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		if(families.find(parameters->at(0)->integerValue) == families.end())
 		{
 			return BaseLib::Variable::createError(-2, "Device family is unknown.");
 		}
-		return GD::deviceFamilies.at(parameters->at(0)->integerValue)->getCentral()->createDevice(clientID, parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->integerValue, parameters->at(4)->integerValue);
+		return families.at(parameters->at(0)->integerValue)->getCentral()->createDevice(clientID, parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->integerValue, parameters->at(4)->integerValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -580,7 +584,8 @@ BaseLib::PVariable RPCDeleteDevice::invoke(int32_t clientID, std::shared_ptr<std
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		bool useSerialNumber = (parameters->at(0)->type == BaseLib::VariableType::tString) ? true : false;
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
@@ -636,7 +641,8 @@ BaseLib::PVariable RPCDeleteMetadata::invoke(int32_t clientID, std::shared_ptr<s
 		}
 
 		std::shared_ptr<BaseLib::Systems::Peer> peer;
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
@@ -749,7 +755,8 @@ BaseLib::PVariable RPCGetAllMetadata::invoke(int32_t clientID, std::shared_ptr<s
 		}
 
 		std::shared_ptr<BaseLib::Systems::Peer> peer;
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
@@ -878,7 +885,8 @@ BaseLib::PVariable RPCGetAllValues::invoke(int32_t clientID, std::shared_ptr<std
 		}
 
 		BaseLib::PVariable values(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
@@ -945,7 +953,8 @@ BaseLib::PVariable RPCGetDeviceDescription::invoke(int32_t clientID, std::shared
 			}
 		}
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
@@ -1016,7 +1025,8 @@ BaseLib::PVariable RPCGetDeviceInfo::invoke(int32_t clientID, std::shared_ptr<st
 		}
 
 		BaseLib::PVariable deviceInfo(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
@@ -1098,16 +1108,17 @@ BaseLib::PVariable RPCGetInstallMode::invoke(int32_t clientID, std::shared_ptr<s
 			familyID = parameters->at(0)->integerValue;
 		}
 
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
 		if(familyID > -1)
 		{
-			if(GD::deviceFamilies.find(familyID) == GD::deviceFamilies.end())
+			if(families.find(familyID) == families.end())
 			{
 				return BaseLib::Variable::createError(-2, "Device family is unknown.");
 			}
-			return GD::deviceFamilies.at(familyID)->getCentral()->getInstallMode(clientID);
+			return families.at(familyID)->getCentral()->getInstallMode(clientID);
 		}
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
@@ -1194,7 +1205,8 @@ BaseLib::PVariable RPCGetLinkInfo::invoke(int32_t clientID, std::shared_ptr<std:
 			else receiverSerialNumber = parameters->at(1)->stringValue;
 		}
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
@@ -1256,7 +1268,8 @@ BaseLib::PVariable RPCGetLinkPeers::invoke(int32_t clientID, std::shared_ptr<std
 			}
 		}
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
@@ -1336,7 +1349,8 @@ BaseLib::PVariable RPCGetLinks::invoke(int32_t clientID, std::shared_ptr<std::ve
 		}
 
 		BaseLib::PVariable links(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
@@ -1398,7 +1412,8 @@ BaseLib::PVariable RPCGetMetadata::invoke(int32_t clientID, std::shared_ptr<std:
 		}
 
 		std::shared_ptr<BaseLib::Systems::Peer> peer;
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
@@ -1457,7 +1472,8 @@ BaseLib::PVariable RPCGetName::invoke(int32_t clientID, std::shared_ptr<std::vec
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central && central->peerExists((uint64_t)parameters->at(0)->integerValue))
@@ -1541,7 +1557,8 @@ BaseLib::PVariable RPCGetParamsetDescription::invoke(int32_t clientID, std::shar
 			remoteChannel = parameters->at(3)->integerValue;
 		}
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
@@ -1630,7 +1647,8 @@ BaseLib::PVariable RPCGetParamsetId::invoke(int32_t clientID, std::shared_ptr<st
 			remoteChannel = parameters->at(3)->integerValue;
 		}
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
@@ -1720,7 +1738,8 @@ BaseLib::PVariable RPCGetParamset::invoke(int32_t clientID, std::shared_ptr<std:
 			remoteChannel = parameters->at(3)->integerValue;
 		}
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
@@ -1764,7 +1783,8 @@ BaseLib::PVariable RPCGetPeerId::invoke(int32_t clientID, std::shared_ptr<std::v
 		std::string filterValue = (parameters->size() > 1) ? parameters->at(1)->stringValue : "";
 
 		BaseLib::PVariable ids(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
@@ -1805,7 +1825,8 @@ BaseLib::PVariable RPCGetServiceMessages::invoke(int32_t clientID, std::shared_p
 		if(parameters->size() == 1) id = parameters->at(0)->booleanValue;
 
 		BaseLib::PVariable serviceMessages(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
@@ -1934,7 +1955,8 @@ BaseLib::PVariable RPCGetValue::invoke(int32_t clientID, std::shared_ptr<std::ve
 			if(parameters->size() >= 5) asynchronously = parameters->at(4)->booleanValue;
 		}
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
@@ -2132,7 +2154,8 @@ BaseLib::PVariable RPCListBidcosInterfaces::invoke(int32_t clientID, std::shared
 		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
 
 		//Return dummy data
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
@@ -2215,7 +2238,8 @@ BaseLib::PVariable RPCListDevices::invoke(int32_t clientID, std::shared_ptr<std:
 		}
 
 		BaseLib::PVariable devices(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
@@ -2333,7 +2357,7 @@ BaseLib::PVariable RPCListInterfaces::invoke(int32_t clientID, std::shared_ptr<s
 			familyID = parameters->at(0)->integerValue;
 		}
 
-		return GD::physicalInterfaces->listInterfaces(familyID);
+		return GD::familyController->listInterfaces(familyID);
 	}
 	catch(const std::exception& ex)
     {
@@ -2357,7 +2381,8 @@ BaseLib::PVariable RPCListTeams::invoke(int32_t clientID, std::shared_ptr<std::v
 		if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
 
 		BaseLib::PVariable teams(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
@@ -2472,7 +2497,8 @@ BaseLib::PVariable RPCPutParamset::invoke(int32_t clientID, std::shared_ptr<std:
 			remoteChannel = parameters->at(3)->integerValue;
 		}
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central)continue;
@@ -2567,7 +2593,8 @@ BaseLib::PVariable RPCRemoveLink::invoke(int32_t clientID, std::shared_ptr<std::
 			else receiverSerialNumber = parameters->at(1)->stringValue;
 		}
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
@@ -2617,7 +2644,8 @@ BaseLib::PVariable RPCReportValueUsage::invoke(int32_t clientID, std::shared_ptr
 			else serialNumber = parameters->at(0)->stringValue;
 		}
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central && central->peerExists(serialNumber)) return central->reportValueUsage(clientID, serialNumber);
@@ -2647,7 +2675,8 @@ BaseLib::PVariable RPCRssiInfo::invoke(int32_t clientID, std::shared_ptr<std::ve
 		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
 
 		BaseLib::PVariable response(new BaseLib::Variable(BaseLib::VariableType::tStruct));
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
@@ -2790,17 +2819,18 @@ BaseLib::PVariable RPCSearchDevices::invoke(int32_t clientID, std::shared_ptr<st
 			familyID = parameters->at(0)->integerValue;
 		}
 
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
 		if(familyID > -1)
 		{
-			if(GD::deviceFamilies.find(familyID) == GD::deviceFamilies.end())
+			if(families.find(familyID) == families.end())
 			{
 				return BaseLib::Variable::createError(-2, "Device family is unknown.");
 			}
-			return GD::deviceFamilies.at(familyID)->getCentral()->searchDevices(clientID);
+			return families.at(familyID)->getCentral()->searchDevices(clientID);
 		}
 
 		BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tInteger));
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central) result->integerValue += central->searchDevices(clientID)->integerValue;
@@ -2832,7 +2862,8 @@ BaseLib::PVariable RPCSetId::invoke(int32_t clientID, std::shared_ptr<std::vecto
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central && central->peerExists((uint64_t)parameters->at(0)->integerValue))
@@ -2886,16 +2917,17 @@ BaseLib::PVariable RPCSetInstallMode::invoke(int32_t clientID, std::shared_ptr<s
 		if(time < 5) time = 60;
 		if(time > 3600) time = 3600;
 
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
 		if(familyID > -1)
 		{
-			if(GD::deviceFamilies.find(familyID) == GD::deviceFamilies.end())
+			if(families.find(familyID) == families.end())
 			{
 				return BaseLib::Variable::createError(-2, "Device family is unknown.");
 			}
-			return GD::deviceFamilies.at(familyID)->getCentral()->setInstallMode(enable, time);
+			return families.at(familyID)->getCentral()->setInstallMode(enable, time);
 		}
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central) central->setInstallMode(enable, time);
@@ -2927,7 +2959,8 @@ BaseLib::PVariable RPCSetInterface::invoke(int32_t clientID, std::shared_ptr<std
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
@@ -3008,7 +3041,8 @@ BaseLib::PVariable RPCSetLinkInfo::invoke(int32_t clientID, std::shared_ptr<std:
 		}
 
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
@@ -3062,7 +3096,8 @@ BaseLib::PVariable RPCSetMetadata::invoke(int32_t clientID, std::shared_ptr<std:
 		}
 
 		std::shared_ptr<BaseLib::Systems::Peer> peer;
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
@@ -3114,7 +3149,8 @@ BaseLib::PVariable RPCSetName::invoke(int32_t clientID, std::shared_ptr<std::vec
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central && central->peerExists((uint64_t)parameters->at(0)->integerValue))
@@ -3211,7 +3247,8 @@ BaseLib::PVariable RPCSetTeam::invoke(int32_t clientID, std::shared_ptr<std::vec
 			teamChannel = parameters->at(3)->integerValue;
 		}
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
@@ -3273,7 +3310,8 @@ BaseLib::PVariable RPCSetValue::invoke(int32_t clientID, std::shared_ptr<std::ve
 		else if(!useSerialNumber && parameters->size() == 4) value = parameters->at(3);
 		else value.reset(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
@@ -3493,7 +3531,8 @@ BaseLib::PVariable RPCUpdateFirmware::invoke(int32_t clientID, std::shared_ptr<s
 			if(parameters->size() == 2 && parameters->at(1)->booleanValue) manual = true;
 		}
 
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;

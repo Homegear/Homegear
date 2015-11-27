@@ -86,6 +86,7 @@ private:
 	void collectGarbage();
 	void handleCommand(std::string& command, std::shared_ptr<ClientData> clientData);
 	std::string handleUserCommand(std::string& command);
+	std::string handleModuleCommand(std::string& command);
 	std::string handleGlobalCommand(std::string& command);
 	void getFileDescriptor(bool deleteOldSocket = false);
 	std::shared_ptr<BaseLib::FileDescriptor> getClientFileDescriptor();

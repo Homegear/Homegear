@@ -57,10 +57,6 @@ public:
 	virtual void addPeer(std::shared_ptr<MiscPeer> peer);
 	std::shared_ptr<MiscPeer> getPeer(uint64_t id);
 	std::shared_ptr<MiscPeer> getPeer(std::string serialNumber);
-	virtual void loadPeers();
-	virtual void savePeers(bool full);
-	virtual void loadVariables() {}
-	virtual void saveVariables() {}
 
 	virtual BaseLib::PVariable createDevice(int32_t clientID, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion);
 	virtual BaseLib::PVariable deleteDevice(int32_t clientID, std::string serialNumber, int32_t flags);
@@ -72,6 +68,11 @@ protected:
 	std::shared_ptr<MiscPeer> createPeer(BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
 	void deletePeer(uint64_t id);
 	virtual void init();
+
+	virtual void loadPeers();
+	virtual void savePeers(bool full);
+	virtual void loadVariables() {}
+	virtual void saveVariables() {}
 };
 
 }

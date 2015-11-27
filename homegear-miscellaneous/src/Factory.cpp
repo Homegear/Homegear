@@ -30,10 +30,16 @@
 
 #include "Factory.h"
 #include "../../config.h"
+#include "GD.h"
 
 BaseLib::Systems::DeviceFamily* MiscellaneousFactory::createDeviceFamily(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
 {
 	return new Misc::Miscellaneous(bl, eventHandler);
+}
+
+int32_t getFamilyId()
+{
+	return MISC_FAMILY_ID;
 }
 
 std::string getVersion()

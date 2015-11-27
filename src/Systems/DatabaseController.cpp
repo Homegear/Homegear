@@ -252,8 +252,8 @@ bool DatabaseController::convertDatabase()
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data);
 		if(result->empty()) return false; //Handled in initializeDatabase
 		std::string version = result->at(0).at(3)->textValue;
-		if(version == "0.6.0") return false; //Up to date
-		if(version != "0.3.1" && version != "0.4.3" && version != "0.5.0" && version != "0.5.1")
+		if(version == "0.6.1") return false; //Up to date
+		if(version != "0.3.1" && version != "0.4.3" && version != "0.5.0" && version != "0.5.1" && version != "0.6.0")
 		{
 			GD::out.printCritical("Critical: Unknown database version: " + version);
 			return true; //Don't know, what to do
@@ -386,6 +386,25 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			//Don't forget to set new version in initializeDatabase!!!
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.6.0")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+			GD::out.printMessage("Exiting Homegear after database conversion...");
+			return true;
+		}
+		else if(version == "0.6.0")
+		{
+			GD::out.printMessage("Converting database from version " + version + " to version 0.6.1...");
+			_db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".0.6.0.old");
+
+			_db.executeCommand("UPDATE devices SET deviceType=4294967293 WHERE deviceType=4278190077");
+
+			data.clear();
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			//Don't forget to set new version in initializeDatabase!!!
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.6.1")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 

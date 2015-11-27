@@ -47,13 +47,11 @@ public:
 	virtual bool init();
 	virtual void dispose();
 
-	virtual void load();
-	virtual std::shared_ptr<BaseLib::Systems::ICentral> getCentral();
-	virtual std::string handleCliCommand(std::string& command);
 	virtual bool hasPhysicalInterface() { return false; }
 	virtual PVariable getPairingMethods();
-private:
-	void createCentral();
+protected:
+	virtual std::shared_ptr<BaseLib::Systems::ICentral> initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber);
+	virtual void createCentral();
 };
 
 }

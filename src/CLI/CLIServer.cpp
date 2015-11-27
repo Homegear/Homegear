@@ -715,6 +715,232 @@ std::string Server::handleUserCommand(std::string& command)
     return "Error executing command. See log file for more details.\n";
 }
 
+std::string Server::handleModuleCommand(std::string& command)
+{
+	try
+	{
+		std::ostringstream stringStream;
+		if(command.compare(0, 12, "modules help") == 0 || command.compare(0, 2, "mh") == 0)
+		{
+			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
+			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "modules list (mls)\tLists all loaded family module" << std::endl;
+			stringStream << "modules load (mld)\tLoads a family module" << std::endl;
+			stringStream << "modules unload (mul)\tUnloads a family module" << std::endl;
+			stringStream << "modules reload (mrl)\tReloads a family module" << std::endl;
+			return stringStream.str();
+		}
+		if(command.compare(0, 12, "modules list") == 0 || command.compare(0, 3, "mls") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			bool printHelp = false;
+			int32_t offset = (command.at(1) == 'l') ? 0 : 1;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 1 + offset)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1 + offset && element == "help") printHelp = true;
+				else
+				{
+					printHelp = true;
+					break;
+				}
+				index ++;
+			}
+			if(printHelp)
+			{
+				stringStream << "Description: This command lists all loaded family modules and shows the corresponding family ids." << std::endl;
+				stringStream << "Usage: modules list" << std::endl << std::endl;
+				return stringStream.str();
+			}
+
+			std::vector<std::pair<std::string, int32_t>> modules = GD::familyController->getModuleNames();
+			if(modules.size() == 0) return "No modules loaded.\n";
+
+			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(70) << "Filename" << std::endl;
+			for(std::vector<std::pair<std::string, int32_t>>::iterator i = modules.begin(); i != modules.end(); ++i)
+			{
+				stringStream << std::setw(6) << i->second << std::setw(70) << i->first << std::endl;
+			}
+
+			return stringStream.str();
+		}
+		else if(command.compare(0, 12, "modules load") == 0 || command.compare(0, 3, "mld") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t offset = (command.at(1) == 'l') ? 0 : 1;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index == 0 + offset)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1 + offset)
+				{
+					if(element == "help" || element.empty()) break;
+				}
+				index++;
+			}
+			if(index == 1 + offset)
+			{
+				stringStream << "Description: This command loads a family module from \"" + GD::bl->settings.modulePath() + "\"." << std::endl;
+				stringStream << "Usage: modules load FILENAME" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  FILENAME:\t\tThe file name of the module. E. g. \"mod_miscellaneous.so\"" << std::endl;
+				return stringStream.str();
+			}
+
+			int32_t result = GD::familyController->loadModule(element);
+			switch(result)
+			{
+			case 0:
+				stringStream << "Module successfully loaded." << std::endl;
+				break;
+			case 1:
+				stringStream << "Module already loaded." << std::endl;
+				break;
+			case -1:
+				stringStream << "System error. See log for more details." << std::endl;
+				break;
+			case -2:
+				stringStream << "Module does not exist." << std::endl;
+				break;
+			case -4:
+				stringStream << "Family initialization failed. See log for more details." << std::endl;
+				break;
+			default:
+				stringStream << "Unknown result code: " << result << std::endl;
+			}
+
+			return stringStream.str();
+		}
+		else if(command.compare(0, 14, "modules unload") == 0 || command.compare(0, 3, "mul") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t offset = (command.at(1) == 'u') ? 0 : 1;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index == 0 + offset)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1 + offset)
+				{
+					if(element == "help" || element.empty()) break;
+				}
+				index++;
+			}
+			if(index == 1 + offset)
+			{
+				stringStream << "Description: This command unloads a family module." << std::endl;
+				stringStream << "Usage: modules unload FILENAME" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  FILENAME:\t\tThe file name of the module. E. g. \"mod_miscellaneous.so\"" << std::endl;
+				return stringStream.str();
+			}
+
+			int32_t result = GD::familyController->unloadModule(element);
+			switch(result)
+			{
+			case 0:
+				stringStream << "Module successfully unloaded." << std::endl;
+				break;
+			case 1:
+				stringStream << "Module not loaded." << std::endl;
+				break;
+			case -1:
+				stringStream << "System error. See log for more details." << std::endl;
+				break;
+			case -2:
+				stringStream << "Module does not exist." << std::endl;
+				break;
+			default:
+				stringStream << "Unknown result code: " << result << std::endl;
+			}
+
+			return stringStream.str();
+		}
+		else if(command.compare(0, 14, "modules reload") == 0 || command.compare(0, 3, "mrl") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t offset = (command.at(1) == 'l') ? 0 : 1;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index == 0 + offset)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1 + offset)
+				{
+					if(element == "help" || element.empty()) break;
+				}
+				index++;
+			}
+			if(index == 1 + offset)
+			{
+				stringStream << "Description: This command reloads a family module." << std::endl;
+				stringStream << "Usage: modules reload FILENAME" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  FILENAME:\t\tThe file name of the module. E. g. \"mod_miscellaneous.so\"" << std::endl;
+				return stringStream.str();
+			}
+
+			int32_t result = GD::familyController->unloadModule(element);
+			switch(result)
+			{
+			case 0:
+				stringStream << "Module successfully reloaded." << std::endl;
+				break;
+			case 1:
+				stringStream << "Module already loaded." << std::endl;
+				break;
+			case -1:
+				stringStream << "System error. See log for more details." << std::endl;
+				break;
+			case -2:
+				stringStream << "Module does not exist." << std::endl;
+				break;
+			case -4:
+				stringStream << "Family initialization failed. See log for more details." << std::endl;
+				break;
+			default:
+				stringStream << "Unknown result code: " << result << std::endl;
+			}
+
+			return stringStream.str();
+		}
+		else return "Unknown command.\n";
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "Error executing command. See log file for more details.\n";
+}
+
+
 std::string Server::handleGlobalCommand(std::string& command)
 {
 	try
@@ -729,6 +955,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "rpcservers (rpc)\t\tLists all active RPC servers" << std::endl;
 			stringStream << "users [COMMAND]\t\tExecute user commands. Type \"users help\" for more information." << std::endl;
 			stringStream << "families [COMMAND]\tExecute device family commands. Type \"families help\" for more information." << std::endl;
+			stringStream << "modules [COMMAND]\t\tExecute module commands. Type \"modules help\" for more information." << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 10, "debuglevel") == 0 || (command.compare(0, 2, "dl") == 0 && !GD::familyController->familySelected()))
@@ -916,6 +1143,7 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
 		if(response.empty())
 		{
 			if(command.compare(0, 5, "users") == 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'u' && !GD::familyController->familySelected())) response = handleUserCommand(command);
+			else if(command.compare(0, 7, "modules") == 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'm' && !GD::familyController->familySelected())) response = handleModuleCommand(command);
 			else response = GD::familyController->handleCliCommand(command);
 		}
 		response.push_back(0);
