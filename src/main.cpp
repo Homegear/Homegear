@@ -219,10 +219,11 @@ void terminate(int32_t signalNumber)
 			GD::out.printInfo( "(Shutdown) => Stopping RPC client");;
 			if(GD::rpcClient) GD::rpcClient->dispose();
 			GD::out.printInfo( "(Shutdown) => Closing physical interfaces");
-			if(GD::physicalInterfaces) GD::physicalInterfaces->stopListening();
+			if(GD::familyController) GD::familyController->physicalInterfaceStartListening();
 #ifdef SCRIPTENGINE
 			if(GD::scriptEngine) GD::scriptEngine->dispose();
 #endif
+			GD::out.printMessage("(Shutdown) => Saving device families");
 			if(GD::familyController) GD::familyController->save(false);
 			GD::out.printMessage("(Shutdown) => Disposing device families");
 			if(GD::familyController) GD::familyController->disposeDeviceFamilies();
@@ -275,7 +276,7 @@ void terminate(int32_t signalNumber)
 					GD::out.printInfo( "(Shutdown) => Stopping MQTT client");;
 					GD::mqtt->stop();
 				}
-				if(GD::physicalInterfaces) GD::physicalInterfaces->stopListening();
+				if(GD::familyController) GD::familyController->physicalInterfaceStopListening();
 				//Binding fails sometimes with "address is already in use" without waiting.
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				GD::out.printMessage("Reloading settings...");
@@ -288,7 +289,7 @@ void terminate(int32_t signalNumber)
 					GD::out.printInfo("Starting MQTT client");;
 					GD::mqtt->start();
 				}
-				if(GD::physicalInterfaces) GD::physicalInterfaces->startListening();
+				if(GD::familyController) GD::familyController->physicalInterfaceStartListening();
 				startRPCServers();
 				if(GD::bl->settings.enableUPnP())
 				{
@@ -525,6 +526,12 @@ void startUp()
 {
 	try
 	{
+		if((chdir(GD::bl->settings.logfilePath().c_str())) < 0)
+		{
+			GD::out.printError("Could not change working directory to " + GD::bl->settings.logfilePath() + ".");
+			exitHomegear(1);
+		}
+
 		//Set rlimit for core dumps
     	struct rlimit limits;
     	getrlimit(RLIMIT_CORE, &limits);
@@ -604,7 +611,6 @@ void startUp()
     	GD::licensingController->loadModules();
 
 		GD::familyController->loadModules();
-		if(GD::deviceFamilies.empty()) exitHomegear(1);
 
     	if(getuid() == 0 && !GD::runAsUser.empty() && !GD::runAsGroup.empty())
     	{
@@ -616,7 +622,7 @@ void startUp()
 				exitHomegear(1);
 			}
 			GD::out.printInfo("Info: Settings up physical interfaces and GPIOs...");
-			GD::physicalInterfaces->setup(userId, groupId);
+			if(GD::familyController) GD::familyController->physicalInterfaceSetup(userId, groupId);
 			BaseLib::Gpio gpio(GD::bl.get());
 			gpio.setup(userId, groupId);
 			GD::out.printInfo("Info: Dropping privileges to user " + GD::runAsUser + " (" + std::to_string(userId) + ") and group " + GD::runAsGroup + " (" + std::to_string(groupId) + ")");
@@ -745,16 +751,15 @@ void startUp()
         GD::out.printInfo("Initializing family controller...");
         if(BaseLib::Io::fileExists(GD::configPath + "physicalinterfaces.conf")) GD::out.printWarning("Warning: File physicalinterfaces.conf exists in config directory. Interface configuration has been moved to " + GD::bl->settings.familyConfigPath());
         GD::familyController->init();
-        if(GD::deviceFamilies.empty()) exitHomegear(1);
         GD::out.printInfo("Loading devices...");
         GD::familyController->load(); //Don't load before database is open!
 
         GD::out.printInfo("Start listening for packets...");
-        GD::physicalInterfaces->startListening();
-        if(!GD::physicalInterfaces->isOpen())
+        GD::familyController->physicalInterfaceStartListening();
+        if(!GD::familyController->physicalInterfaceIsOpen())
         {
         	GD::out.printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
-        	GD::physicalInterfaces->stopListening();
+        	GD::familyController->physicalInterfaceStopListening();
         	exitHomegear(1);
         }
 
@@ -793,7 +798,7 @@ void startUp()
         {
 			for(int32_t i = 0; i < 300; i++)
 			{
-				if(GD::physicalInterfaces->isOpen())
+				if(GD::familyController->physicalInterfaceIsOpen())
 				{
 					GD::out.printMessage("All physical interfaces are connected now.");
 					break;
@@ -960,7 +965,6 @@ int main(int argc, char* argv[])
     				GD::bl->debugLevel = 3; //Only output warnings.
     				GD::licensingController.reset(new LicensingController());
     				GD::familyController.reset(new FamilyController());
-    				GD::physicalInterfaces.reset(new PhysicalInterfaces());
     				GD::licensingController->loadModules();
     				GD::familyController->loadModules();
     				uid_t userId = GD::bl->hf.userId(std::string(argv[i + 1]));
@@ -973,7 +977,7 @@ int main(int argc, char* argv[])
     					GD::licensingController->dispose();
     					exit(1);
     				}
-    				GD::physicalInterfaces->setup(userId, groupId);
+    				GD::familyController->physicalInterfaceSetup(userId, groupId);
     				BaseLib::Gpio gpio(GD::bl.get());
     				gpio.setup(userId, groupId);
     				GD::familyController->dispose();
@@ -1101,7 +1105,6 @@ int main(int argc, char* argv[])
 
 		GD::licensingController.reset(new LicensingController());
 		GD::familyController.reset(new FamilyController());
-		GD::physicalInterfaces.reset(new PhysicalInterfaces());
 		GD::bl->db.reset(new DatabaseController());
 		GD::rpcClient.reset(new RPC::Client());
 

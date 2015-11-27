@@ -52,10 +52,7 @@ std::unique_ptr<CLI::Client> GD::cliClient;
 int32_t GD::rpcLogLevel = 1;
 BaseLib::Rpc::ServerInfo GD::serverInfo;
 RPC::ClientSettings GD::clientSettings;
-std::unique_ptr<PhysicalInterfaces> GD::physicalInterfaces;
-std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>> GD::deviceFamilies;
 std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>> GD::licensingModules;
-std::map<std::string, int32_t> GD::deviceFamiliesByName;
 std::unique_ptr<UPnP> GD::uPnP(new UPnP());
 std::unique_ptr<Mqtt> GD::mqtt;
 #ifdef EVENTHANDLER

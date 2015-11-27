@@ -46,10 +46,14 @@ class ModuleLoader
 public:
 	ModuleLoader(std::string name, std::string path);
 	virtual ~ModuleLoader();
+	void dispose();
+	int32_t getFamilyId();
 
 	std::unique_ptr<BaseLib::Systems::DeviceFamily> createModule(BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
 private:
+	bool _disposing = false;
 	std::string _name;
+	int32_t _familyId = -1;
 	void* _handle = nullptr;
 	std::unique_ptr<BaseLib::Systems::SystemFactory> _factory;
 
@@ -84,13 +88,34 @@ public:
 	void disposeDeviceFamilies();
 	void dispose();
 
+	/**
+	 * Returns a vector of all loaded module filenames and family ids.
+	 */
+	std::vector<std::pair<std::string, int32_t>> getModuleNames();
+	int32_t loadModule(std::string filename);
+	int32_t unloadModule(std::string filename);
+	int32_t reloadModule(std::string filename);
 	void loadModules();
 	void load();
 	void save(bool full);
 	bool familySelected() { return (bool)_currentFamily; }
 	std::string handleCliCommand(std::string& command);
 	bool familyAvailable(int32_t family);
-	static bool peerExists(uint64_t peerId);
+
+	/*
+	 * Returns the family map.
+	 */
+	std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> getFamilies();
+
+	/*
+	 * Returns the device family specified by familyId.
+	 */
+	std::shared_ptr<BaseLib::Systems::DeviceFamily> getFamily(int32_t familyId);
+
+	/*
+	 * Checks if the peer with the provided id exists.
+	 */
+	bool peerExists(uint64_t peerId);
 
 	/*
      * Executed when Homegear is fully started.
@@ -102,14 +127,28 @@ public:
      */
 	void homegearShuttingDown();
 
+	// {{{ Physical interfaces
+	uint32_t physicalInterfaceCount(int32_t family);
+	void physicalInterfaceClear(int32_t family);
+	void physicalInterfaceStopListening();
+	void physicalInterfaceStartListening();
+	bool physicalInterfaceIsOpen();
+	void physicalInterfaceSetup(int32_t userID, int32_t groupID);
+	BaseLib::PVariable listInterfaces(int32_t familyID);
+	// }}}
+
 	BaseLib::PVariable listFamilies();
 private:
 	bool _disposed = false;
 	BaseLib::PVariable _rpcCache;
 
 	std::set<int32_t> _familiesWithoutPhysicalInterface;
-	std::map<std::string, std::unique_ptr<ModuleLoader>> moduleLoaders;
-	BaseLib::Systems::DeviceFamily* _currentFamily = nullptr;
+	std::mutex _moduleLoadersMutex;
+	std::map<std::string, std::unique_ptr<ModuleLoader>> _moduleLoaders;
+
+	std::mutex _familiesMutex;
+	std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> _families;
+	std::shared_ptr<BaseLib::Systems::DeviceFamily> _currentFamily;
 
 	FamilyController(const FamilyController&);
 	FamilyController& operator=(const FamilyController&);

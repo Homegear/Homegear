@@ -58,7 +58,6 @@ void MiscCentral::dispose(bool wait)
 {
 	if(_disposing) return;
 	_disposing = true;
-	_disposed = true;
 }
 
 void MiscCentral::loadPeers()

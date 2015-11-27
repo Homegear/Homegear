@@ -63,53 +63,18 @@ void Miscellaneous::dispose()
 	if(_disposed) return;
 	DeviceFamily::dispose();
 
-	_central.reset();
 	GD::rpcDevices.clear();
 }
 
-std::shared_ptr<BaseLib::Systems::ICentral> Miscellaneous::getCentral() { return _central; }
-
-void Miscellaneous::load()
+std::shared_ptr<BaseLib::Systems::ICentral> Miscellaneous::initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber)
 {
-	try
-	{
-		std::shared_ptr<BaseLib::Database::DataTable> rows = _bl->db->getDevices((uint32_t)getFamily());
-		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
-		{
-			uint32_t deviceId = row->second.at(0)->intValue;
-			GD::out.printMessage("Loading Miscellaneous central " + std::to_string(deviceId));
-			std::string serialNumber = row->second.at(2)->textValue;
-			uint32_t deviceType = row->second.at(3)->intValue;
-
-			if(deviceType == 0xFEFFFFFD || deviceType == 0xFFFFFFFD) //Test for device type in case there are devices from older Homegear versions in the database
-			{
-				_central = std::shared_ptr<MiscCentral>(new MiscCentral(deviceId, serialNumber, this));
-				_central->load();
-				_central->loadPeers();
-			}
-		}
-		if(!_central) createCentral();
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
+	return std::shared_ptr<MiscCentral>(new MiscCentral(deviceId, serialNumber, this));
 }
 
 void Miscellaneous::createCentral()
 {
 	try
 	{
-		if(_central) return;
-
 		_central.reset(new MiscCentral(0, "VMC0000001", this));
 		GD::out.printMessage("Created Miscellaneous central with id " + std::to_string(_central->getId()) + ".");
 	}
@@ -125,29 +90,6 @@ void Miscellaneous::createCentral()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-}
-
-std::string Miscellaneous::handleCliCommand(std::string& command)
-{
-	try
-	{
-		std::ostringstream stringStream;
-		if(!_central) return "Error: No central exists.\n";
-		return _central->handleCliCommand(command);
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return "Error executing command. See log file for more details.\n";
 }
 
 PVariable Miscellaneous::getPairingMethods()

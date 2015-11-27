@@ -40,7 +40,6 @@
 #include "../Events/EventHandler.h"
 #include "../Licensing/LicensingController.h"
 #include "../Systems/FamilyController.h"
-#include "../Systems/PhysicalInterfaces.h"
 #include "../Systems/DatabaseController.h"
 #include "homegear-base/BaseLib.h"
 #include "../RPC/Server.h"
@@ -77,10 +76,7 @@ public:
 	static BaseLib::Rpc::ServerInfo serverInfo;
 	static RPC::ClientSettings clientSettings;
 	static int32_t rpcLogLevel;
-	static std::unique_ptr<PhysicalInterfaces> physicalInterfaces;
-	static std::map<int32_t, std::unique_ptr<BaseLib::Systems::DeviceFamily>> deviceFamilies;
 	static std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>> licensingModules;
-	static std::map<std::string, int32_t> deviceFamiliesByName;
 	static std::unique_ptr<UPnP> uPnP;
 	static std::unique_ptr<Mqtt> mqtt;
 #ifdef EVENTHANDLER
