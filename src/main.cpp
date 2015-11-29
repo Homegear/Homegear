@@ -219,7 +219,7 @@ void terminate(int32_t signalNumber)
 			GD::out.printInfo( "(Shutdown) => Stopping RPC client");;
 			if(GD::rpcClient) GD::rpcClient->dispose();
 			GD::out.printInfo( "(Shutdown) => Closing physical interfaces");
-			if(GD::familyController) GD::familyController->physicalInterfaceStartListening();
+			if(GD::familyController) GD::familyController->physicalInterfaceStopListening();
 #ifdef SCRIPTENGINE
 			if(GD::scriptEngine) GD::scriptEngine->dispose();
 #endif
