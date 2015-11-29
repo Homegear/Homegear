@@ -654,7 +654,7 @@ void FamilyController::loadModules()
     _moduleLoadersMutex.unlock();
 }
 
-void FamilyController::init()
+void FamilyController::load()
 {
 	try
 	{
@@ -666,35 +666,10 @@ void FamilyController::init()
 				if(familyAvailable(i->first)) GD::out.printError("Error: Could not initialize device family " + i->second->getName() + ".");
 				else GD::out.printInfo("Info: Not initializing device family " + i->second->getName() + ", because no physical interface was found.");
 				i->second->dispose();
-				i->second.reset();
+				_families[i->first].reset();
+				continue;
 			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void FamilyController::load()
-{
-	try
-	{
-		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
-		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
-		{
-			if(familyAvailable(i->first))
-			{
-				i->second->load();
-			}
+			i->second->load();
 		}
 	}
 	catch(const std::exception& ex)
@@ -720,7 +695,7 @@ void FamilyController::disposeDeviceFamilies()
 		{
 			if(!i->second) continue;
 			i->second->dispose();
-			i->second.reset();
+			_families[i->first].reset();
 		}
 		families.clear();
 	}
