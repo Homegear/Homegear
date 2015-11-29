@@ -748,10 +748,8 @@ void startUp()
         GD::out.printInfo("Loading licensing controller data...");
         GD::licensingController->load();
 
-        GD::out.printInfo("Initializing family controller...");
-        if(BaseLib::Io::fileExists(GD::configPath + "physicalinterfaces.conf")) GD::out.printWarning("Warning: File physicalinterfaces.conf exists in config directory. Interface configuration has been moved to " + GD::bl->settings.familyConfigPath());
-        GD::familyController->init();
         GD::out.printInfo("Loading devices...");
+        if(BaseLib::Io::fileExists(GD::configPath + "physicalinterfaces.conf")) GD::out.printWarning("Warning: File physicalinterfaces.conf exists in config directory. Interface configuration has been moved to " + GD::bl->settings.familyConfigPath());
         GD::familyController->load(); //Don't load before database is open!
 
         GD::out.printInfo("Start listening for packets...");

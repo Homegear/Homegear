@@ -84,7 +84,6 @@ public:
 
 	FamilyController();
 	virtual ~FamilyController();
-	void init();
 	void disposeDeviceFamilies();
 	void dispose();
 
