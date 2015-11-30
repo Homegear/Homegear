@@ -41,18 +41,23 @@ public:
 	void init();
 	void stop();
 	void dispose();
+	bool killedProcess();
 
 	void prepareParent();
 	void prepareChild();
-	void checkHealth();
+	void checkHealth(pid_t mainProcessId);
 private:
 	int _pipeToChild[2];
 	int _pipeFromChild[2];
+	bool _suspendMonitoring = true;
 	bool _stopMonitorThread = false;
 	std::thread _monitorThread;
+	bool _killedProcess = false;
 	bool _disposing = false;
 
 	void monitor();
+	void killChild(pid_t mainProcessId);
+	bool lifetick();
 };
 
 #endif

@@ -953,6 +953,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "debuglevel (dl)\t\tChanges the debug level" << std::endl;
 			stringStream << "runscript (rs)\t\tExecutes a script with the internal PHP engine" << std::endl;
 			stringStream << "rpcservers (rpc)\t\tLists all active RPC servers" << std::endl;
+			stringStream << "rpcclients (rcl)\t\tLists all active RPC clients" << std::endl;
 			stringStream << "users [COMMAND]\t\tExecute user commands. Type \"users help\" for more information." << std::endl;
 			stringStream << "families [COMMAND]\tExecute device family commands. Type \"families help\" for more information." << std::endl;
 			stringStream << "modules [COMMAND]\t\tExecute module commands. Type \"modules help\" for more information." << std::endl;
@@ -1042,6 +1043,116 @@ std::string Server::handleGlobalCommand(std::string& command)
 #else
 			stringStream << "This Homegear binary is compiled without script engine support." << std::endl;
 #endif
+			return stringStream.str();
+		}
+		else if(command.compare(0, 10, "rpcclients") == 0 || command.compare(0, 3, "rcl") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index == 0)
+				{
+					index++;
+					continue;
+				}
+				else
+				{
+					index++;
+					break;
+				}
+			}
+			if(index > 1)
+			{
+				stringStream << "Description: This command lists all connected RPC clients." << std::endl;
+				stringStream << "Usage: rpcclients" << std::endl << std::endl;
+				return stringStream.str();
+			}
+
+			int32_t idWidth = 10;
+			int32_t addressWidth = 15;
+			int32_t urlWidth = 30;
+			int32_t interfaceIdWidth = 30;
+			int32_t xmlWidth = 10;
+			int32_t binaryWidth = 10;
+			int32_t jsonWidth = 10;
+			int32_t websocketWidth = 10;
+
+			//Safe to use without mutex
+			for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+			{
+				if(!i->second.isRunning()) continue;
+				const BaseLib::Rpc::PServerInfo settings = i->second.getInfo();
+				const std::vector<std::shared_ptr<RPC::RPCServer::Client>> clients = i->second.getClientInfo();
+
+				stringStream << "Server " << settings->name << " (Port: " << std::to_string(settings->port) << "):" << std::endl;
+
+				std::string idCaption("Client ID");
+				std::string addressCaption("Address");
+				std::string urlCaption("Init URL");
+				std::string interfaceIdCaption("Init ID");
+				idCaption.resize(idWidth, ' ');
+				addressCaption.resize(addressWidth, ' ');
+				urlCaption.resize(urlWidth, ' ');
+				interfaceIdCaption.resize(interfaceIdWidth, ' ');
+				stringStream << std::setfill(' ')
+				    << "    "
+					<< idCaption << "  "
+					<< addressCaption << "  "
+					<< urlCaption << "  "
+					<< interfaceIdCaption << "  "
+					<< std::setw(xmlWidth) << "XML-RPC" << "  "
+					<< std::setw(binaryWidth) << "Binary RPC" << "  "
+					<< std::setw(jsonWidth) << "JSON-RPC" << "  "
+					<< std::setw(websocketWidth) << "Websocket" << "  "
+					<< std::endl;
+
+				for(std::vector<std::shared_ptr<RPC::RPCServer::Client>>::const_iterator j = clients.begin(); j != clients.end(); ++j)
+				{
+					std::string id = std::to_string((*j)->id);
+					id.resize(idWidth, ' ');
+
+					std::string address = (*j)->address;
+					if(address.size() > (unsigned)addressWidth)
+					{
+						address.resize(addressWidth - 3);
+						address += "...";
+					}
+					else address.resize(addressWidth, ' ');
+
+					std::string url = (*j)->initUrl;
+					if(url.size() > (unsigned)urlWidth)
+					{
+						url.resize(urlWidth - 3);
+						url += "...";
+					}
+					else url.resize(urlWidth, ' ');
+
+					std::string interfaceId = (*j)->initInterfaceId;
+					if(interfaceId.size() > (unsigned)interfaceIdWidth)
+					{
+						interfaceId.resize(interfaceIdWidth - 3);
+						interfaceId += "...";
+					}
+					else interfaceId.resize(interfaceIdWidth, ' ');
+
+					stringStream
+						<< "    "
+						<< id << "  "
+						<< address << "  "
+						<< url << "  "
+						<< interfaceId << "  "
+						<< std::setw(xmlWidth) << ((*j)->xmlRpc ? "true" : "false") << "  "
+						<< std::setw(binaryWidth) << ((*j)->binaryRpc ? "true" : "false") << "  "
+						<< std::setw(jsonWidth) << ((*j)->jsonRpc ? "true" : "false") << "  "
+						<< std::setw(websocketWidth) << ((*j)->webSocket ? "true" : "false") << "  "
+						<< std::endl;
+				}
+
+				stringStream << std::endl;
+			}
 			return stringStream.str();
 		}
 		else if(command.compare(0, 10, "rpcservers") == 0 || command.compare(0, 3, "rpc") == 0)
@@ -1142,8 +1253,10 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
 		std::string response = handleGlobalCommand(command);
 		if(response.empty())
 		{
+			//User commands can be executed when family is selected
 			if(command.compare(0, 5, "users") == 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'u' && !GD::familyController->familySelected())) response = handleUserCommand(command);
-			else if(command.compare(0, 7, "modules") == 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'm' && !GD::familyController->familySelected())) response = handleModuleCommand(command);
+			//Do not execute module commands when family is selected
+			else if((command.compare(0, 7, "modules") == 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'm')) && !GD::familyController->familySelected()) response = handleModuleCommand(command);
 			else response = GD::familyController->handleCliCommand(command);
 		}
 		response.push_back(0);
@@ -1166,4 +1279,4 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
     }
 }
 
-} /* namespace CLI */
+}

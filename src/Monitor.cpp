@@ -41,58 +41,50 @@ Monitor::~Monitor()
 	dispose();
 }
 
+bool Monitor::killedProcess()
+{
+	return _killedProcess;
+}
+
 void Monitor::init()
 {
-	/*if(pipe(_pipeFromChild) == -1)
+	if(pipe(_pipeFromChild) == -1)
 	{
-		GD::out.printError("Error creating pipe to child.");
-	}*/
+		GD::out.printError("Error creating pipe from child.");
+	}
 	if(pipe(_pipeToChild) == -1)
 	{
 		GD::out.printError("Error creating pipe to child.");
+	}
+	if(!(fcntl(_pipeFromChild[0], F_GETFL) & O_NONBLOCK))
+	{
+		if(fcntl(_pipeFromChild[0], F_SETFL, fcntl(_pipeFromChild[0], F_GETFL) | O_NONBLOCK) < 0)
+		{
+			GD::out.printError("Error: Could not set pipe from child process to non blocking.");
+		}
+	}
+	if(!(fcntl(_pipeToChild[0], F_GETFL) & O_NONBLOCK))
+	{
+		if(fcntl(_pipeToChild[0], F_SETFL, fcntl(_pipeToChild[0], F_GETFL) | O_NONBLOCK) < 0)
+		{
+			GD::out.printError("Error: Could not start monitor thread, because the pipe would be blocking.");
+			return;
+		}
 	}
 }
 
 void Monitor::prepareParent()
 {
-	//close(_pipeToChild[1]);
-	//close(_pipeFromChild[0]);
-	/*if(!(fcntl(_pipeToChild[0], F_GETFL) & O_NONBLOCK))
-	{
-		if(fcntl(_pipeToChild[0], F_SETFL, fcntl(_pipeToChild[0], F_GETFL) | O_NONBLOCK) < 0)
-		{
-			GD::out.printError("Error: Could not set pipe to child process to non blocking.");
-		}
-	}*/
-	/*if(!(fcntl(_pipeFromChild[1], F_GETFL) & O_NONBLOCK))
-	{
-		if(fcntl(_pipeFromChild[1], F_SETFL, fcntl(_pipeFromChild[1], F_GETFL) | O_NONBLOCK) < 0)
-		{
-			GD::out.printError("Error: Could not set pipe from child process to non blocking.");
-		}
-	}*/
+	close(_pipeToChild[0]);
+	close(_pipeFromChild[1]);
+	_suspendMonitoring = false;
+	_killedProcess = false;
 }
 
 void Monitor::prepareChild()
 {
-	//close(_pipeToChild[0]);
-	//close(_pipeFromChild[1]);
-	if(!(fcntl(_pipeToChild[1], F_GETFL) & O_NONBLOCK))
-	{
-		if(fcntl(_pipeToChild[1], F_SETFL, fcntl(_pipeToChild[1], F_GETFL) | O_NONBLOCK) < 0)
-		{
-			GD::out.printError("Error: Could not start monitor thread, because the pipe would be blocking.");
-			return;
-		}
-	}
-	/*if(!(fcntl(_pipeFromChild[0], F_GETFL) & O_NONBLOCK))
-	{
-		if(fcntl(_pipeFromChild[0], F_SETFL, fcntl(_pipeFromChild[0], F_GETFL) | O_NONBLOCK) < 0)
-		{
-			GD::out.printError("Error: Could not start monitor thread, because the pipe would be blocking.");
-			return;
-		}
-	}*/
+	close(_pipeToChild[1]);
+	close(_pipeFromChild[0]);
 	stop();
 	_stopMonitorThread = false;
 	_monitorThread = std::thread(&Monitor::monitor, this);
@@ -126,21 +118,88 @@ void Monitor::dispose()
 	stop();
 }
 
-void Monitor::checkHealth()
+void Monitor::killChild(pid_t mainProcessId)
+{
+	_suspendMonitoring = true;
+	_killedProcess = true;
+	GD::out.printCritical("Critical: Killing child process.");
+	if(mainProcessId != 0) kill(mainProcessId, 9);
+}
+
+void Monitor::checkHealth(pid_t mainProcessId)
 {
 	try
 	{
-		uint32_t totalBytesWritten = 0;
-		std::string command("Hallo Welt");
-		while(totalBytesWritten < command.size())
+		if(_suspendMonitoring) return;
+		for(int32_t i = 0; i < 6; i++)
 		{
-			ssize_t bytesWritten = write(_pipeToChild[0], command.c_str() + totalBytesWritten, command.size() - totalBytesWritten);
-			if(bytesWritten == -1)
+			uint32_t totalBytesWritten = 0;
+			std::string command("l");
+			while(totalBytesWritten < command.size())
 			{
-				GD::out.printError(std::string("Error writing to child process pipe: ") + strerror(errno));
-				return;
+				ssize_t bytesWritten = write(_pipeToChild[1], command.c_str() + totalBytesWritten, command.size() - totalBytesWritten);
+				if(bytesWritten == -1)
+				{
+					if(_suspendMonitoring) return;
+					GD::out.printError(std::string("Error writing to child process pipe: ") + strerror(errno));
+					killChild(mainProcessId);
+					return;
+				}
+				totalBytesWritten += bytesWritten;
 			}
-			totalBytesWritten += bytesWritten;
+
+			for(int32_t i = 0; i < 100; i++)
+			{
+				char buffer = 0;
+				int32_t bytesRead = read(_pipeFromChild[0], &buffer, 1);
+				if(bytesRead <= 0 || (unsigned)bytesRead > 1)
+				{
+					if(bytesRead == -1)
+					{
+						if(errno != EAGAIN && errno != EWOULDBLOCK)
+						{
+							if(_suspendMonitoring) return;
+							GD::out.printError(std::string("Error reading from child's process pipe: ") + strerror(errno));
+							killChild(mainProcessId);
+							return;
+						}
+					}
+					else
+					{
+						if(_suspendMonitoring) return;
+						GD::out.printInfo("Info: Pipe to child process closed.");
+						std::this_thread::sleep_for(std::chrono::milliseconds(30000));
+						//Normally this point is never reached (exit is called by main before)
+						killChild(mainProcessId); //In case the pipe didn't close because of an ordered shutdown and the process hangs, kill it
+						_suspendMonitoring = true;
+						return;
+					}
+					std::this_thread::sleep_for(std::chrono::milliseconds(100));
+					continue;
+				}
+				if(bytesRead != 1)
+				{
+					if(_suspendMonitoring) return;
+					GD::out.printError("Error reading from child's process pipe: Too much data.");
+					killChild(mainProcessId);
+					return;
+				}
+
+				switch(buffer)
+				{
+				case 'a': //Everything ok
+					if(GD::bl->debugLevel >= 6) GD::out.printDebug("Debug: checkHealth returned ok.");
+					break;
+				case 'n':
+					killChild(mainProcessId);
+					break;
+				case 's':
+					GD::out.printInfo("Info: Shutdown detected. Suspending monitoring.");
+					_suspendMonitoring = true;
+					break;
+				}
+				break;
+			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -161,30 +220,47 @@ void Monitor::monitor()
 {
 	try
 	{
-		std::vector<char> buffer(2048);
+		char buffer = 0;
+		int32_t bytesRead = 0;
+		uint32_t totalBytesWritten = 0;
 		while(!_stopMonitorThread)
 		{
-			fd_set readFileDescriptor;
-			int32_t nfds = _pipeToChild[1] + 1;
-			FD_SET(_pipeToChild[1], &readFileDescriptor);
-			timeval timeout;
-			timeout.tv_sec = 1;
-			timeout.tv_usec = 0;
-			int32_t bytesRead = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
-			if(bytesRead == 0) continue; //Timeout
-			if(bytesRead != 1)
+			bytesRead = read(_pipeToChild[0], &buffer, 1);
+			if(bytesRead <= 0 || (unsigned)bytesRead > 1)
 			{
-				GD::out.printError("Error reading from parent's process pipe. Stopping monitoring.");
-				return;
-			}
-			bytesRead = read(_pipeToChild[1], &buffer.at(0), buffer.size());
-			if(bytesRead <= 0 || (unsigned)bytesRead > buffer.size())
-			{
-				if(bytesRead == -1) GD::out.printError(std::string("Error reading from parent's process pipe: ") + strerror(errno));
+				if(bytesRead == -1)
+				{
+					if(errno != EAGAIN && errno != EWOULDBLOCK) GD::out.printError(std::string("Error reading from parent's process pipe: ") + strerror(errno));
+				}
 				else GD::out.printError("Error reading from parent's process pipe.");
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				continue;
 			}
-			std::cerr << std::string(&buffer.at(0), bytesRead) << std::endl;
+			if(bytesRead != 1)
+			{
+				GD::out.printError("Error reading from parent's process pipe: Too much data.");
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				continue;
+			}
+
+			totalBytesWritten = 0;
+			if(buffer == 'l')
+			{
+				std::string response;
+				if(GD::bl->shuttingDown) response = "s";
+				else
+				{
+					if(lifetick()) response = "a";
+					else response = "n";
+				}
+				ssize_t bytesWritten = write(_pipeFromChild[1], response.c_str() + totalBytesWritten, response.size() - totalBytesWritten);
+				if(bytesWritten == -1)
+				{
+					GD::out.printError(std::string("Error writing to child process pipe: ") + strerror(errno));
+					return;
+				}
+				totalBytesWritten += bytesWritten;
+			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -199,4 +275,30 @@ void Monitor::monitor()
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+}
+
+bool Monitor::lifetick()
+{
+	try
+	{
+		if(!GD::rpcClient->lifetick()) return false;
+		for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+		{
+			if(!i->second.lifetick()) return false;
+		}
+		return true;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return false;
 }

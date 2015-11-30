@@ -132,13 +132,14 @@ void sigchld_handler(int32_t signalNumber)
 		{
 			if(pid == _mainProcessId)
 			{
+				_mainProcessId = 0;
 				bool stop = false;
 				int32_t exitStatus = WEXITSTATUS(status);
 				if(WIFSIGNALED(status))
 				{
 					int32_t signal = WTERMSIG(status);
-					if(signal == SIGTERM || signal == SIGINT || signal == SIGQUIT || signal == SIGKILL) stop = true;
-					if(signal == SIGKILL) GD::out.printWarning("Warning: SIGKILL (signal 9) used to stop Homegear. Please shutdown Homegear properly to avoid database corruption.");
+					if(signal == SIGTERM || signal == SIGINT || signal == SIGQUIT || (signal == SIGKILL && !_monitor.killedProcess())) stop = true;
+					if(signal == SIGKILL && !_monitor.killedProcess()) GD::out.printWarning("Warning: SIGKILL (signal 9) used to stop Homegear. Please shutdown Homegear properly to avoid database corruption.");
 					if(WCOREDUMP(status)) GD::out.printError("Error: Core was dumped.");
 				}
 				else stop = true;
@@ -173,6 +174,13 @@ void terminate(int32_t signalNumber)
 	{
 		if(signalNumber == SIGTERM)
 		{
+			if(_monitorProcess)
+			{
+				if(_mainProcessId != 0) kill(_mainProcessId, SIGTERM);
+				else exit(0);
+				return;
+			}
+
 			_shuttingDownMutex.lock();
 			if(!_startUpComplete)
 			{
@@ -188,7 +196,6 @@ void terminate(int32_t signalNumber)
 			GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
 			GD::bl->shuttingDown = true;
 			_shuttingDownMutex.unlock();
-			_monitor.stop();
 #ifdef SCRIPTENGINE
 			if(GD::scriptEngine) GD::scriptEngine->stopEventThreads();
 #endif
@@ -239,6 +246,7 @@ void terminate(int32_t signalNumber)
 			GD::out.printMessage("(Shutdown) => Disposing licensing modules");
 			if(GD::licensingController) GD::licensingController->dispose();
 			GD::bl->fileDescriptorManager.dispose();
+			_monitor.stop();
 			GD::out.printMessage("(Shutdown) => Shutdown complete.");
 			if(_startAsDaemon)
 			{
@@ -253,6 +261,12 @@ void terminate(int32_t signalNumber)
 		}
 		else if(signalNumber == SIGHUP)
 		{
+			if(_monitorProcess)
+			{
+				if(_mainProcessId != 0) kill(_mainProcessId, SIGHUP);
+				return;
+			}
+
 			_shuttingDownMutex.lock();
 			GD::out.printInfo("Info: SIGHUP received... Reloading...");
 			if(!_startUpComplete)
@@ -434,7 +448,7 @@ void startMainProcess()
 	try
 	{
 		_monitorProcess = false;
-		//_monitor.init();
+		_monitor.init();
 
 		pid_t pid, sid;
 		pid = fork();
@@ -442,11 +456,11 @@ void startMainProcess()
 		{
 			exitHomegear(1);
 		}
-		if(pid > 0)
+		else if(pid > 0)
 		{
 			_monitorProcess = true;
 			_mainProcessId = pid;
-			//_monitor.prepareParent();
+			_monitor.prepareParent();
 		}
 		else
 		{
@@ -460,10 +474,10 @@ void startMainProcess()
 				exitHomegear(1);
 			}
 
-			//_monitor.prepareChild();
+			_monitor.prepareChild();
 		}
 
-		//close(STDIN_FILENO);
+		close(STDIN_FILENO);
 
 		if(pid == 0) startUp();
 	}
@@ -573,8 +587,8 @@ void startUp()
 
     		while(true)
     		{
-    			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    			//_monitor.checkHealth();
+    			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+    			_monitor.checkHealth(_mainProcessId);
     		}
     	}
 

@@ -77,6 +77,42 @@ void RPCServer::dispose()
 	_rpcMethods->clear();
 }
 
+bool RPCServer::lifetick()
+{
+	try
+	{
+		_lifetick1Mutex.lock();
+		if(!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 60000)
+		{
+			GD::out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 60 seconds.");
+			return false;
+		}
+		_lifetick1Mutex.unlock();
+
+		_lifetick2Mutex.lock();
+		if(!_lifetick2.second && BaseLib::HelperFunctions::getTime() - _lifetick2.first > 60000)
+		{
+			GD::out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 60 seconds.");
+			return false;
+		}
+		_lifetick2Mutex.unlock();
+		return true;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
 void RPCServer::start(BaseLib::Rpc::PServerInfo& info)
 {
 	try
@@ -445,7 +481,7 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::vec
 		{
 			//Sleep a tiny little bit. Some clients like the linux version of IP-Symcon don't accept responses too fast.
 			std::this_thread::sleep_for(std::chrono::milliseconds(2));
-			if(!keepAlive || !client->binaryPacket) std::this_thread::sleep_for(std::chrono::milliseconds(20)); //Add additional time for XMLRPC requests. Otherwise clients might not receive response.
+			if(!keepAlive || !client->binaryRpc) std::this_thread::sleep_for(std::chrono::milliseconds(20)); //Add additional time for XMLRPC requests. Otherwise clients might not receive response.
 			client->socket->proofwrite(data);
 		}
 		catch(BaseLib::SocketDataLimitException& ex)
@@ -481,10 +517,19 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& pa
 		std::string methodName;
 		int32_t messageId = 0;
 		std::shared_ptr<std::vector<BaseLib::PVariable>> parameters;
-		if(packetType == PacketType::Enum::binaryRequest) parameters = _rpcDecoder->decodeRequest(packet, methodName);
-		else if(packetType == PacketType::Enum::xmlRequest) parameters = _xmlRpcDecoder->decodeRequest(packet, methodName);
+		if(packetType == PacketType::Enum::binaryRequest)
+		{
+			client->binaryRpc = true;
+			parameters = _rpcDecoder->decodeRequest(packet, methodName);
+		}
+		else if(packetType == PacketType::Enum::xmlRequest)
+		{
+			client->xmlRpc = true;
+			parameters = _xmlRpcDecoder->decodeRequest(packet, methodName);
+		}
 		else if(packetType == PacketType::Enum::jsonRequest || packetType == PacketType::Enum::webSocketRequest)
 		{
+			client->jsonRpc = true;
 			BaseLib::PVariable result = _jsonDecoder->decode(packet);
 			if(result->type == BaseLib::VariableType::tStruct)
 			{
@@ -609,6 +654,10 @@ BaseLib::PVariable RPCServer::callMethod(std::string& methodName, BaseLib::PVari
 			_out.printError("Warning: RPC method not found: " + methodName);
 			return BaseLib::Variable::createError(-32601, ": Requested method not found.");
 		}
+		_lifetick1Mutex.lock();
+		_lifetick1.second = false;
+		_lifetick1.first = BaseLib::HelperFunctions::getTime();
+		_lifetick1Mutex.unlock();
 		if(GD::bl->debugLevel >= 4)
 		{
 			_out.printInfo("Info: RPC Method called: " + methodName + " Parameters:");
@@ -623,6 +672,9 @@ BaseLib::PVariable RPCServer::callMethod(std::string& methodName, BaseLib::PVari
 			_out.printDebug("Response: ");
 			ret->print();
 		}
+		_lifetick1Mutex.lock();
+		_lifetick1.second = true;
+		_lifetick1Mutex.unlock();
 		return ret;
 	}
 	catch(const std::exception& ex)
@@ -657,6 +709,11 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 			}
 			return;
 		}
+		else if(methodName == "init" && parameters->size() >= 2)
+		{
+			client->initUrl = parameters->at(0)->stringValue;
+			client->initInterfaceId = parameters->at(1)->stringValue;
+		}
 
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
@@ -664,6 +721,10 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 			sendRPCResponseToClient(client, BaseLib::Variable::createError(-32601, ": Requested method not found."), messageId, responseType, keepAlive);
 			return;
 		}
+		_lifetick2Mutex.lock();
+		_lifetick2.second = false;
+		_lifetick2.first = BaseLib::HelperFunctions::getTime();
+		_lifetick2Mutex.unlock();
 		if(GD::bl->debugLevel >= 4)
 		{
 			_out.printInfo("Info: Client number " + std::to_string(client->socketDescriptor->id) + " is calling RPC method: " + methodName + " Parameters:");
@@ -679,6 +740,9 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 			ret->print();
 		}
 		sendRPCResponseToClient(client, ret, messageId, responseType, keepAlive);
+		_lifetick2Mutex.lock();
+		_lifetick2.second = true;
+		_lifetick2Mutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
@@ -788,6 +852,34 @@ int32_t RPCServer::isAddonClient(int32_t clientID)
     }
     _stateMutex.unlock();
     return -1;
+}
+
+const std::vector<std::shared_ptr<RPCServer::Client>> RPCServer::getClientInfo()
+{
+	std::vector<std::shared_ptr<Client>> clients;
+	_stateMutex.lock();
+	try
+	{
+		for(std::map<int32_t, std::shared_ptr<Client>>::const_iterator i = _clients.begin(); i != _clients.end(); i++)
+		{
+			if(i->second->closed) continue;
+			clients.push_back(i->second);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_stateMutex.unlock();
+	return clients;
 }
 
 std::string RPCServer::getClientIP(int32_t clientID)
@@ -1048,7 +1140,6 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				if(!_info->xmlrpcServer) continue;
 				//buffer[3] & 1 is true for buffer[3] == 0xFF, too
 				packetType = (buffer[3] & 1) ? PacketType::Enum::binaryResponse : PacketType::Enum::binaryRequest;
-				client->binaryPacket = true;
 				if(bytesRead < 8) continue;
 				uint32_t headerSize = 0;
 				if(buffer[3] & 0x40)

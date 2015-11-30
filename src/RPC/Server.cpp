@@ -161,6 +161,26 @@ void Server::stop()
 	if(_server) _server->stop();
 }
 
+bool Server::lifetick()
+{
+	if(!_server) return true; return _server->lifetick();
+}
+
+bool Server::isRunning()
+{
+	if(!_server) return false; return _server->isRunning();
+}
+
+const std::vector<std::shared_ptr<RPCServer::Client>> Server::getClientInfo()
+{
+	if(!_server) return std::vector<std::shared_ptr<RPCServer::Client>>(); return _server->getClientInfo();
+}
+
+const BaseLib::Rpc::PServerInfo Server::getInfo()
+{
+	if(!_server) return BaseLib::Rpc::PServerInfo(); return _server->getInfo();
+}
+
 int32_t Server::isAddonClient(int32_t clientID)
 {
 	if(!_server) return -1;
