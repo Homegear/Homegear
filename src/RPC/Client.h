@@ -54,6 +54,7 @@ public:
 	virtual ~Client();
 	void dispose();
 	void init();
+	bool lifetick();
 
 	void initServerMethods(std::pair<std::string, std::string> address);
 	void broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
@@ -82,6 +83,8 @@ private:
 	int32_t _serverId = 0;
 	std::map<int32_t, std::shared_ptr<RemoteRpcServer>> _servers;
 	std::unique_ptr<BaseLib::RPC::JsonEncoder> _jsonEncoder;
+	std::mutex _lifetick1Mutex;
+	std::pair<int64_t, bool> _lifetick1;
 
 	void collectGarbage();
 };

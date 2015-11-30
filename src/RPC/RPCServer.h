@@ -55,7 +55,9 @@ namespace RPC
 				int32_t id = -1;
 				bool closed = false;
 				bool addon = false;
-				bool binaryPacket = false;
+				bool xmlRpc = false;
+				bool jsonRpc = false;
+				bool binaryRpc = false;
 				bool webSocket = false;
 				bool webSocketClient = false;
 				bool webSocketAuthorized = false;
@@ -66,6 +68,8 @@ namespace RPC
 				Auth auth;
 				std::string address;
 				int32_t port;
+				std::string initUrl;
+				std::string initInterfaceId;
 
 				Client();
 				virtual ~Client();
@@ -80,7 +84,9 @@ namespace RPC
 			virtual ~RPCServer();
 
 			void dispose();
+			const std::vector<std::shared_ptr<Client>> getClientInfo();
 			const BaseLib::Rpc::PServerInfo getInfo() { return _info; }
+			bool lifetick();
 			bool isRunning() { return !_stopped; }
 			void start(BaseLib::Rpc::PServerInfo& settings);
 			void stop();
@@ -133,6 +139,10 @@ namespace RPC
 			std::unique_ptr<BaseLib::RPC::JsonDecoder> _jsonDecoder;
 			std::unique_ptr<BaseLib::RPC::JsonEncoder> _jsonEncoder;
 			std::unique_ptr<WebServer> _webServer;
+			std::mutex _lifetick1Mutex;
+			std::pair<int64_t, bool> _lifetick1;
+			std::mutex _lifetick2Mutex;
+			std::pair<int64_t, bool> _lifetick2;
 
 			void collectGarbage();
 			void getSocketDescriptor();

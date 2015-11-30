@@ -48,8 +48,10 @@ public:
 	void registerMethods();
 	void start(BaseLib::Rpc::PServerInfo& serverInfo);
 	void stop();
-	bool isRunning() { if(!_server) return false; return _server->isRunning(); }
-	const BaseLib::Rpc::PServerInfo getInfo() { if(!_server) return BaseLib::Rpc::PServerInfo(); return _server->getInfo(); }
+	bool lifetick();
+	bool isRunning();
+	const std::vector<std::shared_ptr<RPCServer::Client>> getClientInfo();
+	const BaseLib::Rpc::PServerInfo getInfo();
 	uint32_t connectionCount();
 	BaseLib::PVariable callMethod(std::string methodName, BaseLib::PVariable parameters);
 

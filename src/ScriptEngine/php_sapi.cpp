@@ -72,10 +72,10 @@ ZEND_FUNCTION(hg_get_value);
 ZEND_FUNCTION(hg_set_meta);
 ZEND_FUNCTION(hg_set_system);
 ZEND_FUNCTION(hg_set_value);
-ZEND_FUNCTION(hg_auth);
 ZEND_FUNCTION(hg_load_module);
 ZEND_FUNCTION(hg_unload_module);
 ZEND_FUNCTION(hg_reload_module);
+ZEND_FUNCTION(hg_auth);
 ZEND_FUNCTION(hg_create_user);
 ZEND_FUNCTION(hg_delete_user);
 ZEND_FUNCTION(hg_update_user);
@@ -84,6 +84,7 @@ ZEND_FUNCTION(hg_users);
 ZEND_FUNCTION(hg_log);
 ZEND_FUNCTION(hg_check_license);
 ZEND_FUNCTION(hg_poll_event);
+ZEND_FUNCTION(hg_list_rpc_clients);
 ZEND_FUNCTION(hg_peer_exists);
 ZEND_FUNCTION(hg_subscribe_peer);
 ZEND_FUNCTION(hg_unsubscribe_peer);
@@ -109,10 +110,10 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_set_meta, NULL)
 	ZEND_FE(hg_set_system, NULL)
 	ZEND_FE(hg_set_value, NULL)
-	ZEND_FE(hg_auth, NULL)
 	ZEND_FE(hg_load_module, NULL)
 	ZEND_FE(hg_unload_module, NULL)
 	ZEND_FE(hg_reload_module, NULL)
+	ZEND_FE(hg_auth, NULL)
 	ZEND_FE(hg_create_user, NULL)
 	ZEND_FE(hg_delete_user, NULL)
 	ZEND_FE(hg_update_user, NULL)
@@ -121,6 +122,7 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_log, NULL)
 	ZEND_FE(hg_check_license, NULL)
 	ZEND_FE(hg_poll_event, NULL)
+	ZEND_FE(hg_list_rpc_clients, NULL)
 	ZEND_FE(hg_peer_exists, NULL)
 	ZEND_FE(hg_subscribe_peer, NULL)
 	ZEND_FE(hg_unsubscribe_peer, NULL)
@@ -682,112 +684,117 @@ ZEND_FUNCTION(hg_set_value)
 	php_homegear_invoke_rpc(methodName, parameters, return_value);
 }
 
-/* User functions/methods */
+// {{{ Module functions
 
-ZEND_FUNCTION(hg_auth)
-{
-	if(_disposed) RETURN_NULL();
-	char* pName = nullptr;
-	int nameLength = 0;
-	char* pPassword = nullptr;
-	int passwordLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
-	if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
-	if(User::verify(std::string(pName, nameLength), std::string(pPassword, passwordLength))) RETURN_TRUE;
-	RETURN_FALSE
-}
-
-ZEND_FUNCTION(hg_load_module)
-{
-	if(_disposed) RETURN_NULL();
-	char* pFilename = nullptr;
-	int filenameLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pFilename, &filenameLength) != SUCCESS) RETURN_NULL();
-	if(filenameLength == 0) RETURN_FALSE;
-	ZVAL_LONG(return_value, GD::familyController->loadModule(std::string(pFilename, filenameLength)));
-}
-
-ZEND_FUNCTION(hg_unload_module)
-{
-	if(_disposed) RETURN_NULL();
-	char* pFilename = nullptr;
-	int filenameLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pFilename, &filenameLength) != SUCCESS) RETURN_NULL();
-	if(filenameLength == 0) RETURN_FALSE;
-	ZVAL_LONG(return_value, GD::familyController->unloadModule(std::string(pFilename, filenameLength)));
-}
-
-ZEND_FUNCTION(hg_reload_module)
-{
-	if(_disposed) RETURN_NULL();
-	char* pFilename = nullptr;
-	int filenameLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pFilename, &filenameLength) != SUCCESS) RETURN_NULL();
-	if(filenameLength == 0) RETURN_FALSE;
-	ZVAL_LONG(return_value, GD::familyController->reloadModule(std::string(pFilename, filenameLength)));
-}
-
-ZEND_FUNCTION(hg_create_user)
-{
-	if(_disposed) RETURN_NULL();
-	char* pName = nullptr;
-	int nameLength = 0;
-	char* pPassword = nullptr;
-	int passwordLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
-	if(nameLength == 0 || passwordLength < 8) RETURN_FALSE;
-	std::string userName(pName, nameLength);
-	if(!BaseLib::HelperFunctions::isAlphaNumeric(userName)) RETURN_FALSE;
-	if(User::create(userName, std::string(pPassword, passwordLength))) RETURN_TRUE;
-	RETURN_FALSE
-}
-
-ZEND_FUNCTION(hg_delete_user)
-{
-	if(_disposed) RETURN_NULL();
-	char* pName = nullptr;
-	int nameLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
-	if(nameLength == 0) RETURN_FALSE;
-	if(User::remove(std::string(pName, nameLength))) RETURN_TRUE;
-	RETURN_FALSE
-}
-
-ZEND_FUNCTION(hg_update_user)
-{
-	if(_disposed) RETURN_NULL();
-	char* pName = nullptr;
-	int nameLength = 0;
-	char* pPassword = nullptr;
-	int passwordLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
-	if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
-	if(User::update(std::string(pName, nameLength), std::string(pPassword, passwordLength))) RETURN_TRUE;
-	RETURN_FALSE
-}
-
-ZEND_FUNCTION(hg_user_exists)
-{
-	if(_disposed) RETURN_NULL();
-	char* pName = nullptr;
-	int nameLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
-	if(nameLength == 0) RETURN_FALSE;
-	if(User::exists(std::string(pName, nameLength))) RETURN_TRUE
-	RETURN_FALSE
-}
-
-ZEND_FUNCTION(hg_users)
-{
-	if(_disposed) RETURN_NULL();
-	std::map<uint64_t, std::string> users;
-	User::getAll(users);
-	array_init(return_value);
-	for(std::map<uint64_t, std::string>::iterator i = users.begin(); i != users.end(); ++i)
+	ZEND_FUNCTION(hg_load_module)
 	{
-		add_next_index_stringl(return_value, i->second.c_str(), i->second.size());
+		if(_disposed) RETURN_NULL();
+		char* pFilename = nullptr;
+		int filenameLength = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pFilename, &filenameLength) != SUCCESS) RETURN_NULL();
+		if(filenameLength == 0) RETURN_FALSE;
+		ZVAL_LONG(return_value, GD::familyController->loadModule(std::string(pFilename, filenameLength)));
 	}
-}
+
+	ZEND_FUNCTION(hg_unload_module)
+	{
+		if(_disposed) RETURN_NULL();
+		char* pFilename = nullptr;
+		int filenameLength = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pFilename, &filenameLength) != SUCCESS) RETURN_NULL();
+		if(filenameLength == 0) RETURN_FALSE;
+		ZVAL_LONG(return_value, GD::familyController->unloadModule(std::string(pFilename, filenameLength)));
+	}
+
+	ZEND_FUNCTION(hg_reload_module)
+	{
+		if(_disposed) RETURN_NULL();
+		char* pFilename = nullptr;
+		int filenameLength = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pFilename, &filenameLength) != SUCCESS) RETURN_NULL();
+		if(filenameLength == 0) RETURN_FALSE;
+		ZVAL_LONG(return_value, GD::familyController->reloadModule(std::string(pFilename, filenameLength)));
+	}
+
+// }}}
+
+// {{{ User functions
+
+	ZEND_FUNCTION(hg_auth)
+	{
+		if(_disposed) RETURN_NULL();
+		char* pName = nullptr;
+		int nameLength = 0;
+		char* pPassword = nullptr;
+		int passwordLength = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
+		if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
+		if(User::verify(std::string(pName, nameLength), std::string(pPassword, passwordLength))) RETURN_TRUE;
+		RETURN_FALSE
+	}
+
+	ZEND_FUNCTION(hg_create_user)
+	{
+		if(_disposed) RETURN_NULL();
+		char* pName = nullptr;
+		int nameLength = 0;
+		char* pPassword = nullptr;
+		int passwordLength = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
+		if(nameLength == 0 || passwordLength < 8) RETURN_FALSE;
+		std::string userName(pName, nameLength);
+		if(!BaseLib::HelperFunctions::isAlphaNumeric(userName)) RETURN_FALSE;
+		if(User::create(userName, std::string(pPassword, passwordLength))) RETURN_TRUE;
+		RETURN_FALSE
+	}
+
+	ZEND_FUNCTION(hg_delete_user)
+	{
+		if(_disposed) RETURN_NULL();
+		char* pName = nullptr;
+		int nameLength = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
+		if(nameLength == 0) RETURN_FALSE;
+		if(User::remove(std::string(pName, nameLength))) RETURN_TRUE;
+		RETURN_FALSE
+	}
+
+	ZEND_FUNCTION(hg_update_user)
+	{
+		if(_disposed) RETURN_NULL();
+		char* pName = nullptr;
+		int nameLength = 0;
+		char* pPassword = nullptr;
+		int passwordLength = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
+		if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
+		if(User::update(std::string(pName, nameLength), std::string(pPassword, passwordLength))) RETURN_TRUE;
+		RETURN_FALSE
+	}
+
+	ZEND_FUNCTION(hg_user_exists)
+	{
+		if(_disposed) RETURN_NULL();
+		char* pName = nullptr;
+		int nameLength = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
+		if(nameLength == 0) RETURN_FALSE;
+		if(User::exists(std::string(pName, nameLength))) RETURN_TRUE
+		RETURN_FALSE
+	}
+
+	ZEND_FUNCTION(hg_users)
+	{
+		if(_disposed) RETURN_NULL();
+		std::map<uint64_t, std::string> users;
+		User::getAll(users);
+		array_init(return_value);
+		for(std::map<uint64_t, std::string>::iterator i = users.begin(); i != users.end(); ++i)
+		{
+			add_next_index_stringl(return_value, i->second.c_str(), i->second.size());
+		}
+	}
+// }}}
 
 ZEND_FUNCTION(hg_poll_event)
 {
@@ -849,6 +856,52 @@ ZEND_FUNCTION(hg_poll_event)
 		}
 	}
 	else RETURN_FALSE
+}
+
+ZEND_FUNCTION(hg_list_rpc_clients)
+{
+	if(_disposed) RETURN_NULL();
+
+	array_init(return_value);
+	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+	{
+		const std::vector<std::shared_ptr<RPC::RPCServer::Client>> clients = i->second.getClientInfo();
+		for(std::vector<std::shared_ptr<RPC::RPCServer::Client>>::const_iterator j = clients.begin(); j != clients.end(); ++j)
+		{
+			zval arrayElement;
+			array_init(&arrayElement);
+
+			zval element;
+			ZVAL_LONG(&element, (*j)->id);
+			add_assoc_zval_ex(&arrayElement, "CLIENT_ID", sizeof("CLIENT_ID") - 1, &element);
+
+			if((*j)->address.empty()) ZVAL_STRINGL(&element, "", 0);
+			else ZVAL_STRINGL(&element, (*j)->address.c_str(), (*j)->address.size());
+			add_assoc_zval_ex(&arrayElement, "IP_ADDRESS", sizeof("IP_ADDRESS") - 1, &element);
+
+			if((*j)->initUrl.empty()) ZVAL_STRINGL(&element, "", 0);
+			else ZVAL_STRINGL(&element, (*j)->initUrl.c_str(), (*j)->initUrl.size());
+			add_assoc_zval_ex(&arrayElement, "INIT_URL", sizeof("INIT_URL") - 1, &element);
+
+			if((*j)->initInterfaceId.empty()) ZVAL_STRINGL(&element, "", 0);
+			else ZVAL_STRINGL(&element, (*j)->initInterfaceId.c_str(), (*j)->initInterfaceId.size());
+			add_assoc_zval_ex(&arrayElement, "INIT_INTERFACE_ID", sizeof("INIT_INTERFACE_ID") - 1, &element);
+
+			ZVAL_BOOL(&element, (*j)->xmlRpc);
+			add_assoc_zval_ex(&arrayElement, "XML_RPC", sizeof("XML_RPC") - 1, &element);
+
+			ZVAL_BOOL(&element, (*j)->binaryRpc);
+			add_assoc_zval_ex(&arrayElement, "BINARY_RPC", sizeof("BINARY_RPC") - 1, &element);
+
+			ZVAL_BOOL(&element, (*j)->jsonRpc);
+			add_assoc_zval_ex(&arrayElement, "JSON_RPC", sizeof("JSON_RPC") - 1, &element);
+
+			ZVAL_BOOL(&element, (*j)->webSocket);
+			add_assoc_zval_ex(&arrayElement, "WEBSOCKET", sizeof("WEBSOCKET") - 1, &element);
+
+			add_next_index_zval(return_value, &arrayElement);
+		}
+	}
 }
 
 ZEND_FUNCTION(hg_peer_exists)
@@ -1230,10 +1283,10 @@ ZEND_END_ARG_INFO()
 static const zend_function_entry homegear_methods[] = {
 	ZEND_ME(Homegear, __call, php_homegear_two_args, ZEND_ACC_PUBLIC)
 	ZEND_ME(Homegear, __callStatic, php_homegear_two_args, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	ZEND_ME_MAPPING(auth, hg_auth, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(loadModule, hg_load_module, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(unloadModule, hg_unload_module, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(reloadModule, hg_reload_module, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(auth, hg_auth, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(createUser, hg_create_user, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(deleteUser, hg_delete_user, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(updateUser, hg_update_user, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
@@ -1242,6 +1295,7 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME_MAPPING(log, hg_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(checkLicense, hg_check_license, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(pollEvent, hg_poll_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(listRpcClients, hg_list_rpc_clients, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(peerExists, hg_peer_exists, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(subscribePeer, hg_subscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(unsubscribePeer, hg_unsubscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)

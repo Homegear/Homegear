@@ -37,6 +37,8 @@ namespace RPC
 {
 Client::Client()
 {
+	_lifetick1.first = 0;
+	_lifetick1.second = 0;
 }
 
 Client::~Client()
@@ -56,6 +58,34 @@ void Client::init()
 	//GD::bl needs to be valid, before _client is created.
 	_client.reset(new RpcClient());
 	_jsonEncoder = std::unique_ptr<BaseLib::RPC::JsonEncoder>(new BaseLib::RPC::JsonEncoder(GD::bl.get()));
+}
+
+bool Client::lifetick()
+{
+	try
+	{
+		_lifetick1Mutex.lock();
+		if(!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 60000)
+		{
+			GD::out.printCritical("Critical: RPC client's lifetick was not updated for more than 60 seconds.");
+			return false;
+		}
+		_lifetick1Mutex.unlock();
+		return true;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
 }
 
 void Client::initServerMethods(std::pair<std::string, std::string> address)
@@ -96,6 +126,10 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 			return;
 		}
 		if(!valueKeys || !values || valueKeys->size() != values->size()) return;
+		_lifetick1Mutex.lock();
+		_lifetick1.second = false;
+		_lifetick1.first = BaseLib::HelperFunctions::getTime();
+		_lifetick1Mutex.unlock();
 #ifdef SCRIPTENGINE
 		GD::scriptEngine->broadcastEvent(id, channel, valueKeys, values);
 #endif
@@ -162,6 +196,9 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 			}
 		}
 		_serversMutex.unlock();
+		_lifetick1Mutex.lock();
+		_lifetick1.second = true;
+		_lifetick1Mutex.unlock();
 		return;
 	}
 	catch(const std::exception& ex)
