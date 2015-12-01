@@ -67,6 +67,7 @@ bool Client::lifetick()
 		_lifetick1Mutex.lock();
 		if(!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 60000)
 		{
+			_lifetick1Mutex.unlock();
 			GD::out.printCritical("Critical: RPC client's lifetick was not updated for more than 60 seconds.");
 			return false;
 		}
@@ -85,6 +86,7 @@ bool Client::lifetick()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _lifetick1Mutex.unlock();
     return false;
 }
 
@@ -127,8 +129,8 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 		}
 		if(!valueKeys || !values || valueKeys->size() != values->size()) return;
 		_lifetick1Mutex.lock();
-		_lifetick1.second = false;
 		_lifetick1.first = BaseLib::HelperFunctions::getTime();
+		_lifetick1.second = false;
 		_lifetick1Mutex.unlock();
 #ifdef SCRIPTENGINE
 		GD::scriptEngine->broadcastEvent(id, channel, valueKeys, values);
