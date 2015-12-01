@@ -48,6 +48,7 @@ bool Monitor::killedProcess()
 
 void Monitor::init()
 {
+
 	if(pipe(_pipeFromChild) == -1)
 	{
 		GD::out.printError("Error creating pipe from child.");
@@ -198,7 +199,7 @@ void Monitor::checkHealth(pid_t mainProcessId)
 					_suspendMonitoring = true;
 					break;
 				}
-				break;
+				return;
 			}
 		}
 	}

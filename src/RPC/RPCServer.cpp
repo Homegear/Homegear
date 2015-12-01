@@ -85,6 +85,7 @@ bool RPCServer::lifetick()
 		if(!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 60000)
 		{
 			GD::out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 60 seconds.");
+			_lifetick1Mutex.unlock();
 			return false;
 		}
 		_lifetick1Mutex.unlock();
@@ -93,6 +94,7 @@ bool RPCServer::lifetick()
 		if(!_lifetick2.second && BaseLib::HelperFunctions::getTime() - _lifetick2.first > 60000)
 		{
 			GD::out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 60 seconds.");
+			_lifetick2Mutex.unlock();
 			return false;
 		}
 		_lifetick2Mutex.unlock();
