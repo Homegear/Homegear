@@ -531,12 +531,11 @@ static void php_homegear_register_variables(zval* track_vars_array)
 		php_register_variable_safe((char*)"HTTP_HOST", (char*)header->host.c_str(), header->host.size(), track_vars_array);
 		php_register_variable_safe((char*)"QUERY_STRING", (char*)header->args.c_str(), header->args.size(), track_vars_array);
 		php_register_variable_safe((char*)"SERVER_PROTOCOL", (char*)"HTTP/1.1", 8, track_vars_array);
-		php_register_variable_safe((char*)"REMOTE_ADDRESS", (char*)header->remoteAddress.c_str(), header->remoteAddress.size(), track_vars_array);
+		php_register_variable_safe((char*)"REMOTE_ADDR", (char*)header->remoteAddress.c_str(), header->remoteAddress.size(), track_vars_array);
 		ZVAL_LONG(&value, header->remotePort);
 		php_register_variable_ex((char*)"REMOTE_PORT", &value, track_vars_array);
 		if(SG(request_info).request_method) php_register_variable((char*)"REQUEST_METHOD", (char*)SG(request_info).request_method, track_vars_array);
 		if(SG(request_info).request_uri) php_register_variable((char*)"REQUEST_URI", SG(request_info).request_uri, track_vars_array);
-		if(!header->pathInfo.empty()) php_register_variable_safe((char*)"REMOTE_ADDRESS", (char*)header->pathInfo.c_str(), header->pathInfo.size(), track_vars_array);
 		if(header->contentLength > 0)
 		{
 			ZVAL_LONG(&value, header->contentLength);

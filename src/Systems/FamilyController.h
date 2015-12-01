@@ -86,6 +86,7 @@ public:
 	virtual ~FamilyController();
 	void disposeDeviceFamilies();
 	void dispose();
+	bool lifetick();
 
 	/**
 	 * Returns a vector of all loaded module filenames and family ids.
