@@ -286,6 +286,7 @@ bool Monitor::lifetick()
 		{
 			if(!i->second.lifetick()) return false;
 		}
+		if(!GD::familyController->lifetick()) return false;
 		return true;
 	}
 	catch(const std::exception& ex)

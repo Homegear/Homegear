@@ -1331,7 +1331,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					{
 						if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic && !client->auth.basicServer(webSocket))
 						{
-							_out.printError("Error: Basic authentication failed for host " + http.getHeader()->host + ". Closing connection.");
+							_out.printError("Error: Basic authentication failed for host " + client->address + ". Closing connection.");
 							std::vector <char> output;
 							BaseLib::WebSocket::encodeClose(output);
 							sendRPCResponseToClient(client, output, false);
@@ -1339,7 +1339,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						}
 						else if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session && !client->auth.sessionServer(webSocket))
 						{
-							_out.printError("Error: Session authentication failed for host " + http.getHeader()->host + ". Closing connection.");
+							_out.printError("Error: Session authentication failed for host " + client->address + ". Closing connection.");
 							std::vector <char> output;
 							BaseLib::WebSocket::encodeClose(output);
 							sendRPCResponseToClient(client, output, false);

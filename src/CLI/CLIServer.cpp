@@ -875,7 +875,7 @@ std::string Server::handleModuleCommand(std::string& command)
 		{
 			std::stringstream stream(command);
 			std::string element;
-			int32_t offset = (command.at(1) == 'l') ? 0 : 1;
+			int32_t offset = (command.at(1) == 'r') ? 0 : 1;
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
@@ -899,7 +899,7 @@ std::string Server::handleModuleCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			int32_t result = GD::familyController->unloadModule(element);
+			int32_t result = GD::familyController->reloadModule(element);
 			switch(result)
 			{
 			case 0:
