@@ -48,7 +48,7 @@ bool Monitor::killedProcess()
 
 void Monitor::init()
 {
-
+	if(!GD::bl->settings.enableMonitoring()) return;
 	if(pipe(_pipeFromChild) == -1)
 	{
 		GD::out.printError("Error creating pipe from child.");
@@ -76,6 +76,7 @@ void Monitor::init()
 
 void Monitor::prepareParent()
 {
+	if(!GD::bl->settings.enableMonitoring()) return;
 	close(_pipeToChild[0]);
 	close(_pipeFromChild[1]);
 	_suspendMonitoring = false;
@@ -84,6 +85,7 @@ void Monitor::prepareParent()
 
 void Monitor::prepareChild()
 {
+	if(!GD::bl->settings.enableMonitoring()) return;
 	close(_pipeToChild[1]);
 	close(_pipeFromChild[0]);
 	stop();
@@ -131,7 +133,7 @@ void Monitor::checkHealth(pid_t mainProcessId)
 {
 	try
 	{
-		if(_suspendMonitoring) return;
+		if(!GD::bl->settings.enableMonitoring() || _suspendMonitoring) return;
 		for(int32_t i = 0; i < 6; i++)
 		{
 			uint32_t totalBytesWritten = 0;
