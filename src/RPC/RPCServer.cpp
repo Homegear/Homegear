@@ -64,6 +64,11 @@ RPCServer::RPCServer()
 	_serverFileDescriptor.reset(new BaseLib::FileDescriptor);
 	_threadPriority = GD::bl->settings.rpcServerThreadPriority();
 	_threadPolicy = GD::bl->settings.rpcServerThreadPolicy();
+
+	_lifetick1.first = 0;
+	_lifetick1.second = true;
+	_lifetick2.first = 0;
+	_lifetick2.second = true;
 }
 
 RPCServer::~RPCServer()

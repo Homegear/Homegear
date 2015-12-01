@@ -38,7 +38,7 @@ namespace RPC
 Client::Client()
 {
 	_lifetick1.first = 0;
-	_lifetick1.second = 0;
+	_lifetick1.second = true;
 }
 
 Client::~Client()
