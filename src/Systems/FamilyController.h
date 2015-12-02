@@ -90,11 +90,32 @@ public:
 
 	/**
 	 * Returns a vector of all loaded module filenames and family ids.
+	 * @return Returns a vector of type pair<string, int32_t>. The first value is the module filename the second value the family id.
 	 */
 	std::vector<std::pair<std::string, int32_t>> getModuleNames();
+
+	/**
+	 * Loads a family module. The module needs to be in Homegear's module path.
+	 * @param filename The filename of the module (e. g. mod_miscellanous.so).
+	 * @return Returns positive values or 0 on success and negative values on error. 0: Modules successfully loaded, 1: Module already loaded, -1: System error, -2: Module does not exists, -4: Family initialization failed
+	 */
 	int32_t loadModule(std::string filename);
+
+	/**
+	 * Unloads a previously loaded family module.
+	 * @param filename The filename of the module (e. g. mod_miscellanous.so).
+	 * @return Returns positive values or 0 on success and negative values on error. 0: Modules successfully loaded, 1: Module not loaded, -1: System error, -2: Module does not exists
+	 */
 	int32_t unloadModule(std::string filename);
+
+	/**
+	 * Unloads and loads a family module again. The module needs to be in Homegear's module path.
+	 *
+	 * @param filename The filename of the module (e. g. mod_miscellanous.so).
+	 * @return Returns positive values or 0 on success and negative values on error. 0: Modules successfully loaded, -1: System error, -2: Module does not exists, -4: Family initialization failed
+	 */
 	int32_t reloadModule(std::string filename);
+
 	void loadModules();
 	void load();
 	void save(bool full);
