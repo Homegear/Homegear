@@ -166,6 +166,7 @@ private:
 	std::set<int32_t> _familiesWithoutPhysicalInterface;
 	std::mutex _moduleLoadersMutex;
 	std::map<std::string, std::unique_ptr<ModuleLoader>> _moduleLoaders;
+	std::map<int32_t, std::string> _moduleFilenames;
 
 	std::mutex _familiesMutex;
 	std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> _families;

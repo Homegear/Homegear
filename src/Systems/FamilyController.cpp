@@ -469,6 +469,7 @@ int32_t FamilyController::loadModule(std::string filename)
 
 		if(family)
 		{
+			_moduleFilenames[family->getFamily()] = filename;
 			if(!family->hasPhysicalInterface()) _familiesWithoutPhysicalInterface.insert(family->getFamily());
 			std::string name = family->getName();
 			BaseLib::HelperFunctions::toLower(name);
@@ -486,6 +487,7 @@ int32_t FamilyController::loadModule(std::string filename)
 				return -4;
 			}
 			family->load();
+			family->physicalInterfaces()->startListening();
 		}
 		_moduleLoadersMutex.unlock();
 		return 0;
@@ -536,6 +538,7 @@ int32_t FamilyController::unloadModule(std::string filename)
 			_familiesMutex.lock();
 			familyIterator->second->lock();
 			_familiesMutex.unlock();
+			familyIterator->second->physicalInterfaces()->stopListening();
 			while(familyIterator->second.use_count() > 1)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -622,6 +625,7 @@ void FamilyController::loadModules()
 
 			if(family)
 			{
+				_moduleFilenames[family->getFamily()] = *i;
 				if(!family->hasPhysicalInterface()) _familiesWithoutPhysicalInterface.insert(family->getFamily());
 				std::string name = family->getName();
 				BaseLib::HelperFunctions::toLower(name);
@@ -667,6 +671,14 @@ void FamilyController::load()
 				else GD::out.printInfo("Info: Not initializing device family " + i->second->getName() + ", because no physical interface was found.");
 				i->second->dispose();
 				_families[i->first].reset();
+				_moduleLoadersMutex.lock();
+				std::map<std::string, std::unique_ptr<ModuleLoader>>::iterator moduleIterator = _moduleLoaders.find(_moduleFilenames[i->first]);
+				if(moduleIterator != _moduleLoaders.end())
+				{
+					moduleIterator->second->dispose();
+					_moduleLoaders.erase(moduleIterator);
+				}
+				_moduleLoadersMutex.unlock();
 				continue;
 			}
 			i->second->load();
