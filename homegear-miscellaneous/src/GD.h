@@ -46,7 +46,6 @@ public:
 
 	static BaseLib::Obj* bl;
 	static Miscellaneous* family;
-	static BaseLib::DeviceDescription::Devices rpcDevices;
 	static BaseLib::Output out;
 private:
 	GD();

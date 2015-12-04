@@ -42,7 +42,6 @@ Miscellaneous::Miscellaneous(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::I
 	GD::out.init(bl);
 	GD::out.setPrefix("Module Miscellaneous: ");
 	GD::out.printDebug("Debug: Loading module...");
-	GD::rpcDevices.init(_bl, this);
 }
 
 Miscellaneous::~Miscellaneous()
@@ -50,20 +49,10 @@ Miscellaneous::~Miscellaneous()
 
 }
 
-bool Miscellaneous::init()
-{
-	GD::out.printInfo("Loading XML RPC devices...");
-	GD::rpcDevices.load();
-	if(GD::rpcDevices.empty()) return false;
-	return true;
-}
-
 void Miscellaneous::dispose()
 {
 	if(_disposed) return;
 	DeviceFamily::dispose();
-
-	GD::rpcDevices.clear();
 }
 
 std::shared_ptr<BaseLib::Systems::ICentral> Miscellaneous::initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber)

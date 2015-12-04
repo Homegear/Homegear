@@ -1048,8 +1048,7 @@ int main(int argc, char* argv[])
     				GD::bl->settings.load(GD::configPath + "main.conf");
     				std::string inputFile(argv[i + 1]);
     				std::string outputFile(argv[i + 2]);
-    				BaseLib::DeviceDescription::Devices devices(0);
-    				devices.init(GD::bl.get(), nullptr);
+    				BaseLib::DeviceDescription::Devices devices(GD::bl.get(), nullptr, 0);
 					std::shared_ptr<HomegearDevice> device = devices.load(inputFile);
 					if(!device) exit(1);
 					device->save(outputFile);
