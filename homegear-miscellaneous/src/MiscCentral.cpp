@@ -662,7 +662,7 @@ std::shared_ptr<MiscPeer> MiscCentral::createPeer(BaseLib::Systems::LogicalDevic
 		std::shared_ptr<MiscPeer> peer(new MiscPeer(_deviceId, true, this));
 		peer->setDeviceType(deviceType);
 		peer->setSerialNumber(serialNumber);
-		peer->setRpcDevice(GD::rpcDevices.find(deviceType, 0x10, -1));
+		peer->setRpcDevice(GD::family->getRpcDevices()->find(deviceType, 0x10, -1));
 		if(!peer->getRpcDevice()) return std::shared_ptr<MiscPeer>();
 		if(save) peer->save(true, true, false); //Save and create peerID
 		return peer;

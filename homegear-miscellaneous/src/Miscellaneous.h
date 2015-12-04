@@ -44,7 +44,6 @@ class Miscellaneous : public BaseLib::Systems::DeviceFamily
 public:
 	Miscellaneous(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
 	virtual ~Miscellaneous();
-	virtual bool init();
 	virtual void dispose();
 
 	virtual bool hasPhysicalInterface() { return false; }
