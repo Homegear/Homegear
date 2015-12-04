@@ -99,6 +99,7 @@ void Server::registerMethods()
 		_server->registerMethod("listEvents", std::shared_ptr<RPCMethod>(new RPCListEvents()));
 		_server->registerMethod("listFamilies", std::shared_ptr<RPCMethod>(new RPCListFamilies()));
 		_server->registerMethod("listInterfaces", std::shared_ptr<RPCMethod>(new RPCListInterfaces()));
+		_server->registerMethod("listKnownDeviceTypes", std::shared_ptr<RPCMethod>(new RPCListKnownDeviceTypes()));
 		_server->registerMethod("listTeams", std::shared_ptr<RPCMethod>(new RPCListTeams()));
 		_server->registerMethod("logLevel", std::shared_ptr<RPCMethod>(new RPCLogLevel()));
 		_server->registerMethod("putParamset", std::shared_ptr<RPCMethod>(new RPCPutParamset()));

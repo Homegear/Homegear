@@ -574,6 +574,17 @@ public:
 	BaseLib::PVariable invoke(int32_t clientID, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
+class RPCListKnownDeviceTypes : public RPCMethod
+{
+public:
+	RPCListKnownDeviceTypes()
+	{
+		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
+		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray}));
+	}
+	BaseLib::PVariable invoke(int32_t clientID, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+};
+
 class RPCListTeams : public RPCMethod
 {
 public:

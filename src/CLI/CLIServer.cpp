@@ -1260,9 +1260,16 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
 			else response = GD::familyController->handleCliCommand(command);
 		}
 		response.push_back(0);
-		if(send(clientData->fileDescriptor->descriptor, response.c_str(), response.size(), MSG_NOSIGNAL) == -1)
+		int32_t totallySentBytes = 0;
+		while (totallySentBytes < (signed)response.size())
 		{
-			GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
+			int32_t sentBytes = send(clientData->fileDescriptor->descriptor, response.c_str() + totallySentBytes, response.size() - totallySentBytes, MSG_NOSIGNAL);
+			if(sentBytes == -1)
+			{
+				GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
+				break;
+			}
+			totallySentBytes += sentBytes;
 		}
 	}
     catch(const std::exception& ex)
