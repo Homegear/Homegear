@@ -2374,6 +2374,62 @@ BaseLib::PVariable RPCListInterfaces::invoke(int32_t clientID, std::shared_ptr<s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCListKnownDeviceTypes::invoke(int32_t clientID, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		if(parameters->size() > 0)
+		{
+			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+					std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tBoolean }),
+					std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }),
+					std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray }),
+			}));
+			if(error != ParameterError::Enum::noError) return getError(error);
+		}
+		bool channels = true;
+		std::map<std::string, bool> fields;
+		if(parameters->size() == 2)
+		{
+			channels = parameters->at(0)->booleanValue;
+			for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(1)->arrayValue->begin(); i != parameters->at(1)->arrayValue->end(); ++i)
+			{
+				if((*i)->stringValue.empty()) continue;
+				fields[(*i)->stringValue] = true;
+			}
+		}
+
+		BaseLib::PVariable devices(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(3));
+			BaseLib::PVariable result = i->second->listKnownDeviceTypes(clientID, channels, fields);
+			if(result && result->errorStruct)
+			{
+				GD::out.printWarning("Warning: Error calling method \"listKnownDeviceTypes\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
+				continue;
+			}
+			if(result && !result->arrayValue->empty()) devices->arrayValue->insert(devices->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
+		}
+
+		return devices;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCListTeams::invoke(int32_t clientID, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	try

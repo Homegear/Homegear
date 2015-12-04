@@ -481,6 +481,7 @@ int32_t FamilyController::loadModule(std::string filename)
 				else GD::out.printInfo("Info: Not initializing device family " + family->getName() + ", because no physical interface was found.");
 				_families[family->getFamily()]->dispose();
 				_families[family->getFamily()].reset();
+				family.reset();
 				_moduleLoaders.at(filename)->dispose();
 				_moduleLoaders.erase(filename);
 				_moduleLoadersMutex.unlock();
