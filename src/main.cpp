@@ -46,6 +46,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/file.h>
+#include <sys/prctl.h> //For function prctl
 #include <sys/sysctl.h> //For BSD systems
 
 #include <cmath>
@@ -598,23 +599,6 @@ void startUp()
     		}
     	}
 
-    	    //Set rlimit for core dumps while still root => this is only a test, remove if unnecessary
-			struct rlimit limits;
-			getrlimit(RLIMIT_CORE, &limits);
-			limits.rlim_cur = limits.rlim_max;
-			GD::out.printInfo("Info: Setting allowed core file size on monitor process to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
-			setrlimit(RLIMIT_CORE, &limits);
-			getrlimit(RLIMIT_CORE, &limits);
-			GD::out.printInfo("Info: Core file size on monitor process now is \"" + std::to_string(limits.rlim_cur) + "\".");
-#ifdef RLIMIT_RTPRIO //Not existant on BSD systems
-			getrlimit(RLIMIT_RTPRIO, &limits);
-			limits.rlim_cur = limits.rlim_max;
-			GD::out.printInfo("Info: Setting maximum thread priority on monitor process to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
-			setrlimit(RLIMIT_RTPRIO, &limits);
-			getrlimit(RLIMIT_RTPRIO, &limits);
-			GD::out.printInfo("Info: Maximum thread priority on monitor process now is \"" + std::to_string(limits.rlim_cur) + "\".");
-#endif
-
     	// {{{ Init gcrypt and GnuTLS
 			gcry_error_t gcryResult;
 			if((gcryResult = gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread)) != GPG_ERR_NO_ERROR)
@@ -674,6 +658,9 @@ void startUp()
 				GD::out.printCritical("Critical: Could not drop user privileges.");
 				exitHomegear(1);
 			}
+
+			//Core dumps are disabled by setuid. Enable them again.
+			prctl(PR_SET_DUMPABLE, 1);
     	}
 
     	if(getuid() == 0) GD::out.printWarning("Warning: Running as root. The authors of Homegear recommend running Homegear as user.");
@@ -688,6 +675,7 @@ void startUp()
     	}
 
     	//Set rlimit for core dumps
+    	struct rlimit limits;
     	getrlimit(RLIMIT_CORE, &limits);
     	limits.rlim_cur = limits.rlim_max;
     	GD::out.printInfo("Info: Setting allowed core file size to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
