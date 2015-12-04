@@ -489,6 +489,7 @@ int32_t FamilyController::loadModule(std::string filename)
 			family->load();
 			family->physicalInterfaces()->startListening();
 		}
+		_rpcCache.reset();
 		_moduleLoadersMutex.unlock();
 		return 0;
 	}
@@ -552,6 +553,7 @@ int32_t FamilyController::unloadModule(std::string filename)
 		moduleLoaderIterator->second.reset();
 		_moduleLoaders.erase(moduleLoaderIterator);
 
+		_rpcCache.reset();
 		_moduleLoadersMutex.unlock();
 		return 0;
 	}
@@ -670,6 +672,7 @@ void FamilyController::load()
 				if(familyAvailable(i->first)) GD::out.printError("Error: Could not initialize device family " + i->second->getName() + ".");
 				else GD::out.printInfo("Info: Not initializing device family " + i->second->getName() + ", because no physical interface was found.");
 				i->second->dispose();
+				i->second.reset();
 				_families[i->first].reset();
 				_moduleLoadersMutex.lock();
 				std::map<std::string, std::unique_ptr<ModuleLoader>>::iterator moduleIterator = _moduleLoaders.find(_moduleFilenames[i->first]);
