@@ -83,6 +83,7 @@ ZEND_FUNCTION(hg_user_exists);
 ZEND_FUNCTION(hg_users);
 ZEND_FUNCTION(hg_log);
 ZEND_FUNCTION(hg_check_license);
+ZEND_FUNCTION(hg_get_license_states);
 ZEND_FUNCTION(hg_poll_event);
 ZEND_FUNCTION(hg_list_rpc_clients);
 ZEND_FUNCTION(hg_peer_exists);
@@ -121,6 +122,7 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_users, NULL)
 	ZEND_FE(hg_log, NULL)
 	ZEND_FE(hg_check_license, NULL)
+	ZEND_FE(hg_get_license_states, NULL)
 	ZEND_FE(hg_poll_event, NULL)
 	ZEND_FE(hg_list_rpc_clients, NULL)
 	ZEND_FE(hg_peer_exists, NULL)
@@ -986,6 +988,44 @@ ZEND_FUNCTION(hg_check_license)
 	ZVAL_LONG(return_value, i->second->checkLicense(familyId, deviceId, licenseKey));
 }
 
+ZEND_FUNCTION(hg_get_license_states)
+{
+	if(_disposed) RETURN_NULL();
+	long moduleId = -1;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &moduleId) != SUCCESS) RETURN_NULL();
+	std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
+	if(i == GD::licensingModules.end() || !i->second)
+	{
+		GD::out.printError("Error: Could get license information. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
+		RETURN_FALSE;
+	}
+	BaseLib::Licensing::Licensing::DeviceStates states = i->second->getDeviceStates();
+	array_init(return_value);
+	for(BaseLib::Licensing::Licensing::DeviceStates::iterator i = states.begin(); i != states.end(); ++i)
+	{
+		for(std::map<int32_t, BaseLib::Licensing::Licensing::PDeviceInfo>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+		{
+			zval device;
+			array_init(&device);
+			zval element;
+
+			ZVAL_LONG(&element, j->second->moduleId);
+			add_assoc_zval_ex(&device, "MODULE_ID", sizeof("MODULE_ID") - 1, &element);
+
+			ZVAL_LONG(&element, j->second->familyId);
+			add_assoc_zval_ex(&device, "FAMILY_ID", sizeof("FAMILY_ID") - 1, &element);
+
+			ZVAL_LONG(&element, j->second->deviceId);
+			add_assoc_zval_ex(&device, "DEVICE_ID", sizeof("DEVICE_ID") - 1, &element);
+
+			ZVAL_BOOL(&element, j->second->state);
+			add_assoc_zval_ex(&device, "ACTIVATED", sizeof("ACTIVATED") - 1, &element);
+
+			add_next_index_zval(return_value, &device);
+		}
+	}
+}
+
 ZEND_FUNCTION(hg_shutting_down)
 {
 	if(_disposed || GD::bl->shuttingDown) RETURN_TRUE
@@ -1293,6 +1333,7 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME_MAPPING(listUsers, hg_users, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(log, hg_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(checkLicense, hg_check_license, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(getLicenseStates, hg_get_license_states, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(pollEvent, hg_poll_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(listRpcClients, hg_list_rpc_clients, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(peerExists, hg_peer_exists, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
