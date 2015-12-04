@@ -574,12 +574,46 @@ void startUp()
     		sa.sa_handler = sigchld_handler;
     		sigaction(SIGCHLD, &sa, NULL);
 
+    		//Set rlimit for core dumps
+			struct rlimit limits;
+			getrlimit(RLIMIT_CORE, &limits);
+			limits.rlim_cur = limits.rlim_max;
+			GD::out.printInfo("Info: Setting allowed core file size on monitor process to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
+			setrlimit(RLIMIT_CORE, &limits);
+			getrlimit(RLIMIT_CORE, &limits);
+			GD::out.printInfo("Info: Core file size on monitor process now is \"" + std::to_string(limits.rlim_cur) + "\".");
+#ifdef RLIMIT_RTPRIO //Not existant on BSD systems
+			getrlimit(RLIMIT_RTPRIO, &limits);
+			limits.rlim_cur = limits.rlim_max;
+			GD::out.printInfo("Info: Setting maximum thread priority on monitor process to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
+			setrlimit(RLIMIT_RTPRIO, &limits);
+			getrlimit(RLIMIT_RTPRIO, &limits);
+			GD::out.printInfo("Info: Maximum thread priority on monitor process now is \"" + std::to_string(limits.rlim_cur) + "\".");
+#endif
+
     		while(true)
     		{
     			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
     			_monitor.checkHealth(_mainProcessId);
     		}
     	}
+
+    	    //Set rlimit for core dumps while still root => this is only a test, remove if unnecessary
+			struct rlimit limits;
+			getrlimit(RLIMIT_CORE, &limits);
+			limits.rlim_cur = limits.rlim_max;
+			GD::out.printInfo("Info: Setting allowed core file size on monitor process to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
+			setrlimit(RLIMIT_CORE, &limits);
+			getrlimit(RLIMIT_CORE, &limits);
+			GD::out.printInfo("Info: Core file size on monitor process now is \"" + std::to_string(limits.rlim_cur) + "\".");
+#ifdef RLIMIT_RTPRIO //Not existant on BSD systems
+			getrlimit(RLIMIT_RTPRIO, &limits);
+			limits.rlim_cur = limits.rlim_max;
+			GD::out.printInfo("Info: Setting maximum thread priority on monitor process to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
+			setrlimit(RLIMIT_RTPRIO, &limits);
+			getrlimit(RLIMIT_RTPRIO, &limits);
+			GD::out.printInfo("Info: Maximum thread priority on monitor process now is \"" + std::to_string(limits.rlim_cur) + "\".");
+#endif
 
     	// {{{ Init gcrypt and GnuTLS
 			gcry_error_t gcryResult;
@@ -654,7 +688,6 @@ void startUp()
     	}
 
     	//Set rlimit for core dumps
-    	struct rlimit limits;
     	getrlimit(RLIMIT_CORE, &limits);
     	limits.rlim_cur = limits.rlim_max;
     	GD::out.printInfo("Info: Setting allowed core file size to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
