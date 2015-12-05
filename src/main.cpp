@@ -575,14 +575,18 @@ void startUp()
     		sa.sa_handler = sigchld_handler;
     		sigaction(SIGCHLD, &sa, NULL);
 
-    		//Set rlimit for core dumps
-			struct rlimit limits;
-			getrlimit(RLIMIT_CORE, &limits);
-			limits.rlim_cur = limits.rlim_max;
-			GD::out.printInfo("Info: Setting allowed core file size on monitor process to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
-			setrlimit(RLIMIT_CORE, &limits);
-			getrlimit(RLIMIT_CORE, &limits);
-			GD::out.printInfo("Info: Core file size on monitor process now is \"" + std::to_string(limits.rlim_cur) + "\".");
+    		struct rlimit limits;
+    		if(!GD::bl->settings.enableCoreDumps()) prctl(PR_SET_DUMPABLE, 0);
+    		else
+    		{
+				//Set rlimit for core dumps
+				getrlimit(RLIMIT_CORE, &limits);
+				limits.rlim_cur = limits.rlim_max;
+				GD::out.printInfo("Info: Setting allowed core file size on monitor process to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
+				setrlimit(RLIMIT_CORE, &limits);
+				getrlimit(RLIMIT_CORE, &limits);
+				GD::out.printInfo("Info: Core file size on monitor process now is \"" + std::to_string(limits.rlim_cur) + "\".");
+    		}
 #ifdef RLIMIT_RTPRIO //Not existant on BSD systems
 			getrlimit(RLIMIT_RTPRIO, &limits);
 			limits.rlim_cur = limits.rlim_max;
@@ -660,7 +664,7 @@ void startUp()
 			}
 
 			//Core dumps are disabled by setuid. Enable them again.
-			prctl(PR_SET_DUMPABLE, 1);
+			if(GD::bl->settings.enableCoreDumps()) prctl(PR_SET_DUMPABLE, 1);
     	}
 
     	if(getuid() == 0) GD::out.printWarning("Warning: Running as root. The authors of Homegear recommend running Homegear as user.");
@@ -674,14 +678,18 @@ void startUp()
     		GD::out.printInfo("Info: Homegear is (now) running as user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
     	}
 
-    	//Set rlimit for core dumps
     	struct rlimit limits;
-    	getrlimit(RLIMIT_CORE, &limits);
-    	limits.rlim_cur = limits.rlim_max;
-    	GD::out.printInfo("Info: Setting allowed core file size to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
-    	setrlimit(RLIMIT_CORE, &limits);
-    	getrlimit(RLIMIT_CORE, &limits);
-    	GD::out.printInfo("Info: Core file size now is \"" + std::to_string(limits.rlim_cur) + "\".");
+    	if(!GD::bl->settings.enableCoreDumps()) prctl(PR_SET_DUMPABLE, 0);
+    	else
+    	{
+			//Set rlimit for core dumps
+			getrlimit(RLIMIT_CORE, &limits);
+			limits.rlim_cur = limits.rlim_max;
+			GD::out.printInfo("Info: Setting allowed core file size to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
+			setrlimit(RLIMIT_CORE, &limits);
+			getrlimit(RLIMIT_CORE, &limits);
+			GD::out.printInfo("Info: Core file size now is \"" + std::to_string(limits.rlim_cur) + "\".");
+    	}
 #ifdef RLIMIT_RTPRIO //Not existant on BSD systems
     	getrlimit(RLIMIT_RTPRIO, &limits);
     	limits.rlim_cur = limits.rlim_max;

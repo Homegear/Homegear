@@ -545,8 +545,8 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 				{
 					int32_t threadId = _currentScriptThreadID++;
 					if(threadId == -1) threadId = _currentScriptThreadID++;
-					if(!script.empty()) _scriptThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&ScriptEngine::executeScriptThread, this, script, path, arguments, output, exitCode, threadId, std::shared_ptr<std::mutex>(), std::shared_ptr<bool>(), std::shared_ptr<std::condition_variable>()), true)));
-					else _scriptThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&ScriptEngine::executeThread, this, path, arguments, output, exitCode, threadId, std::shared_ptr<std::mutex>(), std::shared_ptr<bool>(), std::shared_ptr<std::condition_variable>()), true)));
+					if(!script.empty()) _scriptThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&ScriptEngine::executeScriptThread, this, script, path, arguments, std::shared_ptr<std::vector<char>>(), nullptr, threadId, std::shared_ptr<std::mutex>(), std::shared_ptr<bool>(), std::shared_ptr<std::condition_variable>()), true)));
+					else _scriptThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&ScriptEngine::executeThread, this, path, arguments, std::shared_ptr<std::vector<char>>(), nullptr, threadId, std::shared_ptr<std::mutex>(), std::shared_ptr<bool>(), std::shared_ptr<std::condition_variable>()), true)));
 				}
 				catch(const std::exception& ex)
 				{
