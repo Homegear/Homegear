@@ -2382,7 +2382,6 @@ BaseLib::PVariable RPCListKnownDeviceTypes::invoke(int32_t clientID, std::shared
 		{
 			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 					std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tBoolean }),
-					std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }),
 					std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray }),
 			}));
 			if(error != ParameterError::Enum::noError) return getError(error);
