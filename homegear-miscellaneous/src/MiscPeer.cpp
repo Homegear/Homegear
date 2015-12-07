@@ -565,11 +565,11 @@ PParameterGroup MiscPeer::getParameterSet(int32_t channel, ParameterGroup::Type:
 	return PParameterGroup();
 }
 
-PVariable MiscPeer::getDeviceInfo(int32_t clientID, std::map<std::string, bool> fields)
+PVariable MiscPeer::getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, std::map<std::string, bool> fields)
 {
 	try
 	{
-		PVariable info(Peer::getDeviceInfo(clientID, fields));
+		PVariable info(Peer::getDeviceInfo(clientInfo, fields));
 		return info;
 	}
 	catch(const std::exception& ex)
@@ -587,7 +587,7 @@ PVariable MiscPeer::getDeviceInfo(int32_t clientID, std::map<std::string, bool> 
     return PVariable();
 }
 
-PVariable MiscPeer::getParamset(int32_t clientID, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
+PVariable MiscPeer::getParamset(BaseLib::PRpcClientInfo clientInfo, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
 {
 	try
 	{
@@ -650,7 +650,7 @@ PVariable MiscPeer::getParamset(int32_t clientID, int32_t channel, ParameterGrou
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MiscPeer::getParamsetDescription(int32_t clientID, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
+PVariable MiscPeer::getParamsetDescription(BaseLib::PRpcClientInfo clientInfo, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
 {
 	try
 	{
@@ -666,7 +666,7 @@ PVariable MiscPeer::getParamsetDescription(int32_t clientID, int32_t channel, Pa
 			if(!remotePeer) return Variable::createError(-2, "Unknown remote peer.");
 		}
 
-		return Peer::getParamsetDescription(clientID, parameterGroup);
+		return Peer::getParamsetDescription(clientInfo, parameterGroup);
 	}
 	catch(const std::exception& ex)
     {
@@ -683,7 +683,7 @@ PVariable MiscPeer::getParamsetDescription(int32_t clientID, int32_t channel, Pa
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MiscPeer::putParamset(int32_t clientID, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, PVariable variables, bool onlyPushing)
+PVariable MiscPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, PVariable variables, bool onlyPushing)
 {
 	try
 	{
@@ -744,7 +744,7 @@ PVariable MiscPeer::putParamset(int32_t clientID, int32_t channel, ParameterGrou
 			for(Struct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
 				if(i->first.empty() || !i->second) continue;
-				setValue(clientID, channel, i->first, i->second);
+				setValue(clientInfo, channel, i->first, i->second);
 			}
 		}
 		else
@@ -768,11 +768,12 @@ PVariable MiscPeer::putParamset(int32_t clientID, int32_t channel, ParameterGrou
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MiscPeer::setValue(int32_t clientID, uint32_t channel, std::string valueKey, PVariable value)
+PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel, std::string valueKey, PVariable value)
 {
 	try
 	{
-		Peer::setValue(clientID, channel, valueKey, value); //Ignore result, otherwise setHomegerValue might not be executed
+		if(!clientInfo) clientInfo.reset(new BaseLib::RpcClientInfo());
+		Peer::setValue(clientInfo, channel, valueKey, value); //Ignore result, otherwise setHomegerValue might not be executed
 		if(_disposing) return Variable::createError(-32500, "Peer is disposing.");
 		if(!_centralFeatures) return Variable::createError(-2, "Not a central peer.");
 		if(valueKey.empty()) return Variable::createError(-5, "Value key is empty.");
@@ -789,7 +790,7 @@ PVariable MiscPeer::setValue(int32_t clientID, uint32_t channel, std::string val
 			else if(value->type == VariableType::tInteger) serviceMessages->set(valueKey, value->integerValue, channel);
 		}
 		if(rpcParameter->logical->type == ILogical::Type::tAction && !value->booleanValue) return Variable::createError(-5, "Parameter of type action cannot be set to \"false\".");
-		if(!rpcParameter->writeable && clientID != -1 && !(rpcParameter->addonWriteable && raiseIsAddonClient(clientID) == 1)) return Variable::createError(-6, "parameter is read only");
+		if(!rpcParameter->writeable && clientInfo->id != -1 && !(rpcParameter->addonWriteable && raiseIsAddonClient(clientInfo->id) == 1)) return Variable::createError(-6, "parameter is read only");
 		BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
 		std::shared_ptr<std::vector<PVariable>> values(new std::vector<PVariable>());

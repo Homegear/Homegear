@@ -711,9 +711,11 @@ void FamilyController::disposeDeviceFamilies()
 		{
 			if(!i->second) continue;
 			i->second->dispose();
+			i->second.reset();
 			_families[i->first].reset();
 		}
 		families.clear();
+		_families.clear();
 	}
 	catch(const std::exception& ex)
     {

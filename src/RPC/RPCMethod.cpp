@@ -33,7 +33,7 @@
 
 namespace RPC
 {
-BaseLib::PVariable RPCMethod::invoke(int32_t clientID, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCMethod::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	return BaseLib::PVariable(new BaseLib::Variable());
 }

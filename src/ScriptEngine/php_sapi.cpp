@@ -866,8 +866,8 @@ ZEND_FUNCTION(hg_list_rpc_clients)
 	array_init(return_value);
 	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 	{
-		const std::vector<std::shared_ptr<RPC::RPCServer::Client>> clients = i->second.getClientInfo();
-		for(std::vector<std::shared_ptr<RPC::RPCServer::Client>>::const_iterator j = clients.begin(); j != clients.end(); ++j)
+		const std::vector<BaseLib::PRpcClientInfo> clients = i->second.getClientInfo();
+		for(std::vector<BaseLib::PRpcClientInfo>::const_iterator j = clients.begin(); j != clients.end(); ++j)
 		{
 			zval arrayElement;
 			array_init(&arrayElement);
@@ -899,6 +899,21 @@ ZEND_FUNCTION(hg_list_rpc_clients)
 
 			ZVAL_BOOL(&element, (*j)->webSocket);
 			add_assoc_zval_ex(&arrayElement, "WEBSOCKET", sizeof("WEBSOCKET") - 1, &element);
+
+			ZVAL_BOOL(&element, (*j)->initKeepAlive);
+			add_assoc_zval_ex(&arrayElement, "INIT_KEEP_ALIVE", sizeof("INIT_KEEP_ALIVE") - 1, &element);
+
+			ZVAL_BOOL(&element, (*j)->initBinaryMode);
+			add_assoc_zval_ex(&arrayElement, "INIT_BINARY_MODE", sizeof("INIT_BINARY_MODE") - 1, &element);
+
+			ZVAL_BOOL(&element, (*j)->initNewFormat);
+			add_assoc_zval_ex(&arrayElement, "INIT_NEW_FORMAT", sizeof("INIT_NEW_FORMAT") - 1, &element);
+
+			ZVAL_BOOL(&element, (*j)->initSubscribePeers);
+			add_assoc_zval_ex(&arrayElement, "INIT_SUBSCRIBE_PEERS", sizeof("INIT_SUBSCRIBE_PEERS") - 1, &element);
+
+			ZVAL_BOOL(&element, (*j)->initJsonMode);
+			add_assoc_zval_ex(&arrayElement, "INIT_JSON_MODE", sizeof("INIT_JSON_MODE") - 1, &element);
 
 			add_next_index_zval(return_value, &arrayElement);
 		}
@@ -1020,6 +1035,9 @@ ZEND_FUNCTION(hg_get_license_states)
 
 			ZVAL_BOOL(&element, j->second->state);
 			add_assoc_zval_ex(&device, "ACTIVATED", sizeof("ACTIVATED") - 1, &element);
+
+			ZVAL_STRINGL(&element, j->second->licenseKey.c_str(), j->second->licenseKey.size());
+			add_assoc_zval_ex(return_value, "LICENSE_KEY", sizeof("LICENSE_KEY") - 1, &element);
 
 			add_next_index_zval(return_value, &device);
 		}

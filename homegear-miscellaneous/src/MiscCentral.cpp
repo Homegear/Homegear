@@ -346,7 +346,7 @@ std::string MiscCentral::handleCliCommand(std::string command)
 				}
 
 				PVariable deviceDescriptions(new Variable(VariableType::tArray));
-				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(-1, true, std::map<std::string, bool>());
+				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
 				raiseRPCNewDevices(deviceDescriptions);
 				GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(peer->getID()) + ".");
 				stringStream << "Added peer " + std::to_string(peer->getID()) + " of type 0x" << (int32_t)deviceType << " with serial number " << serialNumber << "." << std::dec << std::endl;
@@ -682,7 +682,7 @@ std::shared_ptr<MiscPeer> MiscCentral::createPeer(BaseLib::Systems::LogicalDevic
     return std::shared_ptr<MiscPeer>();
 }
 
-PVariable MiscCentral::createDevice(int32_t clientID, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion)
+PVariable MiscCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion)
 {
 	try
 	{
@@ -720,7 +720,7 @@ PVariable MiscCentral::createDevice(int32_t clientID, int32_t deviceType, std::s
 		}
 
 		PVariable deviceDescriptions(new Variable(VariableType::tArray));
-		deviceDescriptions->arrayValue = peer->getDeviceDescriptions(-1, true, std::map<std::string, bool>());
+		deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
 		raiseRPCNewDevices(deviceDescriptions);
 		GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(peer->getID()) + ".");
 		peer->initProgram();
@@ -742,7 +742,7 @@ PVariable MiscCentral::createDevice(int32_t clientID, int32_t deviceType, std::s
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MiscCentral::deleteDevice(int32_t clientID, std::string serialNumber, int32_t flags)
+PVariable MiscCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags)
 {
 	try
 	{
@@ -750,7 +750,7 @@ PVariable MiscCentral::deleteDevice(int32_t clientID, std::string serialNumber, 
 		std::shared_ptr<MiscPeer> peer = getPeer(serialNumber);
 		if(!peer) return PVariable(new Variable(VariableType::tVoid));
 
-		return deleteDevice(clientID, peer->getID(), flags);
+		return deleteDevice(clientInfo, peer->getID(), flags);
 	}
 	catch(const std::exception& ex)
     {
@@ -767,7 +767,7 @@ PVariable MiscCentral::deleteDevice(int32_t clientID, std::string serialNumber, 
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MiscCentral::deleteDevice(int32_t clientID, uint64_t peerID, int32_t flags)
+PVariable MiscCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerID, int32_t flags)
 {
 	try
 	{
@@ -797,7 +797,7 @@ PVariable MiscCentral::deleteDevice(int32_t clientID, uint64_t peerID, int32_t f
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MiscCentral::getDeviceInfo(int32_t clientID, uint64_t id, std::map<std::string, bool> fields)
+PVariable MiscCentral::getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, uint64_t id, std::map<std::string, bool> fields)
 {
 	try
 	{
@@ -806,7 +806,7 @@ PVariable MiscCentral::getDeviceInfo(int32_t clientID, uint64_t id, std::map<std
 			std::shared_ptr<MiscPeer> peer(getPeer(id));
 			if(!peer) return Variable::createError(-2, "Unknown device.");
 
-			return peer->getDeviceInfo(clientID, fields);
+			return peer->getDeviceInfo(clientInfo, fields);
 		}
 		else
 		{
@@ -825,7 +825,7 @@ PVariable MiscCentral::getDeviceInfo(int32_t clientID, uint64_t id, std::map<std
 			{
 				//listDevices really needs a lot of resources, so wait a little bit after each device
 				std::this_thread::sleep_for(std::chrono::milliseconds(3));
-				PVariable info = (*i)->getDeviceInfo(clientID, fields);
+				PVariable info = (*i)->getDeviceInfo(clientInfo, fields);
 				if(!info) continue;
 				array->arrayValue->push_back(info);
 			}
@@ -848,7 +848,7 @@ PVariable MiscCentral::getDeviceInfo(int32_t clientID, uint64_t id, std::map<std
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MiscCentral::putParamset(int32_t clientID, std::string serialNumber, int32_t channel, ParameterGroup::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, PVariable paramset)
+PVariable MiscCentral::putParamset(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t channel, ParameterGroup::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, PVariable paramset)
 {
 	try
 	{
@@ -860,7 +860,7 @@ PVariable MiscCentral::putParamset(int32_t clientID, std::string serialNumber, i
 			if(!remotePeer) return Variable::createError(-3, "Remote peer is unknown.");
 			remoteID = remotePeer->getID();
 		}
-		if(peer) return peer->putParamset(clientID, channel, type, remoteID, remoteChannel, paramset);
+		if(peer) return peer->putParamset(clientInfo, channel, type, remoteID, remoteChannel, paramset);
 		return Variable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)
@@ -878,12 +878,12 @@ PVariable MiscCentral::putParamset(int32_t clientID, std::string serialNumber, i
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MiscCentral::putParamset(int32_t clientID, uint64_t peerID, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, PVariable paramset)
+PVariable MiscCentral::putParamset(BaseLib::PRpcClientInfo clientInfo, uint64_t peerID, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, PVariable paramset)
 {
 	try
 	{
 		std::shared_ptr<MiscPeer> peer(getPeer(peerID));
-		if(peer) return peer->putParamset(clientID, channel, type, remoteID, remoteChannel, paramset);
+		if(peer) return peer->putParamset(clientInfo, channel, type, remoteID, remoteChannel, paramset);
 		return Variable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)

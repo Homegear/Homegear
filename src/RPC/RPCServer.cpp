@@ -60,6 +60,7 @@ RPCServer::RPCServer()
 	_jsonEncoder = std::unique_ptr<BaseLib::RPC::JsonEncoder>(new BaseLib::RPC::JsonEncoder(GD::bl.get()));
 
 	_info.reset(new BaseLib::Rpc::ServerInfo::Info());
+	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
 	_rpcMethods.reset(new std::map<std::string, std::shared_ptr<RPCMethod>>);
 	_serverFileDescriptor.reset(new BaseLib::FileDescriptor);
 	_threadPriority = GD::bl->settings.rpcServerThreadPriority();
@@ -673,7 +674,7 @@ BaseLib::PVariable RPCServer::callMethod(std::string& methodName, BaseLib::PVari
 				(*i)->print();
 			}
 		}
-		BaseLib::PVariable ret = _rpcMethods->at(methodName)->invoke(-1, parameters->arrayValue);
+		BaseLib::PVariable ret = _rpcMethods->at(methodName)->invoke(_dummyClientInfo, parameters->arrayValue);
 		if(GD::bl->debugLevel >= 5)
 		{
 			_out.printDebug("Response: ");
@@ -720,6 +721,15 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 		{
 			client->initUrl = parameters->at(0)->stringValue;
 			client->initInterfaceId = parameters->at(1)->stringValue;
+			if(parameters->size() >= 3)
+			{
+				int32_t flags = parameters->at(2)->integerValue;
+				client->initKeepAlive = flags & 1;
+				client->initBinaryMode = flags & 2;
+				client->initNewFormat = flags & 4;
+				client->initSubscribePeers = flags & 8;
+				client->initJsonMode = flags & 0x10;
+			}
 		}
 
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
@@ -740,7 +750,7 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 				(*i)->print();
 			}
 		}
-		BaseLib::PVariable ret = _rpcMethods->at(methodName)->invoke(client->id, parameters);
+		BaseLib::PVariable ret = _rpcMethods->at(methodName)->invoke(client, parameters);
 		if(GD::bl->debugLevel >= 5)
 		{
 			_out.printDebug("Response: ");
@@ -861,9 +871,9 @@ int32_t RPCServer::isAddonClient(int32_t clientID)
     return -1;
 }
 
-const std::vector<std::shared_ptr<RPCServer::Client>> RPCServer::getClientInfo()
+const std::vector<BaseLib::PRpcClientInfo> RPCServer::getClientInfo()
 {
-	std::vector<std::shared_ptr<Client>> clients;
+	std::vector<BaseLib::PRpcClientInfo> clients;
 	_stateMutex.lock();
 	try
 	{
