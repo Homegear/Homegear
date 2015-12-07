@@ -58,12 +58,12 @@ public:
 	std::shared_ptr<MiscPeer> getPeer(uint64_t id);
 	std::shared_ptr<MiscPeer> getPeer(std::string serialNumber);
 
-	virtual BaseLib::PVariable createDevice(int32_t clientID, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion);
-	virtual BaseLib::PVariable deleteDevice(int32_t clientID, std::string serialNumber, int32_t flags);
-	virtual BaseLib::PVariable deleteDevice(int32_t clientID, uint64_t peerID, int32_t flags);
-	virtual BaseLib::PVariable getDeviceInfo(int32_t clientID, uint64_t id, std::map<std::string, bool> fields);
-	virtual BaseLib::PVariable putParamset(int32_t clientID, std::string serialNumber, int32_t channel, ParameterGroup::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, BaseLib::PVariable paramset);
-	virtual BaseLib::PVariable putParamset(int32_t clientID, uint64_t peerID, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, BaseLib::PVariable paramset);
+	virtual BaseLib::PVariable createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion);
+	virtual BaseLib::PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags);
+	virtual BaseLib::PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerID, int32_t flags);
+	virtual BaseLib::PVariable getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, uint64_t id, std::map<std::string, bool> fields);
+	virtual BaseLib::PVariable putParamset(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t channel, ParameterGroup::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, BaseLib::PVariable paramset);
+	virtual BaseLib::PVariable putParamset(BaseLib::PRpcClientInfo clientInfo, uint64_t peerID, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, BaseLib::PVariable paramset);
 protected:
 	std::shared_ptr<MiscPeer> createPeer(BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
 	void deletePeer(uint64_t id);

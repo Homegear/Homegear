@@ -351,7 +351,7 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			BaseLib::PVariable result = central->listDevices(-1, true, std::map<std::string, bool>(), server->knownDevices);
+			BaseLib::PVariable result = central->listDevices(nullptr, true, std::map<std::string, bool>(), server->knownDevices);
 			if(!result->arrayValue->empty()) devices->arrayValue->insert(devices->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
 		}
 		if(devices->arrayValue->empty()) return;

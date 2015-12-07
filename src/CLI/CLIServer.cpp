@@ -1085,7 +1085,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			{
 				if(!i->second.isRunning()) continue;
 				const BaseLib::Rpc::PServerInfo settings = i->second.getInfo();
-				const std::vector<std::shared_ptr<RPC::RPCServer::Client>> clients = i->second.getClientInfo();
+				const std::vector<BaseLib::PRpcClientInfo> clients = i->second.getClientInfo();
 
 				stringStream << "Server " << settings->name << " (Port: " << std::to_string(settings->port) << "):" << std::endl;
 
@@ -1109,7 +1109,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 					<< std::setw(websocketWidth) << "Websocket" << "  "
 					<< std::endl;
 
-				for(std::vector<std::shared_ptr<RPC::RPCServer::Client>>::const_iterator j = clients.begin(); j != clients.end(); ++j)
+				for(std::vector<BaseLib::PRpcClientInfo>::const_iterator j = clients.begin(); j != clients.end(); ++j)
 				{
 					std::string id = std::to_string((*j)->id);
 					id.resize(idWidth, ' ');

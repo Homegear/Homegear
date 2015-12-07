@@ -52,7 +52,7 @@ public:
 
 	ParameterError::Enum checkParameters(std::shared_ptr<std::vector<BaseLib::PVariable>> parameters, std::vector<BaseLib::VariableType> types);
 	ParameterError::Enum checkParameters(std::shared_ptr<std::vector<BaseLib::PVariable>> parameters, std::vector<std::vector<BaseLib::VariableType>> types);
-	virtual BaseLib::PVariable invoke(int32_t clientID, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	virtual BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 	BaseLib::PVariable getError(ParameterError::Enum error);
 	BaseLib::PVariable getSignature() { return _signatures; }
 	BaseLib::PVariable getHelp() { return _help; }
@@ -64,5 +64,5 @@ protected:
 	void setHelp(std::string help);
 };
 
-} /* namespace RPC */
-#endif /* RPCMETHOD_H_ */
+}
+#endif

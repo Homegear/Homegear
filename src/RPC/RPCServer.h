@@ -49,27 +49,15 @@ namespace RPC
 {
 	class RPCServer {
 		public:
-			class Client
+			class Client : public BaseLib::RpcClientInfo
 			{
 			public:
-				int32_t id = -1;
-				bool closed = false;
-				bool addon = false;
-				bool xmlRpc = false;
-				bool jsonRpc = false;
-				bool binaryRpc = false;
-				bool webSocket = false;
 				bool webSocketClient = false;
 				bool webSocketAuthorized = false;
-				std::string webSocketClientId;
 				std::thread readThread;
 				std::shared_ptr<BaseLib::FileDescriptor> socketDescriptor;
 				std::shared_ptr<BaseLib::SocketOperations> socket;
 				Auth auth;
-				std::string address;
-				int32_t port;
-				std::string initUrl;
-				std::string initInterfaceId;
 
 				Client();
 				virtual ~Client();
@@ -84,7 +72,7 @@ namespace RPC
 			virtual ~RPCServer();
 
 			void dispose();
-			const std::vector<std::shared_ptr<Client>> getClientInfo();
+			const std::vector<BaseLib::PRpcClientInfo> getClientInfo();
 			const BaseLib::Rpc::PServerInfo getInfo() { return _info; }
 			bool lifetick();
 			bool isRunning() { return !_stopped; }
@@ -143,6 +131,7 @@ namespace RPC
 			std::pair<int64_t, bool> _lifetick1;
 			std::mutex _lifetick2Mutex;
 			std::pair<int64_t, bool> _lifetick2;
+			std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 
 			void collectGarbage();
 			void getSocketDescriptor();
