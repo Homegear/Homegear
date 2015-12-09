@@ -109,14 +109,14 @@ void UPnP::stop()
 	try
 	{
 		if(_stopServer) return;
-		for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
-		{
-			i->second.removeWebserverEventHandler(_webserverEventHandler);
-		}
 		_stopServer = true;
 		if(_listenThread.joinable()) _listenThread.join();
 		sendByebye();
 		_packets.clear();
+		for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+		{
+			i->second.removeWebserverEventHandler(_webserverEventHandler);
+		}
 	}
 	catch(const std::exception& ex)
 	{
@@ -554,6 +554,7 @@ void UPnP::getSocketDescriptor()
 // {{{ Webserver events
 	bool UPnP::onGet(BaseLib::Rpc::PServerInfo& serverInfo, BaseLib::HTTP& httpRequest, std::shared_ptr<BaseLib::SocketOperations>& socket, std::string& path)
 	{
+		if(_stopServer) return false;
 		if(GD::bl->settings.enableUPnP() && path == "/description.xml")
 		{
 			std::vector<char> content;

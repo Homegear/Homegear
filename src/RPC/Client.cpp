@@ -159,7 +159,7 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 				{
 					std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 					parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
-					if(server->second->useID)
+					if(server->second->newFormat)
 					{
 						parameters->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)id)));
 						parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
@@ -183,7 +183,7 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 					BaseLib::PVariable params(new BaseLib::Variable(BaseLib::VariableType::tArray));
 					method->structValue->insert(BaseLib::StructElement("params", params));
 					params->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
-					if(server->second->useID)
+					if(server->second->newFormat)
 					{
 						params->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)id)));
 						params->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
@@ -487,7 +487,7 @@ void Client::broadcastDeleteDevices(BaseLib::PVariable deviceAddresses, BaseLib:
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("deleteDevices") == server->second->knownMethods.end())) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
-			if(server->second->useID) parameters->push_back(deviceInfo);
+			if(server->second->newFormat) parameters->push_back(deviceInfo);
 			else parameters->push_back(deviceAddresses);
 			server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("deleteDevices", parameters)));
 		}
@@ -556,7 +556,7 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
 			if(id > 0 && server->second->subscribePeers && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end()) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
-			if(server->second->useID)
+			if(server->second->newFormat)
 			{
 				parameters->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)id)));
 				parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
@@ -731,7 +731,7 @@ std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<Base
 		server->socket = socket;
 		server->keepAlive = true;
 		server->subscribePeers = true;
-		server->useID = true;
+		server->newFormat = true;
 		_servers[server->uid] = server;
 		_serversMutex.unlock();
 		return server;
@@ -845,6 +845,7 @@ BaseLib::PVariable Client::listClientServers(std::string id)
 		_serversMutex.lock();
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator i = _servers.begin(); i != _servers.end(); ++i)
 		{
+			if(i->second->removed) continue;
 			if(!id.empty() && i->second->id != id) continue;
 			servers.push_back(i->second);
 		}
@@ -860,8 +861,9 @@ BaseLib::PVariable Client::listClientServers(std::string id)
 			serverInfo->structValue->insert(BaseLib::StructElement("PATH", BaseLib::PVariable(new BaseLib::Variable((*i)->path))));
 			serverInfo->structValue->insert(BaseLib::StructElement("SSL", BaseLib::PVariable(new BaseLib::Variable((*i)->useSSL))));
 			serverInfo->structValue->insert(BaseLib::StructElement("BINARY", BaseLib::PVariable(new BaseLib::Variable((*i)->binary))));
+			serverInfo->structValue->insert(BaseLib::StructElement("WEBSOCKET", BaseLib::PVariable(new BaseLib::Variable((*i)->webSocket))));
 			serverInfo->structValue->insert(BaseLib::StructElement("KEEP_ALIVE", BaseLib::PVariable(new BaseLib::Variable((*i)->keepAlive))));
-			serverInfo->structValue->insert(BaseLib::StructElement("USEID", BaseLib::PVariable(new BaseLib::Variable((*i)->useID))));
+			serverInfo->structValue->insert(BaseLib::StructElement("NEW_FORMAT", BaseLib::PVariable(new BaseLib::Variable((*i)->newFormat))));
 			if((*i)->settings)
 			{
 				serverInfo->structValue->insert(BaseLib::StructElement("FORCESSL", BaseLib::PVariable(new BaseLib::Variable((*i)->settings->forceSSL))));
