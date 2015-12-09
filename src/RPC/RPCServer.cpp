@@ -1043,6 +1043,10 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 			if(protocol == "server" || pathProtocol == "server")
 			{
 				client->webSocket = true;
+				client->initJsonMode = true;
+				client->initKeepAlive = true;
+				client->initNewFormat = true;
+				client->initSubscribePeers = true;
 				std::string header;
 				header.reserve(133 + websocketAccept.size());
 				header.append("HTTP/1.1 101 Switching Protocols\r\n");

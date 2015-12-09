@@ -61,7 +61,7 @@ public:
 	bool binary = false;
 	bool json = false;
 	bool webSocket = false;
-	bool useID = false;
+	bool newFormat = false;
 	bool subscribePeers = false;
 	bool reconnectInfinitely = false;
 	std::string hostname;
