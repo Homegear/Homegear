@@ -850,8 +850,8 @@ BaseLib::PVariable Client::listClientServers(std::string id)
 			servers.push_back(i->second);
 		}
 		_serversMutex.unlock();
-		if(servers.empty()) return BaseLib::Variable::createError(-32602, "Server is unknown.");
 		BaseLib::PVariable serverInfos(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		if(servers.empty()) return serverInfos;
 		for(std::vector<std::shared_ptr<RemoteRpcServer>>::iterator i = servers.begin(); i != servers.end(); ++i)
 		{
 			BaseLib::PVariable serverInfo(new BaseLib::Variable(BaseLib::VariableType::tStruct));
