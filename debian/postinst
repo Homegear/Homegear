@@ -29,7 +29,7 @@ case $1 in
 			[ $? -ne 0 ] && exit 1
 			mkdir /tmp/HomegearScriptsDir
 			[ $? -ne 0 ] && exit 1
-			wget -P /tmp/HomegearScriptsDir/ http://homegear.eu/downloads/Homegear_PHP_XMLRPC_Client.zip
+			wget -P /tmp/HomegearScriptsDir/ https://homegear.eu/downloads/Homegear_PHP_XMLRPC_Client.zip
 			[ $? -ne 0 ] && exit 1
 			unzip -d /tmp/HomegearScriptsDir /tmp/HomegearScriptsDir/Homegear_PHP_XMLRPC_Client.zip
 			[ $? -ne 0 ] && exit 1
