@@ -84,6 +84,7 @@ ZEND_FUNCTION(hg_user_exists);
 ZEND_FUNCTION(hg_users);
 ZEND_FUNCTION(hg_log);
 ZEND_FUNCTION(hg_check_license);
+ZEND_FUNCTION(hg_remove_license);
 ZEND_FUNCTION(hg_get_license_states);
 ZEND_FUNCTION(hg_poll_event);
 ZEND_FUNCTION(hg_list_rpc_clients);
@@ -124,6 +125,7 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_users, NULL)
 	ZEND_FE(hg_log, NULL)
 	ZEND_FE(hg_check_license, NULL)
+	ZEND_FE(hg_remove_license, NULL)
 	ZEND_FE(hg_get_license_states, NULL)
 	ZEND_FE(hg_poll_event, NULL)
 	ZEND_FE(hg_list_rpc_clients, NULL)
@@ -1034,6 +1036,23 @@ ZEND_FUNCTION(hg_check_license)
 	ZVAL_LONG(return_value, i->second->checkLicense(familyId, deviceId, licenseKey));
 }
 
+ZEND_FUNCTION(hg_remove_license)
+{
+	if(_disposed) RETURN_NULL();
+	long moduleId = -1;
+	long familyId = -1;
+	long deviceId = -1;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "lll", &moduleId, &familyId, &deviceId) != SUCCESS) RETURN_NULL();
+	std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
+	if(i == GD::licensingModules.end() || !i->second)
+	{
+		GD::out.printError("Error: Could not check license. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
+		ZVAL_LONG(return_value, -2);
+		return;
+	}
+	i->second->removeLicense(familyId, deviceId);
+}
+
 ZEND_FUNCTION(hg_get_license_states)
 {
 	if(_disposed) RETURN_NULL();
@@ -1383,6 +1402,7 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME_MAPPING(listUsers, hg_users, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(log, hg_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(checkLicense, hg_check_license, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(removeLicense, hg_remove_license, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(getLicenseStates, hg_get_license_states, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(pollEvent, hg_poll_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(listRpcClients, hg_list_rpc_clients, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)

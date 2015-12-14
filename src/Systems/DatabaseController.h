@@ -128,6 +128,7 @@ public:
 	// {{{ License modules
 	virtual std::shared_ptr<BaseLib::Database::DataTable> getLicenseVariables(int32_t moduleId);
 	virtual void saveLicenseVariable(int32_t moduleId, BaseLib::Database::DataRow& data);
+	virtual void deleteLicenseVariable(int32_t moduleId, uint64_t mapKey);
 	// }}}
 protected:
 	bool _disposing = false;
