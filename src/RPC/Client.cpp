@@ -135,9 +135,6 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 			_lifetick1.first = BaseLib::HelperFunctions::getTime();
 			_lifetick1.second = false;
 		}
-#ifdef SCRIPTENGINE
-		GD::scriptEngine->broadcastEvent(id, channel, valueKeys, values);
-#endif
 		if(GD::mqtt->enabled())
 		{
 			for(uint32_t i = 0; i < valueKeys->size(); i++)

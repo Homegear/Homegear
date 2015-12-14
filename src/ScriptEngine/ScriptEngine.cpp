@@ -195,7 +195,7 @@ void ScriptEngine::setThreadNotRunning(int32_t threadId)
 	}
 }
 
-int32_t ScriptEngine::executeWebScript(const std::string& script, BaseLib::HTTP& request, std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo, std::shared_ptr<BaseLib::SocketOperations>& socket)
+int32_t ScriptEngine::executeWebScript(const std::string& script, const std::string& path, BaseLib::HTTP& request, std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo, std::shared_ptr<BaseLib::SocketOperations>& socket)
 {
 	if(_disposing || script.empty()) return 1;
 	ts_resource_ex(0, NULL); //Replaces TSRMLS_FETCH()
@@ -216,7 +216,7 @@ int32_t ScriptEngine::executeWebScript(const std::string& script, BaseLib::HTTP&
 		zendHandle.handle.stream.closer = nullptr;
 		zendHandle.handle.stream.mmap.buf = (char*)scriptCopy.c_str(); //String is not modified
 		zendHandle.handle.stream.mmap.len = scriptCopy.size();
-		zendHandle.filename = "";
+		zendHandle.filename = path.c_str();
 		zendHandle.opened_path = nullptr;
 		zendHandle.free_filename = 0;
 
@@ -621,7 +621,7 @@ void ScriptEngine::executeScriptThread(const std::string script, const std::stri
 		zendHandle.handle.stream.closer = nullptr;
 		zendHandle.handle.stream.mmap.buf = (char*)scriptCopy.c_str(); //String is not modified
 		zendHandle.handle.stream.mmap.len = scriptCopy.size();
-		zendHandle.filename = "";
+		zendHandle.filename = path.c_str();
 		zendHandle.opened_path = nullptr;
 		zendHandle.free_filename = 0;
 
@@ -951,7 +951,7 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& 
 					script = cacheInfo->script;
 				}
 			}
-			if(!script.empty()) executeWebScript(script, request, serverInfo, socket);
+			if(!script.empty()) executeWebScript(script, path, request, serverInfo, socket);
 			return 0;
 		}
 	}

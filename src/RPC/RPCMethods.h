@@ -388,6 +388,16 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
+class RPCGetPairingMethods : public RPCMethod
+{
+public:
+	RPCGetPairingMethods()
+	{
+		addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+	}
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+};
+
 class RPCGetParamsetDescription : public RPCMethod
 {
 public:

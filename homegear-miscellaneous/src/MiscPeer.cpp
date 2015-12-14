@@ -103,6 +103,7 @@ void MiscPeer::homegearShuttingDown()
 			kill(_programPID, 15);
 			_programPID = -1;
 		}
+
 		_stopRunProgramThread = true;
 		if(_runProgramThread.joinable())
 		{
