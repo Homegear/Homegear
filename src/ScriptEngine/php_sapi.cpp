@@ -72,6 +72,7 @@ ZEND_FUNCTION(hg_get_value);
 ZEND_FUNCTION(hg_set_meta);
 ZEND_FUNCTION(hg_set_system);
 ZEND_FUNCTION(hg_set_value);
+ZEND_FUNCTION(hg_list_modules);
 ZEND_FUNCTION(hg_load_module);
 ZEND_FUNCTION(hg_unload_module);
 ZEND_FUNCTION(hg_reload_module);
@@ -111,6 +112,7 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_set_meta, NULL)
 	ZEND_FE(hg_set_system, NULL)
 	ZEND_FE(hg_set_value, NULL)
+	ZEND_FE(hg_list_modules, NULL)
 	ZEND_FE(hg_load_module, NULL)
 	ZEND_FE(hg_unload_module, NULL)
 	ZEND_FE(hg_reload_module, NULL)
@@ -686,6 +688,35 @@ ZEND_FUNCTION(hg_set_value)
 }
 
 // {{{ Module functions
+	ZEND_FUNCTION(hg_list_modules)
+	{
+		if(_disposed) RETURN_NULL();
+
+		array_init(return_value);
+		std::vector<std::shared_ptr<FamilyController::ModuleInfo>> moduleInfo = GD::familyController->getModuleInfo();
+		for(std::vector<std::shared_ptr<FamilyController::ModuleInfo>>::iterator i = moduleInfo.begin(); i != moduleInfo.end(); ++i)
+		{
+			zval arrayElement;
+			array_init(&arrayElement);
+
+			zval element;
+			if((*i)->filename.empty()) ZVAL_STRINGL(&element, "", 0);
+			else ZVAL_STRINGL(&element, (*i)->filename.c_str(), (*i)->filename.size());
+			add_assoc_zval_ex(&arrayElement, "FILENAME", sizeof("FILENAME") - 1, &element);
+
+			ZVAL_LONG(&element, (*i)->familyId);
+			add_assoc_zval_ex(&arrayElement, "FAMILY_ID", sizeof("FAMILY_ID") - 1, &element);
+
+			if((*i)->baselibVersion.empty()) ZVAL_STRINGL(&element, "", 0);
+			else ZVAL_STRINGL(&element, (*i)->baselibVersion.c_str(), (*i)->baselibVersion.size());
+			add_assoc_zval_ex(&arrayElement, "BASELIB_VERSION", sizeof("BASELIB_VERSION") - 1, &element);
+
+			ZVAL_BOOL(&element, (*i)->loaded);
+			add_assoc_zval_ex(&arrayElement, "LOADED", sizeof("LOADED") - 1, &element);
+
+			add_next_index_zval(return_value, &arrayElement);
+		}
+	}
 
 	ZEND_FUNCTION(hg_load_module)
 	{
@@ -1340,6 +1371,7 @@ ZEND_END_ARG_INFO()
 static const zend_function_entry homegear_methods[] = {
 	ZEND_ME(Homegear, __call, php_homegear_two_args, ZEND_ACC_PUBLIC)
 	ZEND_ME(Homegear, __callStatic, php_homegear_two_args, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(listModules, hg_list_modules, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(loadModule, hg_load_module, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(unloadModule, hg_unload_module, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(reloadModule, hg_reload_module, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)

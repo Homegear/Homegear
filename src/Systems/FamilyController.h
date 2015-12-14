@@ -48,12 +48,14 @@ public:
 	virtual ~ModuleLoader();
 	void dispose();
 	int32_t getFamilyId();
+	std::string getVersion();
 
 	std::unique_ptr<BaseLib::Systems::DeviceFamily> createModule(BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
 private:
 	bool _disposing = false;
 	std::string _name;
 	int32_t _familyId = -1;
+	std::string _version;
 	void* _handle = nullptr;
 	std::unique_ptr<BaseLib::Systems::SystemFactory> _factory;
 
@@ -64,6 +66,14 @@ private:
 class FamilyController : public BaseLib::Systems::DeviceFamily::IFamilyEventSink
 {
 public:
+	struct ModuleInfo
+	{
+		std::string filename;
+		std::string baselibVersion;
+		int32_t familyId;
+		bool loaded;
+	};
+
 	// {{{ Family event handling
 		//Hooks
 		virtual void onAddWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler, std::map<int32_t, BaseLib::PEventHandler>& eventHandlers);
@@ -89,10 +99,10 @@ public:
 	bool lifetick();
 
 	/**
-	 * Returns a vector of all loaded module filenames and family ids.
-	 * @return Returns a vector of type pair<string, int32_t>. The first value is the module filename the second value the family id.
+	 * Returns a vector of type ModuleInfo with information about all loaded and not loaded modules.
+	 * @return Returns a vector of type ModuleInfo.
 	 */
-	std::vector<std::pair<std::string, int32_t>> getModuleNames();
+	std::vector<std::shared_ptr<ModuleInfo>> getModuleInfo();
 
 	/**
 	 * Loads a family module. The module needs to be in Homegear's module path.

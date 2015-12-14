@@ -46,22 +46,6 @@ ModuleLoader::ModuleLoader(std::string name, std::string path)
 			return;
 		}
 
-		std::string (*getVersion)();
-		getVersion = (std::string (*)())dlsym(moduleHandle, "getVersion");
-		if(!getVersion)
-		{
-			GD::out.printCritical("Critical: Could not open module \"" + path + "\". Symbol \"getVersion\" not found.");
-			dlclose(moduleHandle);
-			return;
-		}
-		std::string version = getVersion();
-		if(GD::bl->version() != version)
-		{
-			GD::out.printCritical("Critical: Could not open module \"" + path + "\". Module is compiled for Homegear version " + version);
-			dlclose(moduleHandle);
-			return;
-		}
-
 		int32_t (*getFamilyId)();
 		getFamilyId = (int32_t (*)())dlsym(moduleHandle, "getFamilyId");
 		if(!getFamilyId)
@@ -74,6 +58,22 @@ ModuleLoader::ModuleLoader(std::string name, std::string path)
 		if(_familyId < 0)
 		{
 			GD::out.printCritical("Critical: Could not open module \"" + path + "\". Got invalid family id.");
+			dlclose(moduleHandle);
+			return;
+		}
+
+		std::string (*getVersion)();
+		getVersion = (std::string (*)())dlsym(moduleHandle, "getVersion");
+		if(!getVersion)
+		{
+			GD::out.printCritical("Critical: Could not open module \"" + path + "\". Symbol \"getVersion\" not found.");
+			dlclose(moduleHandle);
+			return;
+		}
+		_version = getVersion();
+		if(GD::bl->version() != _version)
+		{
+			GD::out.printCritical("Critical: Could not open module \"" + path + "\". Module is compiled for Homegear version " + _version);
 			dlclose(moduleHandle);
 			return;
 		}
@@ -140,6 +140,11 @@ void ModuleLoader::dispose()
 int32_t ModuleLoader::getFamilyId()
 {
 	return _familyId;
+}
+
+std::string ModuleLoader::getVersion()
+{
+	return _version;
 }
 
 std::unique_ptr<BaseLib::Systems::DeviceFamily> ModuleLoader::createModule(BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
@@ -412,21 +417,44 @@ bool FamilyController::familyAvailable(int32_t family)
 	return physicalInterfaceCount(family) > 0 || _familiesWithoutPhysicalInterface.find(family) != _familiesWithoutPhysicalInterface.end();
 }
 
-std::vector<std::pair<std::string, int32_t>> FamilyController::getModuleNames()
+std::vector<std::shared_ptr<FamilyController::ModuleInfo>> FamilyController::getModuleInfo()
 {
-	std::vector<std::pair<std::string, int32_t>> moduleNames;
-	_moduleLoadersMutex.lock();
+	std::vector<std::shared_ptr<FamilyController::ModuleInfo>> moduleInfoVector;
 	try
 	{
-		if(_disposed)
+		if(_disposed) return moduleInfoVector;
+		std::vector<std::string> files = GD::bl->io.getFiles(GD::bl->settings.modulePath());
+		if(files.empty()) return moduleInfoVector;
+		for(std::vector<std::string>::iterator i = files.begin(); i != files.end(); ++i)
 		{
-			_moduleLoadersMutex.unlock();
-			return moduleNames;
-		}
-		for(std::map<std::string, std::unique_ptr<ModuleLoader>>::iterator i = _moduleLoaders.begin(); i != _moduleLoaders.end(); ++i)
-		{
-			if(!i->second) continue;
-			moduleNames.push_back(std::pair<std::string, int32_t>(i->first, i->second->getFamilyId()));
+			if(i->size() < 9) continue; //mod_?*.so
+			std::string prefix = i->substr(0, 4);
+			std::string extension = i->substr(i->size() - 3, 3);
+			std::string licensingPostfix;
+			if(i->size() > 15) licensingPostfix = i->substr(i->size() - 12, 9);
+			if(extension != ".so" || prefix != "mod_" || licensingPostfix == "licensing") continue;
+			std::shared_ptr<FamilyController::ModuleInfo> moduleInfo(new FamilyController::ModuleInfo());
+			{
+				std::lock_guard<std::mutex> moduleLoadersGuard(_moduleLoadersMutex);
+				std::map<std::string, std::unique_ptr<ModuleLoader>>::const_iterator moduleIterator = _moduleLoaders.find(*i);
+				if(moduleIterator != _moduleLoaders.end() && moduleIterator->second)
+				{
+					moduleInfo->baselibVersion = moduleIterator->second->getVersion();
+					moduleInfo->loaded = true;
+					moduleInfo->filename = moduleIterator->first;
+					moduleInfo->familyId = moduleIterator->second->getFamilyId();
+					moduleInfoVector.push_back(moduleInfo);
+					continue;
+				}
+			}
+			std::string path(GD::bl->settings.modulePath() + *i);
+			std::unique_ptr<ModuleLoader> moduleLoader(new ModuleLoader(*i, path));
+			moduleInfo->baselibVersion = moduleLoader->getVersion();
+			moduleInfo->loaded = false;
+			moduleInfo->filename = *i;
+			moduleInfo->familyId = moduleLoader->getFamilyId();
+			moduleInfoVector.push_back(moduleInfo);
+			moduleLoader->dispose();
 		}
 	}
 	catch(const std::exception& ex)
@@ -441,8 +469,7 @@ std::vector<std::pair<std::string, int32_t>> FamilyController::getModuleNames()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _moduleLoadersMutex.unlock();
-    return moduleNames;
+    return moduleInfoVector;
 }
 
 int32_t FamilyController::loadModule(std::string filename)

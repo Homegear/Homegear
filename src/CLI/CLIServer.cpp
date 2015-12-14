@@ -759,13 +759,13 @@ std::string Server::handleModuleCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			std::vector<std::pair<std::string, int32_t>> modules = GD::familyController->getModuleNames();
+			std::vector<std::shared_ptr<FamilyController::ModuleInfo>> modules = GD::familyController->getModuleInfo();
 			if(modules.size() == 0) return "No modules loaded.\n";
 
-			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(70) << "Filename" << std::endl;
-			for(std::vector<std::pair<std::string, int32_t>>::iterator i = modules.begin(); i != modules.end(); ++i)
+			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(40) << "Filename" << std::setw(14) << "Compiled for" << std::setw(7) << "Loaded" << std::endl;
+			for(std::vector<std::shared_ptr<FamilyController::ModuleInfo>>::iterator i = modules.begin(); i != modules.end(); ++i)
 			{
-				stringStream << std::setw(6) << i->second << std::setw(70) << i->first << std::endl;
+				stringStream << std::setw(6) << (*i)->familyId << std::setw(40) << (*i)->filename << std::setw(14) << (*i)->baselibVersion << std::setw(7) << ((*i)->loaded ? "true" : "false") << std::endl;
 			}
 
 			return stringStream.str();
