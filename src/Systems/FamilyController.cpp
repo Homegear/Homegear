@@ -260,6 +260,9 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 #ifdef EVENTHANDLER
 		GD::eventHandler->trigger(peerID, channel, variables, values);
 #endif
+#ifdef SCRIPTENGINE
+		GD::scriptEngine->broadcastEvent(peerID, channel, variables, values);
+#endif
 	}
 	catch(const std::exception& ex)
 	{
@@ -489,6 +492,7 @@ int32_t FamilyController::loadModule(std::string filename)
 			}
 			family->load();
 			family->physicalInterfaces()->startListening();
+			family->homegearStarted();
 		}
 		_rpcCache.reset();
 		_moduleLoadersMutex.unlock();
@@ -540,6 +544,7 @@ int32_t FamilyController::unloadModule(std::string filename)
 			_familiesMutex.lock();
 			familyIterator->second->lock();
 			_familiesMutex.unlock();
+			familyIterator->second->homegearShuttingDown();
 			familyIterator->second->physicalInterfaces()->stopListening();
 			while(familyIterator->second.use_count() > 1)
 			{
@@ -877,6 +882,7 @@ bool FamilyController::peerExists(uint64_t peerId)
 			{
 				if(central->peerExists(peerId))
 				{
+					if(i->second->locked()) return false;
 					return true;
 				}
 			}

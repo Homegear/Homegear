@@ -83,6 +83,7 @@ void Server::registerMethods()
 		_server->registerMethod("getLinks", std::shared_ptr<RPCMethod>(new RPCGetLinks()));
 		_server->registerMethod("getMetadata", std::shared_ptr<RPCMethod>(new RPCGetMetadata()));
 		_server->registerMethod("getName", std::shared_ptr<RPCMethod>(new RPCGetName()));
+		_server->registerMethod("getPairingMethods", std::shared_ptr<RPCMethod>(new RPCGetPairingMethods()));
 		_server->registerMethod("getParamset", std::shared_ptr<RPCMethod>(new RPCGetParamset()));
 		_server->registerMethod("getParamsetDescription", std::shared_ptr<RPCMethod>(new RPCGetParamsetDescription()));
 		_server->registerMethod("getParamsetId", std::shared_ptr<RPCMethod>(new RPCGetParamsetId()));
