@@ -709,6 +709,10 @@ ZEND_FUNCTION(hg_set_value)
 			ZVAL_LONG(&element, (*i)->familyId);
 			add_assoc_zval_ex(&arrayElement, "FAMILY_ID", sizeof("FAMILY_ID") - 1, &element);
 
+			if((*i)->familyName.empty()) ZVAL_STRINGL(&element, "", 0);
+			else ZVAL_STRINGL(&element, (*i)->familyName.c_str(), (*i)->familyName.size());
+			add_assoc_zval_ex(&arrayElement, "FAMILY_NAME", sizeof("FAMILY_NAME") - 1, &element);
+
 			if((*i)->baselibVersion.empty()) ZVAL_STRINGL(&element, "", 0);
 			else ZVAL_STRINGL(&element, (*i)->baselibVersion.c_str(), (*i)->baselibVersion.size());
 			add_assoc_zval_ex(&arrayElement, "BASELIB_VERSION", sizeof("BASELIB_VERSION") - 1, &element);

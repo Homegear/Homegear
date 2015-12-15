@@ -48,6 +48,7 @@ public:
 	virtual ~ModuleLoader();
 	void dispose();
 	int32_t getFamilyId();
+	std::string getFamilyName();
 	std::string getVersion();
 
 	std::unique_ptr<BaseLib::Systems::DeviceFamily> createModule(BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
@@ -55,6 +56,7 @@ private:
 	bool _disposing = false;
 	std::string _name;
 	int32_t _familyId = -1;
+	std::string _familyName;
 	std::string _version;
 	void* _handle = nullptr;
 	std::unique_ptr<BaseLib::Systems::SystemFactory> _factory;
@@ -71,6 +73,7 @@ public:
 		std::string filename;
 		std::string baselibVersion;
 		int32_t familyId;
+		std::string familyName;
 		bool loaded;
 	};
 
