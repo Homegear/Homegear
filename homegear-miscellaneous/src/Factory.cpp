@@ -42,6 +42,11 @@ int32_t getFamilyId()
 	return MISC_FAMILY_ID;
 }
 
+std::string getFamilyName()
+{
+	return MISC_FAMILY_NAME;
+}
+
 std::string getVersion()
 {
 	return VERSION;

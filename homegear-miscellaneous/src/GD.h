@@ -32,6 +32,7 @@
 #define GD_H_
 
 #define MISC_FAMILY_ID 254
+#define MISC_FAMILY_NAME "Miscellaneous"
 
 #include "homegear-base/BaseLib.h"
 #include "Miscellaneous.h"

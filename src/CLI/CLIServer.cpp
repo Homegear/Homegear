@@ -724,7 +724,7 @@ std::string Server::handleModuleCommand(std::string& command)
 		{
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "modules list (mls)\tLists all loaded family module" << std::endl;
+			stringStream << "modules list (mls)\tLists all family modules" << std::endl;
 			stringStream << "modules load (mld)\tLoads a family module" << std::endl;
 			stringStream << "modules unload (mul)\tUnloads a family module" << std::endl;
 			stringStream << "modules reload (mrl)\tReloads a family module" << std::endl;
@@ -762,10 +762,10 @@ std::string Server::handleModuleCommand(std::string& command)
 			std::vector<std::shared_ptr<FamilyController::ModuleInfo>> modules = GD::familyController->getModuleInfo();
 			if(modules.size() == 0) return "No modules loaded.\n";
 
-			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(40) << "Filename" << std::setw(14) << "Compiled for" << std::setw(7) << "Loaded" << std::endl;
+			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(30) << "Family Name" << std::setw(30) << "Filename" << std::setw(14) << "Compiled For" << std::setw(7) << "Loaded" << std::endl;
 			for(std::vector<std::shared_ptr<FamilyController::ModuleInfo>>::iterator i = modules.begin(); i != modules.end(); ++i)
 			{
-				stringStream << std::setw(6) << (*i)->familyId << std::setw(40) << (*i)->filename << std::setw(14) << (*i)->baselibVersion << std::setw(7) << ((*i)->loaded ? "true" : "false") << std::endl;
+				stringStream << std::setw(6) << (*i)->familyId << std::setw(30) << (*i)->familyName << std::setw(30) << (*i)->filename << std::setw(14) << (*i)->baselibVersion << std::setw(7) << ((*i)->loaded ? "true" : "false") << std::endl;
 			}
 
 			return stringStream.str();

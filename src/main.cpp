@@ -197,10 +197,10 @@ void terminate(int32_t signalNumber)
 			GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
 			GD::bl->shuttingDown = true;
 			_shuttingDownMutex.unlock();
+			if(GD::familyController) GD::familyController->homegearShuttingDown();
 #ifdef SCRIPTENGINE
 			if(GD::scriptEngine) GD::scriptEngine->stopEventThreads();
 #endif
-			if(GD::familyController) GD::familyController->homegearShuttingDown();
 			_disposing = true;
 			if(_startAsDaemon)
 			{
