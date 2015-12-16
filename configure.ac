@@ -89,4 +89,9 @@ AS_IF([test "x$with_openssl" = "xno"], [
 	AC_DEFINE(OPENSSL, [], [Enables OpenSSL support in MQTT])
 	])
 
+AC_ARG_WITH([i2c], [AS_HELP_STRING([--without-i2c], [Compile without I2C support (disables all I2C interfaces)])], [with_i2c=no], [])
+AS_IF([test "x$with_i2c" != "xno"], [
+	AC_DEFINE(I2CSUPPORT, [], [Enables compilation of all I2C interfaces and I2C support in PHP])
+	])
+
 AC_OUTPUT(Makefile src/Makefile homegear-miscellaneous/src/Makefile)

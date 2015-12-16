@@ -31,6 +31,12 @@
 #include "../GD/GD.h"
 #include "php_sapi.h"
 #include "PhpVariableConverter.h"
+#include "../../config.h"
+
+#ifdef I2CSUPPORT
+#include <linux/i2c-dev.h>
+#include <sys/ioctl.h>
+#endif
 
 static bool _disposed = true;
 static zend_homegear_superglobals _superglobals;
@@ -38,6 +44,9 @@ static pthread_key_t pthread_key;
 static zend_class_entry* homegear_class_entry = nullptr;
 static zend_class_entry* homegear_gpio_class_entry = nullptr;
 static zend_class_entry* homegear_serial_class_entry = nullptr;
+#ifdef I2CSUPPORT
+static zend_class_entry* homegear_i2c_class_entry = nullptr;
+#endif
 static zend_class_entry* homegear_exception_class_entry = nullptr;
 static char* ini_path_override = nullptr;
 static char* ini_entries = nullptr;
@@ -103,6 +112,12 @@ ZEND_FUNCTION(hg_serial_open);
 ZEND_FUNCTION(hg_serial_close);
 ZEND_FUNCTION(hg_serial_read);
 ZEND_FUNCTION(hg_serial_write);
+#ifdef I2CSUPPORT
+ZEND_FUNCTION(hg_i2c_open);
+ZEND_FUNCTION(hg_i2c_close);
+ZEND_FUNCTION(hg_i2c_read);
+ZEND_FUNCTION(hg_i2c_write);
+#endif
 
 static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(get_thread_id, NULL)
@@ -144,6 +159,12 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_serial_close, NULL)
 	ZEND_FE(hg_serial_read, NULL)
 	ZEND_FE(hg_serial_write, NULL)
+#ifdef I2CSUPPORT
+	ZEND_FE(hg_i2c_open, NULL)
+	ZEND_FE(hg_i2c_close, NULL)
+	ZEND_FE(hg_i2c_read, NULL)
+	ZEND_FE(hg_i2c_write, NULL)
+#endif
 	{NULL, NULL, NULL}
 };
 
@@ -1362,6 +1383,81 @@ ZEND_FUNCTION(hg_serial_write)
 	}
 }
 
+#ifdef I2CSUPPORT
+ZEND_FUNCTION(hg_i2c_open)
+{
+	if(_disposed) RETURN_NULL();
+	char* pDevice = nullptr;
+	int deviceLength = 0;
+	long address = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "sl", &pDevice, &deviceLength, &address) != SUCCESS) RETURN_NULL();
+	std::string device(pDevice, deviceLength);
+	int32_t descriptor = open(device.c_str(), O_RDWR);
+	if(descriptor == -1)
+	{
+		ZVAL_LONG(return_value, -1);
+		return;
+	}
+	if (ioctl(descriptor, I2C_SLAVE, address) == -1)
+	{
+		close(descriptor);
+		ZVAL_LONG(return_value, -1);
+		return;
+	}
+	ZVAL_LONG(return_value, descriptor);
+}
+
+ZEND_FUNCTION(hg_i2c_close)
+{
+	if(_disposed) RETURN_NULL();
+	long descriptor = -1;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &descriptor) != SUCCESS) RETURN_NULL();
+	if(descriptor != -1) close(descriptor);
+}
+
+ZEND_FUNCTION(hg_i2c_read)
+{
+	if(_disposed) RETURN_NULL();
+	long descriptor = -1;
+	long length = 1;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &descriptor, &length) != SUCCESS) RETURN_NULL();
+
+	if(length < 0)
+	{
+		ZVAL_LONG(return_value, -1);
+		return;
+	}
+
+	std::vector<uint8_t> buffer(length, 0);
+	if(read(descriptor, &buffer.at(0), length) != length)
+	{
+		ZVAL_LONG(return_value, -1);
+		return;
+	}
+
+	std::string hex = BaseLib::HelperFunctions::getHexString(buffer);
+	if(hex.empty()) ZVAL_STRINGL(return_value, "", 0); //At least once, input->stringValue.c_str() on an empty string was a nullptr causing a segementation fault, so check for empty string
+	else ZVAL_STRINGL(return_value, hex.c_str(), hex.size());
+}
+
+ZEND_FUNCTION(hg_i2c_write)
+{
+	if(_disposed) RETURN_NULL();
+	long descriptor = -1;
+	char* pData = nullptr;
+	int dataLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ls", &descriptor, &pData, &dataLength) != SUCCESS) RETURN_NULL();
+	std::string hexData(pData, dataLength);
+	std::vector<uint8_t> data = GD::bl->hf.getUBinary(hexData);
+	if (write(descriptor, &data.at(0), data.size()) != (signed)data.size()) {
+		ZVAL_LONG(return_value, -1);
+		return;
+	}
+
+	ZVAL_LONG(return_value, 0);
+}
+#endif
+
 ZEND_METHOD(Homegear, __call)
 {
 	if(_disposed) RETURN_NULL();
@@ -1435,6 +1531,16 @@ static const zend_function_entry homegear_serial_methods[] = {
 	ZEND_ME_MAPPING(write, hg_serial_write, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
 };
+
+#ifdef I2CSUPPORT
+static const zend_function_entry homegear_i2c_methods[] = {
+	ZEND_ME_MAPPING(open, hg_i2c_open, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(close, hg_i2c_close, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(read, hg_i2c_read, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(write, hg_i2c_write, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	{NULL, NULL, NULL}
+};
+#endif
 
 int php_homegear_init()
 {
@@ -1521,6 +1627,12 @@ static PHP_MINIT_FUNCTION(homegear)
 	zend_class_entry homegearSerialCe;
 	INIT_CLASS_ENTRY(homegearSerialCe, "Homegear\\HomegearSerial", homegear_serial_methods);
 	homegear_serial_class_entry = zend_register_internal_class(&homegearSerialCe);
+
+#ifdef I2CSUPPORT
+	zend_class_entry homegearI2cCe;
+	INIT_CLASS_ENTRY(homegearI2cCe, "Homegear\\HomegearI2c", homegear_i2c_methods);
+	homegear_i2c_class_entry = zend_register_internal_class(&homegearI2cCe);
+#endif
 
     return SUCCESS;
 }
