@@ -362,14 +362,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 			}
 		}
 
-		_sendCounter++;
-		if(_sendCounter > (signed)GD::bl->settings.rpcClientMaxServers())
-		{
-			_out.printCritical("Critical: Could not execute RPC method on server " + server->hostname + ", because there are more than " + std::to_string(GD::bl->settings.rpcClientMaxServers()) + " requests queued. Your server is either not reachable currently or your connection is too slow.", false);
-			_sendCounter--;
-			return;
-		}
-
 		try
 		{
 			if(!server->socket->connected())
@@ -390,7 +382,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 				{
 					_out.printError("Connection to server with id " + std::to_string(server->uid) + " closed. Removing server.");
 					server->removed = true;
-					_sendCounter--;
 					return;
 				}
 			}
@@ -400,7 +391,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 			if(!server->reconnectInfinitely) server->removed = true;
 			GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
 			_out.printError(ex.what() + " Removing server. Server has to send \"init\" again.");
-			_sendCounter--;
 			return;
 		}
 
@@ -411,7 +401,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 			{
 				server->socket->close();
 				_out.printError("Error: No user name or password specified in config file for RPC server " + server->hostname + ". Closing connection.");
-				_sendCounter--;
 				return;
 			}
 			server->auth = Auth(server->socket, server->settings->userName, server->settings->password);
@@ -461,7 +450,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 		{
 			server->socket->close();
 			_out.printWarning("Warning: " + ex.what());
-			_sendCounter--;
 			return;
 		}
 		catch(const BaseLib::SocketOperationException& ex)
@@ -469,7 +457,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 			retry = true;
 			server->socket->close();
 			_out.printError("Error: Could not send data to XML RPC server " + server->hostname + ": " + ex.what() + ".");
-			_sendCounter--;
 			return;
 		}
 	}
@@ -479,7 +466,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
     	GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	_out.printError("Removing server. Server has to send \"init\" again.");
-    	_sendCounter--;
     	return;
     }
     catch(BaseLib::Exception& ex)
@@ -488,7 +474,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
     	GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	_out.printError("Removing server. Server has to send \"init\" again.");
-    	_sendCounter--;
     	return;
     }
     catch(...)
@@ -497,7 +482,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
     	GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     	_out.printError("Removing server. Server has to send \"init\" again.");
-    	_sendCounter--;
     	return;
     }
 
@@ -527,7 +511,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 				_out.printInfo("Info: Reading from RPC server timed out. Server: " + server->hostname);
 				retry = true;
 				if(!server->keepAlive) server->socket->close();
-				_sendCounter--;
 				return;
 			}
 			catch(const BaseLib::SocketClosedException& ex)
@@ -535,7 +518,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 				retry = true;
 				if(!server->keepAlive) server->socket->close();
 				_out.printWarning("Warning: " + ex.what());
-				_sendCounter--;
 				return;
 			}
 			catch(const BaseLib::SocketOperationException& ex)
@@ -543,7 +525,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 				retry = true;
 				if(!server->keepAlive) server->socket->close();
 				_out.printError(ex.what());
-				_sendCounter--;
 				return;
 			}
 
@@ -560,14 +541,12 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 						responseData.insert(responseData.end(), buffer, buffer + receivedBytes);
 						_out.printError("Error: RPC client received binary request as response from server " + server->hostname + ". Packet was: " + GD::bl->hf.getHexString(responseData));
 						if(!server->keepAlive) server->socket->close();
-						_sendCounter--;
 						return;
 					}
 					if(receivedBytes < 8)
 					{
 						_out.printError("Error: RPC client received binary packet smaller than 8 bytes from server " + server->hostname);
 						if(!server->keepAlive) server->socket->close();
-						_sendCounter--;
 						return;
 					}
 					GD::bl->hf.memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
@@ -576,14 +555,12 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 					{
 						_out.printError("Error: RPC client received binary packet without data from server " + server->hostname + ".");
 						if(!server->keepAlive) server->socket->close();
-						_sendCounter--;
 						return;
 					}
 					if(dataSize > 10485760)
 					{
 						_out.printError("Error: RPC client received packet with data larger than 10 MiB.");
 						if(!server->keepAlive) server->socket->close();
-						_sendCounter--;
 						return;
 					}
 					packetLength = receivedBytes - 8;
@@ -595,7 +572,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 					{
 						_out.printError("Error: RPC client received response packet larger than the expected data size.");
 						if(!server->keepAlive) server->socket->close();
-						_sendCounter--;
 						return;
 					}
 					responseData.insert(responseData.end(), buffer, buffer + receivedBytes);
@@ -617,14 +593,12 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 				{
 					if(!server->keepAlive) server->socket->close();
 					_out.printError("RPC Client: Could not process WebSocket packet: " + ex.what() + " Buffer: " + std::string(buffer, receivedBytes));
-					_sendCounter--;
 					return;
 				}
 				if(http.getContentSize() > 10485760 || http.getHeader()->contentLength > 10485760)
 				{
 					if(!server->keepAlive) server->socket->close();
 					_out.printError("Error: Packet with data larger than 100 MiB received.");
-					_sendCounter--;
 					return;
 				}
 				if(webSocket.isFinished() && webSocket.getHeader()->opcode == BaseLib::WebSocket::Header::Opcode::ping)
@@ -640,7 +614,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 					{
 						server->socket->close();
 						_out.printWarning("Warning: " + ex.what());
-						_sendCounter--;
 						return;
 					}
 					catch(const BaseLib::SocketOperationException& ex)
@@ -648,7 +621,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 						retry = true;
 						server->socket->close();
 						_out.printError("Error: Could not send data to XML RPC server " + server->hostname + ": " + ex.what() + ".");
-						_sendCounter--;
 						return;
 					}
 					webSocket = BaseLib::WebSocket();
@@ -662,7 +634,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 					{
 						if(!server->keepAlive) server->socket->close();
 						_out.printError("Error: Authentication failed. Server " + server->hostname + ". Check user name and password in rpcclients.conf.");
-						_sendCounter--;
 						return;
 					}
 				}
@@ -675,14 +646,12 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 				{
 					if(!server->keepAlive) server->socket->close();
 					_out.printError("XML RPC Client: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, receivedBytes));
-					_sendCounter--;
 					return;
 				}
 				if(http.getContentSize() > 10485760 || http.getHeader()->contentLength > 10485760)
 				{
 					if(!server->keepAlive) server->socket->close();
 					_out.printError("Error: Packet with data larger than 100 MiB received.");
-					_sendCounter--;
 					return;
 				}
 			}
@@ -696,7 +665,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 		}
 		if(server->webSocket && webSocket.isFinished()) responseData = *webSocket.getContent();
 		else if(http.isFinished()) responseData = *http.getContent();
-		_sendCounter--;
 		return;
     }
     catch(const std::exception& ex)
@@ -720,6 +688,5 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     	_out.printError("Removing server. Server has to send \"init\" again.");
     }
-    _sendCounter--;
 }
 }
