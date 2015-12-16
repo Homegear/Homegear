@@ -546,6 +546,11 @@ int32_t FamilyController::loadModule(std::string filename)
 			family->physicalInterfaces()->startListening();
 			family->homegearStarted();
 		}
+		else
+		{
+			_moduleLoaders.at(filename)->dispose();
+			_moduleLoaders.erase(filename);
+		}
 		_rpcCache.reset();
 		_moduleLoadersMutex.unlock();
 		return 0;

@@ -734,6 +734,58 @@ BaseLib::PVariable RPCEnableEvent::invoke(BaseLib::PRpcClientInfo clientInfo, st
 #endif
 }
 
+BaseLib::PVariable RPCGetAllConfig::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		if(parameters->size() > 0)
+		{
+			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
+			}));
+			if(error != ParameterError::Enum::noError) return getError(error);
+		}
+
+		uint64_t peerID = 0;
+		if(parameters->size() > 0) peerID = parameters->at(0)->integerValue;
+
+		BaseLib::PVariable config(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+			if(!central) continue;
+			if(peerID > 0 && !central->peerExists(peerID)) continue;
+			std::this_thread::sleep_for(std::chrono::milliseconds(3));
+			BaseLib::PVariable result = central->getAllConfig(clientInfo, peerID);
+			if(result && result->errorStruct)
+			{
+				if(peerID > 0) return result;
+				else GD::out.printWarning("Warning: Error calling method \"getAllConfig\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
+				continue;
+			}
+			if(result && !result->arrayValue->empty()) config->arrayValue->insert(config->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
+			if(peerID > 0) break;
+		}
+
+		if(config->arrayValue->empty() && peerID > 0) return BaseLib::Variable::createError(-2, "Unknown device.");
+		return config;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCGetAllMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	try
@@ -864,8 +916,8 @@ BaseLib::PVariable RPCGetAllValues::invoke(BaseLib::PRpcClientInfo clientInfo, s
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tBoolean }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean })
-		}));
-		if(error != ParameterError::Enum::noError) return getError(error);
+			}));
+			if(error != ParameterError::Enum::noError) return getError(error);
 		}
 
 		uint64_t peerID = 0;
@@ -919,6 +971,64 @@ BaseLib::PVariable RPCGetAllValues::invoke(BaseLib::PRpcClientInfo clientInfo, s
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCGetConfigParameter::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString }),
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString }),
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+		std::string serialNumber;
+		uint32_t channel = 0;
+		bool useSerialNumber = false;
+		if(parameters->at(0)->type == BaseLib::VariableType::tString)
+		{
+			useSerialNumber = true;
+			int32_t pos = parameters->at(0)->stringValue.find(':');
+			if(pos > -1)
+			{
+				serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+				if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
+			}
+			else serialNumber = parameters->at(0)->stringValue;
+		}
+
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+			if(central)
+			{
+				if(useSerialNumber)
+				{
+					if(central->peerExists(serialNumber)) return central->getConfigParameter(clientInfo, serialNumber, channel, parameters->at(1)->stringValue);
+				}
+				else
+				{
+					if(central->peerExists((uint64_t)parameters->at(0)->integerValue)) return central->getConfigParameter(clientInfo, parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue);
+				}
+			}
+		}
+
+		return BaseLib::Variable::createError(-2, "Device not found.");
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
 BaseLib::PVariable RPCGetDeviceDescription::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)

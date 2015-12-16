@@ -69,10 +69,12 @@ void Server::registerMethods()
 		_server->registerMethod("deleteMetadata", std::shared_ptr<RPCMethod>(new RPCDeleteMetadata()));
 		_server->registerMethod("deleteSystemVariable", std::shared_ptr<RPCMethod>(new RPCDeleteSystemVariable()));
 		_server->registerMethod("enableEvent", std::shared_ptr<RPCMethod>(new RPCEnableEvent()));
+		_server->registerMethod("getAllConfig", std::shared_ptr<RPCMethod>(new RPCGetAllConfig()));
 		_server->registerMethod("getAllMetadata", std::shared_ptr<RPCMethod>(new RPCGetAllMetadata()));
 		_server->registerMethod("getAllScripts", std::shared_ptr<RPCMethod>(new RPCGetAllScripts()));
 		_server->registerMethod("getAllSystemVariables", std::shared_ptr<RPCMethod>(new RPCGetAllSystemVariables()));
 		_server->registerMethod("getAllValues", std::shared_ptr<RPCMethod>(new RPCGetAllValues()));
+		_server->registerMethod("getConfigParameter", std::shared_ptr<RPCMethod>(new RPCGetConfigParameter()));
 		_server->registerMethod("getDeviceDescription", std::shared_ptr<RPCMethod>(new RPCGetDeviceDescription()));
 		_server->registerMethod("getDeviceInfo", std::shared_ptr<RPCMethod>(new RPCGetDeviceInfo()));
 		_server->registerMethod("getEvent", std::shared_ptr<RPCMethod>(new RPCGetEvent()));
