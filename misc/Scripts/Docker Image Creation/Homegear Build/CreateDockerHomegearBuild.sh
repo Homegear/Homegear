@@ -86,9 +86,6 @@ elif [ "$dist" == "Raspbian" ]; then
 	" > $rootfs/etc/apt/sources.list
 fi
 
-echo "deb http://homegear.eu/packages/$dist/ $distver/
-" > $rootfs/etc/apt/sources.list.d/homegear.list
-
 # prevent init scripts from running during install/update
 cat > "$rootfs/usr/sbin/policy-rc.d" <<'EOF'
 #!/bin/sh
@@ -127,15 +124,21 @@ Pin: origin homegear.eu
 Pin-Priority: 999
 EOF
 
-wget -P $rootfs http://homegear.eu/packages/Release.key
-chroot $rootfs apt-key add Release.key
-rm $rootfs/Release.key
-
 chroot $rootfs apt-get update
 if [ "$distver" == "vivid" ] || [ "$distver" == "wily" ]; then
 	chroot $rootfs apt-get -y install python3
 	chroot $rootfs apt-get -y -f install
 fi
+chroot $rootfs apt-get -y install apt-transport-https
+
+echo "deb https://homegear.eu/packages/$dist/ $distver/
+" > $rootfs/etc/apt/sources.list.d/homegear.list
+
+wget -P $rootfs https://homegear.eu/packages/Release.key
+chroot $rootfs apt-key add Release.key
+rm $rootfs/Release.key
+
+chroot $rootfs apt-get update
 chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libmcrypt-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev
 
 if [ "$distver" == "wheezy" ]; then
