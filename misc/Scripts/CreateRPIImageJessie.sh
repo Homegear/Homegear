@@ -109,16 +109,21 @@ console-common  console-data/keymap/full        select  us
 " > debconf.set
 
 echo "#!/bin/bash
+set -x
 debconf-set-selections /debconf.set
 rm -f /debconf.set
+apt update
+ls -l /etc/apt/sources.list.d
+cat /etc/apt/sources.list
+apt -y install apt-transport-https ca-certificates
+update-ca-certificates --fresh
 mkdir -p /etc/apt/sources.list.d/
-echo \"deb http://homegear.eu/packages/Raspbian/ jessie/\" >> /etc/apt/sources.list.d/homegear.list
+echo \"deb https://homegear.eu/packages/Raspbian/ jessie/\" >> /etc/apt/sources.list.d/homegear.list
 wget http://homegear.eu/packages/Release.key
 apt-key add - < Release.key
 rm Release.key
-apt-get update
-apt-get -y install locales console-common ntp openssh-server git-core binutils curl ca-certificates sudo parted unzip p7zip-full php5-cli php5-xmlrpc libxml2-utils keyboard-configuration liblzo2-dev python-lzo libgcrypt20 libgcrypt20-dev libgpg-error0 libgpg-error-dev libgnutlsxx28 libgnutls28-dev lua5.2
-update-ca-certificates --fresh
+apt update
+apt -y install locales console-common ntp openssh-server git-core binutils curl sudo parted unzip p7zip-full php5-cli php5-xmlrpc libxml2-utils keyboard-configuration liblzo2-dev python-lzo libgcrypt20 libgcrypt20-dev libgpg-error0 libgpg-error-dev libgnutlsxx28 libgnutls28-dev lua5.2
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
 chmod +x /usr/bin/rpi-update
 mkdir -p /lib/modules/$(uname -r)
@@ -193,7 +198,7 @@ chroot $rootfs /fourth-stage
 #Install Java and OpenHAB
 if [ $OPENHAB -eq 1 ]; then
 	echo "#!/bin/bash
-read -p \"Ready to install Java. Please provide the download link to the current ARM package (http://www.oracle.com/technetwork/java/javase/downloads/jdk8-arm-downloads-2187472.html): \" JAVAPACKAGE
+read -p \"Ready to install Java. Please provide the download link to the current ARM package (http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html): \" JAVAPACKAGE
 wget --header \"Cookie: oraclelicense=accept-securebackup-cookie\" \$JAVAPACKAGE
 tar -zxf jdk*.tar.gz -C /opt
 rm jdk*.tar.gz
@@ -284,9 +289,35 @@ echo "echo \"Generating new SSH host keys. This might take a while.\"
 rm /etc/ssh/ssh_host* >/dev/null
 ssh-keygen -A >/dev/null
 echo \"Updating your system...\"
-apt-get update
-apt-get -y upgrade
-apt-get -y install homegear
+apt update
+apt -y upgrade
+rm -f homegear*.deb
+rm -f libhomegear*.deb
+wget http://homegear.eu/downloads/nightlies/libhomegear-base_current_raspbian_jessie_armhf.deb || exit 1
+wget http://homegear.eu/downloads/nightlies/homegear_current_raspbian_jessie_armhf.deb || exit 1
+wget http://homegear.eu/downloads/nightlies/homegear-homematicbidcos_current_raspbian_jessie_armhf.deb || exit 1
+wget http://homegear.eu/downloads/nightlies/homegear-homematicwired_current_raspbian_jessie_armhf.deb || exit 1
+wget http://homegear.eu/downloads/nightlies/homegear-insteon_current_raspbian_jessie_armhf.deb || exit 1
+wget http://homegear.eu/downloads/nightlies/homegear-max_current_raspbian_jessie_armhf.deb || exit 1
+wget http://homegear.eu/downloads/nightlies/homegear-philipshue_current_raspbian_jessie_armhf.deb || exit 1
+wget http://homegear.eu/downloads/nightlies/homegear-sonos_current_raspbian_jessie_armhf.deb || exit 1
+dpkg -i libhomegear-base_current_raspbian_jessie_armhf.deb
+apt-get -f install
+dpkg -i homegear_current_raspbian_jessie_armhf.deb
+apt-get -f install
+dpkg -i homegear-homematicbidcos_current_raspbian_jessie_armhf.deb
+apt-get -f install
+dpkg -i homegear-homematicwired_current_raspbian_jessie_armhf.deb
+apt-get -f install
+dpkg -i homegear-insteon_current_raspbian_jessie_armhf.deb
+apt-get -f install
+dpkg -i homegear-max_current_raspbian_jessie_armhf.deb
+apt-get -f install
+dpkg -i homegear-philipshue_current_raspbian_jessie_armhf.deb
+apt-get -f install
+dpkg -i homegear-sonos_current_raspbian_jessie_armhf.deb
+apt-get -f install
+service homegear stop
 echo \"Starting raspi-config...\"
 raspi-config
 rm /scripts/firstStart.sh
