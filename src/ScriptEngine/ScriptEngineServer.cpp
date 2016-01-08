@@ -28,90 +28,28 @@
  * files in the program, then also delete it here.
 */
 
-#include "CLIServer.h"
+#include "ScriptEngineServer.h"
 #include "../GD/GD.h"
 #include "homegear-base/BaseLib.h"
 
-namespace CLI {
+int32_t ScriptEngineServer::_currentClientId = 0;
 
-int32_t Server::_currentClientID = 0;
-
-Server::Server()
+ScriptEngineServer::ScriptEngineServer()
 {
 }
 
-Server::~Server()
+ScriptEngineServer::~ScriptEngineServer()
 {
 	stop();
 }
 
-void Server::collectGarbage()
-{
-	_garbageCollectionMutex.lock();
-	try
-	{
-		_lastGargabeCollection = GD::bl->hf.getTime();
-		std::vector<std::shared_ptr<ClientData>> clientsToRemove;
-		_stateMutex.lock();
-		try
-		{
-			for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
-			{
-				if(i->second->closed) clientsToRemove.push_back(i->second);
-			}
-		}
-		catch(const std::exception& ex)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		_stateMutex.unlock();
-		for(std::vector<std::shared_ptr<ClientData>>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
-		{
-			GD::out.printDebug("Debug: Joining read thread of CLI client " + std::to_string((*i)->id));
-			if((*i)->readThread.joinable()) (*i)->readThread.join();
-			_stateMutex.lock();
-			try
-			{
-				_clients.erase((*i)->id);
-			}
-			catch(const std::exception& ex)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			_stateMutex.unlock();
-			GD::out.printDebug("Debug: CLI client " + std::to_string((*i)->id) + " removed.");
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _garbageCollectionMutex.unlock();
-}
-
-void Server::start()
+void ScriptEngineServer::start()
 {
 	try
 	{
 		stop();
 		_stopServer = false;
-		_mainThread = std::thread(&Server::mainThread, this);
+		_mainThread = std::thread(&ScriptEngineServer::mainThread, this);
 	}
     catch(const std::exception& ex)
     {
@@ -127,24 +65,13 @@ void Server::start()
     }
 }
 
-void Server::stop()
+void ScriptEngineServer::stop()
 {
 	try
 	{
 		_stopServer = true;
 		if(_mainThread.joinable()) _mainThread.join();
-		GD::out.printDebug("Debug: Waiting for CLI client threads to finish.");
-		_stateMutex.lock();
-		for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
-		{
-			closeClientConnection(i->second);
-		}
-		_stateMutex.unlock();
-		while(_clients.size() > 0)
-		{
-			collectGarbage();
-			if(_clients.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		}
+		closeClientConnection();
 		unlink(GD::socketPath.c_str());
 	}
 	catch(const std::exception& ex)
@@ -161,13 +88,11 @@ void Server::stop()
 	}
 }
 
-void Server::closeClientConnection(std::shared_ptr<ClientData> client)
+void ScriptEngineServer::closeClientConnection()
 {
 	try
 	{
-		if(!client) return;
-		GD::bl->fileDescriptorManager.close(client->fileDescriptor);
-		client->closed = true;
+		GD::bl->fileDescriptorManager.close(_clientFileDescriptor);
 	}
 	catch(const std::exception& ex)
     {
@@ -183,7 +108,7 @@ void Server::closeClientConnection(std::shared_ptr<ClientData> client)
     }
 }
 
-void Server::mainThread()
+void ScriptEngineServer::mainThread()
 {
 	try
 	{
@@ -193,19 +118,6 @@ void Server::mainThread()
 		{
 			try
 			{
-				_stateMutex.lock();
-				if(_clients.size() > GD::bl->settings.cliServerMaxConnections())
-				{
-					_stateMutex.unlock();
-					collectGarbage();
-					if(_clients.size() > GD::bl->settings.cliServerMaxConnections())
-					{
-						GD::out.printError("Error in CLI server: There are too many clients connected to me. Waiting for connections to close. You can increase the number of allowed connections in main.conf.");
-						std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-						continue;
-					}
-				}
-				_stateMutex.unlock();
 				getFileDescriptor();
 				if(!_serverFileDescriptor || _serverFileDescriptor->descriptor == -1)
 				{
@@ -230,27 +142,7 @@ void Server::mainThread()
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 				continue;
 			}
-			try
-			{
-				std::shared_ptr<ClientData> clientData = std::shared_ptr<ClientData>(new ClientData(clientFileDescriptor));
-				_stateMutex.lock();
-				clientData->id = _currentClientID++;
-				_clients[clientData->id] = clientData;
-				clientData->readThread = std::thread(&Server::readClient, this, clientData);
-			}
-			catch(const std::exception& ex)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			_stateMutex.unlock();
+			_readThread = std::thread(&ScriptEngineServer::readClient, this);
 		}
 		GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 	}
@@ -268,7 +160,7 @@ void Server::mainThread()
     }
 }
 
-std::shared_ptr<BaseLib::FileDescriptor> Server::getClientFileDescriptor()
+std::shared_ptr<BaseLib::FileDescriptor> ScriptEngineServer::getClientFileDescriptor()
 {
 	std::shared_ptr<BaseLib::FileDescriptor> descriptor;
 	try
@@ -317,7 +209,7 @@ std::shared_ptr<BaseLib::FileDescriptor> Server::getClientFileDescriptor()
     return descriptor;
 }
 
-void Server::getFileDescriptor(bool deleteOldSocket)
+void ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
 {
 	try
 	{
@@ -366,7 +258,7 @@ void Server::getFileDescriptor(bool deleteOldSocket)
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 			throw BaseLib::Exception("Error: CLI server could not start listening. Error: " + std::string(strerror(errno)));
 		}
-		if(chmod(GD::socketPath.c_str(), S_IRWXU | S_IRWXG) == -1)
+		if(chmod(GD::socketPath.c_str(), S_IRWXU | S_IRGRP | S_IXGRP) == -1)
 		{
 			GD::out.printError("Error: chmod failed on unix socket \"" + GD::socketPath + "\".");
 		}
@@ -387,7 +279,7 @@ void Server::getFileDescriptor(bool deleteOldSocket)
     GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 }
 
-void Server::readClient(std::shared_ptr<ClientData> clientData)
+void ScriptEngineServer::readClient(std::shared_ptr<ClientData> clientData)
 {
 	try
 	{
@@ -460,7 +352,7 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
     }
 }
 
-std::string Server::handleUserCommand(std::string& command)
+std::string ScriptEngineServer::handleUserCommand(std::string& command)
 {
 	try
 	{
@@ -715,7 +607,7 @@ std::string Server::handleUserCommand(std::string& command)
     return "Error executing command. See log file for more details.\n";
 }
 
-std::string Server::handleModuleCommand(std::string& command)
+std::string ScriptEngineServer::handleModuleCommand(std::string& command)
 {
 	try
 	{
@@ -941,7 +833,7 @@ std::string Server::handleModuleCommand(std::string& command)
 }
 
 
-std::string Server::handleGlobalCommand(std::string& command)
+std::string ScriptEngineServer::handleGlobalCommand(std::string& command)
 {
 	try
 	{
@@ -1245,7 +1137,7 @@ std::string Server::handleGlobalCommand(std::string& command)
     return "Error executing command. See log file for more details.\n";
 }
 
-void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> clientData)
+void ScriptEngineServer::handleCommand(std::string& command, std::shared_ptr<ClientData> clientData)
 {
 	try
 	{
@@ -1284,6 +1176,4 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-}
-
 }
