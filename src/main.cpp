@@ -640,8 +640,6 @@ void startUp()
 
 		GD::familyController->loadModules();
 
-		free(bla);
-
     	if(getuid() == 0 && !GD::runAsUser.empty() && !GD::runAsGroup.empty())
     	{
     		uid_t userId = GD::bl->hf.userId(GD::runAsUser);
