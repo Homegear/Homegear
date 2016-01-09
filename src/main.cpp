@@ -48,6 +48,7 @@
 #include <sys/file.h>
 #include <sys/prctl.h> //For function prctl
 #include <sys/sysctl.h> //For BSD systems
+#include <malloc.h>
 
 #include <cmath>
 #include <vector>
@@ -570,6 +571,8 @@ void startUp()
 			}
 		}
 
+    	if(GD::bl->settings.memoryDebugging()) mallopt(M_CHECK_ACTION, 3); //Print detailed error message, stack trace, and memory, and abort the program. See: http://man7.org/linux/man-pages/man3/mallopt.3.html
+
     	if(_monitorProcess)
     	{
     		sa.sa_handler = sigchld_handler;
@@ -636,6 +639,8 @@ void startUp()
     	GD::licensingController->loadModules();
 
 		GD::familyController->loadModules();
+
+		free(bla);
 
     	if(getuid() == 0 && !GD::runAsUser.empty() && !GD::runAsGroup.empty())
     	{

@@ -812,7 +812,11 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::shared_ptr<std
 	try
 	{
 		if(_disposing) return;
-		if(eventThreadMaxReached()) return;
+		if(eventThreadMaxReached())
+		{
+			GD::out.printError("Error: Not triggering event for peer " + std::to_string(peerID) + " and channel " + std::to_string(channel) + " (multiple variables).");
+			return;
+		}
 		_eventThreadMutex.lock();
 		int32_t threadId = _currentEventThreadID++;
 		if(threadId == -1) threadId = _currentEventThreadID++;
@@ -863,7 +867,11 @@ void EventHandler::trigger(std::string& variable, BaseLib::PVariable& value)
 	try
 	{
 		if(_disposing) return;
-		if(eventThreadMaxReached()) return;
+		if(eventThreadMaxReached())
+		{
+			GD::out.printError("Error: Not triggering event for variable \"" + variable + "\".");
+			return;
+		}
 		_eventThreadMutex.lock();
 		int32_t threadId = _currentEventThreadID++;
 		if(threadId == -1) threadId = _currentEventThreadID++;
@@ -889,7 +897,11 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::string& variab
 	try
 	{
 		if(_disposing) return;
-		if(eventThreadMaxReached()) return;
+		if(eventThreadMaxReached())
+		{
+			GD::out.printError("Error: Not triggering event for peer " + std::to_string(peerID) + " and channel " + std::to_string(channel) + " (variable \"" + variable + "\").");
+			return;
+		}
 		_eventThreadMutex.lock();
 		int32_t threadId = _currentEventThreadID++;
 		if(threadId == -1) threadId = _currentEventThreadID++;

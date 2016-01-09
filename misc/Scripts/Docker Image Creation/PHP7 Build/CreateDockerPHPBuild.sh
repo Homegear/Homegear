@@ -186,14 +186,6 @@ distribution="<DISTVER>"
 rm -Rf /PHPBuild/php*
 rm -Rf /PHPBuild/lib*
 
-target="$($rootfs gcc -v 2>&1)"
-strpos="${target%%--target=*}"
-strpos=${#strpos}
-target=${target:strpos}
-target=$(echo $target | cut -d "=" -f 2 | cut -d " " -f 1)
-ln -s /usr/include/qdbm /usr/include/qdbm/include
-ln -s /usr/include/$target/ /usr/include/$target/include
-
 cd /PHPBuild
 apt-get update
 apt-get source php7.0
@@ -204,10 +196,10 @@ cd ext
 if test ! -f ext_skel.in; then
 	touch ext_skel.in
 fi
-wget https://github.com/krakjoe/pthreads/archive/v3.0.8.tar.gz
-tar -zxf v3.0.8.tar.gz
-rm v3.0.8.tar.gz
-mv pthreads-3.0.8 pthreads
+wget https://github.com/krakjoe/pthreads/archive/v3.1.5.tar.gz
+tar -zxf v3.1.5.tar.gz
+rm v3.1.5.tar.gz
+mv pthreads-3.1.5 pthreads
 sed -i 's/{ZEND_STRL("cli")}/{ZEND_STRL("homegear")}/g' pthreads/php_pthreads.c
 cd ..
 autoconf
