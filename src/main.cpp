@@ -1110,6 +1110,11 @@ int main(int argc, char* argv[])
     				exit(1);
     			}
     		}
+    		else if(arg == "-tc")
+    		{
+    			std::cout << GD::bl->threads.getMaxThreadCount() << std::endl;
+    			exit(0);
+    		}
     		else if(arg == "-v")
     		{
     			std::cout <<  "Homegear version " << VERSION << std::endl;
