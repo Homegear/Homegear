@@ -800,6 +800,10 @@ void FamilyController::dispose()
 		if(_disposed) return;
 		_disposed = true;
 		_rpcCache.reset();
+		_familiesMutex.lock();
+		_currentFamily.reset();
+		_families.clear();
+		_familiesMutex.unlock();
 		_moduleLoadersMutex.lock();
 		_moduleLoaders.clear();
 		_moduleLoadersMutex.unlock();
