@@ -571,6 +571,11 @@ void startUp()
 			}
 		}
 
+    	GD::out.printMessage("Starting Homegear...");
+    	GD::out.printMessage("Homegear version " + VERSION);
+    	GD::out.printMessage("Git commit SHA of libhomegear-base: " + GITCOMMITSHABASE);
+    	GD::out.printMessage("Git commit SHA of Homegear:         " + GITCOMMITSHAHOMEGEAR);
+
     	if(GD::bl->settings.memoryDebugging()) mallopt(M_CHECK_ACTION, 3); //Print detailed error message, stack trace, and memory, and abort the program. See: http://man7.org/linux/man-pages/man3/mallopt.3.html
 
     	if(_monitorProcess)
@@ -1117,10 +1122,12 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-v")
     		{
-    			std::cout <<  "Homegear version " << VERSION << std::endl;
-    			std::cout << "Copyright (C) 2013-2015 Sathya Laufer" << std::endl << std::endl;
+    			std::cout << "Homegear version " << VERSION << std::endl;
+    			std::cout << "Copyright (C) 2013-2016 Sathya Laufer" << std::endl << std::endl;
+    			std::cout << "Git commit SHA of libhomegear-base: " << GITCOMMITSHABASE << std::endl;
+    			std::cout << "Git commit SHA of Homegear:         " << GITCOMMITSHAHOMEGEAR << std::endl << std::endl;
     			std::cout << "This product includes PHP software, freely available from <http://www.php.net/software/>" << std::endl;
-    			std::cout << "Copyright (c) 1999 - 2015 The PHP Group. All rights reserved." << std::endl;
+    			std::cout << "Copyright (c) 1999-2016 The PHP Group. All rights reserved." << std::endl;
     			exit(0);
     		}
     		else
