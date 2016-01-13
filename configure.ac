@@ -68,6 +68,9 @@ case $host_os in
         ;;
 esac
 
+AC_DEFINE_UNQUOTED([GITCOMMITSHABASE], [`./getGitCommitBase.sh`], [Define git commit SHA of libhomegear-base])
+AC_DEFINE_UNQUOTED([GITCOMMITSHAHOMEGEAR], [`./getGitCommitHomegear.sh`], [Define git commit SHA of Homegear])
+
 AC_ARG_WITH([scriptengine], [AS_HELP_STRING([--without-scriptengine], [Compile without script engine (removes the requirement for PHP)])], [with_scriptengine=no], [])
 AS_IF([test "x$with_scriptengine" = "xno"], [
 	AM_CONDITIONAL(WITH_SCRIPTENGINE, false)
