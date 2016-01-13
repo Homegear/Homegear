@@ -572,9 +572,9 @@ void startUp()
 		}
 
     	GD::out.printMessage("Starting Homegear...");
-    	GD::out.printMessage("Homegear version " + VERSION);
-    	GD::out.printMessage("Git commit SHA of libhomegear-base: " + GITCOMMITSHABASE);
-    	GD::out.printMessage("Git commit SHA of Homegear:         " + GITCOMMITSHAHOMEGEAR);
+    	GD::out.printMessage(std::string("Homegear version ") + VERSION);
+    	GD::out.printMessage(std::string("Git commit SHA of libhomegear-base: ") + GITCOMMITSHABASE);
+    	GD::out.printMessage(std::string("Git commit SHA of Homegear:         ") + GITCOMMITSHAHOMEGEAR);
 
     	if(GD::bl->settings.memoryDebugging()) mallopt(M_CHECK_ACTION, 3); //Print detailed error message, stack trace, and memory, and abort the program. See: http://man7.org/linux/man-pages/man3/mallopt.3.html
 
