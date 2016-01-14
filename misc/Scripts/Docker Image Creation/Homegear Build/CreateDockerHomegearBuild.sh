@@ -155,7 +155,8 @@ mkdir $rootfs/build
 cat > "$rootfs/build/CreateDebianPackageNightly.sh" <<-'EOF'
 #!/bin/bash
 
-distribution="<DISTVER>"
+distribution="<DIST>"
+distributionVersion="<DISTVER>"
 buildthreads="<BUILDTHREADS>"
 
 cd /build
@@ -214,7 +215,14 @@ mv libhomegear-base-master $sourcePath
 cd $sourcePath
 ./bootstrap
 cd ..
-if [ "$distribution" == "wheezy" ]; then
+if [ "$distribution" == "Debian" ]; then
+	sed -i '/\/bin\/sh/a\
+if \[ "$(uname -m)" = "armv6l" \]; then\
+\techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
+\texit 1\
+fi' preinst
+fi
+if [ "$distributionVersion" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
 	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
 	sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
@@ -249,8 +257,15 @@ mv Homegear-master $sourcePath
 cd $sourcePath
 ./bootstrap
 cd ..
+if [ "$distribution" == "Debian" ]; then
+	sed -i '/\/bin\/sh/a\
+if \[ "$(uname -m)" = "armv6l" \]; then\
+\techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
+\texit 1\
+fi' preinst
+fi
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-if [ "$distribution" == "wheezy" ]; then
+if [ "$distributionVersion" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
 	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
 	sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
@@ -279,8 +294,15 @@ mv Homegear-HomeMaticBidCoS-master $sourcePath
 cd $sourcePath
 ./bootstrap
 cd ..
+if [ "$distribution" == "Debian" ]; then
+	sed -i '/\/bin\/sh/a\
+if \[ "$(uname -m)" = "armv6l" \]; then\
+\techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
+\texit 1\
+fi' preinst
+fi
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-if [ "$distribution" == "wheezy" ]; then
+if [ "$distributionVersion" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
 	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
 	sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
@@ -309,8 +331,15 @@ mv Homegear-HomeMaticWired-master $sourcePath
 cd $sourcePath
 ./bootstrap
 cd ..
+if [ "$distribution" == "Debian" ]; then
+	sed -i '/\/bin\/sh/a\
+if \[ "$(uname -m)" = "armv6l" \]; then\
+\techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
+\texit 1\
+fi' preinst
+fi
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-if [ "$distribution" == "wheezy" ]; then
+if [ "$distributionVersion" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
 	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
 	sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
@@ -339,8 +368,15 @@ mv Homegear-Insteon-master $sourcePath
 cd $sourcePath
 ./bootstrap
 cd ..
+if [ "$distribution" == "Debian" ]; then
+	sed -i '/\/bin\/sh/a\
+if \[ "$(uname -m)" = "armv6l" \]; then\
+\techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
+\texit 1\
+fi' preinst
+fi
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-if [ "$distribution" == "wheezy" ]; then
+if [ "$distributionVersion" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
 	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
 	sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
@@ -369,8 +405,15 @@ mv Homegear-MAX-master $sourcePath
 cd $sourcePath
 ./bootstrap
 cd ..
+if [ "$distribution" == "Debian" ]; then
+	sed -i '/\/bin\/sh/a\
+if \[ "$(uname -m)" = "armv6l" \]; then\
+\techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
+\texit 1\
+fi' preinst
+fi
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-if [ "$distribution" == "wheezy" ]; then
+if [ "$distributionVersion" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
 	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
 	sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
@@ -399,8 +442,15 @@ mv Homegear-PhilipsHue-master $sourcePath
 cd $sourcePath
 ./bootstrap
 cd ..
+if [ "$distribution" == "Debian" ]; then
+	sed -i '/\/bin\/sh/a\
+if \[ "$(uname -m)" = "armv6l" \]; then\
+\techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
+\texit 1\
+fi' preinst
+fi
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-if [ "$distribution" == "wheezy" ]; then
+if [ "$distributionVersion" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
 	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
 	sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
@@ -429,8 +479,15 @@ mv Homegear-Sonos-master $sourcePath
 cd $sourcePath
 ./bootstrap
 cd ..
+if [ "$distribution" == "Debian" ]; then
+	sed -i '/\/bin\/sh/a\
+if \[ "$(uname -m)" = "armv6l" \]; then\
+\techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
+\texit 1\
+fi' preinst
+fi
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-if [ "$distribution" == "wheezy" ]; then
+if [ "$distributionVersion" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
 	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
 	sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
@@ -466,6 +523,7 @@ echo "	mv libhomegear-base.deb libhomegear-base_\$[isodate]_${distlc}_${distver}
 	fi
 fi" >> $rootfs/build/CreateDebianPackageNightly.sh
 chmod 755 $rootfs/build/CreateDebianPackageNightly.sh
+sed -i "s/<DIST>/${dist}/g" $rootfs/build/CreateDebianPackageNightly.sh
 sed -i "s/<DISTVER>/${distver}/g" $rootfs/build/CreateDebianPackageNightly.sh
 
 cat > "$rootfs/FirstStart.sh" <<-'EOF'
