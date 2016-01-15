@@ -220,7 +220,7 @@ if [ "$distribution" == "Debian" ]; then
 if \[ "$(uname -m)" = "armv6l" \]; then\
 \techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
 \texit 1\
-fi' preinst
+fi' $sourcePath/debian/preinst
 fi
 if [ "$distributionVersion" == "wheezy" ]; then
 	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
@@ -262,7 +262,7 @@ if [ "$distribution" == "Debian" ]; then
 if \[ "$(uname -m)" = "armv6l" \]; then\
 \techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
 \texit 1\
-fi' preinst
+fi' $sourcePath/debian/preinst
 fi
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distributionVersion" == "wheezy" ]; then
@@ -299,7 +299,7 @@ if [ "$distribution" == "Debian" ]; then
 if \[ "$(uname -m)" = "armv6l" \]; then\
 \techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
 \texit 1\
-fi' preinst
+fi' $sourcePath/debian/preinst
 fi
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distributionVersion" == "wheezy" ]; then
@@ -336,7 +336,7 @@ if [ "$distribution" == "Debian" ]; then
 if \[ "$(uname -m)" = "armv6l" \]; then\
 \techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
 \texit 1\
-fi' preinst
+fi' $sourcePath/debian/preinst
 fi
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distributionVersion" == "wheezy" ]; then
@@ -373,7 +373,7 @@ if [ "$distribution" == "Debian" ]; then
 if \[ "$(uname -m)" = "armv6l" \]; then\
 \techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
 \texit 1\
-fi' preinst
+fi' $sourcePath/debian/preinst
 fi
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distributionVersion" == "wheezy" ]; then
@@ -410,7 +410,7 @@ if [ "$distribution" == "Debian" ]; then
 if \[ "$(uname -m)" = "armv6l" \]; then\
 \techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
 \texit 1\
-fi' preinst
+fi' $sourcePath/debian/preinst
 fi
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distributionVersion" == "wheezy" ]; then
@@ -447,7 +447,7 @@ if [ "$distribution" == "Debian" ]; then
 if \[ "$(uname -m)" = "armv6l" \]; then\
 \techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
 \texit 1\
-fi' preinst
+fi' $sourcePath/debian/preinst
 fi
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distributionVersion" == "wheezy" ]; then
@@ -484,7 +484,7 @@ if [ "$distribution" == "Debian" ]; then
 if \[ "$(uname -m)" = "armv6l" \]; then\
 \techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
 \texit 1\
-fi' preinst
+fi' $sourcePath/debian/preinst
 fi
 sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
 if [ "$distributionVersion" == "wheezy" ]; then

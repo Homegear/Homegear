@@ -55,24 +55,41 @@ public:
 	void start();
 	void stop();
 private:
+	class ClientData
+	{
+	public:
+		ClientData() { fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor); }
+		ClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor) { fileDescriptor = clientFileDescriptor; }
+		virtual ~ClientData() {}
+
+		int32_t id = 0;
+		bool closed = false;
+		std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
+		std::thread readThread;
+	};
+
+	std::string _socketPath;
 	bool _stopServer = false;
 	std::thread _mainThread;
 	std::thread _readThread;
 	int32_t _backlog = 10;
 	std::shared_ptr<BaseLib::FileDescriptor> _clientFileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
-	int32_t _currentClientId = 0;
+	std::mutex _stateMutex;
+	std::map<int32_t, std::shared_ptr<ClientData>> _clients;
+	static int32_t _currentClientID;
+	std::mutex _garbageCollectionMutex;
 	int64_t _lastGargabeCollection = 0;
 
 	void collectGarbage();
-	void handleCommand(std::string& command);
+	void handleCommand(std::string& command, std::shared_ptr<ClientData> clientData);
 	std::string handleUserCommand(std::string& command);
 	std::string handleModuleCommand(std::string& command);
 	std::string handleGlobalCommand(std::string& command);
 	void getFileDescriptor(bool deleteOldSocket = false);
 	std::shared_ptr<BaseLib::FileDescriptor> getClientFileDescriptor();
 	void mainThread();
-	void readClient();
-	void closeClientConnection();
+	void readClient(std::shared_ptr<ClientData> clientData);
+	void closeClientConnection(std::shared_ptr<ClientData> client);
 };
 #endif
