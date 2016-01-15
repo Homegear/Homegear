@@ -32,7 +32,7 @@
 #include "../GD/GD.h"
 #include "homegear-base/BaseLib.h"
 
-int32_t ScriptEngineServer::_currentClientId = 0;
+int32_t ScriptEngineServer::_currentClientID = 0;
 
 ScriptEngineServer::ScriptEngineServer()
 {
@@ -43,11 +43,72 @@ ScriptEngineServer::~ScriptEngineServer()
 	stop();
 }
 
+void ScriptEngineServer::collectGarbage()
+{
+	_garbageCollectionMutex.lock();
+	try
+	{
+		_lastGargabeCollection = GD::bl->hf.getTime();
+		std::vector<std::shared_ptr<ClientData>> clientsToRemove;
+		_stateMutex.lock();
+		try
+		{
+			for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) clientsToRemove.push_back(i->second);
+			}
+		}
+		catch(const std::exception& ex)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+		_stateMutex.unlock();
+		for(std::vector<std::shared_ptr<ClientData>>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
+		{
+			GD::out.printDebug("Debug: Joining read thread of CLI client " + std::to_string((*i)->id));
+			if((*i)->readThread.joinable()) (*i)->readThread.join();
+			_stateMutex.lock();
+			try
+			{
+				_clients.erase((*i)->id);
+			}
+			catch(const std::exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			_stateMutex.unlock();
+			GD::out.printDebug("Debug: CLI client " + std::to_string((*i)->id) + " removed.");
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _garbageCollectionMutex.unlock();
+}
+
 void ScriptEngineServer::start()
 {
 	try
 	{
 		stop();
+		_socketPath = GD::runDir + "homegearSE.sock";
 		_stopServer = false;
 		_mainThread = std::thread(&ScriptEngineServer::mainThread, this);
 	}
@@ -71,8 +132,19 @@ void ScriptEngineServer::stop()
 	{
 		_stopServer = true;
 		if(_mainThread.joinable()) _mainThread.join();
-		closeClientConnection();
-		unlink(GD::socketPath.c_str());
+		GD::out.printDebug("Debug: Waiting for CLI client threads to finish.");
+		_stateMutex.lock();
+		for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+		{
+			closeClientConnection(i->second);
+		}
+		_stateMutex.unlock();
+		while(_clients.size() > 0)
+		{
+			collectGarbage();
+			if(_clients.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		unlink(_socketPath.c_str());
 	}
 	catch(const std::exception& ex)
 	{
@@ -88,11 +160,13 @@ void ScriptEngineServer::stop()
 	}
 }
 
-void ScriptEngineServer::closeClientConnection()
+void ScriptEngineServer::closeClientConnection(std::shared_ptr<ClientData> client)
 {
 	try
 	{
-		GD::bl->fileDescriptorManager.close(_clientFileDescriptor);
+		if(!client) return;
+		GD::bl->fileDescriptorManager.close(client->fileDescriptor);
+		client->closed = true;
 	}
 	catch(const std::exception& ex)
     {
@@ -118,6 +192,19 @@ void ScriptEngineServer::mainThread()
 		{
 			try
 			{
+				_stateMutex.lock();
+				if(_clients.size() > GD::bl->settings.cliServerMaxConnections())
+				{
+					_stateMutex.unlock();
+					collectGarbage();
+					if(_clients.size() > GD::bl->settings.cliServerMaxConnections())
+					{
+						GD::out.printError("Error in script engine server: There are too many clients connected to me. Waiting for connections to close. You can increase the number of allowed connections in main.conf.");
+						std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+						continue;
+					}
+				}
+				_stateMutex.unlock();
 				getFileDescriptor();
 				if(!_serverFileDescriptor || _serverFileDescriptor->descriptor == -1)
 				{
@@ -142,7 +229,27 @@ void ScriptEngineServer::mainThread()
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 				continue;
 			}
-			_readThread = std::thread(&ScriptEngineServer::readClient, this);
+			try
+			{
+				std::shared_ptr<ClientData> clientData = std::shared_ptr<ClientData>(new ClientData(clientFileDescriptor));
+				_stateMutex.lock();
+				clientData->id = _currentClientID++;
+				_clients[clientData->id] = clientData;
+				clientData->readThread = std::thread(&ScriptEngineServer::readClient, this, clientData);
+			}
+			catch(const std::exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			_stateMutex.unlock();
 		}
 		GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 	}
@@ -175,7 +282,7 @@ std::shared_ptr<BaseLib::FileDescriptor> ScriptEngineServer::getClientFileDescri
 		if(nfds <= 0)
 		{
 			GD::bl->fileDescriptorManager.unlock();
-			GD::out.printError("Error: CLI server socket descriptor is invalid.");
+			GD::out.printError("Error: Script engine server socket descriptor is invalid.");
 			return descriptor;
 		}
 		FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
@@ -229,44 +336,44 @@ void ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
 		}
 		if(deleteOldSocket)
 		{
-			if(unlink(GD::socketPath.c_str()) == -1 && errno != ENOENT) throw(BaseLib::Exception("Couldn't delete existing socket: " + GD::socketPath + ". Error: " + strerror(errno)));
+			if(unlink(_socketPath.c_str()) == -1 && errno != ENOENT) throw(BaseLib::Exception("Couldn't delete existing socket: " + _socketPath + ". Error: " + strerror(errno)));
 		}
-		else if(stat(GD::socketPath.c_str(), &sb) == 0) return;
+		else if(stat(_socketPath.c_str(), &sb) == 0) return;
 
 		_serverFileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0));
-		if(_serverFileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't create socket: " + GD::socketPath + ". Error: " + strerror(errno)));
+		if(_serverFileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't create socket: " + _socketPath + ". Error: " + strerror(errno)));
 		int32_t reuseAddress = 1;
 		if(setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (void*)&reuseAddress, sizeof(int32_t)) == -1)
 		{
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
-			throw(BaseLib::Exception("Couldn't set socket options: " + GD::socketPath + ". Error: " + strerror(errno)));
+			throw(BaseLib::Exception("Couldn't set socket options: " + _socketPath + ". Error: " + strerror(errno)));
 		}
 		sockaddr_un serverAddress;
 		serverAddress.sun_family = AF_LOCAL;
 		//104 is the size on BSD systems - slightly smaller than in Linux
-		if(GD::socketPath.length() > 104)
+		if(_socketPath.length() > 104)
 		{
 			//Check for buffer overflow
 			GD::out.printCritical("Critical: Socket path is too long.");
 			return;
 		}
-		strncpy(serverAddress.sun_path, GD::socketPath.c_str(), 104);
+		strncpy(serverAddress.sun_path, _socketPath.c_str(), 104);
 		serverAddress.sun_path[103] = 0; //Just to make sure the string is null terminated.
 		bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*)&serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
 		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
 		{
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
-			throw BaseLib::Exception("Error: CLI server could not start listening. Error: " + std::string(strerror(errno)));
+			throw BaseLib::Exception("Error: Script engine server could not start listening. Error: " + std::string(strerror(errno)));
 		}
-		if(chmod(GD::socketPath.c_str(), S_IRWXU | S_IRGRP | S_IXGRP) == -1)
+		if(chmod(_socketPath.c_str(), S_IRWXU | S_IRWXG) == -1)
 		{
-			GD::out.printError("Error: chmod failed on unix socket \"" + GD::socketPath + "\".");
+			GD::out.printError("Error: chmod failed on unix socket \"" + _socketPath + "\".");
 		}
 		return;
     }
     catch(const std::exception& ex)
     {
-    	GD::out.printError("Couldn't create socket file " + GD::socketPath + ": " + ex.what());
+    	GD::out.printError("Couldn't create socket file " + _socketPath + ": " + ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
