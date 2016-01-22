@@ -69,7 +69,7 @@ void MiscCentral::loadPeers()
 		{
 			int32_t peerId = row->second.at(0)->intValue;
 			GD::out.printMessage("Loading Miscellaneous peer " + std::to_string(peerId));
-			std::shared_ptr<MiscPeer> peer(new MiscPeer(peerId, row->second.at(3)->textValue, _deviceId, true, this));
+			std::shared_ptr<MiscPeer> peer(new MiscPeer(peerId, row->second.at(3)->textValue, _deviceId, this));
 			if(!peer->load(this)) continue;
 			if(!peer->getRpcDevice()) continue;
 			_peersMutex.lock();
@@ -659,7 +659,7 @@ std::shared_ptr<MiscPeer> MiscCentral::createPeer(BaseLib::Systems::LogicalDevic
 {
 	try
 	{
-		std::shared_ptr<MiscPeer> peer(new MiscPeer(_deviceId, true, this));
+		std::shared_ptr<MiscPeer> peer(new MiscPeer(_deviceId, this));
 		peer->setDeviceType(deviceType);
 		peer->setSerialNumber(serialNumber);
 		peer->setRpcDevice(GD::family->getRpcDevices()->find(deviceType, 0x10, -1));

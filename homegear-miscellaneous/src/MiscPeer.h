@@ -45,8 +45,8 @@ class MiscCentral;
 class MiscPeer : public BaseLib::Systems::Peer
 {
 public:
-	MiscPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
-	MiscPeer(int32_t id, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
+	MiscPeer(uint32_t parentID, IPeerEventSink* eventHandler);
+	MiscPeer(int32_t id, std::string serialNumber, uint32_t parentID, IPeerEventSink* eventHandler);
 	virtual ~MiscPeer();
 
 	//Features
