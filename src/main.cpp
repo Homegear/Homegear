@@ -30,6 +30,10 @@
 
 #include "GD/GD.h"
 #include "Monitor.h"
+#include "CLI/CLIClient.h"
+#ifdef SCRIPTENGINE
+#include "ScriptEngine/ScriptEngineClient.h"
+#endif
 #include "UPnP/UPnP.h"
 #include "MQTT/Mqtt.h"
 #include "homegear-base/BaseLib.h"
@@ -230,6 +234,8 @@ void terminate(int32_t signalNumber)
 			GD::out.printInfo( "(Shutdown) => Closing physical interfaces");
 			if(GD::familyController) GD::familyController->physicalInterfaceStopListening();
 #ifdef SCRIPTENGINE
+			GD::out.printInfo("Stopping script engine server...");
+			GD::scriptEngineServer->stop();
 			if(GD::scriptEngine) GD::scriptEngine->dispose();
 #endif
 			GD::out.printMessage("(Shutdown) => Saving device families");
@@ -774,6 +780,9 @@ void startUp()
 			}
 		}
 		GD::scriptEngine.reset(new ScriptEngine());
+		GD::out.printInfo("Starting script engine server...");
+		GD::scriptEngineServer.reset(new ScriptEngineServer());
+		GD::scriptEngineServer->start();
 		#endif
 
 		for(uint32_t i = 0; i < 100; ++i)
@@ -937,7 +946,7 @@ int main(int argc, char* argv[])
     {
     	getExecutablePath();
     	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
-    	GD::bl.reset(new BaseLib::Obj(GD::executablePath, _errorCallback.get()));
+    	GD::bl.reset(new BaseLib::Obj(GD::executablePath, _errorCallback.get(), false));
     	GD::out.init(GD::bl.get());
 
     	if(std::string(VERSION) != GD::bl->version())
@@ -1070,8 +1079,14 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-r")
     		{
-    			GD::cliClient.reset(new CLI::Client());
-    			GD::cliClient->start();
+    			CLI::Client cliClient;
+    			cliClient.start();
+    			exit(0);
+    		}
+    		else if(arg == "-rse")
+    		{
+    			ScriptEngineClient scriptEngineClient;
+    			scriptEngineClient.start();
     			exit(0);
     		}
     		else if(arg == "-e")
@@ -1094,8 +1109,8 @@ int main(int argc, char* argv[])
     				else command << " " << argv[j];
     			}
 
-    			GD::cliClient.reset(new CLI::Client());
-    			exit(GD::cliClient->start(command.str()));
+    			CLI::Client cliClient;
+    			exit(cliClient.start(command.str()));
     		}
     		else if(arg == "-t")
     		{
@@ -1117,7 +1132,7 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-tc")
     		{
-    			std::cout << GD::bl->threads.getMaxThreadCount() << std::endl;
+    			std::cout << GD::bl->threadManager.getMaxThreadCount() << std::endl;
     			exit(0);
     		}
     		else if(arg == "-v")
@@ -1136,6 +1151,8 @@ int main(int argc, char* argv[])
     			exit(1);
     		}
     	}
+
+    	GD::bl->threadManager.testMaxThreadCount();
 
     	// {{{ Load settings
 			if(GD::configPath.empty()) GD::configPath = "/etc/homegear/";

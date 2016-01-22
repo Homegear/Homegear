@@ -1,4 +1,4 @@
-/* Copyright 2013-2015 Sathya Laufer
+/* Copyright 2013-2016 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -45,7 +45,7 @@ RPCServer::Client::Client()
 RPCServer::Client::~Client()
 {
 	GD::bl->fileDescriptorManager.shutdown(socketDescriptor);
-	if(readThread.joinable()) readThread.detach();
+	GD::bl->threadManager.join(readThread);
 }
 
 RPCServer::RPCServer()
@@ -213,8 +213,7 @@ void RPCServer::start(BaseLib::Rpc::PServerInfo& info)
 			gnutls_certificate_set_dh_params(_x509Cred, _dhParams);
 		}
 		_webServer.reset(new WebServer(_info));
-		_mainThread = std::thread(&RPCServer::mainThread, this);
-		BaseLib::Threads::setThreadPriority(GD::bl.get(), _mainThread.native_handle(), _threadPriority, _threadPolicy);
+		GD::bl->threadManager.start(_mainThread, true, _threadPriority, _threadPolicy, &RPCServer::mainThread, this);
 		_stopped = false;
 	}
 	catch(const std::exception& ex)
@@ -238,7 +237,7 @@ void RPCServer::stop()
 		if(_stopped) return;
 		_stopped = true;
 		_stopServer = true;
-		if(_mainThread.joinable()) _mainThread.join();
+		GD::bl->threadManager.join(_mainThread);
 		_out.printInfo("Info: Waiting for threads to finish.");
 		_stateMutex.lock();
 		for(std::map<int32_t, std::shared_ptr<Client>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
@@ -336,6 +335,7 @@ void RPCServer::closeClientConnection(std::shared_ptr<Client> client)
 {
 	try
 	{
+		if(!client) return;
 		GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 		client->closed = true;
 	}
@@ -373,19 +373,20 @@ void RPCServer::mainThread()
 				}
 				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = getClientSocketDescriptor(address, port);
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
-				_stateMutex.lock();
 				std::shared_ptr<Client> client(new Client());
-				client->id = _currentClientID++;
-				if(client->id == -1) client->id = _currentClientID++; //-1 is not allowed
-				client->socketDescriptor = clientFileDescriptor;
-				while(_clients.find(client->id) != _clients.end())
 				{
-					_out.printError("Error: Client id was used twice. This shouldn't happen. Please report this error to the developer.");
-					_currentClientID++;
-					client->id++;
+					std::lock_guard<std::mutex> stateGuard(_stateMutex);
+					client->id = _currentClientID++;
+					if(client->id == -1) client->id = _currentClientID++; //-1 is not allowed
+					client->socketDescriptor = clientFileDescriptor;
+					while(_clients.find(client->id) != _clients.end())
+					{
+						_out.printError("Error: Client id was used twice. This shouldn't happen. Please report this error to the developer.");
+						_currentClientID++;
+						client->id++;
+					}
+					_clients[client->id] = client;
 				}
-				_clients[client->id] = client;
-				_stateMutex.unlock();
 
 				try
 				{
@@ -403,8 +404,7 @@ void RPCServer::mainThread()
 					client->address = address;
 					client->port = port;
 
-					client->readThread = std::thread(&RPCServer::readClient, this, client);
-					BaseLib::Threads::setThreadPriority(GD::bl.get(), client->readThread.native_handle(), _threadPriority, _threadPolicy);
+					GD::bl->threadManager.start(client->readThread, false, _threadPriority, _threadPolicy, &RPCServer::readClient, this, client);
 				}
 				catch(const std::exception& ex)
 				{
@@ -425,17 +425,14 @@ void RPCServer::mainThread()
 			catch(const std::exception& ex)
 			{
 				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				_stateMutex.unlock();
 			}
 			catch(BaseLib::Exception& ex)
 			{
 				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				_stateMutex.unlock();
 			}
 			catch(...)
 			{
 				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-				_stateMutex.unlock();
 			}
 		}
 	}
@@ -965,7 +962,7 @@ void RPCServer::collectGarbage()
 		for(std::vector<std::shared_ptr<Client>>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
 		{
 			_out.printDebug("Debug: Joining read thread of client " + std::to_string((*i)->id));
-			if((*i)->readThread.joinable()) (*i)->readThread.join();
+			GD::bl->threadManager.join((*i)->readThread);
 			_stateMutex.lock();
 			try
 			{
@@ -1481,19 +1478,19 @@ std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientSocketDescriptor(st
 	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
 	try
 	{
-		_stateMutex.lock();
-		if(_clients.size() > GD::bl->settings.rpcServerMaxConnections())
+		bool tooManyConnections = false;
 		{
-			_stateMutex.unlock();
-			collectGarbage();
+			//Don't lock _stateMutex => no synchronisation needed
 			if(_clients.size() > GD::bl->settings.rpcServerMaxConnections())
 			{
-				_out.printError("Error: There are too many clients connected to me. Waiting for connections to close. You can increase the number of allowed connections in main.conf.");
-				std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-				return fileDescriptor;
+				collectGarbage();
+				if(_clients.size() > GD::bl->settings.rpcServerMaxConnections())
+				{
+					_out.printError("Error: There are too many clients connected to me. Closing incoming connection. You can increase the number of allowed connections in main.conf.");
+					tooManyConnections = true;
+				}
 			}
 		}
-		_stateMutex.unlock();
 
 		timeval timeout;
 		timeout.tv_sec = 1;
@@ -1520,6 +1517,11 @@ std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientSocketDescriptor(st
 		socklen_t addressSize = sizeof(addressSize);
 		fileDescriptor = GD::bl->fileDescriptorManager.add(accept(_serverFileDescriptor->descriptor, (struct sockaddr *) &clientInfo, &addressSize));
 		if(!fileDescriptor) return fileDescriptor;
+		if(tooManyConnections)
+		{
+			GD::bl->fileDescriptorManager.shutdown(fileDescriptor);
+			return std::shared_ptr<BaseLib::FileDescriptor>();
+		}
 
 		getpeername(fileDescriptor->descriptor, (struct sockaddr*)&clientInfo, &addressSize);
 

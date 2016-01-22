@@ -222,7 +222,7 @@ fi
 #End install Java and OpenHAB
 
 #Install raspi-config
-wget https://raw.github.com/asb/raspi-config/master/raspi-config
+wget https://raw.githubusercontent.com/RPi-Distro/raspi-config/master/raspi-config
 mv raspi-config usr/bin
 chown root:root usr/bin/raspi-config
 chmod 755 usr/bin/raspi-config

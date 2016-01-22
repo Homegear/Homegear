@@ -28,36 +28,35 @@
  * files in the program, then also delete it here.
 */
 
-#include "GD.h"
+#ifndef SCRIPTENGINECLIENT_H_
+#define SCRIPTENGINECLIENT_H_
 
-#include "../MQTT/Mqtt.h"
-#include "../UPnP/UPnP.h"
+#include "homegear-base/BaseLib.h"
 
-std::unique_ptr<BaseLib::Obj> GD::bl;
-BaseLib::Output GD::out;
-std::string GD::runAsUser = "";
-std::string GD::runAsGroup = "";
-std::string GD::configPath = "/etc/homegear/";
-std::string GD::pidfilePath = "";
-std::string GD::runDir = "/var/run/homegear/";
-std::string GD::socketPath = GD::runDir + "homegear.sock";
-std::string GD::workingDirectory = "";
-std::string GD::executablePath = "";
-std::unique_ptr<FamilyController> GD::familyController;
-std::unique_ptr<LicensingController> GD::licensingController;
-std::map<int32_t, RPC::Server> GD::rpcServers;
-std::unique_ptr<RPC::Client> GD::rpcClient;
-std::unique_ptr<CLI::Server> GD::cliServer;
-int32_t GD::rpcLogLevel = 1;
-BaseLib::Rpc::ServerInfo GD::serverInfo;
-RPC::ClientSettings GD::clientSettings;
-std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>> GD::licensingModules;
-std::unique_ptr<UPnP> GD::uPnP(new UPnP());
-std::unique_ptr<Mqtt> GD::mqtt;
-#ifdef EVENTHANDLER
-std::unique_ptr<EventHandler> GD::eventHandler;
-#endif
-#ifdef SCRIPTENGINE
-std::unique_ptr<ScriptEngine> GD::scriptEngine;
-std::unique_ptr<ScriptEngineServer> GD::scriptEngineServer;
+#include <thread>
+#include <mutex>
+#include <string>
+
+class ScriptEngineClient {
+public:
+	ScriptEngineClient();
+	virtual ~ScriptEngineClient();
+
+	/**
+	 * Starts the script engine client.
+	 *
+	 * @param command A command to execute. After this command is executed the function returns. If "command" is empty the function listens for input until "exit" or "quit" is entered.
+	 * @return Returns the exit code. If a script is executed the script exit code is returned.
+	 */
+	int32_t start(std::string command = "");
+private:
+	std::string _socketPath;
+	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
+	bool _stopPingThread = false;
+	std::thread _pingThread;
+	bool _closed = false;
+	std::mutex _sendMutex;
+
+	void ping();
+};
 #endif

@@ -17,7 +17,7 @@ endif
 
 if WITH_SCRIPTENGINE
 noinst_LIBRARIES = libscriptengine.a
-libscriptengine_a_SOURCES = ScriptEngine/php_sapi.cpp ScriptEngine/php_sapi.h ScriptEngine/PhpVariableConverter.cpp ScriptEngine/PhpVariableConverter.h ScriptEngine/PhpEvents.cpp ScriptEngine/PhpEvents.h ScriptEngine/ScriptEngine.cpp ScriptEngine/ScriptEngine.h
+libscriptengine_a_SOURCES = ScriptEngine/php_sapi.cpp ScriptEngine/php_sapi.h ScriptEngine/PhpVariableConverter.cpp ScriptEngine/PhpVariableConverter.h ScriptEngine/PhpEvents.cpp ScriptEngine/PhpEvents.h ScriptEngine/ScriptEngine.cpp ScriptEngine/ScriptEngine.h ScriptEngine/ScriptEngineServer.cpp ScriptEngine/ScriptEngineServer.h ScriptEngine/ScriptEngineClient.cpp ScriptEngine/ScriptEngineClient.h
 homegear_LDADD += libscriptengine.a
 libscriptengine_a_CPPFLAGS = -Wall -std=c++11 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
 if BSDSYSTEM

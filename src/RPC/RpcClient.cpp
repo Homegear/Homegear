@@ -439,8 +439,8 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 
 		if(GD::bl->debugLevel >= 5)
 		{
-			if(server->binary || server->webSocket) _out.printDebug("Sending packet: " + GD::bl->hf.getHexString(data));
-			else _out.printDebug("Sending packet: " + std::string(&data.at(0), data.size()));
+			if(server->binary || server->webSocket) _out.printDebug("Debug: Sending packet: " + GD::bl->hf.getHexString(data));
+			else _out.printDebug("Debug: Sending packet: " + std::string(&data.at(0), data.size()));
 		}
 		try
 		{

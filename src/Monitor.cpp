@@ -90,7 +90,7 @@ void Monitor::prepareChild()
 	close(_pipeFromChild[0]);
 	stop();
 	_stopMonitorThread = false;
-	_monitorThread = std::thread(&Monitor::monitor, this);
+	GD::bl->threadManager.start(_monitorThread, true, &Monitor::monitor, this);
 }
 
 void Monitor::stop()
@@ -98,7 +98,7 @@ void Monitor::stop()
 	try
 	{
 		_stopMonitorThread = true;
-		if(_monitorThread.joinable()) _monitorThread.join();
+		GD::bl->threadManager.join(_monitorThread);
 	}
 	catch(const std::exception& ex)
 	{

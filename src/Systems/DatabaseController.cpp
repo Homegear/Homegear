@@ -52,7 +52,7 @@ void DatabaseController::dispose()
 	_stopQueueProcessingThread = true;
 	_queueEntryAvailable = true;
 	_queueConditionVariable.notify_one();
-	if(_queueProcessingThread.joinable()) _queueProcessingThread.join();
+	GD::bl->threadManager.join(_queueProcessingThread);
 	for(int32_t i = 0; i < _queueSize; ++i) _queue[i].reset(); //Just to make sure there are no valid shared pointers anymore
 	_db.dispose();
 	_systemVariables.clear();
@@ -73,7 +73,7 @@ void DatabaseController::init()
 	_queueEntryAvailable = false;
 	_queueHead = 0;
 	_queueTail = 0;
-	_queueProcessingThread = std::thread(&DatabaseController::processQueueEntry, this);
+	GD::bl->threadManager.start(_queueProcessingThread, true, &DatabaseController::processQueueEntry, this);
 }
 
 //General

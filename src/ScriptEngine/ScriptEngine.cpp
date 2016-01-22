@@ -486,15 +486,12 @@ void ScriptEngine::execute(const std::string path, const std::string arguments, 
 					if(pos == -1)
 					{
 						GD::bl->out.printError("Error: License module id is missing in encrypted script file \"" + path + "\"");
-						return ;
+						return;
 					}
 					std::string moduleIdString(&data.at(0), pos);
 					int32_t moduleId = BaseLib::Math::getNumber(moduleIdString);
 					std::vector<char> input(&data.at(pos + 1), &data.at(data.size() - 1) + 1);
-					if(input.empty())
-					{
-						return ;
-					}
+					if(input.empty()) return;
 					std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
 					if(i == GD::licensingModules.end() || !i->second)
 					{
@@ -739,6 +736,289 @@ void ScriptEngine::executeScriptThread(const std::string script, const std::stri
 	setThreadNotRunning(threadId);
 }
 
+void ScriptEngine::executeWebRequestThread(const std::string path, BaseLib::HTTP* request, std::shared_ptr<BaseLib::Rpc::ServerInfo::Info> serverInfo, std::shared_ptr<BaseLib::SocketOperations> socket, int32_t* exitCode, int32_t threadId, std::shared_ptr<std::mutex> lockMutex, std::shared_ptr<bool> mutexReady, std::shared_ptr<std::condition_variable> conditionVariable)
+{
+	//Must run in a separate Thread, because calling this function twice from the same thread causes a segmentation fault.
+	if(_disposing)
+	{
+		if(lockMutex)
+		{
+			{
+				std::lock_guard<std::mutex> lock(*lockMutex);
+				*mutexReady = true;
+			}
+			conditionVariable->notify_one();
+		}
+		setThreadNotRunning(threadId);
+		return;
+	}
+	if(exitCode) *exitCode = -1;
+	if(!GD::bl->io.fileExists(path))
+	{
+		GD::out.printError("Error: PHP script \"" + path + "\" does not exist.");
+		if(lockMutex)
+		{
+			{
+				std::lock_guard<std::mutex> lock(*lockMutex);
+				*mutexReady = true;
+			}
+			conditionVariable->notify_one();
+		}
+		setThreadNotRunning(threadId);
+		return;
+	}
+
+	try
+	{
+		std::string script;
+		if(path.size() > 3 && path.compare(path.size() - 4, 4, ".hgs") == 0)
+		{
+			std::map<std::string, std::shared_ptr<CacheInfo>>::iterator scriptIterator = _scriptCache.find(path);
+			if(scriptIterator != _scriptCache.end() && scriptIterator->second->lastModified == BaseLib::Io::getFileLastModifiedTime(path)) script = scriptIterator->second->script;
+			else
+			{
+				std::vector<char> data = BaseLib::Io::getBinaryFileContent(path);
+				int32_t pos = -1;
+				for(uint32_t i = 0; i < 11 && i < data.size(); i++)
+				{
+					if(data[i] == ' ')
+					{
+						pos = (int32_t)i;
+						break;
+					}
+				}
+				if(pos == -1)
+				{
+					GD::bl->out.printError("Error: License module id is missing in encrypted script file \"" + path + "\"");
+					if(lockMutex)
+					{
+						{
+							std::lock_guard<std::mutex> lock(*lockMutex);
+							*mutexReady = true;
+						}
+						conditionVariable->notify_one();
+					}
+					setThreadNotRunning(threadId);
+					return ;
+				}
+				std::string moduleIdString(&data.at(0), pos);
+				int32_t moduleId = BaseLib::Math::getNumber(moduleIdString);
+				std::vector<char> input(&data.at(pos + 1), &data.at(data.size() - 1) + 1);
+				if(input.empty())
+				{
+					if(lockMutex)
+					{
+						{
+							std::lock_guard<std::mutex> lock(*lockMutex);
+							*mutexReady = true;
+						}
+						conditionVariable->notify_one();
+					}
+					setThreadNotRunning(threadId);
+					return;
+				}
+				std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
+				if(i == GD::licensingModules.end() || !i->second)
+				{
+					GD::out.printError("Error: Could not decrypt script file. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
+					if(lockMutex)
+					{
+						{
+							std::lock_guard<std::mutex> lock(*lockMutex);
+							*mutexReady = true;
+						}
+						conditionVariable->notify_one();
+					}
+					setThreadNotRunning(threadId);
+					return;
+				}
+				std::shared_ptr<CacheInfo> cacheInfo(new CacheInfo());
+				i->second->decryptScript(input, cacheInfo->script);
+				cacheInfo->lastModified = BaseLib::Io::getFileLastModifiedTime(path);
+				if(!cacheInfo->script.empty())
+				{
+					_scriptCache[path] = cacheInfo;
+					script = cacheInfo->script;
+				}
+			}
+			if(!script.empty()) executeWebScript(script, path, *request, serverInfo, socket);
+			if(exitCode) *exitCode = 0;
+			if(lockMutex)
+			{
+				{
+					std::lock_guard<std::mutex> lock(*lockMutex);
+					*mutexReady = true;
+				}
+				conditionVariable->notify_one();
+			}
+			setThreadNotRunning(threadId);
+			return;
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+
+	ts_resource_ex(0, NULL); //Replaces TSRMLS_FETCH()
+	try
+	{
+		zend_file_handle script;
+
+		script.type = ZEND_HANDLE_FILENAME;
+		script.filename = path.c_str();
+		script.opened_path = NULL;
+		script.free_filename = 0;
+
+		zend_homegear_globals* globals = php_homegear_get_globals();
+		if(!globals)
+		{
+			ts_free_thread();
+			if(lockMutex)
+			{
+				{
+					std::lock_guard<std::mutex> lock(*lockMutex);
+					*mutexReady = true;
+				}
+				conditionVariable->notify_one();
+			}
+			setThreadNotRunning(threadId);
+			return;
+		}
+		globals->output = nullptr;
+		globals->socket = socket.get();
+		globals->http = request;
+
+		if(!tsrm_get_ls_cache() || !((sapi_globals_struct *) (*((void ***) tsrm_get_ls_cache()))[((sapi_globals_id)-1)]))
+		{
+			GD::out.printCritical("Critical: Error in PHP: No thread safe resource exists.");
+			ts_free_thread();
+			if(lockMutex)
+			{
+				{
+					std::lock_guard<std::mutex> lock(*lockMutex);
+					*mutexReady = true;
+				}
+				conditionVariable->notify_one();
+			}
+			setThreadNotRunning(threadId);
+			return;
+		}
+
+		SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise POST data is not processed.
+		SG(sapi_headers).http_response_code = 200;
+		SG(default_mimetype) = nullptr;
+		SG(default_charset) = nullptr;
+		SG(request_info).content_length = request->getHeader()->contentLength;
+		if(!request->getHeader()->contentType.empty()) SG(request_info).content_type = request->getHeader()->contentType.c_str();
+		SG(request_info).request_method = request->getHeader()->method.c_str();
+		SG(request_info).proto_num = request->getHeader()->protocol == BaseLib::HTTP::Protocol::http10 ? 1000 : 1001;
+		std::string uri = request->getHeader()->path + request->getHeader()->pathInfo;
+		if(!request->getHeader()->args.empty()) uri.append('?' + request->getHeader()->args);
+		if(!request->getHeader()->args.empty()) SG(request_info).query_string = estrndup(&request->getHeader()->args.at(0), request->getHeader()->args.size());
+		if(!uri.empty()) SG(request_info).request_uri = estrndup(&uri.at(0), uri.size());
+		std::string pathTranslated = serverInfo->contentPath.substr(0, serverInfo->contentPath.size() - 1) + request->getHeader()->pathInfo;
+		SG(request_info).path_translated = estrndup(&pathTranslated.at(0), pathTranslated.size());
+
+		if (php_request_startup() == FAILURE) {
+			GD::bl->out.printError("Error calling php_request_startup...");
+			ts_free_thread();
+			if(lockMutex)
+			{
+				{
+					std::lock_guard<std::mutex> lock(*lockMutex);
+					*mutexReady = true;
+				}
+				conditionVariable->notify_one();
+			}
+			setThreadNotRunning(threadId);
+			if(exitCode) *exitCode = 1;
+			return;
+		}
+
+		php_execute_script(&script);
+
+		if(exitCode) *exitCode = EG(exit_status);
+
+		if(SG(request_info).query_string)
+		{
+			efree(SG(request_info).query_string);
+			SG(request_info).query_string = nullptr;
+		}
+		if(SG(request_info).request_uri)
+		{
+			efree(SG(request_info).request_uri);
+			SG(request_info).request_uri = nullptr;
+		}
+		if(SG(request_info).path_translated)
+		{
+			efree(SG(request_info).path_translated);
+			SG(request_info).path_translated = nullptr;
+		}
+
+		php_request_shutdown(NULL);
+
+		ts_free_thread();
+		if(lockMutex)
+		{
+			{
+				std::lock_guard<std::mutex> lock(*lockMutex);
+				*mutexReady = true;
+			}
+			conditionVariable->notify_one();
+		}
+		setThreadNotRunning(threadId);
+		return;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	std::string error("Error executing script. Check Homegear log for more details.");
+	if(socket) php_homegear_write_socket(socket.get(), error.c_str(), error.length());
+	if(SG(request_info).query_string)
+	{
+		efree(SG(request_info).query_string);
+		SG(request_info).query_string = nullptr;
+	}
+	if(SG(request_info).request_uri)
+	{
+		efree(SG(request_info).request_uri);
+		SG(request_info).request_uri = nullptr;
+	}
+	if(SG(request_info).path_translated)
+	{
+		efree(SG(request_info).path_translated);
+		SG(request_info).path_translated = nullptr;
+	}
+	ts_free_thread();
+	if(lockMutex)
+	{
+		{
+			std::lock_guard<std::mutex> lock(*lockMutex);
+			*mutexReady = true;
+		}
+		conditionVariable->notify_one();
+	}
+	setThreadNotRunning(threadId);
+}
+
 void ScriptEngine::executeThread(const std::string path, const std::string arguments, std::shared_ptr<std::vector<char>> output, int32_t* exitCode, int32_t threadId, std::shared_ptr<std::mutex> lockMutex, std::shared_ptr<bool> mutexReady, std::shared_ptr<std::condition_variable> conditionVariable)
 {
 	//Must run in a separate Thread, because a Script might call runScript, which would start it on the same thread and causes a segmentation fault.
@@ -898,61 +1178,37 @@ void ScriptEngine::executeThread(const std::string path, const std::string argum
 
 int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& request, std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo, std::shared_ptr<BaseLib::SocketOperations>& socket)
 {
-	if(_disposing) return 1;
-	if(!GD::bl->io.fileExists(path))
-	{
-		GD::out.printError("Error: PHP script \"" + path + "\" does not exist.");
-		return -1;
-	}
-
 	try
 	{
-		std::string script;
-		if(path.size() > 3 && path.compare(path.size() - 4, 4, ".hgs") == 0)
+		if(_disposing || path.empty()) return -1;
+
+		collectGarbage();
+		if(!scriptThreadMaxReached())
 		{
-			std::map<std::string, std::shared_ptr<CacheInfo>>::iterator scriptIterator = _scriptCache.find(path);
-			if(scriptIterator != _scriptCache.end() && scriptIterator->second->lastModified == BaseLib::Io::getFileLastModifiedTime(path)) script = scriptIterator->second->script;
-			else
+			int32_t exitCode = 0;
+			std::shared_ptr<std::mutex> lockMutex(new std::mutex());
+			std::shared_ptr<bool> mutexReady(new bool());
+			*mutexReady = false;
+			std::shared_ptr<std::condition_variable> conditionVariable(new std::condition_variable());
+			std::unique_lock<std::mutex> lock(*lockMutex);
+			_scriptThreadMutex.lock();
+			try
 			{
-				std::vector<char> data = BaseLib::Io::getBinaryFileContent(path);
-				int32_t pos = -1;
-				for(uint32_t i = 0; i < 11 && i < data.size(); i++)
-				{
-					if(data[i] == ' ')
-					{
-						pos = (int32_t)i;
-						break;
-					}
-				}
-				if(pos == -1)
-				{
-					GD::bl->out.printError("Error: License module id is missing in encrypted script file \"" + path + "\"");
-					return -1;
-				}
-				std::string moduleIdString(&data.at(0), pos);
-				int32_t moduleId = BaseLib::Math::getNumber(moduleIdString);
-				std::vector<char> input(&data.at(pos + 1), &data.at(data.size() - 1) + 1);
-				if(input.empty())
-				{
-					return -1;
-				}
-				std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
-				if(i == GD::licensingModules.end() || !i->second)
-				{
-					GD::out.printError("Error: Could not decrypt script file. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
-					return -1;
-				}
-				std::shared_ptr<CacheInfo> cacheInfo(new CacheInfo());
-				i->second->decryptScript(input, cacheInfo->script);
-				cacheInfo->lastModified = BaseLib::Io::getFileLastModifiedTime(path);
-				if(!cacheInfo->script.empty())
-				{
-					_scriptCache[path] = cacheInfo;
-					script = cacheInfo->script;
-				}
+				int32_t threadId = _currentScriptThreadID++;
+				if(threadId == -1) threadId = _currentScriptThreadID++;
+				_scriptThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&ScriptEngine::executeWebRequestThread, this, path, &request, serverInfo, socket, &exitCode, threadId, lockMutex, mutexReady, conditionVariable), true)));
 			}
-			if(!script.empty()) executeWebScript(script, path, request, serverInfo, socket);
-			return 0;
+			catch(const std::exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			_scriptThreadMutex.unlock();
+			conditionVariable->wait(lock, [&] { return *mutexReady; });
+			return exitCode;
 		}
 	}
 	catch(const std::exception& ex)
@@ -967,111 +1223,7 @@ int32_t ScriptEngine::executeWebRequest(const std::string& path, BaseLib::HTTP& 
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-
-	ts_resource_ex(0, NULL); //Replaces TSRMLS_FETCH()
-	try
-	{
-		zend_file_handle script;
-
-		script.type = ZEND_HANDLE_FILENAME;
-		script.filename = path.c_str();
-		script.opened_path = NULL;
-		script.free_filename = 0;
-
-		zend_homegear_globals* globals = php_homegear_get_globals();
-		if(!globals)
-		{
-			ts_free_thread();
-			return -1;
-		}
-		globals->output = nullptr;
-		globals->socket = socket.get();
-		globals->http = &request;
-
-		if(!tsrm_get_ls_cache() || !((sapi_globals_struct *) (*((void ***) tsrm_get_ls_cache()))[((sapi_globals_id)-1)]))
-		{
-			GD::out.printCritical("Critical: Error in PHP: No thread safe resource exists.");
-			ts_free_thread();
-			return -1;
-		}
-
-		SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise POST data is not processed.
-		SG(sapi_headers).http_response_code = 200;
-		SG(default_mimetype) = nullptr;
-		SG(default_charset) = nullptr;
-		SG(request_info).content_length = request.getHeader()->contentLength;
-		if(!request.getHeader()->contentType.empty()) SG(request_info).content_type = request.getHeader()->contentType.c_str();
-		SG(request_info).request_method = request.getHeader()->method.c_str();
-		SG(request_info).proto_num = request.getHeader()->protocol == BaseLib::HTTP::Protocol::http10 ? 1000 : 1001;
-		std::string uri = request.getHeader()->path + request.getHeader()->pathInfo;
-		if(!request.getHeader()->args.empty()) uri.append('?' + request.getHeader()->args);
-		if(!request.getHeader()->args.empty()) SG(request_info).query_string = estrndup(&request.getHeader()->args.at(0), request.getHeader()->args.size());
-		if(!uri.empty()) SG(request_info).request_uri = estrndup(&uri.at(0), uri.size());
-		std::string pathTranslated = serverInfo->contentPath.substr(0, serverInfo->contentPath.size() - 1) + request.getHeader()->pathInfo;
-		SG(request_info).path_translated = estrndup(&pathTranslated.at(0), pathTranslated.size());
-
-		if (php_request_startup() == FAILURE) {
-			GD::bl->out.printError("Error calling php_request_startup...");
-			ts_free_thread();
-			return 1;
-		}
-
-		php_execute_script(&script);
-
-		int32_t exitCode = EG(exit_status);
-
-		if(SG(request_info).query_string)
-		{
-			efree(SG(request_info).query_string);
-			SG(request_info).query_string = nullptr;
-		}
-		if(SG(request_info).request_uri)
-		{
-			efree(SG(request_info).request_uri);
-			SG(request_info).request_uri = nullptr;
-		}
-		if(SG(request_info).path_translated)
-		{
-			efree(SG(request_info).path_translated);
-			SG(request_info).path_translated = nullptr;
-		}
-
-		php_request_shutdown(NULL);
-
-		ts_free_thread();
-		return exitCode;
-	}
-	catch(const std::exception& ex)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	std::string error("Error executing script. Check Homegear log for more details.");
-	if(socket) php_homegear_write_socket(socket.get(), error.c_str(), error.length());
-	if(SG(request_info).query_string)
-	{
-		efree(SG(request_info).query_string);
-		SG(request_info).query_string = nullptr;
-	}
-	if(SG(request_info).request_uri)
-	{
-		efree(SG(request_info).request_uri);
-		SG(request_info).request_uri = nullptr;
-	}
-	if(SG(request_info).path_translated)
-	{
-		efree(SG(request_info).path_translated);
-		SG(request_info).path_translated = nullptr;
-	}
-	ts_free_thread();
-	return 1;
+	return -1;
 }
 
 void ScriptEngine::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values)
@@ -1207,7 +1359,58 @@ void ScriptEngine::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t h
 
 bool ScriptEngine::checkSessionId(const std::string& sessionId)
 {
-	if(_disposing) return false;
+	try
+	{
+		if(_disposing) return false;
+
+		collectGarbage();
+		if(!scriptThreadMaxReached())
+		{
+			std::shared_ptr<std::mutex> lockMutex(new std::mutex());
+			std::shared_ptr<bool> mutexReady(new bool());
+			*mutexReady = false;
+			std::shared_ptr<std::condition_variable> conditionVariable(new std::condition_variable());
+			std::unique_lock<std::mutex> lock(*lockMutex);
+			bool result;
+			_scriptThreadMutex.lock();
+			try
+			{
+				int32_t threadId = _currentScriptThreadID++;
+				if(threadId == -1) threadId = _currentScriptThreadID++;
+				_scriptThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&ScriptEngine::checkSessionIdThread, this, sessionId, &result, threadId, lockMutex, mutexReady, conditionVariable), true)));
+			}
+			catch(const std::exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			_scriptThreadMutex.unlock();
+			conditionVariable->wait(lock, [&] { return *mutexReady; });
+			return result;
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return false;
+}
+
+void ScriptEngine::checkSessionIdThread(const std::string sessionId, bool* result, int32_t threadId, std::shared_ptr<std::mutex> lockMutex, std::shared_ptr<bool> mutexReady, std::shared_ptr<std::condition_variable> conditionVariable)
+{
+	*result = false;
+	if(_disposing) return;
 	std::unique_ptr<BaseLib::HTTP> request(new BaseLib::HTTP());
 	std::shared_ptr<BaseLib::Rpc::ServerInfo::Info> serverInfo(new BaseLib::Rpc::ServerInfo::Info());
 	ts_resource_ex(0, NULL); //Replaces TSRMLS_FETCH()
@@ -1217,7 +1420,16 @@ bool ScriptEngine::checkSessionId(const std::string& sessionId)
 		if(!globals)
 		{
 			ts_free_thread();
-			return false;
+			if(lockMutex)
+			{
+				{
+					std::lock_guard<std::mutex> lock(*lockMutex);
+					*mutexReady = true;
+				}
+				conditionVariable->notify_one();
+			}
+			setThreadNotRunning(threadId);
+			return;
 		}
 		globals->http = request.get();
 
@@ -1225,7 +1437,16 @@ bool ScriptEngine::checkSessionId(const std::string& sessionId)
 		{
 			GD::out.printCritical("Critical: Error in PHP: No thread safe resource exists.");
 			ts_free_thread();
-			return false;
+			if(lockMutex)
+			{
+				{
+					std::lock_guard<std::mutex> lock(*lockMutex);
+					*mutexReady = true;
+				}
+				conditionVariable->notify_one();
+			}
+			setThreadNotRunning(threadId);
+			return;
 		}
 		SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise POST data is not processed.
 		SG(sapi_headers).http_response_code = 200;
@@ -1239,7 +1460,16 @@ bool ScriptEngine::checkSessionId(const std::string& sessionId)
 		if (php_request_startup(TSRMLS_C) == FAILURE) {
 			GD::bl->out.printError("Error calling php_request_startup...");
 			ts_free_thread();
-			return false;
+			if(lockMutex)
+			{
+				{
+					std::lock_guard<std::mutex> lock(*lockMutex);
+					*mutexReady = true;
+				}
+				conditionVariable->notify_one();
+			}
+			setThreadNotRunning(threadId);
+			return;
 		}
 
 		zval returnValue;
@@ -1248,7 +1478,6 @@ bool ScriptEngine::checkSessionId(const std::string& sessionId)
 		ZVAL_STRINGL(&function, "session_start", sizeof("session_start") - 1);
 		call_user_function(EG(function_table), NULL, &function, &returnValue, 0, nullptr);
 
-		bool result = false;
 		zval* reference = zend_hash_str_find(&EG(symbol_table), "_SESSION", sizeof("_SESSION") - 1);
 		if(reference != NULL)
 		{
@@ -1257,15 +1486,12 @@ bool ScriptEngine::checkSessionId(const std::string& sessionId)
 				zval* token = zend_hash_str_find(Z_ARRVAL_P(Z_REFVAL_P(reference)), "authorized", sizeof("authorized") - 1);
 				if(token != NULL)
 				{
-					result = (Z_TYPE_P(token) == IS_TRUE);
+					*result = (Z_TYPE_P(token) == IS_TRUE);
 				}
 			}
         }
 
 		php_request_shutdown(NULL);
-
-		ts_free_thread();
-		return result;
 	}
 	catch(const std::exception& ex)
 	{
@@ -1280,7 +1506,15 @@ bool ScriptEngine::checkSessionId(const std::string& sessionId)
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	ts_free_thread();
-	return false;
+	if(lockMutex)
+	{
+		{
+			std::lock_guard<std::mutex> lock(*lockMutex);
+			*mutexReady = true;
+		}
+		conditionVariable->notify_one();
+	}
+	setThreadNotRunning(threadId);
 }
 
 BaseLib::PVariable ScriptEngine::getAllScripts()

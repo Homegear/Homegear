@@ -87,7 +87,7 @@ void UPnP::start()
 			return;
 		}
 		_stopServer = false;
-		_listenThread = std::thread(&UPnP::listen, this);
+		GD::bl->threadManager.start(_listenThread, true, &UPnP::listen, this);
 		sendNotify();
 	}
 	catch(const std::exception& ex)
@@ -110,7 +110,7 @@ void UPnP::stop()
 	{
 		if(_stopServer) return;
 		_stopServer = true;
-		if(_listenThread.joinable()) _listenThread.join();
+		GD::bl->threadManager.join(_listenThread);
 		sendByebye();
 		_packets.clear();
 		for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)

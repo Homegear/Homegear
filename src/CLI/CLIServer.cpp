@@ -31,6 +31,7 @@
 #include "CLIServer.h"
 #include "../GD/GD.h"
 #include "homegear-base/BaseLib.h"
+#include <functional>
 
 namespace CLI {
 
@@ -72,7 +73,7 @@ void Server::collectGarbage()
 		for(std::vector<std::shared_ptr<ClientData>>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
 		{
 			GD::out.printDebug("Debug: Joining read thread of CLI client " + std::to_string((*i)->id));
-			if((*i)->readThread.joinable()) (*i)->readThread.join();
+			GD::bl->threadManager.join((*i)->readThread);
 			_stateMutex.lock();
 			try
 			{
@@ -111,7 +112,7 @@ void Server::start()
 	{
 		stop();
 		_stopServer = false;
-		_mainThread = std::thread(&Server::mainThread, this);
+		GD::bl->threadManager.start(_mainThread, true, &Server::mainThread, this);
 	}
     catch(const std::exception& ex)
     {
@@ -132,14 +133,15 @@ void Server::stop()
 	try
 	{
 		_stopServer = true;
-		if(_mainThread.joinable()) _mainThread.join();
+		GD::bl->threadManager.join(_mainThread);
 		GD::out.printDebug("Debug: Waiting for CLI client threads to finish.");
-		_stateMutex.lock();
-		for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 		{
-			closeClientConnection(i->second);
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				closeClientConnection(i->second);
+			}
 		}
-		_stateMutex.unlock();
 		while(_clients.size() > 0)
 		{
 			collectGarbage();
@@ -193,10 +195,9 @@ void Server::mainThread()
 		{
 			try
 			{
-				_stateMutex.lock();
+				//Don't lock _stateMutex => no synchronisation needed
 				if(_clients.size() > GD::bl->settings.cliServerMaxConnections())
 				{
-					_stateMutex.unlock();
 					collectGarbage();
 					if(_clients.size() > GD::bl->settings.cliServerMaxConnections())
 					{
@@ -205,7 +206,6 @@ void Server::mainThread()
 						continue;
 					}
 				}
-				_stateMutex.unlock();
 				getFileDescriptor();
 				if(!_serverFileDescriptor || _serverFileDescriptor->descriptor == -1)
 				{
@@ -233,10 +233,10 @@ void Server::mainThread()
 			try
 			{
 				std::shared_ptr<ClientData> clientData = std::shared_ptr<ClientData>(new ClientData(clientFileDescriptor));
-				_stateMutex.lock();
+				std::lock_guard<std::mutex> stateGuard(_stateMutex);
 				clientData->id = _currentClientID++;
 				_clients[clientData->id] = clientData;
-				clientData->readThread = std::thread(&Server::readClient, this, clientData);
+				GD::bl->threadManager.start(clientData->readThread, false, &Server::readClient, this, clientData);
 			}
 			catch(const std::exception& ex)
 			{
@@ -250,7 +250,6 @@ void Server::mainThread()
 			{
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
-			_stateMutex.unlock();
 		}
 		GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 	}
@@ -954,6 +953,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "runscript (rs)\t\tExecutes a script with the internal PHP engine" << std::endl;
 			stringStream << "rpcservers (rpc)\t\tLists all active RPC servers" << std::endl;
 			stringStream << "rpcclients (rcl)\t\tLists all active RPC clients" << std::endl;
+			stringStream << "threads\t\tPrints current thread count" << std::endl;
 			stringStream << "users [COMMAND]\t\tExecute user commands. Type \"users help\" for more information." << std::endl;
 			stringStream << "families [COMMAND]\tExecute device family commands. Type \"families help\" for more information." << std::endl;
 			stringStream << "modules [COMMAND]\t\tExecute module commands. Type \"modules help\" for more information." << std::endl;
@@ -1226,6 +1226,11 @@ std::string Server::handleGlobalCommand(std::string& command)
 					<< std::endl;
 
 			}
+			return stringStream.str();
+		}
+		else if(command.compare(0, 7, "threads") == 0)
+		{
+			stringStream << GD::bl->threadManager.getCurrentThreadCount() << " of " << GD::bl->threadManager.getMaxThreadCount() << std::endl;
 			return stringStream.str();
 		}
 		return "";

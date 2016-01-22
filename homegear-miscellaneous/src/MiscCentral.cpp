@@ -349,7 +349,7 @@ std::string MiscCentral::handleCliCommand(std::string command)
 				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
 				raiseRPCNewDevices(deviceDescriptions);
 				GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(peer->getID()) + ".");
-				stringStream << "Added peer " + std::to_string(peer->getID()) + " of type 0x" << (int32_t)deviceType << " with serial number " << serialNumber << "." << std::dec << std::endl;
+				stringStream << "Added peer " + std::to_string(peer->getID()) + " of type 0x" << BaseLib::HelperFunctions::getHexString(deviceType) << " with serial number " << serialNumber << "." << std::dec << std::endl;
 				peer->initProgram();
 			}
 			return stringStream.str();

@@ -34,7 +34,7 @@
 #include "../GD/GD.h"
 #include "homegear-base/BaseLib.h"
 
-EventHandler::EventHandler()
+EventHandler::EventHandler() : BaseLib::IQueue(GD::bl.get(), 1000)
 {
 }
 
@@ -47,14 +47,8 @@ void EventHandler::dispose()
 {
 	if(_disposing) return;
 	_disposing = true;
-	_stopThread = true;
-	GD::out.printDebug("Debug: Waiting for event threads to finish.");
-	while(_eventThreads.size() > 0)
-	{
-		collectGarbage();
-		if(_eventThreads.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-	}
-	if(_mainThread.joinable()) _mainThread.join();
+	GD::bl->threadManager.join(_mainThread);
+	stopQueue(0);
 	_timedEvents.clear();
 	_triggeredEvents.clear();
 	_eventsToReset.clear();
@@ -63,122 +57,12 @@ void EventHandler::dispose()
 	_rpcEncoder.reset();
 }
 
-void EventHandler::collectGarbage()
-{
-	try
-	{
-		_lastGargabeCollection = GD::bl->hf.getTime();
-		std::vector<int32_t> eventsToRemove;
-		_eventThreadMutex.lock();
-		try
-		{
-			for(std::map<int32_t, std::pair<std::thread, bool>>::iterator i = _eventThreads.begin(); i != _eventThreads.end(); ++i)
-			{
-				if(!i->second.second)
-				{
-					if(i->second.first.joinable()) i->second.first.join();
-					eventsToRemove.push_back(i->first);
-				}
-			}
-		}
-		catch(const std::exception& ex)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		for(std::vector<int32_t>::iterator i = eventsToRemove.begin(); i != eventsToRemove.end(); ++i)
-		{
-			try
-			{
-				_eventThreads.erase(*i);
-			}
-			catch(const std::exception& ex)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-		}
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	_eventThreadMutex.unlock();
-}
-
-void EventHandler::setThreadNotRunning(int32_t threadId)
-{
-	if(threadId != -1)
-	{
-		_eventThreadMutex.lock();
-		try
-		{
-			_eventThreads.at(threadId).second = false;
-		}
-		catch(const std::exception& ex)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		_eventThreadMutex.unlock();
-	}
-}
-
-bool EventHandler::eventThreadMaxReached()
-{
-	try
-	{
-		_eventThreadMutex.lock();
-		if(_eventThreads.size() >= GD::bl->settings.eventThreadMax() * 100 / 125)
-		{
-			_eventThreadMutex.unlock();
-			collectGarbage();
-			_eventThreadMutex.lock();
-			if(_eventThreads.size() >= GD::bl->settings.eventThreadMax())
-			{
-				_eventThreadMutex.unlock();
-				GD::out.printError("Error: Your event processing is too slow. More than " + std::to_string(GD::bl->settings.eventThreadMax()) + " events are queued. Skipping event.");
-				return true;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	_eventThreadMutex.unlock();
-	return false;
-}
-
 void EventHandler::init()
 {
 	_rpcDecoder = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get()));
 	_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
+
+	startQueue(0, GD::bl->settings.eventThreadCount(), GD::bl->settings.eventThreadPriority(), GD::bl->settings.eventThreadPolicy());
 }
 
 void EventHandler::mainThread()
@@ -198,25 +82,11 @@ void EventHandler::mainThread()
 			{
 				std::shared_ptr<Event> event = _timedEvents.begin()->second;
 				_eventsMutex.unlock();
-				if(event->enabled && !eventThreadMaxReached())
+				if(event->enabled)
 				{
-					_eventThreadMutex.lock();
-					try
-					{
-						int32_t threadId = _currentEventThreadID++;
-						if(threadId == -1) threadId = _currentEventThreadID++;
-						_eventThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&EventHandler::rpcCallThread, this, event->name, event->eventMethod,  event->eventMethodParameters, threadId), true)));
-						event->lastRaised = currentTime;
-					}
-					catch(const std::exception& ex)
-					{
-						GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-					}
-					catch(...)
-					{
-						GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-					}
-					_eventThreadMutex.unlock();
+					std::shared_ptr<BaseLib::IQueueEntry> queueEntry(new QueueEntry(event->name, event->eventMethod,  event->eventMethodParameters));
+					enqueue(0, queueEntry);
+					event->lastRaised = currentTime;
 				}
 				save(event);
 				if(event->recurEvery == 0 || (event->endTime > 0 && currentTime >= event->endTime))
@@ -251,37 +121,19 @@ void EventHandler::mainThread()
 				std::shared_ptr<Event> event = _eventsToReset.begin()->second;
 				_eventsMutex.unlock();
 
-				if(!eventThreadMaxReached())
-				{
-					GD::out.printInfo("Info: Resetting event " + event->name + ".");
-					_eventThreadMutex.lock();
-					try
-					{
-						int32_t threadId = _currentEventThreadID++;
-						if(threadId == -1) threadId = _currentEventThreadID++;
-						_eventThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&EventHandler::rpcCallThread, this, event->name, event->resetMethod, event->resetMethodParameters, threadId), true)));
-						event->lastReset = currentTime;
-
-					}
-					catch(const std::exception& ex)
-					{
-						GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-					}
-					catch(...)
-					{
-						GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-					}
-					_eventThreadMutex.unlock();
-					removeEventToReset(event->id);
-					save(event);
-					GD::rpcClient->broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
-				}
+				GD::out.printInfo("Info: Resetting event " + event->name + ".");
+				std::shared_ptr<BaseLib::IQueueEntry> queueEntry(new QueueEntry(event->name, event->resetMethod, event->resetMethodParameters));
+				enqueue(0, queueEntry);
+				event->lastReset = currentTime;
+				removeEventToReset(event->id);
+				save(event);
+				GD::rpcClient->broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
 			}
 			else if(!_timesToReset.empty() && _timesToReset.begin()->first <= currentTime)
 			{
 				std::shared_ptr<Event> event = _timesToReset.begin()->second;
-				GD::out.printInfo("Info: Resetting initial time for event " + event->name + ".");
 				_eventsMutex.unlock();
+				GD::out.printInfo("Info: Resetting initial time for event " + event->name + ".");
 				removeTimeToReset(event->id);
 				event->lastReset = currentTime;
 				event->currentTime = 0;
@@ -294,26 +146,22 @@ void EventHandler::mainThread()
 				std::this_thread::sleep_for(std::chrono::milliseconds(300));
 			}
 
-			_mainThreadMutex.lock();
+			std::lock_guard<std::mutex> mainThreadGuard(_mainThreadMutex);
 			if(_timedEvents.empty() && _eventsToReset.empty() && _timesToReset.empty()) _stopThread = true;
-			_mainThreadMutex.unlock();
 		}
 		catch(const std::exception& ex)
 		{
 			_eventsMutex.unlock();
-			_mainThreadMutex.unlock();
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		catch(BaseLib::Exception& ex)
 		{
 			_eventsMutex.unlock();
-			_mainThreadMutex.unlock();
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		catch(...)
 		{
 			_eventsMutex.unlock();
-			_mainThreadMutex.unlock();
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
 	}
@@ -395,9 +243,8 @@ BaseLib::PVariable EventHandler::add(BaseLib::PVariable eventDescription)
 					if(event->resetAfter == 0) return BaseLib::Variable::createError(-5, "RESETAFTER is not specified or 0.");
 				}
 			}
-			_eventsMutex.lock();
+			std::lock_guard<std::mutex> eventsGuard(_eventsMutex);
 			_triggeredEvents[event->peerID][event->peerChannel][event->variable].push_back(event);
-			_eventsMutex.unlock();
 		}
 		else
 		{
@@ -409,18 +256,20 @@ BaseLib::PVariable EventHandler::add(BaseLib::PVariable eventDescription)
 			if(eventDescription->structValue->find("RECUREVERY") != eventDescription->structValue->end())
 				event->recurEvery = ((uint64_t)eventDescription->structValue->at("RECUREVERY")->integerValue) * 1000;
 			uint64_t nextExecution = getNextExecution(event->eventTime, event->recurEvery);
-			_eventsMutex.lock();
-			while(_timedEvents.find(nextExecution) != _timedEvents.end()) nextExecution++;
-			_timedEvents[nextExecution] = event;
-			_eventsMutex.unlock();
-			_mainThreadMutex.lock();
+
+			{
+				std::lock_guard<std::mutex> eventsGuard(_eventsMutex);
+				while(_timedEvents.find(nextExecution) != _timedEvents.end()) nextExecution++;
+				_timedEvents[nextExecution] = event;
+			}
+
+			std::lock_guard<std::mutex> mainThreadGuard(_mainThreadMutex);
 			if(_stopThread || !_mainThread.joinable())
 			{
-				if(_mainThread.joinable()) _mainThread.join();
+				GD::bl->threadManager.join(_mainThread);
 				_stopThread = false;
-				_mainThread = std::thread(&EventHandler::mainThread, this);
+				GD::bl->threadManager.start(_mainThread, true, &EventHandler::mainThread, this);
 			}
-			_mainThreadMutex.unlock();
 		}
 		save(event);
 		GD::rpcClient->broadcastNewEvent(get(event->name));
@@ -428,20 +277,14 @@ BaseLib::PVariable EventHandler::add(BaseLib::PVariable eventDescription)
 	}
 	catch(const std::exception& ex)
     {
-		_eventsMutex.unlock();
-		_mainThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	_eventsMutex.unlock();
-    	_mainThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_eventsMutex.unlock();
-    	_mainThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
@@ -812,15 +655,8 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::shared_ptr<std
 	try
 	{
 		if(_disposing) return;
-		if(eventThreadMaxReached())
-		{
-			GD::out.printError("Error: Not triggering event for peer " + std::to_string(peerID) + " and channel " + std::to_string(channel) + " (multiple variables).");
-			return;
-		}
-		_eventThreadMutex.lock();
-		int32_t threadId = _currentEventThreadID++;
-		if(threadId == -1) threadId = _currentEventThreadID++;
-		_eventThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&EventHandler::triggerThreadMultipleVariables, this, peerID, channel, variables, values, threadId), true)));
+		std::shared_ptr<BaseLib::IQueueEntry> queueEntry(new QueueEntry(peerID, channel, variables, values));
+		enqueue(0, queueEntry);
 	}
 	catch(const std::exception& ex)
     {
@@ -834,7 +670,6 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::shared_ptr<std
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _eventThreadMutex.unlock();
 }
 
 uint64_t EventHandler::getNextExecution(uint64_t startTime, uint64_t recurEvery)
@@ -867,15 +702,8 @@ void EventHandler::trigger(std::string& variable, BaseLib::PVariable& value)
 	try
 	{
 		if(_disposing) return;
-		if(eventThreadMaxReached())
-		{
-			GD::out.printError("Error: Not triggering event for variable \"" + variable + "\".");
-			return;
-		}
-		_eventThreadMutex.lock();
-		int32_t threadId = _currentEventThreadID++;
-		if(threadId == -1) threadId = _currentEventThreadID++;
-		_eventThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&EventHandler::triggerThread, this, 0, -1, variable, value, threadId), true)));
+		std::shared_ptr<BaseLib::IQueueEntry> queueEntry(new QueueEntry(0, -1, variable, value));
+		enqueue(0, queueEntry);
 	}
 	catch(const std::exception& ex)
     {
@@ -889,7 +717,6 @@ void EventHandler::trigger(std::string& variable, BaseLib::PVariable& value)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _eventThreadMutex.unlock();
 }
 
 void EventHandler::trigger(uint64_t peerID, int32_t channel, std::string& variable, BaseLib::PVariable& value)
@@ -897,15 +724,8 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::string& variab
 	try
 	{
 		if(_disposing) return;
-		if(eventThreadMaxReached())
-		{
-			GD::out.printError("Error: Not triggering event for peer " + std::to_string(peerID) + " and channel " + std::to_string(channel) + " (variable \"" + variable + "\").");
-			return;
-		}
-		_eventThreadMutex.lock();
-		int32_t threadId = _currentEventThreadID++;
-		if(threadId == -1) threadId = _currentEventThreadID++;
-		_eventThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(threadId, std::pair<std::thread, bool>(std::thread(&EventHandler::triggerThread, this, peerID, channel, variable, value, threadId), true)));
+		std::shared_ptr<BaseLib::IQueueEntry> queueEntry(new QueueEntry(peerID, channel, variable, value));
+		enqueue(0, queueEntry);
 	}
 	catch(const std::exception& ex)
     {
@@ -919,16 +739,15 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::string& variab
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _eventThreadMutex.unlock();
 }
 
-void EventHandler::triggerThreadMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values, int32_t threadId)
+void EventHandler::processTriggerMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, std::shared_ptr<std::vector<BaseLib::PVariable>>& values)
 {
 	try
 	{
 		for(uint32_t i = 0; i < variables->size(); i++)
 		{
-			triggerThread(peerID, channel, variables->at(i), values->at(i), -1);
+			processTriggerSingleVariable(peerID, channel, variables->at(i), values->at(i));
 		}
 	}
 	catch(const std::exception& ex)
@@ -943,7 +762,6 @@ void EventHandler::triggerThreadMultipleVariables(uint64_t peerID, int32_t chann
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    setThreadNotRunning(threadId);
 }
 
 void EventHandler::removeEventToReset(uint32_t id)
@@ -1250,7 +1068,41 @@ BaseLib::PVariable EventHandler::trigger(std::string name)
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-void EventHandler::rpcCallThread(std::string eventName, std::string eventMethod, BaseLib::PVariable eventMethodParameters, int32_t threadId)
+void EventHandler::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry)
+{
+	try
+	{
+		std::shared_ptr<QueueEntry> queueEntry;
+		queueEntry = std::dynamic_pointer_cast<QueueEntry>(entry);
+		if(!queueEntry) return;
+		if(queueEntry->type == QueueEntryType::singleVariable)
+		{
+			processTriggerSingleVariable(queueEntry->peerId, queueEntry->channel, queueEntry->variable, queueEntry->value);
+		}
+		else if(queueEntry->type == QueueEntryType::multipleVariables)
+		{
+			processTriggerMultipleVariables(queueEntry->peerId, queueEntry->channel, queueEntry->variables, queueEntry->values);
+		}
+		else if(queueEntry->type == QueueEntryType::rpcCall)
+		{
+			processRpcCall(queueEntry->eventName, queueEntry->eventMethod, queueEntry->eventMethodParameters);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void EventHandler::processRpcCall(std::string& eventName, std::string& eventMethod, BaseLib::PVariable& eventMethodParameters)
 {
 	try
 	{
@@ -1275,44 +1127,31 @@ void EventHandler::rpcCallThread(std::string eventName, std::string eventMethod,
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    setThreadNotRunning(threadId);
 }
 
-void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string variable, BaseLib::PVariable value, int32_t threadId)
+void EventHandler::processTriggerSingleVariable(uint64_t peerID, int32_t channel, std::string& variable, BaseLib::PVariable& value)
 {
 	try
 	{
-		_eventsMutex.lock();
-		if(!value || _triggeredEvents.find(peerID) == _triggeredEvents.end())
-		{
-			_eventsMutex.unlock();
-			setThreadNotRunning(threadId);
-			return;
-		}
-		std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>* channels = &_triggeredEvents.at(peerID);
-		if(channels->find(channel) == channels->end())
-		{
-			_eventsMutex.unlock();
-			setThreadNotRunning(threadId);
-			return;
-		}
-		std::map<std::string, std::vector<std::shared_ptr<Event>>>* variables = &channels->at(channel);
-		if(variables->find(variable) == variables->end())
-		{
-			_eventsMutex.unlock();
-			setThreadNotRunning(threadId);
-			return;
-		}
-		std::vector<std::shared_ptr<Event>>* events = &variables->at(variable);
-		std::vector<std::shared_ptr<Event>> triggeredEvents;
+		if(!value) return;
 		uint64_t currentTime = BaseLib::HelperFunctions::getTime();
-		for(std::vector<std::shared_ptr<Event>>::iterator i = events->begin(); i !=  events->end(); ++i)
+		std::vector<std::shared_ptr<Event>> triggeredEvents;
 		{
-			//Don't raise the same event multiple times
-			if(!(*i)->enabled || ((*i)->lastValue && *((*i)->lastValue) == *value && currentTime - (*i)->lastRaised < 220)) continue;
-			triggeredEvents.push_back(*i);
+			std::lock_guard<std::mutex> eventsGuard(_eventsMutex);
+			std::map<uint64_t, std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>>::iterator peerIterator = _triggeredEvents.find(peerID);
+			if(peerIterator == _triggeredEvents.end()) return;
+			std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator channelIterator = peerIterator->second.find(channel);
+			if(channelIterator == peerIterator->second.end()) return;
+			std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator variableIterator = channelIterator->second.find(variable);
+			if(variableIterator == channelIterator->second.end()) return;
+			for(std::vector<std::shared_ptr<Event>>::iterator i = variableIterator->second.begin(); i !=  variableIterator->second.end(); ++i)
+			{
+				//Don't raise the same event multiple times
+				if(!(*i)->enabled || ((*i)->lastValue && *((*i)->lastValue) == *value && currentTime - (*i)->lastRaised < 220)) continue;
+				triggeredEvents.push_back(*i);
+			}
 		}
-		_eventsMutex.unlock();
+
 		for(std::vector<std::shared_ptr<Event>>::iterator i = triggeredEvents.begin(); i !=  triggeredEvents.end(); ++i)
 		{
 			BaseLib::PVariable eventMethodParameters(new BaseLib::Variable());
@@ -1449,20 +1288,16 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 	}
 	catch(const std::exception& ex)
     {
-		_eventsMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	_eventsMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_eventsMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    setThreadNotRunning(threadId);
 }
 
 void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, BaseLib::PVariable& rpcResult, uint64_t currentTime)
@@ -1538,28 +1373,25 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, BaseLib::PVar
 			}
 			catch(const std::exception& ex)
 			{
-				_eventsMutex.unlock();
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(BaseLib::Exception& ex)
 			{
-				_eventsMutex.unlock();
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(...)
 			{
-				_eventsMutex.unlock();
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 
 			try
 			{
-				_mainThreadMutex.lock();
+				std::lock_guard<std::mutex> mainThreadGuard(_mainThreadMutex);
 				if(_stopThread || !_mainThread.joinable())
 				{
-					if(_mainThread.joinable()) _mainThread.join();
+					GD::bl->threadManager.join(_mainThread);
 					_stopThread = false;
-					_mainThread = std::thread(&EventHandler::mainThread, this);
+					GD::bl->threadManager.start(_mainThread, true, &EventHandler::mainThread, this);
 				}
 			}
 			catch(const std::exception& ex)
@@ -1574,7 +1406,6 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, BaseLib::PVar
 			{
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
-			_mainThreadMutex.unlock();
 		}
 		save(event);
 	}
@@ -1633,7 +1464,7 @@ void EventHandler::load()
 			event->lastReset = row->second.at(22)->intValue;
 			event->currentTime = row->second.at(23)->intValue;
 			event->enabled = row->second.at(24)->intValue;
-			_eventsMutex.lock();
+			std::lock_guard<std::mutex> eventsGuard(_eventsMutex);
 			if(event->eventTime > 0)
 			{
 				uint64_t nextExecution = getNextExecution(event->eventTime, event->recurEvery);
@@ -1654,32 +1485,24 @@ void EventHandler::load()
 				}
 				else if(event->initialTime > 0) event->currentTime = 0;
 			}
-			_eventsMutex.unlock();
 		}
-		_mainThreadMutex.lock();
+		std::lock_guard<std::mutex> mainThreadGuard(_mainThreadMutex);
 		if(!_timedEvents.empty() || !_eventsToReset.empty())
 		{
 			_stopThread = false;
-			_mainThread = std::thread(&EventHandler::mainThread, this);
+			GD::bl->threadManager.start(_mainThread, true, &EventHandler::mainThread, this);
 		}
-		_mainThreadMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_eventsMutex.unlock();
-		_mainThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	_eventsMutex.unlock();
-    	_mainThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_eventsMutex.unlock();
-    	_mainThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
