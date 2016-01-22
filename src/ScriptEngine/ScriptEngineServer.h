@@ -68,6 +68,19 @@ private:
 		std::thread readThread;
 	};
 
+	class ScriptEngineProcess
+	{
+	public:
+		ScriptEngineProcess() {}
+		virtual ~ScriptEngineProcess() {}
+
+		pid_t pid = 0;
+		std::shared_ptr<ClientData> clientData;
+		std::mutex scriptCountMutex;
+		uint32_t scriptCount = 0;
+	};
+
+	BaseLib::Output _out;
 	std::string _socketPath;
 	bool _stopServer = false;
 	std::thread _mainThread;
@@ -75,6 +88,8 @@ private:
 	int32_t _backlog = 10;
 	std::shared_ptr<BaseLib::FileDescriptor> _clientFileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
+	std::mutex _processMutex;
+	std::map<int32_t, std::shared_ptr<ScriptEngineProcess>> _processes;
 	std::mutex _stateMutex;
 	std::map<int32_t, std::shared_ptr<ClientData>> _clients;
 	static int32_t _currentClientID;
