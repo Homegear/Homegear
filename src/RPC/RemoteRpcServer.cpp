@@ -47,8 +47,10 @@ RemoteRpcServer::RemoteRpcServer(std::shared_ptr<RpcClient> client)
 	_methodProcessingMessageAvailable = false;
 	_methodBufferHead = 0;
 	_methodBufferTail = 0;
-	_methodProcessingThread = std::thread(&RemoteRpcServer::processMethods, this);
-	BaseLib::Threads::setThreadPriority(GD::bl.get(), _methodProcessingThread.native_handle(), GD::bl->settings.rpcClientThreadPriority(), GD::bl->settings.rpcClientThreadPolicy());
+	if(!GD::bl->threadManager.start(_methodProcessingThread, false, GD::bl->settings.rpcClientThreadPriority(), GD::bl->settings.rpcClientThreadPolicy(), &RemoteRpcServer::processMethods, this))
+	{
+		removed = true;
+	}
 }
 
 RemoteRpcServer::~RemoteRpcServer()
@@ -58,7 +60,7 @@ RemoteRpcServer::~RemoteRpcServer()
 	_stopMethodProcessingThread = true;
 	_methodProcessingMessageAvailable = true;
 	_methodProcessingConditionVariable.notify_one();
-	if(_methodProcessingThread.joinable()) _methodProcessingThread.join();
+	GD::bl->threadManager.join(_methodProcessingThread);
 	_client.reset();
 }
 

@@ -53,6 +53,7 @@ void Server::registerMethods()
 	if(!_server) return;
 	try
 	{
+		_server->registerMethod("devTest", std::shared_ptr<RPCMethod>(new RPCDevTest()));
 		_server->registerMethod("system.getCapabilities", std::shared_ptr<RPCMethod>(new RPCSystemGetCapabilities()));
 		_server->registerMethod("system.listMethods", std::shared_ptr<RPCMethod>(new RPCSystemListMethods(_server)));
 		_server->registerMethod("system.methodHelp", std::shared_ptr<RPCMethod>(new RPCSystemMethodHelp(_server)));

@@ -28,8 +28,8 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef CLISERVER_H_
-#define CLISERVER_H_
+#ifndef SCRIPTENGINESERVER_H_
+#define SCRIPTENGINESERVER_H_
 
 #include "homegear-base/BaseLib.h"
 
@@ -82,10 +82,6 @@ private:
 	int64_t _lastGargabeCollection = 0;
 
 	void collectGarbage();
-	void handleCommand(std::string& command, std::shared_ptr<ClientData> clientData);
-	std::string handleUserCommand(std::string& command);
-	std::string handleModuleCommand(std::string& command);
-	std::string handleGlobalCommand(std::string& command);
 	void getFileDescriptor(bool deleteOldSocket = false);
 	std::shared_ptr<BaseLib::FileDescriptor> getClientFileDescriptor();
 	void mainThread();

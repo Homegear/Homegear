@@ -73,11 +73,8 @@ MiscPeer::~MiscPeer()
 	{
 		if(_programPID != -1) kill(_programPID, 15);
 		_stopRunProgramThread = true;
-		if(_runProgramThread.joinable())
-		{
-			if(_programPID != -1) GD::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
-			_runProgramThread.join();
-		}
+		if(_programPID != -1) GD::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
+		_bl->threadManager.join(_runProgramThread);
 	}
 	catch(const std::exception& ex)
 	{
@@ -105,11 +102,8 @@ void MiscPeer::homegearShuttingDown()
 		}
 
 		_stopRunProgramThread = true;
-		if(_runProgramThread.joinable())
-		{
-			if(_programPID != -1) GD::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
-			_runProgramThread.join();
-		}
+		if(_programPID != -1) GD::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
+		_bl->threadManager.join(_runProgramThread);
 	}
 	catch(const std::exception& ex)
 	{
@@ -518,14 +512,11 @@ void MiscPeer::initProgram()
 	{
 		if(_rpcDevice->runProgram)
 		{
-			if(_runProgramThread.joinable())
-			{
-				_stopRunProgramThread = true;
-				_runProgramThread.join();
-			}
+			_stopRunProgramThread = true;
+			_bl->threadManager.join(_runProgramThread);
 			_stopRunProgramThread = false;
-			if(!_rpcDevice->runProgram->script.empty()) _runProgramThread = std::thread(&MiscPeer::runScript, this);
-			else _runProgramThread = std::thread(&MiscPeer::runProgram, this);
+			if(!_rpcDevice->runProgram->script.empty()) _bl->threadManager.start(_runProgramThread, true, &MiscPeer::runScript, this);
+			else _bl->threadManager.start(_runProgramThread, true, &MiscPeer::runProgram, this);
 		}
 	}
 	catch(const std::exception& ex)
@@ -745,7 +736,7 @@ PVariable MiscPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
 			for(Struct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
 				if(i->first.empty() || !i->second) continue;
-				setValue(clientInfo, channel, i->first, i->second);
+				setValue(clientInfo, channel, i->first, i->second, false);
 			}
 		}
 		else
@@ -769,12 +760,12 @@ PVariable MiscPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel, std::string valueKey, PVariable value)
+PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel, std::string valueKey, PVariable value, bool wait)
 {
 	try
 	{
 		if(!clientInfo) clientInfo.reset(new BaseLib::RpcClientInfo());
-		Peer::setValue(clientInfo, channel, valueKey, value); //Ignore result, otherwise setHomegerValue might not be executed
+		Peer::setValue(clientInfo, channel, valueKey, value, wait); //Ignore result, otherwise setHomegerValue might not be executed
 		if(_disposing) return Variable::createError(-32500, "Peer is disposing.");
 		if(!_centralFeatures) return Variable::createError(-2, "Not a central peer.");
 		if(valueKey.empty()) return Variable::createError(-5, "Value key is empty.");

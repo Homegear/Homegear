@@ -69,7 +69,8 @@ case $1 in
 				chmod 750 $DBPATH
 				chmod 640 $DBPATH/db.sql
 				chmod 550 $DBPATH/scripts
-                chmod 550 $STATICPATH
+				chown -R $RUNASUSER:$RUNASGROUP $STATICPATH
+				chmod 550 $STATICPATH
 				chmod 550 $STATICPATH/firmware
 				chmod 440 $STATICPATH/firmware/*
 				chmod 550 $STATICPATH/firmware/GetFirmwareUpdates*.sh

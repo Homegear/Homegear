@@ -30,7 +30,7 @@
 #include "Mqtt.h"
 #include "../GD/GD.h"
 
-Mqtt::Mqtt() : BaseLib::IQueue(GD::bl.get())
+Mqtt::Mqtt() : BaseLib::IQueue(GD::bl.get(), 1000)
 {
 	try
 	{
@@ -82,7 +82,7 @@ void Mqtt::start()
 		if(_started) return;
 		_started = true;
 
-		startQueue(0, 0, SCHED_OTHER);
+		startQueue(0, 1, 0, SCHED_OTHER);
 
 		signal(SIGPIPE, SIG_IGN);
 
@@ -91,11 +91,11 @@ void Mqtt::start()
 		_jsonEncoder = std::unique_ptr<BaseLib::RPC::JsonEncoder>(new BaseLib::RPC::JsonEncoder(GD::bl.get()));
 		_jsonDecoder = std::unique_ptr<BaseLib::RPC::JsonDecoder>(new BaseLib::RPC::JsonDecoder(GD::bl.get()));
 		_socket.reset(new BaseLib::SocketOperations(GD::bl.get(), _settings.brokerHostname(), _settings.brokerPort(), _settings.enableSSL(), _settings.caFile(), _settings.verifyCertificate(), _settings.certPath(), _settings.keyPath()));
-		if(_listenThread.joinable()) _listenThread.join();
-		_listenThread = std::thread(&Mqtt::listen, this);
+		GD::bl->threadManager.join(_listenThread);
+		GD::bl->threadManager.start(_listenThread, true, &Mqtt::listen, this);
 		connect();
-		if(_pingThread.joinable()) _pingThread.join();
-		_pingThread = std::thread(&Mqtt::ping, this);
+		GD::bl->threadManager.join(_pingThread);
+		GD::bl->threadManager.start(_pingThread, true, &Mqtt::ping, this);
 	}
 	catch(const std::exception& ex)
 	{
@@ -118,10 +118,10 @@ void Mqtt::stop()
 		_started = false;
 		stopQueue(0);
 		disconnect();
-		if(_pingThread.joinable()) _pingThread.join();
-		if(_listenThread.joinable()) _listenThread.join();
+		GD::bl->threadManager.join(_pingThread);
+		GD::bl->threadManager.join(_listenThread);
 		_reconnectThreadMutex.lock();
-		if(_reconnectThread.joinable()) _reconnectThread.join();
+		GD::bl->threadManager.join(_reconnectThread);
 		_reconnectThreadMutex.unlock();
 		_socket.reset(new BaseLib::SocketOperations(GD::bl.get()));
 	}
@@ -734,8 +734,8 @@ void Mqtt::reconnect()
 			return;
 		}
 		_reconnecting = true;
-		if(_reconnectThread.joinable())	_reconnectThread.join();
-		_reconnectThread = std::thread(&Mqtt::connect, this);
+		GD::bl->threadManager.join(_reconnectThread);
+		GD::bl->threadManager.start(_reconnectThread, true, &Mqtt::connect, this);
 	}
     catch(const std::exception& ex)
     {

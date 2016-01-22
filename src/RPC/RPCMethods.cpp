@@ -38,6 +38,33 @@
 namespace RPC
 {
 
+BaseLib::PVariable RPCDevTest::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		bool value = false;
+		if(parameters->size() > 0) value = parameters->at(0)->booleanValue;
+
+		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{ "PRESS_SHORT" });
+		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{ BaseLib::PVariable(new BaseLib::Variable(value)) });
+		GD::rpcClient->broadcastEvent(90, 1, "OPNWEATHES:1", valueKeys, values);
+		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCSystemGetCapabilities::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	try
@@ -2168,7 +2195,7 @@ RPCInit::~RPCInit()
 	{
 		_disposing = true;
 		_initServerThreadMutex.lock();
-		if(_initServerThread.joinable()) _initServerThread.join();
+		GD::bl->threadManager.join(_initServerThread);
 		_initServerThreadMutex.unlock();
 	}
 	catch(const std::exception& ex)
@@ -2264,8 +2291,8 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, std::shar
 					_initServerThreadMutex.unlock();
 					return BaseLib::Variable::createError(-32500, "I'm disposing.");
 				}
-				if(_initServerThread.joinable()) _initServerThread.join();
-				_initServerThread = std::thread(&RPC::Client::initServerMethods, GD::rpcClient.get(), server);
+				GD::bl->threadManager.join(_initServerThread);
+				GD::bl->threadManager.start(_initServerThread, false, &RPC::Client::initServerMethods, GD::rpcClient.get(), server);
 			}
 			catch(const std::exception& ex)
 			{
@@ -3487,8 +3514,10 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant, BaseLib::VariableType::tBoolean }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString }),
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant, BaseLib::VariableType::tBoolean }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString })
 		}));
@@ -3513,6 +3542,10 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 		else if(!useSerialNumber && parameters->size() == 4) value = parameters->at(3);
 		else value.reset(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 
+		bool wait = true;
+		if(useSerialNumber && parameters->size() == 4) wait = parameters->at(3)->booleanValue;
+		else if(!useSerialNumber && parameters->size() == 5) wait = parameters->at(4)->booleanValue;
+
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
@@ -3521,11 +3554,11 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 			{
 				if(useSerialNumber)
 				{
-					if(central->peerExists(serialNumber)) return central->setValue(clientInfo, serialNumber, channel, parameters->at(1)->stringValue, value);
+					if(central->peerExists(serialNumber)) return central->setValue(clientInfo, serialNumber, channel, parameters->at(1)->stringValue, value, wait);
 				}
 				else
 				{
-					if(central->peerExists((uint64_t)parameters->at(0)->integerValue)) return central->setValue(clientInfo, parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue, value);
+					if(central->peerExists((uint64_t)parameters->at(0)->integerValue)) return central->setValue(clientInfo, parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue, value, wait);
 				}
 			}
 		}

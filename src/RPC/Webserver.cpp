@@ -319,7 +319,7 @@ void WebServer::send(std::shared_ptr<BaseLib::SocketOperations>& socket, std::ve
 		}
 		catch(const BaseLib::SocketOperationException& ex)
 		{
-			_out.printError("Error: " + ex.what());
+			_out.printInfo("Info: " + ex.what());
 		}
 		socket->close();
 	}

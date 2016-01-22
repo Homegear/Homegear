@@ -34,9 +34,9 @@
 #include "../../config.h"
 #ifdef SCRIPTENGINE
 #include "../ScriptEngine/ScriptEngine.h"
+#include "../ScriptEngine/ScriptEngineServer.h"
 #endif
 #include "../CLI/CLIServer.h"
-#include "../CLI/CLIClient.h"
 #include "../Events/EventHandler.h"
 #include "../Licensing/LicensingController.h"
 #include "../Systems/FamilyController.h"
@@ -71,8 +71,10 @@ public:
 	//We can work with rpcServers without Mutex, because elements are never deleted and iterators are not invalidated upon insertion of new elements.
 	static std::map<int32_t, RPC::Server> rpcServers;
 	static std::unique_ptr<RPC::Client> rpcClient;
+#ifdef SCRIPTENGINE
+	static std::unique_ptr<ScriptEngineServer> scriptEngineServer;
+#endif
 	static std::unique_ptr<CLI::Server> cliServer;
-	static std::unique_ptr<CLI::Client> cliClient;
 	static BaseLib::Rpc::ServerInfo serverInfo;
 	static RPC::ClientSettings clientSettings;
 	static int32_t rpcLogLevel;

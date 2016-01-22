@@ -91,7 +91,7 @@ public:
 	virtual ~Event() {}
 };
 
-class EventHandler
+class EventHandler : public BaseLib::IQueue
 {
 public:
 	EventHandler();
@@ -117,6 +117,45 @@ public:
 	 */
 	void trigger(std::string& variable, BaseLib::PVariable& value);
 protected:
+	enum class QueueEntryType
+	{
+		singleVariable,
+		multipleVariables,
+		rpcCall
+	};
+
+	class QueueEntry : public BaseLib::IQueueEntry
+	{
+	public:
+		QueueEntry() {}
+		QueueEntry(QueueEntryType t) : type(t) {}
+		QueueEntry(std::string& name, std::string& method, BaseLib::PVariable& methodParameters) : type(QueueEntryType::rpcCall), eventName(name), eventMethod(method), eventMethodParameters(methodParameters) {}
+		QueueEntry(uint64_t peerId, int32_t channel, std::string& variable, BaseLib::PVariable& value) : type(QueueEntryType::singleVariable), peerId(peerId), channel(channel), variable(variable), value(value) {}
+		QueueEntry(uint64_t peerId, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, std::shared_ptr<std::vector<BaseLib::PVariable>>& values) : type(QueueEntryType::multipleVariables), peerId(peerId), channel(channel), variables(variables), values(values) {}
+		virtual ~QueueEntry() {}
+
+		QueueEntryType type = QueueEntryType::singleVariable;
+
+		// {{{ Triggered event
+			uint64_t peerId = 0;
+			int32_t channel = -1;
+
+			//Multiple variables
+			std::shared_ptr<std::vector<std::string>> variables;
+			std::shared_ptr<std::vector<BaseLib::PVariable>> values;
+
+			//One variable
+			std::string variable;
+			BaseLib::PVariable value;
+		// }}}
+
+		// {{{ Timed event
+			std::string eventName;
+			std::string eventMethod;
+			BaseLib::PVariable eventMethodParameters;
+		// }}}
+	};
+
 	bool _disposing = false;
 	std::mutex _eventsMutex;
 	std::map<uint64_t, std::shared_ptr<Event>> _timedEvents;
@@ -130,17 +169,9 @@ protected:
 	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
 
-	//Event threads
-	int64_t _lastGargabeCollection = 0;
-	volatile int32_t _currentEventThreadID = 0;
-	std::map<int32_t, std::pair<std::thread, bool>> _eventThreads;
-	std::mutex _eventThreadMutex;
-
-	void collectGarbage();
-	bool eventThreadMaxReached();
-	void triggerThreadMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values, int32_t threadId = -1);
-	void triggerThread(uint64_t peerID, int32_t channel, std::string variable, BaseLib::PVariable value, int32_t threadId = -1);
-	void rpcCallThread(std::string eventName, std::string eventMethod, BaseLib::PVariable eventMethodParameters, int32_t threadId = -1);
+	void processTriggerMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, std::shared_ptr<std::vector<BaseLib::PVariable>>& values);
+	void processTriggerSingleVariable(uint64_t peerID, int32_t channel, std::string& variable, BaseLib::PVariable& value);
+	void processRpcCall(std::string& eventName, std::string& eventMethod, BaseLib::PVariable& eventMethodParameters);
 	void mainThread();
 	uint64_t getNextExecution(uint64_t startTime, uint64_t recurEvery);
 	void removeEventToReset(uint32_t id);
@@ -152,7 +183,7 @@ protected:
 	std::shared_ptr<Event> getEvent(std::string name);
 	void save(std::shared_ptr<Event>);
 	void postTriggerTasks(std::shared_ptr<Event>& event, BaseLib::PVariable& rpcResult, uint64_t currentTime);
-	void setThreadNotRunning(int32_t threadId);
+	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 };
 #endif
 #endif

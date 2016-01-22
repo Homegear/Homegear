@@ -70,11 +70,11 @@ void ScriptEngineServer::collectGarbage()
 		for(std::vector<std::shared_ptr<ClientData>>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
 		{
 			GD::out.printDebug("Debug: Joining read thread of CLI client " + std::to_string((*i)->id));
-			if((*i)->readThread.joinable()) (*i)->readThread.join();
+			GD::bl->threadManager.join((*i)->readThread);
 			_stateMutex.lock();
 			try
 			{
-				_clients.erase((*i)->id);
+				if(i->use_count() <= 2) _clients.erase((*i)->id);
 			}
 			catch(const std::exception& ex)
 			{
@@ -109,8 +109,7 @@ void ScriptEngineServer::start()
 	{
 		stop();
 		_socketPath = GD::runDir + "homegearSE.sock";
-		_stopServer = false;
-		_mainThread = std::thread(&ScriptEngineServer::mainThread, this);
+		GD::bl->threadManager.start(_mainThread, true, &ScriptEngineServer::mainThread, this);
 	}
     catch(const std::exception& ex)
     {
@@ -131,20 +130,21 @@ void ScriptEngineServer::stop()
 	try
 	{
 		_stopServer = true;
-		if(_mainThread.joinable()) _mainThread.join();
-		GD::out.printDebug("Debug: Waiting for CLI client threads to finish.");
-		_stateMutex.lock();
-		for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+		GD::bl->threadManager.join(_mainThread);
+		GD::out.printDebug("Debug: Waiting for script engine server's client threads to finish.");
 		{
-			closeClientConnection(i->second);
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				closeClientConnection(i->second);
+			}
 		}
-		_stateMutex.unlock();
 		while(_clients.size() > 0)
 		{
 			collectGarbage();
 			if(_clients.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-		unlink(_socketPath.c_str());
+		unlink(GD::socketPath.c_str());
 	}
 	catch(const std::exception& ex)
 	{
@@ -192,19 +192,17 @@ void ScriptEngineServer::mainThread()
 		{
 			try
 			{
-				_stateMutex.lock();
-				if(_clients.size() > GD::bl->settings.cliServerMaxConnections())
+				//Don't lock _stateMutex => no synchronisation needed
+				if(_clients.size() > GD::bl->settings.scriptEngineServerMaxConnections())
 				{
-					_stateMutex.unlock();
 					collectGarbage();
-					if(_clients.size() > GD::bl->settings.cliServerMaxConnections())
+					if(_clients.size() > GD::bl->settings.scriptEngineServerMaxConnections())
 					{
 						GD::out.printError("Error in script engine server: There are too many clients connected to me. Waiting for connections to close. You can increase the number of allowed connections in main.conf.");
 						std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 						continue;
 					}
 				}
-				_stateMutex.unlock();
 				getFileDescriptor();
 				if(!_serverFileDescriptor || _serverFileDescriptor->descriptor == -1)
 				{
@@ -232,10 +230,10 @@ void ScriptEngineServer::mainThread()
 			try
 			{
 				std::shared_ptr<ClientData> clientData = std::shared_ptr<ClientData>(new ClientData(clientFileDescriptor));
-				_stateMutex.lock();
+				std::lock_guard<std::mutex> stateGuard(_stateMutex);
 				clientData->id = _currentClientID++;
 				_clients[clientData->id] = clientData;
-				clientData->readThread = std::thread(&ScriptEngineServer::readClient, this, clientData);
+				GD::bl->threadManager.start(clientData->readThread, true, &ScriptEngineServer::readClient, this, clientData);
 			}
 			catch(const std::exception& ex)
 			{
@@ -249,7 +247,6 @@ void ScriptEngineServer::mainThread()
 			{
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
-			_stateMutex.unlock();
 		}
 		GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 	}
@@ -289,7 +286,7 @@ std::shared_ptr<BaseLib::FileDescriptor> ScriptEngineServer::getClientFileDescri
 		GD::bl->fileDescriptorManager.unlock();
 		if(!select(nfds, &readFileDescriptor, NULL, NULL, &timeout))
 		{
-			if(GD::bl->hf.getTime() - _lastGargabeCollection > 60000 || _clients.size() > GD::bl->settings.cliServerMaxConnections() * 100 / 112) collectGarbage();
+			if(GD::bl->hf.getTime() - _lastGargabeCollection > 60000 || _clients.size() > GD::bl->settings.scriptEngineServerMaxConnections() * 100 / 112) collectGarbage();
 			return descriptor;
 		}
 
@@ -323,30 +320,39 @@ void ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
 		struct stat sb;
 		if(stat(GD::runDir.c_str(), &sb) == -1)
 		{
-			if(errno == ENOENT) GD::out.printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear otherwise the command line interface won't work.");
-			else throw BaseLib::Exception("Error reading information of directory " + GD::runDir + ": " + strerror(errno));
+			if(errno == ENOENT) GD::out.printCritical("Critical: Directory " + GD::runDir + " does not exist. Please create it before starting Homegear otherwise the script engine won't work.");
+			else GD::out.printCritical("Critical: Error reading information of directory " + GD::runDir + ". The script engine won't work: " + strerror(errno));
 			_stopServer = true;
 			return;
 		}
 		if(!S_ISDIR(sb.st_mode))
 		{
-			GD::out.printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear otherwise the command line interface won't work.");
+			GD::out.printCritical("Critical: Directory " + GD::runDir + " does not exist. Please create it before starting Homegear otherwise the script engine interface won't work.");
 			_stopServer = true;
 			return;
 		}
 		if(deleteOldSocket)
 		{
-			if(unlink(_socketPath.c_str()) == -1 && errno != ENOENT) throw(BaseLib::Exception("Couldn't delete existing socket: " + _socketPath + ". Error: " + strerror(errno)));
+			if(unlink(_socketPath.c_str()) == -1 && errno != ENOENT)
+			{
+				GD::out.printCritical("Critical: Couldn't delete existing socket: " + _socketPath + ". Please delete it manually. The script engine won't work. Error: " + strerror(errno));
+				return;
+			}
 		}
 		else if(stat(_socketPath.c_str(), &sb) == 0) return;
 
 		_serverFileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0));
-		if(_serverFileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't create socket: " + _socketPath + ". Error: " + strerror(errno)));
+		if(_serverFileDescriptor->descriptor == -1)
+		{
+			GD::out.printCritical("Critical: Couldn't create socket: " + _socketPath + ". The script engine won't work. Error: " + strerror(errno));
+			return;
+		}
 		int32_t reuseAddress = 1;
 		if(setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (void*)&reuseAddress, sizeof(int32_t)) == -1)
 		{
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
-			throw(BaseLib::Exception("Couldn't set socket options: " + _socketPath + ". Error: " + strerror(errno)));
+			GD::out.printCritical("Couldn't set socket options: " + _socketPath + ". The script engine won't work correctly. Error: " + strerror(errno));
+			return;
 		}
 		sockaddr_un serverAddress;
 		serverAddress.sun_family = AF_LOCAL;
@@ -363,7 +369,7 @@ void ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
 		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
 		{
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
-			throw BaseLib::Exception("Error: Script engine server could not start listening. Error: " + std::string(strerror(errno)));
+			GD::out.printCritical("Critical: Script engine server could not start listening. Error: " + std::string(strerror(errno)));
 		}
 		if(chmod(_socketPath.c_str(), S_IRWXU | S_IRWXG) == -1)
 		{
@@ -373,7 +379,7 @@ void ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
     }
     catch(const std::exception& ex)
     {
-    	GD::out.printError("Couldn't create socket file " + _socketPath + ": " + ex.what());
+    	GD::out.printError("Critical: Couldn't create socket file " + _socketPath + ": " + ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
@@ -390,12 +396,6 @@ void ScriptEngineServer::readClient(std::shared_ptr<ClientData> clientData)
 {
 	try
 	{
-		std::string unselect = "unselect";
-		GD::familyController->handleCliCommand(unselect);
-		GD::familyController->handleCliCommand(unselect);
-		GD::familyController->handleCliCommand(unselect);
-		GD::familyController->handleCliCommand(unselect);
-
 		int32_t bufferMax = 1024;
 		char buffer[bufferMax + 1];
 		std::shared_ptr<std::vector<char>> packet(new std::vector<char>());
@@ -441,835 +441,9 @@ void ScriptEngineServer::readClient(std::shared_ptr<ClientData> clientData)
 
 			std::string command;
 			command.insert(command.end(), buffer, buffer + bytesRead);
-			handleCommand(command, clientData);
+			//handleCommand(command, clientData);
 		}
 		closeClientConnection(clientData);
-	}
-    catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-std::string ScriptEngineServer::handleUserCommand(std::string& command)
-{
-	try
-	{
-		std::ostringstream stringStream;
-		if(command.compare(0, 10, "users help") == 0 || command.compare(0, 2, "uh") == 0)
-		{
-			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
-			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "users list (ul)\t\tLists all users." << std::endl;
-			stringStream << "users create (uc)\tCreate a new user." << std::endl;
-			stringStream << "users update (uu)\tChange the password of an existing user." << std::endl;
-			stringStream << "users delete (ud)\tDelete an existing user." << std::endl;
-			return stringStream.str();
-		}
-		if(command.compare(0, 10, "users list") == 0 || command.compare(0, 2, "ul") == 0 || command.compare(0, 2, "ls") == 0)
-		{
-			std::stringstream stream(command);
-			std::string element;
-			int32_t offset = (command.at(1) == 'l') ? 0 : 1;
-			int32_t index = 0;
-			bool printHelp = false;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index < 1 + offset)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1 + offset && element == "help") printHelp = true;
-				else
-				{
-					printHelp = true;
-					break;
-				}
-				index++;
-			}
-			if(printHelp)
-			{
-				stringStream << "Description: This command lists all known users." << std::endl;
-				stringStream << "Usage: users list" << std::endl << std::endl;
-				return stringStream.str();
-			}
-
-			std::map<uint64_t, std::string> users;
-			User::getAll(users);
-			if(users.size() == 0) return "No users exist.\n";
-
-			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(30) << "Name" << std::endl;
-			for(std::map<uint64_t, std::string>::iterator i = users.begin(); i != users.end(); ++i)
-			{
-				if(i->second.size() < 2 || !i->second.at(0) || !i->second.at(1)) continue;
-				stringStream << std::setw(6) << i->first << std::setw(30) << i->second << std::endl;
-			}
-
-			return stringStream.str();
-		}
-		else if(command.compare(0, 12, "users create") == 0 || command.compare(0, 2, "uc") == 0)
-		{
-			std::string userName;
-			std::string password;
-
-			std::stringstream stream(command);
-			std::string element;
-			int32_t offset = (command.at(1) == 'c') ? 0 : 1;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index < 1 + offset)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1 + offset)
-				{
-					if(element == "help") break;
-					else
-					{
-						userName = BaseLib::HelperFunctions::toLower(BaseLib::HelperFunctions::trim(element));
-						if(userName.empty() || !BaseLib::HelperFunctions::isAlphaNumeric(userName))
-						{
-							stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;
-							return stringStream.str();
-						}
-					}
-				}
-				else if(index == 2 + offset)
-				{
-					password = BaseLib::HelperFunctions::trim(element);
-
-					if(password.front() == '"' && password.back() == '"')
-					{
-						password = password.substr(1, password.size() - 2);
-						BaseLib::HelperFunctions::stringReplace(password, "\\\"", "\"");
-						BaseLib::HelperFunctions::stringReplace(password, "\\\\", "\\");
-					}
-					if(password.size() < 8)
-					{
-						stringStream << "The password is too short. Please choose a password with at least 8 characters." << std::endl;
-						return stringStream.str();
-					}
-				}
-				index++;
-			}
-			if(index < 3 + offset)
-			{
-				stringStream << "Description: This command creates a new user." << std::endl;
-				stringStream << "Usage: users create USERNAME \"PASSWORD\"" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  USERNAME:\tThe user name of the new user to create. It may contain alphanumeric characters, \"_\"" << std::endl;
-				stringStream << "           \tand \"-\". Example: foo" << std::endl;
-				stringStream << "  PASSWORD:\tThe password for the new user. All characters are allowed. If the password contains spaces," << std::endl;
-				stringStream << "           \twrap it in double quotes." << std::endl;
-				stringStream << "           \tExample: MyPassword" << std::endl;
-				stringStream << "           \tExample with spaces and escape characters: \"My_\\\\\\\"Password\" (Translates to: My_\\\"Password)" << std::endl;
-				return stringStream.str();
-			}
-
-			if(User::exists(userName)) return "A user with that name already exists.\n";
-
-			if(User::create(userName, password)) stringStream << "User successfully created." << std::endl;
-			else stringStream << "Error creating user. See log for more details." << std::endl;
-
-			return stringStream.str();
-		}
-		else if(command.compare(0, 12, "users update") == 0 || command.compare(0, 2, "uu") == 0)
-		{
-			std::string userName;
-			std::string password;
-
-			std::stringstream stream(command);
-			std::string element;
-			int32_t offset = (command.at(1) == 'u') ? 0 : 1;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index < 1 + offset)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1 + offset)
-				{
-					if(element == "help") break;
-					else
-					{
-						userName = BaseLib::HelperFunctions::trim(element);
-						if(userName.empty() || !BaseLib::HelperFunctions::isAlphaNumeric(userName))
-						{
-							stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;
-							return stringStream.str();
-						}
-					}
-				}
-				else if(index == 2 + offset)
-				{
-					password = BaseLib::HelperFunctions::trim(element);
-
-					if(password.front() == '"' && password.back() == '"')
-					{
-						password = password.substr(1, password.size() - 2);
-						BaseLib::HelperFunctions::stringReplace(password, "\\\"", "\"");
-						BaseLib::HelperFunctions::stringReplace(password, "\\\\", "\\");
-					}
-					if(password.size() < 8)
-					{
-						stringStream << "The password is too short. Please choose a password with at least 8 characters." << std::endl;
-						return stringStream.str();
-					}
-				}
-				index++;
-			}
-			if(index < 3 + offset)
-			{
-				stringStream << "Description: This command sets a new password for an existing user." << std::endl;
-				stringStream << "Usage: users update USERNAME \"PASSWORD\"" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  USERNAME:\tThe user name of an existing user. Example: foo" << std::endl;
-				stringStream << "  PASSWORD:\tThe new password for the user. All characters are allowed. If the password contains spaces," << std::endl;
-				stringStream << "           \twrap it in double quotes." << std::endl;
-				stringStream << "           \tExample: MyPassword" << std::endl;
-				stringStream << "           \tExample with spaces and escape characters: \"My_\\\\\\\"Password\" (Translates to: My_\\\"Password)" << std::endl;
-				return stringStream.str();
-			}
-
-			if(!User::exists(userName)) return "The user doesn't exist.\n";
-
-			if(User::update(userName, password)) stringStream << "User successfully updated." << std::endl;
-			else stringStream << "Error updating user. See log for more details." << std::endl;
-
-			return stringStream.str();
-		}
-		else if(command.compare(0, 12, "users delete") == 0 || command.compare(0, 2, "ud") == 0)
-		{
-			std::string userName;
-
-			std::stringstream stream(command);
-			std::string element;
-			int32_t offset = (command.at(1) == 'd') ? 0 : 1;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index < 1 + offset)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1 + offset)
-				{
-					if(element == "help") break;
-					else
-					{
-						userName = BaseLib::HelperFunctions::trim(element);
-						if(userName.empty() || !BaseLib::HelperFunctions::isAlphaNumeric(userName))
-						{
-							stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;
-							return stringStream.str();
-						}
-					}
-				}
-				index++;
-			}
-			if(index == 1 + offset)
-			{
-				stringStream << "Description: This command deletes an existing user." << std::endl;
-				stringStream << "Usage: users delete USERNAME" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  USERNAME:\tThe user name of the user to delete. Example: foo" << std::endl;
-				return stringStream.str();
-			}
-
-			if(!User::exists(userName)) return "The user doesn't exist.\n";
-
-			if(User::remove(userName)) stringStream << "User successfully deleted." << std::endl;
-			else stringStream << "Error deleting user. See log for more details." << std::endl;
-
-			return stringStream.str();
-		}
-		else return "Unknown command.\n";
-	}
-    catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return "Error executing command. See log file for more details.\n";
-}
-
-std::string ScriptEngineServer::handleModuleCommand(std::string& command)
-{
-	try
-	{
-		std::ostringstream stringStream;
-		if(command.compare(0, 12, "modules help") == 0 || command.compare(0, 2, "mh") == 0)
-		{
-			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
-			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "modules list (mls)\tLists all family modules" << std::endl;
-			stringStream << "modules load (mld)\tLoads a family module" << std::endl;
-			stringStream << "modules unload (mul)\tUnloads a family module" << std::endl;
-			stringStream << "modules reload (mrl)\tReloads a family module" << std::endl;
-			return stringStream.str();
-		}
-		if(command.compare(0, 12, "modules list") == 0 || command.compare(0, 3, "mls") == 0)
-		{
-			std::stringstream stream(command);
-			std::string element;
-			bool printHelp = false;
-			int32_t offset = (command.at(1) == 'l') ? 0 : 1;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index < 1 + offset)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1 + offset && element == "help") printHelp = true;
-				else
-				{
-					printHelp = true;
-					break;
-				}
-				index ++;
-			}
-			if(printHelp)
-			{
-				stringStream << "Description: This command lists all loaded family modules and shows the corresponding family ids." << std::endl;
-				stringStream << "Usage: modules list" << std::endl << std::endl;
-				return stringStream.str();
-			}
-
-			std::vector<std::shared_ptr<FamilyController::ModuleInfo>> modules = GD::familyController->getModuleInfo();
-			if(modules.size() == 0) return "No modules loaded.\n";
-
-			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(30) << "Family Name" << std::setw(30) << "Filename" << std::setw(14) << "Compiled For" << std::setw(7) << "Loaded" << std::endl;
-			for(std::vector<std::shared_ptr<FamilyController::ModuleInfo>>::iterator i = modules.begin(); i != modules.end(); ++i)
-			{
-				stringStream << std::setw(6) << (*i)->familyId << std::setw(30) << (*i)->familyName << std::setw(30) << (*i)->filename << std::setw(14) << (*i)->baselibVersion << std::setw(7) << ((*i)->loaded ? "true" : "false") << std::endl;
-			}
-
-			return stringStream.str();
-		}
-		else if(command.compare(0, 12, "modules load") == 0 || command.compare(0, 3, "mld") == 0)
-		{
-			std::stringstream stream(command);
-			std::string element;
-			int32_t offset = (command.at(1) == 'l') ? 0 : 1;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index == 0 + offset)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1 + offset)
-				{
-					if(element == "help" || element.empty()) break;
-				}
-				index++;
-			}
-			if(index == 1 + offset)
-			{
-				stringStream << "Description: This command loads a family module from \"" + GD::bl->settings.modulePath() + "\"." << std::endl;
-				stringStream << "Usage: modules load FILENAME" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  FILENAME:\t\tThe file name of the module. E. g. \"mod_miscellaneous.so\"" << std::endl;
-				return stringStream.str();
-			}
-
-			int32_t result = GD::familyController->loadModule(element);
-			switch(result)
-			{
-			case 0:
-				stringStream << "Module successfully loaded." << std::endl;
-				break;
-			case 1:
-				stringStream << "Module already loaded." << std::endl;
-				break;
-			case -1:
-				stringStream << "System error. See log for more details." << std::endl;
-				break;
-			case -2:
-				stringStream << "Module does not exist." << std::endl;
-				break;
-			case -4:
-				stringStream << "Family initialization failed. See log for more details." << std::endl;
-				break;
-			default:
-				stringStream << "Unknown result code: " << result << std::endl;
-			}
-
-			return stringStream.str();
-		}
-		else if(command.compare(0, 14, "modules unload") == 0 || command.compare(0, 3, "mul") == 0)
-		{
-			std::stringstream stream(command);
-			std::string element;
-			int32_t offset = (command.at(1) == 'u') ? 0 : 1;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index == 0 + offset)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1 + offset)
-				{
-					if(element == "help" || element.empty()) break;
-				}
-				index++;
-			}
-			if(index == 1 + offset)
-			{
-				stringStream << "Description: This command unloads a family module." << std::endl;
-				stringStream << "Usage: modules unload FILENAME" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  FILENAME:\t\tThe file name of the module. E. g. \"mod_miscellaneous.so\"" << std::endl;
-				return stringStream.str();
-			}
-
-			int32_t result = GD::familyController->unloadModule(element);
-			switch(result)
-			{
-			case 0:
-				stringStream << "Module successfully unloaded." << std::endl;
-				break;
-			case 1:
-				stringStream << "Module not loaded." << std::endl;
-				break;
-			case -1:
-				stringStream << "System error. See log for more details." << std::endl;
-				break;
-			case -2:
-				stringStream << "Module does not exist." << std::endl;
-				break;
-			default:
-				stringStream << "Unknown result code: " << result << std::endl;
-			}
-
-			return stringStream.str();
-		}
-		else if(command.compare(0, 14, "modules reload") == 0 || command.compare(0, 3, "mrl") == 0)
-		{
-			std::stringstream stream(command);
-			std::string element;
-			int32_t offset = (command.at(1) == 'r') ? 0 : 1;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index == 0 + offset)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1 + offset)
-				{
-					if(element == "help" || element.empty()) break;
-				}
-				index++;
-			}
-			if(index == 1 + offset)
-			{
-				stringStream << "Description: This command reloads a family module." << std::endl;
-				stringStream << "Usage: modules reload FILENAME" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  FILENAME:\t\tThe file name of the module. E. g. \"mod_miscellaneous.so\"" << std::endl;
-				return stringStream.str();
-			}
-
-			int32_t result = GD::familyController->reloadModule(element);
-			switch(result)
-			{
-			case 0:
-				stringStream << "Module successfully reloaded." << std::endl;
-				break;
-			case 1:
-				stringStream << "Module already loaded." << std::endl;
-				break;
-			case -1:
-				stringStream << "System error. See log for more details." << std::endl;
-				break;
-			case -2:
-				stringStream << "Module does not exist." << std::endl;
-				break;
-			case -4:
-				stringStream << "Family initialization failed. See log for more details." << std::endl;
-				break;
-			default:
-				stringStream << "Unknown result code: " << result << std::endl;
-			}
-
-			return stringStream.str();
-		}
-		else return "Unknown command.\n";
-	}
-    catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return "Error executing command. See log file for more details.\n";
-}
-
-
-std::string ScriptEngineServer::handleGlobalCommand(std::string& command)
-{
-	try
-	{
-		std::ostringstream stringStream;
-		if((command == "help" || command == "h") && !GD::familyController->familySelected())
-		{
-			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
-			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "debuglevel (dl)\t\tChanges the debug level" << std::endl;
-			stringStream << "runscript (rs)\t\tExecutes a script with the internal PHP engine" << std::endl;
-			stringStream << "rpcservers (rpc)\t\tLists all active RPC servers" << std::endl;
-			stringStream << "rpcclients (rcl)\t\tLists all active RPC clients" << std::endl;
-			stringStream << "users [COMMAND]\t\tExecute user commands. Type \"users help\" for more information." << std::endl;
-			stringStream << "families [COMMAND]\tExecute device family commands. Type \"families help\" for more information." << std::endl;
-			stringStream << "modules [COMMAND]\t\tExecute module commands. Type \"modules help\" for more information." << std::endl;
-			return stringStream.str();
-		}
-		else if(command.compare(0, 10, "debuglevel") == 0 || (command.compare(0, 2, "dl") == 0 && !GD::familyController->familySelected()))
-		{
-			int32_t debugLevel = 3;
-
-			std::stringstream stream(command);
-			std::string element;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index == 0)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1)
-				{
-					if(element == "help") break;
-					debugLevel = BaseLib::Math::getNumber(element);
-					if(debugLevel < 0 || debugLevel > 10) return "Invalid debug level. Please provide a debug level between 0 and 10.\n";
-				}
-				index++;
-			}
-			if(index == 1)
-			{
-				stringStream << "Description: This command changes the current debug level temporarily until Homegear is restarted." << std::endl;
-				stringStream << "Usage: debuglevel DEBUGLEVEL" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  DEBUGLEVEL:\tThe debug level between 0 and 10." << std::endl;
-				return stringStream.str();
-			}
-
-			GD::bl->debugLevel = debugLevel;
-			stringStream << "Debug level set to " << debugLevel << "." << std::endl;
-			return stringStream.str();
-		}
-		else if(command.compare(0, 9, "runscript") == 0 || command.compare(0, 2, "rs") == 0)
-		{
-			std::string path;
-
-			std::stringstream stream(command);
-			std::string element;
-			std::stringstream arguments;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index == 0)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1)
-				{
-					if(element == "help" || element.empty()) break;
-					path = GD::bl->settings.scriptPath() + element;
-				}
-				else
-				{
-					arguments << element << " ";
-				}
-				index++;
-			}
-			if(index < 2)
-			{
-				stringStream << "Description: This command executes a script in the Homegear script folder using the internal PHP engine." << std::endl;
-				stringStream << "Usage: runscript PATH [ARGUMENTS]" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  PATH:\t\tPath relative to the Homegear scripts folder." << std::endl;
-				stringStream << "  ARGUMENTS:\tParameters passed to the script." << std::endl;
-				return stringStream.str();
-			}
-
-			std::shared_ptr<std::vector<char>> scriptOutput(new std::vector<char>());
-#ifdef SCRIPTENGINE
-			int32_t exitCode = 0;
-			GD::scriptEngine->execute(path, arguments.str(), scriptOutput, &exitCode);
-			if(scriptOutput->size() > 0)
-			{
-				std::string outputString(&scriptOutput->at(0), &scriptOutput->at(0) + scriptOutput->size());
-				stringStream << outputString << std::endl;
-			}
-			stringStream << "Exit code: " << std::dec << exitCode << std::endl;
-#else
-			stringStream << "This Homegear binary is compiled without script engine support." << std::endl;
-#endif
-			return stringStream.str();
-		}
-		else if(command.compare(0, 10, "rpcclients") == 0 || command.compare(0, 3, "rcl") == 0)
-		{
-			std::stringstream stream(command);
-			std::string element;
-
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index == 0)
-				{
-					index++;
-					continue;
-				}
-				else
-				{
-					index++;
-					break;
-				}
-			}
-			if(index > 1)
-			{
-				stringStream << "Description: This command lists all connected RPC clients." << std::endl;
-				stringStream << "Usage: rpcclients" << std::endl << std::endl;
-				return stringStream.str();
-			}
-
-			int32_t idWidth = 10;
-			int32_t addressWidth = 15;
-			int32_t urlWidth = 30;
-			int32_t interfaceIdWidth = 30;
-			int32_t xmlWidth = 10;
-			int32_t binaryWidth = 10;
-			int32_t jsonWidth = 10;
-			int32_t websocketWidth = 10;
-
-			//Safe to use without mutex
-			for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
-			{
-				if(!i->second.isRunning()) continue;
-				const BaseLib::Rpc::PServerInfo settings = i->second.getInfo();
-				const std::vector<BaseLib::PRpcClientInfo> clients = i->second.getClientInfo();
-
-				stringStream << "Server " << settings->name << " (Port: " << std::to_string(settings->port) << "):" << std::endl;
-
-				std::string idCaption("Client ID");
-				std::string addressCaption("Address");
-				std::string urlCaption("Init URL");
-				std::string interfaceIdCaption("Init ID");
-				idCaption.resize(idWidth, ' ');
-				addressCaption.resize(addressWidth, ' ');
-				urlCaption.resize(urlWidth, ' ');
-				interfaceIdCaption.resize(interfaceIdWidth, ' ');
-				stringStream << std::setfill(' ')
-				    << "    "
-					<< idCaption << "  "
-					<< addressCaption << "  "
-					<< urlCaption << "  "
-					<< interfaceIdCaption << "  "
-					<< std::setw(xmlWidth) << "XML-RPC" << "  "
-					<< std::setw(binaryWidth) << "Binary RPC" << "  "
-					<< std::setw(jsonWidth) << "JSON-RPC" << "  "
-					<< std::setw(websocketWidth) << "Websocket" << "  "
-					<< std::endl;
-
-				for(std::vector<BaseLib::PRpcClientInfo>::const_iterator j = clients.begin(); j != clients.end(); ++j)
-				{
-					std::string id = std::to_string((*j)->id);
-					id.resize(idWidth, ' ');
-
-					std::string address = (*j)->address;
-					if(address.size() > (unsigned)addressWidth)
-					{
-						address.resize(addressWidth - 3);
-						address += "...";
-					}
-					else address.resize(addressWidth, ' ');
-
-					std::string url = (*j)->initUrl;
-					if(url.size() > (unsigned)urlWidth)
-					{
-						url.resize(urlWidth - 3);
-						url += "...";
-					}
-					else url.resize(urlWidth, ' ');
-
-					std::string interfaceId = (*j)->initInterfaceId;
-					if(interfaceId.size() > (unsigned)interfaceIdWidth)
-					{
-						interfaceId.resize(interfaceIdWidth - 3);
-						interfaceId += "...";
-					}
-					else interfaceId.resize(interfaceIdWidth, ' ');
-
-					stringStream
-						<< "    "
-						<< id << "  "
-						<< address << "  "
-						<< url << "  "
-						<< interfaceId << "  "
-						<< std::setw(xmlWidth) << ((*j)->xmlRpc ? "true" : "false") << "  "
-						<< std::setw(binaryWidth) << ((*j)->binaryRpc ? "true" : "false") << "  "
-						<< std::setw(jsonWidth) << ((*j)->jsonRpc ? "true" : "false") << "  "
-						<< std::setw(websocketWidth) << ((*j)->webSocket ? "true" : "false") << "  "
-						<< std::endl;
-				}
-
-				stringStream << std::endl;
-			}
-			return stringStream.str();
-		}
-		else if(command.compare(0, 10, "rpcservers") == 0 || command.compare(0, 3, "rpc") == 0)
-		{
-			std::stringstream stream(command);
-			std::string element;
-
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index == 0)
-				{
-					index++;
-					continue;
-				}
-				else
-				{
-					index++;
-					break;
-				}
-			}
-			if(index > 1)
-			{
-				stringStream << "Description: This command lists all active RPC servers." << std::endl;
-				stringStream << "Usage: rpcservers" << std::endl << std::endl;
-				return stringStream.str();
-			}
-
-			int32_t nameWidth = 20;
-			int32_t interfaceWidth = 20;
-			int32_t portWidth = 6;
-			int32_t sslWidth = 5;
-			int32_t authWidth = 5;
-			std::string nameCaption("Name");
-			std::string interfaceCaption("Interface");
-			nameCaption.resize(nameWidth, ' ');
-			interfaceCaption.resize(interfaceWidth, ' ');
-			stringStream << std::setfill(' ')
-				<< nameCaption << "  "
-				<< interfaceCaption << "  "
-				<< std::setw(portWidth) << "Port" << "  "
-				<< std::setw(sslWidth) << "SSL" << "  "
-				<< std::setw(authWidth) << "Auth" << "  "
-				<< std::endl;
-
-			//Safe to use without mutex
-			for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
-			{
-				if(!i->second.isRunning()) continue;
-				const BaseLib::Rpc::PServerInfo settings = i->second.getInfo();
-				std::string name = settings->name;
-				if(name.size() > (unsigned)nameWidth)
-				{
-					name.resize(nameWidth - 3);
-					name += "...";
-				}
-				else name.resize(nameWidth, ' ');
-				std::string interface = settings->interface;
-				if(interface.size() > (unsigned)interfaceWidth)
-				{
-					interface.resize(interfaceWidth - 3);
-					interface += "...";
-				}
-				else interface.resize(interfaceWidth, ' ');
-				stringStream
-					<< name << "  "
-					<< interface << "  "
-					<< std::setw(portWidth) << settings->port << "  "
-					<< std::setw(sslWidth) << (settings->ssl ? "true" : "false") << "  "
-					<< std::setw(authWidth) << (settings->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic ? "basic" : "none") << "  "
-					<< std::endl;
-
-			}
-			return stringStream.str();
-		}
-		return "";
-	}
-    catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return "Error executing command. See log file for more details.\n";
-}
-
-void ScriptEngineServer::handleCommand(std::string& command, std::shared_ptr<ClientData> clientData)
-{
-	try
-	{
-		if(!command.empty() && command.at(0) == 0) return;
-		std::string response = handleGlobalCommand(command);
-		if(response.empty())
-		{
-			//User commands can be executed when family is selected
-			if(command.compare(0, 5, "users") == 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'u' && !GD::familyController->familySelected())) response = handleUserCommand(command);
-			//Do not execute module commands when family is selected
-			else if((command.compare(0, 7, "modules") == 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'm')) && !GD::familyController->familySelected()) response = handleModuleCommand(command);
-			else response = GD::familyController->handleCliCommand(command);
-		}
-		response.push_back(0);
-		int32_t totallySentBytes = 0;
-		while (totallySentBytes < (signed)response.size())
-		{
-			int32_t sentBytes = send(clientData->fileDescriptor->descriptor, response.c_str() + totallySentBytes, response.size() - totallySentBytes, MSG_NOSIGNAL);
-			if(sentBytes == -1)
-			{
-				GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
-				break;
-			}
-			totallySentBytes += sentBytes;
-		}
 	}
     catch(const std::exception& ex)
     {
