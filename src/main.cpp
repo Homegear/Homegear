@@ -1132,6 +1132,7 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-tc")
     		{
+    			GD::bl->threadManager.testMaxThreadCount();
     			std::cout << GD::bl->threadManager.getMaxThreadCount() << std::endl;
     			exit(0);
     		}

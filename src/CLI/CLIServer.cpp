@@ -31,7 +31,6 @@
 #include "CLIServer.h"
 #include "../GD/GD.h"
 #include "homegear-base/BaseLib.h"
-#include <functional>
 
 namespace CLI {
 
@@ -1230,7 +1229,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 		}
 		else if(command.compare(0, 7, "threads") == 0)
 		{
-			stringStream << GD::bl->threadManager.getCurrentThreadCount() << " of " << GD::bl->threadManager.getMaxThreadCount() << std::endl;
+			stringStream << GD::bl->threadManager.getCurrentThreadCount() << " of " << GD::bl->threadManager.getMaxThreadCount() << std::endl << "Maximum thread count since start: " << GD::bl->threadManager.getMaxRegisteredThreadCount() << std::endl;
 			return stringStream.str();
 		}
 		return "";

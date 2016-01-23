@@ -35,7 +35,6 @@
 #include <random>
 #include <string>
 #include <vector>
-#include <functional>
 #include <map>
 
 #include <gcrypt.h>
