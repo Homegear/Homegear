@@ -51,7 +51,7 @@ AM_CONDITIONAL(BSDSYSTEM, false)
 
 AC_CANONICAL_HOST
 case $host_os in
-	darwin* )
+	darwin*)
 		CPPFLAGS="$CPPFLAGS -DMACOSSYSTEM"
 		AM_CONDITIONAL(MACOSSYSTEM, true)
 		;;
