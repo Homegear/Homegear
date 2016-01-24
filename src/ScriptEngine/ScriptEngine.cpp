@@ -128,15 +128,15 @@ bool ScriptEngine::scriptThreadMaxReached()
 	try
 	{
 		_scriptThreadMutex.lock();
-		if(_scriptThreads.size() >= GD::bl->settings.scriptThreadMax() * 100 / 125)
+		if(_scriptThreads.size() >= 30 * 100 / 125)
 		{
 			_scriptThreadMutex.unlock();
 			collectGarbage();
 			_scriptThreadMutex.lock();
-			if(_scriptThreads.size() >= GD::bl->settings.scriptThreadMax())
+			if(_scriptThreads.size() >= 30)
 			{
 				_scriptThreadMutex.unlock();
-				GD::out.printError("Error: Your script processing is too slow. More than " + std::to_string(GD::bl->settings.scriptThreadMax()) + " scripts are queued. Not executing script.");
+				GD::out.printError("Error: Your script processing is too slow. More than 30 scripts are queued. Not executing script.");
 				return true;
 			}
 		}

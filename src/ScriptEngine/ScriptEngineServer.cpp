@@ -34,7 +34,7 @@
 
 int32_t ScriptEngineServer::_currentClientID = 0;
 
-ScriptEngineServer::ScriptEngineServer()
+ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 1000)
 {
 	_out.init(GD::bl.get());
 	_out.setPrefix("Script Engine Server: ");
@@ -182,6 +182,11 @@ void ScriptEngineServer::closeClientConnection(std::shared_ptr<ClientData> clien
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry)
+{
+
 }
 
 void ScriptEngineServer::mainThread()

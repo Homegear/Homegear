@@ -47,7 +47,7 @@
 #include <iostream>
 #include <string>
 
-class ScriptEngineServer {
+class ScriptEngineServer : public BaseLib::IQueue {
 public:
 	ScriptEngineServer();
 	virtual ~ScriptEngineServer();
@@ -102,5 +102,7 @@ private:
 	void mainThread();
 	void readClient(std::shared_ptr<ClientData> clientData);
 	void closeClientConnection(std::shared_ptr<ClientData> client);
+
+	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 };
 #endif
