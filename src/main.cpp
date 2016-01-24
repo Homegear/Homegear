@@ -631,7 +631,7 @@ void startUp()
 				exit(2);
 			}
 			gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
-			if((gcryResult = gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0)) != GPG_ERR_NO_ERROR)
+			if((gcryResult = gcry_control(GCRYCTL_INIT_SECMEM, 65536, 0)) != GPG_ERR_NO_ERROR)
 			{
 				GD::out.printCritical("Critical: Could not allocate secure memory.");
 				exit(2);
@@ -1153,7 +1153,32 @@ int main(int argc, char* argv[])
     		}
     	}
 
-    	GD::bl->threadManager.testMaxThreadCount();
+    	try
+    	{
+    		// {{{ Get maximum thread count
+				std::string executableName(argc > 0 ? argv[0]: "homegear");
+				BaseLib::HelperFunctions::trim(executableName);
+				if(executableName.empty()) executableName = "homegear";
+				std::pair<std::string, std::string> pathNamePair = BaseLib::HelperFunctions::splitLast(executableName, '/');
+				if(!pathNamePair.second.empty()) executableName = pathNamePair.second;
+				std::string output;
+				BaseLib::HelperFunctions::exec(GD::executablePath + "/homegear -tc", output);
+				BaseLib::HelperFunctions::trim(output);
+				if(BaseLib::Math::isNumber(output, false)) GD::bl->threadManager.setMaxThreadCount(BaseLib::Math::getNumber(output, false));
+			// }}}
+		}
+		catch(const std::exception& ex)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(BaseLib::Exception& ex)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
 
     	// {{{ Load settings
 			if(GD::configPath.empty()) GD::configPath = "/etc/homegear/";
