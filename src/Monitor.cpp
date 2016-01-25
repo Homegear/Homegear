@@ -34,6 +34,11 @@
 Monitor::Monitor()
 {
 	signal(SIGPIPE, SIG_IGN);
+
+	_pipeToChild[0] = 0;
+	_pipeToChild[1] = 0;
+	_pipeFromChild[0] = 0;
+	_pipeFromChild[1] = 0;
 }
 
 Monitor::~Monitor()
