@@ -129,24 +129,29 @@ void sigchld_handler(int32_t signalNumber)
 {
 	try
 	{
-		if(_mainProcessId == 0) return;
-
 		pid_t pid;
 		int status;
 
 		while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
 		{
+			int32_t exitStatus = WEXITSTATUS(status);
+			int32_t signal = -1;
+			bool coreDumped = false;
+			if(WIFSIGNALED(status))
+			{
+				signal = WTERMSIG(status);
+				if(WCOREDUMP(status)) coreDumped = true;
+			}
+
 			if(pid == _mainProcessId)
 			{
 				_mainProcessId = 0;
 				bool stop = false;
-				int32_t exitStatus = WEXITSTATUS(status);
-				if(WIFSIGNALED(status))
+				if(signal != -1)
 				{
-					int32_t signal = WTERMSIG(status);
 					if(signal == SIGTERM || signal == SIGINT || signal == SIGQUIT || (signal == SIGKILL && !_monitor.killedProcess())) stop = true;
 					if(signal == SIGKILL && !_monitor.killedProcess()) GD::out.printWarning("Warning: SIGKILL (signal 9) used to stop Homegear. Please shutdown Homegear properly to avoid database corruption.");
-					if(WCOREDUMP(status)) GD::out.printError("Error: Core was dumped.");
+					if(coreDumped) GD::out.printError("Error: Core was dumped.");
 				}
 				else stop = true;
 				if(stop)
@@ -158,6 +163,7 @@ void sigchld_handler(int32_t signalNumber)
 				GD::out.printError("Homegear was terminated. Restarting...");
 				startMainProcess();
 			}
+			else if(GD::scriptEngineServer) GD::scriptEngineServer->processKilled(pid, exitStatus, signal, coreDumped);
 		}
 	}
 	catch(const std::exception& ex)
@@ -565,6 +571,9 @@ void startUp()
     	sigaction(SIGSEGV, &sa, NULL);
     	sigaction(SIGTERM, &sa, NULL);
 
+    	sa.sa_handler = sigchld_handler;
+    	sigaction(SIGCHLD, &sa, NULL);
+
     	if(_startAsDaemon)
 		{
 			if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
@@ -583,12 +592,8 @@ void startUp()
     	GD::out.printMessage(std::string("Git commit SHA of Homegear:         ") + GITCOMMITSHAHOMEGEAR);
 
     	if(GD::bl->settings.memoryDebugging()) mallopt(M_CHECK_ACTION, 3); //Print detailed error message, stack trace, and memory, and abort the program. See: http://man7.org/linux/man-pages/man3/mallopt.3.html
-
     	if(_monitorProcess)
     	{
-    		sa.sa_handler = sigchld_handler;
-    		sigaction(SIGCHLD, &sa, NULL);
-
     		struct rlimit limits;
     		if(!GD::bl->settings.enableCoreDumps()) prctl(PR_SET_DUMPABLE, 0);
     		else

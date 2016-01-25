@@ -72,7 +72,6 @@ void ScriptEngineServer::collectGarbage()
 		for(std::vector<std::shared_ptr<ClientData>>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
 		{
 			_out.printDebug("Debug: Joining read thread of script engine client " + std::to_string((*i)->id));
-			GD::bl->threadManager.join((*i)->readThread);
 			_stateMutex.lock();
 			try
 			{
@@ -111,6 +110,7 @@ void ScriptEngineServer::start()
 	{
 		stop();
 		_socketPath = GD::runDir + "homegearSE.sock";
+		_stopServer = false;
 		GD::bl->threadManager.start(_mainThread, true, &ScriptEngineServer::mainThread, this);
 	}
     catch(const std::exception& ex)
@@ -162,6 +162,11 @@ void ScriptEngineServer::stop()
 	}
 }
 
+void ScriptEngineServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped)
+{
+	std::cerr << "Process killed: " << (uint32_t)pid << ' ' << exitCode << ' ' << signal << ' ' << (int32_t)coreDumped << std::endl;
+}
+
 void ScriptEngineServer::closeClientConnection(std::shared_ptr<ClientData> client)
 {
 	try
@@ -197,63 +202,90 @@ void ScriptEngineServer::mainThread()
 		std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor;
 		while(!_stopServer)
 		{
-			try
+			if(!_serverFileDescriptor || _serverFileDescriptor->descriptor == -1)
 			{
-				//Don't lock _stateMutex => no synchronisation needed
+				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+				getFileDescriptor();
+				continue;
+			}
+
+			timeval timeout;
+			timeout.tv_sec = 5;
+			timeout.tv_usec = 0;
+			fd_set readFileDescriptor;
+			FD_ZERO(&readFileDescriptor);
+			GD::bl->fileDescriptorManager.lock();
+			int32_t maxfd = _serverFileDescriptor->descriptor;
+			FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
+
+			{
+				std::lock_guard<std::mutex> stateGuard(_stateMutex);
+				for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+				{
+					if(i->second->closed) continue;
+					if(i->second->fileDescriptor->descriptor == -1)
+					{
+						i->second->closed = true;
+						continue;
+					}
+					FD_SET(i->second->fileDescriptor->descriptor, &readFileDescriptor);
+					if(i->second->fileDescriptor->descriptor > maxfd) maxfd = i->second->fileDescriptor->descriptor;
+				}
+			}
+
+			GD::bl->fileDescriptorManager.unlock();
+
+			if(!select(maxfd + 1, &readFileDescriptor, NULL, NULL, &timeout))
+			{
+				if(GD::bl->hf.getTime() - _lastGargabeCollection > 60000 || _clients.size() > GD::bl->settings.scriptEngineServerMaxConnections() * 100 / 112) collectGarbage();
+				continue;
+			}
+
+			if(FD_ISSET(_serverFileDescriptor->descriptor, &readFileDescriptor))
+			{
+				sockaddr_un clientAddress;
+				socklen_t addressSize = sizeof(addressSize);
+				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = GD::bl->fileDescriptorManager.add(accept(_serverFileDescriptor->descriptor, (struct sockaddr *) &clientAddress, &addressSize));
+				if(!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
+				_out.printInfo("Info: Connection accepted. Client number: " + std::to_string(clientFileDescriptor->id));
+
 				if(_clients.size() > GD::bl->settings.scriptEngineServerMaxConnections())
 				{
 					collectGarbage();
 					if(_clients.size() > GD::bl->settings.scriptEngineServerMaxConnections())
 					{
-						_out.printError("Error: There are too many clients connected to me. Waiting for connections to close. You can increase the number of allowed connections in main.conf.");
-						std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+						_out.printError("Error: There are too many clients connected to me. Closing connection. You can increase the number of allowed connections in main.conf.");
+						GD::bl->fileDescriptorManager.close(clientFileDescriptor);
 						continue;
 					}
 				}
-				getFileDescriptor();
-				if(!_serverFileDescriptor || _serverFileDescriptor->descriptor == -1)
-				{
-					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-					continue;
-				}
-				clientFileDescriptor = getClientFileDescriptor();
-				if(!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				continue;
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				continue;
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-				continue;
-			}
-			try
-			{
-				std::shared_ptr<ClientData> clientData = std::shared_ptr<ClientData>(new ClientData(clientFileDescriptor));
+
 				std::lock_guard<std::mutex> stateGuard(_stateMutex);
+				std::shared_ptr<ClientData> clientData = std::shared_ptr<ClientData>(new ClientData(clientFileDescriptor));
 				clientData->id = _currentClientID++;
 				_clients[clientData->id] = clientData;
-				GD::bl->threadManager.start(clientData->readThread, true, &ScriptEngineServer::readClient, this, clientData);
+				continue;
 			}
-			catch(const std::exception& ex)
+
+			std::shared_ptr<ClientData> clientData;
 			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				std::lock_guard<std::mutex> stateGuard(_stateMutex);
+				for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+				{
+					if(i->second->fileDescriptor->descriptor == -1)
+					{
+						i->second->closed = true;
+						continue;
+					}
+					if(FD_ISSET(i->second->fileDescriptor->descriptor, &readFileDescriptor))
+					{
+						clientData = i->second;
+						break;
+					}
+				}
 			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
+
+			if(clientData) readClient(clientData);
 		}
 		GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 	}
@@ -271,39 +303,38 @@ void ScriptEngineServer::mainThread()
     }
 }
 
-std::shared_ptr<BaseLib::FileDescriptor> ScriptEngineServer::getClientFileDescriptor()
+void ScriptEngineServer::readClient(std::shared_ptr<ClientData> clientData)
 {
-	std::shared_ptr<BaseLib::FileDescriptor> descriptor;
 	try
 	{
-		timeval timeout;
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
-		fd_set readFileDescriptor;
-		FD_ZERO(&readFileDescriptor);
-		GD::bl->fileDescriptorManager.lock();
-		int32_t nfds = _serverFileDescriptor->descriptor + 1;
-		if(nfds <= 0)
+		std::vector<std::string> arguments{"-c1", "192.168.0.2"};
+		GD::bl->hf.system("/bin/ping", arguments);
+		int32_t bytesRead = read(clientData->fileDescriptor->descriptor, &(clientData->buffer[0]), clientData->buffer.size() - 1);
+		if(bytesRead <= 0)
 		{
-			GD::bl->fileDescriptorManager.unlock();
-			_out.printError("Error: Socket descriptor is invalid.");
-			return descriptor;
-		}
-		FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
-		GD::bl->fileDescriptorManager.unlock();
-		if(!select(nfds, &readFileDescriptor, NULL, NULL, &timeout))
-		{
-			if(GD::bl->hf.getTime() - _lastGargabeCollection > 60000 || _clients.size() > GD::bl->settings.scriptEngineServerMaxConnections() * 100 / 112) collectGarbage();
-			return descriptor;
+			_out.printInfo("Info: Connection to script server's client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
+			closeClientConnection(clientData);
+			return;
 		}
 
-		sockaddr_un clientAddress;
-		socklen_t addressSize = sizeof(addressSize);
-		descriptor = GD::bl->fileDescriptorManager.add(accept(_serverFileDescriptor->descriptor, (struct sockaddr *) &clientAddress, &addressSize));
-		if(descriptor->descriptor == -1) return descriptor;
-		_out.printInfo("Info: Connection accepted. Client number: " + std::to_string(descriptor->id));
+		if(bytesRead > (signed)clientData->buffer.size() - 1) bytesRead = clientData->buffer.size() - 1;
+		clientData->buffer.at(bytesRead) = 0;
+		std::string command;
+		command.insert(command.end(), &(clientData->buffer[0]), &(clientData->buffer[0]) + bytesRead);
 
-		return descriptor;
+		std::string response = "Hallo\n";
+		response.push_back(0);
+		int32_t totallySentBytes = 0;
+		while (totallySentBytes < (signed)response.size())
+		{
+			int32_t sentBytes = send(clientData->fileDescriptor->descriptor, response.c_str() + totallySentBytes, response.size() - totallySentBytes, MSG_NOSIGNAL);
+			if(sentBytes == -1)
+			{
+				GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
+				break;
+			}
+			totallySentBytes += sentBytes;
+		}
 	}
     catch(const std::exception& ex)
     {
@@ -317,7 +348,6 @@ std::shared_ptr<BaseLib::FileDescriptor> ScriptEngineServer::getClientFileDescri
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return descriptor;
 }
 
 void ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
@@ -397,71 +427,4 @@ void ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
-}
-
-void ScriptEngineServer::readClient(std::shared_ptr<ClientData> clientData)
-{
-	try
-	{
-		int32_t bufferMax = 1024;
-		char buffer[bufferMax + 1];
-		std::shared_ptr<std::vector<char>> packet(new std::vector<char>());
-		int32_t bytesRead;
-		_out.printDebug("Debug: Listening for incoming commands from client number " + std::to_string(clientData->fileDescriptor->id) + ".");
-		while(!_stopServer)
-		{
-			//Timeout needs to be set every time, so don't put it outside of the while loop
-			timeval timeout;
-			timeout.tv_sec = 2;
-			timeout.tv_usec = 0;
-			fd_set readFileDescriptor;
-			FD_ZERO(&readFileDescriptor);
-			GD::bl->fileDescriptorManager.lock();
-			int32_t nfds = clientData->fileDescriptor->descriptor + 1;
-			if(nfds <= 0)
-			{
-				GD::bl->fileDescriptorManager.unlock();
-				_out.printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
-				closeClientConnection(clientData);
-				return;
-			}
-			FD_SET(clientData->fileDescriptor->descriptor, &readFileDescriptor);
-			GD::bl->fileDescriptorManager.unlock();
-			bytesRead = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
-			if(bytesRead == 0) continue;
-			if(bytesRead != 1)
-			{
-				_out.printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
-				closeClientConnection(clientData);
-				return;
-			}
-
-			bytesRead = read(clientData->fileDescriptor->descriptor, buffer, bufferMax);
-			if(bytesRead <= 0)
-			{
-				_out.printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
-				closeClientConnection(clientData);
-				//If we close the socket, the socket file gets deleted. We don't want that
-				//GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
-				return;
-			}
-
-			std::string command;
-			command.insert(command.end(), buffer, buffer + bytesRead);
-			//handleCommand(command, clientData);
-		}
-		closeClientConnection(clientData);
-	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
