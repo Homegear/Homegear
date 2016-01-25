@@ -136,7 +136,6 @@ void sigchld_handler(int32_t signalNumber)
 
 		while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
 		{
-			GD::out.printError("Hi");
 			if(pid == _mainProcessId)
 			{
 				_mainProcessId = 0;
