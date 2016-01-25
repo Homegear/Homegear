@@ -47,25 +47,27 @@
 #include <iostream>
 #include <string>
 
-class ScriptEngineServer : public BaseLib::IQueue {
+class ScriptEngineServer : public BaseLib::IQueue
+{
 public:
 	ScriptEngineServer();
 	virtual ~ScriptEngineServer();
 
 	void start();
 	void stop();
+	void processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped);
 private:
 	class ClientData
 	{
 	public:
-		ClientData() { fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor); }
-		ClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor) { fileDescriptor = clientFileDescriptor; }
+		ClientData() { fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor); buffer.resize(1025); }
+		ClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor) { fileDescriptor = clientFileDescriptor; buffer.resize(1025); }
 		virtual ~ClientData() {}
 
 		int32_t id = 0;
 		bool closed = false;
+		std::vector<char> buffer;
 		std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
-		std::thread readThread;
 	};
 
 	class ScriptEngineProcess
@@ -84,9 +86,7 @@ private:
 	std::string _socketPath;
 	bool _stopServer = false;
 	std::thread _mainThread;
-	std::thread _readThread;
 	int32_t _backlog = 10;
-	std::shared_ptr<BaseLib::FileDescriptor> _clientFileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
 	std::mutex _processMutex;
 	std::map<int32_t, std::shared_ptr<ScriptEngineProcess>> _processes;
@@ -98,7 +98,6 @@ private:
 
 	void collectGarbage();
 	void getFileDescriptor(bool deleteOldSocket = false);
-	std::shared_ptr<BaseLib::FileDescriptor> getClientFileDescriptor();
 	void mainThread();
 	void readClient(std::shared_ptr<ClientData> clientData);
 	void closeClientConnection(std::shared_ptr<ClientData> client);
