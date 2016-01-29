@@ -53,6 +53,7 @@ public:
 	std::string homegearId() { return _homegearId; }
 	std::string username() { return _username; }
 	std::string password() { return _password; }
+	bool retain() { return _retain; }
 	bool enableSSL() { return _enableSSL; }
 	std::string caFile() { return _caFile; }
 	bool verifyCertificate() { return _verifyCertificate; }
@@ -66,6 +67,7 @@ private:
 	std::string _homegearId;
 	std::string _username;
 	std::string _password;
+	bool _retain = true;
 	bool _enableSSL = false;
 	std::string _caFile;
 	bool _verifyCertificate = true;

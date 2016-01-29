@@ -44,6 +44,7 @@ void MqttSettings::reset()
 	_homegearId = "";
 	_username = "";
 	_password = "";
+	_retain = true;
 	_enableSSL = false;
 	_caFile = "";
 	_verifyCertificate = true;
@@ -130,6 +131,11 @@ void MqttSettings::load(std::string filename)
 				{
 					_password = value;
 					GD::bl->out.printDebug("Debug (MQTT settings): password set to " + _password);
+				}
+				else if(name == "retain")
+				{
+					if(BaseLib::HelperFunctions::toLower(value) == "false") _retain = false;
+					GD::bl->out.printDebug("Debug (MQTT settings): retain set to " + std::to_string(_retain));
 				}
 				else if(name == "enablessl")
 				{
