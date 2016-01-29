@@ -216,7 +216,6 @@ echo "php7-homegear-dev (${version}-${revision}~${1}) ${distribution}; urgency=m
  -- Sathya Laufer <sathya@laufers.net>  $date
 " | cat - debian/changelog > debian/changelog2
 mv debian/changelog2 debian/changelog
-sed -i 's/enableval=$enable_embed;/enableval=static;/g' configure
 cd ..
 mv php7* php7-homegear-dev-${version}
 tar -zcpf php7-homegear-dev_${version}.orig.tar.gz php7-homegear-dev-${version}

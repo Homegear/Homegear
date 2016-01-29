@@ -1026,7 +1026,7 @@ void Mqtt::publish(const std::string& topic, const std::vector<char>& data)
 		payload.insert(payload.end(), data.begin(), data.end());
 		std::vector<char> lengthBytes = getLengthBytes(payload.size());
 		packet.reserve(1 + lengthBytes.size() + payload.size());
-		packet.push_back(0x32);
+		_settings.retain() ? packet.push_back(0x33) : packet.push_back(0x32);
 		packet.insert(packet.end(), lengthBytes.begin(), lengthBytes.end());
 		packet.insert(packet.end(), payload.begin(), payload.end());
 		int32_t j = 0;

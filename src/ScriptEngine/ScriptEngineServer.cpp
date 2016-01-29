@@ -307,7 +307,7 @@ void ScriptEngineServer::readClient(std::shared_ptr<ClientData> clientData)
 {
 	try
 	{
-		std::vector<std::string> arguments{"-c1", "192.168.0.2"};
+		std::vector<std::string> arguments{ "-c1", "192.168.0.2" };
 		GD::bl->hf.system("/bin/ping", arguments);
 		int32_t bytesRead = read(clientData->fileDescriptor->descriptor, &(clientData->buffer[0]), clientData->buffer.size() - 1);
 		if(bytesRead <= 0)
