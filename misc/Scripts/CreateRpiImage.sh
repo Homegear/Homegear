@@ -290,7 +290,7 @@ rm /etc/ssh/ssh_host* >/dev/null
 ssh-keygen -A >/dev/null
 revision=\$(cat /proc/cpuinfo | grep Revision | cut -d ' ' -f 2)
 if [ \$revision -eq 1041 ]; then
-  echo \"dwc_otg.lpm_enable=0 console=ttyUSB0,115200 kgdboc=ttyUSB0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline isolcpus=0,1 rootwait\" > boot/cmdline.txt
+  echo \"dwc_otg.lpm_enable=0 console=ttyUSB0,115200 kgdboc=ttyUSB0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline isolcpus=2,3 rootwait\" > boot/cmdline.txt
 fi
 echo \"Updating your system...\"
 apt update

@@ -97,12 +97,12 @@ case $1 in
                         homegearPids=($(ps -ejH -1 | grep /usr/bin/homegear | grep -v grep | sed -e 's/^[[:space:]]*//' | cut -d ' ' -f 1))
                         for i in "${homegearPids[@]}"
                         do
-                            taskset -cp 2 $i
+                            taskset -acp 2 $i
                         done
 
                         openhabInstalled=`ls -l /etc | grep -c openhab`
                         if [ $openhabInstalled -eq 1 ]; then
-                            openhabPid=0 && while [ $openhabPid -eq 0 ]; do sleep 1 && openhabPid=`ps -ejH -1 | grep "Dopenhab.configfile=/etc/openhab/configurations/openhab.cfg" | grep -v grep | sed -e 's/^[[:space:]]*//' | cut -d ' ' -f 1`; done && taskset -cp 3 $openhabPid &
+                            openhabPid=0 && while [ $openhabPid -eq 0 ]; do sleep 1 && openhabPid=`ps -ejH -1 | grep "Dopenhab.configfile=/etc/openhab/configurations/openhab.cfg" | grep -v grep | sed -e 's/^[[:space:]]*//' | cut -d ' ' -f 1`; done && taskset -acp 3 $openhabPid &
                         fi
                     fi
                 # }}}
