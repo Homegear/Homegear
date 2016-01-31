@@ -51,7 +51,7 @@ RUNASGROUP=homegear
 
 case $1 in
         start)       		
-        		SPIPID=`ps -eo pid,cmd | grep "\[bcm2708_spi\.0\]" | sed 's/^ *//g' | cut -d ' ' -f 1`
+        		SPIPID=`ps -eo pid,cmd | grep -e "\[bcm2708_spi\.0\]" -e "\[spi0\]" | sed 's/^ *//g' | cut -d ' ' -f 1`
         		if [ ! -z "$SPIPID" ]; then
         			chrt -f -p 99 $SPIPID
         		fi
@@ -100,7 +100,10 @@ case $1 in
                             taskset -cp 2 $i
                         done
 
-                        openhabPid=0 && while [ $openhabPid -eq 0 ]; do sleep 1 && openhabPid=`ps -ejH -1 | grep "Dopenhab.configfile=/etc/openhab/configurations/openhab.cfg" | grep -v grep | sed -e 's/^[[:space:]]*//' | cut -d ' ' -f 1`; done && taskset -cp 3 $openhabPid &
+                        openhabInstalled=`ls -l /etc | grep -c openhab`
+                        if [ $openhabInstalled -eq 1 ]; then
+                            openhabPid=0 && while [ $openhabPid -eq 0 ]; do sleep 1 && openhabPid=`ps -ejH -1 | grep "Dopenhab.configfile=/etc/openhab/configurations/openhab.cfg" | grep -v grep | sed -e 's/^[[:space:]]*//' | cut -d ' ' -f 1`; done && taskset -cp 3 $openhabPid &
+                        fi
                     fi
                 # }}}
 
