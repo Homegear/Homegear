@@ -207,10 +207,10 @@ update-alternatives --install /usr/bin/javac javac /opt/\${JDK}/bin/javac 1
 update-alternatives --install /usr/bin/java java /opt/\${JDK}/bin/java 1
 update-alternatives --config javac
 update-alternatives --config java
-read -p \"Ready to install OpenHAB. Please provide the current version number (e. g. 1.6.1): \" OPENHABVERSION
-echo \"deb http://repository-openhab.forge.cloudbees.com/release/\${OPENHABVERSION}/apt-repo/ /\" > /etc/apt/sources.list.d/openhab.list
+wget -qO - 'https://bintray.com/user/downloadSubjectPublicKey?username=openhab' | sudo apt-key add -
+echo \"deb http://dl.bintray.com/openhab/apt-repo stable main\" > /etc/apt/sources.list.d/openhab.list
 apt-get update
-apt-get -y --force-yes install openhab-runtime openhab-addon-action-homematic openhab-addon-binding-homematic
+apt-get -y install openhab-runtime openhab-addon-action-homematic openhab-addon-binding-homematic
 cp /etc/openhab/configurations/openhab_default.cfg /etc/openhab/configurations/openhab.cfg
 sed -i \"s/^# homematic:host=/homematic:host=127.0.0.1/\" /etc/openhab/configurations/openhab.cfg
 sed -i \"s/^# homematic:callback.host=/homematic:callback.host=127.0.0.1/\" /etc/openhab/configurations/openhab.cfg
