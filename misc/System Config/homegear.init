@@ -89,6 +89,21 @@ case $1 in
                 start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --startas $DAEMON -- -p $PIDFILE -u $RUNASUSER -g $RUNASGROUP $HOMEGEAR_OPTS
                 status=$?
                 unlock_homegear
+
+                # {{{ Limit Homegear to core 2 and OpenHAB to core 3 on Raspberry Pi 2
+                    isolcpus=`cat /boot/cmdline.txt | grep -c isolcpus`
+                    revision=$(cat /proc/cpuinfo | grep Revision | cut -d ' ' -f 2)
+                    if [ $isolcpus -eq 1 ] && [ $revision -eq 1041 ]; then
+                        homegearPids=($(ps -ejH -1 | grep /usr/bin/homegear | grep -v grep | sed -e 's/^[[:space:]]*//' | cut -d ' ' -f 1))
+                        for i in "${homegearPids[@]}"
+                        do
+                            taskset -cp 2 $i
+                        done
+
+                        openhabPid=0 && while [ $openhabPid -eq 0 ]; do sleep 1 && openhabPid=`ps -ejH -1 | grep "Dopenhab.configfile=/etc/openhab/configurations/openhab.cfg" | grep -v grep | sed -e 's/^[[:space:]]*//' | cut -d ' ' -f 1`; done && taskset -cp 3 $openhabPid &
+                    fi
+                # }}}
+
                 log_end_msg $status
                 ;;
         stop)
