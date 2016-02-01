@@ -337,7 +337,7 @@ std::shared_ptr<ScriptEngineServer::ScriptEngineProcess> ScriptEngineServer::get
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			for(std::map<int32_t, std::shared_ptr<ScriptEngineProcess>>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
-				if(i->second->scriptCount < _bl->threadManager.getMaxThreadCount() / _bl->settings.scriptEngineMaxThreadsPerScript() && (_bl->settings.scriptEngineMaxScriptsPerProcess() == -1 || i->second->scriptCount < _bl->settings.scriptEngineMaxScriptsPerProcess()))
+				if(i->second->scriptCount < GD::bl->threadManager.getMaxThreadCount() / GD::bl->settings.scriptEngineMaxThreadsPerScript() && (GD::bl->settings.scriptEngineMaxScriptsPerProcess() == -1 || i->second->scriptCount < GD::bl->settings.scriptEngineMaxScriptsPerProcess()))
 				{
 					i->second->scriptCount++;
 					return i->second;
@@ -346,7 +346,7 @@ std::shared_ptr<ScriptEngineServer::ScriptEngineProcess> ScriptEngineServer::get
 		}
 		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess());
 		std::vector<std::string> arguments{ "-sre" };
-		process->pid = _bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments);
+		process->pid = GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments);
 		if(process->pid != -1)
 		{
 			process->scriptCount++;
