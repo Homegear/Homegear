@@ -209,11 +209,6 @@ update-alternatives --config javac
 update-alternatives --config java
 wget -qO - 'https://bintray.com/user/downloadSubjectPublicKey?username=openhab' | sudo apt-key add -
 echo \"deb http://dl.bintray.com/openhab/apt-repo stable main\" > /etc/apt/sources.list.d/openhab.list
-apt-get update
-apt-get -y install openhab-runtime openhab-addon-action-homematic openhab-addon-binding-homematic
-cp /etc/openhab/configurations/openhab_default.cfg /etc/openhab/configurations/openhab.cfg
-sed -i \"s/^# homematic:host=/homematic:host=127.0.0.1/\" /etc/openhab/configurations/openhab.cfg
-sed -i \"s/^# homematic:callback.host=/homematic:callback.host=127.0.0.1/\" /etc/openhab/configurations/openhab.cfg
 rm -f fifth-stage
 " > fifth-stage
 	chmod +x fifth-stage
@@ -289,7 +284,7 @@ echo "echo \"Generating new SSH host keys. This might take a while.\"
 rm /etc/ssh/ssh_host* >/dev/null
 ssh-keygen -A >/dev/null
 revision=\$(cat /proc/cpuinfo | grep Revision | cut -d ' ' -f 2)
-if [ \$revision -eq 1041 ]; then
+if [ \$(nproc --all) -ge 4 ]; then
   echo \"dwc_otg.lpm_enable=0 console=ttyUSB0,115200 kgdboc=ttyUSB0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline isolcpus=2,3 rootwait\" > boot/cmdline.txt
 fi
 echo \"Updating your system...\"
@@ -322,6 +317,12 @@ apt-get -y -f install
 dpkg -i homegear-sonos_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 service homegear stop
+apt-get -y install openhab-runtime openhab-addon-action-homematic openhab-addon-binding-homematic
+apt-get -y -f install
+cp /etc/openhab/configurations/openhab_default.cfg /etc/openhab/configurations/openhab.cfg
+sed -i \"s/^# homematic:host=/homematic:host=127.0.0.1/\" /etc/openhab/configurations/openhab.cfg
+sed -i \"s/^# homematic:callback.host=/homematic:callback.host=127.0.0.1/\" /etc/openhab/configurations/openhab.cfg
+systemctl enable openhab
 echo \"Starting raspi-config...\"
 raspi-config
 rm /scripts/firstStart.sh

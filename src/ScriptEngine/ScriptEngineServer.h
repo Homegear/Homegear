@@ -101,6 +101,7 @@ private:
 	void mainThread();
 	void readClient(std::shared_ptr<ClientData> clientData);
 	void closeClientConnection(std::shared_ptr<ClientData> client);
+	std::shared_ptr<ScriptEngineProcess> getFreeProcess();
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 };

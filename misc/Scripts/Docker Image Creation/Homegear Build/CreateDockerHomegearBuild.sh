@@ -152,12 +152,47 @@ else
 fi
 
 mkdir $rootfs/build
-cat > "$rootfs/build/CreateDebianPackageNightly.sh" <<-'EOF'
+cat > "$rootfs/build/CreateDebianPackage.sh" <<-'EOF'
 #!/bin/bash
 
 distribution="<DIST>"
 distributionVersion="<DISTVER>"
 buildthreads="<BUILDTHREADS>"
+
+function createPackage {
+	fullversion=$(${1}-master/getVersion.sh)
+	version=$(echo $fullversion | cut -d "-" -f 1)
+	revision=$(echo $fullversion | cut -d "-" -f 2)
+	if [ $revision -eq 0 ]; then
+		echo "Error: Could not get revision."
+		exit 1
+	fi
+	sourcePath=${2}-$version
+	mv ${1}-master $sourcePath
+	cd $sourcePath
+	./bootstrap
+	cd ..
+	if [ "$distribution" == "Debian" ]; then
+		sed -i '/\/bin\/sh/a\
+	if \[ "$(uname -m)" = "armv6l" \]; then\
+	\techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
+	\texit 1\
+	fi' $sourcePath/debian/preinst
+	fi
+	sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
+	if [ "$distributionVersion" == "wheezy" ]; then
+		sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
+		sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
+		sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
+		sed -i 's/libgnutlsxx28/libgnutlsxx27/g' $sourcePath/debian/control
+	fi
+	tar -zcpf ${2}_$version.orig.tar.gz $sourcePath
+	cd $sourcePath
+	dch -v $version-$revision -M "Version $version."
+	debuild -j${buildthreads} -us -uc
+	cd ..
+	rm -Rf $sourcePath
+}
 
 cd /build
 
@@ -202,315 +237,52 @@ unzip master.zip
 [ $? -ne 0 ] && exit 1
 rm master.zip
 
-# {{{ libhomegear-base
-fullversion=$(libhomegear-base-master/getVersion.sh)
-version=$(echo $fullversion | cut -d "-" -f 1)
-revision=$(echo $fullversion | cut -d "-" -f 2)
-if [ $revision -eq 0 ]; then
-	echo "Error: Could not get revision from GitHub."
-	exit 1
-fi
-sourcePath=libhomegear-base-$version
-mv libhomegear-base-master $sourcePath
-cd $sourcePath
-./bootstrap
-cd ..
-if [ "$distribution" == "Debian" ]; then
-	sed -i '/\/bin\/sh/a\
-if \[ "$(uname -m)" = "armv6l" \]; then\
-\techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
-\texit 1\
-fi' $sourcePath/debian/preinst
-fi
-if [ "$distributionVersion" == "wheezy" ]; then
-	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
-	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
-	sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
-	sed -i 's/libgnutlsxx28/libgnutlsxx27/g' $sourcePath/debian/control
-fi
-tar -zcpf libhomegear-base_$version.orig.tar.gz $sourcePath
-cd $sourcePath
-dch -v $version-$revision -M "Version $version."
-debuild -j${buildthreads} -us -uc
-cd ..
-rm -Rf $sourcePath
-rm libhomegear-base_$version-$revision_*.build
-rm libhomegear-base_$version-$revision_*.changes
-rm libhomegear-base_$version-$revision.debian.tar.?z
-rm libhomegear-base_$version-$revision.dsc
-rm libhomegear-base_$version.orig.tar.gz
-mv libhomegear-base*.deb libhomegear-base.deb
-if test -f libhomegear-base.deb; then
-	dpkg -i libhomegear-base.deb
+createPackage libhomegear-base libhomegear-base
+if test -f libhomegear-base*.deb; then
+	dpkg -i libhomegear-base*.deb
 else
 	echo "Error building libhomegear-base."
 	exit 1
 fi
-# }}}
 
-# {{{ homegear
-fullversion=$(Homegear-master/getVersion.sh)
-version=$(echo $fullversion | cut -d "-" -f 1)
-revision=$(echo $fullversion | cut -d "-" -f 2)
-sourcePath=homegear-$version
-mv Homegear-master $sourcePath
-cd $sourcePath
-./bootstrap
-cd ..
-if [ "$distribution" == "Debian" ]; then
-	sed -i '/\/bin\/sh/a\
-if \[ "$(uname -m)" = "armv6l" \]; then\
-\techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
-\texit 1\
-fi' $sourcePath/debian/preinst
-fi
-sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-if [ "$distributionVersion" == "wheezy" ]; then
-	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
-	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
-	sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
-	sed -i 's/libgnutlsxx28/libgnutlsxx27/g' $sourcePath/debian/control
-fi
-tar -zcpf homegear_$version.orig.tar.gz $sourcePath
-cd $sourcePath
-dch -v $version-$revision -M "Version $version."
-debuild -j${buildthreads} -us -uc
-cd ..
-rm -Rf $sourcePath
-rm homegear_$version-$revision_*.build
-rm homegear_$version-$revision_*.changes
-rm homegear_$version-$revision.debian.tar.?z
-rm homegear_$version-$revision.dsc
-rm homegear_$version.orig.tar.gz
-mv homegear_$version-$revision_*.deb homegear.deb
-# }}}
-
-# {{{ homegear-homematicbidcos
-fullversion=$(Homegear-HomeMaticBidCoS-master/getVersion.sh)
-version=$(echo $fullversion | cut -d "-" -f 1)
-revision=$(echo $fullversion | cut -d "-" -f 2)
-sourcePath=homegear-homematicbidcos-$version
-mv Homegear-HomeMaticBidCoS-master $sourcePath
-cd $sourcePath
-./bootstrap
-cd ..
-if [ "$distribution" == "Debian" ]; then
-	sed -i '/\/bin\/sh/a\
-if \[ "$(uname -m)" = "armv6l" \]; then\
-\techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
-\texit 1\
-fi' $sourcePath/debian/preinst
-fi
-sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-if [ "$distributionVersion" == "wheezy" ]; then
-	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
-	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
-	sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
-	sed -i 's/libgnutlsxx28/libgnutlsxx27/g' $sourcePath/debian/control
-fi
-tar -zcpf homegear-homematicbidcos_$version.orig.tar.gz $sourcePath
-cd $sourcePath
-dch -v $version-$revision -M "Version $version."
-debuild -j${buildthreads} -us -uc
-cd ..
-rm -Rf $sourcePath
-rm homegear-homematicbidcos_$version-$revision_*.build
-rm homegear-homematicbidcos_$version-$revision_*.changes
-rm homegear-homematicbidcos_$version-$revision.debian.tar.?z
-rm homegear-homematicbidcos_$version-$revision.dsc
-rm homegear-homematicbidcos_$version.orig.tar.gz
-mv homegear-homematicbidcos*.deb homegear-homematicbidcos.deb
-# }}}
-
-# {{{ homegear-homematicwired
-fullversion=$(Homegear-HomeMaticWired-master/getVersion.sh)
-version=$(echo $fullversion | cut -d "-" -f 1)
-revision=$(echo $fullversion | cut -d "-" -f 2)
-sourcePath=homegear-homematicwired-$version
-mv Homegear-HomeMaticWired-master $sourcePath
-cd $sourcePath
-./bootstrap
-cd ..
-if [ "$distribution" == "Debian" ]; then
-	sed -i '/\/bin\/sh/a\
-if \[ "$(uname -m)" = "armv6l" \]; then\
-\techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
-\texit 1\
-fi' $sourcePath/debian/preinst
-fi
-sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-if [ "$distributionVersion" == "wheezy" ]; then
-	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
-	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
-	sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
-	sed -i 's/libgnutlsxx28/libgnutlsxx27/g' $sourcePath/debian/control
-fi
-tar -zcpf homegear-homematicwired_$version.orig.tar.gz $sourcePath
-cd $sourcePath
-dch -v $version-$revision -M "Version $version."
-debuild -j${buildthreads} -us -uc
-cd ..
-rm -Rf $sourcePath
-rm homegear-homematicwired_$version-$revision_*.build
-rm homegear-homematicwired_$version-$revision_*.changes
-rm homegear-homematicwired_$version-$revision.debian.tar.?z
-rm homegear-homematicwired_$version-$revision.dsc
-rm homegear-homematicwired_$version.orig.tar.gz
-mv homegear-homematicwired*.deb homegear-homematicwired.deb
-# }}}
-
-# {{{ homegear-insteon
-fullversion=$(Homegear-Insteon-master/getVersion.sh)
-version=$(echo $fullversion | cut -d "-" -f 1)
-revision=$(echo $fullversion | cut -d "-" -f 2)
-sourcePath=homegear-insteon-$version
-mv Homegear-Insteon-master $sourcePath
-cd $sourcePath
-./bootstrap
-cd ..
-if [ "$distribution" == "Debian" ]; then
-	sed -i '/\/bin\/sh/a\
-if \[ "$(uname -m)" = "armv6l" \]; then\
-\techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
-\texit 1\
-fi' $sourcePath/debian/preinst
-fi
-sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-if [ "$distributionVersion" == "wheezy" ]; then
-	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
-	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
-	sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
-	sed -i 's/libgnutlsxx28/libgnutlsxx27/g' $sourcePath/debian/control
-fi
-tar -zcpf homegear-insteon_$version.orig.tar.gz $sourcePath
-cd $sourcePath
-dch -v $version-$revision -M "Version $version."
-debuild -j${buildthreads} -us -uc
-cd ..
-rm -Rf $sourcePath
-rm homegear-insteon_$version-$revision_*.build
-rm homegear-insteon_$version-$revision_*.changes
-rm homegear-insteon_$version-$revision.debian.tar.?z
-rm homegear-insteon_$version-$revision.dsc
-rm homegear-insteon_$version.orig.tar.gz
-mv homegear-insteon*.deb homegear-insteon.deb
-# }}}
-
-# {{{ homegear-max
-fullversion=$(Homegear-MAX-master/getVersion.sh)
-version=$(echo $fullversion | cut -d "-" -f 1)
-revision=$(echo $fullversion | cut -d "-" -f 2)
-sourcePath=homegear-max-$version
-mv Homegear-MAX-master $sourcePath
-cd $sourcePath
-./bootstrap
-cd ..
-if [ "$distribution" == "Debian" ]; then
-	sed -i '/\/bin\/sh/a\
-if \[ "$(uname -m)" = "armv6l" \]; then\
-\techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
-\texit 1\
-fi' $sourcePath/debian/preinst
-fi
-sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-if [ "$distributionVersion" == "wheezy" ]; then
-	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
-	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
-	sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
-	sed -i 's/libgnutlsxx28/libgnutlsxx27/g' $sourcePath/debian/control
-fi
-tar -zcpf homegear-max_$version.orig.tar.gz $sourcePath
-cd $sourcePath
-dch -v $version-$revision -M "Version $version."
-debuild -j${buildthreads} -us -uc
-cd ..
-rm -Rf $sourcePath
-rm homegear-max_$version-$revision_*.build
-rm homegear-max_$version-$revision_*.changes
-rm homegear-max_$version-$revision.debian.tar.?z
-rm homegear-max_$version-$revision.dsc
-rm homegear-max_$version.orig.tar.gz
-mv homegear-max*.deb homegear-max.deb
-# }}}
-
-# {{{ homegear-philipshue
-fullversion=$(Homegear-PhilipsHue-master/getVersion.sh)
-version=$(echo $fullversion | cut -d "-" -f 1)
-revision=$(echo $fullversion | cut -d "-" -f 2)
-sourcePath=homegear-philipshue-$version
-mv Homegear-PhilipsHue-master $sourcePath
-cd $sourcePath
-./bootstrap
-cd ..
-if [ "$distribution" == "Debian" ]; then
-	sed -i '/\/bin\/sh/a\
-if \[ "$(uname -m)" = "armv6l" \]; then\
-\techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
-\texit 1\
-fi' $sourcePath/debian/preinst
-fi
-sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-if [ "$distributionVersion" == "wheezy" ]; then
-	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
-	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
-	sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
-	sed -i 's/libgnutlsxx28/libgnutlsxx27/g' $sourcePath/debian/control
-fi
-tar -zcpf homegear-philipshue_$version.orig.tar.gz $sourcePath
-cd $sourcePath
-dch -v $version-$revision -M "Version $version."
-debuild -j${buildthreads} -us -uc
-cd ..
-rm -Rf $sourcePath
-rm homegear-philipshue_$version-$revision_*.build
-rm homegear-philipshue_$version-$revision_*.changes
-rm homegear-philipshue_$version-$revision.debian.tar.?z
-rm homegear-philipshue_$version-$revision.dsc
-rm homegear-philipshue_$version.orig.tar.gz
-mv homegear-philipshue*.deb homegear-philipshue.deb
-# }}}
-
-# {{{ homegear-sonos
-fullversion=$(Homegear-Sonos-master/getVersion.sh)
-version=$(echo $fullversion | cut -d "-" -f 1)
-revision=$(echo $fullversion | cut -d "-" -f 2)
-sourcePath=homegear-sonos-$version
-mv Homegear-Sonos-master $sourcePath
-cd $sourcePath
-./bootstrap
-cd ..
-if [ "$distribution" == "Debian" ]; then
-	sed -i '/\/bin\/sh/a\
-if \[ "$(uname -m)" = "armv6l" \]; then\
-\techo "Wrong CPU instruction set. Are you trying to install the Debian package on Raspbian?"\
-\texit 1\
-fi' $sourcePath/debian/preinst
-fi
-sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-if [ "$distributionVersion" == "wheezy" ]; then
-	sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
-	sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
-	sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
-	sed -i 's/libgnutlsxx28/libgnutlsxx27/g' $sourcePath/debian/control
-fi
-tar -zcpf homegear-sonos_$version.orig.tar.gz $sourcePath
-cd $sourcePath
-dch -v $version-$revision -M "Version $version."
-debuild -j${buildthreads} -us -uc
-cd ..
-rm -Rf $sourcePath
-rm homegear-sonos_$version-$revision_*.build
-rm homegear-sonos_$version-$revision_*.changes
-rm homegear-sonos_$version-$revision.debian.tar.?z
-rm homegear-sonos_$version-$revision.dsc
-rm homegear-sonos_$version.orig.tar.gz
-mv homegear-sonos*.deb homegear-sonos.deb
-# }}}
-
-if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb; then
-	isodate=`date +%Y%m%d`
+createPackage Homegear homegear
+createPackage Homegear-HomeMaticBidCoS homegear-homematicbidcos
+createPackage Homegear-HomeMaticWired homegear-homematicwired
+createPackage Homegear-Insteon homegear-insteon
+createPackage Homegear-MAX homegear-max
+createPackage Homegear-PhilipsHue homegear-philipshue
+createPackage Homegear-Sonos homegear-sonos
 EOF
-echo "	mv libhomegear-base.deb libhomegear-base_\$[isodate]_${distlc}_${distver}_${arch}.deb
+chmod 755 $rootfs/build/CreateDebianPackage.sh
+sed -i "s/<DIST>/${dist}/g" $rootfs/build/CreateDebianPackage.sh
+sed -i "s/<DISTVER>/${distver}/g" $rootfs/build/CreateDebianPackage.sh
+
+cat > "$rootfs/build/CreateDebianPackageNightly.sh" <<-'EOF'
+#!/bin/bash
+
+function cleanUp {
+	rm ${1}_*.build
+	rm ${1}_*.changes
+	rm ${1}_*.debian.tar.?z
+	rm ${1}_*.dsc
+	rm ${1}_*.orig.tar.gz
+	mv ${1}_*.deb ${1}.deb
+}
+
+/build/CreateDebianPackage.sh
+
+cleanUp homegear
+cleanUp homegear-homematicbidcos
+cleanUp homegear-homematicwired
+cleanUp homegear-insteon
+cleanUp homegear-max
+cleanUp homegear-philipshue
+cleanUp homegear-sonos
+
+EOF
+echo "if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb; then
+	isodate=`date +%Y%m%d`
+	mv libhomegear-base.deb libhomegear-base_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear.deb homegear_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-homematicbidcos.deb homegear-homematicbidcos_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-homematicwired.deb homegear-homematicwired_\$[isodate]_${distlc}_${distver}_${arch}.deb
@@ -518,28 +290,37 @@ echo "	mv libhomegear-base.deb libhomegear-base_\$[isodate]_${distlc}_${distver}
 	mv homegear-max.deb homegear-max_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-philipshue.deb homegear-philipshue_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-sonos.deb homegear-sonos_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	if test -f /build/Upload.sh; then
-		/build/Upload.sh
+	if test -f /build/UploadNightly.sh; then
+		/build/UploadNightly.sh
 	fi
 fi" >> $rootfs/build/CreateDebianPackageNightly.sh
 chmod 755 $rootfs/build/CreateDebianPackageNightly.sh
-sed -i "s/<DIST>/${dist}/g" $rootfs/build/CreateDebianPackageNightly.sh
-sed -i "s/<DISTVER>/${distver}/g" $rootfs/build/CreateDebianPackageNightly.sh
+
+cat > "$rootfs/build/CreateDebianPackageStable.sh" <<-'EOF'
+#!/bin/bash
+
+/build/CreateDebianPackage.sh
+
+if test -f /build/UploadStable.sh; then
+	/build/UploadStable.sh
+fi
+EOF
+chmod 755 $rootfs/build/CreateDebianPackageStable.sh
 
 cat > "$rootfs/FirstStart.sh" <<-'EOF'
 #!/bin/bash
 sed -i '$ d' /root/.bashrc >/dev/null
 if [ -n "$HOMEGEARBUILD_THREADS" ]; then
-	sed -i "s/<BUILDTHREADS>/${HOMEGEARBUILD_THREADS}/g" /build/CreateDebianPackageNightly.sh
+	sed -i "s/<BUILDTHREADS>/${HOMEGEARBUILD_THREADS}/g" /build/CreateDebianPackage.sh
 else
-	sed -i "s/<BUILDTHREADS>/1/g" /build/CreateDebianPackageNightly.sh
+	sed -i "s/<BUILDTHREADS>/1/g" /build/CreateDebianPackage.sh
 fi
 if [ -n "$HOMEGEARBUILD_SHELL" ]; then
-	echo "Container setup successful. You can now execute \"/build/CreateDebianPackageNightly.sh\"."
+	echo "Container setup successful. You can now execute \"/build/CreateDebianPackageStable.sh\" or \"/build/CreateDebianPackageNightly.sh\"."
 	/bin/bash
 	exit 0
 fi
-if [[ -z "$HOMEGEARBUILD_SERVERNAME" || -z "$HOMEGEARBUILD_SERVERPORT" || -z "$HOMEGEARBUILD_SERVERUSER" || -z "$HOMEGEARBUILD_SERVERPATH" || -z "$HOMEGEARBUILD_SERVERCERT" ]]; then
+if [[ -z "$HOMEGEARBUILD_SERVERNAME" || -z "$HOMEGEARBUILD_SERVERPORT" || -z "$HOMEGEARBUILD_SERVERUSER" || -z "$HOMEGEARBUILD_STABLESERVERPATH" || -z "$HOMEGEARBUILD_NIGHTLYSERVERPATH" || -z "$HOMEGEARBUILD_SERVERCERT" ]]; then
 	while :
 	do
 		echo "Setting up SSH package uploading:"
@@ -566,9 +347,17 @@ if [[ -z "$HOMEGEARBUILD_SERVERNAME" || -z "$HOMEGEARBUILD_SERVERPORT" || -z "$H
 		done
 		while :
 		do
-			read -p "Please specify the path on the server to upload packages to: " HOMEGEARBUILD_SERVERPATH
-			HOMEGEARBUILD_SERVERPATH=${HOMEGEARBUILD_SERVERPATH%/}
-			if [ -n "$HOMEGEARBUILD_SERVERPATH" ]; then
+			read -p "Please specify the path on the server to upload stable packages to: " HOMEGEARBUILD_STABLESERVERPATH
+			HOMEGEARBUILD_STABLESERVERPATH=${HOMEGEARBUILD_STABLESERVERPATH%/}
+			if [ -n "$HOMEGEARBUILD_STABLESERVERPATH" ]; then
+				break
+			fi
+		done
+		while :
+		do
+			read -p "Please specify the path on the server to upload nightly packages to: " HOMEGEARBUILD_NIGHTLYSERVERPATH
+			HOMEGEARBUILD_NIGHTLYSERVERPATH=${HOMEGEARBUILD_NIGHTLYSERVERPATH%/}
+			if [ -n "$HOMEGEARBUILD_NIGHTLYSERVERPATH" ]; then
 				break
 			fi
 		done
@@ -589,7 +378,8 @@ if [[ -z "$HOMEGEARBUILD_SERVERNAME" || -z "$HOMEGEARBUILD_SERVERPORT" || -z "$H
 		echo -e "Server name:\t$HOMEGEARBUILD_SERVERNAME"
 		echo -e "Server port:\t$HOMEGEARBUILD_SERVERPORT"
 		echo -e "Server user:\t$HOMEGEARBUILD_SERVERUSER"
-		echo -e "Server path:\t$HOMEGEARBUILD_SERVERPATH"
+		echo -e "Server path (stable):\t$HOMEGEARBUILD_STABLESERVERPATH"
+		echo -e "Server path (nightlies):\t$HOMEGEARBUILD_NIGHTLYSERVERPATH"
 		echo -e "Certificate:\t"
 		echo "$HOMEGEARBUILD_SERVERCERT"
 		while :
@@ -604,7 +394,8 @@ if [[ -z "$HOMEGEARBUILD_SERVERNAME" || -z "$HOMEGEARBUILD_SERVERPORT" || -z "$H
 		fi
 	done
 else
-	HOMEGEARBUILD_SERVERPATH=${HOMEGEARBUILD_SERVERPATH%/}
+	HOMEGEARBUILD_STABLESERVERPATH=${HOMEGEARBUILD_STABLESERVERPATH%/}
+	HOMEGEARBUILD_NIGHTLYSERVERPATH=${HOMEGEARBUILD_NIGHTLYSERVERPATH%/}
 	echo "Testing connection..."
 	mkdir -p /root/.ssh
 	echo "$HOMEGEARBUILD_SERVERCERT" > /root/.ssh/id_rsa
@@ -622,15 +413,16 @@ echo "#!/bin/bash
 set -x
 
 cd /build
-if [ \$(ls /build | grep -c \"\\.deb\$\") -ne 0 ]; then
+if [ \$(ls /build | grep -c \"\\.changes\$\") -ne 0 ]; then
 	path=\`mktemp -p / -u\`".tar.gz"
-	tar -zcpf \${path} *.deb
+	echo \"<DIST>\" > distribution
+	tar -zcpf \${path} homegear* lib* distribution
 	if test -f \${path}; then
 		mv \${path} \${path}.uploading
 		filename=\$(basename \$path)
-		scp -P $HOMEGEARBUILD_SERVERPORT \${path}.uploading ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME}:${HOMEGEARBUILD_SERVERPATH}
+		scp -P $HOMEGEARBUILD_SERVERPORT \${path}.uploading ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME}:${HOMEGEARBUILD_NIGHTLYSERVERPATH}
 		if [ \$? -eq 0 ]; then
-			ssh -p $HOMEGEARBUILD_SERVERPORT ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME} \"mv ${HOMEGEARBUILD_SERVERPATH}/\${filename}.uploading ${HOMEGEARBUILD_SERVERPATH}/\${filename}\"
+			ssh -p $HOMEGEARBUILD_SERVERPORT ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME} \"mv ${HOMEGEARBUILD_NIGHTLYSERVERPATH}/\${filename}.uploading ${HOMEGEARBUILD_NIGHTLYSERVERPATH}/\${filename}\"
 			if [ \$? -eq 0 ]; then
 				echo "Packages uploaded successfully."
 				exit 0
@@ -640,17 +432,46 @@ if [ \$(ls /build | grep -c \"\\.deb\$\") -ne 0 ]; then
 		fi
 	fi
 fi
-" > /build/Upload.sh
-chmod 755 /build/Upload.sh
+" > /build/UploadStable.sh
+chmod 755 /build/UploadStable.sh
+
+echo "#!/bin/bash
+
+set -x
+
+cd /build
+if [ \$(ls /build | grep -c \"\\.deb\$\") -ne 0 ]; then
+	path=\`mktemp -p / -u\`".tar.gz"
+	tar -zcpf \${path} *.deb
+	if test -f \${path}; then
+		mv \${path} \${path}.uploading
+		filename=\$(basename \$path)
+		scp -P $HOMEGEARBUILD_SERVERPORT \${path}.uploading ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME}:${HOMEGEARBUILD_NIGHTLYSERVERPATH}
+		if [ \$? -eq 0 ]; then
+			ssh -p $HOMEGEARBUILD_SERVERPORT ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME} \"mv ${HOMEGEARBUILD_NIGHTLYSERVERPATH}/\${filename}.uploading ${HOMEGEARBUILD_NIGHTLYSERVERPATH}/\${filename}\"
+			if [ \$? -eq 0 ]; then
+				echo "Packages uploaded successfully."
+				exit 0
+			else
+				exit \$?
+			fi
+		fi
+	fi
+fi
+" > /build/UploadNightly.sh
+chmod 755 /build/UploadNightly.sh
 rm /FirstStart.sh
-if [ -n "$HOMEGEARBUILD_REVISION" ]; then
-	/build/CreateDebianPackageNightly.sh $HOMEGEARBUILD_REVISION
+if [ "$HOMEGEARBUILD_TYPE" = "stable" ]; then
+	/build/CreateDebianPackageStable.sh
+elif [ "$HOMEGEARBUILD_TYPE" = "nightly" ]; then
+	/build/CreateDebianPackageNightly.sh
 else
-	echo "Container setup successful. You can now execute \"/build/CreateDebianPackageNightly.sh\"."
+	echo "Container setup successful. You can now execute \"/build/CreateDebianPackageStable.sh\" or \"/build/CreateDebianPackageNightly.sh\"."
 	/bin/bash
 fi
 EOF
 chmod 755 $rootfs/FirstStart.sh
+sed -i "s/<DIST>/${dist}/g" $rootfs/FirstStart.sh
 
 read -p "Copy additional files into ${rootfs} and check that all packages were installed ok then hit [Enter] to continue..."
 

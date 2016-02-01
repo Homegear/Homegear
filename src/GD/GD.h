@@ -66,6 +66,7 @@ public:
 	static std::string socketPath;
 	static std::string workingDirectory;
 	static std::string executablePath;
+	static std::string executableFile;
 	static std::unique_ptr<FamilyController> familyController;
 	static std::unique_ptr<LicensingController> licensingController;
 	//We can work with rpcServers without Mutex, because elements are never deleted and iterators are not invalidated upon insertion of new elements.

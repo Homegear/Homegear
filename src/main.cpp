@@ -397,7 +397,7 @@ int32_t getHexInput()
     return intInput;
 }
 
-void getExecutablePath()
+void getExecutablePath(int argc, char* argv[])
 {
 	char path[1024];
 	if(!getcwd(path, sizeof(path)))
@@ -438,6 +438,12 @@ void getExecutablePath()
 	GD::executablePath = std::string(path);
 	GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
 #endif
+
+	GD::executableFile(argc > 0 ? argv[0] : "homegear");
+	BaseLib::HelperFunctions::trim(executableName);
+	if(GD::executableFile.empty()) executableName = "homegear";
+	std::pair<std::string, std::string> pathNamePair = BaseLib::HelperFunctions::splitLast(GD::executableFile, '/');
+	if(!pathNamePair.second.empty()) GD::executableFile = pathNamePair.second;
 }
 
 void printHelp()
@@ -949,7 +955,7 @@ int main(int argc, char* argv[])
 {
     try
     {
-    	getExecutablePath();
+    	getExecutablePath(argc, argv);
     	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
     	GD::bl.reset(new BaseLib::Obj(GD::executablePath, _errorCallback.get(), false));
     	GD::out.init(GD::bl.get());
@@ -1161,13 +1167,8 @@ int main(int argc, char* argv[])
     	try
     	{
     		// {{{ Get maximum thread count
-				std::string executableName(argc > 0 ? argv[0]: "homegear");
-				BaseLib::HelperFunctions::trim(executableName);
-				if(executableName.empty()) executableName = "homegear";
-				std::pair<std::string, std::string> pathNamePair = BaseLib::HelperFunctions::splitLast(executableName, '/');
-				if(!pathNamePair.second.empty()) executableName = pathNamePair.second;
 				std::string output;
-				BaseLib::HelperFunctions::exec(GD::executablePath + "/homegear -tc", output);
+				BaseLib::HelperFunctions::exec(GD::executablePath + "/" + GD::executableFile + " -tc", output);
 				BaseLib::HelperFunctions::trim(output);
 				if(BaseLib::Math::isNumber(output, false)) GD::bl->threadManager.setMaxThreadCount(BaseLib::Math::getNumber(output, false));
 			// }}}
