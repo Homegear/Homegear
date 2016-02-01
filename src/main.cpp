@@ -439,9 +439,9 @@ void getExecutablePath(int argc, char* argv[])
 	GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
 #endif
 
-	GD::executableFile(argc > 0 ? argv[0] : "homegear");
-	BaseLib::HelperFunctions::trim(executableName);
-	if(GD::executableFile.empty()) executableName = "homegear";
+	GD::executableFile = std::string(argc > 0 ? argv[0] : "homegear");
+	BaseLib::HelperFunctions::trim(GD::executableFile);
+	if(GD::executableFile.empty()) GD::executableFile = "homegear";
 	std::pair<std::string, std::string> pathNamePair = BaseLib::HelperFunctions::splitLast(GD::executableFile, '/');
 	if(!pathNamePair.second.empty()) GD::executableFile = pathNamePair.second;
 }
