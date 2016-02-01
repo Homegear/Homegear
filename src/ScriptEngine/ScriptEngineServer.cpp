@@ -164,7 +164,33 @@ void ScriptEngineServer::stop()
 
 void ScriptEngineServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped)
 {
-	std::cerr << "Process killed: " << (uint32_t)pid << ' ' << exitCode << ' ' << signal << ' ' << (int32_t)coreDumped << std::endl;
+	try
+	{
+		{
+			std::lock_guard<std::mutex> processGuard(_processMutex);
+			std::map<int32_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(pid);
+			if(processIterator != _processes.end())
+			{
+				closeClientConnection(processIterator->second->clientData);
+				_processes.erase(processIterator);
+			}
+		}
+
+		std::cerr << "Process killed: " << (uint32_t)pid << ' ' << exitCode << ' ' << signal << ' ' << (int32_t)coreDumped << std::endl;
+		//Todo: Call process killed event handlers.
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void ScriptEngineServer::closeClientConnection(std::shared_ptr<ClientData> client)
@@ -303,12 +329,50 @@ void ScriptEngineServer::mainThread()
     }
 }
 
+std::shared_ptr<ScriptEngineServer::ScriptEngineProcess> ScriptEngineServer::getFreeProcess()
+{
+	try
+	{
+		{
+			std::lock_guard<std::mutex> processGuard(_processMutex);
+			for(std::map<int32_t, std::shared_ptr<ScriptEngineProcess>>::iterator i = _processes.begin(); i != _processes.end(); ++i)
+			{
+				if(i->second->scriptCount < _bl->threadManager.getMaxThreadCount() / _bl->settings.scriptEngineMaxThreadsPerScript() && (_bl->settings.scriptEngineMaxScriptsPerProcess() == -1 || i->second->scriptCount < _bl->settings.scriptEngineMaxScriptsPerProcess()))
+				{
+					i->second->scriptCount++;
+					return i->second;
+				}
+			}
+		}
+		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess());
+		std::vector<std::string> arguments{ "-sre" };
+		process->pid = _bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments);
+		if(process->pid != -1)
+		{
+			process->scriptCount++;
+			std::lock_guard<std::mutex> processGuard(_processMutex);
+			_processes[process->pid] = process;
+		}
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::shared_ptr<ScriptEngineProcess>();
+}
+
 void ScriptEngineServer::readClient(std::shared_ptr<ClientData> clientData)
 {
 	try
 	{
-		std::vector<std::string> arguments{ "-c1", "192.168.0.2" };
-		GD::bl->hf.system("/bin/ping", arguments);
 		int32_t bytesRead = read(clientData->fileDescriptor->descriptor, &(clientData->buffer[0]), clientData->buffer.size() - 1);
 		if(bytesRead <= 0)
 		{
