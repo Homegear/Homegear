@@ -11,10 +11,13 @@ WebServer::WebServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo
 	_serverInfo = serverInfo;
 
 	_out.setPrefix("Web server (Port " + std::to_string(serverInfo->port) + "): ");
+
+	_scriptEngineEventHandler = GD::scriptEngineServer->addEventHandler(this);
 }
 
 WebServer::~WebServer()
 {
+	GD::scriptEngineServer->removeEventHandler(_scriptEngineEventHandler);
 }
 
 void WebServer::get(BaseLib::HTTP& http, std::shared_ptr<BaseLib::SocketOperations> socket)

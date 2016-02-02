@@ -1,4 +1,4 @@
-/* Copyright 2013-2015 Sathya Laufer
+/* Copyright 2013-2016 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -61,9 +61,7 @@ public:
 	static std::string runAsUser;
 	static std::string runAsGroup;
 	static std::string configPath;
-	static std::string runDir;
 	static std::string pidfilePath;
-	static std::string socketPath;
 	static std::string workingDirectory;
 	static std::string executablePath;
 	static std::string executableFile;

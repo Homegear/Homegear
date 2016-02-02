@@ -1,4 +1,4 @@
-/* Copyright 2013-2015 Sathya Laufer
+/* Copyright 2013-2016 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -658,6 +658,25 @@ void startUp()
 			}
 		// }}}
 
+		if(!GD::bl->io.directoryExists(GD::bl->settings.socketPath()))
+		{
+			if(!GD::bl->io.createDirectory(GD::bl->settings.socketPath(), S_IRWXU | S_IRWXG))
+			{
+				GD::out.printCritical("Critical: Directory \"" + GD::bl->settings.socketPath() + "\" does not exist and cannot be created.");
+				exit(1);
+			}
+			uid_t userId = GD::bl->hf.userId(GD::runAsUser);
+			gid_t groupId = GD::bl->hf.groupId(GD::runAsGroup);
+			if((signed)userId != -1 && (signed)groupId != -1)
+			{
+				if(chown(GD::bl->settings.socketPath().c_str(), userId, groupId) == -1)
+				{
+					GD::out.printCritical("Critical: Could not set permissions on directory \"" + GD::bl->settings.socketPath() + "\"");
+					exit(1);
+				}
+			}
+		}
+
     	GD::licensingController->loadModules();
 
 		GD::familyController->loadModules();
@@ -793,7 +812,11 @@ void startUp()
 		GD::scriptEngine.reset(new ScriptEngine());
 		GD::out.printInfo("Starting script engine server...");
 		GD::scriptEngineServer.reset(new ScriptEngineServer());
-		GD::scriptEngineServer->start();
+		if(!GD::scriptEngineServer->start())
+		{
+			GD::out.printCritical("Critical: Cannot start script engine server. Exiting Homegear.");
+			exit(1);
+		}
 		#endif
 
 		for(uint32_t i = 0; i < 100; ++i)

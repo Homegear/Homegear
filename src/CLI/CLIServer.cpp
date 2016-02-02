@@ -1,4 +1,4 @@
-/* Copyright 2013-2015 Sathya Laufer
+/* Copyright 2013-2016 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -109,6 +109,7 @@ void Server::start()
 {
 	try
 	{
+		_socketPath = GD::bl->settings.socketPath() + "homegear.sock";
 		stop();
 		_stopServer = false;
 		GD::bl->threadManager.start(_mainThread, true, &Server::mainThread, this);
@@ -146,7 +147,7 @@ void Server::stop()
 			collectGarbage();
 			if(_clients.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-		unlink(GD::socketPath.c_str());
+		unlink(_socketPath.c_str());
 	}
 	catch(const std::exception& ex)
 	{
@@ -320,43 +321,43 @@ void Server::getFileDescriptor(bool deleteOldSocket)
 	try
 	{
 		struct stat sb;
-		if(stat(GD::runDir.c_str(), &sb) == -1)
+		if(stat(GD::bl->settings.socketPath().c_str(), &sb) == -1)
 		{
-			if(errno == ENOENT) GD::out.printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear otherwise the command line interface won't work.");
-			else throw BaseLib::Exception("Error reading information of directory " + GD::runDir + ": " + strerror(errno));
+			if(errno == ENOENT) GD::out.printError("Directory " + GD::bl->settings.socketPath() + " does not exist. Please create it before starting Homegear otherwise the command line interface won't work.");
+			else throw BaseLib::Exception("Error reading information of directory " + GD::bl->settings.socketPath() + ": " + strerror(errno));
 			_stopServer = true;
 			return;
 		}
 		if(!S_ISDIR(sb.st_mode))
 		{
-			GD::out.printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear otherwise the command line interface won't work.");
+			GD::out.printError("Directory " + GD::bl->settings.socketPath() + " does not exist. Please create it before starting Homegear otherwise the command line interface won't work.");
 			_stopServer = true;
 			return;
 		}
 		if(deleteOldSocket)
 		{
-			if(unlink(GD::socketPath.c_str()) == -1 && errno != ENOENT) throw(BaseLib::Exception("Couldn't delete existing socket: " + GD::socketPath + ". Error: " + strerror(errno)));
+			if(unlink(_socketPath.c_str()) == -1 && errno != ENOENT) throw(BaseLib::Exception("Couldn't delete existing socket: " + _socketPath + ". Error: " + strerror(errno)));
 		}
-		else if(stat(GD::socketPath.c_str(), &sb) == 0) return;
+		else if(stat(_socketPath.c_str(), &sb) == 0) return;
 
 		_serverFileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0));
-		if(_serverFileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't create socket: " + GD::socketPath + ". Error: " + strerror(errno)));
+		if(_serverFileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't create socket: " + _socketPath + ". Error: " + strerror(errno)));
 		int32_t reuseAddress = 1;
 		if(setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (void*)&reuseAddress, sizeof(int32_t)) == -1)
 		{
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
-			throw(BaseLib::Exception("Couldn't set socket options: " + GD::socketPath + ". Error: " + strerror(errno)));
+			throw(BaseLib::Exception("Couldn't set socket options: " + _socketPath + ". Error: " + strerror(errno)));
 		}
 		sockaddr_un serverAddress;
 		serverAddress.sun_family = AF_LOCAL;
 		//104 is the size on BSD systems - slightly smaller than in Linux
-		if(GD::socketPath.length() > 104)
+		if(_socketPath.length() > 104)
 		{
 			//Check for buffer overflow
 			GD::out.printCritical("Critical: Socket path is too long.");
 			return;
 		}
-		strncpy(serverAddress.sun_path, GD::socketPath.c_str(), 104);
+		strncpy(serverAddress.sun_path, _socketPath.c_str(), 104);
 		serverAddress.sun_path[103] = 0; //Just to make sure the string is null terminated.
 		bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*)&serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
 		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
@@ -364,15 +365,15 @@ void Server::getFileDescriptor(bool deleteOldSocket)
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 			throw BaseLib::Exception("Error: CLI server could not start listening. Error: " + std::string(strerror(errno)));
 		}
-		if(chmod(GD::socketPath.c_str(), S_IRWXU | S_IRWXG) == -1)
+		if(chmod(_socketPath.c_str(), S_IRWXU | S_IRWXG) == -1)
 		{
-			GD::out.printError("Error: chmod failed on unix socket \"" + GD::socketPath + "\".");
+			GD::out.printError("Error: chmod failed on unix socket \"" + _socketPath + "\".");
 		}
 		return;
     }
     catch(const std::exception& ex)
     {
-    	GD::out.printError("Couldn't create socket file " + GD::socketPath + ": " + ex.what());
+    	GD::out.printError("Couldn't create socket file " + _socketPath + ": " + ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
