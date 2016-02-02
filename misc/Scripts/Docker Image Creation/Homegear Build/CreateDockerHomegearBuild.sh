@@ -160,15 +160,15 @@ distributionVersion="<DISTVER>"
 buildthreads="<BUILDTHREADS>"
 
 function createPackage {
-	fullversion=$(${1}-master/getVersion.sh)
+	fullversion=$(${1}-${2}/getVersion.sh)
 	version=$(echo $fullversion | cut -d "-" -f 1)
 	revision=$(echo $fullversion | cut -d "-" -f 2)
 	if [ $revision -eq 0 ]; then
 		echo "Error: Could not get revision."
 		exit 1
 	fi
-	sourcePath=${2}-$version
-	mv ${1}-master $sourcePath
+	sourcePath=${3}-$version
+	mv ${1}-${2} $sourcePath
 	cd $sourcePath
 	./bootstrap
 	cd ..
@@ -186,7 +186,7 @@ function createPackage {
 		sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
 		sed -i 's/libgnutlsxx28/libgnutlsxx27/g' $sourcePath/debian/control
 	fi
-	tar -zcpf ${2}_$version.orig.tar.gz $sourcePath
+	tar -zcpf ${3}_$version.orig.tar.gz $sourcePath
 	cd $sourcePath
 	dch -v $version-$revision -M "Version $version."
 	debuild -j${buildthreads} -us -uc
@@ -196,48 +196,48 @@ function createPackage {
 
 cd /build
 
-wget https://github.com/Homegear/libhomegear-base/archive/master.zip
+wget https://github.com/Homegear/libhomegear-base/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
-unzip master.zip
+unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
-rm master.zip
-wget https://github.com/Homegear/Homegear/archive/master.zip
+rm ${1}.zip
+wget https://github.com/Homegear/Homegear/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
-unzip master.zip
+unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
-rm master.zip
-wget https://github.com/Homegear/Homegear-HomeMaticBidCoS/archive/master.zip
+rm ${1}.zip
+wget https://github.com/Homegear/Homegear-HomeMaticBidCoS/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
-unzip master.zip
+unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
-rm master.zip
-wget https://github.com/Homegear/Homegear-HomeMaticWired/archive/master.zip
+rm ${1}.zip
+wget https://github.com/Homegear/Homegear-HomeMaticWired/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
-unzip master.zip
+unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
-rm master.zip
-wget https://github.com/Homegear/Homegear-Insteon/archive/master.zip
+rm ${1}.zip
+wget https://github.com/Homegear/Homegear-Insteon/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
-unzip master.zip
+unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
-rm master.zip
-wget https://github.com/Homegear/Homegear-MAX/archive/master.zip
+rm ${1}.zip
+wget https://github.com/Homegear/Homegear-MAX/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
-unzip master.zip
+unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
-rm master.zip
-wget https://github.com/Homegear/Homegear-PhilipsHue/archive/master.zip
+rm ${1}.zip
+wget https://github.com/Homegear/Homegear-PhilipsHue/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
-unzip master.zip
+unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
-rm master.zip
-wget https://github.com/Homegear/Homegear-Sonos/archive/master.zip
+rm ${1}.zip
+wget https://github.com/Homegear/Homegear-Sonos/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
-unzip master.zip
+unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
-rm master.zip
+rm ${1}.zip
 
-createPackage libhomegear-base libhomegear-base
+createPackage libhomegear-base $1 libhomegear-base
 if test -f libhomegear-base*.deb; then
 	dpkg -i libhomegear-base*.deb
 else
@@ -245,13 +245,13 @@ else
 	exit 1
 fi
 
-createPackage Homegear homegear
-createPackage Homegear-HomeMaticBidCoS homegear-homematicbidcos
-createPackage Homegear-HomeMaticWired homegear-homematicwired
-createPackage Homegear-Insteon homegear-insteon
-createPackage Homegear-MAX homegear-max
-createPackage Homegear-PhilipsHue homegear-philipshue
-createPackage Homegear-Sonos homegear-sonos
+createPackage Homegear $1 homegear
+createPackage Homegear-HomeMaticBidCoS $1 homegear-homematicbidcos
+createPackage Homegear-HomeMaticWired $1 homegear-homematicwired
+createPackage Homegear-Insteon $1 homegear-insteon
+createPackage Homegear-MAX $1 homegear-max
+createPackage Homegear-PhilipsHue $1 homegear-philipshue
+createPackage Homegear-Sonos $1 homegear-sonos
 EOF
 chmod 755 $rootfs/build/CreateDebianPackage.sh
 sed -i "s/<DIST>/${dist}/g" $rootfs/build/CreateDebianPackage.sh
@@ -269,8 +269,11 @@ function cleanUp {
 	mv ${1}_*.deb ${1}.deb
 }
 
-/build/CreateDebianPackage.sh
+/build/CreateDebianPackage.sh master
 
+cd /build
+
+cleanUp libhomegear-base
 cleanUp homegear
 cleanUp homegear-homematicbidcos
 cleanUp homegear-homematicwired
@@ -299,7 +302,7 @@ chmod 755 $rootfs/build/CreateDebianPackageNightly.sh
 cat > "$rootfs/build/CreateDebianPackageStable.sh" <<-'EOF'
 #!/bin/bash
 
-/build/CreateDebianPackage.sh
+/build/CreateDebianPackage.sh 0.6
 
 if test -f /build/UploadStable.sh; then
 	/build/UploadStable.sh

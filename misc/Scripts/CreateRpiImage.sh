@@ -283,9 +283,8 @@ fi
 echo "echo \"Generating new SSH host keys. This might take a while.\"
 rm /etc/ssh/ssh_host* >/dev/null
 ssh-keygen -A >/dev/null
-revision=\$(cat /proc/cpuinfo | grep Revision | cut -d ' ' -f 2)
 if [ \$(nproc --all) -ge 4 ]; then
-  echo \"dwc_otg.lpm_enable=0 console=ttyUSB0,115200 kgdboc=ttyUSB0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline isolcpus=2,3 rootwait\" > boot/cmdline.txt
+  echo \"dwc_otg.lpm_enable=0 console=ttyUSB0,115200 kgdboc=ttyUSB0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline isolcpus=2,3 rootwait\" > /boot/cmdline.txt
 fi
 echo \"Updating your system...\"
 apt update
@@ -302,20 +301,28 @@ wget http://homegear.eu/downloads/nightlies/homegear-philipshue_current_raspbian
 wget http://homegear.eu/downloads/nightlies/homegear-sonos_current_raspbian_jessie_armhf.deb || exit 1
 dpkg -i libhomegear-base_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
+rm -f libhomegear-base_current_raspbian_jessie_armhf.deb
 dpkg -i homegear_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
+rm -f homegear_current_raspbian_jessie_armhf.deb
 dpkg -i homegear-homematicbidcos_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
+rm -f homegear-homematicbidcos_current_raspbian_jessie_armhf.deb
 dpkg -i homegear-homematicwired_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
+rm -f homegear-homematicwired_current_raspbian_jessie_armhf.deb
 dpkg -i homegear-insteon_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
+rm -f homegear-insteon_current_raspbian_jessie_armhf.deb
 dpkg -i homegear-max_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
+rm -f homegear-max_current_raspbian_jessie_armhf.deb
 dpkg -i homegear-philipshue_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
+rm -f homegear-philipshue_current_raspbian_jessie_armhf.deb
 dpkg -i homegear-sonos_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
+rm -f homegear-sonos_current_raspbian_jessie_armhf.deb
 service homegear stop
 apt-get -y install openhab-runtime openhab-addon-action-homematic openhab-addon-binding-homematic
 apt-get -y -f install
