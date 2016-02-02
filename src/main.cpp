@@ -1113,18 +1113,22 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-r")
     		{
+    			GD::bl->settings.load(GD::configPath + "main.conf");
     			CLI::Client cliClient;
     			cliClient.start();
     			exit(0);
     		}
     		else if(arg == "-rse")
     		{
+    			GD::bl->settings.load(GD::configPath + "main.conf");
     			ScriptEngineClient scriptEngineClient;
     			scriptEngineClient.start();
     			exit(0);
     		}
     		else if(arg == "-e")
     		{
+    			GD::bl->settings.load(GD::configPath + "main.conf");
+    			GD::bl->debugLevel = 3; //Only output warnings.
     			std::stringstream command;
     			if(i + 1 < argc)
     			{

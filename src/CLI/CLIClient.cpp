@@ -119,7 +119,7 @@ int32_t Client::start(std::string command)
 				return 1;
 			}
 
-			if(GD::bl->debugLevel >= 4 && i == 0) std::cout << "Info: Trying to connect..." << std::endl;
+			if(GD::bl->debugLevel >= 5 && i == 0) std::cout << "Debug: Trying to connect..." << std::endl;
 			sockaddr_un remoteAddress;
 			remoteAddress.sun_family = AF_LOCAL;
 			//104 is the size on BSD systems - slightly smaller than in Linux
@@ -149,7 +149,7 @@ int32_t Client::start(std::string command)
 			}
 			else break;
 		}
-		if(GD::bl->debugLevel >= 4) std::cout << "Info: Connected." << std::endl;
+		if(GD::bl->debugLevel >= 4) std::cout << "Connected to Homegear (version " + GD::bl->version() + ")." << std::endl;
 
 		if(command.empty()) _pingThread = std::thread(&CLI::Client::ping, this);
 
