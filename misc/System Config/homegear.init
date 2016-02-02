@@ -92,7 +92,6 @@ case $1 in
 
                 # {{{ Limit Homegear to core 2 and OpenHAB to core 3 on Raspberry Pi 2
                     isolcpus=`cat /boot/cmdline.txt | grep -c isolcpus`
-                    revision=$(cat /proc/cpuinfo | grep Revision | cut -d ' ' -f 2)
                     if [ $isolcpus -eq 1 ] && [ $(nproc --all) -ge 4 ]; then
                         homegearPids=($(ps -ejH -1 | grep /usr/bin/homegear | grep -v grep | sed -e 's/^[[:space:]]*//' | cut -d ' ' -f 1))
                         for i in "${homegearPids[@]}"
