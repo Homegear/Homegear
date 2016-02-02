@@ -1,4 +1,4 @@
-/* Copyright 2013-2015 Sathya Laufer
+/* Copyright 2013-2016 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -35,7 +35,8 @@
 
 namespace RPC
 {
-	class WebServer : public BaseLib::IEventsEx {
+	class WebServer : public BaseLib::IEventsEx, public BaseLib::ScriptEngine::IScriptEngineEventSink
+	{
 		public:
 			WebServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo);
 			virtual ~WebServer();
@@ -51,6 +52,12 @@ namespace RPC
 			BaseLib::HTTP _http;
 
 			void send(std::shared_ptr<BaseLib::SocketOperations>& socket, std::vector<char>& data);
+
+			// {{{ Script engine events
+				BaseLib::PEventHandler _scriptEngineEventHandler;
+
+				bool onExecutionFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, int32_t exitCode) { return false; }
+			// }}}
 	};
 }
 #endif

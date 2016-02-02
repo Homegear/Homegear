@@ -1,4 +1,4 @@
-/* Copyright 2013-2015 Sathya Laufer
+/* Copyright 2013-2016 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -107,7 +107,7 @@ int32_t ScriptEngineClient::start(std::string command)
 {
 	try
 	{
-		_socketPath = GD::runDir + "homegearSE.sock";
+		_socketPath = GD::bl->settings.socketPath() + "homegearSE.sock";
 		for(int32_t i = 0; i < 2; i++)
 		{
 			_fileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM, 0));
@@ -318,7 +318,7 @@ int32_t ScriptEngineClient::start(std::string command)
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printError("Couldn't create socket file " + _socketPath + ": " + ex.what());;
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {

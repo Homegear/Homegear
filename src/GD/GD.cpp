@@ -1,4 +1,4 @@
-/* Copyright 2013-2015 Sathya Laufer
+/* Copyright 2013-2016 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -39,8 +39,6 @@ std::string GD::runAsUser = "";
 std::string GD::runAsGroup = "";
 std::string GD::configPath = "/etc/homegear/";
 std::string GD::pidfilePath = "";
-std::string GD::runDir = "/var/run/homegear/";
-std::string GD::socketPath = GD::runDir + "homegear.sock";
 std::string GD::workingDirectory = "";
 std::string GD::executablePath = "";
 std::string GD::executableFile = "";

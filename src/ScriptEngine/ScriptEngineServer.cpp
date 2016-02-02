@@ -1,4 +1,4 @@
-/* Copyright 2013-2015 Sathya Laufer
+/* Copyright 2013-2016 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -104,14 +104,16 @@ void ScriptEngineServer::collectGarbage()
     _garbageCollectionMutex.unlock();
 }
 
-void ScriptEngineServer::start()
+bool ScriptEngineServer::start()
 {
 	try
 	{
 		stop();
-		_socketPath = GD::runDir + "homegearSE.sock";
+		_socketPath = GD::bl->settings.socketPath() + "homegearSE.sock";
 		_stopServer = false;
+		if(!getFileDescriptor(true)) return false;
 		GD::bl->threadManager.start(_mainThread, true, &ScriptEngineServer::mainThread, this);
+		return true;
 	}
     catch(const std::exception& ex)
     {
@@ -125,6 +127,7 @@ void ScriptEngineServer::start()
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    return false;
 }
 
 void ScriptEngineServer::stop()
@@ -146,7 +149,7 @@ void ScriptEngineServer::stop()
 			collectGarbage();
 			if(_clients.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-		unlink(GD::socketPath.c_str());
+		unlink(_socketPath.c_str());
 	}
 	catch(const std::exception& ex)
 	{
@@ -224,7 +227,6 @@ void ScriptEngineServer::mainThread()
 {
 	try
 	{
-		getFileDescriptor(true); //Deletes an existing socket file
 		std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor;
 		while(!_stopServer)
 		{
@@ -337,7 +339,7 @@ std::shared_ptr<ScriptEngineServer::ScriptEngineProcess> ScriptEngineServer::get
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			for(std::map<int32_t, std::shared_ptr<ScriptEngineProcess>>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
-				if(i->second->scriptCount < GD::bl->threadManager.getMaxThreadCount() / GD::bl->settings.scriptEngineMaxThreadsPerScript() && (GD::bl->settings.scriptEngineMaxScriptsPerProcess() == -1 || i->second->scriptCount < GD::bl->settings.scriptEngineMaxScriptsPerProcess()))
+				if(i->second->scriptCount < GD::bl->threadManager.getMaxThreadCount() / GD::bl->settings.scriptEngineMaxThreadsPerScript() && (GD::bl->settings.scriptEngineMaxScriptsPerProcess() == -1 || i->second->scriptCount < (unsigned)GD::bl->settings.scriptEngineMaxScriptsPerProcess()))
 				{
 					i->second->scriptCount++;
 					return i->second;
@@ -414,46 +416,46 @@ void ScriptEngineServer::readClient(std::shared_ptr<ClientData> clientData)
     }
 }
 
-void ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
+bool ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
 {
 	try
 	{
 		struct stat sb;
-		if(stat(GD::runDir.c_str(), &sb) == -1)
+		if(stat(GD::bl->settings.socketPath().c_str(), &sb) == -1)
 		{
-			if(errno == ENOENT) _out.printCritical("Critical: Directory " + GD::runDir + " does not exist. Please create it before starting Homegear otherwise the script engine won't work.");
-			else _out.printCritical("Critical: Error reading information of directory " + GD::runDir + ". The script engine won't work: " + strerror(errno));
+			if(errno == ENOENT) _out.printCritical("Critical: Directory " + GD::bl->settings.socketPath() + " does not exist. Please create it before starting Homegear otherwise the script engine won't work.");
+			else _out.printCritical("Critical: Error reading information of directory " + GD::bl->settings.socketPath() + ". The script engine won't work: " + strerror(errno));
 			_stopServer = true;
-			return;
+			return false;
 		}
 		if(!S_ISDIR(sb.st_mode))
 		{
-			_out.printCritical("Critical: Directory " + GD::runDir + " does not exist. Please create it before starting Homegear otherwise the script engine interface won't work.");
+			_out.printCritical("Critical: Directory " + GD::bl->settings.socketPath() + " does not exist. Please create it before starting Homegear otherwise the script engine interface won't work.");
 			_stopServer = true;
-			return;
+			return false;
 		}
 		if(deleteOldSocket)
 		{
 			if(unlink(_socketPath.c_str()) == -1 && errno != ENOENT)
 			{
 				_out.printCritical("Critical: Couldn't delete existing socket: " + _socketPath + ". Please delete it manually. The script engine won't work. Error: " + strerror(errno));
-				return;
+				return false;
 			}
 		}
-		else if(stat(_socketPath.c_str(), &sb) == 0) return;
+		else if(stat(_socketPath.c_str(), &sb) == 0) return false;
 
 		_serverFileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0));
 		if(_serverFileDescriptor->descriptor == -1)
 		{
 			_out.printCritical("Critical: Couldn't create socket: " + _socketPath + ". The script engine won't work. Error: " + strerror(errno));
-			return;
+			return false;
 		}
 		int32_t reuseAddress = 1;
 		if(setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (void*)&reuseAddress, sizeof(int32_t)) == -1)
 		{
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
-			_out.printCritical("Couldn't set socket options: " + _socketPath + ". The script engine won't work correctly. Error: " + strerror(errno));
-			return;
+			_out.printCritical("Critical: Couldn't set socket options: " + _socketPath + ". The script engine won't work correctly. Error: " + strerror(errno));
+			return false;
 		}
 		sockaddr_un serverAddress;
 		serverAddress.sun_family = AF_LOCAL;
@@ -462,7 +464,7 @@ void ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
 		{
 			//Check for buffer overflow
 			_out.printCritical("Critical: Socket path is too long.");
-			return;
+			return false;
 		}
 		strncpy(serverAddress.sun_path, _socketPath.c_str(), 104);
 		serverAddress.sun_path[103] = 0; //Just to make sure the string is null terminated.
@@ -476,7 +478,7 @@ void ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
 		{
 			_out.printError("Error: chmod failed on unix socket \"" + _socketPath + "\".");
 		}
-		return;
+		return true;
     }
     catch(const std::exception& ex)
     {
@@ -491,4 +493,10 @@ void ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
+    return false;
+}
+
+void ScriptEngineServer::executeScript(BaseLib::ScriptEngine::PScriptInfo scriptInfo)
+{
+
 }

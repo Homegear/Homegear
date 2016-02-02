@@ -1,4 +1,4 @@
-/* Copyright 2013-2015 Sathya Laufer
+/* Copyright 2013-2016 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -72,6 +72,7 @@ private:
 		std::thread readThread;
 	};
 
+	std::string _socketPath;
 	bool _stopServer = false;
 	std::thread _mainThread;
 	int32_t _backlog = 10;

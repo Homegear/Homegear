@@ -81,6 +81,7 @@ void RPCServer::dispose()
 {
 	stop();
 	_rpcMethods->clear();
+	_webServer.reset();
 }
 
 bool RPCServer::lifetick()

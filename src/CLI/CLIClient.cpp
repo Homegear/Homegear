@@ -1,4 +1,4 @@
-/* Copyright 2013-2015 Sathya Laufer
+/* Copyright 2013-2016 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -109,6 +109,7 @@ int32_t Client::start(std::string command)
 {
 	try
 	{
+		_socketPath = GD::bl->settings.socketPath() + "homegear.sock";
 		for(int32_t i = 0; i < 2; i++)
 		{
 			_fileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM, 0));
@@ -122,13 +123,13 @@ int32_t Client::start(std::string command)
 			sockaddr_un remoteAddress;
 			remoteAddress.sun_family = AF_LOCAL;
 			//104 is the size on BSD systems - slightly smaller than in Linux
-			if(GD::socketPath.length() > 104)
+			if(_socketPath.length() > 104)
 			{
 				//Check for buffer overflow
 				GD::out.printCritical("Critical: Socket path is too long.");
 				return 2;
 			}
-			strncpy(remoteAddress.sun_path, GD::socketPath.c_str(), 104);
+			strncpy(remoteAddress.sun_path, _socketPath.c_str(), 104);
 			remoteAddress.sun_path[103] = 0; //Just to make sure it is null terminated.
 			if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + 1 + sizeof(remoteAddress.sun_family)) == -1)
 			{
@@ -319,7 +320,7 @@ int32_t Client::start(std::string command)
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printError("Couldn't create socket file " + GD::socketPath + ": " + ex.what());;
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {

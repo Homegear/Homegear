@@ -1,4 +1,4 @@
-/* Copyright 2013-2015 Sathya Laufer
+/* Copyright 2013-2016 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -47,15 +47,16 @@
 #include <iostream>
 #include <string>
 
-class ScriptEngineServer : public BaseLib::IQueue
+class ScriptEngineServer : public BaseLib::IQueue, public BaseLib::IEventsEx
 {
 public:
 	ScriptEngineServer();
 	virtual ~ScriptEngineServer();
 
-	void start();
+	bool start();
 	void stop();
 	void processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped);
+	void executeScript(BaseLib::ScriptEngine::PScriptInfo scriptInfo);
 private:
 	class ClientData
 	{
@@ -97,7 +98,7 @@ private:
 	int64_t _lastGargabeCollection = 0;
 
 	void collectGarbage();
-	void getFileDescriptor(bool deleteOldSocket = false);
+	bool getFileDescriptor(bool deleteOldSocket = false);
 	void mainThread();
 	void readClient(std::shared_ptr<ClientData> clientData);
 	void closeClientConnection(std::shared_ptr<ClientData> client);
