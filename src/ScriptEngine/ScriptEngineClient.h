@@ -42,21 +42,13 @@ public:
 	ScriptEngineClient();
 	virtual ~ScriptEngineClient();
 
-	/**
-	 * Starts the script engine client.
-	 *
-	 * @param command A command to execute. After this command is executed the function returns. If "command" is empty the function listens for input until "exit" or "quit" is entered.
-	 * @return Returns the exit code. If a script is executed the script exit code is returned.
-	 */
-	int32_t start(std::string command = "");
+	void start();
 private:
+	BaseLib::Output _out;
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
-	bool _stopPingThread = false;
-	std::thread _pingThread;
 	bool _closed = false;
 	std::mutex _sendMutex;
 
-	void ping();
 };
 #endif

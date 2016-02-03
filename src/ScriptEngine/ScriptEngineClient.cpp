@@ -43,78 +43,51 @@
 ScriptEngineClient::ScriptEngineClient()
 {
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
+	_out.init(GD::bl.get());
+	_out.setPrefix("Script Engine: ");
 }
 
 ScriptEngineClient::~ScriptEngineClient()
 {
 	try
 	{
-		_stopPingThread = true;
-		if(_pingThread.joinable()) _pingThread.join();
+
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-void ScriptEngineClient::ping()
+void ScriptEngineClient::start()
 {
 	try
 	{
-		char buffer[1] = {0};
-		while(!_stopPingThread)
+		if(!std::freopen((GD::bl->settings.logfilePath() + "homegear-scriptengine.log").c_str(), "a", stdout))
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-			_sendMutex.lock();
-			if(_closed) return;
-			if(send(_fileDescriptor->descriptor, buffer, 1, MSG_NOSIGNAL) == -1)
-			{
-				_closed = true;
-				std::cout << std::endl << "Connection closed." << std::endl;
-				_sendMutex.unlock();
-				return;
-			}
-			_sendMutex.unlock();
+			_out.printError("Error: Could not redirect output to log file.");
 		}
-	}
-    catch(const std::exception& ex)
-    {
-    	_sendMutex.unlock();
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_sendMutex.unlock();
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_sendMutex.unlock();
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
+		if(!std::freopen((GD::bl->settings.logfilePath() + "homegear-scriptengine.err").c_str(), "a", stderr))
+		{
+			_out.printError("Error: Could not redirect errors to log file.");
+		}
 
-int32_t ScriptEngineClient::start(std::string command)
-{
-	try
-	{
 		_socketPath = GD::bl->settings.socketPath() + "homegearSE.sock";
 		for(int32_t i = 0; i < 2; i++)
 		{
 			_fileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM, 0));
 			if(!_fileDescriptor || _fileDescriptor->descriptor == -1)
 			{
-				GD::out.printError("Could not create socket.");
-				return 1;
+				_out.printError("Could not create socket.");
+				return;
 			}
 
 			if(GD::bl->debugLevel >= 4 && i == 0) std::cout << "Info: Trying to connect..." << std::endl;
@@ -124,8 +97,8 @@ int32_t ScriptEngineClient::start(std::string command)
 			if(_socketPath.length() > 104)
 			{
 				//Check for buffer overflow
-				GD::out.printCritical("Critical: Socket path is too long.");
-				return 2;
+				_out.printCritical("Critical: Socket path is too long.");
+				return;
 			}
 			strncpy(remoteAddress.sun_path, _socketPath.c_str(), 104);
 			remoteAddress.sun_path[103] = 0; //Just to make sure it is null terminated.
@@ -134,22 +107,20 @@ int32_t ScriptEngineClient::start(std::string command)
 				GD::bl->fileDescriptorManager.shutdown(_fileDescriptor);
 				if(i == 0)
 				{
-					GD::out.printDebug("Debug: Socket closed. Trying again...");
+					_out.printDebug("Debug: Socket closed. Trying again...");
 					//When socket was not properly closed, we sometimes need to reconnect
 					std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 					continue;
 				}
 				else
 				{
-					GD::out.printError("Could not connect to socket. Error: " + std::string(strerror(errno)));
-					return 3;
+					_out.printError("Could not connect to socket. Error: " + std::string(strerror(errno)));
+					return;
 				}
 			}
 			else break;
 		}
-		if(GD::bl->debugLevel >= 4) std::cout << "Info: Connected." << std::endl;
-
-		if(command.empty()) _pingThread = std::thread(&ScriptEngineClient::ping, this);
+		if(GD::bl->debugLevel >= 4) _out.printInfo("Info: Connected.");
 
 		rl_bind_key('\t', rl_abort); //no autocompletion
 
@@ -159,7 +130,7 @@ int32_t ScriptEngineClient::start(std::string command)
 		char* sendBuffer;
 		char receiveBuffer[1025];
 		int32_t bytes = 0;
-		while(!command.empty() || (sendBuffer = readline((level + "> ").c_str())) != NULL)
+		/*while(!command.empty() || (sendBuffer = readline((level + "> ").c_str())) != NULL)
 		{
 			if(command.empty())
 			{
@@ -183,7 +154,7 @@ int32_t ScriptEngineClient::start(std::string command)
 				if(send(_fileDescriptor->descriptor, sendBuffer, bytes, MSG_NOSIGNAL) == -1)
 				{
 					_sendMutex.unlock();
-					GD::out.printError("Error sending to socket.");
+					_out.printError("Error sending to socket.");
 					//If we close the socket, the socket file gets deleted. We don't want that
 					//GD::bl->fileDescriptorManager.close(_fileDescriptor);
 					free(sendBuffer);
@@ -212,7 +183,7 @@ int32_t ScriptEngineClient::start(std::string command)
 				if(send(_fileDescriptor->descriptor, command.c_str(), command.size(), MSG_NOSIGNAL) == -1)
 				{
 					_sendMutex.unlock();
-					GD::out.printError("Error sending to socket.");
+					_out.printError("Error sending to socket.");
 					return 6;
 				}
 			}
@@ -259,7 +230,7 @@ int32_t ScriptEngineClient::start(std::string command)
 								level = "(Device)";
 							}
 						}*/
-					}
+					/*}
 
 					if(bytes < 1024 || (bytes == 1024 && receiveBuffer[bytes - 1] == 0))
 					{
@@ -314,19 +285,19 @@ int32_t ScriptEngineClient::start(std::string command)
 				}
 			}
 			_sendMutex.unlock();
-		}
+		}*/
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return 0;
+    return;
 }
