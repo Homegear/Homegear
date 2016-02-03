@@ -35,6 +35,7 @@ namespace RPC
 {
 Server::Server()
 {
+	if(!_server) _server.reset(new RPCServer());
 }
 
 Server::~Server()
@@ -156,7 +157,6 @@ BaseLib::PVariable Server::callMethod(std::string methodName, BaseLib::PVariable
 
 void Server::start(BaseLib::Rpc::PServerInfo& serverInfo)
 {
-	if(!_server) _server.reset(new RPCServer());
 	if(_server->getMethods()->size() == 0) registerMethods();
 	_server->start(serverInfo);
 }
@@ -179,6 +179,11 @@ bool Server::isRunning()
 const std::vector<std::shared_ptr<BaseLib::RpcClientInfo>> Server::getClientInfo()
 {
 	if(!_server) return std::vector<std::shared_ptr<BaseLib::RpcClientInfo>>(); return _server->getClientInfo();
+}
+
+const std::shared_ptr<RPCServer> Server::getServer()
+{
+	return _server;
 }
 
 const BaseLib::Rpc::PServerInfo Server::getInfo()

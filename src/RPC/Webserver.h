@@ -35,7 +35,7 @@
 
 namespace RPC
 {
-	class WebServer : public BaseLib::IEventsEx, public BaseLib::ScriptEngine::IScriptEngineEventSink
+	class WebServer : public BaseLib::IEventsEx
 	{
 		public:
 			WebServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo);
@@ -52,12 +52,6 @@ namespace RPC
 			BaseLib::HTTP _http;
 
 			void send(std::shared_ptr<BaseLib::SocketOperations>& socket, std::vector<char>& data);
-
-			// {{{ Script engine events
-				BaseLib::PEventHandler _scriptEngineEventHandler;
-
-				bool onExecutionFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, int32_t exitCode) { return false; }
-			// }}}
 	};
 }
 #endif

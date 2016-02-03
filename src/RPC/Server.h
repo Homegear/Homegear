@@ -51,6 +51,7 @@ public:
 	bool lifetick();
 	bool isRunning();
 	const std::vector<std::shared_ptr<BaseLib::RpcClientInfo>> getClientInfo();
+	const std::shared_ptr<RPCServer> getServer();
 	const BaseLib::Rpc::PServerInfo getInfo();
 	uint32_t connectionCount();
 	BaseLib::PVariable callMethod(std::string methodName, BaseLib::PVariable parameters);
