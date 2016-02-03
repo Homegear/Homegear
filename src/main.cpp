@@ -797,28 +797,6 @@ void startUp()
 			}
 		}
 
-		#ifdef EVENTHANDLER
-		GD::eventHandler.reset(new EventHandler());
-		#endif
-		#ifdef SCRIPTENGINE
-		if(!GD::bl->io.directoryExists(GD::bl->settings.tempPath() + "php"))
-		{
-			if(!GD::bl->io.createDirectory(GD::bl->settings.tempPath() + "php", S_IRWXU | S_IRWXG))
-			{
-				GD::out.printCritical("Critical: Cannot create temp directory \"" + GD::bl->settings.tempPath() + "php");
-				exit(1);
-			}
-		}
-		GD::scriptEngine.reset(new ScriptEngine());
-		GD::out.printInfo("Starting script engine server...");
-		GD::scriptEngineServer.reset(new ScriptEngineServer());
-		if(!GD::scriptEngineServer->start())
-		{
-			GD::out.printCritical("Critical: Cannot start script engine server. Exiting Homegear.");
-			exit(1);
-		}
-		#endif
-
 		for(uint32_t i = 0; i < 100; ++i)
 		{
 			if(BaseLib::HelperFunctions::getTime() < 1000000000000)
@@ -841,6 +819,28 @@ void startUp()
         GD::out.printInfo("Initializing database...");
         if(GD::bl->db->convertDatabase()) exitHomegear(0);
         GD::bl->db->initializeDatabase();
+
+        #ifdef EVENTHANDLER
+		GD::eventHandler.reset(new EventHandler());
+		#endif
+		#ifdef SCRIPTENGINE
+		if(!GD::bl->io.directoryExists(GD::bl->settings.tempPath() + "php"))
+		{
+			if(!GD::bl->io.createDirectory(GD::bl->settings.tempPath() + "php", S_IRWXU | S_IRWXG))
+			{
+				GD::out.printCritical("Critical: Cannot create temp directory \"" + GD::bl->settings.tempPath() + "php");
+				exit(1);
+			}
+		}
+		GD::scriptEngine.reset(new ScriptEngine());
+		GD::out.printInfo("Starting script engine server...");
+		GD::scriptEngineServer.reset(new ScriptEngineServer());
+		if(!GD::scriptEngineServer->start())
+		{
+			GD::out.printCritical("Critical: Cannot start script engine server. Exiting Homegear.");
+			exit(1);
+		}
+		#endif
 
         GD::out.printInfo("Initializing licensing controller...");
         GD::licensingController->init();

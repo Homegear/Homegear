@@ -32,6 +32,7 @@
 #define SCRIPTENGINESERVER_H_
 
 #include "homegear-base/BaseLib.h"
+#include "../RPC/RPCMethod.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -47,7 +48,7 @@
 #include <iostream>
 #include <string>
 
-class ScriptEngineServer : public BaseLib::IQueue, public BaseLib::IEventsEx
+class ScriptEngineServer : public BaseLib::IQueue
 {
 public:
 	ScriptEngineServer();
@@ -67,8 +68,15 @@ private:
 
 		int32_t id = 0;
 		bool closed = false;
+		uint32_t packetLength = 0;
+		uint32_t receivedDataLength = 0;
+		bool packetIsRequest = false;
 		std::vector<char> buffer;
+		std::vector<uint8_t> packet;
 		std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
+		std::mutex requestMutex;
+		BaseLib::PVariable rpcResponse;
+		std::condition_variable requestConditionVariable;
 	};
 
 	class ScriptEngineProcess
@@ -81,6 +89,19 @@ private:
 		std::shared_ptr<ClientData> clientData;
 		std::mutex scriptCountMutex;
 		uint32_t scriptCount = 0;
+		std::condition_variable requestConditionVariable;
+	};
+
+	class QueueEntry : public BaseLib::IQueueEntry
+	{
+	public:
+		QueueEntry() {}
+		QueueEntry(std::shared_ptr<ClientData> clientData, std::vector<uint8_t> packet, bool isRequest) { this->clientData = clientData; this->packet = packet; this->isRequest = isRequest; }
+		virtual ~QueueEntry() {}
+
+		std::shared_ptr<ClientData> clientData;
+		std::vector<uint8_t> packet;
+		bool isRequest = false;
 	};
 
 	BaseLib::Output _out;
@@ -89,6 +110,7 @@ private:
 	std::thread _mainThread;
 	int32_t _backlog = 10;
 	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
+	std::mutex _newProcessMutex;
 	std::mutex _processMutex;
 	std::map<int32_t, std::shared_ptr<ScriptEngineProcess>> _processes;
 	std::mutex _stateMutex;
@@ -96,11 +118,18 @@ private:
 	static int32_t _currentClientID;
 	std::mutex _garbageCollectionMutex;
 	int64_t _lastGargabeCollection = 0;
+	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
+	std::map<std::string, std::shared_ptr<RPC::RPCMethod>> _rpcMethods;
+
+	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
+	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
 
 	void collectGarbage();
 	bool getFileDescriptor(bool deleteOldSocket = false);
 	void mainThread();
-	void readClient(std::shared_ptr<ClientData> clientData);
+	void readClient(std::shared_ptr<ClientData>& clientData);
+	BaseLib::PVariable sendRequest(std::shared_ptr<ClientData>& clientData, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters);
+	void sendResponse(std::shared_ptr<ClientData>& clientData, BaseLib::PVariable& variable);
 	void closeClientConnection(std::shared_ptr<ClientData> client);
 	std::shared_ptr<ScriptEngineProcess> getFreeProcess();
 
