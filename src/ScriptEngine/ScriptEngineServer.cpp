@@ -192,7 +192,7 @@ bool ScriptEngineServer::start()
 		_socketPath = GD::bl->settings.socketPath() + "homegearSE.sock";
 		_stopServer = false;
 		if(!getFileDescriptor(true)) return false;
-		startQueue(0, GD::bl->settings.scriptEngineThreadCount(), -1, SCHED_OTHER);
+		startQueue(0, GD::bl->settings.scriptEngineThreadCount(), 0, SCHED_OTHER);
 		GD::bl->threadManager.start(_mainThread, true, &ScriptEngineServer::mainThread, this);
 		return true;
 	}
