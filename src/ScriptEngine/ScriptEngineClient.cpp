@@ -37,21 +37,28 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <readline/readline.h>
-#include <readline/history.h>
 
-ScriptEngineClient::ScriptEngineClient()
+ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 1000)
 {
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	_out.init(GD::bl.get());
-	_out.setPrefix("Script Engine: ");
+	_out.setPrefix("Script Engine (" + std::to_string(getpid()) + "): ");
+
+	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
+
+	_rpcDecoder = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get()));
+	_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
 }
 
 ScriptEngineClient::~ScriptEngineClient()
 {
+}
+
+void ScriptEngineClient::cleanUp()
+{
 	try
 	{
-
+		stopQueue(0);
 	}
     catch(const std::exception& ex)
     {
@@ -79,6 +86,8 @@ void ScriptEngineClient::start()
 		{
 			_out.printError("Error: Could not redirect errors to log file.");
 		}
+
+		startQueue(0, GD::bl->settings.scriptEngineThreadCount(), 0, SCHED_OTHER);
 
 		_socketPath = GD::bl->settings.socketPath() + "homegearSE.sock";
 		for(int32_t i = 0; i < 2; i++)
@@ -122,170 +131,69 @@ void ScriptEngineClient::start()
 		}
 		if(GD::bl->debugLevel >= 4) _out.printInfo("Info: Connected.");
 
-		rl_bind_key('\t', rl_abort); //no autocompletion
+		if(_registerClientThread.joinable()) _registerClientThread.join();
+		_registerClientThread = std::thread(&ScriptEngineClient::registerClient, this);
 
-		std::string level = "";
-		std::string lastCommand;
-		std::string currentCommand;
-		char* sendBuffer;
-		char receiveBuffer[1025];
-		int32_t bytes = 0;
-		/*while(!command.empty() || (sendBuffer = readline((level + "> ").c_str())) != NULL)
+		std::vector<char> buffer(1025);
+		std::vector<uint8_t> packet;
+		int32_t bytesRead = 0;
+		uint32_t receivedDataLength = 0;
+		uint32_t packetLength = 0;
+		bool packetIsRequest = false;
+		while(true)
 		{
-			if(command.empty())
+			bytesRead = read(_fileDescriptor->descriptor, &buffer[0], 1024);
+			if(bytesRead <= 0)
 			{
-				if(_closed) break;
-				bytes = strlen(sendBuffer);
-				if(sendBuffer[0] == '\n' || sendBuffer[0] == 0) continue;
-				if(strncmp(sendBuffer, "quit", 4) == 0 || strncmp(sendBuffer, "exit", 4) == 0 || strncmp(sendBuffer, "moin", 4) == 0)
+				_out.printInfo("Info: Connection to script server closed.");
+				cleanUp();
+				exit(0);
+			}
+
+			if(bytesRead < 8) return;
+			if(bytesRead > (signed)buffer.size() - 1) bytesRead = buffer.size() - 1;
+			buffer.at(bytesRead) = 0;
+
+			if(receivedDataLength == 0 && !strncmp(&buffer[0], "Bin", 3))
+			{
+				packetIsRequest = !(buffer[3] & 1);
+				GD::bl->hf.memcpyBigEndian((char*)&packetLength, &buffer[4], 4);
+				if(packetLength == 0) return;
+				if(packetLength > 10485760)
 				{
-					_closed = true;
-					//If we close the socket, the socket file gets deleted. We don't want that
-					//GD::bl->fileDescriptorManager.close(_fileDescriptor);
-					free(sendBuffer);
-					return 4;
+					_out.printError("Error: Packet with data larger than 10 MiB received.");
+					return;
 				}
-				_sendMutex.lock();
-				if(_closed)
-				{
-					_sendMutex.unlock();
-					break;
-				}
-				if(send(_fileDescriptor->descriptor, sendBuffer, bytes, MSG_NOSIGNAL) == -1)
-				{
-					_sendMutex.unlock();
-					_out.printError("Error sending to socket.");
-					//If we close the socket, the socket file gets deleted. We don't want that
-					//GD::bl->fileDescriptorManager.close(_fileDescriptor);
-					free(sendBuffer);
-					return 5;
-				}
-				currentCommand = std::string(sendBuffer);
-				if(currentCommand != lastCommand)
-				{
-					lastCommand = currentCommand;
-					add_history(sendBuffer); //Sets sendBuffer to 0
-				}
+				packet.clear();
+				packet.reserve(packetLength + 9);
+				packet.insert(packet.end(), &buffer[0], &buffer[0] + bytesRead);
+				if(packetLength > (unsigned)bytesRead - 8) receivedDataLength = bytesRead - 8;
 				else
 				{
-					free(sendBuffer);
-					sendBuffer = 0;
+					receivedDataLength = 0;
+					std::shared_ptr<BaseLib::IQueueEntry> queueEntry(new QueueEntry(packet,packetIsRequest));
+					enqueue(0, queueEntry);
 				}
 			}
-			else
+			else if(receivedDataLength > 0)
 			{
-				_sendMutex.lock();
-				if(_closed)
+				if(receivedDataLength + bytesRead > packetLength)
 				{
-					_sendMutex.unlock();
-					break;
+					_out.printError("Error: Packet length is wrong.");
+					receivedDataLength = 0;
+					return;
 				}
-				if(send(_fileDescriptor->descriptor, command.c_str(), command.size(), MSG_NOSIGNAL) == -1)
+				packet.insert(packet.end(), &buffer[0], &buffer[0] + bytesRead);
+				receivedDataLength += bytesRead;
+				if(receivedDataLength == packetLength)
 				{
-					_sendMutex.unlock();
-					_out.printError("Error sending to socket.");
-					return 6;
-				}
-			}
-
-			while(true)
-			{
-				bytes = recv(_fileDescriptor->descriptor, receiveBuffer, 1024, 0);
-				if(bytes > 0)
-				{
-					receiveBuffer[bytes] = 0;
-					std::string response(receiveBuffer);
-					if(response.size() > 15)
-					{
-						if(response.compare(7, 6, "family") == 0)
-						{
-							if((signed)response.find("unselected") != (signed)std::string::npos)
-							{
-								level = "";
-							}
-							else if((signed)response.find("selected") != (signed)std::string::npos)
-							{
-								level = "(Family)";
-							}
-						}
-						else if(response.compare(0, 4, "Peer") == 0)
-						{
-							if((signed)response.find("unselected") != (signed)std::string::npos)
-							{
-								level = "(Family)";
-							}
-							else if((signed)response.find("selected") != (signed)std::string::npos)
-							{
-								level = "(Peer)";
-							}
-						}
-						/*else if(response.compare(0, 6, "Device") == 0)
-						{
-							if((signed)response.find("unselected") != (signed)std::string::npos)
-							{
-								level = "(Family)";
-							}
-							else if((signed)response.find("selected") != (signed)std::string::npos)
-							{
-								level = "(Device)";
-							}
-						}*/
-					/*}
-
-					if(bytes < 1024 || (bytes == 1024 && receiveBuffer[bytes - 1] == 0))
-					{
-						if(!command.empty())
-						{
-							_sendMutex.unlock();
-
-							// {{{ Get last line and check if it contains the exit code.
-							if(response.size() > 2)
-							{
-								const char* pos = response.c_str() + response.size() - 2; // -2, because last line ends with new line
-
-								while(pos > response.c_str())
-								{
-									if(*pos == '\n')
-									{
-										pos++;
-										break;
-									}
-									pos--;
-								}
-
-								int32_t count = (response.c_str() + response.size()) - pos - 1;
-								std::string lastLine(pos, count);
-								if(lastLine.compare(0, 11, "Exit code: ") == 0 && lastLine.size() > 11)
-								{
-									count = pos - response.c_str();
-									response = response.substr(0, count);
-									std::cout << response;
-									std::string exitCode = lastLine.substr(11);
-									return BaseLib::Math::getNumber(exitCode);
-								}
-								else std::cout << response;
-							}
-							// }}}
-
-							return 0;
-						}
-						else std::cout << response;
-						break;
-					}
-					else std::cout << response;
-				}
-				else
-				{
-					_sendMutex.unlock();
-					if(bytes < 0) std::cerr << "Error receiving data from socket." << std::endl;
-					else std::cout << "Connection closed." << std::endl;
-					//If we close the socket, the socket file gets deleted. We don't want that
-					//GD::bl->fileDescriptorManager.close(_fileDescriptor);
-					return 8;
+					packet.push_back('\0');
+					packetLength = 0;
+					std::shared_ptr<BaseLib::IQueueEntry> queueEntry(new QueueEntry(packet, packetIsRequest));
+					enqueue(0, queueEntry);
 				}
 			}
-			_sendMutex.unlock();
-		}*/
+		}
 	}
     catch(const std::exception& ex)
     {
@@ -300,4 +208,165 @@ void ScriptEngineClient::start()
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return;
+}
+
+void ScriptEngineClient::registerClient()
+{
+	try
+	{
+		std::string methodName("registerScriptEngineClient");
+		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>{BaseLib::PVariable(new BaseLib::Variable((int32_t)getpid()))});
+		BaseLib::PVariable result = sendGlobalRequest(methodName, parameters);
+		if(result->errorStruct)
+		{
+			_out.printCritical("Critical: Could not register client.");
+			cleanUp();
+			exit(1);
+		}
+		_out.printInfo("Info: Client registered to server.");
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry)
+{
+	try
+	{
+		std::shared_ptr<QueueEntry> queueEntry;
+		queueEntry = std::dynamic_pointer_cast<QueueEntry>(entry);
+		if(!queueEntry) return;
+
+		if(queueEntry->isRequest)
+		{
+			std::string methodName;
+			BaseLib::PArray parameters = _rpcDecoder->decodeRequest(queueEntry->packet, methodName);
+
+			std::map<std::string, std::shared_ptr<RPC::RPCMethod>>::iterator methodIterator = _rpcMethods.find(methodName);
+			if(methodIterator == _rpcMethods.end())
+			{
+				_out.printError("Warning: RPC method not found: " + methodName);
+				BaseLib::PVariable result = BaseLib::Variable::createError(-32601, ": Requested method not found.");
+				sendResponse(result);
+				return;
+			}
+			if(GD::bl->debugLevel >= 4)
+			{
+				_out.printInfo("Info: Server is calling RPC method: " + methodName + " Parameters:");
+				for(std::vector<BaseLib::PVariable>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+				{
+					(*i)->print();
+				}
+			}
+			BaseLib::PVariable result = _rpcMethods.at(methodName)->invoke(_dummyClientInfo, parameters);
+			if(GD::bl->debugLevel >= 5)
+			{
+				_out.printDebug("Response: ");
+				result->print();
+			}
+
+			sendResponse(result);
+		}
+		else
+		{
+			_rpcResponse = _rpcDecoder->decodeResponse(queueEntry->packet);
+			_requestConditionVariable.notify_one();
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+BaseLib::PVariable ScriptEngineClient::sendGlobalRequest(std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters)
+{
+	try
+	{
+		std::unique_lock<std::mutex> requestLock(_requestMutex);
+		std::vector<char> data;
+		_rpcEncoder->encodeRequest(methodName, parameters, data);
+
+		for(int32_t i = 0; i < 5; i++)
+		{
+			_rpcResponse.reset();
+			int32_t totallySentBytes = 0;
+			while (totallySentBytes < (signed)data.size())
+			{
+				int32_t sentBytes = ::send(_fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
+				if(sentBytes == -1)
+				{
+					GD::out.printError("Could not send data to client: " + std::to_string(_fileDescriptor->descriptor));
+					break;
+				}
+				totallySentBytes += sentBytes;
+			}
+			_requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(5000), [&]{ return (bool)_rpcResponse; });
+			if(_rpcResponse) return _rpcResponse;
+			else if(i == 4) _out.printError("Error: No response received to RPC request. Method: " + methodName);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+void ScriptEngineClient::sendResponse(BaseLib::PVariable& variable)
+{
+	try
+	{
+		std::vector<char> data;
+		_rpcEncoder->encodeResponse(variable, data);
+		int32_t totallySentBytes = 0;
+		while (totallySentBytes < (signed)data.size())
+		{
+			int32_t sentBytes = ::send(_fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
+			if(sentBytes == -1)
+			{
+				GD::out.printError("Could not send data to client: " + std::to_string(_fileDescriptor->descriptor));
+				break;
+			}
+			totallySentBytes += sentBytes;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }

@@ -32,23 +32,49 @@
 #define SCRIPTENGINECLIENT_H_
 
 #include "homegear-base/BaseLib.h"
+#include "../RPC/RPCMethod.h"
 
 #include <thread>
 #include <mutex>
 #include <string>
 
-class ScriptEngineClient {
+class ScriptEngineClient : public BaseLib::IQueue {
 public:
 	ScriptEngineClient();
 	virtual ~ScriptEngineClient();
 
 	void start();
 private:
+	class QueueEntry : public BaseLib::IQueueEntry
+	{
+	public:
+		QueueEntry() {}
+		QueueEntry(std::vector<uint8_t> packet, bool isRequest) { this->packet = packet; this->isRequest = isRequest; }
+		virtual ~QueueEntry() {}
+
+		std::vector<uint8_t> packet;
+		bool isRequest = false;
+	};
+
 	BaseLib::Output _out;
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
 	bool _closed = false;
-	std::mutex _sendMutex;
+	std::mutex _requestMutex;
+	BaseLib::PVariable _rpcResponse;
+	std::condition_variable _requestConditionVariable;
+	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
+	std::map<std::string, std::shared_ptr<RPC::RPCMethod>> _rpcMethods;
+	std::thread _registerClientThread;
 
+	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
+	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
+
+	void cleanUp();
+	void registerClient();
+	BaseLib::PVariable sendGlobalRequest(std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters);
+	void sendResponse(BaseLib::PVariable& variable);
+
+	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 };
 #endif
