@@ -122,7 +122,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 1000)
 
 ScriptEngineServer::~ScriptEngineServer()
 {
-	stop();
+	if(!_stopServer) stop();
 }
 
 void ScriptEngineServer::collectGarbage()
@@ -155,7 +155,7 @@ void ScriptEngineServer::collectGarbage()
 			_stateMutex.lock();
 			try
 			{
-				if(i->use_count() <= 2) _clients.erase((*i)->id);
+				_clients.erase((*i)->id);
 			}
 			catch(const std::exception& ex)
 			{
@@ -251,6 +251,8 @@ void ScriptEngineServer::processKilled(pid_t pid, int32_t exitCode, int32_t sign
 {
 	try
 	{
+		if(GD::bl->shuttingDown) return;
+
 		{
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			std::map<int32_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(pid);
@@ -283,7 +285,7 @@ void ScriptEngineServer::closeClientConnection(std::shared_ptr<ClientData> clien
 	try
 	{
 		if(!client) return;
-		GD::bl->fileDescriptorManager.close(client->fileDescriptor);
+		GD::bl->fileDescriptorManager.shutdown(client->fileDescriptor);
 		client->closed = true;
 	}
 	catch(const std::exception& ex)
@@ -315,6 +317,7 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 
 			if(methodName == "registerScriptEngineClient" && parameters->size() > 0)
 			{
+				_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + methodName + " Parameters:");
 				{
 					pid_t pid = parameters->at(0)->integerValue;
 					std::lock_guard<std::mutex> processGuard(_processMutex);
@@ -579,8 +582,9 @@ std::shared_ptr<ScriptEngineServer::ScriptEngineProcess> ScriptEngineServer::get
 				}
 			}
 		}
+		_out.printInfo("Info: Spawning new script engine process.");
 		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess());
-		std::vector<std::string> arguments{ "-sre" };
+		std::vector<std::string> arguments{ "-rse" };
 		process->pid = GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments);
 		if(process->pid != -1)
 		{
@@ -598,8 +602,10 @@ std::shared_ptr<ScriptEngineServer::ScriptEngineProcess> ScriptEngineServer::get
 			{
 				std::lock_guard<std::mutex> processGuard(_processMutex);
 				_processes.erase(process->pid);
+				_out.printError("Error: Could not start new script engine process.");
 				return std::shared_ptr<ScriptEngineProcess>();
 			}
+			_out.printInfo("Info: Script engine process successfully spawned. Process id is " + std::to_string(process->pid) + ". Client id is: " + std::to_string(process->clientData->id) + ".");
 			return process;
 		}
 	}
@@ -778,7 +784,7 @@ void ScriptEngineServer::executeScript(BaseLib::ScriptEngine::PScriptInfo script
 			_out.printError("Error: Could not get free process. Not executing script.");
 			return;
 		}
-
+		scriptInfo->scriptFinishedCallback(scriptInfo, BaseLib::HelperFunctions::getTimeSeconds());
 	}
     catch(const std::exception& ex)
     {

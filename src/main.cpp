@@ -240,7 +240,7 @@ void terminate(int32_t signalNumber)
 			GD::out.printInfo( "(Shutdown) => Closing physical interfaces");
 			if(GD::familyController) GD::familyController->physicalInterfaceStopListening();
 #ifdef SCRIPTENGINE
-			GD::out.printInfo("Stopping script engine server...");
+			GD::out.printInfo("(Shutdown) => Stopping script engine server...");
 			GD::scriptEngineServer->stop();
 			if(GD::scriptEngine) GD::scriptEngine->dispose();
 #endif
@@ -555,6 +555,15 @@ void startDaemon()
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
+
+class Dummy
+{
+public:
+	void doSomething(BaseLib::ScriptEngine::PScriptInfo& info, int32_t value)
+	{
+		std::cerr << "Moin " << value << std::endl;
+	}
+};
 
 void startUp()
 {
@@ -922,36 +931,24 @@ void startUp()
         }
         else
         {
+        	Dummy dummy;
+
         	rl_bind_key('\t', rl_abort); //no autocompletion
 			while((inputBuffer = readline("")) != NULL)
 			{
 				if(inputBuffer[0] == '\n' || inputBuffer[0] == 0) continue;
 				if(strncmp(inputBuffer, "quit", 4) == 0 || strncmp(inputBuffer, "exit", 4) == 0 || strncmp(inputBuffer, "moin", 4) == 0) break;
-				/*else if(strncmp(inputBuffer, "test", 4) == 0)
+				else if(strncmp(inputBuffer, "test", 4) == 0)
 				{
-					std::string json("{\"on\":true, \"off\":    false, \"bla\":null, \"blupp\":  [5.643,false , null ,true ],\"blupp2\":[ 5.643,false,null,true], \"sat\":255.63456, \"bri\":-255,\"hue\":10000, \"bli\":{\"a\": 2,\"b\":false}    ,     \"e\"  :   -34785326,\"f\":-0.547887237, \"g\":{},\"h\":[], \"i\" : {    }  , \"j\" : [    ] , \"k\": {} , \"l\": [] }");
-					BaseLib::RPC::JsonDecoder bla(GD::bl.get());
-					PVariable var = bla.decode(json);
-					var->print();
-					BaseLib::RPC::JsonEncoder blupp(GD::bl.get());
-					std::string hmm;
-					blupp.encode(var, hmm);
-					std::cout << hmm << std::endl;
-					continue;
-				}*/
+					BaseLib::ScriptEngine::PScriptInfo info(new BaseLib::ScriptEngine::ScriptInfo());
+					using std::placeholders::_1;
+					using std::placeholders::_2;
+					info->scriptFinishedCallback = std::bind(&Dummy::doSomething, &dummy, _1, _2);
+					GD::scriptEngineServer->executeScript(info);
+				}
 
 				add_history(inputBuffer); //Sets inputBuffer to 0
 
-				//std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
-				//std::string packetHex("1ACAA0101D94A8FD00010301110B2A221828005800002422482A8A");
-				//packet->import(packetHex, false);
-				//if(input == "test") GD::devices.getHomeMaticCentral()->packetReceived(packet);
-				//else if(input == "test2")
-				//{
-					//std::vector<uint8_t> payload({2, 1, 1, 0, 0});
-					//std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(0x2F, 0xA0, 0x11, 0x212000, 0x1F454D, payload));
-					//GD::physicalInterfaces.get(DeviceFamily::HomeMaticBidCoS)->sendPacket(packet);
-				//}
 				std::string input(inputBuffer);
 				std::cout << GD::familyController->handleCliCommand(input);
 			}
