@@ -32,7 +32,8 @@
 #include "../GD/GD.h"
 #include "homegear-base/BaseLib.h"
 
-int32_t ScriptEngineServer::_currentClientID = 0;
+namespace ScriptEngine
+{
 
 ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 1000)
 {
@@ -118,6 +119,9 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 1000)
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("unsubscribePeers", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCUnsubscribePeers())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("updateFirmware", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCUpdateFirmware())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("writeLog", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCWriteLog())));
+
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, BaseLib::PArray& parameters)>>("registerScriptEngineClient", std::bind(&ScriptEngineServer::registerScriptEngineClient, this, std::placeholders::_1, std::placeholders::_2)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, BaseLib::PArray& parameters)>>("scriptFinished", std::bind(&ScriptEngineServer::scriptFinished, this, std::placeholders::_1, std::placeholders::_2)));
 }
 
 ScriptEngineServer::~ScriptEngineServer()
@@ -131,11 +135,11 @@ void ScriptEngineServer::collectGarbage()
 	try
 	{
 		_lastGargabeCollection = GD::bl->hf.getTime();
-		std::vector<std::shared_ptr<ClientData>> clientsToRemove;
+		std::vector<PScriptEngineClientData> clientsToRemove;
 		_stateMutex.lock();
 		try
 		{
-			for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) clientsToRemove.push_back(i->second);
 			}
@@ -149,7 +153,7 @@ void ScriptEngineServer::collectGarbage()
 			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
 		_stateMutex.unlock();
-		for(std::vector<std::shared_ptr<ClientData>>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
+		for(std::vector<PScriptEngineClientData>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
 		{
 			_out.printDebug("Debug: Joining read thread of script engine client " + std::to_string((*i)->id));
 			_stateMutex.lock();
@@ -221,7 +225,7 @@ void ScriptEngineServer::stop()
 		_out.printDebug("Debug: Waiting for script engine server's client threads to finish.");
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				closeClientConnection(i->second);
 			}
@@ -253,18 +257,26 @@ void ScriptEngineServer::processKilled(pid_t pid, int32_t exitCode, int32_t sign
 	{
 		if(GD::bl->shuttingDown) return;
 
+		std::shared_ptr<ScriptEngineProcess> process;
+
 		{
 			std::lock_guard<std::mutex> processGuard(_processMutex);
-			std::map<int32_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(pid);
+			std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(pid);
 			if(processIterator != _processes.end())
 			{
-				closeClientConnection(processIterator->second->clientData);
+				process = processIterator->second;
+				closeClientConnection(process->getClientData());
 				_processes.erase(processIterator);
 			}
 		}
 
-		std::cerr << "Process killed: " << (uint32_t)pid << ' ' << exitCode << ' ' << signal << ' ' << (int32_t)coreDumped << std::endl;
-		//Todo: Call process killed event handlers.
+		if(signal != -1) _out.printCritical("Critical: Client process with pid " + std::to_string(pid) + " was killed with signal " + std::to_string(signal) + '.');
+		else if(exitCode != 0) _out.printError("Error: Client process with pid " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + '.');
+		if(process)
+		{
+			if(signal != -1) exitCode = -32500;
+			process->invokeScriptFinished(exitCode);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -280,7 +292,7 @@ void ScriptEngineServer::processKilled(pid_t pid, int32_t exitCode, int32_t sign
     }
 }
 
-void ScriptEngineServer::closeClientConnection(std::shared_ptr<ClientData> client)
+void ScriptEngineServer::closeClientConnection(PScriptEngineClientData client)
 {
 	try
 	{
@@ -315,26 +327,26 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 			std::string methodName;
 			BaseLib::PArray parameters = _rpcDecoder->decodeRequest(queueEntry->packet, methodName);
 
-			if(methodName == "registerScriptEngineClient" && parameters->size() > 0)
+			std::map<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(methodName);
+			if(localMethodIterator != _localRpcMethods.end())
 			{
-				_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + methodName + " Parameters:");
+				if(GD::bl->debugLevel >= 4)
 				{
-					pid_t pid = parameters->at(0)->integerValue;
-					std::lock_guard<std::mutex> processGuard(_processMutex);
-					std::map<int32_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(pid);
-					if(processIterator == _processes.end())
+					_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + methodName + " Parameters:");
+					for(std::vector<BaseLib::PVariable>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 					{
-						_out.printError("Error: Cannot register client. No process with pid " + std::to_string(pid) + " found.");
-						BaseLib::PVariable result = BaseLib::Variable::createError(-1, "No matching process found.");
-						sendResponse(queueEntry->clientData, result);
-						return;
+						(*i)->print();
 					}
-					processIterator->second->clientData = queueEntry->clientData;
-					processIterator->second->requestConditionVariable.notify_one();
+				}
+				BaseLib::PVariable result = localMethodIterator->second(queueEntry->clientData, parameters);
+				if(GD::bl->debugLevel >= 5)
+				{
+					_out.printDebug("Response: ");
+					result->print();
 				}
 
-				BaseLib::PVariable result(new BaseLib::Variable());
-				sendResponse(queueEntry->clientData, result);
+				BaseLib::PVariable resultArray(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(parameters->at(0)->integerValue)), result })));
+				sendResponse(queueEntry->clientData, resultArray);
 				return;
 			}
 
@@ -342,8 +354,8 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 			if(methodIterator == _rpcMethods.end())
 			{
 				_out.printError("Warning: RPC method not found: " + methodName);
-				BaseLib::PVariable result = BaseLib::Variable::createError(-32601, ": Requested method not found.");
-				sendResponse(queueEntry->clientData, result);
+				BaseLib::PVariable resultArray(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(parameters->at(0)->integerValue)), BaseLib::Variable::createError(-32601, ": Requested method not found.") })));
+				sendResponse(queueEntry->clientData, resultArray);
 				return;
 			}
 			if(GD::bl->debugLevel >= 4)
@@ -361,7 +373,8 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 				result->print();
 			}
 
-			sendResponse(queueEntry->clientData, result);
+			BaseLib::PVariable resultArray(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(parameters->at(0)->integerValue)), result })));
+			sendResponse(queueEntry->clientData, resultArray);
 		}
 		else
 		{
@@ -383,7 +396,7 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
     }
 }
 
-BaseLib::PVariable ScriptEngineServer::sendRequest(std::shared_ptr<ClientData>& clientData, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters)
+BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData clientData, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters)
 {
 	try
 	{
@@ -393,18 +406,22 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(std::shared_ptr<ClientData>& 
 
 		for(int32_t i = 0; i < 5; i++)
 		{
-			clientData->rpcResponse.reset();
-			int32_t totallySentBytes = 0;
-			while (totallySentBytes < (signed)data.size())
 			{
-				int32_t sentBytes = ::send(clientData->fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
-				if(sentBytes == -1)
+				clientData->rpcResponse.reset();
+				int32_t totallySentBytes = 0;
+				std::lock_guard<std::mutex> sendGuard(clientData->sendMutex);
+				while (totallySentBytes < (signed)data.size())
 				{
-					GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
-					break;
+					int32_t sentBytes = ::send(clientData->fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
+					if(sentBytes == -1)
+					{
+						GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
+						break;
+					}
+					totallySentBytes += sentBytes;
 				}
-				totallySentBytes += sentBytes;
 			}
+
 			clientData->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(5000), [&]{ return clientData->rpcResponse || _stopServer; });
 			if(clientData->rpcResponse) return clientData->rpcResponse;
 			else if(_stopServer) return BaseLib::Variable::createError(-32500, "Server is being stopped.");
@@ -426,13 +443,14 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(std::shared_ptr<ClientData>& 
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-void ScriptEngineServer::sendResponse(std::shared_ptr<ClientData>& clientData, BaseLib::PVariable& variable)
+void ScriptEngineServer::sendResponse(PScriptEngineClientData& clientData, BaseLib::PVariable& variable)
 {
 	try
 	{
 		std::vector<char> data;
 		_rpcEncoder->encodeResponse(variable, data);
 		int32_t totallySentBytes = 0;
+		std::lock_guard<std::mutex> sendGuard(clientData->sendMutex);
 		while (totallySentBytes < (signed)data.size())
 		{
 			int32_t sentBytes = ::send(clientData->fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
@@ -483,7 +501,7 @@ void ScriptEngineServer::mainThread()
 
 			{
 				std::lock_guard<std::mutex> stateGuard(_stateMutex);
-				for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+				for(std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 				{
 					if(i->second->closed) continue;
 					if(i->second->fileDescriptor->descriptor == -1)
@@ -524,16 +542,16 @@ void ScriptEngineServer::mainThread()
 				}
 
 				std::lock_guard<std::mutex> stateGuard(_stateMutex);
-				std::shared_ptr<ClientData> clientData = std::shared_ptr<ClientData>(new ClientData(clientFileDescriptor));
-				clientData->id = _currentClientID++;
+				PScriptEngineClientData clientData = PScriptEngineClientData(new ScriptEngineClientData(clientFileDescriptor));
+				clientData->id = _currentClientId++;
 				_clients[clientData->id] = clientData;
 				continue;
 			}
 
-			std::shared_ptr<ClientData> clientData;
+			PScriptEngineClientData clientData;
 			{
 				std::lock_guard<std::mutex> stateGuard(_stateMutex);
-				for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+				for(std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 				{
 					if(i->second->fileDescriptor->descriptor == -1)
 					{
@@ -566,18 +584,17 @@ void ScriptEngineServer::mainThread()
     }
 }
 
-std::shared_ptr<ScriptEngineServer::ScriptEngineProcess> ScriptEngineServer::getFreeProcess()
+PScriptEngineProcess ScriptEngineServer::getFreeProcess()
 {
 	try
 	{
 		std::lock_guard<std::mutex> processGuard(_newProcessMutex);
 		{
 			std::lock_guard<std::mutex> processGuard(_processMutex);
-			for(std::map<int32_t, std::shared_ptr<ScriptEngineProcess>>::iterator i = _processes.begin(); i != _processes.end(); ++i)
+			for(std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
-				if(i->second->scriptCount < GD::bl->threadManager.getMaxThreadCount() / GD::bl->settings.scriptEngineMaxThreadsPerScript() && (GD::bl->settings.scriptEngineMaxScriptsPerProcess() == -1 || i->second->scriptCount < (unsigned)GD::bl->settings.scriptEngineMaxScriptsPerProcess()))
+				if(i->second->scriptCount() < GD::bl->threadManager.getMaxThreadCount() / GD::bl->settings.scriptEngineMaxThreadsPerScript() && (GD::bl->settings.scriptEngineMaxScriptsPerProcess() == -1 || i->second->scriptCount() < (unsigned)GD::bl->settings.scriptEngineMaxScriptsPerProcess()))
 				{
-					i->second->scriptCount++;
 					return i->second;
 				}
 			}
@@ -585,27 +602,26 @@ std::shared_ptr<ScriptEngineServer::ScriptEngineProcess> ScriptEngineServer::get
 		_out.printInfo("Info: Spawning new script engine process.");
 		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess());
 		std::vector<std::string> arguments{ "-rse" };
-		process->pid = GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments);
-		if(process->pid != -1)
+		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
+		if(process->getPid() != -1)
 		{
-			process->scriptCount++;
 			{
 				std::lock_guard<std::mutex> processGuard(_processMutex);
-				_processes[process->pid] = process;
+				_processes[process->getPid()] = process;
 			}
 
 			std::mutex requestMutex;
 			std::unique_lock<std::mutex> requestLock(requestMutex);
-			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(5000), [&]{ return (bool)(process->clientData); });
+			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(5000), [&]{ return (bool)(process->getClientData()); });
 
-			if(!process->clientData)
+			if(!process->getClientData())
 			{
 				std::lock_guard<std::mutex> processGuard(_processMutex);
-				_processes.erase(process->pid);
+				_processes.erase(process->getPid());
 				_out.printError("Error: Could not start new script engine process.");
 				return std::shared_ptr<ScriptEngineProcess>();
 			}
-			_out.printInfo("Info: Script engine process successfully spawned. Process id is " + std::to_string(process->pid) + ". Client id is: " + std::to_string(process->clientData->id) + ".");
+			_out.printInfo("Info: Script engine process successfully spawned. Process id is " + std::to_string(process->getPid()) + ". Client id is: " + std::to_string(process->getClientData()->id) + ".");
 			return process;
 		}
 	}
@@ -624,7 +640,7 @@ std::shared_ptr<ScriptEngineServer::ScriptEngineProcess> ScriptEngineServer::get
     return std::shared_ptr<ScriptEngineProcess>();
 }
 
-void ScriptEngineServer::readClient(std::shared_ptr<ClientData>& clientData)
+void ScriptEngineServer::readClient(PScriptEngineClientData& clientData)
 {
 	try
 	{
@@ -774,17 +790,34 @@ bool ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
     return false;
 }
 
-void ScriptEngineServer::executeScript(BaseLib::ScriptEngine::PScriptInfo scriptInfo)
+void ScriptEngineServer::executeScript(PScriptInfo scriptInfo)
 {
 	try
 	{
-		std::shared_ptr<ScriptEngineServer::ScriptEngineProcess> process = getFreeProcess();
+		PScriptEngineProcess process = getFreeProcess();
 		if(!process)
 		{
 			_out.printError("Error: Could not get free process. Not executing script.");
 			return;
 		}
-		scriptInfo->scriptFinishedCallback(scriptInfo, BaseLib::HelperFunctions::getTimeSeconds());
+
+		{
+			std::lock_guard<std::mutex> processGuard(_currentScriptIdMutex);
+			while(scriptInfo->id == 0) scriptInfo->id = _currentScriptId++;
+		}
+
+		_out.printInfo("Info: Starting script with id " + std::to_string(scriptInfo->id) + ".");
+		process->registerScript(scriptInfo->id, scriptInfo);
+
+		std::string methodName("executeScript");
+		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>{BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)), BaseLib::PVariable(new BaseLib::Variable(scriptInfo->path)), BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)), BaseLib::PVariable(new BaseLib::Variable(true))});
+		BaseLib::PVariable result = sendRequest(process->getClientData(), methodName, parameters);
+		if(result->errorStruct)
+		{
+			_out.printError("Error: Could not execute script: " + result->structValue->at("faultString")->stringValue);
+			process->invokeScriptFinished(scriptInfo->id, -1, result->structValue->at("faultString")->stringValue);
+			process->unregisterScript(scriptInfo->id);
+		}
 	}
     catch(const std::exception& ex)
     {
@@ -798,4 +831,73 @@ void ScriptEngineServer::executeScript(BaseLib::ScriptEngine::PScriptInfo script
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+// {{{ RPC methods
+BaseLib::PVariable ScriptEngineServer::registerScriptEngineClient(PScriptEngineClientData& clientData, BaseLib::PArray& parameters)
+{
+	try
+	{
+		pid_t pid = parameters->at(1)->integerValue;
+		std::lock_guard<std::mutex> processGuard(_processMutex);
+		std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(pid);
+		if(processIterator == _processes.end())
+		{
+			_out.printError("Error: Cannot register client. No process with pid " + std::to_string(pid) + " found.");
+			return BaseLib::Variable::createError(-1, "No matching process found.");
+		}
+		clientData->pid = processIterator->second->getPid();
+		processIterator->second->setClientData(clientData);
+		processIterator->second->requestConditionVariable.notify_one();
+		return BaseLib::PVariable(new BaseLib::Variable());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::scriptFinished(PScriptEngineClientData& clientData, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() < 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+
+		int32_t scriptId = parameters->at(0)->integerValue;
+		int32_t exitCode = parameters->at(1)->integerValue;
+		std::lock_guard<std::mutex> processGuard(_processMutex);
+		std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(clientData->pid);
+		if(processIterator == _processes.end()) return BaseLib::Variable::createError(-1, "No matching process found.");
+		_out.printInfo("Info: Script with id " + std::to_string(scriptId) + " finished.");
+		std::string output;
+		if(parameters->size() >= 3) processIterator->second->invokeScriptFinished(scriptId, exitCode, parameters->at(2)->stringValue);
+		else processIterator->second->invokeScriptFinished(scriptId, exitCode, output);
+		processIterator->second->unregisterScript(scriptId);
+		return BaseLib::PVariable(new BaseLib::Variable());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+// }}}
+
 }

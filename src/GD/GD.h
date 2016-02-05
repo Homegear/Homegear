@@ -71,7 +71,7 @@ public:
 	static std::map<int32_t, RPC::Server> rpcServers;
 	static std::unique_ptr<RPC::Client> rpcClient;
 #ifdef SCRIPTENGINE
-	static std::unique_ptr<ScriptEngineServer> scriptEngineServer;
+	static std::unique_ptr<ScriptEngine::ScriptEngineServer> scriptEngineServer;
 #endif
 	static std::unique_ptr<CLI::Server> cliServer;
 	static BaseLib::Rpc::ServerInfo serverInfo;
@@ -84,7 +84,7 @@ public:
 	static std::unique_ptr<EventHandler> eventHandler;
 #endif
 #ifdef SCRIPTENGINE
-	static std::unique_ptr<ScriptEngine> scriptEngine;
+	static std::unique_ptr<ScriptEngine::ScriptEngine> scriptEngine;
 #endif
 
 	virtual ~GD() {}

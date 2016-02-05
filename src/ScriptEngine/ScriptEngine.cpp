@@ -32,6 +32,9 @@
 #include "php_sapi.h"
 #include "PhpEvents.h"
 
+namespace ScriptEngine
+{
+
 ScriptEngine::ScriptEngine()
 {
 	php_homegear_init();
@@ -1545,4 +1548,6 @@ BaseLib::PVariable ScriptEngine::getAllScripts()
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 }

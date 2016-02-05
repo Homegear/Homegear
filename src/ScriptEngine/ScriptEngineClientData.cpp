@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -28,55 +28,25 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef HOMEGEAR_PHP_SAPI_H_
-#define HOMEGEAR_PHP_SAPI_H_
+#include "ScriptEngineClientData.h"
+#include "../GD/GD.h"
 
-#include "php_config_fixes.h"
-#include "homegear-base/BaseLib.h"
-#include "PhpEvents.h"
-
-#include <iostream>
-#include <string>
-#include <vector>
-#include <iterator>
-#include <map>
-
-#include <php.h>
-#include <SAPI.h>
-#include <php_main.h>
-#include <php_variables.h>
-#include <php_ini.h>
-#include <zend_API.h>
-#include <zend_ini.h>
-#include <zend_exceptions.h>
-#include <ext/standard/info.h>
-
-
-typedef struct _zend_homegear_globals
+namespace ScriptEngine
 {
-	std::mutex requestMutex;
-	BaseLib::HTTP* http = nullptr;
-	BaseLib::SocketOperations* socket = nullptr;
-	std::vector<char>* output = nullptr;
-	bool commandLine = false;
-	bool cookiesParsed = false;
-	int64_t peerId = 0;
-} zend_homegear_globals;
 
-typedef struct _zend_homegear_superglobals
+ScriptEngineClientData::ScriptEngineClientData()
 {
-	BaseLib::HTTP* http;
-	BaseLib::Gpio* gpio;
-	std::mutex serialDevicesMutex;
-	std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>> serialDevices;
-} zend_homegear_superglobals;
+	fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor); buffer.resize(1025);
+}
 
-zend_homegear_globals* php_homegear_get_globals();
-void php_homegear_build_argv(std::vector<std::string>& arguments);
-int php_homegear_init();
-void php_homegear_shutdown();
-bool php_homegear_write_socket(BaseLib::SocketOperations* socket, std::vector<char>& data);
-bool php_homegear_write_socket(BaseLib::SocketOperations* socket, const char* buffer, uint32_t length);
+ScriptEngineClientData::ScriptEngineClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor)
+{
+	fileDescriptor = clientFileDescriptor; buffer.resize(1025);
+}
 
-#endif
 
+ScriptEngineClientData::~ScriptEngineClientData()
+{
+}
+
+}

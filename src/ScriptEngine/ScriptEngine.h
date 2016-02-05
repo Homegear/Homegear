@@ -37,6 +37,9 @@
 #include <mutex>
 #include <wordexp.h>
 
+namespace ScriptEngine
+{
+
 class ScriptEngine
 {
 public:
@@ -79,4 +82,6 @@ protected:
 	void executeScriptThread(const std::string script, const std::string path, const std::string arguments, std::shared_ptr<std::vector<char>> output = nullptr, int32_t* exitCode = nullptr, int32_t threadId = -1, std::shared_ptr<std::mutex> lockMutex = std::shared_ptr<std::mutex>(), std::shared_ptr<bool> mutexReady = std::shared_ptr<bool>(), std::shared_ptr<std::condition_variable> conditionVariable = std::shared_ptr<std::condition_variable>());
 	void checkSessionIdThread(const std::string sessionId, bool* result, int32_t threadId = -1, std::shared_ptr<std::mutex> lockMutex = std::shared_ptr<std::mutex>(), std::shared_ptr<bool> mutexReady = std::shared_ptr<bool>(), std::shared_ptr<std::condition_variable> conditionVariable = std::shared_ptr<std::condition_variable>());
 };
+
+}
 #endif
