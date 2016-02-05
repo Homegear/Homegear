@@ -31,8 +31,9 @@
 #ifndef SCRIPTENGINESERVER_H_
 #define SCRIPTENGINESERVER_H_
 
-#include "homegear-base/BaseLib.h"
+#include "ScriptEngineProcess.h"
 #include "../RPC/RPCMethod.h"
+#include "homegear-base/BaseLib.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -48,6 +49,9 @@
 #include <iostream>
 #include <string>
 
+namespace ScriptEngine
+{
+
 class ScriptEngineServer : public BaseLib::IQueue
 {
 public:
@@ -57,49 +61,16 @@ public:
 	bool start();
 	void stop();
 	void processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped);
-	void executeScript(BaseLib::ScriptEngine::PScriptInfo scriptInfo);
+	void executeScript(PScriptInfo scriptInfo);
 private:
-	class ClientData
-	{
-	public:
-		ClientData() { fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor); buffer.resize(1025); }
-		ClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor) { fileDescriptor = clientFileDescriptor; buffer.resize(1025); }
-		virtual ~ClientData() {}
-
-		int32_t id = 0;
-		bool closed = false;
-		uint32_t packetLength = 0;
-		uint32_t receivedDataLength = 0;
-		bool packetIsRequest = false;
-		std::vector<char> buffer;
-		std::vector<uint8_t> packet;
-		std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
-		std::mutex requestMutex;
-		BaseLib::PVariable rpcResponse;
-		std::condition_variable requestConditionVariable;
-	};
-
-	class ScriptEngineProcess
-	{
-	public:
-		ScriptEngineProcess() {}
-		virtual ~ScriptEngineProcess() {}
-
-		pid_t pid = 0;
-		std::shared_ptr<ClientData> clientData;
-		std::mutex scriptCountMutex;
-		uint32_t scriptCount = 0;
-		std::condition_variable requestConditionVariable;
-	};
-
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
 	public:
 		QueueEntry() {}
-		QueueEntry(std::shared_ptr<ClientData> clientData, std::vector<uint8_t> packet, bool isRequest) { this->clientData = clientData; this->packet = packet; this->isRequest = isRequest; }
+		QueueEntry(PScriptEngineClientData clientData, std::vector<uint8_t> packet, bool isRequest) { this->clientData = clientData; this->packet = packet; this->isRequest = isRequest; }
 		virtual ~QueueEntry() {}
 
-		std::shared_ptr<ClientData> clientData;
+		PScriptEngineClientData clientData;
 		std::vector<uint8_t> packet;
 		bool isRequest = false;
 	};
@@ -112,14 +83,17 @@ private:
 	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
 	std::mutex _newProcessMutex;
 	std::mutex _processMutex;
-	std::map<int32_t, std::shared_ptr<ScriptEngineProcess>> _processes;
+	std::map<pid_t, std::shared_ptr<ScriptEngineProcess>> _processes;
+	std::mutex _currentScriptIdMutex;
+	int32_t _currentScriptId = 0;
 	std::mutex _stateMutex;
-	std::map<int32_t, std::shared_ptr<ClientData>> _clients;
-	static int32_t _currentClientID;
+	std::map<int32_t, PScriptEngineClientData> _clients;
+	int32_t _currentClientId = 0;
 	std::mutex _garbageCollectionMutex;
 	int64_t _lastGargabeCollection = 0;
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 	std::map<std::string, std::shared_ptr<RPC::RPCMethod>> _rpcMethods;
+	std::map<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, BaseLib::PArray& parameters)>> _localRpcMethods;
 
 	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
@@ -127,12 +101,19 @@ private:
 	void collectGarbage();
 	bool getFileDescriptor(bool deleteOldSocket = false);
 	void mainThread();
-	void readClient(std::shared_ptr<ClientData>& clientData);
-	BaseLib::PVariable sendRequest(std::shared_ptr<ClientData>& clientData, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters);
-	void sendResponse(std::shared_ptr<ClientData>& clientData, BaseLib::PVariable& variable);
-	void closeClientConnection(std::shared_ptr<ClientData> client);
-	std::shared_ptr<ScriptEngineProcess> getFreeProcess();
+	void readClient(PScriptEngineClientData& clientData);
+	BaseLib::PVariable sendRequest(PScriptEngineClientData clientData, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters);
+	void sendResponse(PScriptEngineClientData& clientData, BaseLib::PVariable& variable);
+	void closeClientConnection(PScriptEngineClientData client);
+	PScriptEngineProcess getFreeProcess();
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
+
+	// {{{ RPC methods
+		BaseLib::PVariable registerScriptEngineClient(PScriptEngineClientData& clientData, BaseLib::PArray& parameters);
+		BaseLib::PVariable scriptFinished(PScriptEngineClientData& clientData, BaseLib::PArray& parameters);
+	// }}}
 };
+
+}
 #endif

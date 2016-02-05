@@ -30,13 +30,18 @@
 
 #include "ScriptEngineClient.h"
 #include "../GD/GD.h"
-#include "homegear-base/BaseLib.h"
+#include "php_sapi.h"
+#include "PhpEvents.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <wordexp.h>
+
+namespace ScriptEngine
+{
 
 ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 1000)
 {
@@ -48,17 +53,44 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 1000)
 
 	_rpcDecoder = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get()));
 	_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
+
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("executeScript", std::bind(&ScriptEngineClient::executeScript, this, std::placeholders::_1)));
+
+	php_homegear_init();
 }
 
 ScriptEngineClient::~ScriptEngineClient()
 {
+	dispose();
 }
 
-void ScriptEngineClient::cleanUp()
+void ScriptEngineClient::stopEventThreads()
+{
+	PhpEvents::eventsMapMutex.lock();
+	for(std::map<pthread_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
+	{
+		if(i->second) i->second->stop();
+	}
+	PhpEvents::eventsMapMutex.unlock();
+}
+
+void ScriptEngineClient::dispose()
 {
 	try
 	{
+		if(_disposing) return;
+		_disposing = true;
 		stopQueue(0);
+		while(_scriptThreads.size() > 0)
+		{
+			GD::out.printInfo("Info: Waiting for script threads to finish.");
+			stopEventThreads();
+			collectGarbage();
+			if(_scriptThreads.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		}
+		php_homegear_shutdown();
+		_scriptCache.clear();
+		_rpcResponses.clear();
 	}
     catch(const std::exception& ex)
     {
@@ -87,7 +119,7 @@ void ScriptEngineClient::start()
 			_out.printError("Error: Could not redirect errors to log file.");
 		}
 
-		startQueue(0, GD::bl->settings.scriptEngineThreadCount(), 0, SCHED_OTHER);
+		startQueue(0, 5, 0, SCHED_OTHER);
 
 		_socketPath = GD::bl->settings.socketPath() + "homegearSE.sock";
 		for(int32_t i = 0; i < 2; i++)
@@ -146,7 +178,7 @@ void ScriptEngineClient::start()
 			if(bytesRead <= 0)
 			{
 				_out.printInfo("Info: Connection to script server closed.");
-				cleanUp();
+				dispose();
 				exit(0);
 			}
 
@@ -210,17 +242,57 @@ void ScriptEngineClient::start()
     return;
 }
 
+std::vector<std::string> ScriptEngineClient::getArgs(const std::string& path, const std::string& args)
+{
+	std::vector<std::string> argv;
+	if(!path.empty() && path.back() != '/') argv.push_back(path.substr(path.find_last_of('/') + 1));
+	else argv.push_back(path);
+	wordexp_t p;
+	if(wordexp(args.c_str(), &p, 0) == 0)
+	{
+		for (size_t i = 0; i < p.we_wordc; i++)
+		{
+			argv.push_back(std::string(p.we_wordv[i]));
+		}
+		wordfree(&p);
+	}
+	return argv;
+}
+
+void ScriptEngineClient::sendScriptFinished(zend_homegear_globals* globals, int32_t scriptId, std::string& output, int32_t exitCode)
+{
+	try
+	{
+		_out.printInfo("Info: Script " + std::to_string(scriptId) + " exited with code " + std::to_string(exitCode) + ".");
+		std::string methodName("scriptFinished");
+		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>{BaseLib::PVariable(new BaseLib::Variable(scriptId)), BaseLib::PVariable(new BaseLib::Variable(exitCode)), BaseLib::PVariable(new BaseLib::Variable(output))});
+		sendRequest(scriptId, globals->requestMutex, methodName, parameters);
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void ScriptEngineClient::registerClient()
 {
 	try
 	{
 		std::string methodName("registerScriptEngineClient");
-		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>{BaseLib::PVariable(new BaseLib::Variable((int32_t)getpid()))});
+		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>{BaseLib::PVariable(new BaseLib::Variable(0)), BaseLib::PVariable(new BaseLib::Variable((int32_t)getpid()))});
 		BaseLib::PVariable result = sendGlobalRequest(methodName, parameters);
 		if(result->errorStruct)
 		{
 			_out.printCritical("Critical: Could not register client.");
-			cleanUp();
+			dispose();
 			exit(1);
 		}
 		_out.printInfo("Info: Client registered to server.");
@@ -252,14 +324,15 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 			std::string methodName;
 			BaseLib::PArray parameters = _rpcDecoder->decodeRequest(queueEntry->packet, methodName);
 
-			std::map<std::string, std::shared_ptr<RPC::RPCMethod>>::iterator methodIterator = _rpcMethods.find(methodName);
-			if(methodIterator == _rpcMethods.end())
+			std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(methodName);
+			if(localMethodIterator == _localRpcMethods.end())
 			{
 				_out.printError("Warning: RPC method not found: " + methodName);
 				BaseLib::PVariable result = BaseLib::Variable::createError(-32601, ": Requested method not found.");
 				sendResponse(result);
 				return;
 			}
+
 			if(GD::bl->debugLevel >= 4)
 			{
 				_out.printInfo("Info: Server is calling RPC method: " + methodName + " Parameters:");
@@ -268,18 +341,21 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 					(*i)->print();
 				}
 			}
-			BaseLib::PVariable result = _rpcMethods.at(methodName)->invoke(_dummyClientInfo, parameters);
+			BaseLib::PVariable result = localMethodIterator->second(parameters);
 			if(GD::bl->debugLevel >= 5)
 			{
 				_out.printDebug("Response: ");
 				result->print();
 			}
-
 			sendResponse(result);
 		}
 		else
 		{
-			_rpcResponse = _rpcDecoder->decodeResponse(queueEntry->packet);
+			BaseLib::PVariable response = _rpcDecoder->decodeResponse(queueEntry->packet);
+			{
+				std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+				_rpcResponses[response->arrayValue->at(0)->integerValue] = response->arrayValue->at(1);
+			}
 			_requestConditionVariable.notify_one();
 		}
 	}
@@ -297,6 +373,56 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
     }
 }
 
+BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::mutex& requestMutex, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters)
+{
+	try
+	{
+		std::unique_lock<std::mutex> requestLock(requestMutex);
+		std::vector<char> data;
+		_rpcEncoder->encodeRequest(methodName, parameters, data);
+
+		for(int32_t i = 0; i < 5; i++)
+		{
+			{
+				{
+					std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+					_rpcResponses[scriptId].reset();
+				}
+				int32_t totallySentBytes = 0;
+				std::lock_guard<std::mutex> sendGuard(_sendMutex);
+				while (totallySentBytes < (signed)data.size())
+				{
+					int32_t sentBytes = ::send(_fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
+					if(sentBytes == -1)
+					{
+						GD::out.printError("Could not send data to client: " + std::to_string(_fileDescriptor->descriptor));
+						break;
+					}
+					totallySentBytes += sentBytes;
+				}
+			}
+
+			_requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(5000), [&]{ std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex); return (bool)(_rpcResponses[scriptId]); });
+			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+			if(_rpcResponses[scriptId]) return _rpcResponses[scriptId];
+			else if(i == 4) _out.printError("Error: No response received to RPC request. Method: " + methodName);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable ScriptEngineClient::sendGlobalRequest(std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters)
 {
 	try
@@ -307,20 +433,28 @@ BaseLib::PVariable ScriptEngineClient::sendGlobalRequest(std::string methodName,
 
 		for(int32_t i = 0; i < 5; i++)
 		{
-			_rpcResponse.reset();
-			int32_t totallySentBytes = 0;
-			while (totallySentBytes < (signed)data.size())
 			{
-				int32_t sentBytes = ::send(_fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
-				if(sentBytes == -1)
 				{
-					GD::out.printError("Could not send data to client: " + std::to_string(_fileDescriptor->descriptor));
-					break;
+					std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+					_rpcResponses[0].reset();
 				}
-				totallySentBytes += sentBytes;
+				int32_t totallySentBytes = 0;
+				std::lock_guard<std::mutex> sendGuard(_sendMutex);
+				while (totallySentBytes < (signed)data.size())
+				{
+					int32_t sentBytes = ::send(_fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
+					if(sentBytes == -1)
+					{
+						GD::out.printError("Could not send data to client: " + std::to_string(_fileDescriptor->descriptor));
+						break;
+					}
+					totallySentBytes += sentBytes;
+				}
 			}
-			_requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(5000), [&]{ return (bool)_rpcResponse; });
-			if(_rpcResponse) return _rpcResponse;
+
+			_requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(5000), [&]{ std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex); return (bool)(_rpcResponses[0]); });
+			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+			if(_rpcResponses[0]) return _rpcResponses[0];
 			else if(i == 4) _out.printError("Error: No response received to RPC request. Method: " + methodName);
 		}
 	}
@@ -345,6 +479,8 @@ void ScriptEngineClient::sendResponse(BaseLib::PVariable& variable)
 	{
 		std::vector<char> data;
 		_rpcEncoder->encodeResponse(variable, data);
+
+		std::lock_guard<std::mutex> sendGuard(_sendMutex);
 		int32_t totallySentBytes = 0;
 		while (totallySentBytes < (signed)data.size())
 		{
@@ -369,4 +505,314 @@ void ScriptEngineClient::sendResponse(BaseLib::PVariable& variable)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+void ScriptEngineClient::collectGarbage()
+{
+	try
+	{
+		std::vector<int32_t> threadsToRemove;
+		std::lock_guard<std::mutex> threadGuard(_scriptThreadMutex);
+		try
+		{
+			for(std::map<int32_t, std::pair<std::thread, bool>>::iterator i = _scriptThreads.begin(); i != _scriptThreads.end(); ++i)
+			{
+				if(!i->second.second)
+				{
+					if(i->second.first.joinable()) i->second.first.join();
+					threadsToRemove.push_back(i->first);
+				}
+			}
+		}
+		catch(const std::exception& ex)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+		for(std::vector<int32_t>::iterator i = threadsToRemove.begin(); i != threadsToRemove.end(); ++i)
+		{
+			try
+			{
+				{
+					std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+					_rpcResponses.erase(*i);
+				}
+				_scriptThreads.erase(*i);
+			}
+			catch(const std::exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void ScriptEngineClient::setThreadNotRunning(int32_t threadId)
+{
+	if(threadId != -1)
+	{
+		_scriptThreadMutex.lock();
+		try
+		{
+			_scriptThreads.at(threadId).second = false;
+		}
+		catch(const std::exception& ex)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+		_scriptThreadMutex.unlock();
+	}
+}
+
+ScriptEngineClient::ScriptGuard::~ScriptGuard()
+{
+	if(!_client || !_globals) return;
+	std::string outputString;
+	if(_output && !_output->empty()) outputString = std::move(std::string(&_output->at(0), _output->size()));
+	if(BaseLib::HelperFunctions::trim(outputString).size() > 0) GD::out.printMessage("Script output:\n" + outputString);
+	_client->sendScriptFinished(_globals, _scriptId, outputString, *_exitCode);
+	if(tsrm_get_ls_cache() && (*((void ***)tsrm_get_ls_cache()))[sapi_globals_id - 1])
+	{
+		if(SG(request_info).path_translated)
+		{
+			efree(SG(request_info).query_string);
+			SG(request_info).query_string = nullptr;
+		}
+		if(SG(request_info).argv)
+		{
+			free(SG(request_info).argv);
+			SG(request_info).argv = nullptr;
+		}
+		SG(request_info).argc = 0;
+	}
+	ts_free_thread();
+	PhpEvents::eventsMapMutex.lock();
+	PhpEvents::eventsMap.erase(pthread_self());
+	PhpEvents::eventsMapMutex.unlock();
+	_client->setThreadNotRunning(_scriptId);
+}
+
+void ScriptEngineClient::executeCliScript(int32_t id, std::string& script, std::string& path, std::string& arguments, std::shared_ptr<std::vector<char>>& output, std::shared_ptr<int32_t>& exitCode)
+{
+	std::shared_ptr<BaseLib::Rpc::ServerInfo::Info> serverInfo(new BaseLib::Rpc::ServerInfo::Info());
+	ts_resource_ex(0, NULL); //Replaces TSRMLS_FETCH()
+
+	try
+	{
+		zend_file_handle zendHandle;
+		if(script.empty())
+		{
+			zendHandle.type = ZEND_HANDLE_FILENAME;
+			zendHandle.filename = path.c_str();
+			zendHandle.opened_path = NULL;
+			zendHandle.free_filename = 0;
+		}
+		else
+		{
+			zendHandle.type = ZEND_HANDLE_MAPPED;
+			zendHandle.handle.fp = nullptr;
+			zendHandle.handle.stream.handle = nullptr;
+			zendHandle.handle.stream.closer = nullptr;
+			zendHandle.handle.stream.mmap.buf = (char*)script.c_str(); //String is not modified
+			zendHandle.handle.stream.mmap.len = script.size();
+			zendHandle.filename = path.c_str();
+			zendHandle.opened_path = nullptr;
+			zendHandle.free_filename = 0;
+		}
+
+		zend_homegear_globals* globals = php_homegear_get_globals();
+		if(!globals) exit(1);
+
+		if(output) globals->output = output.get();
+		globals->commandLine = true;
+		globals->cookiesParsed = true;
+
+		if(!tsrm_get_ls_cache() || !(*((void ***)tsrm_get_ls_cache()))[sapi_globals_id - 1] || !(*((void ***)tsrm_get_ls_cache()))[core_globals_id - 1])
+		{
+			GD::out.printCritical("Critical: Error in PHP: No thread safe resource exists.");
+			exit(1);
+		}
+
+		if(!script.empty())
+		{
+			PhpEvents::eventsMapMutex.lock();
+			PhpEvents::eventsMap.insert(std::pair<pthread_t, std::shared_ptr<PhpEvents>>(pthread_self(), std::shared_ptr<PhpEvents>()));
+			PhpEvents::eventsMapMutex.unlock();
+		}
+
+		PG(register_argc_argv) = 1;
+		PG(implicit_flush) = 1;
+		PG(html_errors) = 0;
+		SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
+		SG(options) |= SAPI_OPTION_NO_CHDIR;
+		SG(headers_sent) = 1;
+		SG(request_info).no_headers = 1;
+		SG(default_mimetype) = nullptr;
+		SG(default_charset) = nullptr;
+		SG(request_info).path_translated = estrndup(path.c_str(), path.size());
+
+		if (php_request_startup(TSRMLS_C) == FAILURE) {
+			GD::bl->out.printError("Error calling php_request_startup...");
+			return;
+		}
+
+		std::vector<std::string> argv = getArgs(path, arguments);
+		php_homegear_build_argv(argv);
+		SG(request_info).argc = argv.size();
+		SG(request_info).argv = (char**)malloc((argv.size() + 1) * sizeof(char*));
+		for(uint32_t i = 0; i < argv.size(); ++i)
+		{
+			SG(request_info).argv[i] = (char*)argv[i].c_str(); //Value is not modified.
+		}
+		SG(request_info).argv[argv.size()] = nullptr;
+
+		php_execute_script(&zendHandle);
+		*exitCode = EG(exit_status);
+
+		php_request_shutdown(NULL);
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void ScriptEngineClient::executeScriptThread(int32_t id, std::string path, std::string arguments, bool sendOutput)
+{
+	try
+	{
+		std::string script;
+		if(path.size() > 3 && path.compare(path.size() - 4, 4, ".hgs") == 0)
+		{
+			std::map<std::string, std::shared_ptr<CacheInfo>>::iterator scriptIterator = _scriptCache.find(path);
+			if(scriptIterator != _scriptCache.end() && scriptIterator->second->lastModified == BaseLib::Io::getFileLastModifiedTime(path)) script = scriptIterator->second->script;
+			else
+			{
+				std::vector<char> data = BaseLib::Io::getBinaryFileContent(path);
+				int32_t pos = -1;
+				for(uint32_t i = 0; i < 11 && i < data.size(); i++)
+				{
+					if(data[i] == ' ')
+					{
+						pos = (int32_t)i;
+						break;
+					}
+				}
+				if(pos == -1)
+				{
+					GD::bl->out.printError("Error: License module id is missing in encrypted script file \"" + path + "\"");
+					return;
+				}
+				std::string moduleIdString(&data.at(0), pos);
+				int32_t moduleId = BaseLib::Math::getNumber(moduleIdString);
+				std::vector<char> input(&data.at(pos + 1), &data.at(data.size() - 1) + 1);
+				if(input.empty()) return;
+				std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
+				if(i == GD::licensingModules.end() || !i->second)
+				{
+					GD::out.printError("Error: Could not decrypt script file. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
+					return;
+				}
+				std::shared_ptr<CacheInfo> cacheInfo(new CacheInfo());
+				i->second->decryptScript(input, cacheInfo->script);
+				cacheInfo->lastModified = BaseLib::Io::getFileLastModifiedTime(path);
+				if(!cacheInfo->script.empty())
+				{
+					_scriptCache[path] = cacheInfo;
+					script = cacheInfo->script;
+				}
+			}
+		}
+
+		zend_homegear_globals* globals = php_homegear_get_globals();
+		if(!globals) exit(1);
+		std::shared_ptr<std::vector<char>> output;
+		if(sendOutput) output.reset(new std::vector<char>());
+		std::shared_ptr<int32_t> exitCode(new int32_t(-1));
+		ScriptGuard scriptGuard(this, globals, id, output, exitCode);
+
+		executeCliScript(id, script, path, arguments, output, exitCode);
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+// {{{ RPC methods
+BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
+		if(parameters->size() != 4) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+		if(parameters->at(1)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Path is empty.");
+
+		std::string path = std::move(parameters->at(1)->stringValue);
+		if(!GD::bl->io.fileExists(path))
+		{
+			_out.printError("Error: PHP script \"" + path + "\" does not exist.");
+			return BaseLib::Variable::createError(-1, "Script file does not exist.");
+		}
+
+		_scriptThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(parameters->at(0)->integerValue, std::pair<std::thread, bool>(std::thread(&ScriptEngineClient::executeScriptThread, this, parameters->at(0)->integerValue, path, parameters->at(2)->stringValue, parameters->at(3)->booleanValue), true)));
+		collectGarbage();
+
+		return BaseLib::PVariable(new BaseLib::Variable());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+// }}}
+
 }

@@ -559,9 +559,9 @@ void startDaemon()
 class Dummy
 {
 public:
-	void doSomething(BaseLib::ScriptEngine::PScriptInfo& info, int32_t value)
+	void doSomething(BaseLib::ScriptEngine::PScriptInfo& info, int32_t value, std::string& output)
 	{
-		std::cerr << "Moin " << value << std::endl;
+		std::cout << "Moin (callback). ID: " << info->id << " Exit code: " << value << " Output: " << std::endl << output << std::endl;
 	}
 };
 
@@ -841,9 +841,9 @@ void startUp()
 				exit(1);
 			}
 		}
-		GD::scriptEngine.reset(new ScriptEngine());
+		GD::scriptEngine.reset(new ScriptEngine::ScriptEngine());
 		GD::out.printInfo("Starting script engine server...");
-		GD::scriptEngineServer.reset(new ScriptEngineServer());
+		GD::scriptEngineServer.reset(new ScriptEngine::ScriptEngineServer());
 		if(!GD::scriptEngineServer->start())
 		{
 			GD::out.printCritical("Critical: Cannot start script engine server. Exiting Homegear.");
@@ -941,16 +941,19 @@ void startUp()
 				else if(strncmp(inputBuffer, "test", 4) == 0)
 				{
 					BaseLib::ScriptEngine::PScriptInfo info(new BaseLib::ScriptEngine::ScriptInfo());
-					using std::placeholders::_1;
-					using std::placeholders::_2;
-					info->scriptFinishedCallback = std::bind(&Dummy::doSomething, &dummy, _1, _2);
+					info->scriptFinishedCallback = std::bind(&Dummy::doSomething, &dummy, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+					info->path = GD::bl->settings.scriptPath() + "Test.php";
+					info->arguments = "bla blupp blii \"Hallo Welt\" bluu";
 					GD::scriptEngineServer->executeScript(info);
+					free(inputBuffer);
+					continue;
 				}
 
 				add_history(inputBuffer); //Sets inputBuffer to 0
 
 				std::string input(inputBuffer);
 				std::cout << GD::familyController->handleCliCommand(input);
+				free(inputBuffer);
 			}
 			clear_history();
 
@@ -1118,7 +1121,7 @@ int main(int argc, char* argv[])
     		else if(arg == "-rse")
     		{
     			GD::bl->settings.load(GD::configPath + "main.conf");
-    			ScriptEngineClient scriptEngineClient;
+    			ScriptEngine::ScriptEngineClient scriptEngineClient;
     			scriptEngineClient.start();
     			exit(0);
     		}

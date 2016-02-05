@@ -31,20 +31,48 @@
 #ifndef SCRIPTENGINECLIENT_H_
 #define SCRIPTENGINECLIENT_H_
 
-#include "homegear-base/BaseLib.h"
+#include "php_config_fixes.h"
 #include "../RPC/RPCMethod.h"
+#include "homegear-base/BaseLib.h"
 
 #include <thread>
 #include <mutex>
 #include <string>
 
+using namespace BaseLib::ScriptEngine;
+
+typedef struct _zend_homegear_globals zend_homegear_globals;
+
+namespace ScriptEngine
+{
+
 class ScriptEngineClient : public BaseLib::IQueue {
 public:
 	ScriptEngineClient();
 	virtual ~ScriptEngineClient();
+	void dispose();
 
 	void start();
 private:
+	struct CacheInfo
+	{
+		int32_t lastModified;
+		std::string script;
+	};
+
+	class ScriptGuard
+	{
+	private:
+		ScriptEngineClient* _client = nullptr;
+		zend_homegear_globals* _globals = nullptr;
+		int32_t _scriptId = 0;
+		std::shared_ptr<std::vector<char>> _output;
+		std::shared_ptr<int32_t> _exitCode;
+	public:
+		ScriptGuard(ScriptEngineClient* client, zend_homegear_globals* globals, int32_t scriptId, std::shared_ptr<std::vector<char>>& output, std::shared_ptr<int32_t>& exitCode) : _client(client), _globals(globals), _scriptId(scriptId), _output(output), _exitCode(exitCode) {}
+		virtual ~ScriptGuard();
+	};
+
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
 	public:
@@ -56,25 +84,44 @@ private:
 		bool isRequest = false;
 	};
 
+	bool _disposing = false;
 	BaseLib::Output _out;
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
 	bool _closed = false;
+	std::mutex _sendMutex;
 	std::mutex _requestMutex;
-	BaseLib::PVariable _rpcResponse;
+	std::mutex _rpcResponsesMutex;
+	std::map<int32_t, BaseLib::PVariable> _rpcResponses;
 	std::condition_variable _requestConditionVariable;
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
-	std::map<std::string, std::shared_ptr<RPC::RPCMethod>> _rpcMethods;
+	std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>> _localRpcMethods;
 	std::thread _registerClientThread;
+	std::mutex _scriptThreadMutex;
+	std::map<int32_t, std::pair<std::thread, bool>> _scriptThreads;
+	std::map<std::string, std::shared_ptr<CacheInfo>> _scriptCache;
 
 	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
 
-	void cleanUp();
+	void collectGarbage();
+	std::vector<std::string> getArgs(const std::string& path, const std::string& args);
 	void registerClient();
+	BaseLib::PVariable sendRequest(int32_t scriptId, std::mutex& requestMutex, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters);
 	BaseLib::PVariable sendGlobalRequest(std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters);
 	void sendResponse(BaseLib::PVariable& variable);
+	void sendScriptFinished(zend_homegear_globals* globals, int32_t scriptId, std::string& output, int32_t exitCode);
+	void setThreadNotRunning(int32_t threadId);
+	void stopEventThreads();
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
+	void executeScriptThread(int32_t id, std::string path, std::string arguments, bool sendOutput);
+	void executeCliScript(int32_t id, std::string& script, std::string& path, std::string& arguments, std::shared_ptr<std::vector<char>>& output, std::shared_ptr<int32_t>& exitCode);
+
+	// {{{ RPC methods
+		BaseLib::PVariable executeScript(BaseLib::PArray& parameters);
+	// }}}
 };
+
+}
 #endif
