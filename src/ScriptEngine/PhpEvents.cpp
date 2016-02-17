@@ -32,10 +32,12 @@
 #include "PhpEvents.h"
 
 std::mutex PhpEvents::eventsMapMutex;
-std::map<pthread_t, std::shared_ptr<PhpEvents>> PhpEvents::eventsMap;
+std::map<int32_t, std::shared_ptr<PhpEvents>> PhpEvents::eventsMap;
 
-PhpEvents::PhpEvents()
+PhpEvents::PhpEvents(std::function<void(std::string& output)>& outputCallback, std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)>& rpcCallback)
 {
+	_outputCallback = outputCallback;
+	_rpcCallback = rpcCallback;
 }
 
 PhpEvents::~PhpEvents()
@@ -98,13 +100,14 @@ std::shared_ptr<PhpEvents::EventData> PhpEvents::poll()
 	std::unique_lock<std::mutex> lock(_processingThreadMutex);
 	try
 	{
-		_bufferMutex.lock();
-		if(_bufferHead == _bufferTail) //Only lock, when there is really no packet to process. This check is necessary, because the check of the while loop condition is outside of the mutex
 		{
-			_bufferMutex.unlock();
-			_processingConditionVariable.wait(lock, [&]{ return _processingEntryAvailable; });
+			std::lock_guard<std::mutex> bufferGuard(_bufferMutex);
+			if(_bufferHead == _bufferTail)
+			{
+				bufferGuard.~lock_guard();
+				_processingConditionVariable.wait(lock, [&]{ return _processingEntryAvailable; });
+			}
 		}
-		else _bufferMutex.unlock();
 		if(GD::bl->shuttingDown)
 		{
 			lock.unlock();
@@ -116,7 +119,7 @@ std::shared_ptr<PhpEvents::EventData> PhpEvents::poll()
 		_buffer[_bufferTail].reset();
 		_bufferTail++;
 		if(_bufferTail >= _bufferSize) _bufferTail = 0;
-		if(_bufferHead == _bufferTail) _processingEntryAvailable = false; //Set here, because otherwise it might be set to "true" in publish and then set to false again after the while loop
+		if(_bufferHead == _bufferTail) _processingEntryAvailable = false;
 		_bufferMutex.unlock();
 	}
 	catch(const std::exception& ex)

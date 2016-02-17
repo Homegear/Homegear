@@ -70,6 +70,7 @@ private:
 		bool closed = false;
 		std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
 		std::thread readThread;
+		std::mutex sendMutex;
 	};
 
 	std::string _socketPath;
@@ -88,12 +89,13 @@ private:
 	void handleCommand(std::string& command, std::shared_ptr<ClientData> clientData);
 	std::string handleUserCommand(std::string& command);
 	std::string handleModuleCommand(std::string& command);
-	std::string handleGlobalCommand(std::string& command);
+	std::string handleGlobalCommand(std::shared_ptr<ClientData> clientData, std::string& command);
 	void getFileDescriptor(bool deleteOldSocket = false);
 	std::shared_ptr<BaseLib::FileDescriptor> getClientFileDescriptor();
 	void mainThread();
 	void readClient(std::shared_ptr<ClientData> clientData);
 	void closeClientConnection(std::shared_ptr<ClientData> client);
+	void send(std::shared_ptr<ClientData> client, std::string& data);
 };
 
 }

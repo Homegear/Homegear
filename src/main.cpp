@@ -31,9 +31,7 @@
 #include "GD/GD.h"
 #include "Monitor.h"
 #include "CLI/CLIClient.h"
-#ifdef SCRIPTENGINE
 #include "ScriptEngine/ScriptEngineClient.h"
-#endif
 #include "UPnP/UPnP.h"
 #include "MQTT/Mqtt.h"
 #include "homegear-base/BaseLib.h"
@@ -208,10 +206,8 @@ void terminate(int32_t signalNumber)
 			GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
 			GD::bl->shuttingDown = true;
 			_shuttingDownMutex.unlock();
+			if(GD::scriptEngineServer) GD::scriptEngineServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
 			if(GD::familyController) GD::familyController->homegearShuttingDown();
-#ifdef SCRIPTENGINE
-			if(GD::scriptEngine) GD::scriptEngine->stopEventThreads();
-#endif
 			_disposing = true;
 			if(_startAsDaemon)
 			{
@@ -239,11 +235,8 @@ void terminate(int32_t signalNumber)
 			if(GD::rpcClient) GD::rpcClient->dispose();
 			GD::out.printInfo( "(Shutdown) => Closing physical interfaces");
 			if(GD::familyController) GD::familyController->physicalInterfaceStopListening();
-#ifdef SCRIPTENGINE
 			GD::out.printInfo("(Shutdown) => Stopping script engine server...");
 			GD::scriptEngineServer->stop();
-			if(GD::scriptEngine) GD::scriptEngine->dispose();
-#endif
 			GD::out.printMessage("(Shutdown) => Saving device families");
 			if(GD::familyController) GD::familyController->save(false);
 			GD::out.printMessage("(Shutdown) => Disposing device families");
@@ -556,15 +549,6 @@ void startDaemon()
     }
 }
 
-class Dummy
-{
-public:
-	void doSomething(BaseLib::ScriptEngine::PScriptInfo& info, int32_t value, std::string& output)
-	{
-		std::cout << "Moin (callback). ID: " << info->id << " Exit code: " << value << " Output: " << std::endl << output << std::endl;
-	}
-};
-
 void startUp()
 {
 	try
@@ -832,7 +816,6 @@ void startUp()
         #ifdef EVENTHANDLER
 		GD::eventHandler.reset(new EventHandler());
 		#endif
-		#ifdef SCRIPTENGINE
 		if(!GD::bl->io.directoryExists(GD::bl->settings.tempPath() + "php"))
 		{
 			if(!GD::bl->io.createDirectory(GD::bl->settings.tempPath() + "php", S_IRWXU | S_IRWXG))
@@ -841,7 +824,6 @@ void startUp()
 				exit(1);
 			}
 		}
-		GD::scriptEngine.reset(new ScriptEngine::ScriptEngine());
 		GD::out.printInfo("Starting script engine server...");
 		GD::scriptEngineServer.reset(new ScriptEngine::ScriptEngineServer());
 		if(!GD::scriptEngineServer->start())
@@ -849,7 +831,6 @@ void startUp()
 			GD::out.printCritical("Critical: Cannot start script engine server. Exiting Homegear.");
 			exit(1);
 		}
-		#endif
 
         GD::out.printInfo("Initializing licensing controller...");
         GD::licensingController->init();
@@ -931,23 +912,11 @@ void startUp()
         }
         else
         {
-        	Dummy dummy;
-
         	rl_bind_key('\t', rl_abort); //no autocompletion
 			while((inputBuffer = readline("")) != NULL)
 			{
 				if(inputBuffer[0] == '\n' || inputBuffer[0] == 0) continue;
 				if(strncmp(inputBuffer, "quit", 4) == 0 || strncmp(inputBuffer, "exit", 4) == 0 || strncmp(inputBuffer, "moin", 4) == 0) break;
-				else if(strncmp(inputBuffer, "test", 4) == 0)
-				{
-					BaseLib::ScriptEngine::PScriptInfo info(new BaseLib::ScriptEngine::ScriptInfo());
-					info->scriptFinishedCallback = std::bind(&Dummy::doSomething, &dummy, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-					info->path = GD::bl->settings.scriptPath() + "Test.php";
-					info->arguments = "bla blupp blii \"Hallo Welt\" bluu";
-					GD::scriptEngineServer->executeScript(info);
-					free(inputBuffer);
-					continue;
-				}
 
 				add_history(inputBuffer); //Sets inputBuffer to 0
 

@@ -46,9 +46,9 @@ public:
 	};
 
 	static std::mutex eventsMapMutex;
-	static std::map<pthread_t, std::shared_ptr<PhpEvents>> eventsMap;
+	static std::map<int32_t, std::shared_ptr<PhpEvents>> eventsMap;
 
-	PhpEvents();
+	PhpEvents(std::function<void(std::string& output)>& outputCallback, std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)>& rpcCallback);
 	virtual ~PhpEvents();
 	void stop();
 	bool enqueue(std::shared_ptr<EventData>& entry);
@@ -56,7 +56,13 @@ public:
 	void addPeer(uint64_t peerId);
 	void removePeer(uint64_t peerId);
 	bool peerSubscribed(uint64_t peerId);
+
+	std::function<void(std::string& output)>& getOutputCallback() { return _outputCallback; };
+	std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)>& getRpcCallback() { return _rpcCallback; };
 private:
+	std::function<void(std::string& output)> _outputCallback;
+	std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)> _rpcCallback;
+
 	static const int32_t _bufferSize = 100;
 	std::mutex _bufferMutex;
 	int32_t _bufferHead = 0;

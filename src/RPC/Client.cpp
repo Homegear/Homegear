@@ -411,9 +411,7 @@ void Client::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
 	try
 	{
 		if(!deviceDescriptions) return;
-#ifdef SCRIPTENGINE
-		GD::scriptEngine->broadcastNewDevices(deviceDescriptions);
-#endif
+		GD::scriptEngineServer->broadcastNewDevices(deviceDescriptions);
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		std::string methodName("newDevices");
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
@@ -473,9 +471,7 @@ void Client::broadcastDeleteDevices(BaseLib::PVariable deviceAddresses, BaseLib:
 	try
 	{
 		if(!deviceAddresses || !deviceInfo) return;
-#ifdef SCRIPTENGINE
-		GD::scriptEngine->broadcastDeleteDevices(deviceInfo);
-#endif
+		GD::scriptEngineServer->broadcastDeleteDevices(deviceInfo);
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
@@ -539,9 +535,7 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
 	try
 	{
 		if(id == 0 || address.empty()) return;
-#ifdef SCRIPTENGINE
-		GD::scriptEngine->broadcastUpdateDevice(id, channel, hint);
-#endif
+		GD::scriptEngineServer->broadcastUpdateDevice(id, channel, hint);
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{

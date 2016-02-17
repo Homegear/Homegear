@@ -58,7 +58,7 @@ public:
 	bool initialized() { return _initialized; }
 	std::pair<std::string, std::string> basicClient();
 	bool basicServer(std::shared_ptr<BaseLib::RPC::RPCHeader>& binaryHeader);
-	bool basicServer(BaseLib::HTTP& httpPacket);
+	bool basicServer(BaseLib::Http& httpPacket);
 	bool basicServer(BaseLib::WebSocket& webSocket);
 	bool sessionServer(BaseLib::WebSocket& webSocket);
 protected:
@@ -72,7 +72,7 @@ protected:
 	std::string _userName;
 	std::string _password;
 	std::pair<std::string, std::string> _basicAuthString;
-	BaseLib::HTTP _http;
+	BaseLib::Http _http;
 	std::shared_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
 	std::shared_ptr<BaseLib::RPC::JsonDecoder> _jsonDecoder;
 

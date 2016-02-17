@@ -885,12 +885,11 @@ BaseLib::PVariable RPCGetAllMetadata::invoke(BaseLib::PRpcClientInfo clientInfo,
 
 BaseLib::PVariable RPCGetAllScripts::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
-#ifdef SCRIPTENGINE
 	try
 	{
 		if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
 
-		return GD::scriptEngine->getAllScripts();
+		return GD::scriptEngineServer->getAllScripts();
 	}
 	catch(const std::exception& ex)
     {
@@ -905,9 +904,6 @@ BaseLib::PVariable RPCGetAllScripts::invoke(BaseLib::PRpcClientInfo clientInfo, 
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
-#else
-    return BaseLib::Variable::createError(-32500, "This version of Homegear is compiled without script engine.");
-#endif
 }
 
 BaseLib::PVariable RPCGetAllSystemVariables::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
@@ -2939,7 +2935,6 @@ BaseLib::PVariable RPCRssiInfo::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 
 BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
-#ifdef SCRIPTENGINE
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
@@ -2980,12 +2975,12 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 		if(internalEngine)
 		{
 			if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Executing script \"" + path + "\" with parameters \"" + arguments + "\" using internal script engine.");
-			std::shared_ptr<std::vector<char>> scriptOutput(new std::vector<char>());
-			GD::scriptEngine->execute(path, arguments, scriptOutput, &exitCode, wait);
-			if(scriptOutput->size() > 0)
+			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli, path, arguments));
+			if(wait) scriptInfo->returnOutput = true;
+			GD::scriptEngineServer->executeScript(scriptInfo, wait);
+			if(!scriptInfo->output.empty())
 			{
-				std::string outputString(&scriptOutput->at(0), &scriptOutput->at(0) + scriptOutput->size());
-				return BaseLib::PVariable(new BaseLib::Variable(outputString));
+				return BaseLib::PVariable(new BaseLib::Variable(scriptInfo->output));
 			}
 			else return BaseLib::PVariable(new BaseLib::Variable(exitCode));
 		}
@@ -3029,9 +3024,6 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
-#else
-    return BaseLib::Variable::createError(-32500, "This version of Homegear is compiled without script engine.");
-#endif
 }
 
 BaseLib::PVariable RPCSearchDevices::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)

@@ -70,14 +70,14 @@ private:
 	// {{{ Webserver events
 		BaseLib::PEventHandler _webserverEventHandler;
 
-		bool onGet(BaseLib::Rpc::PServerInfo& serverInfo, BaseLib::HTTP& httpRequest, std::shared_ptr<BaseLib::SocketOperations>& socket, std::string& path);
+		bool onGet(BaseLib::Rpc::PServerInfo& serverInfo, BaseLib::Http& httpRequest, std::shared_ptr<BaseLib::SocketOperations>& socket, std::string& path);
 	// }}}
 
 	void getAddress();
 	void getUDN();
 	void getSocketDescriptor();
 	void listen();
-	void processPacket(BaseLib::HTTP& http);
+	void processPacket(BaseLib::Http& http);
 	void sendOK(std::string destinationIpAddress, int32_t destinationPort, bool rootDeviceOnly);
 	void sendNotify();
 	void sendByebye();

@@ -27,7 +27,7 @@
 * files in the program, then also delete it here.
 */
 
-
+#include "php_config_fixes.h"
 #include "../GD/GD.h"
 #include "PhpVariableConverter.h"
 

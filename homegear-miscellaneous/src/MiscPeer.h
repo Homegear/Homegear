@@ -78,6 +78,8 @@ public:
 	virtual PVariable setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel, std::string valueKey, PVariable value, bool wait);
 	//End RPC methods
 protected:
+	bool _shuttingDown = false;
+	bool _scriptRunning = false;
 	bool _stopRunProgramThread = true;
 	std::thread _runProgramThread;
 	pid_t _programPID = -1;
@@ -88,6 +90,7 @@ protected:
 
 	void runProgram();
 	void runScript();
+	void scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, int32_t exitCode);
 
 	virtual std::shared_ptr<BaseLib::Systems::ICentral> getCentral();
 

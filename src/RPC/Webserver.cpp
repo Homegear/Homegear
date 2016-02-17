@@ -17,7 +17,7 @@ WebServer::~WebServer()
 {
 }
 
-void WebServer::get(BaseLib::HTTP& http, std::shared_ptr<BaseLib::SocketOperations> socket)
+void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperations> socket)
 {
 	try
 	{
@@ -25,7 +25,7 @@ void WebServer::get(BaseLib::HTTP& http, std::shared_ptr<BaseLib::SocketOperatio
 		{	_out.printError("Error: Socket is nullptr.");
 			return;
 		}
-		std::string path = http.getHeader()->path;
+		std::string path = http.getHeader().path;
 
 		BaseLib::EventHandlers eventHandlers = getEventHandlers();
 		for(BaseLib::EventHandlers::const_iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i)
@@ -93,24 +93,25 @@ void WebServer::get(BaseLib::HTTP& http, std::shared_ptr<BaseLib::SocketOperatio
 
 		try
 		{
-			_out.printInfo("Client is requesting: " + http.getHeader()->path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
+			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
 			std::string ending = "";
 			int32_t pos = path.find_last_of('.');
 			if(pos != (signed)std::string::npos && (unsigned)pos < path.size() - 1) ending = path.substr(pos + 1);
 			GD::bl->hf.toLower(ending);
 			std::string contentString;
-#ifdef SCRIPTENGINE
 			if(ending == "php" || ending == "php5" || ending == "php7" || ending == "hgs")
 			{
-				GD::scriptEngine->executeWebRequest(_serverInfo->contentPath + path, http, _serverInfo, socket);
+				std::string fullPath = _serverInfo->contentPath + path;
+				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, http.serialize(), _serverInfo->serialize()));
+				scriptInfo->socket = socket;
+				GD::scriptEngineServer->executeScript(scriptInfo, true);
 				socket->close();
 				return;
 			}
-#endif
 			std::string contentType = _http.getMimeType(ending);
 			if(contentType.empty()) contentType = "application/octet-stream";
 			//Don't return content when method is "HEAD"
-			if(http.getHeader()->method == "GET") contentString = GD::bl->io.getFileContent(_serverInfo->contentPath + path);
+			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_serverInfo->contentPath + path);
 			std::string header;
 			_http.constructHeader(contentString.size(), contentType, 200, "OK", headers, header);
 			content.insert(content.end(), header.begin(), header.end());
@@ -144,17 +145,16 @@ void WebServer::get(BaseLib::HTTP& http, std::shared_ptr<BaseLib::SocketOperatio
     }
 }
 
-void WebServer::post(BaseLib::HTTP& http, std::shared_ptr<BaseLib::SocketOperations> socket)
+void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperations> socket)
 {
 	try
 	{
 		std::vector<char> content;
-#ifdef SCRIPTENGINE
 		if(!socket)
 		{	_out.printError("Error: Socket is nullptr.");
 			return;
 		}
-		std::string path = http.getHeader()->path;
+		std::string path = http.getHeader().path;
 
 		BaseLib::EventHandlers eventHandlers = getEventHandlers();
 		for(BaseLib::EventHandlers::const_iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i)
@@ -218,8 +218,11 @@ void WebServer::post(BaseLib::HTTP& http, std::shared_ptr<BaseLib::SocketOperati
 
 		try
 		{
-			_out.printInfo("Client is requesting: " + http.getHeader()->path + " (translated to: \"" + _serverInfo->contentPath + path + "\", method: POST)");
-			GD::scriptEngine->executeWebRequest(_serverInfo->contentPath + path, http, _serverInfo, socket);
+			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to: \"" + _serverInfo->contentPath + path + "\", method: POST)");
+			std::string fullPath = _serverInfo->contentPath + path;
+			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, http.serialize(), _serverInfo->serialize()));
+			scriptInfo->socket = socket;
+			GD::scriptEngineServer->executeScript(scriptInfo, true);
 			socket->close();
 		}
 		catch(const std::exception& ex)
@@ -234,10 +237,6 @@ void WebServer::post(BaseLib::HTTP& http, std::shared_ptr<BaseLib::SocketOperati
 			send(socket, content);
 			return;
 		}
-#else
-		getError(304, _http.getStatusText(304), "Homegear is compiled without script engine.", content);
-		send(socket, content);
-#endif
 	}
 	catch(const std::exception& ex)
     {

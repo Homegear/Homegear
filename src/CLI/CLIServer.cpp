@@ -940,7 +940,7 @@ std::string Server::handleModuleCommand(std::string& command)
 }
 
 
-std::string Server::handleGlobalCommand(std::string& command)
+std::string Server::handleGlobalCommand(std::shared_ptr<ClientData> client, std::string& command)
 {
 	try
 	{
@@ -951,6 +951,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "debuglevel (dl)\t\tChanges the debug level" << std::endl;
 			stringStream << "runscript (rs)\t\tExecutes a script with the internal PHP engine" << std::endl;
+			stringStream << "scriptcount (sc)\t\tReturns the number of currently running scripts" << std::endl;
 			stringStream << "rpcservers (rpc)\t\tLists all active RPC servers" << std::endl;
 			stringStream << "rpcclients (rcl)\t\tLists all active RPC clients" << std::endl;
 			stringStream << "threads\t\tPrints current thread count" << std::endl;
@@ -1030,19 +1031,43 @@ std::string Server::handleGlobalCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			std::shared_ptr<std::vector<char>> scriptOutput(new std::vector<char>());
-#ifdef SCRIPTENGINE
-			int32_t exitCode = 0;
-			GD::scriptEngine->execute(path, arguments.str(), scriptOutput, &exitCode);
-			if(scriptOutput->size() > 0)
+			std::string argumentsString = arguments.str();
+			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli, path, argumentsString));
+			scriptInfo->returnOutput = true;
+			GD::scriptEngineServer->executeScript(scriptInfo, true);
+			if(!scriptInfo->output.empty()) stringStream << scriptInfo->output;
+			stringStream << "Exit code: " << std::dec << scriptInfo->exitCode << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 11, "scriptcount") == 0 || command.compare(0, 2, "sc") == 0)
+		{
+			std::string path;
+
+			std::stringstream stream(command);
+			std::string element;
+			std::stringstream arguments;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
 			{
-				std::string outputString(&scriptOutput->at(0), &scriptOutput->at(0) + scriptOutput->size());
-				stringStream << outputString << std::endl;
+				if(index == 0)
+				{
+					index++;
+					continue;
+				}
+				else
+				{
+					index++;
+					break;
+				}
 			}
-			stringStream << "Exit code: " << std::dec << exitCode << std::endl;
-#else
-			stringStream << "This Homegear binary is compiled without script engine support." << std::endl;
-#endif
+			if(index > 1)
+			{
+				stringStream << "Description: This command returns the total number of currently running scripts." << std::endl;
+				stringStream << "Usage: scriptcount" << std::endl << std::endl;
+				return stringStream.str();
+			}
+
+			stringStream << std::dec << GD::scriptEngineServer->scriptCount() << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 10, "rpcclients") == 0 || command.compare(0, 3, "rcl") == 0)
@@ -1255,7 +1280,7 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
 	try
 	{
 		if(!command.empty() && command.at(0) == 0) return;
-		std::string response = handleGlobalCommand(command);
+		std::string response = handleGlobalCommand(clientData, command);
 		if(response.empty())
 		{
 			//User commands can be executed when family is selected
@@ -1265,13 +1290,37 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
 			else response = GD::familyController->handleCliCommand(command);
 		}
 		response.push_back(0);
+		send(clientData, response);
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void Server::send(std::shared_ptr<ClientData> client, std::string& data)
+{
+	try
+	{
+		std::lock_guard<std::mutex> clientLock(client->sendMutex);
+		if(client->fileDescriptor->descriptor == -1) return;
 		int32_t totallySentBytes = 0;
-		while (totallySentBytes < (signed)response.size())
+		while (totallySentBytes < (signed)data.size())
 		{
-			int32_t sentBytes = send(clientData->fileDescriptor->descriptor, response.c_str() + totallySentBytes, response.size() - totallySentBytes, MSG_NOSIGNAL);
+			int32_t sizeToSend = data.size() - totallySentBytes;
+			if(totallySentBytes + sizeToSend == (signed)data.size() && sizeToSend == 1024) sizeToSend -= 1; //Avoid packet size of exactly 1024, so CLI client does not hang. I know, this is a bad solution for the problem. At some point the CLI packets need to RPC encoded to avoid this problem.
+			int32_t sentBytes = ::send(client->fileDescriptor->descriptor, data.c_str() + totallySentBytes, sizeToSend, MSG_NOSIGNAL);
 			if(sentBytes == -1)
 			{
-				GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
+				GD::out.printError("CLI Server: Error: Could not send data to client: " + std::to_string(client->fileDescriptor->descriptor));
 				break;
 			}
 			totallySentBytes += sentBytes;

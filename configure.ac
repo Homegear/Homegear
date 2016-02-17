@@ -71,26 +71,26 @@ esac
 AC_DEFINE_UNQUOTED([GITCOMMITSHABASE], [`./getGitCommitBase.sh`], [Define git commit SHA of libhomegear-base])
 AC_DEFINE_UNQUOTED([GITCOMMITSHAHOMEGEAR], [`./getGitCommitHomegear.sh`], [Define git commit SHA of Homegear])
 
-AC_ARG_WITH([scriptengine], [AS_HELP_STRING([--without-scriptengine], [Compile without script engine (removes the requirement for PHP)])], [with_scriptengine=no], [])
-AS_IF([test "x$with_scriptengine" = "xno"], [
-	AM_CONDITIONAL(WITH_SCRIPTENGINE, false)
-	], [
-	AM_CONDITIONAL(WITH_SCRIPTENGINE, true)
-	AC_DEFINE(SCRIPTENGINE, [], [Enables compilation of the PHP script engine])
-	])
+#AC_ARG_WITH([scriptengine], [AS_HELP_STRING([--without-scriptengine], [Compile without script engine (removes the requirement for PHP)])], [with_scriptengine=no], [])
+#AS_IF([test "x$with_scriptengine" = "xno"], [
+#	AM_CONDITIONAL(WITH_SCRIPTENGINE, false)
+#	], [
+#	AM_CONDITIONAL(WITH_SCRIPTENGINE, true)
+#	AC_DEFINE(SCRIPTENGINE, [], [Enables compilation of the PHP script engine])
+#	])
 
 AC_ARG_WITH([eventhandler], [AS_HELP_STRING([--without-eventhandler], [Compile without event handler])], [with_eventhandler=no], [])
 AS_IF([test "x$with_eventhandler" != "xno"], [	
 	AC_DEFINE(EVENTHANDLER, [], [Enables compilation of Homegear's event handler])
 	])
 
-AC_ARG_WITH([openssl], [AS_HELP_STRING([--without-openssl], [Compile without OpenSSL (disables SSL in MQTT)])], [with_openssl=no], [])
-AS_IF([test "x$with_openssl" = "xno"], [
-	AM_CONDITIONAL(WITH_OPENSSL, false)
-	], [
-	AM_CONDITIONAL(WITH_OPENSSL, true)
-	AC_DEFINE(OPENSSL, [], [Enables OpenSSL support in MQTT])
-	])
+#AC_ARG_WITH([openssl], [AS_HELP_STRING([--without-openssl], [Compile without OpenSSL (disables SSL in MQTT)])], [with_openssl=no], [])
+#AS_IF([test "x$with_openssl" = "xno"], [
+#	AM_CONDITIONAL(WITH_OPENSSL, false)
+#	], [
+#	AM_CONDITIONAL(WITH_OPENSSL, true)
+#	AC_DEFINE(OPENSSL, [], [Enables OpenSSL support in MQTT])
+#	])
 
 AC_ARG_WITH([i2c], [AS_HELP_STRING([--without-i2c], [Compile without I2C support (disables all I2C interfaces)])], [with_i2c=no], [])
 AS_IF([test "x$with_i2c" != "xno"], [

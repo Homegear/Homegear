@@ -56,7 +56,4 @@ std::unique_ptr<Mqtt> GD::mqtt;
 #ifdef EVENTHANDLER
 std::unique_ptr<EventHandler> GD::eventHandler;
 #endif
-#ifdef SCRIPTENGINE
-std::unique_ptr<ScriptEngine::ScriptEngine> GD::scriptEngine;
 std::unique_ptr<ScriptEngine::ScriptEngineServer> GD::scriptEngineServer;
-#endif

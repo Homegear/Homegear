@@ -15,9 +15,9 @@ else
 homegear_LDADD += -ldl
 endif
 
-if WITH_SCRIPTENGINE
+#if WITH_SCRIPTENGINE
 noinst_LIBRARIES = libscriptengine.a
-libscriptengine_a_SOURCES = ScriptEngine/php_sapi.cpp ScriptEngine/php_sapi.h ScriptEngine/PhpVariableConverter.cpp ScriptEngine/PhpVariableConverter.h ScriptEngine/PhpEvents.cpp ScriptEngine/PhpEvents.h ScriptEngine/ScriptEngine.cpp ScriptEngine/ScriptEngine.h ScriptEngine/ScriptEngineServer.cpp ScriptEngine/ScriptEngineServer.h ScriptEngine/ScriptEngineClient.cpp ScriptEngine/ScriptEngineClient.h ScriptEngine/ScriptEngineClientData.cpp ScriptEngine/ScriptEngineClientData.h ScriptEngine/ScriptEngineProcess.cpp ScriptEngine/ScriptEngineProcess.h
+libscriptengine_a_SOURCES = ScriptEngine/php_sapi.cpp ScriptEngine/php_sapi.h ScriptEngine/PhpVariableConverter.cpp ScriptEngine/PhpVariableConverter.h ScriptEngine/PhpEvents.cpp ScriptEngine/PhpEvents.h ScriptEngine/ScriptEngineServer.cpp ScriptEngine/ScriptEngineServer.h ScriptEngine/ScriptEngineClient.cpp ScriptEngine/ScriptEngineClient.h ScriptEngine/ScriptEngineClientData.cpp ScriptEngine/ScriptEngineClientData.h ScriptEngine/ScriptEngineProcess.cpp ScriptEngine/ScriptEngineProcess.h
 homegear_LDADD += libscriptengine.a
 libscriptengine_a_CPPFLAGS = -Wall -std=c++11 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
 if BSDSYSTEM
@@ -25,8 +25,8 @@ libscriptengine_a_CPPFLAGS += -I/usr/include/php7-homegear -I/usr/include/php7-h
 else
 libscriptengine_a_CPPFLAGS += -I/usr/include/php7-homegear -I/usr/include/php7-homegear/main -I/usr/include/php7-homegear/sapi -I/usr/include/php7-homegear/TSRM -I/usr/include/php7-homegear/Zend
 endif
-endif
+#endif
 
-if WITH_OPENSSL
-homegear_LDADD += -lcrypto -lssl
-endif
+#if WITH_OPENSSL
+#homegear_LDADD += -lcrypto -lssl
+#endif

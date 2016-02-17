@@ -32,10 +32,7 @@
 #define GD_H_
 
 #include "../../config.h"
-#ifdef SCRIPTENGINE
-#include "../ScriptEngine/ScriptEngine.h"
 #include "../ScriptEngine/ScriptEngineServer.h"
-#endif
 #include "../CLI/CLIServer.h"
 #include "../Events/EventHandler.h"
 #include "../Licensing/LicensingController.h"
@@ -70,9 +67,7 @@ public:
 	//We can work with rpcServers without Mutex, because elements are never deleted and iterators are not invalidated upon insertion of new elements.
 	static std::map<int32_t, RPC::Server> rpcServers;
 	static std::unique_ptr<RPC::Client> rpcClient;
-#ifdef SCRIPTENGINE
 	static std::unique_ptr<ScriptEngine::ScriptEngineServer> scriptEngineServer;
-#endif
 	static std::unique_ptr<CLI::Server> cliServer;
 	static BaseLib::Rpc::ServerInfo serverInfo;
 	static RPC::ClientSettings clientSettings;
@@ -82,9 +77,6 @@ public:
 	static std::unique_ptr<Mqtt> mqtt;
 #ifdef EVENTHANDLER
 	static std::unique_ptr<EventHandler> eventHandler;
-#endif
-#ifdef SCRIPTENGINE
-	static std::unique_ptr<ScriptEngine::ScriptEngine> scriptEngine;
 #endif
 
 	virtual ~GD() {}

@@ -46,15 +46,13 @@ public:
 	int32_t id = 0;
 	pid_t pid = 0;
 	bool closed = false;
-	uint32_t packetLength = 0;
-	uint32_t receivedDataLength = 0;
-	bool packetIsRequest = false;
 	std::vector<char> buffer;
-	std::vector<uint8_t> packet;
+	std::unique_ptr<BaseLib::Rpc::BinaryRpc> binaryRpc;
 	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
 	std::mutex sendMutex;
-	std::mutex requestMutex;
-	BaseLib::PVariable rpcResponse;
+	std::mutex waitMutex;
+	std::mutex rpcResponsesMutex;
+	std::map<int32_t, BaseLib::PPVariable> rpcResponses;
 	std::condition_variable requestConditionVariable;
 };
 
