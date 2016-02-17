@@ -240,7 +240,7 @@ void MiscPeer::scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, in
 	try
 	{
 		_scriptRunning = false;
-		if(!_shuttingDown) runScript();
+		if(!_shuttingDown && !GD::bl->shuttingDown) runScript();
 	}
 	catch(const std::exception& ex)
 	{

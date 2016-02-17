@@ -545,6 +545,109 @@ BaseLib::PVariable RPCAddLink::invoke(BaseLib::PRpcClientInfo clientInfo, std::s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCCopyConfig::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tString }),
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		int32_t channel1 = -1;
+		std::string serialNumber1;
+		int32_t channel2 = -1;
+		std::string serialNumber2;
+
+		bool useSerialNumber = false;
+		if(parameters->at(0)->type == BaseLib::VariableType::tString)
+		{
+			useSerialNumber = true;
+			int32_t pos = parameters->at(0)->stringValue.find(':');
+			if(pos > -1)
+			{
+				serialNumber1 = parameters->at(0)->stringValue.substr(0, pos);
+				if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel1 = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
+			}
+			else serialNumber1 = parameters->at(0)->stringValue;
+		}
+
+		if(parameters->at(2)->type == BaseLib::VariableType::tString)
+		{
+			int32_t pos = parameters->at(2)->stringValue.find(':');
+			if(pos > -1)
+			{
+				serialNumber2 = parameters->at(2)->stringValue.substr(0, pos);
+				if(parameters->at(2)->stringValue.size() > (unsigned)pos + 1) channel2 = std::stoll(parameters->at(2)->stringValue.substr(pos + 1));
+			}
+			else serialNumber2 = parameters->at(2)->stringValue;
+		}
+
+		BaseLib::PVariable parameterSet1;
+		BaseLib::PVariable parameterSet2;
+
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+			if(!central)continue;
+			if(useSerialNumber)
+			{
+				if(central->peerExists(serialNumber1)) parameterSet1 = central->getParamset(clientInfo, serialNumber1, channel1, BaseLib::DeviceDescription::ParameterGroup::Type::Enum::config, "", -1);
+				if(central->peerExists(serialNumber2)) parameterSet2 = central->getParamset(clientInfo, serialNumber2, channel2, BaseLib::DeviceDescription::ParameterGroup::Type::Enum::config, "", -1);
+			}
+			else
+			{
+				if(central->peerExists((uint64_t)parameters->at(0)->integerValue)) parameterSet1 = central->getParamset(clientInfo, parameters->at(0)->integerValue, parameters->at(1)->integerValue, BaseLib::DeviceDescription::ParameterGroup::Type::Enum::config, 0, -1);
+				if(central->peerExists((uint64_t)parameters->at(2)->integerValue)) parameterSet2 = central->getParamset(clientInfo, parameters->at(2)->integerValue, parameters->at(3)->integerValue, BaseLib::DeviceDescription::ParameterGroup::Type::Enum::config, 0, -1);
+			}
+		}
+
+		if(!parameterSet1) return BaseLib::Variable::createError(-3, "Source parameter set not found.");
+		if(!parameterSet2) return BaseLib::Variable::createError(-3, "Target parameter set not found.");
+
+		parameterSet1->print();
+		parameterSet2->print();
+
+		BaseLib::PVariable resultSet(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+		for(BaseLib::Struct::iterator i = parameterSet1->structValue->begin(); i != parameterSet1->structValue->end(); ++i)
+		{
+			BaseLib::Struct::iterator set2Iterator = parameterSet2->structValue->find(i->first);
+			if(set2Iterator == parameterSet2->structValue->end() || *(set2Iterator->second) == *(i->second) || set2Iterator->second->type != i->second->type) continue;
+
+			resultSet->structValue->insert(BaseLib::StructElement(i->first, i->second));
+		}
+
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+			if(!central) continue;
+			if(useSerialNumber)
+			{
+				if(central->peerExists(serialNumber2)) return central->putParamset(clientInfo, serialNumber2, channel2, BaseLib::DeviceDescription::ParameterGroup::Type::Enum::config, "", -1, resultSet);
+			}
+			else
+			{
+				if(central->peerExists((uint64_t)parameters->at(2)->integerValue)) return central->putParamset(clientInfo, parameters->at(2)->integerValue, parameters->at(3)->integerValue, BaseLib::DeviceDescription::ParameterGroup::Type::Enum::config, 0, -1, resultSet);
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
+}
+
 BaseLib::PVariable RPCClientServerInitialized::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	try
