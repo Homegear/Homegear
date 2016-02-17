@@ -56,6 +56,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 1000)
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("addDevice", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCAddDevice())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("addEvent", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCAddEvent())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("addLink", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCAddLink())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("copyConfig", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCCopyConfig())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("clientServerInitialized", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCClientServerInitialized())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("createDevice", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCCreateDevice())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("deleteDevice", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCDeleteDevice())));
