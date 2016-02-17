@@ -113,7 +113,7 @@ namespace RPC
 			bool _stopServer = false;
 			bool _stopped = true;
 			std::thread _mainThread;
-			int32_t _backlog = 10;
+			int32_t _backlog = 100;
 			std::mutex _garbageCollectionMutex;
 			int64_t _lastGargabeCollection = 0;
 			std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
@@ -142,7 +142,7 @@ namespace RPC
 			void sendRPCResponseToClient(std::shared_ptr<Client> client, BaseLib::PVariable variable, int32_t messageId, PacketType::Enum packetType, bool keepAlive);
 			void sendRPCResponseToClient(std::shared_ptr<Client> client, std::vector<char>& data, bool keepAlive);
 			void packetReceived(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
-			void handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib::HTTP& http);
+			void handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib::Http& http);
 			void analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
 			void analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
 			void callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters, int32_t messageId, PacketType::Enum responseType, bool keepAlive);

@@ -286,9 +286,7 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 #ifdef EVENTHANDLER
 		GD::eventHandler->trigger(peerID, channel, variables, values);
 #endif
-#ifdef SCRIPTENGINE
-		GD::scriptEngine->broadcastEvent(peerID, channel, variables, values);
-#endif
+		GD::scriptEngineServer->broadcastEvent(peerID, channel, variables, values);
 	}
 	catch(const std::exception& ex)
 	{
@@ -304,13 +302,11 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 	}
 }
 
-void FamilyController::onRunScript(std::string& script, uint64_t peerId, const std::string& args, bool keepAlive, int32_t interval)
+void FamilyController::onRunScript(PScriptInfo& scriptInfo, bool wait)
 {
 	try
 	{
-#ifdef SCRIPTENGINE
-		GD::scriptEngine->executeDeviceScript(script, peerId, args, keepAlive, interval);
-#endif
+		GD::scriptEngineServer->executeScript(scriptInfo, wait);
 	}
 	catch(const std::exception& ex)
 	{

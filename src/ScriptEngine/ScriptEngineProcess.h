@@ -39,12 +39,21 @@ using namespace BaseLib::ScriptEngine;
 namespace ScriptEngine
 {
 
+struct ScriptFinishedInfo
+{
+	bool finished = false;
+	std::mutex mutex;
+	std::condition_variable conditionVariable;
+};
+typedef std::shared_ptr<ScriptFinishedInfo> PScriptFinishedInfo;
+
 class ScriptEngineProcess
 {
 private:
 	pid_t _pid = 0;
 	std::mutex _scriptsMutex;
 	std::map<int32_t, PScriptInfo> _scripts;
+	std::map<int32_t, PScriptFinishedInfo> _scriptFinishedInfo;
 	PScriptEngineClientData _clientData;
 public:
 	ScriptEngineProcess();
@@ -54,13 +63,15 @@ public:
 
 	pid_t getPid() { return _pid; }
 	void setPid(pid_t value) { _pid = value; }
-	PScriptEngineClientData getClientData() { return _clientData; }
+	PScriptEngineClientData& getClientData() { return _clientData; }
 	void setClientData(PScriptEngineClientData& value) { _clientData = value; }
 
+	void invokeScriptOutput(int32_t id, std::string& output);
 	void invokeScriptFinished(int32_t exitCode);
-	void invokeScriptFinished(int32_t id, int32_t exitCode, std::string& output);
+	void invokeScriptFinished(int32_t id, int32_t exitCode);
 	uint32_t scriptCount();
 	BaseLib::ScriptEngine::PScriptInfo getScript(int32_t id);
+	PScriptFinishedInfo getScriptFinishedInfo(int32_t id);
 	void registerScript(int32_t id, PScriptInfo& scriptInfo);
 	void unregisterScript(int32_t id);
 };

@@ -489,22 +489,21 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 	try
 	{
 		responseData.clear();
-		ssize_t receivedBytes;
+		ssize_t receivedBytes = 0;
 
 		int32_t bufferMax = 2048;
 		char buffer[bufferMax + 1];
-		BaseLib::HTTP http;
+		BaseLib::Rpc::BinaryRpc binaryRpc(GD::bl.get());
+		BaseLib::Http http;
 		BaseLib::WebSocket webSocket;
-		uint32_t packetLength = 0;
-		uint32_t dataSize = 0;
 
-		while(!http.isFinished() && !webSocket.isFinished()) //This is equal to while(true) for binary packets
+		while(!binaryRpc.isFinished() && !http.isFinished() && !webSocket.isFinished()) //This is equal to while(true) for binary packets
 		{
 			try
 			{
 				receivedBytes = server->socket->proofread(buffer, bufferMax);
 				//Some clients send only one byte in the first packet
-				if(packetLength == 0 && receivedBytes == 1 && !http.headerIsFinished() && !webSocket.dataProcessingStarted()) receivedBytes += server->socket->proofread(&buffer[1], bufferMax - 1);
+				if(receivedBytes == 1 && !binaryRpc.processingStarted() && !http.headerIsFinished() && !webSocket.dataProcessingStarted()) receivedBytes += server->socket->proofread(&buffer[1], bufferMax - 1);
 			}
 			catch(const BaseLib::SocketTimeOutException& ex)
 			{
@@ -534,53 +533,19 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 
 			if(server->binary)
 			{
-				if(dataSize == 0)
+				try
 				{
-					if(!(buffer[3] & 1) && buffer[3] != 0xFF)
+					int32_t processedBytes = binaryRpc.process(&buffer[0], receivedBytes);
+					if(processedBytes < receivedBytes)
 					{
-						responseData.insert(responseData.end(), buffer, buffer + receivedBytes);
-						_out.printError("Error: RPC client received binary request as response from server " + server->hostname + ". Packet was: " + GD::bl->hf.getHexString(responseData));
-						if(!server->keepAlive) server->socket->close();
-						return;
+						_out.printError("Received more bytes (" + std::to_string(receivedBytes) + ") than binary packet size (" + std::to_string(processedBytes) + ").");
 					}
-					if(receivedBytes < 8)
-					{
-						_out.printError("Error: RPC client received binary packet smaller than 8 bytes from server " + server->hostname);
-						if(!server->keepAlive) server->socket->close();
-						return;
-					}
-					GD::bl->hf.memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
-					_out.printDebug("RPC client receiving binary rpc packet with size: " + std::to_string(receivedBytes) + ". Payload size is: " + std::to_string(dataSize));
-					if(dataSize == 0)
-					{
-						_out.printError("Error: RPC client received binary packet without data from server " + server->hostname + ".");
-						if(!server->keepAlive) server->socket->close();
-						return;
-					}
-					if(dataSize > 10485760)
-					{
-						_out.printError("Error: RPC client received packet with data larger than 10 MiB.");
-						if(!server->keepAlive) server->socket->close();
-						return;
-					}
-					packetLength = receivedBytes - 8;
-					responseData.insert(responseData.end(), buffer, buffer + receivedBytes);
 				}
-				else
+				catch(BaseLib::Rpc::BinaryRpcException& ex)
 				{
-					if(packetLength + receivedBytes > dataSize)
-					{
-						_out.printError("Error: RPC client received response packet larger than the expected data size.");
-						if(!server->keepAlive) server->socket->close();
-						return;
-					}
-					responseData.insert(responseData.end(), buffer, buffer + receivedBytes);
-					packetLength += receivedBytes;
-				}
-				if(packetLength == dataSize)
-				{
-					responseData.push_back('\0');
-					break;
+					if(!server->keepAlive) server->socket->close();
+					_out.printError("Error processing packet: " + ex.what());
+					return;
 				}
 			}
 			else if(server->webSocket)
@@ -595,17 +560,17 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 					_out.printError("RPC Client: Could not process WebSocket packet: " + ex.what() + " Buffer: " + std::string(buffer, receivedBytes));
 					return;
 				}
-				if(http.getContentSize() > 10485760 || http.getHeader()->contentLength > 10485760)
+				if(http.getContentSize() > 10485760 || http.getHeader().contentLength > 10485760)
 				{
 					if(!server->keepAlive) server->socket->close();
 					_out.printError("Error: Packet with data larger than 100 MiB received.");
 					return;
 				}
-				if(webSocket.isFinished() && webSocket.getHeader()->opcode == BaseLib::WebSocket::Header::Opcode::ping)
+				if(webSocket.isFinished() && webSocket.getHeader().opcode == BaseLib::WebSocket::Header::Opcode::ping)
 				{
 					_out.printInfo("Info: Websocket ping received.");
 					std::vector<char> pong;
-					webSocket.encode(*webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::pong, pong);
+					webSocket.encode(webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::pong, pong);
 					try
 					{
 						server->socket->proofwrite(pong);
@@ -642,13 +607,13 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 				{
 					http.process(buffer, receivedBytes, true); //Check for chunked packets (HomeMatic Manager, ioBroker). Necessary, because HTTP header does not contain transfer-encoding.
 				}
-				catch(BaseLib::HTTPException& ex)
+				catch(BaseLib::HttpException& ex)
 				{
 					if(!server->keepAlive) server->socket->close();
 					_out.printError("XML RPC Client: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, receivedBytes));
 					return;
 				}
-				if(http.getContentSize() > 10485760 || http.getHeader()->contentLength > 10485760)
+				if(http.getContentSize() > 10485760 || http.getHeader().contentLength > 10485760)
 				{
 					if(!server->keepAlive) server->socket->close();
 					_out.printError("Error: Packet with data larger than 100 MiB received.");
@@ -659,13 +624,13 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 		if(!server->keepAlive) server->socket->close();
 		if(GD::bl->debugLevel >= 5)
 		{
-			if(server->binary) _out.printDebug("Debug: Received packet from server " + server->hostname + ": " + GD::bl->hf.getHexString(responseData));
-			else if(http.isFinished() && !http.getContent()->empty()) _out.printDebug("Debug: Received packet from server " + server->hostname + ":\n" + std::string(&http.getContent()->at(0), http.getContent()->size()));
-			else if(webSocket.isFinished() && !webSocket.getContent()->empty()) _out.printDebug("Debug: Received packet from server " + server->hostname + ":\n" + std::string(&webSocket.getContent()->at(0), webSocket.getContent()->size()));
+			if(server->binary) _out.printDebug("Debug: Received packet from server " + server->hostname + ": " + GD::bl->hf.getHexString(binaryRpc.getData()));
+			else if(http.isFinished() && !http.getContent().empty()) _out.printDebug("Debug: Received packet from server " + server->hostname + ":\n" + std::string(&http.getContent().at(0), http.getContent().size()));
+			else if(webSocket.isFinished() && !webSocket.getContent().empty()) _out.printDebug("Debug: Received packet from server " + server->hostname + ":\n" + std::string(&webSocket.getContent().at(0), webSocket.getContent().size()));
 		}
-		if(server->webSocket && webSocket.isFinished()) responseData = *webSocket.getContent();
-		else if(http.isFinished()) responseData = *http.getContent();
-		return;
+		if(server->binary && binaryRpc.isFinished()) responseData = std::move(binaryRpc.getData());
+		else if(server->webSocket && webSocket.isFinished()) responseData = std::move(webSocket.getContent());
+		else if(http.isFinished()) responseData = std::move(http.getContent());
     }
     catch(const std::exception& ex)
     {

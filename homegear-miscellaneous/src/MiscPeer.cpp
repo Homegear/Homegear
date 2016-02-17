@@ -94,14 +94,22 @@ void MiscPeer::homegearShuttingDown()
 {
 	try
 	{
+		_shuttingDown = true;
 		Peer::homegearShuttingDown();
+
+		_stopRunProgramThread = true;
+		while(_scriptRunning)
+		{
+			_bl->out.printInfo("Info: Waiting for script to finish...");
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		}
+
 		if(_programPID != -1)
 		{
 			kill(_programPID, 15);
 			_programPID = -1;
 		}
 
-		_stopRunProgramThread = true;
 		if(_programPID != -1) GD::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
 		_bl->threadManager.join(_runProgramThread);
 	}
@@ -227,6 +235,27 @@ void MiscPeer::runProgram()
 	_programPID = -1;
 }
 
+void MiscPeer::scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, int32_t exitCode)
+{
+	try
+	{
+		_scriptRunning = false;
+		if(!_shuttingDown) runScript();
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 void MiscPeer::runScript()
 {
 	try
@@ -240,6 +269,9 @@ void MiscPeer::runScript()
 		if(_stopRunProgramThread) return;
 		std::string script = _rpcDevice->runProgram->script;
 		if(script.empty()) return;
+
+		_scriptRunning = true;
+		std::string path = _rpcDevice->getPath();
 		std::string args;
 		std::vector<std::string> arguments = _rpcDevice->runProgram->arguments;
 		for(std::vector<std::string>::iterator i = arguments.begin(); i != arguments.end(); ++i)
@@ -251,12 +283,14 @@ void MiscPeer::runScript()
 		BaseLib::HelperFunctions::trim(args);
 
 		if(_rpcDevice->runProgram->interval == 0) _rpcDevice->runProgram->interval = 10;
-		bool keepAlive = true;
-		int32_t interval = -1;
-		if(_rpcDevice->runProgram->startType == RunProgram::StartType::once) keepAlive = false;
-		if(_rpcDevice->runProgram->startType == RunProgram::StartType::interval) interval = _rpcDevice->runProgram->interval * 1000;
 
-		raiseRunScript(script, args, keepAlive, interval);
+		BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::device, path, script, args, _peerID));
+		if(_rpcDevice->runProgram->startType != RunProgram::StartType::once)
+		{
+			scriptInfo->scriptFinishedCallback = std::bind(&MiscPeer::scriptFinished, this, std::placeholders::_1, std::placeholders::_2);
+		}
+
+		raiseRunScript(scriptInfo, false);
 	}
 	catch(const std::exception& ex)
 	{

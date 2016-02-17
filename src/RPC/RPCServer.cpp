@@ -996,45 +996,45 @@ void RPCServer::collectGarbage()
     _garbageCollectionMutex.unlock();
 }
 
-void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib::HTTP& http)
+void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib::Http& http)
 {
 	try
 	{
-		if(http.getHeader()->fields.find("upgrade") != http.getHeader()->fields.end() && BaseLib::HelperFunctions::toLower(http.getHeader()->fields["upgrade"]) == "websocket")
+		if(http.getHeader().fields.find("upgrade") != http.getHeader().fields.end() && BaseLib::HelperFunctions::toLower(http.getHeader().fields["upgrade"]) == "websocket")
 		{
-			if(http.getHeader()->fields.find("sec-websocket-protocol") == http.getHeader()->fields.end() && (http.getHeader()->path.empty() || http.getHeader()->path == "/"))
+			if(http.getHeader().fields.find("sec-websocket-protocol") == http.getHeader().fields.end() && (http.getHeader().path.empty() || http.getHeader().path == "/"))
 			{
 				closeClientConnection(client);
 				_out.printError("Error: No websocket protocol specified.");
 				return;
 			}
-			if(http.getHeader()->fields.find("sec-websocket-key") == http.getHeader()->fields.end())
+			if(http.getHeader().fields.find("sec-websocket-key") == http.getHeader().fields.end())
 			{
 				closeClientConnection(client);
 				_out.printError("Error: No websocket key specified.");
 				return;
 			}
-			std::string protocol = http.getHeader()->fields["sec-websocket-protocol"];
+			std::string protocol = http.getHeader().fields["sec-websocket-protocol"];
 			BaseLib::HelperFunctions::toLower(protocol);
-			std::string websocketKey = http.getHeader()->fields["sec-websocket-key"] + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+			std::string websocketKey = http.getHeader().fields["sec-websocket-key"] + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 			std::vector<char> data(&websocketKey[0], &websocketKey[0] + websocketKey.size());
 			std::vector<char> sha1;
 			BaseLib::Crypt::sha1(data, sha1);
 			std::string websocketAccept;
 			BaseLib::Base64::encode(sha1, websocketAccept);
 			std::string pathProtocol;
-			int32_t pos = http.getHeader()->path.find('/', 1);
-			if(http.getHeader()->path.size() == 7 || pos == 7) pathProtocol = http.getHeader()->path.substr(1, 6);
+			int32_t pos = http.getHeader().path.find('/', 1);
+			if(http.getHeader().path.size() == 7 || pos == 7) pathProtocol = http.getHeader().path.substr(1, 6);
 			if(pathProtocol == "client" || pathProtocol == "server")
 			{
 				//path starts with "/client/" or "/server/". Both are not part of the client id.
-				if(http.getHeader()->path.size() > 8) client->webSocketClientId = http.getHeader()->path.substr(8);
+				if(http.getHeader().path.size() > 8) client->webSocketClientId = http.getHeader().path.substr(8);
 			}
-			else if(http.getHeader()->path.size() > 1)
+			else if(http.getHeader().path.size() > 1)
 			{
 				pathProtocol.clear();
 				//Full path is client id.
-				client->webSocketClientId = http.getHeader()->path.substr(1);
+				client->webSocketClientId = http.getHeader().path.substr(1);
 			}
 			BaseLib::HelperFunctions::toLower(client->webSocketClientId);
 
@@ -1088,7 +1088,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 		else
 		{
 			closeClientConnection(client);
-			_out.printError("Error: Connection upgrade type not supported: " + http.getHeader()->fields["upgrade"]);
+			_out.printError("Error: Connection upgrade type not supported: " + http.getHeader().fields["upgrade"]);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1114,12 +1114,11 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 		char buffer[bufferMax + 1];
 		//Make sure the buffer is null terminated.
 		buffer[bufferMax] = '\0';
-		std::vector<char> packet;
-		uint32_t packetLength = 0;
-		int32_t bytesRead;
-		uint32_t dataSize = 0;
+		int32_t processedBytes = 0;
+		int32_t bytesRead = 0;
 		PacketType::Enum packetType = PacketType::binaryRequest;
-		BaseLib::HTTP http;
+		BaseLib::Rpc::BinaryRpc binaryRpc(GD::bl.get());
+		BaseLib::Http http;
 		BaseLib::WebSocket webSocket;
 
 		_out.printDebug("Listening for incoming packets from client number " + std::to_string(client->socketDescriptor->id) + ".");
@@ -1130,7 +1129,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				bytesRead = client->socket->proofread(buffer, bufferMax);
 				buffer[bufferMax] = 0; //Even though it shouldn't matter, make sure there is a null termination.
 				//Some clients send only one byte in the first packet
-				if(packetLength == 0 && !http.headerProcessingStarted() && !webSocket.dataProcessingStarted() && bytesRead == 1) bytesRead += client->socket->proofread(&buffer[1], bufferMax - 1);
+				if(bytesRead == 1 && !binaryRpc.processingStarted() && !http.headerProcessingStarted() && !webSocket.dataProcessingStarted()) bytesRead += client->socket->proofread(&buffer[1], bufferMax - 1);
 			}
 			catch(const BaseLib::SocketTimeOutException& ex)
 			{
@@ -1154,178 +1153,142 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				std::vector<uint8_t> rawPacket(buffer, buffer + bytesRead);
 				_out.printDebug("Debug: Packet received: " + BaseLib::HelperFunctions::getHexString(rawPacket));
 			}
-			if(!http.headerProcessingStarted() && !webSocket.dataProcessingStarted() && packetLength == 0 && !strncmp(&buffer[0], "Bin", 3))
+			if(binaryRpc.processingStarted() || (!binaryRpc.processingStarted() && !http.headerProcessingStarted() && !webSocket.dataProcessingStarted() && !strncmp(&buffer[0], "Bin", 3)))
 			{
 				if(!_info->xmlrpcServer) continue;
-				//buffer[3] & 1 is true for buffer[3] == 0xFF, too
-				packetType = (buffer[3] & 1) ? PacketType::Enum::binaryResponse : PacketType::Enum::binaryRequest;
-				if(bytesRead < 8) continue;
-				uint32_t headerSize = 0;
-				if(buffer[3] & 0x40)
-				{
-					GD::bl->hf.memcpyBigEndian((char*)&headerSize, buffer + 4, 4);
-					if(bytesRead < (signed)headerSize + 12)
-					{
-						_out.printError("Error: Binary rpc packet has invalid header size.");
-						continue;
-					}
-					GD::bl->hf.memcpyBigEndian((char*)&dataSize, buffer + 8 + headerSize, 4);
-					dataSize += headerSize + 4;
-				}
-				else GD::bl->hf.memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
-				_out.printDebug("Receiving binary rpc packet with size: " + std::to_string(dataSize), 6);
-				if(dataSize == 0) continue;
-				if(headerSize > 1024)
-				{
-					_out.printError("Error: Binary rpc packet with header larger than 1 KiB received.");
-					continue;
-				}
-				if(dataSize > 10485760)
-				{
-					_out.printError("Error: Packet with data larger than 10 MiB received.");
-					continue;
-				}
-				packet.clear();
-				packet.reserve(dataSize + 9);
-				packet.insert(packet.end(), buffer, buffer + bytesRead);
-				std::shared_ptr<BaseLib::RPC::RPCHeader> header = _rpcDecoder->decodeHeader(packet);
-				if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic)
-				{
-					if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
-					try
-					{
-						if(!client->auth.basicServer(header))
-						{
-							_out.printError("Error: Authorization failed. Closing connection.");
-							break;
-						}
-						else _out.printDebug("Client successfully authorized using basic authentication.");
-					}
-					catch(AuthException& ex)
-					{
-						_out.printError("Error: Authorization failed. Closing connection. Error was: " + ex.what());
-						break;
-					}
-				}
-				if(dataSize > (unsigned)bytesRead - 8) packetLength = bytesRead - 8;
-				else
-				{
-					packetLength = 0;
-					packetReceived(client, packet, packetType, true);
-					if(client->socketDescriptor->descriptor == -1)
-					{
-						if(GD::bl->debugLevel >= 4) _out.printInfo("Info: Connection to client number " + std::to_string(client->socketDescriptor->id) + " closed.");
-						break;
-					}
-				}
-			}
-			else if(!http.headerProcessingStarted() && !webSocket.dataProcessingStarted() && (!strncmp(&buffer[0], "GET ", 4) || !strncmp(&buffer[0], "HEAD ", 5)))
-			{
-				if(bytesRead < 8) continue;
-				buffer[bytesRead] = '\0';
-				packetType = PacketType::Enum::xmlRequest;
-
-				if(!_info->redirectTo.empty())
-				{
-					std::vector<char> data;
-					std::vector<std::string> additionalHeaders({std::string("Location: ") + _info->redirectTo});
-					_webServer->getError(301, "Moved Permanently", "The document has moved <a href=\"" + _info->redirectTo + "\">here</a>.", data, additionalHeaders);
-					sendRPCResponseToClient(client, data, false);
-					continue;
-				}
-				if(!_info->webServer)
-				{
-					std::vector<char> data;
-					_webServer->getError(400, "Bad Request", "Your client sent a request that this server could not understand.", data);
-					sendRPCResponseToClient(client, data, false);
-					continue;
-				}
 
 				try
 				{
-					http.reset();
-					http.process(buffer, bytesRead);
-				}
-				catch(BaseLib::HTTPException& ex)
-				{
-					_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
-					std::vector<char> data;
-					_webServer->getError(400, "Bad Request", "Your client sent a request that this server could not understand.", data);
-					sendRPCResponseToClient(client, data, false);
-				}
-			}
-			else if(!http.headerProcessingStarted() && !webSocket.dataProcessingStarted() && (!strncmp(&buffer[0], "POST", 4) || !strncmp(&buffer[0], "HTTP/1.", 7)))
-			{
-				if(bytesRead < 8) continue;
-				buffer[bytesRead] = '\0';
-				packetType = (!strncmp(&buffer[0], "POST", 4)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
-
-				try
-				{
-					http.reset();
-					http.process(buffer, bytesRead);
-				}
-				catch(BaseLib::HTTPException& ex)
-				{
-					_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
-				}
-			}
-			else if(client->webSocket && !webSocket.dataProcessingStarted())
-			{
-				packetType = PacketType::Enum::webSocketRequest;
-				webSocket.reset();
-				webSocket.process(buffer, bytesRead);
-			}
-			else if(packetLength > 0 || http.headerProcessingStarted() || webSocket.dataProcessingStarted())
-			{
-				if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::binaryResponse)
-				{
-					if(packetLength + bytesRead > dataSize)
+					processedBytes = 0;
+					while(processedBytes < bytesRead)
 					{
-						_out.printError("Error: Packet length is wrong.");
-						packetLength = 0;
-						continue;
-					}
-					packet.insert(packet.end(), buffer, buffer + bytesRead);
-					packetLength += bytesRead;
-					if(packetLength == dataSize)
-					{
-						packet.push_back('\0');
-						packetReceived(client, packet, packetType, true);
-						packetLength = 0;
-						if(client->socketDescriptor->descriptor == -1)
+						processedBytes += binaryRpc.process(&buffer[processedBytes], bytesRead - processedBytes);
+						if(binaryRpc.isFinished())
 						{
-							if(GD::bl->debugLevel >= 4) _out.printInfo("Info: Connection to client number " + std::to_string(client->socketDescriptor->id) + " closed.");
-							break;
+							std::shared_ptr<BaseLib::RPC::RPCHeader> header = _rpcDecoder->decodeHeader(binaryRpc.getData());
+							if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic)
+							{
+								if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
+								try
+								{
+									if(!client->auth.basicServer(header))
+									{
+										_out.printError("Error: Authorization failed. Closing connection.");
+										break;
+									}
+									else _out.printDebug("Client successfully authorized using basic authentication.");
+								}
+								catch(AuthException& ex)
+								{
+									_out.printError("Error: Authorization failed. Closing connection. Error was: " + ex.what());
+									break;
+								}
+							}
+
+							packetType = (binaryRpc.getType() == BaseLib::Rpc::BinaryRpc::Type::request) ? PacketType::Enum::binaryRequest : PacketType::Enum::binaryRequest;
+
+							packetReceived(client, binaryRpc.getData(), packetType, true);
+							binaryRpc.reset();
+							if(client->socketDescriptor->descriptor == -1)
+							{
+								if(GD::bl->debugLevel >= 4) _out.printInfo("Info: Connection to client number " + std::to_string(client->socketDescriptor->id) + " closed.");
+								break;
+							}
 						}
 					}
 				}
-				else
+				catch(BaseLib::Rpc::BinaryRpcException& ex)
+				{
+					_out.printError("Error processing binary RPC packet. Closing connection. Error was: " + ex.what());
+					binaryRpc.reset();
+					break;
+				}
+				continue;
+			}
+			else if(!binaryRpc.processingStarted() && !http.headerProcessingStarted() && !webSocket.dataProcessingStarted())
+			{
+				if(!strncmp(&buffer[0], "GET ", 4) || !strncmp(&buffer[0], "HEAD ", 5))
 				{
 					buffer[bytesRead] = '\0';
-					if(client->webSocket) webSocket.process(buffer, bytesRead);
-					else
-					{
-						try
-						{
-							http.process(buffer, bytesRead);
-						}
-						catch(BaseLib::HTTPException& ex)
-						{
-							_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
-							http.reset();
-							std::vector<char> data;
-							_webServer->getError(400, "Bad Request", "Your client sent a request that the server couldn't understand..", data);
-							sendRPCResponseToClient(client, data, false);
-						}
+					packetType = PacketType::Enum::xmlRequest;
 
-						if(http.getContentSize() > 10485760)
-						{
-							http.reset();
-							std::vector<char> data;
-							_webServer->getError(400, "Bad Request", "Your client sent a request larger than 10 MiB.", data);
-							sendRPCResponseToClient(client, data, false);
-						}
+					if(!_info->redirectTo.empty())
+					{
+						std::vector<char> data;
+						std::vector<std::string> additionalHeaders({std::string("Location: ") + _info->redirectTo});
+						_webServer->getError(301, "Moved Permanently", "The document has moved <a href=\"" + _info->redirectTo + "\">here</a>.", data, additionalHeaders);
+						sendRPCResponseToClient(client, data, false);
+						continue;
+					}
+					if(!_info->webServer)
+					{
+						std::vector<char> data;
+						_webServer->getError(400, "Bad Request", "Your client sent a request that this server could not understand.", data);
+						sendRPCResponseToClient(client, data, false);
+						continue;
+					}
+
+					try
+					{
+						http.reset();
+						http.process(buffer, bytesRead);
+					}
+					catch(BaseLib::HttpException& ex)
+					{
+						_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
+						std::vector<char> data;
+						_webServer->getError(400, "Bad Request", "Your client sent a request that this server could not understand.", data);
+						sendRPCResponseToClient(client, data, false);
+					}
+				}
+				else if(!strncmp(&buffer[0], "POST", 4) || !strncmp(&buffer[0], "HTTP/1.", 7))
+				{
+					if(bytesRead < 8) continue;
+					buffer[bytesRead] = '\0';
+					packetType = (!strncmp(&buffer[0], "POST", 4)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
+
+					try
+					{
+						http.reset();
+						http.process(buffer, bytesRead);
+					}
+					catch(BaseLib::HttpException& ex)
+					{
+						_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
+					}
+				}
+				else if(client->webSocket)
+				{
+					packetType = PacketType::Enum::webSocketRequest;
+					webSocket.reset();
+					webSocket.process(buffer, bytesRead);
+				}
+			}
+			else if(http.headerProcessingStarted() || webSocket.dataProcessingStarted())
+			{
+				buffer[bytesRead] = '\0';
+				if(client->webSocket) webSocket.process(buffer, bytesRead);
+				else
+				{
+					try
+					{
+						http.process(buffer, bytesRead);
+					}
+					catch(BaseLib::HttpException& ex)
+					{
+						_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
+						http.reset();
+						std::vector<char> data;
+						_webServer->getError(400, "Bad Request", "Your client sent a request that the server couldn't understand..", data);
+						sendRPCResponseToClient(client, data, false);
+					}
+
+					if(http.getContentSize() > 10485760)
+					{
+						http.reset();
+						std::vector<char> data;
+						_webServer->getError(400, "Bad Request", "Your client sent a request larger than 10 MiB.", data);
+						sendRPCResponseToClient(client, data, false);
 					}
 				}
 			}
@@ -1336,10 +1299,10 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			}
 			if(client->webSocket && webSocket.isFinished())
 			{
-				if(webSocket.getHeader()->close)
+				if(webSocket.getHeader().close)
 				{
 					std::vector<char> response;
-					webSocket.encode(*webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::close, response);
+					webSocket.encode(webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::close, response);
 					sendRPCResponseToClient(client, response, false);
 					closeClientConnection(client);
 				}
@@ -1382,30 +1345,29 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					}
 					catch(AuthException& ex)
 					{
-						_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection. Error was: " + ex.what());
+						_out.printError("Error: Authorization failed for host " + http.getHeader().host + ". Closing connection. Error was: " + ex.what());
 						break;
 					}
 				}
-				else if(webSocket.getHeader()->opcode == BaseLib::WebSocket::Header::Opcode::ping)
+				else if(webSocket.getHeader().opcode == BaseLib::WebSocket::Header::Opcode::ping)
 				{
 					std::vector<char> response;
-					webSocket.encode(*webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::pong, response);
+					webSocket.encode(webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::pong, response);
 					sendRPCResponseToClient(client, response, false);
 				}
 				else
 				{
-					packetReceived(client, *webSocket.getContent(), packetType, true);
+					packetReceived(client, webSocket.getContent(), packetType, true);
 				}
 				webSocket.reset();
 			}
 			else if(http.isFinished())
 			{
-				if(_info->webSocket && (http.getHeader()->connection & BaseLib::HTTP::Connection::upgrade))
+				if(_info->webSocket && (http.getHeader().connection & BaseLib::Http::Connection::upgrade))
 				{
 					//Do this before basic auth, because currently basic auth is not supported by websockets. Authorization takes place after the upgrade.
 					handleConnectionUpgrade(client, http);
 					if(client->closed) break; //No auth and client transferred.
-					packetLength = 0;
 					http.reset();
 					continue;
 				}
@@ -1417,31 +1379,30 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					{
 						if(!client->auth.basicServer(http))
 						{
-							_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection.");
+							_out.printError("Error: Authorization failed for host " + http.getHeader().host + ". Closing connection.");
 							break;
 						}
 						else _out.printInfo("Info: Client successfully authorized using basic authentication.");
 					}
 					catch(AuthException& ex)
 					{
-						_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection. Error was: " + ex.what());
+						_out.printError("Error: Authorization failed for host " + http.getHeader().host + ". Closing connection. Error was: " + ex.what());
 						break;
 					}
 				}
-				if(_info->webServer && (!_info->xmlrpcServer || http.getHeader()->method != "POST" || (!http.getHeader()->contentType.empty() && http.getHeader()->contentType != "text/xml")) && (!_info->jsonrpcServer || http.getHeader()->method != "POST" || (!http.getHeader()->contentType.empty() && http.getHeader()->contentType != "application/json")))
+				if(_info->webServer && (!_info->xmlrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml")) && (!_info->jsonrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json")))
 				{
 
-					http.getHeader()->remoteAddress = client->address;
-					http.getHeader()->remotePort = client->port;
-					if(http.getHeader()->method == "POST") _webServer->post(http, client->socket);
-					else if(http.getHeader()->method == "GET" || http.getHeader()->method == "HEAD") _webServer->get(http, client->socket);
+					http.getHeader().remoteAddress = client->address;
+					http.getHeader().remotePort = client->port;
+					if(http.getHeader().method == "POST") _webServer->post(http, client->socket);
+					else if(http.getHeader().method == "GET" || http.getHeader().method == "HEAD") _webServer->get(http, client->socket);
 				}
 				else if(http.getContentSize() > 0 && (_info->xmlrpcServer || _info->jsonrpcServer))
 				{
-					if(http.getHeader()->contentType == "application/json" || http.getContent()->at(0) == '{') packetType = PacketType::jsonRequest;
-					packetReceived(client, *http.getContent(), packetType, http.getHeader()->connection & BaseLib::HTTP::Connection::Enum::keepAlive);
+					if(http.getHeader().contentType == "application/json" || http.getContent().at(0) == '{') packetType = PacketType::jsonRequest;
+					packetReceived(client, http.getContent(), packetType, http.getHeader().connection & BaseLib::Http::Connection::Enum::keepAlive);
 				}
-				packetLength = 0;
 				http.reset();
 				if(client->socketDescriptor->descriptor == -1)
 				{

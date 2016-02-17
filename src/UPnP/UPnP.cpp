@@ -203,7 +203,7 @@ void UPnP::listen()
 		fd_set readFileDescriptor;
 		timeval timeout;
 		int32_t nfds = 0;
-		BaseLib::HTTP http;
+		BaseLib::Http http;
 		while(!_stopServer)
 		{
 			try
@@ -276,23 +276,23 @@ void UPnP::listen()
 	GD::bl->fileDescriptorManager.shutdown(_serverSocketDescriptor);
 }
 
-void UPnP::processPacket(BaseLib::HTTP& http)
+void UPnP::processPacket(BaseLib::Http& http)
 {
 	try
 	{
-		BaseLib::HTTP::Header* header = http.getHeader();
-		if(!header || header->method != "M-SEARCH" || header->fields.find("st") == header->fields.end() || header->host.empty()) return;
+		BaseLib::Http::Header& header = http.getHeader();
+		if(header.method != "M-SEARCH" || header.fields.find("st") == header.fields.end() || header.host.empty()) return;
 
-		BaseLib::HelperFunctions::toLower(header->fields.at("st"));
-		if(header->fields.at("st") == "urn:schemas-upnp-org:device:basic:1" || header->fields.at("st") == "urn:schemas-upnp-org:device:basic:1.0" || header->fields.at("st") == "ssdp:all" || header->fields.at("st") == "upnp:rootdevice" || header->fields.at("st") == _st)
+		BaseLib::HelperFunctions::toLower(header.fields.at("st"));
+		if(header.fields.at("st") == "urn:schemas-upnp-org:device:basic:1" || header.fields.at("st") == "urn:schemas-upnp-org:device:basic:1.0" || header.fields.at("st") == "ssdp:all" || header.fields.at("st") == "upnp:rootdevice" || header.fields.at("st") == _st)
 		{
-			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Discovery packet received from " + header->host);
-			std::pair<std::string, std::string> address = BaseLib::HelperFunctions::splitLast(header->host, ':');
+			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Discovery packet received from " + header.host);
+			std::pair<std::string, std::string> address = BaseLib::HelperFunctions::splitLast(header.host, ':');
 			int32_t port = BaseLib::Math::getNumber(address.second, false);
 			if(!address.first.empty() && port > 0)
 			{
 				int32_t mx = 500;
-				if(header->fields.find("mx") != header->fields.end()) mx = BaseLib::Math::getNumber(header->fields.at("mx"), false) * 1000;
+				if(header.fields.find("mx") != header.fields.end()) mx = BaseLib::Math::getNumber(header.fields.at("mx"), false) * 1000;
 				std::this_thread::sleep_for(std::chrono::milliseconds(20));
 				//Wait for 0 to mx seconds for load balancing
 				if(mx > 500)
@@ -301,7 +301,7 @@ void UPnP::processPacket(BaseLib::HTTP& http)
 					GD::out.printDebug("Debug: Sleeping " + std::to_string(mx) + "ms before sending response.");
 					std::this_thread::sleep_for(std::chrono::milliseconds(mx));
 				}
-				sendOK(address.first, port, header->fields.at("st") == "upnp:rootdevice");
+				sendOK(address.first, port, header.fields.at("st") == "upnp:rootdevice");
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				sendNotify();
 			}
@@ -552,7 +552,7 @@ void UPnP::getSocketDescriptor()
 }
 
 // {{{ Webserver events
-	bool UPnP::onGet(BaseLib::Rpc::PServerInfo& serverInfo, BaseLib::HTTP& httpRequest, std::shared_ptr<BaseLib::SocketOperations>& socket, std::string& path)
+	bool UPnP::onGet(BaseLib::Rpc::PServerInfo& serverInfo, BaseLib::Http& httpRequest, std::shared_ptr<BaseLib::SocketOperations>& socket, std::string& path)
 	{
 		if(_stopServer) return false;
 		if(GD::bl->settings.enableUPnP() && path == "/description.xml")
@@ -563,7 +563,7 @@ void UPnP::getSocketDescriptor()
 			{
 				std::string header;
 				std::vector<std::string> additionalHeaders;
-				BaseLib::HTTP::constructHeader(content.size(), "text/xml", 200, "OK", additionalHeaders, header);
+				BaseLib::Http::constructHeader(content.size(), "text/xml", 200, "OK", additionalHeaders, header);
 				content.insert(content.begin(), header.begin(), header.end());
 				try
 				{

@@ -140,13 +140,13 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::RPC::RPCHeader>& binaryHeader)
 	return false;
 }
 
-bool Auth::basicServer(BaseLib::HTTP& httpPacket)
+bool Auth::basicServer(BaseLib::Http& httpPacket)
 {
 	if(!_initialized) throw AuthException("Not initialized.");
 	_http.reset();
 	uint32_t bufferLength = 1024;
 	char buffer[bufferLength + 1];
-	if(httpPacket.getHeader()->authorization.empty())
+	if(httpPacket.getHeader().authorization.empty())
 	{
 		if(_basicAuthHTTPHeader.empty())
 		{
@@ -170,7 +170,7 @@ bool Auth::basicServer(BaseLib::HTTP& httpPacket)
 			{
 				_http.process(buffer, bufferLength);
 			}
-			catch(BaseLib::HTTPException& ex)
+			catch(BaseLib::HttpException& ex)
 			{
 				throw AuthException("Authorization failed because of HTTP exception: " + ex.what());
 			}
@@ -181,12 +181,12 @@ bool Auth::basicServer(BaseLib::HTTP& httpPacket)
 		}
 	}
 	else _http = httpPacket;
-	if(_http.getHeader()->authorization.empty())
+	if(_http.getHeader().authorization.empty())
 	{
 		sendBasicUnauthorized(false);
 		throw AuthException("No header field \"Authorization\"");
 	}
-	std::pair<std::string, std::string> authData = BaseLib::HelperFunctions::splitLast(_http.getHeader()->authorization, ' ');
+	std::pair<std::string, std::string> authData = BaseLib::HelperFunctions::splitLast(_http.getHeader().authorization, ' ');
 	BaseLib::HelperFunctions::toLower(authData.first);
 	if(authData.first != "basic")
 	{
@@ -210,7 +210,7 @@ bool Auth::basicServer(BaseLib::HTTP& httpPacket)
 bool Auth::basicServer(BaseLib::WebSocket& webSocket)
 {
 	if(!_initialized) throw AuthException("Not initialized.");
-	if(webSocket.getContent()->empty())
+	if(webSocket.getContent().empty())
 	{
 		sendWebSocketUnauthorized(webSocket, "No data received.");
 		return false;
@@ -218,7 +218,7 @@ bool Auth::basicServer(BaseLib::WebSocket& webSocket)
 	BaseLib::PVariable variable;
 	try
 	{
-		variable = _jsonDecoder->decode(*webSocket.getContent());
+		variable = _jsonDecoder->decode(webSocket.getContent());
 	}
 	catch(BaseLib::RPC::JsonDecoderException& ex)
 	{
@@ -247,7 +247,7 @@ bool Auth::basicServer(BaseLib::WebSocket& webSocket)
 bool Auth::sessionServer(BaseLib::WebSocket& webSocket)
 {
 	if(!_initialized) throw AuthException("Not initialized.");
-	if(webSocket.getContent()->empty())
+	if(webSocket.getContent().empty())
 	{
 		sendWebSocketUnauthorized(webSocket, "No data received.");
 		return false;
@@ -255,7 +255,7 @@ bool Auth::sessionServer(BaseLib::WebSocket& webSocket)
 	BaseLib::PVariable variable;
 	try
 	{
-		variable = _jsonDecoder->decode(*webSocket.getContent());
+		variable = _jsonDecoder->decode(webSocket.getContent());
 	}
 	catch(BaseLib::RPC::JsonDecoderException& ex)
 	{
@@ -267,8 +267,7 @@ bool Auth::sessionServer(BaseLib::WebSocket& webSocket)
 		sendWebSocketUnauthorized(webSocket, "Received data is no json object.");
 		return false;
 	}
-#ifdef SCRIPTENGINE
-	if(variable->structValue->find("user") != variable->structValue->end() && GD::scriptEngine->checkSessionId(variable->structValue->at("user")->stringValue))
+	if(variable->structValue->find("user") != variable->structValue->end() && GD::scriptEngineServer->checkSessionId(variable->structValue->at("user")->stringValue))
 	{
 		sendWebSocketAuthorized(webSocket);
 		return true;
@@ -278,10 +277,6 @@ bool Auth::sessionServer(BaseLib::WebSocket& webSocket)
 		sendWebSocketUnauthorized(webSocket, "No session id specified.");
 		return false;
 	}
-#else
-	sendWebSocketUnauthorized(webSocket, "Session authentication is not supported as Homegear is compiled without script engine.");
-	return false;
-#endif
 }
 
 void Auth::sendWebSocketAuthorized(BaseLib::WebSocket& webSocket)

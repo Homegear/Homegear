@@ -41,15 +41,15 @@ namespace RPC
 			WebServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo);
 			virtual ~WebServer();
 
-			void get(BaseLib::HTTP& http, std::shared_ptr<BaseLib::SocketOperations> socket);
-			void post(BaseLib::HTTP& http, std::shared_ptr<BaseLib::SocketOperations> socket);
+			void get(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperations> socket);
+			void post(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperations> socket);
 			void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content);
 			void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content, std::vector<std::string>& additionalHeaders);
 		protected:
 		private:
 			BaseLib::Output _out;
 			BaseLib::Rpc::PServerInfo _serverInfo;
-			BaseLib::HTTP _http;
+			BaseLib::Http _http;
 
 			void send(std::shared_ptr<BaseLib::SocketOperations>& socket, std::vector<char>& data);
 	};

@@ -51,21 +51,30 @@
 #include <zend_exceptions.h>
 #include <ext/standard/info.h>
 
+namespace ScriptEngine
+{
+	class ScriptEngineClient;
+}
 
 typedef struct _zend_homegear_globals
 {
-	std::mutex requestMutex;
-	BaseLib::HTTP* http = nullptr;
-	BaseLib::SocketOperations* socket = nullptr;
-	std::vector<char>* output = nullptr;
+	std::function<void(std::string& output)> outputCallback;
+	std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)> rpcCallback;
+	BaseLib::Http http;
+	bool webRequest = false;
 	bool commandLine = false;
 	bool cookiesParsed = false;
 	int64_t peerId = 0;
+
+	// {{{ Needed by ScriptEngineClient
+	int32_t id = 0;
+	bool executionStarted = false;
+	// }}}
 } zend_homegear_globals;
 
 typedef struct _zend_homegear_superglobals
 {
-	BaseLib::HTTP* http;
+	BaseLib::Http* http;
 	BaseLib::Gpio* gpio;
 	std::mutex serialDevicesMutex;
 	std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>> serialDevices;

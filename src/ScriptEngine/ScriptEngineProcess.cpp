@@ -66,15 +66,42 @@ uint32_t ScriptEngineProcess::scriptCount()
     return (uint32_t)-1;
 }
 
-void ScriptEngineProcess::invokeScriptFinished(int32_t exitCode)
+void ScriptEngineProcess::invokeScriptOutput(int32_t id, std::string& output)
 {
 	try
 	{
-		std::string output;
 		std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
-		for(std::map<int32_t, PScriptInfo>::iterator i = _scripts.begin(); i != _scripts.end(); ++i)
+		std::map<int32_t, PScriptInfo>::iterator scriptsIterator = _scripts.find(id);
+		if(scriptsIterator != _scripts.end())
 		{
-			if(i->second->scriptFinishedCallback) i->second->scriptFinishedCallback(i->second, exitCode, output);
+			if(scriptsIterator->second->socket)
+			{
+				try
+				{
+					scriptsIterator->second->socket->proofwrite(output.c_str(), output.size());
+				}
+				catch(BaseLib::SocketDataLimitException& ex)
+				{
+					GD::out.printWarning("Warning: " + ex.what());
+					scriptsIterator->second->socket->close();
+				}
+				catch(const BaseLib::SocketOperationException& ex)
+				{
+					GD::out.printError("Error: " + ex.what());
+					scriptsIterator->second->socket->close();
+				}
+				catch(const std::exception& ex)
+				{
+					GD::out.printError(std::string("Error: ") + ex.what());
+					scriptsIterator->second->socket->close();
+				}
+			}
+			if(scriptsIterator->second->scriptOutputCallback) scriptsIterator->second->scriptOutputCallback(scriptsIterator->second, output);
+			if(scriptsIterator->second->returnOutput)
+			{
+				if(scriptsIterator->second->output.size() + output.size() > scriptsIterator->second->output.capacity()) scriptsIterator->second->output.reserve(scriptsIterator->second->output.capacity() + (((output.size() / 1024) + 1) * 1024));
+				scriptsIterator->second->output.append(output);
+			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -91,13 +118,53 @@ void ScriptEngineProcess::invokeScriptFinished(int32_t exitCode)
     }
 }
 
-void ScriptEngineProcess::invokeScriptFinished(int32_t id, int32_t exitCode, std::string& output)
+void ScriptEngineProcess::invokeScriptFinished(int32_t exitCode)
 {
 	try
 	{
 		std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
+		for(std::map<int32_t, PScriptFinishedInfo>::iterator i = _scriptFinishedInfo.begin(); i != _scriptFinishedInfo.end(); ++i)
+		{
+			i->second->finished = true;
+			i->second->conditionVariable.notify_all();
+		}
+		for(std::map<int32_t, PScriptInfo>::iterator i = _scripts.begin(); i != _scripts.end(); ++i)
+		{
+			i->second->exitCode = exitCode;
+			if(i->second->scriptFinishedCallback) i->second->scriptFinishedCallback(i->second, exitCode);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void ScriptEngineProcess::invokeScriptFinished(int32_t id, int32_t exitCode)
+{
+	try
+	{
+		std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
+		std::map<int32_t, PScriptFinishedInfo>::iterator scriptFinishedIterator = _scriptFinishedInfo.find(id);
+		if(scriptFinishedIterator != _scriptFinishedInfo.end())
+		{
+			scriptFinishedIterator->second->finished = true;
+			scriptFinishedIterator->second->conditionVariable.notify_all();
+		}
 		std::map<int32_t, PScriptInfo>::iterator scriptsIterator = _scripts.find(id);
-		if(scriptsIterator != _scripts.end() && scriptsIterator->second->scriptFinishedCallback) scriptsIterator->second->scriptFinishedCallback(scriptsIterator->second, exitCode, output);
+		if(scriptsIterator != _scripts.end())
+		{
+			scriptsIterator->second->exitCode = exitCode;
+			if(scriptsIterator->second->scriptFinishedCallback) scriptsIterator->second->scriptFinishedCallback(scriptsIterator->second, exitCode);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -136,12 +203,36 @@ PScriptInfo ScriptEngineProcess::getScript(int32_t id)
     return PScriptInfo();
 }
 
+PScriptFinishedInfo ScriptEngineProcess::getScriptFinishedInfo(int32_t id)
+{
+	try
+	{
+		std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
+		std::map<int32_t, PScriptFinishedInfo>::iterator scriptsIterator = _scriptFinishedInfo.find(id);
+		if(scriptsIterator != _scriptFinishedInfo.end()) return scriptsIterator->second;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return PScriptFinishedInfo();
+}
+
 void ScriptEngineProcess::registerScript(int32_t id, PScriptInfo& scriptInfo)
 {
 	try
 	{
 		std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
 		_scripts[id] = scriptInfo;
+		_scriptFinishedInfo[id] = PScriptFinishedInfo(new ScriptFinishedInfo());
 	}
 	catch(const std::exception& ex)
     {
@@ -163,6 +254,7 @@ void ScriptEngineProcess::unregisterScript(int32_t id)
 	{
 		std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
 		_scripts.erase(id);
+		_scriptFinishedInfo.erase(id);
 	}
 	catch(const std::exception& ex)
     {

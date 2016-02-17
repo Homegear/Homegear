@@ -60,16 +60,21 @@ private:
 		std::string script;
 	};
 
+	struct RequestInfo
+	{
+		std::mutex waitMutex;
+		std::condition_variable conditionVariable;
+	};
+	typedef std::shared_ptr<RequestInfo> PRequestInfo;
+
 	class ScriptGuard
 	{
 	private:
 		ScriptEngineClient* _client = nullptr;
-		zend_homegear_globals* _globals = nullptr;
 		int32_t _scriptId = 0;
-		std::shared_ptr<std::vector<char>> _output;
-		std::shared_ptr<int32_t> _exitCode;
+		PScriptInfo _scriptInfo;
 	public:
-		ScriptGuard(ScriptEngineClient* client, zend_homegear_globals* globals, int32_t scriptId, std::shared_ptr<std::vector<char>>& output, std::shared_ptr<int32_t>& exitCode) : _client(client), _globals(globals), _scriptId(scriptId), _output(output), _exitCode(exitCode) {}
+		ScriptGuard(ScriptEngineClient* client, zend_homegear_globals* globals, int32_t scriptId, PScriptInfo& scriptInfo) : _client(client), _scriptId(scriptId), _scriptInfo(scriptInfo) {}
 		virtual ~ScriptGuard();
 	};
 
@@ -77,49 +82,66 @@ private:
 	{
 	public:
 		QueueEntry() {}
-		QueueEntry(std::vector<uint8_t> packet, bool isRequest) { this->packet = packet; this->isRequest = isRequest; }
+		QueueEntry(std::vector<char>& packet, bool isRequest) { this->packet = packet; this->isRequest = isRequest; }
 		virtual ~QueueEntry() {}
 
-		std::vector<uint8_t> packet;
+		std::vector<char> packet;
 		bool isRequest = false;
 	};
 
+	std::mutex _disposeMutex;
 	bool _disposing = false;
 	BaseLib::Output _out;
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
+	int64_t _lastGargabeCollection = 0;
 	bool _closed = false;
 	std::mutex _sendMutex;
 	std::mutex _requestMutex;
+	std::mutex _waitMutex;
 	std::mutex _rpcResponsesMutex;
-	std::map<int32_t, BaseLib::PVariable> _rpcResponses;
+	std::map<int32_t, std::map<int32_t, BaseLib::PPVariable>> _rpcResponses;
 	std::condition_variable _requestConditionVariable;
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 	std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>> _localRpcMethods;
-	std::thread _registerClientThread;
+	std::thread _maintenanceThread;
 	std::mutex _scriptThreadMutex;
 	std::map<int32_t, std::pair<std::thread, bool>> _scriptThreads;
+	std::mutex _requestInfoMutex;
+	std::map<int32_t, PRequestInfo> _requestInfo;
 	std::map<std::string, std::shared_ptr<CacheInfo>> _scriptCache;
+	std::mutex _packetIdMutex;
+	int32_t _currentPacketId = 0;
 
+	std::unique_ptr<BaseLib::Rpc::BinaryRpc> _binaryRpc;
 	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
 
 	void collectGarbage();
 	std::vector<std::string> getArgs(const std::string& path, const std::string& args);
 	void registerClient();
-	BaseLib::PVariable sendRequest(int32_t scriptId, std::mutex& requestMutex, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters);
-	BaseLib::PVariable sendGlobalRequest(std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters);
-	void sendResponse(BaseLib::PVariable& variable);
-	void sendScriptFinished(zend_homegear_globals* globals, int32_t scriptId, std::string& output, int32_t exitCode);
+	void sendOutput(std::string& output);
+	BaseLib::PVariable callMethod(std::string& methodName, BaseLib::PVariable& parameters);
+	BaseLib::PVariable sendRequest(int32_t scriptId, std::string methodName, BaseLib::PArray& parameters);
+	BaseLib::PVariable sendGlobalRequest(std::string methodName, BaseLib::PArray& parameters);
+	void sendResponse(BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
+	void sendScriptFinished(int32_t exitCode);
 	void setThreadNotRunning(int32_t threadId);
 	void stopEventThreads();
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
-	void executeScriptThread(int32_t id, std::string path, std::string arguments, bool sendOutput);
-	void executeCliScript(int32_t id, std::string& script, std::string& path, std::string& arguments, std::shared_ptr<std::vector<char>>& output, std::shared_ptr<int32_t>& exitCode);
+	void scriptThread(int32_t id, PScriptInfo scriptInfo, bool sendOutput);
+	void runScript(int32_t id, PScriptInfo scriptInfo);
+	BaseLib::PVariable send(std::vector<char>& data);
 
 	// {{{ RPC methods
+		BaseLib::PVariable shutdown(BaseLib::PArray& parameters);
 		BaseLib::PVariable executeScript(BaseLib::PArray& parameters);
+		BaseLib::PVariable scriptCount(BaseLib::PArray& parameters);
+		BaseLib::PVariable broadcastEvent(BaseLib::PArray& parameters);
+		BaseLib::PVariable broadcastNewDevices(BaseLib::PArray& parameters);
+		BaseLib::PVariable broadcastDeleteDevices(BaseLib::PArray& parameters);
+		BaseLib::PVariable broadcastUpdateDevice(BaseLib::PArray& parameters);
 	// }}}
 };
 
