@@ -1312,7 +1312,7 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, BaseLib::PVar
 		if(rpcResult && rpcResult->errorStruct)
 		{
 			GD::out.printError("Error: Could not execute RPC method for event from peer with id " + std::to_string(event->peerID) + ", channel " + std::to_string(event->peerChannel) + " and variable " + event->variable + ". Error struct:");
-			rpcResult->print();
+			rpcResult->print(true);
 		}
 		if(event->lastRaised >= currentTime && (event->resetAfter > 0 || event->initialTime > 0))
 		{
