@@ -819,6 +819,7 @@ std::string Server::handleModuleCommand(std::string& command)
 				stringStream << "Unknown result code: " << result << std::endl;
 			}
 
+			stringStream << "Exit code: " << std::dec << result << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 14, "modules unload") == 0 || command.compare(0, 3, "mul") == 0)
@@ -868,6 +869,7 @@ std::string Server::handleModuleCommand(std::string& command)
 				stringStream << "Unknown result code: " << result << std::endl;
 			}
 
+			stringStream << "Exit code: " << std::dec << result << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 14, "modules reload") == 0 || command.compare(0, 3, "mrl") == 0)
@@ -920,6 +922,7 @@ std::string Server::handleModuleCommand(std::string& command)
 				stringStream << "Unknown result code: " << result << std::endl;
 			}
 
+			stringStream << "Exit code: " << std::dec << result << std::endl;
 			return stringStream.str();
 		}
 		else return "Unknown command.\n";
@@ -1036,7 +1039,7 @@ std::string Server::handleGlobalCommand(std::shared_ptr<ClientData> client, std:
 			scriptInfo->returnOutput = true;
 			GD::scriptEngineServer->executeScript(scriptInfo, true);
 			if(!scriptInfo->output.empty()) stringStream << scriptInfo->output;
-			stringStream << "Exit code: " << std::dec << scriptInfo->exitCode << std::endl;
+			stringStream << std::endl << "Exit code: " << std::dec << scriptInfo->exitCode << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 11, "scriptcount") == 0 || command.compare(0, 2, "sc") == 0)
