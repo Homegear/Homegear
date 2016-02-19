@@ -1039,7 +1039,7 @@ std::string Server::handleGlobalCommand(std::shared_ptr<ClientData> client, std:
 			scriptInfo->returnOutput = true;
 			GD::scriptEngineServer->executeScript(scriptInfo, true);
 			if(!scriptInfo->output.empty()) stringStream << scriptInfo->output;
-			stringStream << std::endl << "Exit code: " << std::dec << scriptInfo->exitCode << std::endl;
+			stringStream << "Exit code: " << std::dec << scriptInfo->exitCode << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 11, "scriptcount") == 0 || command.compare(0, 2, "sc") == 0)
