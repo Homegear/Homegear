@@ -1084,8 +1084,8 @@ int main(int argc, char* argv[])
     		{
     			GD::bl->settings.load(GD::configPath + "main.conf");
     			CLI::Client cliClient;
-    			cliClient.start();
-    			exit(0);
+    			int32_t exitCode = cliClient.start();
+    			exit(exitCode);
     		}
     		else if(arg == "-rse")
     		{
@@ -1117,7 +1117,8 @@ int main(int argc, char* argv[])
     			}
 
     			CLI::Client cliClient;
-    			exit(cliClient.start(command.str()));
+    			int32_t exitCode = cliClient.start(command.str());
+    			exit(exitCode);
     		}
     		else if(arg == "-t")
     		{

@@ -389,7 +389,7 @@ uint32_t ScriptEngineServer::scriptCount()
 		{
 			BaseLib::PArray parameters(new BaseLib::Array());
 			BaseLib::PVariable response = sendRequest(*i, "scriptCount", parameters);
-			count += response->arrayValue->at(1)->integerValue;
+			count += response->integerValue;
 		}
 		return count;
 	}
@@ -753,7 +753,7 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
 			clientData->rpcResponses.erase(packetId);
 		}
 
-		return *response;
+		return (*response)->arrayValue->at(1);
 	}
 	catch(const std::exception& ex)
     {
@@ -1261,6 +1261,7 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 		if(result->errorStruct)
 		{
 			_out.printError("Error: Could not execute script: " + result->structValue->at("faultString")->stringValue);
+			if(scriptInfo->returnOutput) scriptInfo->output.append("Error: Could not execute script: " + result->structValue->at("faultString")->stringValue + '\n');
 			process->invokeScriptFinished(scriptInfo->id, result->structValue->at("faultCode")->integerValue);
 			process->unregisterScript(scriptInfo->id);
 			return;

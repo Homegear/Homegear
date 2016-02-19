@@ -269,14 +269,17 @@ int32_t Client::start(std::string command)
 						{
 							_sendMutex.unlock();
 
+							int32_t exitCode = 0;
+
 							// {{{ Get last line and check if it contains the exit code.
 							if(response.size() > 2)
 							{
-								const char* pos = response.c_str() + response.size() - 2; // -2, because last line ends with new line
 
-								while(pos > response.c_str())
+								const char* pos = response.c_str() + response.size() - 2; // -2, because last line ends with new line
+								while(pos >= response.c_str())
 								{
-									if(*pos == '\n')
+									if(*pos == 'E') break;
+									else if(*pos == '\n')
 									{
 										pos++;
 										break;
@@ -290,15 +293,14 @@ int32_t Client::start(std::string command)
 								{
 									count = pos - response.c_str();
 									response = response.substr(0, count);
-									std::cout << response;
-									std::string exitCode = lastLine.substr(11);
-									return BaseLib::Math::getNumber(exitCode);
+									std::string exitCodeString = lastLine.substr(11);
+									exitCode = BaseLib::Math::getNumber(exitCodeString);
 								}
-								else std::cout << response;
+								std::cout << response;
 							}
 							// }}}
 
-							return 0;
+							return exitCode;
 						}
 						else std::cout << response;
 						break;
