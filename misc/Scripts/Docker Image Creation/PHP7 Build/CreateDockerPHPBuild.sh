@@ -196,10 +196,10 @@ cd ext
 if test ! -f ext_skel.in; then
 	touch ext_skel.in
 fi
-wget https://github.com/krakjoe/pthreads/archive/v3.1.5.tar.gz
-tar -zxf v3.1.5.tar.gz
-rm v3.1.5.tar.gz
-mv pthreads-3.1.5 pthreads
+wget https://github.com/krakjoe/pthreads/archive/v3.1.6.tar.gz
+tar -zxf v3.1.6.tar.gz
+rm v3.1.6.tar.gz
+mv pthreads-3.1.6 pthreads
 sed -i 's/{ZEND_STRL("cli")}/{ZEND_STRL("homegear")}/g' pthreads/php_pthreads.c
 cd ..
 autoconf
