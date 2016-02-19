@@ -1998,11 +1998,6 @@ BaseLib::PVariable RPCGetParamset::invoke(BaseLib::PRpcClientInfo clientInfo, st
 					if(parameters->at(parameterSetIndex)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(parameterSetIndex)->stringValue.substr(pos + 1));
 				}
 				else remoteSerialNumber = parameters->at(parameterSetIndex)->stringValue;
-				// {{{ HomeMatic-Konfigurator Bugfix
-				std::string copy = remoteSerialNumber;
-				BaseLib::HelperFunctions::toUpper(copy);
-				if(copy == serialNumber) remoteSerialNumber = copy;
-				// }}}
 			}
 		}
 		else
