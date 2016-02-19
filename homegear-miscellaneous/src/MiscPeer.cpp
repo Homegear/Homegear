@@ -242,8 +242,9 @@ void MiscPeer::scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, in
 		_scriptRunning = false;
 		if(!_shuttingDown && !GD::bl->shuttingDown)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-			runScript();
+			GD::out.printError("Error: Script of peer " + std::to_string(_peerID) + " was killed. Restarting in 10 seconds...");
+			_bl->threadManager.join(_runProgramThread);
+			_bl->threadManager.start(_runProgramThread, true, &MiscPeer::runScript, this, true);
 		}
 	}
 	catch(const std::exception& ex)
@@ -260,7 +261,7 @@ void MiscPeer::scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, in
 	}
 }
 
-void MiscPeer::runScript()
+void MiscPeer::runScript(bool delay)
 {
 	try
 	{
@@ -271,6 +272,11 @@ void MiscPeer::runScript()
 			continue;
 		}
 		if(_stopRunProgramThread) return;
+		if(delay)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+			if(_stopRunProgramThread) return;
+		}
 		std::string script = _rpcDevice->runProgram->script;
 		if(script.empty()) return;
 
@@ -553,7 +559,7 @@ void MiscPeer::initProgram()
 			_stopRunProgramThread = true;
 			_bl->threadManager.join(_runProgramThread);
 			_stopRunProgramThread = false;
-			if(!_rpcDevice->runProgram->script.empty()) _bl->threadManager.start(_runProgramThread, true, &MiscPeer::runScript, this);
+			if(!_rpcDevice->runProgram->script.empty()) _bl->threadManager.start(_runProgramThread, true, &MiscPeer::runScript, this, false);
 			else _bl->threadManager.start(_runProgramThread, true, &MiscPeer::runProgram, this);
 		}
 	}

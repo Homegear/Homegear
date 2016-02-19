@@ -89,7 +89,7 @@ protected:
     virtual void savePeers() {}
 
 	void runProgram();
-	void runScript();
+	void runScript(bool delay = false);
 	void scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, int32_t exitCode);
 
 	virtual std::shared_ptr<BaseLib::Systems::ICentral> getCentral();

@@ -212,15 +212,15 @@ void ScriptEngineClient::start()
 			else if(result == -1)
 			{
 				if(errno == EINTR) continue;
-				_out.printMessage("Connection to script server closed unexpectedly (1). Exiting.");
-				exit(1);
+				_out.printMessage("Connection to script server closed (1). Exiting.");
+				exit(0);
 			}
 
 			bytesRead = read(_fileDescriptor->descriptor, &buffer[0], 1024);
 			if(bytesRead <= 0) //read returns 0, when connection is disrupted.
 			{
-				_out.printMessage("Connection to script server closed unexpectedly (2). Exiting.");
-				exit(1);
+				_out.printMessage("Connection to script server closed (2). Exiting.");
+				exit(0);
 			}
 
 			if(bytesRead > (signed)buffer.size()) bytesRead = buffer.size();
@@ -1049,7 +1049,9 @@ BaseLib::PVariable ScriptEngineClient::scriptCount(BaseLib::PArray& parameters)
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
+		if(_disposing) return BaseLib::PVariable(new BaseLib::Variable(0));
+
+		collectGarbage();
 
 		return BaseLib::PVariable(new BaseLib::Variable((int32_t)_scriptThreads.size()));
 	}

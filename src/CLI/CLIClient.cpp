@@ -263,7 +263,7 @@ int32_t Client::start(std::string command)
 						}*/
 					}
 
-					if(bytes < 1024 || (bytes == 1024 && receiveBuffer[bytes - 1] == 0))
+					if(receiveBuffer[bytes - 1] == 0)
 					{
 						if(!command.empty())
 						{

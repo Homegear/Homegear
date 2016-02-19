@@ -314,6 +314,14 @@ void ScriptEngineServer::homegearShuttingDown()
 			BaseLib::PArray parameters(new BaseLib::Array());
 			sendRequest(*i, "shutdown", parameters);
 		}
+
+		int32_t i = 0;
+		while(_clients.size() > 0 && i < 60)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			collectGarbage();
+			i++;
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -1206,6 +1214,9 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 		if(!process)
 		{
 			_out.printError("Error: Could not get free process. Not executing script.");
+			if(scriptInfo->returnOutput) scriptInfo->output.append("Error: Could not get free process. Not executing script.\n");
+			scriptInfo->exitCode = -1;
+			if(scriptInfo->scriptFinishedCallback) scriptInfo->scriptFinishedCallback(scriptInfo, -1);
 			return;
 		}
 
@@ -1362,7 +1373,6 @@ BaseLib::PVariable ScriptEngineServer::scriptFinished(PScriptEngineClientData& c
 		std::lock_guard<std::mutex> processGuard(_processMutex);
 		std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(clientData->pid);
 		if(processIterator == _processes.end()) return BaseLib::Variable::createError(-1, "No matching process found.");
-		_out.printInfo("Info: Script with id " + std::to_string(scriptId) + " finished.");
 		processIterator->second->invokeScriptFinished(scriptId, exitCode);
 		processIterator->second->unregisterScript(scriptId);
 		return BaseLib::PVariable(new BaseLib::Variable());
