@@ -97,10 +97,11 @@ void MiscPeer::homegearShuttingDown()
 		_shuttingDown = true;
 		Peer::homegearShuttingDown();
 
+		int32_t i = 0;
 		_stopRunProgramThread = true;
-		while(_scriptRunning)
+		while(_scriptRunning && i < 30)
 		{
-			_bl->out.printInfo("Info: Waiting for script to finish...");
+			GD::out.printInfo("Info: Peer " + std::to_string(_peerID) + " Waiting for script to finish...");
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		}
 
@@ -280,7 +281,6 @@ void MiscPeer::runScript(bool delay)
 		std::string script = _rpcDevice->runProgram->script;
 		if(script.empty()) return;
 
-		_scriptRunning = true;
 		std::string path = _rpcDevice->getPath();
 		std::string args;
 		std::vector<std::string> arguments = _rpcDevice->runProgram->arguments;
@@ -301,6 +301,8 @@ void MiscPeer::runScript(bool delay)
 		}
 
 		raiseRunScript(scriptInfo, false);
+		_scriptRunning = scriptInfo->started;
+		if(!_scriptRunning && !_bl->shuttingDown) GD::out.printError("Error: Could not start script of peer " + std::to_string(_peerID) + ".");
 	}
 	catch(const std::exception& ex)
 	{

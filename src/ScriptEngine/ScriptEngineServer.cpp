@@ -1277,6 +1277,7 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 			process->unregisterScript(scriptInfo->id);
 			return;
 		}
+		scriptInfo->started = true;
 		if(wait)
 		{
 			while(!scriptFinishedInfo->conditionVariable.wait_for(scriptFinishedLock, std::chrono::milliseconds(10000), [&]{ return scriptFinishedInfo->finished || clientData->closed || _stopServer; }));

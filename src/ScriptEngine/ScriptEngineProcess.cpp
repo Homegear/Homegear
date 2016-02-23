@@ -131,6 +131,7 @@ void ScriptEngineProcess::invokeScriptFinished(int32_t exitCode)
 		for(std::map<int32_t, PScriptInfo>::iterator i = _scripts.begin(); i != _scripts.end(); ++i)
 		{
 			GD::out.printInfo("Info: Script with id " + std::to_string(i->first) + " finished with exit code " + std::to_string(exitCode));
+			i->second->finished = true;
 			i->second->exitCode = exitCode;
 			if(i->second->scriptFinishedCallback) i->second->scriptFinishedCallback(i->second, exitCode);
 		}
@@ -164,6 +165,7 @@ void ScriptEngineProcess::invokeScriptFinished(int32_t id, int32_t exitCode)
 		std::map<int32_t, PScriptInfo>::iterator scriptsIterator = _scripts.find(id);
 		if(scriptsIterator != _scripts.end())
 		{
+			scriptsIterator->second->finished = true;
 			scriptsIterator->second->exitCode = exitCode;
 			if(scriptsIterator->second->scriptFinishedCallback) scriptsIterator->second->scriptFinishedCallback(scriptsIterator->second, exitCode);
 		}
