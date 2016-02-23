@@ -77,7 +77,6 @@ static PHP_MINFO_FUNCTION(homegear);
 
 ZEND_FUNCTION(hg_get_thread_id);
 ZEND_FUNCTION(hg_get_script_id);
-ZEND_FUNCTION(hg_get_script_token);
 ZEND_FUNCTION(hg_register_thread);
 ZEND_FUNCTION(hg_invoke);
 ZEND_FUNCTION(hg_log);
@@ -106,7 +105,6 @@ ZEND_FUNCTION(hg_i2c_write);
 static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_get_thread_id, NULL)
 	ZEND_FE(hg_get_script_id, NULL)
-	ZEND_FE(hg_get_script_token, NULL)
 	ZEND_FE(hg_register_thread, NULL)
 	ZEND_FE(hg_invoke, NULL)
 	ZEND_FE(hg_log, NULL)
@@ -483,22 +481,21 @@ ZEND_FUNCTION(hg_get_thread_id)
 
 ZEND_FUNCTION(hg_get_script_id)
 {
-	ZVAL_LONG(return_value, SEG(id));
-}
-
-ZEND_FUNCTION(hg_get_script_token)
-{
-	ZVAL_STRINGL(return_value, SEG(token).c_str(), SEG(token).size());
+	std::string id = std::to_string(SEG(id)) + ',' + SEG(token);
+	ZVAL_STRINGL(return_value, id.c_str(), id.size());
 }
 
 ZEND_FUNCTION(hg_register_thread)
 {
 	if(_disposed) RETURN_FALSE;
-	long scriptId = 0;
-	char* pToken = nullptr;
-	int tokenLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ls", &scriptId, &pToken, &tokenLength) != SUCCESS) RETURN_FALSE;
-	std::string token(pToken, tokenLength);
+	char* pTokenPair = nullptr;
+	int tokenPairLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pTokenPair, &tokenPairLength) != SUCCESS) RETURN_FALSE;
+	int32_t scriptId;
+	std::string tokenPairString(pTokenPair, tokenPairLength);
+	std::pair<std::string, std::string> tokenPair = BaseLib::HelperFunctions::splitFirst(tokenPairString, ',');
+	scriptId = BaseLib::Math::getNumber(tokenPair.first, false);
+	std::string token = tokenPair.second;
 	std::shared_ptr<PhpEvents> phpEvents;
 	{
 		std::lock_guard<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
@@ -507,7 +504,7 @@ ZEND_FUNCTION(hg_register_thread)
 		phpEvents = eventsIterator->second;
 	}
 	SEG(id) = scriptId;
-	SEG(token) = phpEvents->getToken();
+	SEG(token) = token;
 	SEG(outputCallback) = phpEvents->getOutputCallback();
 	SEG(rpcCallback) = phpEvents->getRpcCallback();
 	RETURN_TRUE
@@ -1040,7 +1037,6 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME(Homegear, __callStatic, php_homegear_two_args, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(getThreadId, hg_get_thread_id, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(getScriptId, hg_get_script_id, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	ZEND_ME_MAPPING(getScriptToken, hg_get_script_token, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(registerThread, hg_register_thread, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(log, hg_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(pollEvent, hg_poll_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
