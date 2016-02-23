@@ -68,6 +68,7 @@ typedef struct _zend_homegear_globals
 
 	// {{{ Needed by ScriptEngineClient
 	int32_t id = 0;
+	std::string token;
 	bool executionStarted = false;
 	// }}}
 } zend_homegear_globals;

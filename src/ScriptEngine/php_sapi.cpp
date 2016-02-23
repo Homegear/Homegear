@@ -77,6 +77,7 @@ static PHP_MINFO_FUNCTION(homegear);
 
 ZEND_FUNCTION(hg_get_thread_id);
 ZEND_FUNCTION(hg_get_script_id);
+ZEND_FUNCTION(hg_get_script_token);
 ZEND_FUNCTION(hg_register_thread);
 ZEND_FUNCTION(hg_invoke);
 ZEND_FUNCTION(hg_log);
@@ -105,6 +106,7 @@ ZEND_FUNCTION(hg_i2c_write);
 static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_get_thread_id, NULL)
 	ZEND_FE(hg_get_script_id, NULL)
+	ZEND_FE(hg_get_script_token, NULL)
 	ZEND_FE(hg_register_thread, NULL)
 	ZEND_FE(hg_invoke, NULL)
 	ZEND_FE(hg_log, NULL)
@@ -484,19 +486,28 @@ ZEND_FUNCTION(hg_get_script_id)
 	ZVAL_LONG(return_value, SEG(id));
 }
 
+ZEND_FUNCTION(hg_get_script_token)
+{
+	ZVAL_STRINGL(return_value, SEG(token).c_str(), SEG(token).size());
+}
+
 ZEND_FUNCTION(hg_register_thread)
 {
 	if(_disposed) RETURN_FALSE;
 	long scriptId = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &scriptId) != SUCCESS) RETURN_FALSE;
+	char* pToken = nullptr;
+	int tokenLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ls", &scriptId, &pToken, &tokenLength) != SUCCESS) RETURN_FALSE;
+	std::string token(pToken, tokenLength);
 	std::shared_ptr<PhpEvents> phpEvents;
 	{
 		std::lock_guard<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
 		std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(scriptId);
-		if(eventsIterator == PhpEvents::eventsMap.end() || !eventsIterator->second) RETURN_FALSE
+		if(eventsIterator == PhpEvents::eventsMap.end() || !eventsIterator->second || eventsIterator->second->getToken().empty() || eventsIterator->second->getToken() != token) RETURN_FALSE
 		phpEvents = eventsIterator->second;
 	}
 	SEG(id) = scriptId;
+	SEG(token) = phpEvents->getToken();
 	SEG(outputCallback) = phpEvents->getOutputCallback();
 	SEG(rpcCallback) = phpEvents->getRpcCallback();
 	RETURN_TRUE
@@ -516,7 +527,7 @@ ZEND_FUNCTION(hg_invoke)
 	zval* args = nullptr;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s*", &pMethodName, &methodNameLength, &args, &argc) != SUCCESS) RETURN_NULL();
 	if(methodNameLength == 0) RETURN_NULL();
-	std::string methodName(std::string(pMethodName, methodNameLength));
+	std::string methodName(pMethodName, methodNameLength);
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 	for(int32_t i = 0; i < argc; i++)
 	{
@@ -544,7 +555,7 @@ ZEND_FUNCTION(hg_poll_event)
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
-		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(outputCallback), SEG(rpcCallback)));
+		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
 		phpEvents = eventsIterator->second;
 	}
 	std::shared_ptr<PhpEvents::EventData> eventData = phpEvents->poll();
@@ -612,7 +623,7 @@ ZEND_FUNCTION(hg_subscribe_peer)
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
-		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(outputCallback), SEG(rpcCallback)));
+		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
 		phpEvents = eventsIterator->second;
 	}
 	phpEvents->addPeer(peerId);
@@ -638,7 +649,7 @@ ZEND_FUNCTION(hg_unsubscribe_peer)
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
-		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(outputCallback), SEG(rpcCallback)));
+		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
 		phpEvents = eventsIterator->second;
 	}
 	phpEvents->removePeer(peerId);
@@ -1029,6 +1040,7 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME(Homegear, __callStatic, php_homegear_two_args, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(getThreadId, hg_get_thread_id, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(getScriptId, hg_get_script_id, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(getScriptToken, hg_get_script_token, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(registerThread, hg_register_thread, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(log, hg_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(pollEvent, hg_poll_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
