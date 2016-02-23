@@ -34,8 +34,9 @@
 std::mutex PhpEvents::eventsMapMutex;
 std::map<int32_t, std::shared_ptr<PhpEvents>> PhpEvents::eventsMap;
 
-PhpEvents::PhpEvents(std::function<void(std::string& output)>& outputCallback, std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)>& rpcCallback)
+PhpEvents::PhpEvents(std::string& token, std::function<void(std::string& output)>& outputCallback, std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)>& rpcCallback)
 {
+	_token = token;
 	_outputCallback = outputCallback;
 	_rpcCallback = rpcCallback;
 }

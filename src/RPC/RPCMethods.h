@@ -58,7 +58,7 @@ class RPCSystemGetCapabilities : public RPCMethod
 public:
 	RPCSystemGetCapabilities()
 	{
-		setHelp("Lists server's XML RPC capabilities.");
+		setHelp("Lists server's RPC capabilities.");
 		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>());
 	}
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
@@ -70,7 +70,7 @@ public:
 	RPCSystemListMethods(std::shared_ptr<RPCServer> server)
 	{
 		_server = server;
-		setHelp("Lists all XML RPC methods.");
+		setHelp("Lists all RPC methods.");
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
 	}
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
@@ -84,7 +84,7 @@ public:
 	RPCSystemMethodHelp(std::shared_ptr<RPCServer> server)
 	{
 		_server = server;
-		setHelp("Returns a description of the method.");
+		setHelp("Returns a description of a RPC method.");
 		addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 	}
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
@@ -112,7 +112,7 @@ public:
 	RPCSystemMulticall(std::shared_ptr<RPCServer> server)
 	{
 		_server = server;
-		setHelp("Calls multiple XML RPC methods.");
+		setHelp("Calls multiple RPC methods at once to reduce traffic.");
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tArray});
 	}
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
