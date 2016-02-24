@@ -75,7 +75,6 @@ static PHP_MINFO_FUNCTION(homegear);
 
 #define SEG(v) php_homegear_get_globals()->v
 
-ZEND_FUNCTION(hg_get_thread_id);
 ZEND_FUNCTION(hg_get_script_id);
 ZEND_FUNCTION(hg_register_thread);
 ZEND_FUNCTION(hg_invoke);
@@ -103,7 +102,6 @@ ZEND_FUNCTION(hg_i2c_write);
 #endif
 
 static const zend_function_entry homegear_functions[] = {
-	ZEND_FE(hg_get_thread_id, NULL)
 	ZEND_FE(hg_get_script_id, NULL)
 	ZEND_FE(hg_register_thread, NULL)
 	ZEND_FE(hg_invoke, NULL)
@@ -473,12 +471,6 @@ void php_homegear_invoke_rpc(std::string& methodName, BaseLib::PVariable& parame
 }
 
 /* RPC functions */
-
-ZEND_FUNCTION(hg_get_thread_id)
-{
-	ZVAL_LONG(return_value, pthread_self());
-}
-
 ZEND_FUNCTION(hg_get_script_id)
 {
 	std::string id = std::to_string(SEG(id)) + ',' + SEG(token);
@@ -1035,7 +1027,6 @@ ZEND_END_ARG_INFO()
 static const zend_function_entry homegear_methods[] = {
 	ZEND_ME(Homegear, __call, php_homegear_two_args, ZEND_ACC_PUBLIC)
 	ZEND_ME(Homegear, __callStatic, php_homegear_two_args, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	ZEND_ME_MAPPING(getThreadId, hg_get_thread_id, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(getScriptId, hg_get_script_id, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(registerThread, hg_register_thread, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(log, hg_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
