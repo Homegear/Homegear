@@ -790,11 +790,44 @@ ZEND_FUNCTION(hg_serial_open)
 		if(_disposed) RETURN_NULL();
 		char* pDevice = nullptr;
 		int deviceLength = 0;
-		long baudrate = 0;
-		if(zend_parse_parameters(ZEND_NUM_ARGS(), "sl", &pDevice, &deviceLength, &baudrate) != SUCCESS) RETURN_NULL();
+		long baudrate = 38400;
+		bool evenParity = false;
+		bool oddParity = false;
+		int argc = 0;
+		zval* args = nullptr;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "s*", &pDevice, &deviceLength, &args, &argc) != SUCCESS) RETURN_NULL();
+		if(deviceLength == 0)
+		{
+			ZVAL_LONG(return_value, -1);
+			return;
+		}
 		std::string device(pDevice, deviceLength);
+		if(argc >= 1)
+		{
+			if(Z_TYPE(args[0]) != IS_LONG) php_error_docref(NULL, E_WARNING, "baudrate is not of type integer.");
+			else baudrate = Z_LVAL(args[0]);
+
+			if(argc >= 2)
+			{
+				if(Z_TYPE(args[1]) != IS_TRUE && Z_TYPE(args[1]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "evenParity is not of type boolean.");
+				else
+				{
+					evenParity = Z_TYPE(args[1]) == IS_TRUE;
+				}
+
+				if(argc >= 3)
+				{
+					if(Z_TYPE(args[2]) != IS_TRUE && Z_TYPE(args[2]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "oddParity is not of type boolean.");
+					else
+					{
+						oddParity = Z_TYPE(args[2]) == IS_TRUE;
+					}
+				}
+			}
+		}
+
 		std::shared_ptr<BaseLib::SerialReaderWriter> serialDevice(new BaseLib::SerialReaderWriter(GD::bl.get(), device, baudrate, 0, true, -1));
-		serialDevice->openDevice(false);
+		serialDevice->openDevice(evenParity, oddParity, false);
 		if(serialDevice->isOpen())
 		{
 			int32_t descriptor = serialDevice->fileDescriptor()->descriptor;
