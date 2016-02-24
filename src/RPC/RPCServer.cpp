@@ -387,6 +387,7 @@ void RPCServer::mainThread()
 						client->id++;
 					}
 					_clients[client->id] = client;
+					_out.printInfo("Info: RPC server client id for client number " + std::to_string(client->socketDescriptor->id) + " is: " + std::to_string(client->id));
 				}
 
 				try

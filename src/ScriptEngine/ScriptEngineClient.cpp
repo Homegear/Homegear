@@ -802,7 +802,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			exit(1);
 		}
 
-		if(type == ScriptInfo::ScriptType::device)
+		if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)
 		{
 			BaseLib::Base64::encode(BaseLib::HelperFunctions::getRandomBytes(16), globals->token);
 			std::shared_ptr<PhpEvents> phpEvents(new PhpEvents(globals->token, globals->outputCallback, globals->rpcCallback));
