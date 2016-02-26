@@ -93,6 +93,7 @@ ZEND_FUNCTION(hg_gpio_poll);
 ZEND_FUNCTION(hg_serial_open);
 ZEND_FUNCTION(hg_serial_close);
 ZEND_FUNCTION(hg_serial_read);
+ZEND_FUNCTION(hg_serial_readline);
 ZEND_FUNCTION(hg_serial_write);
 #ifdef I2CSUPPORT
 ZEND_FUNCTION(hg_i2c_open);
@@ -120,6 +121,7 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_serial_open, NULL)
 	ZEND_FE(hg_serial_close, NULL)
 	ZEND_FE(hg_serial_read, NULL)
+	ZEND_FE(hg_serial_readline, NULL)
 	ZEND_FE(hg_serial_write, NULL)
 #ifdef I2CSUPPORT
 	ZEND_FE(hg_i2c_open, NULL)
@@ -725,7 +727,18 @@ ZEND_FUNCTION(hg_gpio_poll)
 	if(_disposed) RETURN_NULL();
 	long gpio = -1;
 	long timeout = -1;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &timeout) != SUCCESS) RETURN_NULL();
+	int argc = 0;
+	zval* args = nullptr;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll*", &gpio, &timeout, &args, &argc) != SUCCESS) RETURN_NULL();
+
+	bool debounce = false;
+	if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearGpio::poll().");
+	else if(argc >= 1)
+	{
+		if(Z_TYPE(args[0]) != IS_TRUE && Z_TYPE(args[0]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "debounce is not of type bool.");
+		else debounce = Z_TYPE(args[0]) == IS_TRUE;
+	}
+
 	if(timeout > 5000) timeout = 5000;
 	if(gpio < 0 || timeout < 0)
 	{
@@ -758,6 +771,8 @@ ZEND_FUNCTION(hg_gpio_poll)
 		ZVAL_LONG(return_value, -1);
 		return;
 	}
+
+	if(debounce) std::this_thread::sleep_for(std::chrono::milliseconds(30));
 
 	if(lseek(fileDescriptor->descriptor, 0, SEEK_SET) == -1)
 	{
@@ -873,6 +888,54 @@ ZEND_FUNCTION(hg_serial_close)
 }
 
 ZEND_FUNCTION(hg_serial_read)
+{
+	try
+	{
+		if(_disposed) RETURN_NULL();
+		long id = -1;
+		long timeout = -1;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &id, &timeout) != SUCCESS) RETURN_NULL();
+		if(timeout < 0)
+		{
+			ZVAL_LONG(return_value, -1);
+			return;
+		}
+		if(timeout > 5000) timeout = 5000;
+		std::shared_ptr<BaseLib::SerialReaderWriter> serialReaderWriter;
+		_superglobals.serialDevicesMutex.lock();
+		std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>>::iterator deviceIterator = _superglobals.serialDevices.find(id);
+		if(deviceIterator != _superglobals.serialDevices.end())
+		{
+			if(deviceIterator->second) serialReaderWriter = deviceIterator->second;
+		}
+		_superglobals.serialDevicesMutex.unlock();
+		if(!serialReaderWriter)
+		{
+			ZVAL_LONG(return_value, -1);
+			return;
+		}
+		char data;
+		int32_t result = serialReaderWriter->readChar(data, timeout * 1000);
+		if(result == -1)
+		{
+			ZVAL_LONG(return_value, -1);
+			return;
+		}
+		else if(result == 1)
+		{
+			ZVAL_LONG(return_value, -2);
+			return;
+		}
+		ZVAL_STRINGL(return_value, &data, 1);
+	}
+	catch(BaseLib::SerialReaderWriterException& ex)
+	{
+		GD::out.printError("Script engine: " + ex.what());
+		ZVAL_LONG(return_value, -1);
+	}
+}
+
+ZEND_FUNCTION(hg_serial_readline)
 {
 	try
 	{
@@ -1095,6 +1158,7 @@ static const zend_function_entry homegear_serial_methods[] = {
 	ZEND_ME_MAPPING(open, hg_serial_open, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(close, hg_serial_close, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(read, hg_serial_read, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(readline, hg_serial_readline, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(write, hg_serial_write, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
 };
