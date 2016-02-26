@@ -95,7 +95,7 @@ bool PhpEvents::enqueue(std::shared_ptr<EventData>& entry)
 	return false;
 }
 
-std::shared_ptr<PhpEvents::EventData> PhpEvents::poll()
+std::shared_ptr<PhpEvents::EventData> PhpEvents::poll(int32_t timeout)
 {
 	std::shared_ptr<EventData> eventData;
 	std::unique_lock<std::mutex> lock(_processingThreadMutex);
@@ -106,7 +106,8 @@ std::shared_ptr<PhpEvents::EventData> PhpEvents::poll()
 			if(_bufferHead == _bufferTail)
 			{
 				bufferGuard.~lock_guard();
-				_processingConditionVariable.wait(lock, [&]{ return _processingEntryAvailable; });
+				if(timeout > 0)	_processingConditionVariable.wait_for(lock, std::chrono::milliseconds(timeout), [&]{ return _processingEntryAvailable; });
+				else _processingConditionVariable.wait(lock, [&]{ return _processingEntryAvailable; });
 			}
 		}
 		if(GD::bl->shuttingDown)
