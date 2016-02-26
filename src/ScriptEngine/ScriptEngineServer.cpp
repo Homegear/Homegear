@@ -1245,6 +1245,7 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
 				BaseLib::PVariable(new BaseLib::Variable((int32_t)scriptInfo->getType())),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->path)),
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->script)),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)),
 				BaseLib::PVariable(new BaseLib::Variable((bool)scriptInfo->scriptOutputCallback || scriptInfo->returnOutput))}));
 		}

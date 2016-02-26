@@ -954,6 +954,7 @@ std::string Server::handleGlobalCommand(std::shared_ptr<ClientData> client, std:
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "debuglevel (dl)\t\tChanges the debug level" << std::endl;
 			stringStream << "runscript (rs)\t\tExecutes a script with the internal PHP engine" << std::endl;
+			stringStream << "runcommand (rc)\t\tExecutes a PHP command" << std::endl;
 			stringStream << "scriptcount (sc)\t\tReturns the number of currently running scripts" << std::endl;
 			stringStream << "rpcservers (rpc)\t\tLists all active RPC servers" << std::endl;
 			stringStream << "rpcclients (rcl)\t\tLists all active RPC clients" << std::endl;
@@ -1036,6 +1037,37 @@ std::string Server::handleGlobalCommand(std::shared_ptr<ClientData> client, std:
 
 			std::string argumentsString = arguments.str();
 			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli, path, argumentsString));
+			scriptInfo->returnOutput = true;
+			GD::scriptEngineServer->executeScript(scriptInfo, true);
+			if(!scriptInfo->output.empty()) stringStream << scriptInfo->output;
+			stringStream << "Exit code: " << std::dec << scriptInfo->exitCode << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 10, "runcommand") == 0 || command.compare(0, 2, "rc") == 0)
+		{
+			int32_t commandSize = 11;
+			if(command.compare(0, 2, "rc") == 0) commandSize = 3;
+			if(((int32_t)command.size()) - commandSize < 4 || command.compare(commandSize, 4, "help") == 0)
+			{
+				stringStream << "Description: Executes a PHP command. The Homegear object ($hg) is defined implicitly." << std::endl;
+				stringStream << "Usage: runcommand COMMAND" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  COMMAND:\t\tThe command to execute. E. g.: $hg->setValue(12, 2, \"STATE\", true);" << std::endl;
+				return stringStream.str();
+			}
+
+			std::string script;
+			script.reserve(command.size() - commandSize + 50);
+			script.append("<?php\n$hg = new Homegear\\Homegear();\n");
+			command = command.substr(commandSize);
+			BaseLib::HelperFunctions::trim(command);
+			if(command.size() < 4) return "Invalid code.";
+			if((command.front() == '\"' && command.back() == '\"') || (command.front() == '\'' && command.back() == '\'')) script.append(command.substr(1, command.size() - 2));
+			else script.append(command);
+
+			std::string path = GD::bl->settings.scriptPath() + "inline.php";
+			std::string arguments;
+			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli, path, script, arguments));
 			scriptInfo->returnOutput = true;
 			GD::scriptEngineServer->executeScript(scriptInfo, true);
 			if(!scriptInfo->output.empty()) stringStream << scriptInfo->output;

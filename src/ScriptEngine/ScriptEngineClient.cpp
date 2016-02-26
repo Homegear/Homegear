@@ -991,22 +991,22 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 		ScriptInfo::ScriptType type = (ScriptInfo::ScriptType)parameters->at(1)->integerValue;
 		if(type == ScriptInfo::ScriptType::cli)
 		{
-			if(parameters->at(2)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Path is empty.");
-			scriptInfo.reset(new ScriptInfo(type, parameters->at(2)->stringValue, parameters->at(3)->stringValue));
+			if(parameters->at(2)->stringValue.empty() ) return BaseLib::Variable::createError(-1, "Path is empty.");
+			scriptInfo.reset(new ScriptInfo(type, parameters->at(2)->stringValue, parameters->at(3)->stringValue, parameters->at(4)->stringValue));
 
-			if(!GD::bl->io.fileExists(scriptInfo->path))
+			if(scriptInfo->script.empty() && !GD::bl->io.fileExists(scriptInfo->path))
 			{
 				_out.printError("Error: PHP script \"" + parameters->at(2)->stringValue + "\" does not exist.");
 				return BaseLib::Variable::createError(-1, "Script file does not exist: " + scriptInfo->path);
 			}
-			sendOutput = parameters->at(4)->booleanValue;
+			sendOutput = parameters->at(5)->booleanValue;
 		}
 		else if(type == ScriptInfo::ScriptType::web)
 		{
 			if(parameters->at(2)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Path is empty.");
 			scriptInfo.reset(new ScriptInfo(type, parameters->at(2)->stringValue, parameters->at(3), parameters->at(4)));
 
-			if(!GD::bl->io.fileExists(scriptInfo->path))
+			if(scriptInfo->script.empty() && !GD::bl->io.fileExists(scriptInfo->path))
 			{
 				_out.printError("Error: PHP script \"" + parameters->at(2)->stringValue + "\" does not exist.");
 				return BaseLib::Variable::createError(-1, "Script file does not exist: " + scriptInfo->path);
