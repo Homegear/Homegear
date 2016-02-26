@@ -536,6 +536,17 @@ ZEND_FUNCTION(hg_poll_event)
 		zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Did you call \"registerThread\"?", -1);
 		RETURN_FALSE
 	}
+	int argc = 0;
+	zval* args = nullptr;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+	int32_t timeout = -1;
+	if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::pollEvent().");
+	else if(argc >= 1)
+	{
+		if(Z_TYPE(args[0]) != IS_LONG) php_error_docref(NULL, E_WARNING, "timeout is not of type int.");
+		else timeout = Z_LVAL(args[0]);
+	}
+
 	std::shared_ptr<PhpEvents> phpEvents;
 	{
 		std::lock_guard<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
@@ -549,7 +560,7 @@ ZEND_FUNCTION(hg_poll_event)
 		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
 		phpEvents = eventsIterator->second;
 	}
-	std::shared_ptr<PhpEvents::EventData> eventData = phpEvents->poll();
+	std::shared_ptr<PhpEvents::EventData> eventData = phpEvents->poll(timeout);
 	if(eventData)
 	{
 		array_init(return_value);
@@ -612,7 +623,6 @@ ZEND_FUNCTION(hg_subscribe_peer)
 		{
 			eventsMapGuard.~lock_guard();
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
-			RETURN_FALSE
 		}
 		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
 		phpEvents = eventsIterator->second;
@@ -638,7 +648,6 @@ ZEND_FUNCTION(hg_unsubscribe_peer)
 		{
 			eventsMapGuard.~lock_guard();
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
-			RETURN_FALSE
 		}
 		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
 		phpEvents = eventsIterator->second;
@@ -656,6 +665,7 @@ ZEND_FUNCTION(hg_log)
 	if(messageLength == 0) RETURN_FALSE;
 	if(SEG(peerId) != 0) GD::out.printMessage("Script log (peer id: " + std::to_string(SEG(peerId)) + "): " + std::string(pMessage, messageLength), debugLevel, true);
 	else GD::out.printMessage("Script log: " + std::string(pMessage, messageLength), debugLevel, true);
+	RETURN_TRUE;
 }
 
 ZEND_FUNCTION(hg_shutting_down)

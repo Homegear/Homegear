@@ -52,7 +52,7 @@ public:
 	virtual ~PhpEvents();
 	void stop();
 	bool enqueue(std::shared_ptr<EventData>& entry);
-	std::shared_ptr<EventData> poll();
+	std::shared_ptr<EventData> poll(int32_t timeout = -1);
 	void addPeer(uint64_t peerId);
 	void removePeer(uint64_t peerId);
 	bool peerSubscribed(uint64_t peerId);
