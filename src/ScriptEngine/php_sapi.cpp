@@ -733,7 +733,7 @@ ZEND_FUNCTION(hg_gpio_poll)
 		return;
 	}
 	BaseLib::PFileDescriptor fileDescriptor = _superglobals.gpio->getFileDescriptor(gpio);
-	if(!fileDescriptor)
+	if(!fileDescriptor || fileDescriptor->descriptor == -1)
 	{
 		ZVAL_LONG(return_value, -1);
 		return;
@@ -768,18 +768,18 @@ ZEND_FUNCTION(hg_gpio_poll)
 
 	std::vector<char> readBuffer({'0'});
 	int32_t bytesRead = read(fileDescriptor->descriptor, &readBuffer[0], 1);
-	if(!bytesRead)
+	if(bytesRead <= 0)
 	{
 		ZVAL_LONG(return_value, -1);
 		return;
 	}
 	if(readBuffer.at(0) == 0x30)
 	{
-		ZVAL_LONG(return_value, 1);
+		ZVAL_LONG(return_value, 0);
 	}
 	else
 	{
-		ZVAL_LONG(return_value, 0);
+		ZVAL_LONG(return_value, 1);
 	}
 }
 
@@ -798,11 +798,11 @@ ZEND_FUNCTION(hg_serial_open)
 		if(zend_parse_parameters(ZEND_NUM_ARGS(), "s*", &pDevice, &deviceLength, &args, &argc) != SUCCESS) RETURN_NULL();
 		if(deviceLength == 0)
 		{
-			ZVAL_LONG(return_value, -1);
-			return;
+			RETURN_FALSE;
 		}
 		std::string device(pDevice, deviceLength);
-		if(argc >= 1)
+		if(argc > 3) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearSerial::open().");
+		else if(argc >= 1)
 		{
 			if(Z_TYPE(args[0]) != IS_LONG) php_error_docref(NULL, E_WARNING, "baudrate is not of type integer.");
 			else baudrate = Z_LVAL(args[0]);
@@ -815,7 +815,7 @@ ZEND_FUNCTION(hg_serial_open)
 					evenParity = Z_TYPE(args[1]) == IS_TRUE;
 				}
 
-				if(argc >= 3)
+				if(argc == 3)
 				{
 					if(Z_TYPE(args[2]) != IS_TRUE && Z_TYPE(args[2]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "oddParity is not of type boolean.");
 					else
@@ -838,7 +838,7 @@ ZEND_FUNCTION(hg_serial_open)
 		}
 		else
 		{
-			ZVAL_LONG(return_value, -1);
+			RETURN_FALSE;
 		}
 	}
 	catch(BaseLib::SerialReaderWriterException& ex)
@@ -863,11 +863,12 @@ ZEND_FUNCTION(hg_serial_close)
 			_superglobals.serialDevices.erase(id);
 		}
 		_superglobals.serialDevicesMutex.unlock();
+		RETURN_TRUE;
 	}
 	catch(BaseLib::SerialReaderWriterException& ex)
 	{
 		GD::out.printError("Script engine: " + ex.what());
-		ZVAL_LONG(return_value, -1);
+		RETURN_FALSE;
 	}
 }
 
@@ -937,19 +938,15 @@ ZEND_FUNCTION(hg_serial_write)
 			if(deviceIterator->second) serialReaderWriter = deviceIterator->second;
 		}
 		_superglobals.serialDevicesMutex.unlock();
-		if(!serialReaderWriter)
-		{
-			ZVAL_LONG(return_value, -1);
-			return;
-		}
+		if(!serialReaderWriter) RETURN_FALSE;
 		std::string data(pData, dataLength);
 		if(data.size() > 0) serialReaderWriter->writeLine(data);
-		ZVAL_LONG(return_value, 0);
+		RETURN_TRUE;
 	}
 	catch(BaseLib::SerialReaderWriterException& ex)
 	{
 		GD::out.printError("Script engine: " + ex.what());
-		ZVAL_LONG(return_value, -1);
+		RETURN_FALSE;
 	}
 }
 
@@ -963,16 +960,11 @@ ZEND_FUNCTION(hg_i2c_open)
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "sl", &pDevice, &deviceLength, &address) != SUCCESS) RETURN_NULL();
 	std::string device(pDevice, deviceLength);
 	int32_t descriptor = open(device.c_str(), O_RDWR);
-	if(descriptor == -1)
-	{
-		ZVAL_LONG(return_value, -1);
-		return;
-	}
+	if(descriptor == -1) RETURN_FALSE;
 	if (ioctl(descriptor, I2C_SLAVE, address) == -1)
 	{
 		close(descriptor);
-		ZVAL_LONG(return_value, -1);
-		return;
+		RETURN_FALSE;
 	}
 	ZVAL_LONG(return_value, descriptor);
 }
@@ -983,6 +975,7 @@ ZEND_FUNCTION(hg_i2c_close)
 	long descriptor = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &descriptor) != SUCCESS) RETURN_NULL();
 	if(descriptor != -1) close(descriptor);
+	RETURN_TRUE;
 }
 
 ZEND_FUNCTION(hg_i2c_read)
@@ -990,24 +983,29 @@ ZEND_FUNCTION(hg_i2c_read)
 	if(_disposed) RETURN_NULL();
 	long descriptor = -1;
 	long length = 1;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &descriptor, &length) != SUCCESS) RETURN_NULL();
+	int argc = 0;
+	zval* args = nullptr;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll*", &descriptor, &length, &args, &argc) != SUCCESS) RETURN_NULL();
+	if(length < 0) RETURN_FALSE;
 
-	if(length < 0)
+	bool binary = false;
+	if(argc == 1)
 	{
-		ZVAL_LONG(return_value, -1);
-		return;
+		if(Z_TYPE(args[0]) != IS_TRUE && Z_TYPE(args[0]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "returnBinary is not of type bool.");
+		else binary = (Z_TYPE(args[0]) == IS_TRUE);
 	}
+	else if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearI2c::read().");
 
 	std::vector<uint8_t> buffer(length, 0);
-	if(read(descriptor, &buffer.at(0), length) != length)
-	{
-		ZVAL_LONG(return_value, -1);
-		return;
-	}
+	if(read(descriptor, &buffer.at(0), length) != length) RETURN_FALSE;
 
-	std::string hex = BaseLib::HelperFunctions::getHexString(buffer);
-	if(hex.empty()) ZVAL_STRINGL(return_value, "", 0); //At least once, input->stringValue.c_str() on an empty string was a nullptr causing a segementation fault, so check for empty string
-	else ZVAL_STRINGL(return_value, hex.c_str(), hex.size());
+	if(binary) ZVAL_STRINGL(return_value, (char*)(&buffer[0]), buffer.size());
+	else
+	{
+		std::string hex = BaseLib::HelperFunctions::getHexString(buffer);
+		if(hex.empty()) ZVAL_STRINGL(return_value, "", 0); //At least once, input->stringValue.c_str() on an empty string was a nullptr causing a segementation fault, so check for empty string
+		else ZVAL_STRINGL(return_value, hex.c_str(), hex.size());
+	}
 }
 
 ZEND_FUNCTION(hg_i2c_write)
@@ -1016,15 +1014,27 @@ ZEND_FUNCTION(hg_i2c_write)
 	long descriptor = -1;
 	char* pData = nullptr;
 	int dataLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ls", &descriptor, &pData, &dataLength) != SUCCESS) RETURN_NULL();
-	std::string hexData(pData, dataLength);
-	std::vector<uint8_t> data = GD::bl->hf.getUBinary(hexData);
-	if (write(descriptor, &data.at(0), data.size()) != (signed)data.size()) {
-		ZVAL_LONG(return_value, -1);
-		return;
-	}
+	int argc = 0;
+	zval* args = nullptr;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ls*", &descriptor, &pData, &dataLength, &args, &argc) != SUCCESS) RETURN_NULL();
 
-	ZVAL_LONG(return_value, 0);
+	bool binary = false;
+	if(argc == 1)
+	{
+		if(Z_TYPE(args[0]) != IS_TRUE && Z_TYPE(args[0]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "dataIsBinary is not of type bool.");
+		else binary = (Z_TYPE(args[0]) == IS_TRUE);
+	}
+	else if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearI2c::write().");
+
+	std::vector<uint8_t> data;
+	if(binary) data = std::vector<uint8_t>(pData, pData + dataLength);
+	else
+	{
+		std::string hexData(pData, dataLength);
+		data = GD::bl->hf.getUBinary(hexData);
+	}
+	if (write(descriptor, &data.at(0), data.size()) != (signed)data.size()) RETURN_FALSE;
+	RETURN_TRUE;
 }
 #endif
 
@@ -1180,6 +1190,11 @@ static PHP_MINIT_FUNCTION(homegear)
 	zend_class_entry homegearGpioCe;
 	INIT_CLASS_ENTRY(homegearGpioCe, "Homegear\\HomegearGpio", homegear_gpio_methods);
 	homegear_gpio_class_entry = zend_register_internal_class(&homegearGpioCe);
+	zend_declare_class_constant_long(homegear_gpio_class_entry, "DIRECTION_IN", 12, 0);
+	zend_declare_class_constant_long(homegear_gpio_class_entry, "DIRECTION_OUT", 13, 1);
+	zend_declare_class_constant_long(homegear_gpio_class_entry, "EDGE_RISING", 11, 0);
+	zend_declare_class_constant_long(homegear_gpio_class_entry, "EDGE_FALLING", 12, 1);
+	zend_declare_class_constant_long(homegear_gpio_class_entry, "EDGE_BOTH", 9, 2);
 
 	zend_class_entry homegearSerialCe;
 	INIT_CLASS_ENTRY(homegearSerialCe, "Homegear\\HomegearSerial", homegear_serial_methods);
