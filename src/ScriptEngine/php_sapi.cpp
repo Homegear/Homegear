@@ -749,63 +749,13 @@ ZEND_FUNCTION(hg_gpio_poll)
 		else debounce = Z_TYPE(args[0]) == IS_TRUE;
 	}
 
-	if(timeout > 5000) timeout = 5000;
 	if(gpio < 0 || timeout < 0)
 	{
 		ZVAL_LONG(return_value, -1);
 		return;
 	}
-	BaseLib::PFileDescriptor fileDescriptor = _superglobals.gpio->getFileDescriptor(gpio);
-	if(!fileDescriptor || fileDescriptor->descriptor == -1)
-	{
-		ZVAL_LONG(return_value, -1);
-		return;
-	}
 
-	pollfd pollstruct
-	{
-		(int)fileDescriptor->descriptor,
-		(short)(POLLPRI | POLLERR),
-		(short)0
-	};
-
-	int32_t pollResult = poll(&pollstruct, 1, timeout);
-	if(pollResult == 0)
-	{
-		ZVAL_LONG(return_value, -2);
-		return;
-	}
-	else if(pollResult == -1)
-	{
-		_superglobals.gpio->closeDevice(gpio);
-		ZVAL_LONG(return_value, -1);
-		return;
-	}
-
-	if(debounce) std::this_thread::sleep_for(std::chrono::milliseconds(30));
-
-	if(lseek(fileDescriptor->descriptor, 0, SEEK_SET) == -1)
-	{
-		_superglobals.gpio->closeDevice(gpio);
-		ZVAL_LONG(return_value, -1);
-		return;
-	}
-
-	std::vector<char> readBuffer({'0'});
-	int32_t bytesRead = read(fileDescriptor->descriptor, &readBuffer[0], 1);
-	if(bytesRead <= 0)
-	{
-		ZVAL_LONG(return_value, -1);
-		return;
-	}
-	if(readBuffer.at(0) == 0x30)
-	{
-		ZVAL_LONG(return_value, 0);
-	}
-	else
-	{
-		ZVAL_LONG(return_value, 1);
-	}
+	ZVAL_LONG(return_value, _superglobals.gpio->poll(gpio, timeout, debounce));
 }
 
 ZEND_FUNCTION(hg_serial_open)

@@ -135,6 +135,7 @@ private:
 	BaseLib::PVariable send(std::vector<char>& data);
 
 	// {{{ RPC methods
+		BaseLib::PVariable reload(BaseLib::PArray& parameters);
 		BaseLib::PVariable shutdown(BaseLib::PArray& parameters);
 		BaseLib::PVariable executeScript(BaseLib::PArray& parameters);
 		BaseLib::PVariable scriptCount(BaseLib::PArray& parameters);

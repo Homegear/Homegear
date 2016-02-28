@@ -943,7 +943,7 @@ std::string Server::handleModuleCommand(std::string& command)
 }
 
 
-std::string Server::handleGlobalCommand(std::shared_ptr<ClientData> client, std::string& command)
+std::string Server::handleGlobalCommand(std::string& command)
 {
 	try
 	{
@@ -1043,10 +1043,11 @@ std::string Server::handleGlobalCommand(std::shared_ptr<ClientData> client, std:
 			stringStream << "Exit code: " << std::dec << scriptInfo->exitCode << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 10, "runcommand") == 0 || command.compare(0, 2, "rc") == 0)
+		else if(command.compare(0, 10, "runcommand") == 0 || command.compare(0, 2, "rc") == 0 || command.compare(0, 1, "$") == 0)
 		{
 			int32_t commandSize = 11;
 			if(command.compare(0, 2, "rc") == 0) commandSize = 3;
+			else if(command.compare(0, 1, "$") == 0) commandSize = 0;
 			if(((int32_t)command.size()) - commandSize < 4 || command.compare(commandSize, 4, "help") == 0)
 			{
 				stringStream << "Description: Executes a PHP command. The Homegear object ($hg) is defined implicitly." << std::endl;
@@ -1058,12 +1059,14 @@ std::string Server::handleGlobalCommand(std::shared_ptr<ClientData> client, std:
 
 			std::string script;
 			script.reserve(command.size() - commandSize + 50);
-			script.append("<?php\n$hg = new Homegear\\Homegear();\n");
-			command = command.substr(commandSize);
+			script.append("<?php\nuse Homegear\\Homegear as Homegear;\nuse Homegear\\HomegearGpio as HomegearGpio;\nuse Homegear\\HomegearSerial as HomegearSerial;\nuse Homegear\\HomegearI2c as HomegearI2c;\n$hg = new Homegear();\n");
+			if(commandSize > 0) command = command.substr(commandSize);
 			BaseLib::HelperFunctions::trim(command);
 			if(command.size() < 4) return "Invalid code.";
-			if((command.front() == '\"' && command.back() == '\"') || (command.front() == '\'' && command.back() == '\'')) script.append(command.substr(1, command.size() - 2));
-			else script.append(command);
+			if((command.front() == '\"' && command.back() == '\"') || (command.front() == '\'' && command.back() == '\'')) command = command.substr(1, command.size() - 2);
+			command.push_back(';');
+
+			script.append(command);
 
 			std::string path = GD::bl->settings.scriptPath() + "inline.php";
 			std::string arguments;
@@ -1310,12 +1313,12 @@ std::string Server::handleGlobalCommand(std::shared_ptr<ClientData> client, std:
     return "Error executing command. See log file for more details.\n";
 }
 
-void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> clientData)
+std::string Server::handleCommand(std::string& command)
 {
 	try
 	{
-		if(!command.empty() && command.at(0) == 0) return;
-		std::string response = handleGlobalCommand(clientData, command);
+		if(!command.empty() && command.at(0) == 0) return "";
+		std::string response = handleGlobalCommand(command);
 		if(response.empty())
 		{
 			//User commands can be executed when family is selected
@@ -1324,6 +1327,29 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
 			else if((command.compare(0, 7, "modules") == 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'm')) && !GD::familyController->familySelected()) response = handleModuleCommand(command);
 			else response = GD::familyController->handleCliCommand(command);
 		}
+		return response;
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "";
+}
+
+void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> clientData)
+{
+	try
+	{
+		if(!command.empty() && command.at(0) == 0) return;
+		std::string response = handleCommand(command);
 		response.push_back(0);
 		send(clientData, response);
 	}

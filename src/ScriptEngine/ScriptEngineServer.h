@@ -62,6 +62,7 @@ public:
 	bool start();
 	void stop();
 	void homegearShuttingDown();
+	void homegearReloading();
 	void processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped);
 	uint32_t scriptCount();
 	void executeScript(PScriptInfo& scriptInfo, bool wait);
