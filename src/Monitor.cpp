@@ -54,6 +54,10 @@ bool Monitor::killedProcess()
 void Monitor::init()
 {
 	if(!GD::bl->settings.enableMonitoring()) return;
+	_pipeToChild[0] = 0;
+	_pipeToChild[1] = 0;
+	_pipeFromChild[0] = 0;
+	_pipeFromChild[1] = 0;
 	if(pipe(_pipeFromChild) == -1)
 	{
 		GD::out.printError("Error creating pipe from child.");
@@ -83,7 +87,9 @@ void Monitor::prepareParent()
 {
 	if(!GD::bl->settings.enableMonitoring()) return;
 	close(_pipeToChild[0]);
+	_pipeToChild[0] = -1;
 	close(_pipeFromChild[1]);
+	_pipeFromChild[1] = -1;
 	_suspendMonitoring = false;
 	_killedProcess = false;
 }
@@ -92,7 +98,9 @@ void Monitor::prepareChild()
 {
 	if(!GD::bl->settings.enableMonitoring()) return;
 	close(_pipeToChild[1]);
+	_pipeToChild[1] = -1;
 	close(_pipeFromChild[0]);
+	_pipeFromChild[0]= -1;
 	stop();
 	_stopMonitorThread = false;
 	GD::bl->threadManager.start(_monitorThread, true, &Monitor::monitor, this);
@@ -102,8 +110,14 @@ void Monitor::stop()
 {
 	try
 	{
+		_suspendMonitoring = true;
+		std::lock_guard<std::mutex> checkHealthGuard(_checkHealthMutex);
 		_stopMonitorThread = true;
 		GD::bl->threadManager.join(_monitorThread);
+		if(_pipeToChild[0] != -1) close(_pipeToChild[0]);
+		if(_pipeToChild[1] != -1) close(_pipeToChild[1]);
+		if(_pipeFromChild[0] != -1) close(_pipeFromChild[0]);
+		if(_pipeFromChild[1] != -1) close(_pipeFromChild[1]);
 	}
 	catch(const std::exception& ex)
 	{
@@ -138,6 +152,7 @@ void Monitor::checkHealth(pid_t mainProcessId)
 {
 	try
 	{
+		std::lock_guard<std::mutex> checkHealthGuard(_checkHealthMutex);
 		if(!GD::bl->settings.enableMonitoring() || _suspendMonitoring) return;
 		for(int32_t i = 0; i < 6; i++)
 		{

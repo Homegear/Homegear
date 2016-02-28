@@ -58,6 +58,7 @@ public:
 
 	void start();
 	void stop();
+	std::string handleCommand(std::string& command);
 private:
 	class ClientData
 	{
@@ -89,7 +90,7 @@ private:
 	void handleCommand(std::string& command, std::shared_ptr<ClientData> clientData);
 	std::string handleUserCommand(std::string& command);
 	std::string handleModuleCommand(std::string& command);
-	std::string handleGlobalCommand(std::shared_ptr<ClientData> clientData, std::string& command);
+	std::string handleGlobalCommand(std::string& command);
 	void getFileDescriptor(bool deleteOldSocket = false);
 	std::shared_ptr<BaseLib::FileDescriptor> getClientFileDescriptor();
 	void mainThread();

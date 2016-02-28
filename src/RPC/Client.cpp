@@ -747,8 +747,11 @@ void Client::removeServer(std::pair<std::string, std::string> server)
 			{
 				GD::out.printInfo("Info: Removing server \"" + i->second->address.first + "\".");
 				i->second->removed = true;
-				if(i->second->socket) i->second->socket->close();
+				std::shared_ptr<RemoteRpcServer> server = i->second;
 				_servers.erase(i);
+				serversGuard.~lock_guard();
+				//Close waits for all read/write operations to finish and can therefore block. That's why we unlock the mutex first.
+				if(server->socket) server->socket->close();
 				return;
 			}
 		}

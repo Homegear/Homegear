@@ -336,6 +336,8 @@ void terminate(int32_t signalNumber)
 				GD::out.printCritical("Critical: Can't reopen database. Exiting...");
 				exit(1);
 			}
+			GD::out.printInfo("Reloading script engine server...");
+			GD::scriptEngineServer->homegearReloading();
 			_shuttingDownMutex.lock();
 			_startUpComplete = true;
 			if(_shutdownQueued)
@@ -460,6 +462,7 @@ void startMainProcess()
 {
 	try
 	{
+		_monitor.stop();
 		_monitorProcess = false;
 		_monitor.init();
 
@@ -921,7 +924,7 @@ void startUp()
 				add_history(inputBuffer); //Sets inputBuffer to 0
 
 				std::string input(inputBuffer);
-				std::cout << GD::familyController->handleCliCommand(input);
+				std::cout << GD::cliServer->handleCommand(input);
 				free(inputBuffer);
 			}
 			clear_history();

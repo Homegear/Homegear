@@ -32,6 +32,7 @@
 #define MONITOR_H_
 
 #include <thread>
+#include <mutex>
 
 class Monitor
 {
@@ -54,6 +55,7 @@ private:
 	std::thread _monitorThread;
 	bool _killedProcess = false;
 	bool _disposing = false;
+	std::mutex _checkHealthMutex;
 
 	void monitor();
 	void killChild(pid_t mainProcessId);
