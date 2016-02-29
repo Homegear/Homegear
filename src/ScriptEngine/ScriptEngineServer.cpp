@@ -1827,7 +1827,7 @@ BaseLib::PVariable ScriptEngineServer::listRpcClients(PScriptEngineClientData& c
 				std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
 				if(i == GD::licensingModules.end() || !i->second)
 				{
-					_out.printError("Error: Could not check license. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
+					_out.printError("Error: Could not check license. License module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
 					return BaseLib::PVariable(new BaseLib::Variable(-2));
 				}
 
