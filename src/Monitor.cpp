@@ -87,9 +87,7 @@ void Monitor::prepareParent()
 {
 	if(!GD::bl->settings.enableMonitoring()) return;
 	close(_pipeToChild[0]);
-	_pipeToChild[0] = -1;
 	close(_pipeFromChild[1]);
-	_pipeFromChild[1] = -1;
 	_suspendMonitoring = false;
 	_killedProcess = false;
 }
@@ -98,9 +96,7 @@ void Monitor::prepareChild()
 {
 	if(!GD::bl->settings.enableMonitoring()) return;
 	close(_pipeToChild[1]);
-	_pipeToChild[1] = -1;
 	close(_pipeFromChild[0]);
-	_pipeFromChild[0]= -1;
 	stop();
 	_stopMonitorThread = false;
 	GD::bl->threadManager.start(_monitorThread, true, &Monitor::monitor, this);
