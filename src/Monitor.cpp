@@ -35,10 +35,10 @@ Monitor::Monitor()
 {
 	signal(SIGPIPE, SIG_IGN);
 
-	_pipeToChild[0] = 0;
-	_pipeToChild[1] = 0;
-	_pipeFromChild[0] = 0;
-	_pipeFromChild[1] = 0;
+	_pipeToChild[0] = -1;
+	_pipeToChild[1] = -1;
+	_pipeFromChild[0] = -1;
+	_pipeFromChild[1] = -1;
 }
 
 Monitor::~Monitor()
@@ -54,10 +54,10 @@ bool Monitor::killedProcess()
 void Monitor::init()
 {
 	if(!GD::bl->settings.enableMonitoring()) return;
-	_pipeToChild[0] = 0;
-	_pipeToChild[1] = 0;
-	_pipeFromChild[0] = 0;
-	_pipeFromChild[1] = 0;
+	_pipeToChild[0] = -1;
+	_pipeToChild[1] = -1;
+	_pipeFromChild[0] = -1;
+	_pipeFromChild[1] = -1;
 	if(pipe(_pipeFromChild) == -1)
 	{
 		GD::out.printError("Error creating pipe from child.");
@@ -97,7 +97,6 @@ void Monitor::prepareChild()
 	if(!GD::bl->settings.enableMonitoring()) return;
 	close(_pipeToChild[1]);
 	close(_pipeFromChild[0]);
-	stop();
 	_stopMonitorThread = false;
 	GD::bl->threadManager.start(_monitorThread, true, &Monitor::monitor, this);
 }
@@ -107,7 +106,8 @@ void Monitor::stop()
 	try
 	{
 		_suspendMonitoring = true;
-		std::lock_guard<std::mutex> checkHealthGuard(_checkHealthMutex);
+		_checkHealthMutex.lock();
+		_checkHealthMutex.unlock();
 		_stopMonitorThread = true;
 		GD::bl->threadManager.join(_monitorThread);
 		if(_pipeToChild[0] != -1) close(_pipeToChild[0]);
@@ -161,7 +161,7 @@ void Monitor::checkHealth(pid_t mainProcessId)
 				{
 					if(_suspendMonitoring) return;
 					GD::out.printError(std::string("Error writing to child process pipe: ") + strerror(errno));
-					killChild(mainProcessId);
+					_suspendMonitoring = true;
 					return;
 				}
 				totalBytesWritten += bytesWritten;
@@ -179,7 +179,7 @@ void Monitor::checkHealth(pid_t mainProcessId)
 						{
 							if(_suspendMonitoring) return;
 							GD::out.printError(std::string("Error reading from child's process pipe: ") + strerror(errno));
-							killChild(mainProcessId);
+							_suspendMonitoring = true;
 							return;
 						}
 					}
@@ -207,6 +207,7 @@ void Monitor::checkHealth(pid_t mainProcessId)
 				switch(buffer)
 				{
 				case 'a': //Everything ok
+					std::cerr << "Moin ok" << std::endl;
 					if(GD::bl->debugLevel >= 6) GD::out.printDebug("Debug: checkHealth returned ok.");
 					break;
 				case 'n':
@@ -251,7 +252,11 @@ void Monitor::monitor()
 				{
 					if(errno != EAGAIN && errno != EWOULDBLOCK) GD::out.printError(std::string("Error reading from parent's process pipe: ") + strerror(errno));
 				}
-				else GD::out.printError("Error reading from parent's process pipe.");
+				else
+				{
+					GD::out.printError("Error reading from parent's process pipe.");
+					_stopMonitorThread = true;
+				}
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				continue;
 			}
