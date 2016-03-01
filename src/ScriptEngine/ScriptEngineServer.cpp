@@ -972,7 +972,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess()
 		}
 		_out.printInfo("Info: Spawning new script engine process.");
 		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess());
-		std::vector<std::string> arguments{ "-rse" };
+		std::vector<std::string> arguments{ "-c", GD::configPath, "-rse" };
 		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
 		if(process->getPid() != -1)
 		{
