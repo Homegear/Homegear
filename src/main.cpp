@@ -1093,8 +1093,13 @@ int main(int argc, char* argv[])
     		else if(arg == "-rse")
     		{
     			GD::bl->settings.load(GD::configPath + "main.conf");
+    			GD::licensingController.reset(new LicensingController());
+    			GD::licensingController->loadModules();
+    			GD::licensingController->init();
+    			GD::licensingController->load();
     			ScriptEngine::ScriptEngineClient scriptEngineClient;
     			scriptEngineClient.start();
+    			GD::licensingController->dispose();
     			exit(0);
     		}
     		else if(arg == "-e")
@@ -1122,24 +1127,6 @@ int main(int argc, char* argv[])
     			CLI::Client cliClient;
     			int32_t exitCode = cliClient.start(command.str());
     			exit(exitCode);
-    		}
-    		else if(arg == "-t")
-    		{
-    			if(i + 2 < argc)
-    			{
-    				GD::licensingController.reset(new LicensingController());
-    				GD::licensingController->loadModules();
-    				std::string inputFile(argv[i + 1]);
-    				std::string outputFile(argv[i + 2]);
-
-					GD::licensingController->dispose();
-    				exit(0);
-    			}
-    			else
-    			{
-    				printHelp();
-    				exit(1);
-    			}
     		}
     		else if(arg == "-tc")
     		{

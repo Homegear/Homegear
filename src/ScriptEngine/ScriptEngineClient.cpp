@@ -885,7 +885,18 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
 {
 	try
 	{
-		if(scriptInfo->getType() != ScriptInfo::ScriptType::device && scriptInfo->path.size() > 3 && scriptInfo->path.compare(scriptInfo->path.size() - 4, 4, ".hgs") == 0)
+		zend_homegear_globals* globals = php_homegear_get_globals();
+		if(!globals) exit(1);
+		globals->id = id;
+		if(sendOutput) globals->outputCallback = std::bind(&ScriptEngineClient::sendOutput, this, std::placeholders::_1);
+		globals->rpcCallback = std::bind(&ScriptEngineClient::callMethod, this, std::placeholders::_1, std::placeholders::_2);
+		{
+			std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
+			_requestInfo[id].reset(new RequestInfo());
+		}
+		ScriptGuard scriptGuard(this, globals, id, scriptInfo);
+
+		if(scriptInfo->script.empty() && scriptInfo->path.size() > 3 && scriptInfo->path.compare(scriptInfo->path.size() - 4, 4, ".hgs") == 0)
 		{
 			std::map<std::string, std::shared_ptr<CacheInfo>>::iterator scriptIterator = _scriptCache.find(scriptInfo->path);
 			if(scriptIterator != _scriptCache.end() && scriptIterator->second->lastModified == BaseLib::Io::getFileLastModifiedTime(scriptInfo->path)) scriptInfo->script = scriptIterator->second->script;
@@ -926,17 +937,6 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
 				}
 			}
 		}
-
-		zend_homegear_globals* globals = php_homegear_get_globals();
-		if(!globals) exit(1);
-		globals->id = id;
-		if(sendOutput) globals->outputCallback = std::bind(&ScriptEngineClient::sendOutput, this, std::placeholders::_1);
-		globals->rpcCallback = std::bind(&ScriptEngineClient::callMethod, this, std::placeholders::_1, std::placeholders::_2);
-		{
-			std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
-			_requestInfo[id].reset(new RequestInfo());
-		}
-		ScriptGuard scriptGuard(this, globals, id, scriptInfo);
 
 		runScript(id, scriptInfo);
 	}
