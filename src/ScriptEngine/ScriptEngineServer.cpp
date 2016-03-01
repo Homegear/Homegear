@@ -1813,7 +1813,7 @@ BaseLib::PVariable ScriptEngineServer::listRpcClients(PScriptEngineClientData& c
 		{
 			try
 			{
-				if(parameters->size() != 3 || parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects three or four parameters.");
+				if(parameters->size() != 3 && parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects three or four parameters. " + std::to_string(parameters->size()) + " given.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
 				if(parameters->at(1)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type integer.");
 				if(parameters->at(2)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type integer.");
