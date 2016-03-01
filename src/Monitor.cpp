@@ -207,7 +207,6 @@ void Monitor::checkHealth(pid_t mainProcessId)
 				switch(buffer)
 				{
 				case 'a': //Everything ok
-					std::cerr << "Moin ok" << std::endl;
 					if(GD::bl->debugLevel >= 6) GD::out.printDebug("Debug: checkHealth returned ok.");
 					break;
 				case 'n':

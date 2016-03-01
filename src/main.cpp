@@ -493,8 +493,6 @@ void startMainProcess()
 			_monitor.prepareChild();
 		}
 
-		close(STDIN_FILENO);
-
 		if(pid == 0) startUp();
 	}
 	catch(const std::exception& ex)
@@ -535,6 +533,8 @@ void startDaemon()
 		{
 			exitHomegear(1);
 		}
+
+		close(STDIN_FILENO);
 
 		startMainProcess();
 	}
