@@ -983,7 +983,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess()
 
 			std::mutex requestMutex;
 			std::unique_lock<std::mutex> requestLock(requestMutex);
-			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(5000), [&]{ return (bool)(process->getClientData()); });
+			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(30000), [&]{ return (bool)(process->getClientData()); });
 
 			if(!process->getClientData())
 			{
