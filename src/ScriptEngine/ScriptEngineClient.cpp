@@ -145,6 +145,7 @@ void ScriptEngineClient::start()
 		startQueue(0, 5, 0, SCHED_OTHER);
 
 		_socketPath = GD::bl->settings.socketPath() + "homegearSE.sock";
+		if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Socket path is " + _socketPath);
 		for(int32_t i = 0; i < 2; i++)
 		{
 			_fileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0));
