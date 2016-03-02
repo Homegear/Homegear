@@ -78,8 +78,29 @@ static PHP_MINFO_FUNCTION(homegear);
 ZEND_FUNCTION(hg_get_script_id);
 ZEND_FUNCTION(hg_register_thread);
 ZEND_FUNCTION(hg_invoke);
+ZEND_FUNCTION(hg_get_meta);
+ZEND_FUNCTION(hg_get_system);
+ZEND_FUNCTION(hg_get_value);
+ZEND_FUNCTION(hg_set_meta);
+ZEND_FUNCTION(hg_set_system);
+ZEND_FUNCTION(hg_set_value);
+ZEND_FUNCTION(hg_list_modules);
+ZEND_FUNCTION(hg_load_module);
+ZEND_FUNCTION(hg_unload_module);
+ZEND_FUNCTION(hg_reload_module);
+ZEND_FUNCTION(hg_auth);
+ZEND_FUNCTION(hg_create_user);
+ZEND_FUNCTION(hg_delete_user);
+ZEND_FUNCTION(hg_update_user);
+ZEND_FUNCTION(hg_user_exists);
+ZEND_FUNCTION(hg_users);
 ZEND_FUNCTION(hg_log);
+ZEND_FUNCTION(hg_check_license);
+ZEND_FUNCTION(hg_remove_license);
+ZEND_FUNCTION(hg_get_license_states);
 ZEND_FUNCTION(hg_poll_event);
+ZEND_FUNCTION(hg_list_rpc_clients);
+ZEND_FUNCTION(hg_peer_exists);
 ZEND_FUNCTION(hg_subscribe_peer);
 ZEND_FUNCTION(hg_unsubscribe_peer);
 ZEND_FUNCTION(hg_shutting_down);
@@ -106,8 +127,29 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_get_script_id, NULL)
 	ZEND_FE(hg_register_thread, NULL)
 	ZEND_FE(hg_invoke, NULL)
+	ZEND_FE(hg_get_meta, NULL)
+	ZEND_FE(hg_get_system, NULL)
+	ZEND_FE(hg_get_value, NULL)
+	ZEND_FE(hg_set_meta, NULL)
+	ZEND_FE(hg_set_system, NULL)
+	ZEND_FE(hg_set_value, NULL)
+	ZEND_FE(hg_list_modules, NULL)
+	ZEND_FE(hg_load_module, NULL)
+	ZEND_FE(hg_unload_module, NULL)
+	ZEND_FE(hg_reload_module, NULL)
+	ZEND_FE(hg_auth, NULL)
+	ZEND_FE(hg_create_user, NULL)
+	ZEND_FE(hg_delete_user, NULL)
+	ZEND_FE(hg_update_user, NULL)
+	ZEND_FE(hg_user_exists, NULL)
+	ZEND_FE(hg_users, NULL)
 	ZEND_FE(hg_log, NULL)
+	ZEND_FE(hg_check_license, NULL)
+	ZEND_FE(hg_remove_license, NULL)
+	ZEND_FE(hg_get_license_states, NULL)
 	ZEND_FE(hg_poll_event, NULL)
+	ZEND_FE(hg_list_rpc_clients, NULL)
+	ZEND_FE(hg_peer_exists, NULL)
 	ZEND_FE(hg_subscribe_peer, NULL)
 	ZEND_FE(hg_unsubscribe_peer, NULL)
 	ZEND_FE(hg_shutting_down, NULL)
@@ -528,6 +570,253 @@ ZEND_FUNCTION(hg_invoke)
 	php_homegear_invoke_rpc(methodName, parameters, return_value);
 }
 
+ZEND_FUNCTION(hg_get_meta)
+{
+	if(_disposed) RETURN_NULL();
+	unsigned long id = 0;
+	char* pName = nullptr;
+	int nameLength = 0;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "ls", &id, &pName, &nameLength) != SUCCESS) RETURN_NULL();
+	if(nameLength == 0) RETURN_NULL();
+	std::string methodName("getMetadata");
+	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)id)));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
+	php_homegear_invoke_rpc(methodName, parameters, return_value);
+}
+
+ZEND_FUNCTION(hg_get_system)
+{
+	if(_disposed) RETURN_NULL();
+	char* pName = nullptr;
+	int nameLength = 0;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s",&pName, &nameLength) != SUCCESS) RETURN_NULL();
+	if(nameLength == 0) RETURN_NULL();
+	std::string methodName("getSystemVariable");
+	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
+	php_homegear_invoke_rpc(methodName, parameters, return_value);
+}
+
+ZEND_FUNCTION(hg_get_value)
+{
+	if(_disposed) RETURN_NULL();
+	unsigned long id = 0;
+	long channel = -1;
+	char* pParameterName = nullptr;
+	int parameterNameLength = 0;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lls", &id, &channel, &pParameterName, &parameterNameLength) != SUCCESS) RETURN_NULL();
+	if(parameterNameLength == 0) RETURN_NULL();
+	std::string methodName("getValue");
+	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)id)));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)channel)));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pParameterName, parameterNameLength))));
+	php_homegear_invoke_rpc(methodName, parameters, return_value);
+}
+
+ZEND_FUNCTION(hg_set_meta)
+{
+	if(_disposed) RETURN_NULL();
+	unsigned long id = 0;
+	char* pName = nullptr;
+	int nameLength = 0;
+	zval* newValue = nullptr;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lsz", &id, &pName, &nameLength, &newValue) != SUCCESS) RETURN_NULL();
+	if(nameLength == 0) RETURN_FALSE;
+	std::string methodName("setMetadata");
+	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)id)));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
+	BaseLib::PVariable parameter = PhpVariableConverter::getVariable(newValue);
+	if(parameter) parameters->arrayValue->push_back(parameter);
+	php_homegear_invoke_rpc(methodName, parameters, return_value);
+}
+
+ZEND_FUNCTION(hg_set_system)
+{
+	if(_disposed) RETURN_NULL();
+	char* pName = nullptr;
+	int nameLength = 0;
+	zval* newValue = nullptr;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "sz", &pName, &nameLength, &newValue) != SUCCESS) RETURN_NULL();
+	if(nameLength == 0) RETURN_FALSE;
+	std::string methodName("setSystemVariable");
+	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
+	BaseLib::PVariable parameter = PhpVariableConverter::getVariable(newValue);
+	if(parameter) parameters->arrayValue->push_back(parameter);
+	php_homegear_invoke_rpc(methodName, parameters, return_value);
+}
+
+ZEND_FUNCTION(hg_set_value)
+{
+	if(_disposed) RETURN_NULL();
+	unsigned long id = 0;
+	long channel = -1;
+	char* pParameterName = nullptr;
+	int parameterNameLength = 0;
+	zval* newValue = nullptr;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "llsz", &id, &channel, &pParameterName, &parameterNameLength, &newValue) != SUCCESS) RETURN_NULL();
+	if(parameterNameLength == 0) RETURN_FALSE;
+	std::string methodName("setValue");
+	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)id)));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)channel)));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pParameterName, parameterNameLength))));
+	BaseLib::PVariable parameter = PhpVariableConverter::getVariable(newValue);
+	if(parameter) parameters->arrayValue->push_back(parameter);
+	php_homegear_invoke_rpc(methodName, parameters, return_value);
+}
+
+// {{{ Module functions
+	ZEND_FUNCTION(hg_list_modules)
+	{
+		if(_disposed) RETURN_NULL();
+
+		std::string methodName("listModules");
+		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		php_homegear_invoke_rpc(methodName, parameters, return_value);
+	}
+
+	ZEND_FUNCTION(hg_load_module)
+	{
+		if(_disposed) RETURN_NULL();
+		char* pFilename = nullptr;
+		int filenameLength = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pFilename, &filenameLength) != SUCCESS) RETURN_NULL();
+		if(filenameLength == 0)
+		{
+			ZVAL_LONG(return_value, -1);
+			return;
+		}
+		std::string methodName("loadModule");
+		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pFilename, filenameLength))));
+		php_homegear_invoke_rpc(methodName, parameters, return_value);
+	}
+
+	ZEND_FUNCTION(hg_unload_module)
+	{
+		if(_disposed) RETURN_NULL();
+		char* pFilename = nullptr;
+		int filenameLength = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pFilename, &filenameLength) != SUCCESS) RETURN_NULL();
+		if(filenameLength == 0)
+		{
+			ZVAL_LONG(return_value, -1);
+			return;
+		}
+		std::string methodName("unloadModule");
+		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pFilename, filenameLength))));
+		php_homegear_invoke_rpc(methodName, parameters, return_value);
+	}
+
+	ZEND_FUNCTION(hg_reload_module)
+	{
+		if(_disposed) RETURN_NULL();
+		char* pFilename = nullptr;
+		int filenameLength = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pFilename, &filenameLength) != SUCCESS) RETURN_NULL();
+		if(filenameLength == 0)
+		{
+			ZVAL_LONG(return_value, -1);
+			return;
+		}
+		std::string methodName("reloadModule");
+		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pFilename, filenameLength))));
+		php_homegear_invoke_rpc(methodName, parameters, return_value);
+	}
+
+// }}}
+
+// {{{ User functions
+
+	ZEND_FUNCTION(hg_auth)
+	{
+		if(_disposed) RETURN_NULL();
+		char* pName = nullptr;
+		int nameLength = 0;
+		char* pPassword = nullptr;
+		int passwordLength = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
+		if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
+		std::string methodName("auth");
+		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pPassword, passwordLength))));
+		php_homegear_invoke_rpc(methodName, parameters, return_value);
+	}
+
+	ZEND_FUNCTION(hg_create_user)
+	{
+		if(_disposed) RETURN_NULL();
+		char* pName = nullptr;
+		int nameLength = 0;
+		char* pPassword = nullptr;
+		int passwordLength = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
+		if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
+		std::string methodName("createUser");
+		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pPassword, passwordLength))));
+		php_homegear_invoke_rpc(methodName, parameters, return_value);
+	}
+
+	ZEND_FUNCTION(hg_delete_user)
+	{
+		if(_disposed) RETURN_NULL();
+		char* pName = nullptr;
+		int nameLength = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
+		if(nameLength == 0) RETURN_FALSE;
+		std::string methodName("deleteUser");
+		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
+		php_homegear_invoke_rpc(methodName, parameters, return_value);
+	}
+
+	ZEND_FUNCTION(hg_update_user)
+	{
+		if(_disposed) RETURN_NULL();
+		char* pName = nullptr;
+		int nameLength = 0;
+		char* pPassword = nullptr;
+		int passwordLength = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
+		if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
+		std::string methodName("updateUser");
+		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pPassword, passwordLength))));
+		php_homegear_invoke_rpc(methodName, parameters, return_value);
+	}
+
+	ZEND_FUNCTION(hg_user_exists)
+	{
+		if(_disposed) RETURN_NULL();
+		char* pName = nullptr;
+		int nameLength = 0;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
+		if(nameLength == 0) RETURN_FALSE;
+		std::string methodName("userExists");
+		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
+		php_homegear_invoke_rpc(methodName, parameters, return_value);
+	}
+
+	ZEND_FUNCTION(hg_users)
+	{
+		if(_disposed) RETURN_NULL();
+		std::string methodName("listUsers");
+		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		php_homegear_invoke_rpc(methodName, parameters, return_value);
+	}
+// }}}
+
 ZEND_FUNCTION(hg_poll_event)
 {
 	if(_disposed) RETURN_NULL();
@@ -605,6 +894,25 @@ ZEND_FUNCTION(hg_poll_event)
 	else RETURN_FALSE
 }
 
+ZEND_FUNCTION(hg_list_rpc_clients)
+{
+	if(_disposed) RETURN_NULL();
+	std::string methodName("listRpcClients");
+	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+	php_homegear_invoke_rpc(methodName, parameters, return_value);
+}
+
+ZEND_FUNCTION(hg_peer_exists)
+{
+	if(_disposed) RETURN_NULL();
+	unsigned long peerId = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &peerId) != SUCCESS) RETURN_NULL();
+	std::string methodName("peerExists");
+	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)peerId)));
+	php_homegear_invoke_rpc(methodName, parameters, return_value);
+}
+
 ZEND_FUNCTION(hg_subscribe_peer)
 {
 	if(_disposed) RETURN_NULL();
@@ -666,6 +974,50 @@ ZEND_FUNCTION(hg_log)
 	if(SEG(peerId) != 0) GD::out.printMessage("Script log (peer id: " + std::to_string(SEG(peerId)) + "): " + std::string(pMessage, messageLength), debugLevel, true);
 	else GD::out.printMessage("Script log: " + std::string(pMessage, messageLength), debugLevel, true);
 	RETURN_TRUE;
+}
+
+ZEND_FUNCTION(hg_check_license)
+{
+	if(_disposed) RETURN_NULL();
+	long moduleId = -1;
+	long familyId = -1;
+	long deviceId = -1;
+	char* pLicenseKey = nullptr;
+	int licenseKeyLength = 0;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "llls", &moduleId, &familyId, &deviceId, &pLicenseKey, &licenseKeyLength) != SUCCESS) RETURN_NULL();
+	std::string methodName("checkLicense");
+	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)moduleId)));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)familyId)));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)deviceId)));
+	if(licenseKeyLength > 0) parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pLicenseKey, licenseKeyLength))));
+	php_homegear_invoke_rpc(methodName, parameters, return_value);
+}
+
+ZEND_FUNCTION(hg_remove_license)
+{
+	if(_disposed) RETURN_NULL();
+	long moduleId = -1;
+	long familyId = -1;
+	long deviceId = -1;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "lll", &moduleId, &familyId, &deviceId) != SUCCESS) RETURN_NULL();
+	std::string methodName("removeLicense");
+	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)moduleId)));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)familyId)));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)deviceId)));
+	php_homegear_invoke_rpc(methodName, parameters, return_value);
+}
+
+ZEND_FUNCTION(hg_get_license_states)
+{
+	if(_disposed) RETURN_NULL();
+	long moduleId = -1;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &moduleId) != SUCCESS) RETURN_NULL();
+	std::string methodName("getLicenseStates");
+	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+	parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)moduleId)));
+	php_homegear_invoke_rpc(methodName, parameters, return_value);
 }
 
 ZEND_FUNCTION(hg_shutting_down)
