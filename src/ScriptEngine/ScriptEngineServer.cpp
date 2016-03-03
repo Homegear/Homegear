@@ -1148,6 +1148,7 @@ bool ScriptEngineServer::checkSessionId(const std::string& sessionId)
 		bool result = false;
 		std::lock_guard<std::mutex> checkSessionIdGuard(_checkSessionIdMutex);
 		GD::bl->threadManager.join(_checkSessionIdThread);
+		_checkSessionIdThread = std::thread();
 		GD::bl->threadManager.start(_checkSessionIdThread, false, &ScriptEngineServer::checkSessionIdThread, this, sessionId, &result);
 		GD::bl->threadManager.join(_checkSessionIdThread);
 
@@ -1173,15 +1174,10 @@ void ScriptEngineServer::checkSessionIdThread(std::string sessionId, bool* resul
 	*result = false;
 	std::shared_ptr<BaseLib::Rpc::ServerInfo::Info> serverInfo(new BaseLib::Rpc::ServerInfo::Info());
 	ts_resource_ex(0, NULL); //Replaces TSRMLS_FETCH()
+	zend_homegear_globals* globals = php_homegear_get_globals();
+	if(!globals) return;
 	try
 	{
-		zend_homegear_globals* globals = php_homegear_get_globals();
-		if(!globals)
-		{
-			ts_free_thread();
-			return;
-		}
-
 		if(!tsrm_get_ls_cache() || !((sapi_globals_struct *) (*((void ***) tsrm_get_ls_cache()))[((sapi_globals_id)-1)]))
 		{
 			GD::out.printCritical("Critical: Error in PHP: No thread safe resource exists.");
@@ -1201,7 +1197,28 @@ void ScriptEngineServer::checkSessionIdThread(std::string sessionId, bool* resul
 			ts_free_thread();
 			return;
 		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		ts_free_thread();
+		return;
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		ts_free_thread();
+		return;
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		ts_free_thread();
+		return;
+	}
 
+	try
+	{
 		zval returnValue;
 		zval function;
 
@@ -1220,8 +1237,6 @@ void ScriptEngineServer::checkSessionIdThread(std::string sessionId, bool* resul
 				}
 			}
         }
-
-		php_request_shutdown(NULL);
 	}
 	catch(const std::exception& ex)
 	{
@@ -1235,6 +1250,8 @@ void ScriptEngineServer::checkSessionIdThread(std::string sessionId, bool* resul
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	php_request_shutdown(NULL);
+	ts_free_thread();
 }
 
 void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
