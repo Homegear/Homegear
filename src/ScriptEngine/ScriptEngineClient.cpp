@@ -781,7 +781,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 		}
 
 		zend_homegear_globals* globals = php_homegear_get_globals();
-		if(!globals) exit(1);
+		if(!globals) return;
 
 		if(type == ScriptInfo::ScriptType::web)
 		{
@@ -801,7 +801,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 		if(!tsrm_get_ls_cache() || !(*((void ***)tsrm_get_ls_cache()))[sapi_globals_id - 1] || !(*((void ***)tsrm_get_ls_cache()))[core_globals_id - 1])
 		{
 			GD::out.printCritical("Critical: Error in PHP: No thread safe resource exists.");
-			exit(1);
+			return;
 		}
 
 		if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)

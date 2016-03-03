@@ -441,6 +441,63 @@ void getExecutablePath(int argc, char* argv[])
 	if(!pathNamePair.second.empty()) GD::executableFile = pathNamePair.second;
 }
 
+void initGnuTls()
+{
+	// {{{ Init gcrypt and GnuTLS
+		gcry_error_t gcryResult;
+		if((gcryResult = gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread)) != GPG_ERR_NO_ERROR)
+		{
+			GD::out.printCritical("Critical: Could not enable thread support for gcrypt.");
+			exit(2);
+		}
+
+		if (!gcry_check_version(GCRYPT_VERSION))
+		{
+			GD::out.printCritical("Critical: Wrong gcrypt version.");
+			exit(2);
+		}
+		gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
+		if((gcryResult = gcry_control(GCRYCTL_INIT_SECMEM, 65536, 0)) != GPG_ERR_NO_ERROR)
+		{
+			GD::out.printCritical("Critical: Could not allocate secure memory.");
+			exit(2);
+		}
+		gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
+		gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
+
+		int32_t gnutlsResult = 0;
+		if((gnutlsResult = gnutls_global_init()) != GNUTLS_E_SUCCESS)
+		{
+			GD::out.printCritical("Critical: Could not initialize GnuTLS: " + std::string(gnutls_strerror(gnutlsResult)));
+			exit(2);
+		}
+	// }}}
+}
+
+void setLimits()
+{
+	struct rlimit limits;
+	if(!GD::bl->settings.enableCoreDumps()) prctl(PR_SET_DUMPABLE, 0);
+	else
+	{
+		//Set rlimit for core dumps
+		getrlimit(RLIMIT_CORE, &limits);
+		limits.rlim_cur = limits.rlim_max;
+		GD::out.printInfo("Info: Setting allowed core file size to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
+		setrlimit(RLIMIT_CORE, &limits);
+		getrlimit(RLIMIT_CORE, &limits);
+		GD::out.printInfo("Info: Core file size now is \"" + std::to_string(limits.rlim_cur) + "\".");
+	}
+#ifdef RLIMIT_RTPRIO //Not existant on BSD systems
+	getrlimit(RLIMIT_RTPRIO, &limits);
+	limits.rlim_cur = limits.rlim_max;
+	GD::out.printInfo("Info: Setting maximum thread priority to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
+	setrlimit(RLIMIT_RTPRIO, &limits);
+	getrlimit(RLIMIT_RTPRIO, &limits);
+	GD::out.printInfo("Info: Maximum thread priority now is \"" + std::to_string(limits.rlim_cur) + "\".");
+#endif
+}
+
 void printHelp()
 {
 	std::cout << "Usage: homegear [OPTIONS]" << std::endl << std::endl;
@@ -596,26 +653,7 @@ void startUp()
     	if(GD::bl->settings.memoryDebugging()) mallopt(M_CHECK_ACTION, 3); //Print detailed error message, stack trace, and memory, and abort the program. See: http://man7.org/linux/man-pages/man3/mallopt.3.html
     	if(_monitorProcess)
     	{
-    		struct rlimit limits;
-    		if(!GD::bl->settings.enableCoreDumps()) prctl(PR_SET_DUMPABLE, 0);
-    		else
-    		{
-				//Set rlimit for core dumps
-				getrlimit(RLIMIT_CORE, &limits);
-				limits.rlim_cur = limits.rlim_max;
-				GD::out.printInfo("Info: Setting allowed core file size on monitor process to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
-				setrlimit(RLIMIT_CORE, &limits);
-				getrlimit(RLIMIT_CORE, &limits);
-				GD::out.printInfo("Info: Core file size on monitor process now is \"" + std::to_string(limits.rlim_cur) + "\".");
-    		}
-#ifdef RLIMIT_RTPRIO //Not existant on BSD systems
-			getrlimit(RLIMIT_RTPRIO, &limits);
-			limits.rlim_cur = limits.rlim_max;
-			GD::out.printInfo("Info: Setting maximum thread priority on monitor process to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
-			setrlimit(RLIMIT_RTPRIO, &limits);
-			getrlimit(RLIMIT_RTPRIO, &limits);
-			GD::out.printInfo("Info: Maximum thread priority on monitor process now is \"" + std::to_string(limits.rlim_cur) + "\".");
-#endif
+    		setLimits();
 
     		while(true)
     		{
@@ -624,35 +662,7 @@ void startUp()
     		}
     	}
 
-    	// {{{ Init gcrypt and GnuTLS
-			gcry_error_t gcryResult;
-			if((gcryResult = gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread)) != GPG_ERR_NO_ERROR)
-			{
-				GD::out.printCritical("Critical: Could not enable thread support for gcrypt.");
-				exit(2);
-			}
-
-			if (!gcry_check_version(GCRYPT_VERSION))
-			{
-				GD::out.printCritical("Critical: Wrong gcrypt version.");
-				exit(2);
-			}
-			gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
-			if((gcryResult = gcry_control(GCRYCTL_INIT_SECMEM, 65536, 0)) != GPG_ERR_NO_ERROR)
-			{
-				GD::out.printCritical("Critical: Could not allocate secure memory.");
-				exit(2);
-			}
-			gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
-			gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
-
-			int32_t gnutlsResult = 0;
-			if((gnutlsResult = gnutls_global_init()) != GNUTLS_E_SUCCESS)
-			{
-				GD::out.printCritical("Critical: Could not initialize GnuTLS: " + std::string(gnutls_strerror(gnutlsResult)));
-				exit(2);
-			}
-		// }}}
+    	initGnuTls();
 
 		if(!GD::bl->io.directoryExists(GD::bl->settings.socketPath()))
 		{
@@ -718,26 +728,7 @@ void startUp()
     		GD::out.printInfo("Info: Homegear is (now) running as user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
     	}
 
-    	struct rlimit limits;
-    	if(!GD::bl->settings.enableCoreDumps()) prctl(PR_SET_DUMPABLE, 0);
-    	else
-    	{
-			//Set rlimit for core dumps
-			getrlimit(RLIMIT_CORE, &limits);
-			limits.rlim_cur = limits.rlim_max;
-			GD::out.printInfo("Info: Setting allowed core file size to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
-			setrlimit(RLIMIT_CORE, &limits);
-			getrlimit(RLIMIT_CORE, &limits);
-			GD::out.printInfo("Info: Core file size now is \"" + std::to_string(limits.rlim_cur) + "\".");
-    	}
-#ifdef RLIMIT_RTPRIO //Not existant on BSD systems
-    	getrlimit(RLIMIT_RTPRIO, &limits);
-    	limits.rlim_cur = limits.rlim_max;
-    	GD::out.printInfo("Info: Setting maximum thread priority to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
-    	setrlimit(RLIMIT_RTPRIO, &limits);
-    	getrlimit(RLIMIT_RTPRIO, &limits);
-    	GD::out.printInfo("Info: Maximum thread priority now is \"" + std::to_string(limits.rlim_cur) + "\".");
-#endif
+    	setLimits();
 
     	//Create PID file
     	try
@@ -1092,6 +1083,8 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-rse")
     		{
+    			initGnuTls();
+    			setLimits();
     			GD::bl->settings.load(GD::configPath + "main.conf");
     			GD::licensingController.reset(new LicensingController());
     			GD::licensingController->loadModules();
@@ -1174,7 +1167,12 @@ int main(int argc, char* argv[])
 		}
 
     	// {{{ Load settings
-			if(GD::configPath.empty()) GD::configPath = "/etc/homegear/";
+			if(GD::configPath.empty())
+			{
+				if(BaseLib::Io::directoryExists(GD::executablePath + "config")) GD::configPath = GD::executablePath + "config";
+				else if(BaseLib::Io::directoryExists(GD::executablePath + "cfg")) GD::configPath = GD::executablePath + "cfg";
+				else GD::configPath = "/etc/homegear/";
+			}
 			GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");
 			GD::bl->settings.load(GD::configPath + "main.conf");
 			if(GD::runAsUser.empty()) GD::runAsUser = GD::bl->settings.runAsUser();

@@ -1185,7 +1185,6 @@ void ScriptEngineServer::checkSessionIdThread(std::string sessionId, bool* resul
 		if(!tsrm_get_ls_cache() || !((sapi_globals_struct *) (*((void ***) tsrm_get_ls_cache()))[((sapi_globals_id)-1)]))
 		{
 			GD::out.printCritical("Critical: Error in PHP: No thread safe resource exists.");
-			ts_free_thread();
 			return;
 		}
 		SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise POST data is not processed.
