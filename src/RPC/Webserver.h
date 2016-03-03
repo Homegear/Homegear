@@ -52,6 +52,7 @@ namespace RPC
 			BaseLib::Http _http;
 
 			void send(std::shared_ptr<BaseLib::SocketOperations>& socket, std::vector<char>& data);
+			void sendHeaders(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, std::string& headers);
 	};
 }
 #endif

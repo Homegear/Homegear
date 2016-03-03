@@ -102,8 +102,9 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperatio
 			if(ending == "php" || ending == "php5" || ending == "php7" || ending == "hgs")
 			{
 				std::string fullPath = _serverInfo->contentPath + path;
-				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, http.serialize(), _serverInfo->serialize()));
+				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, http, _serverInfo));
 				scriptInfo->socket = socket;
+				scriptInfo->scriptHeadersCallback = std::bind(&WebServer::sendHeaders, this, std::placeholders::_1, std::placeholders::_2);
 				GD::scriptEngineServer->executeScript(scriptInfo, true);
 				socket->close();
 				return;
@@ -220,8 +221,9 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperati
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to: \"" + _serverInfo->contentPath + path + "\", method: POST)");
 			std::string fullPath = _serverInfo->contentPath + path;
-			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, http.serialize(), _serverInfo->serialize()));
+			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, http, _serverInfo));
 			scriptInfo->socket = socket;
+			scriptInfo->scriptHeadersCallback = std::bind(&WebServer::sendHeaders, this, std::placeholders::_1, std::placeholders::_2);
 			GD::scriptEngineServer->executeScript(scriptInfo, true);
 			socket->close();
 		}
@@ -321,6 +323,41 @@ void WebServer::send(std::shared_ptr<BaseLib::SocketOperations>& socket, std::ve
 			_out.printInfo("Info: " + ex.what());
 		}
 		socket->close();
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void WebServer::sendHeaders(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, std::string& headers)
+{
+	try
+	{
+		try
+		{
+			if(!scriptInfo->socket) return;
+			headers.reserve(headers.size() + 2);
+			headers.push_back('\r');
+			headers.push_back('\n');
+			scriptInfo->socket->proofwrite(headers.c_str(), headers.size());
+		}
+		catch(BaseLib::SocketDataLimitException& ex)
+		{
+			_out.printWarning("Warning: " + ex.what());
+		}
+		catch(const BaseLib::SocketOperationException& ex)
+		{
+			_out.printInfo("Info: " + ex.what());
+		}
 	}
     catch(const std::exception& ex)
     {

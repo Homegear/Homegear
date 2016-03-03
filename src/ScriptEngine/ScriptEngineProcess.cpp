@@ -118,6 +118,36 @@ void ScriptEngineProcess::invokeScriptOutput(int32_t id, std::string& output)
     }
 }
 
+void ScriptEngineProcess::invokeScriptHeaders(int32_t id, std::string& output)
+{
+	try
+	{
+		std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
+		std::map<int32_t, PScriptInfo>::iterator scriptsIterator = _scripts.find(id);
+		if(scriptsIterator != _scripts.end())
+		{
+			if(scriptsIterator->second->scriptHeadersCallback) scriptsIterator->second->scriptHeadersCallback(scriptsIterator->second, output);
+			if(scriptsIterator->second->returnOutput)
+			{
+				if(scriptsIterator->second->output.size() + output.size() > scriptsIterator->second->output.capacity()) scriptsIterator->second->output.reserve(scriptsIterator->second->output.capacity() + (((output.size() / 1024) + 1) * 1024));
+				scriptsIterator->second->output.append(output);
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void ScriptEngineProcess::invokeScriptFinished(int32_t exitCode)
 {
 	try

@@ -67,6 +67,7 @@ public:
 	void setClientData(PScriptEngineClientData& value) { _clientData = value; }
 
 	void invokeScriptOutput(int32_t id, std::string& output);
+	void invokeScriptHeaders(int32_t id, std::string& headers);
 	void invokeScriptFinished(int32_t exitCode);
 	void invokeScriptFinished(int32_t id, int32_t exitCode);
 	uint32_t scriptCount();

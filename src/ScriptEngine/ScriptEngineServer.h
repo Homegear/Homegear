@@ -131,6 +131,7 @@ private:
 		BaseLib::PVariable registerScriptEngineClient(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 		BaseLib::PVariable scriptFinished(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 		BaseLib::PVariable scriptOutput(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+		BaseLib::PVariable scriptHeaders(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 		BaseLib::PVariable peerExists(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 
 		BaseLib::PVariable listRpcClients(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);

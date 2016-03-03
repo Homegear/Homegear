@@ -125,6 +125,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 1000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("registerScriptEngineClient", std::bind(&ScriptEngineServer::registerScriptEngineClient, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("scriptFinished", std::bind(&ScriptEngineServer::scriptFinished, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("scriptOutput", std::bind(&ScriptEngineServer::scriptOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("scriptHeaders", std::bind(&ScriptEngineServer::scriptHeaders, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("peerExists", std::bind(&ScriptEngineServer::peerExists, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("listRpcClients", std::bind(&ScriptEngineServer::listRpcClients, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
@@ -1304,8 +1305,8 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
 				BaseLib::PVariable(new BaseLib::Variable((int32_t)scriptInfo->getType())),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->path)),
-				scriptInfo->http,
-				scriptInfo->serverInfo}));
+				scriptInfo->http.serialize(),
+				scriptInfo->serverInfo->serialize()}));
 		}
 		else if(scriptType == ScriptInfo::ScriptType::device)
 		{
@@ -1426,6 +1427,33 @@ BaseLib::PVariable ScriptEngineServer::scriptFinished(PScriptEngineClientData& c
 		if(processIterator == _processes.end()) return BaseLib::Variable::createError(-1, "No matching process found.");
 		processIterator->second->invokeScriptFinished(scriptId, exitCode);
 		processIterator->second->unregisterScript(scriptId);
+		return BaseLib::PVariable(new BaseLib::Variable());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::scriptHeaders(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() < 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+
+		std::lock_guard<std::mutex> processGuard(_processMutex);
+		std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(clientData->pid);
+		if(processIterator == _processes.end()) return BaseLib::Variable::createError(-1, "No matching process found.");
+		processIterator->second->invokeScriptHeaders(scriptId, parameters->at(0)->stringValue);
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
     catch(const std::exception& ex)
