@@ -121,6 +121,7 @@ private:
 	std::vector<std::string> getArgs(const std::string& path, const std::string& args);
 	void registerClient();
 	void sendOutput(std::string& output);
+	void sendHeaders(std::string& headers);
 	BaseLib::PVariable callMethod(std::string& methodName, BaseLib::PVariable& parameters);
 	BaseLib::PVariable sendRequest(int32_t scriptId, std::string methodName, BaseLib::PArray& parameters);
 	BaseLib::PVariable sendGlobalRequest(std::string methodName, BaseLib::PArray& parameters);

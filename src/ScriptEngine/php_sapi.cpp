@@ -330,7 +330,7 @@ static void php_homegear_flush(void *server_context)
 static int php_homegear_send_headers(sapi_headers_struct* sapi_headers)
 {
 	if(_disposed || SEG(commandLine)) return SAPI_HEADER_SENT_SUCCESSFULLY;
-	if(!sapi_headers || !SEG(outputCallback)) return SAPI_HEADER_SEND_FAILED;
+	if(!sapi_headers || !SEG(sendHeadersCallback)) return SAPI_HEADER_SEND_FAILED;
 	std::string out;
 	if(!SEG(webRequest)) return SAPI_HEADER_SENT_SUCCESSFULLY;
 	if(out.size() + 100 > out.capacity()) out.reserve(out.capacity() + 1024);
@@ -366,9 +366,7 @@ static int php_homegear_send_headers(sapi_headers_struct* sapi_headers)
 		out.push_back('\n');
 		element = element->next;
 	}
-	out.push_back('\r');
-	out.push_back('\n');
-	SEG(outputCallback)(out);
+	SEG(sendHeadersCallback)(out);
 	return SAPI_HEADER_SENT_SUCCESSFULLY;
 }
 

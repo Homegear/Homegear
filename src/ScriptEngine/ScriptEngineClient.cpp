@@ -429,6 +429,29 @@ void ScriptEngineClient::sendOutput(std::string& output)
     }
 }
 
+void ScriptEngineClient::sendHeaders(std::string& headers)
+{
+	try
+	{
+		zend_homegear_globals* globals = php_homegear_get_globals();
+		std::string methodName("scriptHeaders");
+		BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(headers))});
+		sendRequest(globals->id, methodName, parameters);
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 BaseLib::PVariable ScriptEngineClient::callMethod(std::string& methodName, BaseLib::PVariable& parameters)
 {
 	try
@@ -788,8 +811,8 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			globals->webRequest = true;
 			globals->commandLine = false;
 			globals->cookiesParsed = !scriptInfo->script.empty();
-			globals->http.unserialize(scriptInfo->http);
-			serverInfo->unserialize(scriptInfo->serverInfo);
+			globals->http = scriptInfo->http;
+			serverInfo = scriptInfo->serverInfo;
 		}
 		else
 		{
@@ -889,7 +912,11 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		if(!globals) exit(1);
 		globals->id = id;
-		if(sendOutput) globals->outputCallback = std::bind(&ScriptEngineClient::sendOutput, this, std::placeholders::_1);
+		if(sendOutput)
+		{
+			globals->outputCallback = std::bind(&ScriptEngineClient::sendOutput, this, std::placeholders::_1);
+			globals->sendHeadersCallback = std::bind(&ScriptEngineClient::sendHeaders, this, std::placeholders::_1);
+		}
 		globals->rpcCallback = std::bind(&ScriptEngineClient::callMethod, this, std::placeholders::_1, std::placeholders::_2);
 		{
 			std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
