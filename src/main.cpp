@@ -946,6 +946,10 @@ int main(int argc, char* argv[])
     	GD::bl.reset(new BaseLib::Obj(GD::executablePath, _errorCallback.get(), false));
     	GD::out.init(GD::bl.get());
 
+		if(BaseLib::Io::directoryExists(GD::executablePath + "config")) GD::configPath = GD::executablePath + "config";
+		else if(BaseLib::Io::directoryExists(GD::executablePath + "cfg")) GD::configPath = GD::executablePath + "cfg";
+		else GD::configPath = "/etc/homegear/";
+
     	if(std::string(VERSION) != GD::bl->version())
     	{
     		GD::out.printCritical(std::string("Base library has wrong version. Expected version ") + VERSION + " but got version " + GD::bl->version());
@@ -964,8 +968,9 @@ int main(int argc, char* argv[])
     		{
     			if(i + 1 < argc)
     			{
-    				GD::configPath = std::string(argv[i + 1]);
-    				if(!GD::configPath.empty() && GD::configPath[GD::configPath.size() - 1] != '/') GD::configPath.push_back('/');
+    				std::string configPath = std::string(argv[i + 1]);
+    				if(!configPath.empty()) GD::configPath = configPath;
+    				if(GD::configPath[GD::configPath.size() - 1] != '/') GD::configPath.push_back('/');
     				i++;
     			}
     			else
@@ -1167,12 +1172,6 @@ int main(int argc, char* argv[])
 		}
 
     	// {{{ Load settings
-			if(GD::configPath.empty())
-			{
-				if(BaseLib::Io::directoryExists(GD::executablePath + "config")) GD::configPath = GD::executablePath + "config";
-				else if(BaseLib::Io::directoryExists(GD::executablePath + "cfg")) GD::configPath = GD::executablePath + "cfg";
-				else GD::configPath = "/etc/homegear/";
-			}
 			GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");
 			GD::bl->settings.load(GD::configPath + "main.conf");
 			if(GD::runAsUser.empty()) GD::runAsUser = GD::bl->settings.runAsUser();

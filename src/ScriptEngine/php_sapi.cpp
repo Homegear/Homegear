@@ -331,25 +331,20 @@ static int php_homegear_send_headers(sapi_headers_struct* sapi_headers)
 {
 	if(_disposed || SEG(commandLine)) return SAPI_HEADER_SENT_SUCCESSFULLY;
 	if(!sapi_headers || !SEG(sendHeadersCallback)) return SAPI_HEADER_SEND_FAILED;
-	std::string out;
+	BaseLib::PVariable headers(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 	if(!SEG(webRequest)) return SAPI_HEADER_SENT_SUCCESSFULLY;
-	if(out.size() + 100 > out.capacity()) out.reserve(out.capacity() + 1024);
 	if(sapi_headers->http_status_line)
 	{
-		out.insert(out.end(), sapi_headers->http_status_line, sapi_headers->http_status_line + strlen(sapi_headers->http_status_line));
-		out.push_back('\r');
-		out.push_back('\n');
+		std::string status(sapi_headers->http_status_line);
+		std::vector<std::string> elements = BaseLib::HelperFunctions::splitAll(status, ' ');
+		if(elements.size() < 2) headers->structValue->insert(BaseLib::StructElement("RESPONSE_CODE", BaseLib::PVariable(new BaseLib::Variable(BaseLib::Math::getNumber(elements.at(1))))));
+		else headers->structValue->insert(BaseLib::StructElement("RESPONSE_CODE", BaseLib::PVariable(new BaseLib::Variable(500))));
 	}
-	else
-	{
-		std::string status = "HTTP/1.1 " + std::to_string(sapi_headers->http_response_code) + " " + _superglobals.http->getStatusText(sapi_headers->http_response_code) + "\r\n";
-		out.insert(out.end(), &status[0], &status[0] + status.size());
-	}
+	else headers->structValue->insert(BaseLib::StructElement("RESPONSE_CODE", BaseLib::PVariable(new BaseLib::Variable(200))));
 	zend_llist_element* element = sapi_headers->headers.head;
 	while(element)
 	{
 		sapi_header_struct* header = (sapi_header_struct*)element->data;
-		if(out.size() + header->header_len + 4 > out.capacity()) out.reserve(out.capacity() + 1024);
 		std::string temp(header->header, header->header_len);
 		//PHP returns this sometimes
 		if(temp.compare(0, 22, "Content-type: ext/html") == 0)
@@ -361,12 +356,11 @@ static int php_homegear_send_headers(sapi_headers_struct* sapi_headers)
 			}
 			temp = "Content-Type: text/html; charset=UTF-8";
 		}
-		out.insert(out.end(), temp.begin(), temp.end());
-		out.push_back('\r');
-		out.push_back('\n');
+		std::pair<std::string, std::string> dataPair = BaseLib::HelperFunctions::splitFirst(temp, ':');
+		headers->structValue->insert(BaseLib::StructElement(BaseLib::HelperFunctions::trim(dataPair.first), BaseLib::PVariable(new BaseLib::Variable(BaseLib::HelperFunctions::trim(dataPair.second)))));
 		element = element->next;
 	}
-	SEG(sendHeadersCallback)(out);
+	SEG(sendHeadersCallback)(headers);
 	return SAPI_HEADER_SENT_SUCCESSFULLY;
 }
 

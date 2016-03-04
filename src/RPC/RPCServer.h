@@ -34,7 +34,7 @@
 #include "homegear-base/BaseLib.h"
 #include "RPCMethod.h"
 #include "Auth.h"
-#include "Webserver.h"
+#include "../WebServer/WebServer.h"
 
 #include <thread>
 #include <string>
@@ -126,7 +126,7 @@ namespace RPC
 			std::unique_ptr<BaseLib::RPC::XMLRPCEncoder> _xmlRpcEncoder;
 			std::unique_ptr<BaseLib::RPC::JsonDecoder> _jsonDecoder;
 			std::unique_ptr<BaseLib::RPC::JsonEncoder> _jsonEncoder;
-			std::unique_ptr<WebServer> _webServer;
+			std::unique_ptr<WebServer::WebServer> _webServer;
 			std::mutex _lifetick1Mutex;
 			std::pair<int64_t, bool> _lifetick1;
 			std::mutex _lifetick2Mutex;

@@ -1,8 +1,8 @@
-#include "Webserver.h"
 #include "../GD/GD.h"
 #include "../UPnP/UPnP.h"
+#include "WebServer.h"
 
-namespace RPC
+namespace WebServer
 {
 WebServer::WebServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo)
 {
@@ -338,26 +338,39 @@ void WebServer::send(std::shared_ptr<BaseLib::SocketOperations>& socket, std::ve
     }
 }
 
-void WebServer::sendHeaders(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, std::string& headers)
+void WebServer::sendHeaders(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, BaseLib::PVariable& headers)
 {
 	try
 	{
-		try
+		if(!scriptInfo || !scriptInfo->socket || !headers) return;
+		BaseLib::Struct::iterator headerIterator = headers->structValue->find("RESPONSE_CODE");
+		int32_t responseCode = 500;
+		if(headerIterator != headers->structValue->end()) responseCode = headerIterator->second->integerValue;
+		if(responseCode == 0) responseCode = 500;
+		scriptInfo->http.getHeader().responseCode = responseCode;
+		headers->structValue->erase("RESPONSE_CODE");
+
 		{
-			if(!scriptInfo->socket) return;
-			headers.reserve(headers.size() + 2);
-			headers.push_back('\r');
-			headers.push_back('\n');
-			scriptInfo->socket->proofwrite(headers.c_str(), headers.size());
+			std::lock_guard<std::mutex> sendHeaderGuard(_sendHeaderHookMutex);
+			for(std::map<std::string, std::function<void(BaseLib::Http& http, BaseLib::PVariable& headers)>>::iterator i = _sendHeaderHooks.begin(); i != _sendHeaderHooks.end(); ++i)
+			{
+				i->second(scriptInfo->http, headers);
+			}
 		}
-		catch(BaseLib::SocketDataLimitException& ex)
+
+		headers->print(true);
+
+		std::string output;
+		output.reserve(1024);
+		output.append("HTTP/1.1 " + std::to_string(responseCode) + ' ' + scriptInfo->http.getStatusText(responseCode) + "\r\n");
+		for(BaseLib::Struct::iterator i = headers->structValue->begin(); i != headers->structValue->end(); ++i)
 		{
-			_out.printWarning("Warning: " + ex.what());
+			if(output.size() + i->first.size() + i->second->stringValue.size() + 6 > output.capacity()) output.reserve(output.capacity() + 1024);
+			output.append(i->first + ": " + i->second->stringValue + "\r\n");
 		}
-		catch(const BaseLib::SocketOperationException& ex)
-		{
-			_out.printInfo("Info: " + ex.what());
-		}
+		output.append("\r\n");
+		std::cerr << output << std::endl;
+		scriptInfo->socket->proofwrite(output.c_str(), output.size());
 	}
     catch(const std::exception& ex)
     {
@@ -372,5 +385,29 @@ void WebServer::sendHeaders(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, std:
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
+
+// {{{ Hooks
+void WebServer::registerSendHeadersHook(std::string& moduleName, std::function<void(BaseLib::Http& http, BaseLib::PVariable& headers)>& callback)
+{
+	try
+	{
+		if(!callback) return;
+		std::lock_guard<std::mutex> sendHeaderGuard(_sendHeaderHookMutex);
+		_sendHeaderHooks[moduleName] = callback;
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+// }}}
 
 }

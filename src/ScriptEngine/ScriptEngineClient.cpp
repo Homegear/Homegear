@@ -429,13 +429,13 @@ void ScriptEngineClient::sendOutput(std::string& output)
     }
 }
 
-void ScriptEngineClient::sendHeaders(std::string& headers)
+void ScriptEngineClient::sendHeaders(BaseLib::PVariable& headers)
 {
 	try
 	{
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		std::string methodName("scriptHeaders");
-		BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(headers))});
+		BaseLib::PArray parameters(new BaseLib::Array{headers});
 		sendRequest(globals->id, methodName, parameters);
 	}
 	catch(const std::exception& ex)

@@ -213,7 +213,7 @@ void RPCServer::start(BaseLib::Rpc::PServerInfo& info)
 			}
 			gnutls_certificate_set_dh_params(_x509Cred, _dhParams);
 		}
-		_webServer.reset(new WebServer(_info));
+		_webServer.reset(new WebServer::WebServer(_info));
 		GD::bl->threadManager.start(_mainThread, true, _threadPriority, _threadPolicy, &RPCServer::mainThread, this);
 		_stopped = false;
 	}
