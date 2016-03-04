@@ -33,7 +33,7 @@
 
 #include "homegear-base/BaseLib.h"
 
-namespace RPC
+namespace WebServer
 {
 	class WebServer : public BaseLib::IEventsEx
 	{
@@ -45,14 +45,19 @@ namespace RPC
 			void post(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperations> socket);
 			void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content);
 			void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content, std::vector<std::string>& additionalHeaders);
+
+			void registerSendHeadersHook(std::string& moduleName, std::function<void(BaseLib::Http& http, BaseLib::PVariable& headers)>& callback);
 		protected:
 		private:
 			BaseLib::Output _out;
 			BaseLib::Rpc::PServerInfo _serverInfo;
 			BaseLib::Http _http;
 
+			std::mutex _sendHeaderHookMutex;
+			std::map<std::string, std::function<void(BaseLib::Http& http, BaseLib::PVariable& headers)>> _sendHeaderHooks;
+
 			void send(std::shared_ptr<BaseLib::SocketOperations>& socket, std::vector<char>& data);
-			void sendHeaders(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, std::string& headers);
+			void sendHeaders(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, BaseLib::PVariable& headers);
 	};
 }
 #endif

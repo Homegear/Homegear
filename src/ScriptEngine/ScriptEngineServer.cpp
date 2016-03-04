@@ -1453,7 +1453,7 @@ BaseLib::PVariable ScriptEngineServer::scriptHeaders(PScriptEngineClientData& cl
 		std::lock_guard<std::mutex> processGuard(_processMutex);
 		std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(clientData->pid);
 		if(processIterator == _processes.end()) return BaseLib::Variable::createError(-1, "No matching process found.");
-		processIterator->second->invokeScriptHeaders(scriptId, parameters->at(0)->stringValue);
+		processIterator->second->invokeScriptHeaders(scriptId, parameters->at(0));
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
     catch(const std::exception& ex)
