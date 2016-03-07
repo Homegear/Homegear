@@ -333,14 +333,7 @@ static int php_homegear_send_headers(sapi_headers_struct* sapi_headers)
 	if(!sapi_headers || !SEG(sendHeadersCallback)) return SAPI_HEADER_SEND_FAILED;
 	BaseLib::PVariable headers(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 	if(!SEG(webRequest)) return SAPI_HEADER_SENT_SUCCESSFULLY;
-	if(sapi_headers->http_status_line)
-	{
-		std::string status(sapi_headers->http_status_line);
-		std::vector<std::string> elements = BaseLib::HelperFunctions::splitAll(status, ' ');
-		if(elements.size() < 2) headers->structValue->insert(BaseLib::StructElement("RESPONSE_CODE", BaseLib::PVariable(new BaseLib::Variable(BaseLib::Math::getNumber(elements.at(1))))));
-		else headers->structValue->insert(BaseLib::StructElement("RESPONSE_CODE", BaseLib::PVariable(new BaseLib::Variable(500))));
-	}
-	else headers->structValue->insert(BaseLib::StructElement("RESPONSE_CODE", BaseLib::PVariable(new BaseLib::Variable(200))));
+	headers->structValue->insert(BaseLib::StructElement("RESPONSE_CODE", BaseLib::PVariable(new BaseLib::Variable(sapi_headers->http_response_code))));
 	zend_llist_element* element = sapi_headers->headers.head;
 	while(element)
 	{

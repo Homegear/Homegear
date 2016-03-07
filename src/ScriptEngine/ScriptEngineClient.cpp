@@ -105,7 +105,7 @@ void ScriptEngineClient::dispose()
 		if(i == 30)
 		{
 			GD::out.printError("Error: At least one script did not finish within 30 seconds during shutdown. Exiting.");
-			exit(1);
+			return;
 		}
 
 		_disposing = true;
@@ -215,14 +215,14 @@ void ScriptEngineClient::start()
 			{
 				if(errno == EINTR) continue;
 				_out.printMessage("Connection to script server closed (1). Exiting.");
-				exit(0);
+				return;
 			}
 
 			bytesRead = read(_fileDescriptor->descriptor, &buffer[0], 1024);
 			if(bytesRead <= 0) //read returns 0, when connection is disrupted.
 			{
 				_out.printMessage("Connection to script server closed (2). Exiting.");
-				exit(0);
+				return;
 			}
 
 			if(bytesRead > (signed)buffer.size()) bytesRead = buffer.size();
