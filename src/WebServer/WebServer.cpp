@@ -78,7 +78,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperatio
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.htm")) path += "index.htm";
 			else
 			{
-				getError(404, "Not Found", "The requested URL / was not found on this server.", content);
+				getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
 				send(socket, content);
 				return;
 			}
@@ -204,7 +204,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperati
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.hgs")) path += "index.hgs";
 			else
 			{
-				getError(404, _http.getStatusText(404), "The requested URL / was not found on this server.", content);
+				getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 				send(socket, content);
 				return;
 			}
@@ -358,8 +358,6 @@ void WebServer::sendHeaders(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, Base
 			}
 		}
 
-		headers->print(true);
-
 		std::string output;
 		output.reserve(1024);
 		output.append("HTTP/1.1 " + std::to_string(responseCode) + ' ' + scriptInfo->http.getStatusText(responseCode) + "\r\n");
@@ -369,7 +367,6 @@ void WebServer::sendHeaders(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, Base
 			output.append(i->first + ": " + i->second->stringValue + "\r\n");
 		}
 		output.append("\r\n");
-		std::cerr << output << std::endl;
 		scriptInfo->socket->proofwrite(output.c_str(), output.size());
 	}
     catch(const std::exception& ex)
