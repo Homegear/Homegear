@@ -670,14 +670,14 @@ BaseLib::PVariable RPCServer::callMethod(std::string& methodName, BaseLib::PVari
 			_out.printInfo("Info: RPC Method called: " + methodName + " Parameters:");
 			for(std::vector<BaseLib::PVariable>::iterator i = parameters->arrayValue->begin(); i != parameters->arrayValue->end(); ++i)
 			{
-				(*i)->print();
+				(*i)->print(true, false);
 			}
 		}
 		BaseLib::PVariable ret = _rpcMethods->at(methodName)->invoke(_dummyClientInfo, parameters->arrayValue);
 		if(GD::bl->debugLevel >= 5)
 		{
 			_out.printDebug("Response: ");
-			ret->print();
+			ret->print(true, false);
 		}
 		_lifetick1Mutex.lock();
 		_lifetick1.second = true;
@@ -746,14 +746,14 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 			_out.printInfo("Info: Client number " + std::to_string(client->socketDescriptor->id) + " is calling RPC method: " + methodName + " Parameters:");
 			for(std::vector<BaseLib::PVariable>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 			{
-				(*i)->print();
+				(*i)->print(true, false);
 			}
 		}
 		BaseLib::PVariable ret = _rpcMethods->at(methodName)->invoke(client, parameters);
 		if(GD::bl->debugLevel >= 5)
 		{
 			_out.printDebug("Response: ");
-			ret->print();
+			ret->print(true, false);
 		}
 		sendRPCResponseToClient(client, ret, messageId, responseType, keepAlive);
 		_lifetick2Mutex.lock();
@@ -797,7 +797,7 @@ void RPCServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<c
 		if(GD::bl->debugLevel >= 3)
 		{
 			_out.printWarning("Warning: RPC server received RPC response. This shouldn't happen. Response data: ");
-			response->print();
+			response->print(true, false);
 		}
 	}
 	catch(const std::exception& ex)

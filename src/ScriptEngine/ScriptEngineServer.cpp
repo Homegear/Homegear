@@ -657,7 +657,7 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 					{
 						for(BaseLib::Array::iterator i = parameters->at(2)->arrayValue->begin(); i != parameters->at(2)->arrayValue->end(); ++i)
 						{
-							(*i)->print();
+							(*i)->print(true, false);
 						}
 					}
 				}
@@ -665,7 +665,7 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 				if(GD::bl->debugLevel >= 5)
 				{
 					_out.printDebug("Response: ");
-					result->print();
+					result->print(true, false);
 				}
 
 				sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
@@ -686,14 +686,14 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 				_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + methodName + " Parameters:");
 				for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(2)->arrayValue->begin(); i != parameters->at(2)->arrayValue->end(); ++i)
 				{
-					(*i)->print();
+					(*i)->print(true, false);
 				}
 			}
 			BaseLib::PVariable result = _rpcMethods.at(methodName)->invoke(_dummyClientInfo, parameters->at(2)->arrayValue);
 			if(GD::bl->debugLevel >= 5)
 			{
 				_out.printDebug("Response: ");
-				result->print();
+				result->print(true, false);
 			}
 
 			sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
@@ -734,6 +734,7 @@ BaseLib::PVariable ScriptEngineServer::send(PScriptEngineClientData& clientData,
 			int32_t sentBytes = ::send(clientData->fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
 			if(sentBytes <= 0)
 			{
+				if(errno == EAGAIN) continue;
 				GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
 				return BaseLib::Variable::createError(-32500, "Unknown application error.");
 			}

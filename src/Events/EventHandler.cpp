@@ -1112,7 +1112,7 @@ void EventHandler::processRpcCall(std::string& eventName, std::string& eventMeth
 		if(result && result->errorStruct)
 		{
 			GD::out.printError("Could not execute RPC method \"" + eventMethod + "\" for event \"" + eventName + "\". Error struct:");
-			result->print();
+			result->print(true, false);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1312,7 +1312,7 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, BaseLib::PVar
 		if(rpcResult && rpcResult->errorStruct)
 		{
 			GD::out.printError("Error: Could not execute RPC method for event from peer with id " + std::to_string(event->peerID) + ", channel " + std::to_string(event->peerChannel) + " and variable " + event->variable + ". Error struct:");
-			rpcResult->print(true);
+			rpcResult->print(true, true);
 		}
 		if(event->lastRaised >= currentTime && (event->resetAfter > 0 || event->initialTime > 0))
 		{

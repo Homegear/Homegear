@@ -86,8 +86,6 @@ zend_homegear_globals* php_homegear_get_globals();
 void php_homegear_build_argv(std::vector<std::string>& arguments);
 int php_homegear_init();
 void php_homegear_shutdown();
-bool php_homegear_write_socket(BaseLib::SocketOperations* socket, std::vector<char>& data);
-bool php_homegear_write_socket(BaseLib::SocketOperations* socket, const char* buffer, uint32_t length);
 
 #endif
 
