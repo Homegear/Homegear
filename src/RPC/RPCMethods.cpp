@@ -607,9 +607,6 @@ BaseLib::PVariable RPCCopyConfig::invoke(BaseLib::PRpcClientInfo clientInfo, std
 		if(!parameterSet1) return BaseLib::Variable::createError(-3, "Source parameter set not found.");
 		if(!parameterSet2) return BaseLib::Variable::createError(-3, "Target parameter set not found.");
 
-		parameterSet1->print();
-		parameterSet2->print();
-
 		BaseLib::PVariable resultSet(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 		for(BaseLib::Struct::iterator i = parameterSet1->structValue->begin(); i != parameterSet1->structValue->end(); ++i)
 		{

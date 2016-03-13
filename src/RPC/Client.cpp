@@ -228,7 +228,7 @@ void Client::systemListMethods(std::pair<std::string, std::string> address)
 		{
 			if(server->removed || (!server->socket->connected() && server->keepAlive && !server->reconnectInfinitely)) return;
 			GD::out.printWarning("Warning: Error calling XML RPC method \"system.listMethods\" on server " + address.first + " with port " + address.second + ". Error struct: ");
-			result->print();
+			result->print(true, false);
 			return;
 		}
 		if(result->type != BaseLib::VariableType::tArray) return;
@@ -282,7 +282,7 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 		{
 			if(server->removed || (!server->socket->connected() && server->keepAlive && !server->reconnectInfinitely)) return;
 			GD::out.printError("Error calling XML RPC method \"listDevices\" on server " + address.first + " with port " + address.second + ". Error struct: ");
-			result->print();
+			result->print(true, false);
 			return;
 		}
 		if(result->type != BaseLib::VariableType::tArray) return;
@@ -359,7 +359,7 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 		{
 			if(server->removed) return;
 			GD::out.printError("Error calling XML RPC method \"newDevices\" on server " + address.first + " with port " + address.second + ". Error struct: ");
-			result->print();
+			result->print(true, false);
 			return;
 		}
 	}

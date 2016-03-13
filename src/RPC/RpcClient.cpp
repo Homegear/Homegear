@@ -108,7 +108,7 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 			_out.printDebug("Parameters:");
 			for(std::list<BaseLib::PVariable>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 			{
-				(*i)->print();
+				(*i)->print(true, false);
 			}
 		}
 		bool retry = false;
@@ -168,7 +168,7 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 			if(GD::bl->debugLevel >= 5)
 			{
 				_out.printDebug("Response was:");
-				returnValue->print();
+				returnValue->print(true, false);
 			}
 			server->lastPacketSent = BaseLib::HelperFunctions::getTimeSeconds();
 		}
@@ -206,7 +206,7 @@ BaseLib::PVariable RpcClient::invoke(std::shared_ptr<RemoteRpcServer> server, st
 			_out.printDebug("Parameters:");
 			for(std::list<BaseLib::PVariable>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 			{
-				(*i)->print();
+				(*i)->print(true, false);
 			}
 		}
 		bool retry = false;
@@ -261,7 +261,7 @@ BaseLib::PVariable RpcClient::invoke(std::shared_ptr<RemoteRpcServer> server, st
 			if(GD::bl->debugLevel >= 5)
 			{
 				_out.printDebug("Response was:");
-				returnValue->print();
+				returnValue->print(true, false);
 			}
 			server->lastPacketSent = BaseLib::HelperFunctions::getTimeSeconds();
 		}

@@ -365,7 +365,7 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 			if(GD::bl->debugLevel >= 5)
 			{
 				_out.printDebug("Response: ");
-				result->print();
+				result->print(true, false);
 			}
 			sendResponse(parameters->at(0), result);
 		}
@@ -485,7 +485,8 @@ BaseLib::PVariable ScriptEngineClient::send(std::vector<char>& data)
 			int32_t sentBytes = ::send(_fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
 			if(sentBytes <= 0)
 			{
-				GD::out.printError("Could not send data to client: " + std::to_string(_fileDescriptor->descriptor));
+				if(errno == EAGAIN) continue;
+				_out.printError("Could not send data to client " + std::to_string(_fileDescriptor->descriptor) + ". Sent bytes: " + std::to_string(totallySentBytes) + " of " + std::to_string(data.size()) + (sentBytes == -1 ? ". Error message: " + std::string(strerror(errno)) : ""));
 				return BaseLib::Variable::createError(-32500, "Unknown application error.");
 			}
 			totallySentBytes += sentBytes;

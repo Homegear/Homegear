@@ -60,6 +60,7 @@ static const char HARDCODED_INI[] =
 static int php_homegear_startup(sapi_module_struct* sapi_module);
 static int php_homegear_activate(TSRMLS_D);
 static int php_homegear_deactivate(TSRMLS_D);
+static size_t php_homegear_ub_write_string(std::string& string);
 static size_t php_homegear_ub_write(const char* str, size_t length);
 static void php_homegear_flush(void *server_context);
 static int php_homegear_send_headers(sapi_headers_struct* sapi_headers);
@@ -75,6 +76,7 @@ static PHP_MINFO_FUNCTION(homegear);
 
 #define SEG(v) php_homegear_get_globals()->v
 
+ZEND_FUNCTION(print_v);
 ZEND_FUNCTION(hg_get_script_id);
 ZEND_FUNCTION(hg_register_thread);
 ZEND_FUNCTION(hg_invoke);
@@ -124,6 +126,7 @@ ZEND_FUNCTION(hg_i2c_write);
 #endif
 
 static const zend_function_entry homegear_functions[] = {
+	ZEND_FE(print_v, NULL)
 	ZEND_FE(hg_get_script_id, NULL)
 	ZEND_FE(hg_register_thread, NULL)
 	ZEND_FE(hg_invoke, NULL)
@@ -306,6 +309,19 @@ static char* php_homegear_read_cookies()
 		if(!http->getHeader().cookie.empty()) return (char*)http->getHeader().cookie.c_str();
 	}
 	return NULL;
+}
+
+static size_t php_homegear_ub_write_string(std::string& string)
+{
+	if(string.empty() || _disposed) return 0;
+	zend_homegear_globals* globals = php_homegear_get_globals();
+	if(globals->outputCallback) globals->outputCallback(string);
+	else
+	{
+		if(SEG(peerId) != 0) GD::out.printMessage("Script output (peer id: " + std::to_string(SEG(peerId)) + "): " + string);
+		else GD::out.printMessage("Script output: " + string);
+	}
+	return string.size();
 }
 
 static size_t php_homegear_ub_write(const char* str, size_t length)
@@ -500,6 +516,31 @@ void php_homegear_invoke_rpc(std::string& methodName, BaseLib::PVariable& parame
 }
 
 /* RPC functions */
+ZEND_FUNCTION(print_v)
+{
+	if(_disposed) RETURN_NULL();
+	int argc = 0;
+	zval* args = nullptr;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+	if(argc != 1 && argc != 2)
+	{
+		php_error_docref(NULL, E_WARNING, "print_v() expects 1 or 2 arguments.");
+		RETURN_NULL();
+	}
+	if(argc >= 2 && Z_TYPE(args[1]) != IS_TRUE && Z_TYPE(args[1]) != IS_FALSE)
+	{
+		php_error_docref(NULL, E_WARNING, "Parameter \"return\" is not of type boolean.");
+		RETURN_NULL();
+	}
+
+	bool returnString = (Z_TYPE(args[1]) == IS_TRUE);
+
+	BaseLib::PVariable parameter = PhpVariableConverter::getVariable(&args[0]);
+	std::string result = parameter->print();
+	if(returnString) ZVAL_STRINGL(return_value, result.c_str(), result.size());
+	else php_homegear_ub_write_string(result);
+}
+
 ZEND_FUNCTION(hg_get_script_id)
 {
 	std::string id = std::to_string(SEG(id)) + ',' + SEG(token);

@@ -306,7 +306,7 @@ std::string MiscCentral::handleCliCommand(std::string command)
 			}
 			if(index < 3 + offset)
 			{
-				stringStream << "Description: This command create a new peer." << std::endl;
+				stringStream << "Description: This command creates a new peer." << std::endl;
 				stringStream << "Usage: peers add DEVICETYPE SERIALNUMBER" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
 				stringStream << "  DEVICETYPE:\t\tThe 2 byte device type of the peer to add in hexadecimal format. Example: 0192" << std::endl;
