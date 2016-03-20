@@ -536,6 +536,7 @@ ZEND_FUNCTION(print_v)
 	bool returnString = (Z_TYPE(args[1]) == IS_TRUE);
 
 	BaseLib::PVariable parameter = PhpVariableConverter::getVariable(&args[0]);
+	if(!parameter) RETURN_FALSE;
 	std::string result = parameter->print();
 	if(returnString) ZVAL_STRINGL(return_value, result.c_str(), result.size());
 	else php_homegear_ub_write_string(result);

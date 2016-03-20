@@ -73,14 +73,19 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval* value)
 			HashTable* ht = Z_ARRVAL_P(value);
 			zend_string* key = nullptr;
 			ulong keyIndex = 0;
+			if(zend_hash_num_elements(ht) == 0)
+			{
+				variable.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
+				return variable;
+			}
 			ZEND_HASH_FOREACH_KEY_VAL(ht, keyIndex, key, element)
 			{
-				if(!element) continue;
 				if(!variable)
 				{
 					if(key) variable.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 					else variable.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
 				}
+				if(!element) continue;
 				BaseLib::PVariable arrayElement = getVariable(element);
 				if(!arrayElement) continue;
 				if(key)
