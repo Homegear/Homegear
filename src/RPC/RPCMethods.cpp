@@ -3744,7 +3744,7 @@ BaseLib::PVariable RPCTriggerEvent::invoke(BaseLib::PRpcClientInfo clientInfo, s
 #endif
 }
 
-BaseLib::PVariable RPCTriggerRPCEvent::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCTriggerRpcEvent::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	try
 	{
@@ -3753,7 +3753,7 @@ BaseLib::PVariable RPCTriggerRPCEvent::invoke(BaseLib::PRpcClientInfo clientInfo
 
 		if(parameters->at(0)->stringValue == "deleteDevices")
 		{
-			if(parameters->at(1)->arrayValue->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count. You need to pass (in this order): Array deviceAddresses, Struct deviceInfo");
+			if(parameters->at(1)->arrayValue->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count. You need to pass (in this order): Array<String> deviceAddresses, Array<Struct> deviceInfo");
 			GD::rpcClient->broadcastDeleteDevices(parameters->at(1)->arrayValue->at(0), parameters->at(1)->arrayValue->at(1));
 		}
 		else if(parameters->at(0)->stringValue == "newDevices")

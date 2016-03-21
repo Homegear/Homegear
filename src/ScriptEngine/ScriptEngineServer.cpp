@@ -117,7 +117,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 1000)
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("setValue", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCSetValue())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("subscribePeers", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCSubscribePeers())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("triggerEvent", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCTriggerEvent())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("triggerRPCEvent", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCTriggerRPCEvent())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("triggerRpcEvent", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCTriggerRpcEvent())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("unsubscribePeers", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCUnsubscribePeers())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("updateFirmware", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCUpdateFirmware())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("writeLog", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCWriteLog())));

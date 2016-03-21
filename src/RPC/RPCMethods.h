@@ -862,10 +862,10 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCTriggerRPCEvent : public RPCMethod
+class RPCTriggerRpcEvent : public RPCMethod
 {
 public:
-	RPCTriggerRPCEvent()
+	RPCTriggerRpcEvent()
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
 	}
