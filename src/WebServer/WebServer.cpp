@@ -84,8 +84,49 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperatio
 			}
 		}
 
+		// {{{ Node-RED test
+		if(path == "node-red/public/locales/editor" || path == "node-red/public/locales/node-red")
+		{
+			path = "node-red/public/staticTemp" + path.substr(15);
+			std::string contentString;
+			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_serverInfo->contentPath + path);
+			std::string header;
+			_http.constructHeader(contentString.size(), "application/json", 304, "Not Modified", headers, header);
+			content.insert(content.end(), header.begin(), header.end());
+			if(!contentString.empty()) content.insert(content.end(), contentString.begin(), contentString.end());
+			send(socket, content);
+			return;
+		}
+		else if(path == "node-red/public/settings" || path == "node-red/public/library/flows")
+		{
+			path = "node-red/public/staticTemp" + path.substr(15);
+			std::string contentString;
+			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_serverInfo->contentPath + path);
+			std::string header;
+			_http.constructHeader(contentString.size(), "application/json", 200, "OK", headers, header);
+			content.insert(content.end(), header.begin(), header.end());
+			if(!contentString.empty()) content.insert(content.end(), contentString.begin(), contentString.end());
+			send(socket, content);
+			return;
+		}
+		else if(path == "node-red/public/nodes")
+		{
+			path = "node-red/public/staticTemp" + path.substr(15);
+
+			std::string contentString;
+			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_serverInfo->contentPath + path);
+			std::string header;
+			_http.constructHeader(contentString.size(), "text/html", 200, "OK", headers, header);
+			content.insert(content.end(), header.begin(), header.end());
+			if(!contentString.empty()) content.insert(content.end(), contentString.begin(), contentString.end());
+			send(socket, content);
+			return;
+		}
+		// }}}
+
 		if(!BaseLib::Io::fileExists(_serverInfo->contentPath + path))
 		{
+			GD::out.printWarning("Warning: Requested URL not found: " + path);
 			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 			send(socket, content);
 			return;
