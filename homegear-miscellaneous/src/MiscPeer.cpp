@@ -103,7 +103,9 @@ void MiscPeer::homegearShuttingDown()
 		{
 			GD::out.printInfo("Info: Peer " + std::to_string(_peerID) + " Waiting for script to finish...");
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			i++;
 		}
+		if(i == 30) GD::out.printError("Error: Script of peer " + std::to_string(_peerID) + " did not finish.");
 
 		if(_programPID != -1)
 		{
