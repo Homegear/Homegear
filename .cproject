@@ -131,6 +131,11 @@
 									<listOptionValue builtIn="false" value="/usr/include/php7-homegear/sapi"/>
 									<listOptionValue builtIn="false" value="/usr/include/php7-homegear/TSRM"/>
 									<listOptionValue builtIn="false" value="/usr/include/php7-homegear/Zend"/>
+									<listOptionValue builtIn="false" value="/usr/include/php7-homegear/php"/>
+									<listOptionValue builtIn="false" value="/usr/include/php7-homegear/php/main"/>
+									<listOptionValue builtIn="false" value="/usr/include/php7-homegear/php/sapi"/>
+									<listOptionValue builtIn="false" value="/usr/include/php7-homegear/php/TSRM"/>
+									<listOptionValue builtIn="false" value="/usr/include/php7-homegear/php/Zend"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1073675196" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -294,6 +299,11 @@
 									<listOptionValue builtIn="false" value="/usr/include/php7-homegear/sapi"/>
 									<listOptionValue builtIn="false" value="/usr/include/php7-homegear/TSRM"/>
 									<listOptionValue builtIn="false" value="/usr/include/php7-homegear/Zend"/>
+									<listOptionValue builtIn="false" value="/usr/include/php7-homegear/php"/>
+									<listOptionValue builtIn="false" value="/usr/include/php7-homegear/php/main"/>
+									<listOptionValue builtIn="false" value="/usr/include/php7-homegear/php/sapi"/>
+									<listOptionValue builtIn="false" value="/usr/include/php7-homegear/php/TSRM"/>
+									<listOptionValue builtIn="false" value="/usr/include/php7-homegear/php/Zend"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.852683577" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>

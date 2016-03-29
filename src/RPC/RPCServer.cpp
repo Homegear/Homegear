@@ -1186,7 +1186,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 								}
 							}
 
-							packetType = (binaryRpc.getType() == BaseLib::Rpc::BinaryRpc::Type::request) ? PacketType::Enum::binaryRequest : PacketType::Enum::binaryRequest;
+							packetType = (binaryRpc.getType() == BaseLib::Rpc::BinaryRpc::Type::request) ? PacketType::Enum::binaryRequest : PacketType::Enum::binaryResponse;
 
 							packetReceived(client, binaryRpc.getData(), packetType, true);
 							binaryRpc.reset();

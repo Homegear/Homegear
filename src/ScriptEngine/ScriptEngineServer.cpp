@@ -1067,15 +1067,16 @@ bool ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
 {
 	try
 	{
-		struct stat sb;
-		if(stat(GD::bl->settings.socketPath().c_str(), &sb) == -1)
+		if(!BaseLib::Io::directoryExists(GD::bl->settings.socketPath().c_str()))
 		{
 			if(errno == ENOENT) _out.printCritical("Critical: Directory " + GD::bl->settings.socketPath() + " does not exist. Please create it before starting Homegear otherwise the script engine won't work.");
 			else _out.printCritical("Critical: Error reading information of directory " + GD::bl->settings.socketPath() + ". The script engine won't work: " + strerror(errno));
 			_stopServer = true;
 			return false;
 		}
-		if(!S_ISDIR(sb.st_mode))
+		bool isDirectory = false;
+		int32_t result = BaseLib::Io::isDirectory(GD::bl->settings.socketPath(), isDirectory);
+		if(result != 0 || !isDirectory)
 		{
 			_out.printCritical("Critical: Directory " + GD::bl->settings.socketPath() + " does not exist. Please create it before starting Homegear otherwise the script engine interface won't work.");
 			_stopServer = true;
@@ -1089,7 +1090,7 @@ bool ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
 				return false;
 			}
 		}
-		else if(stat(_socketPath.c_str(), &sb) == 0) return false;
+		else if(BaseLib::Io::fileExists(_socketPath)) return false;
 
 		_serverFileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0));
 		if(_serverFileDescriptor->descriptor == -1)

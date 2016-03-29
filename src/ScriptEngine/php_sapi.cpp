@@ -961,6 +961,7 @@ ZEND_FUNCTION(hg_subscribe_peer)
 		{
 			eventsMapGuard.~lock_guard();
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
+			RETURN_FALSE
 		}
 		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
 		phpEvents = eventsIterator->second;
@@ -986,6 +987,7 @@ ZEND_FUNCTION(hg_unsubscribe_peer)
 		{
 			eventsMapGuard.~lock_guard();
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
+			RETURN_FALSE
 		}
 		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
 		phpEvents = eventsIterator->second;

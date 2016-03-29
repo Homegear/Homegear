@@ -65,7 +65,7 @@ private:
 	std::string _udn;
 	std::string _st;
 	std::map<int32_t, Packets> _packets;
-	int32_t _lastAdvertisement;
+	int32_t _lastAdvertisement = 0;
 
 	// {{{ Webserver events
 		BaseLib::PEventHandler _webserverEventHandler;

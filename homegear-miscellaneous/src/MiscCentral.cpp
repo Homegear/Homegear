@@ -132,7 +132,8 @@ void MiscCentral::deletePeer(uint64_t id)
 		PVariable channels(new Variable(VariableType::tArray));
 		deviceInfo->structValue->insert(StructElement("CHANNELS", channels));
 
-		for(Functions::iterator i = peer->getRpcDevice()->functions.begin(); i != peer->getRpcDevice()->functions.end(); ++i)
+		std::shared_ptr<HomegearDevice> rpcDevice = peer->getRpcDevice();
+		for(Functions::iterator i = rpcDevice->functions.begin(); i != rpcDevice->functions.end(); ++i)
 		{
 			deviceAddresses->arrayValue->push_back(PVariable(new Variable(peer->getSerialNumber() + ":" + std::to_string(i->first))));
 			channels->arrayValue->push_back(PVariable(new Variable(i->first)));
