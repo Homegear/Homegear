@@ -30,6 +30,7 @@
 
 #include "GD/GD.h"
 #include "Monitor.h"
+#include "DeathHandler.h"
 #include "CLI/CLIClient.h"
 #include "ScriptEngine/ScriptEngineClient.h"
 #include "UPnP/UPnP.h"
@@ -626,9 +627,14 @@ void startUp()
     	//Enable printing of backtraces
 		//Use sigaction over signal because of different behavior in Linux and BSD
     	sigaction(SIGHUP, &sa, NULL);
-    	sigaction(SIGABRT, &sa, NULL);
-    	sigaction(SIGSEGV, &sa, NULL);
+    	//sigaction(SIGABRT, &sa, NULL);
+    	//sigaction(SIGSEGV, &sa, NULL);
     	sigaction(SIGTERM, &sa, NULL);
+    	Debug::DeathHandler deathHandler;
+    	deathHandler.set_append_pid(true);
+    	deathHandler.set_frames_count(32);
+    	deathHandler.set_color_output(false);
+    	deathHandler.set_generate_core_dump(true);
 
     	sa.sa_handler = sigchld_handler;
     	sigaction(SIGCHLD, &sa, NULL);

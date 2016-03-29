@@ -87,6 +87,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperatio
 		// {{{ Node-RED test
 		if(path == "node-red/public/locales/editor" || path == "node-red/public/locales/node-red")
 		{
+			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
 			path = "node-red/public/staticTemp" + path.substr(15);
 			std::string contentString;
 			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_serverInfo->contentPath + path);
@@ -97,8 +98,9 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperatio
 			send(socket, content);
 			return;
 		}
-		else if(path == "node-red/public/settings" || path == "node-red/public/library/flows")
+		else if(path == "node-red/public/settings" || path == "node-red/public/library/flows" || path == "node-red/public/flows")
 		{
+			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
 			path = "node-red/public/staticTemp" + path.substr(15);
 			std::string contentString;
 			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_serverInfo->contentPath + path);
@@ -111,12 +113,14 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperatio
 		}
 		else if(path == "node-red/public/nodes")
 		{
+			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
 			path = "node-red/public/staticTemp" + path.substr(15);
-
+			if(http.getHeader().fields["accept"] == "text/html") path += "2";
 			std::string contentString;
 			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_serverInfo->contentPath + path);
 			std::string header;
-			_http.constructHeader(contentString.size(), "text/html", 200, "OK", headers, header);
+			if(http.getHeader().fields["accept"] == "text/html") _http.constructHeader(contentString.size(), "text/html", 200, "OK", headers, header);
+			else _http.constructHeader(contentString.size(), "application/json", 200, "OK", headers, header);
 			content.insert(content.end(), header.begin(), header.end());
 			if(!contentString.empty()) content.insert(content.end(), contentString.begin(), contentString.end());
 			send(socket, content);
