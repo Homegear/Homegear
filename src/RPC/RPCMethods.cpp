@@ -111,14 +111,14 @@ BaseLib::PVariable RPCSystemListMethods::invoke(BaseLib::PRpcClientInfo clientIn
 	{
 		if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
 
-		BaseLib::PVariable methods(new BaseLib::Variable(BaseLib::VariableType::tArray));
-
-		for(std::map<std::string, std::shared_ptr<RPCMethod>>::iterator i = _server->getMethods()->begin(); i != _server->getMethods()->end(); ++i)
+		BaseLib::PVariable methodInfo(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> methods = _server->getMethods();
+		for(std::map<std::string, std::shared_ptr<RPCMethod>>::iterator i = methods->begin(); i != methods->end(); ++i)
 		{
-			methods->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(i->first)));
+			methodInfo->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(i->first)));
 		}
 
-		return methods;
+		return methodInfo;
 	}
 	catch(const std::exception& ex)
     {
@@ -142,7 +142,8 @@ BaseLib::PVariable RPCSystemMethodHelp::invoke(BaseLib::PRpcClientInfo clientInf
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		if(_server->getMethods()->find(parameters->at(0)->stringValue) == _server->getMethods()->end())
+		std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> methods = _server->getMethods();
+		if(methods->find(parameters->at(0)->stringValue) == methods->end())
 		{
 			return BaseLib::Variable::createError(-32602, "Method not found.");
 		}
@@ -175,7 +176,8 @@ BaseLib::PVariable RPCSystemMethodSignature::invoke(BaseLib::PRpcClientInfo clie
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		if(_server->getMethods()->find(parameters->at(0)->stringValue) == _server->getMethods()->end())
+		std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> methods = _server->getMethods();
+		if(methods->find(parameters->at(0)->stringValue) == methods->end())
 		{
 			return BaseLib::Variable::createError(-32602, "Method not found.");
 		}
