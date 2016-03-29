@@ -741,8 +741,8 @@ ScriptEngineClient::ScriptGuard::~ScriptGuard()
 		SG(server_context) = nullptr; //Pointer is invalid - cleaned up already.
 		if(SG(request_info).path_translated)
 		{
-			efree(SG(request_info).query_string);
-			SG(request_info).query_string = nullptr;
+			efree(SG(request_info).path_translated);
+			SG(request_info).path_translated = nullptr;
 		}
 		if(SG(request_info).query_string)
 		{
@@ -853,7 +853,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 		{
 			SG(sapi_headers).http_response_code = 200;
 			SG(request_info).content_length = globals->http.getHeader().contentLength;
-			if(!globals->http.getHeader().contentType.empty()) SG(request_info).content_type = globals->http.getHeader().contentType.c_str();
+			if(!globals->http.getHeader().contentTypeFull.empty()) SG(request_info).content_type = globals->http.getHeader().contentTypeFull.c_str();
 			SG(request_info).request_method = globals->http.getHeader().method.c_str();
 			SG(request_info).proto_num = globals->http.getHeader().protocol == BaseLib::Http::Protocol::http10 ? 1000 : 1001;
 			std::string uri = globals->http.getHeader().path + globals->http.getHeader().pathInfo;
