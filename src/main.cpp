@@ -1087,6 +1087,12 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-r")
     		{
+    			Debug::DeathHandler deathHandler;
+				deathHandler.set_append_pid(true);
+				deathHandler.set_frames_count(32);
+				deathHandler.set_color_output(false);
+				deathHandler.set_generate_core_dump(true);
+
     			GD::bl->settings.load(GD::configPath + "main.conf");
     			CLI::Client cliClient;
     			int32_t exitCode = cliClient.start();
@@ -1094,6 +1100,12 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-rse")
     		{
+    			Debug::DeathHandler deathHandler;
+				deathHandler.set_append_pid(true);
+				deathHandler.set_frames_count(32);
+				deathHandler.set_color_output(false);
+				deathHandler.set_generate_core_dump(true);
+
     			initGnuTls();
     			setLimits();
     			GD::bl->settings.load(GD::configPath + "main.conf");
@@ -1141,11 +1153,15 @@ int main(int argc, char* argv[])
     		else if(arg == "-v")
     		{
     			std::cout << "Homegear version " << VERSION << std::endl;
-    			std::cout << "Copyright (C) 2013-2016 Sathya Laufer" << std::endl << std::endl;
+    			std::cout << "Copyright (c) 2013-2016 Sathya Laufer" << std::endl << std::endl;
     			std::cout << "Git commit SHA of libhomegear-base: " << GITCOMMITSHABASE << std::endl;
     			std::cout << "Git commit SHA of Homegear:         " << GITCOMMITSHAHOMEGEAR << std::endl << std::endl;
+    			std::cout << "PHP (License: PHP License):" << std::endl;
     			std::cout << "This product includes PHP software, freely available from <http://www.php.net/software/>" << std::endl;
-    			std::cout << "Copyright (c) 1999-2016 The PHP Group. All rights reserved." << std::endl;
+    			std::cout << "Copyright (c) 1999-2016 The PHP Group. All rights reserved." << std::endl << std::endl;
+    			std::cout << "DeathHandler (License: Simplified BSD License):" << std::endl;
+    			std::cout << "Copyright (c) 2012, Samsung R&D Institute Russia. All rights reserved." << std::endl;
+
     			exit(0);
     		}
     		else
