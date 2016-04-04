@@ -139,7 +139,7 @@ chroot $rootfs apt-key add Release.key
 rm $rootfs/Release.key
 
 chroot $rootfs apt-get update
-chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libmcrypt-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev
+chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libmcrypt-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libmysqlclient-dev
 
 if [ "$distver" == "wheezy" ]; then
 	chroot $rootfs apt-get -y install libgcrypt11-dev libgnutls-dev g++-4.7 gcc-4.7
@@ -149,6 +149,9 @@ if [ "$distver" == "wheezy" ]; then
 	ln -s gcc-4.7 $rootfs/usr/bin/gcc
 else
 	chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
+	if [ "$distributionVersion" == "jessie" ]; then
+		chroot $rootfs apt-get -y install libcurl4-gnutls-dev
+	fi
 fi
 
 mkdir $rootfs/build
@@ -185,6 +188,10 @@ function createPackage {
 		sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
 		sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
 		sed -i 's/libgnutlsxx28/libgnutlsxx27/g' $sourcePath/debian/control
+	fi
+	if [ "$distributionVersion" != "jessie" ]; then
+		sed -i 's/, libcurl4-gnutls-dev//g' $sourcePath/debian/control
+		sed -i 's/ --with-curl//g' $sourcePath/debian/rules
 	fi
 	tar -zcpf ${3}_$version.orig.tar.gz $sourcePath
 	cd $sourcePath
