@@ -84,13 +84,12 @@ AS_IF([test "x$with_eventhandler" != "xno"], [
 	AC_DEFINE(EVENTHANDLER, [], [Enables compilation of Homegear's event handler])
 	])
 
-#AC_ARG_WITH([openssl], [AS_HELP_STRING([--without-openssl], [Compile without OpenSSL (disables SSL in MQTT)])], [with_openssl=no], [])
-#AS_IF([test "x$with_openssl" = "xno"], [
-#	AM_CONDITIONAL(WITH_OPENSSL, false)
-#	], [
-#	AM_CONDITIONAL(WITH_OPENSSL, true)
-#	AC_DEFINE(OPENSSL, [], [Enables OpenSSL support in MQTT])
-#	])
+AC_ARG_WITH([curl], [AS_HELP_STRING([--with-curl], [Use this option when PHP is compiled with --with-curl.])], [with_openssl=yes], [])
+AS_IF([test "x$with_openssl" = "xyes"], [
+	AM_CONDITIONAL(WITH_CURL, true)
+	], [
+	AM_CONDITIONAL(WITH_CURL, false)
+	])
 
 AC_ARG_WITH([i2c], [AS_HELP_STRING([--without-i2c], [Compile without I2C support (disables all I2C interfaces)])], [with_i2c=no], [])
 AS_IF([test "x$with_i2c" != "xno"], [
