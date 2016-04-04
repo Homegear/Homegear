@@ -98,7 +98,13 @@ void Monitor::prepareChild()
 	close(_pipeToChild[1]);
 	close(_pipeFromChild[0]);
 	_stopMonitorThread = false;
+	_suspendMonitoring = true;
 	GD::bl->threadManager.start(_monitorThread, true, &Monitor::monitor, this);
+}
+
+void Monitor::suspend()
+{
+	_suspendMonitoring = true;
 }
 
 void Monitor::stop()
@@ -140,11 +146,38 @@ void Monitor::killChild(pid_t mainProcessId)
 {
 	_suspendMonitoring = true;
 	_killedProcess = true;
-	GD::out.printCritical("Critical: Killing child process.");
-	if(mainProcessId != 0) kill(mainProcessId, 9);
+	if(mainProcessId != 0)
+	{
+		GD::out.printCritical("Critical: Killing child process.");
+		kill(mainProcessId, 9);
+	}
 }
 
 void Monitor::checkHealth(pid_t mainProcessId)
+{
+	try
+	{
+		if(!GD::bl->settings.enableMonitoring() || _suspendMonitoring) return;
+		// We need to start the method in a new thread, so that stop() called by the sigchld_handler works. Otherwise stop() runs in the same thread as checkHealth => Deadlock
+		GD::bl->threadManager.start(_checkHealthThread, true, &Monitor::checkHealthThread, this, mainProcessId);
+		// Wait
+		GD::bl->threadManager.join(_checkHealthThread);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void Monitor::checkHealthThread(pid_t mainProcessId)
 {
 	try
 	{
@@ -161,6 +194,12 @@ void Monitor::checkHealth(pid_t mainProcessId)
 				{
 					if(_suspendMonitoring) return;
 					GD::out.printError(std::string("Error writing to child process pipe: ") + strerror(errno));
+					for(int32_t i = 0; i < 30; i++)
+					{
+						if(_suspendMonitoring) return;
+						std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					}
+					killChild(mainProcessId); //In case the pipe didn't close because of an ordered shutdown and the process hangs, kill it
 					_suspendMonitoring = true;
 					return;
 				}
@@ -186,9 +225,12 @@ void Monitor::checkHealth(pid_t mainProcessId)
 					else
 					{
 						if(_suspendMonitoring) return;
-						GD::out.printInfo("Info: Pipe to child process closed.");
-						std::this_thread::sleep_for(std::chrono::milliseconds(30000));
-						//Normally this point is never reached (exit is called by main before)
+						GD::out.printWarning("Warning: Pipe to child process closed.");
+						for(int32_t i = 0; i < 30; i++)
+						{
+							if(_suspendMonitoring) return;
+							std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+						}
 						killChild(mainProcessId); //In case the pipe didn't close because of an ordered shutdown and the process hangs, kill it
 						_suspendMonitoring = true;
 						return;
@@ -196,6 +238,7 @@ void Monitor::checkHealth(pid_t mainProcessId)
 					std::this_thread::sleep_for(std::chrono::milliseconds(100));
 					continue;
 				}
+
 				if(bytesRead != 1)
 				{
 					if(_suspendMonitoring) return;

@@ -44,6 +44,11 @@ public:
 	void dispose();
 	bool killedProcess();
 
+	/**
+	 * Causes checkHealthThread to exit as soon as possible and prevents starting checkHealthThread.
+	 */
+	void suspend();
+
 	void prepareParent();
 	void prepareChild();
 	void checkHealth(pid_t mainProcessId);
@@ -52,6 +57,7 @@ private:
 	int _pipeFromChild[2];
 	bool _suspendMonitoring = true;
 	bool _stopMonitorThread = false;
+	std::thread _checkHealthThread;
 	std::thread _monitorThread;
 	bool _killedProcess = false;
 	bool _disposing = false;
@@ -60,6 +66,7 @@ private:
 	void monitor();
 	void killChild(pid_t mainProcessId);
 	bool lifetick();
+	void checkHealthThread(pid_t mainProcessId);
 };
 
 #endif
