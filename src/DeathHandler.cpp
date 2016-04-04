@@ -54,6 +54,8 @@
 #include <sys/mman.h>
 #endif
 
+#include <iostream>
+
 #define INLINE __attribute__((always_inline)) inline
 
 namespace Debug {
@@ -391,6 +393,7 @@ static char *addr2line(const char *image, void *addr, bool color_output,
   if (pipe(pipefd) != 0) {
     safe_abort();
   }
+  char* line = *memory;
   pid_t pid = fork();
   if (pid == 0) {
     close(pipefd[0]);
@@ -399,44 +402,58 @@ static char *addr2line(const char *image, void *addr, bool color_output,
     if (execlp("addr2line", "addr2line",
                Safe::ptoa(addr, *memory), "-f", "-C", "-e", image,
                reinterpret_cast<void*>(NULL)) == -1) {
+      char* result = (char*)"??\n??:0\n";
+
+      int32_t totalBytesWritten = 0;
+	  while (totalBytesWritten < 9)
+	  {
+		int32_t bytesWritten = write(pipefd[1], result, 9);;
+		if(bytesWritten <= 0)
+		{
+			if(bytesWritten == -1 && errno == EINTR) continue;
+			else safe_abort();
+		}
+		totalBytesWritten += bytesWritten;
+	  }
       safe_abort();
     }
   }
+  else if(pid > 0)
+  {
+	  close(pipefd[1]);
+	  const int line_max_length = 4096;
+	  *memory += line_max_length;
+	  ssize_t len = read(pipefd[0], line, line_max_length);
+	  close(pipefd[0]);
+	  if (len == 0) {
+		safe_abort();
+	  }
+	  line[len] = 0;
 
-  close(pipefd[1]);
-  const int line_max_length = 4096;
-  char* line = *memory;
-  *memory += line_max_length;
-  ssize_t len = read(pipefd[0], line, line_max_length);
-  close(pipefd[0]);
-  if (len == 0) {
-    safe_abort();
-  }
-  line[len] = 0;
-
-  if (waitpid(pid, NULL, 0) != pid) {
-    safe_abort();
-  }
-  if (line[0] == '?') {
-    char* straddr = Safe::ptoa(addr, *memory);
-    if (color_output) {
-      strcpy(line, "\033[32;1m");  // NOLINT(runtime/printf)
-    }
-    strcat(line, straddr);  // NOLINT(runtime/printf)
-    if (color_output) {
-      strcat(line, "\033[0m");  // NOLINT(runtime/printf)
-    }
-    strcat(line, " at ");  // NOLINT(runtime/printf)
-    strcat(line, image);  // NOLINT(runtime/printf)
-    strcat(line, " ");  // NOLINT(runtime/printf)
-  } else {
-    if (*(strstr(line, "\n") + 1) == '?') {
-      char* straddr = Safe::ptoa(addr, *memory);
-      strcpy(strstr(line, "\n") + 1, image);  // NOLINT(runtime/printf)
-      strcat(line, ":");  // NOLINT(runtime/printf)
-      strcat(line, straddr);  // NOLINT(runtime/printf)
-      strcat(line, "\n");  // NOLINT(runtime/printf)
-    }
+	  if (waitpid(pid, NULL, 0) != pid) {
+		safe_abort();
+	  }
+	  if (line[0] == '?') {
+		char* straddr = Safe::ptoa(addr, *memory);
+		if (color_output) {
+		  strcpy(line, "\033[32;1m");  // NOLINT(runtime/printf)
+		}
+		strcat(line, straddr);  // NOLINT(runtime/printf)
+		if (color_output) {
+		  strcat(line, "\033[0m");  // NOLINT(runtime/printf)
+		}
+		strcat(line, " at ");  // NOLINT(runtime/printf)
+		strcat(line, image);  // NOLINT(runtime/printf)
+		strcat(line, " ");  // NOLINT(runtime/printf)
+	  } else {
+		if (*(strstr(line, "\n") + 1) == '?') {
+		  char* straddr = Safe::ptoa(addr, *memory);
+		  strcpy(strstr(line, "\n") + 1, image);  // NOLINT(runtime/printf)
+		  strcat(line, ":");  // NOLINT(runtime/printf)
+		  strcat(line, straddr);  // NOLINT(runtime/printf)
+		  strcat(line, "\n");  // NOLINT(runtime/printf)
+		}
+	  }
   }
   return line;
 }
