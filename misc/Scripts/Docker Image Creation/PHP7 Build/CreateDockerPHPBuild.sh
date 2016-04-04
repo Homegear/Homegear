@@ -132,7 +132,7 @@ if [ "$distver" == "vivid" ] || [ "$distver" == "wily" ]; then
 	chroot $rootfs apt-get -y -f install
 fi
 chroot $rootfs apt-get -y -f install
-chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano
+chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano libmysqlclient-dev
 
 mkdir $rootfs/PHPBuild
 chroot $rootfs bash -c "cd /PHPBuild && apt-get source php7.0"

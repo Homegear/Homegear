@@ -68,6 +68,7 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 Monitor _monitor;
 std::mutex _shuttingDownMutex;
 bool _reloading = false;
+bool _fork = false;
 bool _monitorProcess = false;
 pid_t _mainProcessId = 0;
 bool _startAsDaemon = false;
@@ -142,6 +143,7 @@ void sigchld_handler(int32_t signalNumber)
 				if(WCOREDUMP(status)) coreDumped = true;
 			}
 
+			GD::out.printInfo("Info: Process with id " + std::to_string(pid) + " ended.");
 			if(pid == _mainProcessId)
 			{
 				_mainProcessId = 0;
@@ -159,8 +161,9 @@ void sigchld_handler(int32_t signalNumber)
 					exit(0);
 				}
 
-				GD::out.printError("Homegear was terminated. Restarting...");
-				startMainProcess();
+				GD::out.printError("Homegear was terminated. Restarting (1)...");
+				_monitor.suspend();
+				_fork = true;
 			}
 			else if(GD::scriptEngineServer) GD::scriptEngineServer->processKilled(pid, exitStatus, signal, coreDumped);
 		}
@@ -521,6 +524,7 @@ void startMainProcess()
 	try
 	{
 		_monitor.stop();
+		_fork = false;
 		_monitorProcess = false;
 		_monitor.init();
 
@@ -550,8 +554,6 @@ void startMainProcess()
 
 			_monitor.prepareChild();
 		}
-
-		if(pid == 0) startUp();
 	}
 	catch(const std::exception& ex)
     {
@@ -634,7 +636,7 @@ void startUp()
     	deathHandler.set_append_pid(true);
     	deathHandler.set_frames_count(32);
     	deathHandler.set_color_output(false);
-    	deathHandler.set_generate_core_dump(true);
+    	deathHandler.set_generate_core_dump(GD::bl->settings.enableCoreDumps());
 
     	sa.sa_handler = sigchld_handler;
     	sigaction(SIGCHLD, &sa, NULL);
@@ -661,9 +663,14 @@ void startUp()
     	{
     		setLimits();
 
-    		while(true)
+    		while(_monitorProcess)
     		{
     			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+    			if(_fork)
+    			{
+    				GD::out.printError("Homegear was terminated. Restarting (2)...");
+    				startMainProcess();
+    			}
     			_monitor.checkHealth(_mainProcessId);
     		}
     	}
@@ -1091,7 +1098,7 @@ int main(int argc, char* argv[])
 				deathHandler.set_append_pid(true);
 				deathHandler.set_frames_count(32);
 				deathHandler.set_color_output(false);
-				deathHandler.set_generate_core_dump(true);
+				deathHandler.set_generate_core_dump(GD::bl->settings.enableCoreDumps());
 
     			GD::bl->settings.load(GD::configPath + "main.conf");
     			CLI::Client cliClient;
@@ -1104,7 +1111,7 @@ int main(int argc, char* argv[])
 				deathHandler.set_append_pid(true);
 				deathHandler.set_frames_count(32);
 				deathHandler.set_color_output(false);
-				deathHandler.set_generate_core_dump(true);
+				deathHandler.set_generate_core_dump(GD::bl->settings.enableCoreDumps());
 
     			initGnuTls();
     			setLimits();
