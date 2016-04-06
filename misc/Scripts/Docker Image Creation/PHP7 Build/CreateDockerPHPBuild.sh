@@ -134,23 +134,21 @@ fi
 chroot $rootfs apt-get -y -f install
 chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano libmysqlclient-dev
 
+if [ "$distver" == "jessie" ]; then
+	chroot $rootfs apt-get -y install libcurl4-gnutls-dev
+fi
 mkdir $rootfs/PHPBuild
 chroot $rootfs bash -c "cd /PHPBuild && apt-get source php7.0"
 cd $rootfs/PHPBuild
 tar -xf php7*debian.tar.xz
 cd ..
+sed -i '/.*libcurl4-openssl-dev | libcurl-dev,.*/d' $rootfs/PHPBuild/debian/control
 if [ "$distver" == "wheezy" ]; then
-	sed -i '/.*libcurl4-openssl-dev | libcurl-dev,.*/d' $rootfs/PHPBuild/debian/control
 	sed -i 's/apache2-dev.*,//g' $rootfs/PHPBuild/debian/control
 	sed -i '/.*dh-apache2,.*/d' $rootfs/PHPBuild/debian/control
 	sed -i '/.*dh-systemd.*,.*/d' $rootfs/PHPBuild/debian/control
 	sed -i '/.*libc-client-dev,.*/d' $rootfs/PHPBuild/debian/control
-	sed -i 's/--with-curl //g' $rootfs/PHPBuild/debian/rules
 else
-	if [ "$distver" != "jessie" ]; then
-		sed -i '/.*libcurl4-openssl-dev | libcurl-dev,.*/d' $rootfs/PHPBuild/debian/control
-		sed -i 's/--with-curl //g' $rootfs/PHPBuild/debian/rules
-	fi
 	sed -i '/.*libgcrypt11-dev,.*/d' $rootfs/PHPBuild/debian/control
 	sed -i '/.*libsystemd-daemon-dev,.*/d' $rootfs/PHPBuild/debian/control
 	sed -i '/.*libxml2-dev/a\\t       libgcrypt20-dev,' $rootfs/PHPBuild/debian/control
@@ -166,6 +164,10 @@ chroot $rootfs bash -c "cd /PHPBuild && dpkg -i php*-build-deps_*.deb"
 # Create links necessary to build PHP
 rm -Rf $rootfs/PHPBuild/*
 cp -R "$scriptdir/debian" $rootfs/PHPBuild
+if [ "$distver" != "jessie" ]; then
+	sed -i 's/, libcurl4-gnutls-dev//g' $rootfs/PHPBuild/debian/control
+	sed -i 's/--with-curl //g' $rootfs/PHPBuild/debian/rules
+fi
 cat > "$rootfs/PHPBuild/SetTarget.sh" <<-'EOF'
 #!/bin/bash
 target="$(gcc -v 2>&1)"
