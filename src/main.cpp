@@ -30,7 +30,9 @@
 
 #include "GD/GD.h"
 #include "Monitor.h"
+#ifndef __aarch64__
 #include "DeathHandler.h"
+#endif
 #include "CLI/CLIClient.h"
 #include "ScriptEngine/ScriptEngineClient.h"
 #include "UPnP/UPnP.h"
@@ -629,14 +631,17 @@ void startUp()
     	//Enable printing of backtraces
 		//Use sigaction over signal because of different behavior in Linux and BSD
     	sigaction(SIGHUP, &sa, NULL);
-    	//sigaction(SIGABRT, &sa, NULL);
-    	//sigaction(SIGSEGV, &sa, NULL);
     	sigaction(SIGTERM, &sa, NULL);
+#ifdef __aarch64__
+    	sigaction(SIGABRT, &sa, NULL);
+    	sigaction(SIGSEGV, &sa, NULL);
+#else
     	Debug::DeathHandler deathHandler;
     	deathHandler.set_append_pid(true);
     	deathHandler.set_frames_count(32);
     	deathHandler.set_color_output(false);
     	deathHandler.set_generate_core_dump(GD::bl->settings.enableCoreDumps());
+#endif
 
     	sa.sa_handler = sigchld_handler;
     	sigaction(SIGCHLD, &sa, NULL);
@@ -1094,11 +1099,13 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-r")
     		{
+#ifndef __aarch64__
     			Debug::DeathHandler deathHandler;
 				deathHandler.set_append_pid(true);
 				deathHandler.set_frames_count(32);
 				deathHandler.set_color_output(false);
 				deathHandler.set_generate_core_dump(GD::bl->settings.enableCoreDumps());
+#endif
 
     			GD::bl->settings.load(GD::configPath + "main.conf");
     			CLI::Client cliClient;
@@ -1107,11 +1114,13 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-rse")
     		{
+#ifndef __aarch64__
     			Debug::DeathHandler deathHandler;
 				deathHandler.set_append_pid(true);
 				deathHandler.set_frames_count(32);
 				deathHandler.set_color_output(false);
 				deathHandler.set_generate_core_dump(GD::bl->settings.enableCoreDumps());
+#endif
 
     			initGnuTls();
     			setLimits();
