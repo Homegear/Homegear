@@ -575,9 +575,11 @@ void DeathHandler::HandleSignal(int sig, void * /* info */, void *secret) {
 #ifdef __linux__
 #if defined(__arm__)
   trace[1] = reinterpret_cast<void *>(uc->uc_mcontext.arm_pc);
+#elif defined(__aarch64__)
+  trace[1] = reinterpret_cast<void *>(uc->uc_mcontext.pc);
 #else
 #if !defined(__i386__) && !defined(__x86_64__)
-#error Only ARM, x86 and x86-64 are supported
+#error Only ARM, AARCH64, x86 and x86-64 are supported
 #endif
 #if defined(__x86_64__)
   trace[1] = reinterpret_cast<void *>(uc->uc_mcontext.gregs[REG_RIP]);

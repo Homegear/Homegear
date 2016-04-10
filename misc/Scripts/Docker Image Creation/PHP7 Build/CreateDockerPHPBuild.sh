@@ -127,14 +127,14 @@ chroot $rootfs apt-key add dotdeb.gpg
 rm $rootfs/dotdeb.gpg
 #Fix debootstrap base package errors
 chroot $rootfs apt-get update
-if [ "$distver" == "vivid" ] || [ "$distver" == "wily" ]; then
+if [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ]; then
 	chroot $rootfs apt-get -y install python3
 	chroot $rootfs apt-get -y -f install
 fi
 chroot $rootfs apt-get -y -f install
 chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano libmysqlclient-dev
 
-if [ "$distver" == "jessie" ]; then
+if [ "$distver" == "jessie" ] || [ "$distver" == "xenial" ]; then
 	chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
 mkdir $rootfs/PHPBuild
@@ -164,7 +164,7 @@ chroot $rootfs bash -c "cd /PHPBuild && dpkg -i php*-build-deps_*.deb"
 # Create links necessary to build PHP
 rm -Rf $rootfs/PHPBuild/*
 cp -R "$scriptdir/debian" $rootfs/PHPBuild
-if [ "$distver" != "jessie" ]; then
+if [ "$distver" != "jessie" ] && [ "$distver" != "xenial" ]; then
 	sed -i 's/, libcurl4-gnutls-dev//g' $rootfs/PHPBuild/debian/control
 	sed -i 's/--with-curl //g' $rootfs/PHPBuild/debian/rules
 fi
