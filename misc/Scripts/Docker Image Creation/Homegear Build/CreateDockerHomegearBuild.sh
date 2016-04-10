@@ -149,7 +149,7 @@ if [ "$distver" == "wheezy" ]; then
 	ln -s gcc-4.7 $rootfs/usr/bin/gcc
 else
 	chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
-	if [ "$distributionVersion" == "jessie" ]; then
+	if [ "$distver" == "jessie" ]; then
 		chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 	fi
 fi
@@ -483,7 +483,7 @@ EOF
 chmod 755 $rootfs/FirstStart.sh
 sed -i "s/<DIST>/${dist}/g" $rootfs/FirstStart.sh
 
-read -p "Copy additional files into ${rootfs} and check that all packages were installed ok then hit [Enter] to continue..."
+#read -p "Copy additional files into ${rootfs} and check that all packages were installed ok then hit [Enter] to continue..."
 
 chroot $rootfs apt-get clean
 rm -Rf $rootfs/var/lib/apt/lists/*
