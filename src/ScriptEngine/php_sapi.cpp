@@ -289,12 +289,9 @@ void php_homegear_build_argv(std::vector<std::string>& arguments)
 
 static size_t php_homegear_read_post(char *buf, size_t count_bytes)
 {
-	GD::out.printError("Moin0");
 	if(_disposed || SEG(commandLine)) return 0;
-	std::cerr << "Moin1" << std::endl;
 	BaseLib::Http* http = &SEG(http);
 	if(!http || http->getContentSize() == 0) return 0;
-	std::cerr << "Moin2 " << http->getContentSize() << std::endl;
 	size_t bytesRead = http->readContentStream(buf, count_bytes);
 	if(GD::bl->debugLevel >= 5 && bytesRead > 0) GD::out.printDebug("Debug: Raw post data: " + std::string(buf, bytesRead));
 	return bytesRead;
