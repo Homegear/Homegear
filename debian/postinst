@@ -1,7 +1,5 @@
 #!/bin/sh
 
-set +e
-
 case $1 in
 	# Configure this package. If the package must prompt the user for
 	# information, do it here.
@@ -69,8 +67,6 @@ case $1 in
 		fi
 
 		insserv homegear
-		sleep 5
-		service homegear start
 		;;
 
 	# Back out of an attempt to upgrade this package FROM THIS VERSION
