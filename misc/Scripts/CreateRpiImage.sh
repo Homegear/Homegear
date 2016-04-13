@@ -323,14 +323,16 @@ rm -f homegear-philipshue_current_raspbian_jessie_armhf.deb
 dpkg -i homegear-sonos_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 rm -f homegear-sonos_current_raspbian_jessie_armhf.deb
-service homegear stop
-apt-get -y install openhab-runtime openhab-addon-action-homematic openhab-addon-binding-homematic
-apt-get -y -f install
-cp /etc/openhab/configurations/openhab_default.cfg /etc/openhab/configurations/openhab.cfg
-sed -i \"s/^# homematic:host=/homematic:host=127.0.0.1/\" /etc/openhab/configurations/openhab.cfg
-sed -i \"s/^# homematic:callback.host=/homematic:callback.host=127.0.0.1/\" /etc/openhab/configurations/openhab.cfg
-systemctl enable openhab
-echo \"Starting raspi-config...\"
+service homegear stop" >> scripts/firstStart.sh
+if [ $OPENHAB -eq 1 ]; then
+  echo "apt-get -y install openhab-runtime openhab-addon-action-homematic openhab-addon-binding-homematic
+  apt-get -y -f install
+  cp /etc/openhab/configurations/openhab_default.cfg /etc/openhab/configurations/openhab.cfg
+  sed -i \"s/^# homematic:host=/homematic:host=127.0.0.1/\" /etc/openhab/configurations/openhab.cfg
+  sed -i \"s/^# homematic:callback.host=/homematic:callback.host=127.0.0.1/\" /etc/openhab/configurations/openhab.cfg
+  systemctl enable openhab" >> scripts/firstStart.sh
+fi
+echo "echo \"Starting raspi-config...\"
 raspi-config
 rm /scripts/firstStart.sh
 rm -Rf /var/log/homegear/*
