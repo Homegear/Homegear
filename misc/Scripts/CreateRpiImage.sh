@@ -269,6 +269,61 @@ chmod 755 boot/config.txt
 echo "deb $deb_mirror $deb_release main contrib non-free rpi
 " > etc/apt/sources.list
 
+cat > "etc/init.d/tmpfslog.sh" <<-'EOF'
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides:          tmpfslog
+# Required-Start:    $local_fs
+# Required-Stop:     $local_fs
+# X-Start-Before:    $syslog
+# X-Stop-After:      $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start/stop logfile saving
+### END INIT INFO
+#
+# varlog        This init.d script is used to start logfile saving and restore.
+#
+
+varlogSave=/var/log.save/
+[ ! -d $varlogSave ] && mkdir -p $varlogSave
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+
+case $1 in
+    start)
+        echo "*** Starting tmpfs file restore: varlog."
+        if [ -z "$(grep /var/log /proc/mounts)" ]; then
+            echo "*** mounting /var/log"
+            cp -Rpu /var/log/* $varlogSave
+            varlogsize=$(grep /var/log /etc/fstab|awk {'print $4'}|cut -d"=" -f2)
+            [ -z "$varlogsize" ] && varlogsize="100M"
+            mount -t tmpfs tmpfs /var/log -o defaults,size=$varlogsize
+            chmod 755 /var/log
+        fi
+        cp -Rpu ${varlogSave}* /var/log/
+    ;;
+    stop)
+        echo "*** Stopping tmpfs file saving: varlog."
+        cp -Rpu /var/log/* $varlogSave >/dev/null 2>&1
+        sync
+        umount -f /var/log/
+    ;;
+  reload)
+    echo "*** Stopping tmpfs file saving: varlog."
+        cp -Rpu /var/log/* $varlogSave >/dev/null 2>&1
+        sync
+  ;;
+    *)
+        echo "Usage: $0 {start|stop}"
+    ;;
+esac
+
+exit 0
+EOF
+chown root:root etc/init.d/tmpfslog.sh
+chmod 755 etc/init.d/tmpfslog.sh
+
 #First-start script
 echo "#!/bin/bash
 sed -i '$ d' /home/pi/.bashrc >/dev/null
@@ -285,7 +340,9 @@ rm /etc/ssh/ssh_host* >/dev/null
 ssh-keygen -A >/dev/null
 if [ \$(nproc --all) -ge 4 ]; then
   echo \"dwc_otg.lpm_enable=0 console=ttyUSB0,115200 kgdboc=ttyUSB0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline isolcpus=2,3 rootwait\" > /boot/cmdline.txt
+  sed -i 's/varlogsize=\"100M\"/varlogsize=\"250M\"/g' /etc/init.d/tmpfslog.sh
 fi
+insserv tmpfslog.sh
 echo \"Updating your system...\"
 apt update
 apt -y upgrade

@@ -1,6 +1,6 @@
 /var/log/homegear/*.log /var/log/homegear/*.err {
         missingok
-        rotate 30
+        rotate 2
         compress
         delaycompress
         notifempty
