@@ -77,18 +77,18 @@ fi
 LANG=C chroot $rootfs /debootstrap/debootstrap --second-stage
 
 if [ "$dist" == "Ubuntu" ]; then
-	echo "deb $repository $distver main restricted universe multiverse
-	" > $rootfs/etc/apt/sources.list
+	echo "deb $repository $distver main restricted universe multiverse" > $rootfs/etc/apt/sources.list
 elif [ "$dist" == "Debian" ]; then
-	echo "deb http://ftp.debian.org/debian $distver main contrib
-	" > $rootfs/etc/apt/sources.list
+	echo "deb http://ftp.debian.org/debian $distver main contrib" > $rootfs/etc/apt/sources.list
 elif [ "$dist" == "Raspbian" ]; then
-	echo "deb http://mirrordirector.raspbian.org/raspbian/ $distver main contrib
-	" > $rootfs/etc/apt/sources.list
+	echo "deb http://mirrordirector.raspbian.org/raspbian/ $distver main contrib" > $rootfs/etc/apt/sources.list
 fi
 
-echo "deb-src http://packages.dotdeb.org jessie all
-	" > $rootfs/etc/apt/sources.list.d/php7-src.list
+if [ "$distver" == "xenial" ]; then
+	echo "deb-src http://archive.ubuntu.com/ubuntu xenial main restricted universe multiverse" >> $rootfs/etc/apt/sources.list
+else
+	echo "deb-src http://packages.dotdeb.org jessie all" > $rootfs/etc/apt/sources.list.d/php7-src.list
+fi
 
 # prevent init scripts from running during install/update
 cat > "$rootfs/usr/sbin/policy-rc.d" <<'EOF'
@@ -122,9 +122,11 @@ Acquire::GzipIndexes "true";
 Acquire::CompressionTypes::Order:: "gz";
 EOF
 
-wget -P $rootfs http://www.dotdeb.org/dotdeb.gpg
-chroot $rootfs apt-key add dotdeb.gpg
-rm $rootfs/dotdeb.gpg
+if [ "$distver" != "xenial" ]; then
+	wget -P $rootfs http://www.dotdeb.org/dotdeb.gpg
+	chroot $rootfs apt-key add dotdeb.gpg
+	rm $rootfs/dotdeb.gpg
+fi
 #Fix debootstrap base package errors
 chroot $rootfs apt-get update
 if [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ]; then
