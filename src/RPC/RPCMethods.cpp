@@ -3627,8 +3627,8 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 		}
 
 		BaseLib::PVariable value;
-		if(useSerialNumber && parameters->size() == 3) value = parameters->at(2);
-		else if(!useSerialNumber && parameters->size() == 4) value = parameters->at(3);
+		if(useSerialNumber && parameters->size() >= 3) value = parameters->at(2);
+		else if(!useSerialNumber && parameters->size() >= 4) value = parameters->at(3);
 		else value.reset(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 
 		bool wait = true;

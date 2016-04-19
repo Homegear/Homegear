@@ -468,6 +468,8 @@ BaseLib::PVariable EventHandler::remove(std::string name)
 			if(i->second->name == name)
 			{
 				event = i->second;
+				std::lock_guard<std::mutex> disposingGuard(event->disposingMutex);
+				event->disposing = true;
 				_timedEvents.erase(i);
 				break;
 			}
@@ -489,6 +491,8 @@ BaseLib::PVariable EventHandler::remove(std::string name)
 								if(_triggeredEvents[peerID->first][channel->first][variable->first].empty()) _triggeredEvents[peerID->first][channel->first].erase(variable->first);
 								if(_triggeredEvents[peerID->first][channel->first].empty()) _triggeredEvents[peerID->first].erase(channel->first);
 								if(_triggeredEvents[peerID->first].empty()) _triggeredEvents.erase(peerID->first);
+								std::lock_guard<std::mutex> disposingGuard(event->disposingMutex);
+								event->disposing = true;
 								break;
 							}
 						}
@@ -1514,12 +1518,10 @@ void EventHandler::save(std::shared_ptr<Event> event)
 	{
 		//The eventExists is necessary so we don't safe an event that is being deleted
 		if(!event || _disposing) return;
-		_databaseMutex.lock();
-		if(event->id > 0 && !eventExists(event->id))
-		{
-			_databaseMutex.unlock();
-			return;
-		}
+		std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
+		if(event->id > 0 && !eventExists(event->id)) return;
+		std::lock_guard<std::mutex> disposingGuard(event->disposingMutex);
+		if(event->disposing) return;
 		BaseLib::Database::DataRow data;
 		if(event->id > 0) data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->id)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->name)));
@@ -1565,6 +1567,5 @@ void EventHandler::save(std::shared_ptr<Event> event)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _databaseMutex.unlock();
 }
 #endif
