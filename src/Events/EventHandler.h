@@ -61,6 +61,8 @@ public:
 		enum Enum { none = 0, addition = 1, subtraction = 2, multiplication = 3, division = 4 };
 	};
 
+	std::mutex disposingMutex;
+	bool disposing = false;
 	uint64_t id = 0;
 	Type::Enum type = Type::Enum::triggered;
 	std::string name;
