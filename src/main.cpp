@@ -618,9 +618,9 @@ void startUp()
 {
 	try
 	{
-		if((chdir(GD::bl->settings.logfilePath().c_str())) < 0)
+		if((chdir(GD::bl->settings.workingDirectory().c_str())) < 0)
 		{
-			GD::out.printError("Could not change working directory to " + GD::bl->settings.logfilePath() + ".");
+			GD::out.printError("Could not change working directory to " + GD::bl->settings.workingDirectory() + ".");
 			exitHomegear(1);
 		}
 
@@ -1229,9 +1229,9 @@ int main(int argc, char* argv[])
 			GD::mqtt->loadSettings();
 		// }}}
 
-		if((chdir(GD::bl->settings.logfilePath().c_str())) < 0)
+		if((chdir(GD::bl->settings.workingDirectory().c_str())) < 0)
 		{
-			GD::out.printError("Could not change working directory to " + GD::bl->settings.logfilePath() + ".");
+			GD::out.printError("Could not change working directory to " + GD::bl->settings.workingDirectory() + ".");
 			exitHomegear(1);
 		}
 

@@ -3038,7 +3038,7 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }),
 			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean }),
 			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString }),
-			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean }),
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
@@ -3068,18 +3068,38 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 
 		std::string path = GD::bl->settings.scriptPath() + filename;
 
-		int32_t exitCode = 0;
+		BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+		BaseLib::PVariable exitCode(new BaseLib::Variable(0));
+		BaseLib::PVariable output(new BaseLib::Variable(BaseLib::VariableType::tString));
+		result->structValue->insert(BaseLib::StructElement("EXITCODE", exitCode));
+		result->structValue->insert(BaseLib::StructElement("OUTPUT", output));
 		if(internalEngine)
 		{
 			if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Executing script \"" + path + "\" with parameters \"" + arguments + "\" using internal script engine.");
 			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli, path, arguments));
 			if(wait) scriptInfo->returnOutput = true;
 			GD::scriptEngineServer->executeScript(scriptInfo, wait);
+			if(!scriptInfo->started)
+			{
+				output->stringValue = "Error: Could not execute script. Check log file for more details.";
+				exitCode->integerValue = -1;
+				return result;
+			}
+			if(wait) exitCode->integerValue = scriptInfo->exitCode;
 			if(!scriptInfo->output.empty())
 			{
-				return BaseLib::PVariable(new BaseLib::Variable(scriptInfo->output));
+				output->stringValue = std::move(scriptInfo->output);
+				return result;
 			}
-			else return BaseLib::PVariable(new BaseLib::Variable(exitCode));
+			else
+			{
+				if(!wait)
+				{
+					output->stringValue = "Error executing script. Check log file for more details.";
+					exitCode->integerValue = -1;
+				}
+				return result;
+			}
 		}
 		else
 		{
@@ -3088,24 +3108,41 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 			if(!wait) command += "&";
 
 			struct stat statStruct;
-			if(stat(path.c_str(), &statStruct) < 0) return BaseLib::Variable::createError(-32400, "Could not execute script: " + std::string(strerror(errno)));
+			if(stat(path.c_str(), &statStruct) < 0)
+			{
+				output->stringValue = "Could not execute script: " + std::string(strerror(errno));
+				exitCode->integerValue = -32400;
+				return result;
+			}
 			uint32_t uid = getuid();
 			uint32_t gid = getgid();
 			if((statStruct.st_mode & S_IXOTH) == 0)
 			{
 				if(statStruct.st_gid != gid || (statStruct.st_gid == gid && (statStruct.st_mode & S_IXGRP) == 0))
 				{
-					if(statStruct.st_uid != uid || (statStruct.st_uid == uid && (statStruct.st_mode & S_IXUSR) == 0)) return BaseLib::Variable::createError(-32400, "Could not execute script. No permission - or executable bit is not set.");
+					if(statStruct.st_uid != uid || (statStruct.st_uid == uid && (statStruct.st_mode & S_IXUSR) == 0))
+					{
+						output->stringValue = "Could not execute script. No permission - or executable bit is not set.";
+						exitCode->integerValue = -32400;
+						return result;
+					}
 				}
 			}
 			if((statStruct.st_mode & (S_IXGRP | S_IXUSR)) == 0) //At least in Debian it is not possible to execute scripts, when the execution bit is only set for "other".
-				return BaseLib::Variable::createError(-32400, "Could not execute script. Executable bit is not set for user or group.");
-			if((statStruct.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0) return BaseLib::Variable::createError(-32400, "Could not execute script. The file mode is not set to executable.");
-			exitCode = std::system(command.c_str());
-			int32_t signal = WIFSIGNALED(exitCode);
-			if(signal) return BaseLib::Variable::createError(-32400, "Script exited with signal: " + std::to_string(signal));
-			exitCode = WEXITSTATUS(exitCode);
-			return BaseLib::PVariable(new BaseLib::Variable(exitCode));
+			{
+				output->stringValue = "Could not execute script. Executable bit is not set for user or group.";
+				exitCode->integerValue = -32400;
+				return result;
+			}
+			if((statStruct.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
+			{
+				output->stringValue = "Could not execute script. The file mode is not set to executable.";
+				exitCode->integerValue = -32400;
+				return result;
+			}
+
+			exitCode->integerValue = BaseLib::HelperFunctions::exec(command.c_str(), output->stringValue);
+			return result;
 		}
 	}
 	catch(const std::exception& ex)
