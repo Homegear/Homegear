@@ -504,6 +504,11 @@ static void php_homegear_register_variables(zval* track_vars_array)
 
 void php_homegear_invoke_rpc(std::string& methodName, BaseLib::PVariable& parameters, zval* return_value)
 {
+	if(SEG(id) == 0)
+	{
+		zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Please call \"registerThread\" before calling any Homegear specific method within threads.", -1);
+		RETURN_FALSE
+	}
 	if(!SEG(rpcCallback)) RETURN_FALSE;
 	if(!parameters) parameters.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
 	BaseLib::PVariable result = SEG(rpcCallback)(methodName, parameters);
