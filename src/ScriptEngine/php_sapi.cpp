@@ -97,6 +97,7 @@ ZEND_FUNCTION(hg_update_user);
 ZEND_FUNCTION(hg_user_exists);
 ZEND_FUNCTION(hg_users);
 ZEND_FUNCTION(hg_log);
+ZEND_FUNCTION(hg_get_http_contents);
 ZEND_FUNCTION(hg_check_license);
 ZEND_FUNCTION(hg_remove_license);
 ZEND_FUNCTION(hg_get_license_states);
@@ -147,6 +148,7 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_user_exists, NULL)
 	ZEND_FE(hg_users, NULL)
 	ZEND_FE(hg_log, NULL)
+	ZEND_FE(hg_get_http_contents, NULL)
 	ZEND_FE(hg_check_license, NULL)
 	ZEND_FE(hg_remove_license, NULL)
 	ZEND_FE(hg_get_license_states, NULL)
@@ -1010,6 +1012,36 @@ ZEND_FUNCTION(hg_log)
 	RETURN_TRUE;
 }
 
+ZEND_FUNCTION(hg_get_http_contents)
+{
+	if(_disposed) RETURN_NULL();
+	char* pHostname = nullptr;
+	int hostnameLength = 0;
+	long port = 443;
+	char* pPath = nullptr;
+	int pathLength = 0;
+	char* pCaFile = nullptr;
+	int caFileLength = 0;
+	zend_bool verifyCertificate = 1;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "slssb", &pHostname, &hostnameLength, &port, &pPath, &pathLength, &pCaFile, &caFileLength, &verifyCertificate) != SUCCESS) RETURN_NULL();
+	if(hostnameLength == 0 || pathLength == 0 || caFileLength == 0 || port < 1 || port > 65535) RETURN_FALSE;
+
+	std::string data;
+	try
+	{
+		BaseLib::HttpClient client(GD::bl.get(), std::string(pHostname, hostnameLength), port, false, true, std::string(pCaFile, caFileLength), (bool)verifyCertificate);
+		std::string path(pPath, pathLength);
+		client.get(path, data);
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printError("Error downloading file: " + ex.what());
+		RETURN_FALSE;
+	}
+
+	ZVAL_STRINGL(return_value, data.c_str(), data.size());
+}
+
 ZEND_FUNCTION(hg_check_license)
 {
 	if(_disposed) RETURN_NULL();
@@ -1482,6 +1514,7 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME_MAPPING(getScriptId, hg_get_script_id, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(registerThread, hg_register_thread, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(log, hg_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(getHttpContents, hg_get_http_contents, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(pollEvent, hg_poll_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(subscribePeer, hg_subscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(unsubscribePeer, hg_unsubscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
