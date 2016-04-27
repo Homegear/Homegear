@@ -445,7 +445,8 @@ static void php_homegear_register_variables(zval* track_vars_array)
 	else
 	{
 		BaseLib::Http* http = &SEG(http);
-		if(!http) return;
+		BaseLib::ScriptEngine::PScriptInfo& scriptInfo = SEG(scriptInfo);
+		if(!http || !scriptInfo) return;
 		BaseLib::Http::Header& header = http->getHeader();
 		BaseLib::Rpc::ServerInfo::Info* server = (BaseLib::Rpc::ServerInfo::Info*)SG(server_context);
 		zval value;
@@ -459,7 +460,7 @@ static void php_homegear_register_variables(zval* track_vars_array)
 			php_register_variable_safe((char*)"HTTP_CONNECTION", (char*)connection.c_str(), connection.size(), track_vars_array);
 			php_register_variable_safe((char*)"DOCUMENT_ROOT", (char*)server->contentPath.c_str(), server->contentPath.size(), track_vars_array);
 			std::string filename = server->contentPath;
-			filename += (!header.path.empty() && header.path.front() == '/') ? header.path.substr(1) : header.path;
+			filename += (!scriptInfo->relativePath.empty() && scriptInfo->relativePath.front() == '/') ? scriptInfo->relativePath.substr(1) : scriptInfo->relativePath;
 			php_register_variable_safe((char*)"SCRIPT_FILENAME", (char*)filename.c_str(), filename.size(), track_vars_array);
 			php_register_variable_safe((char*)"SERVER_NAME", (char*)server->name.c_str(), server->name.size(), track_vars_array);
 			php_register_variable_safe((char*)"SERVER_ADDR", (char*)server->address.c_str(), server->address.size(), track_vars_array);
@@ -473,8 +474,8 @@ static void php_homegear_register_variables(zval* track_vars_array)
 
 		std::string version = std::string("Homegear ") + VERSION;
 		php_register_variable_safe((char*)"SERVER_SOFTWARE", (char*)version.c_str(), version.size(), track_vars_array);
-		php_register_variable_safe((char*)"SCRIPT_NAME", (char*)header.path.c_str(), header.path.size(), track_vars_array);
-		std::string phpSelf = header.path + header.pathInfo;
+		php_register_variable_safe((char*)"SCRIPT_NAME", (char*)scriptInfo->relativePath.c_str(), scriptInfo->relativePath.size(), track_vars_array);
+		std::string phpSelf = scriptInfo->relativePath + header.pathInfo;
 		php_register_variable_safe((char*)"PHP_SELF", (char*)phpSelf.c_str(), phpSelf.size(), track_vars_array);
 		if(!header.pathInfo.empty())
 		{

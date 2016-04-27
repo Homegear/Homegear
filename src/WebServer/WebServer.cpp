@@ -147,7 +147,8 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperatio
 			if(ending == "php" || ending == "php5" || ending == "php7" || ending == "hgs")
 			{
 				std::string fullPath = _serverInfo->contentPath + path;
-				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, http, _serverInfo));
+				std::string relativePath = '/' + path;
+				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, relativePath, http, _serverInfo));
 				scriptInfo->socket = socket;
 				scriptInfo->scriptHeadersCallback = std::bind(&WebServer::sendHeaders, this, std::placeholders::_1, std::placeholders::_2);
 				GD::scriptEngineServer->executeScript(scriptInfo, true);
@@ -266,7 +267,8 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperati
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to: \"" + _serverInfo->contentPath + path + "\", method: POST)");
 			std::string fullPath = _serverInfo->contentPath + path;
-			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, http, _serverInfo));
+			std::string relativePath = '/' + path;
+			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, relativePath, http, _serverInfo));
 			scriptInfo->socket = socket;
 			scriptInfo->scriptHeadersCallback = std::bind(&WebServer::sendHeaders, this, std::placeholders::_1, std::placeholders::_2);
 			GD::scriptEngineServer->executeScript(scriptInfo, true);

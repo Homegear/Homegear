@@ -62,6 +62,8 @@ typedef struct _zend_homegear_globals
 	std::function<void(BaseLib::PVariable& headers)> sendHeadersCallback;
 	std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)> rpcCallback;
 	BaseLib::Http http;
+	PScriptInfo scriptInfo;
+
 	bool webRequest = false;
 	bool commandLine = false;
 	bool cookiesParsed = false;

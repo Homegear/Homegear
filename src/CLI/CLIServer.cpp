@@ -1001,7 +1001,8 @@ std::string Server::handleGlobalCommand(std::string& command)
 		}
 		else if(command.compare(0, 9, "runscript") == 0 || command.compare(0, 2, "rs") == 0)
 		{
-			std::string path;
+			std::string fullPath;
+			std::string relativePath;
 
 			std::stringstream stream(command);
 			std::string element;
@@ -1017,7 +1018,8 @@ std::string Server::handleGlobalCommand(std::string& command)
 				else if(index == 1)
 				{
 					if(element == "help" || element.empty()) break;
-					path = GD::bl->settings.scriptPath() + element;
+					relativePath = '/' + element;
+					fullPath = GD::bl->settings.scriptPath() + element;
 				}
 				else
 				{
@@ -1036,7 +1038,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			}
 
 			std::string argumentsString = arguments.str();
-			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli, path, argumentsString));
+			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli, fullPath, relativePath, argumentsString));
 			scriptInfo->returnOutput = true;
 			GD::scriptEngineServer->executeScript(scriptInfo, true);
 			if(!scriptInfo->output.empty()) stringStream << scriptInfo->output;
@@ -1068,9 +1070,10 @@ std::string Server::handleGlobalCommand(std::string& command)
 
 			script.append(command);
 
-			std::string path = GD::bl->settings.scriptPath() + "inline.php";
+			std::string fullPath = GD::bl->settings.scriptPath() + "inline.php";
+			std::string relativePath = "/inline.php";
 			std::string arguments;
-			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli, path, script, arguments));
+			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli, fullPath, relativePath, script, arguments));
 			scriptInfo->returnOutput = true;
 			GD::scriptEngineServer->executeScript(scriptInfo, true);
 			if(!scriptInfo->output.empty()) stringStream << scriptInfo->output;
