@@ -296,7 +296,7 @@ void MiscPeer::runScript(bool delay)
 
 		if(_rpcDevice->runProgram->interval == 0) _rpcDevice->runProgram->interval = 10;
 
-		BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::device, path, script, args, _peerID));
+		BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::device, path, path, script, args, _peerID));
 		if(_rpcDevice->runProgram->startType != RunProgram::StartType::once)
 		{
 			scriptInfo->scriptFinishedCallback = std::bind(&MiscPeer::scriptFinished, this, std::placeholders::_1, std::placeholders::_2);

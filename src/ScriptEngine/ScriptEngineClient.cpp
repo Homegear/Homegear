@@ -792,14 +792,14 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			zendHandle.handle.stream.closer = nullptr;
 			zendHandle.handle.stream.mmap.buf = (char*)scriptInfo->script.c_str(); //String is not modified
 			zendHandle.handle.stream.mmap.len = scriptInfo->script.size();
-			zendHandle.filename = scriptInfo->path.c_str();
+			zendHandle.filename = scriptInfo->fullPath.c_str();
 			zendHandle.opened_path = nullptr;
 			zendHandle.free_filename = 0;
 		}
 		else
 		{
 			zendHandle.type = ZEND_HANDLE_FILENAME;
-			zendHandle.filename = scriptInfo->path.c_str();
+			zendHandle.filename = scriptInfo->fullPath.c_str();
 			zendHandle.opened_path = NULL;
 			zendHandle.free_filename = 0;
 		}
@@ -847,7 +847,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			SG(options) |= SAPI_OPTION_NO_CHDIR;
 			SG(headers_sent) = 1;
 			SG(request_info).no_headers = 1;
-			SG(request_info).path_translated = estrndup(scriptInfo->path.c_str(), scriptInfo->path.size());
+			SG(request_info).path_translated = estrndup(scriptInfo->fullPath.c_str(), scriptInfo->fullPath.size());
 		}
 		else if(type == ScriptInfo::ScriptType::web)
 		{
@@ -860,7 +860,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			if(!globals->http.getHeader().args.empty()) uri.append('?' + globals->http.getHeader().args);
 			if(!globals->http.getHeader().args.empty()) SG(request_info).query_string = estrndup(&globals->http.getHeader().args.at(0), globals->http.getHeader().args.size());
 			if(!uri.empty()) SG(request_info).request_uri = estrndup(&uri.at(0), uri.size());
-			std::string pathTranslated = serverInfo->contentPath.substr(0, serverInfo->contentPath.size() - 1) + globals->http.getHeader().pathInfo;
+			std::string pathTranslated = serverInfo->contentPath.substr(0, serverInfo->contentPath.size() - 1) + scriptInfo->relativePath;
 			SG(request_info).path_translated = estrndup(&pathTranslated.at(0), pathTranslated.size());
 		}
 
@@ -872,7 +872,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 
 		if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)
 		{
-			std::vector<std::string> argv = getArgs(scriptInfo->path, scriptInfo->arguments);
+			std::vector<std::string> argv = getArgs(scriptInfo->fullPath, scriptInfo->arguments);
 			if(type == ScriptInfo::ScriptType::device) argv[0] = std::to_string(scriptInfo->peerId);
 			php_homegear_build_argv(argv);
 			SG(request_info).argc = argv.size();
@@ -913,6 +913,7 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		if(!globals) exit(1);
 		globals->id = id;
+		globals->scriptInfo = scriptInfo;
 		if(sendOutput)
 		{
 			globals->outputCallback = std::bind(&ScriptEngineClient::sendOutput, this, std::placeholders::_1);
@@ -925,13 +926,13 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
 		}
 		ScriptGuard scriptGuard(this, globals, id, scriptInfo);
 
-		if(scriptInfo->script.empty() && scriptInfo->path.size() > 3 && scriptInfo->path.compare(scriptInfo->path.size() - 4, 4, ".hgs") == 0)
+		if(scriptInfo->script.empty() && scriptInfo->fullPath.size() > 3 && scriptInfo->fullPath.compare(scriptInfo->fullPath.size() - 4, 4, ".hgs") == 0)
 		{
-			std::map<std::string, std::shared_ptr<CacheInfo>>::iterator scriptIterator = _scriptCache.find(scriptInfo->path);
-			if(scriptIterator != _scriptCache.end() && scriptIterator->second->lastModified == BaseLib::Io::getFileLastModifiedTime(scriptInfo->path)) scriptInfo->script = scriptIterator->second->script;
+			std::map<std::string, std::shared_ptr<CacheInfo>>::iterator scriptIterator = _scriptCache.find(scriptInfo->fullPath);
+			if(scriptIterator != _scriptCache.end() && scriptIterator->second->lastModified == BaseLib::Io::getFileLastModifiedTime(scriptInfo->fullPath)) scriptInfo->script = scriptIterator->second->script;
 			else
 			{
-				std::vector<char> data = BaseLib::Io::getBinaryFileContent(scriptInfo->path);
+				std::vector<char> data = BaseLib::Io::getBinaryFileContent(scriptInfo->fullPath);
 				int32_t pos = -1;
 				for(uint32_t i = 0; i < 11 && i < data.size(); i++)
 				{
@@ -943,7 +944,7 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
 				}
 				if(pos == -1)
 				{
-					GD::bl->out.printError("Error: License module id is missing in encrypted script file \"" + scriptInfo->path + "\"");
+					GD::bl->out.printError("Error: License module id is missing in encrypted script file \"" + scriptInfo->fullPath + "\"");
 					return;
 				}
 				std::string moduleIdString(&data.at(0), pos);
@@ -958,10 +959,10 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
 				}
 				std::shared_ptr<CacheInfo> cacheInfo(new CacheInfo());
 				i->second->decryptScript(input, cacheInfo->script);
-				cacheInfo->lastModified = BaseLib::Io::getFileLastModifiedTime(scriptInfo->path);
+				cacheInfo->lastModified = BaseLib::Io::getFileLastModifiedTime(scriptInfo->fullPath);
 				if(!cacheInfo->script.empty())
 				{
-					_scriptCache[scriptInfo->path] = cacheInfo;
+					_scriptCache[scriptInfo->fullPath] = cacheInfo;
 					scriptInfo->script = cacheInfo->script;
 				}
 			}
@@ -1054,30 +1055,30 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 		if(type == ScriptInfo::ScriptType::cli)
 		{
 			if(parameters->at(2)->stringValue.empty() ) return BaseLib::Variable::createError(-1, "Path is empty.");
-			scriptInfo.reset(new ScriptInfo(type, parameters->at(2)->stringValue, parameters->at(3)->stringValue, parameters->at(4)->stringValue));
+			scriptInfo.reset(new ScriptInfo(type, parameters->at(2)->stringValue, parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5)->stringValue));
 
-			if(scriptInfo->script.empty() && !GD::bl->io.fileExists(scriptInfo->path))
+			if(scriptInfo->script.empty() && !GD::bl->io.fileExists(scriptInfo->fullPath))
 			{
 				_out.printError("Error: PHP script \"" + parameters->at(2)->stringValue + "\" does not exist.");
-				return BaseLib::Variable::createError(-1, "Script file does not exist: " + scriptInfo->path);
+				return BaseLib::Variable::createError(-1, "Script file does not exist: " + scriptInfo->fullPath);
 			}
 			sendOutput = parameters->at(5)->booleanValue;
 		}
 		else if(type == ScriptInfo::ScriptType::web)
 		{
 			if(parameters->at(2)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Path is empty.");
-			scriptInfo.reset(new ScriptInfo(type, parameters->at(2)->stringValue, parameters->at(3), parameters->at(4)));
+			scriptInfo.reset(new ScriptInfo(type, parameters->at(2)->stringValue, parameters->at(3)->stringValue, parameters->at(4), parameters->at(5)));
 
-			if(scriptInfo->script.empty() && !GD::bl->io.fileExists(scriptInfo->path))
+			if(scriptInfo->script.empty() && !GD::bl->io.fileExists(scriptInfo->fullPath))
 			{
 				_out.printError("Error: PHP script \"" + parameters->at(2)->stringValue + "\" does not exist.");
-				return BaseLib::Variable::createError(-1, "Script file does not exist: " + scriptInfo->path);
+				return BaseLib::Variable::createError(-1, "Script file does not exist: " + scriptInfo->fullPath);
 			}
 			sendOutput = true;
 		}
 		else if(type == ScriptInfo::ScriptType::device)
 		{
-			scriptInfo.reset(new ScriptInfo(type, parameters->at(2)->stringValue, parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5)->integerValue64));
+			scriptInfo.reset(new ScriptInfo(type, parameters->at(2)->stringValue, parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5)->stringValue, parameters->at(6)->integerValue64));
 		}
 
 		scriptInfo->id = parameters->at(0)->integerValue;

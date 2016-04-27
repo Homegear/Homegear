@@ -1277,7 +1277,7 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 			while(scriptInfo->id == 0) scriptInfo->id = _currentScriptId++;
 		}
 
-		_out.printInfo("Info: Starting script \"" + scriptInfo->path + "\" with id " + std::to_string(scriptInfo->id) + ".");
+		_out.printInfo("Info: Starting script \"" + scriptInfo->fullPath + "\" with id " + std::to_string(scriptInfo->id) + ".");
 		process->registerScript(scriptInfo->id, scriptInfo);
 
 		PScriptEngineClientData clientData = process->getClientData();
@@ -1296,7 +1296,8 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 			parameters = std::move(BaseLib::PArray(new BaseLib::Array{
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
 				BaseLib::PVariable(new BaseLib::Variable((int32_t)scriptInfo->getType())),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->path)),
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->script)),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)),
 				BaseLib::PVariable(new BaseLib::Variable((bool)scriptInfo->scriptOutputCallback || scriptInfo->returnOutput))}));
@@ -1306,7 +1307,8 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 			parameters = std::move(BaseLib::PArray(new BaseLib::Array{
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
 				BaseLib::PVariable(new BaseLib::Variable((int32_t)scriptInfo->getType())),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->path)),
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
 				scriptInfo->http.serialize(),
 				scriptInfo->serverInfo->serialize()}));
 		}
@@ -1315,7 +1317,8 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 			parameters = std::move(BaseLib::PArray(new BaseLib::Array{
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
 				BaseLib::PVariable(new BaseLib::Variable((int32_t)scriptInfo->getType())),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->path)),
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->script)),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->peerId))}));

@@ -3066,7 +3066,8 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 			wait = parameters->at(2)->booleanValue;
 		}
 
-		std::string path = GD::bl->settings.scriptPath() + filename;
+		std::string relativePath = '/' + filename;
+		std::string fullPath = GD::bl->settings.scriptPath() + filename;
 
 		BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 		BaseLib::PVariable exitCode(new BaseLib::Variable(0));
@@ -3075,8 +3076,8 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 		result->structValue->insert(BaseLib::StructElement("OUTPUT", output));
 		if(internalEngine)
 		{
-			if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Executing script \"" + path + "\" with parameters \"" + arguments + "\" using internal script engine.");
-			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli, path, arguments));
+			if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Executing script \"" + fullPath + "\" with parameters \"" + arguments + "\" using internal script engine.");
+			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli, fullPath, relativePath, arguments));
 			if(wait) scriptInfo->returnOutput = true;
 			GD::scriptEngineServer->executeScript(scriptInfo, wait);
 			if(!scriptInfo->started)
@@ -3103,12 +3104,12 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 		}
 		else
 		{
-			if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Executing program/script \"" + path + "\" with parameters \"" + arguments + "\".");
-			std::string command = path + " " + arguments;
+			if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Executing program/script \"" + fullPath + "\" with parameters \"" + arguments + "\".");
+			std::string command = fullPath + " " + arguments;
 			if(!wait) command += "&";
 
 			struct stat statStruct;
-			if(stat(path.c_str(), &statStruct) < 0)
+			if(stat(fullPath.c_str(), &statStruct) < 0)
 			{
 				output->stringValue = "Could not execute script: " + std::string(strerror(errno));
 				exitCode->integerValue = -32400;
