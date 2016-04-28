@@ -636,11 +636,20 @@ void startUp()
     	sigaction(SIGABRT, &sa, NULL);
     	sigaction(SIGSEGV, &sa, NULL);
 #else
-    	Debug::DeathHandler deathHandler;
-    	deathHandler.set_append_pid(true);
-    	deathHandler.set_frames_count(32);
-    	deathHandler.set_color_output(false);
-    	deathHandler.set_generate_core_dump(GD::bl->settings.enableCoreDumps());
+    	std::unique_ptr<Debug::DeathHandler> deathHandler;
+    	if(_startAsDaemon)
+    	{
+			deathHandler.reset(new Debug::DeathHandler());
+			deathHandler->set_append_pid(true);
+			deathHandler->set_frames_count(32);
+			deathHandler->set_color_output(false);
+			deathHandler->set_generate_core_dump(GD::bl->settings.enableCoreDumps());
+    	}
+    	else
+    	{
+    		sigaction(SIGABRT, &sa, NULL);
+    		sigaction(SIGSEGV, &sa, NULL);
+    	}
 #endif
 
     	sa.sa_handler = sigchld_handler;
