@@ -1062,7 +1062,7 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 				_out.printError("Error: PHP script \"" + parameters->at(2)->stringValue + "\" does not exist.");
 				return BaseLib::Variable::createError(-1, "Script file does not exist: " + scriptInfo->fullPath);
 			}
-			sendOutput = parameters->at(5)->booleanValue;
+			sendOutput = parameters->at(6)->booleanValue;
 		}
 		else if(type == ScriptInfo::ScriptType::web)
 		{

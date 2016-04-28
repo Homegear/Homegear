@@ -788,7 +788,7 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
 		if(!(*response) || (*response)->arrayValue->size() != 2 || (*response)->arrayValue->at(0)->integerValue != packetId)
 		{
 			_out.printError("Error: No response received to RPC request. Method: " + methodName);
-			*response = BaseLib::Variable::createError(-1, "No response received.");
+			return BaseLib::Variable::createError(-1, "No response received.");
 		}
 
 		{
