@@ -546,6 +546,7 @@ int32_t FamilyController::loadModule(std::string filename)
 		{
 			_moduleLoaders.at(filename)->dispose();
 			_moduleLoaders.erase(filename);
+			return -3;
 		}
 		_rpcCache.reset();
 		_moduleLoadersMutex.unlock();
