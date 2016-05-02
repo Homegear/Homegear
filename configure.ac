@@ -40,8 +40,6 @@ AC_TYPE_SIZE_T
 AC_FUNC_ERROR_AT_LINE
 AC_FUNC_FORK
 AC_FUNC_LSTAT_FOLLOWS_SLASHED_SYMLINK
-AC_FUNC_MALLOC
-AC_FUNC_REALLOC
 AC_CHECK_FUNCS([clock_gettime ftime getcwd gettimeofday memmove memset mkdir rmdir select setenv socket strchr strerror strrchr strstr])
 AM_PROG_CC_C_O
 
