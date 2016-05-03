@@ -147,6 +147,11 @@ private:
 		 * @param parameters Irrelevant for this method.
 		 */
 		BaseLib::PVariable shutdown(BaseLib::PArray& parameters);
+
+		/**
+		 * Executes a new script.
+		 * @param parameters The parameters depend on the script type. See source code.
+		 */
 		BaseLib::PVariable executeScript(BaseLib::PArray& parameters);
 		BaseLib::PVariable scriptCount(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastEvent(BaseLib::PArray& parameters);
