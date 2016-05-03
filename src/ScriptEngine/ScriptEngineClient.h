@@ -136,6 +136,10 @@ private:
 	BaseLib::PVariable send(std::vector<char>& data);
 
 	// {{{ RPC methods
+		/**
+		 * Causes the log files to be reopened.
+		 * @param parameters Irrelevant for this method.
+		 */
 		BaseLib::PVariable reload(BaseLib::PArray& parameters);
 		BaseLib::PVariable shutdown(BaseLib::PArray& parameters);
 		BaseLib::PVariable executeScript(BaseLib::PArray& parameters);
