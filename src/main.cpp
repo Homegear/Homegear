@@ -644,6 +644,7 @@ void startUp()
 			deathHandler->set_frames_count(32);
 			deathHandler->set_color_output(false);
 			deathHandler->set_generate_core_dump(GD::bl->settings.enableCoreDumps());
+			deathHandler->set_cleanup(false);
     	}
     	else
     	{
@@ -1114,6 +1115,7 @@ int main(int argc, char* argv[])
 				deathHandler.set_frames_count(32);
 				deathHandler.set_color_output(false);
 				deathHandler.set_generate_core_dump(GD::bl->settings.enableCoreDumps());
+				deathHandler.set_cleanup(false);
 #endif
 
     			GD::bl->settings.load(GD::configPath + "main.conf");
@@ -1129,6 +1131,7 @@ int main(int argc, char* argv[])
 				deathHandler.set_frames_count(32);
 				deathHandler.set_color_output(false);
 				deathHandler.set_generate_core_dump(GD::bl->settings.enableCoreDumps());
+				deathHandler.set_cleanup(false);
 #endif
 
     			initGnuTls();
