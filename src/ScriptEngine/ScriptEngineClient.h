@@ -141,6 +141,11 @@ private:
 		 * @param parameters Irrelevant for this method.
 		 */
 		BaseLib::PVariable reload(BaseLib::PArray& parameters);
+
+		/**
+		 * Causes the script engine client to exit.
+		 * @param parameters Irrelevant for this method.
+		 */
 		BaseLib::PVariable shutdown(BaseLib::PArray& parameters);
 		BaseLib::PVariable executeScript(BaseLib::PArray& parameters);
 		BaseLib::PVariable scriptCount(BaseLib::PArray& parameters);
