@@ -153,6 +153,12 @@ private:
 		 * @param parameters The parameters depend on the script type. See source code.
 		 */
 		BaseLib::PVariable executeScript(BaseLib::PArray& parameters);
+
+		/**
+		 * Returns the number of scripts currently running.
+		 * @param parameters Irrelevant for this method.
+		 * @return Returns the number of running scripts.
+		 */
 		BaseLib::PVariable scriptCount(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastEvent(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastNewDevices(BaseLib::PArray& parameters);
