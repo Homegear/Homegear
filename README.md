@@ -1,5 +1,33 @@
 Homegear
 ========
-Homegear is a free and open source program to interface your HomeMatic BidCoS, HomeMatic Wired, MAX!, INSTEON and Philips hue devices with your home automation software (like IP-Symcon, openHAB, etc.) or your own control scripts. Homegear fully replaces the CCU and MAX! Cube. It communicates with HomeMatic and MAX! devices directly, enabling features not available by default. It implements the same XML-RPC (XML Remote Procedure Call) interface and supports the same set of methods as the HomeMatic central or the BidCoS® service. Because of this you can use any software or script that supports the HomeMatic XML-RPC interface to control Homegear.
 
-For more information, please visit https://homegear.eu. Please post your questions in our forum on https://forum.homegear.eu.
+Homegear is a free and open source program to interface your home automation devices or services with your home automation software or scripts. It features the following interfaces to control your devices - all with SSL support:
+
+* XML-RPC
+* Binary-RPC
+* JSON-RPC
+* MQTT
+* WebSockets with PHP session authentication
+* HTTP (GET and POST) 
+
+If needed new interfaces can easily be added to the source code. Homegear also features:
+
+* A built-in rich featured web server with PHP 7 and IP cam proxy support. Together with WebSockets and the script engine you can easily create web pages to bidirectionally interact with all devices known to Homegear.
+* A built-in script engine using PHP 7:
+
+	* All devices and device functions are directly accessible.
+	* All PHP modules can be used:
+
+		* Thread support using the PHP module "pthreads".
+		* Low level peripheral support:
+		
+			* Directly access serial devices, I²C devices and GPIOs.
+			* You immediately get notified on new data and GPIO state changes. No polling is necessary.
+			* Using threads you can implement bidirectional and event driven communication. 
+	* A base library to easily implement your own device families.
+	* XML device description files with PHP script support to easily implement individual devices.
+	* Support for customized licensing modules supporting module online activation, license verification and script encryption.
+
+Homegear is written to make it as easy as possible to integrate new devices making them accessible through all the above interfaces.
+
+For more information, please visit https://homegear.eu, https://doc.homegear.eu and https://ref.homegear.eu. Please post your questions in our forum on https://forum.homegear.eu.
