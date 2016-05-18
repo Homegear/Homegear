@@ -1,3 +1,5 @@
+#include <math.h>
+
 #undef PACKAGE_BUGREPORT
 #undef PACKAGE_NAME
 #undef PACKAGE_STRING
@@ -7,4 +9,6 @@
 	#define HAVE_SSIZE_T 1
 #endif
 
-#define isnan(a) std::isnan(a)
+#ifndef isnan //Fix for build on Ubuntu Xenial
+	#define isnan(a) std::isnan(a)
+#endif
