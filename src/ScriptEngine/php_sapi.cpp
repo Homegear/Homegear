@@ -1522,12 +1522,10 @@ ZEND_FUNCTION(hg_i2c_write)
 ZEND_METHOD(Homegear, __call)
 {
 	if(_disposed) RETURN_NULL();
-	char* pMethodName = nullptr;
-	int methodNameLength = 0;
+	zval* zMethodName = nullptr;
 	zval* args = nullptr;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "sz", &pMethodName, &methodNameLength, &args) != SUCCESS) RETURN_NULL();
-	if(methodNameLength == 0) RETURN_NULL();
-	std::string methodName(std::string(pMethodName, methodNameLength));
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "zz", &zMethodName, &args) != SUCCESS) RETURN_NULL();
+	std::string methodName(std::string(Z_STRVAL_P(zMethodName), Z_STRLEN_P(zMethodName)));
 	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args);
 	php_homegear_invoke_rpc(methodName, parameters, return_value);
 }
@@ -1535,12 +1533,10 @@ ZEND_METHOD(Homegear, __call)
 ZEND_METHOD(Homegear, __callStatic)
 {
 	if(_disposed) RETURN_NULL();
-	char* pMethodName = nullptr;
-	int methodNameLength = 0;
+	zval* zMethodName = nullptr;
 	zval* args = nullptr;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "sz", &pMethodName, &methodNameLength, &args) != SUCCESS) RETURN_NULL();
-	if(methodNameLength == 0) RETURN_NULL();
-	std::string methodName(std::string(pMethodName, methodNameLength));
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "zz", &zMethodName, &args) != SUCCESS) RETURN_NULL();
+	std::string methodName(std::string(Z_STRVAL_P(zMethodName), Z_STRLEN_P(zMethodName)));
 	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args);
 	php_homegear_invoke_rpc(methodName, parameters, return_value);
 }
