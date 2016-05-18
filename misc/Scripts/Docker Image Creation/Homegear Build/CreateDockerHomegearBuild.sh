@@ -125,7 +125,7 @@ Pin-Priority: 999
 EOF
 
 chroot $rootfs apt-get update
-if [ "$distver" == "vivid" ] || [ "$distver" == "wily" ]; then
+if [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ]; then
 	chroot $rootfs apt-get -y install python3
 	chroot $rootfs apt-get -y -f install
 fi
@@ -193,9 +193,14 @@ function createPackage {
 		sed -i 's/, libcurl4-gnutls-dev//g' $sourcePath/debian/control
 		sed -i 's/ --with-curl//g' $sourcePath/debian/rules
 	fi
+	date=`LANG=en_US.UTF-8 date +"%a, %d %b %Y %T %z"`
+	echo "${3} (${fullversion}) ${distributionVersion}; urgency=low
+
+  * See https://github.com/Homegear/${1}/issues?q=is%3Aissue+is%3Aclosed
+
+ -- Sathya Laufer <sathya@laufers.net>  $date" > $sourcePath/debian/changelog
 	tar -zcpf ${3}_$version.orig.tar.gz $sourcePath
 	cd $sourcePath
-	dch -v $version-$revision -M "Version $version."
 	debuild -j${buildthreads} -us -uc
 	cd ..
 	rm -Rf $sourcePath
@@ -430,9 +435,9 @@ if [ \$(ls /build | grep -c \"\\.changes\$\") -ne 0 ]; then
 	if test -f \${path}; then
 		mv \${path} \${path}.uploading
 		filename=\$(basename \$path)
-		scp -P $HOMEGEARBUILD_SERVERPORT \${path}.uploading ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME}:${HOMEGEARBUILD_NIGHTLYSERVERPATH}
+		scp -P $HOMEGEARBUILD_SERVERPORT \${path}.uploading ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME}:${HOMEGEARBUILD_STABLESERVERPATH}
 		if [ \$? -eq 0 ]; then
-			ssh -p $HOMEGEARBUILD_SERVERPORT ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME} \"mv ${HOMEGEARBUILD_NIGHTLYSERVERPATH}/\${filename}.uploading ${HOMEGEARBUILD_NIGHTLYSERVERPATH}/\${filename}\"
+			ssh -p $HOMEGEARBUILD_SERVERPORT ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME} \"mv ${HOMEGEARBUILD_STABLESERVERPATH}/\${filename}.uploading ${HOMEGEARBUILD_STABLESERVERPATH}/\${filename}\"
 			if [ \$? -eq 0 ]; then
 				echo "Packages uploaded successfully."
 				exit 0
@@ -504,7 +509,7 @@ rm -Rf $rootfs
 
 docker build -t homegear/build:${distlc}-${distver}-${arch} "$dir"
 if [ "$dist" == "Raspbian" ]; then
-	docker tag homegear/build:${distlc}-${distver}-${arch} homegear/build:${distlc}-${distver}
+	docker tag -f homegear/build:${distlc}-${distver}-${arch} homegear/build:${distlc}-${distver}
 fi
 
 rm -Rf $dir
