@@ -1526,6 +1526,7 @@ ZEND_METHOD(Homegear, __call)
 	int methodNameLength = 0;
 	zval* args = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "sz", &pMethodName, &methodNameLength, &args) != SUCCESS) RETURN_NULL();
+	if(methodNameLength == 0) RETURN_NULL();
 	std::string methodName(std::string(pMethodName, methodNameLength));
 	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args);
 	php_homegear_invoke_rpc(methodName, parameters, return_value);
@@ -1538,6 +1539,7 @@ ZEND_METHOD(Homegear, __callStatic)
 	int methodNameLength = 0;
 	zval* args = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "sz", &pMethodName, &methodNameLength, &args) != SUCCESS) RETURN_NULL();
+	if(methodNameLength == 0) RETURN_NULL();
 	std::string methodName(std::string(pMethodName, methodNameLength));
 	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args);
 	php_homegear_invoke_rpc(methodName, parameters, return_value);
@@ -1549,8 +1551,8 @@ ZEND_BEGIN_ARG_INFO_EX(php_homegear_two_args, 0, 0, 2)
 ZEND_END_ARG_INFO()
 
 static const zend_function_entry homegear_methods[] = {
-	ZEND_ME(Homegear, __call, php_homegear_two_args, ZEND_ACC_PUBLIC)
-	ZEND_ME(Homegear, __callStatic, php_homegear_two_args, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME(Homegear, __call, php_homegear_two_args, ZEND_ACC_PRIVATE)
+	ZEND_ME(Homegear, __callStatic, php_homegear_two_args, ZEND_ACC_PRIVATE | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(getScriptId, hg_get_script_id, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(registerThread, hg_register_thread, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(log, hg_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
