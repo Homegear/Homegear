@@ -6,3 +6,5 @@
 #ifndef HAVE_SSIZE_T
 	#define HAVE_SSIZE_T 1
 #endif
+
+#define isnan(a) std::isnan(a)
