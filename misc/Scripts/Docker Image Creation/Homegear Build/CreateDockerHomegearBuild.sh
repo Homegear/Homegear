@@ -281,7 +281,7 @@ function cleanUp {
 	mv ${1}_*.deb ${1}.deb
 }
 
-/build/CreateDebianPackage.sh master
+/build/CreateDebianPackage.sh dev
 
 cd /build
 
@@ -314,7 +314,7 @@ chmod 755 $rootfs/build/CreateDebianPackageNightly.sh
 cat > "$rootfs/build/CreateDebianPackageStable.sh" <<-'EOF'
 #!/bin/bash
 
-/build/CreateDebianPackage.sh 0.6
+/build/CreateDebianPackage.sh master
 
 if test -f /build/UploadStable.sh; then
 	/build/UploadStable.sh
