@@ -671,7 +671,9 @@ void startUp()
     	GD::out.printMessage("Starting Homegear...");
     	GD::out.printMessage(std::string("Homegear version ") + VERSION);
     	GD::out.printMessage(std::string("Git commit SHA of libhomegear-base: ") + GITCOMMITSHABASE);
+    	GD::out.printMessage(std::string("Git branch of libhomegear-base:     ") + GITBRANCHBASE);
     	GD::out.printMessage(std::string("Git commit SHA of Homegear:         ") + GITCOMMITSHAHOMEGEAR);
+    	GD::out.printMessage(std::string("Git branch of Homegear:             ") + GITBRANCHHOMEGEAR);
 
     	if(GD::bl->settings.memoryDebugging()) mallopt(M_CHECK_ACTION, 3); //Print detailed error message, stack trace, and memory, and abort the program. See: http://man7.org/linux/man-pages/man3/mallopt.3.html
     	if(_monitorProcess)
@@ -1183,7 +1185,9 @@ int main(int argc, char* argv[])
     			std::cout << "Homegear version " << VERSION << std::endl;
     			std::cout << "Copyright (c) 2013-2016 Sathya Laufer" << std::endl << std::endl;
     			std::cout << "Git commit SHA of libhomegear-base: " << GITCOMMITSHABASE << std::endl;
+    			std::cout << "Git branch of libhomegear-base:     " << GITBRANCHBASE << std::endl;
     			std::cout << "Git commit SHA of Homegear:         " << GITCOMMITSHAHOMEGEAR << std::endl << std::endl;
+    			std::cout << "Git branch of Homegear:             " << GITBRANCHHOMEGEAR << std::endl << std::endl;
     			std::cout << "PHP (License: PHP License):" << std::endl;
     			std::cout << "This product includes PHP software, freely available from <http://www.php.net/software/>" << std::endl;
     			std::cout << "Copyright (c) 1999-2016 The PHP Group. All rights reserved." << std::endl << std::endl;
