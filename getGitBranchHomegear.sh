@@ -4,6 +4,6 @@ cd $SCRIPTDIR
 if [ ! -d .git ]; then
 	echo "\"-\""
 else
-	commit=`git rev-parse HEAD`
-	echo "\"$commit\""
+	branch=`git rev-parse --abbrev-ref HEAD`
+	echo "\"$branch\""
 fi
