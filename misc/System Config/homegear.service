@@ -1,13 +1,13 @@
 [Unit]
 Description=Homegear
-After=syslog.target network-online.target
-Requires=syslog.target network-online.target
+After=network-online.target
+
+[Install]
+WantedBy=multi-user.target
 
 [Service]
 Type=forking
 PIDFile=/var/run/homegear/homegear.pid
-ExecStart=/etc/init.d/homegear start
-ExecStop=/etc/init.d/homegear stop
-ExecReload=/etc/init.d/homegear reload
-
-[Install]
+TimeoutSec=300
+ExecStartPre=/usr/bin/homegear -u homegear -g homegear -p /var/run/homegear/homegear.pid -pre
+ExecStart=/usr/bin/homegear -u homegear -g homegear -p /var/run/homegear/homegear.pid -d
