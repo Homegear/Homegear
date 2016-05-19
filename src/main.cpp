@@ -1180,6 +1180,64 @@ int main(int argc, char* argv[])
     			std::cout << GD::bl->threadManager.getMaxThreadCount() << std::endl;
     			exit(0);
     		}
+    		else if(arg == "-pre")
+    		{
+    			GD::bl->settings.load(GD::configPath + "main.conf");
+    			if(GD::runAsUser.empty()) GD::runAsUser = GD::bl->settings.runAsUser();
+				if(GD::runAsGroup.empty()) GD::runAsGroup = GD::bl->settings.runAsGroup();
+				uid_t userId = GD::bl->hf.userId(GD::runAsUser);
+				gid_t groupId = GD::bl->hf.groupId(GD::runAsGroup);
+				if((!GD::runAsUser.empty() && GD::runAsGroup.empty()) || (!GD::runAsGroup.empty() && GD::runAsUser.empty()))
+				{
+					GD::out.printCritical("Critical: You only provided a user OR a group for Homegear to run as. Please specify both.");
+					exit(1);
+				}
+				std::string currentPath;
+    			if(!GD::pidfilePath.empty() && GD::pidfilePath.find('/') != std::string::npos)
+    			{
+    				currentPath = GD::pidfilePath.substr(0, GD::pidfilePath.find_last_of('/'));
+    				if(!currentPath.empty())
+    				{
+    					if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
+    					if(chmod(currentPath.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    					if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << currentPath << std::endl;
+    				}
+    			}
+
+    			std::string currentPath = GD::bl->settings.databasePath().substr(0, GD::bl->settings.databasePath().find_last_of('/'));
+    			if(!currentPath.empty())
+				{
+					if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
+					if(chmod(currentPath.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+					if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << currentPath << std::endl;
+				}
+    			if(BaseLib::Io::fileExists(GD::bl->settings.databasePath()))
+    			{
+    				if(chmod(GD::bl->settings.databasePath().c_str(), S_IRUSR | S_IWUSR | S_IRGRP) == -1) std::cerr << "Could not set permissions on " << GD::bl->settings.databasePath() << std::endl;
+    			}
+
+    			currentPath = GD::bl->settings.scriptPath();
+    			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
+    			if(chmod(currentPath.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+
+    			currentPath = GD::bl->settings.socketPath();
+    			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
+    			if(chmod(currentPath.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+
+    			currentPath = GD::bl->settings.modulePath();
+    			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP);
+    			if(chmod(currentPath.c_str(), S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+
+    			currentPath = GD::bl->settings.logfilePath();
+    			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
+    			if(chmod(currentPath.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+
+    			exit(0);
+    		}
     		else if(arg == "-v")
     		{
     			std::cout << "Homegear version " << VERSION << std::endl;

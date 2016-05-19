@@ -3082,25 +3082,13 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 			GD::scriptEngineServer->executeScript(scriptInfo, wait);
 			if(!scriptInfo->started)
 			{
-				output->stringValue = "Error: Could not execute script. Check log file for more details.";
+				output->stringValue = "Error: Could not execute script. Check log file for more details (1).";
 				exitCode->integerValue = -1;
 				return result;
 			}
 			if(wait) exitCode->integerValue = scriptInfo->exitCode;
-			if(!scriptInfo->output.empty())
-			{
-				output->stringValue = std::move(scriptInfo->output);
-				return result;
-			}
-			else
-			{
-				if(!wait)
-				{
-					output->stringValue = "Error executing script. Check log file for more details.";
-					exitCode->integerValue = -1;
-				}
-				return result;
-			}
+			if(!scriptInfo->output.empty()) output->stringValue = std::move(scriptInfo->output);
+			return result;
 		}
 		else
 		{
