@@ -1663,11 +1663,18 @@ static PHP_MINIT_FUNCTION(homegear)
 	INIT_CLASS_ENTRY(homegearExceptionCe, "Homegear\\HomegearException", NULL);
 	//Register child class inherited from Exception (fetched with "zend_exception_get_default")
 	homegear_exception_class_entry = zend_register_internal_class_ex(&homegearExceptionCe, zend_exception_get_default());
-	zend_declare_class_constant_long(homegear_exception_class_entry, "UNKNOWN_DEVICE", sizeof("UNKNOWN_DEVICE"), -2);
+	zend_declare_class_constant_long(homegear_exception_class_entry, "UNKNOWN_DEVICE", sizeof("UNKNOWN_DEVICE") - 1, -2);
 
 	zend_class_entry homegearCe;
 	INIT_CLASS_ENTRY(homegearCe, "Homegear\\Homegear", homegear_methods);
 	homegear_class_entry = zend_register_internal_class(&homegearCe);
+	zend_declare_property_stringl(homegear_class_entry, "tempPath", sizeof("tempPath") - 1, GD::bl->settings.tempPath().c_str(), GD::bl->settings.tempPath().size(), ZEND_ACC_STATIC | ZEND_ACC_PUBLIC);
+	zend_declare_property_stringl(homegear_class_entry, "scriptPath", sizeof("scriptPath") - 1, GD::bl->settings.scriptPath().c_str(), GD::bl->settings.scriptPath().size(), ZEND_ACC_STATIC | ZEND_ACC_PUBLIC);
+	zend_declare_property_stringl(homegear_class_entry, "modulePath", sizeof("modulePath") - 1, GD::bl->settings.modulePath().c_str(), GD::bl->settings.modulePath().size(), ZEND_ACC_STATIC | ZEND_ACC_PUBLIC);
+	zend_declare_property_stringl(homegear_class_entry, "dbPath", sizeof("databasePath") - 1, GD::bl->settings.databasePath().c_str(), GD::bl->settings.databasePath().size(), ZEND_ACC_STATIC | ZEND_ACC_PUBLIC);
+	zend_declare_property_stringl(homegear_class_entry, "socketPath", sizeof("socketPath") - 1, GD::bl->settings.socketPath().c_str(), GD::bl->settings.socketPath().size(), ZEND_ACC_STATIC | ZEND_ACC_PUBLIC);
+	zend_declare_property_stringl(homegear_class_entry, "logfilePath", sizeof("logfilePath") - 1, GD::bl->settings.logfilePath().c_str(), GD::bl->settings.logfilePath().size(), ZEND_ACC_STATIC | ZEND_ACC_PUBLIC);
+	zend_declare_property_stringl(homegear_class_entry, "workingDirectory", sizeof("workingDirectory") - 1, GD::bl->settings.workingDirectory().c_str(), GD::bl->settings.workingDirectory().size(), ZEND_ACC_STATIC | ZEND_ACC_PUBLIC);
 
 	zend_class_entry homegearGpioCe;
 	INIT_CLASS_ENTRY(homegearGpioCe, "Homegear\\HomegearGpio", homegear_gpio_methods);
