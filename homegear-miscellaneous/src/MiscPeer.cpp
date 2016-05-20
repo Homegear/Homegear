@@ -663,7 +663,7 @@ PVariable MiscPeer::getParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
 				if(configCentral.find(channel) == configCentral.end()) continue;
 				if(configCentral[channel].find(i->second->id) == configCentral[channel].end()) continue;
 				element = i->second->convertFromPacket(configCentral[channel][i->second->id].data);
-				if(i->second->password) element.reset(new Variable(element->type));
+				//if(i->second->password) element.reset(new Variable(element->type));
 			}
 			else if(type == ParameterGroup::Type::Enum::link)
 			{
