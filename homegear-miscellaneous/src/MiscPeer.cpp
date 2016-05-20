@@ -663,6 +663,7 @@ PVariable MiscPeer::getParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
 				if(configCentral.find(channel) == configCentral.end()) continue;
 				if(configCentral[channel].find(i->second->id) == configCentral[channel].end()) continue;
 				element = i->second->convertFromPacket(configCentral[channel][i->second->id].data);
+				if(i->second->password) element.reset(new Variable(element->type));
 			}
 			else if(type == ParameterGroup::Type::Enum::link)
 			{
@@ -750,6 +751,7 @@ PVariable MiscPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
 				if(configCentral[channel].find(i->first) == configCentral[channel].end()) continue;
 				BaseLib::Systems::RPCConfigurationParameter* parameter = &configCentral[channel][i->first];
 				if(!parameter->rpcParameter) continue;
+				if(parameter->rpcParameter->password && i->second->stringValue.empty()) continue; //Don't safe password if empty
 				parameter->rpcParameter->convertToPacket(i->second, value);
 				std::vector<uint8_t> shiftedValue = value;
 				parameter->rpcParameter->adjustBitPosition(shiftedValue);
