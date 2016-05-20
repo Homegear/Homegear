@@ -22,10 +22,10 @@ override_dh_auto_install:
 	cp $(CURDIR)/misc/System\ Config/homegear.init $(CURDIR)/debian/homegear/etc/init.d/homegear
 	chown root:root $(CURDIR)/debian/homegear/etc/init.d/homegear
 	chmod 755 $(CURDIR)/debian/homegear/etc/init.d/homegear
-	mkdir -p $(CURDIR)/debian/homegear/usr/lib/systemd/system
-	cp $(CURDIR)/misc/System\ Config/homegear.service $(CURDIR)/debian/homegear/usr/lib/systemd/system/
-	chown root:root $(CURDIR)/debian/homegear/usr/lib/systemd/system/homegear.service
-	chmod 644 $(CURDIR)/debian/homegear/usr/lib/systemd/system/homegear.service
+	mkdir -p $(CURDIR)/debian/homegear/lib/systemd/system
+	cp $(CURDIR)/misc/System\ Config/homegear.service $(CURDIR)/debian/homegear/lib/systemd/system/
+	chown root:root $(CURDIR)/debian/homegear/lib/systemd/system/homegear.service
+	chmod 644 $(CURDIR)/debian/homegear/lib/systemd/system/homegear.service
 
 	mkdir -p $(CURDIR)/debian/homegear/etc/logrotate.d
 	cp $(CURDIR)/misc/System\ Config/logrotate $(CURDIR)/debian/homegear/etc/logrotate.d/homegear
