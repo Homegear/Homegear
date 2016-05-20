@@ -1668,13 +1668,13 @@ static PHP_MINIT_FUNCTION(homegear)
 	zend_class_entry homegearCe;
 	INIT_CLASS_ENTRY(homegearCe, "Homegear\\Homegear", homegear_methods);
 	homegear_class_entry = zend_register_internal_class(&homegearCe);
-	zend_declare_property_stringl(homegear_class_entry, "tempPath", sizeof("tempPath") - 1, GD::bl->settings.tempPath().c_str(), GD::bl->settings.tempPath().size(), ZEND_ACC_STATIC | ZEND_ACC_PUBLIC);
-	zend_declare_property_stringl(homegear_class_entry, "scriptPath", sizeof("scriptPath") - 1, GD::bl->settings.scriptPath().c_str(), GD::bl->settings.scriptPath().size(), ZEND_ACC_STATIC | ZEND_ACC_PUBLIC);
-	zend_declare_property_stringl(homegear_class_entry, "modulePath", sizeof("modulePath") - 1, GD::bl->settings.modulePath().c_str(), GD::bl->settings.modulePath().size(), ZEND_ACC_STATIC | ZEND_ACC_PUBLIC);
-	zend_declare_property_stringl(homegear_class_entry, "dbPath", sizeof("databasePath") - 1, GD::bl->settings.databasePath().c_str(), GD::bl->settings.databasePath().size(), ZEND_ACC_STATIC | ZEND_ACC_PUBLIC);
-	zend_declare_property_stringl(homegear_class_entry, "socketPath", sizeof("socketPath") - 1, GD::bl->settings.socketPath().c_str(), GD::bl->settings.socketPath().size(), ZEND_ACC_STATIC | ZEND_ACC_PUBLIC);
-	zend_declare_property_stringl(homegear_class_entry, "logfilePath", sizeof("logfilePath") - 1, GD::bl->settings.logfilePath().c_str(), GD::bl->settings.logfilePath().size(), ZEND_ACC_STATIC | ZEND_ACC_PUBLIC);
-	zend_declare_property_stringl(homegear_class_entry, "workingDirectory", sizeof("workingDirectory") - 1, GD::bl->settings.workingDirectory().c_str(), GD::bl->settings.workingDirectory().size(), ZEND_ACC_STATIC | ZEND_ACC_PUBLIC);
+	zend_declare_class_constant_stringl(homegear_class_entry, "TEMP_PATH", sizeof("TEMP_PATH") - 1, GD::bl->settings.tempPath().c_str(), GD::bl->settings.tempPath().size());
+	zend_declare_class_constant_stringl(homegear_class_entry, "SCRIPT_PATH", sizeof("SCRIPT_PATH") - 1, GD::bl->settings.scriptPath().c_str(), GD::bl->settings.scriptPath().size());
+	zend_declare_class_constant_stringl(homegear_class_entry, "MODULE_PATH", sizeof("MODULE_PATH") - 1, GD::bl->settings.modulePath().c_str(), GD::bl->settings.modulePath().size());
+	zend_declare_class_constant_stringl(homegear_class_entry, "DATABASE_PATH", sizeof("DATABASE_PATH") - 1, GD::bl->settings.databasePath().c_str(), GD::bl->settings.databasePath().size());
+	zend_declare_class_constant_stringl(homegear_class_entry, "SOCKET_PATH", sizeof("SOCKET_PATH") - 1, GD::bl->settings.socketPath().c_str(), GD::bl->settings.socketPath().size());
+	zend_declare_class_constant_stringl(homegear_class_entry, "LOGFILE_PATH", sizeof("LOGFILE_PATH") - 1, GD::bl->settings.logfilePath().c_str(), GD::bl->settings.logfilePath().size());
+	zend_declare_class_constant_stringl(homegear_class_entry, "WORKING_DIRECTORY", sizeof("WORKING_DIRECTORY") - 1, GD::bl->settings.workingDirectory().c_str(), GD::bl->settings.workingDirectory().size());
 
 	zend_class_entry homegearGpioCe;
 	INIT_CLASS_ENTRY(homegearGpioCe, "Homegear\\HomegearGpio", homegear_gpio_methods);
