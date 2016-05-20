@@ -136,7 +136,7 @@ fi
 chroot $rootfs apt-get -y -f install
 chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano libmysqlclient-dev
 
-if [ "$distver" == "jessie" ] || [ "$distver" == "xenial" ]; then
+if [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ]; then
 	chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
 mkdir $rootfs/PHPBuild
@@ -166,7 +166,7 @@ chroot $rootfs bash -c "cd /PHPBuild && dpkg -i php*-build-deps_*.deb"
 # Create links necessary to build PHP
 rm -Rf $rootfs/PHPBuild/*
 cp -R "$scriptdir/debian" $rootfs/PHPBuild
-if [ "$distver" != "jessie" ] && [ "$distver" != "xenial" ]; then
+if [ "$distver" != "jessie" ] && [ "$distver" != "wheezy" ] && [ "$distver" != "xenial" ]; then
 	sed -i 's/, libcurl4-gnutls-dev//g' $rootfs/PHPBuild/debian/control
 	sed -i 's/--with-curl //g' $rootfs/PHPBuild/debian/rules
 fi
@@ -362,7 +362,7 @@ EOF
 chmod 755 $rootfs/FirstStart.sh
 sed -i "s/<DIST>/${dist}/g" $rootfs/FirstStart.sh
 
-read -p "Copy additional files into ${rootfs} and check that all packages were installed ok then hit [Enter] to continue..."
+#read -p "Copy additional files into ${rootfs} and check that all packages were installed ok then hit [Enter] to continue..."
 
 chroot $rootfs apt-get clean
 rm -Rf $rootfs/var/lib/apt/lists/*
