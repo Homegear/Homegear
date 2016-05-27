@@ -213,37 +213,50 @@ wget https://github.com/Homegear/libhomegear-base/archive/${1}.zip
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
+
 wget https://github.com/Homegear/Homegear/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
+
 wget https://github.com/Homegear/Homegear-HomeMaticBidCoS/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
+
 wget https://github.com/Homegear/Homegear-HomeMaticWired/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
+
 wget https://github.com/Homegear/Homegear-Insteon/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
+
 wget https://github.com/Homegear/Homegear-MAX/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
+
 wget https://github.com/Homegear/Homegear-PhilipsHue/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
+
 wget https://github.com/Homegear/Homegear-Sonos/archive/${1}.zip
+[ $? -ne 0 ] && exit 1
+unzip ${1}.zip
+[ $? -ne 0 ] && exit 1
+rm ${1}.zip
+
+wget https://github.com/Homegear/Homegear-Kodi/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
@@ -264,6 +277,7 @@ createPackage Homegear-Insteon $1 homegear-insteon
 createPackage Homegear-MAX $1 homegear-max
 createPackage Homegear-PhilipsHue $1 homegear-philipshue
 createPackage Homegear-Sonos $1 homegear-sonos
+createPackage Homegear-Kodi $1 homegear-kodi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackage.sh
 sed -i "s/<DIST>/${dist}/g" $rootfs/build/CreateDebianPackage.sh
