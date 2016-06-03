@@ -1210,6 +1210,24 @@ int main(int argc, char* argv[])
 					if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
 					if(chmod(currentPath.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 					if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << currentPath << std::endl;
+					std::vector<std::string> subdirs = GD::bl->io.getDirectories(currentPath, true);
+					for(std::vector<std::string>::iterator j = subdirs.begin(); j != subdirs.end(); ++j)
+					{
+						std::string subdir = currentPath + *j;
+						if(chown(subdir.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << subdir << std::endl;
+						std::vector<std::string> files = GD::bl->io.getFiles(subdir, false);
+						for(std::vector<std::string>::iterator k = files.begin(); k != files.end(); ++k)
+						{
+							std::string file = subdir + *k;
+							if(chown(file.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << file << std::endl;
+						}
+					}
+					for(std::vector<std::string>::iterator j = subdirs.begin(); j != subdirs.end(); ++j)
+					{
+						std::string subdir = currentPath + *j;
+						if(subdir == GD::bl->settings.scriptPath() || subdir == GD::bl->settings.socketPath() || subdir == GD::bl->settings.modulePath() || subdir == GD::bl->settings.logfilePath()) continue;
+						if(chmod(subdir.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << subdir << std::endl;
+					}
 				}
     			if(BaseLib::Io::fileExists(GD::bl->settings.databasePath()))
     			{
@@ -1230,11 +1248,23 @@ int main(int argc, char* argv[])
     			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP);
     			if(chmod(currentPath.c_str(), S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
     			if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			std::vector<std::string> files = GD::bl->io.getFiles(currentPath, false);
+				for(std::vector<std::string>::iterator j = files.begin(); j != files.end(); ++j)
+				{
+					std::string file = currentPath + *j;
+					if(chown(file.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << file << std::endl;
+				}
 
     			currentPath = GD::bl->settings.logfilePath();
     			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
     			if(chmod(currentPath.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
     			if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			files = GD::bl->io.getFiles(currentPath, false);
+				for(std::vector<std::string>::iterator j = files.begin(); j != files.end(); ++j)
+				{
+					std::string file = currentPath + *j;
+					if(chown(file.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << file << std::endl;
+				}
 
     			exit(0);
     		}
