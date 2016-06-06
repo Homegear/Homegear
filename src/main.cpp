@@ -1204,7 +1204,7 @@ int main(int argc, char* argv[])
     				}
     			}
 
-    			currentPath = GD::bl->settings.databasePath().substr(0, GD::bl->settings.databasePath().find_last_of('/'));
+    			currentPath = GD::bl->settings.databasePath().substr(0, GD::bl->settings.databasePath().find_last_of('/') + 1);
     			if(!currentPath.empty())
 				{
 					if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
