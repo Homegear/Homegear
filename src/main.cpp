@@ -813,23 +813,14 @@ void startUp()
 				GD::out.printCritical("Critical: deleting temporary file \"" + GD::bl->settings.tempPath() + *i + "\": " + strerror(errno));
 			}
 		}
-
-		for(uint32_t i = 0; i < 100; ++i)
+		
+		while(BaseLib::HelperFunctions::getTime() < 1000000000000)
 		{
-			if(BaseLib::HelperFunctions::getTime() < 1000000000000)
-			{
-				GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
-				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-			}
-			else break;
-		}
-		if(BaseLib::HelperFunctions::getTime() < 1000000000000)
-		{
-			GD::out.printCritical("Critical: Time is still in the past. Check that ntp is setup correctly and your internet connection is working. Exiting...");
-			exit(1);
+			GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
+			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 		}
 
-		GD::bl->db->init();
+	GD::bl->db->init();
     	GD::bl->db->open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".bak");
     	if(!GD::bl->db->isOpen()) exitHomegear(1);
 
