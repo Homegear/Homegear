@@ -123,7 +123,7 @@ wget http://homegear.eu/packages/Release.key
 apt-key add - < Release.key
 rm Release.key
 apt update
-apt -y install locales console-common ntp openssh-server git-core binutils curl sudo parted unzip p7zip-full php5-cli php5-xmlrpc libxml2-utils keyboard-configuration liblzo2-dev python-lzo libgcrypt20 libgcrypt20-dev libgpg-error0 libgpg-error-dev libgnutlsxx28 libgnutls28-dev lua5.2 libmysqlclient-dev libcurl4-gnutls-dev libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 
+apt -y install locales console-common ntp openssh-server git-core binutils curl sudo parted unzip p7zip-full php5-cli php5-xmlrpc libxml2-utils keyboard-configuration liblzo2-dev python-lzo libgcrypt20 libgcrypt20-dev libgpg-error0 libgpg-error-dev libgnutlsxx28 libgnutls28-dev lua5.2 libmysqlclient-dev libcurl4-gnutls-dev libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 libmodbus5
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
 chmod +x /usr/bin/rpi-update
 mkdir -p /lib/modules/$(uname -r)
@@ -230,7 +230,7 @@ chmod 750 scripts
 
 #Add homegear monitor script
 echo "#!/bin/bash
-return=`ps -A | grep homegear -c`
+return=\`ps -A | grep homegear -c\`
 if [ \$return -lt 1 ] && test -e /var/run/homegear/homegear.pid; then
         LOGDIR=/var/log/homegear
         if test -e \$LOGDIR/core; then
@@ -356,30 +356,49 @@ wget http://homegear.eu/downloads/nightlies/homegear-insteon_current_raspbian_je
 wget http://homegear.eu/downloads/nightlies/homegear-max_current_raspbian_jessie_armhf.deb || exit 1
 wget http://homegear.eu/downloads/nightlies/homegear-philipshue_current_raspbian_jessie_armhf.deb || exit 1
 wget http://homegear.eu/downloads/nightlies/homegear-sonos_current_raspbian_jessie_armhf.deb || exit 1
+wget http://homegear.eu/downloads/nightlies/homegear-kodi_current_raspbian_jessie_armhf.deb || exit 1
+wget http://homegear.eu/downloads/nightlies/homegear-beckhoff-bk90x0_current_raspbian_jessie_armhf.deb || exit 1
+
 dpkg -i libhomegear-base_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 rm -f libhomegear-base_current_raspbian_jessie_armhf.deb
+
 dpkg -i homegear_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 rm -f homegear_current_raspbian_jessie_armhf.deb
+
 dpkg -i homegear-homematicbidcos_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 rm -f homegear-homematicbidcos_current_raspbian_jessie_armhf.deb
+
 dpkg -i homegear-homematicwired_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 rm -f homegear-homematicwired_current_raspbian_jessie_armhf.deb
+
 dpkg -i homegear-insteon_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 rm -f homegear-insteon_current_raspbian_jessie_armhf.deb
+
 dpkg -i homegear-max_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 rm -f homegear-max_current_raspbian_jessie_armhf.deb
+
 dpkg -i homegear-philipshue_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 rm -f homegear-philipshue_current_raspbian_jessie_armhf.deb
+
 dpkg -i homegear-sonos_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 rm -f homegear-sonos_current_raspbian_jessie_armhf.deb
+
+dpkg -i homegear-kodi_current_raspbian_jessie_armhf.deb
+apt-get -y -f install
+rm -f homegear-kodi_current_raspbian_jessie_armhf.deb
+
+dpkg -i homegear-beckhoff-bk90x0_current_raspbian_jessie_armhf.deb
+apt-get -y -f install
+rm -f homegear-beckhoff-bk90x0_current_raspbian_jessie_armhf.deb
+
 service homegear stop" >> scripts/firstStart.sh
 if [ $OPENHAB -eq 1 ]; then
   echo "apt-get -y install openhab-runtime openhab-addon-action-homematic openhab-addon-binding-homematic
