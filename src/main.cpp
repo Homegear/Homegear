@@ -190,6 +190,8 @@ void terminate(int32_t signalNumber)
 	{
 		if(signalNumber == SIGTERM)
 		{
+			if(BaseLib::HelperFunctions::getTime() - GD::startingTime < 15000) return;
+
 			if(_monitorProcess)
 			{
 				if(_mainProcessId != 0) kill(_mainProcessId, SIGTERM);
@@ -887,14 +889,7 @@ void startUp()
         GD::out.printInfo("Loading events...");
         GD::eventHandler->load();
 #endif
-        _shuttingDownMutex.lock();
-		_startUpComplete = true;
-		if(_shutdownQueued)
-		{
-			_shuttingDownMutex.unlock();
-			terminate(SIGTERM);
-		}
-		_shuttingDownMutex.unlock();
+
         GD::out.printMessage("Startup complete. Waiting for physical interfaces to connect.");
 
         //Wait for all interfaces to connect before setting booting to false
@@ -919,6 +914,15 @@ void startUp()
 
         GD::bl->booting = false;
         GD::familyController->homegearStarted();
+
+        _shuttingDownMutex.lock();
+		_startUpComplete = true;
+		if(_shutdownQueued)
+		{
+			_shuttingDownMutex.unlock();
+			terminate(SIGTERM);
+		}
+		_shuttingDownMutex.unlock();
 
 		char* inputBuffer = nullptr;
         if(_startAsDaemon)
