@@ -31,7 +31,7 @@
 #ifndef AUTH_H_
 #define AUTH_H_
 
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 #include "../User/User.h"
 
 #include <string>

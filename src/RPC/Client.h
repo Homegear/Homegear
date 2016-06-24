@@ -38,7 +38,7 @@
 #include <chrono>
 
 #include "RpcClient.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 namespace RPC
 {

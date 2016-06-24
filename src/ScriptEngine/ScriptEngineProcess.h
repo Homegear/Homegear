@@ -32,7 +32,7 @@
 #define SCRIPTENGINEPROCESS_H_
 
 #include "ScriptEngineClientData.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 using namespace BaseLib::ScriptEngine;
 

@@ -144,57 +144,6 @@ rm -f third-stage
 chmod +x third-stage
 LANG=C chroot $rootfs /third-stage
 
-#Create SPI and I2C device tree blob
-echo "// Enable the i2c-1, spidev-0 & spidev-1 devices
-/dts-v1/;
-/plugin/;
-
-/ {
-   compatible = \"brcm,bcm2708,bcm2836\";
-
-   fragment@0 {
-      target = <&i2c0>;
-      __overlay__ {
-         status = \"okay\";
-      };
-   };
-
-   fragment@1 {
-      target = <&i2c1>;
-      __overlay__ {
-         status = \"okay\";
-      };
-   };
-
-   fragment@2 {
-      target = <&spi0>;
-      __overlay__ {
-         status = \"okay\";
-      };
-   };
-};
-" > enable-i2c-spi-overlay.dts
-
-echo "#!/bin/bash
-apt-get -y install bison build-essential flex
-mkdir /tmp/dtc
-wget -P /tmp/dtc https://github.com/RobertCNelson/dtc/archive/dtc-fixup-65cc4d2.zip
-unzip /tmp/dtc/dtc-fixup-65cc4d2.zip -d /tmp/dtc
-cd /tmp/dtc/dtc-dtc-fixup-65cc4d2
-make PREFIX=/usr/ CC=gcc CROSS_COMPILE=all
-make PREFIX=/usr/ install
-cd /
-dtc -@ -I dts -O dtb -o /boot/overlays/enable-i2c-spi-overlay.dtb /enable-i2c-spi-overlay.dts
-rm -Rf /tmp/dtc
-rm /enable-i2c-spi-overlay.dts
-dpkg --purge bison build-essential flex
-apt-get -y autoremove
-rm -f fourth-stage
-" > fourth-stage
-chmod +x fourth-stage
-chroot $rootfs /fourth-stage
-#End create SPI and I2C device tree blob
-
 #Install Java and OpenHAB
 if [ $OPENHAB -eq 1 ]; then
 	echo "#!/bin/bash
@@ -261,7 +210,9 @@ echo "arm_freq=900
 core_freq=250
 sdram_freq=450
 over_voltage=2
-device_tree_overlay=overlays/enable-i2c-spi-overlay.dtb" > boot/config.txt
+enable_uart=1
+dtparam=spi=on
+dtparam=i2c_arm=on" > boot/config.txt
 chown root:root boot/config.txt
 chmod 755 boot/config.txt
 #End Raspberry Pi boot config

@@ -31,7 +31,7 @@
 #ifndef LICENSINGCONTROLLER_H_
 #define LICENSINGCONTROLLER_H_
 
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 #include <string>
 #include <iostream>

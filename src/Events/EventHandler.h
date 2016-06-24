@@ -34,7 +34,7 @@
 #include "../../config.h"
 
 #ifdef EVENTHANDLER
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 #include "../RPC/Server.h"
 
 #include <memory>

@@ -30,7 +30,7 @@
 
 #include "RPCServer.h"
 #include "../GD/GD.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 using namespace RPC;
 

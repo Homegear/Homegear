@@ -38,7 +38,7 @@
 #include "../Licensing/LicensingController.h"
 #include "../Systems/FamilyController.h"
 #include "../Systems/DatabaseController.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 #include "../RPC/Server.h"
 #include "../RPC/Client.h"
 

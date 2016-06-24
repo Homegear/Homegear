@@ -31,7 +31,7 @@
 #ifndef FAMILYCONTROLLER_H_
 #define FAMILYCONTROLLER_H_
 
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 #include <string>
 #include <iostream>

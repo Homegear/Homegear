@@ -31,7 +31,7 @@
 #ifndef CLICLIENT_H_
 #define CLICLIENT_H_
 
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 #include <thread>
 #include <mutex>

@@ -34,7 +34,7 @@
 #include <memory>
 #include <string>
 
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 #include "RPCServer.h"
 #include "RPCMethods.h"
 
