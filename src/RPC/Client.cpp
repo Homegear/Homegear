@@ -30,7 +30,7 @@
 
 #include "Client.h"
 #include "../GD/GD.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 #include "../MQTT/Mqtt.h"
 
 namespace RPC

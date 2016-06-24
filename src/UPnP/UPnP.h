@@ -31,7 +31,7 @@
 #ifndef UPNP_H_
 #define UPNP_H_
 
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 class UPnP : public BaseLib::Rpc::IWebserverEventSink
 {

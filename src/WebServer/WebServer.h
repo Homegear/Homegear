@@ -31,7 +31,7 @@
 #ifndef WEBSERVER_H_
 #define WEBSERVER_H_
 
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 namespace WebServer
 {

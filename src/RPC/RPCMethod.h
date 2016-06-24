@@ -34,7 +34,7 @@
 #include <vector>
 #include <memory>
 
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 namespace RPC
 {

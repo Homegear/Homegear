@@ -31,7 +31,7 @@
 #ifndef CLISERVER_H_
 #define CLISERVER_H_
 
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 #include "../User/User.h"
 #include "../Systems/FamilyController.h"
 

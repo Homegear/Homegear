@@ -31,7 +31,7 @@
 #ifndef MISCPEER_H_
 #define MISCPEER_H_
 
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 #include <list>
 

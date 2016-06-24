@@ -33,7 +33,7 @@
 
 #include "php_config_fixes.h"
 #include "../RPC/RPCMethod.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 #include <thread>
 #include <mutex>

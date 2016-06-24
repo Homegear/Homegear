@@ -37,7 +37,7 @@
 #include "ScriptEngine/ScriptEngineClient.h"
 #include "UPnP/UPnP.h"
 #include "MQTT/Mqtt.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 #include "homegear-base/HelperFunctions/HelperFunctions.h"
 #include "../config.h"
 

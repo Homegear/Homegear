@@ -32,7 +32,7 @@
 #define HOMEGEAR_PHP_SAPI_H_
 
 #include "php_config_fixes.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 #include "PhpEvents.h"
 
 #include <iostream>

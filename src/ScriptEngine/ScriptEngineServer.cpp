@@ -30,7 +30,7 @@
 
 #include "ScriptEngineServer.h"
 #include "../GD/GD.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 #include "php_sapi.h"
 
 namespace ScriptEngine

@@ -32,7 +32,7 @@
 #define RPCCLIENT_H_
 
 #include "ClientSettings.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 #include "Auth.h"
 #include "RemoteRpcServer.h"
 
