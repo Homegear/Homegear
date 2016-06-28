@@ -74,6 +74,7 @@ bool _fork = false;
 bool _monitorProcess = false;
 pid_t _mainProcessId = 0;
 bool _startAsDaemon = false;
+bool _nonInteractive = false;
 bool _startUpComplete = false;
 bool _shutdownQueued = false;
 bool _disposing = false;
@@ -215,11 +216,8 @@ void terminate(int32_t signalNumber)
 			if(GD::scriptEngineServer) GD::scriptEngineServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
 			if(GD::familyController) GD::familyController->homegearShuttingDown();
 			_disposing = true;
-			if(_startAsDaemon)
-			{
-				GD::out.printInfo("(Shutdown) => Stopping CLI server");
-				if(GD::cliServer) GD::cliServer->stop();
-			}
+			GD::out.printInfo("(Shutdown) => Stopping CLI server");
+			if(GD::cliServer) GD::cliServer->stop();
 			if(GD::bl->settings.enableUPnP())
 			{
 				GD::out.printInfo("Stopping UPnP server...");
@@ -261,7 +259,7 @@ void terminate(int32_t signalNumber)
 			GD::bl->fileDescriptorManager.dispose();
 			_monitor.stop();
 			GD::out.printMessage("(Shutdown) => Shutdown complete.");
-			if(_startAsDaemon)
+			if(_startAsDaemon || _nonInteractive)
 			{
 				fclose(stdout);
 				fclose(stderr);
@@ -325,7 +323,7 @@ void terminate(int32_t signalNumber)
 				}
 			}
 			//Reopen log files, important for logrotate
-			if(_startAsDaemon)
+			if(_startAsDaemon || _nonInteractive)
 			{
 				if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
 				{
@@ -637,7 +635,7 @@ void startUp()
     	sigaction(SIGSEGV, &sa, NULL);
 #else
     	std::unique_ptr<Debug::DeathHandler> deathHandler;
-    	if(_startAsDaemon)
+    	if(_startAsDaemon || _nonInteractive)
     	{
 			deathHandler.reset(new Debug::DeathHandler());
 			deathHandler->set_append_pid(true);
@@ -656,7 +654,7 @@ void startUp()
     	sa.sa_handler = sigchld_handler;
     	sigaction(SIGCHLD, &sa, NULL);
 
-    	if(_startAsDaemon)
+    	if(_startAsDaemon || _nonInteractive)
 		{
 			if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
 			{
@@ -923,7 +921,7 @@ void startUp()
 		_shuttingDownMutex.unlock();
 
 		char* inputBuffer = nullptr;
-        if(_startAsDaemon)
+        if(_startAsDaemon || _nonInteractive)
         {
         	while(true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
@@ -933,11 +931,7 @@ void startUp()
 			while((inputBuffer = readline("")) != NULL)
 			{
 				if(inputBuffer[0] == '\n' || inputBuffer[0] == 0) continue;
-				if(strncmp(inputBuffer, "quit", 4) == 0 || strncmp(inputBuffer, "exit", 4) == 0 || strncmp(inputBuffer, "moin", 4) == 0)
-				{
-					terminate(SIGTERM);
-					while(true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-				}
+				if(strncmp(inputBuffer, "quit", 4) == 0 || strncmp(inputBuffer, "exit", 4) == 0 || strncmp(inputBuffer, "moin", 4) == 0) break;
 
 				add_history(inputBuffer); //Sets inputBuffer to 0
 
@@ -946,31 +940,9 @@ void startUp()
 				free(inputBuffer);
 			}
 			clear_history();
-
-			//{{{ non-interactive
-				if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
-				{
-					GD::out.printError("Error: Could not redirect output to log file.");
-				}
-				if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
-				{
-					GD::out.printError("Error: Could not redirect errors to log file.");
-				}
-
-				sa.sa_handler = SIG_DFL;
-				sigaction(SIGABRT, &sa, NULL);
-				sigaction(SIGSEGV, &sa, NULL);
-
-				deathHandler.reset(new Debug::DeathHandler());
-				deathHandler->set_append_pid(true);
-				deathHandler->set_frames_count(32);
-				deathHandler->set_color_output(false);
-				deathHandler->set_generate_core_dump(GD::bl->settings.enableCoreDumps());
-				deathHandler->set_cleanup(false);
-
-				while(true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        	//}}}
         }
+
+        terminate(SIGTERM);
 	}
 	catch(const std::exception& ex)
     {
@@ -1310,6 +1282,8 @@ int main(int argc, char* argv[])
     			exit(1);
     		}
     	}
+
+    	if(!isatty(STDIN_FILENO)) _nonInteractive = true;
 
     	try
     	{
