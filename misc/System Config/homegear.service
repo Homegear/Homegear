@@ -6,8 +6,8 @@ After=network-online.target
 WantedBy=multi-user.target
 
 [Service]
-Type=forking
+Type=simple
 PIDFile=/var/run/homegear/homegear.pid
 TimeoutSec=300
 ExecStartPre=/usr/bin/homegear -u homegear -g homegear -p /var/run/homegear/homegear.pid -pre
-ExecStart=/usr/bin/homegear -u homegear -g homegear -p /var/run/homegear/homegear.pid -d
+ExecStart=/usr/bin/homegear -u homegear -g homegear -p /var/run/homegear/homegear.pid
