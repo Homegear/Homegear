@@ -190,8 +190,6 @@ void terminate(int32_t signalNumber)
 	{
 		if(signalNumber == SIGTERM)
 		{
-			if(BaseLib::HelperFunctions::getTime() - GD::startingTime < 15000) return;
-
 			if(_monitorProcess)
 			{
 				if(_mainProcessId != 0) kill(_mainProcessId, SIGTERM);
@@ -935,7 +933,11 @@ void startUp()
 			while((inputBuffer = readline("")) != NULL)
 			{
 				if(inputBuffer[0] == '\n' || inputBuffer[0] == 0) continue;
-				if(strncmp(inputBuffer, "quit", 4) == 0 || strncmp(inputBuffer, "exit", 4) == 0 || strncmp(inputBuffer, "moin", 4) == 0) break;
+				if(strncmp(inputBuffer, "quit", 4) == 0 || strncmp(inputBuffer, "exit", 4) == 0 || strncmp(inputBuffer, "moin", 4) == 0)
+				{
+					terminate(SIGTERM);
+					while(true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+				}
 
 				add_history(inputBuffer); //Sets inputBuffer to 0
 
@@ -945,7 +947,8 @@ void startUp()
 			}
 			clear_history();
 
-			terminate(SIGTERM);
+			//non-interactive
+			while(true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
 	}
 	catch(const std::exception& ex)
