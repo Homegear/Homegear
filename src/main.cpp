@@ -947,8 +947,29 @@ void startUp()
 			}
 			clear_history();
 
-			//non-interactive
-			while(true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			//{{{ non-interactive
+				if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
+				{
+					GD::out.printError("Error: Could not redirect output to log file.");
+				}
+				if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
+				{
+					GD::out.printError("Error: Could not redirect errors to log file.");
+				}
+
+				sa.sa_handler = SIG_DFL;
+				sigaction(SIGABRT, &sa, NULL);
+				sigaction(SIGSEGV, &sa, NULL);
+
+				deathHandler.reset(new Debug::DeathHandler());
+				deathHandler->set_append_pid(true);
+				deathHandler->set_frames_count(32);
+				deathHandler->set_color_output(false);
+				deathHandler->set_generate_core_dump(GD::bl->settings.enableCoreDumps());
+				deathHandler->set_cleanup(false);
+
+				while(true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        	//}}}
         }
 	}
 	catch(const std::exception& ex)
