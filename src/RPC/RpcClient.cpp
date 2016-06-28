@@ -225,7 +225,11 @@ BaseLib::PVariable RpcClient::invoke(std::shared_ptr<RemoteRpcServer> server, st
 		{
 			retry = false;
 			if(i == 0) sendRequest(server.get(), requestData, responseData, true, retry);
-			else sendRequest(server.get(), requestData, responseData, false, retry);
+			else
+			{
+				_out.printWarning("Warning: Retry " + std::to_string(i) + ": Calling RPC method \"" + methodName + "\" on server " + (server->hostname.empty() ? server->address.first : server->hostname) + ".");
+				sendRequest(server.get(), requestData, responseData, false, retry);
+			}
 			if(!retry || server->removed || !server->autoConnect) break;
 		}
 		if(server->removed)
@@ -463,6 +467,7 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
     catch(const std::exception& ex)
     {
 		if(!server->reconnectInfinitely) server->removed = true;
+		else retry = true;
     	GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	_out.printError("Removing server. Server has to send \"init\" again.");
@@ -471,6 +476,7 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
     catch(BaseLib::Exception& ex)
     {
 		if(!server->reconnectInfinitely) server->removed = true;
+		else retry = true;
     	GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	_out.printError("Removing server. Server has to send \"init\" again.");
@@ -479,6 +485,7 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
     catch(...)
     {
 		if(!server->reconnectInfinitely) server->removed = true;
+		else retry = true;
     	GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     	_out.printError("Removing server. Server has to send \"init\" again.");
