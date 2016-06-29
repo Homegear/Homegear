@@ -31,7 +31,7 @@
 #ifndef MQTTSETTINGS_H_
 #define MQTTSETTINGS_H_
 
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 #include <memory>
 #include <iostream>

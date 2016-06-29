@@ -31,7 +31,7 @@
 #ifndef FACTORY_H
 #define FACTORY_H
 
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 #include "Miscellaneous.h"
 
 class MiscellaneousFactory : BaseLib::Systems::SystemFactory

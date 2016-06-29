@@ -32,7 +32,7 @@
 #define PHPVARIABLECONVERTER_H_
 
 #include "php_config_fixes.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 #include <stdio.h>
 #include <stdlib.h>

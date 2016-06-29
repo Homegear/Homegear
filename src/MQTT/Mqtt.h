@@ -31,7 +31,7 @@
 #ifndef MQTT_H_
 #define MQTT_H_
 
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 #include "MqttSettings.h"
 

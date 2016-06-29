@@ -139,7 +139,7 @@ chroot $rootfs apt-key add Release.key
 rm $rootfs/Release.key
 
 chroot $rootfs apt-get update
-chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libmcrypt-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libmysqlclient-dev
+chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libmcrypt-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libmysqlclient-dev libmodbus-dev
 
 if [ "$distver" == "wheezy" ]; then
 	chroot $rootfs apt-get -y install libgcrypt11-dev libgnutls-dev g++-4.7 gcc-4.7 libcurl4-gnutls-dev
@@ -213,37 +213,62 @@ wget https://github.com/Homegear/libhomegear-base/archive/${1}.zip
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
+
 wget https://github.com/Homegear/Homegear/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
+
 wget https://github.com/Homegear/Homegear-HomeMaticBidCoS/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
+
 wget https://github.com/Homegear/Homegear-HomeMaticWired/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
+
 wget https://github.com/Homegear/Homegear-Insteon/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
+
 wget https://github.com/Homegear/Homegear-MAX/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
+
 wget https://github.com/Homegear/Homegear-PhilipsHue/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
+
 wget https://github.com/Homegear/Homegear-Sonos/archive/${1}.zip
+[ $? -ne 0 ] && exit 1
+unzip ${1}.zip
+[ $? -ne 0 ] && exit 1
+rm ${1}.zip
+
+wget https://github.com/Homegear/Homegear-Kodi/archive/${1}.zip
+[ $? -ne 0 ] && exit 1
+unzip ${1}.zip
+[ $? -ne 0 ] && exit 1
+rm ${1}.zip
+
+wget https://github.com/Homegear/Homegear-IPCam/archive/${1}.zip
+[ $? -ne 0 ] && exit 1
+unzip ${1}.zip
+[ $? -ne 0 ] && exit 1
+rm ${1}.zip
+
+wget https://github.com/Homegear/Homegear-Beckhoff-BK90x0/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
@@ -264,6 +289,9 @@ createPackage Homegear-Insteon $1 homegear-insteon
 createPackage Homegear-MAX $1 homegear-max
 createPackage Homegear-PhilipsHue $1 homegear-philipshue
 createPackage Homegear-Sonos $1 homegear-sonos
+createPackage Homegear-Kodi $1 homegear-kodi
+createPackage Homegear-IPCam $1 homegear-ipcam
+createPackage Homegear-Beckhoff-BK90x0 $1 homegear-beckhoff-bk90x0
 EOF
 chmod 755 $rootfs/build/CreateDebianPackage.sh
 sed -i "s/<DIST>/${dist}/g" $rootfs/build/CreateDebianPackage.sh
@@ -293,9 +321,12 @@ cleanUp homegear-insteon
 cleanUp homegear-max
 cleanUp homegear-philipshue
 cleanUp homegear-sonos
+cleanUp homegear-kodi
+cleanUp homegear-ipcam
+cleanUp homegear-beckhoff-bk90x0
 
 EOF
-echo "if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb; then
+echo "if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-beckhoff-bk90x0.deb; then
 	isodate=`date +%Y%m%d`
 	mv libhomegear-base.deb libhomegear-base_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear.deb homegear_\$[isodate]_${distlc}_${distver}_${arch}.deb
@@ -305,6 +336,9 @@ echo "if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegea
 	mv homegear-max.deb homegear-max_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-philipshue.deb homegear-philipshue_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-sonos.deb homegear-sonos_\$[isodate]_${distlc}_${distver}_${arch}.deb
+	mv homegear-kodi.deb homegear-kodi_\$[isodate]_${distlc}_${distver}_${arch}.deb
+	mv homegear-ipcam.deb homegear-ipcam_\$[isodate]_${distlc}_${distver}_${arch}.deb
+	mv homegear-beckhoff-bk90x0.deb homegear-beckhoff-bk90x0_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	if test -f /build/UploadNightly.sh; then
 		/build/UploadNightly.sh
 	fi

@@ -30,7 +30,7 @@
 
 #include "CLIClient.h"
 #include "../GD/GD.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>

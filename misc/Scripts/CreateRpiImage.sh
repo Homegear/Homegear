@@ -123,7 +123,7 @@ wget http://homegear.eu/packages/Release.key
 apt-key add - < Release.key
 rm Release.key
 apt update
-apt -y install locales console-common ntp openssh-server git-core binutils curl sudo parted unzip p7zip-full php5-cli php5-xmlrpc libxml2-utils keyboard-configuration liblzo2-dev python-lzo libgcrypt20 libgcrypt20-dev libgpg-error0 libgpg-error-dev libgnutlsxx28 libgnutls28-dev lua5.2 libmysqlclient-dev libcurl4-gnutls-dev libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 
+apt -y install locales console-common ntp openssh-server git-core binutils curl sudo parted unzip p7zip-full php5-cli php5-xmlrpc libxml2-utils keyboard-configuration liblzo2-dev python-lzo libgcrypt20 libgcrypt20-dev libgpg-error0 libgpg-error-dev libgnutlsxx28 libgnutls28-dev lua5.2 libmysqlclient-dev libcurl4-gnutls-dev libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 libmodbus5
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
 chmod +x /usr/bin/rpi-update
 mkdir -p /lib/modules/$(uname -r)
@@ -143,57 +143,6 @@ rm -f third-stage
 " > third-stage
 chmod +x third-stage
 LANG=C chroot $rootfs /third-stage
-
-#Create SPI and I2C device tree blob
-echo "// Enable the i2c-1, spidev-0 & spidev-1 devices
-/dts-v1/;
-/plugin/;
-
-/ {
-   compatible = \"brcm,bcm2708,bcm2836\";
-
-   fragment@0 {
-      target = <&i2c0>;
-      __overlay__ {
-         status = \"okay\";
-      };
-   };
-
-   fragment@1 {
-      target = <&i2c1>;
-      __overlay__ {
-         status = \"okay\";
-      };
-   };
-
-   fragment@2 {
-      target = <&spi0>;
-      __overlay__ {
-         status = \"okay\";
-      };
-   };
-};
-" > enable-i2c-spi-overlay.dts
-
-echo "#!/bin/bash
-apt-get -y install bison build-essential flex
-mkdir /tmp/dtc
-wget -P /tmp/dtc https://github.com/RobertCNelson/dtc/archive/dtc-fixup-65cc4d2.zip
-unzip /tmp/dtc/dtc-fixup-65cc4d2.zip -d /tmp/dtc
-cd /tmp/dtc/dtc-dtc-fixup-65cc4d2
-make PREFIX=/usr/ CC=gcc CROSS_COMPILE=all
-make PREFIX=/usr/ install
-cd /
-dtc -@ -I dts -O dtb -o /boot/overlays/enable-i2c-spi-overlay.dtb /enable-i2c-spi-overlay.dts
-rm -Rf /tmp/dtc
-rm /enable-i2c-spi-overlay.dts
-dpkg --purge bison build-essential flex
-apt-get -y autoremove
-rm -f fourth-stage
-" > fourth-stage
-chmod +x fourth-stage
-chroot $rootfs /fourth-stage
-#End create SPI and I2C device tree blob
 
 #Install Java and OpenHAB
 if [ $OPENHAB -eq 1 ]; then
@@ -230,7 +179,7 @@ chmod 750 scripts
 
 #Add homegear monitor script
 echo "#!/bin/bash
-return=`ps -A | grep homegear -c`
+return=\`ps -A | grep homegear -c\`
 if [ \$return -lt 1 ] && test -e /var/run/homegear/homegear.pid; then
         LOGDIR=/var/log/homegear
         if test -e \$LOGDIR/core; then
@@ -261,7 +210,9 @@ echo "arm_freq=900
 core_freq=250
 sdram_freq=450
 over_voltage=2
-device_tree_overlay=overlays/enable-i2c-spi-overlay.dtb" > boot/config.txt
+enable_uart=1
+dtparam=spi=on
+dtparam=i2c_arm=on" > boot/config.txt
 chown root:root boot/config.txt
 chmod 755 boot/config.txt
 #End Raspberry Pi boot config
@@ -356,30 +307,49 @@ wget http://homegear.eu/downloads/nightlies/homegear-insteon_current_raspbian_je
 wget http://homegear.eu/downloads/nightlies/homegear-max_current_raspbian_jessie_armhf.deb || exit 1
 wget http://homegear.eu/downloads/nightlies/homegear-philipshue_current_raspbian_jessie_armhf.deb || exit 1
 wget http://homegear.eu/downloads/nightlies/homegear-sonos_current_raspbian_jessie_armhf.deb || exit 1
+wget http://homegear.eu/downloads/nightlies/homegear-kodi_current_raspbian_jessie_armhf.deb || exit 1
+wget http://homegear.eu/downloads/nightlies/homegear-beckhoff-bk90x0_current_raspbian_jessie_armhf.deb || exit 1
+
 dpkg -i libhomegear-base_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 rm -f libhomegear-base_current_raspbian_jessie_armhf.deb
+
 dpkg -i homegear_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 rm -f homegear_current_raspbian_jessie_armhf.deb
+
 dpkg -i homegear-homematicbidcos_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 rm -f homegear-homematicbidcos_current_raspbian_jessie_armhf.deb
+
 dpkg -i homegear-homematicwired_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 rm -f homegear-homematicwired_current_raspbian_jessie_armhf.deb
+
 dpkg -i homegear-insteon_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 rm -f homegear-insteon_current_raspbian_jessie_armhf.deb
+
 dpkg -i homegear-max_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 rm -f homegear-max_current_raspbian_jessie_armhf.deb
+
 dpkg -i homegear-philipshue_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 rm -f homegear-philipshue_current_raspbian_jessie_armhf.deb
+
 dpkg -i homegear-sonos_current_raspbian_jessie_armhf.deb
 apt-get -y -f install
 rm -f homegear-sonos_current_raspbian_jessie_armhf.deb
+
+dpkg -i homegear-kodi_current_raspbian_jessie_armhf.deb
+apt-get -y -f install
+rm -f homegear-kodi_current_raspbian_jessie_armhf.deb
+
+dpkg -i homegear-beckhoff-bk90x0_current_raspbian_jessie_armhf.deb
+apt-get -y -f install
+rm -f homegear-beckhoff-bk90x0_current_raspbian_jessie_armhf.deb
+
 service homegear stop" >> scripts/firstStart.sh
 if [ $OPENHAB -eq 1 ]; then
   echo "apt-get -y install openhab-runtime openhab-addon-action-homematic openhab-addon-binding-homematic

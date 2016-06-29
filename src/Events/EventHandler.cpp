@@ -32,7 +32,7 @@
 
 #ifdef EVENTHANDLER
 #include "../GD/GD.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 EventHandler::EventHandler() : BaseLib::IQueue(GD::bl.get(), 1000)
 {

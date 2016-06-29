@@ -30,7 +30,7 @@
 
 #include "LicensingController.h"
 #include "../GD/GD.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 LicensingModuleLoader::LicensingModuleLoader(std::string name, std::string path)
 {
