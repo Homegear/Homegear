@@ -9,6 +9,7 @@ WantedBy=multi-user.target
 Type=simple
 PIDFile=/var/run/homegear/homegear.pid
 TimeoutSec=300
+LimitRTPRIO=100
 ExecStartPre=/usr/bin/homegear -u homegear -g homegear -p /var/run/homegear/homegear.pid -pre
 ExecStart=/usr/bin/homegear -u homegear -g homegear -p /var/run/homegear/homegear.pid
 Restart=on-failure
