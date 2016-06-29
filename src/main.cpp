@@ -814,11 +814,11 @@ void startUp()
 
 		while(BaseLib::HelperFunctions::getTime() < 1000000000000)
 		{
-			GD::out.printWarning("Warning: Time is in the past. Waiting for NTP to set the time...");
+			GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
 			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 		}
 
-		GD::bl->db->init();
+	GD::bl->db->init();
     	GD::bl->db->open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".bak");
     	if(!GD::bl->db->isOpen()) exitHomegear(1);
 
