@@ -31,7 +31,7 @@
 #ifndef RPCSERVER_H_
 #define RPCSERVER_H_
 
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 #include "RPCMethod.h"
 #include "Auth.h"
 #include "../WebServer/WebServer.h"

@@ -31,7 +31,7 @@
 #ifndef SCRIPTENGINECLIENTDATA_H_
 #define SCRIPTENGINECLIENTDATA_H_
 
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 namespace ScriptEngine
 {

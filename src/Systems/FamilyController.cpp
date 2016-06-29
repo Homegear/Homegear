@@ -30,7 +30,7 @@
 
 #include "FamilyController.h"
 #include "../GD/GD.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 ModuleLoader::ModuleLoader(std::string name, std::string path)
 {

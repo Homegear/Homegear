@@ -37,7 +37,7 @@
 #include "ScriptEngine/ScriptEngineClient.h"
 #include "UPnP/UPnP.h"
 #include "MQTT/Mqtt.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 #include "homegear-base/HelperFunctions/HelperFunctions.h"
 #include "../config.h"
 
@@ -74,6 +74,7 @@ bool _fork = false;
 bool _monitorProcess = false;
 pid_t _mainProcessId = 0;
 bool _startAsDaemon = false;
+bool _nonInteractive = false;
 bool _startUpComplete = false;
 bool _shutdownQueued = false;
 bool _disposing = false;
@@ -215,11 +216,8 @@ void terminate(int32_t signalNumber)
 			if(GD::scriptEngineServer) GD::scriptEngineServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
 			if(GD::familyController) GD::familyController->homegearShuttingDown();
 			_disposing = true;
-			if(_startAsDaemon)
-			{
-				GD::out.printInfo("(Shutdown) => Stopping CLI server");
-				if(GD::cliServer) GD::cliServer->stop();
-			}
+			GD::out.printInfo("(Shutdown) => Stopping CLI server");
+			if(GD::cliServer) GD::cliServer->stop();
 			if(GD::bl->settings.enableUPnP())
 			{
 				GD::out.printInfo("Stopping UPnP server...");
@@ -261,7 +259,7 @@ void terminate(int32_t signalNumber)
 			GD::bl->fileDescriptorManager.dispose();
 			_monitor.stop();
 			GD::out.printMessage("(Shutdown) => Shutdown complete.");
-			if(_startAsDaemon)
+			if(_startAsDaemon || _nonInteractive)
 			{
 				fclose(stdout);
 				fclose(stderr);
@@ -325,7 +323,7 @@ void terminate(int32_t signalNumber)
 				}
 			}
 			//Reopen log files, important for logrotate
-			if(_startAsDaemon)
+			if(_startAsDaemon || _nonInteractive)
 			{
 				if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
 				{
@@ -637,7 +635,7 @@ void startUp()
     	sigaction(SIGSEGV, &sa, NULL);
 #else
     	std::unique_ptr<Debug::DeathHandler> deathHandler;
-    	if(_startAsDaemon)
+    	if(_startAsDaemon || _nonInteractive)
     	{
 			deathHandler.reset(new Debug::DeathHandler());
 			deathHandler->set_append_pid(true);
@@ -656,7 +654,7 @@ void startUp()
     	sa.sa_handler = sigchld_handler;
     	sigaction(SIGCHLD, &sa, NULL);
 
-    	if(_startAsDaemon)
+    	if(_startAsDaemon || _nonInteractive)
 		{
 			if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
 			{
@@ -814,19 +812,10 @@ void startUp()
 			}
 		}
 
-		for(uint32_t i = 0; i < 100; ++i)
+		while(BaseLib::HelperFunctions::getTime() < 1000000000000)
 		{
-			if(BaseLib::HelperFunctions::getTime() < 1000000000000)
-			{
-				GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
-				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-			}
-			else break;
-		}
-		if(BaseLib::HelperFunctions::getTime() < 1000000000000)
-		{
-			GD::out.printCritical("Critical: Time is still in the past. Check that ntp is setup correctly and your internet connection is working. Exiting...");
-			exit(1);
+			GD::out.printWarning("Warning: Time is in the past. Waiting for NTP to set the time...");
+			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 		}
 
 		GD::bl->db->init();
@@ -896,14 +885,7 @@ void startUp()
         GD::out.printInfo("Loading events...");
         GD::eventHandler->load();
 #endif
-        _shuttingDownMutex.lock();
-		_startUpComplete = true;
-		if(_shutdownQueued)
-		{
-			_shuttingDownMutex.unlock();
-			terminate(SIGTERM);
-		}
-		_shuttingDownMutex.unlock();
+
         GD::out.printMessage("Startup complete. Waiting for physical interfaces to connect.");
 
         //Wait for all interfaces to connect before setting booting to false
@@ -929,8 +911,17 @@ void startUp()
         GD::bl->booting = false;
         GD::familyController->homegearStarted();
 
+        _shuttingDownMutex.lock();
+		_startUpComplete = true;
+		if(_shutdownQueued)
+		{
+			_shuttingDownMutex.unlock();
+			terminate(SIGTERM);
+		}
+		_shuttingDownMutex.unlock();
+
 		char* inputBuffer = nullptr;
-        if(_startAsDaemon)
+        if(_startAsDaemon || _nonInteractive)
         {
         	while(true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
@@ -949,9 +940,9 @@ void startUp()
 				free(inputBuffer);
 			}
 			clear_history();
-
-			terminate(SIGTERM);
         }
+
+        terminate(SIGTERM);
 	}
 	catch(const std::exception& ex)
     {
@@ -1204,12 +1195,30 @@ int main(int argc, char* argv[])
     				}
     			}
 
-    			currentPath = GD::bl->settings.databasePath().substr(0, GD::bl->settings.databasePath().find_last_of('/'));
+    			currentPath = GD::bl->settings.databasePath().substr(0, GD::bl->settings.databasePath().find_last_of('/') + 1);
     			if(!currentPath.empty())
 				{
 					if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
 					if(chmod(currentPath.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 					if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << currentPath << std::endl;
+					std::vector<std::string> subdirs = GD::bl->io.getDirectories(currentPath, true);
+					for(std::vector<std::string>::iterator j = subdirs.begin(); j != subdirs.end(); ++j)
+					{
+						std::string subdir = currentPath + *j;
+						if(chown(subdir.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << subdir << std::endl;
+						std::vector<std::string> files = GD::bl->io.getFiles(subdir, false);
+						for(std::vector<std::string>::iterator k = files.begin(); k != files.end(); ++k)
+						{
+							std::string file = subdir + *k;
+							if(chown(file.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << file << std::endl;
+						}
+					}
+					for(std::vector<std::string>::iterator j = subdirs.begin(); j != subdirs.end(); ++j)
+					{
+						std::string subdir = currentPath + *j;
+						if(subdir == GD::bl->settings.scriptPath() || subdir == GD::bl->settings.socketPath() || subdir == GD::bl->settings.modulePath() || subdir == GD::bl->settings.logfilePath()) continue;
+						if(chmod(subdir.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << subdir << std::endl;
+					}
 				}
     			if(BaseLib::Io::fileExists(GD::bl->settings.databasePath()))
     			{
@@ -1230,11 +1239,24 @@ int main(int argc, char* argv[])
     			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP);
     			if(chmod(currentPath.c_str(), S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
     			if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			std::vector<std::string> files = GD::bl->io.getFiles(currentPath, false);
+				for(std::vector<std::string>::iterator j = files.begin(); j != files.end(); ++j)
+				{
+					std::string file = currentPath + *j;
+					if(chown(file.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << file << std::endl;
+				}
 
     			currentPath = GD::bl->settings.logfilePath();
-    			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
-    			if(chmod(currentPath.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRGRP | S_IXGRP);
+    			if(chmod(currentPath.c_str(), S_IRWXU | S_IRGRP | S_IXGRP) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
     			if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			files = GD::bl->io.getFiles(currentPath, false);
+				for(std::vector<std::string>::iterator j = files.begin(); j != files.end(); ++j)
+				{
+					std::string file = currentPath + *j;
+					if(chmod(file.c_str(), S_IRUSR | S_IWUSR | S_IRGRP) == -1) std::cerr << "Could not set permissions on " << file << std::endl;
+					if(chown(file.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << file << std::endl;
+				}
 
     			exit(0);
     		}
@@ -1260,6 +1282,8 @@ int main(int argc, char* argv[])
     			exit(1);
     		}
     	}
+
+    	if(!isatty(STDIN_FILENO)) _nonInteractive = true;
 
     	try
     	{

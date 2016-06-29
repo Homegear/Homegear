@@ -683,7 +683,7 @@ std::shared_ptr<MiscPeer> MiscCentral::createPeer(BaseLib::Systems::LogicalDevic
     return std::shared_ptr<MiscPeer>();
 }
 
-PVariable MiscCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion)
+PVariable MiscCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion, std::string interfaceId)
 {
 	try
 	{

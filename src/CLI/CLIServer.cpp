@@ -30,7 +30,7 @@
 
 #include "CLIServer.h"
 #include "../GD/GD.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 namespace CLI {
 

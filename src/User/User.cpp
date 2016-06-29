@@ -30,7 +30,7 @@
 
 #include "User.h"
 #include "../GD/GD.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 std::vector<unsigned char> User::generateWHIRLPOOL(const std::string& password, std::vector<unsigned char>& salt)
 {

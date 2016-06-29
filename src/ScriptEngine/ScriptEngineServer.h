@@ -34,7 +34,7 @@
 #include "php_config_fixes.h"
 #include "ScriptEngineProcess.h"
 #include "../RPC/RPCMethod.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>

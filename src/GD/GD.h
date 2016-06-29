@@ -38,7 +38,7 @@
 #include "../Licensing/LicensingController.h"
 #include "../Systems/FamilyController.h"
 #include "../Systems/DatabaseController.h"
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 #include "../RPC/Server.h"
 #include "../RPC/Client.h"
 
@@ -62,6 +62,7 @@ public:
 	static std::string workingDirectory;
 	static std::string executablePath;
 	static std::string executableFile;
+	static int64_t startingTime;
 	static std::unique_ptr<FamilyController> familyController;
 	static std::unique_ptr<LicensingController> licensingController;
 	//We can work with rpcServers without Mutex, because elements are never deleted and iterators are not invalidated upon insertion of new elements.
