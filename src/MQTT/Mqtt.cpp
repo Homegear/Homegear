@@ -589,6 +589,28 @@ void Mqtt::processPublish(std::vector<char>& data)
 			}
 			BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("setValue", parameters);
 		}
+		else if(parts.size() == 6 && parts.at(2) == "config")
+		{
+			uint64_t peerId = BaseLib::Math::getNumber(parts.at(3));
+			int32_t channel = BaseLib::Math::getNumber(parts.at(4));
+			GD::out.printInfo("Info: MQTT RPC call received. Method: putParamset");
+			BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
+			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
+			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));
+			BaseLib::PVariable value;
+			try
+			{
+				value = _jsonDecoder->decode(payload);
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what() + " Payload was: " + BaseLib::HelperFunctions::getHexString(payload));
+				return;
+			}
+			if(value) parameters->arrayValue->push_back(value);
+			BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("putParamset", parameters);
+		}
 		else if(parts.size() == 3 && parts.at(2) == "rpc")
 		{
 			BaseLib::PVariable result;

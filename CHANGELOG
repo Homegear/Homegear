@@ -10,3 +10,4 @@ Features:
 
 * HomeMatic BidCoS: Added option "processBroadcastWithAesEnabled" to enable broadcast packet reception with AES enabled.
 * Added parameter cast "invert", which inverts a boolean value.
+* Added topic "config" to MQTT to set configuration parameters more easily.

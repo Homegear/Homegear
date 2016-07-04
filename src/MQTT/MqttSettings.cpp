@@ -39,8 +39,8 @@ MqttSettings::MqttSettings()
 void MqttSettings::reset()
 {
 	_enabled = false;
-	_brokerHostname = "";
-	_brokerPort = "";
+	_brokerHostname = "localhost";
+	_brokerPort = "1883";
 	_homegearId = "";
 	_username = "";
 	_password = "";
