@@ -69,7 +69,7 @@ public:
 	void broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable);
 	void sendUnknownDevices(std::pair<std::string, std::string> address);
 	std::shared_ptr<RemoteRpcServer> addServer(std::pair<std::string, std::string> address, std::string path, std::string id);
-	std::shared_ptr<RemoteRpcServer> addWebSocketServer(std::shared_ptr<BaseLib::SocketOperations> socket, std::string clientId, std::string address);
+	std::shared_ptr<RemoteRpcServer> addWebSocketServer(std::shared_ptr<BaseLib::TcpSocket> socket, std::string clientId, std::string address);
 	void removeServer(std::pair<std::string, std::string> address);
 	void removeServer(int32_t uid);
 	std::shared_ptr<RemoteRpcServer> getServer(std::pair<std::string, std::string>);

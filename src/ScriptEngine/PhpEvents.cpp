@@ -102,10 +102,10 @@ std::shared_ptr<PhpEvents::EventData> PhpEvents::poll(int32_t timeout)
 	try
 	{
 		{
-			std::lock_guard<std::mutex> bufferGuard(_bufferMutex);
+			BaseLib::DisposableLockGuard bufferGuard(_bufferMutex);
 			if(_bufferHead == _bufferTail)
 			{
-				bufferGuard.~lock_guard();
+				bufferGuard.dispose();
 				if(timeout > 0)	_processingConditionVariable.wait_for(lock, std::chrono::milliseconds(timeout), [&]{ return _processingEntryAvailable; });
 				else _processingConditionVariable.wait(lock, [&]{ return _processingEntryAvailable; });
 			}

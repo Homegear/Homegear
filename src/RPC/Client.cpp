@@ -692,7 +692,7 @@ std::shared_ptr<RemoteRpcServer> Client::addServer(std::pair<std::string, std::s
     return std::shared_ptr<RemoteRpcServer>(new RemoteRpcServer(_client));
 }
 
-std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<BaseLib::SocketOperations> socket, std::string clientId, std::string address)
+std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<BaseLib::TcpSocket> socket, std::string clientId, std::string address)
 {
 	try
 	{
@@ -740,7 +740,7 @@ void Client::removeServer(std::pair<std::string, std::string> server)
 {
 	try
 	{
-		std::lock_guard<std::mutex> serversGuard(_serversMutex);
+		BaseLib::DisposableLockGuard serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::iterator i = _servers.begin(); i != _servers.end(); ++i)
 		{
 			if(i->second->address == server)
@@ -749,7 +749,7 @@ void Client::removeServer(std::pair<std::string, std::string> server)
 				i->second->removed = true;
 				std::shared_ptr<RemoteRpcServer> server = i->second;
 				_servers.erase(i);
-				serversGuard.~lock_guard();
+				serversGuard.dispose();
 				//Close waits for all read/write operations to finish and can therefore block. That's why we unlock the mutex first.
 				if(server->socket) server->socket->close();
 				return;

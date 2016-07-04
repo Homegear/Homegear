@@ -101,7 +101,7 @@ private:
 	MqttSettings _settings;
 	std::unique_ptr<BaseLib::RPC::JsonEncoder> _jsonEncoder;
 	std::unique_ptr<BaseLib::RPC::JsonDecoder> _jsonDecoder;
-	std::unique_ptr<BaseLib::SocketOperations> _socket;
+	std::unique_ptr<BaseLib::TcpSocket> _socket;
 	std::thread _pingThread;
 	std::thread _listenThread;
 	bool _reconnecting = false;
