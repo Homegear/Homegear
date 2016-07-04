@@ -222,7 +222,7 @@ void Client::systemListMethods(std::pair<std::string, std::string> address)
 	{
 		std::shared_ptr<RemoteRpcServer> server = getServer(address);
 		if(!server) return;
-		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable> { BaseLib::PVariable(new BaseLib::Variable(server->id)) });
+		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable> {});
 		BaseLib::PVariable result = _client->invoke(server, "system.listMethods", parameters);
 		if(result->errorStruct)
 		{
