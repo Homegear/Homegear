@@ -1,3 +1,9 @@
+05.07.2016
+
+Features:
+
+* Support for chunked JSON-RPC packets in RPC client when transfer-encoding is not set to chunked.
+
 04.07.2016
 
 Errors:
