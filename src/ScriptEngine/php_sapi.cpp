@@ -561,11 +561,20 @@ ZEND_FUNCTION(hg_get_script_id)
 ZEND_FUNCTION(hg_register_thread)
 {
 	if(_disposed) RETURN_FALSE;
-	char* pTokenPair = nullptr;
-	int tokenPairLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pTokenPair, &tokenPairLength) != SUCCESS) RETURN_FALSE;
+	int argc = 0;
+	zval* args = nullptr;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+	std::string tokenPairString;
+	if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::registerThread().");
+	else if(argc >= 1)
+	{
+		if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "stringId is not of type string.");
+		else
+		{
+			if(Z_STRLEN(args[0]) > 0) tokenPairString = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+		}
+	}
 	int32_t scriptId;
-	std::string tokenPairString(pTokenPair, tokenPairLength);
 	std::pair<std::string, std::string> tokenPair = BaseLib::HelperFunctions::splitFirst(tokenPairString, ',');
 	scriptId = BaseLib::Math::getNumber(tokenPair.first, false);
 	std::string token = tokenPair.second;
@@ -856,6 +865,7 @@ ZEND_FUNCTION(hg_set_value)
 
 ZEND_FUNCTION(hg_poll_event)
 {
+
 	if(_disposed) RETURN_NULL();
 	if(SEG(id) == 0)
 	{

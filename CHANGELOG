@@ -1,8 +1,15 @@
+06.07.2016
+
+Errors:
+
+* Fixed: SEGFAULT in PHP method Homegear::registerThread
+
 05.07.2016
 
 Features:
 
 * Support for chunked JSON-RPC packets in RPC client when transfer-encoding is not set to chunked.
+* Philips hue: Support for multiple hue bridges.
 
 04.07.2016
 
