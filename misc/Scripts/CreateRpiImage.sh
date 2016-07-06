@@ -35,8 +35,10 @@ fi
 echo "Creating image..."
 mkdir -p $buildenv
 image="${buildenv}/rpi_homegear_${deb_release}_${mydate}.img"
-dd if=/dev/zero of=$image bs=1MB count=1900
+dd if=/dev/zero of=$image bs=1MB count=2000
+[ $? -ne 0 ] && exit 1
 device=`losetup -f --show $image`
+[ $? -ne 0 ] && exit 1
 echo "Image $image Created and mounted as $device"
 
 fdisk $device << EOF
@@ -54,10 +56,16 @@ p
 
 w
 EOF
-
+sleep 1
 
 losetup -d $device
+[ $? -ne 0 ] && exit 1
+sleep 1
+
 device=`kpartx -va $image | sed -E 's/.*(loop[0-9])p.*/\1/g' | head -1`
+[ $? -ne 0 ] && exit 1
+sleep 1
+
 echo "--- kpartx device ${device}"
 device="/dev/mapper/${device}"
 bootp=${device}p1
@@ -67,16 +75,22 @@ mkfs.vfat $bootp
 mkfs.ext4 $rootp
 
 mkdir -p $rootfs
+[ $? -ne 0 ] && exit 1
 
 mount $rootp $rootfs
+[ $? -ne 0 ] && exit 1
 
 cd $rootfs
 debootstrap --no-check-gpg --foreign --arch=armhf $deb_release $rootfs $deb_local_mirror
+[ $? -ne 0 ] && exit 1
 
 cp /usr/bin/qemu-arm-static usr/bin/
+[ $? -ne 0 ] && exit 1
 LANG=C chroot $rootfs /debootstrap/debootstrap --second-stage
+[ $? -ne 0 ] && exit 1
 
 mount $bootp $bootfs
+[ $? -ne 0 ] && exit 1
 
 echo "deb $deb_local_mirror $deb_release main contrib non-free rpi
 " > etc/apt/sources.list
