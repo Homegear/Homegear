@@ -7,6 +7,7 @@ Errors:
 Features:
 
 * Added HelperFunctions::checkCliCommand to make it easier to analyze commands in family modules.
+* Sonos: New variable "PLAY_FADE".
 
 05.07.2016
 
