@@ -865,7 +865,6 @@ ZEND_FUNCTION(hg_set_value)
 
 ZEND_FUNCTION(hg_poll_event)
 {
-
 	if(_disposed) RETURN_NULL();
 	if(SEG(id) == 0)
 	{

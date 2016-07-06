@@ -972,7 +972,7 @@ std::string FamilyController::handleCliCommand(std::string& command)
 			_currentFamily.reset();
 			return "Device family unselected.\n";
 		}
-		else if((command.compare(0, 8, "families") || BaseLib::HelperFunctions::isShortCLICommand(command)) && _currentFamily)
+		else if((command.compare(0, 8, "families") || BaseLib::HelperFunctions::isShortCliCommand(command)) && _currentFamily)
 		{
 			std::string result = _currentFamily->handleCliCommand(command);
 			return result;

@@ -4,6 +4,10 @@ Errors:
 
 * Fixed: SEGFAULT in PHP method Homegear::registerThread
 
+Features:
+
+* Added HelperFunctions::checkCliCommand to make it easier to analyze commands in family modules.
+
 05.07.2016
 
 Features:

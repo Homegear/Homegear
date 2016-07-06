@@ -1325,9 +1325,9 @@ std::string Server::handleCommand(std::string& command)
 		if(response.empty())
 		{
 			//User commands can be executed when family is selected
-			if(command.compare(0, 5, "users") == 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'u' && !GD::familyController->familySelected())) response = handleUserCommand(command);
+			if(command.compare(0, 5, "users") == 0 || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'u' && !GD::familyController->familySelected())) response = handleUserCommand(command);
 			//Do not execute module commands when family is selected
-			else if((command.compare(0, 7, "modules") == 0 || (BaseLib::HelperFunctions::isShortCLICommand(command) && command.at(0) == 'm')) && !GD::familyController->familySelected()) response = handleModuleCommand(command);
+			else if((command.compare(0, 7, "modules") == 0 || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'm')) && !GD::familyController->familySelected()) response = handleModuleCommand(command);
 			else response = GD::familyController->handleCliCommand(command);
 		}
 		return response;
