@@ -300,62 +300,10 @@ insserv tmpfslog.sh
 echo \"Updating your system...\"
 apt update
 apt -y upgrade
-rm -f homegear*.deb
-rm -f libhomegear*.deb
-wget http://homegear.eu/downloads/nightlies/libhomegear-base_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear-homematicbidcos_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear-homematicwired_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear-insteon_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear-max_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear-philipshue_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear-sonos_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear-kodi_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear-beckhoff-bk90x0_current_raspbian_jessie_armhf.deb || exit 1
-
-dpkg -i libhomegear-base_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f libhomegear-base_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear-homematicbidcos_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear-homematicbidcos_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear-homematicwired_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear-homematicwired_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear-insteon_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear-insteon_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear-max_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear-max_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear-philipshue_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear-philipshue_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear-sonos_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear-sonos_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear-kodi_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear-kodi_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear-beckhoff-bk90x0_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear-beckhoff-bk90x0_current_raspbian_jessie_armhf.deb
-
+apt -y install homegear homegear-homematicbidcos homegear-homematicwired homegear-insteon homegear-max homegear-philipshue homegear-sonos homegear-kodi homegear-ipcam homegear-beckhoff-bk90x0
 service homegear stop" >> scripts/firstStart.sh
 if [ $OPENHAB -eq 1 ]; then
-  echo "apt-get -y install openhab-runtime openhab-addon-action-homematic openhab-addon-binding-homematic
+  echo "apt -y install openhab-runtime openhab-addon-action-homematic openhab-addon-binding-homematic
   apt-get -y -f install
   cp /etc/openhab/configurations/openhab_default.cfg /etc/openhab/configurations/openhab.cfg
   sed -i \"s/^# homematic:host=/homematic:host=127.0.0.1/\" /etc/openhab/configurations/openhab.cfg
