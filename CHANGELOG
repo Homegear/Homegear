@@ -3,11 +3,13 @@
 Errors:
 
 * Fixed: SEGFAULT in PHP method Homegear::registerThread
+* Fixed: MySQL wasn't working in PHP
 
 Features:
 
 * Added HelperFunctions::checkCliCommand to make it easier to analyze commands in family modules.
 * Sonos: New variable "PLAY_FADE".
+* Web page: Large peer IDs are now printed as hex numbers (thanks to thtomate)
 
 05.07.2016
 
