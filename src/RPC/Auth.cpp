@@ -35,10 +35,10 @@ namespace RPC
 {
 Auth::Auth()
 {
-	_socket =  std::shared_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl.get()));
+	_socket =  std::shared_ptr<BaseLib::TcpSocket>(new BaseLib::TcpSocket(GD::bl.get()));
 }
 
-Auth::Auth(std::shared_ptr<BaseLib::SocketOperations>& socket, std::vector<std::string>& validUsers)
+Auth::Auth(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<std::string>& validUsers)
 {
 	_socket = socket;
 	_validUsers = validUsers;
@@ -47,7 +47,7 @@ Auth::Auth(std::shared_ptr<BaseLib::SocketOperations>& socket, std::vector<std::
 	_jsonDecoder = std::shared_ptr<BaseLib::RPC::JsonDecoder>(new BaseLib::RPC::JsonDecoder(GD::bl.get()));
 }
 
-Auth::Auth(std::shared_ptr<BaseLib::SocketOperations>& socket, std::string userName, std::string password)
+Auth::Auth(std::shared_ptr<BaseLib::TcpSocket>& socket, std::string userName, std::string password)
 {
 	_socket = socket;
 	_userName = userName;

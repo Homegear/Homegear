@@ -612,7 +612,7 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 
 				try
 				{
-					http.process(buffer, receivedBytes, true); //Check for chunked packets (HomeMatic Manager, ioBroker). Necessary, because HTTP header does not contain transfer-encoding.
+					http.process(buffer, receivedBytes, !server->json, server->json); //Check for chunked packets (HomeMatic Manager, ioBroker). Necessary, because HTTP header does not contain transfer-encoding.
 				}
 				catch(BaseLib::HttpException& ex)
 				{

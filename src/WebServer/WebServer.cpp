@@ -17,7 +17,7 @@ WebServer::~WebServer()
 {
 }
 
-void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperations> socket)
+void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket)
 {
 	try
 	{
@@ -192,7 +192,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperatio
     }
 }
 
-void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::SocketOperations> socket)
+void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket)
 {
 	try
 	{
@@ -350,7 +350,7 @@ void WebServer::getError(int32_t code, std::string codeDescription, std::string 
     }
 }
 
-void WebServer::send(std::shared_ptr<BaseLib::SocketOperations>& socket, std::vector<char>& data)
+void WebServer::send(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<char>& data)
 {
 	try
 	{

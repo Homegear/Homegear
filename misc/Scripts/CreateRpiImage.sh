@@ -35,8 +35,10 @@ fi
 echo "Creating image..."
 mkdir -p $buildenv
 image="${buildenv}/rpi_homegear_${deb_release}_${mydate}.img"
-dd if=/dev/zero of=$image bs=1MB count=1900
+dd if=/dev/zero of=$image bs=1MB count=2000
+[ $? -ne 0 ] && exit 1
 device=`losetup -f --show $image`
+[ $? -ne 0 ] && exit 1
 echo "Image $image Created and mounted as $device"
 
 fdisk $device << EOF
@@ -54,10 +56,16 @@ p
 
 w
 EOF
-
+sleep 1
 
 losetup -d $device
+[ $? -ne 0 ] && exit 1
+sleep 1
+
 device=`kpartx -va $image | sed -E 's/.*(loop[0-9])p.*/\1/g' | head -1`
+[ $? -ne 0 ] && exit 1
+sleep 1
+
 echo "--- kpartx device ${device}"
 device="/dev/mapper/${device}"
 bootp=${device}p1
@@ -67,16 +75,22 @@ mkfs.vfat $bootp
 mkfs.ext4 $rootp
 
 mkdir -p $rootfs
+[ $? -ne 0 ] && exit 1
 
 mount $rootp $rootfs
+[ $? -ne 0 ] && exit 1
 
 cd $rootfs
 debootstrap --no-check-gpg --foreign --arch=armhf $deb_release $rootfs $deb_local_mirror
+[ $? -ne 0 ] && exit 1
 
 cp /usr/bin/qemu-arm-static usr/bin/
+[ $? -ne 0 ] && exit 1
 LANG=C chroot $rootfs /debootstrap/debootstrap --second-stage
+[ $? -ne 0 ] && exit 1
 
 mount $bootp $bootfs
+[ $? -ne 0 ] && exit 1
 
 echo "deb $deb_local_mirror $deb_release main contrib non-free rpi
 " > etc/apt/sources.list
@@ -247,6 +261,7 @@ case $1 in
         if [ -z "$(grep /var/log /proc/mounts)" ]; then
             echo "*** mounting /var/log"
             cp -Rpu /var/log/* $varlogSave
+            rm -f /var/log/*
             varlogsize=$(grep /var/log /etc/fstab|awk {'print $4'}|cut -d"=" -f2)
             [ -z "$varlogsize" ] && varlogsize="100M"
             mount -t tmpfs tmpfs /var/log -o defaults,size=$varlogsize
@@ -256,12 +271,14 @@ case $1 in
     ;;
     stop)
         echo "*** Stopping tmpfs file saving: varlog."
+        rm -f ${varlogSave}*
         cp -Rpu /var/log/* $varlogSave >/dev/null 2>&1
         sync
         umount -f /var/log/
     ;;
   reload)
     echo "*** Stopping tmpfs file saving: varlog."
+    	rm -f ${varlogSave}*
         cp -Rpu /var/log/* $varlogSave >/dev/null 2>&1
         sync
   ;;
@@ -297,62 +314,10 @@ insserv tmpfslog.sh
 echo \"Updating your system...\"
 apt update
 apt -y upgrade
-rm -f homegear*.deb
-rm -f libhomegear*.deb
-wget http://homegear.eu/downloads/nightlies/libhomegear-base_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear-homematicbidcos_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear-homematicwired_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear-insteon_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear-max_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear-philipshue_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear-sonos_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear-kodi_current_raspbian_jessie_armhf.deb || exit 1
-wget http://homegear.eu/downloads/nightlies/homegear-beckhoff-bk90x0_current_raspbian_jessie_armhf.deb || exit 1
-
-dpkg -i libhomegear-base_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f libhomegear-base_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear-homematicbidcos_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear-homematicbidcos_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear-homematicwired_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear-homematicwired_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear-insteon_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear-insteon_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear-max_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear-max_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear-philipshue_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear-philipshue_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear-sonos_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear-sonos_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear-kodi_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear-kodi_current_raspbian_jessie_armhf.deb
-
-dpkg -i homegear-beckhoff-bk90x0_current_raspbian_jessie_armhf.deb
-apt-get -y -f install
-rm -f homegear-beckhoff-bk90x0_current_raspbian_jessie_armhf.deb
-
+apt -y install homegear homegear-homematicbidcos homegear-homematicwired homegear-insteon homegear-max homegear-philipshue homegear-sonos homegear-kodi homegear-ipcam homegear-beckhoff-bk90x0
 service homegear stop" >> scripts/firstStart.sh
 if [ $OPENHAB -eq 1 ]; then
-  echo "apt-get -y install openhab-runtime openhab-addon-action-homematic openhab-addon-binding-homematic
+  echo "apt -y install openhab-runtime openhab-addon-action-homematic openhab-addon-binding-homematic
   apt-get -y -f install
   cp /etc/openhab/configurations/openhab_default.cfg /etc/openhab/configurations/openhab.cfg
   sed -i \"s/^# homematic:host=/homematic:host=127.0.0.1/\" /etc/openhab/configurations/openhab.cfg

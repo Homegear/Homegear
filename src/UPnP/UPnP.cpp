@@ -591,7 +591,7 @@ void UPnP::getSocketDescriptor()
 }
 
 // {{{ Webserver events
-	bool UPnP::onGet(BaseLib::Rpc::PServerInfo& serverInfo, BaseLib::Http& httpRequest, std::shared_ptr<BaseLib::SocketOperations>& socket, std::string& path)
+	bool UPnP::onGet(BaseLib::Rpc::PServerInfo& serverInfo, BaseLib::Http& httpRequest, std::shared_ptr<BaseLib::TcpSocket>& socket, std::string& path)
 	{
 		if(_stopServer) return false;
 		if(GD::bl->settings.enableUPnP() && path == "/description.xml")

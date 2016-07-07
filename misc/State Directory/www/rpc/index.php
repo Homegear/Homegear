@@ -63,7 +63,7 @@ foreach($devices as $value)
   echo "<tr>";
   echo "<td>".$info["NAME"]."</td>";
   echo "<td>".$familyNames[$value["FAMILY"]]."</td>";
-  echo "<td>".$value["ID"]."</td>";
+  echo "<td>".($value["ID"] > 999999 ? "0x".dechex($value["ID"]) : $value["ID"])."</td>";
   echo "<td>".$value["ADDRESS"]."</td>";
   echo "<td>".$value["TYPE"]."</td>";
   echo "<td>".$info["INTERFACE"]."</td>";

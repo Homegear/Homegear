@@ -34,7 +34,7 @@ Mqtt::Mqtt() : BaseLib::IQueue(GD::bl.get(), 1000)
 {
 	try
 	{
-		_socket.reset(new BaseLib::SocketOperations(GD::bl.get()));
+		_socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
 	}
 	catch(const std::exception& ex)
 	{
@@ -90,7 +90,7 @@ void Mqtt::start()
 		_out.setPrefix("MQTT Client: ");
 		_jsonEncoder = std::unique_ptr<BaseLib::RPC::JsonEncoder>(new BaseLib::RPC::JsonEncoder(GD::bl.get()));
 		_jsonDecoder = std::unique_ptr<BaseLib::RPC::JsonDecoder>(new BaseLib::RPC::JsonDecoder(GD::bl.get()));
-		_socket.reset(new BaseLib::SocketOperations(GD::bl.get(), _settings.brokerHostname(), _settings.brokerPort(), _settings.enableSSL(), _settings.caFile(), _settings.verifyCertificate(), _settings.certPath(), _settings.keyPath()));
+		_socket.reset(new BaseLib::TcpSocket(GD::bl.get(), _settings.brokerHostname(), _settings.brokerPort(), _settings.enableSSL(), _settings.caFile(), _settings.verifyCertificate(), _settings.certPath(), _settings.keyPath()));
 		GD::bl->threadManager.join(_listenThread);
 		GD::bl->threadManager.start(_listenThread, true, &Mqtt::listen, this);
 		connect();
@@ -123,7 +123,7 @@ void Mqtt::stop()
 		_reconnectThreadMutex.lock();
 		GD::bl->threadManager.join(_reconnectThread);
 		_reconnectThreadMutex.unlock();
-		_socket.reset(new BaseLib::SocketOperations(GD::bl.get()));
+		_socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
 	}
 	catch(const std::exception& ex)
 	{
@@ -588,6 +588,28 @@ void Mqtt::processPublish(std::vector<char>& data)
 				parameters->arrayValue->push_back(value->arrayValue->at(0));
 			}
 			BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("setValue", parameters);
+		}
+		else if(parts.size() == 6 && parts.at(2) == "config")
+		{
+			uint64_t peerId = BaseLib::Math::getNumber(parts.at(3));
+			int32_t channel = BaseLib::Math::getNumber(parts.at(4));
+			GD::out.printInfo("Info: MQTT RPC call received. Method: putParamset");
+			BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
+			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
+			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));
+			BaseLib::PVariable value;
+			try
+			{
+				value = _jsonDecoder->decode(payload);
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what() + " Payload was: " + BaseLib::HelperFunctions::getHexString(payload));
+				return;
+			}
+			if(value) parameters->arrayValue->push_back(value);
+			BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("putParamset", parameters);
 		}
 		else if(parts.size() == 3 && parts.at(2) == "rpc")
 		{

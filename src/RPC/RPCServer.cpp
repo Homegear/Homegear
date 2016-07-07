@@ -38,7 +38,7 @@ int32_t RPCServer::_currentClientID = 0;
 
 RPCServer::Client::Client()
 {
-	 socket = std::shared_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl.get()));
+	 socket = std::shared_ptr<BaseLib::TcpSocket>(new BaseLib::TcpSocket(GD::bl.get()));
 	 socketDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor());
 }
 
@@ -402,7 +402,7 @@ void RPCServer::mainThread()
 							continue;
 						}
 					}
-					client->socket = std::shared_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl.get(), client->socketDescriptor));
+					client->socket = std::shared_ptr<BaseLib::TcpSocket>(new BaseLib::TcpSocket(GD::bl.get(), client->socketDescriptor));
 					client->address = address;
 					client->port = port;
 
@@ -1076,7 +1076,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 					_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
 					GD::rpcClient->addWebSocketServer(client->socket, client->webSocketClientId, client->address);
 					client->socketDescriptor.reset(new BaseLib::FileDescriptor());
-					client->socket.reset(new BaseLib::SocketOperations(GD::bl.get()));
+					client->socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
 					client->closed = true;
 				}
 			}
@@ -1338,7 +1338,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 								_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
 								GD::rpcClient->addWebSocketServer(client->socket, client->webSocketClientId, client->address);
 								client->socketDescriptor.reset(new BaseLib::FileDescriptor());
-								client->socket.reset(new BaseLib::SocketOperations(GD::bl.get()));
+								client->socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
 								client->closed = true;
 								break;
 							}

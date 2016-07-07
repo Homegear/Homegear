@@ -51,8 +51,8 @@ class Auth
 {
 public:
 	Auth();
-	Auth(std::shared_ptr<BaseLib::SocketOperations>& socket, std::vector<std::string>& validUsers);
-	Auth(std::shared_ptr<BaseLib::SocketOperations>& socket, std::string userName, std::string password);
+	Auth(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<std::string>& validUsers);
+	Auth(std::shared_ptr<BaseLib::TcpSocket>& socket, std::string userName, std::string password);
 	virtual ~Auth() {}
 
 	bool initialized() { return _initialized; }
@@ -64,7 +64,7 @@ public:
 protected:
 	bool _initialized = false;
 	std::string _hostname;
-	std::shared_ptr<BaseLib::SocketOperations> _socket;
+	std::shared_ptr<BaseLib::TcpSocket> _socket;
 	std::string _basicAuthHTTPHeader;
 	std::vector<char> _basicUnauthBinaryHeader;
 	std::vector<char> _basicUnauthHTTPHeader;

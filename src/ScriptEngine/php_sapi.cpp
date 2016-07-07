@@ -561,11 +561,20 @@ ZEND_FUNCTION(hg_get_script_id)
 ZEND_FUNCTION(hg_register_thread)
 {
 	if(_disposed) RETURN_FALSE;
-	char* pTokenPair = nullptr;
-	int tokenPairLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pTokenPair, &tokenPairLength) != SUCCESS) RETURN_FALSE;
+	int argc = 0;
+	zval* args = nullptr;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+	std::string tokenPairString;
+	if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::registerThread().");
+	else if(argc >= 1)
+	{
+		if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "stringId is not of type string.");
+		else
+		{
+			if(Z_STRLEN(args[0]) > 0) tokenPairString = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+		}
+	}
 	int32_t scriptId;
-	std::string tokenPairString(pTokenPair, tokenPairLength);
 	std::pair<std::string, std::string> tokenPair = BaseLib::HelperFunctions::splitFirst(tokenPairString, ',');
 	scriptId = BaseLib::Math::getNumber(tokenPair.first, false);
 	std::string token = tokenPair.second;
@@ -875,11 +884,11 @@ ZEND_FUNCTION(hg_poll_event)
 
 	std::shared_ptr<PhpEvents> phpEvents;
 	{
-		std::lock_guard<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
+		BaseLib::DisposableLockGuard eventsMapGuard(PhpEvents::eventsMapMutex);
 		std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(SEG(id));
 		if(eventsIterator == PhpEvents::eventsMap.end())
 		{
-			eventsMapGuard.~lock_guard();
+			eventsMapGuard.dispose();
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
@@ -962,11 +971,11 @@ ZEND_FUNCTION(hg_subscribe_peer)
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &peerId) != SUCCESS) RETURN_NULL();
 	std::shared_ptr<PhpEvents> phpEvents;
 	{
-		std::lock_guard<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
+		BaseLib::DisposableLockGuard eventsMapGuard(PhpEvents::eventsMapMutex);
 		std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(SEG(id));
 		if(eventsIterator == PhpEvents::eventsMap.end())
 		{
-			eventsMapGuard.~lock_guard();
+			eventsMapGuard.dispose();
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
@@ -988,11 +997,11 @@ ZEND_FUNCTION(hg_unsubscribe_peer)
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &peerId) != SUCCESS) RETURN_NULL();
 	std::shared_ptr<PhpEvents> phpEvents;
 	{
-		std::lock_guard<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
+		BaseLib::DisposableLockGuard eventsMapGuard(PhpEvents::eventsMapMutex);
 		std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(SEG(id));
 		if(eventsIterator == PhpEvents::eventsMap.end())
 		{
-			eventsMapGuard.~lock_guard();
+			eventsMapGuard.dispose();
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
 			RETURN_FALSE
 		}

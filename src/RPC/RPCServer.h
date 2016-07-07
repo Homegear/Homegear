@@ -56,7 +56,7 @@ namespace RPC
 				bool webSocketAuthorized = false;
 				std::thread readThread;
 				std::shared_ptr<BaseLib::FileDescriptor> socketDescriptor;
-				std::shared_ptr<BaseLib::SocketOperations> socket;
+				std::shared_ptr<BaseLib::TcpSocket> socket;
 				Auth auth;
 
 				Client();

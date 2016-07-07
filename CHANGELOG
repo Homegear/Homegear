@@ -1,0 +1,33 @@
+06.07.2016
+
+Errors:
+
+* Fixed: SEGFAULT in PHP method Homegear::registerThread
+* Fixed: MySQL wasn't working in PHP
+
+Features:
+
+* Added HelperFunctions::checkCliCommand to make it easier to analyze commands in family modules.
+* Sonos: New variable "PLAY_FADE".
+* Web page: Large peer IDs are now printed as hex numbers (thanks to thtomate)
+
+05.07.2016
+
+Features:
+
+* Support for chunked JSON-RPC packets in RPC client when transfer-encoding is not set to chunked.
+* Philips hue: Support for multiple hue bridges.
+
+04.07.2016
+
+Errors:
+
+* Fixed (#255): Error in determination of last channel index on packet reception in most device families.
+* Fixed (#253): SEGFAULT after closing XML-RPC connection => Removed all calls to lock_guard destructor and added class DisposableLockGuard.
+* Fixed (#256): Removed argument from Homegear's call of "system.listMethods" on RPC event servers.
+
+Features:
+
+* HomeMatic BidCoS: Added option "processBroadcastWithAesEnabled" to enable broadcast packet reception with AES enabled.
+* Added parameter cast "invert", which inverts a boolean value.
+* Added topic "config" to MQTT to set configuration parameters more easily.
