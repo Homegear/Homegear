@@ -4,6 +4,7 @@ Features:
 
 * Added ANSI converter
 * Strings from HomeMatic CCU are now converted from ANSI to UTF-8
+* Sonos: Added variables "ADD_SPEAKER_BY_SERIAL" and "REMOVE_SPEAKER_BY_SERIAL" to link speakers.
 
 07.07.2016
 

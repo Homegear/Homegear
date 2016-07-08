@@ -61,11 +61,6 @@
 
 #include <gcrypt.h>
 
-//Temp
-#include <codecvt>
-#include <locale>
-//Temp
-
 void startMainProcess();
 void startUp();
 
