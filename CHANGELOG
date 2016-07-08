@@ -1,3 +1,16 @@
+08.07.2016
+
+Features:
+
+* Added ANSI converter
+* Strings from HomeMatic CCU are now converted from ANSI to UTF-8
+
+07.07.2016
+
+Features:
+
+* Sonos: Added variables "ADD_SPEAKER" and "REMOVE_SPEAKER" to link speakers more easily and "IS_MASTER" to find out if a speaker is the master of a group or not.
+
 06.07.2016
 
 Errors:

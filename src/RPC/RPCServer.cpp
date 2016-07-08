@@ -53,6 +53,7 @@ RPCServer::RPCServer()
 	_out.init(GD::bl.get());
 
 	_rpcDecoder = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get()));
+	_rpcDecoderAnsi = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get(), true));
 	_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
 	_xmlRpcDecoder = std::unique_ptr<BaseLib::RPC::XMLRPCDecoder>(new BaseLib::RPC::XMLRPCDecoder(GD::bl.get()));
 	_xmlRpcEncoder = std::unique_ptr<BaseLib::RPC::XMLRPCEncoder>(new BaseLib::RPC::XMLRPCEncoder(GD::bl.get()));
@@ -527,7 +528,8 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& pa
 		if(packetType == PacketType::Enum::binaryRequest)
 		{
 			client->binaryRpc = true;
-			parameters = _rpcDecoder->decodeRequest(packet, methodName);
+			if(client->type == BaseLib::RpcClientType::ccu2) parameters = _rpcDecoderAnsi->decodeRequest(packet, methodName);
+			else parameters = _rpcDecoder->decodeRequest(packet, methodName);
 		}
 		else if(packetType == PacketType::Enum::xmlRequest)
 		{
@@ -716,20 +718,6 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 			}
 			return;
 		}
-		else if(methodName == "init" && parameters->size() >= 2)
-		{
-			client->initUrl = parameters->at(0)->stringValue;
-			client->initInterfaceId = parameters->at(1)->stringValue;
-			if(parameters->size() >= 3)
-			{
-				int32_t flags = parameters->at(2)->integerValue;
-				client->initKeepAlive = flags & 1;
-				client->initBinaryMode = flags & 2;
-				client->initNewFormat = flags & 4;
-				client->initSubscribePeers = flags & 8;
-				client->initJsonMode = flags & 0x10;
-			}
-		}
 
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
@@ -791,7 +779,11 @@ void RPCServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<c
 	{
 		if(_stopped) return;
 		BaseLib::PVariable response;
-		if(packetType == PacketType::Enum::binaryResponse) response = _rpcDecoder->decodeResponse(packet);
+		if(packetType == PacketType::Enum::binaryResponse)
+		{
+			if(client->type == BaseLib::RpcClientType::ccu2) response = _rpcDecoderAnsi->decodeResponse(packet);
+			else response = _rpcDecoder->decodeResponse(packet);
+		}
 		else if(packetType == PacketType::Enum::xmlResponse) response = _xmlRpcDecoder->decodeResponse(packet);
 		if(!response) return;
 		if(GD::bl->debugLevel >= 3)

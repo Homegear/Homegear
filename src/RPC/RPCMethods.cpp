@@ -2362,6 +2362,36 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, std::shar
 			if(server.first.compare(0, 6, "binary") == 0 ||
 			   server.first.compare(0, 7, "binarys") == 0 ||
 			   server.first.compare(0, 10, "xmlrpc_bin") == 0) eventServer->binary = true;
+
+			// {{{ Reconnect on CCU2 as it doesn't reconnect automatically
+				if((parameters->at(1)->stringValue.size() == 4 && BaseLib::Math::isNumber(parameters->at(1)->stringValue, false) && server.second == "1999") || parameters->at(1)->stringValue == "Homegear_java")
+				{
+					clientInfo->type = BaseLib::RpcClientType::ccu2;
+					eventServer->reconnectInfinitely = true;
+				}
+			// }}}
+			// {{{ Keep connection to IP-Symcon
+				if(parameters->at(1)->stringValue == "IPS")
+				{
+					clientInfo->type = BaseLib::RpcClientType::ipsymcon;
+					eventServer->reconnectInfinitely = true;
+				}
+			// }}}
+
+			clientInfo->initUrl = parameters->at(0)->stringValue;
+			clientInfo->initInterfaceId = parameters->at(1)->stringValue;
+
+			if(parameters->size() >= 3)
+			{
+				int32_t flags = parameters->at(2)->integerValue;
+				clientInfo->initKeepAlive = flags & 1;
+				clientInfo->initBinaryMode = flags & 2;
+				clientInfo->initNewFormat = flags & 4;
+				clientInfo->initSubscribePeers = flags & 8;
+				clientInfo->initJsonMode = flags & 0x10;
+			}
+
+			eventServer->type = clientInfo->type;
 			if(parameters->size() > 2)
 			{
 				eventServer->keepAlive = (parameters->at(2)->integerValue & 1);
@@ -2371,12 +2401,6 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, std::shar
 				eventServer->json = (parameters->at(2)->integerValue & 16);
 				eventServer->reconnectInfinitely = (parameters->at(2)->integerValue & 128);
 			}
-			// {{{ Reconnect on CCU2 as it doesn't reconnect automatically
-			if((parameters->at(1)->stringValue.size() == 4 && BaseLib::Math::isNumber(parameters->at(1)->stringValue, false) && server.second == "1999") || parameters->at(1)->stringValue == "Homegear_java") eventServer->reconnectInfinitely = true;
-			// }}}
-			// {{{ Keep connection to IP-Symcon
-			if(server.second == "5544" && parameters->at(1)->stringValue == "IPS") eventServer->reconnectInfinitely = true;
-			// }}}
 
 			_initServerThreadMutex.lock();
 			try
@@ -3466,6 +3490,7 @@ BaseLib::PVariable RPCSetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, st
 
 		if(parameters->at(1)->stringValue == "NAME")
 		{
+			std::cerr << BaseLib::HelperFunctions::getHexString(parameters->at(2)->stringValue.c_str()) << std::endl;
 			peer->setName(parameters->at(2)->stringValue);
 			return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 		}

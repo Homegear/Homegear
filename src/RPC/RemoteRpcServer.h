@@ -68,6 +68,7 @@ public:
 	std::pair<std::string, std::string> address;
 	std::string path;
 	std::string id;
+	BaseLib::RpcClientType type = BaseLib::RpcClientType::generic;
 	int32_t uid = -1;
 	std::shared_ptr<std::set<uint64_t>> knownDevices;
 	std::map<std::string, bool> knownMethods;

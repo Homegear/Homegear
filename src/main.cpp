@@ -38,7 +38,6 @@
 #include "UPnP/UPnP.h"
 #include "MQTT/Mqtt.h"
 #include <homegear-base/BaseLib.h>
-#include "homegear-base/HelperFunctions/HelperFunctions.h"
 #include "../config.h"
 
 #include <readline/readline.h>
@@ -61,6 +60,11 @@
 #include <algorithm>
 
 #include <gcrypt.h>
+
+//Temp
+#include <codecvt>
+#include <locale>
+//Temp
 
 void startMainProcess();
 void startUp();
