@@ -410,7 +410,7 @@ void RPCServer::mainThread()
 #ifdef CCU2
 					if(client->address == "127.0.0.1")
 					{
-						client->type == BaseLib::RpcClientType::ccu2;
+						client->clientType = BaseLib::RpcClientType::ccu2;
 						_out.printInfo("Info: Client type set to \"CCU2\".");
 					}
 #endif
