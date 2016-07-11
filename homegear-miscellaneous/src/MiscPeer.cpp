@@ -243,12 +243,13 @@ void MiscPeer::scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, in
 	try
 	{
 		_scriptRunning = false;
-		if(!_shuttingDown && !GD::bl->shuttingDown)
+		if(!_shuttingDown && !GD::bl->shuttingDown && !deleting)
 		{
 			GD::out.printError("Error: Script of peer " + std::to_string(_peerID) + " was killed. Restarting in 10 seconds...");
 			_bl->threadManager.join(_runProgramThread);
 			_bl->threadManager.start(_runProgramThread, true, &MiscPeer::runScript, this, true);
 		}
+		else if(deleting) GD::out.printInfo("Info: Script of peer " + std::to_string(_peerID) + " finished.");
 	}
 	catch(const std::exception& ex)
 	{

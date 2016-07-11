@@ -535,18 +535,18 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& pa
 		std::shared_ptr<std::vector<BaseLib::PVariable>> parameters;
 		if(packetType == PacketType::Enum::binaryRequest)
 		{
-			client->rpcType = BaseLib::RpcType::binary;
+			if(client->rpcType == BaseLib::RpcType::unknown) client->rpcType = BaseLib::RpcType::binary;
 			if(client->clientType == BaseLib::RpcClientType::ccu2) parameters = _rpcDecoderAnsi->decodeRequest(packet, methodName);
 			else parameters = _rpcDecoder->decodeRequest(packet, methodName);
 		}
 		else if(packetType == PacketType::Enum::xmlRequest)
 		{
-			client->rpcType = BaseLib::RpcType::xml;
+			if(client->rpcType == BaseLib::RpcType::unknown) client->rpcType = BaseLib::RpcType::xml;
 			parameters = _xmlRpcDecoder->decodeRequest(packet, methodName);
 		}
 		else if(packetType == PacketType::Enum::jsonRequest || packetType == PacketType::Enum::webSocketRequest)
 		{
-			client->rpcType = BaseLib::RpcType::json;
+			if(client->rpcType == BaseLib::RpcType::unknown) client->rpcType = BaseLib::RpcType::json;
 			BaseLib::PVariable result = _jsonDecoder->decode(packet);
 			if(result->type == BaseLib::VariableType::tStruct)
 			{
