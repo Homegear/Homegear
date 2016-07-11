@@ -407,6 +407,14 @@ void RPCServer::mainThread()
 					client->address = address;
 					client->port = port;
 
+#ifdef CCU2
+					if(client->address == "127.0.0.1")
+					{
+						client->type == BaseLib::RpcClientType::ccu2;
+						_out.printInfo("Info: Client type set to \"CCU2\".");
+					}
+#endif
+
 					GD::bl->threadManager.start(client->readThread, false, _threadPriority, _threadPolicy, &RPCServer::readClient, this, client);
 				}
 				catch(const std::exception& ex)
@@ -489,7 +497,7 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::vec
 		{
 			//Sleep a tiny little bit. Some clients like the linux version of IP-Symcon don't accept responses too fast.
 			std::this_thread::sleep_for(std::chrono::milliseconds(2));
-			if(!keepAlive || !client->binaryRpc) std::this_thread::sleep_for(std::chrono::milliseconds(20)); //Add additional time for XMLRPC requests. Otherwise clients might not receive response.
+			if(!keepAlive || client->rpcType != BaseLib::RpcType::binary) std::this_thread::sleep_for(std::chrono::milliseconds(20)); //Add additional time for XMLRPC requests. Otherwise clients might not receive response.
 			client->socket->proofwrite(data);
 		}
 		catch(BaseLib::SocketDataLimitException& ex)
@@ -527,18 +535,18 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& pa
 		std::shared_ptr<std::vector<BaseLib::PVariable>> parameters;
 		if(packetType == PacketType::Enum::binaryRequest)
 		{
-			client->binaryRpc = true;
-			if(client->type == BaseLib::RpcClientType::ccu2) parameters = _rpcDecoderAnsi->decodeRequest(packet, methodName);
+			client->rpcType = BaseLib::RpcType::binary;
+			if(client->clientType == BaseLib::RpcClientType::ccu2) parameters = _rpcDecoderAnsi->decodeRequest(packet, methodName);
 			else parameters = _rpcDecoder->decodeRequest(packet, methodName);
 		}
 		else if(packetType == PacketType::Enum::xmlRequest)
 		{
-			client->xmlRpc = true;
+			client->rpcType = BaseLib::RpcType::xml;
 			parameters = _xmlRpcDecoder->decodeRequest(packet, methodName);
 		}
 		else if(packetType == PacketType::Enum::jsonRequest || packetType == PacketType::Enum::webSocketRequest)
 		{
-			client->jsonRpc = true;
+			client->rpcType = BaseLib::RpcType::json;
 			BaseLib::PVariable result = _jsonDecoder->decode(packet);
 			if(result->type == BaseLib::VariableType::tStruct)
 			{
@@ -731,7 +739,7 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 		_lifetick2Mutex.unlock();
 		if(GD::bl->debugLevel >= 4)
 		{
-			_out.printInfo("Info: Client number " + std::to_string(client->socketDescriptor->id) + (client->type == BaseLib::RpcClientType::ccu2 ? " (CCU2)" : "") +  + (client->type == BaseLib::RpcClientType::ipsymcon ? " (IP-Symcon)" : "") + " is calling RPC method: " + methodName + " Parameters:");
+			_out.printInfo("Info: Client number " + std::to_string(client->socketDescriptor->id) + (client->clientType == BaseLib::RpcClientType::ccu2 ? " (CCU2)" : "") + (client->clientType == BaseLib::RpcClientType::ipsymcon ? " (IP-Symcon)" : "") + " is calling RPC method: " + methodName + " (" + std::to_string((int32_t)(client->rpcType)) + ") Parameters:");
 			for(std::vector<BaseLib::PVariable>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 			{
 				(*i)->print(true, false);
@@ -781,7 +789,7 @@ void RPCServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<c
 		BaseLib::PVariable response;
 		if(packetType == PacketType::Enum::binaryResponse)
 		{
-			if(client->type == BaseLib::RpcClientType::ccu2) response = _rpcDecoderAnsi->decodeResponse(packet);
+			if(client->clientType == BaseLib::RpcClientType::ccu2) response = _rpcDecoderAnsi->decodeResponse(packet);
 			else response = _rpcDecoder->decodeResponse(packet);
 		}
 		else if(packetType == PacketType::Enum::xmlResponse) response = _xmlRpcDecoder->decodeResponse(packet);
@@ -1033,7 +1041,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 
 			if(protocol == "server" || pathProtocol == "server")
 			{
-				client->webSocket = true;
+				client->rpcType = BaseLib::RpcType::websocket;
 				client->initJsonMode = true;
 				client->initKeepAlive = true;
 				client->initNewFormat = true;
@@ -1051,7 +1059,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 			}
 			else if(protocol == "client" || pathProtocol == "client")
 			{
-				client->webSocket = true;
+				client->rpcType = BaseLib::RpcType::websocket;
 				client->webSocketClient = true;
 				std::string header;
 				header.reserve(133 + websocketAccept.size());
@@ -1250,7 +1258,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
 					}
 				}
-				else if(client->webSocket)
+				else if(client->rpcType == BaseLib::RpcType::websocket)
 				{
 					packetType = PacketType::Enum::webSocketRequest;
 					webSocket.reset();
@@ -1260,7 +1268,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			else if(http.headerProcessingStarted() || webSocket.dataProcessingStarted())
 			{
 				buffer[bytesRead] = '\0';
-				if(client->webSocket) webSocket.process(buffer, bytesRead);
+				if(client->rpcType == BaseLib::RpcType::websocket) webSocket.process(buffer, bytesRead);
 				else
 				{
 					try
@@ -1290,7 +1298,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				_out.printError("Error: Uninterpretable packet received. Closing connection. Packet was: " + std::string(buffer, bytesRead));
 				break;
 			}
-			if(client->webSocket && webSocket.isFinished())
+			if(client->rpcType == BaseLib::RpcType::websocket && webSocket.isFinished())
 			{
 				if(webSocket.getHeader().close)
 				{
@@ -1404,7 +1412,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				}
 			}
 		}
-		if(client->webSocket) //Send close packet
+		if(client->rpcType == BaseLib::RpcType::websocket) //Send close packet
 		{
 			std::vector<char> payload;
 			std::vector<char> response;

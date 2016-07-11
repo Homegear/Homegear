@@ -2366,14 +2366,14 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, std::shar
 			// {{{ Reconnect on CCU2 as it doesn't reconnect automatically
 				if((parameters->at(1)->stringValue.size() == 4 && BaseLib::Math::isNumber(parameters->at(1)->stringValue, false) && server.second == "1999") || parameters->at(1)->stringValue == "Homegear_java")
 				{
-					clientInfo->type = BaseLib::RpcClientType::ccu2;
+					clientInfo->clientType = BaseLib::RpcClientType::ccu2;
 					eventServer->reconnectInfinitely = true;
 				}
 			// }}}
 			// {{{ Keep connection to IP-Symcon
 				if(parameters->at(1)->stringValue == "IPS")
 				{
-					clientInfo->type = BaseLib::RpcClientType::ipsymcon;
+					clientInfo->clientType = BaseLib::RpcClientType::ipsymcon;
 					eventServer->reconnectInfinitely = true;
 				}
 			// }}}
@@ -2391,7 +2391,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, std::shar
 				clientInfo->initJsonMode = flags & 0x10;
 			}
 
-			eventServer->type = clientInfo->type;
+			eventServer->type = clientInfo->clientType;
 			if(parameters->size() > 2)
 			{
 				eventServer->keepAlive = (parameters->at(2)->integerValue & 1);
