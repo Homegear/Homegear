@@ -610,11 +610,8 @@ bool MiscPeer::getAllValuesHook2(PRpcClientInfo clientInfo, PParameter parameter
 {
 	try
 	{
-		if(channel == 1)
-		{
-			if(parameter->id == "IP_ADDRESS") parameter->convertToPacket(PVariable(new Variable(_ip)), valuesCentral[channel][parameter->id].data);
-			else if(parameter->id == "PEER_ID") parameter->convertToPacket(PVariable(new Variable((int32_t)_peerID)), valuesCentral[channel][parameter->id].data);
-		}
+		if(parameter->id == "IP_ADDRESS") parameter->convertToPacket(PVariable(new Variable(_ip)), valuesCentral[channel][parameter->id].data);
+		else if(parameter->id == "PEER_ID") parameter->convertToPacket(PVariable(new Variable((int32_t)_peerID)), valuesCentral[channel][parameter->id].data);
 	}
 	catch(const std::exception& ex)
     {
@@ -635,11 +632,8 @@ bool MiscPeer::getParamsetHook2(PRpcClientInfo clientInfo, PParameter parameter,
 {
 	try
 	{
-		if(channel == 1)
-		{
-			if(parameter->id == "IP_ADDRESS") parameter->convertToPacket(PVariable(new Variable(_ip)), valuesCentral[channel][parameter->id].data);
-			else if(parameter->id == "PEER_ID") parameter->convertToPacket(PVariable(new Variable((int32_t)_peerID)), valuesCentral[channel][parameter->id].data);
-		}
+		if(parameter->id == "IP_ADDRESS") parameter->convertToPacket(PVariable(new Variable(_ip)), valuesCentral[channel][parameter->id].data);
+		else if(parameter->id == "PEER_ID") parameter->convertToPacket(PVariable(new Variable((int32_t)_peerID)), valuesCentral[channel][parameter->id].data);
 	}
 	catch(const std::exception& ex)
     {
