@@ -656,6 +656,7 @@ PVariable MiscPeer::getParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
 				if(!i->second->readable) continue;
 				if(valuesCentral.find(channel) == valuesCentral.end()) continue;
 				if(valuesCentral[channel].find(i->second->id) == valuesCentral[channel].end()) continue;
+				if(getParamsetHook2(clientInfo, i->second, channel, variables)) continue;
 				element = i->second->convertFromPacket(valuesCentral[channel][i->second->id].data);
 			}
 			else if(type == ParameterGroup::Type::Enum::config)
