@@ -731,7 +731,7 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 		_lifetick2Mutex.unlock();
 		if(GD::bl->debugLevel >= 4)
 		{
-			_out.printInfo("Info: Client number " + std::to_string(client->socketDescriptor->id) + " is calling RPC method: " + methodName + " Parameters:");
+			_out.printInfo("Info: Client number " + std::to_string(client->socketDescriptor->id) + (client->type == BaseLib::RpcClientType::ccu2 ? " (CCU2)" : "") +  + (client->type == BaseLib::RpcClientType::ipsymcon ? " (IP-Symcon)" : "") + " is calling RPC method: " + methodName + " Parameters:");
 			for(std::vector<BaseLib::PVariable>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 			{
 				(*i)->print(true, false);
