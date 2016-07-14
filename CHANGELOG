@@ -1,3 +1,12 @@
+14.07.2016
+
+Features:
+
+* Added support for family and interface settings in database
+	* Settings can be saved and read from database now
+* Philips hue: Login data is now stored in database
+* Philips hue: Added parameters TRANSITION_TIME, FAST_STATE and FAST_BRIGHTNESS
+
 08.07.2016
 
 Features:
