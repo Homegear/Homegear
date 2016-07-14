@@ -710,6 +710,29 @@ void startUp()
 			}
 		}
 
+		GD::bl->db->init();
+    	GD::bl->db->open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".bak");
+    	if(!GD::bl->db->isOpen()) exitHomegear(1);
+
+        GD::out.printInfo("Initializing database...");
+        if(GD::bl->db->convertDatabase()) exitHomegear(0);
+        GD::bl->db->initializeDatabase();
+
+        std::string currentPath = GD::bl->settings.databasePath().substr(0, GD::bl->settings.databasePath().find_last_of('/') + 1);
+		if(!currentPath.empty() && !GD::runAsUser.empty() && !GD::runAsGroup.empty())
+		{
+			uid_t userId = GD::bl->hf.userId(GD::runAsUser);
+			gid_t groupId = GD::bl->hf.groupId(GD::runAsGroup);
+			std::vector<std::string> files = GD::bl->io.getFiles(currentPath, false);
+			for(std::vector<std::string>::iterator k = files.begin(); k != files.end(); ++k)
+			{
+				if((*k).compare(0, 6, "db.sql") != 0) continue;
+				std::string file = currentPath + *k;
+				if(chmod(currentPath.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) == -1) std::cerr << "Could not set permissions on " << file << std::endl;
+				if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << file << std::endl;
+			}
+		}
+
     	GD::licensingController->loadModules();
 
 		GD::familyController->loadModules();
@@ -723,7 +746,7 @@ void startUp()
 				GD::out.printCritical("Could not drop privileges. User name or group name is not valid.");
 				exitHomegear(1);
 			}
-			GD::out.printInfo("Info: Settings up physical interfaces and GPIOs...");
+			GD::out.printInfo("Info: Setting up physical interfaces and GPIOs...");
 			if(GD::familyController) GD::familyController->physicalInterfaceSetup(userId, groupId);
 			BaseLib::Gpio gpio(GD::bl.get());
 			gpio.setup(userId, groupId);
@@ -816,14 +839,6 @@ void startUp()
 			GD::out.printWarning("Warning: Time is in the past. Waiting for NTP to set the time...");
 			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 		}
-
-		GD::bl->db->init();
-    	GD::bl->db->open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".bak");
-    	if(!GD::bl->db->isOpen()) exitHomegear(1);
-
-        GD::out.printInfo("Initializing database...");
-        if(GD::bl->db->convertDatabase()) exitHomegear(0);
-        GD::bl->db->initializeDatabase();
 
         #ifdef EVENTHANDLER
 		GD::eventHandler.reset(new EventHandler());
@@ -1175,13 +1190,18 @@ int main(int argc, char* argv[])
     			GD::bl->settings.load(GD::configPath + "main.conf");
     			if(GD::runAsUser.empty()) GD::runAsUser = GD::bl->settings.runAsUser();
 				if(GD::runAsGroup.empty()) GD::runAsGroup = GD::bl->settings.runAsGroup();
-				uid_t userId = GD::bl->hf.userId(GD::runAsUser);
-				gid_t groupId = GD::bl->hf.groupId(GD::runAsGroup);
 				if((!GD::runAsUser.empty() && GD::runAsGroup.empty()) || (!GD::runAsGroup.empty() && GD::runAsUser.empty()))
 				{
 					GD::out.printCritical("Critical: You only provided a user OR a group for Homegear to run as. Please specify both.");
 					exit(1);
 				}
+				if(GD::runAsUser.empty() || GD::runAsGroup.empty())
+				{
+					GD::out.printInfo("Info: Not setting permissions as user and group are not specified.");
+					exit(0);
+				}
+				uid_t userId = GD::bl->hf.userId(GD::runAsUser);
+				gid_t groupId = GD::bl->hf.groupId(GD::runAsGroup);
 				std::string currentPath;
     			if(!GD::pidfilePath.empty() && GD::pidfilePath.find('/') != std::string::npos)
     			{

@@ -93,6 +93,8 @@ void DatabaseController::initializeDatabase()
 	{
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS homegearVariables (variableID INTEGER PRIMARY KEY UNIQUE, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS homegearVariablesIndex ON homegearVariables (variableID, variableIndex)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS familyVariables (variableID INTEGER PRIMARY KEY UNIQUE, familyID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, variableName TEXT, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS familyVariablesIndex ON familyVariables (variableID, familyID, variableIndex, variableName)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS peers (peerID INTEGER PRIMARY KEY UNIQUE, parent INTEGER NOT NULL, address INTEGER NOT NULL, serialNumber TEXT NOT NULL, type INTEGER NOT NULL)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS peersIndex ON peers (peerID, parent, address, serialNumber, type)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS peerVariables (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
@@ -1119,6 +1121,132 @@ void DatabaseController::deleteEvent(std::string& name)
 }
 //End events
 
+// {{{ Family
+	void DatabaseController::deleteFamily(int32_t familyId)
+	{
+		BaseLib::Database::DataRow data;
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(familyId)));
+		bufferedWrite("DELETE FROM familyVariables WHERE familyID=?", data);
+	}
+
+	void DatabaseController::saveFamilyVariableAsynchronous(int32_t familyId, BaseLib::Database::DataRow& data)
+	{
+		try
+		{
+			if(data.size() == 2)
+			{
+				if(data.at(1)->intValue == 0)
+				{
+					GD::out.printError("Error: Could not save family variable. Variable ID is \"0\".");
+					return ;
+				}
+				switch(data.at(0)->dataType)
+				{
+					case BaseLib::Database::DataColumn::DataType::INTEGER:
+						bufferedWrite("UPDATE familyVariables SET integerValue=? WHERE variableID=?", data);
+						break;
+					case BaseLib::Database::DataColumn::DataType::TEXT:
+						bufferedWrite("UPDATE familyVariables SET stringValue=? WHERE variableID=?", data);
+						break;
+					case BaseLib::Database::DataColumn::DataType::BLOB:
+						bufferedWrite("UPDATE familyVariables SET binaryValue=? WHERE variableID=?", data);
+						break;
+					case BaseLib::Database::DataColumn::DataType::NODATA:
+						GD::out.printError("Error: Tried to store data of type NODATA in family variable table.");
+						break;
+					case BaseLib::Database::DataColumn::DataType::FLOAT:
+						GD::out.printError("Error: Tried to store data of type FLOAT in family variable table.");
+						break;
+				}
+			}
+			else
+			{
+				if(data.size() == 9)
+				{
+					bufferedWrite("INSERT OR REPLACE INTO familyVariables (variableID, familyID, variableIndex, variableName, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM familyVariables WHERE familyID=? AND variableIndex=? AND variableName=?), ?, ?, ?, ?, ?, ?)", data);
+				}
+				else if(data.size() == 7 && data.at(0)->intValue != 0)
+				{
+					bufferedWrite("REPLACE INTO familyVariables VALUES(?, ?, ?, ?, ?, ?, ?)", data);
+				}
+				else GD::out.printError("Error: Either variableID is 0 or the number of columns is invalid.");
+			}
+		}
+		catch(const std::exception& ex)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(BaseLib::Exception& ex)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+	}
+
+	std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getFamilyVariables(int32_t familyId)
+	{
+		try
+		{
+			BaseLib::Database::DataRow data;
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(familyId)));
+			std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM familyVariables WHERE familyID=?", data);
+			return result;
+		}
+		catch(const std::exception& ex)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(BaseLib::Exception& ex)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+		return std::shared_ptr<BaseLib::Database::DataTable>();
+	}
+
+	void DatabaseController::deleteFamilyVariable(BaseLib::Database::DataRow& data)
+	{
+		try
+		{
+			if(data.size() == 1)
+			{
+				if(data.at(0)->intValue == 0)
+				{
+					GD::out.printError("Error: Could not delete family variable. Variable ID is \"0\".");
+					return;
+				}
+				bufferedWrite("DELETE FROM familyVariables WHERE variableID=?", data);
+			}
+			else if(data.size() == 2)
+			{
+				bufferedWrite("DELETE FROM familyVariables WHERE familyID=? AND variableIndex=?", data);
+			}
+			else if(data.size() == 3)
+			{
+				bufferedWrite("DELETE FROM familyVariables WHERE familyID=? AND variableIndex=? AND variableName=?", data);
+			}
+		}
+		catch(const std::exception& ex)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(BaseLib::Exception& ex)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+	}
+// }}}
+
 //Device
 std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getDevices(uint32_t family)
 {
@@ -1151,6 +1279,7 @@ void DatabaseController::deleteDevice(uint64_t id)
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
 		bufferedWrite("DELETE FROM devices WHERE deviceID=?", data);
+		bufferedWrite("DELETE FROM deviceVariables WHERE deviceID=?", data);
 	}
 	catch(const std::exception& ex)
 	{
