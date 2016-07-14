@@ -84,6 +84,11 @@ AS_IF([test "x$with_eventhandler" != "xno"], [
 	AC_DEFINE(EVENTHANDLER, [], [Enables compilation of Homegear's event handler])
 	])
 
+AC_ARG_WITH([ccu2], [AS_HELP_STRING([--with-ccu2], [Compile for CCU2])], [with_ccu2=yes], [])
+AS_IF([test "x$with_ccu2" = "xyes"], [	
+	AC_DEFINE(CCU2, [], [Enables features specific for CCU2])
+	])
+
 AC_ARG_WITH([curl], [AS_HELP_STRING([--with-curl], [Use this option when PHP is compiled with --with-curl.])], [with_openssl=yes], [])
 AS_IF([test "x$with_openssl" = "xyes"], [
 	AM_CONDITIONAL(WITH_CURL, true)

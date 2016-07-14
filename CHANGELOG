@@ -1,3 +1,26 @@
+14.07.2016
+
+Features:
+
+* Added support for family and interface settings in database
+	* Settings can be saved and read from database now
+* Philips hue: Login data is now stored in database
+* Philips hue: Added parameters TRANSITION_TIME, FAST_STATE and FAST_BRIGHTNESS
+
+08.07.2016
+
+Features:
+
+* Added ANSI converter
+* Strings from HomeMatic CCU are now converted from ANSI to UTF-8
+* Sonos: Added variables "ADD_SPEAKER_BY_SERIAL" and "REMOVE_SPEAKER_BY_SERIAL" to link speakers.
+
+07.07.2016
+
+Features:
+
+* Sonos: Added variables "ADD_SPEAKER" and "REMOVE_SPEAKER" to link speakers more easily and "IS_MASTER" to find out if a speaker is the master of a group or not.
+
 06.07.2016
 
 Errors:

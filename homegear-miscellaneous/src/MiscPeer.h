@@ -95,6 +95,18 @@ protected:
 	virtual std::shared_ptr<BaseLib::Systems::ICentral> getCentral();
 
 	virtual PParameterGroup getParameterSet(int32_t channel, ParameterGroup::Type::Enum type);
+
+	// {{{ Hooks
+		/**
+		 * {@inheritDoc}
+		 */
+		virtual bool getAllValuesHook2(PRpcClientInfo clientInfo, PParameter parameter, uint32_t channel, PVariable parameters);
+
+		/**
+		 * {@inheritDoc}
+		 */
+		virtual bool getParamsetHook2(PRpcClientInfo clientInfo, PParameter parameter, uint32_t channel, PVariable parameters);
+	// }}}
 };
 
 }

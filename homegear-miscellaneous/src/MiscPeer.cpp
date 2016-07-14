@@ -243,12 +243,13 @@ void MiscPeer::scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, in
 	try
 	{
 		_scriptRunning = false;
-		if(!_shuttingDown && !GD::bl->shuttingDown)
+		if(!_shuttingDown && !GD::bl->shuttingDown && !deleting)
 		{
 			GD::out.printError("Error: Script of peer " + std::to_string(_peerID) + " was killed. Restarting in 10 seconds...");
 			_bl->threadManager.join(_runProgramThread);
 			_bl->threadManager.start(_runProgramThread, true, &MiscPeer::runScript, this, true);
 		}
+		else if(deleting) GD::out.printInfo("Info: Script of peer " + std::to_string(_peerID) + " finished.");
 	}
 	catch(const std::exception& ex)
 	{
@@ -605,6 +606,50 @@ PParameterGroup MiscPeer::getParameterSet(int32_t channel, ParameterGroup::Type:
 	return PParameterGroup();
 }
 
+bool MiscPeer::getAllValuesHook2(PRpcClientInfo clientInfo, PParameter parameter, uint32_t channel, PVariable parameters)
+{
+	try
+	{
+		if(parameter->id == "IP_ADDRESS") parameter->convertToPacket(PVariable(new Variable(_ip)), valuesCentral[channel][parameter->id].data);
+		else if(parameter->id == "PEER_ID") parameter->convertToPacket(PVariable(new Variable((int32_t)_peerID)), valuesCentral[channel][parameter->id].data);
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
+bool MiscPeer::getParamsetHook2(PRpcClientInfo clientInfo, PParameter parameter, uint32_t channel, PVariable parameters)
+{
+	try
+	{
+		if(parameter->id == "IP_ADDRESS") parameter->convertToPacket(PVariable(new Variable(_ip)), valuesCentral[channel][parameter->id].data);
+		else if(parameter->id == "PEER_ID") parameter->convertToPacket(PVariable(new Variable((int32_t)_peerID)), valuesCentral[channel][parameter->id].data);
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
 PVariable MiscPeer::getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, std::map<std::string, bool> fields)
 {
 	try
@@ -656,6 +701,7 @@ PVariable MiscPeer::getParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
 				if(!i->second->readable) continue;
 				if(valuesCentral.find(channel) == valuesCentral.end()) continue;
 				if(valuesCentral[channel].find(i->second->id) == valuesCentral[channel].end()) continue;
+				if(getParamsetHook2(clientInfo, i->second, channel, variables)) continue;
 				element = i->second->convertFromPacket(valuesCentral[channel][i->second->id].data);
 			}
 			else if(type == ParameterGroup::Type::Enum::config)

@@ -121,6 +121,7 @@ namespace RPC
 			std::map<int32_t, std::shared_ptr<Client>> _clients;
 			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> _rpcMethods;
 			std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
+			std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoderAnsi;
 			std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
 			std::unique_ptr<BaseLib::RPC::XMLRPCDecoder> _xmlRpcDecoder;
 			std::unique_ptr<BaseLib::RPC::XMLRPCEncoder> _xmlRpcEncoder;

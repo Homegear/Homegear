@@ -1210,10 +1210,10 @@ std::string Server::handleGlobalCommand(std::string& command)
 						<< address << "  "
 						<< url << "  "
 						<< interfaceId << "  "
-						<< std::setw(xmlWidth) << ((*j)->xmlRpc ? "true" : "false") << "  "
-						<< std::setw(binaryWidth) << ((*j)->binaryRpc ? "true" : "false") << "  "
-						<< std::setw(jsonWidth) << ((*j)->jsonRpc ? "true" : "false") << "  "
-						<< std::setw(websocketWidth) << ((*j)->webSocket ? "true" : "false") << "  "
+						<< std::setw(xmlWidth) << ((*j)->rpcType == BaseLib::RpcType::xml ? "true" : "false") << "  "
+						<< std::setw(binaryWidth) << ((*j)->rpcType == BaseLib::RpcType::binary ? "true" : "false") << "  "
+						<< std::setw(jsonWidth) << ((*j)->rpcType == BaseLib::RpcType::json ? "true" : "false") << "  "
+						<< std::setw(websocketWidth) << ((*j)->rpcType == BaseLib::RpcType::websocket ? "true" : "false") << "  "
 						<< std::endl;
 				}
 
