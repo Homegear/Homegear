@@ -150,6 +150,9 @@ if [ "$distver" == "wheezy" ]; then
 	sed -i '/.*dh-apache2,.*/d' $rootfs/PHPBuild/debian/control
 	sed -i '/.*dh-systemd.*,.*/d' $rootfs/PHPBuild/debian/control
 	sed -i '/.*libc-client-dev,.*/d' $rootfs/PHPBuild/debian/control
+	if [ "$arch" == "armel" ]; then
+		sed -i 's/--with-mysqli=mysqlnd //g' $rootfs/PHPBuild/debian/rules
+	fi
 else
 	sed -i '/.*libgcrypt11-dev,.*/d' $rootfs/PHPBuild/debian/control
 	sed -i '/.*libsystemd-daemon-dev,.*/d' $rootfs/PHPBuild/debian/control
