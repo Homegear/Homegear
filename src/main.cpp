@@ -723,7 +723,23 @@ void startUp()
 		{
 			uid_t userId = GD::bl->hf.userId(GD::runAsUser);
 			gid_t groupId = GD::bl->hf.groupId(GD::runAsGroup);
-			std::vector<std::string> files = GD::bl->io.getFiles(currentPath, false);
+			std::vector<std::string> files;
+			try
+			{
+				files = GD::bl->io.getFiles(currentPath, false);
+			}
+			catch(const std::exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
 			for(std::vector<std::string>::iterator k = files.begin(); k != files.end(); ++k)
 			{
 				if((*k).compare(0, 6, "db.sql") != 0) continue;
@@ -840,9 +856,10 @@ void startUp()
 			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 		}
 
-        #ifdef EVENTHANDLER
+#ifdef EVENTHANDLER
 		GD::eventHandler.reset(new EventHandler());
-		#endif
+#endif
+
 		if(!GD::bl->io.directoryExists(GD::bl->settings.tempPath() + "php"))
 		{
 			if(!GD::bl->io.createDirectory(GD::bl->settings.tempPath() + "php", S_IRWXU | S_IRWXG))
