@@ -744,8 +744,8 @@ void startUp()
 			{
 				if((*k).compare(0, 6, "db.sql") != 0) continue;
 				std::string file = currentPath + *k;
-				if(chmod(currentPath.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) == -1) std::cerr << "Could not set permissions on " << file << std::endl;
-				if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << file << std::endl;
+				if(chmod((*k).c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) == -1) GD::out.printError("Could not set permissions on " + file);
+				if(chown((*k).c_str(), userId, groupId) == -1) GD::out.printError("Could not set owner on " + file);
 			}
 		}
 
