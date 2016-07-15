@@ -710,6 +710,8 @@ void startUp()
 			}
 		}
 
+		setLimits();
+
 		GD::bl->db->init();
     	GD::bl->db->open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".bak");
     	if(!GD::bl->db->isOpen()) exitHomegear(1);
@@ -794,8 +796,6 @@ void startUp()
     		GD::out.printInfo("Info: Homegear is (now) running as user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
     	}
 
-    	setLimits();
-
     	//Create PID file
     	try
     	{
@@ -855,14 +855,6 @@ void startUp()
 			GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
 			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 		}
-
-		GD::bl->db->init();
-		GD::bl->db->open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".bak");
-		if(!GD::bl->db->isOpen()) exitHomegear(1);
-
-		GD::out.printInfo("Initializing database...");
-		if(GD::bl->db->convertDatabase()) exitHomegear(0);
-		GD::bl->db->initializeDatabase();
 
 #ifdef EVENTHANDLER
 		GD::eventHandler.reset(new EventHandler());
