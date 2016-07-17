@@ -2787,6 +2787,42 @@ BaseLib::PVariable RPCLogLevel::invoke(BaseLib::PRpcClientInfo clientInfo, std::
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCPing::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		std::string id;
+		if(parameters->size() > 0)
+		{
+			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+					std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString})
+			}));
+			if(error != ParameterError::Enum::noError) return getError(error);
+			id = parameters->at(0)->stringValue;
+		}
+
+		std::shared_ptr<std::vector<std::string>> variables(new std::vector<std::string>{ "PONG" });
+		BaseLib::PArray values(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(id)) });
+		GD::familyController->onEvent(0, -1, variables, values);
+		GD::familyController->onRPCEvent(0, -1, "CENTRAL", variables, values);
+
+		return BaseLib::PVariable(new BaseLib::Variable(true));
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
+}
+
 BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	try

@@ -99,6 +99,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 1000)
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("listKnownDeviceTypes", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCListKnownDeviceTypes())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("listTeams", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCListTeams())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("logLevel", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCLogLevel())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("ping", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCPing())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("putParamset", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCPutParamset())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("removeEvent", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCRemoveEvent())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("removeLink", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCRemoveLink())));

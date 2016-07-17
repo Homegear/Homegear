@@ -108,6 +108,7 @@ void Server::registerMethods()
 		_server->registerMethod("listKnownDeviceTypes", std::shared_ptr<RPCMethod>(new RPCListKnownDeviceTypes()));
 		_server->registerMethod("listTeams", std::shared_ptr<RPCMethod>(new RPCListTeams()));
 		_server->registerMethod("logLevel", std::shared_ptr<RPCMethod>(new RPCLogLevel()));
+		_server->registerMethod("ping", std::shared_ptr<RPCMethod>(new RPCPing()));
 		_server->registerMethod("putParamset", std::shared_ptr<RPCMethod>(new RPCPutParamset()));
 		_server->registerMethod("removeEvent", std::shared_ptr<RPCMethod>(new RPCRemoveEvent()));
 		_server->registerMethod("removeLink", std::shared_ptr<RPCMethod>(new RPCRemoveLink()));
