@@ -136,6 +136,8 @@ private:
 
 		BaseLib::PVariable listRpcClients(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 		BaseLib::PVariable raiseDeleteDevice(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+		BaseLib::PVariable getFamilySetting(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+		BaseLib::PVariable setFamilySetting(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 
 		// {{{ User methods
 			BaseLib::PVariable auth(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
