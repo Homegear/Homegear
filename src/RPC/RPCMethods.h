@@ -662,6 +662,17 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
+class RPCPing : public RPCMethod
+{
+public:
+	RPCPing()
+	{
+		addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+
+	}
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+};
+
 class RPCPutParamset : public RPCMethod
 {
 public:

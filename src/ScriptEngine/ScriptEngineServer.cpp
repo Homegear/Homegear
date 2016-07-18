@@ -99,6 +99,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 1000)
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("listKnownDeviceTypes", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCListKnownDeviceTypes())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("listTeams", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCListTeams())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("logLevel", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCLogLevel())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("ping", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCPing())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("putParamset", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCPutParamset())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("removeEvent", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCRemoveEvent())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<RPC::RPCMethod>>("removeLink", std::shared_ptr<RPC::RPCMethod>(new RPC::RPCRemoveLink())));
@@ -130,6 +131,9 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 1000)
 
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("listRpcClients", std::bind(&ScriptEngineServer::listRpcClients, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("raiseDeleteDevice", std::bind(&ScriptEngineServer::raiseDeleteDevice, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("getFamilySetting", std::bind(&ScriptEngineServer::getFamilySetting, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("setFamilySetting", std::bind(&ScriptEngineServer::setFamilySetting, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("deleteFamilySetting", std::bind(&ScriptEngineServer::deleteFamilySetting, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("auth", std::bind(&ScriptEngineServer::auth, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("createUser", std::bind(&ScriptEngineServer::createUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
@@ -1584,6 +1588,100 @@ BaseLib::PVariable ScriptEngineServer::raiseDeleteDevice(PScriptEngineClientData
 		if(parameters->size() != 1 || parameters->at(0)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Method expects device address array as parameter.");
 
 		GD::familyController->onRPCDeleteDevices(parameters->at(0), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{ 0 }))));
+
+		return BaseLib::PVariable(new BaseLib::Variable());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::getFamilySetting(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 2 || parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Method expects family ID and parameter name as parameters.");
+
+		std::shared_ptr<BaseLib::Systems::DeviceFamily> family = GD::familyController->getFamily(parameters->at(0)->integerValue);
+		if(!family) return BaseLib::Variable::createError(-2, "Device family not found.");
+
+		BaseLib::Systems::FamilySettings::PFamilySetting setting = family->getFamilySetting(parameters->at(1)->stringValue);
+		if(!setting) return BaseLib::Variable::createError(-3, "Setting not found.");
+
+		if(!setting->stringValue.empty()) return BaseLib::PVariable(new BaseLib::Variable(setting->stringValue));
+		else if(!setting->binaryValue.empty()) return BaseLib::PVariable(new BaseLib::Variable(setting->binaryValue));
+		else return BaseLib::PVariable(new BaseLib::Variable(setting->integerValue));
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::setFamilySetting(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 3 || parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Method expects family ID, parameter name and value as parameters.");
+
+		std::shared_ptr<BaseLib::Systems::DeviceFamily> family = GD::familyController->getFamily(parameters->at(0)->integerValue);
+		if(!family) return BaseLib::Variable::createError(-2, "Device family not found.");
+
+		if(parameters->at(2)->type == BaseLib::VariableType::tString) family->setFamilySetting(parameters->at(1)->stringValue, parameters->at(2)->stringValue);
+		else if(parameters->at(2)->type == BaseLib::VariableType::tInteger) family->setFamilySetting(parameters->at(1)->stringValue, parameters->at(2)->integerValue);
+		else if(parameters->at(2)->type == BaseLib::VariableType::tBinary)
+		{
+			std::vector<char> data(&parameters->at(2)->binaryValue.at(0), &parameters->at(2)->binaryValue.at(0) + parameters->at(2)->binaryValue.size());
+			family->setFamilySetting(parameters->at(1)->stringValue, data);
+		}
+		else return BaseLib::Variable::createError(-3, "Unsupported variable type.");
+
+		return BaseLib::PVariable(new BaseLib::Variable());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::deleteFamilySetting(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 2 || parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Method expects family ID and parameter name as parameters.");
+
+		std::shared_ptr<BaseLib::Systems::DeviceFamily> family = GD::familyController->getFamily(parameters->at(0)->integerValue);
+		if(!family) return BaseLib::Variable::createError(-2, "Device family not found.");
+
+		family->deleteFamilySettingFromDatabase(parameters->at(1)->stringValue);
 
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
