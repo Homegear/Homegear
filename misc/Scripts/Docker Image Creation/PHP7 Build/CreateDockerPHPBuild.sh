@@ -170,7 +170,7 @@ if [ "$distver" != "jessie" ] && [ "$distver" != "wheezy" ] && [ "$distver" != "
 	sed -i 's/, libcurl4-gnutls-dev//g' $rootfs/PHPBuild/debian/control
 	sed -i 's/--with-curl //g' $rootfs/PHPBuild/debian/rules
 fi
-if [ "$distver" == "wheezy" ] && [ "$arch" == "armel" ]; then
+if [ "$arch" == "armel" ]; then
 	sed -i 's/--with-mysqli=mysqlnd //g' $rootfs/PHPBuild/debian/rules
 fi
 cat > "$rootfs/PHPBuild/SetTarget.sh" <<-'EOF'
