@@ -5,6 +5,7 @@ Features:
 * Sonos: Improved PLAY_AUDIO_FILE and PLAY_TTS
 	* The following title in playlist does not wrongly start to play anymore
 	* Volume is set on grouped speakers now, too
+* Script engine: Family settings in database can now be deleted (Homegear::deleteFamilySetting)
 
 17.07.2016:
 
@@ -12,7 +13,7 @@ Features:
 
 * Added RPC method "ping" and "pong" event
 * Sonos: Ivona TTS access and secret key are now settable from config file
-* Family settings can now be fetched and saved from PHP (Homegear::getFamilySettings and Homegear::setFamilySettings)
+* Script engine: Family settings can now be fetched and saved (Homegear::getFamilySetting and Homegear::setFamilySetting)
 
 14.07.2016
 
