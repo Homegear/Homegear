@@ -1223,9 +1223,13 @@ void DatabaseController::deleteEvent(std::string& name)
 				}
 				bufferedWrite("DELETE FROM familyVariables WHERE variableID=?", data);
 			}
-			else if(data.size() == 2)
+			else if(data.size() == 2 && data.at(1)->dataType == BaseLib::Database::DataColumn::DataType::Enum::INTEGER)
 			{
 				bufferedWrite("DELETE FROM familyVariables WHERE familyID=? AND variableIndex=?", data);
+			}
+			else if(data.size() == 2 && data.at(1)->dataType == BaseLib::Database::DataColumn::DataType::Enum::TEXT)
+			{
+				bufferedWrite("DELETE FROM familyVariables WHERE familyID=? AND variableName=?", data);
 			}
 			else if(data.size() == 3)
 			{
