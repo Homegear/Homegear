@@ -69,7 +69,7 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 1000)
 
 ScriptEngineClient::~ScriptEngineClient()
 {
-	dispose();
+	dispose(true);
 	if(_maintenanceThread.joinable()) _maintenanceThread.join();
 }
 
@@ -82,7 +82,7 @@ void ScriptEngineClient::stopEventThreads()
 	}
 }
 
-void ScriptEngineClient::dispose()
+void ScriptEngineClient::dispose(bool broadcastShutdown)
 {
 	try
 	{
@@ -92,7 +92,7 @@ void ScriptEngineClient::dispose()
 		BaseLib::PArray eventData(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(0)), BaseLib::PVariable(new BaseLib::Variable(-1)), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(std::string("DISPOSING")))}))), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(true))}))) });
 
 		GD::bl->shuttingDown = true;
-		broadcastEvent(eventData);
+		if(broadcastShutdown) broadcastEvent(eventData);
 
 		int32_t i = 0;
 		while(_scriptThreads.size() > 0 && i < 30)
@@ -313,7 +313,7 @@ void ScriptEngineClient::registerClient()
 		if(result->errorStruct)
 		{
 			_out.printCritical("Critical: Could not register client.");
-			dispose();
+			dispose(false);
 		}
 		_out.printInfo("Info: Client registered to server.");
 	}
@@ -1024,7 +1024,7 @@ BaseLib::PVariable ScriptEngineClient::shutdown(BaseLib::PArray& parameters)
 		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
 
 		if(_maintenanceThread.joinable()) _maintenanceThread.join();
-		_maintenanceThread = std::thread(&ScriptEngineClient::dispose, this);
+		_maintenanceThread = std::thread(&ScriptEngineClient::dispose, this, true);
 
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}

@@ -35,6 +35,10 @@ if test -z $3; then
 fi
 
 scriptdir="$( cd "$(dirname $0)" && pwd )"
+if test ! -d "${scriptdir}/debian"; then
+	echo "Directory \"debian\" does not exist in the directory of this script file."
+	exit 1
+fi
 dist=$1
 dist="$(tr '[:lower:]' '[:upper:]' <<< ${dist:0:1})${dist:1}"
 distlc="$(tr '[:upper:]' '[:lower:]' <<< ${dist:0:1})${dist:1}"
@@ -130,14 +134,14 @@ fi
 #Fix debootstrap base package errors
 chroot $rootfs apt-get update
 if [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ]; then
-	chroot $rootfs apt-get -y install python3
-	chroot $rootfs apt-get -y -f install
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
-chroot $rootfs apt-get -y -f install
-chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano libmysqlclient-dev
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano libmysqlclient-dev
 
 if [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ]; then
-	chroot $rootfs apt-get -y install libcurl4-gnutls-dev
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
 mkdir $rootfs/PHPBuild
 chroot $rootfs bash -c "cd /PHPBuild && apt-get source php7.0"
@@ -156,21 +160,21 @@ else
 	sed -i '/.*libxml2-dev/a\\t       libgcrypt20-dev,' $rootfs/PHPBuild/debian/control
 fi
 chroot $rootfs bash -c "cd /PHPBuild && mk-build-deps debian/control"
-chroot $rootfs bash -c "cd /PHPBuild && dpkg -i php*-build-deps_*.deb"
-chroot $rootfs apt-get -y -f install
+DEBIAN_FRONTEND=noninteractive chroot $rootfs bash -c "cd /PHPBuild && dpkg -i php*-build-deps_*.deb"
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 # On some architechtures install hangs and a process needs to be manually killed. So repeat the installation.
-chroot $rootfs apt-get -y -f install
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 # For some reason php*-build-deps... gets removed. Install it again.
 chroot $rootfs bash -c "cd /PHPBuild && dpkg -i php*-build-deps_*.deb"
 
 # Create links necessary to build PHP
 rm -Rf $rootfs/PHPBuild/*
-cp -R "$scriptdir/debian" $rootfs/PHPBuild
+cp -R "$scriptdir/debian" $rootfs/PHPBuild || exit 1
 if [ "$distver" != "jessie" ] && [ "$distver" != "wheezy" ] && [ "$distver" != "xenial" ]; then
 	sed -i 's/, libcurl4-gnutls-dev//g' $rootfs/PHPBuild/debian/control
 	sed -i 's/--with-curl //g' $rootfs/PHPBuild/debian/rules
 fi
-if [ "$distver" == "wheezy" ] && [ "$arch" == "armel" ]; then
+if [ "$arch" == "armel" ]; then
 	sed -i 's/--with-mysqli=mysqlnd //g' $rootfs/PHPBuild/debian/rules
 fi
 cat > "$rootfs/PHPBuild/SetTarget.sh" <<-'EOF'
