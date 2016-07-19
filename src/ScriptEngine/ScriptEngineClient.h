@@ -50,7 +50,7 @@ class ScriptEngineClient : public BaseLib::IQueue {
 public:
 	ScriptEngineClient();
 	virtual ~ScriptEngineClient();
-	void dispose();
+	void dispose(bool broadcastShutdown);
 
 	void start();
 private:
