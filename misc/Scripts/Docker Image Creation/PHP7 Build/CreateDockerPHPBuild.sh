@@ -35,6 +35,10 @@ if test -z $3; then
 fi
 
 scriptdir="$( cd "$(dirname $0)" && pwd )"
+if test ! -d "${scriptdir}/debian"; then
+	echo "Directory \"debian\" does not exist in the directory of this script file."
+	exit 1
+fi
 dist=$1
 dist="$(tr '[:lower:]' '[:upper:]' <<< ${dist:0:1})${dist:1}"
 distlc="$(tr '[:upper:]' '[:lower:]' <<< ${dist:0:1})${dist:1}"
@@ -165,7 +169,7 @@ chroot $rootfs bash -c "cd /PHPBuild && dpkg -i php*-build-deps_*.deb"
 
 # Create links necessary to build PHP
 rm -Rf $rootfs/PHPBuild/*
-cp -R "$scriptdir/debian" $rootfs/PHPBuild
+cp -R "$scriptdir/debian" $rootfs/PHPBuild || exit 1
 if [ "$distver" != "jessie" ] && [ "$distver" != "wheezy" ] && [ "$distver" != "xenial" ]; then
 	sed -i 's/, libcurl4-gnutls-dev//g' $rootfs/PHPBuild/debian/control
 	sed -i 's/--with-curl //g' $rootfs/PHPBuild/debian/rules
