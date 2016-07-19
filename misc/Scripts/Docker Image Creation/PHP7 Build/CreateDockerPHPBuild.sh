@@ -134,14 +134,14 @@ fi
 #Fix debootstrap base package errors
 chroot $rootfs apt-get update
 if [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ]; then
-	chroot $rootfs apt-get -y install python3
-	chroot $rootfs apt-get -y -f install
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
-chroot $rootfs apt-get -y -f install
-chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano libmysqlclient-dev
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano libmysqlclient-dev
 
 if [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ]; then
-	chroot $rootfs apt-get -y install libcurl4-gnutls-dev
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
 mkdir $rootfs/PHPBuild
 chroot $rootfs bash -c "cd /PHPBuild && apt-get source php7.0"
@@ -160,10 +160,10 @@ else
 	sed -i '/.*libxml2-dev/a\\t       libgcrypt20-dev,' $rootfs/PHPBuild/debian/control
 fi
 chroot $rootfs bash -c "cd /PHPBuild && mk-build-deps debian/control"
-chroot $rootfs bash -c "cd /PHPBuild && dpkg -i php*-build-deps_*.deb"
-chroot $rootfs apt-get -y -f install
+DEBIAN_FRONTEND=noninteractive chroot $rootfs bash -c "cd /PHPBuild && dpkg -i php*-build-deps_*.deb"
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 # On some architechtures install hangs and a process needs to be manually killed. So repeat the installation.
-chroot $rootfs apt-get -y -f install
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 # For some reason php*-build-deps... gets removed. Install it again.
 chroot $rootfs bash -c "cd /PHPBuild && dpkg -i php*-build-deps_*.deb"
 
