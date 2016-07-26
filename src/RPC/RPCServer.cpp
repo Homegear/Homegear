@@ -90,18 +90,18 @@ bool RPCServer::lifetick()
 	try
 	{
 		_lifetick1Mutex.lock();
-		if(!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 60000)
+		if(!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 120000)
 		{
-			GD::out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 60 seconds.");
+			GD::out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 120 seconds.");
 			_lifetick1Mutex.unlock();
 			return false;
 		}
 		_lifetick1Mutex.unlock();
 
 		_lifetick2Mutex.lock();
-		if(!_lifetick2.second && BaseLib::HelperFunctions::getTime() - _lifetick2.first > 60000)
+		if(!_lifetick2.second && BaseLib::HelperFunctions::getTime() - _lifetick2.first > 120000)
 		{
-			GD::out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 60 seconds.");
+			GD::out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 120 seconds.");
 			_lifetick2Mutex.unlock();
 			return false;
 		}
@@ -734,8 +734,8 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 			return;
 		}
 		_lifetick2Mutex.lock();
-		_lifetick2.second = false;
 		_lifetick2.first = BaseLib::HelperFunctions::getTime();
+		_lifetick2.second = false;
 		_lifetick2Mutex.unlock();
 		if(GD::bl->debugLevel >= 4)
 		{
