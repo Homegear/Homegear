@@ -504,18 +504,19 @@ void setLimits()
 void printHelp()
 {
 	std::cout << "Usage: homegear [OPTIONS]" << std::endl << std::endl;
-	std::cout << "Option\t\t\tMeaning" << std::endl;
-	std::cout << "-h\t\t\tShow this help" << std::endl;
-	std::cout << "-u\t\t\tRun as user" << std::endl;
-	std::cout << "-g\t\t\tRun as group" << std::endl;
-	std::cout << "-c <path>\t\tSpecify path to config file" << std::endl;
-	std::cout << "-d\t\t\tRun as daemon" << std::endl;
-	std::cout << "-p <pid path>\t\tSpecify path to process id file" << std::endl;
-	std::cout << "-s <user> <group>\tSet GPIO settings and necessary permissions for all defined physical devices" << std::endl;
-	std::cout << "-r\t\t\tConnect to Homegear on this machine" << std::endl;
-	std::cout << "-e <command>\t\tExecute CLI command" << std::endl;
-	std::cout << "-o <input> <output>\tConvert old device description file into new format." << std::endl;
-	std::cout << "-v\t\t\tPrint program version" << std::endl;
+	std::cout << "Option              Meaning" << std::endl;
+	std::cout << "-h                  Show this help" << std::endl;
+	std::cout << "-u                  Run as user" << std::endl;
+	std::cout << "-g                  Run as group" << std::endl;
+	std::cout << "-c <path>           Specify path to config file" << std::endl;
+	std::cout << "-d                  Run as daemon" << std::endl;
+	std::cout << "-p <pid path>       Specify path to process id file" << std::endl;
+	std::cout << "-s <user> <group>   Set GPIO settings and necessary permissions for all defined physical devices" << std::endl;
+	std::cout << "-r                  Connect to Homegear on this machine" << std::endl;
+	std::cout << "-e <command>        Execute CLI command" << std::endl;
+	std::cout << "-o <input> <output> Convert old device description file into new format." << std::endl;
+	std::cout << "-l                  Checks the lifeticks of all components. Exit code \"0\" means everything is ok." << std::endl;
+	std::cout << "-v                  Print program version" << std::endl;
 }
 
 void startMainProcess()
@@ -1201,6 +1202,15 @@ int main(int argc, char* argv[])
     			GD::bl->threadManager.testMaxThreadCount();
     			std::cout << GD::bl->threadManager.getMaxThreadCount() << std::endl;
     			exit(0);
+    		}
+    		else if(arg == "-l")
+    		{
+    			GD::bl->settings.load(GD::configPath + "main.conf");
+    			GD::bl->debugLevel = 3; //Only output warnings.
+    			std::string command = "lifetick";
+    			CLI::Client cliClient;
+    			int32_t exitCode = cliClient.start(command);
+    			exit(exitCode);
     		}
     		else if(arg == "-pre")
     		{

@@ -948,20 +948,23 @@ std::string Server::handleGlobalCommand(std::string& command)
 	try
 	{
 		std::ostringstream stringStream;
+		std::vector<std::string> arguments;
+		bool showHelp = false;
 		if((command == "help" || command == "h") && !GD::familyController->familySelected())
 		{
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "debuglevel (dl)\t\tChanges the debug level" << std::endl;
-			stringStream << "runscript (rs)\t\tExecutes a script with the internal PHP engine" << std::endl;
-			stringStream << "runcommand (rc)\t\tExecutes a PHP command" << std::endl;
-			stringStream << "scriptcount (sc)\t\tReturns the number of currently running scripts" << std::endl;
-			stringStream << "rpcservers (rpc)\t\tLists all active RPC servers" << std::endl;
-			stringStream << "rpcclients (rcl)\t\tLists all active RPC clients" << std::endl;
-			stringStream << "threads\t\tPrints current thread count" << std::endl;
-			stringStream << "users [COMMAND]\t\tExecute user commands. Type \"users help\" for more information." << std::endl;
-			stringStream << "families [COMMAND]\tExecute device family commands. Type \"families help\" for more information." << std::endl;
-			stringStream << "modules [COMMAND]\t\tExecute module commands. Type \"modules help\" for more information." << std::endl;
+			stringStream << "debuglevel (dl)    Changes the debug level" << std::endl;
+			stringStream << "runscript (rs)     Executes a script with the internal PHP engine" << std::endl;
+			stringStream << "runcommand (rc)    Executes a PHP command" << std::endl;
+			stringStream << "scriptcount (sc)   Returns the number of currently running scripts" << std::endl;
+			stringStream << "rpcservers (rpc)   Lists all active RPC servers" << std::endl;
+			stringStream << "rpcclients (rcl)   Lists all active RPC clients" << std::endl;
+			stringStream << "threads            Prints current thread count" << std::endl;
+			stringStream << "lifetick (lt)      Checks the lifeticks of all components." << std::endl;
+			stringStream << "users [COMMAND]    Execute user commands. Type \"users help\" for more information." << std::endl;
+			stringStream << "families [COMMAND] Execute device family commands. Type \"families help\" for more information." << std::endl;
+			stringStream << "modules [COMMAND]  Execute module commands. Type \"modules help\" for more information." << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 10, "debuglevel") == 0 || (command.compare(0, 2, "dl") == 0 && !GD::familyController->familySelected()))
@@ -1297,6 +1300,52 @@ std::string Server::handleGlobalCommand(std::string& command)
 		else if(command.compare(0, 7, "threads") == 0)
 		{
 			stringStream << GD::bl->threadManager.getCurrentThreadCount() << " of " << GD::bl->threadManager.getMaxThreadCount() << std::endl << "Maximum thread count since start: " << GD::bl->threadManager.getMaxRegisteredThreadCount() << std::endl;
+			return stringStream.str();
+		}
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "lifetick", "lt", "", 2, arguments, showHelp))
+		{
+			int32_t exitCode = 0;
+			try
+			{
+
+				if(!GD::rpcClient->lifetick())
+				{
+					stringStream << "RPC Client: Failed" << std::endl;
+					exitCode = 1;
+				}
+				else stringStream << "RPC Client: OK" << std::endl;
+				for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+				{
+					if(!i->second.lifetick())
+					{
+						stringStream << "RPC Server (Port " << i->second.getInfo()->port << "): Failed" << std::endl;
+						exitCode = 2;
+					}
+					else stringStream << "RPC Server (Port " << i->second.getInfo()->port << "): OK" << std::endl;
+				}
+				if(!GD::familyController->lifetick())
+				{
+					stringStream << "Device families: Failed" << std::endl;
+					exitCode = 3;
+				}
+				else stringStream << "Device families: OK" << std::endl;
+			}
+			catch(const std::exception& ex)
+			{
+				exitCode = 127;
+				GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				exitCode = 127;
+				GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				exitCode = 127;
+				GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			stringStream << "Exit code: " << exitCode << std::endl;
 			return stringStream.str();
 		}
 		return "";
