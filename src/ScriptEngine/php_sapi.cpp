@@ -1471,20 +1471,26 @@ ZEND_FUNCTION(hg_i2c_close)
 ZEND_FUNCTION(hg_i2c_read)
 {
 	if(_disposed) RETURN_NULL();
-	long descriptor = -1;
-	long length = 1;
 	int argc = 0;
 	zval* args = nullptr;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll*", &descriptor, &length, &args, &argc) != SUCCESS) RETURN_NULL();
-	if(length < 0) RETURN_FALSE;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
 
+	long descriptor = -1;
+	long length = 1;
 	bool binary = false;
-	if(argc == 1)
+	if(argc < 2) php_error_docref(NULL, E_WARNING, "HomegearI2c::read() expects at least 2 arguments.");
+	else if(argc > 3) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearI2c::read().");
+	else if(argc == 3)
 	{
-		if(Z_TYPE(args[0]) != IS_TRUE && Z_TYPE(args[0]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "returnBinary is not of type bool.");
-		else binary = (Z_TYPE(args[0]) == IS_TRUE);
+		if(Z_TYPE(args[2]) != IS_TRUE && Z_TYPE(args[2]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "returnBinary is not of type bool.");
+		else binary = (Z_TYPE(args[2]) == IS_TRUE);
 	}
-	else if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearI2c::read().");
+
+	if(Z_TYPE(args[0]) != IS_LONG) php_error_docref(NULL, E_WARNING, "handle is not of type long.");
+	else descriptor = Z_LVAL(args[0]);
+
+	if(Z_TYPE(args[1]) != IS_LONG) php_error_docref(NULL, E_WARNING, "length is not of type long.");
+	else length = Z_LVAL(args[1]);
 
 	std::vector<uint8_t> buffer(length, 0);
 	if(read(descriptor, &buffer.at(0), length) != length) RETURN_FALSE;
@@ -1501,28 +1507,40 @@ ZEND_FUNCTION(hg_i2c_read)
 ZEND_FUNCTION(hg_i2c_write)
 {
 	if(_disposed) RETURN_NULL();
-	long descriptor = -1;
-	char* pData = nullptr;
-	int dataLength = 0;
 	int argc = 0;
 	zval* args = nullptr;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ls*", &descriptor, &pData, &dataLength, &args, &argc) != SUCCESS) RETURN_NULL();
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
 
+	long descriptor = -1;
 	bool binary = false;
-	if(argc == 1)
+	std::vector<uint8_t> data;
+
+	if(argc < 2) php_error_docref(NULL, E_WARNING, "HomegearI2c::write() expects at least 2 arguments.");
+	else if(argc > 3) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearI2c::write().");
+	else if(argc == 3)
 	{
 		if(Z_TYPE(args[0]) != IS_TRUE && Z_TYPE(args[0]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "dataIsBinary is not of type bool.");
 		else binary = (Z_TYPE(args[0]) == IS_TRUE);
 	}
-	else if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearI2c::write().");
 
-	std::vector<uint8_t> data;
-	if(binary) data = std::vector<uint8_t>(pData, pData + dataLength);
+	if(Z_TYPE(args[0]) != IS_LONG) php_error_docref(NULL, E_WARNING, "handle is not of type long.");
+	else descriptor = Z_LVAL(args[0]);
+
+	if(Z_TYPE(args[1]) != IS_STRING) php_error_docref(NULL, E_WARNING, "data is not of type string.");
 	else
 	{
-		std::string hexData(pData, dataLength);
-		data = GD::bl->hf.getUBinary(hexData);
+		if(Z_STRLEN(args[1]) > 0)
+		{
+			if(binary) std::vector<uint8_t>(Z_STRVAL(args[1]), Z_STRVAL(args[1]) + Z_STRLEN(args[1]));
+			else
+			{
+				std::string hexData(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
+				data = GD::bl->hf.getUBinary(hexData);
+			}
+		}
 	}
+	if(data.empty()) RETURN_FALSE;
+
 	if (write(descriptor, &data.at(0), data.size()) != (signed)data.size()) RETURN_FALSE;
 	RETURN_TRUE;
 }
