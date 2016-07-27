@@ -564,7 +564,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 		std::string topic(&data[1 + lengthBytes + 2], topicLength - (1 + lengthBytes + 2));
 		std::string payload(&data[payloadPos], data.size() - payloadPos);
 		std::vector<std::string> parts = BaseLib::HelperFunctions::splitAll(topic, '/');
-		if(parts.size() == 6 && parts.at(2) == "value")
+		if(parts.size() == 6 && (parts.at(2) == "value" || parts.at(2) == "set"))
 		{
 			uint64_t peerId = BaseLib::Math::getNumber(parts.at(3));
 			int32_t channel = BaseLib::Math::getNumber(parts.at(4));
@@ -938,6 +938,7 @@ void Mqtt::connect()
 					_connectMutex.unlock();
 					subscribe("homegear/" + _settings.homegearId() + "/rpc/#");
 					subscribe("homegear/" + _settings.homegearId() + "/value/#");
+					subscribe("homegear/" + _settings.homegearId() + "/set/#");
 					subscribe("homegear/" + _settings.homegearId() + "/config/#");
 					_reconnecting = false;
 					return;
@@ -991,17 +992,17 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::string& key, Base
 	try
 	{
 		std::shared_ptr<std::pair<std::string, std::vector<char>>> messageJson1(new std::pair<std::string, std::vector<char>>());
-		messageJson1->first = "event_json1/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
+		messageJson1->first = "json/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
 		_jsonEncoder->encode(value, messageJson1->second);
 		GD::mqtt->queueMessage(messageJson1);
 
 		std::shared_ptr<std::pair<std::string, std::vector<char>>> messagePlain(new std::pair<std::string, std::vector<char>>());
-		messagePlain->first = "event_plain/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
+		messagePlain->first = "plain/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
 		messagePlain->second.insert(messagePlain->second.end(), messageJson1->second.begin() + 1, messageJson1->second.end() - 1);
 		GD::mqtt->queueMessage(messagePlain);
 
 		std::shared_ptr<std::pair<std::string, std::vector<char>>> messageJson2(new std::pair<std::string, std::vector<char>>());
-		messageJson2->first = "event_json2/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
+		messageJson2->first = "jsonobj/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
 		BaseLib::PVariable structValue(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 		structValue->structValue->insert(BaseLib::StructElement("value", value));
 		_jsonEncoder->encode(structValue, messageJson2->second);
