@@ -33,11 +33,14 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			i->second->lock();
 			try
 			{
+				if(i->second->handler() && GD::bl->settings.devLog()) GD::out.printInfo("Devlog: Calling onGet event handler.");
 				if(i->second->handler() && ((BaseLib::Rpc::IWebserverEventSink*)i->second->handler())->onGet(_serverInfo, http, socket, path))
 				{
 					i->second->unlock();
+					if(i->second->handler() && GD::bl->settings.devLog()) GD::out.printInfo("Devlog: onGet event handler handled event.");
 					return;
 				}
+				if(i->second->handler() && GD::bl->settings.devLog()) GD::out.printInfo("Devlog: onGet event handler did not handle event.");
 			}
 			catch(const std::exception& ex)
 			{

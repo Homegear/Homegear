@@ -1335,7 +1335,7 @@ int main(int argc, char* argv[])
     	{
     		// {{{ Get maximum thread count
 				std::string output;
-				BaseLib::HelperFunctions::exec(GD::executablePath + "/" + GD::executableFile + " -tc", output);
+				BaseLib::HelperFunctions::exec(GD::executablePath + GD::executableFile + " -tc", output);
 				BaseLib::HelperFunctions::trim(output);
 				if(BaseLib::Math::isNumber(output, false)) GD::bl->threadManager.setMaxThreadCount(BaseLib::Math::getNumber(output, false));
 			// }}}
