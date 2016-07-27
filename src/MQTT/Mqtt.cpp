@@ -874,6 +874,7 @@ void Mqtt::connect()
 				_connected = true;
 				_connectMutex.unlock();
 				subscribe("homegear/" + _settings.homegearId() + "/rpc/#");
+				subscribe("homegear/" + _settings.homegearId() + "/set/#");
 				subscribe("homegear/" + _settings.homegearId() + "/value/#");
 				subscribe("homegear/" + _settings.homegearId() + "/config/#");
 				_reconnecting = false;
@@ -937,8 +938,8 @@ void Mqtt::connect()
 					_connected = true;
 					_connectMutex.unlock();
 					subscribe("homegear/" + _settings.homegearId() + "/rpc/#");
-					subscribe("homegear/" + _settings.homegearId() + "/value/#");
 					subscribe("homegear/" + _settings.homegearId() + "/set/#");
+					subscribe("homegear/" + _settings.homegearId() + "/value/#");
 					subscribe("homegear/" + _settings.homegearId() + "/config/#");
 					_reconnecting = false;
 					return;
