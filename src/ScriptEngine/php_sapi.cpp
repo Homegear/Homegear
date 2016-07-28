@@ -1492,13 +1492,21 @@ ZEND_FUNCTION(hg_i2c_read)
 	if(Z_TYPE(args[1]) != IS_LONG) php_error_docref(NULL, E_WARNING, "length is not of type long.");
 	else length = Z_LVAL(args[1]);
 
+	if(length <= 0)
+	{
+		php_error_docref(NULL, E_WARNING, "length is invalid.");
+		RETURN_FALSE;
+	}
+
+	length++;
+
 	std::vector<uint8_t> buffer(length, 0);
 	if(read(descriptor, &buffer.at(0), length) != length) RETURN_FALSE;
 
-	if(binary) ZVAL_STRINGL(return_value, (char*)(&buffer[0]), buffer.size());
+	if(binary) ZVAL_STRINGL(return_value, (char*)(&buffer[1]), buffer.size());
 	else
 	{
-		std::string hex = BaseLib::HelperFunctions::getHexString(buffer);
+		std::string hex = BaseLib::HelperFunctions::getHexString(&buffer[1], buffer.size() - 1);
 		if(hex.empty()) ZVAL_STRINGL(return_value, "", 0); //At least once, input->stringValue.c_str() on an empty string was a nullptr causing a segementation fault, so check for empty string
 		else ZVAL_STRINGL(return_value, hex.c_str(), hex.size());
 	}
@@ -1519,8 +1527,8 @@ ZEND_FUNCTION(hg_i2c_write)
 	else if(argc > 3) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearI2c::write().");
 	else if(argc == 3)
 	{
-		if(Z_TYPE(args[0]) != IS_TRUE && Z_TYPE(args[0]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "dataIsBinary is not of type bool.");
-		else binary = (Z_TYPE(args[0]) == IS_TRUE);
+		if(Z_TYPE(args[2]) != IS_TRUE && Z_TYPE(args[2]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "dataIsBinary is not of type bool.");
+		else binary = (Z_TYPE(args[2]) == IS_TRUE);
 	}
 
 	if(Z_TYPE(args[0]) != IS_LONG) php_error_docref(NULL, E_WARNING, "handle is not of type long.");
@@ -1531,7 +1539,7 @@ ZEND_FUNCTION(hg_i2c_write)
 	{
 		if(Z_STRLEN(args[1]) > 0)
 		{
-			if(binary) std::vector<uint8_t>(Z_STRVAL(args[1]), Z_STRVAL(args[1]) + Z_STRLEN(args[1]));
+			if(binary) data = std::vector<uint8_t>(Z_STRVAL(args[1]), Z_STRVAL(args[1]) + Z_STRLEN(args[1]));
 			else
 			{
 				std::string hexData(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
