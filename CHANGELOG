@@ -1,3 +1,7 @@
+28.07.2016:
+
+* Philips hue: Polling interval is now settable.
+
 27.07.2016:
 
 * Changes to MQTT to support three different payload types (plain, JSON array and JSON object) for values (see doc).

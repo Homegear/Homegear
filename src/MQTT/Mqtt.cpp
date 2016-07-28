@@ -583,9 +583,8 @@ void Mqtt::processPublish(std::vector<char>& data)
 					fixedPayload.push_back('[');
 					fixedPayload.insert(fixedPayload.end(), payload.begin(), payload.end());
 					fixedPayload.push_back(']');
-					std::cerr << BaseLib::HelperFunctions::getHexString(fixedPayload) << std::endl;
 					value = _jsonDecoder->decode(fixedPayload);
-					if(value) parameters->arrayValue->push_back(value);
+					if(value) parameters->arrayValue->push_back(value->arrayValue->at(0));
 				}
 				else
 				{
