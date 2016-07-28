@@ -1498,15 +1498,13 @@ ZEND_FUNCTION(hg_i2c_read)
 		RETURN_FALSE;
 	}
 
-	length++;
-
 	std::vector<uint8_t> buffer(length, 0);
 	if(read(descriptor, &buffer.at(0), length) != length) RETURN_FALSE;
 
-	if(binary) ZVAL_STRINGL(return_value, (char*)(&buffer[1]), buffer.size());
+	if(binary) ZVAL_STRINGL(return_value, (char*)(&buffer[0]), buffer.size());
 	else
 	{
-		std::string hex = BaseLib::HelperFunctions::getHexString(&buffer[1], buffer.size() - 1);
+		std::string hex = BaseLib::HelperFunctions::getHexString(buffer);
 		if(hex.empty()) ZVAL_STRINGL(return_value, "", 0); //At least once, input->stringValue.c_str() on an empty string was a nullptr causing a segementation fault, so check for empty string
 		else ZVAL_STRINGL(return_value, hex.c_str(), hex.size());
 	}
