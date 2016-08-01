@@ -538,8 +538,8 @@ void Mqtt::processPublish(std::vector<char>& data)
 	try
 	{
 		uint32_t lengthBytes = 0;
-		getLength(data, lengthBytes);
-		if(1 + lengthBytes >= data.size() - 1)
+		uint32_t length = getLength(data, lengthBytes);
+		if(1 + lengthBytes >= data.size() - 1 || length == 0)
 		{
 			_out.printError("Error: Invalid packet format: " + BaseLib::HelperFunctions::getHexString(data));
 			return;

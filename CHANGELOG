@@ -1,3 +1,7 @@
+08.08.2016:
+
+* HomeMatic BidCoS: Only set PRESS_LONG of remotes once on continuous press.
+
 28.07.2016:
 
 * Philips hue: Polling interval is now settable.
