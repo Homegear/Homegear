@@ -386,20 +386,22 @@ void Mqtt::listen()
 						dataLength = length + lengthBytes + 1;
 					}
 
-					if(dataLength > 0 && data.size() > dataLength)
+					while(length > 0 && data.size() > dataLength)
 					{
 						//Multiple MQTT packets in one TCP packet
 						std::vector<char> data2(&data.at(0), &data.at(0) + dataLength);
 						processData(data2);
-						data2 = std::vector<char>(&data.at(dataLength), &data.at(dataLength + (data.size() - dataLength - 1)));
-						data = data2;
+						data2 = std::vector<char>(&data.at(dataLength), &data.at(dataLength) + (data.size() - dataLength));
+						data = std::move(data2);
+						length = getLength(data, lengthBytes);
+						dataLength = length + lengthBytes + 1;
 					}
 					if(bytesReceived == (unsigned)bufferMax)
 					{
 						//Check if packet size is exactly a multiple of bufferMax
 						if(data.size() == dataLength) break;
 					}
-				} while(bytesReceived == (unsigned)bufferMax);
+				} while(bytesReceived == (unsigned)bufferMax || dataLength > data.size());
 			}
 			catch(BaseLib::SocketClosedException& ex)
 			{
