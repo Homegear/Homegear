@@ -714,18 +714,24 @@ void startUp()
 		setLimits();
 
 		GD::bl->db->init();
-    	GD::bl->db->open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".bak");
+		std::string databasePath = GD::bl->settings.dataPath() + "db.sql";
+    	GD::bl->db->open(databasePath, GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databasePath + ".bak");
     	if(!GD::bl->db->isOpen()) exitHomegear(1);
 
         GD::out.printInfo("Initializing database...");
         if(GD::bl->db->convertDatabase()) exitHomegear(0);
         GD::bl->db->initializeDatabase();
 
-        std::string currentPath = GD::bl->settings.databasePath().substr(0, GD::bl->settings.databasePath().find_last_of('/') + 1);
+        std::string currentPath = GD::bl->settings.dataPath();
 		if(!currentPath.empty() && !GD::runAsUser.empty() && !GD::runAsGroup.empty())
 		{
-			uid_t userId = GD::bl->hf.userId(GD::runAsUser);
-			gid_t groupId = GD::bl->hf.groupId(GD::runAsGroup);
+			uid_t userId = GD::bl->hf.userId(GD::bl->settings.dataPathUser());
+			gid_t groupId = GD::bl->hf.groupId(GD::bl->settings.dataPathGroup());
+			if(((int32_t)userId) == -1 || ((int32_t)groupId) == -1)
+			{
+				userId = GD::bl->hf.userId(GD::runAsUser);
+				groupId = GD::bl->hf.groupId(GD::runAsGroup);
+			}
 			std::vector<std::string> files;
 			try
 			{
@@ -747,7 +753,7 @@ void startUp()
 			{
 				if((*k).compare(0, 6, "db.sql") != 0) continue;
 				std::string file = currentPath + *k;
-				if(chmod((*k).c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) == -1) GD::out.printError("Could not set permissions on " + file);
+				if(chmod((*k).c_str(), GD::bl->settings.dataPathPermissions()) == -1) GD::out.printError("Could not set permissions on " + file);
 				if(chown((*k).c_str(), userId, groupId) == -1) GD::out.printError("Could not set owner on " + file);
 			}
 		}
@@ -1241,45 +1247,67 @@ int main(int argc, char* argv[])
     				}
     			}
 
-    			currentPath = GD::bl->settings.databasePath().substr(0, GD::bl->settings.databasePath().find_last_of('/') + 1);
+    			currentPath = GD::bl->settings.dataPath();
     			if(!currentPath.empty())
 				{
-					if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
-					if(chmod(currentPath.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
-					if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << currentPath << std::endl;
+    				uid_t localUserId = GD::bl->hf.userId(GD::bl->settings.dataPathUser());
+					gid_t localGroupId = GD::bl->hf.groupId(GD::bl->settings.dataPathGroup());
+					if(((int32_t)localUserId) == -1 || ((int32_t)localGroupId) == -1)
+					{
+						localUserId = userId;
+						localGroupId = groupId;
+					}
+					if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, GD::bl->settings.dataPathPermissions());
+					if(chmod(currentPath.c_str(), GD::bl->settings.dataPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+					if(chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set owner on " << currentPath << std::endl;
 					std::vector<std::string> subdirs = GD::bl->io.getDirectories(currentPath, true);
 					for(std::vector<std::string>::iterator j = subdirs.begin(); j != subdirs.end(); ++j)
 					{
 						std::string subdir = currentPath + *j;
-						if(chown(subdir.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << subdir << std::endl;
+						if(subdir != GD::bl->settings.scriptPath() && subdir != GD::bl->settings.socketPath() && subdir != GD::bl->settings.modulePath() && subdir != GD::bl->settings.logfilePath())
+						{
+							if(chown(subdir.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set owner on " << subdir << std::endl;
+						}
 						std::vector<std::string> files = GD::bl->io.getFiles(subdir, false);
 						for(std::vector<std::string>::iterator k = files.begin(); k != files.end(); ++k)
 						{
 							std::string file = subdir + *k;
-							if(chown(file.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << file << std::endl;
+							if(chown(file.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set owner on " << file << std::endl;
 						}
 					}
 					for(std::vector<std::string>::iterator j = subdirs.begin(); j != subdirs.end(); ++j)
 					{
 						std::string subdir = currentPath + *j;
 						if(subdir == GD::bl->settings.scriptPath() || subdir == GD::bl->settings.socketPath() || subdir == GD::bl->settings.modulePath() || subdir == GD::bl->settings.logfilePath()) continue;
-						if(chmod(subdir.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << subdir << std::endl;
+						if(chmod(subdir.c_str(), GD::bl->settings.dataPathPermissions()) == -1) std::cerr << "Could not set permissions on " << subdir << std::endl;
 					}
 				}
-    			if(BaseLib::Io::fileExists(GD::bl->settings.databasePath()))
+
+    			std::string databasePath = GD::bl->settings.dataPath() + "db.sql";
+    			if(BaseLib::Io::fileExists(databasePath))
     			{
-    				if(chmod(GD::bl->settings.databasePath().c_str(), S_IRUSR | S_IWUSR | S_IRGRP) == -1) std::cerr << "Could not set permissions on " << GD::bl->settings.databasePath() << std::endl;
+    				if(chmod(databasePath.c_str(), S_IRUSR | S_IWUSR | S_IRGRP) == -1) std::cerr << "Could not set permissions on " << databasePath << std::endl;
     			}
 
     			currentPath = GD::bl->settings.scriptPath();
     			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
-    			if(chmod(currentPath.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
-    			if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			uid_t localUserId = GD::bl->hf.userId(GD::bl->settings.scriptPathUser());
+				gid_t localGroupId = GD::bl->hf.groupId(GD::bl->settings.scriptPathGroup());
+				if(((int32_t)localUserId) == -1 || ((int32_t)localGroupId) == -1)
+				{
+					localUserId = userId;
+					localGroupId = groupId;
+				}
+    			if(chmod(currentPath.c_str(), GD::bl->settings.scriptPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			if(chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 
-    			currentPath = GD::bl->settings.socketPath();
-    			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
-    			if(chmod(currentPath.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
-    			if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			if(GD::bl->settings.socketPath() != GD::bl->settings.dataPath())
+    			{
+					currentPath = GD::bl->settings.socketPath();
+					if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
+					if(chmod(currentPath.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+					if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			}
 
     			currentPath = GD::bl->settings.modulePath();
     			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP);
