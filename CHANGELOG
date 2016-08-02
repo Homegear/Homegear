@@ -1,6 +1,12 @@
-08.08.2016:
+01.08.2016:
+
+Features:
 
 * HomeMatic BidCoS: Only set PRESS_LONG of remotes once on continuous press.
+
+Errors:
+
+* MQTT packets were not correctely processed if multiple MQTT packets were sent together in one TCP packet.
 
 28.07.2016:
 
