@@ -537,6 +537,11 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 			//We are using string functions to process the buffer. So just to make sure,
 			//they don't do something in the memory after buffer, we add '\0'
 			buffer[receivedBytes] = '\0';
+			if(GD::bl->debugLevel >= 5)
+			{
+				std::vector<uint8_t> rawPacket(buffer, buffer + receivedBytes);
+				_out.printDebug("Debug: Packet received: " + BaseLib::HelperFunctions::getHexString(rawPacket));
+			}
 
 			if(server->binary)
 			{
