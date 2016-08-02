@@ -386,20 +386,22 @@ void Mqtt::listen()
 						dataLength = length + lengthBytes + 1;
 					}
 
-					if(dataLength > 0 && data.size() > dataLength)
+					while(length > 0 && data.size() > dataLength)
 					{
 						//Multiple MQTT packets in one TCP packet
 						std::vector<char> data2(&data.at(0), &data.at(0) + dataLength);
 						processData(data2);
-						data2 = std::vector<char>(&data.at(dataLength), &data.at(dataLength + (data.size() - dataLength - 1)));
-						data = data2;
+						data2 = std::vector<char>(&data.at(dataLength), &data.at(dataLength) + (data.size() - dataLength));
+						data = std::move(data2);
+						length = getLength(data, lengthBytes);
+						dataLength = length + lengthBytes + 1;
 					}
 					if(bytesReceived == (unsigned)bufferMax)
 					{
 						//Check if packet size is exactly a multiple of bufferMax
 						if(data.size() == dataLength) break;
 					}
-				} while(bytesReceived == (unsigned)bufferMax);
+				} while(bytesReceived == (unsigned)bufferMax || dataLength > data.size());
 			}
 			catch(BaseLib::SocketClosedException& ex)
 			{
@@ -538,8 +540,8 @@ void Mqtt::processPublish(std::vector<char>& data)
 	try
 	{
 		uint32_t lengthBytes = 0;
-		getLength(data, lengthBytes);
-		if(1 + lengthBytes >= data.size() - 1)
+		uint32_t length = getLength(data, lengthBytes);
+		if(1 + lengthBytes >= data.size() - 1 || length == 0)
 		{
 			_out.printError("Error: Invalid packet format: " + BaseLib::HelperFunctions::getHexString(data));
 			return;
@@ -564,7 +566,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 		std::string topic(&data[1 + lengthBytes + 2], topicLength - (1 + lengthBytes + 2));
 		std::string payload(&data[payloadPos], data.size() - payloadPos);
 		std::vector<std::string> parts = BaseLib::HelperFunctions::splitAll(topic, '/');
-		if(parts.size() == 6 && parts.at(2) == "value")
+		if(parts.size() == 6 && (parts.at(2) == "value" || parts.at(2) == "set"))
 		{
 			uint64_t peerId = BaseLib::Math::getNumber(parts.at(3));
 			int32_t channel = BaseLib::Math::getNumber(parts.at(4));
@@ -576,16 +578,42 @@ void Mqtt::processPublish(std::vector<char>& data)
 			BaseLib::PVariable value;
 			try
 			{
-				value = _jsonDecoder->decode(payload);
+				if(payload.front() != '{' && payload.front() != '[')
+				{
+					std::vector<char> fixedPayload;
+					fixedPayload.reserve(payload.size() + 2);
+					fixedPayload.push_back('[');
+					fixedPayload.insert(fixedPayload.end(), payload.begin(), payload.end());
+					fixedPayload.push_back(']');
+					value = _jsonDecoder->decode(fixedPayload);
+					if(value) parameters->arrayValue->push_back(value->arrayValue->at(0));
+				}
+				else
+				{
+					value = _jsonDecoder->decode(payload);
+					if(value)
+					{
+						if(value->arrayValue->size() > 0)
+						{
+							parameters->arrayValue->push_back(value->arrayValue->at(0));
+						}
+						else if(value->type == BaseLib::VariableType::tStruct && value->structValue->size() == 1 && value->structValue->begin()->first == "value")
+						{
+							parameters->arrayValue->push_back(value->structValue->begin()->second);
+						}
+						else _out.printError("Error: MQTT payload has unknown format.");
+					}
+				}
 			}
 			catch(BaseLib::Exception& ex)
 			{
 				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what() + " Payload was: " + BaseLib::HelperFunctions::getHexString(payload));
 				return;
 			}
-			if(value && value->arrayValue->size() > 0)
+			if(!value)
 			{
-				parameters->arrayValue->push_back(value->arrayValue->at(0));
+				_out.printError("Error: value is nullptr.");
+				return;
 			}
 			BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("setValue", parameters);
 		}
@@ -847,6 +875,7 @@ void Mqtt::connect()
 				_connected = true;
 				_connectMutex.unlock();
 				subscribe("homegear/" + _settings.homegearId() + "/rpc/#");
+				subscribe("homegear/" + _settings.homegearId() + "/set/#");
 				subscribe("homegear/" + _settings.homegearId() + "/value/#");
 				subscribe("homegear/" + _settings.homegearId() + "/config/#");
 				_reconnecting = false;
@@ -910,6 +939,7 @@ void Mqtt::connect()
 					_connected = true;
 					_connectMutex.unlock();
 					subscribe("homegear/" + _settings.homegearId() + "/rpc/#");
+					subscribe("homegear/" + _settings.homegearId() + "/set/#");
 					subscribe("homegear/" + _settings.homegearId() + "/value/#");
 					subscribe("homegear/" + _settings.homegearId() + "/config/#");
 					_reconnecting = false;
@@ -959,39 +989,26 @@ void Mqtt::disconnect()
 	}
 }
 
-void Mqtt::messageReceived(std::vector<char>& message)
+void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::string& key, BaseLib::PVariable& value)
 {
 	try
 	{
-		BaseLib::PVariable result = _jsonDecoder->decode(message);
-		std::string methodName;
-		std::string clientId;
-		int32_t messageId = 0;
-		BaseLib::PVariable parameters;
-		if(result->type == BaseLib::VariableType::tStruct)
-		{
-			if(result->structValue->find("method") == result->structValue->end())
-			{
-				_out.printWarning("Warning: Could not decode JSON RPC packet from MQTT payload.");
-				return;
-			}
-			methodName = result->structValue->at("method")->stringValue;
-			if(result->structValue->find("id") != result->structValue->end()) messageId = result->structValue->at("id")->integerValue;
-			if(result->structValue->find("clientid") != result->structValue->end()) clientId = result->structValue->at("clientid")->stringValue;
-			if(result->structValue->find("params") != result->structValue->end()) parameters = result->structValue->at("params");
-			else parameters.reset(new BaseLib::Variable());
-		}
-		else
-		{
-			_out.printWarning("Warning: Could not decode MQTT RPC packet.");
-			return;
-		}
-		GD::out.printInfo("Info: MQTT RPC call received. Method: " + methodName);
-		BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(methodName, parameters);
-		std::shared_ptr<std::pair<std::string, std::vector<char>>> responseData(new std::pair<std::string, std::vector<char>>());
-		_jsonEncoder->encodeMQTTResponse(methodName, response, messageId, responseData->second);
-		responseData->first = (!clientId.empty()) ? clientId + "/rpcResult" : "rpcResult";
-		queueMessage(responseData);
+		std::shared_ptr<std::pair<std::string, std::vector<char>>> messageJson1(new std::pair<std::string, std::vector<char>>());
+		messageJson1->first = "json/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
+		_jsonEncoder->encode(value, messageJson1->second);
+		GD::mqtt->queueMessage(messageJson1);
+
+		std::shared_ptr<std::pair<std::string, std::vector<char>>> messagePlain(new std::pair<std::string, std::vector<char>>());
+		messagePlain->first = "plain/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
+		messagePlain->second.insert(messagePlain->second.end(), messageJson1->second.begin() + 1, messageJson1->second.end() - 1);
+		GD::mqtt->queueMessage(messagePlain);
+
+		std::shared_ptr<std::pair<std::string, std::vector<char>>> messageJson2(new std::pair<std::string, std::vector<char>>());
+		messageJson2->first = "jsonobj/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
+		BaseLib::PVariable structValue(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+		structValue->structValue->insert(BaseLib::StructElement("value", value));
+		_jsonEncoder->encode(structValue, messageJson2->second);
+		GD::mqtt->queueMessage(messageJson2);
 	}
 	catch(const std::exception& ex)
 	{

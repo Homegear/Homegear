@@ -54,11 +54,14 @@ public:
 	void queueMessage(std::shared_ptr<std::pair<std::string, std::vector<char>>>& message);
 
 	/**
-	 * Processes a message received from a message broker.
+	 * Queues a message for publishing to the MQTT broker.
 	 *
-	 * @param payload The content of the message.
+	 * @param peerId The id of the peer to queue the message for.
+	 * @param channel The channel of the peer to queue the message for.
+	 * @param channel The name of the variable.
+	 * @param channel The value of the variable.
 	 */
-	void messageReceived(std::vector<char>& payload);
+	void queueMessage(uint64_t peerId, int32_t channel, std::string& key, BaseLib::PVariable& value);
 private:
 	class QueueEntry : public BaseLib::IQueueEntry
 	{

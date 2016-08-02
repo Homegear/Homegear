@@ -1117,7 +1117,7 @@ int main(int argc, char* argv[])
     				std::string inputFile(argv[i + 1]);
     				std::string outputFile(argv[i + 2]);
     				BaseLib::DeviceDescription::Devices devices(GD::bl.get(), nullptr, 0);
-					std::shared_ptr<HomegearDevice> device = devices.load(inputFile);
+					std::shared_ptr<HomegearDevice> device = devices.loadFile(inputFile);
 					if(!device) exit(1);
 					device->save(outputFile);
     				exit(0);
@@ -1335,7 +1335,7 @@ int main(int argc, char* argv[])
     	{
     		// {{{ Get maximum thread count
 				std::string output;
-				BaseLib::HelperFunctions::exec(GD::executablePath + "/" + GD::executableFile + " -tc", output);
+				BaseLib::HelperFunctions::exec(GD::executablePath + GD::executableFile + " -tc", output);
 				BaseLib::HelperFunctions::trim(output);
 				if(BaseLib::Math::isNumber(output, false)) GD::bl->threadManager.setMaxThreadCount(BaseLib::Math::getNumber(output, false));
 			// }}}
