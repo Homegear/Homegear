@@ -2521,9 +2521,9 @@ BaseLib::PVariable RPCListDevices::invoke(BaseLib::PRpcClientInfo clientInfo, st
 		}
 		bool channels = true;
 		std::map<std::string, bool> fields;
+		if(parameters->size() > 0 && parameters->at(0)->type == BaseLib::VariableType::tBoolean) channels = parameters->at(0)->booleanValue;
 		if(parameters->size() == 2)
 		{
-			channels = parameters->at(0)->booleanValue;
 			for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(1)->arrayValue->begin(); i != parameters->at(1)->arrayValue->end(); ++i)
 			{
 				if((*i)->stringValue.empty()) continue;
