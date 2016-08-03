@@ -50,19 +50,19 @@ RUNASUSER=homegear
 RUNASGROUP=homegear
 
 case $1 in
-        start)       		
+        start)
         		SPIPID=`ps -eo pid,cmd | grep -e "\[bcm2708_spi\.0\]" -e "\[spi0\]" | sed 's/^ *//g' | cut -d ' ' -f 1`
         		if [ ! -z "$SPIPID" ]; then
         			chrt -f -p 99 $SPIPID
         		fi
-				
-				if test ! -d $PIDPATH; then 
+
+				if test ! -d $PIDPATH; then
 					mkdir -p $PIDPATH
 				fi
 				chown -R $RUNASUSER:$RUNASGROUP $PIDPATH
 				chmod -R 750 $PIDPATH
-				
-				if test ! -d $DBPATH; then 
+
+				if test ! -d $DBPATH; then
 					mkdir -p $DBPATH
 				fi
 				chown -R $RUNASUSER:$RUNASGROUP $DBPATH
@@ -75,13 +75,13 @@ case $1 in
 				chmod 440 $STATICPATH/firmware/*
 				chmod 550 $STATICPATH/firmware/GetFirmwareUpdates*.sh
 				chmod -R 550 $DBPATH/modules
-				
+
 				if test ! -d $LOGPATH; then
 					mkdir -p $LOGPATH
 				fi
 				chown -R $RUNASUSER:$RUNASGROUP $LOGPATH
 				chmod -R 750 $LOGPATH
-				
+
                 log_daemon_msg "Starting Homegear" "homegear"
                 lock_homegear
                 #Probably has no effect at all...

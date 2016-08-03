@@ -1594,6 +1594,12 @@ void RPCServer::getSocketDescriptor()
 {
 	try
 	{
+		if(_info->socketDescriptor)
+		{
+			_serverFileDescriptor = _info->socketDescriptor;
+			return;
+		}
+
 		addrinfo hostInfo;
 		addrinfo *serverInfo = nullptr;
 

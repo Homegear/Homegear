@@ -243,6 +243,7 @@ bool DatabaseController::convertDatabase()
 {
 	try
 	{
+		std::string databasePath = GD::bl->settings.dataPath() + "db.sql";
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::string("table"))));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::string("homegearVariables"))));
@@ -312,7 +313,7 @@ bool DatabaseController::convertDatabase()
 		if(version == "0.3.1")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.4.3...");
-			_db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".old");
+			_db.init(databasePath, GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databasePath + ".old");
 
 			_db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
 
@@ -331,7 +332,7 @@ bool DatabaseController::convertDatabase()
 		else if(version == "0.4.3")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.5.0...");
-			_db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".old");
+			_db.init(databasePath, GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databasePath + ".old");
 
 			_db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
 
@@ -350,7 +351,7 @@ bool DatabaseController::convertDatabase()
 		else if(version == "0.5.0")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.5.1...");
-			_db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".old");
+			_db.init(databasePath, GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databasePath + ".old");
 
 			_db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=15");
 
@@ -375,7 +376,7 @@ bool DatabaseController::convertDatabase()
 		else if(version == "0.5.1")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.6.0...");
-			_db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".0.5.1.old");
+			_db.init(databasePath, GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databasePath + ".0.5.1.old");
 
 			_db.executeCommand("DELETE FROM devices WHERE deviceType!=4294967293 AND deviceType!=4278190077");
 			_db.executeCommand("ALTER TABLE peers ADD COLUMN type INTEGER NOT NULL DEFAULT 0");
@@ -397,7 +398,7 @@ bool DatabaseController::convertDatabase()
 		else if(version == "0.6.0")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.6.1...");
-			_db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), GD::bl->settings.databasePath() + ".0.6.0.old");
+			_db.init(databasePath, GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databasePath + ".0.6.0.old");
 
 			_db.executeCommand("UPDATE devices SET deviceType=4294967293 WHERE deviceType=4278190077");
 
