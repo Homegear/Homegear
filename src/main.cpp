@@ -1243,6 +1243,8 @@ int main(int argc, char* argv[])
     		else if(arg == "-pre")
     		{
     			GD::bl->settings.load(GD::configPath + "main.conf");
+    			GD::serverInfo.init(GD::bl.get());
+    			GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
     			if(GD::runAsUser.empty()) GD::runAsUser = GD::bl->settings.runAsUser();
 				if(GD::runAsGroup.empty()) GD::runAsGroup = GD::bl->settings.runAsGroup();
 				if((!GD::runAsUser.empty() && GD::runAsGroup.empty()) || (!GD::runAsGroup.empty() && GD::runAsUser.empty()))
@@ -1264,8 +1266,8 @@ int main(int argc, char* argv[])
     				if(!currentPath.empty())
     				{
     					if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
-    					if(chmod(currentPath.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
     					if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << currentPath << std::endl;
+    					if(chmod(currentPath.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
     				}
     			}
 
@@ -1280,8 +1282,8 @@ int main(int argc, char* argv[])
 						localGroupId = groupId;
 					}
 					if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, GD::bl->settings.dataPathPermissions());
-					if(chmod(currentPath.c_str(), GD::bl->settings.dataPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 					if(chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set owner on " << currentPath << std::endl;
+					if(chmod(currentPath.c_str(), GD::bl->settings.dataPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 					std::vector<std::string> subdirs = GD::bl->io.getDirectories(currentPath, true);
 					for(std::vector<std::string>::iterator j = subdirs.begin(); j != subdirs.end(); ++j)
 					{
@@ -1320,21 +1322,21 @@ int main(int argc, char* argv[])
 					localUserId = userId;
 					localGroupId = groupId;
 				}
+				if(chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
     			if(chmod(currentPath.c_str(), GD::bl->settings.scriptPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
-    			if(chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 
     			if(GD::bl->settings.socketPath() != GD::bl->settings.dataPath())
     			{
 					currentPath = GD::bl->settings.socketPath();
 					if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
-					if(chmod(currentPath.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 					if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+					if(chmod(currentPath.c_str(), S_IRWXU | S_IRWXG) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
     			}
 
     			currentPath = GD::bl->settings.modulePath();
     			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP);
-    			if(chmod(currentPath.c_str(), S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
     			if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			if(chmod(currentPath.c_str(), S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
     			std::vector<std::string> files = GD::bl->io.getFiles(currentPath, false);
 				for(std::vector<std::string>::iterator j = files.begin(); j != files.end(); ++j)
 				{
@@ -1344,14 +1346,27 @@ int main(int argc, char* argv[])
 
     			currentPath = GD::bl->settings.logfilePath();
     			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRGRP | S_IXGRP);
-    			if(chmod(currentPath.c_str(), S_IRWXU | S_IRGRP | S_IXGRP) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
     			if(chown(currentPath.c_str(), userId, groupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			if(chmod(currentPath.c_str(), S_IRWXU | S_IRGRP | S_IXGRP) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
     			files = GD::bl->io.getFiles(currentPath, false);
 				for(std::vector<std::string>::iterator j = files.begin(); j != files.end(); ++j)
 				{
 					std::string file = currentPath + *j;
-					if(chmod(file.c_str(), S_IRUSR | S_IWUSR | S_IRGRP) == -1) std::cerr << "Could not set permissions on " << file << std::endl;
 					if(chown(file.c_str(), userId, groupId) == -1) std::cerr << "Could not set owner on " << file << std::endl;
+					if(chmod(file.c_str(), S_IRUSR | S_IWUSR | S_IRGRP) == -1) std::cerr << "Could not set permissions on " << file << std::endl;
+				}
+
+				for(int32_t i = 0; i < GD::serverInfo.count(); i++)
+				{
+					BaseLib::Rpc::PServerInfo settings = GD::serverInfo.get(i);
+					if(settings->contentPathUser.empty() || settings->contentPathGroup.empty()) continue;
+					uid_t localUserId = GD::bl->hf.userId(settings->contentPathUser);
+					gid_t localGroupId = GD::bl->hf.groupId(settings->contentPathGroup);
+					if(((int32_t)localUserId) == -1 || ((int32_t)localGroupId) == -1) continue;
+					currentPath = settings->contentPath;
+					if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, settings->contentPathPermissions);
+					if(chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+					if(chmod(currentPath.c_str(), settings->contentPathPermissions) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 				}
 
     			exit(0);

@@ -3,6 +3,7 @@
 Features:
 
 * Homegear can now listen on ports lower than 1025 when started as root but running as user.
+* New settings to set permissions on web content path.
 
 02.08.2016:
 
