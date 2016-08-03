@@ -94,6 +94,25 @@ void exitHomegear(int exitCode)
     exit(exitCode);
 }
 
+void bindRPCServers()
+{
+	BaseLib::TcpSocket tcpSocket(GD::bl.get());
+	// Bind all RPC servers listening on ports <= 1024
+	for(int32_t i = 0; i < GD::serverInfo.count(); i++)
+	{
+		BaseLib::Rpc::PServerInfo settings = GD::serverInfo.get(i);
+		if(settings->port > 1024) continue;
+		std::string info = "Info: Binding XML RPC server " + settings->name + " listening on " + settings->interface + ":" + std::to_string(settings->port);
+		if(settings->ssl) info += ", SSL enabled";
+		else GD::bl->rpcPort = settings->port;
+		if(settings->authType != BaseLib::Rpc::ServerInfo::Info::AuthType::none) info += ", authentication enabled";
+		info += "...";
+		GD::out.printInfo(info);
+		settings->socketDescriptor = tcpSocket.bindSocket(settings->interface, std::to_string(settings->port), settings->address);
+		if(settings->socketDescriptor) GD::out.printInfo("Info: Server successfully bound.");
+	}
+}
+
 void startRPCServers()
 {
 	for(int32_t i = 0; i < GD::serverInfo.count(); i++)
@@ -287,7 +306,7 @@ void terminate(int32_t signalNumber)
 			}
 			_startUpComplete = false;
 			_shuttingDownMutex.unlock();
-			if(GD::bl->settings.changed())
+			/*if(GD::bl->settings.changed())
 			{
 				if(GD::bl->settings.enableUPnP())
 				{
@@ -320,7 +339,7 @@ void terminate(int32_t signalNumber)
 					GD::out.printInfo("Starting UPnP server");
 					GD::uPnP->start();
 				}
-			}
+			}*/
 			//Reopen log files, important for logrotate
 			if(_startAsDaemon || _nonInteractive)
 			{
@@ -333,6 +352,7 @@ void terminate(int32_t signalNumber)
 					GD::out.printError("Error: Could not redirect errors to new log file.");
 				}
 			}
+			GD::out.printCritical("Info: Backing up database...");
 			GD::bl->db->hotBackup();
 			if(!GD::bl->db->isOpen())
 			{
@@ -753,14 +773,16 @@ void startUp()
 			{
 				if((*k).compare(0, 6, "db.sql") != 0) continue;
 				std::string file = currentPath + *k;
-				if(chmod((*k).c_str(), GD::bl->settings.dataPathPermissions()) == -1) GD::out.printError("Could not set permissions on " + file);
-				if(chown((*k).c_str(), userId, groupId) == -1) GD::out.printError("Could not set owner on " + file);
+				if(chown(file.c_str(), userId, groupId) == -1) GD::out.printError("Could not set owner on " + file);
+				if(chmod(file.c_str(), GD::bl->settings.dataPathPermissions()) == -1) GD::out.printError("Could not set permissions on " + file);
 			}
 		}
 
     	GD::licensingController->loadModules();
 
 		GD::familyController->loadModules();
+
+		bindRPCServers();
 
     	if(getuid() == 0 && !GD::runAsUser.empty() && !GD::runAsGroup.empty())
     	{

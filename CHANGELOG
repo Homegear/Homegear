@@ -1,3 +1,9 @@
+03.08.2016:
+
+Features:
+
+* Homegear can now listen on ports lower than 1025 when started as root but running as user.
+
 02.08.2016:
 
 Features:
