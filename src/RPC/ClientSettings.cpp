@@ -31,7 +31,7 @@
 #include "ClientSettings.h"
 #include "../GD/GD.h"
 
-namespace RPC
+namespace Rpc
 {
 ClientSettings::ClientSettings()
 {
@@ -168,4 +168,4 @@ void ClientSettings::load(std::string filename)
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
-} /* namespace RPC */
+} /* namespace Rpc */

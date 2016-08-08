@@ -39,7 +39,7 @@
 #include <map>
 #include <cstring>
 
-namespace RPC
+namespace Rpc
 {
 class ClientSettings
 {

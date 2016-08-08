@@ -40,7 +40,7 @@
 #include <memory>
 #include <cstdlib>
 
-namespace RPC
+namespace Rpc
 {
 class RPCDevTest : public RPCMethod
 {

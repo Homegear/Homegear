@@ -38,7 +38,7 @@
 #include "RPCServer.h"
 #include "RPCMethods.h"
 
-namespace RPC {
+namespace Rpc {
 class Server {
 public:
 	Server();
@@ -80,5 +80,5 @@ protected:
 	std::shared_ptr<RPCServer> _server;
 };
 
-} /* namespace RPC */
+} /* namespace Rpc */
 #endif /* SERVER_H_ */

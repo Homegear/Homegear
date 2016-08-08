@@ -80,12 +80,12 @@ AC_DEFINE_UNQUOTED([GITBRANCHHOMEGEAR], [`./getGitBranchHomegear.sh`], [Define g
 #	])
 
 AC_ARG_WITH([eventhandler], [AS_HELP_STRING([--without-eventhandler], [Compile without event handler])], [with_eventhandler=no], [])
-AS_IF([test "x$with_eventhandler" != "xno"], [	
+AS_IF([test "x$with_eventhandler" != "xno"], [
 	AC_DEFINE(EVENTHANDLER, [], [Enables compilation of Homegear's event handler])
 	])
 
 AC_ARG_WITH([ccu2], [AS_HELP_STRING([--with-ccu2], [Compile for CCU2])], [with_ccu2=yes], [])
-AS_IF([test "x$with_ccu2" = "xyes"], [	
+AS_IF([test "x$with_ccu2" = "xyes"], [
 	AC_DEFINE(CCU2, [], [Enables features specific for CCU2])
 	])
 

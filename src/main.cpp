@@ -137,7 +137,7 @@ void startRPCServers()
 void stopRPCServers(bool dispose)
 {
 	GD::out.printInfo( "(Shutdown) => Stopping RPC servers");
-	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+	for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 	{
 		i->second.stop();
 		if(dispose) i->second.dispose();
@@ -719,11 +719,9 @@ void startUp()
 				GD::out.printCritical("Critical: Directory \"" + GD::bl->settings.socketPath() + "\" does not exist and cannot be created.");
 				exit(1);
 			}
-			uid_t userId = GD::bl->hf.userId(GD::runAsUser);
-			gid_t groupId = GD::bl->hf.groupId(GD::runAsGroup);
-			if((signed)userId != -1 && (signed)groupId != -1)
+			if(GD::bl->userId != 0 || GD::bl->groupId != 0)
 			{
-				if(chown(GD::bl->settings.socketPath().c_str(), userId, groupId) == -1)
+				if(chown(GD::bl->settings.socketPath().c_str(), GD::bl->userId, GD::bl->groupId) == -1)
 				{
 					GD::out.printCritical("Critical: Could not set permissions on directory \"" + GD::bl->settings.socketPath() + "\"");
 					exit(1);
@@ -749,8 +747,8 @@ void startUp()
 			gid_t groupId = GD::bl->hf.groupId(GD::bl->settings.dataPathGroup());
 			if(((int32_t)userId) == -1 || ((int32_t)groupId) == -1)
 			{
-				userId = GD::bl->hf.userId(GD::runAsUser);
-				groupId = GD::bl->hf.groupId(GD::runAsGroup);
+				userId = GD::bl->userId;
+				groupId = GD::bl->groupId;
 			}
 			std::vector<std::string> files;
 			try
@@ -786,25 +784,23 @@ void startUp()
 
     	if(getuid() == 0 && !GD::runAsUser.empty() && !GD::runAsGroup.empty())
     	{
-    		uid_t userId = GD::bl->hf.userId(GD::runAsUser);
-			gid_t groupId = GD::bl->hf.groupId(GD::runAsGroup);
-			if((signed)userId == -1 || (signed)groupId == -1)
+			if(GD::bl->userId == 0 || GD::bl->groupId == 0)
 			{
 				GD::out.printCritical("Could not drop privileges. User name or group name is not valid.");
 				exitHomegear(1);
 			}
 			GD::out.printInfo("Info: Setting up physical interfaces and GPIOs...");
-			if(GD::familyController) GD::familyController->physicalInterfaceSetup(userId, groupId);
+			if(GD::familyController) GD::familyController->physicalInterfaceSetup(GD::bl->userId, GD::bl->groupId);
 			BaseLib::Gpio gpio(GD::bl.get());
-			gpio.setup(userId, groupId);
-			GD::out.printInfo("Info: Dropping privileges to user " + GD::runAsUser + " (" + std::to_string(userId) + ") and group " + GD::runAsGroup + " (" + std::to_string(groupId) + ")");
+			gpio.setup(GD::bl->userId, GD::bl->groupId);
+			GD::out.printInfo("Info: Dropping privileges to user " + GD::runAsUser + " (" + std::to_string(GD::bl->userId) + ") and group " + GD::runAsGroup + " (" + std::to_string(GD::bl->groupId) + ")");
 
-			if(setgid(groupId) != 0)
+			if(setgid(GD::bl->groupId) != 0)
 			{
 				GD::out.printCritical("Critical: Could not drop group privileges.");
 				exitHomegear(1);
 			}
-			if(setuid(userId) != 0)
+			if(setuid(GD::bl->userId) != 0)
 			{
 				GD::out.printCritical("Critical: Could not drop user privileges.");
 				exitHomegear(1);
@@ -1020,7 +1016,7 @@ void startUp()
 
 int main(int argc, char* argv[])
 {
-    try
+	try
     {
     	getExecutablePath(argc, argv);
     	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
@@ -1428,6 +1424,13 @@ int main(int argc, char* argv[])
 				GD::out.printCritical("Critical: You only provided a user OR a group for Homegear to run as. Please specify both.");
 				exit(1);
 			}
+			GD::bl->userId = GD::bl->hf.userId(GD::runAsUser);
+			GD::bl->groupId = GD::bl->hf.groupId(GD::runAsGroup);
+			if((int32_t)GD::bl->userId == -1 || (int32_t)GD::bl->groupId == -1)
+			{
+				GD::bl->userId = 0;
+				GD::bl->groupId = 0;
+			}
 
 			GD::out.printInfo("Loading RPC server settings from " + GD::bl->settings.serverSettingsPath());
 			GD::serverInfo.init(GD::bl.get());
@@ -1447,7 +1450,7 @@ int main(int argc, char* argv[])
 		GD::licensingController.reset(new LicensingController());
 		GD::familyController.reset(new FamilyController());
 		GD::bl->db.reset(new DatabaseController());
-		GD::rpcClient.reset(new RPC::Client());
+		GD::rpcClient.reset(new Rpc::Client());
 
     	if(_startAsDaemon) startDaemon();
     	startUp();

@@ -1150,7 +1150,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			int32_t websocketWidth = 10;
 
 			//Safe to use without mutex
-			for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+			for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 			{
 				if(!i->second.isRunning()) continue;
 				const BaseLib::Rpc::PServerInfo settings = i->second.getInfo();
@@ -1268,7 +1268,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 				<< std::endl;
 
 			//Safe to use without mutex
-			for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+			for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 			{
 				if(!i->second.isRunning()) continue;
 				const BaseLib::Rpc::PServerInfo settings = i->second.getInfo();
@@ -1314,7 +1314,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 					exitCode = 1;
 				}
 				else stringStream << "RPC Client: OK" << std::endl;
-				for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+				for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 				{
 					if(!i->second.lifetick())
 					{

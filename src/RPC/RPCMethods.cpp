@@ -35,7 +35,7 @@
 	#include <sys/wait.h>
 #endif
 
-namespace RPC
+namespace Rpc
 {
 
 BaseLib::PVariable RPCDevTest::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
@@ -2322,7 +2322,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, std::shar
 		if(GD::bl->settings.clientAddressesToReplace().find(parameters->at(0)->stringValue) != GD::bl->settings.clientAddressesToReplace().end())
 		{
 			std::string newAddress = GD::bl->settings.clientAddressesToReplace().at(parameters->at(0)->stringValue);
-			std::string remoteIP = RPC::Server::getClientIPAll(clientInfo->id);
+			std::string remoteIP = Rpc::Server::getClientIPAll(clientInfo->id);
 			if(remoteIP.empty()) return BaseLib::Variable::createError(-32500, "Could not get client's IP address.");
 			GD::bl->hf.stringReplace(newAddress, "$remoteip", remoteIP);
 			GD::out.printInfo("Info: Replacing address " + parameters->at(0)->stringValue + " with " + newAddress);
@@ -2411,7 +2411,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, std::shar
 					return BaseLib::Variable::createError(-32500, "I'm disposing.");
 				}
 				GD::bl->threadManager.join(_initServerThread);
-				GD::bl->threadManager.start(_initServerThread, false, &RPC::Client::initServerMethods, GD::rpcClient.get(), server);
+				GD::bl->threadManager.start(_initServerThread, false, &Rpc::Client::initServerMethods, GD::rpcClient.get(), server);
 			}
 			catch(const std::exception& ex)
 			{
@@ -2521,9 +2521,9 @@ BaseLib::PVariable RPCListDevices::invoke(BaseLib::PRpcClientInfo clientInfo, st
 		}
 		bool channels = true;
 		std::map<std::string, bool> fields;
+		if(parameters->size() > 0 && parameters->at(0)->type == BaseLib::VariableType::tBoolean) channels = parameters->at(0)->booleanValue;
 		if(parameters->size() == 2)
 		{
-			channels = parameters->at(0)->booleanValue;
 			for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(1)->arrayValue->begin(); i != parameters->at(1)->arrayValue->end(); ++i)
 			{
 				if((*i)->stringValue.empty()) continue;
@@ -3854,7 +3854,7 @@ BaseLib::PVariable RPCTriggerRpcEvent::invoke(BaseLib::PRpcClientInfo clientInfo
 		else if(parameters->at(0)->stringValue == "updateDevice")
 		{
 			if(parameters->at(1)->arrayValue->size() != 4) return BaseLib::Variable::createError(-1, "Wrong parameter count. You need to pass (in this order): Integer peerID, Integer channel, String address, Integer flags");
-			GD::rpcClient->broadcastUpdateDevice(parameters->at(1)->arrayValue->at(0)->integerValue, parameters->at(1)->arrayValue->at(1)->integerValue, parameters->at(1)->arrayValue->at(2)->stringValue, (RPC::Client::Hint::Enum)parameters->at(1)->arrayValue->at(3)->integerValue);
+			GD::rpcClient->broadcastUpdateDevice(parameters->at(1)->arrayValue->at(0)->integerValue, parameters->at(1)->arrayValue->at(1)->integerValue, parameters->at(1)->arrayValue->at(2)->stringValue, (Rpc::Client::Hint::Enum)parameters->at(1)->arrayValue->at(3)->integerValue);
 		}
 		else return BaseLib::Variable::createError(-1, "Invalid function.");
 
@@ -4018,4 +4018,4 @@ BaseLib::PVariable RPCWriteLog::invoke(BaseLib::PRpcClientInfo clientInfo, std::
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-} /* namespace RPC */
+} /* namespace Rpc */

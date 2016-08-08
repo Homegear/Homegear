@@ -33,7 +33,7 @@
 #include <homegear-base/BaseLib.h>
 #include "../MQTT/Mqtt.h"
 
-namespace RPC
+namespace Rpc
 {
 Client::Client()
 {
@@ -57,7 +57,7 @@ void Client::init()
 {
 	//GD::bl needs to be valid, before _client is created.
 	_client.reset(new RpcClient());
-	_jsonEncoder = std::unique_ptr<BaseLib::RPC::JsonEncoder>(new BaseLib::RPC::JsonEncoder(GD::bl.get()));
+	_jsonEncoder = std::unique_ptr<BaseLib::Rpc::JsonEncoder>(new BaseLib::Rpc::JsonEncoder(GD::bl.get()));
 }
 
 bool Client::lifetick()

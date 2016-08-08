@@ -32,8 +32,8 @@
 #define DATABASECONTROLLER_H_
 
 #include "homegear-base/Database/IDatabaseController.h"
-#include "homegear-base/Encoding/RPCEncoder.h"
-#include "homegear-base/Encoding/RPCDecoder.h"
+#include "homegear-base/Encoding/RpcEncoder.h"
+#include "homegear-base/Encoding/RpcDecoder.h"
 #include "../Database/SQLite3.h"
 
 #include <thread>
@@ -143,8 +143,8 @@ protected:
 
 	BaseLib::Database::SQLite3 _db;
 
-	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
-	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
+	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
+	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
 	std::mutex _systemVariableMutex;
 	std::map<std::string, BaseLib::PVariable> _systemVariables;

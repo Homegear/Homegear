@@ -102,8 +102,8 @@ private:
 
 	BaseLib::Output _out;
 	MqttSettings _settings;
-	std::unique_ptr<BaseLib::RPC::JsonEncoder> _jsonEncoder;
-	std::unique_ptr<BaseLib::RPC::JsonDecoder> _jsonDecoder;
+	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
+	std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
 	std::unique_ptr<BaseLib::TcpSocket> _socket;
 	std::thread _pingThread;
 	std::thread _listenThread;

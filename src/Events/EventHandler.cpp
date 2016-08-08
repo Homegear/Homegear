@@ -59,8 +59,8 @@ void EventHandler::dispose()
 
 void EventHandler::init()
 {
-	_rpcDecoder = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get()));
-	_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
+	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get()));
+	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get()));
 
 	startQueue(0, GD::bl->settings.eventThreadCount(), GD::bl->settings.eventThreadPriority(), GD::bl->settings.eventThreadPolicy());
 }

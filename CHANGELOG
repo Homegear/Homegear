@@ -1,3 +1,16 @@
+07.08.2016:
+
+Features:
+
+* Improved support for 64bit RPC variables.
+* PHP variables are now 64bit on 64bit systems.
+
+04.08.2016:
+
+Features:
+
+* Sonos: PLAY_FADE now fades all grouped speakers.
+
 03.08.2016:
 
 Features:

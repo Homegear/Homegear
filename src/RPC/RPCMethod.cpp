@@ -31,7 +31,7 @@
 #include "RPCMethod.h"
 #include "../GD/GD.h"
 
-namespace RPC
+namespace Rpc
 {
 BaseLib::PVariable RPCMethod::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
@@ -121,4 +121,4 @@ void RPCMethod::addSignature(BaseLib::VariableType returnType, std::vector<BaseL
     }
 }
 
-} /* namespace RPC */
+} /* namespace Rpc */

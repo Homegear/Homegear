@@ -168,8 +168,8 @@ protected:
 	std::thread _mainThread;
 	std::mutex _mainThreadMutex;
 	std::mutex _databaseMutex;
-	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
-	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
+	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
+	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
 	void processTriggerMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, std::shared_ptr<std::vector<BaseLib::PVariable>>& values);
 	void processTriggerSingleVariable(uint64_t peerID, int32_t channel, std::string& variable, BaseLib::PVariable& value);

@@ -32,7 +32,7 @@
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 
-namespace RPC
+namespace Rpc
 {
 
 RpcClient::RpcClient()
@@ -46,12 +46,12 @@ RpcClient::RpcClient()
 		_out.setErrorCallback(nullptr); //Avoid endless loops
 
 		if(!GD::bl) _out.printCritical("Critical: Can't initialize RPC client, because base library is not initialized.");
-		_rpcDecoder = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get()));
-		_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
-		_xmlRpcDecoder = std::unique_ptr<BaseLib::RPC::XMLRPCDecoder>(new BaseLib::RPC::XMLRPCDecoder(GD::bl.get()));
-		_xmlRpcEncoder = std::unique_ptr<BaseLib::RPC::XMLRPCEncoder>(new BaseLib::RPC::XMLRPCEncoder(GD::bl.get()));
-		_jsonDecoder = std::unique_ptr<BaseLib::RPC::JsonDecoder>(new BaseLib::RPC::JsonDecoder(GD::bl.get()));
-		_jsonEncoder = std::unique_ptr<BaseLib::RPC::JsonEncoder>(new BaseLib::RPC::JsonEncoder(GD::bl.get()));
+		_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get()));
+		_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get()));
+		_xmlRpcDecoder = std::unique_ptr<BaseLib::Rpc::XmlrpcDecoder>(new BaseLib::Rpc::XmlrpcDecoder(GD::bl.get()));
+		_xmlRpcEncoder = std::unique_ptr<BaseLib::Rpc::XmlrpcEncoder>(new BaseLib::Rpc::XmlrpcEncoder(GD::bl.get()));
+		_jsonDecoder = std::unique_ptr<BaseLib::Rpc::JsonDecoder>(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
+		_jsonEncoder = std::unique_ptr<BaseLib::Rpc::JsonEncoder>(new BaseLib::Rpc::JsonEncoder(GD::bl.get()));
 	}
 	catch(const std::exception& ex)
     {
@@ -414,7 +414,7 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 		{
 			if(server->binary)
 			{
-				BaseLib::RPC::RPCHeader header;
+				BaseLib::Rpc::RpcHeader header;
 				if(server->settings && server->settings->authType == ClientSettings::Settings::AuthType::basic)
 				{
 					_out.printDebug("Using Basic Access Authentication.");

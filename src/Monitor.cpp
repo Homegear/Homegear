@@ -348,7 +348,7 @@ bool Monitor::lifetick()
 	try
 	{
 		if(!GD::rpcClient->lifetick()) return false;
-		for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+		for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 		{
 			if(!i->second.lifetick()) return false;
 		}

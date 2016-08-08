@@ -31,6 +31,7 @@
 #ifndef RPCSERVER_H_
 #define RPCSERVER_H_
 
+#include "../../config.h"
 #include <homegear-base/BaseLib.h>
 #include "RPCMethod.h"
 #include "Auth.h"
@@ -45,7 +46,7 @@
 
 #include <gnutls/gnutls.h>
 
-namespace RPC
+namespace Rpc
 {
 	class RPCServer {
 		public:
@@ -120,13 +121,13 @@ namespace RPC
 			std::mutex _stateMutex;
 			std::map<int32_t, std::shared_ptr<Client>> _clients;
 			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> _rpcMethods;
-			std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
-			std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoderAnsi;
-			std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
-			std::unique_ptr<BaseLib::RPC::XMLRPCDecoder> _xmlRpcDecoder;
-			std::unique_ptr<BaseLib::RPC::XMLRPCEncoder> _xmlRpcEncoder;
-			std::unique_ptr<BaseLib::RPC::JsonDecoder> _jsonDecoder;
-			std::unique_ptr<BaseLib::RPC::JsonEncoder> _jsonEncoder;
+			std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
+			std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoderAnsi;
+			std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+			std::unique_ptr<BaseLib::Rpc::XmlrpcDecoder> _xmlRpcDecoder;
+			std::unique_ptr<BaseLib::Rpc::XmlrpcEncoder> _xmlRpcEncoder;
+			std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
+			std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
 			std::unique_ptr<WebServer::WebServer> _webServer;
 			std::mutex _lifetick1Mutex;
 			std::pair<int64_t, bool> _lifetick1;

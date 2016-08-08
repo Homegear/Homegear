@@ -31,7 +31,7 @@
 #include "Auth.h"
 #include "../GD/GD.h"
 
-namespace RPC
+namespace Rpc
 {
 Auth::Auth()
 {
@@ -43,8 +43,8 @@ Auth::Auth(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<std::string>
 	_socket = socket;
 	_validUsers = validUsers;
 	_initialized = true;
-	_rpcEncoder = std::shared_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
-	_jsonDecoder = std::shared_ptr<BaseLib::RPC::JsonDecoder>(new BaseLib::RPC::JsonDecoder(GD::bl.get()));
+	_rpcEncoder = std::shared_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get()));
+	_jsonDecoder = std::shared_ptr<BaseLib::Rpc::JsonDecoder>(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
 }
 
 Auth::Auth(std::shared_ptr<BaseLib::TcpSocket>& socket, std::string userName, std::string password)
@@ -110,7 +110,7 @@ void Auth::sendBasicUnauthorized(bool binary)
 	}
 }
 
-bool Auth::basicServer(std::shared_ptr<BaseLib::RPC::RPCHeader>& binaryHeader)
+bool Auth::basicServer(std::shared_ptr<BaseLib::Rpc::RpcHeader>& binaryHeader)
 {
 	if(!_initialized) throw AuthException("Not initialized.");
 	if(!binaryHeader) throw AuthException("Header is nullptr.");
@@ -220,7 +220,7 @@ bool Auth::basicServer(BaseLib::WebSocket& webSocket)
 	{
 		variable = _jsonDecoder->decode(webSocket.getContent());
 	}
-	catch(BaseLib::RPC::JsonDecoderException& ex)
+	catch(BaseLib::Rpc::JsonDecoderException& ex)
 	{
 		sendWebSocketUnauthorized(webSocket, "Error decoding json (is packet in json format?).");
 		return false;
@@ -257,7 +257,7 @@ bool Auth::sessionServer(BaseLib::WebSocket& webSocket)
 	{
 		variable = _jsonDecoder->decode(webSocket.getContent());
 	}
-	catch(BaseLib::RPC::JsonDecoderException& ex)
+	catch(BaseLib::Rpc::JsonDecoderException& ex)
 	{
 		sendWebSocketUnauthorized(webSocket, "Error decoding json (is packet in json format?).");
 		return false;
@@ -297,4 +297,4 @@ void Auth::sendWebSocketUnauthorized(BaseLib::WebSocket& webSocket, std::string 
 	_socket->proofwrite(output);
 }
 
-} /* namespace RPC */
+} /* namespace Rpc */

@@ -32,7 +32,7 @@
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 
-using namespace RPC;
+using namespace Rpc;
 
 int32_t RPCServer::_currentClientID = 0;
 
@@ -52,13 +52,13 @@ RPCServer::RPCServer()
 {
 	_out.init(GD::bl.get());
 
-	_rpcDecoder = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get()));
-	_rpcDecoderAnsi = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get(), true));
-	_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
-	_xmlRpcDecoder = std::unique_ptr<BaseLib::RPC::XMLRPCDecoder>(new BaseLib::RPC::XMLRPCDecoder(GD::bl.get()));
-	_xmlRpcEncoder = std::unique_ptr<BaseLib::RPC::XMLRPCEncoder>(new BaseLib::RPC::XMLRPCEncoder(GD::bl.get()));
-	_jsonDecoder = std::unique_ptr<BaseLib::RPC::JsonDecoder>(new BaseLib::RPC::JsonDecoder(GD::bl.get()));
-	_jsonEncoder = std::unique_ptr<BaseLib::RPC::JsonEncoder>(new BaseLib::RPC::JsonEncoder(GD::bl.get()));
+	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get()));
+	_rpcDecoderAnsi = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), true));
+	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get()));
+	_xmlRpcDecoder = std::unique_ptr<BaseLib::Rpc::XmlrpcDecoder>(new BaseLib::Rpc::XmlrpcDecoder(GD::bl.get()));
+	_xmlRpcEncoder = std::unique_ptr<BaseLib::Rpc::XmlrpcEncoder>(new BaseLib::Rpc::XmlrpcEncoder(GD::bl.get()));
+	_jsonDecoder = std::unique_ptr<BaseLib::Rpc::JsonDecoder>(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
+	_jsonEncoder = std::unique_ptr<BaseLib::Rpc::JsonEncoder>(new BaseLib::Rpc::JsonEncoder(GD::bl.get()));
 
 	_info.reset(new BaseLib::Rpc::ServerInfo::Info());
 	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
@@ -1166,7 +1166,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						processedBytes += binaryRpc.process(&buffer[processedBytes], bytesRead - processedBytes);
 						if(binaryRpc.isFinished())
 						{
-							std::shared_ptr<BaseLib::RPC::RPCHeader> header = _rpcDecoder->decodeHeader(binaryRpc.getData());
+							std::shared_ptr<BaseLib::Rpc::RpcHeader> header = _rpcDecoder->decodeHeader(binaryRpc.getData());
 							if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic)
 							{
 								if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
