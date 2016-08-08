@@ -113,7 +113,7 @@ void UPnP::stop()
 		GD::bl->threadManager.join(_listenThread);
 		sendByebye();
 		_packets.clear();
-		for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+		for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 		{
 			i->second.removeWebserverEventHandler(_webserverEventHandler);
 		}
@@ -343,7 +343,7 @@ void UPnP::registerServers()
 			return;
 		}
 
-		for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+		for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 		{
 			BaseLib::Rpc::PServerInfo settings = i->second.getInfo();
 			if(settings->ssl || settings->authType != BaseLib::Rpc::ServerInfo::Info::AuthType::none || !settings->webServer) continue;

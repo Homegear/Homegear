@@ -36,7 +36,7 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace RPC
+namespace Rpc
 {
 
 class RPCMethod

@@ -185,7 +185,7 @@ FamilyController::~FamilyController()
 
 void FamilyController::onAddWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler, std::map<int32_t, BaseLib::PEventHandler>& eventHandlers)
 {
-	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+	for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 	{
 		eventHandlers[i->first] = i->second.addWebserverEventHandler(eventHandler);
 	}
@@ -193,7 +193,7 @@ void FamilyController::onAddWebserverEventHandler(BaseLib::Rpc::IWebserverEventS
 
 void FamilyController::onRemoveWebserverEventHandler(std::map<int32_t, BaseLib::PEventHandler>& eventHandlers)
 {
-	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+	for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 	{
 		i->second.removeWebserverEventHandler(eventHandlers[i->first]);
 	}
@@ -223,7 +223,7 @@ void FamilyController::onRPCUpdateDevice(uint64_t id, int32_t channel, std::stri
 {
 	try
 	{
-		GD::rpcClient->broadcastUpdateDevice(id, channel, address, (RPC::Client::Hint::Enum)hint);
+		GD::rpcClient->broadcastUpdateDevice(id, channel, address, (Rpc::Client::Hint::Enum)hint);
 	}
 	catch(const std::exception& ex)
 	{
@@ -324,7 +324,7 @@ void FamilyController::onRunScript(PScriptInfo& scriptInfo, bool wait)
 
 int32_t FamilyController::onIsAddonClient(int32_t clientID)
 {
-	return RPC::Server::isAddonClientAll(clientID);
+	return Rpc::Server::isAddonClientAll(clientID);
 }
 
 int32_t FamilyController::onCheckLicense(int32_t moduleId, int32_t familyId, int32_t deviceId, const std::string& licenseKey)

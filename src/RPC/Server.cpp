@@ -31,7 +31,7 @@
 #include "Server.h"
 #include "../GD/GD.h"
 
-namespace RPC
+namespace Rpc
 {
 Server::Server()
 {
@@ -202,7 +202,7 @@ int32_t Server::isAddonClient(int32_t clientID)
 int32_t Server::isAddonClientAll(int32_t clientID)
 {
 	int32_t result = -1;
-	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+	for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 	{
 		result = i->second.isAddonClient(clientID);
 		if(result != -1) return result;
@@ -231,7 +231,7 @@ void Server::removeWebserverEventHandler(BaseLib::PEventHandler eventHandler)
 std::string Server::getClientIPAll(int32_t clientID)
 {
 	std::string ipAddress;
-	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+	for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 	{
 		ipAddress = i->second.getClientIP(clientID);
 		if(!ipAddress.empty()) return ipAddress;

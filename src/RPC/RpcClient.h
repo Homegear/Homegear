@@ -54,7 +54,7 @@
 #include <poll.h>
 #include <signal.h>
 
-namespace RPC
+namespace Rpc
 {
 class RpcClient {
 public:
@@ -68,12 +68,12 @@ public:
 protected:
 	BaseLib::Output _out;
 	BaseLib::WebSocket _webSocket;
-	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
-	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
-	std::unique_ptr<BaseLib::RPC::XMLRPCDecoder> _xmlRpcDecoder;
-	std::unique_ptr<BaseLib::RPC::XMLRPCEncoder> _xmlRpcEncoder;
-	std::unique_ptr<BaseLib::RPC::JsonDecoder> _jsonDecoder;
-	std::unique_ptr<BaseLib::RPC::JsonEncoder> _jsonEncoder;
+	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
+	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+	std::unique_ptr<BaseLib::Rpc::XmlrpcDecoder> _xmlRpcDecoder;
+	std::unique_ptr<BaseLib::Rpc::XmlrpcEncoder> _xmlRpcEncoder;
+	std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
+	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
 
 	void sendRequest(RemoteRpcServer* server, std::vector<char>& data, std::vector<char>& responseData, bool insertHeader, bool& retry);
 	std::string getIPAddress(std::string address);

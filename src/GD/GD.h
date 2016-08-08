@@ -66,12 +66,12 @@ public:
 	static std::unique_ptr<FamilyController> familyController;
 	static std::unique_ptr<LicensingController> licensingController;
 	//We can work with rpcServers without Mutex, because elements are never deleted and iterators are not invalidated upon insertion of new elements.
-	static std::map<int32_t, RPC::Server> rpcServers;
-	static std::unique_ptr<RPC::Client> rpcClient;
+	static std::map<int32_t, Rpc::Server> rpcServers;
+	static std::unique_ptr<Rpc::Client> rpcClient;
 	static std::unique_ptr<ScriptEngine::ScriptEngineServer> scriptEngineServer;
 	static std::unique_ptr<CLI::Server> cliServer;
 	static BaseLib::Rpc::ServerInfo serverInfo;
-	static RPC::ClientSettings clientSettings;
+	static Rpc::ClientSettings clientSettings;
 	static int32_t rpcLogLevel;
 	static std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>> licensingModules;
 	static std::unique_ptr<UPnP> uPnP;

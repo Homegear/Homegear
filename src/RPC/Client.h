@@ -40,7 +40,7 @@
 #include "RpcClient.h"
 #include <homegear-base/BaseLib.h>
 
-namespace RPC
+namespace Rpc
 {
 class Client
 {
@@ -82,7 +82,7 @@ private:
 	std::mutex _serversMutex;
 	int32_t _serverId = 0;
 	std::map<int32_t, std::shared_ptr<RemoteRpcServer>> _servers;
-	std::unique_ptr<BaseLib::RPC::JsonEncoder> _jsonEncoder;
+	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
 	std::mutex _lifetick1Mutex;
 	std::pair<int64_t, bool> _lifetick1;
 

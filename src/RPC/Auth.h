@@ -38,7 +38,7 @@
 #include <memory>
 #include <vector>
 
-namespace RPC
+namespace Rpc
 {
 
 class AuthException : public BaseLib::Exception
@@ -57,7 +57,7 @@ public:
 
 	bool initialized() { return _initialized; }
 	std::pair<std::string, std::string> basicClient();
-	bool basicServer(std::shared_ptr<BaseLib::RPC::RPCHeader>& binaryHeader);
+	bool basicServer(std::shared_ptr<BaseLib::Rpc::RpcHeader>& binaryHeader);
 	bool basicServer(BaseLib::Http& httpPacket);
 	bool basicServer(BaseLib::WebSocket& webSocket);
 	bool sessionServer(BaseLib::WebSocket& webSocket);
@@ -73,8 +73,8 @@ protected:
 	std::string _password;
 	std::pair<std::string, std::string> _basicAuthString;
 	BaseLib::Http _http;
-	std::shared_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
-	std::shared_ptr<BaseLib::RPC::JsonDecoder> _jsonDecoder;
+	std::shared_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+	std::shared_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
 
 	void sendBasicUnauthorized(bool binary);
 	void sendWebSocketAuthorized(BaseLib::WebSocket& webSocket);

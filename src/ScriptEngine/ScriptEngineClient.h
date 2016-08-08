@@ -114,8 +114,8 @@ private:
 	int32_t _currentPacketId = 0;
 
 	std::unique_ptr<BaseLib::Rpc::BinaryRpc> _binaryRpc;
-	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
-	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
+	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
+	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
 	void collectGarbage();
 	std::vector<std::string> getArgs(const std::string& path, const std::string& args);

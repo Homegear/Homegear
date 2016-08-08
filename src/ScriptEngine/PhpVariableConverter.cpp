@@ -48,7 +48,8 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval* value)
 		if(!value) return variable;
 		if(Z_TYPE_P(value) == IS_LONG)
 		{
-			variable.reset(new BaseLib::Variable((int32_t)Z_LVAL_P(value)));
+			variable.reset(new BaseLib::Variable(Z_LVAL_P(value)));
+			variable->type = (sizeof(long) == 8) ? BaseLib::VariableType::tInteger64 : BaseLib::VariableType::tInteger;
 		}
 		else if(Z_TYPE_P(value) == IS_DOUBLE)
 		{
@@ -160,6 +161,10 @@ void PhpVariableConverter::getPHPVariable(BaseLib::PVariable input, zval* output
 		else if(input->type == BaseLib::VariableType::tInteger)
 		{
 			ZVAL_LONG(output, input->integerValue);
+		}
+		else if(input->type == BaseLib::VariableType::tInteger64)
+		{
+			ZVAL_LONG(output, input->integerValue64);
 		}
 		else if(input->type == BaseLib::VariableType::tFloat)
 		{

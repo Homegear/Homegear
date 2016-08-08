@@ -42,7 +42,7 @@
 #include <mutex>
 #include <map>
 
-namespace RPC
+namespace Rpc
 {
 
 class RpcClient;

@@ -31,7 +31,7 @@
 #include "RemoteRpcServer.h"
 #include "../GD/GD.h"
 
-namespace RPC
+namespace Rpc
 {
 
 RemoteRpcServer::RemoteRpcServer(std::shared_ptr<RpcClient> client)
