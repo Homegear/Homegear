@@ -191,34 +191,6 @@ mkdir scripts
 chown root:root scripts
 chmod 750 scripts
 
-#Add homegear monitor script
-echo "#!/bin/bash
-return=\`ps -A | grep homegear -c\`
-if [ \$return -lt 1 ] && test -e /var/run/homegear/homegear.pid; then
-        LOGDIR=/var/log/homegear
-        if test -e \$LOGDIR/core; then
-                COREDIR=\$LOGDIR/coredumps
-                mkdir -p \$COREDIR
-                DIR=0
-                while test -d \$COREDIR/\$DIR; do
-                        ((DIR++))
-                done
-                COREDIR=\$COREDIR/\$DIR
-                mkdir -p \$COREDIR
-                mv \$LOGDIR/core \$COREDIR
-                mv \$LOGDIR/homegear.log \$COREDIR
-                mv \$LOGDIR/homegear.err \$COREDIR
-                cp /usr/bin/homegear \$COREDIR
-        fi
-
-        /etc/init.d/homegear restart
-fi" > scripts/checkServices.sh
-chown root:root scripts/checkServices.sh
-chmod 750 scripts/checkServices.sh
-
-#Add homegear monitor script to crontab
-echo "*/10 *  *       *       *       /scripts/checkServices.sh 2>&1 |/usr/bin/logger -t CheckServices" >> var/spool/cron/crontabs/root
-
 #Create Raspberry Pi boot config
 echo "arm_freq=900
 core_freq=250
