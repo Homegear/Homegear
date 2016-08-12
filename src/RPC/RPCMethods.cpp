@@ -3526,7 +3526,6 @@ BaseLib::PVariable RPCSetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, st
 
 		if(parameters->at(1)->stringValue == "NAME")
 		{
-			std::cerr << BaseLib::HelperFunctions::getHexString(parameters->at(2)->stringValue.c_str()) << std::endl;
 			peer->setName(parameters->at(2)->stringValue);
 			return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 		}
