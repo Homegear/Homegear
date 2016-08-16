@@ -2399,7 +2399,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, std::shar
 				eventServer->newFormat = (parameters->at(2)->integerValue & 4);
 				eventServer->subscribePeers = (parameters->at(2)->integerValue & 8);
 				eventServer->json = (parameters->at(2)->integerValue & 16);
-				eventServer->reconnectInfinitely = (parameters->at(2)->integerValue & 128);
+				if(!eventServer->reconnectInfinitely) eventServer->reconnectInfinitely = (parameters->at(2)->integerValue & 128);
 			}
 
 			_initServerThreadMutex.lock();
@@ -3526,7 +3526,6 @@ BaseLib::PVariable RPCSetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, st
 
 		if(parameters->at(1)->stringValue == "NAME")
 		{
-			std::cerr << BaseLib::HelperFunctions::getHexString(parameters->at(2)->stringValue.c_str()) << std::endl;
 			peer->setName(parameters->at(2)->stringValue);
 			return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 		}

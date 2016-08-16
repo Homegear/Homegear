@@ -39,6 +39,8 @@ RemoteRpcServer::RemoteRpcServer(std::shared_ptr<RpcClient> client)
 	_client = client;
 
 	socket = std::shared_ptr<BaseLib::TcpSocket>(new BaseLib::TcpSocket(GD::bl.get()));
+	socket->setReadTimeout(5000000);
+	socket->setWriteTimeout(5000000);
 	knownDevices.reset(new std::set<uint64_t>());
 	fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	path = "/RPC2";
@@ -74,8 +76,9 @@ void RemoteRpcServer::queueMethod(std::shared_ptr<std::pair<std::string, std::sh
 		if(tempHead >= _methodBufferSize) tempHead = 0;
 		if(tempHead == _methodBufferTail)
 		{
-			GD::out.printError("Error: More than " + std::to_string(_methodBufferSize) + " methods are queued to be sent to server " + address.first + ". Your packet processing is too slow. Dropping method.");
 			_methodBufferMutex.unlock();
+			std::cout << "Error: More than " + std::to_string(_methodBufferSize) + " methods are queued to be sent to server " + address.first + ". Your packet processing is too slow. Dropping method." << std::endl;
+			std::cerr << "Error: More than " + std::to_string(_methodBufferSize) + " methods are queued to be sent to server " + address.first + ". Your packet processing is too slow. Dropping method." << std::endl;
 			return;
 		}
 
@@ -92,18 +95,22 @@ void RemoteRpcServer::queueMethod(std::shared_ptr<std::pair<std::string, std::sh
 	}
 	catch(const std::exception& ex)
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		_methodBufferMutex.unlock();
+		//Don't use the output object here => would cause deadlock because of error callback which is calling queueMethod again.
+		std::cout << "Error in file " << __FILE__ <<  "line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+		std::cerr << "Error in file " << __FILE__ <<  "line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		_methodBufferMutex.unlock();
+		std::cout << "Error in file " << __FILE__ <<  "line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+		std::cerr << "Error in file " << __FILE__ <<  "line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
 	}
 	catch(...)
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		_methodBufferMutex.unlock();
+		std::cout << "Unknown error in file " << __FILE__ <<  "line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
+		std::cerr << "Unknown error in file " << __FILE__ <<  "line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
 	}
 }
 

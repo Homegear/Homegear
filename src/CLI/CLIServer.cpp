@@ -1048,7 +1048,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "Exit code: " << std::dec << scriptInfo->exitCode << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 10, "runcommand") == 0 || command.compare(0, 2, "rc") == 0 || command.compare(0, 1, "$") == 0)
+		else if(command.compare(0, 10, "runcommand") == 0 || command.compare(0, 3, "rc ") == 0 || command.compare(0, 1, "$") == 0)
 		{
 			int32_t commandSize = 11;
 			if(command.compare(0, 2, "rc") == 0) commandSize = 3;

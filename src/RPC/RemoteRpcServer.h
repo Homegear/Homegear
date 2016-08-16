@@ -92,7 +92,7 @@ private:
 	std::shared_ptr<RpcClient> _client;
 
 	//Method queue
-	static const int32_t _methodBufferSize = 10000;
+	static const int32_t _methodBufferSize = 1000;
 	std::mutex _methodBufferMutex;
 	int32_t _methodBufferHead = 0;
 	int32_t _methodBufferTail = 0;
