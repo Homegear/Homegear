@@ -2399,7 +2399,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, std::shar
 				eventServer->newFormat = (parameters->at(2)->integerValue & 4);
 				eventServer->subscribePeers = (parameters->at(2)->integerValue & 8);
 				eventServer->json = (parameters->at(2)->integerValue & 16);
-				eventServer->reconnectInfinitely = (parameters->at(2)->integerValue & 128);
+				if(!eventServer->reconnectInfinitely) eventServer->reconnectInfinitely = (parameters->at(2)->integerValue & 128);
 			}
 
 			_initServerThreadMutex.lock();
