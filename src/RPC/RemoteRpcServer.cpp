@@ -77,8 +77,8 @@ void RemoteRpcServer::queueMethod(std::shared_ptr<std::pair<std::string, std::sh
 		if(tempHead == _methodBufferTail)
 		{
 			_methodBufferMutex.unlock();
-			std::cout << "Error: More than " + std::to_string(_methodBufferSize) + " methods are queued to be sent to server " + address.first + ". Your packet processing is too slow. Dropping method." << std::endl;
-			std::cerr << "Error: More than " + std::to_string(_methodBufferSize) + " methods are queued to be sent to server " + address.first + ". Your packet processing is too slow. Dropping method." << std::endl;
+			std::cout << "Error: More than " << std::to_string(_methodBufferSize) << " methods are queued to be sent to server " << address.first << ". Your packet processing is too slow. Dropping method." << std::endl;
+			std::cerr << "Error: More than " << std::to_string(_methodBufferSize) << " methods are queued to be sent to server " << address.first << ". Your packet processing is too slow. Dropping method." << std::endl;
 			return;
 		}
 
@@ -97,20 +97,20 @@ void RemoteRpcServer::queueMethod(std::shared_ptr<std::pair<std::string, std::sh
 	{
 		_methodBufferMutex.unlock();
 		//Don't use the output object here => would cause deadlock because of error callback which is calling queueMethod again.
-		std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+		std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
 	}
 	catch(BaseLib::Exception& ex)
 	{
 		_methodBufferMutex.unlock();
-		std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+		std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
 	}
 	catch(...)
 	{
 		_methodBufferMutex.unlock();
-		std::cout << "Unknown error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
-		std::cerr << "Unknown error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
+		std::cout << "Unknown error in file " << __FILE__ <<  " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+		std::cerr << "Unknown error in file " << __FILE__ <<  " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
 	}
 }
 
