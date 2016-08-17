@@ -1,3 +1,13 @@
+16.08.2016:
+
+Features:
+
+* MQTT: PRESS_ variables are not retained anymore.
+
+Errors:
+
+* Removed possible deadlock/endless loop causes in RPC client.
+
 07.08.2016:
 
 Features:
