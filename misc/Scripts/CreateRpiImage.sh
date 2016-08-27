@@ -286,7 +286,7 @@ insserv tmpfslog.sh
 echo \"Updating your system...\"
 apt update
 apt -y upgrade
-apt -y install homegear homegear-homematicbidcos homegear-homematicwired homegear-insteon homegear-max homegear-philipshue homegear-sonos homegear-kodi homegear-ipcam homegear-beckhoff-bk90x0
+apt -y install homegear homegear-homematicbidcos homegear-homematicwired homegear-insteon homegear-max homegear-philipshue homegear-sonos homegear-kodi homegear-ipcam homegear-beckhoff homegear-knx
 service homegear stop" >> scripts/firstStart.sh
 if [ $OPENHAB -eq 1 ]; then
   echo "apt -y install openhab-runtime openhab-addon-action-homematic openhab-addon-binding-homematic

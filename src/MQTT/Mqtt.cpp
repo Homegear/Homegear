@@ -675,9 +675,10 @@ void Mqtt::processPublish(std::vector<char>& data)
 			}
 			GD::out.printInfo("Info: MQTT RPC call received. Method: " + methodName);
 			BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(methodName, parameters);
-			std::shared_ptr<std::pair<std::string, std::vector<char>>> responseData(new std::pair<std::string, std::vector<char>>());
-			_jsonEncoder->encodeMQTTResponse(methodName, response, messageId, responseData->second);
-			responseData->first = (!clientId.empty()) ? clientId + "/rpcResult" : "rpcResult";
+			std::shared_ptr<MqttMessage> responseData(new MqttMessage());
+			_jsonEncoder->encodeMQTTResponse(methodName, response, messageId, responseData->message);
+			responseData->topic = (!clientId.empty()) ? clientId + "/rpcResult" : "rpcResult";
+			responseData->retain = false;
 			queueMessage(responseData);
 		}
 		else
@@ -993,21 +994,26 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::string& key, Base
 {
 	try
 	{
-		std::shared_ptr<std::pair<std::string, std::vector<char>>> messageJson1(new std::pair<std::string, std::vector<char>>());
-		messageJson1->first = "json/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
-		_jsonEncoder->encode(value, messageJson1->second);
+		bool retain = key != "PRESS_SHORT" && key != "PRESS_LONG" && key != "PRESS_CONT";
+
+		std::shared_ptr<MqttMessage> messageJson1(new MqttMessage());
+		messageJson1->topic = "json/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
+		_jsonEncoder->encode(value, messageJson1->message);
+		messageJson1->retain = retain;
 		GD::mqtt->queueMessage(messageJson1);
 
-		std::shared_ptr<std::pair<std::string, std::vector<char>>> messagePlain(new std::pair<std::string, std::vector<char>>());
-		messagePlain->first = "plain/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
-		messagePlain->second.insert(messagePlain->second.end(), messageJson1->second.begin() + 1, messageJson1->second.end() - 1);
+		std::shared_ptr<MqttMessage> messagePlain(new MqttMessage());
+		messagePlain->topic = "plain/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
+		messagePlain->message.insert(messagePlain->message.end(), messageJson1->message.begin() + 1, messageJson1->message.end() - 1);
+		messagePlain->retain = retain;
 		GD::mqtt->queueMessage(messagePlain);
 
-		std::shared_ptr<std::pair<std::string, std::vector<char>>> messageJson2(new std::pair<std::string, std::vector<char>>());
-		messageJson2->first = "jsonobj/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
+		std::shared_ptr<MqttMessage> messageJson2(new MqttMessage());
+		messageJson2->topic = "jsonobj/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
 		BaseLib::PVariable structValue(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 		structValue->structValue->insert(BaseLib::StructElement("value", value));
-		_jsonEncoder->encode(structValue, messageJson2->second);
+		_jsonEncoder->encode(structValue, messageJson2->message);
+		messageJson2->retain = retain;
 		GD::mqtt->queueMessage(messageJson2);
 	}
 	catch(const std::exception& ex)
@@ -1024,7 +1030,7 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::string& key, Base
 	}
 }
 
-void Mqtt::queueMessage(std::shared_ptr<std::pair<std::string, std::vector<char>>>& message)
+void Mqtt::queueMessage(std::shared_ptr<MqttMessage>& message)
 {
 	try
 	{
@@ -1046,7 +1052,7 @@ void Mqtt::queueMessage(std::shared_ptr<std::pair<std::string, std::vector<char>
 	}
 }
 
-void Mqtt::publish(const std::string& topic, const std::vector<char>& data)
+void Mqtt::publish(const std::string& topic, const std::vector<char>& data, bool retain)
 {
 	try
 	{
@@ -1065,7 +1071,7 @@ void Mqtt::publish(const std::string& topic, const std::vector<char>& data)
 		payload.insert(payload.end(), data.begin(), data.end());
 		std::vector<char> lengthBytes = getLengthBytes(payload.size());
 		packet.reserve(1 + lengthBytes.size() + payload.size());
-		_settings.retain() ? packet.push_back(0x33) : packet.push_back(0x32);
+		retain && _settings.retain() ? packet.push_back(0x33) : packet.push_back(0x32);
 		packet.insert(packet.end(), lengthBytes.begin(), lengthBytes.end());
 		packet.insert(packet.end(), payload.begin(), payload.end());
 		int32_t j = 0;
@@ -1123,7 +1129,7 @@ void Mqtt::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry
 		std::shared_ptr<QueueEntry> queueEntry;
 		queueEntry = std::dynamic_pointer_cast<QueueEntry>(entry);
 		if(!queueEntry || !queueEntry->message) return;
-		publish(queueEntry->message->first, queueEntry->message->second);
+		publish(queueEntry->message->topic, queueEntry->message->message, queueEntry->message->retain);
 	}
 	catch(const std::exception& ex)
 	{

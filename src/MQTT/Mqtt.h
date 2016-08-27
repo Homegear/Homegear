@@ -38,6 +38,13 @@
 class Mqtt : public BaseLib::IQueue
 {
 public:
+	struct MqttMessage
+	{
+		std::string topic;
+		std::vector<char> message;
+		bool retain = true;
+	};
+
 	Mqtt();
 	virtual ~Mqtt();
 
@@ -49,9 +56,9 @@ public:
 	/**
 	 * Queues a message for publishing to the MQTT broker.
 	 *
-	 * @param message The message to queue. The first part of the pair is the topic, the second part the data.
+	 * @param message The message to queue.
 	 */
-	void queueMessage(std::shared_ptr<std::pair<std::string, std::vector<char>>>& message);
+	void queueMessage(std::shared_ptr<MqttMessage>& message);
 
 	/**
 	 * Queues a message for publishing to the MQTT broker.
@@ -67,10 +74,10 @@ private:
 	{
 	public:
 		QueueEntry() {}
-		QueueEntry(std::shared_ptr<std::pair<std::string, std::vector<char>>>& message) { this->message = message; }
+		QueueEntry(std::shared_ptr<MqttMessage>& message) { this->message = message; }
 		virtual ~QueueEntry() {}
 
-		std::shared_ptr<std::pair<std::string, std::vector<char>>> message;
+		std::shared_ptr<MqttMessage> message;
 	};
 
 	class Request
@@ -136,7 +143,7 @@ private:
 	 * @param topic The topic without Homegear prefix ("/homegear/UNIQUEID/") and without starting "/" (e.g. c/d).
 	 * @param data The data to publish.
 	 */
-	void publish(const std::string& topic, const std::vector<char>& data);
+	void publish(const std::string& topic, const std::vector<char>& data, bool retain);
 	void ping();
 	void getResponseByType(const std::vector<char>& packet, std::vector<char>& responseBuffer, uint8_t responseType, bool errors = true);
 	void getResponse(const std::vector<char>& packet, std::vector<char>& responseBuffer, uint8_t responseType, int16_t packetId, bool errors = true);
