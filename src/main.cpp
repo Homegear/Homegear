@@ -1268,7 +1268,7 @@ int main(int argc, char* argv[])
     			}
 
     			currentPath = GD::bl->settings.dataPath();
-    			if(!currentPath.empty())
+    			if(!currentPath.empty() && currentPath != GD::executablePath)
 				{
     				uid_t localUserId = GD::bl->hf.userId(GD::bl->settings.dataPathUser());
 					gid_t localGroupId = GD::bl->hf.groupId(GD::bl->settings.dataPathGroup());
@@ -1321,7 +1321,7 @@ int main(int argc, char* argv[])
 				if(chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
     			if(chmod(currentPath.c_str(), GD::bl->settings.scriptPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 
-    			if(GD::bl->settings.socketPath() != GD::bl->settings.dataPath())
+    			if(GD::bl->settings.socketPath() != GD::bl->settings.dataPath() && GD::bl->settings.socketPath() != GD::executablePath)
     			{
 					currentPath = GD::bl->settings.socketPath();
 					if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
