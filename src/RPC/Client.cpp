@@ -92,11 +92,13 @@ void Client::initServerMethods(std::pair<std::string, std::string> address)
 	try
 	{
 		GD::out.printInfo("Info: Calling init methods on server \"" + address.first + "\".");
+		std::shared_ptr<RemoteRpcServer> server = getServer(address);
+		if(!server) return; //server is empty when connection timed out
 		//Wait a little before sending these methods, CCU needs pretty long, before it accepts the request
-		if(address.first == "xmlrpc_bin://127.0.0.1:1999" || address.first == "xmlrpc_bin://127.0.0.1") std::this_thread::sleep_for(std::chrono::milliseconds(20000));
+		if(server->type == BaseLib::RpcClientType::ccu2) std::this_thread::sleep_for(std::chrono::milliseconds(20000));
 		else std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		systemListMethods(address);
-		std::shared_ptr<RemoteRpcServer> server = getServer(address);
+		server = getServer(address);
 		if(!server) return; //server is empty when connection timed out
 		listDevices(address);
 		sendUnknownDevices(address);
