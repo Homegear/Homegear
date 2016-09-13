@@ -280,6 +280,12 @@ unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
+wget https://github.com/Homegear/Homegear-EnOcean/archive/${1}.zip
+[ $? -ne 0 ] && exit 1
+unzip ${1}.zip
+[ $? -ne 0 ] && exit 1
+rm ${1}.zip
+
 createPackage libhomegear-base $1 libhomegear-base
 if test -f libhomegear-base*.deb; then
 	dpkg -i libhomegear-base*.deb
@@ -299,6 +305,7 @@ createPackage Homegear-Kodi $1 homegear-kodi
 createPackage Homegear-IPCam $1 homegear-ipcam
 createPackage Homegear-Beckhoff $1 homegear-beckhoff
 createPackage Homegear-KNX $1 homegear-knx
+createPackage Homegear-EnOcean $1 homegear-enocean
 EOF
 chmod 755 $rootfs/build/CreateDebianPackage.sh
 sed -i "s/<DIST>/${dist}/g" $rootfs/build/CreateDebianPackage.sh
@@ -332,9 +339,10 @@ cleanUp homegear-kodi
 cleanUp homegear-ipcam
 cleanUp homegear-beckhoff
 cleanUp homegear-knx
+cleanUp homegear-enocean
 
 EOF
-echo "if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-beckhoff.deb && test -f homegear-knx.deb; then
+echo "if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-beckhoff.deb && test -f homegear-knx.deb && test -f homegear-enocean.deb; then
 	isodate=`date +%Y%m%d`
 	mv libhomegear-base.deb libhomegear-base_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear.deb homegear_\$[isodate]_${distlc}_${distver}_${arch}.deb
@@ -348,6 +356,7 @@ echo "if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegea
 	mv homegear-ipcam.deb homegear-ipcam_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-beckhoff.deb homegear-beckhoff_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-knx.deb homegear-knx_\$[isodate]_${distlc}_${distver}_${arch}.deb
+	mv homegear-enocean.deb homegear-enocean_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	if test -f /build/UploadNightly.sh; then
 		/build/UploadNightly.sh
 	fi
