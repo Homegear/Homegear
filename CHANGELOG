@@ -1,5 +1,9 @@
 19.09.2016:
 
+Features:
+
+* EnOcean: More EEPs.
+
 Errors:
 
 * KNX: Fixed some small errors
