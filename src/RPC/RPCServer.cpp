@@ -1020,7 +1020,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 			std::string websocketKey = http.getHeader().fields["sec-websocket-key"] + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 			std::vector<char> data(&websocketKey[0], &websocketKey[0] + websocketKey.size());
 			std::vector<char> sha1;
-			BaseLib::Crypt::sha1(data, sha1);
+			BaseLib::Security::Hash::sha1(data, sha1);
 			std::string websocketAccept;
 			BaseLib::Base64::encode(sha1, websocketAccept);
 			std::string pathProtocol;

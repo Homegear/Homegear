@@ -50,7 +50,7 @@ std::vector<unsigned char> User::generateWHIRLPOOL(const std::string& password, 
 	gcry_md_hd_t stribogHandle = nullptr;
 	if((result = gcry_md_open(&stribogHandle, GCRY_MD_WHIRLPOOL, 0)) != GPG_ERR_NO_ERROR)
 	{
-		GD::out.printError("Could not initialize WHIRLPOOL handle: " + GD::bl->hf.getGCRYPTError(result));
+		GD::out.printError("Could not initialize WHIRLPOOL handle: " + BaseLib::Security::Gcrypt::getError(result));
 		return std::vector<unsigned char>();
 	}
 	gcry_md_write(stribogHandle, &passwordBytes.at(0), passwordBytes.size());
@@ -58,7 +58,7 @@ std::vector<unsigned char> User::generateWHIRLPOOL(const std::string& password, 
 	uint8_t* digest = gcry_md_read(stribogHandle, GCRY_MD_WHIRLPOOL);
 	if(!digest)
 	{
-		GD::out.printError("Could not generate WHIRLPOOL of password: " + GD::bl->hf.getGCRYPTError(result));
+		GD::out.printError("Could not generate WHIRLPOOL of password: " + BaseLib::Security::Gcrypt::getError(result));
 		gcry_md_close(stribogHandle);
 		return std::vector<unsigned char>();
 	}
