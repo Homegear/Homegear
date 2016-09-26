@@ -1,3 +1,9 @@
+26.09.2016:
+
+Features:
+
+* Added BitReaderWriter to base library. Used by KNX and EnOcean.
+
 19.09.2016:
 
 Features:
