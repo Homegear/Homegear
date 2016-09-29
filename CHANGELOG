@@ -1,3 +1,10 @@
+29.09.2016:
+
+Enhancements:
+
+* MQTT: Topic "set" now supports system variables and metadata.
+* Philips hue: Added type string for Lightstrip Plus.
+
 26.09.2016:
 
 Features:
