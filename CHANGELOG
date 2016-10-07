@@ -1,14 +1,19 @@
 07.10.2016:
 
+Fixed errors:
+
+* Base library: Fixed error in HTTP client causing packets with large headers to be garbage.
+* Philips hue: Multiple hue bridges not really working
+
 Features:
 
 * Base library: Get device type from type ID
 
 Enhancements:
 
-* Base library: Removed unneeded class LogicalDeviceType
-* Sonos: Improved error logging
-* Philips hue: 
+* Base library: Removed unneeded class LogicalDeviceType.
+* Sonos: Improved error logging.
+* Philips hue: modelid is now mapped to device ID in description file.
 
 29.09.2016:
 
