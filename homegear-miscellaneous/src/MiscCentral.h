@@ -65,7 +65,7 @@ public:
 	virtual BaseLib::PVariable putParamset(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t channel, ParameterGroup::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, BaseLib::PVariable paramset);
 	virtual BaseLib::PVariable putParamset(BaseLib::PRpcClientInfo clientInfo, uint64_t peerID, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, BaseLib::PVariable paramset);
 protected:
-	std::shared_ptr<MiscPeer> createPeer(BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
+	std::shared_ptr<MiscPeer> createPeer(uint32_t deviceType, std::string serialNumber, bool save = true);
 	void deletePeer(uint64_t id);
 	virtual void init();
 

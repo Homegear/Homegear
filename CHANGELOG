@@ -1,3 +1,15 @@
+07.10.2016:
+
+Features:
+
+* Base library: Get device type from type ID
+
+Enhancements:
+
+* Base library: Removed unneeded class LogicalDeviceType
+* Sonos: Improved error logging
+* Philips hue: 
+
 29.09.2016:
 
 Enhancements:
