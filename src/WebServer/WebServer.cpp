@@ -67,7 +67,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 		{
 			if(!path.empty() && path.back() != '/')
 			{
-				path.push_back('/');
+				path = '/' + path + '/';
 				std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
 				getError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
 				send(socket, content);
@@ -241,7 +241,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 		{
 			if(!path.empty() && path.back() != '/')
 			{
-				path.push_back('/');
+				path = '/' + path + '/';
 				std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
 				getError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
 				send(socket, content);

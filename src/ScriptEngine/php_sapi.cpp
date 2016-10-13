@@ -783,74 +783,144 @@ ZEND_FUNCTION(hg_set_value)
 	ZEND_FUNCTION(hg_auth)
 	{
 		if(_disposed) RETURN_NULL();
-		char* pName = nullptr;
-		int nameLength = 0;
-		char* pPassword = nullptr;
-		int passwordLength = 0;
-		if(zend_parse_parameters(ZEND_NUM_ARGS(), "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
-		if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
+		int argc = 0;
+		zval* args = nullptr;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+		std::string name;
+		std::string password;
+		if(argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::auth().");
+		else if(argc == 2)
+		{
+			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
+			else
+			{
+				if(Z_STRLEN(args[0]) > 0) name = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+			}
+
+			if(Z_TYPE(args[1]) != IS_STRING) php_error_docref(NULL, E_WARNING, "password is not of type string.");
+			else
+			{
+				if(Z_STRLEN(args[1]) > 0) password = std::string(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
+			}
+		}
+		if(name.empty() || password.empty()) RETURN_FALSE;
+
 		std::string methodName("auth");
 		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
-		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pPassword, passwordLength))));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(name)));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(password)));
 		php_homegear_invoke_rpc(methodName, parameters, return_value);
 	}
 
 	ZEND_FUNCTION(hg_create_user)
 	{
 		if(_disposed) RETURN_NULL();
-		char* pName = nullptr;
-		int nameLength = 0;
-		char* pPassword = nullptr;
-		int passwordLength = 0;
-		if(zend_parse_parameters(ZEND_NUM_ARGS(), "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
-		if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
+		int argc = 0;
+		zval* args = nullptr;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+		std::string name;
+		std::string password;
+		if(argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::createUser().");
+		else if(argc == 2)
+		{
+			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
+			else
+			{
+				if(Z_STRLEN(args[0]) > 0) name = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+			}
+
+			if(Z_TYPE(args[1]) != IS_STRING) php_error_docref(NULL, E_WARNING, "password is not of type string.");
+			else
+			{
+				if(Z_STRLEN(args[1]) > 0) password = std::string(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
+			}
+		}
+		if(name.empty() || password.empty()) RETURN_FALSE;
+
 		std::string methodName("createUser");
 		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
-		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pPassword, passwordLength))));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(name)));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(password)));
 		php_homegear_invoke_rpc(methodName, parameters, return_value);
 	}
 
 	ZEND_FUNCTION(hg_delete_user)
 	{
 		if(_disposed) RETURN_NULL();
-		char* pName = nullptr;
-		int nameLength = 0;
-		if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
-		if(nameLength == 0) RETURN_FALSE;
+		int argc = 0;
+		zval* args = nullptr;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+		std::string name;
+		if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::deleteUser().");
+		else if(argc == 1)
+		{
+			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
+			else
+			{
+				if(Z_STRLEN(args[0]) > 0) name = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+			}
+		}
+		if(name.empty()) RETURN_FALSE;
+
 		std::string methodName("deleteUser");
 		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(name)));
 		php_homegear_invoke_rpc(methodName, parameters, return_value);
 	}
 
 	ZEND_FUNCTION(hg_update_user)
 	{
 		if(_disposed) RETURN_NULL();
-		char* pName = nullptr;
-		int nameLength = 0;
-		char* pPassword = nullptr;
-		int passwordLength = 0;
-		if(zend_parse_parameters(ZEND_NUM_ARGS(), "ss", &pName, &nameLength, &pPassword, &passwordLength) != SUCCESS) RETURN_NULL();
-		if(nameLength == 0 || passwordLength == 0) RETURN_FALSE;
+		int argc = 0;
+		zval* args = nullptr;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+		std::string name;
+		std::string password;
+		if(argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::updateUser().");
+		else if(argc == 2)
+		{
+			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
+			else
+			{
+				if(Z_STRLEN(args[0]) > 0) name = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+			}
+
+			if(Z_TYPE(args[1]) != IS_STRING) php_error_docref(NULL, E_WARNING, "password is not of type string.");
+			else
+			{
+				if(Z_STRLEN(args[1]) > 0) password = std::string(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
+			}
+		}
+		if(name.empty() || password.empty()) RETURN_FALSE;
+
 		std::string methodName("updateUser");
 		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
-		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pPassword, passwordLength))));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(name)));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(password)));
 		php_homegear_invoke_rpc(methodName, parameters, return_value);
 	}
 
 	ZEND_FUNCTION(hg_user_exists)
 	{
 		if(_disposed) RETURN_NULL();
-		char* pName = nullptr;
-		int nameLength = 0;
-		if(zend_parse_parameters(ZEND_NUM_ARGS(), "s", &pName, &nameLength) != SUCCESS) RETURN_NULL();
-		if(nameLength == 0) RETURN_FALSE;
+		int argc = 0;
+		zval* args = nullptr;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+		std::string name;
+		if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::userExists().");
+		else if(argc == 1)
+		{
+			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
+			else
+			{
+				if(Z_STRLEN(args[0]) > 0) name = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+			}
+		}
+		if(name.empty()) RETURN_FALSE;
+
 		std::string methodName("userExists");
 		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(std::string(pName, nameLength))));
+		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(name)));
 		php_homegear_invoke_rpc(methodName, parameters, return_value);
 	}
 
@@ -1014,13 +1084,30 @@ ZEND_FUNCTION(hg_unsubscribe_peer)
 ZEND_FUNCTION(hg_log)
 {
 	if(_disposed) RETURN_NULL();
-	long debugLevel = 3;
-	char* pMessage = nullptr;
-	int messageLength = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ls", &debugLevel, &pMessage, &messageLength) != SUCCESS) RETURN_NULL();
-	if(messageLength == 0) RETURN_FALSE;
-	if(SEG(peerId) != 0) GD::out.printMessage("Script log (peer id: " + std::to_string(SEG(peerId)) + "): " + std::string(pMessage, messageLength), debugLevel, true);
-	else GD::out.printMessage("Script log: " + std::string(pMessage, messageLength), debugLevel, true);
+	int argc = 0;
+	zval* args = nullptr;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+	int32_t logLevel = 3;
+	std::string message;
+	if(argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::log().");
+	else if(argc == 2)
+	{
+		if(Z_TYPE(args[0]) != IS_LONG) php_error_docref(NULL, E_WARNING, "logLevel is not of type integer.");
+		else
+		{
+			logLevel = Z_LVAL(args[0]);
+		}
+
+		if(Z_TYPE(args[1]) != IS_STRING) php_error_docref(NULL, E_WARNING, "message is not of type string.");
+		else
+		{
+			if(Z_STRLEN(args[1]) > 0) message = std::string(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
+		}
+	}
+	if(message.empty()) RETURN_FALSE;
+
+	if(SEG(peerId) != 0) GD::out.printMessage("Script log (peer id: " + std::to_string(SEG(peerId)) + "): " + message, logLevel, true);
+	else GD::out.printMessage("Script log: " + message, logLevel, true);
 	RETURN_TRUE;
 }
 
