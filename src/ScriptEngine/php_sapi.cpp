@@ -1549,7 +1549,7 @@ ZEND_FUNCTION(hg_i2c_open)
 	zval* args = nullptr;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
 	std::string device;
-	int address;
+	int address = 0;
 	if(argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearI2c::open().");
 	else if(argc == 2)
 	{

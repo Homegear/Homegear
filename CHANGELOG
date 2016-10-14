@@ -4,6 +4,10 @@ Fixed errors:
 
 * Improved PHP script stability.
 
+Changes:
+
+* Removed deprecated PHP functions starting with "hg_".
+
 13.10.2016:
 
 Fixed errors:
