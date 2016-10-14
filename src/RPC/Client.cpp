@@ -784,6 +784,7 @@ void Client::disconnectRega()
 			{
 				GD::bl->fileDescriptorManager.shutdown(i->second->fileDescriptor);
 				GD::out.printWarning("Warning: Connection to RegaHss was closed manually.");
+				return;
 			}
 		}
 	}

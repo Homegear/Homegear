@@ -1051,7 +1051,7 @@ ZEND_FUNCTION(hg_get_http_contents)
 			if(Z_STRLEN(args[3]) > 0) caFile = std::string(Z_STRVAL(args[3]), Z_STRLEN(args[3]));
 		}
 
-		if(Z_TYPE(args[4]) != IS_TRUE || Z_TYPE(args[4]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "verifyCertificate is not of type boolean.");
+		if(Z_TYPE(args[4]) != IS_TRUE && Z_TYPE(args[4]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "verifyCertificate is not of type boolean.");
 		else
 		{
 			verifyCertificate = (Z_TYPE(args[4]) == IS_TRUE);
@@ -1119,7 +1119,7 @@ ZEND_FUNCTION(hg_download)
 			if(Z_STRLEN(args[4]) > 0) caFile = std::string(Z_STRVAL(args[4]), Z_STRLEN(args[4]));
 		}
 
-		if(Z_TYPE(args[5]) != IS_TRUE || Z_TYPE(args[5]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "verifyCertificate is not of type boolean.");
+		if(Z_TYPE(args[5]) != IS_TRUE && Z_TYPE(args[5]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "verifyCertificate is not of type boolean.");
 		else
 		{
 			verifyCertificate = (Z_TYPE(args[5]) == IS_TRUE);
