@@ -570,11 +570,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 		{
 			uint64_t peerId = BaseLib::Math::getNumber(parts.at(3));
 			int32_t channel = BaseLib::Math::getNumber(parts.at(4));
-			GD::out.printInfo("Info: MQTT RPC call received. Method: setValue");
-			BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
-			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
-			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));
+
 			BaseLib::PVariable value;
 			try
 			{
@@ -586,7 +582,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 					fixedPayload.insert(fixedPayload.end(), payload.begin(), payload.end());
 					fixedPayload.push_back(']');
 					value = _jsonDecoder->decode(fixedPayload);
-					if(value) parameters->arrayValue->push_back(value->arrayValue->at(0));
+					if(value) value = value->arrayValue->at(0);
 				}
 				else
 				{
@@ -595,11 +591,11 @@ void Mqtt::processPublish(std::vector<char>& data)
 					{
 						if(value->arrayValue->size() > 0)
 						{
-							parameters->arrayValue->push_back(value->arrayValue->at(0));
+							value = value->arrayValue->at(0);
 						}
 						else if(value->type == BaseLib::VariableType::tStruct && value->structValue->size() == 1 && value->structValue->begin()->first == "value")
 						{
-							parameters->arrayValue->push_back(value->structValue->begin()->second);
+							value = value->structValue->begin()->second;
 						}
 						else _out.printError("Error: MQTT payload has unknown format.");
 					}
@@ -615,7 +611,34 @@ void Mqtt::processPublish(std::vector<char>& data)
 				_out.printError("Error: value is nullptr.");
 				return;
 			}
-			BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("setValue", parameters);
+
+			if(peerId == 0 && channel < 0)
+			{
+				GD::out.printInfo("Info: MQTT RPC call received. Method: setSystemVariable");
+				BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));
+				parameters->arrayValue->push_back(value);
+				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("setSystemVariable", parameters);
+			}
+			else if(peerId != 0 && channel < 0)
+			{
+				GD::out.printInfo("Info: MQTT RPC call received. Method: setMetadata");
+				BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
+				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));
+				parameters->arrayValue->push_back(value);
+				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("setMetadata", parameters);
+			}
+			else
+			{
+				GD::out.printInfo("Info: MQTT RPC call received. Method: setValue");
+				BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
+				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
+				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));
+				parameters->arrayValue->push_back(value);
+				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("setValue", parameters);
+			}
 		}
 		else if(parts.size() == 6 && parts.at(2) == "config")
 		{

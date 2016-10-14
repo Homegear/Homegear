@@ -317,7 +317,7 @@ std::string MiscCentral::handleCliCommand(std::string command)
 			if(peerExists(serialNumber)) stringStream << "This peer is already paired to this central." << std::endl;
 			else
 			{
-				std::shared_ptr<MiscPeer> peer = createPeer(BaseLib::Systems::LogicalDeviceType(MISC_FAMILY_ID, deviceType), serialNumber, false);
+				std::shared_ptr<MiscPeer> peer = createPeer(deviceType, serialNumber, false);
 				if(!peer || !peer->getRpcDevice()) return "Device type not supported.\n";
 				try
 				{
@@ -432,7 +432,7 @@ std::string MiscCentral::handleCliCommand(std::string command)
 				}
 				if(index == -1)
 				{
-					stringStream << "Description: This command unpairs a peer." << std::endl;
+					stringStream << "Description: This command lists information about all peers." << std::endl;
 					stringStream << "Usage: peers list [FILTERTYPE] [FILTERVALUE]" << std::endl << std::endl;
 					stringStream << "Parameters:" << std::endl;
 					stringStream << "  FILTERTYPE:\tSee filter types below." << std::endl;
@@ -499,7 +499,7 @@ std::string MiscCentral::handleCliCommand(std::string command)
 					else if(filterType == "type")
 					{
 						int32_t deviceType = BaseLib::Math::getNumber(filterValue, true);
-						if((int32_t)i->second->getDeviceType().type() != deviceType) continue;
+						if((int32_t)i->second->getDeviceType() != deviceType) continue;
 					}
 
 					stringStream << std::setw(idWidth) << std::setfill(' ') << std::to_string(i->second->getID()) << bar;
@@ -513,7 +513,7 @@ std::string MiscCentral::handleCliCommand(std::string command)
 					else name.resize(nameWidth + (name.size() - nameSize), ' ');
 					stringStream << name << bar
 						<< std::setw(serialWidth) << i->second->getSerialNumber() << bar
-						<< std::setw(typeWidth1) << BaseLib::HelperFunctions::getHexString(i->second->getDeviceType().type(), 4) << bar;
+						<< std::setw(typeWidth1) << BaseLib::HelperFunctions::getHexString(i->second->getDeviceType(), 4) << bar;
 					if(i->second->getRpcDevice())
 					{
 						PSupportedDevice type = i->second->getRpcDevice()->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
@@ -634,7 +634,7 @@ std::string MiscCentral::handleCliCommand(std::string command)
 			if(!_currentPeer) stringStream << "This peer is not paired to this central." << std::endl;
 			else
 			{
-				stringStream << "Peer with id " << std::hex << std::to_string(id) << " and device type 0x" << _bl->hf.getHexString(_currentPeer->getDeviceType().type()) << " selected." << std::dec << std::endl;
+				stringStream << "Peer with id " << std::hex << std::to_string(id) << " and device type 0x" << _bl->hf.getHexString(_currentPeer->getDeviceType()) << " selected." << std::dec << std::endl;
 				stringStream << "For information about the peer's commands type: \"help\"" << std::endl;
 			}
 			return stringStream.str();
@@ -656,7 +656,7 @@ std::string MiscCentral::handleCliCommand(std::string command)
     return "Error executing command. See log file for more details.\n";
 }
 
-std::shared_ptr<MiscPeer> MiscCentral::createPeer(BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save)
+std::shared_ptr<MiscPeer> MiscCentral::createPeer(uint32_t deviceType, std::string serialNumber, bool save)
 {
 	try
 	{
@@ -690,7 +690,7 @@ PVariable MiscCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t 
 		if(serialNumber.size() != 10) return Variable::createError(-1, "The serial number needs to have a size of 10.");
 		if(peerExists(serialNumber)) return Variable::createError(-5, "This peer is already paired to this central.");
 
-		std::shared_ptr<MiscPeer> peer = createPeer(BaseLib::Systems::LogicalDeviceType(MISC_FAMILY_ID, deviceType), serialNumber, false);
+		std::shared_ptr<MiscPeer> peer = createPeer(deviceType, serialNumber, false);
 		if(!peer || !peer->getRpcDevice()) return Variable::createError(-6, "Unknown device type.");
 
 		try

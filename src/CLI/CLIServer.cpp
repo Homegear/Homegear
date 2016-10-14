@@ -967,6 +967,12 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "modules [COMMAND]  Execute module commands. Type \"modules help\" for more information." << std::endl;
 			return stringStream.str();
 		}
+		else if(command.compare(0, 10, "disconnect") == 0)
+		{
+			GD::rpcClient->disconnectRega();
+			stringStream << "RegaHss socket closed." << std::endl;
+			return stringStream.str();
+		}
 		else if(command.compare(0, 10, "debuglevel") == 0 || (command.compare(0, 2, "dl") == 0 && !GD::familyController->familySelected()))
 		{
 			int32_t debugLevel = 3;

@@ -773,6 +773,34 @@ void Client::removeServer(std::pair<std::string, std::string> server)
     }
 }
 
+void Client::disconnectRega()
+{
+	try
+	{
+		std::lock_guard<std::mutex> serversGuard(_serversMutex);
+		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator i = _servers.begin(); i != _servers.end(); ++i)
+		{
+			if(i->second->type == BaseLib::RpcClientType::ccu2)
+			{
+				GD::bl->fileDescriptorManager.shutdown(i->second->fileDescriptor);
+				GD::out.printWarning("Warning: Connection to RegaHss was closed manually.");
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void Client::removeServer(int32_t uid)
 {
 	try

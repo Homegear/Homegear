@@ -1,3 +1,93 @@
+14.10.2016:
+
+Fixed errors:
+
+* Improved PHP script stability.
+
+Changes:
+
+* Removed deprecated PHP functions starting with "hg_".
+
+13.10.2016:
+
+Fixed errors:
+
+* Improved PHP script stability.
+
+Features:
+
+* Intertechno: Support for V3 remotes.
+
+11.10.2016:
+
+Features:
+
+* New family: Intertechno
+
+10.10.2016:
+
+Fixed Errors:
+
+* Links in HomeMatic Configurator not working.
+
+09.10.2016:
+
+Features:
+
+* EnOcean: Added EEP A5-07-01
+
+07.10.2016:
+
+Fixed errors:
+
+* Base library: Fixed error in HTTP client causing packets with large headers to be garbage.
+* Philips hue: Multiple hue bridges not really working
+
+Features:
+
+* Base library: Get device type from type ID
+
+Enhancements:
+
+* Base library: Removed unneeded class LogicalDeviceType.
+* Sonos: Improved error logging.
+* Philips hue: modelid is now mapped to device ID in description file.
+
+29.09.2016:
+
+Enhancements:
+
+* MQTT: Topic "set" now supports system variables and metadata.
+* Philips hue: Added type string for Lightstrip Plus.
+
+26.09.2016:
+
+Features:
+
+* Added BitReaderWriter to base library. Used by KNX and EnOcean.
+
+19.09.2016:
+
+Features:
+
+* EnOcean: More EEPs.
+
+Errors:
+
+* KNX: Fixed some small errors
+
+13.09.2016:
+
+Features:
+
+* EnOcean module
+
+11.09.2016:
+
+Features:
+
+* Improvements to SerialReaderWriter
+
 16.08.2016:
 
 Features:

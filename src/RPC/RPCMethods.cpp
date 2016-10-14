@@ -2521,7 +2521,8 @@ BaseLib::PVariable RPCListDevices::invoke(BaseLib::PRpcClientInfo clientInfo, st
 		}
 		bool channels = true;
 		std::map<std::string, bool> fields;
-		if(parameters->size() > 0 && parameters->at(0)->type == BaseLib::VariableType::tBoolean) channels = parameters->at(0)->booleanValue;
+		// The HomeMatic configurator passes boolean false to this method, so only accept "channels = false" when there are more than 1 arguments.
+		if(parameters->size() > 1 && parameters->at(0)->type == BaseLib::VariableType::tBoolean) channels = parameters->at(0)->booleanValue;
 		if(parameters->size() == 2)
 		{
 			for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(1)->arrayValue->begin(); i != parameters->at(1)->arrayValue->end(); ++i)

@@ -56,6 +56,7 @@ public:
 	void init();
 	bool lifetick();
 
+	void disconnectRega();
 	void initServerMethods(std::pair<std::string, std::string> address);
 	void broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
 	void systemListMethods(std::pair<std::string, std::string> address);
