@@ -101,7 +101,7 @@ void Client::initServerMethods(std::pair<std::string, std::string> address)
 		server = getServer(address);
 		if(!server) return; //server is empty when connection timed out
 		listDevices(address);
-		sendUnknownDevices(address);
+		//sendUnknownDevices(address);
 		server = getServer(address);
 		if(server) server->initialized = true;
 	}
@@ -784,7 +784,6 @@ void Client::disconnectRega()
 			{
 				GD::bl->fileDescriptorManager.shutdown(i->second->fileDescriptor);
 				GD::out.printWarning("Warning: Connection to RegaHss was closed manually.");
-				return;
 			}
 		}
 	}
