@@ -1,8 +1,22 @@
+18.10.2016:
+
+Fixed erors:
+
+* getLinks() didn't return direct device links created with old Homegear versions.
+
 17.10.2016:
+
+Changes:
+
+* Removed call of "newDevices" on connection to RPC event servers.
+
+Features:
 
 * Intertechno: Support for old Intertechno remotes.
 
 16.10.2016:
+
+Features:
 
 * Intertechno: Support for Elro remotes.
 
