@@ -1336,7 +1336,7 @@ int main(int argc, char* argv[])
 					currentPath = GD::bl->settings.lockFilePath();
 					if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
 					if(((int32_t)localUserId) != -1 && ((int32_t)localGroupId) != -1) { if(chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl; }
-					if(GD::bl->settings.scriptPathPermissions() != 0) { if(chmod(currentPath.c_str(), GD::bl->settings.scriptPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl; }
+					if(GD::bl->settings.lockFilePathPermissions() != 0) { if(chmod(currentPath.c_str(), GD::bl->settings.lockFilePathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl; }
     			}
 
     			currentPath = GD::bl->settings.modulePath();
