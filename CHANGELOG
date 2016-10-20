@@ -1,3 +1,40 @@
+20.10.2016:
+
+Changes:
+
+* Reduced TCP connection timeout.
+
+Enhancements:
+
+* Sonos: PLAY_TTS and PLAY_AUDIO_FILE can only be executed once now.
+* Sonos: Shorter timeouts if speakers are unreachable.
+
+18.10.2016:
+
+Fixed erors:
+
+* getLinks() didn't return direct device links created with old Homegear versions.
+
+Enhancements:
+
+* Make lock file path configurable.
+
+17.10.2016:
+
+Changes:
+
+* Removed call of "newDevices" on connection to RPC event servers.
+
+Features:
+
+* Intertechno: Support for old Intertechno remotes.
+
+16.10.2016:
+
+Features:
+
+* Intertechno: Support for Elro remotes.
+
 14.10.2016:
 
 Fixed errors:

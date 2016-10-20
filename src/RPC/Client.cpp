@@ -101,7 +101,7 @@ void Client::initServerMethods(std::pair<std::string, std::string> address)
 		server = getServer(address);
 		if(!server) return; //server is empty when connection timed out
 		listDevices(address);
-		sendUnknownDevices(address);
+		//sendUnknownDevices(address);
 		server = getServer(address);
 		if(server) server->initialized = true;
 	}
@@ -777,16 +777,19 @@ void Client::disconnectRega()
 {
 	try
 	{
-		std::lock_guard<std::mutex> serversGuard(_serversMutex);
-		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator i = _servers.begin(); i != _servers.end(); ++i)
+		bool disconnected = false;
 		{
-			if(i->second->type == BaseLib::RpcClientType::ccu2)
+			std::lock_guard<std::mutex> serversGuard(_serversMutex);
+			for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator i = _servers.begin(); i != _servers.end(); ++i)
 			{
-				GD::bl->fileDescriptorManager.shutdown(i->second->fileDescriptor);
-				GD::out.printWarning("Warning: Connection to RegaHss was closed manually.");
-				return;
+				if(i->second->type == BaseLib::RpcClientType::ccu2)
+				{
+					GD::bl->fileDescriptorManager.shutdown(i->second->fileDescriptor);
+					disconnected = true;
+				}
 			}
 		}
+		if(disconnected) GD::out.printWarning("Warning: Connection to RegaHss was closed manually.");
 	}
 	catch(const std::exception& ex)
     {
