@@ -4,6 +4,10 @@ Changes:
 
 * Reduced TCP connection timeout.
 
+Features:
+
+* Get IP address by interface name.
+
 Enhancements:
 
 * Sonos: PLAY_TTS and PLAY_AUDIO_FILE can only be executed once now.
