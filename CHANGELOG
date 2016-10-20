@@ -1,3 +1,14 @@
+20.10.2016:
+
+Changes:
+
+* Reduced TCP connection timeout.
+
+Enhancements:
+
+* Sonos: PLAY_TTS and PLAY_AUDIO_FILE can only be executed once now.
+* Sonos: Shorter timeouts if speakers are unreachable.
+
 18.10.2016:
 
 Fixed erors:
