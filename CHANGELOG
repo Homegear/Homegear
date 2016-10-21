@@ -1,3 +1,9 @@
+21.10.2016:
+
+Fixed errors:
+
+* Not all paired channels are returned in getLinks().
+
 20.10.2016:
 
 Changes:
@@ -7,6 +13,7 @@ Changes:
 Features:
 
 * Get IP address by interface name.
+* All listen addresses can now be specified by interface name.
 
 Enhancements:
 
@@ -15,7 +22,7 @@ Enhancements:
 
 18.10.2016:
 
-Fixed erors:
+Fixed errors:
 
 * getLinks() didn't return direct device links created with old Homegear versions.
 
