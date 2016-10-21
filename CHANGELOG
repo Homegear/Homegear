@@ -7,6 +7,7 @@ Changes:
 Features:
 
 * Get IP address by interface name.
+* All listen addresses can now be specified by interface name.
 
 Enhancements:
 
