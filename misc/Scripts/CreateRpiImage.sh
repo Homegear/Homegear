@@ -233,7 +233,7 @@ case $1 in
         if [ -z "$(grep /var/log /proc/mounts)" ]; then
             echo "*** mounting /var/log"
             cp -Rpu /var/log/* $varlogSave
-            rm -f /var/log/*
+            rm -Rf /var/log/*
             varlogsize=$(grep /var/log /etc/fstab|awk {'print $4'}|cut -d"=" -f2)
             [ -z "$varlogsize" ] && varlogsize="100M"
             mount -t tmpfs tmpfs /var/log -o defaults,size=$varlogsize
@@ -243,14 +243,14 @@ case $1 in
     ;;
     stop)
         echo "*** Stopping tmpfs file saving: varlog."
-        rm -f ${varlogSave}*
+        rm -Rf ${varlogSave}*
         cp -Rpu /var/log/* $varlogSave >/dev/null 2>&1
         sync
         umount -f /var/log/
     ;;
   reload)
     echo "*** Stopping tmpfs file saving: varlog."
-    	rm -f ${varlogSave}*
+    	rm -Rf ${varlogSave}*
         cp -Rpu /var/log/* $varlogSave >/dev/null 2>&1
         sync
   ;;
