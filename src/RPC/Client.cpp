@@ -101,7 +101,7 @@ void Client::initServerMethods(std::pair<std::string, std::string> address)
 		server = getServer(address);
 		if(!server) return; //server is empty when connection timed out
 		listDevices(address);
-		//sendUnknownDevices(address);
+		sendUnknownDevices(address);
 		server = getServer(address);
 		if(server) server->initialized = true;
 	}
@@ -316,7 +316,7 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 						}
 					}
 				}
-				server->knownDevices->insert(device);
+				if(device > 0) server->knownDevices->insert(device);
 			}
 		}
 	}
