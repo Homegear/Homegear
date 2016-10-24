@@ -3,6 +3,7 @@
 Fixed errors:
 
 * Already known devices are sent to RPC event server.
+* Intertechno: Homegear CLI does not process decimal addresses on device creation.
 
 21.10.2016:
 
