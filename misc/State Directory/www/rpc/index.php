@@ -1,3 +1,6 @@
+<?php
+$hg = new \Homegear\Homegear();
+?>
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -15,6 +18,7 @@
   <body>
   <div class="jumbotron">
       <div class="container">
+          <p style="font-size: 12px; float: right;"><b>Version:</b> <?php print(explode(' ', $hg->getVersion())[1]); ?></p>
           <img style="float: left; margin-top: 13px; margin-right: 40px" src="Logo.png" />
           <h2>Your</h2>
           <h1>Homegear RPC Server</h1>
@@ -25,15 +29,15 @@
       <div class="row">
         <div style="height: 350px" class="col-lg-4">
           <span class="glyphicon glyphicon-education" style="font-size: 140px"></span>
-          <h2>Wiki</h2>
-          <p style="height: 40px">For help and tutorials visit the Homegear Wiki.</p>
-          <p><a class="btn btn-default" href="https://homegear.eu" role="button">Go there &raquo;</a></p>
+          <h2>Documentation</h2>
+          <p style="height: 40px">For help and tutorials visit the Homegear documentation.</p>
+          <p><a class="btn btn-default" href="https://doc.homegear.eu" role="button">Go there &raquo;</a></p>
         </div><!-- /.col-lg-4 -->
         <div style="height: 350px" class="col-lg-4">
             <span class="glyphicon glyphicon-wrench" style="font-size: 140px"></span>
           <h2>Reference</h2>
           <p style="height: 40px">Visit the Homegear reference for information about using this RPC server.</p>
-          <p><a class="btn btn-default" href="https://www.homegear.eu/index.php/Homegear_Reference" role="button">Go there &raquo;</a></p>
+          <p><a class="btn btn-default" href="https://ref.homegear.eu" role="button">Go there &raquo;</a></p>
         </div><!-- /.col-lg-4 -->
         <div style="height: 350px" class="col-lg-4">
             <span class="glyphicon glyphicon-comment" style="font-size: 140px"></span>
@@ -49,7 +53,6 @@
             <table class="table">
                 <thead><tr><th>Name</th><th>Family</th><th>ID</th><th>Serial Number</th><th>Type</th><th>Interface</th><th>Firmware</th></tr></thead>
 <?php
-$hg = new \Homegear\Homegear();
 $families = $hg->listFamilies();
 $familyNames = array();
 foreach($families as $value)
@@ -77,7 +80,7 @@ foreach($devices as $value)
         </div>
       <footer>
         <p class="pull-right"><a href="#">Back to top</a></p>
-        <p>&copy; 2014-2015 Homegear UG</p>
+        <p>&copy; 2014-2016 Homegear UG (haftungsbeschränkt)</p>
       </footer>
     </div>
   </body>
