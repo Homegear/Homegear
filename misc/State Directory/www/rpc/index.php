@@ -49,24 +49,25 @@
             <table class="table">
                 <thead><tr><th>Name</th><th>Family</th><th>ID</th><th>Serial Number</th><th>Type</th><th>Interface</th><th>Firmware</th></tr></thead>
 <?php
-$families = hg_invoke("listFamilies");
+$hg = new \Homegear\Homegear();
+$families = $hg->listFamilies();
 $familyNames = array();
 foreach($families as $value)
 {
   $familyNames[$value["ID"]] = $value["NAME"];
 }
 
-$devices = hg_invoke("listDevices", false, array("FAMILY", "ID", "ADDRESS", "TYPE", "FIRMWARE"));
+$devices = $hg->listDevices(false, array("FAMILY", "ID", "ADDRESS", "TYPE", "FIRMWARE"));
 foreach($devices as $value)
 {
-  $info = hg_invoke("getDeviceInfo", $value["ID"], array("NAME", "INTERFACE"));
+  $info = $hg->getDeviceInfo($value["ID"], array("NAME", "INTERFACE"));
   echo "<tr>";
   echo "<td>".$info["NAME"]."</td>";
   echo "<td>".$familyNames[$value["FAMILY"]]."</td>";
   echo "<td>".($value["ID"] > 999999 ? "0x".dechex($value["ID"]) : $value["ID"])."</td>";
   echo "<td>".$value["ADDRESS"]."</td>";
   echo "<td>".$value["TYPE"]."</td>";
-  echo "<td>".$info["INTERFACE"]."</td>";
+  echo "<td>".(array_key_exists("INTERFACE", $info) ? $info["INTERFACE"] : "&nbsp;")."</td>";
   echo "<td>".$value["FIRMWARE"]."</td>";
   echo "</tr>";
 }
