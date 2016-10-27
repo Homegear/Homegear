@@ -976,6 +976,11 @@ void startUp()
 		}
 		_shuttingDownMutex.unlock();
 
+		if(BaseLib::Io::fileExists(GD::bl->settings.workingDirectory() + "core"))
+		{
+			GD::out.printError("Error: A core file exists in Homegear's working directory (\"" + GD::bl->settings.workingDirectory() + "core" + "\"). Please send this file to the Homegear team including information about your system (Linux distribution, CPU architecture), the Homegear version, the current log files and information what might've caused the error.");
+		}
+
 		char* inputBuffer = nullptr;
         if(_startAsDaemon || _nonInteractive)
         {
