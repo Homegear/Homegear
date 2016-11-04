@@ -158,13 +158,13 @@ protected:
 		// }}}
 	};
 
-	bool _disposing = false;
+	std::atomic_bool _disposing;
 	std::mutex _eventsMutex;
 	std::map<uint64_t, std::shared_ptr<Event>> _timedEvents;
 	std::map<uint64_t, std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>> _triggeredEvents;
 	std::map<uint64_t, std::shared_ptr<Event>> _eventsToReset;
 	std::map<uint64_t, std::shared_ptr<Event>> _timesToReset;
-	bool _stopThread = false;
+	std::atomic_bool _stopThread;
 	std::thread _mainThread;
 	std::mutex _mainThreadMutex;
 	std::mutex _databaseMutex;

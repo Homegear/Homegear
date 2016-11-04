@@ -33,7 +33,7 @@
 #include "../MQTT/Mqtt.h"
 #include "../UPnP/UPnP.h"
 
-std::unique_ptr<BaseLib::Obj> GD::bl;
+std::unique_ptr<BaseLib::SharedObjects> GD::bl;
 BaseLib::Output GD::out;
 std::string GD::runAsUser = "";
 std::string GD::runAsGroup = "";

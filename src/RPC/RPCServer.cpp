@@ -67,6 +67,9 @@ RPCServer::RPCServer()
 	_threadPriority = GD::bl->settings.rpcServerThreadPriority();
 	_threadPolicy = GD::bl->settings.rpcServerThreadPolicy();
 
+	_stopServer = false;
+	_stopped = true;
+
 	_lifetick1.first = 0;
 	_lifetick1.second = true;
 	_lifetick2.first = 0;

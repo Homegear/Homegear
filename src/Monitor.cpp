@@ -35,6 +35,9 @@ Monitor::Monitor()
 {
 	signal(SIGPIPE, SIG_IGN);
 
+	_suspendMonitoring = true;
+	_stopMonitorThread = false;
+
 	_pipeToChild[0] = -1;
 	_pipeToChild[1] = -1;
 	_pipeFromChild[0] = -1;

@@ -34,7 +34,7 @@
 
 DatabaseController::DatabaseController()
 {
-
+	_stopQueueProcessingThread = false;
 }
 
 DatabaseController::~DatabaseController()
@@ -310,10 +310,10 @@ bool DatabaseController::convertDatabase()
 			exit(0);
 		}
 		else*/
+		_db.init(databasePath, GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databasePath + ".0.6.0.old");
 		if(version == "0.3.1")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.4.3...");
-			_db.init(databasePath, GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databasePath + ".old");
 
 			_db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
 
@@ -325,14 +325,10 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.4.3")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
-
-			GD::out.printMessage("Exiting Homegear after database conversion...");
-			return true;
 		}
-		else if(version == "0.4.3")
+		if(version == "0.4.3")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.5.0...");
-			_db.init(databasePath, GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databasePath + ".old");
 
 			_db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
 
@@ -344,14 +340,10 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.5.0")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
-
-			GD::out.printMessage("Exiting Homegear after database conversion...");
-			return true;
 		}
-		else if(version == "0.5.0")
+		if(version == "0.5.0")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.5.1...");
-			_db.init(databasePath, GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databasePath + ".old");
 
 			_db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=15");
 
@@ -369,14 +361,10 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.5.1")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
-
-			GD::out.printMessage("Exiting Homegear after database conversion...");
-			return true;
 		}
-		else if(version == "0.5.1")
+		if(version == "0.5.1")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.6.0...");
-			_db.init(databasePath, GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databasePath + ".0.5.1.old");
 
 			_db.executeCommand("DELETE FROM devices WHERE deviceType!=4294967293 AND deviceType!=4278190077");
 			_db.executeCommand("ALTER TABLE peers ADD COLUMN type INTEGER NOT NULL DEFAULT 0");
@@ -391,14 +379,10 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.6.0")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
-
-			GD::out.printMessage("Exiting Homegear after database conversion...");
-			return true;
 		}
-		else if(version == "0.6.0")
+		if(version == "0.6.0")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.6.1...");
-			_db.init(databasePath, GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databasePath + ".0.6.0.old");
 
 			_db.executeCommand("UPDATE devices SET deviceType=4294967293 WHERE deviceType=4278190077");
 
@@ -410,10 +394,8 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.6.1")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
-
-			GD::out.printMessage("Exiting Homegear after database conversion...");
-			return true;
 		}
+		return false;
 	}
 	catch(const std::exception& ex)
     {

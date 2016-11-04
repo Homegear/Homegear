@@ -34,6 +34,7 @@ Mqtt::Mqtt() : BaseLib::IQueue(GD::bl.get(), 1000)
 {
 	try
 	{
+		_started = false;
 		_socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
 	}
 	catch(const std::exception& ex)

@@ -38,6 +38,7 @@
 
 #include <thread>
 #include <condition_variable>
+#include <atomic>
 
 class DatabaseController : public BaseLib::Database::IDatabaseController
 {
@@ -162,7 +163,7 @@ protected:
 		std::thread _queueProcessingThread;
 		bool _queueEntryAvailable = false;
 		std::condition_variable _queueConditionVariable;
-		bool _stopQueueProcessingThread = false;
+		std::atomic_bool _stopQueueProcessingThread;
 
 		void bufferedWrite(std::string command, BaseLib::Database::DataRow& data);
 		void processQueueEntry();

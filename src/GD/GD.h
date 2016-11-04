@@ -53,7 +53,7 @@ class Mqtt;
 class GD
 {
 public:
-	static std::unique_ptr<BaseLib::Obj> bl;
+	static std::unique_ptr<BaseLib::SharedObjects> bl;
 	static BaseLib::Output out;
 	static std::string runAsUser;
 	static std::string runAsGroup;

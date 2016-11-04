@@ -1025,7 +1025,7 @@ int main(int argc, char* argv[])
     {
     	getExecutablePath(argc, argv);
     	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
-    	GD::bl.reset(new BaseLib::Obj(GD::executablePath, _errorCallback.get(), false));
+    	GD::bl.reset(new BaseLib::SharedObjects(GD::executablePath, _errorCallback.get(), false));
     	GD::out.init(GD::bl.get());
 
 		if(BaseLib::Io::directoryExists(GD::executablePath + "config")) GD::configPath = GD::executablePath + "config/";

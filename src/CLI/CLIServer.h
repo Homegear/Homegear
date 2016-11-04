@@ -75,7 +75,7 @@ private:
 	};
 
 	std::string _socketPath;
-	bool _stopServer = false;
+	std::atomic_bool _stopServer;
 	std::thread _mainThread;
 	int32_t _backlog = 10;
 	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;

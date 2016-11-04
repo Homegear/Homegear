@@ -111,8 +111,8 @@ namespace Rpc
 			gnutls_dh_params_t _dhParams = nullptr;
 			int32_t _threadPolicy = SCHED_OTHER;
 			int32_t _threadPriority = 0;
-			bool _stopServer = false;
-			bool _stopped = true;
+			std::atomic_bool _stopServer;
+			std::atomic_bool _stopped;
 			std::thread _mainThread;
 			int32_t _backlog = 100;
 			std::mutex _garbageCollectionMutex;

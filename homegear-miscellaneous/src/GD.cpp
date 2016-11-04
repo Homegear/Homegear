@@ -32,7 +32,7 @@
 
 namespace Misc
 {
-	BaseLib::Obj* GD::bl = nullptr;
+	BaseLib::SharedObjects* GD::bl = nullptr;
 	Miscellaneous* GD::family = nullptr;
 	BaseLib::Output GD::out;
 }

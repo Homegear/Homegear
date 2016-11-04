@@ -61,10 +61,19 @@ std::shared_ptr<BaseLib::Systems::ICentral> MiscPeer::getCentral()
 
 MiscPeer::MiscPeer(uint32_t parentID, IPeerEventSink* eventHandler) : BaseLib::Systems::Peer(GD::bl, parentID, eventHandler)
 {
+	init();
 }
 
 MiscPeer::MiscPeer(int32_t id, std::string serialNumber, uint32_t parentID, IPeerEventSink* eventHandler) : BaseLib::Systems::Peer(GD::bl, id, -1, serialNumber, parentID, eventHandler)
 {
+	init();
+}
+
+void MiscPeer::init()
+{
+	_shuttingDown = false;
+	_scriptRunning = false;
+	_stopRunProgramThread = true;
 }
 
 MiscPeer::~MiscPeer()

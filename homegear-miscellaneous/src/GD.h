@@ -45,7 +45,7 @@ class GD
 public:
 	virtual ~GD();
 
-	static BaseLib::Obj* bl;
+	static BaseLib::SharedObjects* bl;
 	static Miscellaneous* family;
 	static BaseLib::Output out;
 private:

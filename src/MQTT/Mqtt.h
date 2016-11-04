@@ -118,7 +118,7 @@ private:
 	std::mutex _reconnectThreadMutex;
 	std::thread _reconnectThread;
 	std::mutex _connectMutex;
-	bool _started = false;
+	std::atomic_bool _started;
 	bool _connected = false;
 	int16_t _packetId = 1;
 	std::mutex _requestsMutex;

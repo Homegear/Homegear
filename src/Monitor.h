@@ -33,6 +33,7 @@
 
 #include <thread>
 #include <mutex>
+#include <atomic>
 
 class Monitor
 {
@@ -55,8 +56,8 @@ public:
 private:
 	int _pipeToChild[2];
 	int _pipeFromChild[2];
-	bool _suspendMonitoring = true;
-	bool _stopMonitorThread = false;
+	std::atomic_bool _suspendMonitoring;
+	std::atomic_bool _stopMonitorThread;
 	std::thread _checkHealthThread;
 	std::thread _monitorThread;
 	bool _killedProcess = false;
