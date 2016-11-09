@@ -1285,7 +1285,7 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 		}
 
 		{
-			std::lock_guard<std::mutex> processGuard(_currentScriptIdMutex);
+			std::lock_guard<std::mutex> scriptIdGuard(_currentScriptIdMutex);
 			while(scriptInfo->id == 0) scriptInfo->id = _currentScriptId++;
 		}
 

@@ -960,6 +960,12 @@ BaseLib::PVariable RPCGetAllMetadata::invoke(BaseLib::PRpcClientInfo clientInfo,
 		if(!peer) return BaseLib::Variable::createError(-2, "Device not found.");
 
 		std::string peerName = peer->getName();
+		if(clientInfo->clientType == BaseLib::RpcClientType::homematicconfigurator)
+		{
+			BaseLib::Ansi ansi(true, false);
+			std::string ansiName = ansi.toUtf8(peerName); // I know, this absolutely makes no sense, but this is correct!
+			peerName = std::move(ansiName);
+		}
 		BaseLib::PVariable metadata = GD::bl->db->getAllMetadata(peer->getID());
 		if(!peerName.empty())
 		{
@@ -2404,7 +2410,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, std::shar
 				}
 			// }}}
 			// {{{ Keep connection to IP-Symcon
-				if(parameters->at(1)->stringValue == "IPS")
+				else if(parameters->at(1)->stringValue == "IPS")
 				{
 					clientInfo->clientType = BaseLib::RpcClientType::ipsymcon;
 					eventServer->reconnectInfinitely = true;
@@ -2563,6 +2569,11 @@ BaseLib::PVariable RPCListDevices::invoke(BaseLib::PRpcClientInfo clientInfo, st
 				if((*i)->stringValue.empty()) continue;
 				fields[(*i)->stringValue] = true;
 			}
+		}
+		else if(parameters->size() == 1 && parameters->at(0)->type == BaseLib::VariableType::tBoolean && !parameters->at(0)->booleanValue)
+		{
+			//Client is HomeMatic Configurator
+			clientInfo->clientType = BaseLib::RpcClientType::homematicconfigurator;
 		}
 
 		BaseLib::PVariable devices(new BaseLib::Variable(BaseLib::VariableType::tArray));
@@ -3560,6 +3571,9 @@ BaseLib::PVariable RPCSetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, st
 
 		if(parameters->at(1)->stringValue == "NAME")
 		{
+			// Assume HomeMatic Configurator here.
+			BaseLib::Ansi ansi(false, true);
+			parameters->at(2)->stringValue = ansi.toAnsi(parameters->at(2)->stringValue); // I know, this absolutely makes no sense, but this is correct!
 			peer->setName(parameters->at(2)->stringValue);
 			return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 		}

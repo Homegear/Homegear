@@ -1,3 +1,31 @@
+9.11.2016:
+
+Enhancements:
+
+* Names sent to HomeMatic Configurator are now encoded in ANSI.
+
+Features:
+
+* Sonos: Multilanguage support for TTS and option to select voice.
+
+6.11.2016:
+
+Enhancements:
+
+* Philips hue: Improved groups.
+* Philips hue: Save BRIGHTNESS again and restore on setting STATE (previously removed).
+
+4.11.2016:
+
+General:
+
+* Changed listener thread exit condition variable types to std::atomic_bool.
+* Changed name of shared object class from "Obj" to "SharedObjects".
+
+Features:
+
+* Philips hue: Support for groups.
+
 25.10.2016:
 
 Features:
