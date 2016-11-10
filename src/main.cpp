@@ -866,12 +866,24 @@ void startUp()
 				exit(1);
 			}
 		}
-		std::vector<std::string> tempFiles = GD::bl->io.getFiles(GD::bl->settings.tempPath(), true);
+		std::vector<std::string> tempFiles = GD::bl->io.getFiles(GD::bl->settings.tempPath(), false);
 		for(std::vector<std::string>::iterator i = tempFiles.begin(); i != tempFiles.end(); ++i)
 		{
 			if(!GD::bl->io.deleteFile(GD::bl->settings.tempPath() + *i))
 			{
 				GD::out.printCritical("Critical: deleting temporary file \"" + GD::bl->settings.tempPath() + *i + "\": " + strerror(errno));
+			}
+		}
+		std::string phpTempPath = GD::bl->settings.tempPath() + "/php/";
+		if(GD::bl->io.directoryExists(phpTempPath))
+		{
+			tempFiles = GD::bl->io.getFiles(phpTempPath, false);
+			for(std::vector<std::string>::iterator i = tempFiles.begin(); i != tempFiles.end(); ++i)
+			{
+				if(!GD::bl->io.deleteFile(phpTempPath + *i))
+				{
+					GD::out.printCritical("Critical: deleting temporary file \"" + phpTempPath + *i + "\": " + strerror(errno));
+				}
 			}
 		}
 

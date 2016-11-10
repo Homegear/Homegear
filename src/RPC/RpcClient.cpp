@@ -177,6 +177,7 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 		}
 		else
 		{
+			std::cout << "Response received." << std::endl;
 			if(GD::bl->debugLevel >= 5)
 			{
 				_out.printDebug("Response was:");
@@ -594,8 +595,8 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 					int32_t processedBytes = binaryRpc.process(&buffer[0], receivedBytes);
 					if(processedBytes < receivedBytes)
 					{
-						std::cout << "Received more bytes (" << std::to_string(receivedBytes) << ") than binary packet size (" << std::to_string(processedBytes) << ")." << std::endl;
-						std::cerr << "Received more bytes (" << std::to_string(receivedBytes) << ") than binary packet size (" << std::to_string(processedBytes) << ")." << std::endl;
+						std::cout << "Warning: Received more bytes (" << std::to_string(receivedBytes) << ") than binary packet size (" << std::to_string(processedBytes) << ")." << " Packet was: " << BaseLib::HelperFunctions::getHexString(&buffer[0], receivedBytes) << std::endl;
+						std::cerr << "Warning: Received more bytes (" << std::to_string(receivedBytes) << ") than binary packet size (" << std::to_string(processedBytes) << ")." << std::endl;
 					}
 				}
 				catch(BaseLib::Rpc::BinaryRpcException& ex)
