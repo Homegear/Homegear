@@ -177,7 +177,6 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 		}
 		else
 		{
-			std::cout << "Response received." << std::endl;
 			if(GD::bl->debugLevel >= 5)
 			{
 				_out.printDebug("Response was:");
