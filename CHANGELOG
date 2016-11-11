@@ -1,9 +1,16 @@
+11.11.2016:
+
+Enhancements:
+
+* getInterfaces now also returns IP address and hostname.
+
 10.11.2016:
 
-Enhandements:
+Enhancements:
 
 * Temporary files of families are not deleted by Homegear on start up. They are managed by the device families now.
 * Sonos: Time after which temporary files are deleted is configurable now.
+* Sonos: Commands are redirected from slave to master speaker.
 
 9.11.2016:
 

@@ -1251,9 +1251,7 @@ BaseLib::PVariable FamilyController::listInterfaces(int32_t familyID)
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
-			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
-			if(!central) continue;
-			BaseLib::PVariable tempArray = i->second->physicalInterfaces()->listInterfaces(central->getAddress());
+			BaseLib::PVariable tempArray = i->second->physicalInterfaces()->listInterfaces();
 			array->arrayValue->insert(array->arrayValue->end(), tempArray->arrayValue->begin(), tempArray->arrayValue->end());
 		}
 
