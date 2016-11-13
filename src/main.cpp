@@ -650,7 +650,7 @@ void startUp()
 		//Use sigaction over signal because of different behavior in Linux and BSD
     	sigaction(SIGHUP, &sa, NULL);
     	sigaction(SIGTERM, &sa, NULL);
-#ifdef __aarch64__
+#ifdef __aarch64__ || (!defined(__i386__) && !defined(__x86_64__) && !defined(__arm__) && !defined(__aarch64__))
     	sigaction(SIGABRT, &sa, NULL);
     	sigaction(SIGSEGV, &sa, NULL);
 #else
@@ -1175,7 +1175,7 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-r")
     		{
-#ifndef __aarch64__
+#if !defined(__aarch64__) && (defined(__i386__) || defined(__x86_64__) || defined(__arm__))
     			Debug::DeathHandler deathHandler;
 				deathHandler.set_append_pid(true);
 				deathHandler.set_frames_count(32);
@@ -1191,7 +1191,7 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-rse")
     		{
-#ifndef __aarch64__
+#if !defined(__aarch64__) && (defined(__i386__) || defined(__x86_64__) || defined(__arm__))
     			Debug::DeathHandler deathHandler;
 				deathHandler.set_append_pid(true);
 				deathHandler.set_frames_count(32);

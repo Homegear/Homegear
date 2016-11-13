@@ -4,6 +4,10 @@ Enhancements:
 
 * getInterfaces now also returns IP address and hostname.
 
+Fixed errors:
+
+* Philips hue: BRIGHTNESS is sometimes set even though STATE is "false"
+
 10.11.2016:
 
 Enhancements:

@@ -34,6 +34,8 @@
  *  @copyright 2012 Samsung R&D Institute Russia, 2016 Moscow Institute of Physics and Technology
  */
 
+#if defined(__i386__) || defined(__x86_64__) || defined(__arm__) || defined(__aarch64__)
+
 #include "DeathHandler.h"
 #include <assert.h>
 #include <execinfo.h>
@@ -746,3 +748,5 @@ void DeathHandler::HandleSignal(int sig, void * /* info */, void *secret) {
 #endif
 
 }  // namespace Debug
+
+#endif
