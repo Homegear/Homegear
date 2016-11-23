@@ -791,7 +791,7 @@ void startUp()
 			}
 			GD::out.printInfo("Info: Setting up physical interfaces and GPIOs...");
 			if(GD::familyController) GD::familyController->physicalInterfaceSetup(GD::bl->userId, GD::bl->groupId);
-			BaseLib::Gpio gpio(GD::bl.get());
+			BaseLib::LowLevel::Gpio gpio(GD::bl.get());
 			gpio.setup(GD::bl->userId, GD::bl->groupId);
 			GD::out.printInfo("Info: Dropping privileges to user " + GD::runAsUser + " (" + std::to_string(GD::bl->userId) + ") and group " + GD::runAsGroup + " (" + std::to_string(GD::bl->groupId) + ")");
 
@@ -1138,7 +1138,7 @@ int main(int argc, char* argv[])
     					exit(1);
     				}
     				GD::familyController->physicalInterfaceSetup(userId, groupId);
-    				BaseLib::Gpio gpio(GD::bl.get());
+    				BaseLib::LowLevel::Gpio gpio(GD::bl.get());
     				gpio.setup(userId, groupId);
     				GD::familyController->dispose();
     				GD::licensingController->dispose();
