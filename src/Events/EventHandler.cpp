@@ -36,6 +36,8 @@
 
 EventHandler::EventHandler() : BaseLib::IQueue(GD::bl.get(), 1000)
 {
+	_disposing = false;
+	_stopThread = false;
 }
 
 EventHandler::~EventHandler()

@@ -54,6 +54,8 @@
 #ifndef DEATH_HANDLER_H_
 #define DEATH_HANDLER_H_
 
+#if defined(__i386__) || defined(__x86_64__) || defined(__arm__) || defined(__aarch64__)
+
 #include <stddef.h>
 #include <unistd.h>
 
@@ -257,4 +259,6 @@ class DeathHandler {
 };
 
 }  // namespace Debug
-#endif  // DEATH_HANDLER_H_
+#endif
+
+#endif

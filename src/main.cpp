@@ -650,7 +650,7 @@ void startUp()
 		//Use sigaction over signal because of different behavior in Linux and BSD
     	sigaction(SIGHUP, &sa, NULL);
     	sigaction(SIGTERM, &sa, NULL);
-#ifdef __aarch64__
+#if defined(__aarch64__) || (!defined(__i386__) && !defined(__x86_64__) && !defined(__arm__) && !defined(__aarch64__))
     	sigaction(SIGABRT, &sa, NULL);
     	sigaction(SIGSEGV, &sa, NULL);
 #else
@@ -791,7 +791,7 @@ void startUp()
 			}
 			GD::out.printInfo("Info: Setting up physical interfaces and GPIOs...");
 			if(GD::familyController) GD::familyController->physicalInterfaceSetup(GD::bl->userId, GD::bl->groupId);
-			BaseLib::Gpio gpio(GD::bl.get());
+			BaseLib::LowLevel::Gpio gpio(GD::bl.get());
 			gpio.setup(GD::bl->userId, GD::bl->groupId);
 			GD::out.printInfo("Info: Dropping privileges to user " + GD::runAsUser + " (" + std::to_string(GD::bl->userId) + ") and group " + GD::runAsGroup + " (" + std::to_string(GD::bl->groupId) + ")");
 
@@ -866,12 +866,24 @@ void startUp()
 				exit(1);
 			}
 		}
-		std::vector<std::string> tempFiles = GD::bl->io.getFiles(GD::bl->settings.tempPath(), true);
+		std::vector<std::string> tempFiles = GD::bl->io.getFiles(GD::bl->settings.tempPath(), false);
 		for(std::vector<std::string>::iterator i = tempFiles.begin(); i != tempFiles.end(); ++i)
 		{
 			if(!GD::bl->io.deleteFile(GD::bl->settings.tempPath() + *i))
 			{
 				GD::out.printCritical("Critical: deleting temporary file \"" + GD::bl->settings.tempPath() + *i + "\": " + strerror(errno));
+			}
+		}
+		std::string phpTempPath = GD::bl->settings.tempPath() + "/php/";
+		if(GD::bl->io.directoryExists(phpTempPath))
+		{
+			tempFiles = GD::bl->io.getFiles(phpTempPath, false);
+			for(std::vector<std::string>::iterator i = tempFiles.begin(); i != tempFiles.end(); ++i)
+			{
+				if(!GD::bl->io.deleteFile(phpTempPath + *i))
+				{
+					GD::out.printCritical("Critical: deleting temporary file \"" + phpTempPath + *i + "\": " + strerror(errno));
+				}
 			}
 		}
 
@@ -976,6 +988,11 @@ void startUp()
 		}
 		_shuttingDownMutex.unlock();
 
+		if(BaseLib::Io::fileExists(GD::bl->settings.workingDirectory() + "core"))
+		{
+			GD::out.printError("Error: A core file exists in Homegear's working directory (\"" + GD::bl->settings.workingDirectory() + "core" + "\"). Please send this file to the Homegear team including information about your system (Linux distribution, CPU architecture), the Homegear version, the current log files and information what might've caused the error.");
+		}
+
 		char* inputBuffer = nullptr;
         if(_startAsDaemon || _nonInteractive)
         {
@@ -1020,7 +1037,7 @@ int main(int argc, char* argv[])
     {
     	getExecutablePath(argc, argv);
     	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
-    	GD::bl.reset(new BaseLib::Obj(GD::executablePath, _errorCallback.get(), false));
+    	GD::bl.reset(new BaseLib::SharedObjects(GD::executablePath, _errorCallback.get(), false));
     	GD::out.init(GD::bl.get());
 
 		if(BaseLib::Io::directoryExists(GD::executablePath + "config")) GD::configPath = GD::executablePath + "config/";
@@ -1121,7 +1138,7 @@ int main(int argc, char* argv[])
     					exit(1);
     				}
     				GD::familyController->physicalInterfaceSetup(userId, groupId);
-    				BaseLib::Gpio gpio(GD::bl.get());
+    				BaseLib::LowLevel::Gpio gpio(GD::bl.get());
     				gpio.setup(userId, groupId);
     				GD::familyController->dispose();
     				GD::licensingController->dispose();
@@ -1158,7 +1175,7 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-r")
     		{
-#ifndef __aarch64__
+#if !defined(__aarch64__) && (defined(__i386__) || defined(__x86_64__) || defined(__arm__))
     			Debug::DeathHandler deathHandler;
 				deathHandler.set_append_pid(true);
 				deathHandler.set_frames_count(32);
@@ -1174,7 +1191,7 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-rse")
     		{
-#ifndef __aarch64__
+#if !defined(__aarch64__) && (defined(__i386__) || defined(__x86_64__) || defined(__arm__))
     			Debug::DeathHandler deathHandler;
 				deathHandler.set_append_pid(true);
 				deathHandler.set_frames_count(32);

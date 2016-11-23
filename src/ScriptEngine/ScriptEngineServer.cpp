@@ -41,6 +41,9 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 1000)
 	_out.init(GD::bl.get());
 	_out.setPrefix("Script Engine Server: ");
 
+	_shuttingDown = false;
+	_stopServer = false;
+
 	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, true));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true));
 	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
@@ -85,6 +88,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 1000)
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getParamsetId", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetParamsetId())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getPeerId", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetPeerId())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getServiceMessages", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetServiceMessages())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getSniffedDevices", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetSniffedDevices())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getSystemVariable", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetSystemVariable())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getUpdateStatus", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetUpdateStatus())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getValue", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetValue())));
@@ -116,6 +120,8 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 1000)
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("setSystemVariable", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSetSystemVariable())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("setTeam", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSetTeam())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("setValue", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSetValue())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("startSniffing", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCStartSniffing())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("stopSniffing", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCStopSniffing())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("subscribePeers", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSubscribePeers())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("triggerEvent", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCTriggerEvent())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("triggerRpcEvent", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCTriggerRpcEvent())));
@@ -778,9 +784,9 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
 		BaseLib::PPVariable response;
 		{
 			std::lock_guard<std::mutex> responseGuard(clientData->rpcResponsesMutex);
-			BaseLib::PPVariable* element = &clientData->rpcResponses[packetId];
-			element->reset(new BaseLib::PVariable());
-			response = *element;
+			BaseLib::PPVariable& element = clientData->rpcResponses[packetId];
+			element.reset(new BaseLib::PVariable());
+			response = element;
 		}
 		response->reset(new BaseLib::Variable());
 
@@ -788,7 +794,7 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
 
 		std::unique_lock<std::mutex> waitLock(clientData->waitMutex);
 		while(!clientData->requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]{
-			return ((bool)(*response) && (*response)->arrayValue->size() == 2 && (*response)->arrayValue->at(0)->integerValue == packetId) || clientData->closed || _stopServer;
+			return ((bool)(*response) && (*response)->arrayValue && (*response)->arrayValue->size() == 2 && (*response)->arrayValue->at(0)->integerValue == packetId) || clientData->closed || _stopServer;
 		}));
 
 		if(!(*response) || (*response)->arrayValue->size() != 2 || (*response)->arrayValue->at(0)->integerValue != packetId)
@@ -1279,7 +1285,7 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 		}
 
 		{
-			std::lock_guard<std::mutex> processGuard(_currentScriptIdMutex);
+			std::lock_guard<std::mutex> scriptIdGuard(_currentScriptIdMutex);
 			while(scriptInfo->id == 0) scriptInfo->id = _currentScriptId++;
 		}
 

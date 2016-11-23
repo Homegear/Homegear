@@ -37,6 +37,7 @@ UPnP::UPnP()
 {
 	try
 	{
+		_stopServer = true;
 		_serverSocketDescriptor.reset(new BaseLib::FileDescriptor());
 	}
 	catch(const std::exception& ex)

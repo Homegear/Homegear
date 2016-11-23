@@ -528,9 +528,9 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string
 		BaseLib::PPVariable response;
 		{
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			BaseLib::PPVariable* element = &_rpcResponses[scriptId][packetId];
-			element->reset(new BaseLib::PVariable());
-			response = *element;
+			BaseLib::PPVariable& element = _rpcResponses[scriptId][packetId];
+			element.reset(new BaseLib::PVariable());
+			response = element;
 		}
 		response->reset(new BaseLib::Variable());
 
@@ -539,7 +539,7 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string
 
 		std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
 		while(!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]{
-			return ((bool)(*response) && (*response)->arrayValue->size() == 3 && (*response)->arrayValue->at(1)->integerValue == packetId) || _disposing;
+			return ((bool)(*response) && (*response)->arrayValue && (*response)->arrayValue->size() == 3 && (*response)->arrayValue->at(1)->integerValue == packetId) || _disposing;
 		}));
 
 		if(!(*response) || (*response)->arrayValue->size() != 3 || (*response)->arrayValue->at(1)->integerValue != packetId)

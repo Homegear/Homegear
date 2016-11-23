@@ -32,7 +32,7 @@
 #include "../../config.h"
 #include "GD.h"
 
-BaseLib::Systems::DeviceFamily* MiscellaneousFactory::createDeviceFamily(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
+BaseLib::Systems::DeviceFamily* MiscellaneousFactory::createDeviceFamily(BaseLib::SharedObjects* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
 {
 	return new Misc::Miscellaneous(bl, eventHandler);
 }

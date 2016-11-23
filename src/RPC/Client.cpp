@@ -104,6 +104,11 @@ void Client::initServerMethods(std::pair<std::string, std::string> address)
 		sendUnknownDevices(address);
 		server = getServer(address);
 		if(server) server->initialized = true;
+
+		if(BaseLib::Io::fileExists(GD::bl->settings.workingDirectory() + "core"))
+		{
+			sendError(address, 2, "Error: A core file exists in Homegear's working directory (\"" + GD::bl->settings.workingDirectory() + "core" + "\"). Please send this file to the Homegear team including information about your system (Linux distribution, CPU architecture), the Homegear version, the current log files and information what might've caused the error.");
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -361,6 +366,33 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 			result->print(true, false);
 			return;
 		}
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void Client::sendError(std::pair<std::string, std::string> address, int32_t level, std::string message)
+{
+	try
+	{
+		std::shared_ptr<RemoteRpcServer> server = getServer(address);
+		if(!server) return;
+		if(!server->knownMethods.empty() && server->knownMethods.find("error") == server->knownMethods.end()) return;
+		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
+		parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->id)));
+		parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(level)));
+		parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(message)));
+		server->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("error", parameters)));
 	}
     catch(const std::exception& ex)
     {

@@ -101,7 +101,7 @@ private:
 	std::thread _methodProcessingThread;
 	bool _methodProcessingMessageAvailable = false;
 	std::condition_variable _methodProcessingConditionVariable;
-	bool _stopMethodProcessingThread = false;
+	std::atomic_bool _stopMethodProcessingThread;
 
 	void processMethods();
 };

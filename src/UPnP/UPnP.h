@@ -58,7 +58,7 @@ private:
 	};
 
 	BaseLib::Output _out;
-	bool _stopServer = true;
+	std::atomic_bool _stopServer;
 	std::shared_ptr<BaseLib::FileDescriptor> _serverSocketDescriptor;
 	std::thread _listenThread;
 	std::string _address;

@@ -38,6 +38,7 @@ int32_t Server::_currentClientID = 0;
 
 Server::Server()
 {
+	_stopServer = false;
 }
 
 Server::~Server()

@@ -1241,7 +1241,7 @@ ZEND_FUNCTION(hg_gpio_set_direction)
 	long gpio = -1;
 	long direction = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &direction) != SUCCESS) RETURN_NULL();
-	_superglobals.gpio->setDirection(gpio, (BaseLib::Gpio::GpioDirection::Enum)direction);
+	_superglobals.gpio->setDirection(gpio, (BaseLib::LowLevel::Gpio::GpioDirection::Enum)direction);
 }
 
 ZEND_FUNCTION(hg_gpio_set_edge)
@@ -1250,7 +1250,7 @@ ZEND_FUNCTION(hg_gpio_set_edge)
 	long gpio = -1;
 	long edge = -1;
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &edge) != SUCCESS) RETURN_NULL();
-	_superglobals.gpio->setEdge(gpio, (BaseLib::Gpio::GpioEdge::Enum)edge);
+	_superglobals.gpio->setEdge(gpio, (BaseLib::LowLevel::Gpio::GpioEdge::Enum)edge);
 }
 
 ZEND_FUNCTION(hg_gpio_get)
@@ -1745,7 +1745,7 @@ static const zend_function_entry homegear_i2c_methods[] = {
 int php_homegear_init()
 {
 	_superglobals.http = new BaseLib::Http();
-	_superglobals.gpio = new BaseLib::Gpio(GD::bl.get());
+	_superglobals.gpio = new BaseLib::LowLevel::Gpio(GD::bl.get());
 	_disposed = false;
 	pthread_key_create(&pthread_key, pthread_data_destructor);
 	tsrm_startup(20, 1, 0, NULL);

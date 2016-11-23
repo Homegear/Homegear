@@ -960,6 +960,12 @@ BaseLib::PVariable RPCGetAllMetadata::invoke(BaseLib::PRpcClientInfo clientInfo,
 		if(!peer) return BaseLib::Variable::createError(-2, "Device not found.");
 
 		std::string peerName = peer->getName();
+		if(clientInfo->clientType == BaseLib::RpcClientType::homematicconfigurator)
+		{
+			BaseLib::Ansi ansi(true, false);
+			std::string ansiName = ansi.toUtf8(peerName); // I know, this absolutely makes no sense, but this is correct!
+			peerName = std::move(ansiName);
+		}
 		BaseLib::PVariable metadata = GD::bl->db->getAllMetadata(peer->getID());
 		if(!peerName.empty())
 		{
@@ -2123,6 +2129,39 @@ BaseLib::PVariable RPCGetServiceMessages::invoke(BaseLib::PRpcClientInfo clientI
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCGetSniffedDevices::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		auto family = families.find(parameters->at(0)->integerValue);
+		if(family == families.end()) return BaseLib::Variable::createError(-1, "Unknown device family.");
+
+		std::shared_ptr<BaseLib::Systems::ICentral> central = family->second->getCentral();
+		if(central) return central->getSniffedDevices(clientInfo);
+
+		return BaseLib::Variable::createError(-32500, "No central found.");
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCGetSystemVariable::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	try
@@ -2371,7 +2410,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, std::shar
 				}
 			// }}}
 			// {{{ Keep connection to IP-Symcon
-				if(parameters->at(1)->stringValue == "IPS")
+				else if(parameters->at(1)->stringValue == "IPS")
 				{
 					clientInfo->clientType = BaseLib::RpcClientType::ipsymcon;
 					eventServer->reconnectInfinitely = true;
@@ -2530,6 +2569,11 @@ BaseLib::PVariable RPCListDevices::invoke(BaseLib::PRpcClientInfo clientInfo, st
 				if((*i)->stringValue.empty()) continue;
 				fields[(*i)->stringValue] = true;
 			}
+		}
+		else if(parameters->size() == 1 && parameters->at(0)->type == BaseLib::VariableType::tBoolean && !parameters->at(0)->booleanValue)
+		{
+			//Client is HomeMatic Configurator
+			clientInfo->clientType = BaseLib::RpcClientType::homematicconfigurator;
 		}
 
 		BaseLib::PVariable devices(new BaseLib::Variable(BaseLib::VariableType::tArray));
@@ -3527,6 +3571,9 @@ BaseLib::PVariable RPCSetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, st
 
 		if(parameters->at(1)->stringValue == "NAME")
 		{
+			// Assume HomeMatic Configurator here.
+			BaseLib::Ansi ansi(false, true);
+			parameters->at(2)->stringValue = ansi.toAnsi(parameters->at(2)->stringValue); // I know, this absolutely makes no sense, but this is correct!
 			peer->setName(parameters->at(2)->stringValue);
 			return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 		}
@@ -3756,6 +3803,72 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
+}
+
+BaseLib::PVariable RPCStartSniffing::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		auto family = families.find(parameters->at(0)->integerValue);
+		if(family == families.end()) return BaseLib::Variable::createError(-1, "Unknown device family.");
+
+		std::shared_ptr<BaseLib::Systems::ICentral> central = family->second->getCentral();
+		if(central) return central->startSniffing(clientInfo);
+
+		return BaseLib::Variable::createError(-32500, "No central found.");
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCStopSniffing::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		auto family = families.find(parameters->at(0)->integerValue);
+		if(family == families.end()) return BaseLib::Variable::createError(-1, "Unknown device family.");
+
+		std::shared_ptr<BaseLib::Systems::ICentral> central = family->second->getCentral();
+		if(central) return central->stopSniffing(clientInfo);
+
+		return BaseLib::Variable::createError(-32500, "No central found.");
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable RPCSubscribePeers::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)

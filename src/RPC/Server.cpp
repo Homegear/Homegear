@@ -94,6 +94,7 @@ void Server::registerMethods()
 		_server->registerMethod("getParamsetId", std::shared_ptr<RPCMethod>(new RPCGetParamsetId()));
 		_server->registerMethod("getPeerId", std::shared_ptr<RPCMethod>(new RPCGetPeerId()));
 		_server->registerMethod("getServiceMessages", std::shared_ptr<RPCMethod>(new RPCGetServiceMessages()));
+		_server->registerMethod("getSniffedDevices", std::shared_ptr<RPCMethod>(new RPCGetSniffedDevices()));
 		_server->registerMethod("getSystemVariable", std::shared_ptr<RPCMethod>(new RPCGetSystemVariable()));
 		_server->registerMethod("getUpdateStatus", std::shared_ptr<RPCMethod>(new RPCGetUpdateStatus()));
 		_server->registerMethod("getValue", std::shared_ptr<RPCMethod>(new RPCGetValue()));
@@ -125,6 +126,8 @@ void Server::registerMethods()
 		_server->registerMethod("setSystemVariable", std::shared_ptr<RPCMethod>(new RPCSetSystemVariable()));
 		_server->registerMethod("setTeam", std::shared_ptr<RPCMethod>(new RPCSetTeam()));
 		_server->registerMethod("setValue", std::shared_ptr<RPCMethod>(new RPCSetValue()));
+		_server->registerMethod("startSniffing", std::shared_ptr<RPCMethod>(new RPCStartSniffing()));
+		_server->registerMethod("stopSniffing", std::shared_ptr<RPCMethod>(new RPCStopSniffing()));
 		_server->registerMethod("subscribePeers", std::shared_ptr<RPCMethod>(new RPCSubscribePeers()));
 		_server->registerMethod("triggerEvent", std::shared_ptr<RPCMethod>(new RPCTriggerEvent()));
 		_server->registerMethod("triggerRpcEvent", std::shared_ptr<RPCMethod>(new RPCTriggerRpcEvent()));

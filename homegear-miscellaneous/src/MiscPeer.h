@@ -78,11 +78,13 @@ public:
 	virtual PVariable setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel, std::string valueKey, PVariable value, bool wait);
 	//End RPC methods
 protected:
-	bool _shuttingDown = false;
-	bool _scriptRunning = false;
-	bool _stopRunProgramThread = true;
+	std::atomic_bool _shuttingDown;
+	std::atomic_bool _scriptRunning;
+	std::atomic_bool _stopRunProgramThread;
 	std::thread _runProgramThread;
 	pid_t _programPID = -1;
+
+	void init();
 
 	virtual void loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<BaseLib::Database::DataTable>& rows);
     virtual void saveVariables();

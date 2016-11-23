@@ -79,7 +79,7 @@ typedef struct _zend_homegear_globals
 typedef struct _zend_homegear_superglobals
 {
 	BaseLib::Http* http;
-	BaseLib::Gpio* gpio;
+	BaseLib::LowLevel::Gpio* gpio;
 	std::mutex serialDevicesMutex;
 	std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>> serialDevices;
 } zend_homegear_superglobals;
