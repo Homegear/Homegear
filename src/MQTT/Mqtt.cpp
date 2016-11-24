@@ -30,7 +30,7 @@
 #include "Mqtt.h"
 #include "../GD/GD.h"
 
-Mqtt::Mqtt() : BaseLib::IQueue(GD::bl.get(), 1000)
+Mqtt::Mqtt() : BaseLib::IQueue(GD::bl.get(), 2, 1000)
 {
 	try
 	{
@@ -84,6 +84,7 @@ void Mqtt::start()
 		_started = true;
 
 		startQueue(0, 1, 0, SCHED_OTHER);
+		startQueue(1, _settings.processingThreadCount(), 0, SCHED_OTHER);
 
 		signal(SIGPIPE, SIG_IGN);
 
@@ -117,6 +118,7 @@ void Mqtt::stop()
 	try
 	{
 		_started = false;
+		stopQueue(1);
 		stopQueue(0);
 		disconnect();
 		GD::bl->threadManager.join(_pingThread);
@@ -519,7 +521,8 @@ void Mqtt::processData(std::vector<char>& data)
 		}
 		if(data.size() > 4 && (data[0] & 0xF0) == 0x30) //PUBLISH
 		{
-			processPublish(data);
+			std::shared_ptr<BaseLib::IQueueEntry> entry(new QueueEntryReceived(data));
+			if(!enqueue(1, entry)) _out.printError("Error: Too many received packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
 		}
 	}
 	catch(const std::exception& ex)
@@ -1020,25 +1023,36 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::string& key, Base
 	{
 		bool retain = key != "PRESS_SHORT" && key != "PRESS_LONG" && key != "PRESS_CONT";
 
-		std::shared_ptr<MqttMessage> messageJson1(new MqttMessage());
-		messageJson1->topic = "json/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
-		_jsonEncoder->encode(value, messageJson1->message);
-		messageJson1->retain = retain;
-		GD::mqtt->queueMessage(messageJson1);
+		std::shared_ptr<MqttMessage> messageJson1;
+		if(_settings.jsonTopic())
+		{
+			messageJson1.reset(new MqttMessage());
+			messageJson1->topic = "json/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
+			_jsonEncoder->encode(value, messageJson1->message);
+			messageJson1->retain = retain;
+			GD::mqtt->queueMessage(messageJson1);
+		}
 
-		std::shared_ptr<MqttMessage> messagePlain(new MqttMessage());
-		messagePlain->topic = "plain/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
-		messagePlain->message.insert(messagePlain->message.end(), messageJson1->message.begin() + 1, messageJson1->message.end() - 1);
-		messagePlain->retain = retain;
-		GD::mqtt->queueMessage(messagePlain);
+		if(_settings.plainTopic())
+		{
+			std::shared_ptr<MqttMessage> messagePlain(new MqttMessage());
+			messagePlain->topic = "plain/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
+			if(messageJson1) messagePlain->message.insert(messagePlain->message.end(), messageJson1->message.begin() + 1, messageJson1->message.end() - 1);
+			else _jsonEncoder->encode(value, messagePlain->message);
+			messagePlain->retain = retain;
+			GD::mqtt->queueMessage(messagePlain);
+		}
 
-		std::shared_ptr<MqttMessage> messageJson2(new MqttMessage());
-		messageJson2->topic = "jsonobj/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
-		BaseLib::PVariable structValue(new BaseLib::Variable(BaseLib::VariableType::tStruct));
-		structValue->structValue->insert(BaseLib::StructElement("value", value));
-		_jsonEncoder->encode(structValue, messageJson2->message);
-		messageJson2->retain = retain;
-		GD::mqtt->queueMessage(messageJson2);
+		if(_settings.jsonobjTopic())
+		{
+			std::shared_ptr<MqttMessage> messageJson2(new MqttMessage());
+			messageJson2->topic = "jsonobj/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
+			BaseLib::PVariable structValue(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+			structValue->structValue->insert(BaseLib::StructElement("value", value));
+			_jsonEncoder->encode(structValue, messageJson2->message);
+			messageJson2->retain = retain;
+			GD::mqtt->queueMessage(messageJson2);
+		}
 	}
 	catch(const std::exception& ex)
 	{
@@ -1059,7 +1073,7 @@ void Mqtt::queueMessage(std::shared_ptr<MqttMessage>& message)
 	try
 	{
 		if(!_started || !message) return;
-		std::shared_ptr<BaseLib::IQueueEntry> entry(new QueueEntry(message));
+		std::shared_ptr<BaseLib::IQueueEntry> entry(new QueueEntrySend(message));
 		if(!enqueue(0, entry)) _out.printError("Error: Too many packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
 	}
 	catch(const std::exception& ex)
@@ -1150,10 +1164,20 @@ void Mqtt::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry
 {
 	try
 	{
-		std::shared_ptr<QueueEntry> queueEntry;
-		queueEntry = std::dynamic_pointer_cast<QueueEntry>(entry);
-		if(!queueEntry || !queueEntry->message) return;
-		publish(queueEntry->message->topic, queueEntry->message->message, queueEntry->message->retain);
+		if(index == 0) //Send
+		{
+			std::shared_ptr<QueueEntrySend> queueEntry;
+			queueEntry = std::dynamic_pointer_cast<QueueEntrySend>(entry);
+			if(!queueEntry || !queueEntry->message) return;
+			publish(queueEntry->message->topic, queueEntry->message->message, queueEntry->message->retain);
+		}
+		else
+		{
+			std::shared_ptr<QueueEntryReceived> queueEntry;
+			queueEntry = std::dynamic_pointer_cast<QueueEntryReceived>(entry);
+			if(!queueEntry) return;
+			processPublish(queueEntry->data);
+		}
 	}
 	catch(const std::exception& ex)
 	{
