@@ -70,14 +70,24 @@ public:
 	 */
 	void queueMessage(uint64_t peerId, int32_t channel, std::string& key, BaseLib::PVariable& value);
 private:
-	class QueueEntry : public BaseLib::IQueueEntry
+	class QueueEntrySend : public BaseLib::IQueueEntry
 	{
 	public:
-		QueueEntry() {}
-		QueueEntry(std::shared_ptr<MqttMessage>& message) { this->message = message; }
-		virtual ~QueueEntry() {}
+		QueueEntrySend() {}
+		QueueEntrySend(std::shared_ptr<MqttMessage>& message) { this->message = message; }
+		virtual ~QueueEntrySend() {}
 
 		std::shared_ptr<MqttMessage> message;
+	};
+
+	class QueueEntryReceived : public BaseLib::IQueueEntry
+	{
+	public:
+		QueueEntryReceived() {}
+		QueueEntryReceived(std::vector<char>& data) { this->data = data; }
+		virtual ~QueueEntryReceived() {}
+
+		std::vector<char> data;
 	};
 
 	class Request

@@ -47,6 +47,7 @@ public:
 	void load(std::string filename);
 
 	bool enabled() { return _enabled; }
+	int32_t processingThreadCount() { return _processingThreadCount; }
 	std::string brokerHostname() { return _brokerHostname; }
 	std::string brokerPort() { return _brokerPort; }
 	std::string clientName() { return _clientName; }
@@ -54,6 +55,9 @@ public:
 	std::string username() { return _username; }
 	std::string password() { return _password; }
 	bool retain() { return _retain; }
+	bool plainTopic() { return _plainTopic; }
+	bool jsonTopic() { return _jsonTopic; }
+	bool jsonobjTopic() { return _jsonobjTopic; }
 	bool enableSSL() { return _enableSSL; }
 	std::string caFile() { return _caFile; }
 	bool verifyCertificate() { return _verifyCertificate; }
@@ -61,6 +65,7 @@ public:
 	std::string keyPath() { return _keyPath; }
 private:
 	bool _enabled = false;
+	int32_t _processingThreadCount = 5;
 	std::string _brokerHostname;
 	std::string _brokerPort;
 	std::string _clientName;
@@ -68,6 +73,9 @@ private:
 	std::string _username;
 	std::string _password;
 	bool _retain = true;
+	bool _plainTopic = true;
+	bool _jsonTopic = true;
+	bool _jsonobjTopic = true;
 	bool _enableSSL = false;
 	std::string _caFile;
 	bool _verifyCertificate = true;

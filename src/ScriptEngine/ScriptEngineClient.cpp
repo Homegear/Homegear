@@ -43,7 +43,7 @@
 namespace ScriptEngine
 {
 
-ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 1000)
+ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 1, 1000)
 {
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	_out.init(GD::bl.get());

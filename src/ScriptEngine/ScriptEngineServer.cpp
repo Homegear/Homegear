@@ -36,7 +36,7 @@
 namespace ScriptEngine
 {
 
-ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 1000)
+ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 1, 1000)
 {
 	_out.init(GD::bl.get());
 	_out.setPrefix("Script Engine Server: ");
