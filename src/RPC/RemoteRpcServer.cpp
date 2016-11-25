@@ -39,8 +39,8 @@ RemoteRpcServer::RemoteRpcServer(std::shared_ptr<RpcClient> client)
 	_client = client;
 
 	socket = std::shared_ptr<BaseLib::TcpSocket>(new BaseLib::TcpSocket(GD::bl.get()));
-	socket->setReadTimeout(5000000);
-	socket->setWriteTimeout(5000000);
+	socket->setReadTimeout(15000000);
+	socket->setWriteTimeout(15000000);
 	knownDevices.reset(new std::set<uint64_t>());
 	fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	path = "/RPC2";
