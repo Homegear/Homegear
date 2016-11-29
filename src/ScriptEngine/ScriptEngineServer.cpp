@@ -864,30 +864,32 @@ void ScriptEngineServer::mainThread()
 			}
 
 			timeval timeout;
-			timeout.tv_sec = 5;
-			timeout.tv_usec = 0;
+			timeout.tv_sec = 0;
+			timeout.tv_usec = 100000;
 			fd_set readFileDescriptor;
+			int32_t maxfd = 0;
 			FD_ZERO(&readFileDescriptor);
-			GD::bl->fileDescriptorManager.lock();
-			int32_t maxfd = _serverFileDescriptor->descriptor;
-			FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
-
 			{
-				std::lock_guard<std::mutex> stateGuard(_stateMutex);
-				for(std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+				auto fileDescriptorGuard = GD::bl->fileDescriptorManager.getLock();
+				fileDescriptorGuard.lock();
+				maxfd = _serverFileDescriptor->descriptor;
+				FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
+
 				{
-					if(i->second->closed) continue;
-					if(i->second->fileDescriptor->descriptor == -1)
+					std::lock_guard<std::mutex> stateGuard(_stateMutex);
+					for(std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 					{
-						i->second->closed = true;
-						continue;
+						if(i->second->closed) continue;
+						if(i->second->fileDescriptor->descriptor == -1)
+						{
+							i->second->closed = true;
+							continue;
+						}
+						FD_SET(i->second->fileDescriptor->descriptor, &readFileDescriptor);
+						if(i->second->fileDescriptor->descriptor > maxfd) maxfd = i->second->fileDescriptor->descriptor;
 					}
-					FD_SET(i->second->fileDescriptor->descriptor, &readFileDescriptor);
-					if(i->second->fileDescriptor->descriptor > maxfd) maxfd = i->second->fileDescriptor->descriptor;
 				}
 			}
-
-			GD::bl->fileDescriptorManager.unlock();
 
 			result = select(maxfd + 1, &readFileDescriptor, NULL, NULL, &timeout);
 			if(result == 0)

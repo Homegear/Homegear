@@ -407,6 +407,8 @@ void RPCServer::mainThread()
 						}
 					}
 					client->socket = std::shared_ptr<BaseLib::TcpSocket>(new BaseLib::TcpSocket(GD::bl.get(), client->socketDescriptor));
+					client->socket->setReadTimeout(100000);
+					client->socket->setWriteTimeout(15000000);
 					client->address = address;
 					client->port = port;
 
@@ -1459,20 +1461,23 @@ std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientSocketDescriptor(st
 		}
 
 		timeval timeout;
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
+		timeout.tv_sec = 0;
+		timeout.tv_usec = 100000;
 		fd_set readFileDescriptor;
+		int32_t nfds = 0;
 		FD_ZERO(&readFileDescriptor);
-		GD::bl->fileDescriptorManager.lock();
-		int32_t nfds = _serverFileDescriptor->descriptor + 1;
-		if(nfds <= 0)
 		{
-			GD::bl->fileDescriptorManager.unlock();
-			GD::out.printError("Error: Server file descriptor is invalid.");
-			return fileDescriptor;
+			auto fileDescriptorGuard = GD::bl->fileDescriptorManager.getLock();
+			fileDescriptorGuard.lock();
+			nfds = _serverFileDescriptor->descriptor + 1;
+			if(nfds <= 0)
+			{
+				fileDescriptorGuard.unlock();
+				GD::out.printError("Error: Server file descriptor is invalid.");
+				return fileDescriptor;
+			}
+			FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
 		}
-		FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
-		GD::bl->fileDescriptorManager.unlock();
 		if(!select(nfds, &readFileDescriptor, NULL, NULL, &timeout))
 		{
 			if(GD::bl->hf.getTime() - _lastGargabeCollection > 60000 || _clients.size() > GD::bl->settings.rpcServerMaxConnections() * 100 / 112) collectGarbage();
