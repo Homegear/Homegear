@@ -35,6 +35,8 @@ Mqtt::Mqtt() : BaseLib::IQueue(GD::bl.get(), 2, 1000)
 	try
 	{
 		_started = false;
+		_reconnecting = false;
+		_connected = false;
 		_socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
 	}
 	catch(const std::exception& ex)
@@ -521,8 +523,11 @@ void Mqtt::processData(std::vector<char>& data)
 		}
 		if(data.size() > 4 && (data[0] & 0xF0) == 0x30) //PUBLISH
 		{
-			std::shared_ptr<BaseLib::IQueueEntry> entry(new QueueEntryReceived(data));
-			if(!enqueue(1, entry)) _out.printError("Error: Too many received packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
+			//std::shared_ptr<BaseLib::IQueueEntry> entry(new QueueEntryReceived(data));
+			//if(!enqueue(1, entry)) _out.printError("Error: Too many received packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
+			std::cerr << "Moin remove" << std::endl;
+			processPublish(data);
+			std::this_thread::sleep_for(std::chrono::seconds(20));
 		}
 	}
 	catch(const std::exception& ex)
@@ -803,14 +808,10 @@ void Mqtt::subscribe(std::string topic)
 void Mqtt::reconnect()
 {
 	if(!_started) return;
-	_reconnectThreadMutex.lock();
 	try
 	{
-		if(_reconnecting)
-		{
-			_reconnectThreadMutex.unlock();
-			return;
-		}
+		std::lock_guard<std::mutex> reconnectThreadGuard(_reconnectThreadMutex);
+		if(_reconnecting || _socket->connected()) return;
 		_reconnecting = true;
 		GD::bl->threadManager.join(_reconnectThread);
 		GD::bl->threadManager.start(_reconnectThread, true, &Mqtt::connect, this);
@@ -827,7 +828,6 @@ void Mqtt::reconnect()
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _reconnectThreadMutex.unlock();
 }
 
 void Mqtt::connect()
@@ -845,7 +845,7 @@ void Mqtt::connect()
 				return;
 			}
 			_connected = false;
-			_socket->setReadTimeout(5000000);
+			_socket->setReadTimeout(100000);
 			_socket->open();
 			std::vector<char> payload;
 			payload.reserve(200);
@@ -1117,7 +1117,13 @@ void Mqtt::publish(const std::string& topic, const std::vector<char>& data, bool
 		if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Publishing topic " + fullTopic);
 		for(int32_t i = 0; i < 25; i++)
 		{
-			if(!_socket->connected()) connect();
+			if(_reconnecting)
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+				if(!_started) return;
+				continue;
+			}
+			if(!_socket->connected()) reconnect();
 			if(!_started) break;
 			if(i == 1) packet[0] |= 8;
 			getResponse(packet, response, 0x40, id, true);

@@ -277,17 +277,20 @@ std::shared_ptr<BaseLib::FileDescriptor> Server::getClientFileDescriptor()
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
 		fd_set readFileDescriptor;
+		int32_t nfds = 0;
 		FD_ZERO(&readFileDescriptor);
-		GD::bl->fileDescriptorManager.lock();
-		int32_t nfds = _serverFileDescriptor->descriptor + 1;
-		if(nfds <= 0)
 		{
-			GD::bl->fileDescriptorManager.unlock();
-			GD::out.printError("Error: CLI server socket descriptor is invalid.");
-			return descriptor;
+			auto fileDescriptorGuard = GD::bl->fileDescriptorManager.getLock();
+			fileDescriptorGuard.lock();
+			nfds = _serverFileDescriptor->descriptor + 1;
+			if(nfds <= 0)
+			{
+				fileDescriptorGuard.unlock();
+				GD::out.printError("Error: CLI server socket descriptor is invalid.");
+				return descriptor;
+			}
+			FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
 		}
-		FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
-		GD::bl->fileDescriptorManager.unlock();
 		if(!select(nfds, &readFileDescriptor, NULL, NULL, &timeout))
 		{
 			if(GD::bl->hf.getTime() - _lastGargabeCollection > 60000 || _clients.size() > GD::bl->settings.cliServerMaxConnections() * 100 / 112) collectGarbage();
@@ -409,18 +412,21 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 			timeout.tv_sec = 2;
 			timeout.tv_usec = 0;
 			fd_set readFileDescriptor;
+			int32_t nfds = 0;
 			FD_ZERO(&readFileDescriptor);
-			GD::bl->fileDescriptorManager.lock();
-			int32_t nfds = clientData->fileDescriptor->descriptor + 1;
-			if(nfds <= 0)
 			{
-				GD::bl->fileDescriptorManager.unlock();
-				GD::out.printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
-				closeClientConnection(clientData);
-				return;
+				auto fileDescriptorGuard = GD::bl->fileDescriptorManager.getLock();
+				fileDescriptorGuard.lock();
+				nfds = clientData->fileDescriptor->descriptor + 1;
+				if(nfds <= 0)
+				{
+					fileDescriptorGuard.unlock();
+					GD::out.printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
+					closeClientConnection(clientData);
+					return;
+				}
+				FD_SET(clientData->fileDescriptor->descriptor, &readFileDescriptor);
 			}
-			FD_SET(clientData->fileDescriptor->descriptor, &readFileDescriptor);
-			GD::bl->fileDescriptorManager.unlock();
 			bytesRead = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
 			if(bytesRead == 0) continue;
 			if(bytesRead != 1)

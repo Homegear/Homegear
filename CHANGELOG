@@ -1,3 +1,10 @@
+28.11.2016:
+
+Featues:
+
+* EnOcean: Support for 4-byte pairing packets in variation 3.
+* EnOcean: Support for wake-up devices.
+
 24.11.2016:
 
 Enhancements:

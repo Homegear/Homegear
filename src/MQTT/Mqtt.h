@@ -124,12 +124,12 @@ private:
 	std::unique_ptr<BaseLib::TcpSocket> _socket;
 	std::thread _pingThread;
 	std::thread _listenThread;
-	bool _reconnecting = false;
+	std::atomic_bool _reconnecting;
 	std::mutex _reconnectThreadMutex;
 	std::thread _reconnectThread;
 	std::mutex _connectMutex;
 	std::atomic_bool _started;
-	bool _connected = false;
+	std::atomic_bool _connected;
 	int16_t _packetId = 1;
 	std::mutex _requestsMutex;
 	std::map<int16_t, std::shared_ptr<Request>> _requests;

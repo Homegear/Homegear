@@ -222,19 +222,22 @@ void UPnP::listen()
 					continue;
 				}
 
-				timeout.tv_sec = 1;
-				timeout.tv_usec = 0;
+				timeout.tv_sec = 0;
+				timeout.tv_usec = 100000;
 				FD_ZERO(&readFileDescriptor);
-				GD::bl->fileDescriptorManager.lock();
-				nfds = _serverSocketDescriptor->descriptor + 1;
-				if(nfds <= 0)
 				{
-					GD::bl->fileDescriptorManager.unlock();
-					_out.printError("Error: Socket closed (1).");
-					GD::bl->fileDescriptorManager.shutdown(_serverSocketDescriptor);
+					auto fileDescriptorGuard = GD::bl->fileDescriptorManager.getLock();
+					fileDescriptorGuard.lock();
+					nfds = _serverSocketDescriptor->descriptor + 1;
+					if(nfds <= 0)
+					{
+						fileDescriptorGuard.unlock();
+						_out.printError("Error: Socket closed (1).");
+						GD::bl->fileDescriptorManager.shutdown(_serverSocketDescriptor);
+					}
+					FD_SET(_serverSocketDescriptor->descriptor, &readFileDescriptor);
 				}
-				FD_SET(_serverSocketDescriptor->descriptor, &readFileDescriptor);
-				GD::bl->fileDescriptorManager.unlock();
+
 				bytesReceived = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
 				if(bytesReceived == 0)
 				{

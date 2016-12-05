@@ -2407,8 +2407,8 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, std::shar
 				{
 					clientInfo->clientType = BaseLib::RpcClientType::ccu2;
 					eventServer->reconnectInfinitely = true;
-					eventServer->socket->setReadTimeout(120000000);
-					eventServer->socket->setWriteTimeout(120000000);
+					eventServer->socket->setReadTimeout(30000000);
+					eventServer->socket->setWriteTimeout(30000000);
 				}
 			// }}}
 			// {{{ Keep connection to IP-Symcon
