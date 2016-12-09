@@ -305,6 +305,7 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 				else if((*i)->structValue->find("ADDRESS") != (*i)->structValue->end())
 				{
 					serialNumber = (*i)->structValue->at("ADDRESS")->stringValue;
+					serialNumber = BaseLib::HelperFunctions::splitFirst(serialNumber, ':').first;
 				}
 				else continue;
 				if(device == 0) //Client doesn't support ID's

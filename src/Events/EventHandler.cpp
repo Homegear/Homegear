@@ -100,7 +100,7 @@ void EventHandler::mainThread()
 				{
 					uint64_t nextExecution = getNextExecution(event->eventTime, event->recurEvery);
 					_eventsMutex.lock();
-					GD::out.printInfo("Info: Next execution for event " + event->name + ": " + std::to_string(nextExecution));
+					if(event->enabled) GD::out.printInfo("Info: Next execution for event " + event->name + ": " + std::to_string(nextExecution));
 					//We don't call removeTimedEvents here, so we don't need to release the lock. Otherwise there is the possibility that the event
 					//is recreated after being deleted.
 					for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
@@ -114,7 +114,7 @@ void EventHandler::mainThread()
 					while(_timedEvents.find(nextExecution) != _timedEvents.end()) nextExecution++;
 					_timedEvents[nextExecution] = event;
 					_eventsMutex.unlock();
-					GD::rpcClient->broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
+					if(event->enabled) GD::rpcClient->broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
 				}
 				else removeTimedEvent(event->id);
 			}
