@@ -215,6 +215,25 @@ Features:
 
 * Improvements to SerialReaderWriter
 
+31.08.2016:
+
+Enhancements:
+
+* Sonos: No UNREACH anymore on HTTP 500 errors.
+
+30.08.2016:
+
+Errors:
+
+* KNX: Fixes in DptConverter
+* Sonos: ROOMNAME now working
+
+26.08.2016:
+
+Enhancements:
+
+* Variable types are now enforced in getAllValues. Some uninitialized variables had sometimes the wrong type before.
+
 16.08.2016:
 
 Features:

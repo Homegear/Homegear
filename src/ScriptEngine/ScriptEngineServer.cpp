@@ -211,7 +211,7 @@ void ScriptEngineServer::collectGarbage()
 				std::lock_guard<std::mutex> stateGuard(_stateMutex);
 				_clients.erase((*i)->id);
 			}
-			_out.printDebug("Debug: CLI client " + std::to_string((*i)->id) + " removed.");
+			_out.printDebug("Debug: Script engine client " + std::to_string((*i)->id) + " removed.");
 		}
 	}
 	catch(const std::exception& ex)
