@@ -34,7 +34,7 @@
 namespace Flows
 {
 
-FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 1000)
+FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 1, 1000)
 {
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	_out.init(GD::bl.get());
@@ -155,13 +155,15 @@ void FlowsClient::start()
 		while(!_disposing)
 		{
 			timeval timeout;
-			timeout.tv_sec = 5;
-			timeout.tv_usec = 0;
+			timeout.tv_sec = 0;
+			timeout.tv_usec = 100000;
 			fd_set readFileDescriptor;
 			FD_ZERO(&readFileDescriptor);
-			GD::bl->fileDescriptorManager.lock();
-			FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
-			GD::bl->fileDescriptorManager.unlock();
+			{
+				auto fileDescriptorGuard = GD::bl->fileDescriptorManager.getLock();
+				fileDescriptorGuard.lock();
+				FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
+			}
 
 			result = select(_fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
 			if(result == 0) continue;

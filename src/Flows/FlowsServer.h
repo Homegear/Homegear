@@ -70,8 +70,8 @@ private:
 
 	BaseLib::Output _out;
 	std::string _socketPath;
-	bool _shuttingDown = false;
-	bool _stopServer = false;
+	std::atomic_bool _shuttingDown;
+	std::atomic_bool _stopServer;
 	std::thread _mainThread;
 	int32_t _backlog = 100;
 	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;

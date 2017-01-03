@@ -35,10 +35,13 @@
 namespace Flows
 {
 
-FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 1000)
+FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 1, 1000)
 {
 	_out.init(GD::bl.get());
 	_out.setPrefix("Flows Engine Server: ");
+
+	_shuttingDown = false;
+	_stopServer = false;
 
 	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, true));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true));
@@ -202,7 +205,7 @@ bool FlowsServer::start()
 		_shuttingDown = false;
 		_stopServer = false;
 		if(!getFileDescriptor(true)) return false;
-		startQueue(0, GD::bl->settings.flowsProcessingThreadCount(), 0, SCHED_OTHER);
+		startQueue(0, GD::bl->settings.flowsThreadCount(), 0, SCHED_OTHER);
 		GD::bl->threadManager.start(_mainThread, true, &FlowsServer::mainThread, this);
 		startFlows();
 		return true;
@@ -860,30 +863,32 @@ void FlowsServer::mainThread()
 			}
 
 			timeval timeout;
-			timeout.tv_sec = 5;
-			timeout.tv_usec = 0;
+			timeout.tv_sec = 0;
+			timeout.tv_usec = 100000;
 			fd_set readFileDescriptor;
+			int32_t maxfd = 0;
 			FD_ZERO(&readFileDescriptor);
-			GD::bl->fileDescriptorManager.lock();
-			int32_t maxfd = _serverFileDescriptor->descriptor;
-			FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
-
 			{
-				std::lock_guard<std::mutex> stateGuard(_stateMutex);
-				for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+				auto fileDescriptorGuard = GD::bl->fileDescriptorManager.getLock();
+				fileDescriptorGuard.lock();
+				maxfd = _serverFileDescriptor->descriptor;
+				FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
+
 				{
-					if(i->second->closed) continue;
-					if(i->second->fileDescriptor->descriptor == -1)
+					std::lock_guard<std::mutex> stateGuard(_stateMutex);
+					for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 					{
-						i->second->closed = true;
-						continue;
+						if(i->second->closed) continue;
+						if(i->second->fileDescriptor->descriptor == -1)
+						{
+							i->second->closed = true;
+							continue;
+						}
+						FD_SET(i->second->fileDescriptor->descriptor, &readFileDescriptor);
+						if(i->second->fileDescriptor->descriptor > maxfd) maxfd = i->second->fileDescriptor->descriptor;
 					}
-					FD_SET(i->second->fileDescriptor->descriptor, &readFileDescriptor);
-					if(i->second->fileDescriptor->descriptor > maxfd) maxfd = i->second->fileDescriptor->descriptor;
 				}
 			}
-
-			GD::bl->fileDescriptorManager.unlock();
 
 			result = select(maxfd + 1, &readFileDescriptor, NULL, NULL, &timeout);
 			if(result == 0)

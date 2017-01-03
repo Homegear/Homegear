@@ -264,9 +264,9 @@ void terminate(int32_t signalNumber)
 			GD::out.printInfo( "(Shutdown) => Closing physical interfaces");
 			if(GD::familyController) GD::familyController->physicalInterfaceStopListening();
 			GD::out.printInfo("(Shutdown) => Stopping flows server...");
-			GD::flowsServer->stop();
+			if(GD::flowsServer) GD::flowsServer->stop();
 			GD::out.printInfo("(Shutdown) => Stopping script engine server...");
-			GD::scriptEngineServer->stop();
+			if(GD::scriptEngineServer) GD::scriptEngineServer->stop();
 			GD::out.printMessage("(Shutdown) => Saving device families");
 			if(GD::familyController) GD::familyController->save(false);
 			GD::out.printMessage("(Shutdown) => Disposing device families");
@@ -368,9 +368,9 @@ void terminate(int32_t signalNumber)
 				exit(1);
 			}
 			GD::out.printInfo("Reloading flows server...");
-			GD::flowsServer->homegearReloading();
+			if(GD::flowsServer) GD::flowsServer->homegearReloading();
 			GD::out.printInfo("Reloading script engine server...");
-			GD::scriptEngineServer->homegearReloading();
+			if(GD::scriptEngineServer) GD::scriptEngineServer->homegearReloading();
 			_shuttingDownMutex.lock();
 			_startUpComplete = true;
 			if(_shutdownQueued)
@@ -966,7 +966,7 @@ void startUp()
 
         GD::out.printInfo("Starting flows server...");
 		GD::flowsServer.reset(new Flows::FlowsServer());
-		if(!GD::flowsServer->start())
+		if(GD::bl->settings.enableFlows() && !GD::flowsServer->start())
 		{
 			GD::out.printCritical("Critical: Cannot start flows server. Exiting Homegear.");
 			exit(1);
