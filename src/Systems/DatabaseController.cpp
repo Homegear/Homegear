@@ -77,9 +77,9 @@ void DatabaseController::init()
 }
 
 //General
-void DatabaseController::open(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath)
+void DatabaseController::open(std::string databasePath, std::string databaseFilename, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath, std::string backupFilename)
 {
-	_db.init(databasePath, databaseSynchronous, databaseMemoryJournal, databaseWALJournal, backupPath);
+	_db.init(databasePath, databaseFilename, databaseSynchronous, databaseMemoryJournal, databaseWALJournal, backupPath, backupFilename);
 }
 
 void DatabaseController::hotBackup()
@@ -243,7 +243,10 @@ bool DatabaseController::convertDatabase()
 {
 	try
 	{
-		std::string databasePath = GD::bl->settings.dataPath() + "db.sql";
+		std::string databasePath = GD::bl->settings.dataPath();
+		std::string databaseFilename = "db.sql";
+		std::string backupPath = GD::bl->settings.databaseBackupPath();
+		if(backupPath.empty()) backupPath = databasePath;
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::string("table"))));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::string("homegearVariables"))));
@@ -310,7 +313,7 @@ bool DatabaseController::convertDatabase()
 			exit(0);
 		}
 		else*/
-		_db.init(databasePath, GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databasePath + ".0.6.0.old");
+		_db.init(databasePath, databaseFilename, GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), backupPath + databaseFilename + ".0.6.0.old");
 		if(version == "0.3.1")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.4.3...");

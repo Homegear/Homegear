@@ -41,25 +41,29 @@ SQLite3::SQLite3()
 {
 }
 
-SQLite3::SQLite3(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal) : SQLite3()
+SQLite3::SQLite3(std::string databasePath, std::string databaseFilename, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal) : SQLite3()
 {
 	if(databasePath.empty()) return;
 	_databaseSynchronous = databaseSynchronous;
 	_databaseMemoryJournal = databaseMemoryJournal;
 	_databaseWALJournal = databaseWALJournal;
 	_databasePath = databasePath;
+	_databaseFilename = databaseFilename;
 	_backupPath = "";
+	_backupFilename = "";
     openDatabase(true);
 }
 
-void SQLite3::init(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath)
+void SQLite3::init(std::string databasePath, std::string databaseFilename, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath, std::string backupFilename)
 {
 	if(databasePath.empty()) return;
 	_databaseSynchronous = databaseSynchronous;
 	_databaseMemoryJournal = databaseMemoryJournal;
 	_databaseWALJournal = databaseWALJournal;
 	_databasePath = databasePath;
+	_databaseFilename = databaseFilename;
 	_backupPath = backupPath;
+	_backupFilename = backupFilename;
 	hotBackup();
 }
 
@@ -77,25 +81,25 @@ void SQLite3::hotBackup()
 {
 	try
 	{
-		if(_databasePath.empty()) return;
+		if(_databasePath.empty() || _databaseFilename.empty()) return;
 		_databaseMutex.lock();
 		closeDatabase(false);
-		if(GD::bl->io.fileExists(_databasePath))
+		if(GD::bl->io.fileExists(_databasePath + _databaseFilename))
 		{
-			if(!checkIntegrity(_databasePath))
+			if(!checkIntegrity(_databasePath + _databaseFilename))
 			{
 				GD::out.printCritical("Critical: Integrity check on database failed.");
-				if(!_backupPath.empty())
+				if(!_backupPath.empty() && !_backupFilename.empty())
 				{
-					GD::out.printCritical("Critical: Backing up corrupted database file to: " + _databasePath + ".broken");
-					GD::bl->io.copyFile(_databasePath, _databasePath + ".broken");
+					GD::out.printCritical("Critical: Backing up corrupted database file to: " + _backupPath + _databaseFilename + ".broken");
+					GD::bl->io.copyFile(_databasePath + _databaseFilename, _backupPath + _databaseFilename + ".broken");
 					bool restored = false;
 					for(int32_t i = 0; i <= 10000; i++)
 					{
-						if(GD::bl->io.fileExists(_backupPath + std::to_string(i)) && checkIntegrity(_backupPath + std::to_string(i)))
+						if(GD::bl->io.fileExists(_backupPath + _backupFilename + std::to_string(i)) && checkIntegrity(_backupPath + _backupFilename + std::to_string(i)))
 						{
-							GD::out.printCritical("Critical: Restoring database file: " + _backupPath + std::to_string(i));
-							if(GD::bl->io.copyFile(_backupPath + std::to_string(i), _databasePath))
+							GD::out.printCritical("Critical: Restoring database file: " + _backupPath + _backupFilename + std::to_string(i));
+							if(GD::bl->io.copyFile(_backupPath + _backupFilename + std::to_string(i), _databasePath + _databaseFilename))
 							{
 								restored = true;
 								break;
@@ -117,34 +121,34 @@ void SQLite3::hotBackup()
 			}
 			else
 			{
-				if(!_backupPath.empty())
+				if(!_backupPath.empty() && !_backupFilename.empty())
 				{
 					GD::out.printInfo("Info: Backing up database...");
 					if(GD::bl->settings.databaseMaxBackups() > 1)
 					{
-						if(GD::bl->io.fileExists(_backupPath + std::to_string(GD::bl->settings.databaseMaxBackups() - 1)))
+						if(GD::bl->io.fileExists(_backupPath + _backupFilename + std::to_string(GD::bl->settings.databaseMaxBackups() - 1)))
 						{
-							if(!GD::bl->io.deleteFile(_backupPath + std::to_string(GD::bl->settings.databaseMaxBackups() - 1)))
+							if(!GD::bl->io.deleteFile(_backupPath + _backupFilename + std::to_string(GD::bl->settings.databaseMaxBackups() - 1)))
 							{
-								GD::out.printError("Error: Cannot delete file: " + _backupPath + std::to_string(GD::bl->settings.databaseMaxBackups() - 1));
+								GD::out.printError("Error: Cannot delete file: " + _backupPath + _backupFilename + std::to_string(GD::bl->settings.databaseMaxBackups() - 1));
 							}
 						}
 						for(int32_t i = GD::bl->settings.databaseMaxBackups() - 2; i >= 0; i--)
 						{
-							if(GD::bl->io.fileExists(_backupPath + std::to_string(i)))
+							if(GD::bl->io.fileExists(_backupPath + _backupFilename + std::to_string(i)))
 							{
-								if(!GD::bl->io.moveFile(_backupPath + std::to_string(i), _backupPath + std::to_string(i + 1)))
+								if(!GD::bl->io.moveFile(_backupPath + _backupFilename + std::to_string(i), _backupPath + _backupFilename + std::to_string(i + 1)))
 								{
-									GD::out.printError("Error: Cannot move file: " + _backupPath + std::to_string(i));
+									GD::out.printError("Error: Cannot move file: " + _backupPath + _backupFilename + std::to_string(i));
 								}
 							}
 						}
 					}
 					if(GD::bl->settings.databaseMaxBackups() > 0)
 					{
-						if(!GD::bl->io.copyFile(_databasePath, _backupPath + '0'))
+						if(!GD::bl->io.copyFile(_databasePath + _databaseFilename, _backupPath + _backupFilename + '0'))
 						{
-							GD::out.printError("Error: Cannot copy file: " + _backupPath + '0');
+							GD::out.printError("Error: Cannot copy file: " + _backupPath + _backupFilename + '0');
 						}
 					}
 				}
@@ -233,7 +237,8 @@ void SQLite3::openDatabase(bool lockMutex)
 	{
 		if(lockMutex) _databaseMutex.lock();
 		char* errorMessage = nullptr;
-		int result = sqlite3_open(_databasePath.c_str(), &_database);
+		std::string fullDatabasePath = _databasePath + _databaseFilename;
+		int result = sqlite3_open(fullDatabasePath.c_str(), &_database);
 		if(result || !_database)
 		{
 			GD::out.printCritical("Can't open database: " + std::string(sqlite3_errmsg(_database)));

@@ -49,7 +49,7 @@ public:
 	virtual void init();
 
 	// {{{ General
-		virtual void open(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath = "");
+		virtual void open(std::string databasePath, std::string databaseFilename, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath = "", std::string backupFilename = "");
 		virtual void hotBackup();
 		virtual bool isOpen() { return _db.isOpen(); }
 		virtual void initializeDatabase();

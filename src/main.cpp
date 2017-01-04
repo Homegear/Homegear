@@ -742,8 +742,9 @@ void startUp()
 		setLimits();
 
 		GD::bl->db->init();
-		std::string databasePath = GD::bl->settings.dataPath() + "db.sql";
-    	GD::bl->db->open(databasePath, GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databasePath + ".bak");
+		std::string databaseBackupPath = GD::bl->settings.databaseBackupPath();
+		if(databaseBackupPath.empty()) databaseBackupPath = GD::bl->settings.dataPath();
+    	GD::bl->db->open(GD::bl->settings.dataPath(), "db.sql", GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databaseBackupPath, "db.sql.bak");
     	if(!GD::bl->db->isOpen()) exitHomegear(1);
 
         GD::out.printInfo("Initializing database...");
