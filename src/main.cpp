@@ -801,16 +801,34 @@ void startUp()
 				exitHomegear(1);
 			}
 			GD::out.printInfo("Info: Setting up physical interfaces and GPIOs...");
-			if(GD::familyController) GD::familyController->physicalInterfaceSetup(GD::bl->userId, GD::bl->groupId);
+			if(GD::familyController) GD::familyController->physicalInterfaceSetup(GD::bl->userId, GD::bl->groupId, GD::bl->settings.setDevicePermissions());
 			BaseLib::LowLevel::Gpio gpio(GD::bl.get());
-			gpio.setup(GD::bl->userId, GD::bl->groupId);
+			gpio.setup(GD::bl->userId, GD::bl->groupId, GD::bl->settings.setDevicePermissions());
 			GD::out.printInfo("Info: Dropping privileges to user " + GD::runAsUser + " (" + std::to_string(GD::bl->userId) + ") and group " + GD::runAsGroup + " (" + std::to_string(GD::bl->groupId) + ")");
+
+			int result = -1;
+			std::vector<gid_t> supplementaryGroups(10);
+			int numberOfGroups = 10;
+			while(result == -1)
+			{
+				result = getgrouplist(GD::runAsUser.c_str(), 10000, supplementaryGroups.data(), &numberOfGroups);
+
+				if(result == -1) supplementaryGroups.resize(numberOfGroups);
+				else supplementaryGroups.resize(result);
+			}
 
 			if(setgid(GD::bl->groupId) != 0)
 			{
 				GD::out.printCritical("Critical: Could not drop group privileges.");
 				exitHomegear(1);
 			}
+
+			if(setgroups(supplementaryGroups.size(), supplementaryGroups.data()) != 0)
+			{
+				GD::out.printCritical("Critical: Could not set supplementary groups: " + std::string(strerror(errno)));
+				exitHomegear(1);
+			}
+
 			if(setuid(GD::bl->userId) != 0)
 			{
 				GD::out.printCritical("Critical: Could not drop user privileges.");
@@ -1156,9 +1174,9 @@ int main(int argc, char* argv[])
     					GD::licensingController->dispose();
     					exit(1);
     				}
-    				GD::familyController->physicalInterfaceSetup(userId, groupId);
+    				GD::familyController->physicalInterfaceSetup(userId, groupId, GD::bl->settings.setDevicePermissions());
     				BaseLib::LowLevel::Gpio gpio(GD::bl.get());
-    				gpio.setup(userId, groupId);
+    				gpio.setup(userId, groupId, GD::bl->settings.setDevicePermissions());
     				GD::familyController->dispose();
     				GD::licensingController->dispose();
     				exit(0);

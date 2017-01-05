@@ -495,8 +495,7 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 		{
 			retry = true;
 			server->socket->close();
-			std::cout << "Error: Could not send data to XML RPC server " << server->hostname << ": " + ex.what() << "." << std::endl;
-			std::cerr << "Error: Could not send data to XML RPC server " << server->hostname << ": " + ex.what() << "." << std::endl;
+			std::cout << "Info: Could not send data to XML RPC server " << server->hostname << ": " + ex.what() << "." << std::endl;
 			return;
 		}
 	}
@@ -646,8 +645,7 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 					{
 						retry = true;
 						server->socket->close();
-						std::cout << "Error: Could not send data to XML RPC server " << server->hostname << ": " << ex.what() << "." << std::endl;
-						std::cerr << "Error: Could not send data to XML RPC server " << server->hostname << ": " << ex.what() << "." << std::endl;
+						std::cout << "Info: Could not send data to XML RPC server " << server->hostname << ": " << ex.what() << "." << std::endl;
 						return;
 					}
 					webSocket = BaseLib::WebSocket();

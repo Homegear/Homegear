@@ -167,7 +167,7 @@ public:
 	void physicalInterfaceStopListening();
 	void physicalInterfaceStartListening();
 	bool physicalInterfaceIsOpen();
-	void physicalInterfaceSetup(int32_t userID, int32_t groupID);
+	void physicalInterfaceSetup(int32_t userID, int32_t groupID, bool setPermissions);
 	BaseLib::PVariable listInterfaces(int32_t familyID);
 	// }}}
 

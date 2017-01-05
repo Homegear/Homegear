@@ -1218,14 +1218,14 @@ void FamilyController::physicalInterfaceStopListening()
     }
 }
 
-void FamilyController::physicalInterfaceSetup(int32_t userID, int32_t groupID)
+void FamilyController::physicalInterfaceSetup(int32_t userID, int32_t groupID, bool setPermissions)
 {
 	try
 	{
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
-			i->second->physicalInterfaces()->setup(userID, groupID);
+			i->second->physicalInterfaces()->setup(userID, groupID, setPermissions);
 		}
 	}
 	catch(const std::exception& ex)
