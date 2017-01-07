@@ -1982,6 +1982,7 @@ BaseLib::PVariable RPCGetParamset::invoke(BaseLib::PRpcClientInfo clientInfo, st
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString }),
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger }),
 		}));
@@ -1989,6 +1990,8 @@ BaseLib::PVariable RPCGetParamset::invoke(BaseLib::PRpcClientInfo clientInfo, st
 
 		int32_t channel = -1;
 		std::string serialNumber;
+		BaseLib::DeviceDescription::ParameterGroup::Type::Enum type;
+		uint64_t remoteID = 0;
 		int32_t remoteChannel = -1;
 		std::string remoteSerialNumber;
 
@@ -2003,31 +2006,31 @@ BaseLib::PVariable RPCGetParamset::invoke(BaseLib::PRpcClientInfo clientInfo, st
 				if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
 			}
 			else serialNumber = parameters->at(0)->stringValue;
-		}
-
-		uint64_t remoteID = 0;
-		int32_t parameterSetIndex = useSerialNumber ? 1 : 2;
-		BaseLib::DeviceDescription::ParameterGroup::Type::Enum type;
-		if(parameters->at(parameterSetIndex)->type == BaseLib::VariableType::tString)
-		{
-			type = BaseLib::DeviceDescription::ParameterGroup::typeFromString(parameters->at(parameterSetIndex)->stringValue);
+			
+			type = BaseLib::DeviceDescription::ParameterGroup::typeFromString(parameters->at(1)->stringValue);
 			if(type == BaseLib::DeviceDescription::ParameterGroup::Type::Enum::none)
 			{
 				type = BaseLib::DeviceDescription::ParameterGroup::Type::Enum::link;
-				int32_t pos = parameters->at(parameterSetIndex)->stringValue.find(':');
+				int32_t pos = parameters->at(1)->stringValue.find(':');
 				if(pos > -1)
 				{
-					remoteSerialNumber = parameters->at(parameterSetIndex)->stringValue.substr(0, pos);
-					if(parameters->at(parameterSetIndex)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(parameterSetIndex)->stringValue.substr(pos + 1));
+					remoteSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
+					if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
 				}
-				else remoteSerialNumber = parameters->at(parameterSetIndex)->stringValue;
+				else remoteSerialNumber = parameters->at(1)->stringValue;
 			}
 		}
 		else
 		{
-			type = BaseLib::DeviceDescription::ParameterGroup::Type::Enum::link;
-			remoteID = parameters->at(2)->integerValue;
-			remoteChannel = parameters->at(3)->integerValue;
+			if(parameters->size() >= 4)
+			{
+				type = BaseLib::DeviceDescription::ParameterGroup::Type::Enum::link;
+				remoteID = parameters->at(2)->integerValue;
+				remoteChannel = parameters->at(3)->integerValue;
+			}
+			else if(parameters->size() == 3) type = BaseLib::DeviceDescription::ParameterGroup::typeFromString(parameters->at(2)->stringValue);
+
+			if(type == BaseLib::DeviceDescription::ParameterGroup::Type::Enum::none) type = BaseLib::DeviceDescription::ParameterGroup::Type::Enum::master;
 		}
 
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
