@@ -33,6 +33,7 @@
 
 #include "../../config.h"
 #include "../ScriptEngine/ScriptEngineServer.h"
+#include "../Flows/FlowsServer.h"
 #include "../CLI/CLIServer.h"
 #include "../Events/EventHandler.h"
 #include "../Licensing/LicensingController.h"
@@ -69,6 +70,7 @@ public:
 	static std::map<int32_t, Rpc::Server> rpcServers;
 	static std::unique_ptr<Rpc::Client> rpcClient;
 	static std::unique_ptr<ScriptEngine::ScriptEngineServer> scriptEngineServer;
+	static std::unique_ptr<Flows::FlowsServer> flowsServer;
 	static std::unique_ptr<CLI::Server> cliServer;
 	static BaseLib::Rpc::ServerInfo serverInfo;
 	static Rpc::ClientSettings clientSettings;

@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -28,34 +28,51 @@
  * files in the program, then also delete it here.
 */
 
-#include "GD.h"
+#ifndef FLOWSPROCESS_H_
+#define FLOWSPROCESS_H_
 
-#include "../MQTT/Mqtt.h"
-#include "../UPnP/UPnP.h"
+#include "FlowsClientData.h"
+#include <homegear-base/BaseLib.h>
+#include "FlowInfoServer.h"
 
-std::unique_ptr<BaseLib::SharedObjects> GD::bl;
-BaseLib::Output GD::out;
-std::string GD::runAsUser = "";
-std::string GD::runAsGroup = "";
-std::string GD::configPath = "/etc/homegear/";
-std::string GD::pidfilePath = "";
-std::string GD::workingDirectory = "";
-std::string GD::executablePath = "";
-std::string GD::executableFile = "";
-int64_t GD::startingTime = BaseLib::HelperFunctions::getTime();
-std::unique_ptr<FamilyController> GD::familyController;
-std::unique_ptr<LicensingController> GD::licensingController;
-std::map<int32_t, Rpc::Server> GD::rpcServers;
-std::unique_ptr<Rpc::Client> GD::rpcClient;
-std::unique_ptr<CLI::Server> GD::cliServer;
-int32_t GD::rpcLogLevel = 1;
-BaseLib::Rpc::ServerInfo GD::serverInfo;
-Rpc::ClientSettings GD::clientSettings;
-std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>> GD::licensingModules;
-std::unique_ptr<UPnP> GD::uPnP(new UPnP());
-std::unique_ptr<Mqtt> GD::mqtt;
-#ifdef EVENTHANDLER
-std::unique_ptr<EventHandler> GD::eventHandler;
+namespace Flows
+{
+
+struct FlowFinishedInfo
+{
+	bool finished = false;
+};
+typedef std::shared_ptr<FlowFinishedInfo> PFlowFinishedInfo;
+
+class FlowsProcess
+{
+private:
+	pid_t _pid = 0;
+	std::mutex _flowsMutex;
+	std::map<int32_t, PFlowInfoServer> _flows;
+	std::map<int32_t, PFlowFinishedInfo> _flowFinishedInfo;
+	PFlowsClientData _clientData;
+public:
+	FlowsProcess();
+	virtual ~FlowsProcess();
+
+	std::condition_variable requestConditionVariable;
+
+	pid_t getPid() { return _pid; }
+	void setPid(pid_t value) { _pid = value; }
+	PFlowsClientData& getClientData() { return _clientData; }
+	void setClientData(PFlowsClientData& value) { _clientData = value; }
+
+	void invokeFlowFinished(int32_t exitCode);
+	void invokeFlowFinished(int32_t id, int32_t exitCode);
+	uint32_t flowCount();
+	PFlowInfoServer getFlow(int32_t id);
+	PFlowFinishedInfo getFlowFinishedInfo(int32_t id);
+	void registerFlow(int32_t id, PFlowInfoServer& flowInfo);
+	void unregisterFlow(int32_t id);
+};
+
+typedef std::shared_ptr<FlowsProcess> PFlowsProcess;
+
+}
 #endif
-std::unique_ptr<ScriptEngine::ScriptEngineServer> GD::scriptEngineServer;
-std::unique_ptr<Flows::FlowsServer> GD::flowsServer;

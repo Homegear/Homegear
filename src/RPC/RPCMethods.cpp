@@ -1170,13 +1170,17 @@ BaseLib::PVariable RPCGetDeviceDescription::invoke(BaseLib::PRpcClientInfo clien
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }),
-			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger })
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tArray }),
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger }),
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tArray })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		int32_t channel = -1;
 		std::string serialNumber;
 		bool useSerialNumber = false;
+		std::map<std::string, bool> fields;
+		int32_t fieldsIndex = -1;
 		if(parameters->at(0)->type == BaseLib::VariableType::tString)
 		{
 			useSerialNumber = true;
@@ -1194,6 +1198,18 @@ BaseLib::PVariable RPCGetDeviceDescription::invoke(BaseLib::PRpcClientInfo clien
 				description->structValue->insert(BaseLib::StructElement("FIRMWARE", BaseLib::PVariable(new BaseLib::Variable(std::string(VERSION)))));
 				return description;
 			}
+
+			if(parameters->size() >= 2) fieldsIndex = 1;
+		}
+		else if(parameters->size() >= 3) fieldsIndex = 2;
+
+		if(fieldsIndex != -1)
+		{
+			for(auto field : *(parameters->at(fieldsIndex)->arrayValue))
+			{
+				if(field->stringValue.empty()) continue;
+				fields[field->stringValue] = true;
+			}
 		}
 
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
@@ -1204,11 +1220,11 @@ BaseLib::PVariable RPCGetDeviceDescription::invoke(BaseLib::PRpcClientInfo clien
 			{
 				if(useSerialNumber)
 				{
-					if(central->peerExists(serialNumber)) return central->getDeviceDescription(clientInfo, serialNumber, channel);
+					if(central->peerExists(serialNumber)) return central->getDeviceDescription(clientInfo, serialNumber, channel, fields);
 				}
 				else
 				{
-					if(central->peerExists((uint64_t)parameters->at(0)->integerValue)) return central->getDeviceDescription(clientInfo, parameters->at(0)->integerValue, parameters->at(1)->integerValue);
+					if(central->peerExists((uint64_t)parameters->at(0)->integerValue)) return central->getDeviceDescription(clientInfo, parameters->at(0)->integerValue, parameters->at(1)->integerValue, fields);
 				}
 			}
 		}
@@ -1966,6 +1982,7 @@ BaseLib::PVariable RPCGetParamset::invoke(BaseLib::PRpcClientInfo clientInfo, st
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString }),
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger }),
 		}));
@@ -1973,6 +1990,8 @@ BaseLib::PVariable RPCGetParamset::invoke(BaseLib::PRpcClientInfo clientInfo, st
 
 		int32_t channel = -1;
 		std::string serialNumber;
+		BaseLib::DeviceDescription::ParameterGroup::Type::Enum type;
+		uint64_t remoteID = 0;
 		int32_t remoteChannel = -1;
 		std::string remoteSerialNumber;
 
@@ -1987,31 +2006,31 @@ BaseLib::PVariable RPCGetParamset::invoke(BaseLib::PRpcClientInfo clientInfo, st
 				if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
 			}
 			else serialNumber = parameters->at(0)->stringValue;
-		}
-
-		uint64_t remoteID = 0;
-		int32_t parameterSetIndex = useSerialNumber ? 1 : 2;
-		BaseLib::DeviceDescription::ParameterGroup::Type::Enum type;
-		if(parameters->at(parameterSetIndex)->type == BaseLib::VariableType::tString)
-		{
-			type = BaseLib::DeviceDescription::ParameterGroup::typeFromString(parameters->at(parameterSetIndex)->stringValue);
+			
+			type = BaseLib::DeviceDescription::ParameterGroup::typeFromString(parameters->at(1)->stringValue);
 			if(type == BaseLib::DeviceDescription::ParameterGroup::Type::Enum::none)
 			{
 				type = BaseLib::DeviceDescription::ParameterGroup::Type::Enum::link;
-				int32_t pos = parameters->at(parameterSetIndex)->stringValue.find(':');
+				int32_t pos = parameters->at(1)->stringValue.find(':');
 				if(pos > -1)
 				{
-					remoteSerialNumber = parameters->at(parameterSetIndex)->stringValue.substr(0, pos);
-					if(parameters->at(parameterSetIndex)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(parameterSetIndex)->stringValue.substr(pos + 1));
+					remoteSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
+					if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
 				}
-				else remoteSerialNumber = parameters->at(parameterSetIndex)->stringValue;
+				else remoteSerialNumber = parameters->at(1)->stringValue;
 			}
 		}
 		else
 		{
-			type = BaseLib::DeviceDescription::ParameterGroup::Type::Enum::link;
-			remoteID = parameters->at(2)->integerValue;
-			remoteChannel = parameters->at(3)->integerValue;
+			if(parameters->size() >= 4)
+			{
+				type = BaseLib::DeviceDescription::ParameterGroup::Type::Enum::link;
+				remoteID = parameters->at(2)->integerValue;
+				remoteChannel = parameters->at(3)->integerValue;
+			}
+			else if(parameters->size() == 3) type = BaseLib::DeviceDescription::ParameterGroup::typeFromString(parameters->at(2)->stringValue);
+
+			if(type == BaseLib::DeviceDescription::ParameterGroup::Type::Enum::none) type = BaseLib::DeviceDescription::ParameterGroup::Type::Enum::master;
 		}
 
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
@@ -2557,20 +2576,23 @@ BaseLib::PVariable RPCListDevices::invoke(BaseLib::PRpcClientInfo clientInfo, st
 					std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tBoolean }),
 					std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }),
 					std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray }),
+					std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray, BaseLib::VariableType::tInteger }),
 			}));
 			if(error != ParameterError::Enum::noError) return getError(error);
 		}
 		bool channels = true;
 		std::map<std::string, bool> fields;
+		int32_t familyId = -1;
 		// The HomeMatic configurator passes boolean false to this method, so only accept "channels = false" when there are more than 1 arguments.
 		if(parameters->size() > 1 && parameters->at(0)->type == BaseLib::VariableType::tBoolean) channels = parameters->at(0)->booleanValue;
-		if(parameters->size() == 2)
+		if(parameters->size() >= 2)
 		{
 			for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(1)->arrayValue->begin(); i != parameters->at(1)->arrayValue->end(); ++i)
 			{
 				if((*i)->stringValue.empty()) continue;
 				fields[(*i)->stringValue] = true;
 			}
+			if(parameters->size() == 3) familyId = parameters->at(2)->integerValue;
 		}
 		else if(parameters->size() == 1 && parameters->at(0)->type == BaseLib::VariableType::tBoolean && !parameters->at(0)->booleanValue)
 		{
@@ -2582,6 +2604,7 @@ BaseLib::PVariable RPCListDevices::invoke(BaseLib::PRpcClientInfo clientInfo, st
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
+			if(familyId != -1 && i->first != familyId) continue;
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));

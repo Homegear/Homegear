@@ -35,6 +35,7 @@
 #endif
 #include "CLI/CLIClient.h"
 #include "ScriptEngine/ScriptEngineClient.h"
+#include "Flows/FlowsClient.h"
 #include "UPnP/UPnP.h"
 #include "MQTT/Mqtt.h"
 #include <homegear-base/BaseLib.h>
@@ -186,7 +187,11 @@ void sigchld_handler(int32_t signalNumber)
 				_monitor.suspend();
 				_fork = true;
 			}
-			else if(GD::scriptEngineServer) GD::scriptEngineServer->processKilled(pid, exitStatus, signal, coreDumped);
+			else
+			{
+				if(GD::scriptEngineServer) GD::scriptEngineServer->processKilled(pid, exitStatus, signal, coreDumped);
+				if(GD::flowsServer) GD::flowsServer->processKilled(pid, exitStatus, signal, coreDumped);
+			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -231,6 +236,7 @@ void terminate(int32_t signalNumber)
 			GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
 			GD::bl->shuttingDown = true;
 			_shuttingDownMutex.unlock();
+			if(GD::flowsServer) GD::flowsServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
 			if(GD::scriptEngineServer) GD::scriptEngineServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
 			if(GD::familyController) GD::familyController->homegearShuttingDown();
 			_disposing = true;
@@ -257,8 +263,10 @@ void terminate(int32_t signalNumber)
 			if(GD::rpcClient) GD::rpcClient->dispose();
 			GD::out.printInfo( "(Shutdown) => Closing physical interfaces");
 			if(GD::familyController) GD::familyController->physicalInterfaceStopListening();
+			GD::out.printInfo("(Shutdown) => Stopping flows server...");
+			if(GD::flowsServer) GD::flowsServer->stop();
 			GD::out.printInfo("(Shutdown) => Stopping script engine server...");
-			GD::scriptEngineServer->stop();
+			if(GD::scriptEngineServer) GD::scriptEngineServer->stop();
 			GD::out.printMessage("(Shutdown) => Saving device families");
 			if(GD::familyController) GD::familyController->save(false);
 			GD::out.printMessage("(Shutdown) => Disposing device families");
@@ -359,8 +367,10 @@ void terminate(int32_t signalNumber)
 				GD::out.printCritical("Critical: Can't reopen database. Exiting...");
 				exit(1);
 			}
+			GD::out.printInfo("Reloading flows server...");
+			if(GD::flowsServer) GD::flowsServer->homegearReloading();
 			GD::out.printInfo("Reloading script engine server...");
-			GD::scriptEngineServer->homegearReloading();
+			if(GD::scriptEngineServer) GD::scriptEngineServer->homegearReloading();
 			_shuttingDownMutex.lock();
 			_startUpComplete = true;
 			if(_shutdownQueued)
@@ -732,8 +742,9 @@ void startUp()
 		setLimits();
 
 		GD::bl->db->init();
-		std::string databasePath = GD::bl->settings.dataPath() + "db.sql";
-    	GD::bl->db->open(databasePath, GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databasePath + ".bak");
+		std::string databaseBackupPath = GD::bl->settings.databaseBackupPath();
+		if(databaseBackupPath.empty()) databaseBackupPath = GD::bl->settings.dataPath();
+    	GD::bl->db->open(GD::bl->settings.dataPath(), "db.sql", GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databaseBackupPath, "db.sql.bak");
     	if(!GD::bl->db->isOpen()) exitHomegear(1);
 
         GD::out.printInfo("Initializing database...");
@@ -790,16 +801,34 @@ void startUp()
 				exitHomegear(1);
 			}
 			GD::out.printInfo("Info: Setting up physical interfaces and GPIOs...");
-			if(GD::familyController) GD::familyController->physicalInterfaceSetup(GD::bl->userId, GD::bl->groupId);
+			if(GD::familyController) GD::familyController->physicalInterfaceSetup(GD::bl->userId, GD::bl->groupId, GD::bl->settings.setDevicePermissions());
 			BaseLib::LowLevel::Gpio gpio(GD::bl.get());
-			gpio.setup(GD::bl->userId, GD::bl->groupId);
+			gpio.setup(GD::bl->userId, GD::bl->groupId, GD::bl->settings.setDevicePermissions());
 			GD::out.printInfo("Info: Dropping privileges to user " + GD::runAsUser + " (" + std::to_string(GD::bl->userId) + ") and group " + GD::runAsGroup + " (" + std::to_string(GD::bl->groupId) + ")");
+
+			int result = -1;
+			std::vector<gid_t> supplementaryGroups(10);
+			int numberOfGroups = 10;
+			while(result == -1)
+			{
+				result = getgrouplist(GD::runAsUser.c_str(), 10000, supplementaryGroups.data(), &numberOfGroups);
+
+				if(result == -1) supplementaryGroups.resize(numberOfGroups);
+				else supplementaryGroups.resize(result);
+			}
 
 			if(setgid(GD::bl->groupId) != 0)
 			{
 				GD::out.printCritical("Critical: Could not drop group privileges.");
 				exitHomegear(1);
 			}
+
+			if(setgroups(supplementaryGroups.size(), supplementaryGroups.data()) != 0)
+			{
+				GD::out.printCritical("Critical: Could not set supplementary groups: " + std::string(strerror(errno)));
+				exitHomegear(1);
+			}
+
 			if(setuid(GD::bl->userId) != 0)
 			{
 				GD::out.printCritical("Critical: Could not drop user privileges.");
@@ -953,6 +982,14 @@ void startUp()
         GD::out.printInfo("Loading events...");
         GD::eventHandler->load();
 #endif
+
+        GD::out.printInfo("Starting flows server...");
+		GD::flowsServer.reset(new Flows::FlowsServer());
+		if(GD::bl->settings.enableFlows() && !GD::flowsServer->start())
+		{
+			GD::out.printCritical("Critical: Cannot start flows server. Exiting Homegear.");
+			exit(1);
+		}
 
         GD::out.printMessage("Startup complete. Waiting for physical interfaces to connect.");
 
@@ -1137,9 +1174,9 @@ int main(int argc, char* argv[])
     					GD::licensingController->dispose();
     					exit(1);
     				}
-    				GD::familyController->physicalInterfaceSetup(userId, groupId);
+    				GD::familyController->physicalInterfaceSetup(userId, groupId, GD::bl->settings.setDevicePermissions());
     				BaseLib::LowLevel::Gpio gpio(GD::bl.get());
-    				gpio.setup(userId, groupId);
+    				gpio.setup(userId, groupId, GD::bl->settings.setDevicePermissions());
     				GD::familyController->dispose();
     				GD::licensingController->dispose();
     				exit(0);
@@ -1209,6 +1246,29 @@ int main(int argc, char* argv[])
     			GD::licensingController->load();
     			ScriptEngine::ScriptEngineClient scriptEngineClient;
     			scriptEngineClient.start();
+    			GD::licensingController->dispose();
+    			exit(0);
+    		}
+    		else if(arg == "-rl")
+    		{
+#ifndef __aarch64__
+    			Debug::DeathHandler deathHandler;
+				deathHandler.set_append_pid(true);
+				deathHandler.set_frames_count(32);
+				deathHandler.set_color_output(false);
+				deathHandler.set_generate_core_dump(GD::bl->settings.enableCoreDumps());
+				deathHandler.set_cleanup(false);
+#endif
+
+    			initGnuTls();
+    			setLimits();
+    			GD::bl->settings.load(GD::configPath + "main.conf");
+    			GD::licensingController.reset(new LicensingController());
+    			GD::licensingController->loadModules();
+    			GD::licensingController->init();
+    			GD::licensingController->load();
+    			Flows::FlowsClient flowsClient;
+    			flowsClient.start();
     			GD::licensingController->dispose();
     			exit(0);
     		}
@@ -1301,7 +1361,7 @@ int main(int argc, char* argv[])
 					for(std::vector<std::string>::iterator j = subdirs.begin(); j != subdirs.end(); ++j)
 					{
 						std::string subdir = currentPath + *j;
-						if(subdir != GD::bl->settings.scriptPath() && subdir != GD::bl->settings.socketPath() && subdir != GD::bl->settings.modulePath() && subdir != GD::bl->settings.logfilePath())
+						if(subdir != GD::bl->settings.scriptPath() && subdir != GD::bl->settings.flowsPath() && subdir != GD::bl->settings.socketPath() && subdir != GD::bl->settings.modulePath() && subdir != GD::bl->settings.logfilePath())
 						{
 							if(chown(subdir.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set owner on " << subdir << std::endl;
 						}
@@ -1315,7 +1375,7 @@ int main(int argc, char* argv[])
 					for(std::vector<std::string>::iterator j = subdirs.begin(); j != subdirs.end(); ++j)
 					{
 						std::string subdir = currentPath + *j;
-						if(subdir == GD::bl->settings.scriptPath() || subdir == GD::bl->settings.socketPath() || subdir == GD::bl->settings.modulePath() || subdir == GD::bl->settings.logfilePath()) continue;
+						if(subdir == GD::bl->settings.scriptPath() || subdir == GD::bl->settings.flowsPath() || subdir == GD::bl->settings.socketPath() || subdir == GD::bl->settings.modulePath() || subdir == GD::bl->settings.logfilePath()) continue;
 						if(chmod(subdir.c_str(), GD::bl->settings.dataPathPermissions()) == -1) std::cerr << "Could not set permissions on " << subdir << std::endl;
 					}
 				}
@@ -1337,6 +1397,18 @@ int main(int argc, char* argv[])
 				}
 				if(chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
     			if(chmod(currentPath.c_str(), GD::bl->settings.scriptPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+
+    			currentPath = GD::bl->settings.flowsPath();
+    			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
+    			localUserId = GD::bl->hf.userId(GD::bl->settings.flowsPathUser());
+				localGroupId = GD::bl->hf.groupId(GD::bl->settings.flowsPathGroup());
+				if(((int32_t)localUserId) == -1 || ((int32_t)localGroupId) == -1)
+				{
+					localUserId = userId;
+					localGroupId = groupId;
+				}
+				if(chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			if(chmod(currentPath.c_str(), GD::bl->settings.flowsPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 
     			if(GD::bl->settings.socketPath() != GD::bl->settings.dataPath() && GD::bl->settings.socketPath() != GD::executablePath)
     			{
@@ -1400,7 +1472,7 @@ int main(int argc, char* argv[])
     			std::cout << "Copyright (c) 2013-2016 Sathya Laufer" << std::endl << std::endl;
     			std::cout << "Git commit SHA of libhomegear-base: " << GITCOMMITSHABASE << std::endl;
     			std::cout << "Git branch of libhomegear-base:     " << GITBRANCHBASE << std::endl;
-    			std::cout << "Git commit SHA of Homegear:         " << GITCOMMITSHAHOMEGEAR << std::endl << std::endl;
+    			std::cout << "Git commit SHA of Homegear:         " << GITCOMMITSHAHOMEGEAR << std::endl;
     			std::cout << "Git branch of Homegear:             " << GITBRANCHHOMEGEAR << std::endl << std::endl;
     			std::cout << "PHP (License: PHP License):" << std::endl;
     			std::cout << "This product includes PHP software, freely available from <http://www.php.net/software/>" << std::endl;

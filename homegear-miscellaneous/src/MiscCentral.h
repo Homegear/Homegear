@@ -50,7 +50,7 @@ public:
 	virtual void dispose(bool wait = true);
 
 	std::string handleCliCommand(std::string command);
-	uint64_t getPeerIdFromSerial(std::string serialNumber) { std::shared_ptr<MiscPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
+	uint64_t getPeerIdFromSerial(std::string& serialNumber) { std::shared_ptr<MiscPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
 
 	virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet) { return true; }
 
