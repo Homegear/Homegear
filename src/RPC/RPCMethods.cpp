@@ -1990,7 +1990,7 @@ BaseLib::PVariable RPCGetParamset::invoke(BaseLib::PRpcClientInfo clientInfo, st
 
 		int32_t channel = -1;
 		std::string serialNumber;
-		BaseLib::DeviceDescription::ParameterGroup::Type::Enum type;
+		BaseLib::DeviceDescription::ParameterGroup::Type::Enum type = BaseLib::DeviceDescription::ParameterGroup::Type::Enum::none;
 		uint64_t remoteID = 0;
 		int32_t remoteChannel = -1;
 		std::string remoteSerialNumber;
@@ -2030,7 +2030,7 @@ BaseLib::PVariable RPCGetParamset::invoke(BaseLib::PRpcClientInfo clientInfo, st
 			}
 			else if(parameters->size() == 3) type = BaseLib::DeviceDescription::ParameterGroup::typeFromString(parameters->at(2)->stringValue);
 
-			if(type == BaseLib::DeviceDescription::ParameterGroup::Type::Enum::none) type = BaseLib::DeviceDescription::ParameterGroup::Type::Enum::master;
+			if(type == BaseLib::DeviceDescription::ParameterGroup::Type::Enum::none) type = BaseLib::DeviceDescription::ParameterGroup::Type::Enum::config;
 		}
 
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
