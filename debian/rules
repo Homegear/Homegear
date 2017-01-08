@@ -1,0 +1,56 @@
+#!/usr/bin/make -f
+
+override_dh_auto_configure:
+	dh_auto_configure -- --with-curl
+
+override_dh_auto_install:
+	dh_auto_install
+
+	mkdir -p $(CURDIR)/debian/homegear/etc/homegear
+	cp -R $(CURDIR)/misc/Config\ Directory/* $(CURDIR)/debian/homegear/etc/homegear
+	chmod 755 $(CURDIR)/debian/homegear/etc/homegear
+	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/*
+
+	mkdir -p $(CURDIR)/debian/homegear/etc/homegear/devices/254
+	cp $(CURDIR)/homegear-miscellaneous/misc/Device\ Description\ Files/* $(CURDIR)/debian/homegear/etc/homegear/devices/254
+	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/devices/254
+	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/devices/254/*
+
+	chown -R root:root $(CURDIR)/debian/homegear/etc/homegear
+
+	mkdir -p $(CURDIR)/debian/homegear/etc/init.d
+	cp $(CURDIR)/misc/System\ Config/homegear.init $(CURDIR)/debian/homegear/etc/init.d/homegear
+	chown root:root $(CURDIR)/debian/homegear/etc/init.d/homegear
+	chmod 755 $(CURDIR)/debian/homegear/etc/init.d/homegear
+	mkdir -p $(CURDIR)/debian/homegear/lib/systemd/system
+	cp $(CURDIR)/misc/System\ Config/homegear.service $(CURDIR)/debian/homegear/lib/systemd/system/
+	chown root:root $(CURDIR)/debian/homegear/lib/systemd/system/homegear.service
+	chmod 644 $(CURDIR)/debian/homegear/lib/systemd/system/homegear.service
+
+	mkdir -p $(CURDIR)/debian/homegear/etc/logrotate.d
+	cp $(CURDIR)/misc/System\ Config/logrotate $(CURDIR)/debian/homegear/etc/logrotate.d/homegear
+	chown root:root $(CURDIR)/debian/homegear/etc/logrotate.d/homegear
+	chmod 644 $(CURDIR)/debian/homegear/etc/logrotate.d/homegear
+
+	mkdir -p $(CURDIR)/debian/homegear/etc/security/limits.d
+	chown root:root $(CURDIR)/debian/homegear/etc/security/limits.d
+	echo "homegear	soft    rtprio	  100" > $(CURDIR)/debian/homegear/etc/security/limits.d/homegear
+	echo "homegear	hard    rtprio	  100" >> $(CURDIR)/debian/homegear/etc/security/limits.d/homegear
+	chown root:root $(CURDIR)/debian/homegear/etc/security/limits.d/homegear
+	chmod 644 $(CURDIR)/debian/homegear/etc/security/limits.d/homegear
+
+	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear
+	cp -R $(CURDIR)/misc/State\ Directory/* $(CURDIR)/debian/homegear/var/lib/homegear
+	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear
+	find $(CURDIR)/debian/homegear/var/lib/homegear -type d -exec chmod 550 {} \;
+	find $(CURDIR)/debian/homegear/var/lib/homegear -type f -exec chmod 440 {} \;
+
+	mkdir -p $(CURDIR)/debian/homegear/usr/share/homegear
+	chown -R root:root $(CURDIR)/debian/homegear/usr/share/homegear
+	chmod -R 550 $(CURDIR)/debian/homegear/usr/share/homegear
+
+override_dh_strip:
+	dh_strip --dbg-package=homegear
+
+%:
+	dh $@ --parallel

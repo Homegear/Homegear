@@ -1,0 +1,80 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+# Precompiled Headers
+*.gch
+*.pch
+# Compiled Dynamic libraries
+*.so
+*.so.1.0.0
+*.dylib
+*.dll
+# Fortran module files
+*.mod
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+# Executables
+*.exe
+*.out
+*.app
+
+*.pydevproject
+.metadata
+.gradle
+lib/
+bin/
+obj/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+# External tool builders
+.externalToolBuilders/
+# Locally stored "Eclipse launch configurations"
+*.launch
+# CDT-specific
+.cproject
+.project
+# PDT-specific
+.buildpath
+# sbteclipse plugin
+.target
+# TeXlipse plugin
+.texlipse
+autom4te.cache
+*.in~
+config.log
+homegear
+core
+vgcore.*
+
+#Autotools
+autoscan.*
+Makefile
+Makefile.in
+aclocal.m4
+autom4te.cache/
+config.*
+configure
+depcomp
+install-sh
+libtool
+ltmain.sh
+cfg/
+m4/
+missing
+stamp-h?
+.deps/
+.dirstamp
+.libs/
+*.l[ao]
+*~

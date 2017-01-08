@@ -1,0 +1,112 @@
+#!/bin/sh
+
+case $1 in
+	# Configure this package. If the package must prompt the user for
+	# information, do it here.
+	configure)
+		result=`id -u homegear 2>/dev/null`
+		if [ "0$result" -eq "0" ]; then
+			adduser --system --no-create-home --shell /bin/false --group homegear >/dev/null 2>&1
+			[ $? -ne 0 ] && exit 1
+			usermod -a -G dialout homegear 2>/dev/null
+			usermod -a -G gpio homegear 2>/dev/null
+			usermod -a -G spi homegear 2>/dev/null
+		fi
+		
+		chmod 440 /etc/homegear/rpcclients.conf
+		chown homegear:homegear /etc/homegear/rpcclients.conf
+		
+		mkdir -p /var/run/homegear
+		chown homegear:homegear /var/run/homegear
+		chmod 750 /var/run/homegear
+
+		mkdir -p /var/lib/homegear
+		chown homegear:homegear /var/lib/homegear
+		chmod 750 /var/lib/homegear
+
+		if test ! -e /var/lib/homegear/scripts/HM-XMLRPC-Client; then
+			rm -Rf /tmp/HomegearScriptsDir
+			[ $? -ne 0 ] && exit 1
+			mkdir /tmp/HomegearScriptsDir
+			[ $? -ne 0 ] && exit 1
+			wget -P /tmp/HomegearScriptsDir/ https://homegear.eu/downloads/Homegear_PHP_XMLRPC_Client.zip
+			[ $? -ne 0 ] && exit 1
+			unzip -d /tmp/HomegearScriptsDir /tmp/HomegearScriptsDir/Homegear_PHP_XMLRPC_Client.zip
+			[ $? -ne 0 ] && exit 1
+			rm /tmp/HomegearScriptsDir/Homegear_PHP_XMLRPC_Client.zip
+			mkdir -p /var/lib/homegear/scripts
+			[ $? -ne 0 ] && exit 1
+			mv /tmp/HomegearScriptsDir/* /var/lib/homegear/scripts
+			[ $? -ne 0 ] && exit 1
+			chown -R homegear:homegear /var/lib/homegear/scripts
+			chmod -R 550 /var/lib/homegear/scripts
+			rm -Rf /tmp/HomegearScriptsDir
+		fi
+
+		mkdir -p /var/log/homegear
+		chown homegear:homegear /var/log/homegear
+		chmod 750 /var/log/homegear
+
+		chown -R homegear:homegear /var/lib/homegear/modules
+		chmod -R 550 /var/lib/homegear/modules
+		find /var/lib/homegear/www -type d -exec chmod 550 {} \;
+		find /var/lib/homegear/www -type f -exec chmod 440 {} \;
+
+		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION; then
+			if test ! -e /etc/homegear/homegear.crt; then
+				openssl genrsa -out /etc/homegear/homegear.key 2048
+				openssl req -batch -new -key /etc/homegear/homegear.key -out /etc/homegear/homegear.csr
+				openssl x509 -req -in /etc/homegear/homegear.csr -signkey /etc/homegear/homegear.key -out /etc/homegear/homegear.crt
+				rm /etc/homegear/homegear.csr
+				chown homegear:homegear /etc/homegear/homegear.key
+				chmod 400 /etc/homegear/homegear.key
+				openssl dhparam -check -text -5 1024 -out /etc/homegear/dh1024.pem
+				chown homegear:homegear /etc/homegear/dh1024.pem
+				chmod 400 /etc/homegear/dh1024.pem
+			fi
+		fi
+
+		pidof systemd
+		if [ $? -eq 0 ]; then
+			systemctl enable homegear.service
+		else
+			result=`ps -A | grep -c ' systemd$'`
+			command -v systemctl > /dev/null 2>&1
+			if [ $? -ne 0 ] || [ $result -eq 0 ]; then
+				if test -f /usr/lib/insserv/insserv; then
+					/usr/lib/insserv/insserv homegear
+				else
+					insserv homegear
+				fi
+			else
+				systemctl enable homegear.service
+			fi
+		fi
+		;;
+
+	# Back out of an attempt to upgrade this package FROM THIS VERSION
+	# to version $2. Undo the effects of "prerm upgrade $2".
+	abort-upgrade)
+		;;
+
+	# Back out of an attempt to remove this package, which was due to
+	# a conflict with package $3 (version $4). Undo the effects of
+	# "prerm remove in-favour $3 $4".
+	abort-remove)
+		;;
+
+	# Back out of an attempt to deconfigure this package, which was
+	# due to package $6 (version $7) which we depend on being removed
+	# to make way for package $3 (version $4). Undo the effects of
+	# "prerm deconfigure in-favour $3 $4 removing $6 $7".
+	abort-deconfigure)
+		;;
+
+	*)
+		echo "$0: didn't understand being called with \`$1'" 1>&2
+		exit 1;
+		;;
+
+esac
+
+#DEBHELPER#
