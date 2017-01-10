@@ -377,8 +377,10 @@ cat > "$rootfs/build/CreateDebianPackageStable.sh" <<-'EOF'
 
 /build/CreateDebianPackage.sh master
 
-if test -f /build/UploadStable.sh; then
-	/build/UploadStable.sh
+if test -f libhomegear-base*.deb && test -f homegear_*.deb && test -f homegear-homematicbidcos*.deb && test -f homegear-homematicwired*.deb && test -f homegear-insteon*.deb && test -f homegear-max*.deb && test -f homegear-philipshue*.deb && test -f homegear-sonos*.deb && test -f homegear-kodi*.deb && test -f homegear-ipcam*.deb && test -f homegear-beckhoff*.deb && test -f homegear-knx*.deb && test -f homegear-enocean*.deb && test -f homegear-intertechno*.deb; then
+	if test -f /build/UploadStable.sh; then
+		/build/UploadStable.sh
+	fi
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackageStable.sh
