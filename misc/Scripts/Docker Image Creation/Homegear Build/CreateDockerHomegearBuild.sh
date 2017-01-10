@@ -124,8 +124,13 @@ Pin: origin homegear.eu
 Pin-Priority: 999
 EOF
 
+if [ "$distver" == "stretch" ]; then
+	chroot $rootfs apt-get update
+	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
+fi
+
 chroot $rootfs apt-get update
-if [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ]; then
 	chroot $rootfs apt-get -y install python3
 	chroot $rootfs apt-get -y -f install
 fi

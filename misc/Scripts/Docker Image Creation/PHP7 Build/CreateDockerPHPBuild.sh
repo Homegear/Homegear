@@ -131,9 +131,15 @@ if [ "$distver" != "xenial" ]; then
 	chroot $rootfs apt-key add dotdeb.gpg
 	rm $rootfs/dotdeb.gpg
 fi
+
 #Fix debootstrap base package errors
+if [ "$distver" == "stretch" ]; then
+	chroot $rootfs apt-get update
+	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
+fi
+
 chroot $rootfs apt-get update
-if [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
@@ -235,7 +241,7 @@ mv debian/changelog2 debian/changelog
 cd ..
 mv php7* php7-homegear-dev-${version}
 tar -zcpf php7-homegear-dev_${version}.orig.tar.gz php7-homegear-dev-${version}
-cd php7*
+cd php7-homegear-dev-*
 debuild -us -uc
 rm -Rf /PHPBuild/php7-homegear-dev-${version}
 if test -f /PHPBuild/Upload.sh; then
