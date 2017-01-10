@@ -90,7 +90,7 @@ fi
 
 if [ "$distver" == "xenial" ]; then
 	echo "deb-src http://archive.ubuntu.com/ubuntu xenial main restricted universe multiverse" >> $rootfs/etc/apt/sources.list
-else if [ "$distver" == "stretch" ]; then
+elif [ "$distver" == "stretch" ]; then
 	echo "deb-src http://ftp.de.debian.org/debian/ stretch main" >> $rootfs/etc/apt/sources.list
 else
 	echo "deb-src http://packages.dotdeb.org jessie all" > $rootfs/etc/apt/sources.list.d/php7-src.list
@@ -128,7 +128,7 @@ Acquire::GzipIndexes "true";
 Acquire::CompressionTypes::Order:: "gz";
 EOF
 
-if [ "$distver" != "xenial" ]; then
+if [ "$distver" != "xenial" ] && [ "$distver" != "stretch" ]; then
 	wget -P $rootfs http://www.dotdeb.org/dotdeb.gpg
 	chroot $rootfs apt-key add dotdeb.gpg
 	rm $rootfs/dotdeb.gpg
