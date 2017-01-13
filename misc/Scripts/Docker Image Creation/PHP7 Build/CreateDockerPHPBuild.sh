@@ -90,6 +90,8 @@ fi
 
 if [ "$distver" == "xenial" ]; then
 	echo "deb-src http://archive.ubuntu.com/ubuntu xenial main restricted universe multiverse" >> $rootfs/etc/apt/sources.list
+elif [ "$distver" == "stretch" ]; then
+	echo "deb-src http://ftp.de.debian.org/debian/ stretch main" >> $rootfs/etc/apt/sources.list
 else
 	echo "deb-src http://packages.dotdeb.org jessie all" > $rootfs/etc/apt/sources.list.d/php7-src.list
 fi
@@ -126,21 +128,27 @@ Acquire::GzipIndexes "true";
 Acquire::CompressionTypes::Order:: "gz";
 EOF
 
-if [ "$distver" != "xenial" ]; then
+if [ "$distver" != "xenial" ] && [ "$distver" != "stretch" ]; then
 	wget -P $rootfs http://www.dotdeb.org/dotdeb.gpg
 	chroot $rootfs apt-key add dotdeb.gpg
 	rm $rootfs/dotdeb.gpg
 fi
+
 #Fix debootstrap base package errors
+if [ "$distver" == "stretch" ]; then
+	chroot $rootfs apt-get update
+	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
+fi
+
 chroot $rootfs apt-get update
-if [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano libmysqlclient-dev
 
-if [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
 mkdir $rootfs/PHPBuild
@@ -170,7 +178,7 @@ chroot $rootfs bash -c "cd /PHPBuild && dpkg -i php*-build-deps_*.deb"
 # Create links necessary to build PHP
 rm -Rf $rootfs/PHPBuild/*
 cp -R "$scriptdir/debian" $rootfs/PHPBuild || exit 1
-if [ "$distver" != "jessie" ] && [ "$distver" != "wheezy" ] && [ "$distver" != "xenial" ]; then
+if [ "$distver" != "stretch" ] && [ "$distver" != "jessie" ] && [ "$distver" != "wheezy" ] && [ "$distver" != "xenial" ]; then
 	sed -i 's/, libcurl4-gnutls-dev//g' $rootfs/PHPBuild/debian/control
 	sed -i 's/--with-curl //g' $rootfs/PHPBuild/debian/rules
 fi
@@ -235,7 +243,7 @@ mv debian/changelog2 debian/changelog
 cd ..
 mv php7* php7-homegear-dev-${version}
 tar -zcpf php7-homegear-dev_${version}.orig.tar.gz php7-homegear-dev-${version}
-cd php7*
+cd php7-homegear-dev-*
 debuild -us -uc
 rm -Rf /PHPBuild/php7-homegear-dev-${version}
 if test -f /PHPBuild/Upload.sh; then

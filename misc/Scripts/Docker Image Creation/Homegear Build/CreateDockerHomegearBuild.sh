@@ -124,8 +124,13 @@ Pin: origin homegear.eu
 Pin-Priority: 999
 EOF
 
+if [ "$distver" == "stretch" ]; then
+	chroot $rootfs apt-get update
+	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
+fi
+
 chroot $rootfs apt-get update
-if [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ]; then
 	chroot $rootfs apt-get -y install python3
 	chroot $rootfs apt-get -y -f install
 fi
@@ -149,7 +154,7 @@ if [ "$distver" == "wheezy" ]; then
 	ln -s gcc-4.7 $rootfs/usr/bin/gcc
 else
 	chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
-	if [ "$distver" == "jessie" ] || [ "$distver" == "xenial" ]; then
+	if [ "$distver" == "stretch" ] || [ "$distver" == "jessie" ] || [ "$distver" == "xenial" ]; then
 		chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 	fi
 fi
@@ -189,7 +194,7 @@ function createPackage {
 		sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
 		sed -i 's/libgnutlsxx28/libgnutlsxx27/g' $sourcePath/debian/control
 	fi
-	if [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "wheezy" ] && [ "$distributionVersion" != "xenial" ]; then
+	if [ "$distributionVersion" != "stretch" ] && [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "wheezy" ] && [ "$distributionVersion" != "xenial" ]; then
 		sed -i 's/, libcurl4-gnutls-dev//g' $sourcePath/debian/control
 		sed -i 's/ --with-curl//g' $sourcePath/debian/rules
 	fi
@@ -377,8 +382,10 @@ cat > "$rootfs/build/CreateDebianPackageStable.sh" <<-'EOF'
 
 /build/CreateDebianPackage.sh master
 
-if test -f /build/UploadStable.sh; then
-	/build/UploadStable.sh
+if test -f libhomegear-base*.deb && test -f homegear_*.deb && test -f homegear-homematicbidcos*.deb && test -f homegear-homematicwired*.deb && test -f homegear-insteon*.deb && test -f homegear-max*.deb && test -f homegear-philipshue*.deb && test -f homegear-sonos*.deb && test -f homegear-kodi*.deb && test -f homegear-ipcam*.deb && test -f homegear-beckhoff*.deb && test -f homegear-knx*.deb && test -f homegear-enocean*.deb && test -f homegear-intertechno*.deb; then
+	if test -f /build/UploadStable.sh; then
+		/build/UploadStable.sh
+	fi
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackageStable.sh
