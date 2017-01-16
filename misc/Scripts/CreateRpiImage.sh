@@ -152,6 +152,15 @@ dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-reconfigure locales
 service ssh stop
 service ntp stop
+
+cd /tmp/
+git clone --depth 1 git://github.com/raspberrypi/firmware/
+cp -R /tmp/firmware/hardfp/opt/vc /opt/
+rm -Rf /tmp/firmware
+echo \"PATH=\\\"\\\$PATH:/opt/vc/bin:/opt/vc/sbin\\\"\" >> /etc/bash.bashrc
+echo \"/opt/vc/lib\" >> /etc/ld.so.conf.d/vcgencmd.conf
+ldconfig
+
 rm -rf /var/log/homegear/*
 rm -f third-stage
 " > third-stage
@@ -192,13 +201,10 @@ chown root:root scripts
 chmod 750 scripts
 
 #Create Raspberry Pi boot config
-echo "arm_freq=900
-core_freq=250
-sdram_freq=450
-over_voltage=2
-enable_uart=1
+echo "enable_uart=1
 dtparam=spi=on
-dtparam=i2c_arm=on" > boot/config.txt
+dtparam=i2c_arm=on
+gpu_mem=16" > boot/config.txt
 chown root:root boot/config.txt
 chmod 755 boot/config.txt
 #End Raspberry Pi boot config
@@ -297,6 +303,7 @@ if [ $OPENHAB -eq 1 ]; then
   systemctl enable openhab" >> scripts/firstStart.sh
 fi
 echo "echo \"Starting raspi-config...\"
+PATH=\"\$PATH:/opt/vc/bin:/opt/vc/sbin\"
 raspi-config
 rm /scripts/firstStart.sh
 rm -Rf /var/log/homegear/*
@@ -354,6 +361,7 @@ fi" > home/pi/.bash_profile
 
 echo "#!/bin/bash
 apt-get clean
+rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 rm -f cleanup
 " > cleanup
 chmod +x cleanup
