@@ -3,11 +3,15 @@ AUTOMAKE_OPTIONS = subdir-objects
 AM_CPPFLAGS = -Wall -std=c++11 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
 AM_LDFLAGS = -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -Wl,-rpath=/usr/local/lib/homegear
 # {{{ PHP libraries
-LIBS += -Wl,-Bstatic -lphp7-homegear -Wl,-Bdynamic -lz -lexslt -lresolv -ledit -lrt -lmcrypt -lltdl -lgmp -lenchant -lrt -lm -lnsl -lxml2 -lxslt -lcrypt -lcrypto -lssl -lmysqlclient -lgnutls
+LIBS += -Wl,-Bstatic -lphp7-homegear -Wl,-Bdynamic -lz -lexslt -lresolv -ledit -lrt -lmcrypt -lltdl -lgmp -lenchant -lrt -lm -lnsl -lxml2 -lxslt -lcrypt -lcrypto -lssl -lgnutls
 # }}}
 
-if WITH_CURL
+if HAVE_CURL
 LIBS += -lcurl
+endif
+
+if HAVE_MYSQLCLIENT
+LIBS += -lmysqlclient
 endif
 
 
