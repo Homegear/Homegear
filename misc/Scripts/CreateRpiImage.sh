@@ -152,6 +152,9 @@ dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-reconfigure locales
 service ssh stop
 service ntp stop
+systemctl disable serial-getty@ttyAMA0.service
+systemctl disable serial-getty@serial0.service
+systemctl disable serial-getty@ttyS0.service
 
 cd /tmp/
 git clone --depth 1 git://github.com/raspberrypi/firmware/
@@ -284,11 +287,18 @@ fi
 echo "echo \"Generating new SSH host keys. This might take a while.\"
 rm /etc/ssh/ssh_host* >/dev/null
 ssh-keygen -A >/dev/null
-if [ \$(nproc --all) -ge 4 ]; then
+
+boardRev=`grep 'Revision' /proc/cpuinfo | sed 's/.*: //'`
+
+# Detect Pi 3
+if [ \"\$boardRev\" == \"a02082\" ] || [ \"\$boardRev\" == \"a22082\" ]; then
   echo \"dwc_otg.lpm_enable=0 console=ttyUSB0,115200 kgdboc=ttyUSB0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline isolcpus=2,3 rootwait\" > /boot/cmdline.txt
   sed -i 's/varlogsize=\"100M\"/varlogsize=\"250M\"/g' /etc/init.d/tmpfslog.sh
+
+  echo \"dtoverlay=pi3-miniuart-bt\" >> /boot/config.txt
 fi
 insserv tmpfslog.sh
+
 echo \"Updating your system...\"
 apt update
 apt -y upgrade
