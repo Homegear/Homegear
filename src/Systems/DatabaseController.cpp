@@ -243,7 +243,8 @@ bool DatabaseController::convertDatabase()
 {
 	try
 	{
-		std::string databasePath = GD::bl->settings.dataPath();
+		std::string databasePath = GD::bl->settings.databasePath();
+		if(databasePath.empty()) databasePath = GD::bl->settings.dataPath();
 		std::string databaseFilename = "db.sql";
 		std::string backupPath = GD::bl->settings.databaseBackupPath();
 		if(backupPath.empty()) backupPath = databasePath;

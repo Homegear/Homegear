@@ -742,9 +742,11 @@ void startUp()
 		setLimits();
 
 		GD::bl->db->init();
+		std::string databasePath = GD::bl->settings.databasePath();
+		if(databasePath.empty()) databasePath = GD::bl->settings.dataPath();
 		std::string databaseBackupPath = GD::bl->settings.databaseBackupPath();
 		if(databaseBackupPath.empty()) databaseBackupPath = GD::bl->settings.dataPath();
-    	GD::bl->db->open(GD::bl->settings.dataPath(), "db.sql", GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databaseBackupPath, "db.sql.bak");
+    	GD::bl->db->open(databasePath, "db.sql", GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databaseBackupPath, "db.sql.bak");
     	if(!GD::bl->db->isOpen()) exitHomegear(1);
 
         GD::out.printInfo("Initializing database...");
@@ -1380,7 +1382,7 @@ int main(int argc, char* argv[])
 					}
 				}
 
-    			std::string databasePath = GD::bl->settings.dataPath() + "db.sql";
+    			std::string databasePath = (GD::bl->settings.databasePath().empty() ? GD::bl->settings.dataPath() : GD::bl->settings.databasePath()) + "db.sql";
     			if(BaseLib::Io::fileExists(databasePath))
     			{
     				if(chmod(databasePath.c_str(), S_IRUSR | S_IWUSR | S_IRGRP) == -1) std::cerr << "Could not set permissions on " << databasePath << std::endl;

@@ -106,7 +106,12 @@ echo "proc            /proc           proc    defaults        0       0
 
 #Setup network settings
 echo "homegearpi" > etc/hostname
-echo -e "127.0.0.1\thomegearpi" >> etc/hosts
+echo "127.0.0.1   localhost homegearisg
+::1         localhost homegearisg ip6-localhost ip6-loopback
+fe00::0     ip6-localnet
+ff00::0     ip6-mcastprefix
+ff02::1     ip6-allnodes
+ff02::2     ip6-allrouters" > etc/hosts
 
 echo "auto lo
 iface lo inet loopback
@@ -137,15 +142,17 @@ wget http://homegear.eu/packages/Release.key
 apt-key add - < Release.key
 rm Release.key
 apt update
-apt -y install locales console-common ntp openssh-server git-core binutils curl sudo parted unzip p7zip-full php5-cli php5-xmlrpc libxml2-utils keyboard-configuration liblzo2-dev python-lzo libgcrypt20 libgcrypt20-dev libgpg-error0 libgpg-error-dev libgnutlsxx28 libgnutls28-dev lua5.2 libmysqlclient-dev libcurl4-gnutls-dev libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 libmodbus5 tmux
+apt -y install locales console-common ntp openssh-server git-core binutils curl sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 libmodbus5 tmux
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
 chmod +x /usr/bin/rpi-update
 mkdir -p /lib/modules/$(uname -r)
 rpi-update
 rm -Rf /boot.bak
 useradd --create-home --shell /bin/bash --user-group pi
-echo \"pi:raspberry\" | chpasswd
-echo \"root:raspberry\" | chpasswd
+echo -e \"homegear\\nhomegear\" | passwd root
+echo -e \"homegear\\nhomegear\" | passwd pi
+chage -d 0 root
+chage -d 0 pi
 echo \"pi ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers
 sed -i -e 's/KERNEL\!=\"eth\*|/KERNEL\!=\"/' /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
@@ -301,7 +308,7 @@ insserv tmpfslog.sh
 
 echo \"Updating your system...\"
 apt update
-apt -y upgrade
+apt -y dist-upgrade
 apt -y install homegear homegear-homematicbidcos homegear-homematicwired homegear-insteon homegear-max homegear-philipshue homegear-sonos homegear-kodi homegear-ipcam homegear-beckhoff homegear-knx homegear-enocean homegear-intertechno
 service homegear stop" >> scripts/firstStart.sh
 if [ $OPENHAB -eq 1 ]; then
