@@ -69,14 +69,14 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 Monitor _monitor;
 std::mutex _shuttingDownMutex;
-bool _reloading = false;
+std::atomic_bool _reloading;
 bool _fork = false;
 bool _monitorProcess = false;
 pid_t _mainProcessId = 0;
 bool _startAsDaemon = false;
 bool _nonInteractive = false;
-bool _startUpComplete = false;
-bool _shutdownQueued = false;
+std::atomic_bool _startUpComplete;
+std::atomic_bool _shutdownQueued;
 bool _disposing = false;
 std::shared_ptr<std::function<void(int32_t, std::string)>> _errorCallback;
 
@@ -224,6 +224,7 @@ void terminate(int32_t signalNumber)
 			_shuttingDownMutex.lock();
 			if(!_startUpComplete)
 			{
+				GD::out.printMessage("Info: Startup is not complete yet. Queueing shutdown.");
 				_shutdownQueued = true;
 				_shuttingDownMutex.unlock();
 				return;
@@ -304,12 +305,13 @@ void terminate(int32_t signalNumber)
 				return;
 			}
 
+			GD::out.printMessage("Info: SIGHUP received...");
 			_shuttingDownMutex.lock();
-			GD::out.printInfo("Info: SIGHUP received... Reloading...");
+			GD::out.printMessage("Info: Reloading...");
 			if(!_startUpComplete)
 			{
-				GD::out.printError("Error: Cannot reload. Startup is not completed.");
 				_shuttingDownMutex.unlock();
+				GD::out.printError("Error: Cannot reload. Startup is not completed.");
 				return;
 			}
 			_startUpComplete = false;
@@ -1040,8 +1042,14 @@ void startUp()
         else
         {
         	rl_bind_key('\t', rl_abort); //no autocompletion
-			while((inputBuffer = readline("")) != NULL)
+			while(true)
 			{
+				inputBuffer = readline("");
+				if(inputBuffer == nullptr)
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					continue;
+				}
 				if(inputBuffer[0] == '\n' || inputBuffer[0] == 0) continue;
 				if(strncmp(inputBuffer, "quit", 4) == 0 || strncmp(inputBuffer, "exit", 4) == 0 || strncmp(inputBuffer, "moin", 4) == 0) break;
 
@@ -1074,6 +1082,10 @@ int main(int argc, char* argv[])
 {
 	try
     {
+		_reloading = false;
+		_startUpComplete = false;
+		_shutdownQueued = false;
+
     	getExecutablePath(argc, argv);
     	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
     	GD::bl.reset(new BaseLib::SharedObjects(GD::executablePath, _errorCallback.get(), false));
