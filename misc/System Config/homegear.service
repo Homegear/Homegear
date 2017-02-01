@@ -13,6 +13,7 @@ LimitRTPRIO=100
 ExecStartPre=/usr/bin/homegear -u homegear -g homegear -p /var/run/homegear/homegear.pid -pre
 ExecStart=/usr/bin/homegear -u homegear -g homegear -p /var/run/homegear/homegear.pid
 ExecStopPost=/etc/homegear/homegear-stop.sh
+ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 TasksMax=infinity
 LimitRTPRIO=infinity
