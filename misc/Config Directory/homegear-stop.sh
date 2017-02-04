@@ -1,3 +1,3 @@
 #!/bin/bash
 
-#Execute clean-up or backup commands here.
+# This script is executed after Homegear is stopped. Execute clean-up or backup commands here.

@@ -88,23 +88,23 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 		}
 
 		// {{{ Node-RED test
-		if(path == "node-red/public/locales/editor" || path == "node-red/public/locales/node-red")
+		if(path.compare(0, 23, "node-red/public/locales") == 0 || path.compare(0, 24, "/node-red/public/locales") == 0)
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
-			path = "node-red/public/staticTemp" + path.substr(15);
+			path = "node-red/public/static" + (path.front() == '/' ? path.substr(16) : path.substr(15));
 			std::string contentString;
 			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_serverInfo->contentPath + path);
 			std::string header;
-			_http.constructHeader(contentString.size(), "application/json", 304, "Not Modified", headers, header);
+			_http.constructHeader(contentString.size(), "application/json", 200, "Not Modified", headers, header);
 			content.insert(content.end(), header.begin(), header.end());
 			if(!contentString.empty()) content.insert(content.end(), contentString.begin(), contentString.end());
 			send(socket, content);
 			return;
 		}
-		else if(path == "node-red/public/settings" || path == "node-red/public/library/flows" || path == "node-red/public/flows")
+		else if(path == "node-red/public/settings" || path == "node-red/public/library/flows" || path == "node-red/public/flows" || path == "node-red/public/debug/view/debug-utils.js")
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
-			path = "node-red/public/staticTemp" + path.substr(15);
+			path = "node-red/public/static" + path.substr(15);
 			std::string contentString;
 			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_serverInfo->contentPath + path);
 			std::string header;
@@ -114,10 +114,10 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			send(socket, content);
 			return;
 		}
-		else if(path == "node-red/public/nodes")
+		else if(path == "node-red/public/nodes" || path == "/node-red/public/nodes")
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
-			path = "node-red/public/staticTemp" + path.substr(15);
+			path = "node-red/public/static" + (path.front() == '/' ? path.substr(16) : path.substr(15));
 			if(http.getHeader().fields["accept"] == "text/html") path += "2";
 			std::string contentString;
 			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_serverInfo->contentPath + path);
