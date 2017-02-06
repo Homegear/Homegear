@@ -69,14 +69,14 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 Monitor _monitor;
 std::mutex _shuttingDownMutex;
-bool _reloading = false;
+std::atomic_bool _reloading;
 bool _fork = false;
 bool _monitorProcess = false;
 pid_t _mainProcessId = 0;
 bool _startAsDaemon = false;
 bool _nonInteractive = false;
-bool _startUpComplete = false;
-bool _shutdownQueued = false;
+std::atomic_bool _startUpComplete;
+std::atomic_bool _shutdownQueued;
 bool _disposing = false;
 std::shared_ptr<std::function<void(int32_t, std::string)>> _errorCallback;
 
@@ -224,6 +224,7 @@ void terminate(int32_t signalNumber)
 			_shuttingDownMutex.lock();
 			if(!_startUpComplete)
 			{
+				GD::out.printMessage("Info: Startup is not complete yet. Queueing shutdown.");
 				_shutdownQueued = true;
 				_shuttingDownMutex.unlock();
 				return;
@@ -304,12 +305,13 @@ void terminate(int32_t signalNumber)
 				return;
 			}
 
+			GD::out.printMessage("Info: SIGHUP received...");
 			_shuttingDownMutex.lock();
-			GD::out.printInfo("Info: SIGHUP received... Reloading...");
+			GD::out.printMessage("Info: Reloading...");
 			if(!_startUpComplete)
 			{
-				GD::out.printError("Error: Cannot reload. Startup is not completed.");
 				_shuttingDownMutex.unlock();
+				GD::out.printError("Error: Cannot reload. Startup is not completed.");
 				return;
 			}
 			_startUpComplete = false;
@@ -742,50 +744,63 @@ void startUp()
 		setLimits();
 
 		GD::bl->db->init();
+		std::string databasePath = GD::bl->settings.databasePath();
+		if(databasePath.empty()) databasePath = GD::bl->settings.dataPath();
 		std::string databaseBackupPath = GD::bl->settings.databaseBackupPath();
 		if(databaseBackupPath.empty()) databaseBackupPath = GD::bl->settings.dataPath();
-    	GD::bl->db->open(GD::bl->settings.dataPath(), "db.sql", GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databaseBackupPath, "db.sql.bak");
+    	GD::bl->db->open(databasePath, "db.sql", GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databaseBackupPath, "db.sql.bak");
     	if(!GD::bl->db->isOpen()) exitHomegear(1);
 
         GD::out.printInfo("Initializing database...");
         if(GD::bl->db->convertDatabase()) exitHomegear(0);
         GD::bl->db->initializeDatabase();
 
-        std::string currentPath = GD::bl->settings.dataPath();
-		if(!currentPath.empty() && !GD::runAsUser.empty() && !GD::runAsGroup.empty())
-		{
-			uid_t userId = GD::bl->hf.userId(GD::bl->settings.dataPathUser());
-			gid_t groupId = GD::bl->hf.groupId(GD::bl->settings.dataPathGroup());
-			if(((int32_t)userId) == -1 || ((int32_t)groupId) == -1)
+        {
+        	bool runningAsUser = !GD::runAsUser.empty() && !GD::runAsGroup.empty();
+
+			std::string currentPath = GD::bl->settings.dataPath();
+			if(!currentPath.empty() && runningAsUser)
 			{
-				userId = GD::bl->userId;
-				groupId = GD::bl->groupId;
+				uid_t userId = GD::bl->hf.userId(GD::bl->settings.dataPathUser());
+				gid_t groupId = GD::bl->hf.groupId(GD::bl->settings.dataPathGroup());
+				if(((int32_t)userId) == -1 || ((int32_t)groupId) == -1)
+				{
+					userId = GD::bl->userId;
+					groupId = GD::bl->groupId;
+				}
+				std::vector<std::string> files;
+				try
+				{
+					files = GD::bl->io.getFiles(currentPath, false);
+				}
+				catch(const std::exception& ex)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(BaseLib::Exception& ex)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(...)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				}
+				for(std::vector<std::string>::iterator k = files.begin(); k != files.end(); ++k)
+				{
+					if((*k).compare(0, 6, "db.sql") != 0) continue;
+					std::string file = currentPath + *k;
+					if(chown(file.c_str(), userId, groupId) == -1) GD::out.printError("Could not set owner on " + file);
+					if(chmod(file.c_str(), GD::bl->settings.dataPathPermissions()) == -1) GD::out.printError("Could not set permissions on " + file);
+				}
 			}
-			std::vector<std::string> files;
-			try
+
+			if(runningAsUser)
 			{
-				files = GD::bl->io.getFiles(currentPath, false);
+				//Logs are created as root. So it is really important to set the permissions here.
+				if(chown((GD::bl->settings.logfilePath() + "homegear.log").c_str(), GD::bl->userId, GD::bl->groupId) == -1) GD::out.printError("Could not set owner on file homegear.log");
+				if(chown((GD::bl->settings.logfilePath() + "homegear.err").c_str(), GD::bl->userId, GD::bl->groupId) == -1) GD::out.printError("Could not set owner on file homegear.err");
 			}
-			catch(const std::exception& ex)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			for(std::vector<std::string>::iterator k = files.begin(); k != files.end(); ++k)
-			{
-				if((*k).compare(0, 6, "db.sql") != 0) continue;
-				std::string file = currentPath + *k;
-				if(chown(file.c_str(), userId, groupId) == -1) GD::out.printError("Could not set owner on " + file);
-				if(chmod(file.c_str(), GD::bl->settings.dataPathPermissions()) == -1) GD::out.printError("Could not set permissions on " + file);
-			}
-		}
+        }
 
     	GD::licensingController->loadModules();
 
@@ -1038,8 +1053,14 @@ void startUp()
         else
         {
         	rl_bind_key('\t', rl_abort); //no autocompletion
-			while((inputBuffer = readline("")) != NULL)
+			while(true)
 			{
+				inputBuffer = readline("");
+				if(inputBuffer == nullptr)
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					continue;
+				}
 				if(inputBuffer[0] == '\n' || inputBuffer[0] == 0) continue;
 				if(strncmp(inputBuffer, "quit", 4) == 0 || strncmp(inputBuffer, "exit", 4) == 0 || strncmp(inputBuffer, "moin", 4) == 0) break;
 
@@ -1072,6 +1093,10 @@ int main(int argc, char* argv[])
 {
 	try
     {
+		_reloading = false;
+		_startUpComplete = false;
+		_shutdownQueued = false;
+
     	getExecutablePath(argc, argv);
     	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
     	GD::bl.reset(new BaseLib::SharedObjects(GD::executablePath, _errorCallback.get(), false));
@@ -1380,7 +1405,7 @@ int main(int argc, char* argv[])
 					}
 				}
 
-    			std::string databasePath = GD::bl->settings.dataPath() + "db.sql";
+    			std::string databasePath = (GD::bl->settings.databasePath().empty() ? GD::bl->settings.dataPath() : GD::bl->settings.databasePath()) + "db.sql";
     			if(BaseLib::Io::fileExists(databasePath))
     			{
     				if(chmod(databasePath.c_str(), S_IRUSR | S_IWUSR | S_IRGRP) == -1) std::cerr << "Could not set permissions on " << databasePath << std::endl;

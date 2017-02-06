@@ -154,6 +154,36 @@ void SQLite3::hotBackup()
 				}
 			}
 		}
+		else
+		{
+			GD::out.printWarning("Warning: No database found. Trying to restore backup.");
+			if(!_backupPath.empty() && !_backupFilename.empty())
+			{
+				bool restored = false;
+				for(int32_t i = 0; i <= 10000; i++)
+				{
+					if(GD::bl->io.fileExists(_backupPath + _backupFilename + std::to_string(i)) && checkIntegrity(_backupPath + _backupFilename + std::to_string(i)))
+					{
+						GD::out.printWarning("Warning: Restoring database file: " + _backupPath + _backupFilename + std::to_string(i));
+						if(GD::bl->io.copyFile(_backupPath + _backupFilename + std::to_string(i), _databasePath + _databaseFilename))
+						{
+							restored = true;
+							break;
+						}
+					}
+				}
+				if(!restored)
+				{
+					_databaseMutex.unlock();
+					return;
+				}
+			}
+			else
+			{
+				_databaseMutex.unlock();
+				return;
+			}
+		}
 		openDatabase(false);
 	}
 	catch(const std::exception& ex)

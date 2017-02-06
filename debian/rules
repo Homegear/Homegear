@@ -10,6 +10,7 @@ override_dh_auto_install:
 	cp -R $(CURDIR)/misc/Config\ Directory/* $(CURDIR)/debian/homegear/etc/homegear
 	chmod 755 $(CURDIR)/debian/homegear/etc/homegear
 	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/*
+	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/*.sh
 
 	mkdir -p $(CURDIR)/debian/homegear/etc/homegear/devices/254
 	cp $(CURDIR)/homegear-miscellaneous/misc/Device\ Description\ Files/* $(CURDIR)/debian/homegear/etc/homegear/devices/254
