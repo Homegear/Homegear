@@ -332,7 +332,7 @@ stage_one()
 {
     rootpartitionsize=""
     while [ -z $rootpartitionsize ] || ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]]; do
-        rootpartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter new size of readonly root partition in gigabytes. The minimum partition size is 2 GB." 10 50 "2")
+        rootpartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter new size of readonly root partition in gigabytes. The minimum partition size is 2 GB. We recommend only using as much space as really necessary so damaged sectors can be placed outside of the used space. It is also recommended to use a SD card as large as possible." 15 50 "2")
         if ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]] || [[ $rootpartitionsize -lt 2 ]]; then
             dialog --title "Partitioning" --msgbox "Please enter a valid size in gigabytes (without unit). E. g. \"2\" or \"4\". Not \"2G\"." 10 50
         fi
@@ -340,7 +340,7 @@ stage_one()
 
     datapartitionsize=""
     while [ -z $datapartitionsize ] || ! [[ $datapartitionsize =~ ^[1-9][0-9]*$ ]]; do
-        datapartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter size of writeable data partition in gigabytes." 10 50 "2")
+        datapartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter size of writeable data partition in gigabytes. We recommend only using as much space as really necessary so damaged sectors can be placed outside of the used space. It is also recommended to use a SD card as large as possible." 15 50 "2")
         if ! [[ $datapartitionsize =~ ^[1-9][0-9]*$ ]]; then
             dialog --title "Partitioning" --msgbox "Please enter a valid size in gigabytes (without unit). E. g. \"2\" or \"4\". Not \"2G\"." 10 50
         fi
