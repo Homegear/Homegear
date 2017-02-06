@@ -7,14 +7,6 @@ set -x
 #   Klaus M Pfeiffer (http://blog.kmp.or.at/2012/05/build-your-own-raspberry-pi-image/)
 #   Alex Bradbury (http://asbradbury.org/projects/spindle/)
 
-read -p "Do you want to include openHAB and Java in the image [y/N]: " OPENHAB
-if [ "$OPENHAB" = "y" ]; then
-	OPENHAB=1
-	echo "Creating image with openHAB and Java..."
-else
-	OPENHAB=0
-	echo "Creating image without openHAB and Java..."
-fi
 
 deb_mirror="http://mirrordirector.raspbian.org/raspbian/"
 deb_local_mirror=$deb_mirror
@@ -35,7 +27,7 @@ fi
 echo "Creating image..."
 mkdir -p $buildenv
 image="${buildenv}/rpi_homegear_${deb_release}_${mydate}.img"
-dd if=/dev/zero of=$image bs=1MB count=2000
+dd if=/dev/zero of=$image bs=1MB count=1536
 [ $? -ne 0 ] && exit 1
 device=`losetup -f --show $image`
 [ $? -ne 0 ] && exit 1
@@ -95,29 +87,31 @@ mount $bootp $bootfs
 echo "deb $deb_local_mirror $deb_release main contrib non-free rpi
 " > etc/apt/sources.list
 
-echo "blacklist i2c-bcm2708" > etc/modprobe.d/raspi-blacklist.conf
+echo "blacklist i2c-bcm2708" > $rootfs/etc/modprobe.d/raspi-blacklist.conf
 
-echo "dwc_otg.lpm_enable=0 console=ttyUSB0,115200 kgdboc=ttyUSB0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline rootwait" > boot/cmdline.txt
+echo "dwc_otg.lpm_enable=0 console=ttyUSB0,115200 console=tty1 kgdboc=ttyUSB0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline rootwait" > boot/cmdline.txt
 
-echo "proc            /proc           proc    defaults        0       0
-/dev/mmcblk0p1  /boot           vfat    defaults        0       2
-/dev/mmcblk0p2  /           ext4    defaults        0       1
-" > etc/fstab
+rm -f $rootfs/etc/fstab
+cat > "$rootfs/etc/fstab" <<'EOF'
+proc            /proc                       proc            defaults                                                            0       0
+/dev/mmcblk0p1  /boot                       vfat            defaults,noatime,ro                                                 0       2
+/dev/mmcblk0p2  /                           ext4            defaults,noatime,ro                                                 0       1
+tmpfs           /run                        tmpfs           defaults,nosuid,mode=1777,size=20M                                  0       0
+tmpfs           /var/log                    tmpfs           defaults,nosuid,mode=1777,size=10%                                  0       0
+tmpfs           /var/tmp                    tmpfs           defaults,nosuid,mode=1777,size=10%                                  0       0
+tmpfs           /var/lib/homegear/db        tmpfs           defaults,nosuid,mode=1770,uid=homegear,gid=homegear,size=20M        0       0
+#tmpfs           /var/<your directory>       tmpfs           defaults,nosuid,mode=1777,size=50M                                  0       0
+EOF
 
 #Setup network settings
 echo "homegearpi" > etc/hostname
-echo "127.0.0.1   localhost homegearisg
-::1         localhost homegearisg ip6-localhost ip6-loopback
-fe00::0     ip6-localnet
-ff00::0     ip6-mcastprefix
-ff02::1     ip6-allnodes
-ff02::2     ip6-allrouters" > etc/hosts
+echo -e "127.0.0.1\thomegearpi" >> etc/hosts
 
 echo "auto lo
 iface lo inet loopback
 iface lo inet6 loopback
 
-auto eth0
+allow-hotplug eth0
 iface eth0 inet dhcp
 iface eth0 inet6 auto
 " > etc/network/interfaces
@@ -127,7 +121,8 @@ echo "console-common    console-data/keymap/policy      select  Select keymap fr
 console-common  console-data/keymap/full        select  us
 " > debconf.set
 
-echo "#!/bin/bash
+cat > "$rootfs/third-stage" <<'EOF'
+#!/bin/bash
 set -x
 debconf-set-selections /debconf.set
 rm -f /debconf.set
@@ -137,24 +132,29 @@ cat /etc/apt/sources.list
 apt -y install apt-transport-https ca-certificates
 update-ca-certificates --fresh
 mkdir -p /etc/apt/sources.list.d/
-echo \"deb https://homegear.eu/packages/Raspbian/ jessie/\" >> /etc/apt/sources.list.d/homegear.list
+echo "deb https://homegear.eu/packages/Raspbian/ jessie/" >> /etc/apt/sources.list.d/homegear.list
 wget http://homegear.eu/packages/Release.key
 apt-key add - < Release.key
 rm Release.key
 apt update
-apt -y install locales console-common ntp openssh-server git-core binutils curl sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 libmodbus5 tmux
+apt -y install locales console-common ntp openssh-server git-core binutils curl sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 libmodbus5 tmux dialog whiptail
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
 chmod +x /usr/bin/rpi-update
 mkdir -p /lib/modules/$(uname -r)
 rpi-update
 rm -Rf /boot.bak
 useradd --create-home --shell /bin/bash --user-group pi
-echo -e \"homegear\\nhomegear\" | passwd root
-echo -e \"homegear\\nhomegear\" | passwd pi
-chage -d 0 root
-chage -d 0 pi
-echo \"pi ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers
-sed -i -e 's/KERNEL\!=\"eth\*|/KERNEL\!=\"/' /lib/udev/rules.d/75-persistent-net-generator.rules
+echo "pi:raspberry" | chpasswd
+echo "root:raspberry" | chpasswd
+result=`id -u homegear 2>/dev/null`
+if [ "0$result" -eq "0" ]; then
+    adduser --system --no-create-home --shell /bin/false --group homegear >/dev/null 2>&1
+    usermod -a -G dialout homegear 2>/dev/null
+    usermod -a -G gpio homegear 2>/dev/null
+    usermod -a -G spi homegear 2>/dev/null
+fi
+echo "pi ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+sed -i -e 's/KERNEL!="eth*|/KERNEL!="/' /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-reconfigure locales
 service ssh stop
@@ -167,36 +167,87 @@ cd /tmp/
 git clone --depth 1 git://github.com/raspberrypi/firmware/
 cp -R /tmp/firmware/hardfp/opt/vc /opt/
 rm -Rf /tmp/firmware
-echo \"PATH=\\\"\\\$PATH:/opt/vc/bin:/opt/vc/sbin\\\"\" >> /etc/bash.bashrc
-echo \"/opt/vc/lib\" >> /etc/ld.so.conf.d/vcgencmd.conf
+echo "PATH=\"\$PATH:/opt/vc/bin:/opt/vc/sbin\"" >> /etc/bash.bashrc
+echo "/opt/vc/lib" >> /etc/ld.so.conf.d/vcgencmd.conf
 ldconfig
 
 rm -rf /var/log/homegear/*
-rm -f third-stage
-" > third-stage
-chmod +x third-stage
+EOF
+chmod +x $rootfs/third-stage
 LANG=C chroot $rootfs /third-stage
+rm -f $rootfs/third-stage
 
-#Install Java and OpenHAB
-if [ $OPENHAB -eq 1 ]; then
-	echo "#!/bin/bash
-read -p \"Ready to install Java. Please provide the download link to the current ARM package (http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html): \" JAVAPACKAGE
-wget --header \"Cookie: oraclelicense=accept-securebackup-cookie\" \$JAVAPACKAGE
-tar -zxf jdk*.tar.gz -C /opt
-rm jdk*.tar.gz
-JDK=\`ls /opt/ | grep jdk\`
-update-alternatives --install /usr/bin/javac javac /opt/\${JDK}/bin/javac 1
-update-alternatives --install /usr/bin/java java /opt/\${JDK}/bin/java 1
-update-alternatives --config javac
-update-alternatives --config java
-wget -qO - 'https://bintray.com/user/downloadSubjectPublicKey?username=openhab' | sudo apt-key add -
-echo \"deb http://dl.bintray.com/openhab/apt-repo stable main\" > /etc/apt/sources.list.d/openhab.list
-rm -f fifth-stage
-" > fifth-stage
-	chmod +x fifth-stage
-	chroot $rootfs /fifth-stage
-fi
-#End install Java and OpenHAB
+mkdir -p $rootfs/lib/systemd/scripts
+cat > "$rootfs/lib/systemd/scripts/setup-tmpfs.sh" <<'EOF'
+#!/bin/bash
+
+mkdir /var/tmp/lock
+chmod 755 /var/tmp/lock
+mkdir /var/tmp/dhcp
+chmod 755 /var/tmp/dhcp
+mkdir /var/tmp/spool
+chmod 755 /var/tmp/spool
+mkdir /var/tmp/systemd
+chmod 755 /var/tmp/systemd
+touch /var/tmp/systemd/random-seed
+chmod 600 /var/tmp/systemd/random-seed
+mkdir -p /var/spool/cron/crontabs
+chmod 731 /var/spool/cron/crontabs
+chmod +t /var/spool/cron/crontabs
+
+mkdir -p /var/tmp/homegear
+chown homegear:homegear /var/tmp/homegear
+chmod 770 /var/tmp/homegear
+
+[ -d /data ] && [ ! -d /data/homegear-data ] && mkdir /data/homegear-data
+[ -f /data/homegear-data/db.sql ] && cp -a /data/homegear-data/db.sql /var/lib/homegear/db/ && rm -f /data/homegear-data/db.sql
+
+exit 0
+EOF
+    chmod 750 $rootfs/lib/systemd/scripts/setup-tmpfs.sh
+
+    cat > "$rootfs/lib/systemd/system/setup-tmpfs.service" <<'EOF'
+[Unit]
+Description=setup-tmpfs
+DefaultDependencies=no
+After=var-log.mount var-tmp.mount var-lib-homegear-db.mount
+Before=systemd-random-seed.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/lib/systemd/scripts/setup-tmpfs.sh
+TimeoutSec=30s
+
+[Install]
+WantedBy=sysinit.target
+EOF
+
+cat > "$rootfs/fourth-stage" <<'EOF'
+rm -Rf /tmp
+ln -s /var/tmp /tmp
+mkdir /data
+rm -Rf /var/spool
+ln -s /var/tmp/spool /var/spool
+rm -Rf /var/lib/dhcp
+ln -s /var/tmp/dhcp /var/lib/dhcp
+rm -Rf /var/lock
+ln -s /var/tmp/lock /var/lock
+rm -Rf /var/lib/systemd
+ln -s /var/tmp/systemd /var/lib/systemd
+
+mkdir -p /var/lib/homegear/db
+chown -R homegear:homegear /var/lib/homegear
+
+# {{{ debian-fixup fixes
+    ln -sf /proc/mounts /etc/mtab
+# }}}
+
+systemctl enable setup-tmpfs
+EOF
+chmod +x $rootfs/fourth-stage
+LANG=C chroot $rootfs /fourth-stage
+rm $rootfs/fourth-stage
 
 #Install raspi-config
 wget https://raw.githubusercontent.com/RPi-Distro/raspi-config/master/raspi-config
@@ -205,13 +256,65 @@ chown root:root usr/bin/raspi-config
 chmod 755 usr/bin/raspi-config
 #End install raspi-config
 
-#Create scripts directory
-mkdir scripts
-chown root:root scripts
-chmod 750 scripts
-
 #Create Raspberry Pi boot config
-echo "enable_uart=1
+echo "# For more options and information see
+# http://www.raspberrypi.org/documentation/configuration/config-txt.md
+# Some settings may impact device functionality. See link above for details
+
+# uncomment if you get no picture on HDMI for a default "safe" mode
+#hdmi_safe=1
+
+# uncomment this if your display has a black border of unused pixels visible
+# and your display can output without overscan
+#disable_overscan=1
+
+# uncomment the following to adjust overscan. Use positive numbers if console
+# goes off screen, and negative if there is too much border
+#overscan_left=16
+#overscan_right=16
+#overscan_top=16
+#overscan_bottom=16
+
+# uncomment to force a console size. By default it will be display's size minus
+# overscan.
+#framebuffer_width=1280
+#framebuffer_height=720
+
+# uncomment if hdmi display is not detected and composite is being output
+#hdmi_force_hotplug=1
+
+# uncomment to force a specific HDMI mode (this will force VGA)
+#hdmi_group=1
+#hdmi_mode=1
+
+# uncomment to force a HDMI mode rather than DVI. This can make audio work in
+# DMT (computer monitor) modes
+#hdmi_drive=2
+
+# uncomment to increase signal to HDMI, if you have interference, blanking, or
+# no display
+#config_hdmi_boost=4
+
+# uncomment for composite PAL
+#sdtv_mode=2
+
+#uncomment to overclock the arm. 700 MHz is the default.
+#arm_freq=800
+
+# Uncomment some or all of these to enable the optional hardware interfaces
+#dtparam=i2c_arm=on
+#dtparam=i2s=on
+#dtparam=spi=on
+
+# Uncomment this to enable the lirc-rpi module
+#dtoverlay=lirc-rpi
+
+# Additional overlays and parameters are documented /boot/overlays/README
+
+# Enable audio (loads snd_bcm2835)
+dtparam=audio=on
+
+enable_uart=1
 dtparam=spi=on
 dtparam=i2c_arm=on
 gpu_mem=16" > boot/config.txt
@@ -222,114 +325,171 @@ chmod 755 boot/config.txt
 echo "deb $deb_mirror $deb_release main contrib non-free rpi
 " > etc/apt/sources.list
 
-cat > "etc/init.d/tmpfslog.sh" <<-'EOF'
+cat > "$rootfs/setupPartitions.sh" <<-'EOF'
 #!/bin/bash
-### BEGIN INIT INFO
-# Provides:          tmpfslog
-# Required-Start:    $local_fs
-# Required-Stop:     $local_fs
-# X-Start-Before:    $syslog
-# X-Stop-After:      $syslog
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
-# Short-Description: Start/stop logfile saving
-### END INIT INFO
-#
-# varlog        This init.d script is used to start logfile saving and restore.
-#
 
-varlogSave=/var/log.save/
-[ ! -d $varlogSave ] && mkdir -p $varlogSave
-
-PATH=/sbin:/usr/sbin:/bin:/usr/bin
-
-case $1 in
-    start)
-        echo "*** Starting tmpfs file restore: varlog."
-        if [ -z "$(grep /var/log /proc/mounts)" ]; then
-            echo "*** mounting /var/log"
-            cp -Rpu /var/log/* $varlogSave
-            rm -Rf /var/log/*
-            varlogsize=$(grep /var/log /etc/fstab|awk {'print $4'}|cut -d"=" -f2)
-            [ -z "$varlogsize" ] && varlogsize="100M"
-            mount -t tmpfs tmpfs /var/log -o defaults,size=$varlogsize
-            chmod 755 /var/log
+stage_one()
+{
+    rootpartitionsize=""
+    while [ -z $rootpartitionsize ] || ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]]; do
+        rootpartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter new size of readonly root partition in gigabytes. The minimum partition size is 2 GB." 10 50 "2")
+        if ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]] || [[ $rootpartitionsize -lt 2 ]]; then
+            dialog --title "Partitioning" --msgbox "Please enter a valid size in gigabytes (without unit). E. g. \"2\" or \"4\". Not \"2G\"." 10 50
         fi
-        cp -Rpu ${varlogSave}* /var/log/
-    ;;
-    stop)
-        echo "*** Stopping tmpfs file saving: varlog."
-        rm -Rf ${varlogSave}*
-        cp -Rpu /var/log/* $varlogSave >/dev/null 2>&1
-        sync
-        umount -f /var/log/
-    ;;
-  reload)
-    echo "*** Stopping tmpfs file saving: varlog."
-    	rm -Rf ${varlogSave}*
-        cp -Rpu /var/log/* $varlogSave >/dev/null 2>&1
-        sync
-  ;;
-    *)
-        echo "Usage: $0 {start|stop}"
-    ;;
-esac
+    done
 
-exit 0
+    datapartitionsize=""
+    while [ -z $datapartitionsize ] || ! [[ $datapartitionsize =~ ^[1-9][0-9]*$ ]]; do
+        datapartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter size of writeable data partition in gigabytes." 10 50 "2")
+        if ! [[ $datapartitionsize =~ ^[1-9][0-9]*$ ]]; then
+            dialog --title "Partitioning" --msgbox "Please enter a valid size in gigabytes (without unit). E. g. \"2\" or \"4\". Not \"2G\"." 10 50
+        fi
+    done
+
+    fdisk /dev/mmcblk0 << EOC
+d
+2
+n
+p
+2
+
++${rootpartitionsize}G
+n
+p
+3
+
++${datapartitionsize}G
+w
+EOC
+
+    rm -f /partstageone
+    touch /partstagetwo
+
+    dialog --no-cancel --stdout --title "Partition setup" --no-tags --pause "Rebooting in 10 seconds..." 10 50 10
+    reboot
+}
+
+stage_two()
+{
+    TTY_X=$(($(stty size | awk '{print $2}')-6))
+    TTY_Y=$(($(stty size | awk '{print $1}')-6))
+    mkfs.ext4 -F /dev/mmcblk0p3 | dialog --title "Partition setup" --progressbox "Creating data partition..." $TTY_Y $TTY_X
+
+    sed -i '/\/dev\/mmcblk0p2/a\
+\/dev\/mmcblk0p3  \/data                       ext4            defaults,noatime,commit=600             0       1' /etc/fstab
+    mount -o defaults,noatime,commit=600 /dev/mmcblk0p3 /data
+    rm -f /partstagetwo
+}
+
+[ -f /partstagetwo ] && stage_two
+[ -f /partstageone ] && stage_one
 EOF
-chown root:root etc/init.d/tmpfslog.sh
-chmod 755 etc/init.d/tmpfslog.sh
+touch $rootfs/partstageone
+chmod 755 $rootfs/setupPartitions.sh
 
 #First-start script
-echo "#!/bin/bash
-sed -i '$ d' /home/pi/.bashrc >/dev/null
-echo \"************************************************************\"
-echo \"************************************************************\"
-echo \"************* Welcome to your Homegear system! *************\"
-echo \"************************************************************\"
-echo \"************************************************************\"" > scripts/firstStart.sh
-if [ $OPENHAB -eq 1 ]; then
-	echo "read -p \"The Oracle Java Development Kit 8 (JDK 8) is installed on this system. By pressing [Enter] you accept the \\\"Oracle Binary Code License Agreement for Java SE\\\" (http://www.oracle.com/technetwork/java/javase/terms/license/index.html)...\"" >> scripts/firstStart.sh
-fi
-echo "echo \"Generating new SSH host keys. This might take a while.\"
-rm /etc/ssh/ssh_host* >/dev/null
-ssh-keygen -A >/dev/null
+cat > "$rootfs/firstStart.sh" <<-'EOF'
+#!/bin/bash
 
-boardRev=`grep 'Revision' /proc/cpuinfo | sed 's/.*: //'`
+scriptCount=`/bin/ps -ejH -1 | /bin/grep firstStart.sh | /bin/grep -c /firstStart`
+if [ $scriptCount -gt 3 ]; then
+        echo "First start script is already running... Not executing it again..."
+        exit 1
+fi
+
+echo "************************************************************"
+echo "************************************************************"
+echo "************* Welcome to your Homegear system! *************"
+echo "************************************************************"
+echo "************************************************************"
+
+sleep 2
+
+mount -o remount,rw /
+
+export NCURSES_NO_UTF8_ACS=1
+export DIALOG_OUTPUT=1
+
+/setupPartitions.sh
+if [ -f /partstageone ] || [ -f /partstagetwo ]; then
+    exit 0
+fi
+rm -f /setupPartitions.sh
+
+password1=""
+password2=""
+while [[ -z $password1 ]] || [[ $password1 != $password2 ]]; do
+    while [[ -z $password1 ]]; do
+        password1=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter a new password for user \"pi\"" 10 50)
+    done
+    password2=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter the same password again" 10 50)
+
+    mount -o remount,rw /
+    echo -e "${password1}\n${password2}" | passwd pi
+done
+unset password1
+unset passowrd2
+
+password1=""
+password2=""
+while [[ -z $password1 ]] || [[ $password1 != $password2 ]]; do
+    while [[ -z $password1 ]]; do
+        password1=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter a new password for user \"root\"" 10 50)
+    done
+    password2=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter the same password again" 10 50)
+
+    mount -o remount,rw /
+    echo -e "${password1}\n${password2}" | passwd root
+done
+unset password1
+unset passowrd2
 
 # Detect Pi 3
-if [ \"\$boardRev\" == \"a02082\" ] || [ \"\$boardRev\" == \"a22082\" ]; then
-  echo \"dwc_otg.lpm_enable=0 console=ttyUSB0,115200 kgdboc=ttyUSB0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline isolcpus=2,3 rootwait\" > /boot/cmdline.txt
-  sed -i 's/varlogsize=\"100M\"/varlogsize=\"250M\"/g' /etc/init.d/tmpfslog.sh
-
-  echo \"dtoverlay=pi3-miniuart-bt\" >> /boot/config.txt
+if [ "$boardRev" == "a02082" ] || [ "$boardRev" == "a22082" ]; then
+  echo "dwc_otg.lpm_enable=0 console=ttyUSB0,115200 console=tty1 kgdboc=ttyUSB0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline rootwait" > /boot/cmdline.txt
+  echo "dtoverlay=pi3-miniuart-bt" >> /boot/config.txt
 fi
-insserv tmpfslog.sh
 
-echo \"Updating your system...\"
-apt update
-apt -y dist-upgrade
-apt -y install homegear homegear-homematicbidcos homegear-homematicwired homegear-insteon homegear-max homegear-philipshue homegear-sonos homegear-kodi homegear-ipcam homegear-beckhoff homegear-knx homegear-enocean homegear-intertechno
-service homegear stop" >> scripts/firstStart.sh
-if [ $OPENHAB -eq 1 ]; then
-  echo "apt -y install openhab-runtime openhab-addon-action-homematic openhab-addon-binding-homematic
-  apt-get -y -f install
-  cp /etc/openhab/configurations/openhab_default.cfg /etc/openhab/configurations/openhab.cfg
-  sed -i \"s/^# homematic:host=/homematic:host=127.0.0.1/\" /etc/openhab/configurations/openhab.cfg
-  sed -i \"s/^# homematic:callback.host=/homematic:callback.host=127.0.0.1/\" /etc/openhab/configurations/openhab.cfg
-  systemctl enable openhab" >> scripts/firstStart.sh
-fi
-echo "echo \"Starting raspi-config...\"
-PATH=\"\$PATH:/opt/vc/bin:/opt/vc/sbin\"
+rm /etc/ssh/ssh_host* >/dev/null
+ssh-keygen -A | dialog --title "System setup" --progressbox "Generating new SSH host keys. This might take a while." 10 50
+
+TTY_X=$(($(stty size | awk '{print $2}')-6))
+TTY_Y=$(($(stty size | awk '{print $1}')-6))
+apt-get update | dialog --title "System update (1/2)" --progressbox "Updating system..." $TTY_Y $TTY_X
+[ $? -ne 0 ] && mount -o remount,rw / && apt-get update | dialog --title "System update (1/2)" --progressbox "Updating system..." $TTY_Y $TTY_X
+
+TTY_X=$(($(stty size | awk '{print $2}')-6))
+TTY_Y=$(($(stty size | awk '{print $1}')-6))
+apt-get -y dist-upgrade | dialog --title "System update (2/2)" --progressbox "Updating system..." $TTY_Y $TTY_X
+
+TTY_X=$(($(stty size | awk '{print $2}')-6))
+TTY_Y=$(($(stty size | awk '{print $1}')-6))
+apt-get -y install homegear homegear-homematicbidcos homegear-homematicwired homegear-insteon homegear-max homegear-philipshue homegear-sonos homegear-kodi homegear-ipcam homegear-beckhoff homegear-knx homegear-enocean homegear-intertechno | dialog --title "System setup" --progressbox "Installing Homegear..." $TTY_Y $TTY_X
+
+mkdir -p /data/homegear-data
+chown homegear:homegear /data/homegear-data
+sed -i 's/tempPath = \/var\/lib\/homegear\/tmp/tempPath = \/var\/tmp\/homegear/g' /etc/homegear/main.conf
+sed -i 's/# databasePath =/databasePath = \/var\/lib\/homegear\/db/g' /etc/homegear/main.conf
+sed -i 's/# databaseBackupPath =/databaseBackupPath = \/data\/homegear-data/g' /etc/homegear/main.conf
+
+echo "[ -f /var/lib/homegear/db/db.sql ] && [ -d /data/homegear-data ] && cp -a /var/lib/homegear/db/db.sql /data/homegear-data/" >> /etc/homegear/homegear-stop.sh
+echo "sync" >> /etc/homegear/homegear-stop.sh
+
+echo "3 *  * * *   root    /bin/systemctl reload homegear 2>&1 |/usr/bin/logger -t homegear-reload" > /etc/cron.d/homegear
+
+echo ""
+echo "Starting raspi-config..."
+PATH="$PATH:/opt/vc/bin:/opt/vc/sbin"
 raspi-config
-rm /scripts/firstStart.sh
-rm -Rf /var/log/homegear/*
-echo \"Rebooting...\"
-reboot" >> scripts/firstStart.sh
-chown root:root scripts/firstStart.sh
-chmod 755 scripts/firstStart.sh
+rm /firstStart.sh
+sed -i '$ d' /home/pi/.bashrc >/dev/null
+dialog --no-cancel --stdout --title "Setup finished" --no-tags --pause "Rebooting in 10 seconds..." 10 50 10
+reboot
+EOF
+chown root:root $rootfs/firstStart.sh
+chmod 755 $rootfs/firstStart.sh
 
-echo "sudo /scripts/firstStart.sh" >> home/pi/.bashrc
+echo "sudo /firstStart.sh" >> $rootfs/home/pi/.bashrc
 #End first-start script
 
 #Bash profile
@@ -341,7 +501,7 @@ let days=\$((\${upSeconds}/86400))
 UPTIME=\`printf \"%d days, %02dh %02dm %02ds\" \"\$days\" \"\$hours\" \"\$mins\" \"\$secs\"\`
 
 if test -e /usr/bin/homegear; then
-	echo \"\$(tput setaf 4)\$(tput bold)
+    echo \"\$(tput setaf 4)\$(tput bold)
                    dd
                   dddd
                 dddddddd
@@ -361,6 +521,24 @@ ddddddddddddddd,        ,ddddddddddddddd
 
 \$(tput sgr0)\"
 fi
+
+echo \"\"
+echo \"* To change data on the root partition (e. g. to update the system),\"
+echo \"  enter:\"
+echo \"\"
+echo \"  mount -o remount,rw /\"
+echo \"\"
+echo \"  When you are done, execute\"
+echo \"\"
+echo \"  mount -o remount,ro /\"
+echo \"\"
+echo \"  to make the root partition readonly again.\"
+echo \"* You can store data on \\\"/data\\\". It is recommended to only backup\"
+echo \"  data to this directory. During operation data should be written to a\"
+echo \"  temporary file system. By default these are \\\"/var/log\\\" and \"
+echo \"  \\\"/var/tmp\\\". You can add additional mounts in \\\"/etc/fstab\\\".\"
+echo \"* Remember to backup all data to \\\"/data\\\" before rebooting.\"
+echo \"\"
 
 # if running bash
 if [ -n \"\$BASH_VERSION\" ]; then
@@ -385,8 +563,6 @@ chmod +x cleanup
 LANG=C chroot $rootfs /cleanup
 
 cd
-
-read -p "Copy additional files into ${rootfs} or ${bootfs} then hit [Enter] to continue..."
 
 umount $bootp
 umount $rootp

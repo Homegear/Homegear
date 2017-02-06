@@ -422,6 +422,26 @@ void FlowsServer::startFlows()
     }
 }
 
+void FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket)
+{
+	try
+	{
+
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 uint32_t FlowsServer::flowCount()
 {
 	try

@@ -2,8 +2,13 @@
 
 #From http://superuser.com/questions/109213/is-there-a-tool-that-can-test-what-ssl-tls-cipher-suites-a-particular-website-of
 
+if [ -z $1 ]; then
+	echo "Please provide hostname to check"
+	exit 1
+fi
+
 # OpenSSL requires the port number.
-SERVER=192.168.0.119:2002
+SERVER=$1
 DELAY=1
 ciphers=$(openssl ciphers 'ALL:eNULL' | sed -e 's/:/ /g')
 
