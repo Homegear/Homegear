@@ -172,16 +172,8 @@ void SQLite3::hotBackup()
 						}
 					}
 				}
-				if(!restored)
-				{
-					_databaseMutex.unlock();
-					return;
-				}
-			}
-			else
-			{
-				_databaseMutex.unlock();
-				return;
+				if(restored) GD::out.printWarning("Warning: Database successfully restored.");
+				else GD::out.printWarning("Warning: Database could not be restored. Creating new database.");
 			}
 		}
 		openDatabase(false);
