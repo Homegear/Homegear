@@ -425,8 +425,12 @@ while [[ -z $password1 ]] || [[ $password1 != $password2 ]]; do
     done
     password2=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter the same password again" 10 50)
 
-    mount -o remount,rw /
-    echo -e "${password1}\n${password2}" | passwd pi
+    if [[ $password1 == $password2 ]]; then
+        mount -o remount,rw /
+        echo -e "${password1}\n${password2}" | passwd pi
+    else
+        dialog --title "Error changing password" --msgbox "The entered passwords did not match." 10 50
+    fi
 done
 unset password1
 unset passowrd2
@@ -440,8 +444,12 @@ while [[ -z $password1 ]] || [[ $password1 != $password2 ]]; do
     done
     password2=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter the same password again" 10 50)
 
-    mount -o remount,rw /
-    echo -e "${password1}\n${password2}" | passwd root
+    if [[ $password1 == $password2 ]]; then
+        mount -o remount,rw /
+        echo -e "${password1}\n${password2}" | passwd root
+    else
+        dialog --title "Error changing password" --msgbox "The entered passwords did not match." 10 50
+    fi
 done
 unset password1
 unset passowrd2
