@@ -428,34 +428,54 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 	try
 	{
 		std::string contentString;
-		if(path.compare(0, 20, "flows/public/locales") == 0 || path.compare(0, 21, "/flows/public/locales") == 0)
+		if(path.compare(0, 21, "flows/public/locales/") == 0 || path.compare(0, 22, "/flows/public/locales/") == 0)
 		{
-			path = path.front() == '/' ? path.substr(14) : path.substr(13);
-			path = "public/static/";
-			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_webroot + path);
+			std::string localePath = _webroot + "public/static/locales/";
+			std::string language = "en-US";
+			auto fieldsIterator = http.getHeader().fields.find("accept-language");
+			if(fieldsIterator != http.getHeader().fields.end())
+			{
+				std::pair<std::string, std::string> languagePair = BaseLib::HelperFunctions::splitFirst(fieldsIterator->second, ';');
+				std::vector<std::string> languages = BaseLib::HelperFunctions::splitAll(languagePair.first, ',');
+				for(auto& l : languages)
+				{
+					if(GD::bl->io.directoryExists(localePath + l))
+					{
+						language = l;
+						break;
+					}
+				}
+			}
+			path = path.front() == '/' ? path.substr(21) : path.substr(20);
+			path = localePath + language + path;
+			std::cerr << "Requested: " << path << std::endl;
+			if(http.getHeader().method == "GET" && GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
 		else if(path == "flows/public/settings" || path == "flows/public/library/flows" || path == "flows/public/flows" || path == "flows/public/debug/view/debug-utils.js")
 		{
-			path = "public/static/" + path.substr(13);
-			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_webroot + path);
+			path = _webroot + "public/static/" + path.substr(13);
+			std::cerr << "Requested: " << path << std::endl;
+			if(http.getHeader().method == "GET" && GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
 		else if(path == "flows/public/nodes" || path == "/flows/public/nodes")
 		{
-			path = "public/static/" + (path.front() == '/' ? path.substr(14) : path.substr(13));
+			path = _webroot + "public/static/" + (path.front() == '/' ? path.substr(14) : path.substr(13));
+			std::cerr << "Requested: " << path << std::endl;
 			if(http.getHeader().fields["accept"] == "text/html")
 			{
 				path += "2";
 				responseEncoding = "text/html";
 			}
 			else responseEncoding = "application/json";
-			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_webroot + path);
+			if(http.getHeader().method == "GET" && GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 		}
 		else if(path.compare(0, 13, "flows/public/") == 0 && path != "flows/public/index.php")
 		{
-			path = "public/" + path.substr(13);
-			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_webroot + path);
+			path = _webroot + "public/" + path.substr(13);
+			std::cerr << "Requested: " << path << std::endl;
+			if(http.getHeader().method == "GET" && GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 
 			std::string ending = "";
 			int32_t pos = path.find_last_of('.');

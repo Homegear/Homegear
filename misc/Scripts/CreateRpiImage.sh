@@ -200,6 +200,7 @@ chown homegear:homegear /var/tmp/homegear
 chmod 770 /var/tmp/homegear
 
 [ -d /data ] && [ ! -d /data/homegear-data ] && mkdir /data/homegear-data
+[ -d /data/homegear-data ] && chown homegear:homegear /data/homegear-data/*
 [ -f /data/homegear-data/db.sql ] && cp -a /data/homegear-data/db.sql /var/lib/homegear/db/ && rm -f /data/homegear-data/db.sql
 
 exit 0
@@ -483,6 +484,7 @@ sed -i 's/# databasePath =/databasePath = \/var\/lib\/homegear\/db/g' /etc/homeg
 sed -i 's/# databaseBackupPath =/databaseBackupPath = \/data\/homegear-data/g' /etc/homegear/main.conf
 
 echo "[ -f /var/lib/homegear/db/db.sql ] && [ -d /data/homegear-data ] && cp -a /var/lib/homegear/db/db.sql /data/homegear-data/" >> /etc/homegear/homegear-stop.sh
+echo "[ -d /data/homegear-data ] && chown homegear:homegear /data/homegear-data/*" >> /etc/homegear/homegear-stop.sh
 echo "sync" >> /etc/homegear/homegear-stop.sh
 
 echo "3 *  * * *   root    /bin/systemctl reload homegear 2>&1 |/usr/bin/logger -t homegear-reload" > /etc/cron.d/homegear
