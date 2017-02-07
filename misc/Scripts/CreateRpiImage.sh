@@ -200,6 +200,7 @@ chown homegear:homegear /var/tmp/homegear
 chmod 770 /var/tmp/homegear
 
 [ -d /data ] && [ ! -d /data/homegear-data ] && mkdir /data/homegear-data
+[ -d /data/homegear-data ] && chown homegear:homegear /data/homegear-data/*
 [ -f /data/homegear-data/db.sql ] && cp -a /data/homegear-data/db.sql /var/lib/homegear/db/ && rm -f /data/homegear-data/db.sql
 
 exit 0
@@ -419,13 +420,18 @@ rm -f /setupPartitions.sh
 password1=""
 password2=""
 while [[ -z $password1 ]] || [[ $password1 != $password2 ]]; do
+    password1=""
     while [[ -z $password1 ]]; do
         password1=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter a new password for user \"pi\"" 10 50)
     done
     password2=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter the same password again" 10 50)
 
-    mount -o remount,rw /
-    echo -e "${password1}\n${password2}" | passwd pi
+    if [[ $password1 == $password2 ]]; then
+        mount -o remount,rw /
+        echo -e "${password1}\n${password2}" | passwd pi
+    else
+        dialog --title "Error changing password" --msgbox "The entered passwords did not match." 10 50
+    fi
 done
 unset password1
 unset passowrd2
@@ -433,13 +439,18 @@ unset passowrd2
 password1=""
 password2=""
 while [[ -z $password1 ]] || [[ $password1 != $password2 ]]; do
+    password1=""
     while [[ -z $password1 ]]; do
         password1=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter a new password for user \"root\"" 10 50)
     done
     password2=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter the same password again" 10 50)
 
-    mount -o remount,rw /
-    echo -e "${password1}\n${password2}" | passwd root
+    if [[ $password1 == $password2 ]]; then
+        mount -o remount,rw /
+        echo -e "${password1}\n${password2}" | passwd root
+    else
+        dialog --title "Error changing password" --msgbox "The entered passwords did not match." 10 50
+    fi
 done
 unset password1
 unset passowrd2
@@ -473,6 +484,7 @@ sed -i 's/# databasePath =/databasePath = \/var\/lib\/homegear\/db/g' /etc/homeg
 sed -i 's/# databaseBackupPath =/databaseBackupPath = \/data\/homegear-data/g' /etc/homegear/main.conf
 
 echo "[ -f /var/lib/homegear/db/db.sql ] && [ -d /data/homegear-data ] && cp -a /var/lib/homegear/db/db.sql /data/homegear-data/" >> /etc/homegear/homegear-stop.sh
+echo "[ -d /data/homegear-data ] && chown homegear:homegear /data/homegear-data/*" >> /etc/homegear/homegear-stop.sh
 echo "sync" >> /etc/homegear/homegear-stop.sh
 
 echo "3 *  * * *   root    /bin/systemctl reload homegear 2>&1 |/usr/bin/logger -t homegear-reload" > /etc/cron.d/homegear
@@ -482,7 +494,7 @@ echo "Starting raspi-config..."
 PATH="$PATH:/opt/vc/bin:/opt/vc/sbin"
 raspi-config
 rm /firstStart.sh
-sed -i '$ d' /home/pi/.bashrc >/dev/null
+sed -i '/sudo \/firstStart.sh/d' /home/pi/.bashrc
 dialog --no-cancel --stdout --title "Setup finished" --no-tags --pause "Rebooting in 10 seconds..." 10 50 10
 reboot
 EOF
