@@ -419,6 +419,7 @@ rm -f /setupPartitions.sh
 password1=""
 password2=""
 while [[ -z $password1 ]] || [[ $password1 != $password2 ]]; do
+    password1=""
     while [[ -z $password1 ]]; do
         password1=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter a new password for user \"pi\"" 10 50)
     done
@@ -433,6 +434,7 @@ unset passowrd2
 password1=""
 password2=""
 while [[ -z $password1 ]] || [[ $password1 != $password2 ]]; do
+    password1=""
     while [[ -z $password1 ]]; do
         password1=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter a new password for user \"root\"" 10 50)
     done

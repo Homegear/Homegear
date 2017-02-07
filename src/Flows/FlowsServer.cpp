@@ -205,6 +205,7 @@ bool FlowsServer::start()
 		_shuttingDown = false;
 		_stopServer = false;
 		if(!getFileDescriptor(true)) return false;
+		_webroot = GD::bl->settings.flowsPath() + "www/";
 		startQueue(0, GD::bl->settings.flowsThreadCount(), 0, SCHED_OTHER);
 		GD::bl->threadManager.start(_mainThread, true, &FlowsServer::mainThread, this);
 		startFlows();
@@ -396,7 +397,7 @@ void FlowsServer::startFlows()
 {
 	try
 	{
-		std::vector<std::string> flowFiles = GD::bl->io.getFiles(GD::bl->settings.flowsPath(), true);
+		/*std::vector<std::string> flowFiles = GD::bl->io.getFiles(GD::bl->settings.flowsPath(), true);
 		for(std::vector<std::string>::iterator i = flowFiles.begin(); i != flowFiles.end(); ++i)
 		{
 			PFlowInfoServer flowInfo(new FlowInfoServer());
@@ -406,7 +407,7 @@ void FlowsServer::startFlows()
 			}
 			flowInfo->fullPath = GD::bl->settings.flowsPath() + *i;
 			executeFlow(flowInfo);
-		}
+		}*/
 	}
 	catch(const std::exception& ex)
     {
@@ -422,11 +423,48 @@ void FlowsServer::startFlows()
     }
 }
 
-void FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket)
+std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding)
 {
 	try
 	{
+		std::string contentString;
+		if(path.compare(0, 20, "flows/public/locales") == 0 || path.compare(0, 21, "/flows/public/locales") == 0)
+		{
+			path = path.front() == '/' ? path.substr(14) : path.substr(13);
+			path = "public/static/";
+			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_webroot + path);
+			responseEncoding = "application/json";
+		}
+		else if(path == "flows/public/settings" || path == "flows/public/library/flows" || path == "flows/public/flows" || path == "flows/public/debug/view/debug-utils.js")
+		{
+			path = "public/static/" + path.substr(13);
+			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_webroot + path);
+			responseEncoding = "application/json";
+		}
+		else if(path == "flows/public/nodes" || path == "/flows/public/nodes")
+		{
+			path = "public/static/" + (path.front() == '/' ? path.substr(14) : path.substr(13));
+			if(http.getHeader().fields["accept"] == "text/html")
+			{
+				path += "2";
+				responseEncoding = "text/html";
+			}
+			else responseEncoding = "application/json";
+			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_webroot + path);
+		}
+		else if(path.compare(0, 13, "flows/public/") == 0 && path != "flows/public/index.php")
+		{
+			path = "public/" + path.substr(13);
+			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_webroot + path);
 
+			std::string ending = "";
+			int32_t pos = path.find_last_of('.');
+			if(pos != (signed)std::string::npos && (unsigned)pos < path.size() - 1) ending = path.substr(pos + 1);
+			GD::bl->hf.toLower(ending);
+			responseEncoding = http.getMimeType(ending);
+			if(responseEncoding.empty()) responseEncoding = "application/octet-stream";
+		}
+		return contentString;
 	}
 	catch(const std::exception& ex)
     {
@@ -440,6 +478,7 @@ void FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::shared_
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    return "";
 }
 
 uint32_t FlowsServer::flowCount()

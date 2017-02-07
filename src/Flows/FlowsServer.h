@@ -55,7 +55,7 @@ public:
 	void broadcastNewDevices(BaseLib::PVariable deviceDescriptions);
 	void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
-	void handleGet(std::string& path, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket);
+	std::string handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
 private:
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
@@ -71,6 +71,7 @@ private:
 
 	BaseLib::Output _out;
 	std::string _socketPath;
+	std::string _webroot;
 	std::atomic_bool _shuttingDown;
 	std::atomic_bool _stopServer;
 	std::thread _mainThread;

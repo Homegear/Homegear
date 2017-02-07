@@ -86,15 +86,25 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 				return;
 			}
 		}
+		else if(path == "flows/public" || path == "flows/public/") path = "flows/public/index.php";
 
-		if(path.compare(0, 6, "flows/") == 0 || path.compare(0, 7, "/flows/") == 0)
+		if(GD::bl->settings.enableFlows() && (path.compare(0, 6, "flows/") == 0 || path.compare(0, 7, "/flows/") == 0))
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
-			GD::flowsServer->handleGet(path, http, socket);
-			return;
+			std::string responseEncoding;
+			std::string contentString = GD::flowsServer->handleGet(path, http, responseEncoding);
+			if(!contentString.empty())
+			{
+				std::string header;
+				_http.constructHeader(contentString.size(), responseEncoding, 200, "OK", headers, header);
+				content.insert(content.end(), header.begin(), header.end());
+				content.insert(content.end(), contentString.begin(), contentString.end());
+				send(socket, content);
+				return;
+			}
 		}
 
-		if(!BaseLib::Io::fileExists(_serverInfo->contentPath + path))
+		if(!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "flows/public/index.php")
 		{
 			GD::out.printWarning("Warning: Requested URL not found: " + path);
 			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
@@ -112,7 +122,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			std::string contentString;
 			if(ending == "php" || ending == "php5" || ending == "php7" || ending == "hgs")
 			{
-				std::string fullPath = _serverInfo->contentPath + path;
+				std::string fullPath = path == "flows/public/index.php" ? GD::bl->settings.flowsPath() + "www/public/index.php" : _serverInfo->contentPath + path;
 				std::string relativePath = '/' + path;
 				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, relativePath, http, _serverInfo));
 				scriptInfo->socket = socket;
