@@ -484,7 +484,7 @@ echo "Starting raspi-config..."
 PATH="$PATH:/opt/vc/bin:/opt/vc/sbin"
 raspi-config
 rm /firstStart.sh
-sed -i '$ d' /home/pi/.bashrc >/dev/null
+sed -i '/sudo \/firstStart.sh/d' /home/pi/.bashrc
 dialog --no-cancel --stdout --title "Setup finished" --no-tags --pause "Rebooting in 10 seconds..." 10 50 10
 reboot
 EOF
