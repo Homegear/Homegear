@@ -428,9 +428,9 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 	try
 	{
 		std::string contentString;
-		if(path.compare(0, 21, "flows/public/locales/") == 0 || path.compare(0, 22, "/flows/public/locales/") == 0)
+		if(path.compare(0, 14, "flows/locales/") == 0)
 		{
-			std::string localePath = _webroot + "public/static/locales/";
+			std::string localePath = _webroot + "static/locales/";
 			std::string language = "en-US";
 			auto fieldsIterator = http.getHeader().fields.find("accept-language");
 			if(fieldsIterator != http.getHeader().fields.end())
@@ -446,22 +446,22 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 					}
 				}
 			}
-			path = path.front() == '/' ? path.substr(21) : path.substr(20);
+			path = path.substr(13);
 			path = localePath + language + path;
 			std::cerr << "Requested: " << path << std::endl;
 			if(http.getHeader().method == "GET" && GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
-		else if(path == "flows/public/settings" || path == "flows/public/library/flows" || path == "flows/public/flows" || path == "flows/public/debug/view/debug-utils.js")
+		else if(path == "flows/settings" || path == "flows/library/flows" || path == "flows/flows" || path == "flows/debug/view/debug-utils.js")
 		{
-			path = _webroot + "public/static/" + path.substr(13);
+			path = _webroot + "static/" + path.substr(6);
 			std::cerr << "Requested: " << path << std::endl;
 			if(http.getHeader().method == "GET" && GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
-		else if(path == "flows/public/nodes" || path == "/flows/public/nodes")
+		else if(path == "flows/nodes")
 		{
-			path = _webroot + "public/static/" + (path.front() == '/' ? path.substr(14) : path.substr(13));
+			path = _webroot + "static/" + path.substr(6);
 			std::cerr << "Requested: " << path << std::endl;
 			if(http.getHeader().fields["accept"] == "text/html")
 			{
@@ -471,9 +471,9 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 			else responseEncoding = "application/json";
 			if(http.getHeader().method == "GET" && GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 		}
-		else if(path.compare(0, 13, "flows/public/") == 0 && path != "flows/public/index.php")
+		else if(path.compare(0, 6, "flows/") == 0 && path != "flows/index.php")
 		{
-			path = _webroot + "public/" + path.substr(13);
+			path = _webroot + path.substr(6);
 			std::cerr << "Requested: " << path << std::endl;
 			if(http.getHeader().method == "GET" && GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 

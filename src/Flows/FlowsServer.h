@@ -56,6 +56,7 @@ public:
 	void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
 	std::string handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
+	std::string handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
 private:
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
