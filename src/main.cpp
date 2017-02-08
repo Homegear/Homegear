@@ -794,6 +794,41 @@ void startUp()
 				}
 			}
 
+			currentPath = GD::bl->settings.databasePath();
+			if(!currentPath.empty() && runningAsUser)
+			{
+				uid_t userId = GD::bl->hf.userId(GD::bl->settings.dataPathUser());
+				gid_t groupId = GD::bl->hf.groupId(GD::bl->settings.dataPathGroup());
+				if(((int32_t)userId) == -1 || ((int32_t)groupId) == -1)
+				{
+					userId = GD::bl->userId;
+					groupId = GD::bl->groupId;
+				}
+				std::vector<std::string> files;
+				try
+				{
+					files = GD::bl->io.getFiles(currentPath, false);
+				}
+				catch(const std::exception& ex)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(BaseLib::Exception& ex)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(...)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				}
+				for(std::vector<std::string>::iterator k = files.begin(); k != files.end(); ++k)
+				{
+					std::string file = currentPath + *k;
+					if(chown(file.c_str(), userId, groupId) == -1) GD::out.printError("Could not set owner on " + file);
+					if(chmod(file.c_str(), GD::bl->settings.dataPathPermissions()) == -1) GD::out.printError("Could not set permissions on " + file);
+				}
+			}
+
 			currentPath = GD::bl->settings.databaseBackupPath();
 			if(!currentPath.empty() && runningAsUser)
 			{

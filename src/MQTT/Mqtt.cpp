@@ -1035,7 +1035,11 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::string& key, Base
 			std::shared_ptr<MqttMessage> messagePlain(new MqttMessage());
 			messagePlain->topic = "plain/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
 			if(messageJson1) messagePlain->message.insert(messagePlain->message.end(), messageJson1->message.begin() + 1, messageJson1->message.end() - 1);
-			else _jsonEncoder->encode(value, messagePlain->message);
+			else
+			{
+				_jsonEncoder->encode(value, messagePlain->message);
+				messagePlain->message = std::vector<char>(messagePlain->message.begin() + 1, messagePlain->message.end() - 1);
+			}
 			messagePlain->retain = retain;
 			GD::mqtt->queueMessage(messagePlain);
 		}
