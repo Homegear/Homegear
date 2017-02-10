@@ -488,6 +488,11 @@ sed -i 's/tempPath = \/var\/lib\/homegear\/tmp/tempPath = \/var\/tmp\/homegear/g
 sed -i 's/# databasePath =/databasePath = \/var\/lib\/homegear\/db/g' /etc/homegear/main.conf
 sed -i 's/# databaseBackupPath =/databaseBackupPath = \/data\/homegear-data/g' /etc/homegear/main.conf
 
+echo "" >> /etc/homegear/homegear-start.sh
+echo "# Delete backuped db.sql." >> /etc/homegear/homegear-start.sh
+echo "[ -f /data/homegear-data/db.sql ] && [ -f /var/lib/homegear/db/db.sql ] && rm -f /data/homegear-data/db.sql" >> /etc/homegear/homegear-start.sh
+echo "exit 0" >> /etc/homegear/homegear-start.sh
+
 echo "[ -f /var/lib/homegear/db/db.sql ] && [ -d /data/homegear-data ] && cp -a /var/lib/homegear/db/db.sql /data/homegear-data/" >> /etc/homegear/homegear-stop.sh
 echo "[ -d /data/homegear-data ] && chown homegear:homegear /data/homegear-data/*" >> /etc/homegear/homegear-stop.sh
 echo "sync" >> /etc/homegear/homegear-stop.sh
