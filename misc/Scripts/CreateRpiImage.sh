@@ -384,6 +384,8 @@ stage_two()
     sed -i '/\/dev\/mmcblk0p2/a\
 \/dev\/mmcblk0p3  \/data                       ext4            defaults,noatime,commit=600             0       1' /etc/fstab
     mount -o defaults,noatime,commit=600 /dev/mmcblk0p3 /data
+    sed -i '/^After=/ s/$/ data.mount/' setup-tmpfs.service
+    systemctl daemon-reload
     rm -f /partstagetwo
 }
 
