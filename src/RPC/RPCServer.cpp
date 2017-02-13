@@ -1396,7 +1396,6 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						break;
 					}
 				}
-				std::cerr << http.getHeader().path << std::endl;
 				if(_info->webServer && (!_info->xmlrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml")) && (!_info->jsonrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") || http.getHeader().path == "/flows/flows"))
 				{
 
