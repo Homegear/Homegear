@@ -187,7 +187,7 @@ cat > "$rootfs/lib/systemd/scripts/setup-tmpfs.sh" <<'EOF'
 #!/bin/bash
 
 mkdir /var/tmp/lock
-chmod 755 /var/tmp/lock
+chmod 777 /var/tmp/lock
 mkdir /var/tmp/dhcp
 chmod 755 /var/tmp/dhcp
 mkdir /var/tmp/spool
