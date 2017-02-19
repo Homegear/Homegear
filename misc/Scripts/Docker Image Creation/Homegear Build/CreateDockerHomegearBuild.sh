@@ -307,6 +307,12 @@ unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
+if [[ -n $1 ]]; then
+	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-easy-licensing.git homegear-easy-licensing-${1}
+	[ $? -ne 0 ] && exit 1
+	rm -Rf homegear-easy-licensing-${1}/.git
+fi
+
 createPackage libhomegear-base $1 libhomegear-base
 if test -f libhomegear-base*.deb; then
 	dpkg -i libhomegear-base*.deb
@@ -328,6 +334,9 @@ createPackage Homegear-Beckhoff $1 homegear-beckhoff
 createPackage Homegear-KNX $1 homegear-knx
 createPackage Homegear-EnOcean $1 homegear-enocean
 createPackage Homegear-Intertechno $1 homegear-intertechno
+if [[ -n $1 ]]; then
+	createPackage homegear-easy-licensing $1 homegear-easy-licensing
+fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackage.sh
 sed -i "s/<DIST>/${dist}/g" $rootfs/build/CreateDebianPackage.sh
@@ -345,7 +354,7 @@ function cleanUp {
 	mv ${1}_*.deb ${1}.deb
 }
 
-/build/CreateDebianPackage.sh dev
+/build/CreateDebianPackage.sh dev $1
 
 cd /build
 
@@ -363,6 +372,9 @@ cleanUp homegear-beckhoff
 cleanUp homegear-knx
 cleanUp homegear-enocean
 cleanUp homegear-intertechno
+if [[ -n $1 ]]; then
+	cleanUp homegear-easy-licensing
+fi
 
 EOF
 echo "if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-beckhoff.deb && test -f homegear-knx.deb && test -f homegear-enocean.deb && test -f homegear-intertechno.deb; then
@@ -381,6 +393,9 @@ echo "if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegea
 	mv homegear-knx.deb homegear-knx_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-enocean.deb homegear-enocean_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-intertechno.deb homegear-intertechno_\$[isodate]_${distlc}_${distver}_${arch}.deb
+	if [[ -n $1 ]]; then
+		mv homegear-easy-licensing.deb homegear-easy-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
+	fi
 	if test -f /build/UploadNightly.sh; then
 		/build/UploadNightly.sh
 	fi
@@ -390,7 +405,7 @@ chmod 755 $rootfs/build/CreateDebianPackageNightly.sh
 cat > "$rootfs/build/CreateDebianPackageStable.sh" <<-'EOF'
 #!/bin/bash
 
-/build/CreateDebianPackage.sh master
+/build/CreateDebianPackage.sh master $1
 
 cd /build
 
@@ -556,10 +571,11 @@ fi
 " > /build/UploadNightly.sh
 chmod 755 /build/UploadNightly.sh
 rm /FirstStart.sh
+
 if [ "$HOMEGEARBUILD_TYPE" = "stable" ]; then
-	/build/CreateDebianPackageStable.sh
+	/build/CreateDebianPackageStable.sh ${HOMEGEARBUILD_DEPLOY_KEY}
 elif [ "$HOMEGEARBUILD_TYPE" = "nightly" ]; then
-	/build/CreateDebianPackageNightly.sh
+	/build/CreateDebianPackageNightly.sh ${HOMEGEARBUILD_DEPLOY_KEY}
 else
 	echo "Container setup successful. You can now execute \"/build/CreateDebianPackageStable.sh\" or \"/build/CreateDebianPackageNightly.sh\"."
 	/bin/bash
