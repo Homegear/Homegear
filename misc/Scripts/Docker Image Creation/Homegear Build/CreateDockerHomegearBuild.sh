@@ -144,7 +144,7 @@ chroot $rootfs apt-key add Release.key
 rm $rootfs/Release.key
 
 chroot $rootfs apt-get update
-chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libmcrypt-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libmysqlclient-dev libmodbus-dev libzip-dev
+chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libmcrypt-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libmysqlclient-dev libmodbus-dev libzip-dev git-core
 
 # {{{ GCC, GCrypt, GNUTLS, Curl
 if [ "$distver" == "wheezy" ]; then
