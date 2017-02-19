@@ -488,9 +488,11 @@ apt-get -y install homegear homegear-homematicbidcos homegear-homematicwired hom
 mkdir -p /data/homegear-data
 chown homegear:homegear /data/homegear-data
 sed -i 's/tempPath = \/var\/lib\/homegear\/tmp/tempPath = \/var\/tmp\/homegear/g' /etc/homegear/main.conf
-sed -i 's/databaseMemoryJournal =/databaseMemoryJournal = true/g' /etc/homegear/main.conf
-sed -i 's/databaseWALJournal =/databaseWALJournal = false/g' /etc/homegear/main.conf
-sed -i 's/databaseSynchronous =/databaseSynchronous = false/g' /etc/homegear/main.conf
+sed -i 's/# databasePath =/databasePath = \/var\/lib\/homegear\/db/g' /etc/homegear/main.conf
+sed -i 's/# databaseBackupPath =/databaseBackupPath = \/data\/homegear-data/g' /etc/homegear/main.conf
+sed -i 's/databaseMemoryJournal = false/databaseMemoryJournal = true/g' /etc/homegear/main.conf
+sed -i 's/databaseWALJournal = true/databaseWALJournal = false/g' /etc/homegear/main.conf
+sed -i 's/databaseSynchronous = true/databaseSynchronous = false/g' /etc/homegear/main.conf
 
 echo "" >> /etc/homegear/homegear-start.sh
 echo "# Delete backuped db.sql." >> /etc/homegear/homegear-start.sh
