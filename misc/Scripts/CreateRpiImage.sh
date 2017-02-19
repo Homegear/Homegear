@@ -96,7 +96,7 @@ cat > "$rootfs/etc/fstab" <<'EOF'
 proc            /proc                       proc            defaults                                                            0       0
 /dev/mmcblk0p1  /boot                       vfat            defaults,noatime,ro                                                 0       2
 /dev/mmcblk0p2  /                           ext4            defaults,noatime,ro                                                 0       1
-tmpfs           /run                        tmpfs           defaults,nosuid,mode=1777,size=20M                                  0       0
+tmpfs           /run                        tmpfs           defaults,nosuid,mode=1777,size=50M                                  0       0
 tmpfs           /var/log                    tmpfs           defaults,nosuid,mode=1777,size=10%                                  0       0
 tmpfs           /var/tmp                    tmpfs           defaults,nosuid,mode=1777,size=10%                                  0       0
 tmpfs           /var/lib/homegear/db        tmpfs           defaults,nosuid,mode=1770,uid=homegear,gid=homegear,size=20M        0       0
@@ -488,8 +488,9 @@ apt-get -y install homegear homegear-homematicbidcos homegear-homematicwired hom
 mkdir -p /data/homegear-data
 chown homegear:homegear /data/homegear-data
 sed -i 's/tempPath = \/var\/lib\/homegear\/tmp/tempPath = \/var\/tmp\/homegear/g' /etc/homegear/main.conf
-sed -i 's/# databasePath =/databasePath = \/var\/lib\/homegear\/db/g' /etc/homegear/main.conf
-sed -i 's/# databaseBackupPath =/databaseBackupPath = \/data\/homegear-data/g' /etc/homegear/main.conf
+sed -i 's/databaseMemoryJournal =/databaseMemoryJournal = true/g' /etc/homegear/main.conf
+sed -i 's/databaseWALJournal =/databaseWALJournal = false/g' /etc/homegear/main.conf
+sed -i 's/databaseSynchronous =/databaseSynchronous = false/g' /etc/homegear/main.conf
 
 echo "" >> /etc/homegear/homegear-start.sh
 echo "# Delete backuped db.sql." >> /etc/homegear/homegear-start.sh
