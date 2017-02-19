@@ -379,6 +379,7 @@ stage_two()
 {
     TTY_X=$(($(stty size | awk '{print $2}')-6))
     TTY_Y=$(($(stty size | awk '{print $1}')-6))
+    resize2fs /dev/mmcblk0p2 | dialog --title "Partition setup" --progressbox "Resizing root partition..." $TTY_Y $TTY_X
     mkfs.ext4 -F /dev/mmcblk0p3 | dialog --title "Partition setup" --progressbox "Creating data partition..." $TTY_Y $TTY_X
 
     sed -i '/\/dev\/mmcblk0p2/a\
