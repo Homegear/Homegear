@@ -307,7 +307,7 @@ unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-if [[ -n $1 ]]; then
+if [[ -n $2 ]]; then
 	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-easy-licensing.git homegear-easy-licensing-${1}
 	[ $? -ne 0 ] && exit 1
 	rm -Rf homegear-easy-licensing-${1}/.git
@@ -349,7 +349,7 @@ createPackage Homegear-Beckhoff $1 homegear-beckhoff
 createPackage Homegear-KNX $1 homegear-knx
 createPackage Homegear-EnOcean $1 homegear-enocean
 createPackage Homegear-Intertechno $1 homegear-intertechno
-if [[ -n $1 ]]; then
+if [[ -n $2 ]]; then
 	sha512=`sha512sum /usr/bin/homegear | awk '{print toupper($0)}' | cut -d ' ' -f 1`
 	sed -i '/if(sha512(homegearPath) != /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
 	sed -i "/std::string homegearPath(buffer, size);/aif(sha512(homegearPath) != \"$sha512\") return false;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
@@ -426,7 +426,7 @@ echo "if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegea
 	mv homegear-knx.deb homegear-knx_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-enocean.deb homegear-enocean_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-intertechno.deb homegear-intertechno_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	if [[ -n $1 ]]; then
+	if [[ -n \$1 ]]; then
 		mv homegear-easy-licensing.deb homegear-easy-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-licensing.deb homegear-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
 
