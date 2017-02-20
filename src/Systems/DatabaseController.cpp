@@ -582,7 +582,6 @@ BaseLib::PVariable DatabaseController::setMetadata(uint64_t peerID, std::string&
 		if(!metadata) return BaseLib::Variable::createError(-32602, "Could not parse data.");
 		if(dataID.size() > 250) return BaseLib::Variable::createError(-32602, "dataID has more than 250 characters.");
 		//Don't check for type here, so base64, string and future data types that use stringValue are handled
-		if(metadata->stringValue.size() > 1000) return BaseLib::Variable::createError(-32602, "Data has more than 1000 characters.");
 		if(metadata->type != BaseLib::VariableType::tBase64 && metadata->type != BaseLib::VariableType::tString && metadata->type != BaseLib::VariableType::tInteger && metadata->type != BaseLib::VariableType::tFloat && metadata->type != BaseLib::VariableType::tBoolean && metadata->type != BaseLib::VariableType::tStruct && metadata->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-32602, "Type " + BaseLib::Variable::getTypeString(metadata->type) + " is currently not supported.");
 
 		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT COUNT(*) FROM metadata");
@@ -606,10 +605,6 @@ BaseLib::PVariable DatabaseController::setMetadata(uint64_t peerID, std::string&
 
 		std::vector<char> value;
 		_rpcEncoder->encodeResponse(metadata, value);
-		if(value.size() > 1000)
-		{
-			return BaseLib::Variable::createError(-32602, "Data is larger than 1000 bytes.");
-		}
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
 
 		bufferedWrite("INSERT INTO metadata VALUES(?, ?, ?)", data);
@@ -777,7 +772,6 @@ BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableID
 		if(!value) return BaseLib::Variable::createError(-32602, "Could not parse data.");
 		if(variableID.size() > 250) return BaseLib::Variable::createError(-32602, "variableID has more than 250 characters.");
 		//Don't check for type here, so base64, string and future data types that use stringValue are handled
-		if(value->stringValue.size() > 1000) return BaseLib::Variable::createError(-32602, "Data has more than 1000 characters.");
 		if(value->type != BaseLib::VariableType::tBase64 && value->type != BaseLib::VariableType::tString && value->type != BaseLib::VariableType::tInteger && value->type != BaseLib::VariableType::tFloat && value->type != BaseLib::VariableType::tBoolean && value->type != BaseLib::VariableType::tStruct && value->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-32602, "Type " + BaseLib::Variable::getTypeString(value->type) + " is currently not supported.");
 
 		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT COUNT(*) FROM systemVariables");
@@ -800,10 +794,6 @@ BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableID
 
 		std::vector<char> encodedValue;
 		_rpcEncoder->encodeResponse(value, encodedValue);
-		if(encodedValue.size() > 1000)
-		{
-			return BaseLib::Variable::createError(-32602, "Data is larger than 1000 bytes.");
-		}
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(encodedValue)));
 
 		bufferedWrite("INSERT INTO systemVariables VALUES(?, ?)", data);

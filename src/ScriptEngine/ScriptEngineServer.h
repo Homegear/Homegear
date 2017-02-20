@@ -160,6 +160,7 @@ private:
 			BaseLib::PVariable checkLicense(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 			BaseLib::PVariable removeLicense(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 			BaseLib::PVariable getLicenseStates(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+			BaseLib::PVariable getTrialStartTime(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 		// }}}
 	// }}}
 };

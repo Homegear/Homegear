@@ -311,6 +311,10 @@ if [[ -n $1 ]]; then
 	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-easy-licensing.git homegear-easy-licensing-${1}
 	[ $? -ne 0 ] && exit 1
 	rm -Rf homegear-easy-licensing-${1}/.git
+
+	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-licensing.git homegear-licensing-${1}
+	[ $? -ne 0 ] && exit 1
+	rm -Rf homegear-licensing-${1}/.git
 fi
 
 createPackage libhomegear-base $1 libhomegear-base
@@ -322,6 +326,13 @@ else
 fi
 
 createPackage Homegear $1 homegear
+if test -f libhomegear-base*.deb; then
+	dpkg -i homegear*.deb
+else
+	echo "Error building Homegear."
+	exit 1
+fi
+
 createPackage Homegear-HomeMaticBidCoS $1 homegear-homematicbidcos
 createPackage Homegear-HomeMaticWired $1 homegear-homematicwired
 createPackage Homegear-Insteon $1 homegear-insteon
@@ -335,7 +346,20 @@ createPackage Homegear-KNX $1 homegear-knx
 createPackage Homegear-EnOcean $1 homegear-enocean
 createPackage Homegear-Intertechno $1 homegear-intertechno
 if [[ -n $1 ]]; then
+	sha512=`sha512sum /usr/bin/homegear | awk '{print toupper($0)}' | cut -d ' ' -f 1`
+	sed -i '/if(sha512(homegearPath) != /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i "/std::string homegearPath(buffer, size);/aif(sha512(homegearPath) != \"$sha512\") return false;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i '/if(sha512(homegearPath) != /d' homegear-licensing-${1}/src/Licensing.cpp
+	sed -i "/std::string homegearPath(buffer, size);/aif(sha512(homegearPath) != \"$sha512\") return false;" homegear-licensing-${1}/src/Licensing.cpp
+
+	sha512=`sha512sum /usr/lib/libhomegear-base.so.1 | awk '{print toupper($0)}' | cut -d ' ' -f 1`
+	sed -i '/if(sha512(baselibPath) == /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i "/if(baselibPath.empty()) return false;/aif(sha512(baselibPath) == \"$sha512\") return true;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i '/if(sha512(baselibPath) == /d' homegear-licensing-${1}/src/Licensing.cpp
+	sed -i "/if(baselibPath.empty()) return false;/aif(sha512(baselibPath) == \"$sha512\") return true;" homegear-licensing-${1}/src/Licensing.cpp
+
 	createPackage homegear-easy-licensing $1 homegear-easy-licensing
+	createPackage homegear-licensing $1 homegear-licensing
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackage.sh
@@ -374,6 +398,7 @@ cleanUp homegear-enocean
 cleanUp homegear-intertechno
 if [[ -n $1 ]]; then
 	cleanUp homegear-easy-licensing
+	cleanUp homegear-licensing
 fi
 
 EOF
@@ -395,6 +420,7 @@ echo "if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegea
 	mv homegear-intertechno.deb homegear-intertechno_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	if [[ -n $1 ]]; then
 		mv homegear-easy-licensing.deb homegear-easy-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv homegear-licensing.deb homegear-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	fi
 	if test -f /build/UploadNightly.sh; then
 		/build/UploadNightly.sh
