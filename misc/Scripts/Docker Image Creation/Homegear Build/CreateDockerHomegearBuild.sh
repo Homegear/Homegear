@@ -315,6 +315,10 @@ if [[ -n $1 ]]; then
 	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-licensing.git homegear-licensing-${1}
 	[ $? -ne 0 ] && exit 1
 	rm -Rf homegear-licensing-${1}/.git
+
+	git clone ssh://git@gitit.de:44444/EASY/homegear-easyled2.git homegear-easyled2-${1}
+	[ $? -ne 0 ] && exit 1
+	rm -Rf homegear-easyled2-${1}/.git
 fi
 
 createPackage libhomegear-base $1 libhomegear-base
@@ -360,6 +364,8 @@ if [[ -n $1 ]]; then
 
 	createPackage homegear-easy-licensing $1 homegear-easy-licensing
 	createPackage homegear-licensing $1 homegear-licensing
+
+	createPackage homegear-easyled2 $1 homegear-easyled2
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackage.sh
@@ -399,6 +405,8 @@ cleanUp homegear-intertechno
 if [[ -n $1 ]]; then
 	cleanUp homegear-easy-licensing
 	cleanUp homegear-licensing
+
+	cleanUp homegear-easyled2
 fi
 
 EOF
@@ -421,6 +429,8 @@ echo "if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegea
 	if [[ -n $1 ]]; then
 		mv homegear-easy-licensing.deb homegear-easy-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-licensing.deb homegear-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
+
+		mv homegear-easyled2.deb homegear-easyled2\$[isodate]_${distlc}_${distver}_${arch}.deb
 	fi
 	if test -f /build/UploadNightly.sh; then
 		/build/UploadNightly.sh
