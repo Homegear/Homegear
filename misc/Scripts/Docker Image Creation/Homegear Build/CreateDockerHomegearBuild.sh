@@ -430,7 +430,7 @@ echo "if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegea
 		mv homegear-easy-licensing.deb homegear-easy-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-licensing.deb homegear-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
 
-		mv homegear-easyled2.deb homegear-easyled2\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv homegear-easyled2.deb homegear-easyled2_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	fi
 	if test -f /build/UploadNightly.sh; then
 		/build/UploadNightly.sh
