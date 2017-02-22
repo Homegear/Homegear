@@ -40,6 +40,13 @@
 #include <sys/ioctl.h>
 #endif
 
+#if PHP_VERSION_ID >= 70200
+#error PHP 7.2 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line.
+/*
+ * 1. Compare initialization with the initialization in one of the SAPI modules (e. g. "php_embed_init()" in "sapi/embed/php_embed.c").
+ */
+#endif
+
 static bool _disposed = true;
 static zend_homegear_superglobals _superglobals;
 static pthread_key_t pthread_key;
@@ -58,16 +65,20 @@ static const char HARDCODED_INI[] =
 	"max_input_time=-1\n\0";
 
 static int php_homegear_startup(sapi_module_struct* sapi_module);
-static int php_homegear_activate(TSRMLS_D);
-static int php_homegear_deactivate(TSRMLS_D);
+static int php_homegear_activate();
+static int php_homegear_deactivate();
 static size_t php_homegear_ub_write_string(std::string& string);
 static size_t php_homegear_ub_write(const char* str, size_t length);
 static void php_homegear_flush(void *server_context);
 static int php_homegear_send_headers(sapi_headers_struct* sapi_headers);
 static size_t php_homegear_read_post(char *buf, size_t count_bytes);
-static char* php_homegear_read_cookies(TSRMLS_D);
+static char* php_homegear_read_cookies();
 static void php_homegear_register_variables(zval* track_vars_array);
-static void php_homegear_log_message(char* message);
+#if PHP_VERSION_ID >= 70100
+	static void php_homegear_log_message(char* message, int syslog_type_int);
+#else
+	static void php_homegear_log_message(char* message);
+#endif
 static PHP_MINIT_FUNCTION(homegear);
 static PHP_MSHUTDOWN_FUNCTION(homegear);
 static PHP_RINIT_FUNCTION(homegear);
@@ -406,7 +417,11 @@ static int php_homegear_send_headers(sapi_headers_struct* sapi_headers)
 	}
 }*/
 
+#if PHP_VERSION_ID >= 70100
+static void php_homegear_log_message(char* message, int syslog_type_int)
+#else
 static void php_homegear_log_message(char* message)
+#endif
 {
 	if(_disposed) return;
 	std::string pathTranslated;
@@ -1749,6 +1764,11 @@ int php_homegear_init()
 	_disposed = false;
 	pthread_key_create(&pthread_key, pthread_data_destructor);
 	tsrm_startup(20, 1, 0, NULL);
+#ifdef ZEND_SIGNALS
+	#if PHP_VERSION_ID >= 70100
+		zend_signal_startup();
+	#endif
+#endif
 	php_homegear_sapi_module.ini_defaults = homegear_ini_defaults;
 	ini_path_override = strndup(GD::bl->settings.phpIniPath().c_str(), GD::bl->settings.phpIniPath().size());
 	php_homegear_sapi_module.php_ini_path_override = ini_path_override;
@@ -1798,12 +1818,12 @@ static int php_homegear_startup(sapi_module_struct* sapi_module)
 	return SUCCESS;
 }
 
-static int php_homegear_activate(TSRMLS_D)
+static int php_homegear_activate()
 {
 	return SUCCESS;
 }
 
-static int php_homegear_deactivate(TSRMLS_D)
+static int php_homegear_deactivate()
 {
 	return SUCCESS;
 }
