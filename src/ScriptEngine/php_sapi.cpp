@@ -1765,9 +1765,7 @@ int php_homegear_init()
 	pthread_key_create(&pthread_key, pthread_data_destructor);
 	tsrm_startup(20, 1, 0, NULL);
 #ifdef ZEND_SIGNALS
-	#if PHP_VERSION_ID >= 70100
-		zend_signal_startup();
-	#endif
+	zend_signal_startup();
 #endif
 	php_homegear_sapi_module.ini_defaults = homegear_ini_defaults;
 	ini_path_override = strndup(GD::bl->settings.phpIniPath().c_str(), GD::bl->settings.phpIniPath().size());

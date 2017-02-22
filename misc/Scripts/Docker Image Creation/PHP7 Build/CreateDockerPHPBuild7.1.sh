@@ -89,9 +89,9 @@ elif [ "$dist" == "Raspbian" ]; then
 fi
 
 if [ "$distver" == "xenial" ]; then
-	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu xenial main" >> $rootfs/etc/apt/sources.list.d/php7-src.list
+	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu xenial main" > $rootfs/etc/apt/sources.list.d/php7-src.list
 elif [ "$distver" == "stretch" ]; then
-	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu xenial main" >> $rootfs/etc/apt/sources.list.d/php7-src.list
+	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu xenial main" > $rootfs/etc/apt/sources.list.d/php7-src.list
 else
 	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu xenial main" > $rootfs/etc/apt/sources.list.d/php7-src.list
 fi
@@ -154,6 +154,7 @@ tar -xf php7*debian.tar.xz
 cd ..
 sed -i '/.*libcurl4-openssl-dev | libcurl-dev,.*/d' $rootfs/PHPBuild/debian/control
 sed -i 's/libtidy-dev.*,/libtidy-dev,/g' $rootfs/PHPBuild/debian/control
+sed -i 's/libzip-dev.*,/libzip-dev,/g' $rootfs/PHPBuild/debian/control
 if [ "$distver" == "wheezy" ]; then
 	sed -i 's/apache2-dev.*,//g' $rootfs/PHPBuild/debian/control
 	sed -i '/.*dh-apache2,.*/d' $rootfs/PHPBuild/debian/control
