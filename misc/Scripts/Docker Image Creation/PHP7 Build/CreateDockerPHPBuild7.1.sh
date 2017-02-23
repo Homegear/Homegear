@@ -155,14 +155,15 @@ cd ..
 sed -i '/.*libcurl4-openssl-dev | libcurl-dev,.*/d' $rootfs/PHPBuild/debian/control
 sed -i 's/libtidy-dev.*,/libtidy-dev,/g' $rootfs/PHPBuild/debian/control
 sed -i 's/libzip-dev.*,/libzip-dev,/g' $rootfs/PHPBuild/debian/control
+sed -i '/.*libsystemd-daemon-dev,.*/d' $rootfs/PHPBuild/debian/control
 if [ "$distver" == "wheezy" ]; then
 	sed -i 's/apache2-dev.*,//g' $rootfs/PHPBuild/debian/control
 	sed -i '/.*dh-apache2,.*/d' $rootfs/PHPBuild/debian/control
 	sed -i '/.*dh-systemd.*,.*/d' $rootfs/PHPBuild/debian/control
 	sed -i '/.*libc-client-dev,.*/d' $rootfs/PHPBuild/debian/control
+	sed -i 's/libgd-dev.*,/libgd2-xpm-dev,/g' $rootfs/PHPBuild/debian/control
 else
 	sed -i '/.*libgcrypt11-dev,.*/d' $rootfs/PHPBuild/debian/control
-	sed -i '/.*libsystemd-daemon-dev,.*/d' $rootfs/PHPBuild/debian/control
 	sed -i '/.*libxml2-dev/a\\t       libgcrypt20-dev,' $rootfs/PHPBuild/debian/control
 fi
 chroot $rootfs bash -c "cd /PHPBuild && mk-build-deps debian/control"
