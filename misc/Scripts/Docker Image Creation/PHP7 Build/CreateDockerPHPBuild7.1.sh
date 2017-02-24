@@ -144,7 +144,7 @@ fi
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano
 
-if [ "$distver" == "stretch"];  then
+if [ "$distver" == "stretch" ];  then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install default-libmysqlclient-dev
 else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
