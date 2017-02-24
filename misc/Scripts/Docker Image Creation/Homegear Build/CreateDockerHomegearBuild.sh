@@ -423,7 +423,7 @@ fi
 
 EOF
 echo "if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-beckhoff.deb && test -f homegear-knx.deb && test -f homegear-enocean.deb && test -f homegear-intertechno.deb; then
-	isodate=`date +%Y%m%d`
+	isodate=\`date +%Y%m%d\`
 	mv libhomegear-base.deb libhomegear-base_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear.deb homegear_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-homematicbidcos.deb homegear-homematicbidcos_\$[isodate]_${distlc}_${distver}_${arch}.deb

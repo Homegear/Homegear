@@ -142,7 +142,13 @@ if [ "$distver" == "stretch" ] || [ "$distver" == "vivid" ] || [ "$distver" == "
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano libmysqlclient-dev
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano
+
+if [ "$distver" == "stretch"];  then
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install default-libmysqlclient-dev
+else
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
+fi
 
 if [ "$distver" == "stretch" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
