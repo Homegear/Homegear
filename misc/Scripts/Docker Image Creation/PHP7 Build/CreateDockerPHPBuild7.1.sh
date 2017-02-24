@@ -134,24 +134,6 @@ if [ "$distver" == "stretch" ]; then
 	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
 fi
 
-chroot $rootfs apt-get update
-if [ "$distver" == "stretch" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ]; then
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
-fi
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano
-
-if [ "$distver" == "stretch" ];  then
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install default-libmysqlclient-dev dirmngr
-else
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
-fi
-
-if [ "$distver" == "stretch" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ]; then
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
-fi
-
 cat > "$rootfs/php-gpg.key" <<'EOF'
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: GnuPG v1
@@ -169,6 +151,24 @@ FjEnCreZTcRUu2oBQyolORDl+BmF4DjL
 EOF
 chroot $rootfs apt-key add /php-gpg.key
 rm $rootfs/php-gpg.key
+
+chroot $rootfs apt-get update
+if [ "$distver" == "stretch" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ]; then
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
+fi
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano
+
+if [ "$distver" == "stretch" ];  then
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install default-libmysqlclient-dev dirmngr
+else
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
+fi
+
+if [ "$distver" == "stretch" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ]; then
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
+fi
 
 mkdir $rootfs/PHPBuild
 chroot $rootfs bash -c "cd /PHPBuild && apt-get source php7.1"
