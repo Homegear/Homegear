@@ -128,8 +128,6 @@ Acquire::GzipIndexes "true";
 Acquire::CompressionTypes::Order:: "gz";
 EOF
 
-chroot $rootfs apt-key adv --keyserver keyserver.ubuntu.com --recv E5267A6C
-
 #Fix debootstrap base package errors
 if [ "$distver" == "stretch" ]; then
 	chroot $rootfs apt-get update
@@ -153,6 +151,9 @@ fi
 if [ "$distver" == "stretch" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
+
+chroot $rootfs apt-key adv --keyserver keyserver.ubuntu.com --recv E5267A6C
+
 mkdir $rootfs/PHPBuild
 chroot $rootfs bash -c "cd /PHPBuild && apt-get source php7.1"
 cd $rootfs/PHPBuild
