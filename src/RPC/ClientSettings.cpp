@@ -145,6 +145,13 @@ void ClientSettings::load(std::string filename)
 					}
 					GD::out.printDebug("Debug: password of RPC client " + settings->name + " was set.");
 				}
+				else if(name == "retries")
+				{
+					settings->retries = BaseLib::Math::getNumber(value);
+					if(settings->retries < 1) settings->retries = 1;
+					else if(settings->retries > 20) settings->retries = 20;
+					GD::out.printDebug("Debug: retries of RPC client " + settings->name + " set to " + std::to_string(settings->retries));
+				}
 				else
 				{
 					GD::out.printWarning("Warning: RPC client setting not found: " + std::string(input));
