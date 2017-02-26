@@ -1018,7 +1018,7 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::string& key, Base
 {
 	try
 	{
-		bool retain = key != "PRESS_SHORT" && key != "PRESS_LONG" && key != "PRESS_CONT";
+		bool retain = key.compare(0, 5, "PRESS") != 0;
 
 		std::shared_ptr<MqttMessage> messageJson1;
 		if(_settings.jsonTopic())
