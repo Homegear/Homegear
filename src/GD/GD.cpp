@@ -29,8 +29,6 @@
 */
 
 #include "GD.h"
-
-#include "../MQTT/Mqtt.h"
 #include "../UPnP/UPnP.h"
 
 std::unique_ptr<BaseLib::SharedObjects> GD::bl;

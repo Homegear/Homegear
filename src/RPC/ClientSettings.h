@@ -56,6 +56,7 @@ public:
 		bool verifyCertificate = true;
 		std::string userName;
 		std::string password;
+		uint32_t retries = 3;
 	};
 
 	ClientSettings();

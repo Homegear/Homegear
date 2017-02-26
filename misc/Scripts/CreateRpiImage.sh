@@ -96,7 +96,7 @@ cat > "$rootfs/etc/fstab" <<'EOF'
 proc            /proc                       proc            defaults                                                            0       0
 /dev/mmcblk0p1  /boot                       vfat            defaults,noatime,ro                                                 0       2
 /dev/mmcblk0p2  /                           ext4            defaults,noatime,ro                                                 0       1
-tmpfs           /run                        tmpfs           defaults,nosuid,mode=1777,size=20M                                  0       0
+tmpfs           /run                        tmpfs           defaults,nosuid,mode=1777,size=50M                                  0       0
 tmpfs           /var/log                    tmpfs           defaults,nosuid,mode=1777,size=10%                                  0       0
 tmpfs           /var/tmp                    tmpfs           defaults,nosuid,mode=1777,size=10%                                  0       0
 tmpfs           /var/lib/homegear/db        tmpfs           defaults,nosuid,mode=1770,uid=homegear,gid=homegear,size=20M        0       0
@@ -187,7 +187,7 @@ cat > "$rootfs/lib/systemd/scripts/setup-tmpfs.sh" <<'EOF'
 #!/bin/bash
 
 mkdir /var/tmp/lock
-chmod 755 /var/tmp/lock
+chmod 777 /var/tmp/lock
 mkdir /var/tmp/dhcp
 chmod 755 /var/tmp/dhcp
 mkdir /var/tmp/spool
@@ -379,11 +379,14 @@ stage_two()
 {
     TTY_X=$(($(stty size | awk '{print $2}')-6))
     TTY_Y=$(($(stty size | awk '{print $1}')-6))
+    resize2fs /dev/mmcblk0p2 | dialog --title "Partition setup" --progressbox "Resizing root partition..." $TTY_Y $TTY_X
     mkfs.ext4 -F /dev/mmcblk0p3 | dialog --title "Partition setup" --progressbox "Creating data partition..." $TTY_Y $TTY_X
 
     sed -i '/\/dev\/mmcblk0p2/a\
 \/dev\/mmcblk0p3  \/data                       ext4            defaults,noatime,commit=600             0       1' /etc/fstab
     mount -o defaults,noatime,commit=600 /dev/mmcblk0p3 /data
+    sed -i '/^After=/ s/$/ data.mount/' /lib/systemd/system/setup-tmpfs.service
+    systemctl daemon-reload
     rm -f /partstagetwo
 }
 
@@ -487,6 +490,14 @@ chown homegear:homegear /data/homegear-data
 sed -i 's/tempPath = \/var\/lib\/homegear\/tmp/tempPath = \/var\/tmp\/homegear/g' /etc/homegear/main.conf
 sed -i 's/# databasePath =/databasePath = \/var\/lib\/homegear\/db/g' /etc/homegear/main.conf
 sed -i 's/# databaseBackupPath =/databaseBackupPath = \/data\/homegear-data/g' /etc/homegear/main.conf
+sed -i 's/databaseMemoryJournal = false/databaseMemoryJournal = true/g' /etc/homegear/main.conf
+sed -i 's/databaseWALJournal = true/databaseWALJournal = false/g' /etc/homegear/main.conf
+sed -i 's/databaseSynchronous = true/databaseSynchronous = false/g' /etc/homegear/main.conf
+
+echo "" >> /etc/homegear/homegear-start.sh
+echo "# Delete backuped db.sql." >> /etc/homegear/homegear-start.sh
+echo "[ -f /data/homegear-data/db.sql ] && [ -f /var/lib/homegear/db/db.sql ] && rm -f /data/homegear-data/db.sql" >> /etc/homegear/homegear-start.sh
+echo "exit 0" >> /etc/homegear/homegear-start.sh
 
 echo "[ -f /var/lib/homegear/db/db.sql ] && [ -d /data/homegear-data ] && cp -a /var/lib/homegear/db/db.sql /data/homegear-data/" >> /etc/homegear/homegear-stop.sh
 echo "[ -d /data/homegear-data ] && chown homegear:homegear /data/homegear-data/*" >> /etc/homegear/homegear-stop.sh

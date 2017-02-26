@@ -140,6 +140,10 @@ private:
 		BaseLib::PVariable setFamilySetting(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 		BaseLib::PVariable deleteFamilySetting(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 
+		// {{{ MQTT
+			BaseLib::PVariable mqttPublish(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+		// }}}
+
 		// {{{ User methods
 			BaseLib::PVariable auth(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 			BaseLib::PVariable createUser(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
@@ -160,6 +164,7 @@ private:
 			BaseLib::PVariable checkLicense(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 			BaseLib::PVariable removeLicense(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 			BaseLib::PVariable getLicenseStates(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+			BaseLib::PVariable getTrialStartTime(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 		// }}}
 	// }}}
 };

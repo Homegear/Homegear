@@ -144,7 +144,7 @@ chroot $rootfs apt-key add Release.key
 rm $rootfs/Release.key
 
 chroot $rootfs apt-get update
-chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libmcrypt-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libmysqlclient-dev libmodbus-dev libzip-dev
+chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libmcrypt-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libmysqlclient-dev libmodbus-dev libzip-dev git-core
 
 # {{{ GCC, GCrypt, GNUTLS, Curl
 if [ "$distver" == "wheezy" ]; then
@@ -307,6 +307,28 @@ unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
+if [[ -n $2 ]]; then
+	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-easy-licensing.git homegear-easy-licensing-${1}
+	[ $? -ne 0 ] && exit 1
+	rm -Rf homegear-easy-licensing-${1}/.git
+
+	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-licensing.git homegear-licensing-${1}
+	[ $? -ne 0 ] && exit 1
+	rm -Rf homegear-licensing-${1}/.git
+
+	git clone ssh://git@gitit.de:44444/EASY/homegear-easycam.git homegear-easycam-${1}
+	[ $? -ne 0 ] && exit 1
+	rm -Rf homegear-easycam-${1}/.git
+
+	git clone ssh://git@gitit.de:44444/EASY/homegear-easyled.git homegear-easyled-${1}
+	[ $? -ne 0 ] && exit 1
+	rm -Rf homegear-easyled-${1}/.git
+
+	git clone ssh://git@gitit.de:44444/EASY/homegear-easyled2.git homegear-easyled2-${1}
+	[ $? -ne 0 ] && exit 1
+	rm -Rf homegear-easyled2-${1}/.git
+fi
+
 createPackage libhomegear-base $1 libhomegear-base
 if test -f libhomegear-base*.deb; then
 	dpkg -i libhomegear-base*.deb
@@ -316,6 +338,13 @@ else
 fi
 
 createPackage Homegear $1 homegear
+if test -f libhomegear-base*.deb; then
+	dpkg -i homegear*.deb
+else
+	echo "Error building Homegear."
+	exit 1
+fi
+
 createPackage Homegear-HomeMaticBidCoS $1 homegear-homematicbidcos
 createPackage Homegear-HomeMaticWired $1 homegear-homematicwired
 createPackage Homegear-Insteon $1 homegear-insteon
@@ -328,6 +357,26 @@ createPackage Homegear-Beckhoff $1 homegear-beckhoff
 createPackage Homegear-KNX $1 homegear-knx
 createPackage Homegear-EnOcean $1 homegear-enocean
 createPackage Homegear-Intertechno $1 homegear-intertechno
+if [[ -n $2 ]]; then
+	sha512=`sha512sum /usr/bin/homegear | awk '{print toupper($0)}' | cut -d ' ' -f 1`
+	sed -i '/if(sha512(homegearPath) != /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i "/std::string homegearPath(buffer, size);/aif(sha512(homegearPath) != \"$sha512\") return false;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i '/if(sha512(homegearPath) != /d' homegear-licensing-${1}/src/Licensing.cpp
+	sed -i "/std::string homegearPath(buffer, size);/aif(sha512(homegearPath) != \"$sha512\") return false;" homegear-licensing-${1}/src/Licensing.cpp
+
+	sha512=`sha512sum /usr/lib/libhomegear-base.so.1 | awk '{print toupper($0)}' | cut -d ' ' -f 1`
+	sed -i '/if(sha512(baselibPath) == /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i "/if(baselibPath.empty()) return false;/aif(sha512(baselibPath) == \"$sha512\") return true;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i '/if(sha512(baselibPath) == /d' homegear-licensing-${1}/src/Licensing.cpp
+	sed -i "/if(baselibPath.empty()) return false;/aif(sha512(baselibPath) == \"$sha512\") return true;" homegear-licensing-${1}/src/Licensing.cpp
+
+	createPackage homegear-easy-licensing $1 homegear-easy-licensing
+	createPackage homegear-licensing $1 homegear-licensing
+
+	createPackage homegear-easycam $1 homegear-easycam
+	createPackage homegear-easyled $1 homegear-easyled
+	createPackage homegear-easyled2 $1 homegear-easyled2
+fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackage.sh
 sed -i "s/<DIST>/${dist}/g" $rootfs/build/CreateDebianPackage.sh
@@ -345,7 +394,7 @@ function cleanUp {
 	mv ${1}_*.deb ${1}.deb
 }
 
-/build/CreateDebianPackage.sh dev
+/build/CreateDebianPackage.sh dev $1
 
 cd /build
 
@@ -363,10 +412,18 @@ cleanUp homegear-beckhoff
 cleanUp homegear-knx
 cleanUp homegear-enocean
 cleanUp homegear-intertechno
+if [[ -n $1 ]]; then
+	cleanUp homegear-easy-licensing
+	cleanUp homegear-licensing
+
+	cleanUp homegear-easycam
+	cleanUp homegear-easyled
+	cleanUp homegear-easyled2
+fi
 
 EOF
 echo "if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-beckhoff.deb && test -f homegear-knx.deb && test -f homegear-enocean.deb && test -f homegear-intertechno.deb; then
-	isodate=`date +%Y%m%d`
+	isodate=\`date +%Y%m%d\`
 	mv libhomegear-base.deb libhomegear-base_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear.deb homegear_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-homematicbidcos.deb homegear-homematicbidcos_\$[isodate]_${distlc}_${distver}_${arch}.deb
@@ -381,6 +438,14 @@ echo "if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegea
 	mv homegear-knx.deb homegear-knx_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-enocean.deb homegear-enocean_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-intertechno.deb homegear-intertechno_\$[isodate]_${distlc}_${distver}_${arch}.deb
+	if [[ -n \$1 ]]; then
+		mv homegear-easy-licensing.deb homegear-easy-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv homegear-licensing.deb homegear-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
+
+		mv homegear-easycam.deb homegear-easycam_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv homegear-easyled.deb homegear-easyled_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv homegear-easyled2.deb homegear-easyled2_\$[isodate]_${distlc}_${distver}_${arch}.deb
+	fi
 	if test -f /build/UploadNightly.sh; then
 		/build/UploadNightly.sh
 	fi
@@ -390,7 +455,7 @@ chmod 755 $rootfs/build/CreateDebianPackageNightly.sh
 cat > "$rootfs/build/CreateDebianPackageStable.sh" <<-'EOF'
 #!/bin/bash
 
-/build/CreateDebianPackage.sh master
+/build/CreateDebianPackage.sh master $1
 
 cd /build
 
@@ -556,10 +621,11 @@ fi
 " > /build/UploadNightly.sh
 chmod 755 /build/UploadNightly.sh
 rm /FirstStart.sh
+
 if [ "$HOMEGEARBUILD_TYPE" = "stable" ]; then
-	/build/CreateDebianPackageStable.sh
+	/build/CreateDebianPackageStable.sh ${HOMEGEARBUILD_DEPLOY_KEY}
 elif [ "$HOMEGEARBUILD_TYPE" = "nightly" ]; then
-	/build/CreateDebianPackageNightly.sh
+	/build/CreateDebianPackageNightly.sh ${HOMEGEARBUILD_DEPLOY_KEY}
 else
 	echo "Container setup successful. You can now execute \"/build/CreateDebianPackageStable.sh\" or \"/build/CreateDebianPackageNightly.sh\"."
 	/bin/bash

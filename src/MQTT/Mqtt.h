@@ -61,7 +61,15 @@ public:
 	void queueMessage(std::shared_ptr<MqttMessage>& message);
 
 	/**
-	 * Queues a message for publishing to the MQTT broker.
+	 * Queues a generic message for publishing to the MQTT broker.
+	 *
+	 * @param topic The MQTT topic.
+	 * @param payload The MQTT payload.
+	 */
+	void queueMessage(std::string topic, std::string& payload);
+
+	/**
+	 * Queues a peer message for publishing to the MQTT broker.
 	 *
 	 * @param peerId The id of the peer to queue the message for.
 	 * @param channel The channel of the peer to queue the message for.

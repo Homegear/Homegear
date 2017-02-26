@@ -42,6 +42,7 @@
 #include <homegear-base/BaseLib.h>
 #include "../RPC/Server.h"
 #include "../RPC/Client.h"
+#include "../MQTT/Mqtt.h"
 
 #include <vector>
 #include <map>

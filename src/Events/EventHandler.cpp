@@ -182,7 +182,13 @@ BaseLib::PVariable EventHandler::add(BaseLib::PVariable eventDescription)
 		event->type = (Event::Type::Enum)eventDescription->structValue->at("TYPE")->integerValue;
 		event->name = eventDescription->structValue->at("ID")->stringValue;
 		if(event->name.size() > 100) return BaseLib::Variable::createError(-5, "Event ID is too long.");
-		if(eventExists(event->name)) return BaseLib::Variable::createError(-5, "An event with this ID already exists.");
+		bool replace = false;
+		if(eventExists(event->name))
+		{
+			auto descriptionIterator = eventDescription->structValue->find("REPLACE");
+			if(descriptionIterator != eventDescription->structValue->end() && descriptionIterator->second->booleanValue) replace = true;
+			else return BaseLib::Variable::createError(-5, "An event with this ID already exists.");
+		}
 
 		if(eventDescription->structValue->find("EVENTMETHOD") == eventDescription->structValue->end() || eventDescription->structValue->at("EVENTMETHOD")->stringValue.empty()) return BaseLib::Variable::createError(-5, "No event method specified.");
 		event->eventMethod = eventDescription->structValue->at("EVENTMETHOD")->stringValue;
@@ -245,6 +251,7 @@ BaseLib::PVariable EventHandler::add(BaseLib::PVariable eventDescription)
 					if(event->resetAfter == 0) return BaseLib::Variable::createError(-5, "RESETAFTER is not specified or 0.");
 				}
 			}
+			if(replace) remove(event->name);
 			std::lock_guard<std::mutex> eventsGuard(_eventsMutex);
 			_triggeredEvents[event->peerID][event->peerChannel][event->variable].push_back(event);
 		}
@@ -260,6 +267,7 @@ BaseLib::PVariable EventHandler::add(BaseLib::PVariable eventDescription)
 			uint64_t nextExecution = getNextExecution(event->eventTime, event->recurEvery);
 
 			{
+				if(replace) remove(event->name);
 				std::lock_guard<std::mutex> eventsGuard(_eventsMutex);
 				while(_timedEvents.find(nextExecution) != _timedEvents.end()) nextExecution++;
 				_timedEvents[nextExecution] = event;

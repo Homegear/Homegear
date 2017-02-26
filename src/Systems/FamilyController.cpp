@@ -526,9 +526,10 @@ int32_t FamilyController::loadModule(std::string filename)
 			BaseLib::HelperFunctions::toLower(name);
 			BaseLib::HelperFunctions::stringReplace(name, " ", "");
 			_families[family->getFamily()] = family;
-			if(!familyAvailable(family->getFamily()) || !family->init())
+			if(!family->enabled() || !familyAvailable(family->getFamily()) || !family->init())
 			{
-				if(familyAvailable(family->getFamily())) GD::out.printError("Error: Could not initialize device family " + family->getName() + ".");
+				if(!family->enabled()) GD::out.printInfo("Info: Not initializing device family " + family->getName() + ", because it is disabled in it's configuration file.");
+				else if(familyAvailable(family->getFamily())) GD::out.printError("Error: Could not initialize device family " + family->getName() + ".");
 				else GD::out.printInfo("Info: Not initializing device family " + family->getName() + ", because no physical interface was found.");
 				_families[family->getFamily()]->dispose();
 				_families[family->getFamily()].reset();
@@ -728,9 +729,10 @@ void FamilyController::load()
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
-			if(!familyAvailable(i->first) || !i->second->init())
+			if(!i->second->enabled() || !familyAvailable(i->first) || !i->second->init())
 			{
-				if(familyAvailable(i->first)) GD::out.printError("Error: Could not initialize device family " + i->second->getName() + ".");
+				if(!i->second->enabled()) GD::out.printInfo("Info: Not initializing device family " + i->second->getName() + ", because it is disabled in it's configuration file.");
+				else if(familyAvailable(i->first)) GD::out.printError("Error: Could not initialize device family " + i->second->getName() + ".");
 				else GD::out.printInfo("Info: Not initializing device family " + i->second->getName() + ", because no physical interface was found.");
 				i->second->dispose();
 				i->second.reset();

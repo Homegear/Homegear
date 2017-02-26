@@ -866,7 +866,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			SG(request_info).path_translated = estrndup(&pathTranslated.at(0), pathTranslated.size());
 		}
 
-		if (php_request_startup(TSRMLS_C) == FAILURE) {
+		if (php_request_startup() == FAILURE) {
 			GD::bl->out.printError("Error calling php_request_startup...");
 			return;
 		}

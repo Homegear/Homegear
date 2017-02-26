@@ -114,7 +114,11 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 				(*i)->print(true, false);
 			}
 		}
+		//Get settings pointer every time this method is executed, because
+		//the settings might change.
+		server->settings = GD::clientSettings.get(server->hostname);
 		bool retry = false;
+		uint32_t retries = server->settings ? server->settings->retries : 3;
 		std::vector<char> requestData;
 		std::vector<char> responseData;
 		if(server->binary) _rpcEncoder->encodeRequest(methodName, parameters, requestData);
@@ -126,7 +130,7 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 		}
 		else if(server->json) _jsonEncoder->encodeRequest(methodName, parameters, requestData);
 		else _xmlRpcEncoder->encodeRequest(methodName, parameters, requestData);
-		for(uint32_t i = 0; i < 3; ++i)
+		for(uint32_t i = 0; i < retries; ++i)
 		{
 			retry = false;
 			if(i == 0) sendRequest(server, requestData, responseData, true, retry);
@@ -224,7 +228,11 @@ BaseLib::PVariable RpcClient::invoke(std::shared_ptr<RemoteRpcServer> server, st
 				(*i)->print(true, false);
 			}
 		}
+		//Get settings pointer every time this method is executed, because
+		//the settings might change.
+		server->settings = GD::clientSettings.get(server->hostname);
 		bool retry = false;
+		uint32_t retries = server->settings ? server->settings->retries : 3;
 		std::vector<char> requestData;
 		std::vector<char> responseData;
 		if(server->binary) _rpcEncoder->encodeRequest(methodName, parameters, requestData);
@@ -236,7 +244,7 @@ BaseLib::PVariable RpcClient::invoke(std::shared_ptr<RemoteRpcServer> server, st
 		}
 		else if(server->json) _jsonEncoder->encodeRequest(methodName, parameters, requestData);
 		else _xmlRpcEncoder->encodeRequest(methodName, parameters, requestData);
-		for(uint32_t i = 0; i < 3; ++i)
+		for(uint32_t i = 0; i < retries; ++i)
 		{
 			retry = false;
 			if(i == 0) sendRequest(server.get(), requestData, responseData, true, retry);
@@ -384,9 +392,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 				server->removed = true;
 				return;
 			}
-			//Get settings pointer every time this method is executed, because
-			//the settings might change.
-			server->settings = GD::clientSettings.get(server->hostname);
 			if(server->settings) _out.printDebug("Debug: Settings found for host " + server->hostname);
 			if(!server->useSSL && server->settings && server->settings->forceSSL)
 			{
