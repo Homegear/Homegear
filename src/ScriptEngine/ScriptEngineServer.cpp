@@ -1720,6 +1720,7 @@ BaseLib::PVariable ScriptEngineServer::getAllScripts()
 				if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters (topic and payload).");
 				if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameters are not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Topic is empty.");
+				if(parameters->at(1)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Payload is empty.");
 
 				GD::mqtt->queueMessage(parameters->at(0)->stringValue, parameters->at(1)->stringValue);
 				return std::make_shared<BaseLib::Variable>();
