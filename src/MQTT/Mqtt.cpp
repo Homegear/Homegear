@@ -1014,6 +1014,29 @@ void Mqtt::disconnect()
 	}
 }
 
+void Mqtt::queueMessage(std::string topic, std::string& payload)
+{
+	try
+	{
+		std::shared_ptr<MqttMessage> message = std::make_shared<MqttMessage>();
+		message->topic = std::move(topic);
+		message->message.insert(message->message.end(), payload.begin(), payload.end());
+		queueMessage(message);
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::string& key, BaseLib::PVariable& value)
 {
 	try
@@ -1027,7 +1050,7 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::string& key, Base
 			messageJson1->topic = "json/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
 			_jsonEncoder->encode(value, messageJson1->message);
 			messageJson1->retain = retain;
-			GD::mqtt->queueMessage(messageJson1);
+			queueMessage(messageJson1);
 		}
 
 		if(_settings.plainTopic())
@@ -1041,7 +1064,7 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::string& key, Base
 				messagePlain->message = std::vector<char>(messagePlain->message.begin() + 1, messagePlain->message.end() - 1);
 			}
 			messagePlain->retain = retain;
-			GD::mqtt->queueMessage(messagePlain);
+			queueMessage(messagePlain);
 		}
 
 		if(_settings.jsonobjTopic())
@@ -1052,7 +1075,7 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::string& key, Base
 			structValue->structValue->insert(BaseLib::StructElement("value", value));
 			_jsonEncoder->encode(structValue, messageJson2->message);
 			messageJson2->retain = retain;
-			GD::mqtt->queueMessage(messageJson2);
+			queueMessage(messageJson2);
 		}
 	}
 	catch(const std::exception& ex)
