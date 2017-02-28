@@ -132,7 +132,6 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 1, 1000)
 FlowsServer::~FlowsServer()
 {
 	if(!_stopServer) stop();
-	GD::bl->threadManager.join(_checkSessionIdThread);
 }
 
 void FlowsServer::collectGarbage()
@@ -1246,7 +1245,6 @@ void FlowsServer::executeFlow(PFlowInfoServer& flowInfo)
 		{
 			_out.printError("Error: Could not get free process. Not executing flow.");
 			flowInfo->exitCode = -1;
-			if(flowInfo->flowFinishedCallback) flowInfo->flowFinishedCallback(flowInfo, -1);
 			return;
 		}
 
