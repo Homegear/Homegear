@@ -97,7 +97,7 @@ proc            /proc                       proc            defaults            
 /dev/mmcblk0p1  /boot                       vfat            defaults,noatime,ro                                                 0       2
 /dev/mmcblk0p2  /                           ext4            defaults,noatime,ro                                                 0       1
 tmpfs           /run                        tmpfs           defaults,nosuid,mode=1777,size=50M                                  0       0
-tmpfs           /var/log                    tmpfs           defaults,nosuid,mode=1777,size=10%                                  0       0
+tmpfs           /var/log                    tmpfs           defaults,nosuid,mode=1777,size=25%                                  0       0
 tmpfs           /var/tmp                    tmpfs           defaults,nosuid,mode=1777,size=10%                                  0       0
 tmpfs           /var/lib/homegear/db        tmpfs           defaults,nosuid,mode=1770,uid=homegear,gid=homegear,size=20M        0       0
 #tmpfs           /var/<your directory>       tmpfs           defaults,nosuid,mode=1777,size=50M                                  0       0
@@ -487,12 +487,15 @@ apt-get -y install homegear homegear-homematicbidcos homegear-homematicwired hom
 
 mkdir -p /data/homegear-data
 chown homegear:homegear /data/homegear-data
+sed -i 's/debugLevel = 4/debugLevel = 3/g' /etc/homegear/main.conf
 sed -i 's/tempPath = \/var\/lib\/homegear\/tmp/tempPath = \/var\/tmp\/homegear/g' /etc/homegear/main.conf
 sed -i 's/# databasePath =/databasePath = \/var\/lib\/homegear\/db/g' /etc/homegear/main.conf
 sed -i 's/# databaseBackupPath =/databaseBackupPath = \/data\/homegear-data/g' /etc/homegear/main.conf
 sed -i 's/databaseMemoryJournal = false/databaseMemoryJournal = true/g' /etc/homegear/main.conf
 sed -i 's/databaseWALJournal = true/databaseWALJournal = false/g' /etc/homegear/main.conf
 sed -i 's/databaseSynchronous = true/databaseSynchronous = false/g' /etc/homegear/main.conf
+
+sed -i 's/session.save_path = "\/var\/lib\/homegear\/tmp\/php"/session.save_path = "\/var\/tmp\/homegear\/php/g' /etc/homegear/main.conf
 
 echo "" >> /etc/homegear/homegear-start.sh
 echo "# Delete backuped db.sql." >> /etc/homegear/homegear-start.sh
