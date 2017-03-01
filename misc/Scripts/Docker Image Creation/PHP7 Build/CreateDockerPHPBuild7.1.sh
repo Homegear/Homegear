@@ -267,6 +267,7 @@ mv php7* php7-homegear-dev-${version}
 tar -zcpf php7-homegear-dev_${version}.orig.tar.gz php7-homegear-dev-${version}
 cd php7-homegear-dev-*
 debuild -us -uc
+cd /
 rm -Rf /PHPBuild/php7-homegear-dev-${version}
 if test -f /PHPBuild/Upload.sh; then
 	/PHPBuild/Upload.sh
@@ -369,7 +370,7 @@ cd /PHPBuild
 if [ \$(ls /PHPBuild | grep -c \"\\.changes\$\") -ne 0 ]; then
 	path=\`mktemp -p / -u\`".tar.gz"
 	echo \"<DIST>\" > distribution
-	tar -zcpf \${path} php* lib* distribution
+	tar -zcpf \${path} php* distribution
 	if test -f \${path}; then
 		mv \${path} \${path}.uploading
 		filename=\$(basename \$path)
