@@ -104,7 +104,8 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 		}
 		if(i == 30)
 		{
-			GD::out.printError("Error: At least one script did not finish within 30 seconds during shutdown. Exiting.");
+			GD::out.printError("Error: At least one script did not finish within 30 seconds during shutdown. Killing myself.");
+			kill(getpid(), 9);
 			return;
 		}
 
