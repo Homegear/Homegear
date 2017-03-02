@@ -361,6 +361,7 @@ else
 	exit 1
 fi
 
+touch /tmp/HOMEGEAR_STATIC_INSTALLATION
 createPackage Homegear $1 homegear
 if test -f libhomegear-base*.deb; then
 	dpkg -i homegear*.deb
