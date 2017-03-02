@@ -1311,6 +1311,26 @@ void ScriptEngineServer::invokeScriptFinished(PScriptEngineProcess process, int3
 	}
 }
 
+void ScriptEngineServer::invokeScriptFinishedEarly(PScriptInfo scriptInfo, int32_t exitCode)
+{
+	try
+	{
+		if(scriptInfo->scriptFinishedCallback) scriptInfo->scriptFinishedCallback(scriptInfo, exitCode);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 {
 	try
@@ -1322,7 +1342,12 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 			_out.printError("Error: Could not get free process. Not executing script.");
 			if(scriptInfo->returnOutput) scriptInfo->output.append("Error: Could not get free process. Not executing script.\n");
 			scriptInfo->exitCode = -1;
-			if(scriptInfo->scriptFinishedCallback) scriptInfo->scriptFinishedCallback(scriptInfo, -1);
+
+			{
+				std::lock_guard<std::mutex> scriptFinishedGuard(_scriptFinishedThreadMutex);
+				GD::bl->threadManager.start(_scriptFinishedThread, true, &ScriptEngineServer::invokeScriptFinishedEarly, this, scriptInfo, -1);
+			}
+
 			return;
 		}
 

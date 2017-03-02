@@ -125,6 +125,7 @@ private:
 	void closeClientConnection(PScriptEngineClientData client);
 	PScriptEngineProcess getFreeProcess();
 	void invokeScriptFinished(PScriptEngineProcess process, int32_t id, int32_t exitCode);
+	void invokeScriptFinishedEarly(PScriptInfo scriptInfo, int32_t exitCode);
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 
