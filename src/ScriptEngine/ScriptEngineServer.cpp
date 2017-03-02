@@ -1183,6 +1183,7 @@ bool ScriptEngineServer::checkSessionId(const std::string& sessionId)
 		bool result = false;
 		std::lock_guard<std::mutex> checkSessionIdGuard(_checkSessionIdMutex);
 		GD::bl->threadManager.start(_checkSessionIdThread, false, &ScriptEngineServer::checkSessionIdThread, this, sessionId, &result);
+		GD::bl->threadManager.join(_checkSessionIdThread);
 
 		return result;
 	}
@@ -1210,7 +1211,7 @@ void ScriptEngineServer::checkSessionIdThread(std::string sessionId, bool* resul
 	if(!globals) return;
 	try
 	{
-		if(!tsrm_get_ls_cache() || !((sapi_globals_struct *) (*((void ***) tsrm_get_ls_cache()))[((sapi_globals_id)-1)]))
+		if(!tsrm_get_ls_cache() || !(*((void ***)tsrm_get_ls_cache()))[sapi_globals_id - 1] || !(*((void ***)tsrm_get_ls_cache()))[core_globals_id - 1])
 		{
 			GD::out.printCritical("Critical: Error in PHP: No thread safe resource exists.");
 			return;
@@ -1224,7 +1225,7 @@ void ScriptEngineServer::checkSessionIdThread(std::string sessionId, bool* resul
 		SG(request_info).proto_num = 1001;
 		globals->http.getHeader().cookie = "PHPSESSID=" + sessionId;
 
-		if (php_request_startup(TSRMLS_C) == FAILURE) {
+		if (php_request_startup() == FAILURE) {
 			GD::bl->out.printError("Error calling php_request_startup...");
 			ts_free_thread();
 			return;

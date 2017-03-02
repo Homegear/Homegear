@@ -292,7 +292,7 @@ void Auth::sendWebSocketUnauthorized(BaseLib::WebSocket& webSocket, std::string 
 {
 	std::vector <char> output;
 	std::string json("{\"auth\":\"failure\",\"reason\":\"" + reason + "\"}");
-	std::vector<char> data(&json[0], &json[0] + json.size());
+	std::vector<char> data(json.data(), json.data() + json.size());
 	BaseLib::WebSocket::encode(data, BaseLib::WebSocket::Header::Opcode::text, output);
 	_socket->proofwrite(output);
 }
