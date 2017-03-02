@@ -879,7 +879,7 @@ ZEND_FUNCTION(hg_poll_event)
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
-		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
+		if(!eventsIterator->second) eventsIterator->second = std::make_shared<PhpEvents>(SEG(token), SEG(outputCallback), SEG(rpcCallback));
 		phpEvents = eventsIterator->second;
 	}
 	std::shared_ptr<PhpEvents::EventData> eventData = phpEvents->poll(timeout);

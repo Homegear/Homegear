@@ -3173,6 +3173,10 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
+		if(GD::bl->shuttingDown)
+		{
+			return BaseLib::Variable::createError(-32501, "Homegear is shutting down.");
+		}
 
 		bool internalEngine = false;
 

@@ -1123,7 +1123,7 @@ void EventHandler::processRpcCall(std::string& eventName, std::string& eventMeth
 		BaseLib::PVariable eventMethodParametersCopy(new BaseLib::Variable());
 		if(eventMethodParameters) *eventMethodParametersCopy = *eventMethodParameters;
 		BaseLib::PVariable result = GD::rpcServers.begin()->second.callMethod(eventMethod, eventMethodParametersCopy);
-		if(result && result->errorStruct)
+		if(result && result->errorStruct && !GD::bl->shuttingDown)
 		{
 			GD::out.printError("Could not execute RPC method \"" + eventMethod + "\" for event \"" + eventName + "\". Error struct:");
 			result->print(true, false);
@@ -1323,7 +1323,7 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, BaseLib::PVar
 			GD::out.printError("Error: Could not execute post trigger tasks. event was nullptr.");
 			return;
 		}
-		if(rpcResult && rpcResult->errorStruct)
+		if(rpcResult && rpcResult->errorStruct && !GD::bl->shuttingDown)
 		{
 			GD::out.printError("Error: Could not execute RPC method for event from peer with id " + std::to_string(event->peerID) + ", channel " + std::to_string(event->peerChannel) + " and variable " + event->variable + ". Error struct:");
 			rpcResult->print(true, true);

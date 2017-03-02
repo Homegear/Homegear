@@ -34,6 +34,7 @@
 #include "php_config_fixes.h"
 #include "ScriptEngineProcess.h"
 #include "../RPC/RPCMethod.h"
+#include "../../config.h"
 #include <homegear-base/BaseLib.h>
 
 #include <sys/types.h>
@@ -87,6 +88,10 @@ private:
 	};
 
 	BaseLib::Output _out;
+#ifdef DEBUGSESOCKET
+	std::mutex _socketOutputMutex;
+	std::ofstream _socketOutput;
+#endif
 	std::string _socketPath;
 	std::atomic_bool _shuttingDown;
 	std::atomic_bool _stopServer;
@@ -114,6 +119,10 @@ private:
 
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+
+#ifdef DEBUGSESOCKET
+	void socketOutput(int32_t packetId, PScriptEngineClientData& clientData, bool serverRequest, bool request, std::vector<char> data);
+#endif
 
 	void collectGarbage();
 	bool getFileDescriptor(bool deleteOldSocket = false);
