@@ -894,17 +894,11 @@ ZEND_FUNCTION(hg_poll_event)
 			add_assoc_zval_ex(return_value, "TYPE", sizeof("TYPE") - 1, &element);
 		}
 
-		if(eventData->id != 0)
-		{
-			ZVAL_LONG(&element, eventData->id);
-			add_assoc_zval_ex(return_value, "PEERID", sizeof("PEERID") - 1, &element);
-		}
+		ZVAL_LONG(&element, eventData->id);
+		add_assoc_zval_ex(return_value, "PEERID", sizeof("PEERID") - 1, &element);
 
-		if(eventData->channel > -1)
-		{
-			ZVAL_LONG(&element, eventData->channel);
-			add_assoc_zval_ex(return_value, "CHANNEL", sizeof("CHANNEL") - 1, &element);
-		}
+		ZVAL_LONG(&element, eventData->channel);
+		add_assoc_zval_ex(return_value, "CHANNEL", sizeof("CHANNEL") - 1, &element);
 
 		if(!eventData->variable.empty())
 		{

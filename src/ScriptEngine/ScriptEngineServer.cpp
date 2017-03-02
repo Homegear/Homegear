@@ -167,6 +167,7 @@ ScriptEngineServer::~ScriptEngineServer()
 {
 	if(!_stopServer) stop();
 	GD::bl->threadManager.join(_checkSessionIdThread);
+	GD::bl->threadManager.join(_scriptFinishedThread);
 	php_homegear_shutdown();
 }
 
@@ -409,7 +410,11 @@ void ScriptEngineServer::processKilled(pid_t pid, int32_t exitCode, int32_t sign
 			else _out.printInfo("Info: Client process with pid " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + '.');
 
 			if(signal != -1) exitCode = -32500;
-			process->invokeScriptFinished(exitCode);
+
+			{
+				std::lock_guard<std::mutex> scriptFinishedGuard(_scriptFinishedThreadMutex);
+				GD::bl->threadManager.start(_scriptFinishedThread, true, &ScriptEngineServer::invokeScriptFinished, this, process, -1, exitCode);
+			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -795,10 +800,20 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
 
 		send(clientData, data);
 
+		int32_t i = 0;
 		std::unique_lock<std::mutex> waitLock(clientData->waitMutex);
 		while(!clientData->requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]{
 			return ((bool)(*response) && (*response)->arrayValue && (*response)->arrayValue->size() == 2 && (*response)->arrayValue->at(0)->integerValue == packetId) || clientData->closed || _stopServer;
-		}));
+		}))
+		{
+			i++;
+			if(i == 60)
+			{
+				_out.printError("Error: Script engine client with process ID " + std::to_string(clientData->pid) + " is not responding... Killing it.");
+				kill(clientData->pid, 9);
+				break;
+			}
+		}
 
 		if(!(*response) || (*response)->arrayValue->size() != 2 || (*response)->arrayValue->at(0)->integerValue != packetId)
 		{
@@ -1167,10 +1182,7 @@ bool ScriptEngineServer::checkSessionId(const std::string& sessionId)
 	{
 		bool result = false;
 		std::lock_guard<std::mutex> checkSessionIdGuard(_checkSessionIdMutex);
-		GD::bl->threadManager.join(_checkSessionIdThread);
-		_checkSessionIdThread = std::thread();
 		GD::bl->threadManager.start(_checkSessionIdThread, false, &ScriptEngineServer::checkSessionIdThread, this, sessionId, &result);
-		GD::bl->threadManager.join(_checkSessionIdThread);
 
 		return result;
 	}
@@ -1274,6 +1286,31 @@ void ScriptEngineServer::checkSessionIdThread(std::string sessionId, bool* resul
 	ts_free_thread();
 }
 
+void ScriptEngineServer::invokeScriptFinished(PScriptEngineProcess process, int32_t id, int32_t exitCode)
+{
+	try
+	{
+		if(id == -1) process->invokeScriptFinished(exitCode);
+		else
+		{
+			process->invokeScriptFinished(id, exitCode);
+			process->unregisterScript(id);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 {
 	try
@@ -1346,8 +1383,12 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 		{
 			_out.printError("Error: Could not execute script: " + result->structValue->at("faultString")->stringValue);
 			if(scriptInfo->returnOutput) scriptInfo->output.append("Error: Could not execute script: " + result->structValue->at("faultString")->stringValue + '\n');
-			process->invokeScriptFinished(scriptInfo->id, result->structValue->at("faultCode")->integerValue);
-			process->unregisterScript(scriptInfo->id);
+
+			{
+				std::lock_guard<std::mutex> scriptFinishedGuard(_scriptFinishedThreadMutex);
+				GD::bl->threadManager.start(_scriptFinishedThread, true, &ScriptEngineServer::invokeScriptFinished, this, process, scriptInfo->id, result->structValue->at("faultCode")->integerValue);
+			}
+
 			return;
 		}
 		scriptInfo->started = true;

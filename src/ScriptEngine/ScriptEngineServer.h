@@ -109,6 +109,8 @@ private:
 	int32_t _currentPacketId = 0;
 	std::mutex _checkSessionIdMutex;
 	std::thread _checkSessionIdThread;
+	std::mutex _scriptFinishedThreadMutex;
+	std::thread _scriptFinishedThread;
 
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
@@ -122,6 +124,7 @@ private:
 	void sendResponse(PScriptEngineClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 	void closeClientConnection(PScriptEngineClientData client);
 	PScriptEngineProcess getFreeProcess();
+	void invokeScriptFinished(PScriptEngineProcess process, int32_t id, int32_t exitCode);
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 

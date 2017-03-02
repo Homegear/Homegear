@@ -1,0 +1,11 @@
+#!/bin/sh
+
+#Copy this script to .git/hooks/pre-commit to enable automatic version incrementing
+
+SCRIPTDIR="$( cd "$(dirname $0)" && pwd )"
+
+REVISION_FILE=$SCRIPTDIR/../../../libhomegear-base/revision.txt
+REVISION=$(cat $REVISION_FILE)
+echo $(($REVISION + 1)) > $REVISION_FILE
+cd $SCRIPTDIR/../../../libhomegear-base
+git add revision.txt

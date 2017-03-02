@@ -54,8 +54,6 @@ public:
 		int32_t exitCode = -1;
 	// }}}
 
-	std::function<void(PFlowInfoServer& scriptInfo, int32_t exitCode)> flowFinishedCallback;
-
 	FlowInfoServer() { }
 	virtual ~FlowInfoServer() {}
 protected:

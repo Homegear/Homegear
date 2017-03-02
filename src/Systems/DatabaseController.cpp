@@ -614,6 +614,7 @@ BaseLib::PVariable DatabaseController::setMetadata(uint64_t peerID, std::string&
 #endif
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{dataID});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{metadata});
+		GD::scriptEngineServer->broadcastEvent(peerID, -1, valueKeys, values);
 		GD::rpcClient->broadcastEvent(peerID, -1, serialNumber, valueKeys, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
@@ -803,6 +804,7 @@ BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableID
 #endif
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableID});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{value});
+		GD::scriptEngineServer->broadcastEvent(0, -1, valueKeys, values);
 		GD::rpcClient->broadcastEvent(0, -1, "", valueKeys, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));

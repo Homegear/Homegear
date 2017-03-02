@@ -132,7 +132,6 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 1, 1000)
 FlowsServer::~FlowsServer()
 {
 	if(!_stopServer) stop();
-	GD::bl->threadManager.join(_checkSessionIdThread);
 }
 
 void FlowsServer::collectGarbage()
@@ -870,10 +869,20 @@ BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::s
 
 		send(clientData, data);
 
+		int32_t i = 0;
 		std::unique_lock<std::mutex> waitLock(clientData->waitMutex);
 		while(!clientData->requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]{
-			return ((bool)(*response) && (*response)->arrayValue->size() == 2 && (*response)->arrayValue->at(0)->integerValue == packetId) || clientData->closed || _stopServer;
-		}));
+			return ((bool)(*response) && (*response)->arrayValue && (*response)->arrayValue->size() == 2 && (*response)->arrayValue->at(0)->integerValue == packetId) || clientData->closed || _stopServer;
+		}))
+		{
+			i++;
+			if(i == 60)
+			{
+				_out.printError("Error: Flows client with process ID " + std::to_string(clientData->pid) + " is not responding... Killing it.");
+				kill(clientData->pid, 9);
+				break;
+			}
+		}
 
 		if(!(*response) || (*response)->arrayValue->size() != 2 || (*response)->arrayValue->at(0)->integerValue != packetId)
 		{
@@ -1246,7 +1255,6 @@ void FlowsServer::executeFlow(PFlowInfoServer& flowInfo)
 		{
 			_out.printError("Error: Could not get free process. Not executing flow.");
 			flowInfo->exitCode = -1;
-			if(flowInfo->flowFinishedCallback) flowInfo->flowFinishedCallback(flowInfo, -1);
 			return;
 		}
 

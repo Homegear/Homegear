@@ -80,7 +80,6 @@ void FlowsProcess::invokeFlowFinished(int32_t exitCode)
 			GD::out.printInfo("Info: Flow with id " + std::to_string(i->first) + " finished with exit code " + std::to_string(exitCode));
 			i->second->finished = true;
 			i->second->exitCode = exitCode;
-			if(i->second->flowFinishedCallback) i->second->flowFinishedCallback(i->second, exitCode);
 		}
 	}
 	catch(const std::exception& ex)
@@ -113,7 +112,6 @@ void FlowsProcess::invokeFlowFinished(int32_t id, int32_t exitCode)
 		{
 			flowIterator->second->finished = true;
 			flowIterator->second->exitCode = exitCode;
-			if(flowIterator->second->flowFinishedCallback) flowIterator->second->flowFinishedCallback(flowIterator->second, exitCode);
 		}
 	}
 	catch(const std::exception& ex)
