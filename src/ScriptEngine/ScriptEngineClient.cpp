@@ -390,7 +390,7 @@ void ScriptEngineClient::start()
 				processedBytes = 0;
 				while(processedBytes < bytesRead)
 				{
-					processedBytes += _binaryRpc->process(&buffer[processedBytes], bytesRead - processedBytes);
+					processedBytes += _binaryRpc->process(buffer.data() + processedBytes, bytesRead - processedBytes);
 					if(_binaryRpc->isFinished())
 					{
 #ifdef DEBUGSESOCKET
@@ -406,7 +406,7 @@ void ScriptEngineClient::start()
 							socketOutput(response->arrayValue->at(1)->integerValue, true, false, _binaryRpc->getData());
 						}
 #endif
-						std::shared_ptr<BaseLib::IQueueEntry> queueEntry(new QueueEntry(_binaryRpc->getData(), _binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request));
+						std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(_binaryRpc->getData(), _binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request);
 						enqueue(0, queueEntry);
 						_binaryRpc->reset();
 					}

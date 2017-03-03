@@ -33,6 +33,9 @@
 #include <homegear-base/BaseLib.h>
 #include "php_sapi.h"
 
+// Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
+//#define MANUAL_CLIENT_START
+
 namespace ScriptEngine
 {
 
@@ -1166,7 +1169,11 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess()
 		_out.printInfo("Info: Spawning new script engine process.");
 		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess());
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rse" };
+#ifdef MANUAL_CLIENT_START
+		process->setPid(1);
+#else
 		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
+#endif
 		if(process->getPid() != -1)
 		{
 			{
@@ -1176,7 +1183,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess()
 
 			std::mutex requestMutex;
 			std::unique_lock<std::mutex> requestLock(requestMutex);
-			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(30000), [&]{ return (bool)(process->getClientData()); });
+			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(60000), [&]{ return (bool)(process->getClientData()); });
 
 			if(!process->getClientData())
 			{
@@ -1644,6 +1651,9 @@ BaseLib::PVariable ScriptEngineServer::getAllScripts()
 		try
 		{
 			pid_t pid = parameters->at(0)->integerValue;
+#ifdef MANUAL_CLIENT_START
+			pid = 1;
+#endif
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(pid);
 			if(processIterator == _processes.end())
