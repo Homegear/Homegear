@@ -83,6 +83,8 @@ protected:
 	std::atomic_bool _stopRunProgramThread;
 	std::thread _runProgramThread;
 	pid_t _programPID = -1;
+	std::mutex _scriptInfoMutex;
+	BaseLib::ScriptEngine::PScriptInfo _scriptInfo;
 
 	void init();
 

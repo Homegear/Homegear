@@ -352,70 +352,85 @@ void ScriptEngineClient::start()
 		int32_t processedBytes = 0;
 		while(!_disposing)
 		{
-			timeval timeout;
-			timeout.tv_sec = 0;
-			timeout.tv_usec = 100000;
-			fd_set readFileDescriptor;
-			FD_ZERO(&readFileDescriptor);
-			{
-				auto fileDescriptorGuard = GD::bl->fileDescriptorManager.getLock();
-				fileDescriptorGuard.lock();
-				FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
-			}
-
-			result = select(_fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
-			if(result == 0)
-			{
-				if(GD::bl->hf.getTime() - _lastGargabeCollection > 60000) collectGarbage();
-				continue;
-			}
-			else if(result == -1)
-			{
-				if(errno == EINTR) continue;
-				_out.printMessage("Connection to script server closed (1). Exiting.");
-				return;
-			}
-
-			bytesRead = read(_fileDescriptor->descriptor, &buffer[0], 1024);
-			if(bytesRead <= 0) //read returns 0, when connection is disrupted.
-			{
-				_out.printMessage("Connection to script server closed (2). Exiting.");
-				return;
-			}
-
-			if(bytesRead > (signed)buffer.size()) bytesRead = buffer.size();
-
 			try
 			{
-				processedBytes = 0;
-				while(processedBytes < bytesRead)
+				timeval timeout;
+				timeout.tv_sec = 0;
+				timeout.tv_usec = 100000;
+				fd_set readFileDescriptor;
+				FD_ZERO(&readFileDescriptor);
 				{
-					processedBytes += _binaryRpc->process(buffer.data() + processedBytes, bytesRead - processedBytes);
-					if(_binaryRpc->isFinished())
+					auto fileDescriptorGuard = GD::bl->fileDescriptorManager.getLock();
+					fileDescriptorGuard.lock();
+					FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
+				}
+
+				result = select(_fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
+				if(result == 0)
+				{
+					if(GD::bl->hf.getTime() - _lastGargabeCollection > 60000) collectGarbage();
+					continue;
+				}
+				else if(result == -1)
+				{
+					if(errno == EINTR) continue;
+					_out.printMessage("Connection to script server closed (1). Exiting.");
+					return;
+				}
+
+				bytesRead = read(_fileDescriptor->descriptor, buffer.data(), buffer.size());
+				if(bytesRead <= 0) //read returns 0, when connection is disrupted.
+				{
+					_out.printMessage("Connection to script server closed (2). Exiting.");
+					return;
+				}
+
+				if(bytesRead > (signed)buffer.size()) bytesRead = buffer.size();
+
+				try
+				{
+					processedBytes = 0;
+					while(processedBytes < bytesRead)
 					{
-#ifdef DEBUGSESOCKET
-						if(_binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
+						processedBytes += _binaryRpc->process(buffer.data() + processedBytes, bytesRead - processedBytes);
+						if(_binaryRpc->isFinished())
 						{
-							std::string methodName;
-							BaseLib::PArray request = _rpcDecoder->decodeRequest(_binaryRpc->getData(), methodName);
-							socketOutput(request->at(0)->integerValue, false, true, _binaryRpc->getData());
+	#ifdef DEBUGSESOCKET
+							if(_binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
+							{
+								std::string methodName;
+								BaseLib::PArray request = _rpcDecoder->decodeRequest(_binaryRpc->getData(), methodName);
+								socketOutput(request->at(0)->integerValue, false, true, _binaryRpc->getData());
+							}
+							else
+							{
+								BaseLib::PVariable response = _rpcDecoder->decodeResponse(_binaryRpc->getData());
+								socketOutput(response->arrayValue->at(1)->integerValue, true, false, _binaryRpc->getData());
+							}
+	#endif
+							std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(_binaryRpc->getData(), _binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request);
+							enqueue(0, queueEntry);
+							_binaryRpc->reset();
 						}
-						else
-						{
-							BaseLib::PVariable response = _rpcDecoder->decodeResponse(_binaryRpc->getData());
-							socketOutput(response->arrayValue->at(1)->integerValue, true, false, _binaryRpc->getData());
-						}
-#endif
-						std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(_binaryRpc->getData(), _binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request);
-						enqueue(0, queueEntry);
-						_binaryRpc->reset();
 					}
 				}
+				catch(BaseLib::Rpc::BinaryRpcException& ex)
+				{
+					_out.printError("Error processing packet: " + ex.what());
+					_binaryRpc->reset();
+				}
 			}
-			catch(BaseLib::Rpc::BinaryRpcException& ex)
+			catch(const std::exception& ex)
 			{
-				_out.printError("Error processing packet: " + ex.what());
-				_binaryRpc->reset();
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 		}
 		buffer.clear();
