@@ -105,4 +105,9 @@ AS_IF([test "x$with_i2c" != "xno"], [
 	AC_DEFINE(I2CSUPPORT, [], [Enables compilation of all I2C interfaces and I2C support in PHP])
 	])
 
+AC_ARG_ENABLE(sesocketdebug, AS_HELP_STRING([--enable-sesocketdebug], [Enable logging of script engine communication to PCAP file, default: no]), [sesocketdebug=true], [sesocketdebug=false])
+AS_IF([test "x$sesocketdebug" = "xtrue"], [
+        AC_DEFINE(DEBUGSESOCKET, [], [Enable debugging of scriptengine communication])
+        ])
+
 AC_OUTPUT(Makefile src/Makefile homegear-miscellaneous/src/Makefile)

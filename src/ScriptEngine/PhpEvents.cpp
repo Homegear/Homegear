@@ -36,6 +36,7 @@ std::map<int32_t, std::shared_ptr<PhpEvents>> PhpEvents::eventsMap;
 
 PhpEvents::PhpEvents(std::string& token, std::function<void(std::string& output)>& outputCallback, std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)>& rpcCallback)
 {
+	_stopProcessing = false;
 	_token = token;
 	_outputCallback = outputCallback;
 	_rpcCallback = rpcCallback;
@@ -48,31 +49,24 @@ PhpEvents::~PhpEvents()
 
 void PhpEvents::stop()
 {
-	_processingEntryAvailable = true;
-	_processingConditionVariable.notify_one();
+	if(_stopProcessing) return;
+	_stopProcessing = true;
+	_processingConditionVariable.notify_all();
 }
 
 bool PhpEvents::enqueue(std::shared_ptr<EventData>& entry)
 {
 	try
 	{
-		_bufferMutex.lock();
-		int32_t tempHead = _bufferHead + 1;
-		if(tempHead >= _bufferSize) tempHead = 0;
-		if(tempHead == _bufferTail)
-		{
-			_bufferMutex.unlock();
-			return false;
-		}
+		if(!entry || _stopProcessing) return false;
+		std::unique_lock<std::mutex> lock(_queueMutex);
+		if(_stopProcessing) return true;
 
-		_buffer[_bufferHead] = entry;
-		_bufferHead++;
-		if(_bufferHead >= _bufferSize)
-		{
-			_bufferHead = 0;
-		}
-		_processingEntryAvailable = true;
-		_bufferMutex.unlock();
+		if(_bufferCount >= _bufferSize) return false;
+
+		_buffer[_bufferTail] = entry;
+		_bufferTail = (_bufferTail + 1) % _bufferSize;
+        ++_bufferCount;
 
 		_processingConditionVariable.notify_one();
 		return true;
@@ -80,17 +74,14 @@ bool PhpEvents::enqueue(std::shared_ptr<EventData>& entry)
 	catch(const std::exception& ex)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		_bufferMutex.unlock();
 	}
 	catch(BaseLib::Exception& ex)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		_bufferMutex.unlock();
 	}
 	catch(...)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		_bufferMutex.unlock();
 	}
 	return false;
 }
@@ -98,31 +89,20 @@ bool PhpEvents::enqueue(std::shared_ptr<EventData>& entry)
 std::shared_ptr<PhpEvents::EventData> PhpEvents::poll(int32_t timeout)
 {
 	std::shared_ptr<EventData> eventData;
-	std::unique_lock<std::mutex> lock(_processingThreadMutex);
+	if(_stopProcessing) return eventData;
 	try
 	{
 		{
-			BaseLib::DisposableLockGuard bufferGuard(_bufferMutex);
-			if(_bufferHead == _bufferTail)
-			{
-				bufferGuard.dispose();
-				if(timeout > 0)	_processingConditionVariable.wait_for(lock, std::chrono::milliseconds(timeout), [&]{ return _processingEntryAvailable; });
-				else _processingConditionVariable.wait(lock, [&]{ return _processingEntryAvailable; });
-			}
-		}
-		if(GD::bl->shuttingDown)
-		{
-			lock.unlock();
-			return eventData;
-		}
+			std::unique_lock<std::mutex> lock(_queueMutex);
 
-		_bufferMutex.lock();
-		eventData = _buffer[_bufferTail];
-		_buffer[_bufferTail].reset();
-		_bufferTail++;
-		if(_bufferTail >= _bufferSize) _bufferTail = 0;
-		if(_bufferHead == _bufferTail) _processingEntryAvailable = false;
-		_bufferMutex.unlock();
+			_processingConditionVariable.wait(lock, [&]{ return _bufferCount > 0 || _stopProcessing; });
+			if(_stopProcessing) return eventData;
+
+			eventData = _buffer[_bufferHead];
+			_buffer[_bufferHead].reset();
+			_bufferHead = (_bufferHead + 1) % _bufferSize;
+			--_bufferCount;
+		}
 	}
 	catch(const std::exception& ex)
 	{
@@ -136,7 +116,6 @@ std::shared_ptr<PhpEvents::EventData> PhpEvents::poll(int32_t timeout)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	lock.unlock();
 	return eventData;
 }
 

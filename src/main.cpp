@@ -1016,7 +1016,7 @@ void startUp()
 			if(!GD::bl->io.createDirectory(GD::bl->settings.tempPath() + "php", S_IRWXU | S_IRWXG))
 			{
 				GD::out.printCritical("Critical: Cannot create temp directory \"" + GD::bl->settings.tempPath() + "php");
-				exit(1);
+				exitHomegear(1);
 			}
 		}
 		GD::out.printInfo("Starting script engine server...");
@@ -1024,7 +1024,7 @@ void startUp()
 		if(!GD::scriptEngineServer->start())
 		{
 			GD::out.printCritical("Critical: Cannot start script engine server. Exiting Homegear.");
-			exit(1);
+			exitHomegear(1);
 		}
 
         GD::out.printInfo("Initializing licensing controller...");

@@ -65,13 +65,13 @@ private:
 	std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)> _rpcCallback;
 	std::string _token;
 
+	std::atomic_bool _stopProcessing;
 	static const int32_t _bufferSize = 100;
-	std::mutex _bufferMutex;
+	std::mutex _queueMutex;
 	int32_t _bufferHead = 0;
 	int32_t _bufferTail = 0;
+	int32_t _bufferCount = 0;
 	std::shared_ptr<EventData> _buffer[_bufferSize];
-	std::mutex _processingThreadMutex;
-	bool _processingEntryAvailable = false;
 	std::condition_variable _processingConditionVariable;
 	std::mutex _peersMutex;
 	std::set<uint64_t> _peers;

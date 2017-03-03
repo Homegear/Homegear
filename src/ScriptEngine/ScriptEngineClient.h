@@ -33,6 +33,7 @@
 
 #include "php_config_fixes.h"
 #include "../RPC/RPCMethod.h"
+#include "../../config.h"
 #include <homegear-base/BaseLib.h>
 
 #include <thread>
@@ -92,6 +93,9 @@ private:
 	std::mutex _disposeMutex;
 	bool _disposing = false;
 	BaseLib::Output _out;
+#ifdef DEBUGSESOCKET
+	std::ofstream _socketOutput;
+#endif
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
 	int64_t _lastGargabeCollection = 0;
@@ -134,6 +138,11 @@ private:
 	void scriptThread(int32_t id, PScriptInfo scriptInfo, bool sendOutput);
 	void runScript(int32_t id, PScriptInfo scriptInfo);
 	BaseLib::PVariable send(std::vector<char>& data);
+
+#ifdef DEBUGSESOCKET
+	std::mutex _socketOutputMutex;
+	void socketOutput(int32_t packetId, bool clientRequest, bool request, std::vector<char> data);
+#endif
 
 	// {{{ RPC methods
 		/**

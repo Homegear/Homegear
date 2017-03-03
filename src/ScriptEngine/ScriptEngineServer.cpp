@@ -33,6 +33,9 @@
 #include <homegear-base/BaseLib.h>
 #include "php_sapi.h"
 
+// Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
+//#define MANUAL_CLIENT_START
+
 namespace ScriptEngine
 {
 
@@ -40,6 +43,13 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 1, 1000)
 {
 	_out.init(GD::bl.get());
 	_out.setPrefix("Script Engine Server: ");
+
+#ifdef DEBUGSESOCKET
+	BaseLib::Io::deleteFile(GD::bl->settings.logfilePath() + "homegear-socket.pcap");
+	_socketOutput.open(GD::bl->settings.logfilePath() + "homegear-socket.pcap", std::ios::app | std::ios::binary);
+	std::vector<uint8_t> buffer{ 0xa1, 0xb2, 0xc3, 0xd4, 0, 2, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0x7F, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0xe4 };
+	_socketOutput.write((char*)buffer.data(), buffer.size());
+#endif
 
 	_shuttingDown = false;
 	_stopServer = false;
@@ -169,7 +179,153 @@ ScriptEngineServer::~ScriptEngineServer()
 	GD::bl->threadManager.join(_checkSessionIdThread);
 	GD::bl->threadManager.join(_scriptFinishedThread);
 	php_homegear_shutdown();
+#ifdef DEBUGSESOCKET
+	_socketOutput.close();
+#endif
 }
+
+#ifdef DEBUGSESOCKET
+void ScriptEngineServer::socketOutput(int32_t packetId, PScriptEngineClientData& clientData, bool serverRequest, bool request, std::vector<char> data)
+{
+	try
+	{
+		int64_t time = BaseLib::HelperFunctions::getTimeMicroseconds();
+		int32_t timeSeconds = time / 1000000;
+		int32_t timeMicroseconds = time % 1000000;
+
+		uint32_t length = 20 + 8 + data.size();
+
+		std::vector<uint8_t> buffer;
+		buffer.reserve(length);
+		buffer.push_back((uint8_t)(timeSeconds >> 24));
+		buffer.push_back((uint8_t)(timeSeconds >> 16));
+		buffer.push_back((uint8_t)(timeSeconds >> 8));
+		buffer.push_back((uint8_t)timeSeconds);
+
+		buffer.push_back((uint8_t)(timeMicroseconds >> 24));
+		buffer.push_back((uint8_t)(timeMicroseconds >> 16));
+		buffer.push_back((uint8_t)(timeMicroseconds >> 8));
+		buffer.push_back((uint8_t)timeMicroseconds);
+
+		buffer.push_back((uint8_t)(length >> 24)); //incl_len
+		buffer.push_back((uint8_t)(length >> 16));
+		buffer.push_back((uint8_t)(length >> 8));
+		buffer.push_back((uint8_t)length);
+
+		buffer.push_back((uint8_t)(length >> 24)); //orig_len
+		buffer.push_back((uint8_t)(length >> 16));
+		buffer.push_back((uint8_t)(length >> 8));
+		buffer.push_back((uint8_t)length);
+
+		//{{{ IPv4 header
+			buffer.push_back(0x45); //Version 4 (0100....); Header length 20 (....0101)
+			buffer.push_back(0); //Differentiated Services Field
+
+			buffer.push_back((uint8_t)(length >> 8)); //Length
+			buffer.push_back((uint8_t)length);
+
+			buffer.push_back((uint8_t)((packetId % 65536) >> 8)); //Identification
+			buffer.push_back((uint8_t)(packetId % 65536));
+
+			buffer.push_back(0); //Flags: 0 (000.....); Fragment offset 0 (...00000 00000000)
+			buffer.push_back(0);
+
+			buffer.push_back(0x80); //TTL
+
+			buffer.push_back(17); //Protocol UDP
+
+			buffer.push_back(0); //Header checksum
+			buffer.push_back(0);
+
+			if(request)
+			{
+				if(serverRequest)
+				{
+					buffer.push_back(1); //Source
+					buffer.push_back(1);
+					buffer.push_back(1);
+					buffer.push_back(1);
+
+					buffer.push_back(0x80 | (uint8_t)(clientData->pid >> 24)); //Destination
+					buffer.push_back((uint8_t)(clientData->pid >> 16));
+					buffer.push_back((uint8_t)(clientData->pid >> 8));
+					buffer.push_back((uint8_t)clientData->pid);
+				}
+				else
+				{
+					buffer.push_back(0x80 | (uint8_t)(clientData->pid >> 24)); //Source
+					buffer.push_back((uint8_t)(clientData->pid >> 16));
+					buffer.push_back((uint8_t)(clientData->pid >> 8));
+					buffer.push_back((uint8_t)clientData->pid);
+
+					buffer.push_back(2); //Destination
+					buffer.push_back(2);
+					buffer.push_back(2);
+					buffer.push_back(2);
+				}
+			}
+			else
+			{
+				if(serverRequest)
+				{
+					buffer.push_back(0x80 | (uint8_t)(clientData->pid >> 24)); //Source
+					buffer.push_back((uint8_t)(clientData->pid >> 16));
+					buffer.push_back((uint8_t)(clientData->pid >> 8));
+					buffer.push_back((uint8_t)clientData->pid);
+
+					buffer.push_back(1); //Destination
+					buffer.push_back(1);
+					buffer.push_back(1);
+					buffer.push_back(1);
+				}
+				else
+				{
+					buffer.push_back(2); //Source
+					buffer.push_back(2);
+					buffer.push_back(2);
+					buffer.push_back(2);
+
+					buffer.push_back(0x80 | (uint8_t)(clientData->pid >> 24)); //Destination
+					buffer.push_back((uint8_t)(clientData->pid >> 16));
+					buffer.push_back((uint8_t)(clientData->pid >> 8));
+					buffer.push_back((uint8_t)clientData->pid);
+				}
+			}
+		// }}}
+		// {{{ UDP header
+			buffer.push_back(0); //Source port
+			buffer.push_back(1);
+
+			buffer.push_back((uint8_t)(clientData->pid >> 8)); //Destination port
+			buffer.push_back((uint8_t)clientData->pid);
+
+			length -= 20;
+			buffer.push_back((uint8_t)(length >> 8)); //Length
+			buffer.push_back((uint8_t)length);
+
+			buffer.push_back(0); //Checksum
+			buffer.push_back(0);
+		// }}}
+
+		buffer.insert(buffer.end(), data.begin(), data.end());
+
+		std::lock_guard<std::mutex> socketOutputGuard(_socketOutputMutex);
+		_socketOutput.write((char*)buffer.data(), buffer.size());
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+#endif
 
 void ScriptEngineServer::collectGarbage()
 {
@@ -798,6 +954,9 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
 		}
 		response->reset(new BaseLib::Variable());
 
+#ifdef DEBUGSESOCKET
+		socketOutput(packetId, clientData, true, true, data);
+#endif
 		send(clientData, data);
 
 		int32_t i = 0;
@@ -850,6 +1009,9 @@ void ScriptEngineServer::sendResponse(PScriptEngineClientData& clientData, BaseL
 		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{ scriptId, packetId, variable })));
 		std::vector<char> data;
 		_rpcEncoder->encodeResponse(array, data);
+#ifdef DEBUGSESOCKET
+		socketOutput(packetId->integerValue, clientData, false, false, data);
+#endif
 		send(clientData, data);
 	}
 	catch(const std::exception& ex)
@@ -1007,7 +1169,11 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess()
 		_out.printInfo("Info: Spawning new script engine process.");
 		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess());
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rse" };
+#ifdef MANUAL_CLIENT_START
+		process->setPid(1);
+#else
 		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
+#endif
 		if(process->getPid() != -1)
 		{
 			{
@@ -1017,7 +1183,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess()
 
 			std::mutex requestMutex;
 			std::unique_lock<std::mutex> requestLock(requestMutex);
-			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(30000), [&]{ return (bool)(process->getClientData()); });
+			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(60000), [&]{ return (bool)(process->getClientData()); });
 
 			if(!process->getClientData())
 			{
@@ -1051,7 +1217,7 @@ void ScriptEngineServer::readClient(PScriptEngineClientData& clientData)
 	{
 		int32_t processedBytes = 0;
 		int32_t bytesRead = 0;
-		bytesRead = read(clientData->fileDescriptor->descriptor, &(clientData->buffer[0]), clientData->buffer.size());
+		bytesRead = read(clientData->fileDescriptor->descriptor, clientData->buffer.data(), clientData->buffer.size());
 		if(bytesRead <= 0) //read returns 0, when connection is disrupted.
 		{
 			_out.printInfo("Info: Connection to script server's client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
@@ -1069,6 +1235,19 @@ void ScriptEngineServer::readClient(PScriptEngineClientData& clientData)
 				processedBytes += clientData->binaryRpc->process(&(clientData->buffer[processedBytes]), bytesRead - processedBytes);
 				if(clientData->binaryRpc->isFinished())
 				{
+#ifdef DEBUGSESOCKET
+					if(clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
+					{
+						std::string methodName;
+						BaseLib::PArray request = _rpcDecoder->decodeRequest(clientData->binaryRpc->getData(), methodName);
+						socketOutput(request->at(1)->integerValue, clientData, false, true, clientData->binaryRpc->getData());
+					}
+					else
+					{
+						BaseLib::PVariable response = _rpcDecoder->decodeResponse(clientData->binaryRpc->getData());
+						socketOutput(response->arrayValue->at(0)->integerValue, clientData, true, false, clientData->binaryRpc->getData());
+					}
+#endif
 					std::shared_ptr<BaseLib::IQueueEntry> queueEntry(new QueueEntry(clientData, clientData->binaryRpc->getData(), clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request));
 					enqueue(0, queueEntry);
 					clientData->binaryRpc->reset();
@@ -1183,6 +1362,7 @@ bool ScriptEngineServer::checkSessionId(const std::string& sessionId)
 		bool result = false;
 		std::lock_guard<std::mutex> checkSessionIdGuard(_checkSessionIdMutex);
 		GD::bl->threadManager.start(_checkSessionIdThread, false, &ScriptEngineServer::checkSessionIdThread, this, sessionId, &result);
+		GD::bl->threadManager.join(_checkSessionIdThread);
 
 		return result;
 	}
@@ -1210,7 +1390,7 @@ void ScriptEngineServer::checkSessionIdThread(std::string sessionId, bool* resul
 	if(!globals) return;
 	try
 	{
-		if(!tsrm_get_ls_cache() || !((sapi_globals_struct *) (*((void ***) tsrm_get_ls_cache()))[((sapi_globals_id)-1)]))
+		if(!tsrm_get_ls_cache() || !(*((void ***)tsrm_get_ls_cache()))[sapi_globals_id - 1] || !(*((void ***)tsrm_get_ls_cache()))[core_globals_id - 1])
 		{
 			GD::out.printCritical("Critical: Error in PHP: No thread safe resource exists.");
 			return;
@@ -1224,7 +1404,7 @@ void ScriptEngineServer::checkSessionIdThread(std::string sessionId, bool* resul
 		SG(request_info).proto_num = 1001;
 		globals->http.getHeader().cookie = "PHPSESSID=" + sessionId;
 
-		if (php_request_startup(TSRMLS_C) == FAILURE) {
+		if (php_request_startup() == FAILURE) {
 			GD::bl->out.printError("Error calling php_request_startup...");
 			ts_free_thread();
 			return;
@@ -1311,6 +1491,26 @@ void ScriptEngineServer::invokeScriptFinished(PScriptEngineProcess process, int3
 	}
 }
 
+void ScriptEngineServer::invokeScriptFinishedEarly(PScriptInfo scriptInfo, int32_t exitCode)
+{
+	try
+	{
+		if(scriptInfo->scriptFinishedCallback) scriptInfo->scriptFinishedCallback(scriptInfo, exitCode);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 {
 	try
@@ -1322,7 +1522,12 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 			_out.printError("Error: Could not get free process. Not executing script.");
 			if(scriptInfo->returnOutput) scriptInfo->output.append("Error: Could not get free process. Not executing script.\n");
 			scriptInfo->exitCode = -1;
-			if(scriptInfo->scriptFinishedCallback) scriptInfo->scriptFinishedCallback(scriptInfo, -1);
+
+			{
+				std::lock_guard<std::mutex> scriptFinishedGuard(_scriptFinishedThreadMutex);
+				GD::bl->threadManager.start(_scriptFinishedThread, true, &ScriptEngineServer::invokeScriptFinishedEarly, this, scriptInfo, -1);
+			}
+
 			return;
 		}
 
@@ -1446,6 +1651,9 @@ BaseLib::PVariable ScriptEngineServer::getAllScripts()
 		try
 		{
 			pid_t pid = parameters->at(0)->integerValue;
+#ifdef MANUAL_CLIENT_START
+			pid = 1;
+#endif
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(pid);
 			if(processIterator == _processes.end())
