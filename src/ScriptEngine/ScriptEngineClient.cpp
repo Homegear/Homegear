@@ -43,6 +43,8 @@
 namespace ScriptEngine
 {
 
+std::mutex ScriptEngineClient::_resourceMutex;
+
 ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 1, 1000)
 {
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
@@ -106,9 +108,24 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 		if(broadcastShutdown) broadcastEvent(eventData);
 
 		int32_t i = 0;
-		while(_scriptThreads.size() > 0 && i < 30)
+		while(_scriptThreads.size() > 0 && i < 31)
 		{
-			GD::out.printInfo("Info: Waiting for script threads to finish (1).");
+			if(i > 0)
+			{
+				GD::out.printInfo("Info: Waiting for script threads to finish (1). Scripts still running: " + std::to_string(_scriptThreads.size()));
+
+				if(i % 10 == 0)
+				{
+					std::string ids = "IDs of running scripts: ";
+					std::lock_guard<std::mutex> threadGuard(_scriptThreadMutex);
+					for(std::map<int32_t, std::pair<std::thread, bool>>::iterator i = _scriptThreads.begin(); i != _scriptThreads.end(); ++i)
+					{
+						ids.append(std::to_string(i->first) + " ");
+					}
+					GD::out.printInfo(ids);
+				}
+			}
+
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			collectGarbage();
 			i++;
@@ -374,6 +391,7 @@ void ScriptEngineClient::start()
 				else if(result == -1)
 				{
 					if(errno == EINTR) continue;
+					GD::bl->fileDescriptorManager.close(_fileDescriptor);
 					_out.printMessage("Connection to script server closed (1). Exiting.");
 					return;
 				}
@@ -381,6 +399,7 @@ void ScriptEngineClient::start()
 				bytesRead = read(_fileDescriptor->descriptor, buffer.data(), buffer.size());
 				if(bytesRead <= 0) //read returns 0, when connection is disrupted.
 				{
+					GD::bl->fileDescriptorManager.close(_fileDescriptor);
 					_out.printMessage("Connection to script server closed (2). Exiting.");
 					return;
 				}
@@ -564,10 +583,21 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 				return;
 			}
 			int32_t scriptId = response->arrayValue->at(0)->integerValue;
+			int32_t packetId = response->arrayValue->at(1)->integerValue;
+
 			{
 				std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-				BaseLib::PPVariable element = _rpcResponses[scriptId][response->arrayValue->at(1)->integerValue];
-				if(element) *element = response;
+				auto responseIterator = _rpcResponses[scriptId].find(packetId);
+				if(responseIterator != _rpcResponses[scriptId].end())
+				{
+					PScriptEngineResponse element = responseIterator->second;
+					if(element)
+					{
+						element->response = response;
+						element->packetId = packetId;
+						element->finished = true;
+					}
+				}
 			}
 			if(scriptId != 0)
 			{
@@ -711,38 +741,47 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string
 		std::vector<char> data;
 		_rpcEncoder->encodeRequest(methodName, array, data);
 
-		BaseLib::PPVariable response;
+		PScriptEngineResponse response;
 		{
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			BaseLib::PPVariable& element = _rpcResponses[scriptId][packetId];
-			element.reset(new BaseLib::PVariable());
-			response = element;
+			auto result = _rpcResponses[scriptId].emplace(packetId, std::make_shared<ScriptEngineResponse>());
+			if(result.second) response = result.first->second;
 		}
-		response->reset(new BaseLib::Variable());
+		if(!response)
+		{
+			_out.printCritical("Critical: Could not insert response struct into map.");
+			return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		}
 
 #ifdef DEBUGSESOCKET
 		socketOutput(packetId, true, true, data);
 #endif
 		BaseLib::PVariable result = send(data);
-		if(result->errorStruct) return result;
+		if(result->errorStruct)
+		{
+			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+			_rpcResponses[scriptId].erase(packetId);
+			return result;
+		}
 
 		std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
 		while(!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]{
-			return ((bool)(*response) && (*response)->arrayValue && (*response)->arrayValue->size() == 3 && (*response)->arrayValue->at(1)->integerValue == packetId) || _disposing;
+			return response->finished || _disposing;
 		}));
 
-		if(!(*response) || (*response)->arrayValue->size() != 3 || (*response)->arrayValue->at(1)->integerValue != packetId)
+		if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
 		{
 			_out.printError("Error: No response received to RPC request. Method: " + methodName);
-			*response = BaseLib::Variable::createError(-1, "No response received.");
+			result = BaseLib::Variable::createError(-1, "No response received.");
 		}
+		else result = response->response->arrayValue->at(2);
 
 		{
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
 			_rpcResponses[scriptId].erase(packetId);
 		}
 
-		return (*response)->arrayValue->at(2);
+		return result;
 	}
 	catch(const std::exception& ex)
     {
@@ -773,38 +812,47 @@ BaseLib::PVariable ScriptEngineClient::sendGlobalRequest(std::string methodName,
 		std::vector<char> data;
 		_rpcEncoder->encodeRequest(methodName, array, data);
 
-		BaseLib::PPVariable response = _rpcResponses[0][packetId];
+		PScriptEngineResponse response;
 		{
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			BaseLib::PPVariable* element = &_rpcResponses[0][packetId];
-			element->reset(new BaseLib::PVariable());
-			response = *element;
+			auto result = _rpcResponses[0].emplace(packetId, std::make_shared<ScriptEngineResponse>());
+			if(result.second) response = result.first->second;
 		}
-		response->reset(new BaseLib::Variable());
+		if(!response)
+		{
+			_out.printError("Critical: Could not insert response struct into map.");
+			return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		}
 
 #ifdef DEBUGSESOCKET
 		socketOutput(packetId, true, true, data);
 #endif
 		BaseLib::PVariable result = send(data);
-		if(result->errorStruct) return result;
+		if(result->errorStruct)
+		{
+			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+			_rpcResponses[0].erase(packetId);
+			return result;
+		}
 
 		std::unique_lock<std::mutex> waitLock(_waitMutex);
 		while(!_requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]{
-			return ((bool)(*response) && (*response)->arrayValue->size() == 3 && (*response)->arrayValue->at(1)->integerValue == packetId) || _disposing;
+			return response->finished || _disposing;
 		}));
 
-		if(!(*response) || (*response)->arrayValue->size() != 3 || (*response)->arrayValue->at(1)->integerValue != packetId)
+		if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
 		{
 			_out.printError("Error: No response received to RPC request. Method: " + methodName);
-			*response = BaseLib::Variable::createError(-1, "No response received.");
+			result = BaseLib::Variable::createError(-1, "No response received.");
 		}
+		else result = response->response->arrayValue->at(2);
 
 		{
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
 			_rpcResponses[0].erase(packetId);
 		}
 
-		return (*response)->arrayValue->at(2);
+		return result;
 	}
 	catch(const std::exception& ex)
     {
@@ -930,155 +978,159 @@ ScriptEngineClient::ScriptGuard::~ScriptGuard()
 		PhpEvents::eventsMap.erase(_scriptId);
 	}
 
-	if(tsrm_get_ls_cache() && (*((void ***)tsrm_get_ls_cache()))[sapi_globals_id - 1])
 	{
-		SG(server_context) = nullptr; //Pointer is invalid - cleaned up already.
-		if(SG(request_info).path_translated)
+		std::lock_guard<std::mutex> resourceGuard(_resourceMutex);
+		if(tsrm_get_ls_cache())
 		{
-			efree(SG(request_info).path_translated);
-			SG(request_info).path_translated = nullptr;
-		}
-		if(SG(request_info).query_string)
-		{
-			efree(SG(request_info).query_string);
-			SG(request_info).query_string = nullptr;
-		}
-		if(SG(request_info).request_uri)
-		{
-			efree(SG(request_info).request_uri);
-			SG(request_info).request_uri = nullptr;
-		}
-		if(SG(request_info).argv)
-		{
-			free(SG(request_info).argv);
-			SG(request_info).argv = nullptr;
-		}
-		SG(request_info).argc = 0;
+			SG(server_context) = nullptr; //Pointer is invalid - cleaned up already.
+			if(SG(request_info).path_translated)
+			{
+				efree(SG(request_info).path_translated);
+				SG(request_info).path_translated = nullptr;
+			}
+			if(SG(request_info).query_string)
+			{
+				efree(SG(request_info).query_string);
+				SG(request_info).query_string = nullptr;
+			}
+			if(SG(request_info).request_uri)
+			{
+				efree(SG(request_info).request_uri);
+				SG(request_info).request_uri = nullptr;
+			}
+			if(SG(request_info).argv)
+			{
+				free(SG(request_info).argv);
+				SG(request_info).argv = nullptr;
+			}
+			SG(request_info).argc = 0;
 
-		zend_homegear_globals* globals = php_homegear_get_globals();
-		if(globals && globals->executionStarted)
-		{
-			php_request_shutdown(NULL);
+			zend_homegear_globals* globals = php_homegear_get_globals();
+			if(globals && globals->executionStarted)
+			{
+				php_request_shutdown(NULL);
 
-			ts_free_thread();
+				ts_free_thread();
+			}
 		}
 	}
-	_client->sendScriptFinished(_scriptInfo->exitCode);
+	if(!GD::bl->shuttingDown) _client->sendScriptFinished(_scriptInfo->exitCode);
 	if(_scriptInfo->peerId > 0) GD::out.printInfo("Info: PHP script of peer " + std::to_string(_scriptInfo->peerId) + " exited with code " + std::to_string(_scriptInfo->exitCode) + ".");
-	else GD::out.printInfo("Info: Script " + std::to_string(_scriptId) + " exited with code " + std::to_string(_scriptInfo->exitCode) + ".");
+	else GD::out.printInfo("Info: Script " + std::to_string(_scriptInfo->id) + " exited with code " + std::to_string(_scriptInfo->exitCode) + ".");
 	_client->setThreadNotRunning(_scriptId);
 }
 
 void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 {
-	ts_resource_ex(0, NULL); //Replaces TSRMLS_FETCH()
-	BaseLib::Rpc::PServerInfo serverInfo(new BaseLib::Rpc::ServerInfo::Info());
-
 	try
 	{
+		BaseLib::Rpc::PServerInfo serverInfo(new BaseLib::Rpc::ServerInfo::Info());
 		zend_file_handle zendHandle;
-		ScriptInfo::ScriptType type = scriptInfo->getType();
-		if(!scriptInfo->script.empty())
-		{
-			zendHandle.type = ZEND_HANDLE_MAPPED;
-			zendHandle.handle.fp = nullptr;
-			zendHandle.handle.stream.handle = nullptr;
-			zendHandle.handle.stream.closer = nullptr;
-			zendHandle.handle.stream.mmap.buf = (char*)scriptInfo->script.c_str(); //String is not modified
-			zendHandle.handle.stream.mmap.len = scriptInfo->script.size();
-			zendHandle.filename = scriptInfo->fullPath.c_str();
-			zendHandle.opened_path = nullptr;
-			zendHandle.free_filename = 0;
-		}
-		else
-		{
-			zendHandle.type = ZEND_HANDLE_FILENAME;
-			zendHandle.filename = scriptInfo->fullPath.c_str();
-			zendHandle.opened_path = NULL;
-			zendHandle.free_filename = 0;
-		}
 
-		zend_homegear_globals* globals = php_homegear_get_globals();
-		if(!globals) return;
+		{
+			std::lock_guard<std::mutex> resourceGuard(_resourceMutex);
+			ts_resource(0); //Replaces TSRMLS_FETCH()
 
-		if(type == ScriptInfo::ScriptType::web)
-		{
-			globals->webRequest = true;
-			globals->commandLine = false;
-			globals->cookiesParsed = !scriptInfo->script.empty();
-			globals->http = scriptInfo->http;
-			serverInfo = scriptInfo->serverInfo;
-		}
-		else
-		{
-			globals->commandLine = true;
-			globals->cookiesParsed = true;
-			globals->peerId = scriptInfo->peerId;
-		}
-
-		if(!tsrm_get_ls_cache() || !(*((void ***)tsrm_get_ls_cache()))[sapi_globals_id - 1] || !(*((void ***)tsrm_get_ls_cache()))[core_globals_id - 1])
-		{
-			GD::out.printCritical("Critical: Error in PHP: No thread safe resource exists.");
-			return;
-		}
-
-		if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)
-		{
-			BaseLib::Base64::encode(BaseLib::HelperFunctions::getRandomBytes(16), globals->token);
-			std::shared_ptr<PhpEvents> phpEvents(new PhpEvents(globals->token, globals->outputCallback, globals->rpcCallback));
-			std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
-			PhpEvents::eventsMap.insert(std::pair<int32_t, std::shared_ptr<PhpEvents>>(id, phpEvents));
-		}
-
-		SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
-		SG(default_mimetype) = nullptr;
-		SG(default_charset) = nullptr;
-		if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)
-		{
-			PG(register_argc_argv) = 1;
-			PG(implicit_flush) = 1;
-			PG(html_errors) = 0;
-			SG(options) |= SAPI_OPTION_NO_CHDIR;
-			SG(headers_sent) = 1;
-			SG(request_info).no_headers = 1;
-			SG(request_info).path_translated = estrndup(scriptInfo->fullPath.c_str(), scriptInfo->fullPath.size());
-		}
-		else if(type == ScriptInfo::ScriptType::web)
-		{
-			SG(sapi_headers).http_response_code = 200;
-			SG(request_info).content_length = globals->http.getHeader().contentLength;
-			if(!globals->http.getHeader().contentTypeFull.empty()) SG(request_info).content_type = globals->http.getHeader().contentTypeFull.c_str();
-			SG(request_info).request_method = globals->http.getHeader().method.c_str();
-			SG(request_info).proto_num = globals->http.getHeader().protocol == BaseLib::Http::Protocol::http10 ? 1000 : 1001;
-			std::string uri = globals->http.getHeader().path + globals->http.getHeader().pathInfo;
-			if(!globals->http.getHeader().args.empty()) uri.append('?' + globals->http.getHeader().args);
-			if(!globals->http.getHeader().args.empty()) SG(request_info).query_string = estrndup(&globals->http.getHeader().args.at(0), globals->http.getHeader().args.size());
-			if(!uri.empty()) SG(request_info).request_uri = estrndup(&uri.at(0), uri.size());
-			std::string pathTranslated = serverInfo->contentPath.substr(0, serverInfo->contentPath.size() - 1) + scriptInfo->relativePath;
-			SG(request_info).path_translated = estrndup(&pathTranslated.at(0), pathTranslated.size());
-		}
-
-		if (php_request_startup() == FAILURE) {
-			GD::bl->out.printError("Error calling php_request_startup...");
-			return;
-		}
-		globals->executionStarted = true;
-
-		if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)
-		{
-			std::vector<std::string> argv = getArgs(scriptInfo->fullPath, scriptInfo->arguments);
-			if(type == ScriptInfo::ScriptType::device) argv[0] = std::to_string(scriptInfo->peerId);
-			php_homegear_build_argv(argv);
-			SG(request_info).argc = argv.size();
-			SG(request_info).argv = (char**)malloc((argv.size() + 1) * sizeof(char*));
-			for(uint32_t i = 0; i < argv.size(); ++i)
+			ScriptInfo::ScriptType type = scriptInfo->getType();
+			if(!scriptInfo->script.empty())
 			{
-				SG(request_info).argv[i] = (char*)argv[i].c_str(); //Value is not modified.
+				zendHandle.type = ZEND_HANDLE_MAPPED;
+				zendHandle.handle.fp = nullptr;
+				zendHandle.handle.stream.handle = nullptr;
+				zendHandle.handle.stream.closer = nullptr;
+				zendHandle.handle.stream.mmap.buf = (char*)scriptInfo->script.c_str(); //String is not modified
+				zendHandle.handle.stream.mmap.len = scriptInfo->script.size();
+				zendHandle.filename = scriptInfo->fullPath.c_str();
+				zendHandle.opened_path = nullptr;
+				zendHandle.free_filename = 0;
 			}
-			SG(request_info).argv[argv.size()] = nullptr;
+			else
+			{
+				zendHandle.type = ZEND_HANDLE_FILENAME;
+				zendHandle.filename = scriptInfo->fullPath.c_str();
+				zendHandle.opened_path = NULL;
+				zendHandle.free_filename = 0;
+			}
+
+			zend_homegear_globals* globals = php_homegear_get_globals();
+			if(!globals) return;
+
+			if(type == ScriptInfo::ScriptType::web)
+			{
+				globals->webRequest = true;
+				globals->commandLine = false;
+				globals->cookiesParsed = !scriptInfo->script.empty();
+				globals->http = scriptInfo->http;
+				serverInfo = scriptInfo->serverInfo;
+			}
+			else
+			{
+				globals->commandLine = true;
+				globals->cookiesParsed = true;
+				globals->peerId = scriptInfo->peerId;
+			}
+
+			ZEND_TSRMLS_CACHE_UPDATE();
+
+			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)
+			{
+				BaseLib::Base64::encode(BaseLib::HelperFunctions::getRandomBytes(16), globals->token);
+				std::shared_ptr<PhpEvents> phpEvents(new PhpEvents(globals->token, globals->outputCallback, globals->rpcCallback));
+				std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
+				PhpEvents::eventsMap.insert(std::pair<int32_t, std::shared_ptr<PhpEvents>>(id, phpEvents));
+			}
+
+			SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
+			SG(default_mimetype) = nullptr;
+			SG(default_charset) = nullptr;
+			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)
+			{
+				PG(register_argc_argv) = 1;
+				PG(implicit_flush) = 1;
+				PG(html_errors) = 0;
+				SG(options) |= SAPI_OPTION_NO_CHDIR;
+				SG(headers_sent) = 1;
+				SG(request_info).no_headers = 1;
+				SG(request_info).path_translated = estrndup(scriptInfo->fullPath.c_str(), scriptInfo->fullPath.size());
+			}
+			else if(type == ScriptInfo::ScriptType::web)
+			{
+				SG(sapi_headers).http_response_code = 200;
+				SG(request_info).content_length = globals->http.getHeader().contentLength;
+				if(!globals->http.getHeader().contentTypeFull.empty()) SG(request_info).content_type = globals->http.getHeader().contentTypeFull.c_str();
+				SG(request_info).request_method = globals->http.getHeader().method.c_str();
+				SG(request_info).proto_num = globals->http.getHeader().protocol == BaseLib::Http::Protocol::http10 ? 1000 : 1001;
+				std::string uri = globals->http.getHeader().path + globals->http.getHeader().pathInfo;
+				if(!globals->http.getHeader().args.empty()) uri.append('?' + globals->http.getHeader().args);
+				if(!globals->http.getHeader().args.empty()) SG(request_info).query_string = estrndup(&globals->http.getHeader().args.at(0), globals->http.getHeader().args.size());
+				if(!uri.empty()) SG(request_info).request_uri = estrndup(&uri.at(0), uri.size());
+				std::string pathTranslated = serverInfo->contentPath.substr(0, serverInfo->contentPath.size() - 1) + scriptInfo->relativePath;
+				SG(request_info).path_translated = estrndup(&pathTranslated.at(0), pathTranslated.size());
+			}
+
+			if (php_request_startup() == FAILURE) {
+				GD::bl->out.printError("Error calling php_request_startup...");
+				return;
+			}
+			globals->executionStarted = true;
+
+			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)
+			{
+				std::vector<std::string> argv = getArgs(scriptInfo->fullPath, scriptInfo->arguments);
+				if(type == ScriptInfo::ScriptType::device) argv[0] = std::to_string(scriptInfo->peerId);
+				php_homegear_build_argv(argv);
+				SG(request_info).argc = argv.size();
+				SG(request_info).argv = (char**)malloc((argv.size() + 1) * sizeof(char*));
+				for(uint32_t i = 0; i < argv.size(); ++i)
+				{
+					SG(request_info).argv[i] = (char*)argv[i].c_str(); //Value is not modified.
+				}
+				SG(request_info).argv[argv.size()] = nullptr;
+			}
+
+			if(scriptInfo->peerId > 0) GD::out.printInfo("Info: Starting PHP script of peer " + std::to_string(scriptInfo->peerId) + ".");
 		}
 
-		if(scriptInfo->peerId > 0) GD::out.printInfo("Info: Starting PHP script of peer " + std::to_string(scriptInfo->peerId) + ".");
 		php_execute_script(&zendHandle);
 		scriptInfo->exitCode = EG(exit_status);
 
@@ -1283,6 +1335,7 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 			{
 				_scriptThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(scriptInfo->id, std::pair<std::thread, bool>(std::thread(&ScriptEngineClient::scriptThread, this, scriptInfo->id, scriptInfo, sendOutput), true)));
 			}
+			else _out.printError("Error: Tried to execute script with ID of already running script.");
 		}
 		collectGarbage();
 

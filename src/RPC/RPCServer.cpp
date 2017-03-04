@@ -670,7 +670,7 @@ BaseLib::PVariable RPCServer::callMethod(std::string& methodName, BaseLib::PVari
 	try
 	{
 		if(!parameters) parameters = BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		if(_stopped) return BaseLib::Variable::createError(100000, "Server is stopped.");
+		if(_stopped || GD::bl->shuttingDown) return BaseLib::Variable::createError(100000, "Server is stopped.");
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
 			_out.printError("Warning: RPC method not found: " + methodName);
@@ -718,7 +718,7 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 {
 	try
 	{
-		if(_stopped) return;
+		if(_stopped || GD::bl->shuttingDown) return;
 
 		if(methodName == "setClientType" && parameters->size() > 0)
 		{

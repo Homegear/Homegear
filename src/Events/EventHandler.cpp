@@ -1122,7 +1122,8 @@ void EventHandler::processRpcCall(std::string& eventName, std::string& eventMeth
 	{
 		BaseLib::PVariable eventMethodParametersCopy(new BaseLib::Variable());
 		if(eventMethodParameters) *eventMethodParametersCopy = *eventMethodParameters;
-		BaseLib::PVariable result = GD::rpcServers.begin()->second.callMethod(eventMethod, eventMethodParametersCopy);
+		BaseLib::PVariable result;
+		result = GD::rpcServers.begin()->second.callMethod(eventMethod, eventMethodParametersCopy);
 		if(result && result->errorStruct && !GD::bl->shuttingDown)
 		{
 			GD::out.printError("Could not execute RPC method \"" + eventMethod + "\" for event \"" + eventName + "\". Error struct:");
@@ -1150,6 +1151,7 @@ void EventHandler::processTriggerSingleVariable(uint64_t peerID, int32_t channel
 		if(!value) return;
 		uint64_t currentTime = BaseLib::HelperFunctions::getTime();
 		std::vector<std::shared_ptr<Event>> triggeredEvents;
+
 		{
 			std::lock_guard<std::mutex> eventsGuard(_eventsMutex);
 			std::map<uint64_t, std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>>::iterator peerIterator = _triggeredEvents.find(peerID);
@@ -1171,6 +1173,13 @@ void EventHandler::processTriggerSingleVariable(uint64_t peerID, int32_t channel
 			BaseLib::PVariable eventMethodParameters(new BaseLib::Variable());
 			*eventMethodParameters = *(*i)->eventMethodParameters;
 			BaseLib::PVariable result;
+			BaseLib::PVariable lastValue;
+
+			{
+				std::lock_guard<std::mutex> eventsGuard(_eventsMutex);
+				lastValue = (*i)->lastValue;
+			}
+
 			if(((int32_t)(*i)->trigger) < 8)
 			{
 				//Comparison with previous value
@@ -1182,7 +1191,7 @@ void EventHandler::processTriggerSingleVariable(uint64_t peerID, int32_t channel
 				}
 				else if((*i)->trigger == Event::Trigger::unchanged)
 				{
-					if(*((*i)->lastValue) == *value)
+					if(*lastValue == *value)
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"unchanged\"");
 						(*i)->lastRaised = currentTime;
@@ -1191,7 +1200,7 @@ void EventHandler::processTriggerSingleVariable(uint64_t peerID, int32_t channel
 				}
 				else if((*i)->trigger == Event::Trigger::changed)
 				{
-					if(*((*i)->lastValue) != *value)
+					if(*lastValue != *value)
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"changed\"");
 						(*i)->lastRaised = currentTime;
@@ -1200,7 +1209,7 @@ void EventHandler::processTriggerSingleVariable(uint64_t peerID, int32_t channel
 				}
 				else if((*i)->trigger == Event::Trigger::greater)
 				{
-					if(*((*i)->lastValue) > *value)
+					if(*lastValue > *value)
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greater\"");
 						(*i)->lastRaised = currentTime;
@@ -1209,7 +1218,7 @@ void EventHandler::processTriggerSingleVariable(uint64_t peerID, int32_t channel
 				}
 				else if((*i)->trigger == Event::Trigger::less)
 				{
-					if(*((*i)->lastValue) < *value)
+					if(*lastValue < *value)
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"less\"");
 						(*i)->lastRaised = currentTime;
@@ -1218,7 +1227,7 @@ void EventHandler::processTriggerSingleVariable(uint64_t peerID, int32_t channel
 				}
 				else if((*i)->trigger == Event::Trigger::greaterOrUnchanged)
 				{
-					if(*((*i)->lastValue) >= *value)
+					if(*lastValue >= *value)
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greaterOrUnchanged\"");
 						(*i)->lastRaised = currentTime;
@@ -1227,7 +1236,7 @@ void EventHandler::processTriggerSingleVariable(uint64_t peerID, int32_t channel
 				}
 				else if((*i)->trigger == Event::Trigger::lessOrUnchanged)
 				{
-					if(*((*i)->lastValue) <= *value)
+					if(*lastValue <= *value)
 					{
 						GD::out.printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"lessOrUnchanged\"");
 						(*i)->lastRaised = currentTime;
@@ -1293,7 +1302,11 @@ void EventHandler::processTriggerSingleVariable(uint64_t peerID, int32_t channel
 					}
 				}
 			}
-			(*i)->lastValue = value;
+
+			{
+				std::lock_guard<std::mutex> eventsGuard(_eventsMutex);
+				(*i)->lastValue = value;
+			}
 
 			postTriggerTasks(*i, result, currentTime);
 

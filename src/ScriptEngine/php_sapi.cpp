@@ -871,11 +871,11 @@ ZEND_FUNCTION(hg_poll_event)
 
 	std::shared_ptr<PhpEvents> phpEvents;
 	{
-		BaseLib::DisposableLockGuard eventsMapGuard(PhpEvents::eventsMapMutex);
+		std::unique_lock<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
 		std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(SEG(id));
 		if(eventsIterator == PhpEvents::eventsMap.end())
 		{
-			eventsMapGuard.dispose();
+			eventsMapGuard.unlock();
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
@@ -952,11 +952,11 @@ ZEND_FUNCTION(hg_subscribe_peer)
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &peerId) != SUCCESS) RETURN_NULL();
 	std::shared_ptr<PhpEvents> phpEvents;
 	{
-		BaseLib::DisposableLockGuard eventsMapGuard(PhpEvents::eventsMapMutex);
+		std::unique_lock<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
 		std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(SEG(id));
 		if(eventsIterator == PhpEvents::eventsMap.end())
 		{
-			eventsMapGuard.dispose();
+			eventsMapGuard.unlock();
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
@@ -978,11 +978,11 @@ ZEND_FUNCTION(hg_unsubscribe_peer)
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &peerId) != SUCCESS) RETURN_NULL();
 	std::shared_ptr<PhpEvents> phpEvents;
 	{
-		BaseLib::DisposableLockGuard eventsMapGuard(PhpEvents::eventsMapMutex);
+		std::unique_lock<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
 		std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(SEG(id));
 		if(eventsIterator == PhpEvents::eventsMap.end())
 		{
-			eventsMapGuard.dispose();
+			eventsMapGuard.unlock();
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
@@ -1757,7 +1757,8 @@ int php_homegear_init()
 	_superglobals.gpio = new BaseLib::LowLevel::Gpio(GD::bl.get());
 	_disposed = false;
 	pthread_key_create(&pthread_key, pthread_data_destructor);
-	tsrm_startup(20, 1, 0, NULL);
+	int32_t threadCount = GD::bl->settings.scriptEngineMaxScriptsPerProcess() * GD::bl->settings.scriptEngineMaxThreadsPerScript();
+	tsrm_startup(threadCount, threadCount, 0, NULL); //Needs to be called once for the entire process (see TSRM.c)
 #ifdef ZEND_SIGNALS
 	zend_signal_startup();
 #endif
@@ -1786,7 +1787,7 @@ void php_homegear_shutdown()
 
 	ts_free_worker_threads();
 
-	tsrm_shutdown();
+	tsrm_shutdown(); //Needs to be called once for the entire process (see TSRM.c)
 	if(ini_path_override) free(ini_path_override);
 	if(ini_entries) free(ini_entries);
 	if(_superglobals.http)
