@@ -1122,8 +1122,7 @@ void EventHandler::processRpcCall(std::string& eventName, std::string& eventMeth
 	{
 		BaseLib::PVariable eventMethodParametersCopy(new BaseLib::Variable());
 		if(eventMethodParameters) *eventMethodParametersCopy = *eventMethodParameters;
-		BaseLib::PVariable result;
-		result = GD::rpcServers.begin()->second.callMethod(eventMethod, eventMethodParametersCopy);
+		BaseLib::PVariable result = GD::rpcServers.begin()->second.callMethod(eventMethod, eventMethodParametersCopy);
 		if(result && result->errorStruct && !GD::bl->shuttingDown)
 		{
 			GD::out.printError("Could not execute RPC method \"" + eventMethod + "\" for event \"" + eventName + "\". Error struct:");

@@ -66,7 +66,7 @@ private:
 	std::string _token;
 
 	std::atomic_bool _stopProcessing;
-	static const int32_t _bufferSize = 100;
+	static const int32_t _bufferSize = 1000;
 	std::mutex _queueMutex;
 	int32_t _bufferHead = 0;
 	int32_t _bufferTail = 0;
