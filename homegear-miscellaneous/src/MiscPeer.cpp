@@ -80,9 +80,26 @@ MiscPeer::~MiscPeer()
 {
 	try
 	{
-		if(_programPID != -1) kill(_programPID, 15);
+		_shuttingDown = true;
+		std::lock_guard<std::mutex> scriptInfoGuard(_scriptInfoMutex);
+		if(_scriptInfo)
+		{
+			_scriptInfo->scriptFinishedCallback = nullptr;
+			int32_t i = 0;
+			while(!_scriptInfo->finished && i < 30)
+			{
+				GD::out.printInfo("Info: Peer " + std::to_string(_peerID) + " Waiting for script to finish...");
+				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+				i++;
+			}
+			if(i == 30) GD::out.printError("Error: Script of peer " + std::to_string(_peerID) + " did not finish.");
+		}
+		if(_programPID != -1)
+		{
+			kill(_programPID, 15);
+			GD::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
+		}
 		_stopRunProgramThread = true;
-		if(_programPID != -1) GD::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
 		_bl->threadManager.join(_runProgramThread);
 	}
 	catch(const std::exception& ex)
@@ -277,7 +294,7 @@ void MiscPeer::runScript(bool delay)
 {
 	try
 	{
-		if(!_rpcDevice->runProgram) return;
+		if(!_rpcDevice->runProgram || _shuttingDown) return;
 		while(GD::bl->booting && !_stopRunProgramThread)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -305,14 +322,16 @@ void MiscPeer::runScript(bool delay)
 
 		if(_rpcDevice->runProgram->interval == 0) _rpcDevice->runProgram->interval = 10;
 
-		BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::device, path, path, script, args, _peerID));
+		std::lock_guard<std::mutex> scriptInfoGuard(_scriptInfoMutex);
+		if(_shuttingDown) return;
+		_scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(BaseLib::ScriptEngine::ScriptInfo::ScriptType::device, path, path, script, args, _peerID);
 		if(_rpcDevice->runProgram->startType != RunProgram::StartType::once)
 		{
-			scriptInfo->scriptFinishedCallback = std::bind(&MiscPeer::scriptFinished, this, std::placeholders::_1, std::placeholders::_2);
+			_scriptInfo->scriptFinishedCallback = std::bind(&MiscPeer::scriptFinished, this, std::placeholders::_1, std::placeholders::_2);
 		}
 
-		raiseRunScript(scriptInfo, false);
-		_scriptRunning = scriptInfo->started;
+		raiseRunScript(_scriptInfo, false);
+		_scriptRunning = _scriptInfo->started;
 		if(!_scriptRunning && !_bl->shuttingDown) GD::out.printError("Error: Could not start script of peer " + std::to_string(_peerID) + ".");
 	}
 	catch(const std::exception& ex)

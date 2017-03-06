@@ -69,11 +69,12 @@ private:
 	int32_t _logLevel = -1; //We are abusing the events object here for data exchange between main thread and sub threads.
 
 	std::atomic_bool _stopProcessing;
-	static const int32_t _bufferSize = 100;
+	static const int32_t _bufferSize = 1000;
 	std::mutex _queueMutex;
 	int32_t _bufferHead = 0;
 	int32_t _bufferTail = 0;
-	int32_t _bufferCount = 0;
+	std::atomic_int _bufferCount;
+	std::mutex _bufferMutex;
 	std::shared_ptr<EventData> _buffer[_bufferSize];
 	std::condition_variable _processingConditionVariable;
 	std::mutex _peersMutex;

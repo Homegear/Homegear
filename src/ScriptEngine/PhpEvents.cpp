@@ -37,6 +37,7 @@ std::map<int32_t, std::shared_ptr<PhpEvents>> PhpEvents::eventsMap;
 PhpEvents::PhpEvents(std::string& token, std::function<void(std::string& output)>& outputCallback, std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)>& rpcCallback)
 {
 	_stopProcessing = false;
+	_bufferCount = 0;
 	_token = token;
 	_outputCallback = outputCallback;
 	_rpcCallback = rpcCallback;
@@ -64,9 +65,12 @@ bool PhpEvents::enqueue(std::shared_ptr<EventData>& entry)
 
 		if(_bufferCount >= _bufferSize) return false;
 
-		_buffer[_bufferTail] = entry;
-		_bufferTail = (_bufferTail + 1) % _bufferSize;
-        ++_bufferCount;
+		{
+			std::lock_guard<std::mutex> bufferGuard(_bufferMutex);
+			_buffer[_bufferTail] = entry;
+			_bufferTail = (_bufferTail + 1) % _bufferSize;
+			++_bufferCount;
+		}
 
 		_processingConditionVariable.notify_one();
 		return true;
@@ -98,6 +102,7 @@ std::shared_ptr<PhpEvents::EventData> PhpEvents::poll(int32_t timeout)
 			_processingConditionVariable.wait(lock, [&]{ return _bufferCount > 0 || _stopProcessing; });
 			if(_stopProcessing) return eventData;
 
+			std::lock_guard<std::mutex> bufferGuard(_bufferMutex);
 			eventData = _buffer[_bufferHead];
 			_buffer[_bufferHead].reset();
 			_bufferHead = (_bufferHead + 1) % _bufferSize;

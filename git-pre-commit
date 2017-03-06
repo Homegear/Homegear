@@ -15,4 +15,3 @@ BRANCH=$(git branch | grep "\*")
 REVISION_FILE=$SCRIPTDIR/../../../libhomegear-base/revision.txt
 REVISION=$(cat $REVISION_FILE)
 echo $(($REVISION + 1)) > $REVISION_FILE
-git add revision.txt

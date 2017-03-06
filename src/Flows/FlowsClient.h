@@ -31,6 +31,7 @@
 #ifndef FLOWSCLIENT_H_
 #define FLOWSCLIENT_H_
 
+#include "FlowsResponse.h"
 #include "../RPC/RPCMethod.h"
 #include <homegear-base/BaseLib.h>
 
@@ -78,7 +79,7 @@ private:
 	std::mutex _requestMutex;
 	std::mutex _waitMutex;
 	std::mutex _rpcResponsesMutex;
-	std::map<int32_t, std::map<int32_t, BaseLib::PPVariable>> _rpcResponses;
+	std::map<int32_t, std::map<int32_t, PFlowsResponse>> _rpcResponses;
 	std::condition_variable _requestConditionVariable;
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 	std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>> _localRpcMethods;

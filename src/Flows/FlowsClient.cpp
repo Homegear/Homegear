@@ -294,10 +294,21 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 				return;
 			}
 			int32_t flowId = response->arrayValue->at(0)->integerValue;
+			int32_t packetId = response->arrayValue->at(1)->integerValue;
+
 			{
 				std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-				BaseLib::PPVariable element = _rpcResponses[flowId][response->arrayValue->at(1)->integerValue];
-				if(element) *element = response;
+				auto responseIterator = _rpcResponses[flowId].find(packetId);
+				if(responseIterator != _rpcResponses[flowId].end())
+				{
+					PFlowsResponse element = responseIterator->second;
+					if(element)
+					{
+						element->response = response;
+						element->packetId = packetId;
+						element->finished = true;
+					}
+				}
 			}
 			if(flowId != 0)
 			{
@@ -373,35 +384,44 @@ BaseLib::PVariable FlowsClient::sendRequest(int32_t flowId, std::string methodNa
 		std::vector<char> data;
 		_rpcEncoder->encodeRequest(methodName, array, data);
 
-		BaseLib::PPVariable response;
+		PFlowsResponse response;
 		{
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			BaseLib::PPVariable* element = &_rpcResponses[flowId][packetId];
-			element->reset(new BaseLib::PVariable());
-			response = *element;
+			auto result = _rpcResponses[flowId].emplace(packetId, std::make_shared<FlowsResponse>());
+			if(result.second) response = result.first->second;
 		}
-		response->reset(new BaseLib::Variable());
+		if(!response)
+		{
+			_out.printError("Critical: Could not insert response struct into map.");
+			return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		}
 
 		BaseLib::PVariable result = send(data);
-		if(result->errorStruct) return result;
+		if(result->errorStruct)
+		{
+			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+			_rpcResponses[flowId].erase(packetId);
+			return result;
+		}
 
 		std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
 		while(!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]{
-			return ((bool)(*response) && (*response)->arrayValue->size() == 3 && (*response)->arrayValue->at(1)->integerValue == packetId) || _disposing;
+			return response->finished || _disposing;
 		}));
 
-		if(!(*response) || (*response)->arrayValue->size() != 3 || (*response)->arrayValue->at(1)->integerValue != packetId)
+		if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
 		{
 			_out.printError("Error: No response received to RPC request. Method: " + methodName);
-			*response = BaseLib::Variable::createError(-1, "No response received.");
+			result = BaseLib::Variable::createError(-1, "No response received.");
 		}
+		else result = response->response->arrayValue->at(2);
 
 		{
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
 			_rpcResponses[flowId].erase(packetId);
 		}
 
-		return (*response)->arrayValue->at(2);
+		return result;
 	}
 	catch(const std::exception& ex)
     {
@@ -432,35 +452,44 @@ BaseLib::PVariable FlowsClient::sendGlobalRequest(std::string methodName, BaseLi
 		std::vector<char> data;
 		_rpcEncoder->encodeRequest(methodName, array, data);
 
-		BaseLib::PPVariable response = _rpcResponses[0][packetId];
+		PFlowsResponse response;
 		{
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			BaseLib::PPVariable* element = &_rpcResponses[0][packetId];
-			element->reset(new BaseLib::PVariable());
-			response = *element;
+			auto result = _rpcResponses[0].emplace(packetId, std::make_shared<FlowsResponse>());
+			if(result.second) response = result.first->second;
 		}
-		response->reset(new BaseLib::Variable());
+		if(!response)
+		{
+			_out.printError("Critical: Could not insert response struct into map.");
+			return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		}
 
 		BaseLib::PVariable result = send(data);
-		if(result->errorStruct) return result;
+		if(result->errorStruct)
+		{
+			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+			_rpcResponses[0].erase(packetId);
+			return result;
+		}
 
 		std::unique_lock<std::mutex> waitLock(_waitMutex);
 		while(!_requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]{
-			return ((bool)(*response) && (*response)->arrayValue->size() == 3 && (*response)->arrayValue->at(1)->integerValue == packetId) || _disposing;
+			return response->finished || _disposing;
 		}));
 
-		if(!(*response) || (*response)->arrayValue->size() != 3 || (*response)->arrayValue->at(1)->integerValue != packetId)
+		if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
 		{
 			_out.printError("Error: No response received to RPC request. Method: " + methodName);
-			*response = BaseLib::Variable::createError(-1, "No response received.");
+			result = BaseLib::Variable::createError(-1, "No response received.");
 		}
+		else result = response->response->arrayValue->at(2);
 
 		{
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
 			_rpcResponses[0].erase(packetId);
 		}
 
-		return (*response)->arrayValue->at(2);
+		return result;
 	}
 	catch(const std::exception& ex)
     {

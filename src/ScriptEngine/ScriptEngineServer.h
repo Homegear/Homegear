@@ -78,13 +78,29 @@ private:
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
 	public:
+		enum class QueueEntryType
+		{
+			defaultType,
+			broadcast
+		};
+
 		QueueEntry() {}
 		QueueEntry(PScriptEngineClientData clientData, std::vector<char>& packet, bool isRequest) { this->clientData = clientData; this->packet = packet; this->isRequest = isRequest; }
+		QueueEntry(PScriptEngineClientData clientData, std::string methodName, BaseLib::PArray parameters) { type = QueueEntryType::broadcast; this->clientData = clientData; this->methodName = methodName; this->parameters = parameters; }
 		virtual ~QueueEntry() {}
 
+		QueueEntryType type = QueueEntryType::defaultType;
 		PScriptEngineClientData clientData;
-		std::vector<char> packet;
-		bool isRequest = false;
+
+		// {{{ defaultType
+			std::vector<char> packet;
+			bool isRequest = false;
+		// }}}
+
+		// {{{ broadcast
+			std::string methodName;
+			BaseLib::PArray parameters;
+		// }}}
 	};
 
 	BaseLib::Output _out;
@@ -100,6 +116,7 @@ private:
 	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
 	std::mutex _newProcessMutex;
 	std::mutex _processMutex;
+	std::mutex _resourceMutex;
 	std::map<pid_t, PScriptEngineProcess> _processes;
 	std::mutex _currentScriptIdMutex;
 	int32_t _currentScriptId = 0;

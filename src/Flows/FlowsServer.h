@@ -61,13 +61,29 @@ private:
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
 	public:
+		enum class QueueEntryType
+		{
+			defaultType,
+			broadcast
+		};
+
 		QueueEntry() {}
 		QueueEntry(PFlowsClientData clientData, std::vector<char>& packet, bool isRequest) { this->clientData = clientData; this->packet = packet; this->isRequest = isRequest; }
+		QueueEntry(PFlowsClientData clientData, std::string methodName, BaseLib::PArray parameters) { type = QueueEntryType::broadcast; this->clientData = clientData; this->methodName = methodName; this->parameters = parameters; }
 		virtual ~QueueEntry() {}
 
+		QueueEntryType type = QueueEntryType::defaultType;
 		PFlowsClientData clientData;
-		std::vector<char> packet;
-		bool isRequest = false;
+
+		// {{{ defaultType
+			std::vector<char> packet;
+			bool isRequest = false;
+		// }}}
+
+		// {{{ broadcast
+			std::string methodName;
+			BaseLib::PArray parameters;
+		// }}}
 	};
 
 	BaseLib::Output _out;
