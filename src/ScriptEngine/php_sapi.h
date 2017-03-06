@@ -68,6 +68,7 @@ typedef struct _zend_homegear_globals
 	bool commandLine = false;
 	bool cookiesParsed = false;
 	int64_t peerId = 0;
+	int32_t logLevel = -1;
 
 	// {{{ Needed by ScriptEngineClient
 	int32_t id = 0;
