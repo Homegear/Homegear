@@ -604,9 +604,9 @@ uint32_t ScriptEngineServer::scriptCount()
 		}
 
 		uint32_t count = 0;
+		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
 		for(std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
-			BaseLib::PArray parameters(new BaseLib::Array());
 			BaseLib::PVariable response = sendRequest(*i, "scriptCount", parameters);
 			count += response->integerValue;
 		}
@@ -625,6 +625,49 @@ uint32_t ScriptEngineServer::scriptCount()
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return 0;
+}
+
+std::vector<std::pair<int32_t, std::string>> ScriptEngineServer::getRunningScripts()
+{
+	try
+	{
+		if(_shuttingDown) return std::vector<std::pair<int32_t, std::string>>();
+		std::vector<PScriptEngineClientData> clients;
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			for(std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) continue;
+				clients.push_back(i->second);
+			}
+		}
+
+		std::vector<std::pair<int32_t, std::string>> runningScripts;
+		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+		for(std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		{
+			BaseLib::PVariable response = sendRequest(*i, "getRunningScripts", parameters);
+			if(runningScripts.capacity() <= runningScripts.size() + response->arrayValue->size()) runningScripts.reserve(runningScripts.capacity() + response->arrayValue->size() + 100);
+			for(auto& i : *(response->arrayValue))
+			{
+				runningScripts.push_back(std::pair<int32_t, std::string>(i->arrayValue->at(0)->integerValue, i->arrayValue->at(1)->stringValue));
+			}
+		}
+		return runningScripts;
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::vector<std::pair<int32_t, std::string>>();
 }
 
 void ScriptEngineServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values)

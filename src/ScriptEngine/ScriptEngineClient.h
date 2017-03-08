@@ -62,6 +62,16 @@ private:
 		std::string script;
 	};
 
+	struct ThreadInfo
+	{
+		std::thread thread;
+		std::atomic_bool running;
+		std::string filename;
+
+		ThreadInfo() : running(true) {}
+	};
+	typedef std::shared_ptr<ThreadInfo> PThreadInfo;
+
 	struct RequestInfo
 	{
 		std::mutex waitMutex;
@@ -112,7 +122,7 @@ private:
 	std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>> _localRpcMethods;
 	std::thread _maintenanceThread;
 	std::mutex _scriptThreadMutex;
-	std::map<int32_t, std::pair<std::thread, bool>> _scriptThreads;
+	std::map<int32_t, PThreadInfo> _scriptThreads;
 	std::mutex _requestInfoMutex;
 	std::map<int32_t, PRequestInfo> _requestInfo;
 	std::map<std::string, std::shared_ptr<CacheInfo>> _scriptCache;
@@ -171,6 +181,7 @@ private:
 		 * @return Returns the number of running scripts.
 		 */
 		BaseLib::PVariable scriptCount(BaseLib::PArray& parameters);
+		BaseLib::PVariable getRunningScripts(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastEvent(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastNewDevices(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastDeleteDevices(BaseLib::PArray& parameters);

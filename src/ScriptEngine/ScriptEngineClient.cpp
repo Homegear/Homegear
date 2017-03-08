@@ -69,6 +69,7 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 1, 1000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("shutdown", std::bind(&ScriptEngineClient::shutdown, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("executeScript", std::bind(&ScriptEngineClient::executeScript, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("scriptCount", std::bind(&ScriptEngineClient::scriptCount, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("getRunningScripts", std::bind(&ScriptEngineClient::getRunningScripts, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastEvent", std::bind(&ScriptEngineClient::broadcastEvent, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastNewDevices", std::bind(&ScriptEngineClient::broadcastNewDevices, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastDeleteDevices", std::bind(&ScriptEngineClient::broadcastDeleteDevices, this, std::placeholders::_1)));
@@ -118,7 +119,7 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 				{
 					std::string ids = "IDs of running scripts: ";
 					std::lock_guard<std::mutex> threadGuard(_scriptThreadMutex);
-					for(std::map<int32_t, std::pair<std::thread, bool>>::iterator i = _scriptThreads.begin(); i != _scriptThreads.end(); ++i)
+					for(std::map<int32_t, PThreadInfo>::iterator i = _scriptThreads.begin(); i != _scriptThreads.end(); ++i)
 					{
 						ids.append(std::to_string(i->first) + " ");
 					}
@@ -905,11 +906,11 @@ void ScriptEngineClient::collectGarbage()
 		std::lock_guard<std::mutex> threadGuard(_scriptThreadMutex);
 		try
 		{
-			for(std::map<int32_t, std::pair<std::thread, bool>>::iterator i = _scriptThreads.begin(); i != _scriptThreads.end(); ++i)
+			for(std::map<int32_t, PThreadInfo>::iterator i = _scriptThreads.begin(); i != _scriptThreads.end(); ++i)
 			{
-				if(!i->second.second)
+				if(!i->second->running)
 				{
-					if(i->second.first.joinable()) i->second.first.join();
+					if(i->second->thread.joinable()) i->second->thread.join();
 					threadsToRemove.push_back(i->first);
 				}
 			}
@@ -965,7 +966,7 @@ void ScriptEngineClient::setThreadNotRunning(int32_t threadId)
 	if(threadId != -1)
 	{
 		std::lock_guard<std::mutex> scriptThreadsGuard(_scriptThreadMutex);
-		_scriptThreads.at(threadId).second = false;
+		_scriptThreads.at(threadId)->running = false;
 	}
 }
 
@@ -1075,9 +1076,9 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)
 			{
 				BaseLib::Base64::encode(BaseLib::HelperFunctions::getRandomBytes(16), globals->token);
-				std::shared_ptr<PhpEvents> phpEvents(new PhpEvents(globals->token, globals->outputCallback, globals->rpcCallback));
+				std::shared_ptr<PhpEvents> phpEvents = std::make_shared<PhpEvents>(globals->token, globals->outputCallback, globals->rpcCallback);
 				std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
-				PhpEvents::eventsMap.insert(std::pair<int32_t, std::shared_ptr<PhpEvents>>(id, phpEvents));
+				PhpEvents::eventsMap.emplace(id, phpEvents);
 			}
 
 			SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
@@ -1333,7 +1334,10 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 			std::lock_guard<std::mutex> scriptGuard(_scriptThreadMutex);
 			if(_scriptThreads.find(scriptInfo->id) == _scriptThreads.end())
 			{
-				_scriptThreads.insert(std::pair<int32_t, std::pair<std::thread, bool>>(scriptInfo->id, std::pair<std::thread, bool>(std::thread(&ScriptEngineClient::scriptThread, this, scriptInfo->id, scriptInfo, sendOutput), true)));
+				PThreadInfo threadInfo = std::make_shared<ThreadInfo>();
+				threadInfo->filename = scriptInfo->fullPath;
+				threadInfo->thread = std::thread(&ScriptEngineClient::scriptThread, this, scriptInfo->id, scriptInfo, sendOutput);
+				_scriptThreads.emplace(scriptInfo->id, threadInfo);
 			}
 			else _out.printError("Error: Tried to execute script with ID of already running script.");
 		}
@@ -1360,11 +1364,44 @@ BaseLib::PVariable ScriptEngineClient::scriptCount(BaseLib::PArray& parameters)
 {
 	try
 	{
-		if(_disposing) return BaseLib::PVariable(new BaseLib::Variable(0));
+		if(_disposing) return std::make_shared<BaseLib::Variable>(0);
 
 		collectGarbage();
 
-		return BaseLib::PVariable(new BaseLib::Variable((int32_t)_scriptThreads.size()));
+		return std::make_shared<BaseLib::Variable>((int32_t)_scriptThreads.size());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineClient::getRunningScripts(BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(_disposing) return BaseLib::PVariable(new BaseLib::Variable(0));
+
+		BaseLib::PVariable scripts = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+		std::lock_guard<std::mutex> threadGuard(_scriptThreadMutex);
+		for(std::map<int32_t, PThreadInfo>::iterator i = _scriptThreads.begin(); i != _scriptThreads.end(); ++i)
+		{
+			if(i->second->running)
+			{
+				BaseLib::Array pair{std::make_shared<BaseLib::Variable>(i->first), std::make_shared<BaseLib::Variable>(i->second->filename)};
+				scripts->arrayValue->push_back(std::make_shared<BaseLib::Variable>(std::make_shared<BaseLib::Array>(std::move(pair))));
+			}
+		}
+		return scripts;
 	}
     catch(const std::exception& ex)
     {
