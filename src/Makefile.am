@@ -7,7 +7,9 @@ LIBS += -Wl,-Bstatic -lphp7-homegear -Wl,-Bdynamic -lz -lexslt -lresolv -ledit -
 # }}}
 
 if HAVE_CURL
+if HAVE_CURL_HEADERS
 LIBS += -lcurl
+endif
 endif
 
 if HAVE_MYSQLCLIENT

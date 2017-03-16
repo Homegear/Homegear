@@ -155,7 +155,7 @@ if [ "$distver" == "wheezy" ]; then
 	ln -s gcc-4.7 $rootfs/usr/bin/gcc
 else
 	chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
-	if [ "$distver" == "stretch" ] || [ "$distver" == "jessie" ] || [ "$distver" == "xenial" ]; then
+	if [ "$distver" == "stretch" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "jessie" ] || [ "$distver" == "xenial" ]; then
 		chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 	fi
 fi
