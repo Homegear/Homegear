@@ -41,7 +41,7 @@ void MqttSettings::reset()
 	_enabled = false;
 	_brokerHostname = "localhost";
 	_brokerPort = "1883";
-	_prefix = "homegear/"
+	_prefix = "homegear/";
 	_homegearId = "";
 	_username = "";
 	_password = "";
@@ -124,7 +124,7 @@ void MqttSettings::load(std::string filename)
 				{
 					_prefix = value;
 					if(!_prefix.empty() && _prefix.back() != '/') _prefix.push_back('/');
-					if(_prefix == '/') _prefix = "";
+					if(_prefix == "/") _prefix = "";
 					GD::bl->out.printDebug("Debug (MQTT settings): prefix set to " + _prefix);
 				}
 				else if(name == "homegearid")
