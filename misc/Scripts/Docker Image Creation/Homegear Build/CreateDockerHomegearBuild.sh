@@ -131,10 +131,10 @@ fi
 
 chroot $rootfs apt-get update
 if [ "$distver" == "stretch" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ]; then
-	chroot $rootfs apt-get -y install python3
-	chroot $rootfs apt-get -y -f install
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
-chroot $rootfs apt-get -y install apt-transport-https
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install apt-transport-https
 
 echo "deb https://homegear.eu/packages/$dist/ $distver/
 " > $rootfs/etc/apt/sources.list.d/homegear.list
@@ -144,28 +144,34 @@ chroot $rootfs apt-key add Release.key
 rm $rootfs/Release.key
 
 chroot $rootfs apt-get update
-chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libmcrypt-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libmysqlclient-dev libmodbus-dev libzip-dev p7zip-full ntp
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libmcrypt-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libmodbus-dev libzip-dev p7zip-full ntp
+
+if [ "$distver" == "stretch" ];  then
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install default-libmysqlclient-dev dirmngr
+else
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
+fi
 
 # {{{ GCC, GCrypt, GNUTLS, Curl
 if [ "$distver" == "wheezy" ]; then
-	chroot $rootfs apt-get -y install libgcrypt11-dev libgnutls-dev g++-4.7 gcc-4.7 libcurl4-gnutls-dev
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt11-dev libgnutls-dev g++-4.7 gcc-4.7 libcurl4-gnutls-dev
 	rm $rootfs/usr/bin/g++
 	rm $rootfs/usr/bin/gcc
 	ln -s g++-4.7 $rootfs/usr/bin/g++
 	ln -s gcc-4.7 $rootfs/usr/bin/gcc
 else
-	chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
-	if [ "$distver" == "stretch" ] || [ "$distver" == "jessie" ] || [ "$distver" == "xenial" ]; then
-		chroot $rootfs apt-get -y install libcurl4-gnutls-dev
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
+	if [ "$distver" == "stretch" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "jessie" ] || [ "$distver" == "xenial" ]; then
+		DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 	fi
 fi
 # }}}
 
 # {{{ Readline
 if [ "$distver" == "stretch" ]; then
-	chroot $rootfs apt-get -y install libreadline7 libreadline-dev
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline7 libreadline-dev
 else
-	chroot $rootfs apt-get -y install libreadline6 libreadline6-dev
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline6 libreadline6-dev
 fi
 # }}}
 

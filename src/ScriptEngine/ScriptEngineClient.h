@@ -34,6 +34,7 @@
 #include "php_config_fixes.h"
 #include "../RPC/RPCMethod.h"
 #include "../../config.h"
+#include "ScriptEngineResponse.h"
 #include <homegear-base/BaseLib.h>
 
 #include <thread>
@@ -61,6 +62,16 @@ private:
 		std::string script;
 	};
 
+	struct ThreadInfo
+	{
+		std::thread thread;
+		std::atomic_bool running;
+		std::string filename;
+
+		ThreadInfo() : running(true) {}
+	};
+	typedef std::shared_ptr<ThreadInfo> PThreadInfo;
+
 	struct RequestInfo
 	{
 		std::mutex waitMutex;
@@ -76,7 +87,7 @@ private:
 		PScriptInfo _scriptInfo;
 	public:
 		ScriptGuard(ScriptEngineClient* client, zend_homegear_globals* globals, int32_t scriptId, PScriptInfo& scriptInfo) : _client(client), _scriptId(scriptId), _scriptInfo(scriptInfo) {}
-		virtual ~ScriptGuard();
+		~ScriptGuard();
 	};
 
 	class QueueEntry : public BaseLib::IQueueEntry
@@ -100,17 +111,18 @@ private:
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
 	int64_t _lastGargabeCollection = 0;
 	bool _closed = false;
+	static std::mutex _resourceMutex;
 	std::mutex _sendMutex;
 	std::mutex _requestMutex;
 	std::mutex _waitMutex;
 	std::mutex _rpcResponsesMutex;
-	std::map<int32_t, std::map<int32_t, BaseLib::PPVariable>> _rpcResponses;
+	std::map<int32_t, std::map<int32_t, PScriptEngineResponse>> _rpcResponses;
 	std::condition_variable _requestConditionVariable;
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 	std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>> _localRpcMethods;
 	std::thread _maintenanceThread;
 	std::mutex _scriptThreadMutex;
-	std::map<int32_t, std::pair<std::thread, bool>> _scriptThreads;
+	std::map<int32_t, PThreadInfo> _scriptThreads;
 	std::mutex _requestInfoMutex;
 	std::map<int32_t, PRequestInfo> _requestInfo;
 	std::map<std::string, std::shared_ptr<CacheInfo>> _scriptCache;
@@ -169,6 +181,7 @@ private:
 		 * @return Returns the number of running scripts.
 		 */
 		BaseLib::PVariable scriptCount(BaseLib::PArray& parameters);
+		BaseLib::PVariable getRunningScripts(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastEvent(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastNewDevices(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastDeleteDevices(BaseLib::PArray& parameters);

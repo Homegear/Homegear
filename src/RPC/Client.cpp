@@ -751,6 +751,7 @@ std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<Base
 		server->autoConnect = false;
 		server->initialized = true;
 		server->socket = socket;
+		server->socket->setReadTimeout(15000000);
 		server->keepAlive = true;
 		server->subscribePeers = true;
 		server->newFormat = true;

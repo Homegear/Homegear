@@ -475,7 +475,7 @@ ssh-keygen -A | dialog --title "System setup" --progressbox "Generating new SSH 
 TTY_X=$(($(stty size | awk '{print $2}')-6))
 TTY_Y=$(($(stty size | awk '{print $1}')-6))
 apt-get update | dialog --title "System update (1/2)" --progressbox "Updating system..." $TTY_Y $TTY_X
-[ $? -ne 0 ] && mount -o remount,rw / && apt-get update | dialog --title "System update (1/2)" --progressbox "Updating system..." $TTY_Y $TTY_X
+[[ ${PIPESTATUS[0]} -ne 0 ]] && mount -o remount,rw / && apt-get update | dialog --title "System update (1/2)" --progressbox "Updating system..." $TTY_Y $TTY_X
 
 TTY_X=$(($(stty size | awk '{print $2}')-6))
 TTY_Y=$(($(stty size | awk '{print $1}')-6))
@@ -484,6 +484,11 @@ apt-get -y dist-upgrade | dialog --title "System update (2/2)" --progressbox "Up
 TTY_X=$(($(stty size | awk '{print $2}')-6))
 TTY_Y=$(($(stty size | awk '{print $1}')-6))
 apt-get -y install homegear homegear-homematicbidcos homegear-homematicwired homegear-insteon homegear-max homegear-philipshue homegear-sonos homegear-kodi homegear-ipcam homegear-beckhoff homegear-knx homegear-enocean homegear-intertechno | dialog --title "System setup" --progressbox "Installing Homegear..." $TTY_Y $TTY_X
+if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
+    TTY_X=$(($(stty size | awk '{print $2}')-6))
+    TTY_Y=$(($(stty size | awk '{print $1}')-6))
+    apt-get -y -f install  | dialog --title "System setup" --progressbox "Installing dependencies..." $TTY_Y $TTY_X
+fi
 
 mkdir -p /data/homegear-data
 chown homegear:homegear /data/homegear-data
@@ -511,6 +516,7 @@ echo "3 *  * * *   root    /bin/systemctl reload homegear 2>&1 |/usr/bin/logger 
 echo ""
 echo "Starting raspi-config..."
 PATH="$PATH:/opt/vc/bin:/opt/vc/sbin"
+mount -o remount,rw /boot
 raspi-config
 rm /firstStart.sh
 sed -i '/sudo \/firstStart.sh/d' /home/pi/.bashrc

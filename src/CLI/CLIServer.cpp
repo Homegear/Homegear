@@ -957,52 +957,35 @@ std::string Server::handleGlobalCommand(std::string& command)
 		std::ostringstream stringStream;
 		std::vector<std::string> arguments;
 		bool showHelp = false;
-		if((command == "help" || command == "h") && !GD::familyController->familySelected())
+		if(BaseLib::HelperFunctions::checkCliCommand(command, "help", "h", "", 0, arguments, showHelp) && !GD::familyController->familySelected())
 		{
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "debuglevel (dl)    Changes the debug level" << std::endl;
-			stringStream << "runscript (rs)     Executes a script with the internal PHP engine" << std::endl;
-			stringStream << "runcommand (rc)    Executes a PHP command" << std::endl;
-			stringStream << "scriptcount (sc)   Returns the number of currently running scripts" << std::endl;
-			stringStream << "rpcservers (rpc)   Lists all active RPC servers" << std::endl;
-			stringStream << "rpcclients (rcl)   Lists all active RPC clients" << std::endl;
-			stringStream << "threads            Prints current thread count" << std::endl;
-			stringStream << "lifetick (lt)      Checks the lifeticks of all components." << std::endl;
-			stringStream << "users [COMMAND]    Execute user commands. Type \"users help\" for more information." << std::endl;
-			stringStream << "families [COMMAND] Execute device family commands. Type \"families help\" for more information." << std::endl;
-			stringStream << "modules [COMMAND]  Execute module commands. Type \"modules help\" for more information." << std::endl;
+			stringStream << "debuglevel (dl)      Changes the debug level" << std::endl;
+			stringStream << "runscript (rs)       Executes a script with the internal PHP engine" << std::endl;
+			stringStream << "runcommand (rc)      Executes a PHP command" << std::endl;
+			stringStream << "scriptcount (sc)     Returns the number of currently running scripts" << std::endl;
+			stringStream << "scriptsrunning (sr)  Returns the ID and filename of all running scripts" << std::endl;
+			stringStream << "rpcservers (rpc)     Lists all active RPC servers" << std::endl;
+			stringStream << "rpcclients (rcl)     Lists all active RPC clients" << std::endl;
+			stringStream << "threads              Prints current thread count" << std::endl;
+			stringStream << "lifetick (lt)        Checks the lifeticks of all components." << std::endl;
+			stringStream << "users [COMMAND]      Execute user commands. Type \"users help\" for more information." << std::endl;
+			stringStream << "families [COMMAND]   Execute device family commands. Type \"families help\" for more information." << std::endl;
+			stringStream << "modules [COMMAND]    Execute module commands. Type \"modules help\" for more information." << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 10, "disconnect") == 0)
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "disconnect", "dcr", "", 0, arguments, showHelp))
 		{
 			GD::rpcClient->disconnectRega();
 			stringStream << "RegaHss socket closed." << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 10, "debuglevel") == 0 || (command.compare(0, 2, "dl") == 0 && !GD::familyController->familySelected()))
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "debuglevel", "dl", "", 1, arguments, showHelp) && !GD::familyController->familySelected())
 		{
 			int32_t debugLevel = 3;
 
-			std::stringstream stream(command);
-			std::string element;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index == 0)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1)
-				{
-					if(element == "help") break;
-					debugLevel = BaseLib::Math::getNumber(element);
-					if(debugLevel < 0 || debugLevel > 10) return "Invalid debug level. Please provide a debug level between 0 and 10.\n";
-				}
-				index++;
-			}
-			if(index == 1)
+			if(showHelp)
 			{
 				stringStream << "Description: This command changes the current debug level temporarily until Homegear is restarted." << std::endl;
 				stringStream << "Usage: debuglevel DEBUGLEVEL" << std::endl << std::endl;
@@ -1010,6 +993,9 @@ std::string Server::handleGlobalCommand(std::string& command)
 				stringStream << "  DEBUGLEVEL:\tThe debug level between 0 and 10." << std::endl;
 				return stringStream.str();
 			}
+
+			debugLevel = BaseLib::Math::getNumber(arguments.at(0), false);
+			if(debugLevel < 0 || debugLevel > 10) return "Invalid debug level. Please provide a debug level between 0 and 10.\n";
 
 			GD::bl->debugLevel = debugLevel;
 			stringStream << "Debug level set to " << debugLevel << "." << std::endl;
@@ -1096,28 +1082,9 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "Exit code: " << std::dec << scriptInfo->exitCode << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 11, "scriptcount") == 0 || command.compare(0, 2, "sc") == 0)
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "scriptcount", "sc", "", 0, arguments, showHelp))
 		{
-			std::string path;
-
-			std::stringstream stream(command);
-			std::string element;
-			std::stringstream arguments;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index == 0)
-				{
-					index++;
-					continue;
-				}
-				else
-				{
-					index++;
-					break;
-				}
-			}
-			if(index > 1)
+			if(showHelp)
 			{
 				stringStream << "Description: This command returns the total number of currently running scripts." << std::endl;
 				stringStream << "Usage: scriptcount" << std::endl << std::endl;
@@ -1125,6 +1092,26 @@ std::string Server::handleGlobalCommand(std::string& command)
 			}
 
 			stringStream << std::dec << GD::scriptEngineServer->scriptCount() << std::endl;
+			return stringStream.str();
+		}
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "scriptsrunning", "sr", "", 0, arguments, showHelp))
+		{
+			if(showHelp)
+			{
+				stringStream << "Description: This command returns the script IDs and filenames of all running scripts." << std::endl;
+				stringStream << "Usage: scriptsrunning" << std::endl << std::endl;
+				return stringStream.str();
+			}
+
+			std::vector<std::pair<int32_t, std::string>> runningScripts = GD::scriptEngineServer->getRunningScripts();
+			if(runningScripts.size() == 0) return "No scripts are being executed.\n";
+
+			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(80) << "Filename" << std::endl;
+			for(auto& script : runningScripts)
+			{
+				stringStream << std::setw(6) << script.first << std::setw(80) << script.second << std::endl;
+			}
+
 			return stringStream.str();
 		}
 		else if(command.compare(0, 10, "rpcclients") == 0 || command.compare(0, 3, "rcl") == 0)

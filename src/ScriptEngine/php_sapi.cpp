@@ -101,6 +101,7 @@ ZEND_FUNCTION(hg_update_user);
 ZEND_FUNCTION(hg_user_exists);
 ZEND_FUNCTION(hg_users);
 ZEND_FUNCTION(hg_log);
+ZEND_FUNCTION(hg_set_script_log_level);
 ZEND_FUNCTION(hg_get_http_contents);
 ZEND_FUNCTION(hg_download);
 ZEND_FUNCTION(hg_check_license);
@@ -146,6 +147,7 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_user_exists, NULL)
 	ZEND_FE(hg_users, NULL)
 	ZEND_FE(hg_log, NULL)
+	ZEND_FE(hg_set_script_log_level, NULL)
 	ZEND_FE(hg_get_http_contents, NULL)
 	ZEND_FE(hg_download, NULL)
 	ZEND_FE(hg_check_license, NULL)
@@ -258,6 +260,7 @@ zend_homegear_globals* php_homegear_get_globals()
 		data->commandLine = false;
 		data->cookiesParsed = false;
 		data->peerId = 0;
+		data->logLevel = -1;
 	}
 	return data;
 }
@@ -316,6 +319,11 @@ static size_t php_homegear_ub_write_string(std::string& string)
 {
 	if(string.empty() || _disposed) return 0;
 	zend_homegear_globals* globals = php_homegear_get_globals();
+	if(string.size() > 2 && string.at(string.size() - 1) == '\n')
+	{
+		if(string.at(string.size() - 2) == '\r') string.resize(string.size() - 2);
+		else string.resize(string.size() - 1);
+	}
 	if(globals->outputCallback) globals->outputCallback(string);
 	else
 	{
@@ -328,6 +336,11 @@ static size_t php_homegear_ub_write_string(std::string& string)
 static size_t php_homegear_ub_write(const char* str, size_t length)
 {
 	if(length == 0 || _disposed) return 0;
+	if(length > 2 && *(str + length - 1) == '\n')
+	{
+		if(*(str + length - 2) == '\r') length -= 2;
+		else length -= 1;
+	}
 	std::string output(str, length);
 	zend_homegear_globals* globals = php_homegear_get_globals();
 	if(globals->outputCallback) globals->outputCallback(output);
@@ -590,6 +603,7 @@ ZEND_FUNCTION(hg_register_thread)
 	SEG(token) = token;
 	SEG(outputCallback) = phpEvents->getOutputCallback();
 	SEG(rpcCallback) = phpEvents->getRpcCallback();
+	SEG(logLevel) = phpEvents->getLogLevel();
 	RETURN_TRUE
 }
 
@@ -871,11 +885,11 @@ ZEND_FUNCTION(hg_poll_event)
 
 	std::shared_ptr<PhpEvents> phpEvents;
 	{
-		BaseLib::DisposableLockGuard eventsMapGuard(PhpEvents::eventsMapMutex);
+		std::unique_lock<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
 		std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(SEG(id));
 		if(eventsIterator == PhpEvents::eventsMap.end())
 		{
-			eventsMapGuard.dispose();
+			eventsMapGuard.unlock();
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
@@ -952,11 +966,11 @@ ZEND_FUNCTION(hg_subscribe_peer)
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &peerId) != SUCCESS) RETURN_NULL();
 	std::shared_ptr<PhpEvents> phpEvents;
 	{
-		BaseLib::DisposableLockGuard eventsMapGuard(PhpEvents::eventsMapMutex);
+		std::unique_lock<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
 		std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(SEG(id));
 		if(eventsIterator == PhpEvents::eventsMap.end())
 		{
-			eventsMapGuard.dispose();
+			eventsMapGuard.unlock();
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
@@ -978,11 +992,11 @@ ZEND_FUNCTION(hg_unsubscribe_peer)
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &peerId) != SUCCESS) RETURN_NULL();
 	std::shared_ptr<PhpEvents> phpEvents;
 	{
-		BaseLib::DisposableLockGuard eventsMapGuard(PhpEvents::eventsMapMutex);
+		std::unique_lock<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
 		std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(SEG(id));
 		if(eventsIterator == PhpEvents::eventsMap.end())
 		{
-			eventsMapGuard.dispose();
+			eventsMapGuard.unlock();
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
@@ -1017,8 +1031,48 @@ ZEND_FUNCTION(hg_log)
 	}
 	if(message.empty()) RETURN_FALSE;
 
-	if(SEG(peerId) != 0) GD::out.printMessage("Script log (peer id: " + std::to_string(SEG(peerId)) + "): " + message, logLevel, true);
-	else GD::out.printMessage("Script log: " + message, logLevel, true);
+	bool errorLog = true;
+	if(SEG(logLevel) > -1)
+	{
+		if(logLevel <= SEG(logLevel))
+		{
+			if(logLevel > 3) errorLog = false;
+			logLevel = 0;
+		}
+		else RETURN_TRUE;
+	}
+
+	if(SEG(peerId) != 0) GD::out.printMessage("Script log (peer id: " + std::to_string(SEG(peerId)) + "): " + message, logLevel, errorLog);
+	else GD::out.printMessage("Script log: " + message, logLevel, errorLog);
+	RETURN_TRUE;
+}
+
+ZEND_FUNCTION(hg_set_script_log_level)
+{
+	if(_disposed) RETURN_NULL();
+	int argc = 0;
+	zval* args = nullptr;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+	int32_t logLevel = -1;
+	if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::setScriptLoglevel().");
+	else if(argc == 1)
+	{
+		if(Z_TYPE(args[0]) != IS_LONG) php_error_docref(NULL, E_WARNING, "logLevel is not of type integer.");
+		else
+		{
+			logLevel = Z_LVAL(args[0]);
+		}
+	}
+	if(logLevel < 0 || logLevel > 10) RETURN_FALSE;
+	SEG(logLevel) = logLevel;
+
+	{
+		std::lock_guard<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
+		std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(SEG(id));
+		if(eventsIterator == PhpEvents::eventsMap.end() || !eventsIterator->second || eventsIterator->second->getToken().empty() || eventsIterator->second->getToken() != SEG(token)) RETURN_FALSE
+		eventsIterator->second->setLogLevel(logLevel);
+	}
+
 	RETURN_TRUE;
 }
 
@@ -1712,6 +1766,7 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME_MAPPING(getScriptId, hg_get_script_id, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(registerThread, hg_register_thread, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(log, hg_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(setScriptLogLevel, hg_set_script_log_level, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(getHttpContents, hg_get_http_contents, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(download, hg_download, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(pollEvent, hg_poll_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
@@ -1757,7 +1812,8 @@ int php_homegear_init()
 	_superglobals.gpio = new BaseLib::LowLevel::Gpio(GD::bl.get());
 	_disposed = false;
 	pthread_key_create(&pthread_key, pthread_data_destructor);
-	tsrm_startup(20, 1, 0, NULL);
+	int32_t threadCount = GD::bl->settings.scriptEngineMaxScriptsPerProcess() * GD::bl->settings.scriptEngineMaxThreadsPerScript();
+	tsrm_startup(threadCount, threadCount, 0, NULL); //Needs to be called once for the entire process (see TSRM.c)
 #ifdef ZEND_SIGNALS
 	zend_signal_startup();
 #endif
@@ -1786,7 +1842,7 @@ void php_homegear_shutdown()
 
 	ts_free_worker_threads();
 
-	tsrm_shutdown();
+	tsrm_shutdown(); //Needs to be called once for the entire process (see TSRM.c)
 	if(ini_path_override) free(ini_path_override);
 	if(ini_entries) free(ini_entries);
 	if(_superglobals.http)

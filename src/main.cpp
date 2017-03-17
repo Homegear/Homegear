@@ -30,9 +30,6 @@
 
 #include "GD/GD.h"
 #include "Monitor.h"
-#ifndef __aarch64__
-#include "DeathHandler.h"
-#endif
 #include "CLI/CLIClient.h"
 #include "ScriptEngine/ScriptEngineClient.h"
 #include "Flows/FlowsClient.h"
@@ -662,27 +659,8 @@ void startUp()
 		//Use sigaction over signal because of different behavior in Linux and BSD
     	sigaction(SIGHUP, &sa, NULL);
     	sigaction(SIGTERM, &sa, NULL);
-#if defined(__aarch64__) || (!defined(__i386__) && !defined(__x86_64__) && !defined(__arm__) && !defined(__aarch64__))
     	sigaction(SIGABRT, &sa, NULL);
     	sigaction(SIGSEGV, &sa, NULL);
-#else
-    	std::unique_ptr<Debug::DeathHandler> deathHandler;
-    	if(_startAsDaemon || _nonInteractive)
-    	{
-			deathHandler.reset(new Debug::DeathHandler());
-			deathHandler->set_append_pid(true);
-			deathHandler->set_frames_count(32);
-			deathHandler->set_color_output(false);
-			deathHandler->set_generate_core_dump(GD::bl->settings.enableCoreDumps());
-			deathHandler->set_cleanup(false);
-    	}
-    	else
-    	{
-    		sigaction(SIGABRT, &sa, NULL);
-    		sigaction(SIGSEGV, &sa, NULL);
-    	}
-#endif
-
     	sa.sa_handler = sigchld_handler;
     	sigaction(SIGCHLD, &sa, NULL);
 
@@ -1307,15 +1285,6 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-r")
     		{
-#if !defined(__aarch64__) && (defined(__i386__) || defined(__x86_64__) || defined(__arm__))
-    			Debug::DeathHandler deathHandler;
-				deathHandler.set_append_pid(true);
-				deathHandler.set_frames_count(32);
-				deathHandler.set_color_output(false);
-				deathHandler.set_generate_core_dump(GD::bl->settings.enableCoreDumps());
-				deathHandler.set_cleanup(false);
-#endif
-
     			GD::bl->settings.load(GD::configPath + "main.conf");
     			CLI::Client cliClient;
     			int32_t exitCode = cliClient.start();
@@ -1323,15 +1292,6 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-rse")
     		{
-#if !defined(__aarch64__) && (defined(__i386__) || defined(__x86_64__) || defined(__arm__))
-    			Debug::DeathHandler deathHandler;
-				deathHandler.set_append_pid(true);
-				deathHandler.set_frames_count(32);
-				deathHandler.set_color_output(false);
-				deathHandler.set_generate_core_dump(GD::bl->settings.enableCoreDumps());
-				deathHandler.set_cleanup(false);
-#endif
-
     			initGnuTls();
     			setLimits();
     			GD::bl->settings.load(GD::configPath + "main.conf");
@@ -1346,15 +1306,6 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-rl")
     		{
-#ifndef __aarch64__
-    			Debug::DeathHandler deathHandler;
-				deathHandler.set_append_pid(true);
-				deathHandler.set_frames_count(32);
-				deathHandler.set_color_output(false);
-				deathHandler.set_generate_core_dump(GD::bl->settings.enableCoreDumps());
-				deathHandler.set_cleanup(false);
-#endif
-
     			initGnuTls();
     			setLimits();
     			GD::bl->settings.load(GD::configPath + "main.conf");
@@ -1564,16 +1515,14 @@ int main(int argc, char* argv[])
     		else if(arg == "-v")
     		{
     			std::cout << "Homegear version " << VERSION << std::endl;
-    			std::cout << "Copyright (c) 2013-2016 Sathya Laufer" << std::endl << std::endl;
+    			std::cout << "Copyright (c) 2013-2017 Sathya Laufer" << std::endl << std::endl;
     			std::cout << "Git commit SHA of libhomegear-base: " << GITCOMMITSHABASE << std::endl;
     			std::cout << "Git branch of libhomegear-base:     " << GITBRANCHBASE << std::endl;
     			std::cout << "Git commit SHA of Homegear:         " << GITCOMMITSHAHOMEGEAR << std::endl;
     			std::cout << "Git branch of Homegear:             " << GITBRANCHHOMEGEAR << std::endl << std::endl;
     			std::cout << "PHP (License: PHP License):" << std::endl;
     			std::cout << "This product includes PHP software, freely available from <http://www.php.net/software/>" << std::endl;
-    			std::cout << "Copyright (c) 1999-2016 The PHP Group. All rights reserved." << std::endl << std::endl;
-    			std::cout << "DeathHandler (License: Simplified BSD License):" << std::endl;
-    			std::cout << "Copyright (c) 2012, Samsung R&D Institute Russia. All rights reserved." << std::endl;
+    			std::cout << "Copyright (c) 1999-2017 The PHP Group. All rights reserved." << std::endl << std::endl;
 
     			exit(0);
     		}
