@@ -745,7 +745,7 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string
 		PScriptEngineResponse response;
 		{
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			auto result = _rpcResponses[scriptId].emplace(packetId, std::make_shared<ScriptEngineResponse>());
+			std::pair<std::map<int32_t, PScriptEngineResponse>::iterator, bool> result = _rpcResponses[scriptId].emplace(packetId, std::make_shared<ScriptEngineResponse>());
 			if(result.second) response = result.first->second;
 		}
 		if(!response)
@@ -816,7 +816,7 @@ BaseLib::PVariable ScriptEngineClient::sendGlobalRequest(std::string methodName,
 		PScriptEngineResponse response;
 		{
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			auto result = _rpcResponses[0].emplace(packetId, std::make_shared<ScriptEngineResponse>());
+			std::pair<std::map<int32_t, PScriptEngineResponse>::iterator, bool> result = _rpcResponses[0].emplace(packetId, std::make_shared<ScriptEngineResponse>());
 			if(result.second) response = result.first->second;
 		}
 		if(!response)

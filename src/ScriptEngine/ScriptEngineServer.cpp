@@ -1002,7 +1002,7 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
 		PScriptEngineResponse response;
 		{
 			std::lock_guard<std::mutex> responseGuard(clientData->rpcResponsesMutex);
-			auto result = clientData->rpcResponses.emplace(packetId, std::make_shared<ScriptEngineResponse>());
+			std::pair<std::map<int32_t, PScriptEngineResponse>::iterator, bool> result = clientData->rpcResponses.emplace(packetId, std::make_shared<ScriptEngineResponse>());
 			if(result.second) response = result.first->second;
 		}
 		if(!response)
