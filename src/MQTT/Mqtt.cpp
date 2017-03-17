@@ -899,10 +899,10 @@ void Mqtt::connect()
 				_out.printInfo("Info: Successfully connected to MQTT server using protocol version 4.");
 				_connected = true;
 				_connectMutex.unlock();
-				subscribe("homegear/" + _settings.homegearId() + "/rpc/#");
-				subscribe("homegear/" + _settings.homegearId() + "/set/#");
-				subscribe("homegear/" + _settings.homegearId() + "/value/#");
-				subscribe("homegear/" + _settings.homegearId() + "/config/#");
+				subscribe(_settings.prefix() + _settings.homegearId() + "/rpc/#");
+				subscribe(_settings.prefix() + _settings.homegearId() + "/set/#");
+				subscribe(_settings.prefix() + _settings.homegearId() + "/value/#");
+				subscribe(_settings.prefix() + _settings.homegearId() + "/config/#");
 				_reconnecting = false;
 				return;
 			}
@@ -963,10 +963,10 @@ void Mqtt::connect()
 					_out.printInfo("Info: Successfully connected to MQTT server using protocol version 3.");
 					_connected = true;
 					_connectMutex.unlock();
-					subscribe("homegear/" + _settings.homegearId() + "/rpc/#");
-					subscribe("homegear/" + _settings.homegearId() + "/set/#");
-					subscribe("homegear/" + _settings.homegearId() + "/value/#");
-					subscribe("homegear/" + _settings.homegearId() + "/config/#");
+					subscribe(_settings.prefix() + _settings.homegearId() + "/rpc/#");
+					subscribe(_settings.prefix() + _settings.homegearId() + "/set/#");
+					subscribe(_settings.prefix() + _settings.homegearId() + "/value/#");
+					subscribe(_settings.prefix() + _settings.homegearId() + "/config/#");
 					_reconnecting = false;
 					return;
 				}
@@ -1119,7 +1119,7 @@ void Mqtt::publish(const std::string& topic, const std::vector<char>& data, bool
 	try
 	{
 		if(data.empty() || !_started) return;
-		std::string fullTopic = "homegear/" + _settings.homegearId() + "/" + topic;
+		std::string fullTopic = _settings.prefix() + _settings.homegearId() + "/" + topic;
 		std::vector<char> packet;
 		std::vector<char> payload;
 		payload.reserve(fullTopic.size() + 2 + 2 + data.size());
