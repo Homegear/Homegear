@@ -516,6 +516,7 @@ echo "3 *  * * *   root    /bin/systemctl reload homegear 2>&1 |/usr/bin/logger 
 echo ""
 echo "Starting raspi-config..."
 PATH="$PATH:/opt/vc/bin:/opt/vc/sbin"
+mount -o remount,rw /boot
 raspi-config
 rm /firstStart.sh
 sed -i '/sudo \/firstStart.sh/d' /home/pi/.bashrc
