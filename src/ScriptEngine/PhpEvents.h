@@ -53,9 +53,9 @@ public:
 	void stop();
 	bool enqueue(std::shared_ptr<EventData>& entry);
 	std::shared_ptr<EventData> poll(int32_t timeout = -1);
-	void addPeer(uint64_t peerId);
-	void removePeer(uint64_t peerId);
-	bool peerSubscribed(uint64_t peerId);
+	void addPeer(uint64_t peerId, int32_t channel, std::string& variable);
+	void removePeer(uint64_t peerId, int32_t channel, std::string& variable);
+	bool peerSubscribed(uint64_t peerId, int32_t channel, std::string& variable);
 	void setLogLevel(int32_t logLevel) { _logLevel = logLevel; }
 	int32_t getLogLevel() { return _logLevel; }
 	void setPeerId(uint64_t peerId) { _peerId = peerId; }
@@ -84,6 +84,6 @@ private:
 	std::shared_ptr<EventData> _buffer[_bufferSize];
 	std::condition_variable _processingConditionVariable;
 	std::mutex _peersMutex;
-	std::set<uint64_t> _peers;
+	std::map<uint64_t, std::map<int32_t, std::set<std::string>>> _peers;
 };
 #endif

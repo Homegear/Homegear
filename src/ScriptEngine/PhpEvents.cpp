@@ -92,6 +92,7 @@ bool PhpEvents::enqueue(std::shared_ptr<EventData>& entry)
 
 std::shared_ptr<PhpEvents::EventData> PhpEvents::poll(int32_t timeout)
 {
+	if(timeout < 1) timeout = 10000;
 	std::shared_ptr<EventData> eventData;
 	if(_stopProcessing) return eventData;
 	try
@@ -99,7 +100,7 @@ std::shared_ptr<PhpEvents::EventData> PhpEvents::poll(int32_t timeout)
 		{
 			std::unique_lock<std::mutex> lock(_queueMutex);
 
-			_processingConditionVariable.wait(lock, [&]{ return _bufferCount > 0 || _stopProcessing; });
+			if(!_processingConditionVariable.wait_for(lock, std::chrono::milliseconds(timeout), [&]{ return _bufferCount > 0 || _stopProcessing; })) return eventData;
 			if(_stopProcessing) return eventData;
 
 			std::lock_guard<std::mutex> bufferGuard(_bufferMutex);
@@ -124,12 +125,13 @@ std::shared_ptr<PhpEvents::EventData> PhpEvents::poll(int32_t timeout)
 	return eventData;
 }
 
-void PhpEvents::addPeer(uint64_t peerId)
+void PhpEvents::addPeer(uint64_t peerId, int32_t channel, std::string& variable)
 {
-	_peersMutex.lock();
 	try
 	{
-		_peers.insert(peerId);
+		std::lock_guard<std::mutex> peersGuard(_peersMutex);
+		if(channel > -1 && !variable.empty()) _peers[peerId][channel].insert(variable);
+		else _peers.emplace(std::make_pair(peerId, std::map<int32_t, std::set<std::string>>()));
 	}
 	catch(const std::exception& ex)
 	{
@@ -143,40 +145,49 @@ void PhpEvents::addPeer(uint64_t peerId)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_peersMutex.unlock();
 }
 
-void PhpEvents::removePeer(uint64_t peerId)
+void PhpEvents::removePeer(uint64_t peerId, int32_t channel, std::string& variable)
 {
-	_peersMutex.lock();
 	try
 	{
-		_peers.erase(peerId);
-	}
-	catch(const std::exception& ex)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(const BaseLib::Exception& ex)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	_peersMutex.unlock();
-}
-
-bool PhpEvents::peerSubscribed(uint64_t peerId)
-{
-	_peersMutex.lock();
-	try
-	{
-		if(_peers.find(peerId) != _peers.end())
+		std::lock_guard<std::mutex> peersGuard(_peersMutex);
+		if(channel > -1 && !variable.empty())
 		{
-			_peersMutex.unlock();
-			return true;
+			_peers[peerId][channel].erase(variable);
+			if(_peers[peerId][channel].empty()) _peers[peerId].erase(channel);
+		}
+		else _peers.erase(peerId);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+bool PhpEvents::peerSubscribed(uint64_t peerId, int32_t channel, std::string& variable)
+{
+	try
+	{
+		std::lock_guard<std::mutex> peersGuard(_peersMutex);
+		auto peerIterator = _peers.find(peerId);
+		if(peerIterator != _peers.end())
+		{
+			if(!peerIterator->second.empty() && channel > -1 && !variable.empty())
+			{
+				auto channelIterator = peerIterator->second.find(channel);
+				if(channelIterator == peerIterator->second.end()) return false;
+				return channelIterator->second.find(variable) != channelIterator->second.end();
+			}
+			else return true;
 		}
 	}
 	catch(const std::exception& ex)
@@ -191,6 +202,5 @@ bool PhpEvents::peerSubscribed(uint64_t peerId)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_peersMutex.unlock();
 	return false;
 }

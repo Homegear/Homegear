@@ -880,7 +880,7 @@ ZEND_FUNCTION(hg_poll_event)
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
 	int32_t timeout = -1;
 	if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::pollEvent().");
-	else if(argc >= 1)
+	else if(argc == 1)
 	{
 		if(Z_TYPE(args[0]) != IS_LONG) php_error_docref(NULL, E_WARNING, "timeout is not of type int.");
 		else timeout = Z_LVAL(args[0]);
@@ -965,8 +965,43 @@ ZEND_FUNCTION(hg_subscribe_peer)
 		zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Did you call \"registerThread\"?", -1);
 		RETURN_FALSE
 	}
-	long peerId = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &peerId) != SUCCESS) RETURN_NULL();
+	int argc = 0;
+	zval* args = nullptr;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+	uint64_t peerId = 0;
+	int32_t channel = -1;
+	std::string variable;
+	if(argc == 0) php_error_docref(NULL, E_WARNING, "Homegear::subscribePeer() expects 1 or 3 parameters.");
+	else if(argc > 3) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::subscribePeer().");
+	else if(argc == 3)
+	{
+		if(Z_TYPE(args[0]) != IS_LONG) php_error_docref(NULL, E_WARNING, "peerId is not of type integer.");
+		else
+		{
+			peerId = Z_LVAL(args[0]);
+		}
+
+		if(Z_TYPE(args[1]) != IS_LONG) php_error_docref(NULL, E_WARNING, "channel is not of type integer.");
+		else
+		{
+			channel = Z_LVAL(args[1]);
+		}
+
+		if(Z_TYPE(args[2]) != IS_STRING) php_error_docref(NULL, E_WARNING, "variableName is not of type string.");
+		else
+		{
+			if(Z_STRLEN(args[2]) > 0) variable = std::string(Z_STRVAL(args[2]), Z_STRLEN(args[2]));
+		}
+	}
+	else
+	{
+		if(Z_TYPE(args[0]) != IS_LONG) php_error_docref(NULL, E_WARNING, "peerId is not of type integer.");
+		else
+		{
+			peerId = Z_LVAL(args[0]);
+		}
+	}
+
 	std::shared_ptr<PhpEvents> phpEvents;
 	{
 		std::unique_lock<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
@@ -980,7 +1015,7 @@ ZEND_FUNCTION(hg_subscribe_peer)
 		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
 		phpEvents = eventsIterator->second;
 	}
-	phpEvents->addPeer(peerId);
+	phpEvents->addPeer(peerId, channel, variable);
 }
 
 ZEND_FUNCTION(hg_unsubscribe_peer)
@@ -991,8 +1026,42 @@ ZEND_FUNCTION(hg_unsubscribe_peer)
 		zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Did you call \"registerThread\"?", -1);
 		RETURN_FALSE
 	}
-	long peerId = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &peerId) != SUCCESS) RETURN_NULL();
+	int argc = 0;
+	zval* args = nullptr;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+	uint64_t peerId = 0;
+	int32_t channel = -1;
+	std::string variable;
+	if(argc == 0) php_error_docref(NULL, E_WARNING, "Homegear::unsubscribePeer() expects 1 or 3 parameters.");
+	else if(argc > 3) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::unsubscribePeer().");
+	else if(argc == 3)
+	{
+		if(Z_TYPE(args[0]) != IS_LONG) php_error_docref(NULL, E_WARNING, "peerId is not of type integer.");
+		else
+		{
+			peerId = Z_LVAL(args[0]);
+		}
+
+		if(Z_TYPE(args[1]) != IS_LONG) php_error_docref(NULL, E_WARNING, "channel is not of type integer.");
+		else
+		{
+			channel = Z_LVAL(args[1]);
+		}
+
+		if(Z_TYPE(args[2]) != IS_STRING) php_error_docref(NULL, E_WARNING, "variableName is not of type string.");
+		else
+		{
+			if(Z_STRLEN(args[2]) > 0) variable = std::string(Z_STRVAL(args[2]), Z_STRLEN(args[2]));
+		}
+	}
+	else
+	{
+		if(Z_TYPE(args[0]) != IS_LONG) php_error_docref(NULL, E_WARNING, "peerId is not of type integer.");
+		else
+		{
+			peerId = Z_LVAL(args[0]);
+		}
+	}
 	std::shared_ptr<PhpEvents> phpEvents;
 	{
 		std::unique_lock<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
@@ -1006,7 +1075,7 @@ ZEND_FUNCTION(hg_unsubscribe_peer)
 		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
 		phpEvents = eventsIterator->second;
 	}
-	phpEvents->removePeer(peerId);
+	phpEvents->removePeer(peerId, channel, variable);
 }
 
 ZEND_FUNCTION(hg_log)

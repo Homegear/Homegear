@@ -1106,7 +1106,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> runningScripts = GD::scriptEngineServer->getRunningScripts();
 			if(runningScripts.empty()) return "No scripts are being executed.\n";
 
-			stringStream << std::left << std::setfill(' ') << std::setw(10) << "PID" << std::setw(10) << "Peer ID" << std::setw(10) << "ID" << std::setw(80) << "Filename" << std::endl;
+			stringStream << std::left << std::setfill(' ') << std::setw(10) << "PID" << std::setw(10) << "Peer ID" << std::setw(10) << "Script ID" << std::setw(80) << "Filename" << std::endl;
 			for(auto& script : runningScripts)
 			{
 				stringStream << std::setw(10) << std::get<0>(script) << std::setw(10) << (std::get<1>(script) > 0 ? std::to_string(std::get<1>(script)) : "") << std::setw(10) << std::get<2>(script) << std::setw(80) << std::get<3>(script) << std::endl;

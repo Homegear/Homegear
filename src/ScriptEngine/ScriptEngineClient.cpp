@@ -1430,15 +1430,19 @@ BaseLib::PVariable ScriptEngineClient::broadcastEvent(BaseLib::PArray& parameter
 		std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
 		for(std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
 		{
-			if(i->second && (parameters->at(0)->integerValue64 == 0 || i->second->peerSubscribed(parameters->at(0)->integerValue64)))
+			int32_t channel = parameters->at(1)->integerValue;
+			std::string variableName;
+			if(i->second && (parameters->at(0)->integerValue64 == 0 || i->second->peerSubscribed(parameters->at(0)->integerValue64, -1, variableName)))
 			{
 				for(uint32_t j = 0; j < parameters->at(2)->arrayValue->size(); j++)
 				{
+					variableName = parameters->at(2)->arrayValue->at(j)->stringValue;
+					if(!i->second->peerSubscribed(parameters->at(0)->integerValue64, channel, variableName)) continue;
 					std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
 					eventData->type = "event";
 					eventData->id = parameters->at(0)->integerValue64;
-					eventData->channel = parameters->at(1)->integerValue;
-					eventData->variable = parameters->at(2)->arrayValue->at(j)->stringValue;
+					eventData->channel = channel;
+					eventData->variable = variableName;
 					eventData->value = parameters->at(3)->arrayValue->at(j);
 					if(!i->second->enqueue(eventData)) _out.printError("Error: Could not queue event as event buffer is full. Dropping it.");
 				}
@@ -1544,7 +1548,8 @@ BaseLib::PVariable ScriptEngineClient::broadcastUpdateDevice(BaseLib::PArray& pa
 		std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
 		for(std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
 		{
-			if(i->second && i->second->peerSubscribed(parameters->at(0)->integerValue64))
+			std::string variableName;
+			if(i->second && i->second->peerSubscribed(parameters->at(0)->integerValue64, -1, variableName))
 			{
 				std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
 				eventData->type = "updateDevice";
