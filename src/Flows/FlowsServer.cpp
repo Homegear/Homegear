@@ -872,7 +872,7 @@ BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::s
 		PFlowsResponse response;
 		{
 			std::lock_guard<std::mutex> responseGuard(clientData->rpcResponsesMutex);
-			std::pair<std::map<int32_t, PFlowsResponse>::iterator, bool> result = clientData->rpcResponses.emplace(packetId, std::make_shared<FlowsResponse>());
+			auto result = clientData->rpcResponses.emplace(packetId, std::make_shared<FlowsResponse>());
 			if(result.second) response = result.first->second;
 		}
 		if(!response)

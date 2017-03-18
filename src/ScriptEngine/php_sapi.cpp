@@ -44,6 +44,7 @@
 #error PHP 7.2 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line.
 /*
  * 1. Compare initialization with the initialization in one of the SAPI modules (e. g. "php_embed_init()" in "sapi/embed/php_embed.c").
+ * 2. Check if bug 71115 is fixed: https://bugs.php.net/bug.php?id=71115. If that's the case, remove workaround from php_homegear_startup and php_homegear_shutdown.
  */
 #endif
 
@@ -64,7 +65,8 @@ static const char HARDCODED_INI[] =
 	"max_execution_time=0\n"
 	"max_input_time=-1\n\0";
 
-static int php_homegear_startup(sapi_module_struct* sapi_module);
+static int php_homegear_startup(sapi_module_struct* sapi_globals);
+static int php_homegear_shutdown(sapi_module_struct* sapi_globals);
 static int php_homegear_activate();
 static int php_homegear_deactivate();
 static size_t php_homegear_ub_write_string(std::string& string);
@@ -210,7 +212,7 @@ static sapi_module_struct php_homegear_sapi_module = {
 	(char*)"PHP Homegear Library",        /* pretty name */
 
 	php_homegear_startup,              /* startup == MINIT. Called for each new thread. */
-	php_module_shutdown_wrapper,   /* shutdown == MSHUTDOWN. Called for each new thread. */
+	php_homegear_shutdown,             /* shutdown == MSHUTDOWN. Called for each new thread. */
 
 	php_homegear_activate,	            /* activate == RINIT. Called for each request. */
 	php_homegear_deactivate,  			/* deactivate == RSHUTDOWN. Called for each request. */
@@ -1812,8 +1814,16 @@ int php_homegear_init()
 	_superglobals.gpio = new BaseLib::LowLevel::Gpio(GD::bl.get());
 	_disposed = false;
 	pthread_key_create(&pthread_key, pthread_data_destructor);
-	int32_t threadCount = GD::bl->settings.scriptEngineMaxScriptsPerProcess() * GD::bl->settings.scriptEngineMaxThreadsPerScript();
-	tsrm_startup(threadCount, threadCount, 0, NULL); //Needs to be called once for the entire process (see TSRM.c)
+	int32_t maxScriptsPerProcess = GD::bl->settings.scriptEngineMaxScriptsPerProcess();
+	if(maxScriptsPerProcess < 1) maxScriptsPerProcess = 20;
+	int32_t maxThreadsPerScript = GD::bl->settings.scriptEngineMaxThreadsPerScript();
+	if(maxThreadsPerScript < 1) maxThreadsPerScript = 4;
+	int32_t threadCount = maxScriptsPerProcess * maxThreadsPerScript;
+	if(tsrm_startup(threadCount, threadCount, 0, NULL) != 1) //Needs to be called once for the entire process (see TSRM.c)
+	{
+		GD::out.printCritical("Critical: Could not start script engine. tsrm_startup returned error.");
+		return FAILURE;
+	}
 #ifdef ZEND_SIGNALS
 	zend_signal_startup();
 #endif
@@ -1860,10 +1870,107 @@ void php_homegear_shutdown()
 	_superglobals.serialDevicesMutex.unlock();
 }
 
-static int php_homegear_startup(sapi_module_struct* sapi_module)
+static int php_homegear_startup(sapi_module_struct* sapi_globals)
 {
-	if(php_module_startup(sapi_module, &homegear_module_entry, 1) == FAILURE) return FAILURE;
+	if(php_module_startup(sapi_globals, &homegear_module_entry, 1) == FAILURE) return FAILURE;
+
+	// {{{ Fix for bug #71115 which causes process to crash when excessively using $_GLOBALS. Remove once bug is fixed.
+
+			// Run the test code below a million times (at least 30 executions per second) to check if bug really is fixed.
+			/*
+				<?php
+
+				include("test.php");
+
+				function setGlobals()
+				{
+						global $GLOBALS;
+
+						$GLOBALS['ABC'.rand(0, 1000000).rand(1000, 10000000).rand(10000, 100000)] = rand(1000, 10000000)."BLA".rand(10000, 1000000);
+						$GLOBALS['TEST'] = rand(0, 100000).'BLII'.rand(1000, 1000000);
+						for($i = 0; $i < 1000; $i++)
+						{
+								$GLOBALS['TEST'.$i.'-'.rand(0, 10000000)] = $i.'-'.rand(100000, 100000)."TEST$i";
+						}
+				}
+
+				$hg = new \Homegear\Homegear();
+				$version = $hg->getVersion();
+				$logLevel = $hg->logLevel();
+				$logLevel += 4;
+				setGlobals();
+				$hg->log(4, print_r($GLOBALS, true));
+				$hg->log(4, $version);
+				$hg->writeLog($hg->getVersion(), 4);
+				$hg->writeLog((string)$hg->logLevel(), 4);
+				$hg->log(4, "$version $logLevel Bla");
+				$hg->setValue(200, 1, "BALANCE", (int)rand(0, 1000));
+				$hg->setValue(200, 1, "PRODUCTION", (int)rand(0, 1000));
+				$hg->setValue(200, 1, "CONSUMPTION", (int)rand(0, 1000));
+				$hg->setValue(200, 1, "ACTIVEPOWER", (int)rand(0, 1000));
+				$hg->setValue(200, 1, "OWNCONSUMPTION", (int)rand(0, 1000).$GLOBALS['TEST']);
+				$hg->setValue(200, 1, "PRODUCTION2", (int)rand(0, 1000));
+				$hg->putParamset(200, 1, "MASTER", $hg->getParamset(200, 1, "MASTER"));
+			 */
+		void* global;
+		void* function;
+		void* classEntry;
+
+		ZEND_HASH_FOREACH_PTR(CG(auto_globals), global) {
+			GC_FLAGS(((zend_auto_global*)global)->name) |= IS_STR_INTERNED;
+			zend_string_hash_val(((zend_auto_global*)global)->name);
+		} ZEND_HASH_FOREACH_END();
+
+		ZEND_HASH_FOREACH_PTR(CG(function_table), function) {
+			GC_FLAGS(((zend_internal_function*)function)->function_name) |= IS_STR_INTERNED;
+			zend_string_hash_val(((zend_internal_function*)function)->function_name);
+		} ZEND_HASH_FOREACH_END();
+
+		ZEND_HASH_FOREACH_PTR(CG(class_table), classEntry) {
+			void* property;
+			GC_FLAGS(((zend_class_entry*)classEntry)->name) |= IS_STR_INTERNED;
+			zend_string_hash_val(((zend_class_entry*)classEntry)->name);
+			ZEND_HASH_FOREACH_PTR(&((zend_class_entry*)classEntry)->properties_info, property) {
+				GC_FLAGS(((zend_property_info*)property)->name) |= IS_STR_INTERNED;
+				zend_string_hash_val(((zend_property_info*)property)->name);
+				if (((zend_property_info*)property)->doc_comment) {
+					GC_FLAGS(((zend_property_info*)property)->doc_comment) |= IS_STR_INTERNED;
+				}
+			} ZEND_HASH_FOREACH_END();
+
+		} ZEND_HASH_FOREACH_END();
+	// }}}
 	return SUCCESS;
+}
+
+static int php_homegear_shutdown(sapi_module_struct* sapi_globals)
+{
+	// {{{ Fix for bug #71115 which causes process to crash when excessively using $_GLOBALS. Remove once bug is fixed.
+		void* global;
+		void* function;
+		void* classEntry;
+
+		ZEND_HASH_FOREACH_PTR(CG(auto_globals), global) {
+			GC_FLAGS(((zend_auto_global*)global)->name) &= ~IS_STR_INTERNED;
+		} ZEND_HASH_FOREACH_END();
+
+		ZEND_HASH_FOREACH_PTR(CG(function_table), function) {
+			GC_FLAGS(((zend_internal_function*)function)->function_name) &= ~IS_STR_INTERNED;
+		} ZEND_HASH_FOREACH_END();
+
+		ZEND_HASH_FOREACH_PTR(CG(class_table), classEntry) {
+			void* property;
+			GC_FLAGS(((zend_class_entry*)classEntry)->name) &= ~IS_STR_INTERNED;
+			ZEND_HASH_FOREACH_PTR(&((zend_class_entry*)classEntry)->properties_info, property) {
+				GC_FLAGS(((zend_property_info*)property)->name) &= ~IS_STR_INTERNED;
+				if (((zend_property_info*)property)->doc_comment) {
+					GC_FLAGS(((zend_property_info*)property)->doc_comment) &= ~IS_STR_INTERNED;
+				}
+			} ZEND_HASH_FOREACH_END();
+
+		} ZEND_HASH_FOREACH_END();
+	// }}}
+	return php_module_shutdown_wrapper(sapi_globals);
 }
 
 static int php_homegear_activate()

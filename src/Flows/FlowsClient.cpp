@@ -387,7 +387,7 @@ BaseLib::PVariable FlowsClient::sendRequest(int32_t flowId, std::string methodNa
 		PFlowsResponse response;
 		{
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			std::pair<std::map<int32_t, PFlowsResponse>::iterator, bool> result = _rpcResponses[flowId].emplace(packetId, std::make_shared<FlowsResponse>());
+			auto result = _rpcResponses[flowId].emplace(packetId, std::make_shared<FlowsResponse>());
 			if(result.second) response = result.first->second;
 		}
 		if(!response)
@@ -455,7 +455,7 @@ BaseLib::PVariable FlowsClient::sendGlobalRequest(std::string methodName, BaseLi
 		PFlowsResponse response;
 		{
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			std::pair<std::map<int32_t, PFlowsResponse>::iterator, bool> result = _rpcResponses[0].emplace(packetId, std::make_shared<FlowsResponse>());
+			auto result = _rpcResponses[0].emplace(packetId, std::make_shared<FlowsResponse>());
 			if(result.second) response = result.first->second;
 		}
 		if(!response)

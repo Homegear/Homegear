@@ -62,7 +62,7 @@ public:
 	};
 
 	std::mutex disposingMutex;
-	bool disposing = false;
+	std::atomic_bool disposing;
 	uint64_t id = 0;
 	Type::Enum type = Type::Enum::triggered;
 	std::string name;
@@ -89,7 +89,7 @@ public:
 	uint64_t lastRaised = 0;
 	uint64_t lastReset = 0;
 
-	Event() {}
+	Event() { disposing = false; }
 	virtual ~Event() {}
 };
 
