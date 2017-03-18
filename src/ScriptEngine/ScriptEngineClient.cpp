@@ -1077,6 +1077,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			{
 				BaseLib::Base64::encode(BaseLib::HelperFunctions::getRandomBytes(16), globals->token);
 				std::shared_ptr<PhpEvents> phpEvents = std::make_shared<PhpEvents>(globals->token, globals->outputCallback, globals->rpcCallback);
+				phpEvents->setPeerId(scriptInfo->peerId);
 				std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
 				PhpEvents::eventsMap.emplace(id, phpEvents);
 			}
@@ -1336,6 +1337,7 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 			{
 				PThreadInfo threadInfo = std::make_shared<ThreadInfo>();
 				threadInfo->filename = scriptInfo->fullPath;
+				threadInfo->peerId = scriptInfo->peerId;
 				threadInfo->thread = std::thread(&ScriptEngineClient::scriptThread, this, scriptInfo->id, scriptInfo, sendOutput);
 				_scriptThreads.emplace(scriptInfo->id, threadInfo);
 			}
@@ -1397,8 +1399,8 @@ BaseLib::PVariable ScriptEngineClient::getRunningScripts(BaseLib::PArray& parame
 		{
 			if(i->second->running)
 			{
-				BaseLib::Array pair{std::make_shared<BaseLib::Variable>(i->first), std::make_shared<BaseLib::Variable>(i->second->filename)};
-				scripts->arrayValue->push_back(std::make_shared<BaseLib::Variable>(std::make_shared<BaseLib::Array>(std::move(pair))));
+				BaseLib::Array data{std::make_shared<BaseLib::Variable>(i->second->peerId), std::make_shared<BaseLib::Variable>(i->first), std::make_shared<BaseLib::Variable>(i->second->filename)};
+				scripts->arrayValue->push_back(std::make_shared<BaseLib::Variable>(std::make_shared<BaseLib::Array>(std::move(data))));
 			}
 		}
 		return scripts;

@@ -606,6 +606,7 @@ ZEND_FUNCTION(hg_register_thread)
 	SEG(outputCallback) = phpEvents->getOutputCallback();
 	SEG(rpcCallback) = phpEvents->getRpcCallback();
 	SEG(logLevel) = phpEvents->getLogLevel();
+	SEG(peerId) = phpEvents->getPeerId();
 	RETURN_TRUE
 }
 

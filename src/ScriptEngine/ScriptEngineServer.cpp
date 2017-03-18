@@ -627,11 +627,11 @@ uint32_t ScriptEngineServer::scriptCount()
     return 0;
 }
 
-std::vector<std::pair<int32_t, std::string>> ScriptEngineServer::getRunningScripts()
+std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineServer::getRunningScripts()
 {
 	try
 	{
-		if(_shuttingDown) return std::vector<std::pair<int32_t, std::string>>();
+		if(_shuttingDown) return std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>>();
 		std::vector<PScriptEngineClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -642,15 +642,15 @@ std::vector<std::pair<int32_t, std::string>> ScriptEngineServer::getRunningScrip
 			}
 		}
 
-		std::vector<std::pair<int32_t, std::string>> runningScripts;
+		std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> runningScripts;
 		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
 		for(std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PVariable response = sendRequest(*i, "getRunningScripts", parameters);
 			if(runningScripts.capacity() <= runningScripts.size() + response->arrayValue->size()) runningScripts.reserve(runningScripts.capacity() + response->arrayValue->size() + 100);
-			for(auto& i : *(response->arrayValue))
+			for(auto& script : *(response->arrayValue))
 			{
-				runningScripts.push_back(std::pair<int32_t, std::string>(i->arrayValue->at(0)->integerValue, i->arrayValue->at(1)->stringValue));
+				runningScripts.push_back(std::tuple<int32_t, uint64_t, int32_t, std::string>((int32_t)(*i)->pid, script->arrayValue->at(0)->integerValue64, script->arrayValue->at(1)->integerValue, script->arrayValue->at(2)->stringValue));
 			}
 		}
 		return runningScripts;
@@ -667,7 +667,7 @@ std::vector<std::pair<int32_t, std::string>> ScriptEngineServer::getRunningScrip
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::vector<std::pair<int32_t, std::string>>();
+    return std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>>();
 }
 
 void ScriptEngineServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values)

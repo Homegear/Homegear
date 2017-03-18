@@ -58,6 +58,8 @@ public:
 	bool peerSubscribed(uint64_t peerId);
 	void setLogLevel(int32_t logLevel) { _logLevel = logLevel; }
 	int32_t getLogLevel() { return _logLevel; }
+	void setPeerId(uint64_t peerId) { _peerId = peerId; }
+	int32_t getPeerId() { return _peerId; }
 
 	std::function<void(std::string& output)>& getOutputCallback() { return _outputCallback; };
 	std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)>& getRpcCallback() { return _rpcCallback; };
@@ -66,7 +68,11 @@ private:
 	std::function<void(std::string& output)> _outputCallback;
 	std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)> _rpcCallback;
 	std::string _token;
-	int32_t _logLevel = -1; //We are abusing the events object here for data exchange between main thread and sub threads.
+
+	// {{{ Data exchange - e are abusing the events object here for data exchange between main thread and sub threads.
+		uint64_t _peerId = 0;
+		int32_t _logLevel = -1;
+	// }}}
 
 	std::atomic_bool _stopProcessing;
 	static const int32_t _bufferSize = 1000;
