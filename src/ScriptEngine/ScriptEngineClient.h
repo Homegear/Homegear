@@ -67,6 +67,7 @@ private:
 		std::thread thread;
 		std::atomic_bool running;
 		std::string filename;
+		uint64_t peerId;
 
 		ThreadInfo() : running(true) {}
 	};

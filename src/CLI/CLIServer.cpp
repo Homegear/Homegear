@@ -1103,13 +1103,13 @@ std::string Server::handleGlobalCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			std::vector<std::pair<int32_t, std::string>> runningScripts = GD::scriptEngineServer->getRunningScripts();
-			if(runningScripts.size() == 0) return "No scripts are being executed.\n";
+			std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> runningScripts = GD::scriptEngineServer->getRunningScripts();
+			if(runningScripts.empty()) return "No scripts are being executed.\n";
 
-			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(80) << "Filename" << std::endl;
+			stringStream << std::left << std::setfill(' ') << std::setw(10) << "PID" << std::setw(10) << "Peer ID" << std::setw(10) << "Script ID" << std::setw(80) << "Filename" << std::endl;
 			for(auto& script : runningScripts)
 			{
-				stringStream << std::setw(6) << script.first << std::setw(80) << script.second << std::endl;
+				stringStream << std::setw(10) << std::get<0>(script) << std::setw(10) << (std::get<1>(script) > 0 ? std::to_string(std::get<1>(script)) : "") << std::setw(10) << std::get<2>(script) << std::setw(80) << std::get<3>(script) << std::endl;
 			}
 
 			return stringStream.str();

@@ -66,7 +66,7 @@ public:
 	void homegearReloading();
 	void processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped);
 	uint32_t scriptCount();
-	std::vector<std::pair<int32_t, std::string>> getRunningScripts();
+	std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> getRunningScripts();
 	void executeScript(PScriptInfo& scriptInfo, bool wait);
 	bool checkSessionId(const std::string& sessionId);
 	void broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values);

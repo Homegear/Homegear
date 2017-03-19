@@ -12,3 +12,7 @@
 #ifndef isnan //Fix for build on Ubuntu Xenial
 	#define isnan(a) std::isnan(a)
 #endif
+
+#ifndef isfinite //Fix for build with some cross compilers
+	#define isfinite(a) std::isfinite(a)
+#endif

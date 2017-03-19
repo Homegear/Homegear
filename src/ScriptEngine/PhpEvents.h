@@ -53,11 +53,13 @@ public:
 	void stop();
 	bool enqueue(std::shared_ptr<EventData>& entry);
 	std::shared_ptr<EventData> poll(int32_t timeout = -1);
-	void addPeer(uint64_t peerId);
-	void removePeer(uint64_t peerId);
-	bool peerSubscribed(uint64_t peerId);
+	void addPeer(uint64_t peerId, int32_t channel, std::string& variable);
+	void removePeer(uint64_t peerId, int32_t channel, std::string& variable);
+	bool peerSubscribed(uint64_t peerId, int32_t channel, std::string& variable);
 	void setLogLevel(int32_t logLevel) { _logLevel = logLevel; }
 	int32_t getLogLevel() { return _logLevel; }
+	void setPeerId(uint64_t peerId) { _peerId = peerId; }
+	int32_t getPeerId() { return _peerId; }
 
 	std::function<void(std::string& output)>& getOutputCallback() { return _outputCallback; };
 	std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)>& getRpcCallback() { return _rpcCallback; };
@@ -66,7 +68,11 @@ private:
 	std::function<void(std::string& output)> _outputCallback;
 	std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)> _rpcCallback;
 	std::string _token;
-	int32_t _logLevel = -1; //We are abusing the events object here for data exchange between main thread and sub threads.
+
+	// {{{ Data exchange - e are abusing the events object here for data exchange between main thread and sub threads.
+		uint64_t _peerId = 0;
+		int32_t _logLevel = -1;
+	// }}}
 
 	std::atomic_bool _stopProcessing;
 	static const int32_t _bufferSize = 1000;
@@ -78,6 +84,6 @@ private:
 	std::shared_ptr<EventData> _buffer[_bufferSize];
 	std::condition_variable _processingConditionVariable;
 	std::mutex _peersMutex;
-	std::set<uint64_t> _peers;
+	std::map<uint64_t, std::map<int32_t, std::set<std::string>>> _peers;
 };
 #endif
