@@ -1500,6 +1500,7 @@ void ScriptEngineServer::checkSessionIdThread(std::string sessionId, bool* resul
 
 		ZVAL_STRINGL(&function, "session_start", sizeof("session_start") - 1);
 		call_user_function(EG(function_table), NULL, &function, &returnValue, 0, nullptr);
+		zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
 
 		zval* reference = zend_hash_str_find(&EG(symbol_table), "_SESSION", sizeof("_SESSION") - 1);
 		if(reference != NULL)
