@@ -1,3 +1,17 @@
+25.03.2017:
+
+Features:
+
+* Added toggle ("!") for Booleans in RPC method "setValue()"
+
+Changes:
+
+* "putParamset()" now also works without setting the parameter set type.
+
+.
+.
+.
+
 28.11.2016:
 
 Featues:

@@ -2899,6 +2899,7 @@ BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, st
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tStruct }),
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tStruct }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct })
 		}));
@@ -2944,6 +2945,10 @@ BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, st
 				if(copy == serialNumber) remoteSerialNumber = copy;
 				// }}}
 			}
+		}
+		else if(parameters->at(parameterSetIndex)->type == BaseLib::VariableType::tStruct)
+		{
+			type = BaseLib::DeviceDescription::ParameterGroup::Type::Enum::config;
 		}
 		else
 		{
