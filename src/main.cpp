@@ -902,7 +902,15 @@ void startUp()
 			if(GD::bl->settings.enableCoreDumps()) prctl(PR_SET_DUMPABLE, 1);
     	}
 
-    	if(getuid() == 0) GD::out.printWarning("Warning: Running as root. The authors of Homegear recommend running Homegear as user.");
+    	if(getuid() == 0)
+    	{
+    		if(!GD::runAsUser.empty() && !GD::runAsGroup.empty())
+    		{
+    			GD::out.printCritical("Critical: Homegear still has root privileges though privileges should have been dropped. Exiting Homegear as this is a security risk.");
+				exit(1);
+    		}
+    		else GD::out.printWarning("Warning: Running as root. The authors of Homegear recommend running Homegear as user.");
+    	}
     	else
     	{
     		if(setuid(0) != -1)
