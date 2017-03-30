@@ -61,6 +61,10 @@ public:
 	bool basicServer(BaseLib::Http& httpPacket);
 	bool basicServer(BaseLib::WebSocket& webSocket);
 	bool sessionServer(BaseLib::WebSocket& webSocket);
+
+	void sendBasicUnauthorized(bool binary);
+	void sendWebSocketAuthorized();
+	void sendWebSocketUnauthorized(std::string reason);
 protected:
 	bool _initialized = false;
 	std::string _hostname;
@@ -75,10 +79,6 @@ protected:
 	BaseLib::Http _http;
 	std::shared_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 	std::shared_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
-
-	void sendBasicUnauthorized(bool binary);
-	void sendWebSocketAuthorized(BaseLib::WebSocket& webSocket);
-	void sendWebSocketUnauthorized(BaseLib::WebSocket& webSocket, std::string reason);
 };
 
 }

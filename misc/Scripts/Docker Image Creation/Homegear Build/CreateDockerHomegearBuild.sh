@@ -144,7 +144,7 @@ chroot $rootfs apt-key add Release.key
 rm $rootfs/Release.key
 
 chroot $rootfs apt-get update
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libmcrypt-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libmodbus-dev libzip-dev p7zip-full ntp
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper git devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libmcrypt-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libmodbus-dev libzip-dev p7zip-full ntp
 
 if [ "$distver" == "stretch" ];  then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install default-libmysqlclient-dev dirmngr
@@ -176,27 +176,27 @@ fi
 # }}}
 
 # {{{ Git from repository craches for some architectures when qemu is used. Compiling without pthreads solves the issue.
-cat > "$rootfs/build-git.sh" <<-'EOF'
-cd /tmp
-wget https://github.com/git/git/archive/master.zip
-unzip master.zip
-rm master.zip
-cd git-master
-sed -i '/#define GREP_NUM_THREADS_DEFAULT 8/a\
-struct work_item {\
-        struct grep_source source;\
-        char done;\
-        struct strbuf out;\
-};' builtin/grep.c
-make configure
-./configure --prefix=/usr --disable-pthreads
-make -j2
-make install
-rm -Rf /tmp/git-master
-EOF
-chmod 755 $rootfs/build-git.sh
-chroot $rootfs /build-git.sh
-rm $rootfs/build-git.sh
+#cat > "$rootfs/build-git.sh" <<-'EOF'
+#cd /tmp
+#wget https://github.com/git/git/archive/master.zip
+#unzip master.zip
+#rm master.zip
+#cd git-master
+#sed -i '/#define GREP_NUM_THREADS_DEFAULT 8/a\
+#struct work_item {\
+#        struct grep_source source;\
+#        char done;\
+#        struct strbuf out;\
+#};' builtin/grep.c
+#make configure
+#./configure --prefix=/usr --disable-pthreads
+#make -j2
+#make install
+#rm -Rf /tmp/git-master
+#EOF
+#chmod 755 $rootfs/build-git.sh
+#chroot $rootfs /build-git.sh
+#rm $rootfs/build-git.sh
 # }}}
 
 mkdir $rootfs/build
