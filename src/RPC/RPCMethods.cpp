@@ -2747,33 +2747,47 @@ BaseLib::PVariable RPCListKnownDeviceTypes::invoke(BaseLib::PRpcClientInfo clien
 			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 					std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tBoolean }),
 					std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray }),
+					std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray })
 			}));
 			if(error != ParameterError::Enum::noError) return getError(error);
 		}
+		int32_t familyId = parameters->size() == 3 ? parameters->at(0)->integerValue : -1;
 		bool channels = true;
-		std::map<std::string, bool> fields;
-		if(parameters->size() > 0) channels = parameters->at(0)->booleanValue;
-		if(parameters->size() == 2)
+		std::set<std::string> fields;
+		channels = parameters->size() == 3 ? parameters->at(1)->booleanValue : parameters->at(0)->booleanValue;
+		if(parameters->size() >= 2)
 		{
-			for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(1)->arrayValue->begin(); i != parameters->at(1)->arrayValue->end(); ++i)
+			BaseLib::PArray& array = parameters->size() == 3 ? parameters->at(2)->arrayValue : parameters->at(1)->arrayValue;
+			for(auto element : *array)
 			{
-				if((*i)->stringValue.empty()) continue;
-				fields[(*i)->stringValue] = true;
+				if(element->stringValue.empty()) continue;
+				fields.insert(element->stringValue);
 			}
 		}
 
-		BaseLib::PVariable devices(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		BaseLib::PVariable devices;
+		if(familyId != -1)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			BaseLib::PVariable result = i->second->listKnownDeviceTypes(clientInfo, channels, fields);
-			if(result && result->errorStruct)
+			std::shared_ptr<BaseLib::Systems::DeviceFamily> family = GD::familyController->getFamily(familyId);
+			if(!family) return BaseLib::Variable::createError(-2, "Device family not found.");
+			devices = family->listKnownDeviceTypes(clientInfo, channels, fields);
+		}
+		else
+		{
+			devices = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+
+			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 			{
-				GD::out.printWarning("Warning: Error calling method \"listKnownDeviceTypes\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
-				continue;
+				std::this_thread::sleep_for(std::chrono::milliseconds(3));
+				BaseLib::PVariable result = i->second->listKnownDeviceTypes(clientInfo, channels, fields);
+				if(result && result->errorStruct)
+				{
+					GD::out.printWarning("Warning: Error calling method \"listKnownDeviceTypes\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
+					continue;
+				}
+				if(result && !result->arrayValue->empty()) devices->arrayValue->insert(devices->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
 			}
-			if(result && !result->arrayValue->empty()) devices->arrayValue->insert(devices->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
 		}
 
 		return devices;
