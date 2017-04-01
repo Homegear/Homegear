@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -27,6 +27,8 @@
  * version.  If you delete this exception statement from all source
  * files in the program, then also delete it here.
 */
+
+#ifndef NO_SCRIPTENGINE
 
 #include "php_config_fixes.h"
 #include "../GD/GD.h"
@@ -2116,3 +2118,5 @@ static PHP_MINFO_FUNCTION(homegear)
 	php_info_print_table_row(2, "Homegear version", VERSION);
 	php_info_print_table_end();
 }
+
+#endif

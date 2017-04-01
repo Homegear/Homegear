@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -31,6 +31,8 @@
 #ifndef SCRIPTENGINERESPONSE_H_
 #define SCRIPTENGINERESPONSE_H_
 
+#ifndef NO_SCRIPTENGINE
+
 #include <homegear-base/BaseLib.h>
 
 namespace ScriptEngine
@@ -53,4 +55,5 @@ typedef std::shared_ptr<ScriptEngineResponse> PScriptEngineResponse;
 
 }
 
+#endif
 #endif

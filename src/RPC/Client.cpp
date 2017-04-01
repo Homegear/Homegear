@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -447,7 +447,9 @@ void Client::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
 	try
 	{
 		if(!deviceDescriptions) return;
+#ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastNewDevices(deviceDescriptions);
+#endif
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		std::string methodName("newDevices");
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
@@ -507,7 +509,9 @@ void Client::broadcastDeleteDevices(BaseLib::PVariable deviceAddresses, BaseLib:
 	try
 	{
 		if(!deviceAddresses || !deviceInfo) return;
+#ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastDeleteDevices(deviceInfo);
+#endif
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
@@ -571,7 +575,9 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
 	try
 	{
 		if(id == 0 || address.empty()) return;
+#ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastUpdateDevice(id, channel, hint);
+#endif
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{

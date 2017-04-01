@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -252,6 +252,7 @@ bool Auth::sessionServer(BaseLib::WebSocket& webSocket)
 		sendWebSocketUnauthorized("No data received.");
 		return false;
 	}
+#ifndef NO_SCRIPTENGINE
 	BaseLib::PVariable variable;
 	try
 	{
@@ -267,16 +268,29 @@ bool Auth::sessionServer(BaseLib::WebSocket& webSocket)
 		sendWebSocketUnauthorized("Received data is no json object.");
 		return false;
 	}
-	if(variable->structValue->find("user") != variable->structValue->end() && GD::scriptEngineServer->checkSessionId(variable->structValue->at("user")->stringValue))
+	if(variable->structValue->find("user") != variable->structValue->end())
 	{
-		sendWebSocketAuthorized();
-		return true;
+		if(GD::scriptEngineServer->checkSessionId(variable->structValue->at("user")->stringValue))
+		{
+			sendWebSocketAuthorized();
+			return true;
+		}
+		else
+		{
+			sendWebSocketUnauthorized("Session id is invalid.");
+			return false;
+		}
 	}
 	else
 	{
 		sendWebSocketUnauthorized("No session id specified.");
 		return false;
 	}
+#else
+	sendWebSocketUnauthorized("Homegear is compiled without script engine. Session authentication is not possible.");
+	throw AuthException("Homegear is compiled without script engine. Session authentication is not possible.");
+	return false;
+#endif
 }
 
 void Auth::sendWebSocketAuthorized()

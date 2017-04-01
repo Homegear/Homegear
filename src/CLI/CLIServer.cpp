@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -962,10 +962,12 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "debuglevel (dl)      Changes the debug level" << std::endl;
+#ifndef NO_SCRIPTENGINE
 			stringStream << "runscript (rs)       Executes a script with the internal PHP engine" << std::endl;
 			stringStream << "runcommand (rc)      Executes a PHP command" << std::endl;
 			stringStream << "scriptcount (sc)     Returns the number of currently running scripts" << std::endl;
 			stringStream << "scriptsrunning (sr)  Returns the ID and filename of all running scripts" << std::endl;
+#endif
 			stringStream << "rpcservers (rpc)     Lists all active RPC servers" << std::endl;
 			stringStream << "rpcclients (rcl)     Lists all active RPC clients" << std::endl;
 			stringStream << "threads              Prints current thread count" << std::endl;
@@ -1001,6 +1003,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "Debug level set to " << debugLevel << "." << std::endl;
 			return stringStream.str();
 		}
+#ifndef NO_SCRIPTENGINE
 		else if(command.compare(0, 9, "runscript") == 0 || command.compare(0, 2, "rs") == 0)
 		{
 			std::string fullPath;
@@ -1114,6 +1117,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 
 			return stringStream.str();
 		}
+#endif
 		else if(command.compare(0, 10, "rpcclients") == 0 || command.compare(0, 3, "rcl") == 0)
 		{
 			std::stringstream stream(command);

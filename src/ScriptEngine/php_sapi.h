@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -30,6 +30,8 @@
 
 #ifndef HOMEGEAR_PHP_SAPI_H_
 #define HOMEGEAR_PHP_SAPI_H_
+
+#ifndef NO_SCRIPTENGINE
 
 #include "php_config_fixes.h"
 #include <homegear-base/BaseLib.h>
@@ -91,4 +93,4 @@ int php_homegear_init();
 void php_homegear_shutdown();
 
 #endif
-
+#endif

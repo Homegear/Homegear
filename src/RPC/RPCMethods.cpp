@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -999,7 +999,11 @@ BaseLib::PVariable RPCGetAllScripts::invoke(BaseLib::PRpcClientInfo clientInfo, 
 	{
 		if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
 
+#ifndef NO_SCRIPTENGINE
 		return GD::scriptEngineServer->getAllScripts();
+#else
+		return BaseLib::Variable::createError(-32500, "Homegear is compiled without script engine.");
+#endif
 	}
 	catch(const std::exception& ex)
     {
@@ -3197,7 +3201,9 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 			return BaseLib::Variable::createError(-32501, "Homegear is shutting down.");
 		}
 
+#ifndef NO_SCRIPTENGINE
 		bool internalEngine = false;
+#endif
 
 		bool wait = false;
 		std::string filename;
@@ -3208,7 +3214,14 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 		int32_t pos = filename.find_last_of('.');
 		if(pos != (signed)std::string::npos) ending = filename.substr(pos);
 		GD::bl->hf.toLower(ending);
-		if(ending == ".php" || ending == ".php5" || ending == ".php7" || ending == ".hgs") internalEngine = true;
+		if(ending == ".php" || ending == ".php5" || ending == ".php7" || ending == ".hgs")
+		{
+#ifndef NO_SCRIPTENGINE
+			internalEngine = true;
+#else
+			GD::out.printWarning("Warning: Not executing PHP script with internal script engine as Homegear is compiled without script engine.");
+#endif
+		}
 
 		if((signed)parameters->size() == 2)
 		{
@@ -3229,6 +3242,7 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 		BaseLib::PVariable output(new BaseLib::Variable(BaseLib::VariableType::tString));
 		result->structValue->insert(BaseLib::StructElement("EXITCODE", exitCode));
 		result->structValue->insert(BaseLib::StructElement("OUTPUT", output));
+#ifndef NO_SCRIPTENGINE
 		if(internalEngine)
 		{
 			if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Executing script \"" + fullPath + "\" with parameters \"" + arguments + "\" using internal script engine.");
@@ -3247,6 +3261,7 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 		}
 		else
 		{
+#endif
 			if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Executing program/script \"" + fullPath + "\" with parameters \"" + arguments + "\".");
 			std::string command = fullPath + " " + arguments;
 			if(!wait) command += "&";
@@ -3287,7 +3302,9 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 
 			exitCode->integerValue = BaseLib::HelperFunctions::exec(command.c_str(), output->stringValue);
 			return result;
+#ifndef NO_SCRIPTENGINE
 		}
+#endif
 	}
 	catch(const std::exception& ex)
     {
