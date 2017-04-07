@@ -142,13 +142,7 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 			_lifetick1.first = BaseLib::HelperFunctions::getTime();
 			_lifetick1.second = false;
 		}
-		if(GD::mqtt->enabled())
-		{
-			for(uint32_t i = 0; i < valueKeys->size(); i++)
-			{
-				GD::mqtt->queueMessage(id, channel, valueKeys->at(i), values->at(i));
-			}
-		}
+		if(GD::mqtt->enabled()) GD::mqtt->queueMessage(id, channel, *valueKeys, *values);
 		std::string methodName("event");
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
