@@ -128,7 +128,7 @@ BaseLib::PVariable Client::getEvents(std::set<uint64_t> ids, uint32_t timespan)
 {
 	try
 	{
-		if(timespan > 86400) return BaseLib::Variable::createError(-1, "\"timespan\" is invalid.");
+		if(timespan > 86400000) return BaseLib::Variable::createError(-1, "\"timespan\" is invalid.");
 
 		int64_t minTime = BaseLib::HelperFunctions::getTime() - timespan;
 		BaseLib::PVariable events = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
