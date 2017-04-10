@@ -137,7 +137,6 @@ BaseLib::PVariable Client::getEvents(std::set<uint64_t> ids, uint32_t timespan)
 		for(int32_t i = _eventBufferPosition - 1; i != _eventBufferPosition; i--)
 		{
 			if(i < 0) i = _eventBuffer.size() - 1;
-			std::cout << "Moin " << _eventBufferPosition << ' ' << i << std::endl;
 			EventInfo& info = _eventBuffer.at(i);
 			if(info.time < minTime) break;
 			if(!ids.empty() && ids.find(info.id) == ids.end()) continue;
