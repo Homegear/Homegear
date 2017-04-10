@@ -1356,6 +1356,38 @@ BaseLib::PVariable RPCGetEvent::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 #endif
 }
 
+BaseLib::PVariable RPCGetEvents::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tArray, BaseLib::VariableType::tInteger })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		std::set<uint64_t> ids;
+		for(auto& id : *parameters->at(0)->arrayValue)
+		{
+			ids.insert(id->integerValue64);
+		}
+
+		return GD::rpcClient->getEvents(ids, parameters->at(1)->integerValue);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCGetInstallMode::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	try

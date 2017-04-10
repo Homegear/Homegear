@@ -1107,7 +1107,7 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::vector<std::strin
 			jsonObj.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 		}
 
-		for(int32_t i = 0; i < keys.size(); i++)
+		for(int32_t i = 0; i < (signed)keys.size(); i++)
 		{
 			bool retain = keys.at(i).compare(0, 5, "PRESS") != 0;
 
