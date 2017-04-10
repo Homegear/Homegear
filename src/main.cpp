@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -186,7 +186,9 @@ void sigchld_handler(int32_t signalNumber)
 			}
 			else
 			{
+#ifndef NO_SCRIPTENGINE
 				if(GD::scriptEngineServer) GD::scriptEngineServer->processKilled(pid, exitStatus, signal, coreDumped);
+#endif
 				if(GD::flowsServer) GD::flowsServer->processKilled(pid, exitStatus, signal, coreDumped);
 			}
 		}
@@ -235,7 +237,9 @@ void terminate(int32_t signalNumber)
 			GD::bl->shuttingDown = true;
 			_shuttingDownMutex.unlock();
 			if(GD::flowsServer) GD::flowsServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
+#ifndef NO_SCRIPTENGINE
 			if(GD::scriptEngineServer) GD::scriptEngineServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
+#endif
 			if(GD::familyController) GD::familyController->homegearShuttingDown();
 			_disposing = true;
 			GD::out.printInfo("(Shutdown) => Stopping CLI server");
@@ -263,8 +267,10 @@ void terminate(int32_t signalNumber)
 			if(GD::familyController) GD::familyController->physicalInterfaceStopListening();
 			GD::out.printInfo("(Shutdown) => Stopping flows server...");
 			if(GD::flowsServer) GD::flowsServer->stop();
+#ifndef NO_SCRIPTENGINE
 			GD::out.printInfo("(Shutdown) => Stopping script engine server...");
 			if(GD::scriptEngineServer) GD::scriptEngineServer->stop();
+#endif
 			GD::out.printMessage("(Shutdown) => Saving device families");
 			if(GD::familyController) GD::familyController->save(false);
 			GD::out.printMessage("(Shutdown) => Disposing device families");
@@ -368,8 +374,10 @@ void terminate(int32_t signalNumber)
 			}
 			GD::out.printInfo("Reloading flows server...");
 			if(GD::flowsServer) GD::flowsServer->homegearReloading();
+#ifndef NO_SCRIPTENGINE
 			GD::out.printInfo("Reloading script engine server...");
 			if(GD::scriptEngineServer) GD::scriptEngineServer->homegearReloading();
+#endif
 			_shuttingDownMutex.lock();
 			_startUpComplete = true;
 			if(_shutdownQueued)
@@ -902,7 +910,15 @@ void startUp()
 			if(GD::bl->settings.enableCoreDumps()) prctl(PR_SET_DUMPABLE, 1);
     	}
 
-    	if(getuid() == 0) GD::out.printWarning("Warning: Running as root. The authors of Homegear recommend running Homegear as user.");
+    	if(getuid() == 0)
+    	{
+    		if(!GD::runAsUser.empty() && !GD::runAsGroup.empty())
+    		{
+    			GD::out.printCritical("Critical: Homegear still has root privileges though privileges should have been dropped. Exiting Homegear as this is a security risk.");
+				exit(1);
+    		}
+    		else GD::out.printWarning("Warning: Running as root. The authors of Homegear recommend running Homegear as user.");
+    	}
     	else
     	{
     		if(setuid(0) != -1)
@@ -997,6 +1013,7 @@ void startUp()
 				exitHomegear(1);
 			}
 		}
+#ifndef NO_SCRIPTENGINE
 		GD::out.printInfo("Starting script engine server...");
 		GD::scriptEngineServer.reset(new ScriptEngine::ScriptEngineServer());
 		if(!GD::scriptEngineServer->start())
@@ -1004,6 +1021,9 @@ void startUp()
 			GD::out.printCritical("Critical: Cannot start script engine server. Exiting Homegear.");
 			exitHomegear(1);
 		}
+#else
+		GD::out.printInfo("Info: Homegear is compiled without script engine.");
+#endif
 
         GD::out.printInfo("Initializing licensing controller...");
         GD::licensingController->init();
@@ -1290,6 +1310,7 @@ int main(int argc, char* argv[])
     			int32_t exitCode = cliClient.start();
     			exit(exitCode);
     		}
+#ifndef NO_SCRIPTENGINE
     		else if(arg == "-rse")
     		{
     			initGnuTls();
@@ -1304,6 +1325,7 @@ int main(int argc, char* argv[])
     			GD::licensingController->dispose();
     			exit(0);
     		}
+#endif
     		else if(arg == "-rl")
     		{
     			initGnuTls();

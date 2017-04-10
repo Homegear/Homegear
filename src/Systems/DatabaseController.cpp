@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -614,7 +614,9 @@ BaseLib::PVariable DatabaseController::setMetadata(uint64_t peerID, std::string&
 #endif
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{dataID});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{metadata});
+#ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(peerID, -1, valueKeys, values);
+#endif
 		GD::rpcClient->broadcastEvent(peerID, -1, serialNumber, valueKeys, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
@@ -667,6 +669,12 @@ BaseLib::PVariable DatabaseController::deleteMetadata(uint64_t peerID, std::stri
 		value->structValue->insert(BaseLib::StructElement("TYPE", BaseLib::PVariable(new BaseLib::Variable(1))));
 		value->structValue->insert(BaseLib::StructElement("CODE", BaseLib::PVariable(new BaseLib::Variable(1))));
 		values->push_back(value);
+#ifdef EVENTHANDLER
+		GD::eventHandler->trigger(peerID, -1, dataID, value);
+#endif
+#ifndef NO_SCRIPTENGINE
+		GD::scriptEngineServer->broadcastEvent(peerID, -1, valueKeys, values);
+#endif
 		GD::rpcClient->broadcastEvent(peerID, -1, serialNumber, valueKeys, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
@@ -804,7 +812,9 @@ BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableID
 #endif
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableID});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{value});
+#ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(0, -1, valueKeys, values);
+#endif
 		GD::rpcClient->broadcastEvent(0, -1, "", valueKeys, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
@@ -845,6 +855,12 @@ BaseLib::PVariable DatabaseController::deleteSystemVariable(std::string& variabl
 		value->structValue->insert(BaseLib::StructElement("TYPE", BaseLib::PVariable(new BaseLib::Variable(0))));
 		value->structValue->insert(BaseLib::StructElement("CODE", BaseLib::PVariable(new BaseLib::Variable(1))));
 		values->push_back(value);
+#ifdef EVENTHANDLER
+		GD::eventHandler->trigger(variableID, value);
+#endif
+#ifndef NO_SCRIPTENGINE
+		GD::scriptEngineServer->broadcastEvent(0, -1, valueKeys, values);
+#endif
 		GD::rpcClient->broadcastEvent(0, -1, "", valueKeys, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));

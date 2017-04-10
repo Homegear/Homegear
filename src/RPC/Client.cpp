@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -142,13 +142,7 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 			_lifetick1.first = BaseLib::HelperFunctions::getTime();
 			_lifetick1.second = false;
 		}
-		if(GD::mqtt->enabled())
-		{
-			for(uint32_t i = 0; i < valueKeys->size(); i++)
-			{
-				GD::mqtt->queueMessage(id, channel, valueKeys->at(i), values->at(i));
-			}
-		}
+		if(GD::mqtt->enabled()) GD::mqtt->queueMessage(id, channel, *valueKeys, *values);
 		std::string methodName("event");
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
@@ -447,7 +441,9 @@ void Client::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
 	try
 	{
 		if(!deviceDescriptions) return;
+#ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastNewDevices(deviceDescriptions);
+#endif
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		std::string methodName("newDevices");
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
@@ -507,7 +503,9 @@ void Client::broadcastDeleteDevices(BaseLib::PVariable deviceAddresses, BaseLib:
 	try
 	{
 		if(!deviceAddresses || !deviceInfo) return;
+#ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastDeleteDevices(deviceInfo);
+#endif
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
@@ -571,7 +569,9 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
 	try
 	{
 		if(id == 0 || address.empty()) return;
+#ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastUpdateDevice(id, channel, hint);
+#endif
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
@@ -751,6 +751,7 @@ std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<Base
 		server->autoConnect = false;
 		server->initialized = true;
 		server->socket = socket;
+		server->socket->setReadTimeout(15000000);
 		server->keepAlive = true;
 		server->subscribePeers = true;
 		server->newFormat = true;

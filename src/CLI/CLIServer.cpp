@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -962,10 +962,12 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "debuglevel (dl)      Changes the debug level" << std::endl;
+#ifndef NO_SCRIPTENGINE
 			stringStream << "runscript (rs)       Executes a script with the internal PHP engine" << std::endl;
 			stringStream << "runcommand (rc)      Executes a PHP command" << std::endl;
 			stringStream << "scriptcount (sc)     Returns the number of currently running scripts" << std::endl;
 			stringStream << "scriptsrunning (sr)  Returns the ID and filename of all running scripts" << std::endl;
+#endif
 			stringStream << "rpcservers (rpc)     Lists all active RPC servers" << std::endl;
 			stringStream << "rpcclients (rcl)     Lists all active RPC clients" << std::endl;
 			stringStream << "threads              Prints current thread count" << std::endl;
@@ -1007,6 +1009,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "Debug level set to " << debugLevel << "." << std::endl;
 			return stringStream.str();
 		}
+#ifndef NO_SCRIPTENGINE
 		else if(command.compare(0, 9, "runscript") == 0 || command.compare(0, 2, "rs") == 0)
 		{
 			std::string fullPath;
@@ -1109,17 +1112,18 @@ std::string Server::handleGlobalCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			std::vector<std::pair<int32_t, std::string>> runningScripts = GD::scriptEngineServer->getRunningScripts();
-			if(runningScripts.size() == 0) return "No scripts are being executed.\n";
+			std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> runningScripts = GD::scriptEngineServer->getRunningScripts();
+			if(runningScripts.empty()) return "No scripts are being executed.\n";
 
-			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(80) << "Filename" << std::endl;
+			stringStream << std::left << std::setfill(' ') << std::setw(10) << "PID" << std::setw(10) << "Peer ID" << std::setw(10) << "Script ID" << std::setw(80) << "Filename" << std::endl;
 			for(auto& script : runningScripts)
 			{
-				stringStream << std::setw(6) << script.first << std::setw(80) << script.second << std::endl;
+				stringStream << std::setw(10) << std::get<0>(script) << std::setw(10) << (std::get<1>(script) > 0 ? std::to_string(std::get<1>(script)) : "") << std::setw(10) << std::get<2>(script) << std::setw(80) << std::get<3>(script) << std::endl;
 			}
 
 			return stringStream.str();
 		}
+#endif
 		else if(command.compare(0, 10, "rpcclients") == 0 || command.compare(0, 3, "rcl") == 0)
 		{
 			std::stringstream stream(command);

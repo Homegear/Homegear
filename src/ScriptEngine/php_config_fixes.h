@@ -1,3 +1,5 @@
+#ifndef NO_SCRIPTENGINE
+
 #include <math.h>
 
 #undef PACKAGE_BUGREPORT
@@ -13,6 +15,8 @@
 	#define isnan(a) std::isnan(a)
 #endif
 
-#ifndef isfinite //Fix for build on Ubuntu Xenial
+#ifndef isfinite //Fix for build with some cross compilers
 	#define isfinite(a) std::isfinite(a)
+#endif
+
 #endif

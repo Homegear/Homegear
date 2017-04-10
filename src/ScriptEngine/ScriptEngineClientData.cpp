@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -28,6 +28,8 @@
  * files in the program, then also delete it here.
 */
 
+#ifndef NO_SCRIPTENGINE
+
 #include "ScriptEngineClientData.h"
 #include "../GD/GD.h"
 
@@ -54,3 +56,5 @@ ScriptEngineClientData::~ScriptEngineClientData()
 }
 
 }
+
+#endif

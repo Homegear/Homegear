@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -535,6 +535,13 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& pa
 	try
 	{
 		if(_stopped) return;
+
+		PacketType::Enum responseType = PacketType::Enum::xmlResponse;
+		if(packetType == PacketType::Enum::binaryRequest) responseType = PacketType::Enum::binaryResponse;
+		else if(packetType == PacketType::Enum::xmlRequest) responseType = PacketType::Enum::xmlResponse;
+		else if(packetType == PacketType::Enum::jsonRequest) responseType = PacketType::Enum::jsonResponse;
+		else if(packetType == PacketType::Enum::webSocketRequest) responseType = PacketType::Enum::webSocketResponse;
+
 		std::string methodName;
 		int32_t messageId = 0;
 		std::shared_ptr<std::vector<BaseLib::PVariable>> parameters;
@@ -555,27 +562,30 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& pa
 			BaseLib::PVariable result = _jsonDecoder->decode(packet);
 			if(result->type == BaseLib::VariableType::tStruct)
 			{
+				if(result->structValue->find("user") != result->structValue->end())
+				{
+					_out.printWarning("Warning: WebSocket auth packet received but auth is disabled for WebSockets. Closing connection.");
+					closeClientConnection(client);
+					return;
+				}
+				if(result->structValue->find("id") != result->structValue->end()) messageId = result->structValue->at("id")->integerValue;
 				if(result->structValue->find("method") == result->structValue->end())
 				{
-					_out.printWarning("Warning: Could not decode JSON RPC packet.");
+					_out.printWarning("Warning: Could not decode JSON RPC packet:\n" + result->print(false, false));
+					sendRPCResponseToClient(client, BaseLib::Variable::createError(-32500, "Could not decode RPC packet. \"method\" not found in JSON."), messageId, responseType, keepAlive);
 					return;
 				}
 				methodName = result->structValue->at("method")->stringValue;
-				if(result->structValue->find("id") != result->structValue->end()) messageId = result->structValue->at("id")->integerValue;
 				if(result->structValue->find("params") != result->structValue->end()) parameters = result->structValue->at("params")->arrayValue;
 				else parameters.reset(new std::vector<BaseLib::PVariable>());
 			}
 		}
 		if(!parameters)
 		{
-			_out.printWarning("Warning: Could not decode RPC packet.");
+			_out.printWarning("Warning: Could not decode RPC packet. Parameters are empty.");
+			sendRPCResponseToClient(client, BaseLib::Variable::createError(-32500, "Could not decode RPC packet. Parameters are empty."), messageId, responseType, keepAlive);
 			return;
 		}
-		PacketType::Enum responseType = PacketType::Enum::xmlResponse;
-		if(packetType == PacketType::Enum::binaryRequest) responseType = PacketType::Enum::binaryResponse;
-		else if(packetType == PacketType::Enum::xmlRequest) responseType = PacketType::Enum::xmlResponse;
-		else if(packetType == PacketType::Enum::jsonRequest) responseType = PacketType::Enum::jsonResponse;
-		else if(packetType == PacketType::Enum::webSocketRequest) responseType = PacketType::Enum::webSocketResponse;
 
 		if(!parameters->empty() && parameters->at(0)->errorStruct)
 		{

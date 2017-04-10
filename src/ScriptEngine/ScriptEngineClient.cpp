@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -27,6 +27,8 @@
  * version.  If you delete this exception statement from all source
  * files in the program, then also delete it here.
 */
+
+#ifndef NO_SCRIPTENGINE
 
 #include "ScriptEngineClient.h"
 #include "../GD/GD.h"
@@ -1096,6 +1098,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			{
 				BaseLib::Base64::encode(BaseLib::HelperFunctions::getRandomBytes(16), globals->token);
 				std::shared_ptr<PhpEvents> phpEvents = std::make_shared<PhpEvents>(globals->token, globals->outputCallback, globals->rpcCallback);
+				phpEvents->setPeerId(scriptInfo->peerId);
 				std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
 				PhpEvents::eventsMap.emplace(id, phpEvents);
 			}
@@ -1355,6 +1358,7 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 			{
 				PThreadInfo threadInfo = std::make_shared<ThreadInfo>();
 				threadInfo->filename = scriptInfo->fullPath;
+				threadInfo->peerId = scriptInfo->peerId;
 				threadInfo->thread = std::thread(&ScriptEngineClient::scriptThread, this, scriptInfo->id, scriptInfo, sendOutput);
 				_scriptThreads.emplace(scriptInfo->id, threadInfo);
 			}
@@ -1448,8 +1452,8 @@ BaseLib::PVariable ScriptEngineClient::getRunningScripts(BaseLib::PArray& parame
 		{
 			if(i->second->running)
 			{
-				BaseLib::Array pair{std::make_shared<BaseLib::Variable>(i->first), std::make_shared<BaseLib::Variable>(i->second->filename)};
-				scripts->arrayValue->push_back(std::make_shared<BaseLib::Variable>(std::make_shared<BaseLib::Array>(std::move(pair))));
+				BaseLib::Array data{std::make_shared<BaseLib::Variable>(i->second->peerId), std::make_shared<BaseLib::Variable>(i->first), std::make_shared<BaseLib::Variable>(i->second->filename)};
+				scripts->arrayValue->push_back(std::make_shared<BaseLib::Variable>(std::make_shared<BaseLib::Array>(std::move(data))));
 			}
 		}
 		return scripts;
@@ -1479,15 +1483,19 @@ BaseLib::PVariable ScriptEngineClient::broadcastEvent(BaseLib::PArray& parameter
 		std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
 		for(std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
 		{
-			if(i->second && (parameters->at(0)->integerValue64 == 0 || i->second->peerSubscribed(parameters->at(0)->integerValue64)))
+			int32_t channel = parameters->at(1)->integerValue;
+			std::string variableName;
+			if(i->second && (parameters->at(0)->integerValue64 == 0 || i->second->peerSubscribed(parameters->at(0)->integerValue64, -1, variableName)))
 			{
 				for(uint32_t j = 0; j < parameters->at(2)->arrayValue->size(); j++)
 				{
+					variableName = parameters->at(2)->arrayValue->at(j)->stringValue;
+					if(!i->second->peerSubscribed(parameters->at(0)->integerValue64, channel, variableName)) continue;
 					std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
 					eventData->type = "event";
 					eventData->id = parameters->at(0)->integerValue64;
-					eventData->channel = parameters->at(1)->integerValue;
-					eventData->variable = parameters->at(2)->arrayValue->at(j)->stringValue;
+					eventData->channel = channel;
+					eventData->variable = variableName;
 					eventData->value = parameters->at(3)->arrayValue->at(j);
 					if(!i->second->enqueue(eventData)) _out.printError("Error: Could not queue event as event buffer is full. Dropping it.");
 				}
@@ -1593,7 +1601,8 @@ BaseLib::PVariable ScriptEngineClient::broadcastUpdateDevice(BaseLib::PArray& pa
 		std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
 		for(std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
 		{
-			if(i->second && i->second->peerSubscribed(parameters->at(0)->integerValue64))
+			std::string variableName;
+			if(i->second && i->second->peerSubscribed(parameters->at(0)->integerValue64, -1, variableName))
 			{
 				std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
 				eventData->type = "updateDevice";
@@ -1623,3 +1632,5 @@ BaseLib::PVariable ScriptEngineClient::broadcastUpdateDevice(BaseLib::PArray& pa
 // }}}
 
 }
+
+#endif

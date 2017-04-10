@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -30,6 +30,8 @@
 
 #ifndef SCRIPTENGINESERVER_H_
 #define SCRIPTENGINESERVER_H_
+
+#ifndef NO_SCRIPTENGINE
 
 #include "php_config_fixes.h"
 #include "ScriptEngineProcess.h"
@@ -67,7 +69,7 @@ public:
 	void processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped);
 	void devTestClient();
 	uint32_t scriptCount();
-	std::vector<std::pair<int32_t, std::string>> getRunningScripts();
+	std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> getRunningScripts();
 	void executeScript(PScriptInfo& scriptInfo, bool wait);
 	bool checkSessionId(const std::string& sessionId);
 	void broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values);
@@ -202,4 +204,5 @@ private:
 };
 
 }
+#endif
 #endif

@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -332,7 +332,11 @@ void MiscPeer::runScript(bool delay)
 
 		raiseRunScript(_scriptInfo, false);
 		_scriptRunning = _scriptInfo->started;
-		if(!_scriptRunning && !_bl->shuttingDown) GD::out.printError("Error: Could not start script of peer " + std::to_string(_peerID) + ".");
+		if(!_scriptRunning && !_bl->shuttingDown)
+		{
+			GD::out.printError("Error: Could not start script of peer " + std::to_string(_peerID) + ".");
+			_scriptInfo->finished = true;
+		}
 	}
 	catch(const std::exception& ex)
 	{

@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -51,6 +51,7 @@ public:
 	std::string brokerHostname() { return _brokerHostname; }
 	std::string brokerPort() { return _brokerPort; }
 	std::string clientName() { return _clientName; }
+	std::string prefix() { return _prefix; }
 	std::string homegearId() { return _homegearId; }
 	std::string username() { return _username; }
 	std::string password() { return _password; }
@@ -69,6 +70,7 @@ private:
 	std::string _brokerHostname;
 	std::string _brokerPort;
 	std::string _clientName;
+	std::string _prefix;
 	std::string _homegearId;
 	std::string _username;
 	std::string _password;

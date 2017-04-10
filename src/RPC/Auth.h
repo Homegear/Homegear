@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -61,6 +61,10 @@ public:
 	bool basicServer(BaseLib::Http& httpPacket);
 	bool basicServer(BaseLib::WebSocket& webSocket);
 	bool sessionServer(BaseLib::WebSocket& webSocket);
+
+	void sendBasicUnauthorized(bool binary);
+	void sendWebSocketAuthorized();
+	void sendWebSocketUnauthorized(std::string reason);
 protected:
 	bool _initialized = false;
 	std::string _hostname;
@@ -75,10 +79,6 @@ protected:
 	BaseLib::Http _http;
 	std::shared_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 	std::shared_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
-
-	void sendBasicUnauthorized(bool binary);
-	void sendWebSocketAuthorized(BaseLib::WebSocket& webSocket);
-	void sendWebSocketUnauthorized(BaseLib::WebSocket& webSocket, std::string reason);
 };
 
 }

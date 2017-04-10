@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -212,7 +212,7 @@ bool Auth::basicServer(BaseLib::WebSocket& webSocket)
 	if(!_initialized) throw AuthException("Not initialized.");
 	if(webSocket.getContent().empty())
 	{
-		sendWebSocketUnauthorized(webSocket, "No data received.");
+		sendWebSocketUnauthorized("No data received.");
 		return false;
 	}
 	BaseLib::PVariable variable;
@@ -222,25 +222,25 @@ bool Auth::basicServer(BaseLib::WebSocket& webSocket)
 	}
 	catch(BaseLib::Rpc::JsonDecoderException& ex)
 	{
-		sendWebSocketUnauthorized(webSocket, "Error decoding json (is packet in json format?).");
+		sendWebSocketUnauthorized("Error decoding json (is packet in json format?).");
 		return false;
 	}
 	if(variable->type != BaseLib::VariableType::tStruct)
 	{
-		sendWebSocketUnauthorized(webSocket, "Received data is no json object.");
+		sendWebSocketUnauthorized("Received data is no json object.");
 		return false;
 	}
 	if(variable->structValue->find("user") == variable->structValue->end() || variable->structValue->find("password") == variable->structValue->end())
 	{
-		sendWebSocketUnauthorized(webSocket, "Either \"user\" or \"password\" is not specified.");
+		sendWebSocketUnauthorized("Either \"user\" or \"password\" is not specified.");
 		return false;
 	}
 	if(User::verify(variable->structValue->at("user")->stringValue, variable->structValue->at("password")->stringValue))
 	{
-		sendWebSocketAuthorized(webSocket);
+		sendWebSocketAuthorized();
 		return true;
 	}
-	sendWebSocketUnauthorized(webSocket, "Wrong user name or password.");
+	sendWebSocketUnauthorized("Wrong user name or password.");
 	return false;
 }
 
@@ -249,9 +249,10 @@ bool Auth::sessionServer(BaseLib::WebSocket& webSocket)
 	if(!_initialized) throw AuthException("Not initialized.");
 	if(webSocket.getContent().empty())
 	{
-		sendWebSocketUnauthorized(webSocket, "No data received.");
+		sendWebSocketUnauthorized("No data received.");
 		return false;
 	}
+#ifndef NO_SCRIPTENGINE
 	BaseLib::PVariable variable;
 	try
 	{
@@ -259,27 +260,40 @@ bool Auth::sessionServer(BaseLib::WebSocket& webSocket)
 	}
 	catch(BaseLib::Rpc::JsonDecoderException& ex)
 	{
-		sendWebSocketUnauthorized(webSocket, "Error decoding json (is packet in json format?).");
+		sendWebSocketUnauthorized("Error decoding json (is packet in json format?).");
 		return false;
 	}
 	if(variable->type != BaseLib::VariableType::tStruct)
 	{
-		sendWebSocketUnauthorized(webSocket, "Received data is no json object.");
+		sendWebSocketUnauthorized("Received data is no json object.");
 		return false;
 	}
-	if(variable->structValue->find("user") != variable->structValue->end() && GD::scriptEngineServer->checkSessionId(variable->structValue->at("user")->stringValue))
+	if(variable->structValue->find("user") != variable->structValue->end())
 	{
-		sendWebSocketAuthorized(webSocket);
-		return true;
+		if(GD::scriptEngineServer->checkSessionId(variable->structValue->at("user")->stringValue))
+		{
+			sendWebSocketAuthorized();
+			return true;
+		}
+		else
+		{
+			sendWebSocketUnauthorized("Session id is invalid.");
+			return false;
+		}
 	}
 	else
 	{
-		sendWebSocketUnauthorized(webSocket, "No session id specified.");
+		sendWebSocketUnauthorized("No session id specified.");
 		return false;
 	}
+#else
+	sendWebSocketUnauthorized("Homegear is compiled without script engine. Session authentication is not possible.");
+	throw AuthException("Homegear is compiled without script engine. Session authentication is not possible.");
+	return false;
+#endif
 }
 
-void Auth::sendWebSocketAuthorized(BaseLib::WebSocket& webSocket)
+void Auth::sendWebSocketAuthorized()
 {
 	std::vector <char> output;
 	std::string json("{\"auth\":\"success\"}");
@@ -288,7 +302,7 @@ void Auth::sendWebSocketAuthorized(BaseLib::WebSocket& webSocket)
 	_socket->proofwrite(output);
 }
 
-void Auth::sendWebSocketUnauthorized(BaseLib::WebSocket& webSocket, std::string reason)
+void Auth::sendWebSocketUnauthorized(std::string reason)
 {
 	std::vector <char> output;
 	std::string json("{\"auth\":\"failure\",\"reason\":\"" + reason + "\"}");

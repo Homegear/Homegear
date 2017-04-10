@@ -1,3 +1,55 @@
+07.04.2017:
+
+Enhancement:
+
+* MQTT: JSON object can now contain multiple variables.
+
+03.04.2017:
+
+Enhancement:
+
+* Intertechno: Improved address logging
+* Intertechno: Added old IT 1 channel remote
+
+01.04.2017:
+
+Enhancements:
+
+* Intertechno: Improved address logging
+
+30.03.2017:
+
+Features:
+
+* EnOcean: Support for UTE
+* EnOcean: Support for D2-01-12
+
+29.03.2017:
+
+Features:
+
+* Added LEVEL and CURRENT_POSITION to EnOcean blinds.
+
+27.03.2017:
+
+Changes:
+
+* Removed Ivona TTS from Sonos settings.
+
+25.03.2017:
+
+Features:
+
+* Added toggle ("!") for Booleans in RPC method "setValue()"
+
+Changes:
+
+* "putParamset()" now also works without setting the parameter set type.
+
+.
+.
+.
+
 28.11.2016:
 
 Featues:

@@ -120,6 +120,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			if(pos != (signed)std::string::npos && (unsigned)pos < path.size() - 1) ending = path.substr(pos + 1);
 			GD::bl->hf.toLower(ending);
 			std::string contentString;
+#ifndef NO_SCRIPTENGINE
 			if(ending == "php" || ending == "php5" || ending == "php7" || ending == "hgs")
 			{
 				std::string fullPath = path == "flows/index.php" ? GD::bl->settings.flowsPath() + "www/index.php" : _serverInfo->contentPath + path;
@@ -131,6 +132,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 				socket->close();
 				return;
 			}
+#endif
 			std::string contentType = _http.getMimeType(ending);
 			if(contentType.empty()) contentType = "application/octet-stream";
 			//Don't return content when method is "HEAD"
@@ -185,7 +187,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 			i->second->lock();
 			try
 			{
-				if(i->second->handler() && ((BaseLib::Rpc::IWebserverEventSink*)i->second->handler())->onGet(_serverInfo, http, socket, path))
+				if(i->second->handler() && ((BaseLib::Rpc::IWebserverEventSink*)i->second->handler())->onPost(_serverInfo, http, socket, path))
 				{
 					i->second->unlock();
 					return;
@@ -239,6 +241,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 			return;
 		}
 
+#ifndef NO_SCRIPTENGINE
 		try
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to: \"" + _serverInfo->contentPath + path + "\", method: POST)");
@@ -262,6 +265,10 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 			send(socket, content);
 			return;
 		}
+#else
+		getError(500, _http.getStatusText(500), "Homegear is compiled without script engine.", content);
+		send(socket, content);
+#endif
 	}
 	catch(const std::exception& ex)
     {

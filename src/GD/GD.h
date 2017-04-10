@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -70,7 +70,9 @@ public:
 	//We can work with rpcServers without Mutex, because elements are never deleted and iterators are not invalidated upon insertion of new elements.
 	static std::map<int32_t, Rpc::Server> rpcServers;
 	static std::unique_ptr<Rpc::Client> rpcClient;
+#ifndef NO_SCRIPTENGINE
 	static std::unique_ptr<ScriptEngine::ScriptEngineServer> scriptEngineServer;
+#endif
 	static std::unique_ptr<Flows::FlowsServer> flowsServer;
 	static std::unique_ptr<CLI::Server> cliServer;
 	static BaseLib::Rpc::ServerInfo serverInfo;

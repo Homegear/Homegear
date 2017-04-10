@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -41,6 +41,7 @@ void MqttSettings::reset()
 	_enabled = false;
 	_brokerHostname = "localhost";
 	_brokerPort = "1883";
+	_prefix = "homegear/";
 	_homegearId = "";
 	_username = "";
 	_password = "";
@@ -118,6 +119,13 @@ void MqttSettings::load(std::string filename)
 				{
 					_clientName = value;
 					GD::bl->out.printDebug("Debug (MQTT settings): clientName set to " + _clientName);
+				}
+				else if(name == "prefix")
+				{
+					_prefix = value;
+					if(!_prefix.empty() && _prefix.back() != '/') _prefix.push_back('/');
+					if(_prefix == "/") _prefix = "";
+					GD::bl->out.printDebug("Debug (MQTT settings): prefix set to " + _prefix);
 				}
 				else if(name == "homegearid")
 				{

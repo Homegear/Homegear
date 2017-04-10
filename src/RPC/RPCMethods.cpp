@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -999,7 +999,11 @@ BaseLib::PVariable RPCGetAllScripts::invoke(BaseLib::PRpcClientInfo clientInfo, 
 	{
 		if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
 
+#ifndef NO_SCRIPTENGINE
 		return GD::scriptEngineServer->getAllScripts();
+#else
+		return BaseLib::Variable::createError(-32500, "Homegear is compiled without script engine.");
+#endif
 	}
 	catch(const std::exception& ex)
     {
@@ -2747,33 +2751,47 @@ BaseLib::PVariable RPCListKnownDeviceTypes::invoke(BaseLib::PRpcClientInfo clien
 			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 					std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tBoolean }),
 					std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray }),
+					std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray })
 			}));
 			if(error != ParameterError::Enum::noError) return getError(error);
 		}
+		int32_t familyId = parameters->size() == 3 ? parameters->at(0)->integerValue : -1;
 		bool channels = true;
-		std::map<std::string, bool> fields;
-		if(parameters->size() > 0) channels = parameters->at(0)->booleanValue;
-		if(parameters->size() == 2)
+		std::set<std::string> fields;
+		channels = parameters->size() == 3 ? parameters->at(1)->booleanValue : parameters->at(0)->booleanValue;
+		if(parameters->size() >= 2)
 		{
-			for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(1)->arrayValue->begin(); i != parameters->at(1)->arrayValue->end(); ++i)
+			BaseLib::PArray& array = parameters->size() == 3 ? parameters->at(2)->arrayValue : parameters->at(1)->arrayValue;
+			for(auto element : *array)
 			{
-				if((*i)->stringValue.empty()) continue;
-				fields[(*i)->stringValue] = true;
+				if(element->stringValue.empty()) continue;
+				fields.insert(element->stringValue);
 			}
 		}
 
-		BaseLib::PVariable devices(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		BaseLib::PVariable devices;
+		if(familyId != -1)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			BaseLib::PVariable result = i->second->listKnownDeviceTypes(clientInfo, channels, fields);
-			if(result && result->errorStruct)
+			std::shared_ptr<BaseLib::Systems::DeviceFamily> family = GD::familyController->getFamily(familyId);
+			if(!family) return BaseLib::Variable::createError(-2, "Device family not found.");
+			devices = family->listKnownDeviceTypes(clientInfo, channels, fields);
+		}
+		else
+		{
+			devices = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+
+			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 			{
-				GD::out.printWarning("Warning: Error calling method \"listKnownDeviceTypes\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
-				continue;
+				std::this_thread::sleep_for(std::chrono::milliseconds(3));
+				BaseLib::PVariable result = i->second->listKnownDeviceTypes(clientInfo, channels, fields);
+				if(result && result->errorStruct)
+				{
+					GD::out.printWarning("Warning: Error calling method \"listKnownDeviceTypes\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
+					continue;
+				}
+				if(result && !result->arrayValue->empty()) devices->arrayValue->insert(devices->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
 			}
-			if(result && !result->arrayValue->empty()) devices->arrayValue->insert(devices->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
 		}
 
 		return devices;
@@ -2899,6 +2917,7 @@ BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, st
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tStruct }),
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tStruct }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct })
 		}));
@@ -2944,6 +2963,10 @@ BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, st
 				if(copy == serialNumber) remoteSerialNumber = copy;
 				// }}}
 			}
+		}
+		else if(parameters->at(parameterSetIndex)->type == BaseLib::VariableType::tStruct)
+		{
+			type = BaseLib::DeviceDescription::ParameterGroup::Type::Enum::config;
 		}
 		else
 		{
@@ -3178,7 +3201,9 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 			return BaseLib::Variable::createError(-32501, "Homegear is shutting down.");
 		}
 
+#ifndef NO_SCRIPTENGINE
 		bool internalEngine = false;
+#endif
 
 		bool wait = false;
 		std::string filename;
@@ -3189,7 +3214,14 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 		int32_t pos = filename.find_last_of('.');
 		if(pos != (signed)std::string::npos) ending = filename.substr(pos);
 		GD::bl->hf.toLower(ending);
-		if(ending == ".php" || ending == ".php5" || ending == ".php7" || ending == ".hgs") internalEngine = true;
+		if(ending == ".php" || ending == ".php5" || ending == ".php7" || ending == ".hgs")
+		{
+#ifndef NO_SCRIPTENGINE
+			internalEngine = true;
+#else
+			GD::out.printWarning("Warning: Not executing PHP script with internal script engine as Homegear is compiled without script engine.");
+#endif
+		}
 
 		if((signed)parameters->size() == 2)
 		{
@@ -3210,6 +3242,7 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 		BaseLib::PVariable output(new BaseLib::Variable(BaseLib::VariableType::tString));
 		result->structValue->insert(BaseLib::StructElement("EXITCODE", exitCode));
 		result->structValue->insert(BaseLib::StructElement("OUTPUT", output));
+#ifndef NO_SCRIPTENGINE
 		if(internalEngine)
 		{
 			if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Executing script \"" + fullPath + "\" with parameters \"" + arguments + "\" using internal script engine.");
@@ -3228,6 +3261,7 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 		}
 		else
 		{
+#endif
 			if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Executing program/script \"" + fullPath + "\" with parameters \"" + arguments + "\".");
 			std::string command = fullPath + " " + arguments;
 			if(!wait) command += "&";
@@ -3268,7 +3302,9 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 
 			exitCode->integerValue = BaseLib::HelperFunctions::exec(command.c_str(), output->stringValue);
 			return result;
+#ifndef NO_SCRIPTENGINE
 		}
+#endif
 	}
 	catch(const std::exception& ex)
     {
