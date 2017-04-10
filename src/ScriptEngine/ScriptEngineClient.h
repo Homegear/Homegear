@@ -175,6 +175,7 @@ private:
 		 */
 		BaseLib::PVariable executeScript(BaseLib::PArray& parameters);
 
+		BaseLib::PVariable devTest(BaseLib::PArray& parameters);
 		/**
 		 * Returns the number of scripts currently running.
 		 * @param parameters Irrelevant for this method.

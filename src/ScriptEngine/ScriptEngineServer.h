@@ -65,6 +65,7 @@ public:
 	void homegearShuttingDown();
 	void homegearReloading();
 	void processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped);
+	void devTestClient();
 	uint32_t scriptCount();
 	std::vector<std::pair<int32_t, std::string>> getRunningScripts();
 	void executeScript(PScriptInfo& scriptInfo, bool wait);

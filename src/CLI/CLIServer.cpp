@@ -975,6 +975,12 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "modules [COMMAND]    Execute module commands. Type \"modules help\" for more information." << std::endl;
 			return stringStream.str();
 		}
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "test", "tst", "", 0, arguments, showHelp) && !GD::familyController->familySelected())
+		{
+			GD::scriptEngineServer->devTestClient();
+			stringStream << "Done." << std::endl;
+			return stringStream.str();
+		}
 		else if(BaseLib::HelperFunctions::checkCliCommand(command, "disconnect", "dcr", "", 0, arguments, showHelp))
 		{
 			GD::rpcClient->disconnectRega();

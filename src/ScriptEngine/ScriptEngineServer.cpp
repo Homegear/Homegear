@@ -588,6 +588,42 @@ void ScriptEngineServer::processKilled(pid_t pid, int32_t exitCode, int32_t sign
     }
 }
 
+void ScriptEngineServer::devTestClient()
+{
+	try
+	{
+		if(_shuttingDown) return;
+		std::vector<PScriptEngineClientData> clients;
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			for(std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) continue;
+				clients.push_back(i->second);
+			}
+		}
+
+		BaseLib::Array parameterArray{ std::make_shared<BaseLib::Variable>(6) };
+		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>(std::move(parameterArray));
+		for(std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		{
+			BaseLib::PVariable response = sendRequest(*i, "devTest", parameters);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 uint32_t ScriptEngineServer::scriptCount()
 {
 	try

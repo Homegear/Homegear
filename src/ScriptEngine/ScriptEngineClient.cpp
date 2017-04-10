@@ -45,6 +45,19 @@ namespace ScriptEngine
 
 std::mutex ScriptEngineClient::_resourceMutex;
 
+/*void scriptSignalHandler(int32_t signalNumber)
+{
+	zend_homegear_globals* globals = php_homegear_get_globals();
+	GD::out.printError("Signal " + std::to_string(signalNumber) + ' ' + std::to_string(globals->id));
+	zval returnValue;
+	zval function;
+	zval params[1];
+	ZVAL_LONG(&params[0], 3);
+
+	ZVAL_STRINGL(&function, "exit", sizeof("exit") - 1);
+	call_user_function(EG(function_table), NULL, &function, &returnValue, 1, params);
+}*/
+
 ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 1, 1000)
 {
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
@@ -65,6 +78,7 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 1, 1000)
 	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true));
 
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("devTest", std::bind(&ScriptEngineClient::devTest, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("reload", std::bind(&ScriptEngineClient::reload, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("shutdown", std::bind(&ScriptEngineClient::shutdown, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("executeScript", std::bind(&ScriptEngineClient::executeScript, this, std::placeholders::_1)));
@@ -74,6 +88,11 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 1, 1000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastNewDevices", std::bind(&ScriptEngineClient::broadcastNewDevices, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastDeleteDevices", std::bind(&ScriptEngineClient::broadcastDeleteDevices, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastUpdateDevice", std::bind(&ScriptEngineClient::broadcastUpdateDevice, this, std::placeholders::_1)));
+
+	/*struct sigaction sa;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = scriptSignalHandler;
+	sigaction(SIGUSR1, &sa, NULL);*/
 
 	php_homegear_init();
 }
@@ -1344,6 +1363,38 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 		collectGarbage();
 
 		return BaseLib::PVariable(new BaseLib::Variable());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineClient::devTest(BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(_disposing) return std::make_shared<BaseLib::Variable>();
+
+		/*std::lock_guard<std::mutex> threadGuard(_scriptThreadMutex);
+		for(std::map<int32_t, PThreadInfo>::iterator i = _scriptThreads.begin(); i != _scriptThreads.end(); ++i)
+		{
+			if(i->second->running && (i->first % 5 == 0))
+			{
+				pthread_kill((pthread_t)i->second->thread.native_handle(), SIGUSR1);
+			}
+		}*/
+
+		return std::make_shared<BaseLib::Variable>();
 	}
     catch(const std::exception& ex)
     {
