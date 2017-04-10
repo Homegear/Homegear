@@ -355,10 +355,10 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetEvents : public RPCMethod
+class RPCGetLastEvents : public RPCMethod
 {
 public:
-	RPCGetEvents()
+	RPCGetLastEvents()
 	{
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tArray, BaseLib::VariableType::tInteger});
 	}

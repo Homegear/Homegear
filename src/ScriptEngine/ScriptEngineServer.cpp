@@ -87,7 +87,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 2, 1000)
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getDeviceDescription", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetDeviceDescription())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getDeviceInfo", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetDeviceInfo())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getEvent", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetEvent())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getEvents", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetEvents())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getLastEvents", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetLastEvents())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getInstallMode", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetInstallMode())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getKeyMismatchDevice", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetKeyMismatchDevice())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getLinkInfo", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetLinkInfo())));

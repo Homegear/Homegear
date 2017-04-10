@@ -1356,7 +1356,7 @@ BaseLib::PVariable RPCGetEvent::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 #endif
 }
 
-BaseLib::PVariable RPCGetEvents::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetLastEvents::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	try
 	{
@@ -1371,7 +1371,7 @@ BaseLib::PVariable RPCGetEvents::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 			ids.insert(id->integerValue64);
 		}
 
-		return GD::rpcClient->getEvents(ids, parameters->at(1)->integerValue);
+		return GD::rpcClient->getLastEvents(ids, parameters->at(1)->integerValue);
 	}
 	catch(const std::exception& ex)
     {

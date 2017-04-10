@@ -39,6 +39,8 @@ Client::Client()
 {
 	_lifetick1.first = 0;
 	_lifetick1.second = true;
+
+	_uniqueEventId = 0;
 }
 
 Client::~Client()
@@ -124,7 +126,7 @@ void Client::initServerMethods(std::pair<std::string, std::string> address)
     }
 }
 
-BaseLib::PVariable Client::getEvents(std::set<uint64_t> ids, uint32_t timespan)
+BaseLib::PVariable Client::getLastEvents(std::set<uint64_t> ids, uint32_t timespan)
 {
 	try
 	{
@@ -141,6 +143,8 @@ BaseLib::PVariable Client::getEvents(std::set<uint64_t> ids, uint32_t timespan)
 			if(info.time < minTime) break;
 			if(!ids.empty() && ids.find(info.id) == ids.end()) continue;
 			BaseLib::PVariable event = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			event->structValue->insert(BaseLib::StructElement("TIME", std::make_shared<BaseLib::Variable>((int32_t)(info.time / 1000))));
+			event->structValue->insert(BaseLib::StructElement("UNIQUEID", std::make_shared<BaseLib::Variable>(info.uniqueId)));
 			event->structValue->insert(BaseLib::StructElement("PEERID", std::make_shared<BaseLib::Variable>(info.id)));
 			event->structValue->insert(BaseLib::StructElement("CHANNEL", std::make_shared<BaseLib::Variable>(info.channel)));
 			event->structValue->insert(BaseLib::StructElement("VARIABLE", std::make_shared<BaseLib::Variable>(info.name)));
@@ -240,6 +244,7 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 		{
 			EventInfo info;
 			info.time = BaseLib::HelperFunctions::getTime();
+			info.uniqueId = _uniqueEventId++;
 			info.id = id;
 			info.channel = channel;
 			info.name = valueKeys->at(i);
