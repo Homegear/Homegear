@@ -497,7 +497,7 @@ void initGnuTls()
 			exit(2);
 		}
 		gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
-		if((gcryResult = gcry_control(GCRYCTL_INIT_SECMEM, 65536, 0)) != GPG_ERR_NO_ERROR)
+		if((gcryResult = gcry_control(GCRYCTL_INIT_SECMEM, 131072, 0)) != GPG_ERR_NO_ERROR)
 		{
 			GD::out.printCritical("Critical: Could not allocate secure memory.");
 			exit(2);
