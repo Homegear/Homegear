@@ -1313,9 +1313,9 @@ int main(int argc, char* argv[])
 #ifndef NO_SCRIPTENGINE
     		else if(arg == "-rse")
     		{
+    			GD::bl->settings.load(GD::configPath + "main.conf");
     			initGnuTls();
     			setLimits();
-    			GD::bl->settings.load(GD::configPath + "main.conf");
     			GD::licensingController.reset(new LicensingController());
     			GD::licensingController->loadModules();
     			GD::licensingController->init();
@@ -1328,9 +1328,9 @@ int main(int argc, char* argv[])
 #endif
     		else if(arg == "-rl")
     		{
+    			GD::bl->settings.load(GD::configPath + "main.conf");
     			initGnuTls();
     			setLimits();
-    			GD::bl->settings.load(GD::configPath + "main.conf");
     			GD::licensingController.reset(new LicensingController());
     			GD::licensingController->loadModules();
     			GD::licensingController->init();
