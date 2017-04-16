@@ -104,8 +104,11 @@ tmpfs           /var/lib/homegear/db        tmpfs           defaults,nosuid,mode
 EOF
 
 #Setup network settings
-echo "homegearpi" > etc/hostname
-echo -e "127.0.0.1\thomegearpi" >> etc/hosts
+echo "127.0.0.1       localhost
+::1             localhost ip6-localhost ip6-loopback
+ff02::1         ip6-allnodes
+ff02::2         ip6-allrouters
+" > etc/hosts
 
 echo "auto lo
 iface lo inet loopback
@@ -114,6 +117,14 @@ iface lo inet6 loopback
 allow-hotplug eth0
 iface eth0 inet dhcp
 iface eth0 inet6 auto
+
+allow-hotplug wlan0
+iface wlan0 inet manual
+    wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf
+
+allow-hotplug wlan1
+iface wlan1 inet manual
+    wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf
 " > etc/network/interfaces
 
 echo "nameserver 208.67.222.222
@@ -137,12 +148,17 @@ cat /etc/apt/sources.list
 apt -y install apt-transport-https ca-certificates
 update-ca-certificates --fresh
 mkdir -p /etc/apt/sources.list.d/
+echo "deb http://archive.raspberrypi.org/debian/ jessie main ui" > /etc/apt/sources.list.d/raspi.list
+wget http://archive.raspbian.org/raspbian.public.key && apt-key add raspbian.public.key && rm raspbian.public.key
+wget http://archive.raspberrypi.org/debian/raspberrypi.gpg.key && apt-key add raspberrypi.gpg.key && rm raspberrypi.gpg.key
 echo "deb https://homegear.eu/packages/Raspbian/ jessie/" >> /etc/apt/sources.list.d/homegear.list
 wget http://homegear.eu/packages/Release.key
 apt-key add - < Release.key
 rm Release.key
 apt update
-apt -y install locales console-common ntp openssh-server git-core binutils curl sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 libmodbus5 tmux dialog whiptail
+apt -y install libraspberrypi0 libraspberrypi-bin locales console-common ntp openssh-server git-core binutils curl sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 libmodbus5 tmux dialog whiptail
+# Wireless packets
+apt -y install bluez-firmware firmware-atheros firmware-libertas firmware-realtek firmware-ralink firmware-brcm80211 wireless-tools wpasupplicant
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
 chmod +x /usr/bin/rpi-update
 mkdir -p /lib/modules/$(uname -r)
@@ -418,6 +434,14 @@ mount -o remount,rw /
 
 export NCURSES_NO_UTF8_ACS=1
 export DIALOG_OUTPUT=1
+
+MAC="homegearpi-""$( sed "s/^.*macaddr=[0-9A-F:]\{9\}\([0-9A-F:]*\) .*$/\1/;s/:/-/g" /proc/cmdline )"
+echo "$MAC" > "/etc/hostname"
+grep -q $MAC /etc/hosts
+if [ $? -eq 1 ]; then
+    sed -i "s/127.0.0.1       localhost/127.0.0.1       localhost $MAC/g" /etc/hosts
+fi
+hostname $MAC
 
 /setupPartitions.sh
 if [ -f /partstageone ] || [ -f /partstagetwo ]; then

@@ -979,7 +979,9 @@ std::string Server::handleGlobalCommand(std::string& command)
 		}
 		else if(BaseLib::HelperFunctions::checkCliCommand(command, "test", "tst", "", 0, arguments, showHelp) && !GD::familyController->familySelected())
 		{
+#ifndef NO_SCRIPTENGINE
 			GD::scriptEngineServer->devTestClient();
+#endif
 			stringStream << "Done." << std::endl;
 			return stringStream.str();
 		}
