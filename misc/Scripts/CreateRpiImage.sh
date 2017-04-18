@@ -104,7 +104,8 @@ tmpfs           /var/lib/homegear/db        tmpfs           defaults,nosuid,mode
 EOF
 
 #Setup network settings
-echo "127.0.0.1       localhost
+echo "homegearpi" > etc/hostname
+echo "127.0.0.1       localhost homegearpi
 ::1             localhost ip6-localhost ip6-loopback
 ff02::1         ip6-allnodes
 ff02::2         ip6-allrouters
@@ -435,11 +436,11 @@ mount -o remount,rw /
 export NCURSES_NO_UTF8_ACS=1
 export DIALOG_OUTPUT=1
 
-MAC="homegearpi-""$( sed "s/^.*macaddr=[0-9A-F:]\{9\}\([0-9A-F:]*\) .*$/\1/;s/:/-/g" /proc/cmdline )"
+MAC="homegearpi-""$( ifconfig | grep -m 1 HWaddr | sed "s/^.*HWaddr [0-9a-f:]\{9\}\([0-9a-f:]*\) .*$/\1/;s/:/-/g" )"
 echo "$MAC" > "/etc/hostname"
 grep -q $MAC /etc/hosts
 if [ $? -eq 1 ]; then
-    sed -i "s/127.0.0.1       localhost/127.0.0.1       localhost $MAC/g" /etc/hosts
+    sed -i "s/127.0.0.1       localhost homegearpi/127.0.0.1       localhost $MAC/g" /etc/hosts
 fi
 hostname $MAC
 
