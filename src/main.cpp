@@ -497,9 +497,9 @@ void initGnuTls()
 			exit(2);
 		}
 		gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
-		if((gcryResult = gcry_control(GCRYCTL_INIT_SECMEM, GD::bl->settings.secureMemorySize(), 0)) != GPG_ERR_NO_ERROR)
+		if((gcryResult = gcry_control(GCRYCTL_INIT_SECMEM, (int)GD::bl->settings.secureMemorySize(), 0)) != GPG_ERR_NO_ERROR)
 		{
-			GD::out.printCritical("Critical: Could not allocate secure memory.");
+			GD::out.printCritical("Critical: Could not allocate secure memory. Error code is: " + std::to_string((int32_t)gcryResult));
 			exit(2);
 		}
 		gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
