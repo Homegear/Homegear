@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -39,6 +39,8 @@ Client::Client()
 {
 	_lifetick1.first = 0;
 	_lifetick1.second = true;
+
+	_uniqueEventId = 0;
 }
 
 Client::~Client()
@@ -124,6 +126,48 @@ void Client::initServerMethods(std::pair<std::string, std::string> address)
     }
 }
 
+BaseLib::PVariable Client::getLastEvents(std::set<uint64_t> ids, uint32_t timespan)
+{
+	try
+	{
+		if(timespan > 86400000) return BaseLib::Variable::createError(-1, "\"timespan\" is invalid.");
+
+		int64_t minTime = BaseLib::HelperFunctions::getTime() - timespan;
+		BaseLib::PVariable events = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+
+		std::lock_guard<std::mutex> eventBufferGuard(_eventBufferMutex);
+		for(int32_t i = _eventBufferPosition - 1; i != _eventBufferPosition; i--)
+		{
+			if(i < 0) i = _eventBuffer.size() - 1;
+			EventInfo& info = _eventBuffer.at(i);
+			if(info.time < minTime) break;
+			if(!ids.empty() && ids.find(info.id) == ids.end()) continue;
+			BaseLib::PVariable event = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			event->structValue->insert(BaseLib::StructElement("TIME", std::make_shared<BaseLib::Variable>((int32_t)(info.time / 1000))));
+			event->structValue->insert(BaseLib::StructElement("UNIQUEID", std::make_shared<BaseLib::Variable>(info.uniqueId)));
+			event->structValue->insert(BaseLib::StructElement("PEERID", std::make_shared<BaseLib::Variable>(info.id)));
+			event->structValue->insert(BaseLib::StructElement("CHANNEL", std::make_shared<BaseLib::Variable>(info.channel)));
+			event->structValue->insert(BaseLib::StructElement("VARIABLE", std::make_shared<BaseLib::Variable>(info.name)));
+			event->structValue->insert(BaseLib::StructElement("VALUE", info.value));
+			events->arrayValue->push_back(event);
+		}
+		return events;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error. See error log for more details.");
+}
+
 void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>> values)
 {
 	try
@@ -142,13 +186,7 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 			_lifetick1.first = BaseLib::HelperFunctions::getTime();
 			_lifetick1.second = false;
 		}
-		if(GD::mqtt->enabled())
-		{
-			for(uint32_t i = 0; i < valueKeys->size(); i++)
-			{
-				GD::mqtt->queueMessage(id, channel, valueKeys->at(i), values->at(i));
-			}
-		}
+		if(GD::mqtt->enabled()) GD::mqtt->queueMessage(id, channel, *valueKeys, *values);
 		std::string methodName("event");
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
@@ -161,46 +199,62 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 				//No system.multicall
 				for(uint32_t i = 0; i < valueKeys->size(); i++)
 				{
-					std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
-					parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
+					std::shared_ptr<std::list<BaseLib::PVariable>> parameters = std::make_shared<std::list<BaseLib::PVariable>>();
+					parameters->push_back(std::make_shared<BaseLib::Variable>(server->second->id));
 					if(server->second->newFormat)
 					{
-						parameters->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)id)));
-						parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
+						parameters->push_back(std::make_shared<BaseLib::Variable>((int32_t)id));
+						parameters->push_back(std::make_shared<BaseLib::Variable>(channel));
 					}
-					else parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(deviceAddress)));
-					parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(valueKeys->at(i))));
+					else parameters->push_back(std::make_shared<BaseLib::Variable>(deviceAddress));
+					parameters->push_back(std::make_shared<BaseLib::Variable>(valueKeys->at(i)));
 					parameters->push_back(values->at(i));
-					server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("event", parameters)));
+					server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("event", parameters));
 				}
 			}
 			else
 			{
-				std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
-				BaseLib::PVariable array(new BaseLib::Variable(BaseLib::VariableType::tArray));
+				std::shared_ptr<std::list<BaseLib::PVariable>> parameters = std::make_shared<std::list<BaseLib::PVariable>>();
+				BaseLib::PVariable array = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 				BaseLib::PVariable method;
 				for(uint32_t i = 0; i < valueKeys->size(); i++)
 				{
 					method.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 					array->arrayValue->push_back(method);
-					method->structValue->insert(BaseLib::StructElement("methodName", BaseLib::PVariable(new BaseLib::Variable(methodName))));
-					BaseLib::PVariable params(new BaseLib::Variable(BaseLib::VariableType::tArray));
+					method->structValue->insert(BaseLib::StructElement("methodName", std::make_shared<BaseLib::Variable>(methodName)));
+					BaseLib::PVariable params = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 					method->structValue->insert(BaseLib::StructElement("params", params));
-					params->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
+					params->arrayValue->push_back(std::make_shared<BaseLib::Variable>(server->second->id));
 					if(server->second->newFormat)
 					{
-						params->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)id)));
-						params->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
+						params->arrayValue->push_back(std::make_shared<BaseLib::Variable>((int32_t)id));
+						params->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channel));
 					}
-					else params->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(deviceAddress)));
-					params->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(valueKeys->at(i))));
+					else params->arrayValue->push_back(std::make_shared<BaseLib::Variable>(deviceAddress));
+					params->arrayValue->push_back(std::make_shared<BaseLib::Variable>(valueKeys->at(i)));
 					params->arrayValue->push_back(values->at(i));
 				}
 				parameters->push_back(array);
 				//Sadly some clients only support multicall and not "event" directly for single events. That's why we use multicall even when there is only one value.
-				server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("system.multicall", parameters)));
+				server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("system.multicall", parameters));
 			}
 		}
+
+		for(uint32_t i = 0; i < valueKeys->size(); i++)
+		{
+			EventInfo info;
+			info.time = BaseLib::HelperFunctions::getTime();
+			info.uniqueId = _uniqueEventId++;
+			info.id = id;
+			info.channel = channel;
+			info.name = valueKeys->at(i);
+			info.value = values->at(i);
+			std::lock_guard<std::mutex> eventBufferGuard(_eventBufferMutex);
+			_eventBuffer.at(_eventBufferPosition) = std::move(info);
+			_eventBufferPosition++;
+			if(_eventBufferPosition >= (signed)_eventBuffer.size()) _eventBufferPosition = 0;
+		}
+
 		{
 			std::lock_guard<std::mutex> lifetickGuard(_lifetick1Mutex);
 			_lifetick1.second = true;
@@ -447,7 +501,9 @@ void Client::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
 	try
 	{
 		if(!deviceDescriptions) return;
+#ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastNewDevices(deviceDescriptions);
+#endif
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		std::string methodName("newDevices");
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
@@ -507,7 +563,9 @@ void Client::broadcastDeleteDevices(BaseLib::PVariable deviceAddresses, BaseLib:
 	try
 	{
 		if(!deviceAddresses || !deviceInfo) return;
+#ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastDeleteDevices(deviceInfo);
+#endif
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
@@ -571,7 +629,9 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
 	try
 	{
 		if(id == 0 || address.empty()) return;
+#ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastUpdateDevice(id, channel, hint);
+#endif
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{

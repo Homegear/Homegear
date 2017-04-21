@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
 *
 * Homegear is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -1075,6 +1075,76 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::string& key, Base
 			structValue->structValue->insert(BaseLib::StructElement("value", value));
 			_jsonEncoder->encode(structValue, messageJson2->message);
 			messageJson2->retain = retain;
+			queueMessage(messageJson2);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::vector<std::string>& keys, std::vector<BaseLib::PVariable>& values)
+{
+	try
+	{
+		if(keys.empty() || keys.size() != values.size()) return;
+
+		std::shared_ptr<MqttMessage> messageJson2;
+		BaseLib::PVariable jsonObj;
+		if(_settings.jsonobjTopic())
+		{
+			messageJson2.reset(new MqttMessage());
+			messageJson2->topic = "jsonobj/" + std::to_string(peerId) + '/' + std::to_string(channel);
+			jsonObj.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+		}
+
+		for(int32_t i = 0; i < (signed)keys.size(); i++)
+		{
+			bool retain = keys.at(i).compare(0, 5, "PRESS") != 0;
+
+			std::shared_ptr<MqttMessage> messageJson1;
+			if(_settings.jsonTopic())
+			{
+				messageJson1.reset(new MqttMessage());
+				messageJson1->topic = "json/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + keys.at(i);
+				_jsonEncoder->encode(values.at(i), messageJson1->message);
+				messageJson1->retain = retain;
+				queueMessage(messageJson1);
+			}
+
+			if(_settings.plainTopic())
+			{
+				std::shared_ptr<MqttMessage> messagePlain(new MqttMessage());
+				messagePlain->topic = "plain/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + keys.at(i);
+				if(messageJson1) messagePlain->message.insert(messagePlain->message.end(), messageJson1->message.begin() + 1, messageJson1->message.end() - 1);
+				else
+				{
+					_jsonEncoder->encode(values.at(i), messagePlain->message);
+					messagePlain->message = std::vector<char>(messagePlain->message.begin() + 1, messagePlain->message.end() - 1);
+				}
+				messagePlain->retain = retain;
+				queueMessage(messagePlain);
+			}
+
+			if(_settings.jsonobjTopic())
+			{
+				jsonObj->structValue->insert(BaseLib::StructElement(keys.at(i), values.at(i)));
+				if(!retain) messageJson2->retain = false;
+			}
+		}
+
+		if(_settings.jsonobjTopic())
+		{
+			_jsonEncoder->encode(jsonObj, messageJson2->message);
 			queueMessage(messageJson2);
 		}
 	}

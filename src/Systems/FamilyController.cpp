@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -286,7 +286,9 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 #ifdef EVENTHANDLER
 		GD::eventHandler->trigger(peerID, channel, variables, values);
 #endif
+#ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(peerID, channel, variables, values);
+#endif
 	}
 	catch(const std::exception& ex)
 	{
@@ -302,11 +304,13 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 	}
 }
 
-void FamilyController::onRunScript(PScriptInfo& scriptInfo, bool wait)
+void FamilyController::onRunScript(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, bool wait)
 {
 	try
 	{
+#ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->executeScript(scriptInfo, wait);
+#endif
 	}
 	catch(const std::exception& ex)
 	{

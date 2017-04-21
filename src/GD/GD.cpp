@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -55,5 +55,7 @@ std::unique_ptr<Mqtt> GD::mqtt;
 #ifdef EVENTHANDLER
 std::unique_ptr<EventHandler> GD::eventHandler;
 #endif
+#ifndef NO_SCRIPTENGINE
 std::unique_ptr<ScriptEngine::ScriptEngineServer> GD::scriptEngineServer;
+#endif
 std::unique_ptr<Flows::FlowsServer> GD::flowsServer;

@@ -1,3 +1,5 @@
+#ifndef NO_SCRIPTENGINE
+
 #include <math.h>
 
 #undef PACKAGE_BUGREPORT
@@ -15,4 +17,6 @@
 
 #ifndef isfinite //Fix for build with some cross compilers
 	#define isfinite(a) std::isfinite(a)
+#endif
+
 #endif

@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -50,6 +50,16 @@ public:
 		enum Enum { updateHintAll = 0, updateHintLinks = 1 };
 	};
 
+	struct EventInfo
+	{
+		int64_t time = -1;
+		int32_t uniqueId = 0;
+		uint64_t id = 0;
+		int32_t channel = -1;
+		std::string name;
+		BaseLib::PVariable value;
+	};
+
 	Client();
 	virtual ~Client();
 	void dispose();
@@ -78,6 +88,8 @@ public:
 	BaseLib::PVariable listClientServers(std::string id);
 	BaseLib::PVariable clientServerInitialized(std::string id);
 	void reset();
+
+	BaseLib::PVariable getLastEvents(std::set<uint64_t> ids, uint32_t timespan);
 private:
 	bool _disposing = false;
 	std::shared_ptr<RpcClient> _client;
@@ -87,6 +99,10 @@ private:
 	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
 	std::mutex _lifetick1Mutex;
 	std::pair<int64_t, bool> _lifetick1;
+	std::mutex _eventBufferMutex;
+	int32_t _eventBufferPosition = 0;
+	std::atomic_int _uniqueEventId;
+	std::array<EventInfo, 1024> _eventBuffer;
 
 	void collectGarbage();
 };
