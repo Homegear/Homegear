@@ -645,13 +645,15 @@ bool MiscPeer::getAllValuesHook2(PRpcClientInfo clientInfo, PParameter parameter
 	{
 		if(parameter->id == "IP_ADDRESS")
 		{
-			std::vector<uint8_t> parameterData = valuesCentral[channel][parameter->id].getBinaryData();
+			std::vector<uint8_t> parameterData;
 			parameter->convertToPacket(std::make_shared<Variable>(_ip), parameterData);
+			valuesCentral[channel][parameter->id].setBinaryData(parameterData);
 		}
 		else if(parameter->id == "PEER_ID")
 		{
-			std::vector<uint8_t> parameterData = valuesCentral[channel][parameter->id].getBinaryData();
+			std::vector<uint8_t> parameterData;
 			parameter->convertToPacket(std::make_shared<Variable>((int32_t)_peerID), parameterData);
+			valuesCentral[channel][parameter->id].setBinaryData(parameterData);
 		}
 	}
 	catch(const std::exception& ex)
@@ -675,13 +677,15 @@ bool MiscPeer::getParamsetHook2(PRpcClientInfo clientInfo, PParameter parameter,
 	{
 		if(parameter->id == "IP_ADDRESS")
 		{
-			std::vector<uint8_t> parameterData = valuesCentral[channel][parameter->id].getBinaryData();
+			std::vector<uint8_t> parameterData;
 			parameter->convertToPacket(std::make_shared<Variable>(_ip), parameterData);
+			valuesCentral[channel][parameter->id].setBinaryData(parameterData);
 		}
 		else if(parameter->id == "PEER_ID")
 		{
-			std::vector<uint8_t> parameterData = valuesCentral[channel][parameter->id].getBinaryData();
+			std::vector<uint8_t> parameterData;
 			parameter->convertToPacket(std::make_shared<Variable>((int32_t)_peerID), parameterData);
+			valuesCentral[channel][parameter->id].setBinaryData(parameterData);
 		}
 	}
 	catch(const std::exception& ex)
