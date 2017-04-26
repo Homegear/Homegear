@@ -448,15 +448,16 @@ std::string MiscPeer::printConfig()
 		std::ostringstream stringStream;
 		stringStream << "MASTER" << std::endl;
 		stringStream << "{" << std::endl;
-		for(std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::const_iterator i = configCentral.begin(); i != configCentral.end(); ++i)
+		for(std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>>::iterator i = configCentral.begin(); i != configCentral.end(); ++i)
 		{
 			stringStream << "\t" << "Channel: " << std::dec << i->first << std::endl;
 			stringStream << "\t{" << std::endl;
-			for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+			for(std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
 				stringStream << "\t\t[" << j->first << "]: ";
 				if(!j->second.rpcParameter) stringStream << "(No RPC parameter) ";
-				for(std::vector<uint8_t>::const_iterator k = j->second.data.begin(); k != j->second.data.end(); ++k)
+				std::vector<uint8_t> parameterData = j->second.getBinaryData();
+				for(std::vector<uint8_t>::const_iterator k = parameterData.begin(); k != parameterData.end(); ++k)
 				{
 					stringStream << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*k << " ";
 				}
@@ -468,15 +469,16 @@ std::string MiscPeer::printConfig()
 
 		stringStream << "VALUES" << std::endl;
 		stringStream << "{" << std::endl;
-		for(std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::const_iterator i = valuesCentral.begin(); i != valuesCentral.end(); ++i)
+		for(std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>>::iterator i = valuesCentral.begin(); i != valuesCentral.end(); ++i)
 		{
 			stringStream << "\t" << "Channel: " << std::dec << i->first << std::endl;
 			stringStream << "\t{" << std::endl;
-			for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+			for(std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
 				stringStream << "\t\t[" << j->first << "]: ";
 				if(!j->second.rpcParameter) stringStream << "(No RPC parameter) ";
-				for(std::vector<uint8_t>::const_iterator k = j->second.data.begin(); k != j->second.data.end(); ++k)
+				std::vector<uint8_t> parameterData = j->second.getBinaryData();
+				for(std::vector<uint8_t>::const_iterator k = parameterData.begin(); k != parameterData.end(); ++k)
 				{
 					stringStream << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*k << " ";
 				}
@@ -641,8 +643,16 @@ bool MiscPeer::getAllValuesHook2(PRpcClientInfo clientInfo, PParameter parameter
 {
 	try
 	{
-		if(parameter->id == "IP_ADDRESS") parameter->convertToPacket(PVariable(new Variable(_ip)), valuesCentral[channel][parameter->id].data);
-		else if(parameter->id == "PEER_ID") parameter->convertToPacket(PVariable(new Variable((int32_t)_peerID)), valuesCentral[channel][parameter->id].data);
+		if(parameter->id == "IP_ADDRESS")
+		{
+			std::vector<uint8_t> parameterData = valuesCentral[channel][parameter->id].getBinaryData();
+			parameter->convertToPacket(std::make_shared<Variable>(_ip), parameterData);
+		}
+		else if(parameter->id == "PEER_ID")
+		{
+			std::vector<uint8_t> parameterData = valuesCentral[channel][parameter->id].getBinaryData();
+			parameter->convertToPacket(std::make_shared<Variable>((int32_t)_peerID), parameterData);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -663,8 +673,16 @@ bool MiscPeer::getParamsetHook2(PRpcClientInfo clientInfo, PParameter parameter,
 {
 	try
 	{
-		if(parameter->id == "IP_ADDRESS") parameter->convertToPacket(PVariable(new Variable(_ip)), valuesCentral[channel][parameter->id].data);
-		else if(parameter->id == "PEER_ID") parameter->convertToPacket(PVariable(new Variable((int32_t)_peerID)), valuesCentral[channel][parameter->id].data);
+		if(parameter->id == "IP_ADDRESS")
+		{
+			std::vector<uint8_t> parameterData = valuesCentral[channel][parameter->id].getBinaryData();
+			parameter->convertToPacket(std::make_shared<Variable>(_ip), parameterData);
+		}
+		else if(parameter->id == "PEER_ID")
+		{
+			std::vector<uint8_t> parameterData = valuesCentral[channel][parameter->id].getBinaryData();
+			parameter->convertToPacket(std::make_shared<Variable>((int32_t)_peerID), parameterData);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -733,13 +751,15 @@ PVariable MiscPeer::getParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
 				if(valuesCentral.find(channel) == valuesCentral.end()) continue;
 				if(valuesCentral[channel].find(i->second->id) == valuesCentral[channel].end()) continue;
 				if(getParamsetHook2(clientInfo, i->second, channel, variables)) continue;
-				element = i->second->convertFromPacket(valuesCentral[channel][i->second->id].data);
+				std::vector<uint8_t> parameterData = valuesCentral[channel][i->second->id].getBinaryData();
+				element = i->second->convertFromPacket(parameterData);
 			}
 			else if(type == ParameterGroup::Type::Enum::config)
 			{
 				if(configCentral.find(channel) == configCentral.end()) continue;
 				if(configCentral[channel].find(i->second->id) == configCentral[channel].end()) continue;
-				element = i->second->convertFromPacket(configCentral[channel][i->second->id].data);
+				std::vector<uint8_t> parameterData = configCentral[channel][i->second->id].getBinaryData();
+				element = i->second->convertFromPacket(parameterData);
 				//if(i->second->password) element.reset(new Variable(element->type));
 			}
 			else if(type == ParameterGroup::Type::Enum::link)
@@ -826,14 +846,14 @@ PVariable MiscPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
 				if(i->first.empty() || !i->second) continue;
 				std::vector<uint8_t> value;
 				if(configCentral[channel].find(i->first) == configCentral[channel].end()) continue;
-				BaseLib::Systems::RPCConfigurationParameter* parameter = &configCentral[channel][i->first];
-				if(!parameter->rpcParameter) continue;
-				if(parameter->rpcParameter->password && i->second->stringValue.empty()) continue; //Don't safe password if empty
-				parameter->rpcParameter->convertToPacket(i->second, value);
+				BaseLib::Systems::RpcConfigurationParameter& parameter = configCentral[channel][i->first];
+				if(!parameter.rpcParameter) continue;
+				if(parameter.rpcParameter->password && i->second->stringValue.empty()) continue; //Don't safe password if empty
+				parameter.rpcParameter->convertToPacket(i->second, value);
 				std::vector<uint8_t> shiftedValue = value;
-				parameter->rpcParameter->adjustBitPosition(shiftedValue);
-				int32_t intIndex = (int32_t)parameter->rpcParameter->physical->index;
-				int32_t list = parameter->rpcParameter->physical->list;
+				parameter.rpcParameter->adjustBitPosition(shiftedValue);
+				int32_t intIndex = (int32_t)parameter.rpcParameter->physical->index;
+				int32_t list = parameter.rpcParameter->physical->list;
 				if(list == -1) list = 0;
 				if(allParameters[list].find(intIndex) == allParameters[list].end()) allParameters[list][intIndex] = shiftedValue;
 				else
@@ -846,12 +866,12 @@ PVariable MiscPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
 						index++;
 					}
 				}
-				parameter->data = value;
-				if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
-				else saveParameter(0, ParameterGroup::Type::Enum::config, channel, i->first, parameter->data);
+				parameter.setBinaryData(value);
+				if(parameter.databaseId > 0) saveParameter(parameter.databaseId, value);
+				else saveParameter(0, ParameterGroup::Type::Enum::config, channel, i->first, value);
 				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
 				//Only send to device when parameter is of type config
-				if(parameter->rpcParameter->physical->operationType != IPhysical::OperationType::Enum::config && parameter->rpcParameter->physical->operationType != IPhysical::OperationType::Enum::configString) continue;
+				if(parameter.rpcParameter->physical->operationType != IPhysical::OperationType::Enum::config && parameter.rpcParameter->physical->operationType != IPhysical::OperationType::Enum::configString) continue;
 				changedParameters[list][intIndex] = allParameters[list][intIndex];
 			}
 
@@ -908,7 +928,7 @@ PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channe
 		}
 		if(rpcParameter->logical->type == ILogical::Type::tAction && !value->booleanValue) return Variable::createError(-5, "Parameter of type action cannot be set to \"false\".");
 		if(!rpcParameter->writeable && clientInfo->id != -1 && !(rpcParameter->addonWriteable && raiseIsAddonClient(clientInfo->id) == 1)) return Variable::createError(-6, "parameter is read only");
-		BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
+		BaseLib::Systems::RpcConfigurationParameter& parameter = valuesCentral[channel][valueKey];
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
 		std::shared_ptr<std::vector<PVariable>> values(new std::vector<PVariable>());
 
@@ -917,9 +937,11 @@ PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channe
 
 		if(rpcParameter->physical->operationType == IPhysical::OperationType::Enum::store)
 		{
-			rpcParameter->convertToPacket(value, parameter->data);
-			if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
-			else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey, parameter->data);
+			std::vector<uint8_t> parameterData;
+			rpcParameter->convertToPacket(value, parameterData);
+			parameter.setBinaryData(parameterData);
+			if(parameter.databaseId > 0) saveParameter(parameter.databaseId, parameterData);
+			else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey, parameterData);
 
 			raiseEvent(_peerID, channel, valueKeys, values);
 			raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
