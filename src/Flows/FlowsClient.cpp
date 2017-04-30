@@ -127,7 +127,6 @@ void FlowsClient::start()
 			remoteAddress.sun_path[103] = 0; //Just to make sure it is null terminated.
 			if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + 1 + sizeof(remoteAddress.sun_family)) == -1)
 			{
-				GD::bl->fileDescriptorManager.shutdown(_fileDescriptor);
 				if(i == 0)
 				{
 					_out.printDebug("Debug: Socket closed. Trying again...");

@@ -55,7 +55,6 @@ void IpcClientData::init()
 {
 	binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
 	buffer.resize(1024);
-	_secret = BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomBytes(32));
 }
 
 }

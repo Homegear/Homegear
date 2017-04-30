@@ -41,8 +41,6 @@ namespace Ipc
 class IpcClientData
 {
 private:
-	std::string _secret;
-
 	void init();
 public:
 	int32_t id = 0;
@@ -59,7 +57,6 @@ public:
 	IpcClientData();
 	IpcClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor);
 	virtual ~IpcClientData();
-	std::string getSecret() { return _secret; };
 };
 
 typedef std::shared_ptr<IpcClientData> PIpcClientData;

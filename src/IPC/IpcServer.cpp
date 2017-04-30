@@ -124,9 +124,6 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 2, 1000)
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("unsubscribePeers", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCUnsubscribePeers())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("updateFirmware", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCUpdateFirmware())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("writeLog", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCWriteLog())));
-
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("registerFlowsClient", std::bind(&IpcServer::registerIpcClient, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("flowFinished", std::bind(&IpcServer::unregisterIpcClient, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 }
 
 IpcServer::~IpcServer()
@@ -162,7 +159,6 @@ void IpcServer::collectGarbage()
 		{
 			{
 				std::lock_guard<std::mutex> stateGuard(_stateMutex);
-				_clientsBySecret.erase((*i)->getSecret());
 				_clients.erase((*i)->id);
 			}
 			_out.printInfo("Info: IPC client " + std::to_string((*i)->id) + " removed.");
@@ -216,7 +212,7 @@ void IpcServer::stop()
 	try
 	{
 		_shuttingDown = true;
-		_out.printDebug("Debug: Waiting for flows engine server's client threads to finish.");
+		_out.printDebug("Debug: Waiting for IPC server's client threads to finish.");
 		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -562,6 +558,8 @@ void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueue
 				}
 
 				sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
+
+				if(queueEntry->clientData->closed) closeClientConnection(queueEntry->clientData); //unregisterIpcClient was called
 			}
 			else
 			{
@@ -825,7 +823,6 @@ void IpcServer::mainThread()
 				PIpcClientData clientData = std::make_shared<IpcClientData>(clientFileDescriptor);
 				clientData->id = _currentClientId++;
 				_clients.emplace(clientData->id, clientData);
-				_clientsBySecret.emplace(clientData->getSecret(), clientData->id);
 				continue;
 			}
 
@@ -874,7 +871,7 @@ void IpcServer::readClient(PIpcClientData& clientData)
 		bytesRead = read(clientData->fileDescriptor->descriptor, &(clientData->buffer[0]), clientData->buffer.size());
 		if(bytesRead <= 0) //read returns 0, when connection is disrupted.
 		{
-			_out.printInfo("Info: Connection to flows server's client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
+			_out.printInfo("Info: Connection to IPC server's client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
 			closeClientConnection(clientData);
 			return;
 		}
@@ -921,7 +918,7 @@ bool IpcServer::getFileDescriptor(bool deleteOldSocket)
 	{
 		if(!BaseLib::Io::directoryExists(GD::bl->settings.socketPath().c_str()))
 		{
-			if(errno == ENOENT) _out.printCritical("Critical: Directory " + GD::bl->settings.socketPath() + " does not exist. Please create it before starting Homegear otherwise flows won't work.");
+			if(errno == ENOENT) _out.printCritical("Critical: Directory " + GD::bl->settings.socketPath() + " does not exist. Please create it before starting Homegear otherwise IPC won't work.");
 			else _out.printCritical("Critical: Error reading information of directory " + GD::bl->settings.socketPath() + ". The script engine won't work: " + strerror(errno));
 			_stopServer = true;
 			return false;
@@ -930,7 +927,7 @@ bool IpcServer::getFileDescriptor(bool deleteOldSocket)
 		int32_t result = BaseLib::Io::isDirectory(GD::bl->settings.socketPath(), isDirectory);
 		if(result != 0 || !isDirectory)
 		{
-			_out.printCritical("Critical: Directory " + GD::bl->settings.socketPath() + " does not exist. Please create it before starting Homegear otherwise flows won't work.");
+			_out.printCritical("Critical: Directory " + GD::bl->settings.socketPath() + " does not exist. Please create it before starting Homegear otherwise IPC won't work.");
 			_stopServer = true;
 			return false;
 		}
@@ -997,53 +994,6 @@ bool IpcServer::getFileDescriptor(bool deleteOldSocket)
 }
 
 // {{{ RPC methods
-BaseLib::PVariable IpcServer::registerIpcClient(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
-{
-	try
-	{
-		return std::make_shared<BaseLib::Variable>(clientData->getSecret());
-	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable IpcServer::unregisterIpcClient(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
-{
-	try
-	{
-		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects one parameter. " + std::to_string(parameters->size()) + " given.");
-		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
-
-		std::lock_guard<std::mutex> stateGuard(_stateMutex);
-		auto clientIterator = _clientsBySecret.find(parameters->at(0)->stringValue);
-		if(clientIterator != _clientsBySecret.end() && clientIterator->second == clientData->id) closeClientConnection(clientData);
-		return std::make_shared<BaseLib::Variable>();
-	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
 // }}}
 
 }

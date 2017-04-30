@@ -133,7 +133,6 @@ int32_t Client::start(std::string command)
 			remoteAddress.sun_path[103] = 0; //Just to make sure it is null terminated.
 			if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + 1 + sizeof(remoteAddress.sun_family)) == -1)
 			{
-				GD::bl->fileDescriptorManager.shutdown(_fileDescriptor);
 				if(i == 0)
 				{
 					GD::out.printDebug("Debug: Socket closed. Trying again...");

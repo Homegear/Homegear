@@ -91,7 +91,6 @@ private:
 	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
 	std::mutex _stateMutex;
 	std::map<int32_t, PIpcClientData> _clients;
-	std::map<std::string, int32_t> _clientsBySecret;
 	int32_t _currentClientId = 0;
 	int64_t _lastGargabeCollection = 0;
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
@@ -115,8 +114,6 @@ private:
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 
 	// {{{ RPC methods
-		BaseLib::PVariable registerIpcClient(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-		BaseLib::PVariable unregisterIpcClient(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 	// }}}
 };
 
