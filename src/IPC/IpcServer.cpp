@@ -288,39 +288,6 @@ void IpcServer::homegearShuttingDown()
     }
 }
 
-void IpcServer::homegearReloading()
-{
-	try
-	{
-		std::vector<PIpcClientData> clients;
-		{
-			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
-			{
-				if(i->second->closed) continue;
-				clients.push_back(i->second);
-			}
-		}
-		for(std::vector<PIpcClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
-		{
-			BaseLib::PArray parameters(new BaseLib::Array());
-			sendRequest(*i, "reload", parameters);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
 void IpcServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values)
 {
 	try

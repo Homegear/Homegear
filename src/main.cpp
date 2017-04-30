@@ -377,7 +377,6 @@ void terminate(int32_t signalNumber)
 			}
 			GD::out.printInfo("Reloading flows server...");
 			if(GD::flowsServer) GD::flowsServer->homegearReloading();
-			if(GD::ipcServer) GD::ipcServer->homegearReloading();
 #ifndef NO_SCRIPTENGINE
 			GD::out.printInfo("Reloading script engine server...");
 			if(GD::scriptEngineServer) GD::scriptEngineServer->homegearReloading();

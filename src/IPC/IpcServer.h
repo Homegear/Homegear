@@ -48,7 +48,6 @@ public:
 	bool start();
 	void stop();
 	void homegearShuttingDown();
-	void homegearReloading();
 	void broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values);
 	void broadcastNewDevices(BaseLib::PVariable deviceDescriptions);
 	void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
