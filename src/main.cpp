@@ -1066,11 +1066,22 @@ void startUp()
         GD::eventHandler->load();
 #endif
 
-        GD::out.printInfo("Starting flows server...");
 		GD::flowsServer.reset(new Flows::FlowsServer());
-		if(GD::bl->settings.enableFlows() && !GD::flowsServer->start())
+		if(GD::bl->settings.enableFlows())
 		{
-			GD::out.printCritical("Critical: Cannot start flows server. Exiting Homegear.");
+			GD::out.printInfo("Starting flows server...");
+			if(!GD::flowsServer->start())
+			{
+				GD::out.printCritical("Critical: Cannot start flows server. Exiting Homegear.");
+				exit(1);
+			}
+		}
+
+		GD::out.printInfo("Starting IPC server...");
+		GD::ipcServer.reset(new Ipc::IpcServer());
+		if(!GD::ipcServer->start())
+		{
+			GD::out.printCritical("Critical: Cannot start IPC server. Exiting Homegear.");
 			exit(1);
 		}
 
