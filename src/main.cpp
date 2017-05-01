@@ -1181,7 +1181,7 @@ int main(int argc, char* argv[])
 
     	getExecutablePath(argc, argv);
     	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
-    	GD::bl.reset(new BaseLib::SharedObjects(GD::executablePath, _errorCallback.get(), false));
+    	GD::bl.reset(new BaseLib::SharedObjects());
     	GD::out.init(GD::bl.get());
 
 		if(BaseLib::Io::directoryExists(GD::executablePath + "config")) GD::configPath = GD::executablePath + "config/";
@@ -1265,7 +1265,7 @@ int main(int argc, char* argv[])
     					std::cout <<  "Please run Homegear as root to set the device permissions." << std::endl;
     					exit(1);
     				}
-    				GD::bl->settings.load(GD::configPath + "main.conf");
+    				GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     				GD::bl->debugLevel = 3; //Only output warnings.
     				GD::licensingController.reset(new LicensingController());
     				GD::familyController.reset(new FamilyController());
@@ -1298,7 +1298,7 @@ int main(int argc, char* argv[])
     		{
     			if(i + 2 < argc)
     			{
-    				GD::bl->settings.load(GD::configPath + "main.conf");
+    				GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     				std::string inputFile(argv[i + 1]);
     				std::string outputFile(argv[i + 2]);
     				BaseLib::DeviceDescription::Devices devices(GD::bl.get(), nullptr, 0);
@@ -1319,7 +1319,7 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-r")
     		{
-    			GD::bl->settings.load(GD::configPath + "main.conf");
+    			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			CLI::Client cliClient;
     			int32_t exitCode = cliClient.start();
     			exit(exitCode);
@@ -1327,7 +1327,7 @@ int main(int argc, char* argv[])
 #ifndef NO_SCRIPTENGINE
     		else if(arg == "-rse")
     		{
-    			GD::bl->settings.load(GD::configPath + "main.conf");
+    			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			initGnuTls();
     			setLimits();
     			GD::licensingController.reset(new LicensingController());
@@ -1342,7 +1342,7 @@ int main(int argc, char* argv[])
 #endif
     		else if(arg == "-rl")
     		{
-    			GD::bl->settings.load(GD::configPath + "main.conf");
+    			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			initGnuTls();
     			setLimits();
     			GD::licensingController.reset(new LicensingController());
@@ -1356,7 +1356,7 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-e")
     		{
-    			GD::bl->settings.load(GD::configPath + "main.conf");
+    			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			GD::bl->debugLevel = 3; //Only output warnings.
     			std::stringstream command;
     			if(i + 1 < argc)
@@ -1388,7 +1388,7 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-l")
     		{
-    			GD::bl->settings.load(GD::configPath + "main.conf");
+    			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			GD::bl->debugLevel = 3; //Only output warnings.
     			std::string command = "lifetick";
     			CLI::Client cliClient;
@@ -1397,7 +1397,7 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-pre")
     		{
-    			GD::bl->settings.load(GD::configPath + "main.conf");
+    			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			GD::serverInfo.init(GD::bl.get());
     			GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
     			if(GD::runAsUser.empty()) GD::runAsUser = GD::bl->settings.runAsUser();
@@ -1595,7 +1595,7 @@ int main(int argc, char* argv[])
 
     	// {{{ Load settings
 			GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");
-			GD::bl->settings.load(GD::configPath + "main.conf");
+			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
 			if(GD::runAsUser.empty()) GD::runAsUser = GD::bl->settings.runAsUser();
 			if(GD::runAsGroup.empty()) GD::runAsGroup = GD::bl->settings.runAsGroup();
 			if((!GD::runAsUser.empty() && GD::runAsGroup.empty()) || (!GD::runAsGroup.empty() && GD::runAsUser.empty()))
