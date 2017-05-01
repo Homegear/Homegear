@@ -34,7 +34,6 @@
 #ifndef NO_SCRIPTENGINE
 
 #include "php_config_fixes.h"
-#include "../RPC/RPCMethod.h"
 #include "../../config.h"
 #include "ScriptEngineResponse.h"
 #include <homegear-base/BaseLib.h>

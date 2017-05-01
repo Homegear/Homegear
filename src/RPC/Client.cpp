@@ -837,7 +837,7 @@ void Client::removeServer(std::pair<std::string, std::string> server)
 {
 	try
 	{
-		BaseLib::DisposableLockGuard serversGuard(_serversMutex);
+		std::unique_lock<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::iterator i = _servers.begin(); i != _servers.end(); ++i)
 		{
 			if(i->second->address == server)
@@ -846,7 +846,7 @@ void Client::removeServer(std::pair<std::string, std::string> server)
 				i->second->removed = true;
 				std::shared_ptr<RemoteRpcServer> server = i->second;
 				_servers.erase(i);
-				serversGuard.dispose();
+				serversGuard.unlock();
 				//Close waits for all read/write operations to finish and can therefore block. That's why we unlock the mutex first.
 				if(server->socket) server->socket->close();
 				return;

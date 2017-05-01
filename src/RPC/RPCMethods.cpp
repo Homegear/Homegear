@@ -112,12 +112,12 @@ BaseLib::PVariable RPCSystemListMethods::invoke(BaseLib::PRpcClientInfo clientIn
 		if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
 
 		BaseLib::PVariable methodInfo(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> methods = _server->getMethods();
-		for(std::map<std::string, std::shared_ptr<RPCMethod>>::iterator i = methods->begin(); i != methods->end(); ++i)
+		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = _server->getMethods();
+		for(std::map<std::string, std::shared_ptr<RpcMethod>>::iterator i = methods->begin(); i != methods->end(); ++i)
 		{
 			methodInfo->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(i->first)));
 		}
-		std::unordered_map<std::string, std::shared_ptr<Rpc::RPCMethod>> ipcMethods = GD::ipcServer->getRpcMethods();
+		std::unordered_map<std::string, std::shared_ptr<RpcMethod>> ipcMethods = GD::ipcServer->getRpcMethods();
 		for (auto& method : ipcMethods)
 		{
 			methodInfo->arrayValue->push_back(std::make_shared<BaseLib::Variable>(method.first));
@@ -149,11 +149,11 @@ BaseLib::PVariable RPCSystemMethodHelp::invoke(BaseLib::PRpcClientInfo clientInf
 
 		BaseLib::PVariable help;
 
-		std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> methods = _server->getMethods();
+		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = _server->getMethods();
 		auto methodIterator = methods->find(parameters->at(0)->stringValue);
 		if (methodIterator == methods->end())
 		{
-			std::unordered_map<std::string, std::shared_ptr<Rpc::RPCMethod>> ipcMethods = GD::ipcServer->getRpcMethods();
+			std::unordered_map<std::string, std::shared_ptr<RpcMethod>> ipcMethods = GD::ipcServer->getRpcMethods();
 			auto methodIterator2 = ipcMethods.find(parameters->at(0)->stringValue);
 			if (methodIterator2 == ipcMethods.end()) return BaseLib::Variable::createError(-32602, "Method not found.");
 			help = methodIterator2->second->getHelp();
@@ -188,11 +188,11 @@ BaseLib::PVariable RPCSystemMethodSignature::invoke(BaseLib::PRpcClientInfo clie
 
 		BaseLib::PVariable signature;
 
-		std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> methods = _server->getMethods();
+		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = _server->getMethods();
 		auto methodIterator = methods->find(parameters->at(0)->stringValue);
 		if (methodIterator == methods->end())
 		{
-			std::unordered_map<std::string, std::shared_ptr<Rpc::RPCMethod>> ipcMethods = GD::ipcServer->getRpcMethods();
+			std::unordered_map<std::string, std::shared_ptr<RpcMethod>> ipcMethods = GD::ipcServer->getRpcMethods();
 			auto methodIterator2 = ipcMethods.find(parameters->at(0)->stringValue);
 			if (methodIterator2 == ipcMethods.end()) return BaseLib::Variable::createError(-32602, "Method not found.");
 			signature = methodIterator2->second->getSignature();
@@ -231,7 +231,7 @@ BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tArray }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> methods = _server->getMethods();
+		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = _server->getMethods();
 		BaseLib::PVariable returns(new BaseLib::Variable(BaseLib::VariableType::tArray));
 		for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(0)->arrayValue->begin(); i != parameters->at(0)->arrayValue->end(); ++i)
 		{

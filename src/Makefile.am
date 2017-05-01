@@ -20,7 +20,7 @@ endif
 
 
 bin_PROGRAMS = homegear
-homegear_SOURCES = main.cpp Monitor.cpp Monitor.h CLI/CLIClient.cpp CLI/CLIClient.h CLI/CLIServer.cpp CLI/CLIServer.h Database/SQLite3.cpp Database/SQLite3.h Events/EventHandler.cpp Flows/FlowsClient.cpp Flows/FlowsClientData.cpp Flows/FlowsClientData.h Flows/FlowsProcess.cpp Flows/FlowsServer.cpp IPC/IpcClientData.cpp IPC/IpcServer.cpp GD/GD.cpp GD/GD.h Licensing/LicensingController.cpp Licensing/LicensingController.h MQTT/Mqtt.cpp MQTT/Mqtt.h MQTT/MqttSettings.cpp MQTT/MqttSettings.h RPC/Auth.cpp RPC/Auth.h RPC/Client.cpp RPC/Client.h RPC/ClientSettings.cpp RPC/ClientSettings.h RPC/RemoteRpcServer.cpp RPC/RemoteRpcServer.h RPC/RpcClient.cpp RPC/RpcClient.h RPC/RPCMethod.cpp RPC/RPCMethod.h RPC/RPCMethods.cpp RPC/RPCMethods.h RPC/RPCServer.cpp RPC/RPCServer.h RPC/Server.cpp RPC/Server.h WebServer/WebServer.cpp WebServer/WebServer.h Systems/DatabaseController.cpp Systems/DatabaseController.h Systems/FamilyController.cpp Systems/FamilyController.h UPnP/UPnP.cpp UPnP/UPnP.h User/User.cpp User/User.h
+homegear_SOURCES = main.cpp Monitor.cpp CLI/CLIClient.cpp CLI/CLIServer.cpp Database/SQLite3.cpp Events/EventHandler.cpp Flows/FlowsClient.cpp Flows/FlowsClientData.cpp Flows/FlowsProcess.cpp Flows/FlowsServer.cpp IPC/IpcClientData.cpp IPC/IpcServer.cpp GD/GD.cpp Licensing/LicensingController.cpp MQTT/Mqtt.cpp MQTT/MqttSettings.cpp RPC/Auth.cpp RPC/Client.cpp RPC/ClientSettings.cpp RPC/RemoteRpcServer.cpp RPC/RpcClient.cpp RPC/RPCMethods.cpp RPC/RPCServer.cpp RPC/Server.cpp WebServer/WebServer.cpp Systems/DatabaseController.cpp Systems/FamilyController.cpp UPnP/UPnP.cpp User/User.cpp
 homegear_LDADD = -lpthread -lreadline -lgcrypt -lgnutls -lhomegear-base -lgpg-error -lsqlite3
 
 if BSDSYSTEM

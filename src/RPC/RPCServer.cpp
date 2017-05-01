@@ -62,7 +62,7 @@ RPCServer::RPCServer()
 
 	_info.reset(new BaseLib::Rpc::ServerInfo::Info());
 	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
-	_rpcMethods.reset(new std::map<std::string, std::shared_ptr<RPCMethod>>);
+	_rpcMethods.reset(new std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>);
 	_serverFileDescriptor.reset(new BaseLib::FileDescriptor);
 	_threadPriority = GD::bl->settings.rpcServerThreadPriority();
 	_threadPolicy = GD::bl->settings.rpcServerThreadPolicy();
@@ -311,7 +311,7 @@ uint32_t RPCServer::connectionCount()
     return 0;
 }
 
-void RPCServer::registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method)
+void RPCServer::registerMethod(std::string methodName, std::shared_ptr<BaseLib::Rpc::RpcMethod> method)
 {
 	try
 	{
@@ -320,7 +320,7 @@ void RPCServer::registerMethod(std::string methodName, std::shared_ptr<RPCMethod
 			_out.printWarning("Warning: Could not register RPC method, because a method with this name already exists.");
 			return;
 		}
-		_rpcMethods->insert(std::pair<std::string, std::shared_ptr<RPCMethod>>(methodName, method));
+		_rpcMethods->insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>(methodName, method));
 	}
 	catch(const std::exception& ex)
     {

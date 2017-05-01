@@ -33,7 +33,6 @@
 
 #include "../../config.h"
 #include <homegear-base/BaseLib.h>
-#include "RPCMethod.h"
 #include "Auth.h"
 #include "../WebServer/WebServer.h"
 
@@ -79,8 +78,8 @@ namespace Rpc
 			bool isRunning() { return !_stopped; }
 			void start(BaseLib::Rpc::PServerInfo& settings);
 			void stop();
-			void registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method);
-			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> getMethods() { return _rpcMethods; }
+			void registerMethod(std::string methodName, std::shared_ptr<BaseLib::Rpc::RpcMethod> method);
+			std::shared_ptr<std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>> getMethods() { return _rpcMethods; }
 			uint32_t connectionCount();
 			BaseLib::PVariable callMethod(std::string& methodName, BaseLib::PVariable& parameters);
 
@@ -120,7 +119,7 @@ namespace Rpc
 			std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
 			std::mutex _stateMutex;
 			std::map<int32_t, std::shared_ptr<Client>> _clients;
-			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> _rpcMethods;
+			std::shared_ptr<std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>> _rpcMethods;
 			std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 			std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoderAnsi;
 			std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;

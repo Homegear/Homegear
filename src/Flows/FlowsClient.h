@@ -32,7 +32,6 @@
 #define FLOWSCLIENT_H_
 
 #include "FlowsResponse.h"
-#include "../RPC/RPCMethod.h"
 #include <homegear-base/BaseLib.h>
 
 #include <thread>

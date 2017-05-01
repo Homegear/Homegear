@@ -33,7 +33,6 @@
 
 #include "IpcClientData.h"
 
-#include "../RPC/RPCMethod.h"
 #include <homegear-base/BaseLib.h>
 
 namespace Ipc
@@ -53,7 +52,7 @@ public:
 	void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
 	BaseLib::PVariable callRpcMethod(std::string& methodName, BaseLib::PArray& parameters);
-	std::unordered_map<std::string, std::shared_ptr<Rpc::RPCMethod>> getRpcMethods();
+	std::unordered_map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> getRpcMethods();
 private:
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
@@ -93,11 +92,11 @@ private:
 	std::mutex _stateMutex;
 	std::map<int32_t, PIpcClientData> _clients;
 	std::mutex _clientsByRpcMethodsMutex;
-	std::unordered_map<std::string, std::pair<Rpc::PRPCMethod, PIpcClientData>> _clientsByRpcMethods;
+	std::unordered_map<std::string, std::pair<BaseLib::Rpc::PRpcMethod, PIpcClientData>> _clientsByRpcMethods;
 	int32_t _currentClientId = 0;
 	int64_t _lastGargabeCollection = 0;
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
-	std::unordered_map<std::string, std::shared_ptr<Rpc::RPCMethod>> _rpcMethods;
+	std::unordered_map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> _rpcMethods;
 	std::unordered_map<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int64_t threadId, BaseLib::PArray& parameters)>> _localRpcMethods;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;

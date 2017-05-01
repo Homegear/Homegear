@@ -33,7 +33,6 @@
 
 #include "RPCServer.h"
 #include <homegear-base/BaseLib.h>
-#include "RPCMethod.h"
 #include "../Events/EventHandler.h"
 
 #include <vector>
@@ -42,7 +41,7 @@
 
 namespace Rpc
 {
-class RPCDevTest : public RPCMethod
+class RPCDevTest : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCDevTest()
@@ -53,7 +52,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCSystemGetCapabilities : public RPCMethod
+class RPCSystemGetCapabilities : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCSystemGetCapabilities()
@@ -64,7 +63,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCSystemListMethods : public RPCMethod
+class RPCSystemListMethods : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCSystemListMethods(std::shared_ptr<RPCServer> server)
@@ -78,7 +77,7 @@ private:
 	std::shared_ptr<RPCServer> _server;
 };
 
-class RPCSystemMethodHelp : public RPCMethod
+class RPCSystemMethodHelp : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCSystemMethodHelp(std::shared_ptr<RPCServer> server)
@@ -92,7 +91,7 @@ private:
 	std::shared_ptr<RPCServer> _server;
 };
 
-class RPCSystemMethodSignature : public RPCMethod
+class RPCSystemMethodSignature : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCSystemMethodSignature(std::shared_ptr<RPCServer> server)
@@ -106,7 +105,7 @@ private:
 	std::shared_ptr<RPCServer> _server;
 };
 
-class RPCSystemMulticall : public RPCMethod
+class RPCSystemMulticall : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCSystemMulticall(std::shared_ptr<RPCServer> server)
@@ -120,7 +119,7 @@ private:
 	std::shared_ptr<RPCServer> _server;
 };
 
-class RPCAbortEventReset : public RPCMethod
+class RPCAbortEventReset : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCAbortEventReset()
@@ -130,7 +129,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCActivateLinkParamset : public RPCMethod
+class RPCActivateLinkParamset : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCActivateLinkParamset()
@@ -144,7 +143,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCAddDevice : public RPCMethod
+class RPCAddDevice : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCAddDevice()
@@ -155,7 +154,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCAddEvent : public RPCMethod
+class RPCAddEvent : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCAddEvent()
@@ -165,7 +164,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCAddLink : public RPCMethod
+class RPCAddLink : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCAddLink()
@@ -179,7 +178,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCCopyConfig : public RPCMethod
+class RPCCopyConfig : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCCopyConfig()
@@ -190,7 +189,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCClientServerInitialized : public RPCMethod
+class RPCClientServerInitialized : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCClientServerInitialized()
@@ -200,7 +199,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCCreateDevice : public RPCMethod
+class RPCCreateDevice : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCCreateDevice()
@@ -211,7 +210,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCDeleteDevice : public RPCMethod
+class RPCDeleteDevice : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCDeleteDevice()
@@ -222,7 +221,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCDeleteMetadata : public RPCMethod
+class RPCDeleteMetadata : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCDeleteMetadata()
@@ -235,7 +234,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCDeleteSystemVariable : public RPCMethod
+class RPCDeleteSystemVariable : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCDeleteSystemVariable()
@@ -245,7 +244,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCEnableEvent : public RPCMethod
+class RPCEnableEvent : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCEnableEvent()
@@ -255,7 +254,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetAllMetadata : public RPCMethod
+class RPCGetAllMetadata : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetAllMetadata()
@@ -266,7 +265,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetAllScripts : public RPCMethod
+class RPCGetAllScripts : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetAllScripts()
@@ -276,7 +275,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetAllConfig : public RPCMethod
+class RPCGetAllConfig : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetAllConfig()
@@ -287,7 +286,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetAllValues : public RPCMethod
+class RPCGetAllValues : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetAllValues()
@@ -300,7 +299,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetAllSystemVariables : public RPCMethod
+class RPCGetAllSystemVariables : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetAllSystemVariables()
@@ -310,7 +309,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetConfigParameter : public RPCMethod
+class RPCGetConfigParameter : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetConfigParameter()
@@ -321,7 +320,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetDeviceDescription : public RPCMethod
+class RPCGetDeviceDescription : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetDeviceDescription()
@@ -332,7 +331,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetDeviceInfo : public RPCMethod
+class RPCGetDeviceInfo : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetDeviceInfo()
@@ -345,7 +344,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetEvent : public RPCMethod
+class RPCGetEvent : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetEvent()
@@ -355,7 +354,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetLastEvents : public RPCMethod
+class RPCGetLastEvents : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetLastEvents()
@@ -365,7 +364,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetInstallMode : public RPCMethod
+class RPCGetInstallMode : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetInstallMode()
@@ -376,7 +375,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetKeyMismatchDevice : public RPCMethod
+class RPCGetKeyMismatchDevice : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetKeyMismatchDevice()
@@ -386,7 +385,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetLinkInfo : public RPCMethod
+class RPCGetLinkInfo : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetLinkInfo()
@@ -397,7 +396,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetLinkPeers : public RPCMethod
+class RPCGetLinkPeers : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetLinkPeers()
@@ -408,7 +407,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetLinks : public RPCMethod
+class RPCGetLinks : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetLinks()
@@ -422,7 +421,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetMetadata : public RPCMethod
+class RPCGetMetadata : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetMetadata()
@@ -433,7 +432,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetName : public RPCMethod
+class RPCGetName : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetName()
@@ -443,7 +442,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetPairingMethods : public RPCMethod
+class RPCGetPairingMethods : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetPairingMethods()
@@ -453,7 +452,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetParamsetDescription : public RPCMethod
+class RPCGetParamsetDescription : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetParamsetDescription()
@@ -466,7 +465,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetParamsetId : public RPCMethod
+class RPCGetParamsetId : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetParamsetId()
@@ -478,7 +477,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetParamset : public RPCMethod
+class RPCGetParamset : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetParamset()
@@ -491,7 +490,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetPeerId : public RPCMethod
+class RPCGetPeerId : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetPeerId()
@@ -502,7 +501,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetServiceMessages : public RPCMethod
+class RPCGetServiceMessages : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetServiceMessages()
@@ -513,7 +512,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetSniffedDevices : public RPCMethod
+class RPCGetSniffedDevices : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetSniffedDevices()
@@ -523,7 +522,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetSystemVariable : public RPCMethod
+class RPCGetSystemVariable : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetSystemVariable()
@@ -533,7 +532,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetUpdateStatus : public RPCMethod
+class RPCGetUpdateStatus : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetUpdateStatus()
@@ -543,7 +542,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetValue : public RPCMethod
+class RPCGetValue : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetValue()
@@ -558,7 +557,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCGetVersion : public RPCMethod
+class RPCGetVersion : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetVersion()
@@ -568,7 +567,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCInit : public RPCMethod
+class RPCInit : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCInit()
@@ -586,7 +585,7 @@ private:
 	std::thread _initServerThread;
 };
 
-class RPCListBidcosInterfaces : public RPCMethod
+class RPCListBidcosInterfaces : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCListBidcosInterfaces()
@@ -596,7 +595,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCListClientServers : public RPCMethod
+class RPCListClientServers : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCListClientServers()
@@ -607,7 +606,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCListDevices : public RPCMethod
+class RPCListDevices : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCListDevices()
@@ -619,7 +618,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCListEvents : public RPCMethod
+class RPCListEvents : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCListEvents()
@@ -631,7 +630,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCListFamilies : public RPCMethod
+class RPCListFamilies : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCListFamilies()
@@ -641,7 +640,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCListInterfaces : public RPCMethod
+class RPCListInterfaces : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCListInterfaces()
@@ -652,7 +651,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCListKnownDeviceTypes : public RPCMethod
+class RPCListKnownDeviceTypes : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCListKnownDeviceTypes()
@@ -665,7 +664,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCListTeams : public RPCMethod
+class RPCListTeams : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCListTeams()
@@ -675,7 +674,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCLogLevel : public RPCMethod
+class RPCLogLevel : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCLogLevel()
@@ -686,7 +685,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCPing : public RPCMethod
+class RPCPing : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCPing()
@@ -697,7 +696,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCPutParamset : public RPCMethod
+class RPCPutParamset : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCPutParamset()
@@ -711,7 +710,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCRemoveEvent : public RPCMethod
+class RPCRemoveEvent : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCRemoveEvent()
@@ -721,7 +720,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCRemoveLink : public RPCMethod
+class RPCRemoveLink : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCRemoveLink()
@@ -732,7 +731,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCReportValueUsage : public RPCMethod
+class RPCReportValueUsage : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCReportValueUsage()
@@ -742,7 +741,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCRssiInfo : public RPCMethod
+class RPCRssiInfo : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCRssiInfo()
@@ -752,7 +751,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCRunScript : public RPCMethod
+class RPCRunScript : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCRunScript()
@@ -765,7 +764,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCSearchDevices : public RPCMethod
+class RPCSearchDevices : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCSearchDevices()
@@ -776,7 +775,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCSetLinkInfo : public RPCMethod
+class RPCSetLinkInfo : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCSetLinkInfo()
@@ -787,7 +786,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCSetMetadata : public RPCMethod
+class RPCSetMetadata : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCSetMetadata()
@@ -798,7 +797,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCSetId : public RPCMethod
+class RPCSetId : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCSetId()
@@ -808,7 +807,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCSetInstallMode : public RPCMethod
+class RPCSetInstallMode : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCSetInstallMode()
@@ -821,7 +820,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCSetInterface : public RPCMethod
+class RPCSetInterface : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCSetInterface()
@@ -831,7 +830,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCSetName : public RPCMethod
+class RPCSetName : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCSetName()
@@ -841,7 +840,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCSetSystemVariable : public RPCMethod
+class RPCSetSystemVariable : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCSetSystemVariable()
@@ -851,7 +850,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCSetTeam : public RPCMethod
+class RPCSetTeam : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCSetTeam()
@@ -864,7 +863,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCSetValue : public RPCMethod
+class RPCSetValue : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCSetValue()
@@ -879,7 +878,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCStartSniffing : public RPCMethod
+class RPCStartSniffing : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCStartSniffing()
@@ -889,7 +888,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCStopSniffing : public RPCMethod
+class RPCStopSniffing : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCStopSniffing()
@@ -899,7 +898,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCSubscribePeers : public RPCMethod
+class RPCSubscribePeers : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCSubscribePeers()
@@ -909,7 +908,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCTriggerEvent : public RPCMethod
+class RPCTriggerEvent : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCTriggerEvent()
@@ -919,7 +918,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCTriggerRpcEvent : public RPCMethod
+class RPCTriggerRpcEvent : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCTriggerRpcEvent()
@@ -929,7 +928,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCUnsubscribePeers : public RPCMethod
+class RPCUnsubscribePeers : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCUnsubscribePeers()
@@ -939,7 +938,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCUpdateFirmware : public RPCMethod
+class RPCUpdateFirmware : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCUpdateFirmware()
@@ -953,7 +952,7 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
-class RPCWriteLog : public RPCMethod
+class RPCWriteLog : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCWriteLog()
