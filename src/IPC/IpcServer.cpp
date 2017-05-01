@@ -553,9 +553,8 @@ void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueue
 				auto methodIterator = _rpcMethods.find(methodName);
 				if(methodIterator == _rpcMethods.end())
 				{
-					_out.printError("Error: RPC method not found: " + methodName);
-					BaseLib::PVariable error = BaseLib::Variable::createError(-32601, ": Requested method not found.");
-					sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), error);
+					BaseLib::PVariable result = callRpcMethod(methodName, parameters->at(2)->arrayValue);
+					sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
 					return;
 				}
 
