@@ -55,14 +55,14 @@ public:
 	virtual BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 	BaseLib::PVariable getError(ParameterError::Enum error);
 	BaseLib::PVariable getSignature() { return _signatures; }
+	void addSignature(BaseLib::VariableType returnType, std::vector<BaseLib::VariableType> parameterTypes);
 	BaseLib::PVariable getHelp() { return _help; }
+	void setHelp(std::string help);
 protected:
 	BaseLib::PVariable _signatures;
 	BaseLib::PVariable _help;
-
-	void addSignature(BaseLib::VariableType returnType, std::vector<BaseLib::VariableType> parameterTypes);
-	void setHelp(std::string help);
 };
+typedef std::shared_ptr<RPCMethod> PRPCMethod;
 
 }
 #endif

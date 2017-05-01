@@ -52,6 +52,8 @@ public:
 	void broadcastNewDevices(BaseLib::PVariable deviceDescriptions);
 	void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
+	BaseLib::PVariable callRpcMethod(std::string& methodName, BaseLib::PArray& parameters);
+	std::unordered_map<std::string, std::shared_ptr<Rpc::RPCMethod>> getRpcMethods();
 private:
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
@@ -90,11 +92,13 @@ private:
 	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
 	std::mutex _stateMutex;
 	std::map<int32_t, PIpcClientData> _clients;
+	std::mutex _clientsByRpcMethodsMutex;
+	std::unordered_map<std::string, std::pair<Rpc::PRPCMethod, PIpcClientData>> _clientsByRpcMethods;
 	int32_t _currentClientId = 0;
 	int64_t _lastGargabeCollection = 0;
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
-	std::map<std::string, std::shared_ptr<Rpc::RPCMethod>> _rpcMethods;
-	std::map<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int64_t threadId, BaseLib::PArray& parameters)>> _localRpcMethods;
+	std::unordered_map<std::string, std::shared_ptr<Rpc::RPCMethod>> _rpcMethods;
+	std::unordered_map<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int64_t threadId, BaseLib::PArray& parameters)>> _localRpcMethods;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
 
@@ -113,6 +117,7 @@ private:
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 
 	// {{{ RPC methods
+	BaseLib::PVariable registerRpcMethod(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
 	// }}}
 };
 

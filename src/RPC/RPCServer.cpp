@@ -683,8 +683,8 @@ BaseLib::PVariable RPCServer::callMethod(std::string& methodName, BaseLib::PVari
 		if(_stopped || GD::bl->shuttingDown) return BaseLib::Variable::createError(100000, "Server is stopped.");
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
-			_out.printError("Warning: RPC method not found: " + methodName);
-			return BaseLib::Variable::createError(-32601, ": Requested method not found.");
+			BaseLib::PVariable result = GD::ipcServer->callRpcMethod(methodName, parameters->arrayValue);
+			return result;
 		}
 		_lifetick1Mutex.lock();
 		_lifetick1.second = false;
@@ -744,8 +744,8 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
-			_out.printError("Warning: RPC method not found: " + methodName);
-			sendRPCResponseToClient(client, BaseLib::Variable::createError(-32601, ": Requested method not found."), messageId, responseType, keepAlive);
+			BaseLib::PVariable result = GD::ipcServer->callRpcMethod(methodName, parameters);
+			sendRPCResponseToClient(client, result, messageId, responseType, keepAlive);
 			return;
 		}
 		_lifetick2Mutex.lock();

@@ -43,7 +43,7 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 2, 1000)
 	_shuttingDown = false;
 	_stopServer = false;
 
-	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, true));
+	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true));
 	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
 
@@ -124,6 +124,8 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 2, 1000)
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("unsubscribePeers", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCUnsubscribePeers())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("updateFirmware", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCUpdateFirmware())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("writeLog", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCWriteLog())));
+
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("registerRpcMethod", std::bind(&IpcServer::registerRpcMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 }
 
 IpcServer::~IpcServer()
@@ -439,6 +441,16 @@ void IpcServer::closeClientConnection(PIpcClientData client)
 		if(!client) return;
 		GD::bl->fileDescriptorManager.shutdown(client->fileDescriptor);
 		client->closed = true;
+		std::vector<std::string> rpcMethodsToRemove;
+		std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
+		for (auto& element : _clientsByRpcMethods)
+		{
+			if (element.second.second->id == client->id) rpcMethodsToRemove.push_back(element.first);
+		}
+		for (auto& rpcMethod : rpcMethodsToRemove)
+		{
+			_clientsByRpcMethods.erase(rpcMethod);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -452,6 +464,44 @@ void IpcServer::closeClientConnection(PIpcClientData client)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+BaseLib::PVariable IpcServer::callRpcMethod(std::string& methodName, BaseLib::PArray& parameters)
+{
+	try
+	{
+		PIpcClientData clientData;
+		{
+			std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
+			auto clientIterator = _clientsByRpcMethods.find(methodName);
+			if (clientIterator == _clientsByRpcMethods.end())
+			{
+				_out.printError("Warning: RPC method not found: " + methodName);
+				return BaseLib::Variable::createError(-32601, ": Requested method not found.");
+			}
+			clientData = clientIterator->second.second;
+		}
+
+		BaseLib::PVariable response = sendRequest(clientData, methodName, parameters);
+		if (response->errorStruct)
+		{
+			_out.printError("Error calling \"" + methodName + "\" on client " + std::to_string(clientData->id) + ": " + response->structValue->at("faultString")->stringValue);
+		}
+		return response;
+	}
+	catch (const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch (BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch (...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry)
@@ -475,7 +525,7 @@ void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueue
 					return;
 				}
 
-				std::map<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int64_t threadId, BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(methodName);
+				auto localMethodIterator = _localRpcMethods.find(methodName);
 				if(localMethodIterator != _localRpcMethods.end())
 				{
 					if(GD::bl->debugLevel >= 4)
@@ -500,7 +550,7 @@ void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueue
 					return;
 				}
 
-				std::map<std::string, std::shared_ptr<Rpc::RPCMethod>>::iterator methodIterator = _rpcMethods.find(methodName);
+				auto methodIterator = _rpcMethods.find(methodName);
 				if(methodIterator == _rpcMethods.end())
 				{
 					_out.printError("Error: RPC method not found: " + methodName);
@@ -762,7 +812,7 @@ void IpcServer::mainThread()
 				continue;
 			}
 
-			if(FD_ISSET(_serverFileDescriptor->descriptor, &readFileDescriptor))
+			if (FD_ISSET(_serverFileDescriptor->descriptor, &readFileDescriptor) && !_shuttingDown)
 			{
 				sockaddr_un clientAddress;
 				socklen_t addressSize = sizeof(addressSize);
@@ -960,7 +1010,89 @@ bool IpcServer::getFileDescriptor(bool deleteOldSocket)
     return false;
 }
 
+std::unordered_map<std::string, std::shared_ptr<Rpc::RPCMethod>> IpcServer::getRpcMethods()
+{
+	try
+	{
+		std::unordered_map<std::string, std::shared_ptr<Rpc::RPCMethod>> rpcMethods;
+		std::lock_guard<std::mutex> rpcMethodsGuard(_clientsByRpcMethodsMutex);
+		for (auto& element : _clientsByRpcMethods)
+		{
+			rpcMethods.emplace(element.first, element.second.first);
+		}
+		return rpcMethods;
+	}
+	catch (const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch (BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch (...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::unordered_map<std::string, std::shared_ptr<Rpc::RPCMethod>>();
+}
+
 // {{{ RPC methods
+BaseLib::PVariable IpcServer::registerRpcMethod(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects two parameters. " + std::to_string(parameters->size()) + " given.");
+		if (parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
+		if (parameters->at(1)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type array.");
+
+		std::string methodName = parameters->at(0)->stringValue;
+		Rpc::PRPCMethod rpcMethod = std::make_shared<Rpc::RPCMethod>();
+		for (auto& signature : *(parameters->at(1)->arrayValue))
+		{
+			BaseLib::VariableType returnType = BaseLib::VariableType::tVoid;
+			std::vector<BaseLib::VariableType> parameterTypes;
+			if (!signature->arrayValue->empty())
+			{
+				returnType = signature->arrayValue->at(0)->type;
+				for (uint32_t i = 1; i < signature->arrayValue->size(); i++)
+				{
+					parameterTypes.push_back(signature->arrayValue->at(i)->type);
+				}
+			}
+			rpcMethod->addSignature(returnType, parameterTypes);
+		}
+		
+		std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
+		auto clientIterator = _clientsByRpcMethods.find(methodName);
+		if (clientIterator != _clientsByRpcMethods.end())
+		{
+			if (clientIterator->second.second->id != clientData->id)
+			{
+				_out.printError("Error: Client " + std::to_string(clientData->id) + " tried to register a RPC method \"" + methodName + "\" already registed by client " + std::to_string(clientIterator->second.second->id) + ".");
+				return BaseLib::Variable::createError(-2, "RPC method is already registered by another client.");
+			}
+			return BaseLib::PVariable(new BaseLib::Variable());
+		}
+		_clientsByRpcMethods.emplace(methodName, std::make_pair(rpcMethod, clientData));
+		_out.printInfo("Info: Client " + std::to_string(clientData->id) + " successfully registered RPC method \"" + methodName + "\".");
+
+		return BaseLib::PVariable(new BaseLib::Variable());
+	}
+	catch (const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch (BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch (...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
 // }}}
 
 }

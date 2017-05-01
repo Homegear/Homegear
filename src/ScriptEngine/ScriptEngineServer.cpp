@@ -924,9 +924,8 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 				std::map<std::string, std::shared_ptr<Rpc::RPCMethod>>::iterator methodIterator = _rpcMethods.find(methodName);
 				if(methodIterator == _rpcMethods.end())
 				{
-					_out.printError("Error: RPC method not found: " + methodName);
-					BaseLib::PVariable error = BaseLib::Variable::createError(-32601, ": Requested method not found.");
-					sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), error);
+					BaseLib::PVariable result = GD::ipcServer->callRpcMethod(methodName, parameters);
+					sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
 					return;
 				}
 
@@ -1187,7 +1186,7 @@ void ScriptEngineServer::mainThread()
 				continue;
 			}
 
-			if(FD_ISSET(_serverFileDescriptor->descriptor, &readFileDescriptor))
+			if (FD_ISSET(_serverFileDescriptor->descriptor, &readFileDescriptor) && !_shuttingDown)
 			{
 				sockaddr_un clientAddress;
 				socklen_t addressSize = sizeof(addressSize);

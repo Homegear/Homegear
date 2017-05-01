@@ -51,7 +51,7 @@ public:
 	std::mutex sendMutex;
 	std::mutex waitMutex;
 	std::mutex rpcResponsesMutex;
-	std::map<int32_t, PIpcResponse> rpcResponses;
+	std::unordered_map<int32_t, PIpcResponse> rpcResponses;
 	std::condition_variable requestConditionVariable;
 
 	IpcClientData();

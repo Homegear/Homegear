@@ -43,7 +43,7 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 2, 1000)
 	_shuttingDown = false;
 	_stopServer = false;
 
-	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, true));
+	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true));
 	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
 
@@ -755,9 +755,8 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 				std::map<std::string, std::shared_ptr<Rpc::RPCMethod>>::iterator methodIterator = _rpcMethods.find(methodName);
 				if(methodIterator == _rpcMethods.end())
 				{
-					_out.printError("Error: RPC method not found: " + methodName);
-					BaseLib::PVariable error = BaseLib::Variable::createError(-32601, ": Requested method not found.");
-					sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), error);
+					BaseLib::PVariable result = GD::ipcServer->callRpcMethod(methodName, parameters);
+					sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
 					return;
 				}
 
@@ -1012,7 +1011,7 @@ void FlowsServer::mainThread()
 				continue;
 			}
 
-			if(FD_ISSET(_serverFileDescriptor->descriptor, &readFileDescriptor))
+			if (FD_ISSET(_serverFileDescriptor->descriptor, &readFileDescriptor) && !_shuttingDown)
 			{
 				sockaddr_un clientAddress;
 				socklen_t addressSize = sizeof(addressSize);
