@@ -68,6 +68,7 @@ void Server::registerMethods()
 		_server->registerMethod("copyConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCCopyConfig()));
 		_server->registerMethod("clientServerInitialized", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCClientServerInitialized()));
 		_server->registerMethod("createDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCCreateDevice()));
+		_server->registerMethod("deleteData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteData()));
 		_server->registerMethod("deleteDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteDevice()));
 		_server->registerMethod("deleteMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteMetadata()));
 		_server->registerMethod("deleteSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteSystemVariable()));
@@ -78,6 +79,7 @@ void Server::registerMethods()
 		_server->registerMethod("getAllSystemVariables", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetAllSystemVariables()));
 		_server->registerMethod("getAllValues", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetAllValues()));
 		_server->registerMethod("getConfigParameter", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetConfigParameter()));
+		_server->registerMethod("getData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetData()));
 		_server->registerMethod("getDeviceDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetDeviceDescription()));
 		_server->registerMethod("getDeviceInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetDeviceInfo()));
 		_server->registerMethod("getEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetEvent()));
@@ -118,6 +120,7 @@ void Server::registerMethods()
 		_server->registerMethod("rssiInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRssiInfo()));
 		_server->registerMethod("runScript", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRunScript()));
 		_server->registerMethod("searchDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSearchDevices()));
+		_server->registerMethod("setData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetData()));
 		_server->registerMethod("setId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetId()));
 		_server->registerMethod("setInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetInstallMode()));
 		_server->registerMethod("setInterface", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetInterface()));
