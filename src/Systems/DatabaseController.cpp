@@ -519,10 +519,7 @@ BaseLib::PVariable DatabaseController::getData(std::string& component, std::stri
 		else command = "SELECT key, value FROM data WHERE component=?";
 
 		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand(command, data);
-		if(rows->empty() || rows->at(0).empty())
-		{
-			return BaseLib::Variable::createError(-1, "No component or key with this name found.");
-		}
+		if(rows->empty() || rows->at(0).empty()) return std::make_shared<BaseLib::Variable>();
 
 		if(key.empty())
 		{
@@ -716,10 +713,7 @@ BaseLib::PVariable DatabaseController::getMetadata(uint64_t peerID, std::string&
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(dataID)));
 
 		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT serializedObject FROM metadata WHERE objectID=? AND dataID=?", data);
-		if(rows->empty() || rows->at(0).empty())
-		{
-			return BaseLib::Variable::createError(-1, "No metadata found.");
-		}
+		if(rows->empty() || rows->at(0).empty()) return std::make_shared<BaseLib::Variable>();
 
 		metadata = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
 		_metadataMutex.lock();
@@ -916,10 +910,7 @@ BaseLib::PVariable DatabaseController::getSystemVariable(std::string& variableID
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableID)));
 
 		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT serializedObject FROM systemVariables WHERE variableID=?", data);
-		if(rows->empty() || rows->at(0).empty())
-		{
-			return BaseLib::Variable::createError(-1, "System variable not found.");
-		}
+		if(rows->empty() || rows->at(0).empty()) return std::make_shared<BaseLib::Variable>();
 
 		value = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
 		_systemVariableMutex.lock();
