@@ -76,7 +76,6 @@ protected:
 	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
 
 	void sendRequest(RemoteRpcServer* server, std::vector<char>& data, std::vector<char>& responseData, bool insertHeader, bool& retry);
-	std::string getIPAddress(std::string address);
 };
 
 }

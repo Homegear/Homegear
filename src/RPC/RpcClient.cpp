@@ -119,6 +119,7 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 		server->settings = GD::clientSettings.get(server->hostname);
 		bool retry = false;
 		uint32_t retries = server->settings ? server->settings->retries : 3;
+
 		std::vector<char> requestData;
 		std::vector<char> responseData;
 		if(server->binary) _rpcEncoder->encodeRequest(methodName, parameters, requestData);
@@ -319,57 +320,6 @@ BaseLib::PVariable RpcClient::invoke(std::shared_ptr<RemoteRpcServer> server, st
     return BaseLib::Variable::createError(-32700, "No response data.");
 }
 
-std::string RpcClient::getIPAddress(std::string address)
-{
-	try
-	{
-		if(address.size() < 10)
-		{
-			std::cout << BaseLib::Output::getTimeString() << " " << "Error: Server's address too short: " << address << std::endl;
-			std::cerr << BaseLib::Output::getTimeString() << " " << "Error: Server's address too short: " << address << std::endl;
-			return "";
-		}
-		if(address.compare(0, 7, "http://") == 0) address = address.substr(7);
-		else if(address.compare(0, 8, "https://") == 0) address = address.substr(8);
-		else if(address.compare(0, 9, "binary://") == 0) address = address.substr(9);
-		else if(address.size() > 10 && address.compare(0, 10, "binarys://") == 0) address = address.substr(10);
-		else if(address.size() > 13 && address.compare(0, 13, "xmlrpc_bin://") == 0) address = address.substr(13);
-		if(address.empty())
-		{
-			std::cout << BaseLib::Output::getTimeString() << " " << "Error: Server's address is empty." << std::endl;
-			std::cerr << BaseLib::Output::getTimeString() << " " << "Error: Server's address is empty." << std::endl;
-			return "";
-		}
-		//Remove "[" and "]" of IPv6 address
-		if(address.front() == '[' && address.back() == ']') address = address.substr(1, address.size() - 2);
-		if(address.empty())
-		{
-			std::cout << BaseLib::Output::getTimeString() << " " << "Error: Server's address is empty." << std::endl;
-			std::cerr << BaseLib::Output::getTimeString() << " " << "Error: Server's address is empty." << std::endl;
-			return "";
-		}
-
-		if(GD::bl->settings.tunnelClients().find(address) != GD::bl->settings.tunnelClients().end()) return "localhost";
-		return address;
-	}
-    catch(const std::exception& ex)
-    {
-    	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-    }
-    catch(...)
-    {
-    	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
-		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
-    }
-    return "";
-}
-
 void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, std::vector<char>& responseData, bool insertHeader, bool& retry)
 {
 	try
@@ -384,7 +334,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 
 		if(server->autoConnect)
 		{
-			if(server->hostname.empty()) server->hostname = getIPAddress(server->address.first);
 			if(server->hostname.empty())
 			{
 				std::cout << BaseLib::Output::getTimeString() << " " << "RPC Client: Error: hostname is empty." << std::endl;
@@ -392,7 +341,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 				server->removed = true;
 				return;
 			}
-			if(server->settings) _out.printDebug("Debug: Settings found for host " + server->hostname);
 			if(!server->useSSL && server->settings && server->settings->forceSSL)
 			{
 				std::cout << BaseLib::Output::getTimeString() << " " << "RPC Client: Tried to send unencrypted packet to " << server->hostname << " with forceSSL enabled for this server. Removing server from list. Server has to send \"init\" again." << std::endl;
@@ -416,6 +364,11 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 						server->socket->setVerifyCertificate(server->settings->verifyCertificate);
 					}
 					server->socket->setUseSSL(server->useSSL);
+					if(server->settings)
+					{
+						server->socket->setReadTimeout(server->settings->timeout);
+						server->socket->setWriteTimeout(server->settings->timeout);
+					}
 					server->socket->open();
 				}
 				else

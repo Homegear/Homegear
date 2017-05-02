@@ -152,6 +152,12 @@ void ClientSettings::load(std::string filename)
 					else if(settings->retries > 20) settings->retries = 20;
 					GD::out.printDebug("Debug: retries of RPC client " + settings->name + " set to " + std::to_string(settings->retries));
 				}
+				else if(name == "timeout")
+				{
+					settings->timeout = BaseLib::Math::getNumber(value) * 1000;
+					if(settings->timeout < 1000000) settings->timeout = 1000000;
+					GD::out.printDebug("Debug: timeout of RPC client " + settings->name + " set to " + std::to_string(settings->timeout));
+				}
 				else
 				{
 					GD::out.printWarning("Warning: RPC client setting not found: " + std::string(input));

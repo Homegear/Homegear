@@ -105,6 +105,7 @@ private:
 	std::array<EventInfo, 1024> _eventBuffer;
 
 	void collectGarbage();
+	std::string getIPAddress(std::string address);
 };
 
 }

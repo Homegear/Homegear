@@ -50,13 +50,14 @@ public:
 
 		std::string name;
 		std::string hostname;
-		bool forceSSL = true;
+		bool forceSSL = false;
 		AuthType authType = AuthType::none;
 		std::string caFile;
 		bool verifyCertificate = true;
 		std::string userName;
 		std::string password;
 		uint32_t retries = 3;
+		uint32_t timeout = 15000000;
 	};
 
 	ClientSettings();
@@ -70,4 +71,4 @@ private:
 	void reset();
 };
 }
-#endif /* CLIENTSETTINGS_H_ */
+#endif
