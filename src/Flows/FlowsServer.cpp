@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -45,6 +45,8 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 2, 1000)
 
 	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true));
+	_jsonEncoder = std::unique_ptr<BaseLib::Rpc::JsonEncoder>(new BaseLib::Rpc::JsonEncoder(GD::bl.get()));
+	_jsonDecoder = std::unique_ptr<BaseLib::Rpc::JsonDecoder>(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
 	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
 
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("devTest", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDevTest())));
@@ -455,7 +457,22 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 			if(http.getHeader().method == "GET" && GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
-		else if(path == "flows/settings" || path == "flows/library/flows" || path == "flows/flows" || path == "flows/debug/view/debug-utils.js")
+		else if (path == "flows/flows")
+		{
+			std::vector<char> fileContent = _bl->io.getBinaryFileContent(_bl->settings.flowsPath() + "data/flows.json");
+			std::vector<char> md5;
+			BaseLib::Security::Hash::md5(fileContent, md5);
+			std::string md5String = BaseLib::HelperFunctions::getHexString(md5);
+			BaseLib::HelperFunctions::toLower(md5String);
+
+			BaseLib::PVariable flowsJson = _jsonDecoder->decode(fileContent);
+			BaseLib::PVariable responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			responseJson->structValue->emplace("flows", flowsJson);
+			responseJson->structValue->emplace("rev", std::make_shared<BaseLib::Variable>(md5String));
+			_jsonEncoder->encode(responseJson, contentString);
+			responseEncoding = "application/json";
+		}
+		else if (path == "flows/settings" || path == "flows/library/flows" || path == "flows/debug/view/debug-utils.js")
 		{
 			path = _webroot + "static/" + path.substr(6);
 			std::cerr << "Requested: " << path << std::endl;
@@ -502,6 +519,50 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "";
+}
+
+std::string FlowsServer::handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding)
+{
+	try
+	{
+		if (path == "flows/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
+		{
+			std::cerr << "Requested (POST): " << path << std::endl;
+
+			BaseLib::PVariable json = _jsonDecoder->decode(http.getContent());
+			auto flowsIterator = json->structValue->find("flows");
+			if (flowsIterator == json->structValue->end()) return "";
+
+			std::vector<char> flows;
+			_jsonEncoder->encode(flowsIterator->second, flows);
+
+			{
+				std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
+				std::string filename = _bl->settings.flowsPath() + "data/flows.json";
+				_bl->io.writeFile(filename, flows, flows.size());
+			}
+
+			responseEncoding = "application/json";
+			std::vector<char> md5;
+			BaseLib::Security::Hash::md5(flows, md5);
+			std::string md5String = BaseLib::HelperFunctions::getHexString(md5);
+			BaseLib::HelperFunctions::toLower(md5String);
+			return "{\"rev\": \"" + md5String + "\"}";
+		}
+	}
+	catch (const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch (BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch (...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return "";
 }
 
 uint32_t FlowsServer::flowCount()
