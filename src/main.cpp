@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -211,7 +211,7 @@ void terminate(int32_t signalNumber)
 {
 	try
 	{
-		if(signalNumber == SIGTERM)
+		if (signalNumber == SIGTERM || signalNumber == SIGINT)
 		{
 			if(_monitorProcess)
 			{
@@ -670,10 +670,24 @@ void startUp()
 		//Use sigaction over signal because of different behavior in Linux and BSD
     	sigaction(SIGHUP, &sa, NULL);
     	sigaction(SIGTERM, &sa, NULL);
+		sigaction(SIGINT, &sa, NULL);
     	sigaction(SIGABRT, &sa, NULL);
     	sigaction(SIGSEGV, &sa, NULL);
+		sigaction(SIGQUIT, &sa, NULL);
+		sigaction(SIGILL, &sa, NULL);
+		sigaction(SIGABRT, &sa, NULL);
+		sigaction(SIGFPE, &sa, NULL);
+		sigaction(SIGPIPE, &sa, NULL);
+		sigaction(SIGALRM, &sa, NULL);
+		sigaction(SIGUSR1, &sa, NULL);
+		sigaction(SIGUSR2, &sa, NULL);
+		sigaction(SIGSTOP, &sa, NULL);
+		sigaction(SIGTSTP, &sa, NULL);
+		sigaction(SIGTTIN, &sa, NULL);
+		sigaction(SIGTTOU, &sa, NULL);
     	sa.sa_handler = sigchld_handler;
     	sigaction(SIGCHLD, &sa, NULL);
+		signal(SIGPIPE, SIG_IGN);
 
     	if(_startAsDaemon || _nonInteractive)
 		{
