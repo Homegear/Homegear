@@ -207,7 +207,7 @@ void sigchld_handler(int32_t signalNumber)
     }
 }
 
-void terminate(int32_t signalNumber)
+void terminate(int signalNumber)
 {
 	try
 	{
@@ -216,7 +216,7 @@ void terminate(int32_t signalNumber)
 			if(_monitorProcess)
 			{
 				if(_mainProcessId != 0) kill(_mainProcessId, SIGTERM);
-				else exit(0);
+				else _exit(0);
 				return;
 			}
 
@@ -301,7 +301,7 @@ void terminate(int32_t signalNumber)
 			gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
 			gcry_control(GCRYCTL_TERM_SECMEM);
 			gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
-			exit(0);
+			_exit(0);
 		}
 		else if(signalNumber == SIGHUP)
 		{
@@ -373,7 +373,7 @@ void terminate(int32_t signalNumber)
 			if(!GD::bl->db->isOpen())
 			{
 				GD::out.printCritical("Critical: Can't reopen database. Exiting...");
-				exit(1);
+				_exit(1);
 			}
 			GD::out.printInfo("Reloading flows server...");
 			if(GD::flowsServer) GD::flowsServer->homegearReloading();
@@ -393,7 +393,7 @@ void terminate(int32_t signalNumber)
 		}
 		else
 		{
-			if(!_disposing) GD::out.printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
+			if (!_disposing) GD::out.printCritical("Signal " + std::to_string(signalNumber) + " received.");
 			signal(signalNumber, SIG_DFL); //Reset signal handler for the current signal to default
 			kill(getpid(), signalNumber); //Generate core dump
 		}
@@ -677,17 +677,16 @@ void startUp()
 		sigaction(SIGILL, &sa, NULL);
 		sigaction(SIGABRT, &sa, NULL);
 		sigaction(SIGFPE, &sa, NULL);
-		sigaction(SIGPIPE, &sa, NULL);
 		sigaction(SIGALRM, &sa, NULL);
 		sigaction(SIGUSR1, &sa, NULL);
 		sigaction(SIGUSR2, &sa, NULL);
-		sigaction(SIGSTOP, &sa, NULL);
 		sigaction(SIGTSTP, &sa, NULL);
 		sigaction(SIGTTIN, &sa, NULL);
 		sigaction(SIGTTOU, &sa, NULL);
     	sa.sa_handler = sigchld_handler;
     	sigaction(SIGCHLD, &sa, NULL);
-		signal(SIGPIPE, SIG_IGN);
+		sa.sa_handler = SIG_IGN;
+		sigaction(SIGPIPE, &sa, NULL);
 
     	if(_startAsDaemon || _nonInteractive)
 		{

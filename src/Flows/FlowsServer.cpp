@@ -527,8 +527,6 @@ std::string FlowsServer::handlePost(std::string& path, BaseLib::Http& http, std:
 	{
 		if (path == "flows/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
 		{
-			std::cerr << "Requested (POST): " << path << std::endl;
-
 			BaseLib::PVariable json = _jsonDecoder->decode(http.getContent());
 			auto flowsIterator = json->structValue->find("flows");
 			if (flowsIterator == json->structValue->end()) return "";
