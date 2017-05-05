@@ -1464,7 +1464,13 @@ bool ScriptEngineServer::checkSessionId(const std::string& sessionId)
 			{
 				if(i->second->closed) continue;
 				client = i->second;
+				break;
 			}
+		}
+		if(!client)
+		{
+			GD::out.printError("Error: Could not check session ID. No script engine client is started.");
+			return false;
 		}
 		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
 		parameters->push_back(std::make_shared<BaseLib::Variable>(sessionId));

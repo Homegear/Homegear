@@ -38,6 +38,7 @@ namespace ScriptEngine
 
 ScriptEngineClientData::ScriptEngineClientData()
 {
+	closed = false;
 	fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
 	buffer.resize(1024);
@@ -45,6 +46,7 @@ ScriptEngineClientData::ScriptEngineClientData()
 
 ScriptEngineClientData::ScriptEngineClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor)
 {
+	closed = false;
 	fileDescriptor = clientFileDescriptor;
 	binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
 	buffer.resize(1024);
