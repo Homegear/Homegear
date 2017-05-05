@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -33,7 +33,6 @@
 #include "ScriptEngineServer.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
-#include "php_sapi.h"
 
 // Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
 //#define MANUAL_CLIENT_START
@@ -171,16 +170,12 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 2, 1000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("removeLicense", std::bind(&ScriptEngineServer::removeLicense, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("getLicenseStates", std::bind(&ScriptEngineServer::getLicenseStates, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("getTrialStartTime", std::bind(&ScriptEngineServer::getTrialStartTime, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-
-	php_homegear_init();
 }
 
 ScriptEngineServer::~ScriptEngineServer()
 {
 	if(!_stopServer) stop();
-	GD::bl->threadManager.join(_checkSessionIdThread);
 	GD::bl->threadManager.join(_scriptFinishedThread);
-	php_homegear_shutdown();
 #ifdef DEBUGSESOCKET
 	_socketOutput.close();
 #endif
@@ -1460,12 +1455,26 @@ bool ScriptEngineServer::checkSessionId(const std::string& sessionId)
 {
 	try
 	{
-		bool result = false;
-		std::lock_guard<std::mutex> checkSessionIdGuard(_checkSessionIdMutex);
-		GD::bl->threadManager.start(_checkSessionIdThread, false, &ScriptEngineServer::checkSessionIdThread, this, sessionId, &result);
-		GD::bl->threadManager.join(_checkSessionIdThread);
+		if(_shuttingDown) return false;
+		PScriptEngineClientData client;
 
-		return result;
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			for(std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) continue;
+				client = i->second;
+			}
+		}
+		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+		parameters->push_back(std::make_shared<BaseLib::Variable>(sessionId));
+		BaseLib::PVariable result = sendRequest(client, "checkSessionId", parameters);
+		if(result->errorStruct)
+		{
+			GD::out.printError("Error: checkSessionId returned: " + result->structValue->at("faultString")->stringValue);
+			return false;
+		}
+		return result->booleanValue;
 	}
 	catch(const std::exception& ex)
 	{
@@ -1480,92 +1489,6 @@ bool ScriptEngineServer::checkSessionId(const std::string& sessionId)
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return false;
-}
-
-void ScriptEngineServer::checkSessionIdThread(std::string sessionId, bool* result)
-{
-	*result = false;
-	std::shared_ptr<BaseLib::Rpc::ServerInfo::Info> serverInfo(new BaseLib::Rpc::ServerInfo::Info());
-
-	{
-		std::lock_guard<std::mutex> resourceGuard(_resourceMutex);
-		ts_resource(0); //Replaces TSRMLS_FETCH()
-		zend_homegear_globals* globals = php_homegear_get_globals();
-		if(!globals) return;
-		try
-		{
-			ZEND_TSRMLS_CACHE_UPDATE();
-			SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise POST data is not processed.
-			SG(sapi_headers).http_response_code = 200;
-			SG(default_mimetype) = nullptr;
-			SG(default_charset) = nullptr;
-			SG(request_info).content_length = 0;
-			SG(request_info).request_method = "GET";
-			SG(request_info).proto_num = 1001;
-			globals->http.getHeader().cookie = "PHPSESSID=" + sessionId;
-
-			if (php_request_startup() == FAILURE) {
-				GD::bl->out.printError("Error calling php_request_startup...");
-				ts_free_thread();
-				return;
-			}
-		}
-		catch(const std::exception& ex)
-		{
-			GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			ts_free_thread();
-			return;
-		}
-		catch(BaseLib::Exception& ex)
-		{
-			GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			ts_free_thread();
-			return;
-		}
-		catch(...)
-		{
-			GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			ts_free_thread();
-			return;
-		}
-	}
-
-	try
-	{
-		zval returnValue;
-		zval function;
-
-		ZVAL_STRINGL(&function, "session_start", sizeof("session_start") - 1);
-		call_user_function(EG(function_table), NULL, &function, &returnValue, 0, nullptr);
-		zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
-
-		zval* reference = zend_hash_str_find(&EG(symbol_table), "_SESSION", sizeof("_SESSION") - 1);
-		if(reference != NULL)
-		{
-			if(Z_ISREF_P(reference) && Z_RES_P(reference)->ptr && Z_TYPE_P(Z_REFVAL_P(reference)) == IS_ARRAY)
-			{
-				zval* token = zend_hash_str_find(Z_ARRVAL_P(Z_REFVAL_P(reference)), "authorized", sizeof("authorized") - 1);
-				if(token != NULL)
-				{
-					*result = (Z_TYPE_P(token) == IS_TRUE);
-				}
-			}
-        }
-	}
-	catch(const std::exception& ex)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	php_request_shutdown(NULL);
-	ts_free_thread();
 }
 
 void ScriptEngineServer::invokeScriptFinished(PScriptEngineProcess process, int32_t id, int32_t exitCode)

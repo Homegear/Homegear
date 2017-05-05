@@ -116,7 +116,6 @@ void RemoteRpcServer::queueMethod(std::shared_ptr<std::pair<std::string, std::sh
 
 void RemoteRpcServer::processMethods()
 {
-	signal(SIGPIPE, SIG_IGN);
 	while(!_stopMethodProcessingThread)
 	{
 		std::unique_lock<std::mutex> lock(_methodProcessingThreadMutex);

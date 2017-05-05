@@ -107,14 +107,32 @@ public:
 	 */
 	int32_t reloadNode(std::string filename);
 
+	/*
+	 * Returns the node specified by name.
+	 */
+	std::shared_ptr<BaseLib::Flows::INode> getNode(std::string name);
+
+	/*
+	 * Returns the node map.
+	 */
+	std::map<std::string, std::shared_ptr<BaseLib::Flows::INode>> getNodes();
+
 	void loadNodes();
-	void load();
 private:
 	std::mutex _nodeLoadersMutex;
 	std::map<std::string, std::unique_ptr<NodeLoader>> _nodeLoaders;
 
-	std::mutex _nodesMutex;
-	std::map<std::string, std::shared_ptr<BaseLib::Flows::INode>> _nodes;
+	std::mutex _nodesIdNodeMapMutex;
+	typedef std::string NodeId; //Node ID from Node-BLUE
+	std::unordered_map<NodeId, std::shared_ptr<BaseLib::Flows::INode>> _nodesIdNodeMap;
+
+	std::mutex _nodesNameIdMapMutex;
+	typedef std::string NodeName; //Node name from Homegear
+	std::unordered_map<NodeName, std::set<NodeId>> _nodesNameIdMap;
+
+	std::mutex _nodesNameFilenameMapMutex;
+	typedef std::string NodeFilename;
+	std::unordered_map<NodeName, NodeFilename> _nodesNameFilenameMap;
 
 	NodeManager(const NodeManager&) = delete;
 	NodeManager& operator=(const NodeManager&) = delete;

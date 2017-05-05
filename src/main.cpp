@@ -668,7 +668,6 @@ void startUp()
 		memset(&sa, 0, sizeof(sa));
 		sa.sa_handler = terminate;
 
-    	//Enable printing of backtraces
 		//Use sigaction over signal because of different behavior in Linux and BSD
     	sigaction(SIGHUP, &sa, NULL);
     	sigaction(SIGTERM, &sa, NULL);

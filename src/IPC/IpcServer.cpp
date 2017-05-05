@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -1044,27 +1044,29 @@ BaseLib::PVariable IpcServer::registerRpcMethod(PIpcClientData& clientData, int3
 {
 	try
 	{
-		if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects two parameters. " + std::to_string(parameters->size()) + " given.");
+		if (parameters->size() < 1) return BaseLib::Variable::createError(-1, "Method expects at least one parameter. " + std::to_string(parameters->size()) + " given.");
 		if (parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
-		if (parameters->at(1)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type array.");
 
 		std::string methodName = parameters->at(0)->stringValue;
 		BaseLib::Rpc::PRpcMethod rpcMethod = std::make_shared<BaseLib::Rpc::RpcMethod>();
-		for (auto& signature : *(parameters->at(1)->arrayValue))
+		if(parameters->size() == 2)
 		{
-			BaseLib::VariableType returnType = BaseLib::VariableType::tVoid;
-			std::vector<BaseLib::VariableType> parameterTypes;
-			if (!signature->arrayValue->empty())
+			for (auto& signature : *(parameters->at(1)->arrayValue))
 			{
-				returnType = signature->arrayValue->at(0)->type;
-				for (uint32_t i = 1; i < signature->arrayValue->size(); i++)
+				BaseLib::VariableType returnType = BaseLib::VariableType::tVoid;
+				std::vector<BaseLib::VariableType> parameterTypes;
+				if (!signature->arrayValue->empty())
 				{
-					parameterTypes.push_back(signature->arrayValue->at(i)->type);
+					returnType = signature->arrayValue->at(0)->type;
+					for (uint32_t i = 1; i < signature->arrayValue->size(); i++)
+					{
+						parameterTypes.push_back(signature->arrayValue->at(i)->type);
+					}
 				}
+				rpcMethod->addSignature(returnType, parameterTypes);
 			}
-			rpcMethod->addSignature(returnType, parameterTypes);
 		}
-		
+
 		std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
 		auto clientIterator = _clientsByRpcMethods.find(methodName);
 		if (clientIterator != _clientsByRpcMethods.end())
