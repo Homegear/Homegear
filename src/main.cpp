@@ -68,7 +68,7 @@ Monitor _monitor;
 std::mutex _shuttingDownMutex;
 std::atomic_bool _reloading;
 bool _fork = false;
-bool _monitorProcess = false;
+std::atomic_bool _monitorProcess;
 pid_t _mainProcessId = 0;
 bool _startAsDaemon = false;
 bool _nonInteractive = false;
@@ -215,6 +215,7 @@ void terminate(int signalNumber)
 		{
 			if(_monitorProcess)
 			{
+				GD::out.printMessage("Info: Redirecting signal to child process...");
 				if(_mainProcessId != 0) kill(_mainProcessId, SIGTERM);
 				else _exit(0);
 				return;
@@ -307,6 +308,7 @@ void terminate(int signalNumber)
 		{
 			if(_monitorProcess)
 			{
+				GD::out.printMessage("Info: Redirecting signal to child process...");
 				if(_mainProcessId != 0) kill(_mainProcessId, SIGHUP);
 				return;
 			}
@@ -1191,6 +1193,7 @@ int main(int argc, char* argv[])
 		_reloading = false;
 		_startUpComplete = false;
 		_shutdownQueued = false;
+		_monitorProcess = false;
 
     	getExecutablePath(argc, argv);
     	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
