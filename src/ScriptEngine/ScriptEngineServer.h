@@ -33,7 +33,6 @@
 
 #ifndef NO_SCRIPTENGINE
 
-#include "php_config_fixes.h"
 #include "ScriptEngineProcess.h"
 #include "../../config.h"
 #include <homegear-base/BaseLib.h>
