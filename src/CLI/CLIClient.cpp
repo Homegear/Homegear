@@ -158,8 +158,9 @@ int32_t Client::start(std::string command)
 		std::string lastCommand;
 		std::string currentCommand;
 		char* sendBuffer;
-		char receiveBuffer[1025];
+		std::array<char, 1025> receiveBuffer;
 		int32_t bytes = 0;
+		int64_t timeoutCounter = 0;
 		while(!command.empty() || (sendBuffer = readline((level + "> ").c_str())) != NULL)
 		{
 			if(command.empty())
@@ -220,11 +221,40 @@ int32_t Client::start(std::string command)
 
 			while(true)
 			{
-				bytes = recv(_fileDescriptor->descriptor, receiveBuffer, 1024, 0);
+				timeval timeout;
+				timeout.tv_sec = 0;
+				timeout.tv_usec = 100000;
+				fd_set readFileDescriptor;
+				FD_ZERO(&readFileDescriptor);
+				{
+					auto fileDescriptorGuard = GD::bl->fileDescriptorManager.getLock();
+					fileDescriptorGuard.lock();
+					FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
+				}
+
+				int result = select(_fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
+				if(result == 0)
+				{
+					timeoutCounter += 100;
+					if(!command.empty() && timeoutCounter > 60000)
+					{
+						_sendMutex.unlock();
+						return 9;
+					}
+					continue;
+				}
+				else if(result == -1)
+				{
+					if(errno == EINTR) continue;
+					std::cout << "Connection closed." << std::endl;
+				}
+
+				bytes = read(_fileDescriptor->descriptor, receiveBuffer.data(), receiveBuffer.size() - 1);
 				if(bytes > 0)
 				{
-					receiveBuffer[bytes] = 0;
-					std::string response(receiveBuffer);
+					timeoutCounter = 0;
+					receiveBuffer.at(bytes) = 0;
+					std::string response(receiveBuffer.data());
 					if(response.size() > 15)
 					{
 						if(response.compare(7, 6, "family") == 0)
@@ -249,20 +279,9 @@ int32_t Client::start(std::string command)
 								level = "(Peer)";
 							}
 						}
-						/*else if(response.compare(0, 6, "Device") == 0)
-						{
-							if((signed)response.find("unselected") != (signed)std::string::npos)
-							{
-								level = "(Family)";
-							}
-							else if((signed)response.find("selected") != (signed)std::string::npos)
-							{
-								level = "(Device)";
-							}
-						}*/
 					}
 
-					if(receiveBuffer[bytes - 1] == 0)
+					if(receiveBuffer.at(bytes - 1) == 0)
 					{
 						if(!command.empty())
 						{
@@ -334,4 +353,4 @@ int32_t Client::start(std::string command)
     return 0;
 }
 
-} /* namespace CLI */
+}

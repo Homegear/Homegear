@@ -421,7 +421,7 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 				if(nfds <= 0)
 				{
 					fileDescriptorGuard.unlock();
-					GD::out.printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
+					GD::out.printInfo("Info: Connection to CLI client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
 					closeClientConnection(clientData);
 					return;
 				}
@@ -431,7 +431,7 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 			if(bytesRead == 0) continue;
 			if(bytesRead != 1)
 			{
-				GD::out.printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
+				GD::out.printInfo("Info: Connection to CLI client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
 				closeClientConnection(clientData);
 				return;
 			}
@@ -439,7 +439,7 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 			bytesRead = read(clientData->fileDescriptor->descriptor, buffer, bufferMax);
 			if(bytesRead <= 0)
 			{
-				GD::out.printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
+				GD::out.printInfo("Info: Connection to CLI client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
 				closeClientConnection(clientData);
 				//If we close the socket, the socket file gets deleted. We don't want that
 				//GD::bl->fileDescriptorManager.close(_serverFileDescriptor);

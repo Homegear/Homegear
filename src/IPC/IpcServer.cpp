@@ -887,7 +887,7 @@ void IpcServer::readClient(PIpcClientData& clientData)
 	{
 		int32_t processedBytes = 0;
 		int32_t bytesRead = 0;
-		bytesRead = read(clientData->fileDescriptor->descriptor, &(clientData->buffer[0]), clientData->buffer.size());
+		bytesRead = read(clientData->fileDescriptor->descriptor, clientData->buffer.data(), clientData->buffer.size());
 		if(bytesRead <= 0) //read returns 0, when connection is disrupted.
 		{
 			_out.printInfo("Info: Connection to IPC server's client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
