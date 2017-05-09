@@ -88,8 +88,6 @@ void Mqtt::start()
 		startQueue(0, 1, 0, SCHED_OTHER);
 		startQueue(1, _settings.processingThreadCount(), 0, SCHED_OTHER);
 
-		signal(SIGPIPE, SIG_IGN);
-
 		_out.init(GD::bl.get());
 		_out.setPrefix("MQTT Client: ");
 		_jsonEncoder = std::unique_ptr<BaseLib::Rpc::JsonEncoder>(new BaseLib::Rpc::JsonEncoder(GD::bl.get()));

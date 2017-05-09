@@ -65,6 +65,12 @@ public:
 		virtual void setHomegearVariableString(HomegearVariables::Enum id, std::string& value);
 	// }}}
 
+	// {{{ Data
+		virtual BaseLib::PVariable setData(std::string& component, std::string& key, BaseLib::PVariable& value);
+		virtual BaseLib::PVariable getData(std::string& component, std::string& key);
+		virtual BaseLib::PVariable deleteData(std::string& component, std::string& key);
+	// }}}
+
 	// {{{ Metadata
 		virtual BaseLib::PVariable setMetadata(uint64_t peerID, std::string& serialNumber, std::string& dataID, BaseLib::PVariable& metadata);
 		virtual BaseLib::PVariable getMetadata(uint64_t peerID, std::string& dataID);
@@ -149,6 +155,9 @@ protected:
 
 	std::mutex _systemVariableMutex;
 	std::map<std::string, BaseLib::PVariable> _systemVariables;
+
+	std::mutex _dataMutex;
+	std::map<std::string, std::map<std::string, BaseLib::PVariable>> _data;
 
 	std::mutex _metadataMutex;
 	std::map<uint64_t, std::map<std::string, BaseLib::PVariable>> _metadata;

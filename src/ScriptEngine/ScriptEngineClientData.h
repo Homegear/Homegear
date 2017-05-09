@@ -48,7 +48,8 @@ public:
 
 	int32_t id = 0;
 	pid_t pid = 0;
-	bool closed = false;
+	std::atomic_bool closed;
+
 	std::vector<char> buffer;
 	std::unique_ptr<BaseLib::Rpc::BinaryRpc> binaryRpc;
 	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;

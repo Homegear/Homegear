@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -39,8 +39,6 @@ RpcClient::RpcClient()
 {
 	try
 	{
-		signal(SIGPIPE, SIG_IGN);
-
 		_out.init(GD::bl.get());
 		_out.setPrefix("RPC client: ");
 		_out.setErrorCallback(nullptr); //Avoid endless loops
@@ -94,14 +92,14 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 		if(methodName.empty())
 		{
 			//Avoid calling the error callback in Output.
-			std::cout << "Error: Could not invoke RPC method for server " << server->hostname << ". methodName is empty." << std::endl;
-			std::cerr << "Error: Could not invoke RPC method for server " << server->hostname << ". methodName is empty." << std::endl;
+			std::cout << BaseLib::Output::getTimeString() << " " << "Error: Could not invoke RPC method for server " << server->hostname << ". methodName is empty." << std::endl;
+			std::cerr << BaseLib::Output::getTimeString() << " " << "Error: Could not invoke RPC method for server " << server->hostname << ". methodName is empty." << std::endl;
 			return;
 		}
 		if(!server)
 		{
-			std::cout << "RPC Client: Could not send packet. Pointer to server is nullptr." << std::endl;
-			std::cerr << "RPC Client: Could not send packet. Pointer to server is nullptr." << std::endl;
+			std::cout << BaseLib::Output::getTimeString() << " " << "RPC Client: Could not send packet. Pointer to server is nullptr." << std::endl;
+			std::cerr << BaseLib::Output::getTimeString() << " " << "RPC Client: Could not send packet. Pointer to server is nullptr." << std::endl;
 			return;
 		}
 		server->sendMutex.lock();
@@ -119,6 +117,7 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 		server->settings = GD::clientSettings.get(server->hostname);
 		bool retry = false;
 		uint32_t retries = server->settings ? server->settings->retries : 3;
+
 		std::vector<char> requestData;
 		std::vector<char> responseData;
 		if(server->binary) _rpcEncoder->encodeRequest(methodName, parameters, requestData);
@@ -146,8 +145,8 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 		{
 			if(!server->webSocket)
 			{
-				std::cout << "Removing server \"" << server->id << "\". Server has to send \"init\" again." << std::endl;
-				std::cerr << "Removing server \"" << server->id << "\". Server has to send \"init\" again." << std::endl;
+				std::cout << BaseLib::Output::getTimeString() << " " << "Removing server \"" << server->id << "\" after trying to send a packet " + std::to_string(retries) + " times. Server has to send \"init\" again." << std::endl;
+				std::cerr << BaseLib::Output::getTimeString() << " " << "Removing server \"" << server->id << "\" after trying to send a packet " + std::to_string(retries) + " times. Server has to send \"init\" again." << std::endl;
 			}
 			server->removed = true;
 			server->sendMutex.unlock();
@@ -164,8 +163,8 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 			else
 			{
 				server->sendMutex.unlock();
-				std::cout << "Warning: Response is empty. RPC method: " << methodName << " Server: " << server->hostname << std::endl;
-				std::cerr << "Warning: Response is empty. RPC method: " << methodName << " Server: " << server->hostname << std::endl;
+				std::cout << BaseLib::Output::getTimeString() << " " << "Warning: Response is empty. RPC method: " << methodName << " Server: " << server->hostname << std::endl;
+				std::cerr << BaseLib::Output::getTimeString() << " " << "Warning: Response is empty. RPC method: " << methodName << " Server: " << server->hostname << std::endl;
 			}
 			return;
 		}
@@ -176,8 +175,8 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 
 		if(returnValue->errorStruct)
 		{
-			std::cout << "Error in RPC response from " << server->hostname << ". faultCode: " << std::to_string(returnValue->structValue->at("faultCode")->integerValue) << " faultString: " << returnValue->structValue->at("faultString")->stringValue << std::endl;
-			std::cerr << "Error in RPC response from " << server->hostname << ". faultCode: " << std::to_string(returnValue->structValue->at("faultCode")->integerValue) << " faultString: " << returnValue->structValue->at("faultString")->stringValue << std::endl;
+			std::cout << BaseLib::Output::getTimeString() << " " << "Error in RPC response from " << server->hostname << ". faultCode: " << std::to_string(returnValue->structValue->at("faultCode")->integerValue) << " faultString: " << returnValue->structValue->at("faultString")->stringValue << std::endl;
+			std::cerr << BaseLib::Output::getTimeString() << " " << "Error in RPC response from " << server->hostname << ". faultCode: " << std::to_string(returnValue->structValue->at("faultCode")->integerValue) << " faultString: " << returnValue->structValue->at("faultString")->stringValue << std::endl;
 		}
 		else
 		{
@@ -191,18 +190,18 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 	}
 	catch(const std::exception& ex)
     {
-		std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+		std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
     }
     catch(BaseLib::Exception& ex)
     {
-    	std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
     }
     catch(...)
     {
-    	std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
-		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
     }
     server->sendMutex.unlock();
 }
@@ -260,8 +259,8 @@ BaseLib::PVariable RpcClient::invoke(std::shared_ptr<RemoteRpcServer> server, st
 		{
 			if(!server->webSocket)
 			{
-				std::cout << "Removing server \"" + server->id + "\". Server has to send \"init\" again." << std::endl;
-				std::cerr << "Removing server \"" + server->id + "\". Server has to send \"init\" again." << std::endl;
+				std::cout << BaseLib::Output::getTimeString() << " " << "Removing server \"" << server->id << "\" after trying to send a packet " + std::to_string(retries) + " times. Server has to send \"init\" again." << std::endl;
+				std::cerr << BaseLib::Output::getTimeString() << " " << "Removing server \"" << server->id << "\" after trying to send a packet " + std::to_string(retries) + " times. Server has to send \"init\" again." << std::endl;
 			}
 			server->removed = true;
 			server->sendMutex.unlock();
@@ -284,8 +283,8 @@ BaseLib::PVariable RpcClient::invoke(std::shared_ptr<RemoteRpcServer> server, st
 		else returnValue = _xmlRpcDecoder->decodeResponse(responseData);
 		if(returnValue->errorStruct)
 		{
-			std::cout << "Error in RPC response from " << server->hostname << ". faultCode: " << std::to_string(returnValue->structValue->at("faultCode")->integerValue) << " faultString: " << returnValue->structValue->at("faultString")->stringValue << std::endl;
-			std::cerr << "Error in RPC response from " << server->hostname << ". faultCode: " << std::to_string(returnValue->structValue->at("faultCode")->integerValue) << " faultString: " << returnValue->structValue->at("faultString")->stringValue << std::endl;
+			std::cout << BaseLib::Output::getTimeString() << " " << "Error in RPC response from " << server->hostname << ". faultCode: " << std::to_string(returnValue->structValue->at("faultCode")->integerValue) << " faultString: " << returnValue->structValue->at("faultString")->stringValue << std::endl;
+			std::cerr << BaseLib::Output::getTimeString() << " " << "Error in RPC response from " << server->hostname << ". faultCode: " << std::to_string(returnValue->structValue->at("faultCode")->integerValue) << " faultString: " << returnValue->structValue->at("faultString")->stringValue << std::endl;
 		}
 		else
 		{
@@ -302,72 +301,21 @@ BaseLib::PVariable RpcClient::invoke(std::shared_ptr<RemoteRpcServer> server, st
 	}
     catch(const std::exception& ex)
     {
-    	std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
     }
     catch(BaseLib::Exception& ex)
     {
-    	std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
     }
     catch(...)
     {
-    	std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
-		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
     }
     server->sendMutex.unlock();
     return BaseLib::Variable::createError(-32700, "No response data.");
-}
-
-std::string RpcClient::getIPAddress(std::string address)
-{
-	try
-	{
-		if(address.size() < 10)
-		{
-			std::cout << "Error: Server's address too short: " << address << std::endl;
-			std::cerr << "Error: Server's address too short: " << address << std::endl;
-			return "";
-		}
-		if(address.compare(0, 7, "http://") == 0) address = address.substr(7);
-		else if(address.compare(0, 8, "https://") == 0) address = address.substr(8);
-		else if(address.compare(0, 9, "binary://") == 0) address = address.substr(9);
-		else if(address.size() > 10 && address.compare(0, 10, "binarys://") == 0) address = address.substr(10);
-		else if(address.size() > 13 && address.compare(0, 13, "xmlrpc_bin://") == 0) address = address.substr(13);
-		if(address.empty())
-		{
-			std::cout << "Error: Server's address is empty." << std::endl;
-			std::cerr << "Error: Server's address is empty." << std::endl;
-			return "";
-		}
-		//Remove "[" and "]" of IPv6 address
-		if(address.front() == '[' && address.back() == ']') address = address.substr(1, address.size() - 2);
-		if(address.empty())
-		{
-			std::cout << "Error: Server's address is empty." << std::endl;
-			std::cerr << "Error: Server's address is empty." << std::endl;
-			return "";
-		}
-
-		if(GD::bl->settings.tunnelClients().find(address) != GD::bl->settings.tunnelClients().end()) return "localhost";
-		return address;
-	}
-    catch(const std::exception& ex)
-    {
-    	std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-    }
-    catch(...)
-    {
-    	std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
-		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
-    }
-    return "";
 }
 
 void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, std::vector<char>& responseData, bool insertHeader, bool& retry)
@@ -376,27 +324,25 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 	{
 		if(!server)
 		{
-			std::cout << "RPC Client: Could not send packet. Pointer to server or data is nullptr." << std::endl;
-			std::cerr << "RPC Client: Could not send packet. Pointer to server or data is nullptr." << std::endl;
+			std::cout << BaseLib::Output::getTimeString() << " " << "RPC Client: Could not send packet. Pointer to server or data is nullptr." << std::endl;
+			std::cerr << BaseLib::Output::getTimeString() << " " << "RPC Client: Could not send packet. Pointer to server or data is nullptr." << std::endl;
 			return;
 		}
 		if(server->removed) return;
 
 		if(server->autoConnect)
 		{
-			if(server->hostname.empty()) server->hostname = getIPAddress(server->address.first);
 			if(server->hostname.empty())
 			{
-				std::cout << "RPC Client: Error: hostname is empty." << std::endl;
-				std::cerr << "RPC Client: Error: hostname is empty." << std::endl;
+				std::cout << BaseLib::Output::getTimeString() << " " << "RPC Client: Error: hostname is empty." << std::endl;
+				std::cerr << BaseLib::Output::getTimeString() << " " << "RPC Client: Error: hostname is empty." << std::endl;
 				server->removed = true;
 				return;
 			}
-			if(server->settings) _out.printDebug("Debug: Settings found for host " + server->hostname);
 			if(!server->useSSL && server->settings && server->settings->forceSSL)
 			{
-				std::cout << "RPC Client: Tried to send unencrypted packet to " << server->hostname << " with forceSSL enabled for this server. Removing server from list. Server has to send \"init\" again." << std::endl;
-				std::cerr << "RPC Client: Tried to send unencrypted packet to " << server->hostname << " with forceSSL enabled for this server. Removing server from list. Server has to send \"init\" again." << std::endl;
+				std::cout << BaseLib::Output::getTimeString() << " " << "RPC Client: Tried to send unencrypted packet to " << server->hostname << " with forceSSL enabled for this server. Removing server from list. Server has to send \"init\" again." << std::endl;
+				std::cerr << BaseLib::Output::getTimeString() << " " << "RPC Client: Tried to send unencrypted packet to " << server->hostname << " with forceSSL enabled for this server. Removing server from list. Server has to send \"init\" again." << std::endl;
 				server->removed = true;
 				return;
 			}
@@ -416,12 +362,17 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 						server->socket->setVerifyCertificate(server->settings->verifyCertificate);
 					}
 					server->socket->setUseSSL(server->useSSL);
+					if(server->settings)
+					{
+						server->socket->setReadTimeout(server->settings->timeout);
+						server->socket->setWriteTimeout(server->settings->timeout);
+					}
 					server->socket->open();
 				}
 				else
 				{
-					std::cout << "Connection to server with id " << std::to_string(server->uid) << " closed. Removing server." << std::endl;
-					std::cerr << "Connection to server with id " << std::to_string(server->uid) << " closed. Removing server." << std::endl;
+					std::cout << BaseLib::Output::getTimeString() << " " << "Connection to server with id " << std::to_string(server->uid) << " closed. Removing server." << std::endl;
+					std::cerr << BaseLib::Output::getTimeString() << " " << "Connection to server with id " << std::to_string(server->uid) << " closed. Removing server." << std::endl;
 					server->removed = true;
 					return;
 				}
@@ -431,8 +382,8 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 		{
 			if(!server->reconnectInfinitely) server->removed = true;
 			GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
-			std::cout << ex.what() << " Removing server. Server has to send \"init\" again." << std::endl;
-			std::cerr << ex.what() << " Removing server. Server has to send \"init\" again." << std::endl;
+			std::cout << BaseLib::Output::getTimeString() << " " << ex.what() << " Removing server. Server has to send \"init\" again." << std::endl;
+			std::cerr << BaseLib::Output::getTimeString() << " " << ex.what() << " Removing server. Server has to send \"init\" again." << std::endl;
 			return;
 		}
 
@@ -442,8 +393,8 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 			if(server->settings->userName.empty() || server->settings->password.empty())
 			{
 				server->socket->close();
-				std::cout << "Error: No user name or password specified in config file for RPC server " << server->hostname << ". Closing connection." << std::endl;
-				std::cerr << "Error: No user name or password specified in config file for RPC server " << server->hostname << ". Closing connection." << std::endl;
+				std::cout << BaseLib::Output::getTimeString() << " " << "Error: No user name or password specified in config file for RPC server " << server->hostname << ". Closing connection." << std::endl;
+				std::cerr << BaseLib::Output::getTimeString() << " " << "Error: No user name or password specified in config file for RPC server " << server->hostname << ". Closing connection." << std::endl;
 				return;
 			}
 			server->auth = Auth(server->socket, server->settings->userName, server->settings->password);
@@ -492,15 +443,15 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 		catch(BaseLib::SocketDataLimitException& ex)
 		{
 			server->socket->close();
-			std::cout << "Warning: " << ex.what() << std::endl;
-			std::cerr << "Warning: " << ex.what() << std::endl;
+			std::cout << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
+			std::cerr << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
 			return;
 		}
 		catch(const BaseLib::SocketOperationException& ex)
 		{
 			retry = true;
 			server->socket->close();
-			std::cout << "Info: Could not send data to XML RPC server " << server->hostname << ": " + ex.what() << "." << std::endl;
+			std::cout << BaseLib::Output::getTimeString() << " " << "Info: Could not send data to XML RPC server " << server->hostname << ": " + ex.what() << "." << std::endl;
 			return;
 		}
 	}
@@ -509,10 +460,10 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 		if(!server->reconnectInfinitely) server->removed = true;
 		else retry = true;
     	GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
-    	std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-    	std::cout << "Removing server. Server has to send \"init\" again." << std::endl;
-		std::cerr << "Removing server. Server has to send \"init\" again." << std::endl;
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Removing server. Server has to send \"init\" again." << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Removing server. Server has to send \"init\" again." << std::endl;
     	return;
     }
     catch(BaseLib::Exception& ex)
@@ -520,10 +471,10 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 		if(!server->reconnectInfinitely) server->removed = true;
 		else retry = true;
     	GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
-    	std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-    	std::cout << "Removing server. Server has to send \"init\" again." << std::endl;
-		std::cerr << "Removing server. Server has to send \"init\" again." << std::endl;
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Removing server. Server has to send \"init\" again." << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Removing server. Server has to send \"init\" again." << std::endl;
     	return;
     }
     catch(...)
@@ -531,10 +482,10 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 		if(!server->reconnectInfinitely) server->removed = true;
 		else retry = true;
     	GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
-    	std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
-		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
-    	std::cout << "Removing server. Server has to send \"init\" again." << std::endl;
-		std::cerr << "Removing server. Server has to send \"init\" again." << std::endl;
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Removing server. Server has to send \"init\" again." << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Removing server. Server has to send \"init\" again." << std::endl;
     	return;
     }
 
@@ -569,16 +520,16 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 			{
 				retry = true;
 				if(!server->keepAlive) server->socket->close();
-				std::cout << "Warning: " << ex.what() << std::endl;
-				std::cerr << "Warning: " << ex.what() << std::endl;
+				std::cout << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
+				std::cerr << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
 				return;
 			}
 			catch(const BaseLib::SocketOperationException& ex)
 			{
 				retry = true;
 				if(!server->keepAlive) server->socket->close();
-				std::cout << "Error: " << ex.what() << std::endl;
-				std::cerr << "Error: " << ex.what() << std::endl;
+				std::cout << BaseLib::Output::getTimeString() << " " << "Error: " << ex.what() << std::endl;
+				std::cerr << BaseLib::Output::getTimeString() << " " << "Error: " << ex.what() << std::endl;
 				return;
 			}
 
@@ -598,15 +549,15 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 					int32_t processedBytes = binaryRpc.process(&buffer[0], receivedBytes);
 					if(processedBytes < receivedBytes)
 					{
-						std::cout << "Warning: Received more bytes (" << std::to_string(receivedBytes) << ") than binary packet size (" << std::to_string(processedBytes) << ")." << " Packet was: " << BaseLib::HelperFunctions::getHexString(&buffer[0], receivedBytes) << std::endl;
-						std::cerr << "Warning: Received more bytes (" << std::to_string(receivedBytes) << ") than binary packet size (" << std::to_string(processedBytes) << ")." << std::endl;
+						std::cout << BaseLib::Output::getTimeString() << " " << "Warning: Received more bytes (" << std::to_string(receivedBytes) << ") than binary packet size (" << std::to_string(processedBytes) << ")." << " Packet was: " << BaseLib::HelperFunctions::getHexString(&buffer[0], receivedBytes) << std::endl;
+						std::cerr << BaseLib::Output::getTimeString() << " " << "Warning: Received more bytes (" << std::to_string(receivedBytes) << ") than binary packet size (" << std::to_string(processedBytes) << ")." << std::endl;
 					}
 				}
 				catch(BaseLib::Rpc::BinaryRpcException& ex)
 				{
 					if(!server->keepAlive) server->socket->close();
-					std::cout << "Error processing packet: " << ex.what() << std::endl;
-					std::cerr << "Error processing packet: " << ex.what() << std::endl;
+					std::cout << BaseLib::Output::getTimeString() << " " << "Error processing packet: " << ex.what() << std::endl;
+					std::cerr << BaseLib::Output::getTimeString() << " " << "Error processing packet: " << ex.what() << std::endl;
 					return;
 				}
 			}
@@ -619,15 +570,15 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 				catch(BaseLib::WebSocketException& ex)
 				{
 					if(!server->keepAlive) server->socket->close();
-					std::cout << "RPC Client: Could not process WebSocket packet: " << ex.what() << " Buffer: " << std::string(buffer, receivedBytes) << std::endl;
-					std::cerr << "RPC Client: Could not process WebSocket packet: " << ex.what() << " Buffer: " << std::string(buffer, receivedBytes) << std::endl;
+					std::cout << BaseLib::Output::getTimeString() << " " << "RPC Client: Could not process WebSocket packet: " << ex.what() << " Buffer: " << std::string(buffer, receivedBytes) << std::endl;
+					std::cerr << BaseLib::Output::getTimeString() << " " << "RPC Client: Could not process WebSocket packet: " << ex.what() << " Buffer: " << std::string(buffer, receivedBytes) << std::endl;
 					return;
 				}
 				if(http.getContentSize() > 10485760 || http.getHeader().contentLength > 10485760)
 				{
 					if(!server->keepAlive) server->socket->close();
-					std::cout << "Error: Packet with data larger than 100 MiB received." << std::endl;
-					std::cerr << "Error: Packet with data larger than 100 MiB received." << std::endl;
+					std::cout << BaseLib::Output::getTimeString() << " " << "Error: Packet with data larger than 100 MiB received." << std::endl;
+					std::cerr << BaseLib::Output::getTimeString() << " " << "Error: Packet with data larger than 100 MiB received." << std::endl;
 					return;
 				}
 				if(webSocket.isFinished() && webSocket.getHeader().opcode == BaseLib::WebSocket::Header::Opcode::ping)
@@ -642,15 +593,15 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 					catch(BaseLib::SocketDataLimitException& ex)
 					{
 						server->socket->close();
-						std::cout << "Warning: " << ex.what() << std::endl;
-						std::cerr << "Warning: " << ex.what() << std::endl;
+						std::cout << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
+						std::cerr << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
 						return;
 					}
 					catch(const BaseLib::SocketOperationException& ex)
 					{
 						retry = true;
 						server->socket->close();
-						std::cout << "Info: Could not send data to XML RPC server " << server->hostname << ": " << ex.what() << "." << std::endl;
+						std::cout << BaseLib::Output::getTimeString() << " " << "Info: Could not send data to XML RPC server " << server->hostname << ": " << ex.what() << "." << std::endl;
 						return;
 					}
 					webSocket = BaseLib::WebSocket();
@@ -663,8 +614,8 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 					if(!strncmp(buffer, "401", 3) || !strncmp(&buffer[9], "401", 3)) //"401 Unauthorized" or "HTTP/1.X 401 Unauthorized"
 					{
 						if(!server->keepAlive) server->socket->close();
-						std::cout << "Error: Authentication failed. Server " << server->hostname << ". Check user name and password in rpcclients.conf." << std::endl;
-						std::cerr << "Error: Authentication failed. Server " << server->hostname << ". Check user name and password in rpcclients.conf." << std::endl;
+						std::cout << BaseLib::Output::getTimeString() << " " << "Error: Authentication failed. Server " << server->hostname << ". Check user name and password in rpcclients.conf." << std::endl;
+						std::cerr << BaseLib::Output::getTimeString() << " " << "Error: Authentication failed. Server " << server->hostname << ". Check user name and password in rpcclients.conf." << std::endl;
 						return;
 					}
 				}
@@ -676,15 +627,15 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 				catch(BaseLib::HttpException& ex)
 				{
 					if(!server->keepAlive) server->socket->close();
-					std::cout << "XML RPC Client: Could not process HTTP packet: " << ex.what() << " Buffer: " << std::string(buffer, receivedBytes) << std::endl;
-					std::cerr << "XML RPC Client: Could not process HTTP packet: " << ex.what() << " Buffer: " << std::string(buffer, receivedBytes) << std::endl;
+					std::cout << BaseLib::Output::getTimeString() << " " << "XML RPC Client: Could not process HTTP packet: " << ex.what() << " Buffer: " << std::string(buffer, receivedBytes) << std::endl;
+					std::cerr << BaseLib::Output::getTimeString() << " " << "XML RPC Client: Could not process HTTP packet: " << ex.what() << " Buffer: " << std::string(buffer, receivedBytes) << std::endl;
 					return;
 				}
 				if(http.getContentSize() > 10485760 || http.getHeader().contentLength > 10485760)
 				{
 					if(!server->keepAlive) server->socket->close();
-					std::cout << "Error: Packet with data larger than 100 MiB received." << std::endl;
-					std::cerr << "Error: Packet with data larger than 100 MiB received." << std::endl;
+					std::cout << BaseLib::Output::getTimeString() << " " << "Error: Packet with data larger than 100 MiB received." << std::endl;
+					std::cerr << BaseLib::Output::getTimeString() << " " << "Error: Packet with data larger than 100 MiB received." << std::endl;
 					return;
 				}
 			}
@@ -704,28 +655,28 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
     {
     	if(!server->reconnectInfinitely) server->removed = true;
     	GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
-    	std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-    	std::cout << "Removing server. Server has to send \"init\" again." << std::endl;
-		std::cerr << "Removing server. Server has to send \"init\" again." << std::endl;
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Removing server. Server has to send \"init\" again." << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Removing server. Server has to send \"init\" again." << std::endl;
     }
     catch(BaseLib::Exception& ex)
     {
     	if(!server->reconnectInfinitely) server->removed = true;
     	GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
-    	std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-    	std::cout << "Removing server. Server has to send \"init\" again." << std::endl;
-		std::cerr << "Removing server. Server has to send \"init\" again." << std::endl;
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Removing server. Server has to send \"init\" again." << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Removing server. Server has to send \"init\" again." << std::endl;
     }
     catch(...)
     {
     	if(!server->reconnectInfinitely) server->removed = true;
     	GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
-    	std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
-		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
-    	std::cout << "Removing server. Server has to send \"init\" again." << std::endl;
-		std::cerr << "Removing server. Server has to send \"init\" again." << std::endl;
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Removing server. Server has to send \"init\" again." << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Removing server. Server has to send \"init\" again." << std::endl;
     }
 }
 }

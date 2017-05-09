@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -112,10 +112,15 @@ BaseLib::PVariable RPCSystemListMethods::invoke(BaseLib::PRpcClientInfo clientIn
 		if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
 
 		BaseLib::PVariable methodInfo(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> methods = _server->getMethods();
-		for(std::map<std::string, std::shared_ptr<RPCMethod>>::iterator i = methods->begin(); i != methods->end(); ++i)
+		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = _server->getMethods();
+		for(std::map<std::string, std::shared_ptr<RpcMethod>>::iterator i = methods->begin(); i != methods->end(); ++i)
 		{
 			methodInfo->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(i->first)));
+		}
+		std::unordered_map<std::string, std::shared_ptr<RpcMethod>> ipcMethods = GD::ipcServer->getRpcMethods();
+		for (auto& method : ipcMethods)
+		{
+			methodInfo->arrayValue->push_back(std::make_shared<BaseLib::Variable>(method.first));
 		}
 
 		return methodInfo;
@@ -142,13 +147,18 @@ BaseLib::PVariable RPCSystemMethodHelp::invoke(BaseLib::PRpcClientInfo clientInf
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> methods = _server->getMethods();
-		if(methods->find(parameters->at(0)->stringValue) == methods->end())
-		{
-			return BaseLib::Variable::createError(-32602, "Method not found.");
-		}
+		BaseLib::PVariable help;
 
-		BaseLib::PVariable help = _server->getMethods()->at(parameters->at(0)->stringValue)->getHelp();
+		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = _server->getMethods();
+		auto methodIterator = methods->find(parameters->at(0)->stringValue);
+		if (methodIterator == methods->end())
+		{
+			std::unordered_map<std::string, std::shared_ptr<RpcMethod>> ipcMethods = GD::ipcServer->getRpcMethods();
+			auto methodIterator2 = ipcMethods.find(parameters->at(0)->stringValue);
+			if (methodIterator2 == ipcMethods.end()) return BaseLib::Variable::createError(-32602, "Method not found.");
+			help = methodIterator2->second->getHelp();
+		}
+		else help = methodIterator->second->getHelp();
 
 		if(!help) help.reset(new BaseLib::Variable(BaseLib::VariableType::tString));
 
@@ -176,13 +186,18 @@ BaseLib::PVariable RPCSystemMethodSignature::invoke(BaseLib::PRpcClientInfo clie
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> methods = _server->getMethods();
-		if(methods->find(parameters->at(0)->stringValue) == methods->end())
-		{
-			return BaseLib::Variable::createError(-32602, "Method not found.");
-		}
+		BaseLib::PVariable signature;
 
-		BaseLib::PVariable signature = _server->getMethods()->at(parameters->at(0)->stringValue)->getSignature();
+		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = _server->getMethods();
+		auto methodIterator = methods->find(parameters->at(0)->stringValue);
+		if (methodIterator == methods->end())
+		{
+			std::unordered_map<std::string, std::shared_ptr<RpcMethod>> ipcMethods = GD::ipcServer->getRpcMethods();
+			auto methodIterator2 = ipcMethods.find(parameters->at(0)->stringValue);
+			if (methodIterator2 == ipcMethods.end()) return BaseLib::Variable::createError(-32602, "Method not found.");
+			signature = methodIterator2->second->getSignature();
+		}
+		else signature = _server->getMethods()->at(parameters->at(0)->stringValue)->getSignature();
 
 		if(!signature) signature.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
 
@@ -216,7 +231,7 @@ BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tArray }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> methods = _server->getMethods();
+		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = _server->getMethods();
 		BaseLib::PVariable returns(new BaseLib::Variable(BaseLib::VariableType::tArray));
 		for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(0)->arrayValue->begin(); i != parameters->at(0)->arrayValue->end(); ++i)
 		{
@@ -704,6 +719,34 @@ BaseLib::PVariable RPCCreateDevice::invoke(BaseLib::PRpcClientInfo clientInfo, s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCDeleteData::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }),
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		std::string key = parameters->size() == 2 ? parameters->at(1)->stringValue : "";
+		return GD::bl->db->deleteData(parameters->at(0)->stringValue, key);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCDeleteDevice::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	try
@@ -1166,6 +1209,34 @@ BaseLib::PVariable RPCGetConfigParameter::invoke(BaseLib::PRpcClientInfo clientI
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
+}
+
+BaseLib::PVariable RPCGetData::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }),
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		std::string key = parameters->size() == 2 ? parameters->at(1)->stringValue : "";
+		return GD::bl->db->getData(parameters->at(0)->stringValue, key);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable RPCGetDeviceDescription::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
@@ -2042,7 +2113,7 @@ BaseLib::PVariable RPCGetParamset::invoke(BaseLib::PRpcClientInfo clientInfo, st
 				if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
 			}
 			else serialNumber = parameters->at(0)->stringValue;
-			
+
 			type = BaseLib::DeviceDescription::ParameterGroup::typeFromString(parameters->at(1)->stringValue);
 			if(type == BaseLib::DeviceDescription::ParameterGroup::Type::Enum::none)
 			{
@@ -3386,6 +3457,32 @@ BaseLib::PVariable RPCSearchDevices::invoke(BaseLib::PRpcClientInfo clientInfo, 
 		}
 
 		return result;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCSetData::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		return GD::bl->db->setData(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
 	}
 	catch(const std::exception& ex)
     {

@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -529,15 +529,21 @@ int32_t FamilyController::loadModule(std::string filename)
 			std::string name = family->getName();
 			BaseLib::HelperFunctions::toLower(name);
 			BaseLib::HelperFunctions::stringReplace(name, " ", "");
-			_families[family->getFamily()] = family;
+			{
+				std::lock_guard<std::mutex> familiesGuard(_familiesMutex);
+				_families[family->getFamily()] = family;
+			}
 			if(!family->enabled() || !familyAvailable(family->getFamily()) || !family->init())
 			{
 				if(!family->enabled()) GD::out.printInfo("Info: Not initializing device family " + family->getName() + ", because it is disabled in it's configuration file.");
 				else if(familyAvailable(family->getFamily())) GD::out.printError("Error: Could not initialize device family " + family->getName() + ".");
 				else GD::out.printInfo("Info: Not initializing device family " + family->getName() + ", because no physical interface was found.");
-				_families[family->getFamily()]->dispose();
-				_families[family->getFamily()].reset();
+				family->dispose();
 				family.reset();
+				{
+					std::lock_guard<std::mutex> familiesGuard(_familiesMutex);
+					_families[family->getFamily()].reset();
+				}
 				_moduleLoaders.at(filename)->dispose();
 				_moduleLoaders.erase(filename);
 				_moduleLoadersMutex.unlock();
@@ -598,22 +604,27 @@ int32_t FamilyController::unloadModule(std::string filename)
 			return 1;
 		}
 
-		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator familyIterator = _families.find(moduleLoaderIterator->second->getFamilyId());
-		if(familyIterator != _families.end() && familyIterator->second)
+		std::shared_ptr<BaseLib::Systems::DeviceFamily> family = getFamily(moduleLoaderIterator->second->getFamilyId());
+		if(family)
 		{
-			_familiesMutex.lock();
-			familyIterator->second->lock();
-			_familiesMutex.unlock();
-			familyIterator->second->homegearShuttingDown();
-			familyIterator->second->physicalInterfaces()->stopListening();
-			while(familyIterator->second.use_count() > 1)
+			{
+				std::lock_guard<std::mutex> familiesGuard(_familiesMutex);
+				family->lock();
+			}
+
+			family->homegearShuttingDown();
+			family->physicalInterfaces()->stopListening();
+			while(family.use_count() > 1)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(50));
 			}
-			familyIterator->second->save(false);
-			familyIterator->second->dispose();
-			familyIterator->second.reset();
+			family->save(false);
+			family->dispose();
+			std::lock_guard<std::mutex> familiesGuard(_familiesMutex);
+			_families[family->getFamily()].reset();
+			family.reset();
 		}
+
 
 		moduleLoaderIterator->second->dispose();
 		moduleLoaderIterator->second.reset();
@@ -698,6 +709,7 @@ void FamilyController::loadModules()
 				std::string name = family->getName();
 				BaseLib::HelperFunctions::toLower(name);
 				BaseLib::HelperFunctions::stringReplace(name, " ", "");
+				std::lock_guard<std::mutex> familiesGuard(_familiesMutex);
 				_families[family->getFamily()] = family;
 			}
 			else
@@ -881,13 +893,12 @@ std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> FamilyControl
 	std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families;
 	try
 	{
-		_familiesMutex.lock();
+		std::lock_guard<std::mutex> familiesGuard(_familiesMutex);
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = _families.begin(); i != _families.end(); ++i)
 		{
 			if(!i->second || i->second->locked()) continue;
 			families.insert(*i);
 		}
-		_familiesMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
@@ -908,17 +919,11 @@ std::shared_ptr<BaseLib::Systems::DeviceFamily> FamilyController::getFamily(int3
 {
 	try
 	{
-		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator familyIterator = _families.find(familyId);
+		std::lock_guard<std::mutex> familiesGuard(_familiesMutex);
+		auto familyIterator = _families.find(familyId);
 		std::shared_ptr<BaseLib::Systems::DeviceFamily> family;
 		if(familyIterator != _families.end()) family = familyIterator->second;
-		if(!family) return std::shared_ptr<BaseLib::Systems::DeviceFamily>();
-		_familiesMutex.lock();
-		if(!family->locked())
-		{
-			_familiesMutex.unlock();
-			return family;
-		}
-		_familiesMutex.unlock();
+		if(family && !family->locked()) return family;
 	}
 	catch(const std::exception& ex)
     {

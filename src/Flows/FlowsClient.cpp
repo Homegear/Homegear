@@ -127,7 +127,6 @@ void FlowsClient::start()
 			remoteAddress.sun_path[103] = 0; //Just to make sure it is null terminated.
 			if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + 1 + sizeof(remoteAddress.sun_family)) == -1)
 			{
-				GD::bl->fileDescriptorManager.shutdown(_fileDescriptor);
 				if(i == 0)
 				{
 					_out.printDebug("Debug: Socket closed. Trying again...");
@@ -313,8 +312,8 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 			if(flowId != 0)
 			{
 				std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
-				std::map<int32_t, PRequestInfo>::iterator requestIterator = _requestInfo.find(flowId);
-				if(requestIterator != _requestInfo.end()) requestIterator->second->conditionVariable.notify_all();
+				std::map<int32_t, RequestInfo>::iterator requestIterator = _requestInfo.find(flowId);
+				if (requestIterator != _requestInfo.end()) requestIterator->second.conditionVariable.notify_all();
 			}
 			else _requestConditionVariable.notify_all();
 		}
@@ -370,11 +369,10 @@ BaseLib::PVariable FlowsClient::sendRequest(int32_t flowId, std::string methodNa
 {
 	try
 	{
-		PRequestInfo requestInfo;
-		{
-			std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
-			requestInfo = _requestInfo[flowId];
-		}
+		std::unique_lock<std::mutex> requestInfoGuard(_requestInfoMutex);
+		RequestInfo& requestInfo = _requestInfo[flowId];
+		requestInfoGuard.unlock();
+
 		int32_t packetId;
 		{
 			std::lock_guard<std::mutex> packetIdGuard(_packetIdMutex);
@@ -404,8 +402,9 @@ BaseLib::PVariable FlowsClient::sendRequest(int32_t flowId, std::string methodNa
 			return result;
 		}
 
-		std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
-		while(!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]{
+		std::unique_lock<std::mutex> waitLock(requestInfo.waitMutex);
+		while (!requestInfo.conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]
+		{
 			return response->finished || _disposing;
 		}));
 

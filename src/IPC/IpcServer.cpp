@@ -28,25 +28,23 @@
  * files in the program, then also delete it here.
 */
 
-#include "FlowsServer.h"
+#include "IpcServer.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 
-namespace Flows
+namespace Ipc
 {
 
-FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 2, 1000)
+IpcServer::IpcServer() : IQueue(GD::bl.get(), 2, 1000)
 {
 	_out.init(GD::bl.get());
-	_out.setPrefix("Flows Engine Server: ");
+	_out.setPrefix("IPC Server: ");
 
 	_shuttingDown = false;
 	_stopServer = false;
 
 	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true));
-	_jsonEncoder = std::unique_ptr<BaseLib::Rpc::JsonEncoder>(new BaseLib::Rpc::JsonEncoder(GD::bl.get()));
-	_jsonDecoder = std::unique_ptr<BaseLib::Rpc::JsonDecoder>(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
 	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
 
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("devTest", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDevTest())));
@@ -130,40 +128,25 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 2, 1000)
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCWriteLog())));
 
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("registerFlowsClient", std::bind(&FlowsServer::registerFlowsClient, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("flowFinished", std::bind(&FlowsServer::flowFinished, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("registerRpcMethod", std::bind(&IpcServer::registerRpcMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 }
 
-FlowsServer::~FlowsServer()
+IpcServer::~IpcServer()
 {
 	if(!_stopServer) stop();
 }
 
-void FlowsServer::collectGarbage()
+void IpcServer::collectGarbage()
 {
 	try
 	{
 		_lastGargabeCollection = GD::bl->hf.getTime();
-		std::vector<PFlowsProcess> processesToShutdown;
-		{
-			std::lock_guard<std::mutex> processGuard(_processMutex);
-			bool emptyProcess = false;
-			for(std::map<pid_t, PFlowsProcess>::iterator i = _processes.begin(); i != _processes.end(); ++i)
-			{
-				if(i->second->flowCount() == 0 && i->second->getClientData() && !i->second->getClientData()->closed)
-				{
-					if(emptyProcess) closeClientConnection(i->second->getClientData());
-					else emptyProcess = true;
-				}
-			}
-		}
-
-		std::vector<PFlowsClientData> clientsToRemove;
+		std::vector<PIpcClientData> clientsToRemove;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
 			try
 			{
-				for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+				for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 				{
 					if(i->second->closed) clientsToRemove.push_back(i->second);
 				}
@@ -177,13 +160,13 @@ void FlowsServer::collectGarbage()
 				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 		}
-		for(std::vector<PFlowsClientData>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
+		for(std::vector<PIpcClientData>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
 		{
 			{
 				std::lock_guard<std::mutex> stateGuard(_stateMutex);
 				_clients.erase((*i)->id);
 			}
-			_out.printDebug("Debug: Flows engine client " + std::to_string((*i)->id) + " removed.");
+			_out.printInfo("Info: IPC client " + std::to_string((*i)->id) + " removed.");
 		}
 	}
 	catch(const std::exception& ex)
@@ -200,20 +183,18 @@ void FlowsServer::collectGarbage()
     }
 }
 
-bool FlowsServer::start()
+bool IpcServer::start()
 {
 	try
 	{
 		stop();
-		_socketPath = GD::bl->settings.socketPath() + "homegearFE.sock";
+		_socketPath = GD::bl->settings.socketPath() + "homegearIPC.sock";
 		_shuttingDown = false;
 		_stopServer = false;
 		if(!getFileDescriptor(true)) return false;
-		_webroot = GD::bl->settings.flowsPath() + "www/";
-		startQueue(0, GD::bl->settings.flowsThreadCount(), 0, SCHED_OTHER);
-		startQueue(1, GD::bl->settings.flowsThreadCount(), 0, SCHED_OTHER);
-		GD::bl->threadManager.start(_mainThread, true, &FlowsServer::mainThread, this);
-		startFlows();
+		startQueue(0, GD::bl->settings.ipcThreadCount(), 0, SCHED_OTHER);
+		startQueue(1, GD::bl->settings.ipcThreadCount(), 0, SCHED_OTHER);
+		GD::bl->threadManager.start(_mainThread, true, &IpcServer::mainThread, this);
 		return true;
 	}
     catch(const std::exception& ex)
@@ -231,26 +212,19 @@ bool FlowsServer::start()
     return false;
 }
 
-void FlowsServer::stop()
+void IpcServer::stop()
 {
 	try
 	{
 		_shuttingDown = true;
-		_out.printDebug("Debug: Waiting for flows engine server's client threads to finish.");
-		std::vector<PFlowsClientData> clients;
+		_out.printDebug("Debug: Waiting for IPC server's client threads to finish.");
+		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				clients.push_back(i->second);
 				closeClientConnection(i->second);
-				std::lock_guard<std::mutex> processGuard(_processMutex);
-				std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(i->second->pid);
-				if(processIterator != _processes.end())
-				{
-					processIterator->second->invokeFlowFinished(-32501);
-					_processes.erase(processIterator);
-				}
 			}
 		}
 
@@ -258,7 +232,7 @@ void FlowsServer::stop()
 		GD::bl->threadManager.join(_mainThread);
 		while(_clients.size() > 0)
 		{
-			for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+			for(std::vector<PIpcClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 			{
 				(*i)->requestConditionVariable.notify_all();
 			}
@@ -282,24 +256,19 @@ void FlowsServer::stop()
 	}
 }
 
-void FlowsServer::homegearShuttingDown()
+void IpcServer::homegearShuttingDown()
 {
 	try
 	{
 		_shuttingDown = true;
-		std::vector<PFlowsClientData> clients;
+		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
-				clients.push_back(i->second);
+				closeClientConnection(i->second);
 			}
-		}
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
-		{
-			BaseLib::PArray parameters(new BaseLib::Array());
-			sendRequest(*i, "shutdown", parameters);
 		}
 
 		int32_t i = 0;
@@ -324,300 +293,22 @@ void FlowsServer::homegearShuttingDown()
     }
 }
 
-void FlowsServer::homegearReloading()
-{
-	try
-	{
-		std::vector<PFlowsClientData> clients;
-		{
-			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
-			{
-				if(i->second->closed) continue;
-				clients.push_back(i->second);
-			}
-		}
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
-		{
-			BaseLib::PArray parameters(new BaseLib::Array());
-			sendRequest(*i, "reload", parameters);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void FlowsServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped)
-{
-	try
-	{
-		std::shared_ptr<FlowsProcess> process;
-
-		{
-			std::lock_guard<std::mutex> processGuard(_processMutex);
-			std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(pid);
-			if(processIterator != _processes.end())
-			{
-				process = processIterator->second;
-				closeClientConnection(process->getClientData());
-				_processes.erase(processIterator);
-			}
-		}
-
-		if(process)
-		{
-			if(signal != -1 && signal != 15) _out.printCritical("Critical: Client process with pid " + std::to_string(pid) + " was killed with signal " + std::to_string(signal) + '.');
-			else if(exitCode != 0) _out.printError("Error: Client process with pid " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + '.');
-			else _out.printInfo("Info: Client process with pid " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + '.');
-
-			if(signal != -1) exitCode = -32500;
-			process->invokeFlowFinished(exitCode);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void FlowsServer::startFlows()
-{
-	try
-	{
-		/*std::vector<std::string> flowFiles = GD::bl->io.getFiles(GD::bl->settings.flowsPath(), true);
-		for(std::vector<std::string>::iterator i = flowFiles.begin(); i != flowFiles.end(); ++i)
-		{
-			PFlowInfoServer flowInfo(new FlowInfoServer());
-			{
-				std::lock_guard<std::mutex> flowIdGuard(_currentFlowIdMutex);
-				while(flowInfo->id == 0) flowInfo->id = _currentFlowId++;
-			}
-			flowInfo->fullPath = GD::bl->settings.flowsPath() + *i;
-			executeFlow(flowInfo);
-		}*/
-	}
-	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding)
-{
-	try
-	{
-		std::string contentString;
-		if(path.compare(0, 14, "flows/locales/") == 0)
-		{
-			std::string localePath = _webroot + "static/locales/";
-			std::string language = "en-US";
-			auto fieldsIterator = http.getHeader().fields.find("accept-language");
-			if(fieldsIterator != http.getHeader().fields.end())
-			{
-				std::pair<std::string, std::string> languagePair = BaseLib::HelperFunctions::splitFirst(fieldsIterator->second, ';');
-				std::vector<std::string> languages = BaseLib::HelperFunctions::splitAll(languagePair.first, ',');
-				for(auto& l : languages)
-				{
-					if(GD::bl->io.directoryExists(localePath + l))
-					{
-						language = l;
-						break;
-					}
-				}
-			}
-			path = path.substr(13);
-			path = localePath + language + path;
-			std::cerr << "Requested: " << path << std::endl;
-			if(http.getHeader().method == "GET" && GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
-			responseEncoding = "application/json";
-		}
-		else if (path == "flows/flows")
-		{
-			std::vector<char> fileContent = _bl->io.getBinaryFileContent(_bl->settings.flowsPath() + "data/flows.json");
-			std::vector<char> md5;
-			BaseLib::Security::Hash::md5(fileContent, md5);
-			std::string md5String = BaseLib::HelperFunctions::getHexString(md5);
-			BaseLib::HelperFunctions::toLower(md5String);
-
-			BaseLib::PVariable flowsJson = _jsonDecoder->decode(fileContent);
-			BaseLib::PVariable responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-			responseJson->structValue->emplace("flows", flowsJson);
-			responseJson->structValue->emplace("rev", std::make_shared<BaseLib::Variable>(md5String));
-			_jsonEncoder->encode(responseJson, contentString);
-			responseEncoding = "application/json";
-		}
-		else if (path == "flows/settings" || path == "flows/library/flows" || path == "flows/debug/view/debug-utils.js")
-		{
-			path = _webroot + "static/" + path.substr(6);
-			std::cerr << "Requested: " << path << std::endl;
-			if(http.getHeader().method == "GET" && GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
-			responseEncoding = "application/json";
-		}
-		else if(path == "flows/nodes")
-		{
-			path = _webroot + "static/" + path.substr(6);
-			std::cerr << "Requested: " << path << std::endl;
-			if(http.getHeader().fields["accept"] == "text/html")
-			{
-				path += "2";
-				responseEncoding = "text/html";
-			}
-			else responseEncoding = "application/json";
-			if(http.getHeader().method == "GET" && GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
-		}
-		else if(path.compare(0, 6, "flows/") == 0 && path != "flows/index.php")
-		{
-			path = _webroot + path.substr(6);
-			std::cerr << "Requested: " << path << std::endl;
-			if(http.getHeader().method == "GET" && GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
-
-			std::string ending = "";
-			int32_t pos = path.find_last_of('.');
-			if(pos != (signed)std::string::npos && (unsigned)pos < path.size() - 1) ending = path.substr(pos + 1);
-			GD::bl->hf.toLower(ending);
-			responseEncoding = http.getMimeType(ending);
-			if(responseEncoding.empty()) responseEncoding = "application/octet-stream";
-		}
-		return contentString;
-	}
-	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return "";
-}
-
-std::string FlowsServer::handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding)
-{
-	try
-	{
-		if (path == "flows/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
-		{
-			BaseLib::PVariable json = _jsonDecoder->decode(http.getContent());
-			auto flowsIterator = json->structValue->find("flows");
-			if (flowsIterator == json->structValue->end()) return "";
-
-			std::vector<char> flows;
-			_jsonEncoder->encode(flowsIterator->second, flows);
-
-			{
-				std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
-				std::string filename = _bl->settings.flowsPath() + "data/flows.json";
-				_bl->io.writeFile(filename, flows, flows.size());
-			}
-
-			responseEncoding = "application/json";
-			std::vector<char> md5;
-			BaseLib::Security::Hash::md5(flows, md5);
-			std::string md5String = BaseLib::HelperFunctions::getHexString(md5);
-			BaseLib::HelperFunctions::toLower(md5String);
-			return "{\"rev\": \"" + md5String + "\"}";
-		}
-	}
-	catch (const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch (BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch (...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	return "";
-}
-
-uint32_t FlowsServer::flowCount()
-{
-	try
-	{
-		if(_shuttingDown) return 0;
-		std::vector<PFlowsClientData> clients;
-		{
-			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
-			{
-				if(i->second->closed) continue;
-				clients.push_back(i->second);
-			}
-		}
-
-		uint32_t count = 0;
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
-		{
-			BaseLib::PArray parameters(new BaseLib::Array());
-			BaseLib::PVariable response = sendRequest(*i, "flowCount", parameters);
-			count += response->integerValue;
-		}
-		return count;
-	}
-	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return 0;
-}
-
-void FlowsServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values)
+void IpcServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values)
 {
 	try
 	{
 		if(_shuttingDown) return;
-		std::vector<PFlowsClientData> clients;
+		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
 				clients.push_back(i->second);
 			}
 		}
 
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		for(std::vector<PIpcClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(id)), BaseLib::PVariable(new BaseLib::Variable(channel)), BaseLib::PVariable(new BaseLib::Variable(*variables)), BaseLib::PVariable(new BaseLib::Variable(values))});
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastEvent", parameters);
@@ -638,22 +329,22 @@ void FlowsServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<s
     }
 }
 
-void FlowsServer::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
+void IpcServer::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
 {
 	try
 	{
 		if(_shuttingDown) return;
-		std::vector<PFlowsClientData> clients;
+		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
 				clients.push_back(i->second);
 			}
 		}
 
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		for(std::vector<PIpcClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array{deviceDescriptions});
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastNewDevices", parameters);
@@ -674,22 +365,22 @@ void FlowsServer::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
     }
 }
 
-void FlowsServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
+void IpcServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
 {
 	try
 	{
 		if(_shuttingDown) return;
-		std::vector<PFlowsClientData> clients;
+		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
 				clients.push_back(i->second);
 			}
 		}
 
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		for(std::vector<PIpcClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array{deviceInfo});
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastDeleteDevices", parameters);
@@ -710,22 +401,22 @@ void FlowsServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
     }
 }
 
-void FlowsServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint)
+void IpcServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint)
 {
 	try
 	{
 		if(_shuttingDown) return;
-		std::vector<PFlowsClientData> clients;
+		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
 				clients.push_back(i->second);
 			}
 		}
 
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		for(std::vector<PIpcClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(id)), BaseLib::PVariable(new BaseLib::Variable(channel)), BaseLib::PVariable(new BaseLib::Variable(hint))});
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastUpdateDevice", parameters);
@@ -746,13 +437,23 @@ void FlowsServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hi
     }
 }
 
-void FlowsServer::closeClientConnection(PFlowsClientData client)
+void IpcServer::closeClientConnection(PIpcClientData client)
 {
 	try
 	{
 		if(!client) return;
 		GD::bl->fileDescriptorManager.shutdown(client->fileDescriptor);
 		client->closed = true;
+		std::vector<std::string> rpcMethodsToRemove;
+		std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
+		for (auto& element : _clientsByRpcMethods)
+		{
+			if (element.second.second->id == client->id) rpcMethodsToRemove.push_back(element.first);
+		}
+		for (auto& rpcMethod : rpcMethodsToRemove)
+		{
+			_clientsByRpcMethods.erase(rpcMethod);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -768,7 +469,45 @@ void FlowsServer::closeClientConnection(PFlowsClientData client)
     }
 }
 
-void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry)
+BaseLib::PVariable IpcServer::callRpcMethod(std::string& methodName, BaseLib::PArray& parameters)
+{
+	try
+	{
+		PIpcClientData clientData;
+		{
+			std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
+			auto clientIterator = _clientsByRpcMethods.find(methodName);
+			if (clientIterator == _clientsByRpcMethods.end())
+			{
+				_out.printError("Warning: RPC method not found: " + methodName);
+				return BaseLib::Variable::createError(-32601, ": Requested method not found.");
+			}
+			clientData = clientIterator->second.second;
+		}
+
+		BaseLib::PVariable response = sendRequest(clientData, methodName, parameters);
+		if (response->errorStruct)
+		{
+			_out.printError("Error calling \"" + methodName + "\" on client " + std::to_string(clientData->id) + ": " + response->structValue->at("faultString")->stringValue);
+		}
+		return response;
+	}
+	catch (const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch (BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch (...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry)
 {
 	try
 	{
@@ -789,7 +528,7 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 					return;
 				}
 
-				std::map<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(methodName);
+				auto localMethodIterator = _localRpcMethods.find(methodName);
 				if(localMethodIterator != _localRpcMethods.end())
 				{
 					if(GD::bl->debugLevel >= 4)
@@ -814,10 +553,10 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 					return;
 				}
 
-				std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>::iterator methodIterator = _rpcMethods.find(methodName);
+				auto methodIterator = _rpcMethods.find(methodName);
 				if(methodIterator == _rpcMethods.end())
 				{
-					BaseLib::PVariable result = GD::ipcServer->callRpcMethod(methodName, parameters->at(2)->arrayValue);
+					BaseLib::PVariable result = callRpcMethod(methodName, parameters->at(2)->arrayValue);
 					sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
 					return;
 				}
@@ -838,6 +577,8 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 				}
 
 				sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
+
+				if(queueEntry->clientData->closed) closeClientConnection(queueEntry->clientData); //unregisterIpcClient was called
 			}
 			else
 			{
@@ -849,7 +590,7 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 					auto responseIterator = queueEntry->clientData->rpcResponses.find(packetId);
 					if(responseIterator != queueEntry->clientData->rpcResponses.end())
 					{
-						PFlowsResponse element = responseIterator->second;
+						PIpcResponse element = responseIterator->second;
 						if(element)
 						{
 							element->response = response;
@@ -884,7 +625,7 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
     }
 }
 
-BaseLib::PVariable FlowsServer::send(PFlowsClientData& clientData, std::vector<char>& data)
+BaseLib::PVariable IpcServer::send(PIpcClientData& clientData, std::vector<char>& data)
 {
 	try
 	{
@@ -917,7 +658,7 @@ BaseLib::PVariable FlowsServer::send(PFlowsClientData& clientData, std::vector<c
     return BaseLib::PVariable(new BaseLib::Variable());
 }
 
-BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::string methodName, BaseLib::PArray& parameters)
+BaseLib::PVariable IpcServer::sendRequest(PIpcClientData& clientData, std::string methodName, BaseLib::PArray& parameters)
 {
 	try
 	{
@@ -930,10 +671,10 @@ BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::s
 		std::vector<char> data;
 		_rpcEncoder->encodeRequest(methodName, array, data);
 
-		PFlowsResponse response;
+		PIpcResponse response;
 		{
 			std::lock_guard<std::mutex> responseGuard(clientData->rpcResponsesMutex);
-			auto result = clientData->rpcResponses.emplace(packetId, std::make_shared<FlowsResponse>());
+			auto result = clientData->rpcResponses.emplace(packetId, std::make_shared<IpcResponse>());
 			if(result.second) response = result.first->second;
 		}
 		if(!response)
@@ -957,10 +698,10 @@ BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::s
 		}))
 		{
 			i++;
-			if(i == 60)
+			if(i == 5)
 			{
-				_out.printError("Error: Flows client with process ID " + std::to_string(clientData->pid) + " is not responding... Killing it.");
-				kill(clientData->pid, 9);
+				_out.printError("Error: IPC client with ID " + std::to_string(clientData->id) + " is not responding... Closing connection.");
+				closeClientConnection(clientData);
 				break;
 			}
 		}
@@ -994,11 +735,11 @@ BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-void FlowsServer::sendResponse(PFlowsClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable)
+void IpcServer::sendResponse(PIpcClientData& clientData, BaseLib::PVariable& threadId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable)
 {
 	try
 	{
-		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{ scriptId, packetId, variable })));
+		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{ threadId, packetId, variable })));
 		std::vector<char> data;
 		_rpcEncoder->encodeResponse(array, data);
 		send(clientData, data);
@@ -1017,7 +758,7 @@ void FlowsServer::sendResponse(PFlowsClientData& clientData, BaseLib::PVariable&
     }
 }
 
-void FlowsServer::mainThread()
+void IpcServer::mainThread()
 {
 	try
 	{
@@ -1046,7 +787,7 @@ void FlowsServer::mainThread()
 
 				{
 					std::lock_guard<std::mutex> stateGuard(_stateMutex);
-					for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+					for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 					{
 						if(i->second->closed) continue;
 						if(i->second->fileDescriptor->descriptor == -1)
@@ -1063,7 +804,7 @@ void FlowsServer::mainThread()
 			result = select(maxfd + 1, &readFileDescriptor, NULL, NULL, &timeout);
 			if(result == 0)
 			{
-				if(GD::bl->hf.getTime() - _lastGargabeCollection > 60000 || _clients.size() > GD::bl->settings.flowsServerMaxConnections() * 100 / 112) collectGarbage();
+				if(GD::bl->hf.getTime() - _lastGargabeCollection > 60000 || _clients.size() > GD::bl->settings.ipcServerMaxConnections() * 100 / 112) collectGarbage();
 				continue;
 			}
 			else if(result == -1)
@@ -1081,10 +822,10 @@ void FlowsServer::mainThread()
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
 				_out.printInfo("Info: Connection accepted. Client number: " + std::to_string(clientFileDescriptor->id));
 
-				if(_clients.size() > GD::bl->settings.flowsServerMaxConnections())
+				if(_clients.size() > GD::bl->settings.ipcServerMaxConnections())
 				{
 					collectGarbage();
-					if(_clients.size() > GD::bl->settings.flowsServerMaxConnections())
+					if(_clients.size() > GD::bl->settings.ipcServerMaxConnections())
 					{
 						_out.printError("Error: There are too many clients connected to me. Closing connection. You can increase the number of allowed connections in main.conf.");
 						GD::bl->fileDescriptorManager.close(clientFileDescriptor);
@@ -1098,16 +839,16 @@ void FlowsServer::mainThread()
 					GD::bl->fileDescriptorManager.close(clientFileDescriptor);
 					continue;
 				}
-				PFlowsClientData clientData = PFlowsClientData(new FlowsClientData(clientFileDescriptor));
+				PIpcClientData clientData = std::make_shared<IpcClientData>(clientFileDescriptor);
 				clientData->id = _currentClientId++;
-				_clients[clientData->id] = clientData;
+				_clients.emplace(clientData->id, clientData);
 				continue;
 			}
 
-			PFlowsClientData clientData;
+			PIpcClientData clientData;
 			{
 				std::lock_guard<std::mutex> stateGuard(_stateMutex);
-				for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+				for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 				{
 					if(i->second->fileDescriptor->descriptor == -1)
 					{
@@ -1140,72 +881,16 @@ void FlowsServer::mainThread()
     }
 }
 
-PFlowsProcess FlowsServer::getFreeProcess()
-{
-	try
-	{
-		std::lock_guard<std::mutex> processGuard(_newProcessMutex);
-		{
-			std::lock_guard<std::mutex> processGuard(_processMutex);
-			for(std::map<pid_t, PFlowsProcess>::iterator i = _processes.begin(); i != _processes.end(); ++i)
-			{
-				if(i->second->flowCount() < GD::bl->threadManager.getMaxThreadCount() / 4 && (GD::bl->settings.maxFlowsPerProcess() == -1 || i->second->flowCount() < (unsigned)GD::bl->settings.maxFlowsPerProcess()))
-				{
-					return i->second;
-				}
-			}
-		}
-		_out.printInfo("Info: Spawning new flows process.");
-		PFlowsProcess process(new FlowsProcess());
-		std::vector<std::string> arguments{ "-c", GD::configPath, "-rl" };
-		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
-		if(process->getPid() != -1)
-		{
-			{
-				std::lock_guard<std::mutex> processGuard(_processMutex);
-				_processes[process->getPid()] = process;
-			}
-
-			std::mutex requestMutex;
-			std::unique_lock<std::mutex> requestLock(requestMutex);
-			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(30000), [&]{ return (bool)(process->getClientData()); });
-
-			if(!process->getClientData())
-			{
-				std::lock_guard<std::mutex> processGuard(_processMutex);
-				_processes.erase(process->getPid());
-				_out.printError("Error: Could not start new flows process.");
-				return PFlowsProcess();
-			}
-			_out.printInfo("Info: Flows process successfully spawned. Process id is " + std::to_string(process->getPid()) + ". Client id is: " + std::to_string(process->getClientData()->id) + ".");
-			return process;
-		}
-	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return PFlowsProcess();
-}
-
-void FlowsServer::readClient(PFlowsClientData& clientData)
+void IpcServer::readClient(PIpcClientData& clientData)
 {
 	try
 	{
 		int32_t processedBytes = 0;
 		int32_t bytesRead = 0;
-		bytesRead = read(clientData->fileDescriptor->descriptor, &(clientData->buffer[0]), clientData->buffer.size());
+		bytesRead = read(clientData->fileDescriptor->descriptor, clientData->buffer.data(), clientData->buffer.size());
 		if(bytesRead <= 0) //read returns 0, when connection is disrupted.
 		{
-			_out.printInfo("Info: Connection to flows server's client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
+			_out.printInfo("Info: Connection to IPC server's client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
 			closeClientConnection(clientData);
 			return;
 		}
@@ -1246,13 +931,13 @@ void FlowsServer::readClient(PFlowsClientData& clientData)
     }
 }
 
-bool FlowsServer::getFileDescriptor(bool deleteOldSocket)
+bool IpcServer::getFileDescriptor(bool deleteOldSocket)
 {
 	try
 	{
 		if(!BaseLib::Io::directoryExists(GD::bl->settings.socketPath().c_str()))
 		{
-			if(errno == ENOENT) _out.printCritical("Critical: Directory " + GD::bl->settings.socketPath() + " does not exist. Please create it before starting Homegear otherwise flows won't work.");
+			if(errno == ENOENT) _out.printCritical("Critical: Directory " + GD::bl->settings.socketPath() + " does not exist. Please create it before starting Homegear otherwise IPC won't work.");
 			else _out.printCritical("Critical: Error reading information of directory " + GD::bl->settings.socketPath() + ". The script engine won't work: " + strerror(errno));
 			_stopServer = true;
 			return false;
@@ -1261,7 +946,7 @@ bool FlowsServer::getFileDescriptor(bool deleteOldSocket)
 		int32_t result = BaseLib::Io::isDirectory(GD::bl->settings.socketPath(), isDirectory);
 		if(result != 0 || !isDirectory)
 		{
-			_out.printCritical("Critical: Directory " + GD::bl->settings.socketPath() + " does not exist. Please create it before starting Homegear otherwise flows won't work.");
+			_out.printCritical("Critical: Directory " + GD::bl->settings.socketPath() + " does not exist. Please create it before starting Homegear otherwise IPC won't work.");
 			_stopServer = true;
 			return false;
 		}
@@ -1327,122 +1012,90 @@ bool FlowsServer::getFileDescriptor(bool deleteOldSocket)
     return false;
 }
 
-void FlowsServer::executeFlow(PFlowInfoServer& flowInfo)
+std::unordered_map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> IpcServer::getRpcMethods()
 {
 	try
 	{
-		if(_shuttingDown) return;
-		PFlowsProcess process = getFreeProcess();
-		if(!process)
+		std::unordered_map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> rpcMethods;
+		std::lock_guard<std::mutex> rpcMethodsGuard(_clientsByRpcMethodsMutex);
+		for (auto& element : _clientsByRpcMethods)
 		{
-			_out.printError("Error: Could not get free process. Not executing flow.");
-			flowInfo->exitCode = -1;
-			return;
+			rpcMethods.emplace(element.first, element.second.first);
 		}
-
-		{
-			std::lock_guard<std::mutex> processGuard(_currentFlowIdMutex);
-			while(flowInfo->id == 0) flowInfo->id = _currentFlowId++;
-		}
-
-		_out.printInfo("Info: Starting flow \"" + flowInfo->fullPath + "\" with id " + std::to_string(flowInfo->id) + ".");
-		process->registerFlow(flowInfo->id, flowInfo);
-
-		PFlowsClientData clientData = process->getClientData();
-
-		BaseLib::PArray parameters(new BaseLib::Array{
-				BaseLib::PVariable(new BaseLib::Variable(flowInfo->id)),
-				BaseLib::PVariable(new BaseLib::Variable(flowInfo->fullPath))});
-
-		BaseLib::PVariable result = sendRequest(clientData, "executeFlow", parameters);
-		if(result->errorStruct)
-		{
-			_out.printError("Error: Could not execute flow: " + result->structValue->at("faultString")->stringValue);
-			process->invokeFlowFinished(flowInfo->id, result->structValue->at("faultCode")->integerValue);
-			process->unregisterFlow(flowInfo->id);
-			return;
-		}
-		flowInfo->started = true;
+		return rpcMethods;
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	catch (const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch (BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch (...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::unordered_map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>();
 }
 
 // {{{ RPC methods
-BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+BaseLib::PVariable IpcServer::registerRpcMethod(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters)
 {
 	try
 	{
-		pid_t pid = parameters->at(0)->integerValue;
-		std::lock_guard<std::mutex> processGuard(_processMutex);
-		std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(pid);
-		if(processIterator == _processes.end())
+		if (parameters->size() < 1) return BaseLib::Variable::createError(-1, "Method expects at least one parameter. " + std::to_string(parameters->size()) + " given.");
+		if (parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
+
+		std::string methodName = parameters->at(0)->stringValue;
+		BaseLib::Rpc::PRpcMethod rpcMethod = std::make_shared<BaseLib::Rpc::RpcMethod>();
+		if(parameters->size() == 2)
 		{
-			_out.printError("Error: Cannot register client. No process with pid " + std::to_string(pid) + " found.");
-			return BaseLib::Variable::createError(-1, "No matching process found.");
+			for (auto& signature : *(parameters->at(1)->arrayValue))
+			{
+				BaseLib::VariableType returnType = BaseLib::VariableType::tVoid;
+				std::vector<BaseLib::VariableType> parameterTypes;
+				if (!signature->arrayValue->empty())
+				{
+					returnType = signature->arrayValue->at(0)->type;
+					for (uint32_t i = 1; i < signature->arrayValue->size(); i++)
+					{
+						parameterTypes.push_back(signature->arrayValue->at(i)->type);
+					}
+				}
+				rpcMethod->addSignature(returnType, parameterTypes);
+			}
 		}
-		if(processIterator->second->getClientData())
+
+		std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
+		auto clientIterator = _clientsByRpcMethods.find(methodName);
+		if (clientIterator != _clientsByRpcMethods.end())
 		{
-			_out.printError("Error: Cannot register client, because it already is registered.");
+			if (clientIterator->second.second->id != clientData->id)
+			{
+				_out.printError("Error: Client " + std::to_string(clientData->id) + " tried to register a RPC method \"" + methodName + "\" already registed by client " + std::to_string(clientIterator->second.second->id) + ".");
+				return BaseLib::Variable::createError(-2, "RPC method is already registered by another client.");
+			}
 			return BaseLib::PVariable(new BaseLib::Variable());
 		}
-		clientData->pid = pid;
-		processIterator->second->setClientData(clientData);
-		processIterator->second->requestConditionVariable.notify_one();
+		_clientsByRpcMethods.emplace(methodName, std::make_pair(rpcMethod, clientData));
+		_out.printInfo("Info: Client " + std::to_string(clientData->id) + " successfully registered RPC method \"" + methodName + "\".");
+
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable FlowsServer::flowFinished(PFlowsClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
-{
-	try
+	catch (const std::exception& ex)
 	{
-		if(parameters->size() < 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
-
-		int32_t exitCode = parameters->at(0)->integerValue;
-		std::lock_guard<std::mutex> processGuard(_processMutex);
-		std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(clientData->pid);
-		if(processIterator == _processes.end()) return BaseLib::Variable::createError(-1, "No matching process found.");
-		processIterator->second->invokeFlowFinished(scriptId, exitCode);
-		processIterator->second->unregisterFlow(scriptId);
-		return BaseLib::PVariable(new BaseLib::Variable());
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch (BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch (...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 // }}}
 

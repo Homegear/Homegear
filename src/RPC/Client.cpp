@@ -751,6 +751,57 @@ void Client::collectGarbage()
     }
 }
 
+std::string Client::getIPAddress(std::string address)
+{
+	try
+	{
+		if(address.size() < 10)
+		{
+			std::cout << BaseLib::Output::getTimeString() << " " << "Error: Server's address too short: " << address << std::endl;
+			std::cerr << BaseLib::Output::getTimeString() << " " << "Error: Server's address too short: " << address << std::endl;
+			return "";
+		}
+		if(address.compare(0, 7, "http://") == 0) address = address.substr(7);
+		else if(address.compare(0, 8, "https://") == 0) address = address.substr(8);
+		else if(address.compare(0, 9, "binary://") == 0) address = address.substr(9);
+		else if(address.size() > 10 && address.compare(0, 10, "binarys://") == 0) address = address.substr(10);
+		else if(address.size() > 13 && address.compare(0, 13, "xmlrpc_bin://") == 0) address = address.substr(13);
+		if(address.empty())
+		{
+			std::cout << BaseLib::Output::getTimeString() << " " << "Error: Server's address is empty." << std::endl;
+			std::cerr << BaseLib::Output::getTimeString() << " " << "Error: Server's address is empty." << std::endl;
+			return "";
+		}
+		//Remove "[" and "]" of IPv6 address
+		if(address.front() == '[' && address.back() == ']') address = address.substr(1, address.size() - 2);
+		if(address.empty())
+		{
+			std::cout << BaseLib::Output::getTimeString() << " " << "Error: Server's address is empty." << std::endl;
+			std::cerr << BaseLib::Output::getTimeString() << " " << "Error: Server's address is empty." << std::endl;
+			return "";
+		}
+
+		if(GD::bl->settings.tunnelClients().find(address) != GD::bl->settings.tunnelClients().end()) return "localhost";
+		return address;
+	}
+    catch(const std::exception& ex)
+    {
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
+		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    return "";
+}
+
 std::shared_ptr<RemoteRpcServer> Client::addServer(std::pair<std::string, std::string> address, std::string path, std::string id)
 {
 	try
@@ -767,10 +818,13 @@ std::shared_ptr<RemoteRpcServer> Client::addServer(std::pair<std::string, std::s
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		server->creationTime = BaseLib::HelperFunctions::getTimeSeconds();
 		server->address = address;
+		server->hostname = getIPAddress(server->address.first);
 		server->path = path;
 		server->id = id;
 		server->uid = _serverId++;
+		server->settings = GD::clientSettings.get(server->hostname);
 		_servers[server->uid] = server;
+		if(server->settings) GD::out.printInfo("Info: Settings for host \"" + server->hostname + "\" found in \"rpcclients.conf\".");
 		return server;
 	}
 	catch(const std::exception& ex)
@@ -815,7 +869,14 @@ std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<Base
 		server->keepAlive = true;
 		server->subscribePeers = true;
 		server->newFormat = true;
+		server->settings = GD::clientSettings.get(server->hostname);
 		_servers[server->uid] = server;
+		if(server->settings)
+		{
+			GD::out.printInfo("Info: Settings for host \"" + server->hostname + "\" found in \"rpcclients.conf\".");
+			server->socket->setReadTimeout(server->settings->timeout);
+			server->socket->setWriteTimeout(server->settings->timeout);
+		}
 		return server;
 	}
 	catch(const std::exception& ex)
@@ -837,7 +898,7 @@ void Client::removeServer(std::pair<std::string, std::string> server)
 {
 	try
 	{
-		BaseLib::DisposableLockGuard serversGuard(_serversMutex);
+		std::unique_lock<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::iterator i = _servers.begin(); i != _servers.end(); ++i)
 		{
 			if(i->second->address == server)
@@ -846,7 +907,7 @@ void Client::removeServer(std::pair<std::string, std::string> server)
 				i->second->removed = true;
 				std::shared_ptr<RemoteRpcServer> server = i->second;
 				_servers.erase(i);
-				serversGuard.dispose();
+				serversGuard.unlock();
 				//Close waits for all read/write operations to finish and can therefore block. That's why we unlock the mutex first.
 				if(server->socket) server->socket->close();
 				return;

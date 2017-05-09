@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -28,47 +28,33 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef CLIENTSETTINGS_H_
-#define CLIENTSETTINGS_H_
+#include "IpcClientData.h"
+#include "../GD/GD.h"
 
-#include <homegear-base/BaseLib.h>
-
-#include <memory>
-#include <iostream>
-#include <string>
-#include <map>
-#include <cstring>
-
-namespace Rpc
+namespace Ipc
 {
-class ClientSettings
+
+IpcClientData::IpcClientData()
 {
-public:
-	struct Settings
-	{
-		enum AuthType { none, basic };
-
-		std::string name;
-		std::string hostname;
-		bool forceSSL = false;
-		AuthType authType = AuthType::none;
-		std::string caFile;
-		bool verifyCertificate = true;
-		std::string userName;
-		std::string password;
-		uint32_t retries = 3;
-		uint32_t timeout = 15000000;
-	};
-
-	ClientSettings();
-	virtual ~ClientSettings() {}
-	void load(std::string filename);
-
-	std::shared_ptr<Settings> get(std::string& hostname) { if(_clients.find(hostname) != _clients.end()) return _clients[hostname]; else return std::shared_ptr<Settings>(); }
-private:
-	std::map<std::string, std::shared_ptr<Settings>> _clients;
-
-	void reset();
-};
+	init();
+	fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 }
-#endif
+
+IpcClientData::IpcClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor)
+{
+	init();
+	fileDescriptor = clientFileDescriptor;
+}
+
+
+IpcClientData::~IpcClientData()
+{
+}
+
+void IpcClientData::init()
+{
+	binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
+	buffer.resize(1024);
+}
+
+}

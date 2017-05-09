@@ -33,8 +33,6 @@
 
 Monitor::Monitor()
 {
-	signal(SIGPIPE, SIG_IGN);
-
 	_suspendMonitoring = true;
 	_stopMonitorThread = false;
 

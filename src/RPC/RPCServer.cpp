@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -62,7 +62,7 @@ RPCServer::RPCServer()
 
 	_info.reset(new BaseLib::Rpc::ServerInfo::Info());
 	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
-	_rpcMethods.reset(new std::map<std::string, std::shared_ptr<RPCMethod>>);
+	_rpcMethods.reset(new std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>);
 	_serverFileDescriptor.reset(new BaseLib::FileDescriptor);
 	_threadPriority = GD::bl->settings.rpcServerThreadPriority();
 	_threadPolicy = GD::bl->settings.rpcServerThreadPolicy();
@@ -311,7 +311,7 @@ uint32_t RPCServer::connectionCount()
     return 0;
 }
 
-void RPCServer::registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method)
+void RPCServer::registerMethod(std::string methodName, std::shared_ptr<BaseLib::Rpc::RpcMethod> method)
 {
 	try
 	{
@@ -320,7 +320,7 @@ void RPCServer::registerMethod(std::string methodName, std::shared_ptr<RPCMethod
 			_out.printWarning("Warning: Could not register RPC method, because a method with this name already exists.");
 			return;
 		}
-		_rpcMethods->insert(std::pair<std::string, std::shared_ptr<RPCMethod>>(methodName, method));
+		_rpcMethods->insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>(methodName, method));
 	}
 	catch(const std::exception& ex)
     {
@@ -683,8 +683,8 @@ BaseLib::PVariable RPCServer::callMethod(std::string& methodName, BaseLib::PVari
 		if(_stopped || GD::bl->shuttingDown) return BaseLib::Variable::createError(100000, "Server is stopped.");
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
-			_out.printError("Warning: RPC method not found: " + methodName);
-			return BaseLib::Variable::createError(-32601, ": Requested method not found.");
+			BaseLib::PVariable result = GD::ipcServer->callRpcMethod(methodName, parameters->arrayValue);
+			return result;
 		}
 		_lifetick1Mutex.lock();
 		_lifetick1.second = false;
@@ -744,8 +744,8 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
-			_out.printError("Warning: RPC method not found: " + methodName);
-			sendRPCResponseToClient(client, BaseLib::Variable::createError(-32601, ": Requested method not found."), messageId, responseType, keepAlive);
+			BaseLib::PVariable result = GD::ipcServer->callRpcMethod(methodName, parameters);
+			sendRPCResponseToClient(client, result, messageId, responseType, keepAlive);
 			return;
 		}
 		_lifetick2Mutex.lock();
@@ -1681,7 +1681,7 @@ void RPCServer::getSocketDescriptor()
 			_out.printCritical("Error: Server could not start listening on port " + port + ": " + std::string(strerror(errno)));
 			return;
 		}
-		if(_info->address == "0.0.0.0") _info->address = BaseLib::Net::getMyIpAddress();
+		if(_info->address == "0.0.0.0" || _info->address == "::") _info->address = BaseLib::Net::getMyIpAddress();
     }
     catch(const std::exception& ex)
     {

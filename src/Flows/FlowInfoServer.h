@@ -54,7 +54,7 @@ public:
 		int32_t exitCode = -1;
 	// }}}
 
-	FlowInfoServer() { }
+	FlowInfoServer() {}
 	virtual ~FlowInfoServer() {}
 protected:
 };

@@ -34,6 +34,7 @@
 #include "../../config.h"
 #include "../ScriptEngine/ScriptEngineServer.h"
 #include "../Flows/FlowsServer.h"
+#include "../IPC/IpcServer.h"
 #include "../CLI/CLIServer.h"
 #include "../Events/EventHandler.h"
 #include "../Licensing/LicensingController.h"
@@ -73,6 +74,7 @@ public:
 #ifndef NO_SCRIPTENGINE
 	static std::unique_ptr<ScriptEngine::ScriptEngineServer> scriptEngineServer;
 #endif
+	static std::unique_ptr<Ipc::IpcServer> ipcServer;
 	static std::unique_ptr<Flows::FlowsServer> flowsServer;
 	static std::unique_ptr<CLI::Server> cliServer;
 	static BaseLib::Rpc::ServerInfo serverInfo;

@@ -32,7 +32,6 @@
 #define FLOWSCLIENT_H_
 
 #include "FlowsResponse.h"
-#include "../RPC/RPCMethod.h"
 #include <homegear-base/BaseLib.h>
 
 #include <thread>
@@ -55,7 +54,6 @@ private:
 		std::mutex waitMutex;
 		std::condition_variable conditionVariable;
 	};
-	typedef std::shared_ptr<RequestInfo> PRequestInfo;
 
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
@@ -85,7 +83,7 @@ private:
 	std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>> _localRpcMethods;
 	std::thread _maintenanceThread;
 	std::mutex _requestInfoMutex;
-	std::map<int32_t, PRequestInfo> _requestInfo;
+	std::map<int32_t, RequestInfo> _requestInfo;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
 

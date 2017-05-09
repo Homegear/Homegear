@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -68,7 +68,7 @@ Monitor _monitor;
 std::mutex _shuttingDownMutex;
 std::atomic_bool _reloading;
 bool _fork = false;
-bool _monitorProcess = false;
+std::atomic_bool _monitorProcess;
 pid_t _mainProcessId = 0;
 bool _startAsDaemon = false;
 bool _nonInteractive = false;
@@ -207,16 +207,17 @@ void sigchld_handler(int32_t signalNumber)
     }
 }
 
-void terminate(int32_t signalNumber)
+void terminate(int signalNumber)
 {
 	try
 	{
-		if(signalNumber == SIGTERM)
+		if (signalNumber == SIGTERM || signalNumber == SIGINT)
 		{
 			if(_monitorProcess)
 			{
+				GD::out.printMessage("Info: Redirecting signal to child process...");
 				if(_mainProcessId != 0) kill(_mainProcessId, SIGTERM);
-				else exit(0);
+				else _exit(0);
 				return;
 			}
 
@@ -236,6 +237,7 @@ void terminate(int32_t signalNumber)
 			GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
 			GD::bl->shuttingDown = true;
 			_shuttingDownMutex.unlock();
+			if(GD::ipcServer) GD::ipcServer->homegearShuttingDown();
 			if(GD::flowsServer) GD::flowsServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
 #ifndef NO_SCRIPTENGINE
 			if(GD::scriptEngineServer) GD::scriptEngineServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
@@ -265,7 +267,9 @@ void terminate(int32_t signalNumber)
 			if(GD::rpcClient) GD::rpcClient->dispose();
 			GD::out.printInfo( "(Shutdown) => Closing physical interfaces");
 			if(GD::familyController) GD::familyController->physicalInterfaceStopListening();
-			GD::out.printInfo("(Shutdown) => Stopping flows server...");
+			GD::out.printInfo("(Shutdown) => Stopping IPC server...");
+			if(GD::ipcServer) GD::ipcServer->stop();
+			if(GD::bl->settings.enableFlows()) GD::out.printInfo("(Shutdown) => Stopping flows server...");
 			if(GD::flowsServer) GD::flowsServer->stop();
 #ifndef NO_SCRIPTENGINE
 			GD::out.printInfo("(Shutdown) => Stopping script engine server...");
@@ -298,12 +302,13 @@ void terminate(int32_t signalNumber)
 			gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
 			gcry_control(GCRYCTL_TERM_SECMEM);
 			gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
-			exit(0);
+			_exit(0);
 		}
 		else if(signalNumber == SIGHUP)
 		{
 			if(_monitorProcess)
 			{
+				GD::out.printMessage("Info: Redirecting signal to child process...");
 				if(_mainProcessId != 0) kill(_mainProcessId, SIGHUP);
 				return;
 			}
@@ -370,7 +375,7 @@ void terminate(int32_t signalNumber)
 			if(!GD::bl->db->isOpen())
 			{
 				GD::out.printCritical("Critical: Can't reopen database. Exiting...");
-				exit(1);
+				_exit(1);
 			}
 			GD::out.printInfo("Reloading flows server...");
 			if(GD::flowsServer) GD::flowsServer->homegearReloading();
@@ -390,7 +395,7 @@ void terminate(int32_t signalNumber)
 		}
 		else
 		{
-			if(!_disposing) GD::out.printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
+			if (!_disposing) GD::out.printCritical("Signal " + std::to_string(signalNumber) + " received.");
 			signal(signalNumber, SIG_DFL); //Reset signal handler for the current signal to default
 			kill(getpid(), signalNumber); //Generate core dump
 		}
@@ -663,14 +668,26 @@ void startUp()
 		memset(&sa, 0, sizeof(sa));
 		sa.sa_handler = terminate;
 
-    	//Enable printing of backtraces
 		//Use sigaction over signal because of different behavior in Linux and BSD
     	sigaction(SIGHUP, &sa, NULL);
     	sigaction(SIGTERM, &sa, NULL);
+		sigaction(SIGINT, &sa, NULL);
     	sigaction(SIGABRT, &sa, NULL);
     	sigaction(SIGSEGV, &sa, NULL);
+		sigaction(SIGQUIT, &sa, NULL);
+		sigaction(SIGILL, &sa, NULL);
+		sigaction(SIGABRT, &sa, NULL);
+		sigaction(SIGFPE, &sa, NULL);
+		sigaction(SIGALRM, &sa, NULL);
+		sigaction(SIGUSR1, &sa, NULL);
+		sigaction(SIGUSR2, &sa, NULL);
+		sigaction(SIGTSTP, &sa, NULL);
+		sigaction(SIGTTIN, &sa, NULL);
+		sigaction(SIGTTOU, &sa, NULL);
     	sa.sa_handler = sigchld_handler;
     	sigaction(SIGCHLD, &sa, NULL);
+		sa.sa_handler = SIG_IGN;
+		sigaction(SIGPIPE, &sa, NULL);
 
     	if(_startAsDaemon || _nonInteractive)
 		{
@@ -1066,11 +1083,22 @@ void startUp()
         GD::eventHandler->load();
 #endif
 
-        GD::out.printInfo("Starting flows server...");
 		GD::flowsServer.reset(new Flows::FlowsServer());
-		if(GD::bl->settings.enableFlows() && !GD::flowsServer->start())
+		if(GD::bl->settings.enableFlows())
 		{
-			GD::out.printCritical("Critical: Cannot start flows server. Exiting Homegear.");
+			GD::out.printInfo("Starting flows server...");
+			if(!GD::flowsServer->start())
+			{
+				GD::out.printCritical("Critical: Cannot start flows server. Exiting Homegear.");
+				exit(1);
+			}
+		}
+
+		GD::out.printInfo("Starting IPC server...");
+		GD::ipcServer.reset(new Ipc::IpcServer());
+		if(!GD::ipcServer->start())
+		{
+			GD::out.printCritical("Critical: Cannot start IPC server. Exiting Homegear.");
 			exit(1);
 		}
 
@@ -1164,10 +1192,11 @@ int main(int argc, char* argv[])
 		_reloading = false;
 		_startUpComplete = false;
 		_shutdownQueued = false;
+		_monitorProcess = false;
 
     	getExecutablePath(argc, argv);
     	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
-    	GD::bl.reset(new BaseLib::SharedObjects(GD::executablePath, _errorCallback.get(), false));
+    	GD::bl.reset(new BaseLib::SharedObjects());
     	GD::out.init(GD::bl.get());
 
 		if(BaseLib::Io::directoryExists(GD::executablePath + "config")) GD::configPath = GD::executablePath + "config/";
@@ -1251,7 +1280,7 @@ int main(int argc, char* argv[])
     					std::cout <<  "Please run Homegear as root to set the device permissions." << std::endl;
     					exit(1);
     				}
-    				GD::bl->settings.load(GD::configPath + "main.conf");
+    				GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     				GD::bl->debugLevel = 3; //Only output warnings.
     				GD::licensingController.reset(new LicensingController());
     				GD::familyController.reset(new FamilyController());
@@ -1284,7 +1313,7 @@ int main(int argc, char* argv[])
     		{
     			if(i + 2 < argc)
     			{
-    				GD::bl->settings.load(GD::configPath + "main.conf");
+    				GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     				std::string inputFile(argv[i + 1]);
     				std::string outputFile(argv[i + 2]);
     				BaseLib::DeviceDescription::Devices devices(GD::bl.get(), nullptr, 0);
@@ -1305,7 +1334,7 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-r")
     		{
-    			GD::bl->settings.load(GD::configPath + "main.conf");
+    			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			CLI::Client cliClient;
     			int32_t exitCode = cliClient.start();
     			exit(exitCode);
@@ -1313,7 +1342,7 @@ int main(int argc, char* argv[])
 #ifndef NO_SCRIPTENGINE
     		else if(arg == "-rse")
     		{
-    			GD::bl->settings.load(GD::configPath + "main.conf");
+    			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			initGnuTls();
     			setLimits();
     			GD::licensingController.reset(new LicensingController());
@@ -1328,7 +1357,7 @@ int main(int argc, char* argv[])
 #endif
     		else if(arg == "-rl")
     		{
-    			GD::bl->settings.load(GD::configPath + "main.conf");
+    			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			initGnuTls();
     			setLimits();
     			GD::licensingController.reset(new LicensingController());
@@ -1342,7 +1371,7 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-e")
     		{
-    			GD::bl->settings.load(GD::configPath + "main.conf");
+    			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			GD::bl->debugLevel = 3; //Only output warnings.
     			std::stringstream command;
     			if(i + 1 < argc)
@@ -1374,7 +1403,7 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-l")
     		{
-    			GD::bl->settings.load(GD::configPath + "main.conf");
+    			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			GD::bl->debugLevel = 3; //Only output warnings.
     			std::string command = "lifetick";
     			CLI::Client cliClient;
@@ -1383,7 +1412,7 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-pre")
     		{
-    			GD::bl->settings.load(GD::configPath + "main.conf");
+    			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			GD::serverInfo.init(GD::bl.get());
     			GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
     			if(GD::runAsUser.empty()) GD::runAsUser = GD::bl->settings.runAsUser();
@@ -1581,7 +1610,7 @@ int main(int argc, char* argv[])
 
     	// {{{ Load settings
 			GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");
-			GD::bl->settings.load(GD::configPath + "main.conf");
+			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
 			if(GD::runAsUser.empty()) GD::runAsUser = GD::bl->settings.runAsUser();
 			if(GD::runAsGroup.empty()) GD::runAsGroup = GD::bl->settings.runAsGroup();
 			if((!GD::runAsUser.empty() && GD::runAsGroup.empty()) || (!GD::runAsGroup.empty() && GD::runAsUser.empty()))

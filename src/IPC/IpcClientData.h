@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -28,41 +28,38 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef RPCMETHOD_H_
-#define RPCMETHOD_H_
+#ifndef IPCCLIENTDATA_H_
+#define IPCCLIENTDATA_H_
 
-#include <vector>
-#include <memory>
+#include "IpcResponse.h"
 
 #include <homegear-base/BaseLib.h>
 
-namespace Rpc
+namespace Ipc
 {
 
-class RPCMethod
+class IpcClientData
 {
+private:
+	void init();
 public:
-	struct ParameterError
-	{
-		enum Enum { noError, wrongCount, wrongType };
-	};
+	int32_t id = 0;
+	bool closed = false;
+	std::vector<char> buffer;
+	std::unique_ptr<BaseLib::Rpc::BinaryRpc> binaryRpc;
+	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
+	std::mutex sendMutex;
+	std::mutex waitMutex;
+	std::mutex rpcResponsesMutex;
+	std::unordered_map<int32_t, PIpcResponse> rpcResponses;
+	std::condition_variable requestConditionVariable;
 
-	RPCMethod() {}
-	virtual ~RPCMethod() {}
-
-	ParameterError::Enum checkParameters(std::shared_ptr<std::vector<BaseLib::PVariable>> parameters, std::vector<BaseLib::VariableType> types);
-	ParameterError::Enum checkParameters(std::shared_ptr<std::vector<BaseLib::PVariable>> parameters, std::vector<std::vector<BaseLib::VariableType>> types);
-	virtual BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
-	BaseLib::PVariable getError(ParameterError::Enum error);
-	BaseLib::PVariable getSignature() { return _signatures; }
-	BaseLib::PVariable getHelp() { return _help; }
-protected:
-	BaseLib::PVariable _signatures;
-	BaseLib::PVariable _help;
-
-	void addSignature(BaseLib::VariableType returnType, std::vector<BaseLib::VariableType> parameterTypes);
-	void setHelp(std::string help);
+	IpcClientData();
+	IpcClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor);
+	virtual ~IpcClientData();
 };
+
+typedef std::shared_ptr<IpcClientData> PIpcClientData;
 
 }
 #endif

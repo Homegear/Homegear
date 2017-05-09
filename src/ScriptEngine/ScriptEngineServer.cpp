@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -33,7 +33,6 @@
 #include "ScriptEngineServer.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
-#include "php_sapi.h"
 
 // Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
 //#define MANUAL_CLIENT_START
@@ -60,87 +59,86 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 2, 1000)
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true));
 	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
 
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("devTest", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCDevTest())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("system.getCapabilities", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSystemGetCapabilities())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("system.listMethods", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSystemListMethods(GD::rpcServers[0].getServer()))));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("system.methodHelp", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSystemMethodHelp(GD::rpcServers[0].getServer()))));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("system.methodSignature", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSystemMethodSignature(GD::rpcServers[0].getServer()))));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("system.multicall", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSystemMulticall(GD::rpcServers[0].getServer()))));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("activateLinkParamset", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCActivateLinkParamset())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("abortEventReset", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCTriggerEvent())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("addDevice", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCAddDevice())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("addEvent", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCAddEvent())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("addLink", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCAddLink())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("copyConfig", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCCopyConfig())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("clientServerInitialized", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCClientServerInitialized())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("createDevice", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCCreateDevice())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("deleteDevice", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCDeleteDevice())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("deleteMetadata", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCDeleteMetadata())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("deleteSystemVariable", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCDeleteSystemVariable())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("enableEvent", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCEnableEvent())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getAllConfig", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetAllConfig())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getAllMetadata", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetAllMetadata())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getAllScripts", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetAllScripts())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getAllSystemVariables", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetAllSystemVariables())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getAllValues", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetAllValues())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getConfigParameter", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetConfigParameter())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getDeviceDescription", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetDeviceDescription())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getDeviceInfo", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetDeviceInfo())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getEvent", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetEvent())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getLastEvents", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetLastEvents())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getInstallMode", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetInstallMode())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getKeyMismatchDevice", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetKeyMismatchDevice())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getLinkInfo", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetLinkInfo())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getLinkPeers", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetLinkPeers())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getLinks", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetLinks())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getMetadata", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetMetadata())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getName", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetName())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getPairingMethods", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetPairingMethods())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getParamset", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetParamset())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getParamsetDescription", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetParamsetDescription())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getParamsetId", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetParamsetId())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getPeerId", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetPeerId())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getServiceMessages", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetServiceMessages())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getSniffedDevices", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetSniffedDevices())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getSystemVariable", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetSystemVariable())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getUpdateStatus", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetUpdateStatus())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getValue", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetValue())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("getVersion", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCGetVersion())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("init", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCInit())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("listBidcosInterfaces", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCListBidcosInterfaces())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("listClientServers", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCListClientServers())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("listDevices", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCListDevices())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("listEvents", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCListEvents())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("listFamilies", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCListFamilies())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("listInterfaces", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCListInterfaces())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("listKnownDeviceTypes", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCListKnownDeviceTypes())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("listTeams", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCListTeams())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("logLevel", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCLogLevel())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("ping", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCPing())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("putParamset", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCPutParamset())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("removeEvent", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCRemoveEvent())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("removeLink", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCRemoveLink())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("reportValueUsage", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCReportValueUsage())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("rssiInfo", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCRssiInfo())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("runScript", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCRunScript())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("searchDevices", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSearchDevices())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("setId", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSetId())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("setInstallMode", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSetInstallMode())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("setInterface", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSetInterface())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("setLinkInfo", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSetLinkInfo())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("setMetadata", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSetMetadata())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("setName", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSetName())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("setSystemVariable", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSetSystemVariable())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("setTeam", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSetTeam())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("setValue", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSetValue())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("startSniffing", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCStartSniffing())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("stopSniffing", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCStopSniffing())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("subscribePeers", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCSubscribePeers())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("triggerEvent", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCTriggerEvent())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("triggerRpcEvent", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCTriggerRpcEvent())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("unsubscribePeers", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCUnsubscribePeers())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("updateFirmware", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCUpdateFirmware())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<Rpc::RPCMethod>>("writeLog", std::shared_ptr<Rpc::RPCMethod>(new Rpc::RPCWriteLog())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("devTest", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDevTest())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("system.getCapabilities", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemGetCapabilities())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("system.listMethods", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemListMethods(GD::rpcServers[0].getServer()))));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("system.methodHelp", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMethodHelp(GD::rpcServers[0].getServer()))));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("system.methodSignature", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMethodSignature(GD::rpcServers[0].getServer()))));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("system.multicall", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMulticall(GD::rpcServers[0].getServer()))));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("activateLinkParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCActivateLinkParamset())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("abortEventReset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerEvent())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("addDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddDevice())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("addEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddEvent())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("addLink", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddLink())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("copyConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCopyConfig())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("clientServerInitialized", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCClientServerInitialized())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("createDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateDevice())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("deleteData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteData())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("deleteDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteDevice())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("deleteMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteMetadata())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("deleteSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteSystemVariable())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("enableEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCEnableEvent())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getAllConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllConfig())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getAllMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllMetadata())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getAllScripts", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllScripts())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getAllSystemVariables", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllSystemVariables())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getAllValues", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllValues())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getConfigParameter", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetConfigParameter())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetData())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getDeviceDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDeviceDescription())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getDeviceInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDeviceInfo())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetEvent())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetInstallMode())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getKeyMismatchDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetKeyMismatchDevice())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getLinkInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetLinkInfo())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getLinkPeers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetLinkPeers())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getLinks", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetLinks())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetMetadata())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetName())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getPairingMethods", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPairingMethods())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamset())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getParamsetDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetDescription())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getParamsetId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetId())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getPeerId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPeerId())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getServiceMessages", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetServiceMessages())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetSystemVariable())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getUpdateStatus", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetUpdateStatus())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetValue())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getVersion", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetVersion())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("init", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCInit())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("listBidcosInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListBidcosInterfaces())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("listClientServers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListClientServers())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("listDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListDevices())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("listEvents", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListEvents())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("listFamilies", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListFamilies())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("listInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListInterfaces())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("listKnownDeviceTypes", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListKnownDeviceTypes())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("listTeams", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListTeams())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("logLevel", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCLogLevel())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("ping", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPing())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("putParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPutParamset())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("removeEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveEvent())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("removeLink", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveLink())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("reportValueUsage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCReportValueUsage())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("rssiInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRssiInfo())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("runScript", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRunScript())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("searchDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSearchDevices())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetData())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetId())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInstallMode())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setInterface", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInterface())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setLinkInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetLinkInfo())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetMetadata())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetName())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetSystemVariable())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setTeam", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetTeam())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetValue())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("subscribePeers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSubscribePeers())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("triggerEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerEvent())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("triggerRpcEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerRpcEvent())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("unsubscribePeers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUnsubscribePeers())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCWriteLog())));
 
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("registerScriptEngineClient", std::bind(&ScriptEngineServer::registerScriptEngineClient, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("scriptFinished", std::bind(&ScriptEngineServer::scriptFinished, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
@@ -172,16 +170,12 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 2, 1000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("removeLicense", std::bind(&ScriptEngineServer::removeLicense, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("getLicenseStates", std::bind(&ScriptEngineServer::getLicenseStates, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("getTrialStartTime", std::bind(&ScriptEngineServer::getTrialStartTime, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-
-	php_homegear_init();
 }
 
 ScriptEngineServer::~ScriptEngineServer()
 {
 	if(!_stopServer) stop();
-	GD::bl->threadManager.join(_checkSessionIdThread);
 	GD::bl->threadManager.join(_scriptFinishedThread);
-	php_homegear_shutdown();
 #ifdef DEBUGSESOCKET
 	_socketOutput.close();
 #endif
@@ -921,12 +915,11 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 					return;
 				}
 
-				std::map<std::string, std::shared_ptr<Rpc::RPCMethod>>::iterator methodIterator = _rpcMethods.find(methodName);
+				std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>::iterator methodIterator = _rpcMethods.find(methodName);
 				if(methodIterator == _rpcMethods.end())
 				{
-					_out.printError("Error: RPC method not found: " + methodName);
-					BaseLib::PVariable error = BaseLib::Variable::createError(-32601, ": Requested method not found.");
-					sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), error);
+					BaseLib::PVariable result = GD::ipcServer->callRpcMethod(methodName, parameters->at(2)->arrayValue);
+					sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
 					return;
 				}
 
@@ -1187,7 +1180,7 @@ void ScriptEngineServer::mainThread()
 				continue;
 			}
 
-			if(FD_ISSET(_serverFileDescriptor->descriptor, &readFileDescriptor))
+			if (FD_ISSET(_serverFileDescriptor->descriptor, &readFileDescriptor) && !_shuttingDown)
 			{
 				sockaddr_un clientAddress;
 				socklen_t addressSize = sizeof(addressSize);
@@ -1462,12 +1455,32 @@ bool ScriptEngineServer::checkSessionId(const std::string& sessionId)
 {
 	try
 	{
-		bool result = false;
-		std::lock_guard<std::mutex> checkSessionIdGuard(_checkSessionIdMutex);
-		GD::bl->threadManager.start(_checkSessionIdThread, false, &ScriptEngineServer::checkSessionIdThread, this, sessionId, &result);
-		GD::bl->threadManager.join(_checkSessionIdThread);
+		if(_shuttingDown) return false;
+		PScriptEngineClientData client;
 
-		return result;
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			for(std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) continue;
+				client = i->second;
+				break;
+			}
+		}
+		if(!client)
+		{
+			GD::out.printError("Error: Could not check session ID. No script engine client is started.");
+			return false;
+		}
+		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+		parameters->push_back(std::make_shared<BaseLib::Variable>(sessionId));
+		BaseLib::PVariable result = sendRequest(client, "checkSessionId", parameters);
+		if(result->errorStruct)
+		{
+			GD::out.printError("Error: checkSessionId returned: " + result->structValue->at("faultString")->stringValue);
+			return false;
+		}
+		return result->booleanValue;
 	}
 	catch(const std::exception& ex)
 	{
@@ -1482,92 +1495,6 @@ bool ScriptEngineServer::checkSessionId(const std::string& sessionId)
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return false;
-}
-
-void ScriptEngineServer::checkSessionIdThread(std::string sessionId, bool* result)
-{
-	*result = false;
-	std::shared_ptr<BaseLib::Rpc::ServerInfo::Info> serverInfo(new BaseLib::Rpc::ServerInfo::Info());
-
-	{
-		std::lock_guard<std::mutex> resourceGuard(_resourceMutex);
-		ts_resource(0); //Replaces TSRMLS_FETCH()
-		zend_homegear_globals* globals = php_homegear_get_globals();
-		if(!globals) return;
-		try
-		{
-			ZEND_TSRMLS_CACHE_UPDATE();
-			SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise POST data is not processed.
-			SG(sapi_headers).http_response_code = 200;
-			SG(default_mimetype) = nullptr;
-			SG(default_charset) = nullptr;
-			SG(request_info).content_length = 0;
-			SG(request_info).request_method = "GET";
-			SG(request_info).proto_num = 1001;
-			globals->http.getHeader().cookie = "PHPSESSID=" + sessionId;
-
-			if (php_request_startup() == FAILURE) {
-				GD::bl->out.printError("Error calling php_request_startup...");
-				ts_free_thread();
-				return;
-			}
-		}
-		catch(const std::exception& ex)
-		{
-			GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			ts_free_thread();
-			return;
-		}
-		catch(BaseLib::Exception& ex)
-		{
-			GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			ts_free_thread();
-			return;
-		}
-		catch(...)
-		{
-			GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			ts_free_thread();
-			return;
-		}
-	}
-
-	try
-	{
-		zval returnValue;
-		zval function;
-
-		ZVAL_STRINGL(&function, "session_start", sizeof("session_start") - 1);
-		call_user_function(EG(function_table), NULL, &function, &returnValue, 0, nullptr);
-		zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
-
-		zval* reference = zend_hash_str_find(&EG(symbol_table), "_SESSION", sizeof("_SESSION") - 1);
-		if(reference != NULL)
-		{
-			if(Z_ISREF_P(reference) && Z_RES_P(reference)->ptr && Z_TYPE_P(Z_REFVAL_P(reference)) == IS_ARRAY)
-			{
-				zval* token = zend_hash_str_find(Z_ARRVAL_P(Z_REFVAL_P(reference)), "authorized", sizeof("authorized") - 1);
-				if(token != NULL)
-				{
-					*result = (Z_TYPE_P(token) == IS_TRUE);
-				}
-			}
-        }
-	}
-	catch(const std::exception& ex)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	php_request_shutdown(NULL);
-	ts_free_thread();
 }
 
 void ScriptEngineServer::invokeScriptFinished(PScriptEngineProcess process, int32_t id, int32_t exitCode)

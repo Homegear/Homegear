@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -34,7 +34,6 @@
 #ifndef NO_SCRIPTENGINE
 
 #include "php_config_fixes.h"
-#include "../RPC/RPCMethod.h"
 #include "../../config.h"
 #include "ScriptEngineResponse.h"
 #include <homegear-base/BaseLib.h>
@@ -69,7 +68,7 @@ private:
 		std::thread thread;
 		std::atomic_bool running;
 		std::string filename;
-		uint64_t peerId;
+		uint64_t peerId = 0;
 
 		ThreadInfo() : running(true) {}
 	};
@@ -80,7 +79,6 @@ private:
 		std::mutex waitMutex;
 		std::condition_variable conditionVariable;
 	};
-	typedef std::shared_ptr<RequestInfo> PRequestInfo;
 
 	class ScriptGuard
 	{
@@ -123,11 +121,12 @@ private:
 	std::condition_variable _requestConditionVariable;
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 	std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>> _localRpcMethods;
+	std::mutex _maintenanceThreadMutex;
 	std::thread _maintenanceThread;
 	std::mutex _scriptThreadMutex;
 	std::map<int32_t, PThreadInfo> _scriptThreads;
 	std::mutex _requestInfoMutex;
-	std::map<int32_t, PRequestInfo> _requestInfo;
+	std::map<int32_t, RequestInfo> _requestInfo;
 	std::map<std::string, std::shared_ptr<CacheInfo>> _scriptCache;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
@@ -152,6 +151,7 @@ private:
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 	void scriptThread(int32_t id, PScriptInfo scriptInfo, bool sendOutput);
 	void runScript(int32_t id, PScriptInfo scriptInfo);
+	void checkSessionIdThread(std::string sessionId, bool* result);
 	BaseLib::PVariable send(std::vector<char>& data);
 
 #ifdef DEBUGSESOCKET
@@ -186,6 +186,7 @@ private:
 		 */
 		BaseLib::PVariable scriptCount(BaseLib::PArray& parameters);
 		BaseLib::PVariable getRunningScripts(BaseLib::PArray& parameters);
+		BaseLib::PVariable checkSessionId(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastEvent(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastNewDevices(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastDeleteDevices(BaseLib::PArray& parameters);

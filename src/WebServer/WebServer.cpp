@@ -212,7 +212,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 
 		bool isDirectory = false;
 		BaseLib::Io::isDirectory(_serverInfo->contentPath + path, isDirectory);
-		if(isDirectory)
+		if (isDirectory || path == "flows" || path == "flows/")
 		{
 			if(!path.empty() && path.back() != '/')
 			{
@@ -222,7 +222,8 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 				send(socket, content);
 				return;
 			}
-			if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
+			if (path == "flows/") path = "flows/index.php";
+			else if (GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.hgs")) path += "index.hgs";
@@ -234,7 +235,24 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 			}
 		}
 
-		if(!BaseLib::Io::fileExists(_serverInfo->contentPath + path))
+		if (GD::bl->settings.enableFlows() && path.compare(0, 6, "flows/") == 0)
+		{
+			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
+			std::string responseEncoding;
+			std::string contentString = GD::flowsServer->handlePost(path, http, responseEncoding);
+			if (!contentString.empty())
+			{
+				std::vector<std::string> headers;
+				std::string header;
+				_http.constructHeader(contentString.size(), responseEncoding, 200, "OK", headers, header);
+				content.insert(content.end(), header.begin(), header.end());
+				content.insert(content.end(), contentString.begin(), contentString.end());
+				send(socket, content);
+				return;
+			}
+		}
+
+		if (!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "flows/index.php")
 		{
 			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 			send(socket, content);
@@ -245,7 +263,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 		try
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to: \"" + _serverInfo->contentPath + path + "\", method: POST)");
-			std::string fullPath = _serverInfo->contentPath + path;
+			std::string fullPath = path == "flows/index.php" ? GD::bl->settings.flowsPath() + "www/index.php" : _serverInfo->contentPath + path;
 			std::string relativePath = '/' + path;
 			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, relativePath, http, _serverInfo));
 			scriptInfo->socket = socket;
