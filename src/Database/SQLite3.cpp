@@ -82,7 +82,7 @@ void SQLite3::hotBackup()
 	try
 	{
 		if(_databasePath.empty() || _databaseFilename.empty()) return;
-		_databaseMutex.lock();
+		std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
 		closeDatabase(false);
 		if(GD::bl->io.fileExists(_databasePath + _databaseFilename))
 		{
@@ -109,15 +109,10 @@ void SQLite3::hotBackup()
 					if(!restored)
 					{
 						GD::out.printCritical("Critical: Could not restore database.");
-						_databaseMutex.unlock();
 						return;
 					}
 				}
-				else
-				{
-					_databaseMutex.unlock();
-					return;
-				}
+				else return;
 			}
 			else
 			{
@@ -190,7 +185,6 @@ void SQLite3::hotBackup()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _databaseMutex.unlock();
 }
 
 bool SQLite3::checkIntegrity(std::string databasePath)
@@ -464,33 +458,34 @@ uint32_t SQLite3::executeWriteCommand(std::shared_ptr<std::pair<std::string, Dat
 	try
 	{
 		if(!command) return 0;
-		_databaseMutex.lock();
+		std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
 		if(!_database)
 		{
 			GD::out.printError("Error: Could not write to database. No database handle.");
-			_databaseMutex.unlock();
 			return 0;
 		}
 		sqlite3_stmt* statement = nullptr;
 		int32_t result = sqlite3_prepare_v2(_database, command->first.c_str(), -1, &statement, NULL);
 		if(result)
 		{
-			throw(Exception("Can't execute command \"" + command->first + "\": " + std::string(sqlite3_errmsg(_database))));
+			GD::out.printError("Can't execute command \"" + command->first + "\": " + std::string(sqlite3_errmsg(_database)));
+			return 0;
 		}
 		if(!command->second.empty()) bindData(statement, command->second);
 		result = sqlite3_step(statement);
 		if(result != SQLITE_DONE)
 		{
-			throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
+			GD::out.printError("Can't execute command: " + std::string(sqlite3_errmsg(_database)));
+			return 0;
 		}
 		sqlite3_clear_bindings(statement);
 		result = sqlite3_finalize(statement);
 		if(result)
 		{
-			throw(Exception("Can't execute command \"" + command->first + "\": " + std::string(sqlite3_errmsg(_database))));
+			GD::out.printError("Can't execute command \"" + command->first + "\": " + std::string(sqlite3_errmsg(_database)));
+			return 0;
 		}
 		uint32_t rowID = sqlite3_last_insert_rowid(_database);
-		_databaseMutex.unlock();
 		return rowID;
 	}
 	catch(const std::exception& ex)
@@ -505,7 +500,6 @@ uint32_t SQLite3::executeWriteCommand(std::shared_ptr<std::pair<std::string, Dat
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-	_databaseMutex.unlock();
 	return 0;
 }
 
@@ -513,33 +507,34 @@ uint32_t SQLite3::executeWriteCommand(std::string command, DataRow& dataToEscape
 {
 	try
 	{
-		_databaseMutex.lock();
+		std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
 		if(!_database)
 		{
 			GD::out.printError("Error: Could not write to database. No database handle.");
-			_databaseMutex.unlock();
 			return 0;
 		}
 		sqlite3_stmt* statement = nullptr;
 		int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
 		if(result)
 		{
-			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
+			GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
+			return 0;
 		}
 		if(!dataToEscape.empty()) bindData(statement, dataToEscape);
 		result = sqlite3_step(statement);
 		if(result != SQLITE_DONE)
 		{
-			throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
+			GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
+			return 0;
 		}
 		sqlite3_clear_bindings(statement);
 		result = sqlite3_finalize(statement);
 		if(result)
 		{
-			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
+			GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
+			return 0;
 		}
 		uint32_t rowID = sqlite3_last_insert_rowid(_database);
-		_databaseMutex.unlock();
 		return rowID;
 	}
 	catch(const std::exception& ex)
@@ -554,7 +549,6 @@ uint32_t SQLite3::executeWriteCommand(std::string command, DataRow& dataToEscape
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-	_databaseMutex.unlock();
 	return 0;
 }
 
@@ -563,11 +557,10 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command, DataRow&
 	std::shared_ptr<DataTable> dataRows(new DataTable());
 	try
 	{
-		_databaseMutex.lock();
+		std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
 		if(!_database)
 		{
 			GD::out.printError("Error: Could not write to database. No database handle.");
-			_databaseMutex.unlock();
 			return dataRows;
 		}
 		sqlite3_stmt* statement = nullptr;
@@ -575,7 +568,6 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command, DataRow&
 		if(result)
 		{
 			GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
-			_databaseMutex.unlock();
 			return dataRows;
 		}
 		bindData(statement, dataToEscape);
@@ -589,17 +581,13 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command, DataRow&
 			{
 				GD::out.printInfo("Info: " + ex.what());
 				sqlite3_clear_bindings(statement);
-				_databaseMutex.unlock();
 				return dataRows;
 			}
 			else GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		sqlite3_clear_bindings(statement);
 		result = sqlite3_finalize(statement);
-		if(result)
-		{
-			GD::out.printError("Can't execute command \"" + command + "\" (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
-		}
+		if(result) GD::out.printError("Can't execute command \"" + command + "\" (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
 	}
 	catch(const std::exception& ex)
     {
@@ -613,7 +601,6 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command, DataRow&
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-	_databaseMutex.unlock();
 	return dataRows;
 }
 
@@ -622,11 +609,10 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command)
     std::shared_ptr<DataTable> dataRows(new DataTable());
     try
     {
-    	_databaseMutex.lock();
+    	std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
     	if(!_database)
 		{
 			GD::out.printError("Error: Could not write to database. No database handle.");
-			_databaseMutex.unlock();
 			return dataRows;
 		}
 		sqlite3_stmt* statement = nullptr;
@@ -634,7 +620,6 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command)
 		if(result)
 		{
 			GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
-			_databaseMutex.unlock();
 			return dataRows;
 		}
 		try
@@ -647,7 +632,6 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command)
 			{
 				GD::out.printInfo("Info: " + ex.what());
 				sqlite3_clear_bindings(statement);
-				_databaseMutex.unlock();
 				return dataRows;
 			}
 			else GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -671,7 +655,6 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _databaseMutex.unlock();
     return dataRows;
 }
 

@@ -31,18 +31,26 @@
 #ifndef DATABASECONTROLLER_H_
 #define DATABASECONTROLLER_H_
 
-#include "homegear-base/Database/IDatabaseController.h"
-#include "homegear-base/Encoding/RpcEncoder.h"
-#include "homegear-base/Encoding/RpcDecoder.h"
+#include "homegear-base/BaseLib.h"
 #include "../Database/SQLite3.h"
 
 #include <thread>
 #include <condition_variable>
 #include <atomic>
 
-class DatabaseController : public BaseLib::Database::IDatabaseController
+class DatabaseController : public BaseLib::Database::IDatabaseController, public BaseLib::IQueue
 {
 public:
+	class QueueEntry : public BaseLib::IQueueEntry
+	{
+	public:
+		QueueEntry(std::string command, BaseLib::Database::DataRow& data) { _entry = std::make_shared<std::pair<std::string, BaseLib::Database::DataRow>>(command, data); };
+		virtual ~QueueEntry() {};
+		std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>>& getEntry() { return _entry; }
+	private:
+		std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>> _entry;
+	};
+
 	DatabaseController();
 	virtual ~DatabaseController();
 	virtual void dispose();
@@ -162,21 +170,7 @@ protected:
 	std::mutex _metadataMutex;
 	std::map<uint64_t, std::map<std::string, BaseLib::PVariable>> _metadata;
 
-	// {{{ Queueing
-		static const int32_t _queueSize = 100000;
-		std::mutex _queueMutex;
-		int32_t _queueHead = 0;
-		int32_t _queueTail = 0;
-		std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>> _queue[_queueSize];
-		std::mutex _queueProcessingThreadMutex;
-		std::thread _queueProcessingThread;
-		bool _queueEntryAvailable = false;
-		std::condition_variable _queueConditionVariable;
-		std::atomic_bool _stopQueueProcessingThread;
-
-		void bufferedWrite(std::string command, BaseLib::Database::DataRow& data);
-		void processQueueEntry();
-	// }}}
+	virtual void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 };
 
 #endif

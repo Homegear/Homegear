@@ -32,9 +32,8 @@
 #include "../User/User.h"
 #include "../GD/GD.h"
 
-DatabaseController::DatabaseController()
+DatabaseController::DatabaseController() : IQueue(GD::bl.get(), 1, 100000)
 {
-	_stopQueueProcessingThread = false;
 }
 
 DatabaseController::~DatabaseController()
@@ -46,14 +45,7 @@ void DatabaseController::dispose()
 {
 	if(_disposing) return;
 	_disposing = true;
-	_queueMutex.lock();
-	//Make sure, bufferedWrite is finished
-	_queueMutex.unlock();
-	_stopQueueProcessingThread = true;
-	_queueEntryAvailable = true;
-	_queueConditionVariable.notify_one();
-	GD::bl->threadManager.join(_queueProcessingThread);
-	for(int32_t i = 0; i < _queueSize; ++i) _queue[i].reset(); //Just to make sure there are no valid shared pointers anymore
+	stopQueue(0);
 	_db.dispose();
 	_systemVariables.clear();
 	_metadata.clear();
@@ -68,12 +60,7 @@ void DatabaseController::init()
 	}
 	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get()));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get()));
-
-	_stopQueueProcessingThread = false;
-	_queueEntryAvailable = false;
-	_queueHead = 0;
-	_queueTail = 0;
-	GD::bl->threadManager.start(_queueProcessingThread, true, &DatabaseController::processQueueEntry, this);
+	startQueue(0, 1, 0, SCHED_OTHER);
 }
 
 //General
@@ -154,91 +141,11 @@ void DatabaseController::initializeDatabase()
     }
 }
 
-void DatabaseController::bufferedWrite(std::string command, BaseLib::Database::DataRow& data)
+void DatabaseController::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry)
 {
-	try
-	{
-		_queueMutex.lock();
-		if(_disposing)
-		{
-			_queueMutex.unlock();
-			return;
-		}
-		int32_t tempHead = _queueHead + 1;
-		if(tempHead >= _queueSize) tempHead = 0;
-		if(tempHead == _queueTail)
-		{
-			GD::out.printError("Error: More than " + std::to_string(_queueSize) + " entries are queued to be written into the database. Your data processing is too slow. Not writing entry.");
-			_queueMutex.unlock();
-			return;
-		}
-
-		_queue[_queueHead] = std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>>(new std::pair<std::string, BaseLib::Database::DataRow>(command, data));
-		_queueHead++;
-		if(_queueHead >= _queueSize)
-		{
-			_queueHead = 0;
-		}
-		_queueEntryAvailable = true;
-		_queueMutex.unlock();
-
-		_queueConditionVariable.notify_one();
-	}
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(const BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void DatabaseController::processQueueEntry()
-{
-	while(!_stopQueueProcessingThread)
-	{
-		std::unique_lock<std::mutex> lock(_queueProcessingThreadMutex);
-		try
-		{
-			_queueMutex.lock();
-			if(_queueHead == _queueTail) //Only lock, when there is really no packet to process. This check is necessary, because the check of the while loop condition is outside of the mutex
-			{
-				_queueMutex.unlock();
-				_queueConditionVariable.wait(lock, [&]{ return _queueEntryAvailable; });
-			}
-			else _queueMutex.unlock();
-
-			while(_queueHead != _queueTail)
-			{
-				_queueMutex.lock();
-				std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>> entry = _queue[_queueTail];
-				_queue[_queueTail].reset();
-				_queueTail++;
-				if(_queueTail >= _queueSize) _queueTail = 0;
-				if(_queueHead == _queueTail) _queueEntryAvailable = false; //Set here, because otherwise it might be set to "true" in raisePacketReceived and then set to false again after the while loop
-				_queueMutex.unlock();
-				if(entry) _db.executeWriteCommand(entry);
-			}
-		}
-		catch(const std::exception& ex)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(const BaseLib::Exception& ex)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		lock.unlock();
-	}
+	std::shared_ptr<QueueEntry> queueEntry = std::dynamic_pointer_cast<QueueEntry>(entry);
+	if(!queueEntry) return;
+	_db.executeWriteCommand(queueEntry->getEntry());
 }
 
 bool DatabaseController::convertDatabase()
@@ -436,14 +343,16 @@ void DatabaseController::createSavepointAsynchronous(std::string& name)
 {
 	if(GD::bl->debugLevel > 5) GD::out.printDebug("Debug: Creating savepoint (asynchronous) " + name);
 	BaseLib::Database::DataRow data;
-	bufferedWrite("SAVEPOINT " + name, data);
+	std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("SAVEPOINT " + name, data);
+	enqueue(0, entry);
 }
 
 void DatabaseController::releaseSavepointAsynchronous(std::string& name)
 {
 	if(GD::bl->debugLevel > 5) GD::out.printDebug("Debug: Releasing savepoint (asynchronous) " + name);
 	BaseLib::Database::DataRow data;
-	bufferedWrite("RELEASE " + name, data);
+	std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("RELEASE " + name, data);
+	enqueue(0, entry);
 }
 //End general
 
@@ -472,7 +381,8 @@ void DatabaseController::setHomegearVariableString(HomegearVariables::Enum id, s
 		//Don't forget to set new version in initializeDatabase!!!
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-		bufferedWrite("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+		enqueue(0, entry);
 	}
 	else
 	{
@@ -482,7 +392,8 @@ void DatabaseController::setHomegearVariableString(HomegearVariables::Enum id, s
 		//Don't forget to set new version in initializeDatabase!!!
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-		bufferedWrite("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+		enqueue(0, entry);
 	}
 }
 //End Homegear variables
@@ -583,12 +494,14 @@ BaseLib::PVariable DatabaseController::setData(std::string& component, std::stri
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(component)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(key)));
-		bufferedWrite("DELETE FROM data WHERE component=? AND key=?", data);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM data WHERE component=? AND key=?", data);
+		enqueue(0, entry);
 
 		std::vector<char> encodedValue;
 		_rpcEncoder->encodeResponse(value, encodedValue);
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(encodedValue)));
-		bufferedWrite("INSERT INTO data VALUES(?, ?, ?)", data);
+		entry = std::make_shared<QueueEntry>("INSERT INTO data VALUES(?, ?, ?)", data);
+		enqueue(0, entry);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
@@ -629,7 +542,8 @@ BaseLib::PVariable DatabaseController::deleteData(std::string& component, std::s
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(key)));
 			command.append(" AND key=?");
 		}
-		bufferedWrite(command, data);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>(command, data);
+		enqueue(0, entry);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
@@ -763,13 +677,15 @@ BaseLib::PVariable DatabaseController::setMetadata(uint64_t peerID, std::string&
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peerID))));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(dataID)));
-		bufferedWrite("DELETE FROM metadata WHERE objectID=? AND dataID=?", data);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM metadata WHERE objectID=? AND dataID=?", data);
+		enqueue(0, entry);
 
 		std::vector<char> value;
 		_rpcEncoder->encodeResponse(metadata, value);
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
 
-		bufferedWrite("INSERT INTO metadata VALUES(?, ?, ?)", data);
+		entry = std::make_shared<QueueEntry>("INSERT INTO metadata VALUES(?, ?, ?)", data);
+		enqueue(0, entry);
 
 #ifdef EVENTHANDLER
 		GD::eventHandler->trigger(peerID, -1, dataID, metadata);
@@ -823,7 +739,8 @@ BaseLib::PVariable DatabaseController::deleteMetadata(uint64_t peerID, std::stri
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(dataID)));
 			command.append(" AND dataID=?");
 		}
-		bufferedWrite(command, data);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>(command, data);
+		enqueue(0, entry);
 
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{dataID});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>());
@@ -959,13 +876,15 @@ BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableID
 
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableID)));
-		bufferedWrite("DELETE FROM systemVariables WHERE variableID=?", data);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM systemVariables WHERE variableID=?", data);
+		enqueue(0, entry);
 
 		std::vector<char> encodedValue;
 		_rpcEncoder->encodeResponse(value, encodedValue);
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(encodedValue)));
 
-		bufferedWrite("INSERT INTO systemVariables VALUES(?, ?)", data);
+		entry = std::make_shared<QueueEntry>("INSERT INTO systemVariables VALUES(?, ?)", data);
+		enqueue(0, entry);
 
 #ifdef EVENTHANDLER
 		GD::eventHandler->trigger(variableID, value);
@@ -1007,7 +926,8 @@ BaseLib::PVariable DatabaseController::deleteSystemVariable(std::string& variabl
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableID)));
 		std::string command("DELETE FROM systemVariables WHERE variableID=?");
-		bufferedWrite(command, data);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>(command, data);
+		enqueue(0, entry);
 
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableID});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>());
@@ -1245,11 +1165,13 @@ void DatabaseController::saveEventAsynchronous(BaseLib::Database::DataRow& event
 	if(event.size() == 24)
 	{
 		event.push_front(event.at(0));
-		bufferedWrite("INSERT OR REPLACE INTO events (eventID, name, type, peerID, peerChannel, variable, trigger, triggerValue, eventMethod, eventMethodParameters, resetAfter, initialTime, timeOperation, timeFactor, timeLimit, resetMethod, resetMethodParameters, eventTime, endTime, recurEvery, lastValue, lastRaised, lastReset, currentTime, enabled) VALUES((SELECT eventID FROM events WHERE name=?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", event);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO events (eventID, name, type, peerID, peerChannel, variable, trigger, triggerValue, eventMethod, eventMethodParameters, resetAfter, initialTime, timeOperation, timeFactor, timeLimit, resetMethod, resetMethodParameters, eventTime, endTime, recurEvery, lastValue, lastRaised, lastReset, currentTime, enabled) VALUES((SELECT eventID FROM events WHERE name=?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", event);
+		enqueue(0, entry);
 	}
 	else if(event.size() == 25 && event.at(0)->intValue != 0)
 	{
-		bufferedWrite("REPLACE INTO events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", event);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("REPLACE INTO events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", event);
+		enqueue(0, entry);
 	}
 	else GD::out.printError("Error: Either eventID is 0 or the number of columns is invalid.");
 }
@@ -1259,7 +1181,8 @@ void DatabaseController::deleteEvent(std::string& name)
 	try
 	{
 		BaseLib::Database::DataRow data({std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(name))});
-		bufferedWrite("DELETE FROM events WHERE name=?", data);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM events WHERE name=?", data);
+		enqueue(0, entry);
 	}
 	catch(const std::exception& ex)
 	{
@@ -1281,7 +1204,8 @@ void DatabaseController::deleteEvent(std::string& name)
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(familyId)));
-		bufferedWrite("DELETE FROM familyVariables WHERE familyID=?", data);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM familyVariables WHERE familyID=?", data);
+		enqueue(0, entry);
 	}
 
 	void DatabaseController::saveFamilyVariableAsynchronous(int32_t familyId, BaseLib::Database::DataRow& data)
@@ -1298,13 +1222,22 @@ void DatabaseController::deleteEvent(std::string& name)
 				switch(data.at(0)->dataType)
 				{
 					case BaseLib::Database::DataColumn::DataType::INTEGER:
-						bufferedWrite("UPDATE familyVariables SET integerValue=? WHERE variableID=?", data);
+						{
+							std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE familyVariables SET integerValue=? WHERE variableID=?", data);
+							enqueue(0, entry);
+						}
 						break;
 					case BaseLib::Database::DataColumn::DataType::TEXT:
-						bufferedWrite("UPDATE familyVariables SET stringValue=? WHERE variableID=?", data);
+						{
+							std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE familyVariables SET stringValue=? WHERE variableID=?", data);
+							enqueue(0, entry);
+						}
 						break;
 					case BaseLib::Database::DataColumn::DataType::BLOB:
-						bufferedWrite("UPDATE familyVariables SET binaryValue=? WHERE variableID=?", data);
+						{
+							std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE familyVariables SET binaryValue=? WHERE variableID=?", data);
+							enqueue(0, entry);
+						}
 						break;
 					case BaseLib::Database::DataColumn::DataType::NODATA:
 						GD::out.printError("Error: Tried to store data of type NODATA in family variable table.");
@@ -1318,11 +1251,13 @@ void DatabaseController::deleteEvent(std::string& name)
 			{
 				if(data.size() == 9)
 				{
-					bufferedWrite("INSERT OR REPLACE INTO familyVariables (variableID, familyID, variableIndex, variableName, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM familyVariables WHERE familyID=? AND variableIndex=? AND variableName=?), ?, ?, ?, ?, ?, ?)", data);
+					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO familyVariables (variableID, familyID, variableIndex, variableName, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM familyVariables WHERE familyID=? AND variableIndex=? AND variableName=?), ?, ?, ?, ?, ?, ?)", data);
+					enqueue(0, entry);
 				}
 				else if(data.size() == 7 && data.at(0)->intValue != 0)
 				{
-					bufferedWrite("REPLACE INTO familyVariables VALUES(?, ?, ?, ?, ?, ?, ?)", data);
+					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("REPLACE INTO familyVariables VALUES(?, ?, ?, ?, ?, ?, ?)", data);
+					enqueue(0, entry);
 				}
 				else GD::out.printError("Error: Either variableID is 0 or the number of columns is invalid.");
 			}
@@ -1376,19 +1311,23 @@ void DatabaseController::deleteEvent(std::string& name)
 					GD::out.printError("Error: Could not delete family variable. Variable ID is \"0\".");
 					return;
 				}
-				bufferedWrite("DELETE FROM familyVariables WHERE variableID=?", data);
+				std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM familyVariables WHERE variableID=?", data);
+				enqueue(0, entry);
 			}
 			else if(data.size() == 2 && data.at(1)->dataType == BaseLib::Database::DataColumn::DataType::Enum::INTEGER)
 			{
-				bufferedWrite("DELETE FROM familyVariables WHERE familyID=? AND variableIndex=?", data);
+				std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM familyVariables WHERE familyID=? AND variableIndex=?", data);
+				enqueue(0, entry);
 			}
 			else if(data.size() == 2 && data.at(1)->dataType == BaseLib::Database::DataColumn::DataType::Enum::TEXT)
 			{
-				bufferedWrite("DELETE FROM familyVariables WHERE familyID=? AND variableName=?", data);
+				std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM familyVariables WHERE familyID=? AND variableName=?", data);
+				enqueue(0, entry);
 			}
 			else if(data.size() == 3)
 			{
-				bufferedWrite("DELETE FROM familyVariables WHERE familyID=? AND variableIndex=? AND variableName=?", data);
+				std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM familyVariables WHERE familyID=? AND variableIndex=? AND variableName=?", data);
+				enqueue(0, entry);
 			}
 		}
 		catch(const std::exception& ex)
@@ -1437,8 +1376,10 @@ void DatabaseController::deleteDevice(uint64_t id)
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
-		bufferedWrite("DELETE FROM devices WHERE deviceID=?", data);
-		bufferedWrite("DELETE FROM deviceVariables WHERE deviceID=?", data);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM devices WHERE deviceID=?", data);
+		enqueue(0, entry);
+		entry = std::make_shared<QueueEntry>("DELETE FROM deviceVariables WHERE deviceID=?", data);
+		enqueue(0, entry);
 	}
 	catch(const std::exception& ex)
 	{
@@ -1497,13 +1438,22 @@ void DatabaseController::saveDeviceVariableAsynchronous(BaseLib::Database::DataR
 			switch(data.at(0)->dataType)
 			{
 			case BaseLib::Database::DataColumn::DataType::INTEGER:
-				bufferedWrite("UPDATE deviceVariables SET integerValue=? WHERE variableID=?", data);
+				{
+					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE deviceVariables SET integerValue=? WHERE variableID=?", data);
+					enqueue(0, entry);
+				}
 				break;
 			case BaseLib::Database::DataColumn::DataType::TEXT:
-				bufferedWrite("UPDATE deviceVariables SET stringValue=? WHERE variableID=?", data);
+				{
+					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE deviceVariables SET stringValue=? WHERE variableID=?", data);
+					enqueue(0, entry);
+				}
 				break;
 			case BaseLib::Database::DataColumn::DataType::BLOB:
-				bufferedWrite("UPDATE deviceVariables SET binaryValue=? WHERE variableID=?", data);
+				{
+					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE deviceVariables SET binaryValue=? WHERE variableID=?", data);
+					enqueue(0, entry);
+				}
 				break;
 			case BaseLib::Database::DataColumn::DataType::NODATA:
 				GD::out.printError("Error: Tried to store data of type NODATA in variable table.");
@@ -1517,11 +1467,13 @@ void DatabaseController::saveDeviceVariableAsynchronous(BaseLib::Database::DataR
 		{
 			if(data.size() == 5)
 			{
-				bufferedWrite("INSERT OR REPLACE INTO deviceVariables (variableID, deviceID, variableIndex, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM deviceVariables WHERE deviceID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(1)->intValue) + "), ?, ?, ?, ?, ?)", data);
+				std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO deviceVariables (variableID, deviceID, variableIndex, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM deviceVariables WHERE deviceID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(1)->intValue) + "), ?, ?, ?, ?, ?)", data);
+				enqueue(0, entry);
 			}
 			else if(data.size() == 6 && data.at(0)->intValue != 0)
 			{
-				bufferedWrite("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+				std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+				enqueue(0, entry);
 			}
 			else GD::out.printError("Error: Either variableID is 0 or the number of columns is invalid.");
 		}
@@ -1546,7 +1498,8 @@ void DatabaseController::deletePeers(int32_t deviceID)
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(deviceID)));
-		bufferedWrite("DELETE FROM peers WHERE parent=?", data);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM peers WHERE parent=?", data);
+		enqueue(0, entry);
 	}
 	catch(const std::exception& ex)
 	{
@@ -1617,10 +1570,14 @@ void DatabaseController::deletePeer(uint64_t id)
 	try
 	{
 		BaseLib::Database::DataRow data({std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id))});
-		bufferedWrite("DELETE FROM parameters WHERE peerID=?", data);
-		bufferedWrite("DELETE FROM peerVariables WHERE peerID=?", data);
-		bufferedWrite("DELETE FROM peers WHERE peerID=?", data);
-		bufferedWrite("DELETE FROM serviceMessages WHERE peerID=?", data);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM parameters WHERE peerID=?", data);
+		enqueue(0, entry);
+		entry = std::make_shared<QueueEntry>("DELETE FROM peerVariables WHERE peerID=?", data);
+		enqueue(0, entry);
+		entry = std::make_shared<QueueEntry>("DELETE FROM peers WHERE peerID=?", data);
+		enqueue(0, entry);
+		entry = std::make_shared<QueueEntry>("DELETE FROM serviceMessages WHERE peerID=?", data);
+		enqueue(0, entry);
 	}
 	catch(const std::exception& ex)
 	{
@@ -1676,18 +1633,21 @@ void DatabaseController::savePeerParameterAsynchronous(uint64_t peerID, BaseLib:
 				GD::out.printError("Error: Could not save peer parameter. Parameter ID is \"0\".");
 				return ;
 			}
-			bufferedWrite("UPDATE parameters SET value=? WHERE parameterID=?", data);
+			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE parameters SET value=? WHERE parameterID=?", data);
+			enqueue(0, entry);
 		}
 		else
 		{
 			if(data.size() == 7)
 			{
 				data.push_front(data.at(5));
-				bufferedWrite("INSERT OR REPLACE INTO parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName, value) VALUES((SELECT parameterID FROM parameters WHERE peerID=" + std::to_string(data.at(1)->intValue) + " AND parameterSetType=" + std::to_string(data.at(2)->intValue) + " AND peerChannel=" + std::to_string(data.at(3)->intValue) + " AND remotePeer=" + std::to_string(data.at(4)->intValue) + " AND remoteChannel=" + std::to_string(data.at(5)->intValue) + " AND parameterName=?), ?, ?, ?, ?, ?, ?, ?)", data);
+				std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName, value) VALUES((SELECT parameterID FROM parameters WHERE peerID=" + std::to_string(data.at(1)->intValue) + " AND parameterSetType=" + std::to_string(data.at(2)->intValue) + " AND peerChannel=" + std::to_string(data.at(3)->intValue) + " AND remotePeer=" + std::to_string(data.at(4)->intValue) + " AND remoteChannel=" + std::to_string(data.at(5)->intValue) + " AND parameterName=?), ?, ?, ?, ?, ?, ?, ?)", data);
+				enqueue(0, entry);
 			}
 			else if(data.size() == 8 && data.at(0)->intValue != 0)
 			{
-				bufferedWrite("REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
+				std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
+				enqueue(0, entry);
 			}
 			else GD::out.printError("Error: Either parameterID is 0 or the number of columns is invalid.");
 		}
@@ -1720,13 +1680,22 @@ void DatabaseController::savePeerVariableAsynchronous(uint64_t peerID, BaseLib::
 			switch(data.at(0)->dataType)
 			{
 			case BaseLib::Database::DataColumn::DataType::INTEGER:
-				bufferedWrite("UPDATE peerVariables SET integerValue=? WHERE variableID=?", data);
+				{
+					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE peerVariables SET integerValue=? WHERE variableID=?", data);
+					enqueue(0, entry);
+				}
 				break;
 			case BaseLib::Database::DataColumn::DataType::TEXT:
-				bufferedWrite("UPDATE peerVariables SET stringValue=? WHERE variableID=?", data);
+				{
+					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE peerVariables SET stringValue=? WHERE variableID=?", data);
+					enqueue(0, entry);
+				}
 				break;
 			case BaseLib::Database::DataColumn::DataType::BLOB:
-				bufferedWrite("UPDATE peerVariables SET binaryValue=? WHERE variableID=?", data);
+				{
+					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE peerVariables SET binaryValue=? WHERE variableID=?", data);
+					enqueue(0, entry);
+				}
 				break;
 			case BaseLib::Database::DataColumn::DataType::NODATA:
 				GD::out.printError("Error: Tried to store data of type NODATA in peer variable table.");
@@ -1740,11 +1709,13 @@ void DatabaseController::savePeerVariableAsynchronous(uint64_t peerID, BaseLib::
 		{
 			if(data.size() == 5)
 			{
-				bufferedWrite("INSERT OR REPLACE INTO peerVariables (variableID, peerID, variableIndex, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM peerVariables WHERE peerID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(1)->intValue) + "), ?, ?, ?, ?, ?)", data);
+				std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO peerVariables (variableID, peerID, variableIndex, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM peerVariables WHERE peerID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(1)->intValue) + "), ?, ?, ?, ?, ?)", data);
+				enqueue(0, entry);
 			}
 			else if(data.size() == 6 && data.at(0)->intValue != 0)
 			{
-				bufferedWrite("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+				std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+				enqueue(0, entry);
 			}
 			else GD::out.printError("Error: Either variableID is 0 or the number of columns is invalid.");
 		}
@@ -1822,19 +1793,23 @@ void DatabaseController::deletePeerParameter(uint64_t peerID, BaseLib::Database:
 				GD::out.printError("Error: Could not delete parameter. Parameter ID is \"0\".");
 				return;
 			}
-			bufferedWrite("DELETE FROM parameters WHERE peerID=? AND parameterID=?", data);
+			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM parameters WHERE peerID=? AND parameterID=?", data);
+			enqueue(0, entry);
 		}
 		else if(data.size() == 4)
 		{
-			bufferedWrite("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=?", data);
+			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=?", data);
+			enqueue(0, entry);
 		}
 		else if(data.size() == 5)
 		{
-			bufferedWrite("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND remotePeer=? AND remoteChannel=?", data);
+			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND remotePeer=? AND remoteChannel=?", data);
+			enqueue(0, entry);
 		}
 		else
 		{
-			bufferedWrite("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=? AND remotePeer=? AND remoteChannel=?", data);
+			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=? AND remotePeer=? AND remoteChannel=?", data);
+			enqueue(0, entry);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1858,18 +1833,24 @@ bool DatabaseController::setPeerID(uint64_t oldPeerID, uint64_t newPeerID)
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(newPeerID)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(oldPeerID)));
-		bufferedWrite("UPDATE peers SET peerID=? WHERE peerID=?", data);
-		bufferedWrite("UPDATE parameters SET peerID=? WHERE peerID=?", data);
-		bufferedWrite("UPDATE peerVariables SET peerID=? WHERE peerID=?", data);
-		bufferedWrite("UPDATE serviceMessages SET peerID=? WHERE peerID=?", data);
-		bufferedWrite("UPDATE events SET peerID=? WHERE peerID=?", data);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE peers SET peerID=? WHERE peerID=?", data);
+		enqueue(0, entry);
+		entry = std::make_shared<QueueEntry>("UPDATE parameters SET peerID=? WHERE peerID=?", data);
+		enqueue(0, entry);
+		entry = std::make_shared<QueueEntry>("UPDATE peerVariables SET peerID=? WHERE peerID=?", data);
+		enqueue(0, entry);
+		entry = std::make_shared<QueueEntry>("UPDATE serviceMessages SET peerID=? WHERE peerID=?", data);
+		enqueue(0, entry);
+		entry = std::make_shared<QueueEntry>("UPDATE events SET peerID=? WHERE peerID=?", data);
+		enqueue(0, entry);
 		_metadataMutex.lock();
 		_metadata.erase(oldPeerID);
 		_metadataMutex.unlock();
 		data.clear();
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(newPeerID))));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(oldPeerID))));
-		bufferedWrite("UPDATE metadata SET objectID=? WHERE objectID=?", data);
+		entry = std::make_shared<QueueEntry>("UPDATE metadata SET objectID=? WHERE objectID=?", data);
+		enqueue(0, entry);
 		return true;
 	}
 	catch(const std::exception& ex)
@@ -1927,13 +1908,22 @@ void DatabaseController::saveServiceMessageAsynchronous(uint64_t peerID, BaseLib
 			switch(data.at(0)->dataType)
 			{
 			case BaseLib::Database::DataColumn::DataType::INTEGER:
-				bufferedWrite("UPDATE serviceMessages SET integerValue=? WHERE variableID=?", data);
+				{
+					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE serviceMessages SET integerValue=? WHERE variableID=?", data);
+					enqueue(0, entry);
+				}
 				break;
 			case BaseLib::Database::DataColumn::DataType::TEXT:
-				bufferedWrite("UPDATE serviceMessages SET stringValue=? WHERE variableID=?", data);
+				{
+					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE serviceMessages SET stringValue=? WHERE variableID=?", data);
+					enqueue(0, entry);
+				}
 				break;
 			case BaseLib::Database::DataColumn::DataType::BLOB:
-				bufferedWrite("UPDATE serviceMessages SET binaryValue=? WHERE variableID=?", data);
+				{
+					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE serviceMessages SET binaryValue=? WHERE variableID=?", data);
+					enqueue(0, entry);
+				}
 				break;
 			case BaseLib::Database::DataColumn::DataType::NODATA:
 				GD::out.printError("Error: Tried to store data of type NODATA in service message table.");
@@ -1950,15 +1940,18 @@ void DatabaseController::saveServiceMessageAsynchronous(uint64_t peerID, BaseLib
 				GD::out.printError("Error: Could not save service message. Variable ID is \"0\".");
 				return;
 			}
-			bufferedWrite("UPDATE serviceMessages SET integerValue=?, stringValue=?, binaryValue=? WHERE variableID=?", data);
+			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE serviceMessages SET integerValue=?, stringValue=?, binaryValue=? WHERE variableID=?", data);
+			enqueue(0, entry);
 		}
 		else if(data.size() == 5)
 		{
-			bufferedWrite("INSERT OR REPLACE INTO serviceMessages (variableID, peerID, variableIndex, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM serviceMessages WHERE peerID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(1)->intValue) + "), ?, ?, ?, ?, ?)", data);
+			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO serviceMessages (variableID, peerID, variableIndex, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM serviceMessages WHERE peerID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(1)->intValue) + "), ?, ?, ?, ?, ?)", data);
+			enqueue(0, entry);
 		}
 		else  if(data.size() == 6 && data.at(0)->intValue != 0)
 		{
-			bufferedWrite("REPLACE INTO serviceMessages VALUES(?, ?, ?, ?, ?, ?)", data);
+			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("REPLACE INTO serviceMessages VALUES(?, ?, ?, ?, ?, ?)", data);
+			enqueue(0, entry);
 		}
 		else GD::out.printError("Error: Either variableID is 0 or the number of columns is invalid.");
 	}
@@ -2037,13 +2030,22 @@ void DatabaseController::saveLicenseVariable(int32_t moduleId, BaseLib::Database
 			switch(data.at(0)->dataType)
 			{
 			case BaseLib::Database::DataColumn::DataType::INTEGER:
-				bufferedWrite("UPDATE licenseVariables SET integerValue=? WHERE variableID=?", data);
+				{
+					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE licenseVariables SET integerValue=? WHERE variableID=?", data);
+					enqueue(0, entry);
+				}
 				break;
 			case BaseLib::Database::DataColumn::DataType::TEXT:
-				bufferedWrite("UPDATE licenseVariables SET stringValue=? WHERE variableID=?", data);
+				{
+					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE licenseVariables SET stringValue=? WHERE variableID=?", data);
+					enqueue(0, entry);
+				}
 				break;
 			case BaseLib::Database::DataColumn::DataType::BLOB:
-				bufferedWrite("UPDATE licenseVariables SET binaryValue=? WHERE variableID=?", data);
+				{
+					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE licenseVariables SET binaryValue=? WHERE variableID=?", data);
+					enqueue(0, entry);
+				}
 				break;
 			case BaseLib::Database::DataColumn::DataType::NODATA:
 				GD::out.printError("Error: Tried to store data of type NODATA in license module variable table.");
@@ -2057,11 +2059,13 @@ void DatabaseController::saveLicenseVariable(int32_t moduleId, BaseLib::Database
 		{
 			if(data.size() == 5)
 			{
-				bufferedWrite("INSERT OR REPLACE INTO licenseVariables (variableID, moduleID, variableIndex, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM licenseVariables WHERE moduleID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(1)->intValue) + "), ?, ?, ?, ?, ?)", data);
+				std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO licenseVariables (variableID, moduleID, variableIndex, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM licenseVariables WHERE moduleID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(1)->intValue) + "), ?, ?, ?, ?, ?)", data);
+				enqueue(0, entry);
 			}
 			else if(data.size() == 6 && data.at(0)->intValue != 0)
 			{
-				bufferedWrite("REPLACE INTO licenseVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+				std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("REPLACE INTO licenseVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+				enqueue(0, entry);
 			}
 			else GD::out.printError("Error: Either variableID is 0 or the number of columns is invalid.");
 		}
