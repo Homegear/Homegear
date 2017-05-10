@@ -101,6 +101,7 @@ void Server::registerMethods()
 		_server->registerMethod("getSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetSystemVariable()));
 		_server->registerMethod("getUpdateStatus", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetUpdateStatus()));
 		_server->registerMethod("getValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetValue()));
+		_server->registerMethod("getVariableDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetVariableDescription()));
 		_server->registerMethod("getVersion", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetVersion()));
 		_server->registerMethod("init", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCInit()));
 		_server->registerMethod("listBidcosInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCListBidcosInterfaces()));
