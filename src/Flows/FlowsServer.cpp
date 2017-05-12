@@ -403,17 +403,105 @@ void FlowsServer::startFlows()
 {
 	try
 	{
-		/*std::vector<std::string> flowFiles = GD::bl->io.getFiles(GD::bl->settings.flowsPath(), true);
-		for(std::vector<std::string>::iterator i = flowFiles.begin(); i != flowFiles.end(); ++i)
-		{
-			PFlowInfoServer flowInfo(new FlowInfoServer());
+		std::string flowsfile = GD::bl->settings.flowsPath() + "data/flows.json";
+		if(!GD::bl->io.fileExists(flowsfile)) return;
+		std::string rawFlows = GD::bl->io.getFileContent(flowsfile);
+		if(BaseLib::HelperFunctions::trim(rawFlows).empty()) return;
+
+		//{{{ Filter all nodes and set "FlowListElement::next"
+			BaseLib::PVariable flows = _jsonDecoder->decode(rawFlows);
+			std::vector<std::unordered_map<std::string, BaseLib::PVariable>> nodeGroups;
+			for(auto& element : *flows->arrayValue)
 			{
-				std::lock_guard<std::mutex> flowIdGuard(_currentFlowIdMutex);
-				while(flowInfo->id == 0) flowInfo->id = _currentFlowId++;
+				auto idIterator = element->structValue->find("id");
+				if(idIterator == element->structValue->end())
+				{
+					GD::out.printError("Error: Flow element has no id.");
+					continue;
+				}
+
+				auto wiresIterator = element->structValue->find("wires");
+				if(wiresIterator == element->structValue->end()) continue; //Element is no node
+
+				bool processed = false;
+				bool next = false;
+				for(auto& nodeGroup : nodeGroups)
+				{
+					auto nodeGroupIterator = nodeGroup.find(idIterator->second->stringValue);
+					if(nodeGroupIterator != nodeGroup.end())
+					{
+						if(nodeGroupIterator->second)
+						{
+							GD::out.printError("Error: Flow element is defined twice: " + idIterator->second->stringValue + ". One of the flows might not work correctly.");
+							next = true;
+							break;
+						}
+						processed = true;
+					}
+
+					if(!processed)
+					{
+						for(BaseLib::PVariable& output : *wiresIterator->second->arrayValue)
+						{
+							for(BaseLib::PVariable& wire : *output->arrayValue)
+							{
+								if(nodeGroup.find(wire->stringValue) != nodeGroup.end())
+								{
+									processed = true;
+									break;
+								}
+							}
+							if(processed) break;
+						}
+					}
+
+					if(processed)
+					{
+						if(nodeGroupIterator != nodeGroup.end()) nodeGroupIterator->second = element;
+						else nodeGroup.emplace(idIterator->second->stringValue, element);
+
+						for(BaseLib::PVariable& output : *wiresIterator->second->arrayValue)
+						{
+							for(BaseLib::PVariable& wire : *output->arrayValue)
+							{
+								if(nodeGroup.find(wire->stringValue) == nodeGroup.end()) nodeGroup.emplace(wire->stringValue, BaseLib::PVariable());
+							}
+						}
+					}
+				}
+				if(next) continue;
+				if(!processed)
+				{
+					if(nodeGroups.size() + 1 > nodeGroups.capacity()) nodeGroups.reserve(nodeGroups.capacity() + 100);
+
+					std::unordered_map<std::string, BaseLib::PVariable> nodeGroup;
+					nodeGroup.emplace(idIterator->second->stringValue, element);
+
+					for(BaseLib::PVariable& output : *wiresIterator->second->arrayValue)
+					{
+						for(BaseLib::PVariable& wire : *output->arrayValue)
+						{
+							nodeGroup.emplace(wire->stringValue, BaseLib::PVariable());
+						}
+					}
+
+					nodeGroups.push_back(nodeGroup);
+				}
 			}
-			flowInfo->fullPath = GD::bl->settings.flowsPath() + *i;
+		//}}}
+
+		for(auto& nodeGroup : nodeGroups)
+		{
+			BaseLib::PVariable flow = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+			flow->arrayValue->reserve(nodeGroup.size());
+			for(auto& node : nodeGroup)
+			{
+				flow->arrayValue->push_back(node.second);
+			}
+			PFlowInfoServer flowInfo = std::make_shared<FlowInfoServer>();
+			flowInfo->flow = flow;
 			executeFlow(flowInfo);
-		}*/
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -1346,14 +1434,14 @@ void FlowsServer::executeFlow(PFlowInfoServer& flowInfo)
 			while(flowInfo->id == 0) flowInfo->id = _currentFlowId++;
 		}
 
-		_out.printInfo("Info: Starting flow \"" + flowInfo->fullPath + "\" with id " + std::to_string(flowInfo->id) + ".");
+		_out.printInfo("Info: Starting flow with id " + std::to_string(flowInfo->id) + ".");
 		process->registerFlow(flowInfo->id, flowInfo);
 
 		PFlowsClientData clientData = process->getClientData();
 
 		BaseLib::PArray parameters(new BaseLib::Array{
-				BaseLib::PVariable(new BaseLib::Variable(flowInfo->id)),
-				BaseLib::PVariable(new BaseLib::Variable(flowInfo->fullPath))});
+				BaseLib::PVariable(new BaseLib::Variable(flowInfo->id))
+				});
 
 		BaseLib::PVariable result = sendRequest(clientData, "executeFlow", parameters);
 		if(result->errorStruct)

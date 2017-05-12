@@ -31,13 +31,10 @@
 #ifndef FLOWINFOSERVER_H_
 #define FLOWINFOSERVER_H_
 
-#include <string>
+#include <homegear-base/BaseLib.h>
 
 namespace Flows
 {
-
-class FlowInfoServer;
-typedef std::shared_ptr<FlowInfoServer> PFlowInfoServer;
 
 class FlowInfoServer
 {
@@ -45,7 +42,7 @@ public:
 	int32_t id = 0;
 
 	// {{{ Input parameters
-		std::string fullPath;
+		BaseLib::PVariable flow;
 	// }}}
 
 	// {{{ Output parameters
@@ -58,6 +55,8 @@ public:
 	virtual ~FlowInfoServer() {}
 protected:
 };
+
+typedef std::shared_ptr<FlowInfoServer> PFlowInfoServer;
 
 }
 #endif
