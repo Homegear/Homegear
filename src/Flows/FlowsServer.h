@@ -34,6 +34,7 @@
 #include "FlowsProcess.h"
 #include <homegear-base/BaseLib.h>
 #include "FlowInfoServer.h"
+#include "NodeManager.h"
 
 namespace Flows
 {
@@ -108,6 +109,9 @@ private:
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
 	std::mutex _flowsFileMutex;
+	std::string _frontendNodeList;
+	std::string _frontendCode;
+	std::vector<NodeManager::PNodeInfo> _nodeInfo;
 	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
 	std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
 
@@ -123,6 +127,7 @@ private:
 	void sendResponse(PFlowsClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 	void closeClientConnection(PFlowsClientData client);
 	PFlowsProcess getFreeProcess();
+	void getNodeInfo();
 	void startFlows();
 	void executeFlow(PFlowInfoServer& flowInfo);
 

@@ -214,41 +214,95 @@ std::shared_ptr<BaseLib::Flows::INode> NodeManager::getNode(std::string name)
 	return std::shared_ptr<BaseLib::Flows::INode>();
 }
 
-std::vector<std::shared_ptr<NodeManager::NodeInfo>> NodeManager::getNodeInfo()
+std::vector<NodeManager::PNodeInfo> NodeManager::getNodeInfo()
 {
-	std::vector<std::shared_ptr<NodeManager::NodeInfo>> nodeInfoVector;
+	std::vector<NodeManager::PNodeInfo> nodeInfoVector;
 	try
 	{
-		std::vector<std::string> files = GD::bl->io.getFiles(GD::bl->settings.flowsPath() + "nodes/");
-		if (files.empty()) return nodeInfoVector;
-		for(std::vector<std::string>::iterator i = files.begin(); i != files.end(); ++i)
+		std::unique_ptr<BaseLib::Rpc::JsonDecoder> jsonDecoder(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
+		std::vector<std::string> directories = GD::bl->io.getDirectories(GD::bl->settings.flowsPath() + "nodes/");
+		for(auto& directory : directories)
 		{
-			if(i->size() < 9) continue; //mod_?*.so
-			std::string prefix = i->substr(0, 4);
-			std::string extension = i->substr(i->size() - 3, 3);
-			if (extension != ".so" || prefix != "node_") continue;
-			std::shared_ptr<NodeManager::NodeInfo> nodeInfo(new NodeManager::NodeInfo());
+			std::vector<std::string> files = GD::bl->io.getFiles(GD::bl->settings.flowsPath() + "nodes/" + directory);
+			if (files.empty()) continue;
+			for(auto& file : files)
 			{
-				std::lock_guard<std::mutex> nodeLoadersGuard(_nodeLoadersMutex);
-				std::map<std::string, std::unique_ptr<NodeLoader>>::const_iterator nodeIterator = _nodeLoaders.find(*i);
-				if (nodeIterator != _nodeLoaders.end() && nodeIterator->second)
+				std::string path = GD::bl->settings.flowsPath() + "nodes/" + directory + "/" + file;
+				try
 				{
-					nodeInfo->baselibVersion = nodeIterator->second->getVersion();
-					nodeInfo->loaded = true;
-					nodeInfo->filename = nodeIterator->first;
-					nodeInfo->nodeName = nodeIterator->second->getNodeName();
+					if(file.size() < 6) continue; //?*.hni
+					std::string extension = file.substr(file.size() - 4, 4);
+					if (extension != ".hni") continue;
+					std::string content = GD::bl->io.getFileContent(path);
+					BaseLib::HelperFunctions::trim(content);
+					if(content.empty() || content.compare(0, 31, "<script type=\"text/x-homegear\">") != 0)
+					{
+						GD::out.printError("Error: Could not parse file " + path + ". Node header is missing.");
+						continue;
+					}
+					auto endPos = content.find("</script>");
+					if(endPos == std::string::npos)
+					{
+						GD::out.printError("Error: Could not parse file " + path + ". Node header is malformed.");
+						continue;
+					}
+
+					PNodeInfo nodeInfo = std::make_shared<NodeManager::NodeInfo>();
+					nodeInfo->filename = file;
+					nodeInfo->fullPath = path;
+
+					std::string headerJson = content.substr(32, endPos - 32);
+					BaseLib::PVariable header = jsonDecoder->decode(headerJson);
+					auto headerIterator = header->structValue->find("name");
+					if(headerIterator == header->structValue->end() || headerIterator->second->stringValue.empty())
+					{
+						GD::out.printError("Error: Could not parse file " + path + ". \"name\" is not defined in header.");
+						continue;
+					}
+					nodeInfo->nodeName = headerIterator->second->stringValue;
+
+					headerIterator = header->structValue->find("readableName");
+					if(headerIterator == header->structValue->end() || headerIterator->second->stringValue.empty())
+					{
+						GD::out.printError("Error: Could not parse file " + path + ". \"readableName\" is not defined in header.");
+						continue;
+					}
+					nodeInfo->readableName = headerIterator->second->stringValue;
+
+					headerIterator = header->structValue->find("version");
+					if(headerIterator == header->structValue->end() || headerIterator->second->stringValue.empty())
+					{
+						GD::out.printError("Error: Could not parse file " + path + ". \"version\" is not defined in header.");
+						continue;
+					}
+					nodeInfo->version = headerIterator->second->stringValue;
+
+					headerIterator = header->structValue->find("maxThreadCount");
+					if(headerIterator == header->structValue->end())
+					{
+						GD::out.printError("Error: Could not parse file " + path + ". \"maxThreadCount\" is not defined in header.");
+						continue;
+					}
+					nodeInfo->maxThreadCount = headerIterator->second->integerValue;
+
+					nodeInfo->nodeId = directory + file;
+					content = content.substr(endPos + 9);
+					nodeInfo->frontendCode.swap(content);
 					nodeInfoVector.push_back(nodeInfo);
-					continue;
+				}
+				catch(const std::exception& ex)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, "Error opening file " + path + ": " + ex.what());
+				}
+				catch(BaseLib::Exception& ex)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, "Error opening file " + path + ": " + ex.what());
+				}
+				catch(...)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, "Error opening file " + path);
 				}
 			}
-			std::string path(GD::bl->settings.flowsPath() + "nodes/" + *i);
-			std::unique_ptr<NodeLoader> nodeLoader(new NodeLoader(*i, path));
-			nodeInfo->baselibVersion = nodeLoader->getVersion();
-			nodeInfo->loaded = false;
-			nodeInfo->filename = *i;
-			nodeInfo->nodeName = nodeLoader->getNodeName();
-			nodeInfoVector.push_back(nodeInfo);
-			nodeLoader->dispose();
 		}
 	}
 	catch(const std::exception& ex)

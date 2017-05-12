@@ -69,10 +69,16 @@ public:
 	struct NodeInfo
 	{
 		std::string filename;
-		std::string baselibVersion;
+		std::string fullPath;
+		std::string nodeId;
 		std::string nodeName;
-		bool loaded;
+		std::string readableName;
+		std::string version;
+		int32_t maxThreadCount;
+		std::string frontendListEntry;
+		std::string frontendCode;
 	};
+	typedef std::shared_ptr<NodeInfo> PNodeInfo;
 
 	NodeManager();
 	virtual ~NodeManager();
@@ -80,10 +86,10 @@ public:
 	void dispose();
 
 	/**
-	 * Returns a vector of type NodeInfo with information about all loaded and not loaded nodes.
+	 * Returns a vector of type NodeInfo with information about all nodes.
 	 * @return Returns a vector of type NodeInfo.
 	 */
-	std::vector<std::shared_ptr<NodeInfo>> getNodeInfo();
+	static std::vector<PNodeInfo> getNodeInfo();
 
 	/**
 	 * Loads a node. The node needs to be in Homegear's node path.

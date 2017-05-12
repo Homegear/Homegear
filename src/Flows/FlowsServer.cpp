@@ -201,6 +201,44 @@ void FlowsServer::collectGarbage()
     }
 }
 
+void FlowsServer::getNodeInfo()
+{
+	try
+	{
+		_frontendNodeList.clear();
+		_frontendCode.clear();
+		BaseLib::PVariable frontendNodeList = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+		std::vector<NodeManager::PNodeInfo> nodeInfo = NodeManager::getNodeInfo();
+		for(auto& infoEntry : nodeInfo)
+		{
+			_frontendCode += infoEntry->frontendCode;
+
+			BaseLib::PVariable nodeListEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(infoEntry->nodeId));
+			nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(infoEntry->readableName));
+			nodeListEntry->structValue->emplace("types", std::make_shared<BaseLib::Variable>(BaseLib::PArray(new BaseLib::Array{ std::make_shared<BaseLib::Variable>(infoEntry->nodeName) })));
+			nodeListEntry->structValue->emplace("enabled", std::make_shared<BaseLib::Variable>(true));
+			nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(false));
+			nodeListEntry->structValue->emplace("module", std::make_shared<BaseLib::Variable>(infoEntry->nodeName));
+			nodeListEntry->structValue->emplace("version", std::make_shared<BaseLib::Variable>(infoEntry->version));
+			frontendNodeList->arrayValue->push_back(nodeListEntry);
+		}
+		_jsonEncoder->encode(frontendNodeList, _frontendNodeList);
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 bool FlowsServer::start()
 {
 	try
@@ -211,6 +249,7 @@ bool FlowsServer::start()
 		_stopServer = false;
 		if(!getFileDescriptor(true)) return false;
 		_webroot = GD::bl->settings.flowsPath() + "www/";
+		getNodeInfo();
 		startQueue(0, GD::bl->settings.flowsThreadCount(), 0, SCHED_OTHER);
 		startQueue(1, GD::bl->settings.flowsThreadCount(), 0, SCHED_OTHER);
 		GD::bl->threadManager.start(_mainThread, true, &FlowsServer::mainThread, this);
@@ -524,26 +563,51 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 		std::string contentString;
 		if(path.compare(0, 14, "flows/locales/") == 0)
 		{
-			std::string localePath = _webroot + "static/locales/";
-			std::string language = "en-US";
-			auto fieldsIterator = http.getHeader().fields.find("accept-language");
-			if(fieldsIterator != http.getHeader().fields.end())
+			std::string ending = path.substr(path.size() - 4, 4);
+			if(ending == ".hni")
 			{
-				std::pair<std::string, std::string> languagePair = BaseLib::HelperFunctions::splitFirst(fieldsIterator->second, ';');
-				std::vector<std::string> languages = BaseLib::HelperFunctions::splitAll(languagePair.first, ',');
-				for(auto& l : languages)
+				auto pathPair = BaseLib::HelperFunctions::splitFirst(path.substr(14), '/');
+				std::string localePath = _bl->settings.flowsPath() + "nodes/" + pathPair.first + "/locales/";
+				std::string language = "en-US";
+				auto fieldsIterator = http.getHeader().fields.find("accept-language");
+				if(fieldsIterator != http.getHeader().fields.end())
 				{
-					if(GD::bl->io.directoryExists(localePath + l))
+					std::pair<std::string, std::string> languagePair = BaseLib::HelperFunctions::splitFirst(fieldsIterator->second, ';');
+					std::vector<std::string> languages = BaseLib::HelperFunctions::splitAll(languagePair.first, ',');
+					for(auto& l : languages)
 					{
-						language = l;
-						break;
+						if(GD::bl->io.directoryExists(localePath + l))
+						{
+							language = l;
+							break;
+						}
 					}
 				}
+				path = localePath + language + '/' + pathPair.second.substr(0, pathPair.second.size() - 4);
 			}
-			path = path.substr(13);
-			path = localePath + language + path;
+			else
+			{
+				std::string localePath = _webroot + "static/locales/";
+				std::string language = "en-US";
+				auto fieldsIterator = http.getHeader().fields.find("accept-language");
+				if(fieldsIterator != http.getHeader().fields.end())
+				{
+					std::pair<std::string, std::string> languagePair = BaseLib::HelperFunctions::splitFirst(fieldsIterator->second, ';');
+					std::vector<std::string> languages = BaseLib::HelperFunctions::splitAll(languagePair.first, ',');
+					for(auto& l : languages)
+					{
+						if(GD::bl->io.directoryExists(localePath + l))
+						{
+							language = l;
+							break;
+						}
+					}
+				}
+				path = path.substr(13);
+				path = localePath + language + path;
+			}
 			std::cerr << "Requested: " << path << std::endl;
-			if(http.getHeader().method == "GET" && GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
+			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
 		else if (path == "flows/flows")
@@ -565,7 +629,7 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 		{
 			path = _webroot + "static/" + path.substr(6);
 			std::cerr << "Requested: " << path << std::endl;
-			if(http.getHeader().method == "GET" && GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
+			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
 		else if(path == "flows/nodes")
@@ -574,17 +638,20 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 			std::cerr << "Requested: " << path << std::endl;
 			if(http.getHeader().fields["accept"] == "text/html")
 			{
-				path += "2";
 				responseEncoding = "text/html";
+				contentString = _frontendCode;
 			}
-			else responseEncoding = "application/json";
-			if(http.getHeader().method == "GET" && GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
+			else
+			{
+				responseEncoding = "application/json";
+				contentString = _frontendNodeList;
+			}
 		}
 		else if(path.compare(0, 6, "flows/") == 0 && path != "flows/index.php")
 		{
 			path = _webroot + path.substr(6);
 			std::cerr << "Requested: " << path << std::endl;
-			if(http.getHeader().method == "GET" && GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
+			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 
 			std::string ending = "";
 			int32_t pos = path.find_last_of('.');
@@ -1238,7 +1305,16 @@ PFlowsProcess FlowsServer::getFreeProcess()
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			for(std::map<pid_t, PFlowsProcess>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
-				if(i->second->flowCount() < GD::bl->threadManager.getMaxThreadCount() / 4 && (GD::bl->settings.maxFlowsPerProcess() == -1 || i->second->flowCount() < (unsigned)GD::bl->settings.maxFlowsPerProcess()))
+				if(GD::bl->settings.maxNodeThreadsPerProcess() == -1)
+				{
+					//Todo: Add thread count of new flow to condition
+					if(i->second->nodeThreadCount() < GD::bl->threadManager.getMaxThreadCount())
+					{
+						return i->second;
+					}
+				}
+				//Todo: Add thread count of new flow to condition
+				else if(i->second->nodeThreadCount() < (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
 				{
 					return i->second;
 				}

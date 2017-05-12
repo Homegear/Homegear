@@ -66,6 +66,27 @@ uint32_t FlowsProcess::flowCount()
     return (uint32_t)-1;
 }
 
+uint32_t FlowsProcess::nodeThreadCount()
+{
+	try
+	{
+		//Todo: Define from node header
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return (uint32_t)-1;
+}
+
 void FlowsProcess::invokeFlowFinished(int32_t exitCode)
 {
 	try
