@@ -52,6 +52,7 @@ private:
 	std::map<int32_t, PFlowInfoServer> _flows;
 	std::map<int32_t, PFlowFinishedInfo> _flowFinishedInfo;
 	PFlowsClientData _clientData;
+	std::atomic_uint _nodeThreadCount;
 public:
 	FlowsProcess();
 	virtual ~FlowsProcess();

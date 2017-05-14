@@ -207,6 +207,7 @@ void FlowsServer::getNodeInfo()
 	{
 		_frontendNodeList.clear();
 		_frontendCode.clear();
+		_maxThreadCounts.clear();
 		BaseLib::PVariable frontendNodeList = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 		std::vector<NodeManager::PNodeInfo> nodeInfo = NodeManager::getNodeInfo();
 		for(auto& infoEntry : nodeInfo)
@@ -222,6 +223,7 @@ void FlowsServer::getNodeInfo()
 			nodeListEntry->structValue->emplace("module", std::make_shared<BaseLib::Variable>(infoEntry->nodeName));
 			nodeListEntry->structValue->emplace("version", std::make_shared<BaseLib::Variable>(infoEntry->version));
 			frontendNodeList->arrayValue->push_back(nodeListEntry);
+			_maxThreadCounts[infoEntry->nodeName] = infoEntry->maxThreadCount;
 		}
 		_jsonEncoder->encode(frontendNodeList, _frontendNodeList);
 	}
@@ -533,11 +535,20 @@ void FlowsServer::startFlows()
 		{
 			BaseLib::PVariable flow = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 			flow->arrayValue->reserve(nodeGroup.size());
+			uint32_t maxThreadCount = 0;
 			for(auto& node : nodeGroup)
 			{
 				flow->arrayValue->push_back(node.second);
+				auto threadCountIterator = _maxThreadCounts.find(node.second->stringValue);
+				if(threadCountIterator == _maxThreadCounts.end())
+				{
+					GD::out.printError("Error: Could not determine maximum thread count of node \"" + node.second->stringValue + "\". Node is unknown.");
+					continue;
+				}
+				maxThreadCount += threadCountIterator->second;
 			}
 			PFlowInfoServer flowInfo = std::make_shared<FlowInfoServer>();
+			flowInfo->maxThreadCount = maxThreadCount;
 			flowInfo->flow = flow;
 			executeFlow(flowInfo);
 		}
@@ -1296,25 +1307,22 @@ void FlowsServer::mainThread()
     }
 }
 
-PFlowsProcess FlowsServer::getFreeProcess()
+PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
 {
 	try
 	{
+		if(GD::bl->settings.maxNodeThreadsPerProcess() != -1 && maxThreadCount > (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
+		{
+			GD::out.printError("Error: Could not get flow process, because maximum number of threads in flow is greater than the number of threads allowed per flow process.");
+			return PFlowsProcess();
+		}
+
 		std::lock_guard<std::mutex> processGuard(_newProcessMutex);
 		{
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			for(std::map<pid_t, PFlowsProcess>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
-				if(GD::bl->settings.maxNodeThreadsPerProcess() == -1)
-				{
-					//Todo: Add thread count of new flow to condition
-					if(i->second->nodeThreadCount() < GD::bl->threadManager.getMaxThreadCount())
-					{
-						return i->second;
-					}
-				}
-				//Todo: Add thread count of new flow to condition
-				else if(i->second->nodeThreadCount() < (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
+				if(GD::bl->settings.maxNodeThreadsPerProcess() == -1 || i->second->nodeThreadCount() + maxThreadCount <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
 				{
 					return i->second;
 				}
@@ -1497,7 +1505,7 @@ void FlowsServer::executeFlow(PFlowInfoServer& flowInfo)
 	try
 	{
 		if(_shuttingDown) return;
-		PFlowsProcess process = getFreeProcess();
+		PFlowsProcess process = getFreeProcess(flowInfo->maxThreadCount);
 		if(!process)
 		{
 			_out.printError("Error: Could not get free process. Not executing flow.");

@@ -109,6 +109,7 @@ private:
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
 	std::mutex _flowsFileMutex;
+	std::map<std::string, uint32_t> _maxThreadCounts;
 	std::string _frontendNodeList;
 	std::string _frontendCode;
 	std::vector<NodeManager::PNodeInfo> _nodeInfo;
@@ -126,7 +127,7 @@ private:
 	BaseLib::PVariable sendRequest(PFlowsClientData& clientData, std::string methodName, BaseLib::PArray& parameters);
 	void sendResponse(PFlowsClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 	void closeClientConnection(PFlowsClientData client);
-	PFlowsProcess getFreeProcess();
+	PFlowsProcess getFreeProcess(uint32_t maxThreadCount);
 	void getNodeInfo();
 	void startFlows();
 	void executeFlow(PFlowInfoServer& flowInfo);
