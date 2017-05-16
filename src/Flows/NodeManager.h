@@ -130,7 +130,7 @@ private:
 
 	std::mutex _nodesIdNodeMapMutex;
 	typedef std::string NodeId; //Node ID from Node-BLUE
-	std::unordered_map<NodeId, std::shared_ptr<BaseLib::Flows::INode>> _nodesIdNodeMap;
+	std::unordered_map<NodeId, BaseLib::Flows::PINode> _nodesIdNodeMap;
 
 	std::mutex _nodesNameIdMapMutex;
 	typedef std::string NodeName; //Node name from Homegear

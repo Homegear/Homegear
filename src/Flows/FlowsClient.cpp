@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -48,7 +48,7 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 1, 1000)
 
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("reload", std::bind(&FlowsClient::reload, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("shutdown", std::bind(&FlowsClient::shutdown, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("executeFlow", std::bind(&FlowsClient::executeFlow, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("startFlow", std::bind(&FlowsClient::startFlow, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("flowCount", std::bind(&FlowsClient::flowCount, this, std::placeholders::_1)));
 }
 
@@ -62,9 +62,6 @@ void FlowsClient::dispose()
 {
 	try
 	{
-		if(_disposing) return;
-		std::lock_guard<std::mutex> disposeGuard(_disposeMutex);
-
 		BaseLib::PArray eventData(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(0)), BaseLib::PVariable(new BaseLib::Variable(-1)), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(std::string("DISPOSING")))}))), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(true))}))) });
 
 		GD::bl->shuttingDown = true;
@@ -229,6 +226,7 @@ void FlowsClient::registerClient()
 		{
 			_out.printCritical("Critical: Could not register client.");
 			dispose();
+			return;
 		}
 		_out.printInfo("Info: Client registered to server.");
 	}
@@ -250,7 +248,6 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 {
 	try
 	{
-		if(_disposing) return;
 		std::shared_ptr<QueueEntry> queueEntry;
 		queueEntry = std::dynamic_pointer_cast<QueueEntry>(entry);
 		if(!queueEntry) return;
@@ -534,8 +531,6 @@ BaseLib::PVariable FlowsClient::reload(BaseLib::PArray& parameters)
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
-
 		if(!std::freopen((GD::bl->settings.logfilePath() + "homegear-flows.log").c_str(), "a", stdout))
 		{
 			GD::out.printError("Error: Could not redirect output to new log file.");
@@ -566,8 +561,6 @@ BaseLib::PVariable FlowsClient::shutdown(BaseLib::PArray& parameters)
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
-
 		if(_maintenanceThread.joinable()) _maintenanceThread.join();
 		_maintenanceThread = std::thread(&FlowsClient::dispose, this);
 
@@ -588,13 +581,56 @@ BaseLib::PVariable FlowsClient::shutdown(BaseLib::PArray& parameters)
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable FlowsClient::executeFlow(BaseLib::PArray& parameters)
+BaseLib::PVariable FlowsClient::startFlow(BaseLib::PArray& parameters)
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
+		if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
-		_out.printInfo("Info: " + parameters->at(0)->print(false, false) + "\n" + parameters->at(1)->print(false, false));
+		PFlowInfoClient flow = std::make_shared<FlowInfoClient>();
+		flow->id = parameters->at(0)->integerValue;
+
+		_out.printInfo("Info: Starting flow with ID " + std::to_string(flow->id) + ".");
+
+		for(auto& element : *parameters->at(1)->arrayValue)
+		{
+			PNodeInfoClient node = std::make_shared<NodeInfoClient>();
+
+			auto wiresIterator = element->structValue->find("wires");
+			if(wiresIterator == element->structValue->end()) continue; //Element is no node
+
+			auto idIterator = element->structValue->find("id");
+			if(idIterator == element->structValue->end())
+			{
+				GD::out.printError("Error: Flow element has no id.");
+				continue;
+			}
+
+			auto typeIterator = element->structValue->find("type");
+			if(typeIterator == element->structValue->end())
+			{
+				GD::out.printError("Error: Flow element has no type.");
+				continue;
+			}
+
+			node->id = idIterator->second->stringValue;
+			node->type = typeIterator->second->stringValue;
+
+			if(_bl->debugLevel >= 5) _out.printDebug("Starting node " + node->id + " of type " + node->type + ".");
+
+			//Load node with NodeManager
+			//Start node
+			//Stop and dispose node in destructor
+		}
+
+		if(flow->nodes.empty())
+		{
+			_out.printWarning("Warning: Not starting flow with ID " + std::to_string(flow->id) + ", because it has no nodes.");
+			return BaseLib::Variable::createError(-100, "Flow has no nodes.");
+		}
+
+		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+		_flows.emplace(flow->id, flow);
 
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
@@ -617,8 +653,8 @@ BaseLib::PVariable FlowsClient::flowCount(BaseLib::PArray& parameters)
 {
 	try
 	{
-		if(_disposing) return BaseLib::PVariable(new BaseLib::Variable(0));
-
+		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+		return std::make_shared<BaseLib::Variable>(_flows.size());
 	}
     catch(const std::exception& ex)
     {

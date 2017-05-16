@@ -550,7 +550,7 @@ void FlowsServer::startFlows()
 			PFlowInfoServer flowInfo = std::make_shared<FlowInfoServer>();
 			flowInfo->maxThreadCount = maxThreadCount;
 			flowInfo->flow = flow;
-			executeFlow(flowInfo);
+			startFlow(flowInfo);
 		}
 	}
 	catch(const std::exception& ex)
@@ -617,7 +617,7 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 				path = path.substr(13);
 				path = localePath + language + path;
 			}
-			std::cerr << "Requested: " << path << std::endl;
+			std::cerr << "Requested (1): " << path << std::endl;
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
@@ -639,14 +639,14 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 		else if (path == "flows/settings" || path == "flows/library/flows" || path == "flows/debug/view/debug-utils.js")
 		{
 			path = _webroot + "static/" + path.substr(6);
-			std::cerr << "Requested: " << path << std::endl;
+			std::cerr << "Requested (3): " << path << std::endl;
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
 		else if(path == "flows/nodes")
 		{
 			path = _webroot + "static/" + path.substr(6);
-			std::cerr << "Requested: " << path << std::endl;
+			std::cerr << "Requested (4): " << path << std::endl;
 			if(http.getHeader().fields["accept"] == "text/html")
 			{
 				responseEncoding = "text/html";
@@ -661,7 +661,7 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 		else if(path.compare(0, 6, "flows/") == 0 && path != "flows/index.php")
 		{
 			path = _webroot + path.substr(6);
-			std::cerr << "Requested: " << path << std::endl;
+			std::cerr << "Requested (5): " << path << std::endl;
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 
 			std::string ending = "";
@@ -1500,7 +1500,7 @@ bool FlowsServer::getFileDescriptor(bool deleteOldSocket)
     return false;
 }
 
-void FlowsServer::executeFlow(PFlowInfoServer& flowInfo)
+void FlowsServer::startFlow(PFlowInfoServer& flowInfo)
 {
 	try
 	{
@@ -1524,10 +1524,11 @@ void FlowsServer::executeFlow(PFlowInfoServer& flowInfo)
 		PFlowsClientData clientData = process->getClientData();
 
 		BaseLib::PArray parameters(new BaseLib::Array{
-				BaseLib::PVariable(new BaseLib::Variable(flowInfo->id))
+				BaseLib::PVariable(new BaseLib::Variable(flowInfo->id)),
+				flowInfo->flow
 				});
 
-		BaseLib::PVariable result = sendRequest(clientData, "executeFlow", parameters);
+		BaseLib::PVariable result = sendRequest(clientData, "startFlow", parameters);
 		if(result->errorStruct)
 		{
 			_out.printError("Error: Could not execute flow: " + result->structValue->at("faultString")->stringValue);

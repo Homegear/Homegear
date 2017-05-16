@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -32,6 +32,8 @@
 #define FLOWSCLIENT_H_
 
 #include "FlowsResponse.h"
+#include "FlowInfoClient.h"
+
 #include <homegear-base/BaseLib.h>
 
 #include <thread>
@@ -41,7 +43,8 @@
 namespace Flows
 {
 
-class FlowsClient : public BaseLib::IQueue {
+class FlowsClient : public BaseLib::IQueue
+{
 public:
 	FlowsClient();
 	virtual ~FlowsClient();
@@ -66,8 +69,6 @@ private:
 		bool isRequest = false;
 	};
 
-	std::mutex _disposeMutex;
-	bool _disposing = false;
 	BaseLib::Output _out;
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
@@ -90,6 +91,9 @@ private:
 	std::unique_ptr<BaseLib::Rpc::BinaryRpc> _binaryRpc;
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+
+	std::mutex _flowsMutex;
+	std::unordered_map<int32_t, PFlowInfoServer> _flows;
 
 	void registerClient();
 	BaseLib::PVariable sendRequest(int32_t scriptId, std::string methodName, BaseLib::PArray& parameters);
@@ -116,7 +120,7 @@ private:
 		 * Executes a new flow.
 		 * @param parameters
 		 */
-		BaseLib::PVariable executeFlow(BaseLib::PArray& parameters);
+		BaseLib::PVariable startFlow(BaseLib::PArray& parameters);
 
 		/**
 		 * Returns the number of flows currently running.

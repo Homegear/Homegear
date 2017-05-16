@@ -102,8 +102,6 @@ private:
 		bool isRequest = false;
 	};
 
-	std::mutex _disposeMutex;
-	bool _disposing = false;
 	BaseLib::Output _out;
 #ifdef DEBUGSESOCKET
 	std::ofstream _socketOutput;

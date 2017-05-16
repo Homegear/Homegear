@@ -122,9 +122,6 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 {
 	try
 	{
-		if(_disposing) return;
-		std::lock_guard<std::mutex> disposeGuard(_disposeMutex);
-
 		BaseLib::PArray eventData(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(0)), BaseLib::PVariable(new BaseLib::Variable(-1)), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(std::string("DISPOSING")))}))), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(true))}))) });
 
 		GD::bl->shuttingDown = true;
@@ -160,7 +157,6 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 			return;
 		}
 
-		_disposing = true;
 		stopEventThreads();
 		stopQueue(0);
 		php_homegear_shutdown();
@@ -1406,7 +1402,6 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
 		if(parameters->size() < 3) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 		PScriptInfo scriptInfo;
 		bool sendOutput = false;
