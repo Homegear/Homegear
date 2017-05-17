@@ -70,7 +70,7 @@ uint32_t FlowsProcess::nodeThreadCount()
 {
 	try
 	{
-		//Todo: Define from node header
+		return _nodeThreadCount;
 	}
 	catch(const std::exception& ex)
     {

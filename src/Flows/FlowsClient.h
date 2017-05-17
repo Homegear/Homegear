@@ -33,6 +33,7 @@
 
 #include "FlowsResponse.h"
 #include "FlowInfoClient.h"
+#include "NodeManager.h"
 
 #include <homegear-base/BaseLib.h>
 
@@ -73,7 +74,7 @@ private:
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
 	int64_t _lastGargabeCollection = 0;
-	bool _closed = false;
+	std::atomic_bool _stopped;
 	std::mutex _sendMutex;
 	std::mutex _requestMutex;
 	std::mutex _waitMutex;
@@ -87,13 +88,17 @@ private:
 	std::map<int32_t, RequestInfo> _requestInfo;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
+	std::unique_ptr<NodeManager> _nodeManager;
 
 	std::unique_ptr<BaseLib::Rpc::BinaryRpc> _binaryRpc;
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
 	std::mutex _flowsMutex;
-	std::unordered_map<int32_t, PFlowInfoServer> _flows;
+	std::unordered_map<int32_t, PFlowInfoClient> _flows;
+
+	std::mutex _nodesMutex;
+	std::unordered_map<std::string, PNodeInfoClient> _nodes;
 
 	void registerClient();
 	BaseLib::PVariable sendRequest(int32_t scriptId, std::string methodName, BaseLib::PArray& parameters);
@@ -117,10 +122,16 @@ private:
 		BaseLib::PVariable shutdown(BaseLib::PArray& parameters);
 
 		/**
-		 * Executes a new flow.
+		 * Starts a new flow.
 		 * @param parameters
 		 */
 		BaseLib::PVariable startFlow(BaseLib::PArray& parameters);
+
+		/**
+		 * Stops a flow.
+		 * @param parameters
+		 */
+		BaseLib::PVariable stopFlow(BaseLib::PArray& parameters);
 
 		/**
 		 * Returns the number of flows currently running.

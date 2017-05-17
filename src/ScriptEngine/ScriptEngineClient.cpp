@@ -62,6 +62,8 @@ std::mutex ScriptEngineClient::_resourceMutex;
 
 ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 1, 1000)
 {
+	_stopped = false;
+
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	_out.init(GD::bl.get());
 	_out.setPrefix("Script Engine (" + std::to_string(getpid()) + "): ");
@@ -157,6 +159,7 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 			return;
 		}
 
+		_stopped = true;
 		stopEventThreads();
 		stopQueue(0);
 		php_homegear_shutdown();
@@ -388,7 +391,7 @@ void ScriptEngineClient::start()
 		int32_t result = 0;
 		int32_t bytesRead = 0;
 		int32_t processedBytes = 0;
-		while(!_disposing)
+		while(!_stopped)
 		{
 			try
 			{
@@ -561,7 +564,6 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 {
 	try
 	{
-		if(_disposing) return;
 		std::shared_ptr<QueueEntry> queueEntry;
 		queueEntry = std::dynamic_pointer_cast<QueueEntry>(entry);
 		if(!queueEntry) return;
@@ -787,7 +789,7 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string
 		std::unique_lock<std::mutex> waitLock(requestInfo.waitMutex);
 		while (!requestInfo.conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]
 		{
-			return response->finished || _disposing;
+			return response->finished || _stopped;
 		}));
 
 		if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
@@ -858,7 +860,7 @@ BaseLib::PVariable ScriptEngineClient::sendGlobalRequest(std::string methodName,
 
 		std::unique_lock<std::mutex> waitLock(_waitMutex);
 		while(!_requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]{
-			return response->finished || _disposing;
+			return response->finished || _stopped;
 		}));
 
 		if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
@@ -1343,8 +1345,6 @@ BaseLib::PVariable ScriptEngineClient::reload(BaseLib::PArray& parameters)
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
-
 		if(!std::freopen((GD::bl->settings.logfilePath() + "homegear-scriptengine.log").c_str(), "a", stdout))
 		{
 			GD::out.printError("Error: Could not redirect output to new log file.");
@@ -1375,8 +1375,6 @@ BaseLib::PVariable ScriptEngineClient::shutdown(BaseLib::PArray& parameters)
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
-
 		std::lock_guard<std::mutex> maintenanceThreadGuard(_maintenanceThreadMutex);
 		if(_maintenanceThread.joinable()) _maintenanceThread.join();
 		_maintenanceThread = std::thread(&ScriptEngineClient::dispose, this, true);
@@ -1472,8 +1470,6 @@ BaseLib::PVariable ScriptEngineClient::devTest(BaseLib::PArray& parameters)
 {
 	try
 	{
-		if(_disposing) return std::make_shared<BaseLib::Variable>();
-
 		/*std::lock_guard<std::mutex> threadGuard(_scriptThreadMutex);
 		for(std::map<int32_t, PThreadInfo>::iterator i = _scriptThreads.begin(); i != _scriptThreads.end(); ++i)
 		{
@@ -1504,8 +1500,6 @@ BaseLib::PVariable ScriptEngineClient::scriptCount(BaseLib::PArray& parameters)
 {
 	try
 	{
-		if(_disposing) return std::make_shared<BaseLib::Variable>(0);
-
 		collectGarbage();
 
 		return std::make_shared<BaseLib::Variable>((int32_t)_scriptThreads.size());
@@ -1529,8 +1523,6 @@ BaseLib::PVariable ScriptEngineClient::getRunningScripts(BaseLib::PArray& parame
 {
 	try
 	{
-		if(_disposing) return BaseLib::PVariable(new BaseLib::Variable(0));
-
 		BaseLib::PVariable scripts = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 		std::lock_guard<std::mutex> threadGuard(_scriptThreadMutex);
 		for(std::map<int32_t, PThreadInfo>::iterator i = _scriptThreads.begin(); i != _scriptThreads.end(); ++i)
@@ -1562,8 +1554,6 @@ BaseLib::PVariable ScriptEngineClient::checkSessionId(BaseLib::PArray& parameter
 {
 	try
 	{
-		if(_disposing) return BaseLib::PVariable(new BaseLib::Variable(0));
-
 		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
 		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Session ID is empty.");
@@ -1595,7 +1585,6 @@ BaseLib::PVariable ScriptEngineClient::broadcastEvent(BaseLib::PArray& parameter
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
 		if(parameters->size() != 4) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
 		std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
@@ -1641,7 +1630,6 @@ BaseLib::PVariable ScriptEngineClient::broadcastNewDevices(BaseLib::PArray& para
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
 		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
 		std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
@@ -1677,7 +1665,6 @@ BaseLib::PVariable ScriptEngineClient::broadcastDeleteDevices(BaseLib::PArray& p
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
 		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
 		std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
@@ -1713,7 +1700,6 @@ BaseLib::PVariable ScriptEngineClient::broadcastUpdateDevice(BaseLib::PArray& pa
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
 		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
 		std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);

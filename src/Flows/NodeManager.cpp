@@ -29,52 +29,22 @@
 */
 
 #include "NodeManager.h"
+#include "PhpNode.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 
-NodeLoader::NodeLoader(std::string name, std::string path)
+NodeLoader::NodeLoader(std::string filename, std::string path)
 {
 	try
 	{
-		_name = name;
-		GD::out.printInfo("Info: Loading node " + _name);
+		_filename = filename;
+		_path = path;
+		GD::out.printInfo("Info: Loading node " + _filename);
 
-		void* nodeHandle = dlopen(path.c_str(), RTLD_NOW);
+		void* nodeHandle = dlopen(_path.c_str(), RTLD_NOW);
 		if (!nodeHandle)
 		{
-			GD::out.printCritical("Critical: Could not open node \"" + path + "\": " + std::string(dlerror()));
-			return;
-		}
-
-		std::string(*getNodeName)();
-		getNodeName = (std::string (*)())dlsym(nodeHandle, "getNodeName");
-		if (!getNodeName)
-		{
-			GD::out.printCritical("Critical: Could not open node \"" + path + "\". Symbol \"getNodeName\" not found.");
-			dlclose(nodeHandle);
-			return;
-		}
-		_nodeName = getNodeName();
-		if (_nodeName.empty())
-		{
-			GD::out.printCritical("Critical: Could not open node \"" + path + "\". Got empty node name.");
-			dlclose(nodeHandle);
-			return;
-		}
-
-		std::string (*getVersion)();
-		getVersion = (std::string (*)())dlsym(nodeHandle, "getVersion");
-		if(!getVersion)
-		{
-			GD::out.printCritical("Critical: Could not open node \"" + path + "\". Symbol \"getVersion\" not found.");
-			dlclose(nodeHandle);
-			return;
-		}
-		_version = getVersion();
-		if(GD::bl->version() != _version)
-		{
-			GD::out.printCritical("Critical: Could not open node \"" + path + "\". Module is compiled for Homegear version " + _version);
-			dlclose(nodeHandle);
+			GD::out.printCritical("Critical: Could not open node \"" + _filename + "\": " + std::string(dlerror()));
 			return;
 		}
 
@@ -82,7 +52,7 @@ NodeLoader::NodeLoader(std::string name, std::string path)
 		getFactory = (BaseLib::Flows::NodeFactory* (*)())dlsym(nodeHandle, "getFactory");
 		if(!getFactory)
 		{
-			GD::out.printCritical("Critical: Could not open node \"" + path + "\". Symbol \"getFactory\" not found.");
+			GD::out.printCritical("Critical: Could not open node \"" + _filename + "\". Symbol \"getFactory\" not found.");
 			dlclose(nodeHandle);
 			return;
 		}
@@ -106,22 +76,15 @@ NodeLoader::NodeLoader(std::string name, std::string path)
 
 NodeLoader::~NodeLoader()
 {
-	dispose();
-}
-
-void NodeLoader::dispose()
-{
 	try
 	{
-		if(_disposing) return;
-		_disposing = true;
-		GD::out.printInfo("Info: Disposing node " + _name);
-		GD::out.printDebug("Debug: Deleting factory pointer of node " + _name);
+		GD::out.printInfo("Info: Disposing node " + _filename);
+		GD::out.printDebug("Debug: Deleting factory pointer of node " + _filename);
 		if(_factory) delete _factory.release();
-		GD::out.printDebug("Debug: Closing dynamic library module " + _name);
+		GD::out.printDebug("Debug: Closing dynamic library module " + _filename);
 		if(_handle) dlclose(_handle);
 		_handle = nullptr;
-		GD::out.printDebug("Debug: Dynamic library " + _name + " disposed");
+		GD::out.printDebug("Debug: Dynamic library " + _filename + " disposed");
 	}
 	catch(const std::exception& ex)
 	{
@@ -137,20 +100,10 @@ void NodeLoader::dispose()
 	}
 }
 
-std::string NodeLoader::getNodeName()
-{
-	return _nodeName;
-}
-
-std::string NodeLoader::getVersion()
-{
-	return _version;
-}
-
 std::unique_ptr<BaseLib::Flows::INode> NodeLoader::createNode()
 {
 	if (!_factory) return std::unique_ptr<BaseLib::Flows::INode>();
-	return std::unique_ptr<BaseLib::Flows::INode>(_factory->createNode(GD::bl.get()));
+	return std::unique_ptr<BaseLib::Flows::INode>(_factory->createNode(GD::bl.get(), _filename));
 }
 
 NodeManager::NodeManager()
@@ -159,45 +112,25 @@ NodeManager::NodeManager()
 
 NodeManager::~NodeManager()
 {
-	dispose();
-}
-
-std::map<std::string, std::shared_ptr<BaseLib::Flows::INode>> NodeManager::getNodes()
-{
-	std::map<std::string, std::shared_ptr<BaseLib::Flows::INode>> nodes;
-	try
+	std::lock_guard<std::mutex> nodesGuard(_nodesNameNodeMapMutex);
+	for(auto& node : _nodesNameNodeMap)
 	{
-		/*std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
-		for (auto& node : nodes)
-		{
-			if (!node.second || node.second->locked()) continue;
-			nodes.emplace(node);
-		}*/
+		if(!node.second) continue;
+		node.second.reset();
 	}
-	catch (const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch (BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch (...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	return nodes;
+	_nodesNameNodeMap.clear();
+	_nodeLoaders.clear();
 }
 
 std::shared_ptr<BaseLib::Flows::INode> NodeManager::getNode(std::string name)
 {
 	try
 	{
-		/*std::shared_ptr<BaseLib::Flows::INode> node;
-		std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
-		auto nodeIterator = _nodes.find(name);
-		if (nodeIterator != _nodes.end()) node = nodeIterator->second;
-		if (node && !node->locked()) return node;*/
+		BaseLib::Flows::PINode node;
+		std::lock_guard<std::mutex> nodesGuard(_nodesNameNodeMapMutex);
+		auto nodeIterator = _nodesNameNodeMap.find(name);
+		if (nodeIterator != _nodesNameNodeMap.end()) node = nodeIterator->second;
+		if (node && !node->locked()) return node;
 	}
 	catch (const std::exception& ex)
 	{
@@ -320,35 +253,60 @@ std::vector<NodeManager::PNodeInfo> NodeManager::getNodeInfo()
 	return nodeInfoVector;
 }
 
-int32_t NodeManager::loadNode(std::string filename)
+int32_t NodeManager::loadNode(std::string name, BaseLib::Flows::PINode& node)
 {
 	try
 	{
-		/*std::lock_guard<std::mutex> nodeLoadersGuard(_nodeLoadersMutex);
-		std::string path(GD::bl->settings.flowsPath() + "nodes/" + filename);
-		if(!BaseLib::Io::fileExists(path)) return -2;
-		if(_nodeLoaders.find(filename) != _nodeLoaders.end()) return 1;
-		_nodeLoaders.emplace(filename, std::unique_ptr<NodeLoader>(new NodeLoader(filename, path)));
-
-		std::shared_ptr<BaseLib::Flows::INode> node = _nodeLoaders.at(filename)->createNode();
-
-		if(node)
+		std::lock_guard<std::mutex> nodesGuard(_nodesNameNodeMapMutex);
 		{
-			std::string name = node->getName();
-			BaseLib::HelperFunctions::toLower(name);
-			BaseLib::HelperFunctions::stringReplace(name, " ", "");
+			auto nodesIterator = _nodesNameNodeMap.find(name);
+			if(nodesIterator != _nodesNameNodeMap.end())
 			{
-				std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
-				_nodes[node->getName()] = node;
+				nodesIterator->second->incrementReferenceCounter();
+				node = nodesIterator->second;
+				return 1;
 			}
 		}
-		else
+
+		std::string path(GD::bl->settings.flowsPath() + "nodes/" + name + "/");
+		if(BaseLib::Io::fileExists(path + name + ".so")) //C++ module
 		{
-			_nodeLoaders.at(filename)->dispose();
-			_nodeLoaders.erase(filename);
-			return -3;
+			std::string filename = name + ".so";
+			path = path + name + ".so";
+
+			std::lock_guard<std::mutex> nodeLoadersGuard(_nodeLoadersMutex);
+			if(_nodeLoaders.find(filename) != _nodeLoaders.end()) return 1;
+			_nodeLoaders.emplace(filename, std::unique_ptr<NodeLoader>(new NodeLoader(filename, path)));
+
+			node = _nodeLoaders.at(filename)->createNode();
+
+			if(node)
+			{
+				node->incrementReferenceCounter();
+				_nodesNameNodeMap.emplace(name, node);
+			}
+			else
+			{
+				_nodeLoaders.erase(filename);
+				return -3;
+			}
+			return 0;
 		}
-		return 0;*/
+		else if(BaseLib::Io::fileExists(path + name + ".hgn")) //Encrypted PHP
+		{
+			node = std::make_shared<PhpNode>(path + name + ".hgn");
+			node->incrementReferenceCounter();
+			_nodesNameNodeMap.emplace(name, node);
+			return 0;
+		}
+		else if(BaseLib::Io::fileExists(path + name + ".php")) //Unencrypted PHP
+		{
+			node = std::make_shared<PhpNode>(path + name + ".php");
+			node->incrementReferenceCounter();
+			_nodesNameNodeMap.emplace(name, node);
+			return 0;
+		}
+		else return -2;
 	}
 	catch(const std::exception& ex)
     {
@@ -365,106 +323,38 @@ int32_t NodeManager::loadNode(std::string filename)
     return -1;
 }
 
-int32_t NodeManager::unloadNode(std::string filename)
+int32_t NodeManager::unloadNode(std::string name)
 {
 	try
 	{
-		/*std::lock_guard<std::mutex> nodeLoadersGuard(_nodeLoadersMutex);
-		std::string path(GD::bl->settings.flowsPath() + "nodes/" + filename);
-		if(!BaseLib::Io::fileExists(path)) return -2;
-
-		auto nodeLoaderIterator = _nodeLoaders.find(filename);
-		if(nodeLoaderIterator != _nodeLoaders.end()) return 1;
-
-		std::shared_ptr<BaseLib::Flows::INode> node = getNode(nodeLoaderIterator->second->getNodeName());
-		if(node)
-		{
-			{
-				std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
-				node->lock();
-			}
-
-			while(node.use_count() > 1)
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(50));
-			}
-			node->dispose();
-			std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
-			_nodes[node->getName()].reset();
-			node.reset();
-		}
-
-
-		nodeLoaderIterator->second->dispose();
-		nodeLoaderIterator->second.reset();
-		_nodeLoaders.erase(nodeLoaderIterator);
-		return 0;*/
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return -1;
-}
-
-int32_t NodeManager::reloadNode(std::string filename)
-{
-	try
-	{
-		int32_t result = unloadNode(filename);
-		if(result < 0) return result;
-		return loadNode(filename);
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return -1;
-}
-
-void NodeManager::loadNodes()
-{
-	try
-	{
-		/*GD::out.printDebug("Debug: Loading nodes...");
+		std::lock_guard<std::mutex> nodesGuard(_nodesNameNodeMapMutex);
 		std::lock_guard<std::mutex> nodeLoadersGuard(_nodeLoadersMutex);
 
-		std::vector<std::string> files = GD::bl->io.getFiles(GD::bl->settings.flowsPath() + "nodes/");
-		if(files.empty())
-		{
-			GD::out.printError("Error: No nodes found in \"" + GD::bl->settings.flowsPath() + "nodes/\".");
-			return;
-		}
-		for(auto& file : files)
-		{
-			if(file.size() < 10) continue; //node_?*.so
-			std::string prefix = file.substr(0, 5);
-			std::string extension = file.substr(file.size() - 3, 3);
-			if(extension != ".so" || prefix != "node_") continue;
-			std::string path(GD::bl->settings.flowsPath() + "nodes/" + file);
+		auto nodesIterator = _nodesNameNodeMap.find(name);
+		if(nodesIterator == _nodesNameNodeMap.end()) return 1;
+		nodesIterator->second->decrementReferenceCounter();
+		if(nodesIterator->second->getReferenceCounter() > 0) return 0;
 
-			_nodeLoaders.emplace(file, std::unique_ptr<NodeLoader>(new NodeLoader(file, path)));
-		}
-		if(_nodes.empty())
+		std::string path = nodesIterator->second->getFilename();
+
+		if(!BaseLib::Io::fileExists(path)) return -2;
+
+		auto nodeLoaderIterator = _nodeLoaders.find(nodesIterator->second->getFilename());
+		if(nodeLoaderIterator != _nodeLoaders.end()) return 1;
+
+		BaseLib::Flows::PINode node = nodesIterator->second;
+
+		node->lock();
+		while(node.use_count() > 1)
 		{
-			GD::out.printError("Error: Could not load any nodes from \"" + GD::bl->settings.flowsPath() + "nodes/\".");
-		}*/
+			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		}
+		_nodesNameNodeMap.erase(nodesIterator);
+		node.reset();
+
+		nodeLoaderIterator->second.reset();
+		_nodeLoaders.erase(nodeLoaderIterator);
+		return 0;
 	}
 	catch(const std::exception& ex)
     {
@@ -478,60 +368,5 @@ void NodeManager::loadNodes()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-}
-
-void NodeManager::disposeNodes()
-{
-	try
-	{
-		/*auto nodes = getNodes();
-		for(auto node : nodes)
-		{
-			if(!node.second) continue;
-			node.second->dispose();
-			node.second.reset();
-			std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
-			_nodes[node.first].reset();
-		}
-		nodes.clear();
-		std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
-		_nodes.clear();*/
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void NodeManager::dispose()
-{
-	try
-	{
-		/*{
-			std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
-			_nodes.clear();
-		}
-		std::lock_guard<std::mutex> nodesLoadersGuard(_nodeLoadersMutex);
-		_nodeLoaders.clear();*/
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+    return -1;
 }

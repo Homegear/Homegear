@@ -201,31 +201,16 @@ void FlowsServer::collectGarbage()
     }
 }
 
-void FlowsServer::getNodeInfo()
+void FlowsServer::getMaxThreadCounts()
 {
 	try
 	{
-		_frontendNodeList.clear();
-		_frontendCode.clear();
 		_maxThreadCounts.clear();
-		BaseLib::PVariable frontendNodeList = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 		std::vector<NodeManager::PNodeInfo> nodeInfo = NodeManager::getNodeInfo();
 		for(auto& infoEntry : nodeInfo)
 		{
-			_frontendCode += infoEntry->frontendCode;
-
-			BaseLib::PVariable nodeListEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-			nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(infoEntry->nodeId));
-			nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(infoEntry->readableName));
-			nodeListEntry->structValue->emplace("types", std::make_shared<BaseLib::Variable>(BaseLib::PArray(new BaseLib::Array{ std::make_shared<BaseLib::Variable>(infoEntry->nodeName) })));
-			nodeListEntry->structValue->emplace("enabled", std::make_shared<BaseLib::Variable>(true));
-			nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(false));
-			nodeListEntry->structValue->emplace("module", std::make_shared<BaseLib::Variable>(infoEntry->nodeName));
-			nodeListEntry->structValue->emplace("version", std::make_shared<BaseLib::Variable>(infoEntry->version));
-			frontendNodeList->arrayValue->push_back(nodeListEntry);
 			_maxThreadCounts[infoEntry->nodeName] = infoEntry->maxThreadCount;
 		}
-		_jsonEncoder->encode(frontendNodeList, _frontendNodeList);
 	}
     catch(const std::exception& ex)
     {
@@ -251,7 +236,7 @@ bool FlowsServer::start()
 		_stopServer = false;
 		if(!getFileDescriptor(true)) return false;
 		_webroot = GD::bl->settings.flowsPath() + "www/";
-		getNodeInfo();
+		getMaxThreadCounts();
 		startQueue(0, GD::bl->settings.flowsThreadCount(), 0, SCHED_OTHER);
 		startQueue(1, GD::bl->settings.flowsThreadCount(), 0, SCHED_OTHER);
 		GD::bl->threadManager.start(_mainThread, true, &FlowsServer::mainThread, this);
@@ -647,15 +632,33 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 		{
 			path = _webroot + "static/" + path.substr(6);
 			std::cerr << "Requested (4): " << path << std::endl;
+
+			std::vector<NodeManager::PNodeInfo> nodeInfo = NodeManager::getNodeInfo();
 			if(http.getHeader().fields["accept"] == "text/html")
 			{
 				responseEncoding = "text/html";
-				contentString = _frontendCode;
+				for(auto& infoEntry : nodeInfo)
+				{
+					contentString += infoEntry->frontendCode;
+				}
 			}
 			else
 			{
 				responseEncoding = "application/json";
-				contentString = _frontendNodeList;
+				BaseLib::PVariable frontendNodeList = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+				for(auto& infoEntry : nodeInfo)
+				{
+					BaseLib::PVariable nodeListEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+					nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(infoEntry->nodeId));
+					nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(infoEntry->readableName));
+					nodeListEntry->structValue->emplace("types", std::make_shared<BaseLib::Variable>(BaseLib::PArray(new BaseLib::Array{ std::make_shared<BaseLib::Variable>(infoEntry->nodeName) })));
+					nodeListEntry->structValue->emplace("enabled", std::make_shared<BaseLib::Variable>(true));
+					nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(false));
+					nodeListEntry->structValue->emplace("module", std::make_shared<BaseLib::Variable>(infoEntry->nodeName));
+					nodeListEntry->structValue->emplace("version", std::make_shared<BaseLib::Variable>(infoEntry->version));
+					frontendNodeList->arrayValue->push_back(nodeListEntry);
+				}
+				_jsonEncoder->encode(frontendNodeList, contentString);
 			}
 		}
 		else if(path.compare(0, 6, "flows/") == 0 && path != "flows/index.php")

@@ -36,11 +36,15 @@ namespace Flows
 
 FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 1, 1000)
 {
+	_stopped = false;
+
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	_out.init(GD::bl.get());
 	_out.setPrefix("Flows Engine (" + std::to_string(getpid()) + "): ");
 
 	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
+
+	_nodeManager = std::unique_ptr<NodeManager>(new NodeManager());
 
 	_binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
 	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
@@ -49,6 +53,7 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 1, 1000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("reload", std::bind(&FlowsClient::reload, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("shutdown", std::bind(&FlowsClient::shutdown, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("startFlow", std::bind(&FlowsClient::startFlow, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("stopFlow", std::bind(&FlowsClient::stopFlow, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("flowCount", std::bind(&FlowsClient::flowCount, this, std::placeholders::_1)));
 }
 
@@ -66,9 +71,24 @@ void FlowsClient::dispose()
 
 		GD::bl->shuttingDown = true;
 
-		_disposing = true;
 		stopQueue(0);
+
+		{
+			std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+			for(auto& flow : _flows)
+			{
+				for(auto& node : flow.second->nodes)
+				{
+					_nodeManager->unloadNode(node.second->type);
+				}
+			}
+			_flows.clear();
+		}
+
+		_stopped = true;
+
 		_rpcResponses.clear();
+		_nodeManager.reset();
 	}
     catch(const std::exception& ex)
     {
@@ -148,7 +168,7 @@ void FlowsClient::start()
 		int32_t result = 0;
 		int32_t bytesRead = 0;
 		int32_t processedBytes = 0;
-		while(!_disposing)
+		while(!_stopped)
 		{
 			timeval timeout;
 			timeout.tv_sec = 0;
@@ -402,7 +422,7 @@ BaseLib::PVariable FlowsClient::sendRequest(int32_t flowId, std::string methodNa
 		std::unique_lock<std::mutex> waitLock(requestInfo.waitMutex);
 		while (!requestInfo.conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]
 		{
-			return response->finished || _disposing;
+			return response->finished || _stopped;
 		}));
 
 		if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
@@ -470,7 +490,7 @@ BaseLib::PVariable FlowsClient::sendGlobalRequest(std::string methodName, BaseLi
 
 		std::unique_lock<std::mutex> waitLock(_waitMutex);
 		while(!_requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]{
-			return response->finished || _disposing;
+			return response->finished || _stopped;
 		}));
 
 		if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
@@ -618,9 +638,23 @@ BaseLib::PVariable FlowsClient::startFlow(BaseLib::PArray& parameters)
 
 			if(_bl->debugLevel >= 5) _out.printDebug("Starting node " + node->id + " of type " + node->type + ".");
 
-			//Load node with NodeManager
-			//Start node
-			//Stop and dispose node in destructor
+			int32_t result = _nodeManager->loadNode(node->type, node->node);
+			if(result < 0)
+			{
+				_out.printError("Error: Could not load node " + node->type + ". Error code: " + std::to_string(result));
+				continue;
+			}
+
+			if(!node->node->start())
+			{
+				_out.printError("Error: Could not load node " + node->type + ". Start failed.");
+				continue;
+			}
+
+			flow->nodes.emplace(node->id, node);
+
+			std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+			_nodes.emplace(node->id, node);
 		}
 
 		if(flow->nodes.empty())
@@ -635,6 +669,37 @@ BaseLib::PVariable FlowsClient::startFlow(BaseLib::PArray& parameters)
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
     catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable FlowsClient::stopFlow(BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+
+		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+		auto flowsIterator = _flows.find(parameters->at(0)->integerValue);
+		if(flowsIterator == _flows.end()) return BaseLib::Variable::createError(-100, "Unknown flow.");
+		for(auto& node : flowsIterator->second->nodes)
+		{
+			_nodeManager->unloadNode(node.second->type);
+		}
+		_flows.erase(flowsIterator);
+		return std::make_shared<BaseLib::Variable>();
+	}
+	catch(const std::exception& ex)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

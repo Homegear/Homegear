@@ -110,8 +110,6 @@ private:
 	int32_t _currentPacketId = 0;
 	std::mutex _flowsFileMutex;
 	std::map<std::string, uint32_t> _maxThreadCounts;
-	std::string _frontendNodeList;
-	std::string _frontendCode;
 	std::vector<NodeManager::PNodeInfo> _nodeInfo;
 	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
 	std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
@@ -128,7 +126,7 @@ private:
 	void sendResponse(PFlowsClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 	void closeClientConnection(PFlowsClientData client);
 	PFlowsProcess getFreeProcess(uint32_t maxThreadCount);
-	void getNodeInfo();
+	void getMaxThreadCounts();
 	void startFlows();
 	void startFlow(PFlowInfoServer& flowInfo);
 

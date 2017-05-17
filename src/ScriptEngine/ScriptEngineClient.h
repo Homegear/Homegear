@@ -109,7 +109,7 @@ private:
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
 	int64_t _lastGargabeCollection = 0;
-	bool _closed = false;
+	std::atomic_bool _stopped;
 	static std::mutex _resourceMutex;
 	std::mutex _sendMutex;
 	std::mutex _requestMutex;
