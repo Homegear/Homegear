@@ -31,7 +31,7 @@
 #include "PhpNode.h"
 #include "../GD/GD.h"
 
-PhpNode::PhpNode(std::string filename) : INode(GD::bl.get(), filename)
+PhpNode::PhpNode(std::string path, std::string name) : INode(path, name)
 {
 }
 

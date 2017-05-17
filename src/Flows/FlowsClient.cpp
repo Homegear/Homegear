@@ -67,26 +67,15 @@ void FlowsClient::dispose()
 {
 	try
 	{
-		BaseLib::PArray eventData(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(0)), BaseLib::PVariable(new BaseLib::Variable(-1)), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(std::string("DISPOSING")))}))), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(true))}))) });
-
 		GD::bl->shuttingDown = true;
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000)); //Wait for shutdown response to be sent.
 
 		stopQueue(0);
 
-		{
-			std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-			for(auto& flow : _flows)
-			{
-				for(auto& node : flow.second->nodes)
-				{
-					_nodeManager->unloadNode(node.second->type);
-				}
-			}
-			_flows.clear();
-		}
-
 		_stopped = true;
 
+		_flows.clear();
 		_rpcResponses.clear();
 		_nodeManager.reset();
 	}
@@ -546,6 +535,68 @@ void FlowsClient::sendResponse(BaseLib::PVariable& packetId, BaseLib::PVariable&
     }
 }
 
+void FlowsClient::subscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable)
+{
+	try
+	{
+		std::lock_guard<std::mutex> peerSubscriptionsGuard(_peerSubscriptionsMutex);
+		_peerSubscriptions[peerId][channel][variable].insert(nodeId);
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void FlowsClient::unsubscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable)
+{
+	try
+	{
+		std::lock_guard<std::mutex> peerSubscriptionsGuard(_peerSubscriptionsMutex);
+		_peerSubscriptions[peerId][channel][variable].erase(nodeId);
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void FlowsClient::queueOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message)
+{
+	try
+	{
+
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 // {{{ RPC methods
 BaseLib::PVariable FlowsClient::reload(BaseLib::PArray& parameters)
 {
@@ -581,6 +632,32 @@ BaseLib::PVariable FlowsClient::shutdown(BaseLib::PArray& parameters)
 {
 	try
 	{
+		{
+			std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+			for(auto& flow : _flows)
+			{
+				for(auto& node : flow.second->nodes)
+				{
+					{
+						std::lock_guard<std::mutex> peerSubscriptionsGuard(_peerSubscriptionsMutex);
+						for(auto& peerId : _peerSubscriptions)
+						{
+							for(auto& channel : peerId.second)
+							{
+								for(auto& variable : channel.second)
+								{
+									variable.second.erase(node.first);
+								}
+							}
+						}
+					}
+					node.second->node->stop();
+					_nodeManager->unloadNode(node.second->id);
+				}
+			}
+			_flows.clear();
+		}
+
 		if(_maintenanceThread.joinable()) _maintenanceThread.join();
 		_maintenanceThread = std::thread(&FlowsClient::dispose, this);
 
@@ -638,12 +715,18 @@ BaseLib::PVariable FlowsClient::startFlow(BaseLib::PArray& parameters)
 
 			if(_bl->debugLevel >= 5) _out.printDebug("Starting node " + node->id + " of type " + node->type + ".");
 
-			int32_t result = _nodeManager->loadNode(node->type, node->node);
+			int32_t result = _nodeManager->loadNode(node->type, node->id, node->node);
 			if(result < 0)
 			{
 				_out.printError("Error: Could not load node " + node->type + ". Error code: " + std::to_string(result));
 				continue;
 			}
+
+			node->node->setId(node->id);
+
+			node->node->setSubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::subscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
+			node->node->setUnsubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::unsubscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
+			node->node->setOutput(std::function<void(std::string, uint32_t, BaseLib::PVariable)>(std::bind(&FlowsClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 
 			if(!node->node->start())
 			{
@@ -694,7 +777,21 @@ BaseLib::PVariable FlowsClient::stopFlow(BaseLib::PArray& parameters)
 		if(flowsIterator == _flows.end()) return BaseLib::Variable::createError(-100, "Unknown flow.");
 		for(auto& node : flowsIterator->second->nodes)
 		{
-			_nodeManager->unloadNode(node.second->type);
+			{
+				std::lock_guard<std::mutex> peerSubscriptionsGuard(_peerSubscriptionsMutex);
+				for(auto& peerId : _peerSubscriptions)
+				{
+					for(auto& channel : peerId.second)
+					{
+						for(auto& variable : channel.second)
+						{
+							variable.second.erase(node.first);
+						}
+					}
+				}
+			}
+			node.second->node->stop();
+			_nodeManager->unloadNode(node.second->id);
 		}
 		_flows.erase(flowsIterator);
 		return std::make_shared<BaseLib::Variable>();
@@ -720,6 +817,124 @@ BaseLib::PVariable FlowsClient::flowCount(BaseLib::PArray& parameters)
 	{
 		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
 		return std::make_shared<BaseLib::Variable>(_flows.size());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable FlowsClient::broadcastEvent(BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 4) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+
+		std::lock_guard<std::mutex> eventsGuard(_peerSubscriptionsMutex);
+		uint64_t peerId = parameters->at(0)->integerValue64;
+		int32_t channel = parameters->at(1)->integerValue;
+
+		auto peerIterator = _peerSubscriptions.find(peerId);
+		if(peerIterator == _peerSubscriptions.end()) return BaseLib::PVariable(new BaseLib::Variable());
+
+		auto channelIterator = peerIterator->second.find(channel);
+		if(channelIterator == peerIterator->second.end()) return BaseLib::PVariable(new BaseLib::Variable());
+
+		for(uint32_t j = 0; j < parameters->at(2)->arrayValue->size(); j++)
+		{
+			std::string variableName = parameters->at(2)->arrayValue->at(j)->stringValue;
+
+			auto variableIterator = channelIterator->second.find(variableName);
+			if(variableIterator == channelIterator->second.end()) continue;
+
+			BaseLib::PVariable value = parameters->at(3)->arrayValue->at(j);
+
+			for(auto& nodeId : variableIterator->second)
+			{
+				BaseLib::Flows::PINode node = _nodeManager->getNode(nodeId);
+				if(node) node->variableEvent(peerId, channel, variableName, value);
+			}
+		}
+
+		return BaseLib::PVariable(new BaseLib::Variable());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable FlowsClient::broadcastNewDevices(BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+
+		return BaseLib::PVariable(new BaseLib::Variable());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable FlowsClient::broadcastDeleteDevices(BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+
+		return BaseLib::PVariable(new BaseLib::Variable());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable FlowsClient::broadcastUpdateDevice(BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+
+		return BaseLib::PVariable(new BaseLib::Variable());
 	}
     catch(const std::exception& ex)
     {

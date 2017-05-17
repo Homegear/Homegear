@@ -36,7 +36,7 @@
 class PhpNode : public BaseLib::Flows::INode
 {
 public:
-	PhpNode(std::string filename);
+	PhpNode(std::string path, std::string name);
 	virtual ~PhpNode();
 
 	virtual BaseLib::PVariable input(BaseLib::PVariable message) { return BaseLib::PVariable(); }

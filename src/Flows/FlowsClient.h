@@ -100,6 +100,9 @@ private:
 	std::mutex _nodesMutex;
 	std::unordered_map<std::string, PNodeInfoClient> _nodes;
 
+	std::mutex _peerSubscriptionsMutex;
+	std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::set<std::string>>>> _peerSubscriptions;
+
 	void registerClient();
 	BaseLib::PVariable sendRequest(int32_t scriptId, std::string methodName, BaseLib::PArray& parameters);
 	BaseLib::PVariable sendGlobalRequest(std::string methodName, BaseLib::PArray& parameters);
@@ -107,6 +110,10 @@ private:
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 	BaseLib::PVariable send(std::vector<char>& data);
+
+	void subscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable);
+	void unsubscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable);
+	void queueOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message);
 
 	// {{{ RPC methods
 		/**
@@ -139,6 +146,11 @@ private:
 		 * @return Returns the number of running flows.
 		 */
 		BaseLib::PVariable flowCount(BaseLib::PArray& parameters);
+
+		BaseLib::PVariable broadcastEvent(BaseLib::PArray& parameters);
+		BaseLib::PVariable broadcastNewDevices(BaseLib::PArray& parameters);
+		BaseLib::PVariable broadcastDeleteDevices(BaseLib::PArray& parameters);
+		BaseLib::PVariable broadcastUpdateDevice(BaseLib::PArray& parameters);
 	// }}}
 };
 
