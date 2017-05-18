@@ -46,15 +46,19 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 1, 1000)
 
 	_nodeManager = std::unique_ptr<NodeManager>(new NodeManager());
 
-	_binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
-	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
-	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true));
+	_binaryRpc = std::unique_ptr<Flows::BinaryRpc>(new Flows::BinaryRpc());
+	_rpcDecoder = std::unique_ptr<Flows::RpcDecoder>(new Flows::RpcDecoder());
+	_rpcEncoder = std::unique_ptr<Flows::RpcEncoder>(new Flows::RpcEncoder(true));
 
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("reload", std::bind(&FlowsClient::reload, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("shutdown", std::bind(&FlowsClient::shutdown, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("startFlow", std::bind(&FlowsClient::startFlow, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("stopFlow", std::bind(&FlowsClient::stopFlow, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("flowCount", std::bind(&FlowsClient::flowCount, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("reload", std::bind(&FlowsClient::reload, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("shutdown", std::bind(&FlowsClient::shutdown, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("startFlow", std::bind(&FlowsClient::startFlow, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("stopFlow", std::bind(&FlowsClient::stopFlow, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("flowCount", std::bind(&FlowsClient::flowCount, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("broadcastEvent", std::bind(&FlowsClient::broadcastEvent, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("broadcastDeleteDevices", std::bind(&FlowsClient::broadcastDeleteDevices, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("broadcastNewDevices", std::bind(&FlowsClient::broadcastNewDevices, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("broadcastUpdateDevice", std::bind(&FlowsClient::broadcastUpdateDevice, this, std::placeholders::_1)));
 }
 
 FlowsClient::~FlowsClient()
@@ -196,13 +200,13 @@ void FlowsClient::start()
 					processedBytes += _binaryRpc->process(&buffer[processedBytes], bytesRead - processedBytes);
 					if(_binaryRpc->isFinished())
 					{
-						std::shared_ptr<BaseLib::IQueueEntry> queueEntry(new QueueEntry(_binaryRpc->getData(), _binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request));
+						std::shared_ptr<BaseLib::IQueueEntry> queueEntry(new QueueEntry(_binaryRpc->getData(), _binaryRpc->getType() == Flows::BinaryRpc::Type::request));
 						enqueue(0, queueEntry);
 						_binaryRpc->reset();
 					}
 				}
 			}
-			catch(BaseLib::Rpc::BinaryRpcException& ex)
+			catch(Flows::BinaryRpcException& ex)
 			{
 				_out.printError("Error processing packet: " + ex.what());
 				_binaryRpc->reset();
@@ -229,8 +233,8 @@ void FlowsClient::registerClient()
 	try
 	{
 		std::string methodName("registerFlowsClient");
-		BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable((int32_t)getpid()))});
-		BaseLib::PVariable result = sendGlobalRequest(methodName, parameters);
+		Flows::PArray parameters(new Flows::Array{Flows::PVariable(new Flows::Variable((int32_t)getpid()))});
+		Flows::PVariable result = invoke(methodName, parameters);
 		if(result->errorStruct)
 		{
 			_out.printCritical("Critical: Could not register client.");
@@ -264,25 +268,25 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 		if(queueEntry->isRequest)
 		{
 			std::string methodName;
-			BaseLib::PArray parameters = _rpcDecoder->decodeRequest(queueEntry->packet, methodName);
+			Flows::PArray parameters = _rpcDecoder->decodeRequest(queueEntry->packet, methodName);
 
 			if(parameters->size() < 2)
 			{
 				_out.printError("Error: Wrong parameter count while calling method " + methodName);
 				return;
 			}
-			std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(methodName);
+			std::map<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(methodName);
 			if(localMethodIterator == _localRpcMethods.end())
 			{
 				_out.printError("Warning: RPC method not found: " + methodName);
-				BaseLib::PVariable error = BaseLib::Variable::createError(-32601, ": Requested method not found.");
+				Flows::PVariable error = Flows::Variable::createError(-32601, "Requested method not found.");
 				sendResponse(parameters->at(0), error);
 				return;
 			}
 
 			if(GD::bl->debugLevel >= 4) _out.printInfo("Info: Server is calling RPC method: " + methodName);
 
-			BaseLib::PVariable result = localMethodIterator->second(parameters->at(1)->arrayValue);
+			Flows::PVariable result = localMethodIterator->second(parameters->at(1)->arrayValue);
 			if(GD::bl->debugLevel >= 5)
 			{
 				_out.printDebug("Response: ");
@@ -292,19 +296,19 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 		}
 		else
 		{
-			BaseLib::PVariable response = _rpcDecoder->decodeResponse(queueEntry->packet);
+			Flows::PVariable response = _rpcDecoder->decodeResponse(queueEntry->packet);
 			if(response->arrayValue->size() < 3)
 			{
 				_out.printError("Error: Response has wrong array size.");
 				return;
 			}
-			int32_t flowId = response->arrayValue->at(0)->integerValue;
+			int64_t threadId = response->arrayValue->at(0)->integerValue64;
 			int32_t packetId = response->arrayValue->at(1)->integerValue;
 
 			{
 				std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-				auto responseIterator = _rpcResponses[flowId].find(packetId);
-				if(responseIterator != _rpcResponses[flowId].end())
+				auto responseIterator = _rpcResponses[threadId].find(packetId);
+				if(responseIterator != _rpcResponses[threadId].end())
 				{
 					PFlowsResponse element = responseIterator->second;
 					if(element)
@@ -315,13 +319,9 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 					}
 				}
 			}
-			if(flowId != 0)
-			{
-				std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
-				std::map<int32_t, RequestInfo>::iterator requestIterator = _requestInfo.find(flowId);
-				if (requestIterator != _requestInfo.end()) requestIterator->second.conditionVariable.notify_all();
-			}
-			else _requestConditionVariable.notify_all();
+			std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
+			std::map<int64_t, RequestInfo>::iterator requestIterator = _requestInfo.find(threadId);
+			if (requestIterator != _requestInfo.end()) requestIterator->second.conditionVariable.notify_all();
 		}
 	}
 	catch(const std::exception& ex)
@@ -338,7 +338,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
     }
 }
 
-BaseLib::PVariable FlowsClient::send(std::vector<char>& data)
+Flows::PVariable FlowsClient::send(std::vector<char>& data)
 {
 	try
 	{
@@ -351,7 +351,7 @@ BaseLib::PVariable FlowsClient::send(std::vector<char>& data)
 			{
 				if(errno == EAGAIN) continue;
 				_out.printError("Could not send data to client " + std::to_string(_fileDescriptor->descriptor) + ". Sent bytes: " + std::to_string(totallySentBytes) + " of " + std::to_string(data.size()) + (sentBytes == -1 ? ". Error message: " + std::string(strerror(errno)) : ""));
-				return BaseLib::Variable::createError(-32500, "Unknown application error.");
+				return Flows::Variable::createError(-32500, "Unknown application error.");
 			}
 			totallySentBytes += sentBytes;
 		}
@@ -368,15 +368,16 @@ BaseLib::PVariable FlowsClient::send(std::vector<char>& data)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::PVariable(new BaseLib::Variable());
+    return Flows::PVariable(new Flows::Variable());
 }
 
-BaseLib::PVariable FlowsClient::sendRequest(int32_t flowId, std::string methodName, BaseLib::PArray& parameters)
+Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray& parameters)
 {
 	try
 	{
+		int64_t threadId = pthread_self();
 		std::unique_lock<std::mutex> requestInfoGuard(_requestInfoMutex);
-		RequestInfo& requestInfo = _requestInfo[flowId];
+		RequestInfo& requestInfo = _requestInfo[threadId];
 		requestInfoGuard.unlock();
 
 		int32_t packetId;
@@ -384,27 +385,28 @@ BaseLib::PVariable FlowsClient::sendRequest(int32_t flowId, std::string methodNa
 			std::lock_guard<std::mutex> packetIdGuard(_packetIdMutex);
 			packetId = _currentPacketId++;
 		}
-		BaseLib::PArray array(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(flowId)), BaseLib::PVariable(new BaseLib::Variable(packetId)), BaseLib::PVariable(new BaseLib::Variable(parameters)) });
+		Flows::PArray array(new Flows::Array{ Flows::PVariable(new Flows::Variable(threadId)), Flows::PVariable(new Flows::Variable(packetId)), Flows::PVariable(new Flows::Variable(parameters)) });
 		std::vector<char> data;
 		_rpcEncoder->encodeRequest(methodName, array, data);
 
 		PFlowsResponse response;
 		{
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			auto result = _rpcResponses[flowId].emplace(packetId, std::make_shared<FlowsResponse>());
+			auto result = _rpcResponses[threadId].emplace(packetId, std::make_shared<FlowsResponse>());
 			if(result.second) response = result.first->second;
 		}
 		if(!response)
 		{
 			_out.printError("Critical: Could not insert response struct into map.");
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
+			return Flows::Variable::createError(-32500, "Unknown application error.");
 		}
 
-		BaseLib::PVariable result = send(data);
+		Flows::PVariable result = send(data);
 		if(result->errorStruct)
 		{
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			_rpcResponses[flowId].erase(packetId);
+			_rpcResponses[threadId].erase(packetId);
+			if (_rpcResponses[threadId].empty()) _rpcResponses.erase(threadId);
 			return result;
 		}
 
@@ -417,13 +419,14 @@ BaseLib::PVariable FlowsClient::sendRequest(int32_t flowId, std::string methodNa
 		if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
 		{
 			_out.printError("Error: No response received to RPC request. Method: " + methodName);
-			result = BaseLib::Variable::createError(-1, "No response received.");
+			result = Flows::Variable::createError(-1, "No response received.");
 		}
 		else result = response->response->arrayValue->at(2);
 
 		{
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			_rpcResponses[flowId].erase(packetId);
+			_rpcResponses[threadId].erase(packetId);
+			if (_rpcResponses[threadId].empty()) _rpcResponses.erase(threadId);
 		}
 
 		return result;
@@ -440,82 +443,14 @@ BaseLib::PVariable FlowsClient::sendRequest(int32_t flowId, std::string methodNa
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable FlowsClient::sendGlobalRequest(std::string methodName, BaseLib::PArray& parameters)
+void FlowsClient::sendResponse(Flows::PVariable& packetId, Flows::PVariable& variable)
 {
 	try
 	{
-		std::lock_guard<std::mutex> requestGuard(_requestMutex);
-		int32_t packetId;
-		{
-			std::lock_guard<std::mutex> packetIdGuard(_packetIdMutex);
-			packetId = _currentPacketId++;
-		}
-		BaseLib::PArray array(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(0)), BaseLib::PVariable(new BaseLib::Variable(packetId)), BaseLib::PVariable(new BaseLib::Variable(parameters)) });
-		std::vector<char> data;
-		_rpcEncoder->encodeRequest(methodName, array, data);
-
-		PFlowsResponse response;
-		{
-			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			auto result = _rpcResponses[0].emplace(packetId, std::make_shared<FlowsResponse>());
-			if(result.second) response = result.first->second;
-		}
-		if(!response)
-		{
-			_out.printError("Critical: Could not insert response struct into map.");
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-
-		BaseLib::PVariable result = send(data);
-		if(result->errorStruct)
-		{
-			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			_rpcResponses[0].erase(packetId);
-			return result;
-		}
-
-		std::unique_lock<std::mutex> waitLock(_waitMutex);
-		while(!_requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]{
-			return response->finished || _stopped;
-		}));
-
-		if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
-		{
-			_out.printError("Error: No response received to RPC request. Method: " + methodName);
-			result = BaseLib::Variable::createError(-1, "No response received.");
-		}
-		else result = response->response->arrayValue->at(2);
-
-		{
-			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			_rpcResponses[0].erase(packetId);
-		}
-
-		return result;
-	}
-	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-void FlowsClient::sendResponse(BaseLib::PVariable& packetId, BaseLib::PVariable& variable)
-{
-	try
-	{
-		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{ packetId, variable })));
+		Flows::PVariable array(new Flows::Variable(Flows::PArray(new Flows::Array{ packetId, variable })));
 		std::vector<char> data;
 		_rpcEncoder->encodeResponse(array, data);
 
@@ -533,6 +468,11 @@ void FlowsClient::sendResponse(BaseLib::PVariable& packetId, BaseLib::PVariable&
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+void FlowsClient::log(std::string nodeId, int32_t logLevel, std::string message)
+{
+	_out.printMessage("Node " + nodeId + ": " + message, logLevel, logLevel <= 3);
 }
 
 void FlowsClient::subscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable)
@@ -577,11 +517,11 @@ void FlowsClient::unsubscribePeer(std::string nodeId, uint64_t peerId, int32_t c
     }
 }
 
-void FlowsClient::queueOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message)
+void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariable message)
 {
 	try
 	{
-
+		GD::out.printError("Moin: " + nodeId + ' ' + message->print(false, false, true));
 	}
 	catch(const std::exception& ex)
     {
@@ -598,7 +538,7 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, BaseLib::PVari
 }
 
 // {{{ RPC methods
-BaseLib::PVariable FlowsClient::reload(BaseLib::PArray& parameters)
+Flows::PVariable FlowsClient::reload(Flows::PArray& parameters)
 {
 	try
 	{
@@ -611,7 +551,7 @@ BaseLib::PVariable FlowsClient::reload(BaseLib::PArray& parameters)
 			GD::out.printError("Error: Could not redirect errors to new log file.");
 		}
 
-		return BaseLib::PVariable(new BaseLib::Variable());
+		return Flows::PVariable(new Flows::Variable());
 	}
     catch(const std::exception& ex)
     {
@@ -625,10 +565,10 @@ BaseLib::PVariable FlowsClient::reload(BaseLib::PArray& parameters)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable FlowsClient::shutdown(BaseLib::PArray& parameters)
+Flows::PVariable FlowsClient::shutdown(Flows::PArray& parameters)
 {
 	try
 	{
@@ -661,7 +601,7 @@ BaseLib::PVariable FlowsClient::shutdown(BaseLib::PArray& parameters)
 		if(_maintenanceThread.joinable()) _maintenanceThread.join();
 		_maintenanceThread = std::thread(&FlowsClient::dispose, this);
 
-		return BaseLib::PVariable(new BaseLib::Variable());
+		return Flows::PVariable(new Flows::Variable());
 	}
     catch(const std::exception& ex)
     {
@@ -675,19 +615,19 @@ BaseLib::PVariable FlowsClient::shutdown(BaseLib::PArray& parameters)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable FlowsClient::startFlow(BaseLib::PArray& parameters)
+Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 {
 	try
 	{
-		if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+		if(parameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
 		PFlowInfoClient flow = std::make_shared<FlowInfoClient>();
 		flow->id = parameters->at(0)->integerValue;
 
-		_out.printInfo("Info: Starting flow with ID " + std::to_string(flow->id) + ".");
+		_out.printInfo("Info: Starting flow with ID " + std::to_string(flow->id) + "...");
 
 		for(auto& element : *parameters->at(1)->arrayValue)
 		{
@@ -724,11 +664,13 @@ BaseLib::PVariable FlowsClient::startFlow(BaseLib::PArray& parameters)
 
 			node->node->setId(node->id);
 
+			node->node->setLog(std::function<void(std::string, int32_t, std::string)>(std::bind(&FlowsClient::log, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 			node->node->setSubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::subscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
 			node->node->setUnsubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::unsubscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
-			node->node->setOutput(std::function<void(std::string, uint32_t, BaseLib::PVariable)>(std::bind(&FlowsClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+			node->node->setOutput(std::function<void(std::string, uint32_t, Flows::PVariable)>(std::bind(&FlowsClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+			node->node->setInvoke(std::function<Flows::PVariable(std::string, Flows::PArray&)>(std::bind(&FlowsClient::invoke, this, std::placeholders::_1, std::placeholders::_2)));
 
-			if(!node->node->start())
+			if(!node->node->start(element))
 			{
 				_out.printError("Error: Could not load node " + node->type + ". Start failed.");
 				continue;
@@ -743,13 +685,13 @@ BaseLib::PVariable FlowsClient::startFlow(BaseLib::PArray& parameters)
 		if(flow->nodes.empty())
 		{
 			_out.printWarning("Warning: Not starting flow with ID " + std::to_string(flow->id) + ", because it has no nodes.");
-			return BaseLib::Variable::createError(-100, "Flow has no nodes.");
+			return Flows::Variable::createError(-100, "Flow has no nodes.");
 		}
 
 		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
 		_flows.emplace(flow->id, flow);
 
-		return BaseLib::PVariable(new BaseLib::Variable());
+		return Flows::PVariable(new Flows::Variable());
 	}
     catch(const std::exception& ex)
     {
@@ -763,18 +705,18 @@ BaseLib::PVariable FlowsClient::startFlow(BaseLib::PArray& parameters)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable FlowsClient::stopFlow(BaseLib::PArray& parameters)
+Flows::PVariable FlowsClient::stopFlow(Flows::PArray& parameters)
 {
 	try
 	{
-		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+		if(parameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
 		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
 		auto flowsIterator = _flows.find(parameters->at(0)->integerValue);
-		if(flowsIterator == _flows.end()) return BaseLib::Variable::createError(-100, "Unknown flow.");
+		if(flowsIterator == _flows.end()) return Flows::Variable::createError(-100, "Unknown flow.");
 		for(auto& node : flowsIterator->second->nodes)
 		{
 			{
@@ -794,7 +736,7 @@ BaseLib::PVariable FlowsClient::stopFlow(BaseLib::PArray& parameters)
 			_nodeManager->unloadNode(node.second->id);
 		}
 		_flows.erase(flowsIterator);
-		return std::make_shared<BaseLib::Variable>();
+		return std::make_shared<Flows::Variable>();
 	}
 	catch(const std::exception& ex)
     {
@@ -808,15 +750,15 @@ BaseLib::PVariable FlowsClient::stopFlow(BaseLib::PArray& parameters)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable FlowsClient::flowCount(BaseLib::PArray& parameters)
+Flows::PVariable FlowsClient::flowCount(Flows::PArray& parameters)
 {
 	try
 	{
 		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-		return std::make_shared<BaseLib::Variable>(_flows.size());
+		return std::make_shared<Flows::Variable>(_flows.size());
 	}
     catch(const std::exception& ex)
     {
@@ -830,24 +772,24 @@ BaseLib::PVariable FlowsClient::flowCount(BaseLib::PArray& parameters)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable FlowsClient::broadcastEvent(BaseLib::PArray& parameters)
+Flows::PVariable FlowsClient::broadcastEvent(Flows::PArray& parameters)
 {
 	try
 	{
-		if(parameters->size() != 4) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+		if(parameters->size() != 4) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
 		std::lock_guard<std::mutex> eventsGuard(_peerSubscriptionsMutex);
 		uint64_t peerId = parameters->at(0)->integerValue64;
 		int32_t channel = parameters->at(1)->integerValue;
 
 		auto peerIterator = _peerSubscriptions.find(peerId);
-		if(peerIterator == _peerSubscriptions.end()) return BaseLib::PVariable(new BaseLib::Variable());
+		if(peerIterator == _peerSubscriptions.end()) return Flows::PVariable(new Flows::Variable());
 
 		auto channelIterator = peerIterator->second.find(channel);
-		if(channelIterator == peerIterator->second.end()) return BaseLib::PVariable(new BaseLib::Variable());
+		if(channelIterator == peerIterator->second.end()) return Flows::PVariable(new Flows::Variable());
 
 		for(uint32_t j = 0; j < parameters->at(2)->arrayValue->size(); j++)
 		{
@@ -856,16 +798,16 @@ BaseLib::PVariable FlowsClient::broadcastEvent(BaseLib::PArray& parameters)
 			auto variableIterator = channelIterator->second.find(variableName);
 			if(variableIterator == channelIterator->second.end()) continue;
 
-			BaseLib::PVariable value = parameters->at(3)->arrayValue->at(j);
+			Flows::PVariable value = parameters->at(3)->arrayValue->at(j);
 
 			for(auto& nodeId : variableIterator->second)
 			{
-				BaseLib::Flows::PINode node = _nodeManager->getNode(nodeId);
+				Flows::PINode node = _nodeManager->getNode(nodeId);
 				if(node) node->variableEvent(peerId, channel, variableName, value);
 			}
 		}
 
-		return BaseLib::PVariable(new BaseLib::Variable());
+		return Flows::PVariable(new Flows::Variable());
 	}
     catch(const std::exception& ex)
     {
@@ -879,16 +821,16 @@ BaseLib::PVariable FlowsClient::broadcastEvent(BaseLib::PArray& parameters)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable FlowsClient::broadcastNewDevices(BaseLib::PArray& parameters)
+Flows::PVariable FlowsClient::broadcastNewDevices(Flows::PArray& parameters)
 {
 	try
 	{
-		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+		if(parameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
-		return BaseLib::PVariable(new BaseLib::Variable());
+		return Flows::PVariable(new Flows::Variable());
 	}
     catch(const std::exception& ex)
     {
@@ -902,16 +844,16 @@ BaseLib::PVariable FlowsClient::broadcastNewDevices(BaseLib::PArray& parameters)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable FlowsClient::broadcastDeleteDevices(BaseLib::PArray& parameters)
+Flows::PVariable FlowsClient::broadcastDeleteDevices(Flows::PArray& parameters)
 {
 	try
 	{
-		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+		if(parameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
-		return BaseLib::PVariable(new BaseLib::Variable());
+		return Flows::PVariable(new Flows::Variable());
 	}
     catch(const std::exception& ex)
     {
@@ -925,16 +867,16 @@ BaseLib::PVariable FlowsClient::broadcastDeleteDevices(BaseLib::PArray& paramete
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable FlowsClient::broadcastUpdateDevice(BaseLib::PArray& parameters)
+Flows::PVariable FlowsClient::broadcastUpdateDevice(Flows::PArray& parameters)
 {
 	try
 	{
-		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+		if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
-		return BaseLib::PVariable(new BaseLib::Variable());
+		return Flows::PVariable(new Flows::Variable());
 	}
     catch(const std::exception& ex)
     {
@@ -948,7 +890,7 @@ BaseLib::PVariable FlowsClient::broadcastUpdateDevice(BaseLib::PArray& parameter
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 // }}}
 

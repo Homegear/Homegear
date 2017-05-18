@@ -32,6 +32,8 @@
 #define NODEMANAGER_H_
 
 #include <homegear-base/BaseLib.h>
+#include <homegear-node/INode.h>
+#include <homegear-node/NodeFactory.h>
 
 #include <string>
 #include <iostream>
@@ -47,13 +49,13 @@ public:
 	NodeLoader(std::string filename, std::string path);
 	virtual ~NodeLoader();
 
-	BaseLib::Flows::PINode createNode();
+	Flows::PINode createNode();
 private:
 	std::string _filename;
 	std::string _path;
 	std::string _name;
 	void* _handle = nullptr;
-	std::unique_ptr<BaseLib::Flows::NodeFactory> _factory;
+	std::unique_ptr<Flows::NodeFactory> _factory;
 
 	NodeLoader(const NodeLoader&) = delete;
 	NodeLoader& operator=(const NodeLoader&) = delete;
@@ -99,7 +101,7 @@ public:
 	 * @param[out] node If loading was successful, this variable contains the loaded node.
 	 * @return Returns positive values or 0 on success and negative values on error. 0: Node successfully loaded, 1: Node already loaded, -1: System error, -2: Node does not exists, -4: Node initialization failed
 	 */
-	int32_t loadNode(std::string name, std::string id, BaseLib::Flows::PINode& node);
+	int32_t loadNode(std::string name, std::string id, Flows::PINode& node);
 
 	/**
 	 * Unloads a previously loaded node.
@@ -111,7 +113,7 @@ public:
 	/*
 	 * Returns the node specified by id.
 	 */
-	BaseLib::Flows::PINode getNode(std::string id);
+	Flows::PINode getNode(std::string id);
 private:
 	std::mutex _nodeLoadersMutex;
 	std::map<std::string, std::unique_ptr<NodeLoader>> _nodeLoaders;
@@ -120,7 +122,7 @@ private:
 	typedef std::string NodeName; //Node name from Homegear
 
 	std::mutex _nodesMutex;
-	std::unordered_map<NodeId, BaseLib::Flows::PINode> _nodes;
+	std::unordered_map<NodeId, Flows::PINode> _nodes;
 	std::unordered_map<NodeName, PNodeUsageInfo> _nodesUsage;
 
 	NodeManager(const NodeManager&) = delete;

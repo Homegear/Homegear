@@ -31,9 +31,13 @@
 #ifndef FLOWSCLIENT_H_
 #define FLOWSCLIENT_H_
 
-#include "FlowsResponse.h"
+#include "FlowsResponseClient.h"
 #include "FlowInfoClient.h"
 #include "NodeManager.h"
+
+#include <homegear-node/BinaryRpc.h>
+#include <homegear-node/RpcDecoder.h>
+#include <homegear-node/RpcEncoder.h>
 
 #include <homegear-base/BaseLib.h>
 
@@ -76,23 +80,20 @@ private:
 	int64_t _lastGargabeCollection = 0;
 	std::atomic_bool _stopped;
 	std::mutex _sendMutex;
-	std::mutex _requestMutex;
-	std::mutex _waitMutex;
 	std::mutex _rpcResponsesMutex;
-	std::map<int32_t, std::map<int32_t, PFlowsResponse>> _rpcResponses;
-	std::condition_variable _requestConditionVariable;
+	std::map<int64_t, std::map<int32_t, PFlowsResponse>> _rpcResponses;
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
-	std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>> _localRpcMethods;
+	std::map<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>> _localRpcMethods;
 	std::thread _maintenanceThread;
 	std::mutex _requestInfoMutex;
-	std::map<int32_t, RequestInfo> _requestInfo;
+	std::map<int64_t, RequestInfo> _requestInfo;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
 	std::unique_ptr<NodeManager> _nodeManager;
 
-	std::unique_ptr<BaseLib::Rpc::BinaryRpc> _binaryRpc;
-	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
-	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+	std::unique_ptr<Flows::BinaryRpc> _binaryRpc;
+	std::unique_ptr<Flows::RpcDecoder> _rpcDecoder;
+	std::unique_ptr<Flows::RpcEncoder> _rpcEncoder;
 
 	std::mutex _flowsMutex;
 	std::unordered_map<int32_t, PFlowInfoClient> _flows;
@@ -104,53 +105,53 @@ private:
 	std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::set<std::string>>>> _peerSubscriptions;
 
 	void registerClient();
-	BaseLib::PVariable sendRequest(int32_t scriptId, std::string methodName, BaseLib::PArray& parameters);
-	BaseLib::PVariable sendGlobalRequest(std::string methodName, BaseLib::PArray& parameters);
-	void sendResponse(BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
+	Flows::PVariable invoke(std::string methodName, Flows::PArray& parameters);
+	void sendResponse(Flows::PVariable& packetId, Flows::PVariable& variable);
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
-	BaseLib::PVariable send(std::vector<char>& data);
+	Flows::PVariable send(std::vector<char>& data);
 
+	void log(std::string nodeId, int32_t logLevel, std::string message);
 	void subscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable);
 	void unsubscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable);
-	void queueOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message);
+	void queueOutput(std::string nodeId, uint32_t index, Flows::PVariable message);
 
 	// {{{ RPC methods
 		/**
 		 * Causes the log files to be reopened.
 		 * @param parameters Irrelevant for this method.
 		 */
-		BaseLib::PVariable reload(BaseLib::PArray& parameters);
+		Flows::PVariable reload(Flows::PArray& parameters);
 
 		/**
 		 * Causes the script engine client to exit.
 		 * @param parameters Irrelevant for this method.
 		 */
-		BaseLib::PVariable shutdown(BaseLib::PArray& parameters);
+		Flows::PVariable shutdown(Flows::PArray& parameters);
 
 		/**
 		 * Starts a new flow.
 		 * @param parameters
 		 */
-		BaseLib::PVariable startFlow(BaseLib::PArray& parameters);
+		Flows::PVariable startFlow(Flows::PArray& parameters);
 
 		/**
 		 * Stops a flow.
 		 * @param parameters
 		 */
-		BaseLib::PVariable stopFlow(BaseLib::PArray& parameters);
+		Flows::PVariable stopFlow(Flows::PArray& parameters);
 
 		/**
 		 * Returns the number of flows currently running.
 		 * @param parameters Irrelevant for this method.
 		 * @return Returns the number of running flows.
 		 */
-		BaseLib::PVariable flowCount(BaseLib::PArray& parameters);
+		Flows::PVariable flowCount(Flows::PArray& parameters);
 
-		BaseLib::PVariable broadcastEvent(BaseLib::PArray& parameters);
-		BaseLib::PVariable broadcastNewDevices(BaseLib::PArray& parameters);
-		BaseLib::PVariable broadcastDeleteDevices(BaseLib::PArray& parameters);
-		BaseLib::PVariable broadcastUpdateDevice(BaseLib::PArray& parameters);
+		Flows::PVariable broadcastEvent(Flows::PArray& parameters);
+		Flows::PVariable broadcastNewDevices(Flows::PArray& parameters);
+		Flows::PVariable broadcastDeleteDevices(Flows::PArray& parameters);
+		Flows::PVariable broadcastUpdateDevice(Flows::PArray& parameters);
 	// }}}
 };
 

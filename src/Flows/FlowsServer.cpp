@@ -449,6 +449,11 @@ void FlowsServer::startFlows()
 				auto wiresIterator = element->structValue->find("wires");
 				if(wiresIterator == element->structValue->end()) continue; //Element is no node
 
+				auto typeIterator = element->structValue->find("type");
+				if(typeIterator == element->structValue->end()) continue;
+
+				if(typeIterator->second->stringValue == "comment") continue;
+
 				bool processed = false;
 				bool next = false;
 				for(auto& nodeGroup : nodeGroups)
@@ -524,13 +529,18 @@ void FlowsServer::startFlows()
 			for(auto& node : nodeGroup)
 			{
 				flow->arrayValue->push_back(node.second);
-				auto threadCountIterator = _maxThreadCounts.find(node.second->stringValue);
-				if(threadCountIterator == _maxThreadCounts.end())
+				auto typeIterator = node.second->structValue->find("type");
+				if(typeIterator != node.second->structValue->end())
 				{
-					GD::out.printError("Error: Could not determine maximum thread count of node \"" + node.second->stringValue + "\". Node is unknown.");
-					continue;
+					auto threadCountIterator = _maxThreadCounts.find(typeIterator->second->stringValue);
+					if(threadCountIterator == _maxThreadCounts.end())
+					{
+						GD::out.printError("Error: Could not determine maximum thread count of node \"" + node.first + "\". Node is unknown.");
+						continue;
+					}
+					maxThreadCount += threadCountIterator->second;
 				}
-				maxThreadCount += threadCountIterator->second;
+				else GD::out.printError("Error: Could not determine maximum thread count of node \"" + node.first + "\". No key \"name\".");
 			}
 			PFlowInfoServer flowInfo = std::make_shared<FlowInfoServer>();
 			flowInfo->maxThreadCount = maxThreadCount;

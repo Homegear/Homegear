@@ -28,36 +28,31 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef FLOWSCLIENTDATA_H_
-#define FLOWSCLIENTDATA_H_
+#ifndef FLOWSRESPONSE_H_
+#define FLOWSRESPONSE_H_
 
-#include "FlowsResponseServer.h"
-#include <homegear-base/BaseLib.h>
+#include <homegear-node/Variable.h>
+
+#include <atomic>
 
 namespace Flows
 {
 
-class FlowsClientData
+class FlowsResponse
 {
 public:
-	FlowsClientData();
-	FlowsClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor);
-	virtual ~FlowsClientData();
+	std::atomic_bool finished;
+	int32_t packetId = 0;
+	Flows::PVariable response;
 
-	int32_t id = 0;
-	pid_t pid = 0;
-	bool closed = false;
-	std::vector<char> buffer;
-	std::unique_ptr<BaseLib::Rpc::BinaryRpc> binaryRpc;
-	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
-	std::mutex sendMutex;
-	std::mutex waitMutex;
-	std::mutex rpcResponsesMutex;
-	std::map<int32_t, PFlowsResponse> rpcResponses;
-	std::condition_variable requestConditionVariable;
+	FlowsResponse()
+	{
+		finished = false;
+	}
 };
 
-typedef std::shared_ptr<FlowsClientData> PFlowsClientData;
+typedef std::shared_ptr<FlowsResponse> PFlowsResponse;
 
 }
+
 #endif

@@ -49,8 +49,8 @@ NodeLoader::NodeLoader(std::string name, std::string path)
 			return;
 		}
 
-		BaseLib::Flows::NodeFactory* (*getFactory)();
-		getFactory = (BaseLib::Flows::NodeFactory* (*)())dlsym(nodeHandle, "getFactory");
+		Flows::NodeFactory* (*getFactory)();
+		getFactory = (Flows::NodeFactory* (*)())dlsym(nodeHandle, "getFactory");
 		if(!getFactory)
 		{
 			GD::out.printCritical("Critical: Could not open node \"" + _filename + "\". Symbol \"getFactory\" not found.");
@@ -59,7 +59,7 @@ NodeLoader::NodeLoader(std::string name, std::string path)
 		}
 
 		_handle = nodeHandle;
-		_factory = std::unique_ptr<BaseLib::Flows::NodeFactory>(getFactory());
+		_factory = std::unique_ptr<Flows::NodeFactory>(getFactory());
 	}
 	catch(const std::exception& ex)
 	{
@@ -101,10 +101,10 @@ NodeLoader::~NodeLoader()
 	}
 }
 
-BaseLib::Flows::PINode NodeLoader::createNode()
+Flows::PINode NodeLoader::createNode()
 {
-	if (!_factory) return BaseLib::Flows::PINode();
-	return BaseLib::Flows::PINode(_factory->createNode(_path, _name));
+	if (!_factory) return Flows::PINode();
+	return Flows::PINode(_factory->createNode(_path, _name));
 }
 
 NodeManager::NodeManager()
@@ -124,11 +124,11 @@ NodeManager::~NodeManager()
 	_nodeLoaders.clear();
 }
 
-BaseLib::Flows::PINode NodeManager::getNode(std::string id)
+Flows::PINode NodeManager::getNode(std::string id)
 {
 	try
 	{
-		BaseLib::Flows::PINode node;
+		Flows::PINode node;
 		std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
 		auto nodeIterator = _nodes.find(id);
 		bool locked = false;
@@ -152,7 +152,7 @@ BaseLib::Flows::PINode NodeManager::getNode(std::string id)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return std::shared_ptr<BaseLib::Flows::INode>();
+	return Flows::PINode();
 }
 
 std::vector<NodeManager::PNodeInfo> NodeManager::getNodeInfo()
@@ -261,7 +261,7 @@ std::vector<NodeManager::PNodeInfo> NodeManager::getNodeInfo()
 	return nodeInfoVector;
 }
 
-int32_t NodeManager::loadNode(std::string name, std::string id, BaseLib::Flows::PINode& node)
+int32_t NodeManager::loadNode(std::string name, std::string id, Flows::PINode& node)
 {
 	try
 	{
@@ -357,7 +357,7 @@ int32_t NodeManager::unloadNode(std::string id)
 		auto nodeLoaderIterator = _nodeLoaders.find(nodesIterator->second->getName());
 		if(nodeLoaderIterator != _nodeLoaders.end()) return 1;
 
-		BaseLib::Flows::PINode node = nodesIterator->second;
+		Flows::PINode node = nodesIterator->second;
 
 		if(nodesUsageIterator != _nodesUsage.end())
 		{

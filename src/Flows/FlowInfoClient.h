@@ -43,7 +43,7 @@ public:
 	int32_t id = 0;
 
 	// {{{ Input parameters
-		BaseLib::PVariable flow;
+		PVariable flow;
 	// }}}
 
 	std::unordered_map<std::string, PNodeInfoClient> nodes;

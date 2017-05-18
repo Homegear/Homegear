@@ -34,6 +34,7 @@
 #include "NodeInfoClient.h"
 
 #include <homegear-base/BaseLib.h>
+#include <homegear-node/INode.h>
 
 namespace Flows
 {
@@ -44,7 +45,7 @@ public:
 	std::string id;
 	std::string type;
 
-	BaseLib::Flows::PINode node;
+	Flows::PINode node;
 
 	NodeInfoClient() {}
 	virtual ~NodeInfoClient() {}

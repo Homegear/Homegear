@@ -31,15 +31,15 @@
 #ifndef PHPNODE_H_
 #define PHPNODE_H_
 
-#include <homegear-base/BaseLib.h>
+#include <homegear-node/INode.h>
 
-class PhpNode : public BaseLib::Flows::INode
+class PhpNode : public Flows::INode
 {
 public:
 	PhpNode(std::string path, std::string name);
 	virtual ~PhpNode();
 
-	virtual BaseLib::PVariable input(BaseLib::PVariable message) { return BaseLib::PVariable(); }
+	virtual Flows::PVariable input(Flows::PVariable message) { return Flows::PVariable(); }
 };
 
 #endif
