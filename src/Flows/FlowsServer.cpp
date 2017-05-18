@@ -725,6 +725,62 @@ std::string FlowsServer::handlePost(std::string& path, BaseLib::Http& http, std:
 			BaseLib::Security::Hash::md5(flows, md5);
 			std::string md5String = BaseLib::HelperFunctions::getHexString(md5);
 			BaseLib::HelperFunctions::toLower(md5String);
+
+			//{{{ Restart flows
+				std::vector<PFlowsClientData> clients;
+				{
+					std::lock_guard<std::mutex> stateGuard(_stateMutex);
+					for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+					{
+						if(i->second->closed) continue;
+						clients.push_back(i->second);
+					}
+				}
+				for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+				{
+					BaseLib::PArray parameters(new BaseLib::Array());
+					sendRequest(*i, "shutdown", parameters);
+				}
+
+				int32_t i = 0;
+				while(_clients.size() > 0 && i < 60)
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					collectGarbage();
+					i++;
+				}
+
+				//Close connections to remaining clients
+				clients.clear();
+				{
+					std::lock_guard<std::mutex> stateGuard(_stateMutex);
+					for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+					{
+						clients.push_back(i->second);
+						closeClientConnection(i->second);
+						std::lock_guard<std::mutex> processGuard(_processMutex);
+						std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(i->second->pid);
+						if(processIterator != _processes.end())
+						{
+							processIterator->second->invokeFlowFinished(-32501);
+							_processes.erase(processIterator);
+						}
+					}
+				}
+
+				while(_clients.size() > 0)
+				{
+					for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+					{
+						(*i)->requestConditionVariable.notify_all();
+					}
+					collectGarbage();
+					if(_clients.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				}
+
+				startFlows();
+			//}}}
+
 			return "{\"rev\": \"" + md5String + "\"}";
 		}
 	}
