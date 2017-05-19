@@ -968,6 +968,10 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "scriptcount (sc)     Returns the number of currently running scripts" << std::endl;
 			stringStream << "scriptsrunning (sr)  Returns the ID and filename of all running scripts" << std::endl;
 #endif
+			if(GD::bl->settings.enableFlows())
+			{
+			stringStream << "flowsrestart (fr)    Restarts all flows" << std::endl;
+			}
 			stringStream << "rpcservers (rpc)     Lists all active RPC servers" << std::endl;
 			stringStream << "rpcclients (rcl)     Lists all active RPC clients" << std::endl;
 			stringStream << "threads              Prints current thread count" << std::endl;
@@ -1126,6 +1130,21 @@ std::string Server::handleGlobalCommand(std::string& command)
 			return stringStream.str();
 		}
 #endif
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "flowsrestart", "fr", "", 0, arguments, showHelp))
+		{
+			if(showHelp)
+			{
+				stringStream << "Description: This command restarts all flows." << std::endl;
+				stringStream << "Usage: flowsrestart" << std::endl << std::endl;
+				return stringStream.str();
+			}
+
+			GD::flowsServer->restartFlows();
+
+			stringStream << "Flows restarted." << std::endl;
+
+			return stringStream.str();
+		}
 		else if(command.compare(0, 10, "rpcclients") == 0 || command.compare(0, 3, "rcl") == 0)
 		{
 			std::stringstream stream(command);

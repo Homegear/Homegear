@@ -68,10 +68,18 @@ private:
 	public:
 		QueueEntry() {}
 		QueueEntry(std::vector<char>& packet, bool isRequest) { this->packet = packet; this->isRequest = isRequest; }
+		QueueEntry(std::string nodeId, Flows::PVariable message) { this->nodeId = nodeId; this->message = message; }
 		virtual ~QueueEntry() {}
 
-		std::vector<char> packet;
-		bool isRequest = false;
+		//{{{ IPC
+			std::vector<char> packet;
+			bool isRequest = false;
+		//}}}
+
+		//{{{ Node output
+			std::string nodeId;
+			Flows::PVariable message;
+		//}}}
 	};
 
 	BaseLib::Output _out;

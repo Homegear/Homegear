@@ -450,6 +450,7 @@ void ScriptEngineServer::stop()
 			if(_clients.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		stopQueue(0);
+		stopQueue(1);
 		unlink(_socketPath.c_str());
 	}
 	catch(const std::exception& ex)

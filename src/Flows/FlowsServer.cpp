@@ -237,8 +237,8 @@ bool FlowsServer::start()
 		if(!getFileDescriptor(true)) return false;
 		_webroot = GD::bl->settings.flowsPath() + "www/";
 		getMaxThreadCounts();
-		startQueue(0, GD::bl->settings.flowsThreadCount(), 0, SCHED_OTHER);
-		startQueue(1, GD::bl->settings.flowsThreadCount(), 0, SCHED_OTHER);
+		startQueue(0, GD::bl->settings.flowsProcessingThreadCountServer(), 0, SCHED_OTHER);
+		startQueue(1, GD::bl->settings.flowsProcessingThreadCountServer(), 0, SCHED_OTHER);
 		GD::bl->threadManager.start(_mainThread, true, &FlowsServer::mainThread, this);
 		startFlows();
 		return true;
@@ -263,36 +263,12 @@ void FlowsServer::stop()
 	try
 	{
 		_shuttingDown = true;
-		_out.printDebug("Debug: Waiting for flows engine server's client threads to finish.");
-		std::vector<PFlowsClientData> clients;
-		{
-			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
-			{
-				clients.push_back(i->second);
-				closeClientConnection(i->second);
-				std::lock_guard<std::mutex> processGuard(_processMutex);
-				std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(i->second->pid);
-				if(processIterator != _processes.end())
-				{
-					processIterator->second->invokeFlowFinished(-32501);
-					_processes.erase(processIterator);
-				}
-			}
-		}
-
 		_stopServer = true;
+		_out.printDebug("Debug: Waiting for flows engine server's client threads to finish.");
+		closeClientConnections();
 		GD::bl->threadManager.join(_mainThread);
-		while(_clients.size() > 0)
-		{
-			for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
-			{
-				(*i)->requestConditionVariable.notify_all();
-			}
-			collectGarbage();
-			if(_clients.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		}
 		stopQueue(0);
+		stopQueue(1);
 		unlink(_socketPath.c_str());
 	}
 	catch(const std::exception& ex)
@@ -314,28 +290,7 @@ void FlowsServer::homegearShuttingDown()
 	try
 	{
 		_shuttingDown = true;
-		std::vector<PFlowsClientData> clients;
-		{
-			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
-			{
-				if(i->second->closed) continue;
-				clients.push_back(i->second);
-			}
-		}
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
-		{
-			BaseLib::PArray parameters(new BaseLib::Array());
-			sendRequest(*i, "shutdown", parameters);
-		}
-
-		int32_t i = 0;
-		while(_clients.size() > 0 && i < 60)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-			collectGarbage();
-			i++;
-		}
+		sendShutdown();
 	}
 	catch(const std::exception& ex)
     {
@@ -449,10 +404,10 @@ void FlowsServer::startFlows()
 				auto wiresIterator = element->structValue->find("wires");
 				if(wiresIterator == element->structValue->end()) continue; //Element is no node
 
+				if(wiresIterator->second->arrayValue->empty()) continue; //Not connected
+
 				auto typeIterator = element->structValue->find("type");
 				if(typeIterator == element->structValue->end()) continue;
-
-				if(typeIterator->second->stringValue == "comment") continue;
 
 				bool processed = false;
 				bool next = false;
@@ -547,6 +502,115 @@ void FlowsServer::startFlows()
 			flowInfo->flow = flow;
 			startFlow(flowInfo);
 		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void FlowsServer::sendShutdown()
+{
+	try
+	{
+		std::vector<PFlowsClientData> clients;
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) continue;
+				clients.push_back(i->second);
+			}
+		}
+		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		{
+			BaseLib::PArray parameters(new BaseLib::Array());
+			sendRequest(*i, "shutdown", parameters);
+		}
+
+		int32_t i = 0;
+		while(_clients.size() > 0 && i < 60)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			collectGarbage();
+			i++;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void FlowsServer::closeClientConnections()
+{
+	try
+	{
+		std::vector<PFlowsClientData> clients;
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				clients.push_back(i->second);
+				closeClientConnection(i->second);
+				std::lock_guard<std::mutex> processGuard(_processMutex);
+				std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(i->second->pid);
+				if(processIterator != _processes.end())
+				{
+					processIterator->second->invokeFlowFinished(-32501);
+					_processes.erase(processIterator);
+				}
+			}
+		}
+
+		while(_clients.size() > 0)
+		{
+			for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+			{
+				(*i)->requestConditionVariable.notify_all();
+			}
+			collectGarbage();
+			if(_clients.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void FlowsServer::restartFlows()
+{
+	try
+	{
+		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
+		sendShutdown();
+		closeClientConnections();
+		startFlows();
 	}
 	catch(const std::exception& ex)
     {
@@ -726,60 +790,7 @@ std::string FlowsServer::handlePost(std::string& path, BaseLib::Http& http, std:
 			std::string md5String = BaseLib::HelperFunctions::getHexString(md5);
 			BaseLib::HelperFunctions::toLower(md5String);
 
-			//{{{ Restart flows
-				std::vector<PFlowsClientData> clients;
-				{
-					std::lock_guard<std::mutex> stateGuard(_stateMutex);
-					for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
-					{
-						if(i->second->closed) continue;
-						clients.push_back(i->second);
-					}
-				}
-				for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
-				{
-					BaseLib::PArray parameters(new BaseLib::Array());
-					sendRequest(*i, "shutdown", parameters);
-				}
-
-				int32_t i = 0;
-				while(_clients.size() > 0 && i < 60)
-				{
-					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-					collectGarbage();
-					i++;
-				}
-
-				//Close connections to remaining clients
-				clients.clear();
-				{
-					std::lock_guard<std::mutex> stateGuard(_stateMutex);
-					for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
-					{
-						clients.push_back(i->second);
-						closeClientConnection(i->second);
-						std::lock_guard<std::mutex> processGuard(_processMutex);
-						std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(i->second->pid);
-						if(processIterator != _processes.end())
-						{
-							processIterator->second->invokeFlowFinished(-32501);
-							_processes.erase(processIterator);
-						}
-					}
-				}
-
-				while(_clients.size() > 0)
-				{
-					for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
-					{
-						(*i)->requestConditionVariable.notify_all();
-					}
-					collectGarbage();
-					if(_clients.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(100));
-				}
-
-				startFlows();
-			//}}}
+			restartFlows();
 
 			return "{\"rev\": \"" + md5String + "\"}";
 		}

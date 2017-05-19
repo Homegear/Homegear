@@ -44,8 +44,7 @@ class NodeInfoClient
 public:
 	std::string id;
 	std::string type;
-
-	Flows::PINode node;
+	std::vector<std::vector<std::string>> wires;
 
 	NodeInfoClient() {}
 	virtual ~NodeInfoClient() {}

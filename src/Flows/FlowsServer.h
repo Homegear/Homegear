@@ -47,6 +47,7 @@ public:
 
 	bool start();
 	void stop();
+	void restartFlows();
 	void homegearShuttingDown();
 	void homegearReloading();
 	void processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped);
@@ -108,6 +109,7 @@ private:
 	std::map<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>> _localRpcMethods;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
+	std::mutex _restartFlowsMutex;
 	std::mutex _flowsFileMutex;
 	std::map<std::string, uint32_t> _maxThreadCounts;
 	std::vector<NodeManager::PNodeInfo> _nodeInfo;
@@ -124,6 +126,8 @@ private:
 	BaseLib::PVariable send(PFlowsClientData& clientData, std::vector<char>& data);
 	BaseLib::PVariable sendRequest(PFlowsClientData& clientData, std::string methodName, BaseLib::PArray& parameters);
 	void sendResponse(PFlowsClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
+	void sendShutdown();
+	void closeClientConnections();
 	void closeClientConnection(PFlowsClientData client);
 	PFlowsProcess getFreeProcess(uint32_t maxThreadCount);
 	void getMaxThreadCounts();
