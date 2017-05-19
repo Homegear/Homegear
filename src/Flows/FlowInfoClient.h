@@ -32,7 +32,7 @@
 #define FLOWINFOCLIENT_H_
 
 #include <homegear-base/BaseLib.h>
-#include "NodeInfoClient.h"
+#include <homegear-node/NodeInfo.h>
 
 namespace Flows
 {
@@ -46,7 +46,7 @@ public:
 		PVariable flow;
 	// }}}
 
-	std::unordered_map<std::string, PNodeInfoClient> nodes;
+	std::unordered_map<std::string, PNodeInfo> nodes;
 
 	FlowInfoClient() {}
 	virtual ~FlowInfoClient() {}

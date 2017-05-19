@@ -68,7 +68,7 @@ private:
 	public:
 		QueueEntry() {}
 		QueueEntry(std::vector<char>& packet, bool isRequest) { this->packet = packet; this->isRequest = isRequest; }
-		QueueEntry(std::string nodeId, Flows::PVariable message) { this->nodeId = nodeId; this->message = message; }
+		QueueEntry(Flows::PNodeInfo nodeInfo, Flows::PVariable message) { this->nodeInfo = nodeInfo; this->message = message; }
 		virtual ~QueueEntry() {}
 
 		//{{{ IPC
@@ -77,7 +77,7 @@ private:
 		//}}}
 
 		//{{{ Node output
-			std::string nodeId;
+			PNodeInfo nodeInfo;
 			Flows::PVariable message;
 		//}}}
 	};
@@ -107,7 +107,7 @@ private:
 	std::unordered_map<int32_t, PFlowInfoClient> _flows;
 
 	std::mutex _nodesMutex;
-	std::unordered_map<std::string, PNodeInfoClient> _nodes;
+	std::unordered_map<std::string, PNodeInfo> _nodes;
 
 	std::mutex _peerSubscriptionsMutex;
 	std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::set<std::string>>>> _peerSubscriptions;

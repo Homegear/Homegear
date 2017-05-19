@@ -39,7 +39,7 @@ public:
 	PhpNode(std::string path, std::string name);
 	virtual ~PhpNode();
 
-	virtual void input(Flows::PVariable message) {}
+	virtual void input(Flows::PNodeInfo nodeInfo, Flows::PVariable message) {}
 };
 
 #endif

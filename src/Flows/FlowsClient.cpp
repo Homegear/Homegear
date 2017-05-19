@@ -330,9 +330,9 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 		}
 		else //Node output
 		{
-			if(!queueEntry->message) return;
-			Flows::PINode node = _nodeManager->getNode(queueEntry->nodeId);
-			if(node) node->input(queueEntry->message);
+			if(!queueEntry->nodeInfo || !queueEntry->message) return;
+			Flows::PINode node = _nodeManager->getNode(queueEntry->nodeInfo->id);
+			if(node) node->input(queueEntry->nodeInfo, queueEntry->message);
 		}
 	}
 	catch(const std::exception& ex)
@@ -540,16 +540,18 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 
 		if(message->structValue->find("payload") == message->structValue->end()) message->structValue->emplace("payload", std::make_shared<Flows::Variable>());
 
-		if(index >= nodesIterator->second->wires.size())
+		if(index >= nodesIterator->second->wiresOut.size())
 		{
 			_out.printError("Error: " + nodeId + " has no output with index " + std::to_string(index) + ".");
 			return;
 		}
 
 		message->structValue->emplace("source", std::make_shared<Flows::Variable>(nodeId));
-		for(auto& node : nodesIterator->second->wires.at(index))
+		for(auto& node : nodesIterator->second->wiresOut.at(index))
 		{
-			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(node, message);
+			auto nodeIterator = _nodes.find(node);
+			if(nodeIterator == _nodes.end()) continue;
+			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(nodeIterator->second, message);
 			enqueue(1, queueEntry);
 		}
 	}
@@ -660,7 +662,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 
 		for(auto& element : *parameters->at(1)->arrayValue)
 		{
-			PNodeInfoClient node = std::make_shared<NodeInfoClient>();
+			PNodeInfo node = std::make_shared<NodeInfo>();
 
 			auto wiresIterator = element->structValue->find("wires");
 			if(wiresIterator == element->structValue->end()) continue; //Element is no node
@@ -679,10 +681,19 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 				continue;
 			}
 
+			auto yIterator = element->structValue->find("y");
+			if(yIterator == element->structValue->end())
+			{
+				GD::out.printError("Error: Flow element has no y coordinate.");
+				continue;
+			}
+
 			node->id = idIterator->second->stringValue;
 			node->type = typeIterator->second->stringValue;
+			node->y = yIterator->second->integerValue;
+			node->info = element;
 
-			node->wires.reserve(wiresIterator->second->arrayValue->size());
+			node->wiresOut.reserve(wiresIterator->second->arrayValue->size());
 			for(auto& outputIterator : *wiresIterator->second->arrayValue)
 			{
 				std::vector<std::string> output;
@@ -691,7 +702,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 				{
 					output.push_back(wireIterator->stringValue);
 				}
-				node->wires.push_back(output);
+				node->wiresOut.push_back(output);
 			}
 
 			if(_bl->debugLevel >= 5) _out.printDebug("Starting node " + node->id + " of type " + node->type + ".");
@@ -729,6 +740,36 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 			_out.printWarning("Warning: Not starting flow with ID " + std::to_string(flow->id) + ", because it has no nodes.");
 			return Flows::Variable::createError(-100, "Flow has no nodes.");
 		}
+
+		//{{{ Set wiresIn
+			//Prefill wiresIn
+			std::unordered_map<std::string, std::map<int32_t, std::string>> wiresIn;
+			for(auto& node : flow->nodes)
+			{
+				for(auto& output : node.second->wiresOut)
+				{
+					for(auto& wireOut : output)
+					{
+						auto nodeIterator = flow->nodes.find(wireOut);
+						if(nodeIterator == flow->nodes.end()) continue;
+						wiresIn[wireOut][node.second->y] = node.second->id;
+					}
+				}
+			}
+
+			//Sort wiresIn
+			for(auto& nodeId : wiresIn)
+			{
+				auto nodeIterator = flow->nodes.find(nodeId.first);
+				if(nodeIterator == flow->nodes.end()) continue;
+				nodeIterator->second->wiresIn.reserve(nodeId.second.size());
+				for(auto& y : nodeId.second)
+				{
+					nodeIterator->second->wiresIn.push_back(y.second);
+					nodeIterator->second->wiresInMap[y.second] = nodeIterator->second->wiresIn.size() - 1;
+				}
+			}
+		//}}}
 
 		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
 		_flows.emplace(flow->id, flow);
