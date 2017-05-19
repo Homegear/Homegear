@@ -330,7 +330,9 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 		}
 		else //Node output
 		{
-
+			if(!queueEntry->message) return;
+			Flows::PINode node = _nodeManager->getNode(queueEntry->nodeId);
+			if(node) node->input(queueEntry->message);
 		}
 	}
 	catch(const std::exception& ex)
@@ -530,7 +532,26 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 {
 	try
 	{
-		GD::out.printError("Moin: " + nodeId + ' ' + message->print(false, false, true));
+		if(!message) return;
+
+		std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+		auto nodesIterator = _nodes.find(nodeId);
+		if(nodesIterator == _nodes.end()) return;
+
+		if(message->structValue->find("payload") == message->structValue->end()) message->structValue->emplace("payload", std::make_shared<Flows::Variable>());
+
+		if(index >= nodesIterator->second->wires.size())
+		{
+			_out.printError("Error: " + nodeId + " has no output with index " + std::to_string(index) + ".");
+			return;
+		}
+
+		message->structValue->emplace("source", std::make_shared<Flows::Variable>(nodeId));
+		for(auto& node : nodesIterator->second->wires.at(index))
+		{
+			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(node, message);
+			enqueue(1, queueEntry);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -661,11 +682,11 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 			node->id = idIterator->second->stringValue;
 			node->type = typeIterator->second->stringValue;
 
-			node->wires.resize(wiresIterator->second->arrayValue->size());
+			node->wires.reserve(wiresIterator->second->arrayValue->size());
 			for(auto& outputIterator : *wiresIterator->second->arrayValue)
 			{
 				std::vector<std::string> output;
-				output.resize(outputIterator->arrayValue->size());
+				output.reserve(outputIterator->arrayValue->size());
 				for(auto& wireIterator : *outputIterator->arrayValue)
 				{
 					output.push_back(wireIterator->stringValue);

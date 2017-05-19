@@ -2367,7 +2367,8 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 		std::string serialNumber;
-		uint32_t channel = 0;
+		uint64_t peerId = parameters->at(0)->integerValue;
+		int32_t channel = 0;
 		bool useSerialNumber = false;
 		bool requestFromDevice = false;
 		bool asynchronously = false;
@@ -2386,8 +2387,27 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 		}
 		else
 		{
+			channel = parameters->at(1)->integerValue;
 			if(parameters->size() >= 4) requestFromDevice = parameters->at(3)->booleanValue;
 			if(parameters->size() >= 5) asynchronously = parameters->at(4)->booleanValue;
+		}
+
+		if(!useSerialNumber)
+		{
+			if(peerId == 0 && channel < 0)
+			{
+				BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+				requestParameters->arrayValue->push_back(parameters->at(2));
+				return GD::rpcServers.begin()->second.callMethod("getSystemVariable", requestParameters);
+			}
+			else if(peerId != 0 && channel < 0)
+			{
+				BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+				requestParameters->arrayValue->reserve(2);
+				requestParameters->arrayValue->push_back(parameters->at(0));
+				requestParameters->arrayValue->push_back(parameters->at(2));
+				return GD::rpcServers.begin()->second.callMethod("getMetadata", requestParameters);
+			}
 		}
 
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
@@ -2402,7 +2422,7 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 				}
 				else
 				{
-					if(central->peerExists((uint64_t)parameters->at(0)->integerValue)) return central->getValue(clientInfo, parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue, requestFromDevice, asynchronously);
+					if(central->peerExists(peerId)) return central->getValue(clientInfo, peerId, channel, parameters->at(2)->stringValue, requestFromDevice, asynchronously);
 				}
 			}
 		}
@@ -3978,7 +3998,8 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 		std::string serialNumber;
-		uint32_t channel = 0;
+		uint64_t peerId = parameters->at(0)->integerValue;
+		int32_t channel = 0;
 		bool useSerialNumber = false;
 		if(parameters->at(0)->type == BaseLib::VariableType::tString)
 		{
@@ -3991,6 +4012,10 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 			}
 			else serialNumber = parameters->at(0)->stringValue;
 		}
+		else
+		{
+			channel = parameters->at(1)->integerValue;
+		}
 
 		BaseLib::PVariable value;
 		if(useSerialNumber && parameters->size() >= 3) value = parameters->at(2);
@@ -4000,6 +4025,27 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 		bool wait = true;
 		if(useSerialNumber && parameters->size() == 4) wait = parameters->at(3)->booleanValue;
 		else if(!useSerialNumber && parameters->size() == 5) wait = parameters->at(4)->booleanValue;
+
+		if(!useSerialNumber)
+		{
+			if(peerId == 0 && channel < 0)
+			{
+				BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+				requestParameters->arrayValue->reserve(2);
+				requestParameters->arrayValue->push_back(parameters->at(2));
+				requestParameters->arrayValue->push_back(value);
+				return GD::rpcServers.begin()->second.callMethod("setSystemVariable", requestParameters);
+			}
+			else if(peerId != 0 && channel < 0)
+			{
+				BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+				requestParameters->arrayValue->reserve(3);
+				requestParameters->arrayValue->push_back(parameters->at(0));
+				requestParameters->arrayValue->push_back(parameters->at(2));
+				requestParameters->arrayValue->push_back(value);
+				return GD::rpcServers.begin()->second.callMethod("setMetadata", requestParameters);
+			}
+		}
 
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -4013,7 +4059,7 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 				}
 				else
 				{
-					if(central->peerExists((uint64_t)parameters->at(0)->integerValue)) return central->setValue(clientInfo, parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue, value, wait);
+					if(central->peerExists(peerId)) return central->setValue(clientInfo, peerId, channel, parameters->at(2)->stringValue, value, wait);
 				}
 			}
 		}

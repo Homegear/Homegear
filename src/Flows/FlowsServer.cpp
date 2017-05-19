@@ -389,7 +389,7 @@ void FlowsServer::startFlows()
 		std::string rawFlows = GD::bl->io.getFileContent(flowsfile);
 		if(BaseLib::HelperFunctions::trim(rawFlows).empty()) return;
 
-		//{{{ Filter all nodes and set "FlowListElement::next"
+		//{{{ Filter all nodes and assign it to flows
 			BaseLib::PVariable flows = _jsonDecoder->decode(rawFlows);
 			std::vector<std::unordered_map<std::string, BaseLib::PVariable>> nodeGroups;
 			for(auto& element : *flows->arrayValue)
@@ -404,10 +404,10 @@ void FlowsServer::startFlows()
 				auto wiresIterator = element->structValue->find("wires");
 				if(wiresIterator == element->structValue->end()) continue; //Element is no node
 
-				if(wiresIterator->second->arrayValue->empty()) continue; //Not connected
-
 				auto typeIterator = element->structValue->find("type");
 				if(typeIterator == element->structValue->end()) continue;
+
+				if(typeIterator->second->stringValue == "comment") continue;
 
 				bool processed = false;
 				bool next = false;
@@ -450,7 +450,7 @@ void FlowsServer::startFlows()
 						{
 							for(BaseLib::PVariable& wire : *output->arrayValue)
 							{
-								if(nodeGroup.find(wire->stringValue) == nodeGroup.end()) nodeGroup.emplace(wire->stringValue, BaseLib::PVariable());
+								nodeGroup.emplace(wire->stringValue, BaseLib::PVariable());
 							}
 						}
 					}
@@ -467,7 +467,7 @@ void FlowsServer::startFlows()
 					{
 						for(BaseLib::PVariable& wire : *output->arrayValue)
 						{
-							nodeGroup.emplace(wire->stringValue, BaseLib::PVariable());
+							if(nodeGroup.find(wire->stringValue) == nodeGroup.end()) nodeGroup.emplace(wire->stringValue, BaseLib::PVariable());
 						}
 					}
 
@@ -483,6 +483,7 @@ void FlowsServer::startFlows()
 			uint32_t maxThreadCount = 0;
 			for(auto& node : nodeGroup)
 			{
+				if(!node.second) continue;
 				flow->arrayValue->push_back(node.second);
 				auto typeIterator = node.second->structValue->find("type");
 				if(typeIterator != node.second->structValue->end())
