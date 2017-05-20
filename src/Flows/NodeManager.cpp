@@ -40,7 +40,6 @@ NodeLoader::NodeLoader(std::string name, std::string path)
 		_filename = name + ".so";
 		_path = path;
 		_name = name;
-		GD::out.printInfo("Info: Loading node " + _filename);
 
 		void* nodeHandle = dlopen(_path.c_str(), RTLD_NOW);
 		if (!nodeHandle)
@@ -278,6 +277,7 @@ int32_t NodeManager::loadNode(std::string name, std::string id, Flows::PINode& n
 		std::string path(GD::bl->settings.flowsPath() + "nodes/" + name + "/");
 		if(BaseLib::Io::fileExists(path + name + ".so")) //C++ module
 		{
+			GD::out.printInfo("Info: Loading node " + name + ".so");
 			path = path + name + ".so";
 
 			std::lock_guard<std::mutex> nodeLoadersGuard(_nodeLoadersMutex);
@@ -307,12 +307,14 @@ int32_t NodeManager::loadNode(std::string name, std::string id, Flows::PINode& n
 		}
 		else if(BaseLib::Io::fileExists(path + name + ".hgn")) //Encrypted PHP
 		{
+			GD::out.printInfo("Info: Loading node " + name + ".hgn");
 			node = std::make_shared<PhpNode>(path + name + ".hgn", name);
 			_nodes.emplace(id, node);
 			return 0;
 		}
 		else if(BaseLib::Io::fileExists(path + name + ".php")) //Unencrypted PHP
 		{
+			GD::out.printInfo("Info: Loading node " + name + ".php");
 			node = std::make_shared<PhpNode>(path + name + ".php", name);
 			_nodes.emplace(id, node);
 			return 0;

@@ -58,6 +58,7 @@ public:
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
 	std::string handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
 	std::string handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
+	void nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message);
 private:
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
@@ -106,7 +107,7 @@ private:
 	int64_t _lastGargabeCollection = 0;
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 	std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> _rpcMethods;
-	std::map<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>> _localRpcMethods;
+	std::map<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>> _localRpcMethods;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
 	std::mutex _restartFlowsMutex;
@@ -115,6 +116,8 @@ private:
 	std::vector<NodeManager::PNodeInfo> _nodeInfo;
 	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
 	std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
+	std::mutex _nodeClientIdMapMutex;
+	std::map<std::string, int32_t> _nodeClientIdMap;
 
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
@@ -137,8 +140,8 @@ private:
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 
 	// {{{ RPC methods
-		BaseLib::PVariable registerFlowsClient(PFlowsClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-		BaseLib::PVariable flowFinished(PFlowsClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+		BaseLib::PVariable registerFlowsClient(PFlowsClientData& clientData, BaseLib::PArray& parameters);
+		BaseLib::PVariable executePhpNode(PFlowsClientData& clientData, BaseLib::PArray& parameters);
 	// }}}
 };
 

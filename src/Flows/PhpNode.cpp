@@ -38,3 +38,32 @@ PhpNode::PhpNode(std::string path, std::string name) : INode(path, name)
 PhpNode::~PhpNode()
 {
 }
+
+void PhpNode::input(Flows::PNodeInfo nodeInfo, Flows::PVariable message)
+{
+	try
+	{
+		if(!_nodeInfo) _nodeInfo = nodeInfo->serialize();
+
+		std::cerr << "Moin a" << std::endl;
+
+		Flows::PArray parameters = std::make_shared<Flows::Array>();
+		parameters->reserve(3);
+		parameters->push_back(_nodeInfo);
+		parameters->push_back(std::make_shared<Flows::Variable>(_path));
+		parameters->push_back(message);
+		invoke("executePhpNode", parameters);
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}

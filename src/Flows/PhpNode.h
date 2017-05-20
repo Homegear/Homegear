@@ -35,11 +35,13 @@
 
 class PhpNode : public Flows::INode
 {
+private:
+	Flows::PVariable _nodeInfo;
 public:
 	PhpNode(std::string path, std::string name);
 	virtual ~PhpNode();
 
-	virtual void input(Flows::PNodeInfo nodeInfo, Flows::PVariable message) {}
+	virtual void input(Flows::PNodeInfo nodeInfo, Flows::PVariable message);
 };
 
 #endif

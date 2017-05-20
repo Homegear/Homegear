@@ -171,6 +171,8 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 2, 1000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("removeLicense", std::bind(&ScriptEngineServer::removeLicense, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("getLicenseStates", std::bind(&ScriptEngineServer::getLicenseStates, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("getTrialStartTime", std::bind(&ScriptEngineServer::getTrialStartTime, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("nodeOutput", std::bind(&ScriptEngineServer::nodeOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 }
 
 ScriptEngineServer::~ScriptEngineServer()
@@ -1615,6 +1617,16 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->peerId))}));
 		}
+		else if(scriptType == ScriptInfo::ScriptType::node)
+		{
+			parameters = std::move(BaseLib::PArray(new BaseLib::Array{
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
+				BaseLib::PVariable(new BaseLib::Variable((int32_t)scriptInfo->getType())),
+				scriptInfo->nodeInfo,
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
+				scriptInfo->message}));
+		}
 
 		BaseLib::PVariable result = sendRequest(clientData, "executeScript", parameters);
 		if(result->errorStruct)
@@ -2456,6 +2468,35 @@ BaseLib::PVariable ScriptEngineServer::getAllScripts()
 				}
 
 				return BaseLib::PVariable(new BaseLib::Variable(i->second->getTrialStartTime(familyId, deviceId)));
+			}
+			catch(const std::exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		}
+	// }}}
+
+	// {{{ Flows
+		BaseLib::PVariable ScriptEngineServer::nodeOutput(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+		{
+			try
+			{
+				if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
+				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
+				if(parameters->at(1)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type integer.");
+
+				GD::flowsServer->nodeOutput(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2));
+
+				return std::make_shared<BaseLib::Variable>();
 			}
 			catch(const std::exception& ex)
 			{

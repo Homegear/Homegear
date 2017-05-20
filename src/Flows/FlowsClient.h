@@ -156,6 +156,8 @@ private:
 		 */
 		Flows::PVariable flowCount(Flows::PArray& parameters);
 
+		Flows::PVariable nodeOutput(Flows::PArray& parameters);
+
 		Flows::PVariable broadcastEvent(Flows::PArray& parameters);
 		Flows::PVariable broadcastNewDevices(Flows::PArray& parameters);
 		Flows::PVariable broadcastDeleteDevices(Flows::PArray& parameters);

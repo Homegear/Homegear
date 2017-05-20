@@ -131,8 +131,8 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 2, 1000)
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCWriteLog())));
 
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("registerFlowsClient", std::bind(&FlowsServer::registerFlowsClient, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("flowFinished", std::bind(&FlowsServer::flowFinished, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("registerFlowsClient", std::bind(&FlowsServer::registerFlowsClient, this, std::placeholders::_1, std::placeholders::_2)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("executePhpNode", std::bind(&FlowsServer::executePhpNode, this, std::placeholders::_1, std::placeholders::_2)));
 }
 
 FlowsServer::~FlowsServer()
@@ -365,6 +365,46 @@ void FlowsServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, boo
 			if(signal != -1) exitCode = -32500;
 			process->invokeFlowFinished(exitCode);
 		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void FlowsServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message)
+{
+	try
+	{
+		PFlowsClientData clientData;
+		int32_t clientId = 0;
+		{
+			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+			auto nodeClientIdIterator = _nodeClientIdMap.find(nodeId);
+			if(nodeClientIdIterator == _nodeClientIdMap.end()) return;
+			clientId = nodeClientIdIterator->second;
+		}
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			auto clientIterator = _clients.find(clientId);
+			if(clientIterator == _clients.end()) return;
+			clientData = clientIterator->second;
+		}
+
+		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+		parameters->reserve(3);
+		parameters->push_back(std::make_shared<BaseLib::Variable>(nodeId));
+		parameters->push_back(std::make_shared<BaseLib::Variable>(index));
+		parameters->push_back(message);
+		sendRequest(clientData, "nodeOutput", parameters);
 	}
 	catch(const std::exception& ex)
     {
@@ -1037,7 +1077,7 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 					return;
 				}
 
-				std::map<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(methodName);
+				std::map<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(methodName);
 				if(localMethodIterator != _localRpcMethods.end())
 				{
 					if(GD::bl->debugLevel >= 4)
@@ -1051,7 +1091,7 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 							}
 						}
 					}
-					BaseLib::PVariable result = localMethodIterator->second(queueEntry->clientData, parameters->at(0)->integerValue, parameters->at(2)->arrayValue);
+					BaseLib::PVariable result = localMethodIterator->second(queueEntry->clientData, parameters->at(2)->arrayValue);
 					if(GD::bl->debugLevel >= 5)
 					{
 						_out.printDebug("Response: ");
@@ -1634,7 +1674,7 @@ void FlowsServer::startFlow(PFlowInfoServer& flowInfo)
 }
 
 // {{{ RPC methods
-BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData, BaseLib::PArray& parameters)
 {
 	try
 	{
@@ -1671,18 +1711,19 @@ BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable FlowsServer::flowFinished(PFlowsClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+BaseLib::PVariable FlowsServer::executePhpNode(PFlowsClientData& clientData, BaseLib::PArray& parameters)
 {
 	try
 	{
-		if(parameters->size() < 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+		{
+			std::string nodeId = parameters->at(0)->structValue->at("id")->stringValue;
+			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+			_nodeClientIdMap.emplace(nodeId, clientData->id);
+		}
 
-		int32_t exitCode = parameters->at(0)->integerValue;
-		std::lock_guard<std::mutex> processGuard(_processMutex);
-		std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(clientData->pid);
-		if(processIterator == _processes.end()) return BaseLib::Variable::createError(-1, "No matching process found.");
-		processIterator->second->invokeFlowFinished(scriptId, exitCode);
-		processIterator->second->unregisterFlow(scriptId);
+		std::string filename = parameters->at(1)->stringValue.substr(parameters->at(1)->stringValue.find_last_of('/') + 1);
+		BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::node, parameters->at(0), parameters->at(1)->stringValue, filename, parameters->at(2)));
+		GD::scriptEngineServer->executeScript(scriptInfo, false);
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
     catch(const std::exception& ex)

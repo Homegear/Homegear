@@ -55,6 +55,7 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 2, 1000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("startFlow", std::bind(&FlowsClient::startFlow, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("stopFlow", std::bind(&FlowsClient::stopFlow, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("flowCount", std::bind(&FlowsClient::flowCount, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("nodeOutput", std::bind(&FlowsClient::nodeOutput, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("broadcastEvent", std::bind(&FlowsClient::broadcastEvent, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("broadcastDeleteDevices", std::bind(&FlowsClient::broadcastDeleteDevices, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("broadcastNewDevices", std::bind(&FlowsClient::broadcastNewDevices, this, std::placeholders::_1)));
@@ -705,30 +706,6 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 				node->wiresOut.push_back(output);
 			}
 
-			if(_bl->debugLevel >= 5) _out.printDebug("Starting node " + node->id + " of type " + node->type + ".");
-
-			Flows::PINode nodeObject;
-			int32_t result = _nodeManager->loadNode(node->type, node->id, nodeObject);
-			if(result < 0)
-			{
-				_out.printError("Error: Could not load node " + node->type + ". Error code: " + std::to_string(result));
-				continue;
-			}
-
-			nodeObject->setId(node->id);
-
-			nodeObject->setLog(std::function<void(std::string, int32_t, std::string)>(std::bind(&FlowsClient::log, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-			nodeObject->setSubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::subscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
-			nodeObject->setUnsubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::unsubscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
-			nodeObject->setOutput(std::function<void(std::string, uint32_t, Flows::PVariable)>(std::bind(&FlowsClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-			nodeObject->setInvoke(std::function<Flows::PVariable(std::string, Flows::PArray&)>(std::bind(&FlowsClient::invoke, this, std::placeholders::_1, std::placeholders::_2)));
-
-			if(!nodeObject->start(element))
-			{
-				_out.printError("Error: Could not load node " + node->type + ". Start failed.");
-				continue;
-			}
-
 			flow->nodes.emplace(node->id, node);
 
 			std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
@@ -767,6 +744,38 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 				{
 					nodeIterator->second->wiresIn.push_back(y.second);
 					nodeIterator->second->wiresInMap[y.second] = nodeIterator->second->wiresIn.size() - 1;
+				}
+			}
+		//}}}
+
+		//{{{ Start nodes
+			{
+				std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+				for(auto& node : _nodes)
+				{
+					if(_bl->debugLevel >= 5) _out.printDebug("Starting node " + node.second->id + " of type " + node.second->type + ".");
+
+					Flows::PINode nodeObject;
+					int32_t result = _nodeManager->loadNode(node.second->type, node.second->id, nodeObject);
+					if(result < 0)
+					{
+						_out.printError("Error: Could not load node " + node.second->type + ". Error code: " + std::to_string(result));
+						continue;
+					}
+
+					nodeObject->setId(node.second->id);
+
+					nodeObject->setLog(std::function<void(std::string, int32_t, std::string)>(std::bind(&FlowsClient::log, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+					nodeObject->setInvoke(std::function<Flows::PVariable(std::string, Flows::PArray&)>(std::bind(&FlowsClient::invoke, this, std::placeholders::_1, std::placeholders::_2)));
+					nodeObject->setSubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::subscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
+					nodeObject->setUnsubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::unsubscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
+					nodeObject->setOutput(std::function<void(std::string, uint32_t, Flows::PVariable)>(std::bind(&FlowsClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+
+					if(!nodeObject->start(node.second))
+					{
+						_out.printError("Error: Could not load node " + node.second->type + ". Start failed.");
+						continue;
+					}
 				}
 			}
 		//}}}
@@ -841,6 +850,29 @@ Flows::PVariable FlowsClient::flowCount(Flows::PArray& parameters)
 	{
 		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
 		return std::make_shared<Flows::Variable>(_flows.size());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable FlowsClient::nodeOutput(Flows::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+
+		queueOutput(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2));
 	}
     catch(const std::exception& ex)
     {

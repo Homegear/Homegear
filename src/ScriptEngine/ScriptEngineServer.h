@@ -194,6 +194,10 @@ private:
 			BaseLib::PVariable getLicenseStates(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 			BaseLib::PVariable getTrialStartTime(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 		// }}}
+
+		// {{{ Flows
+			BaseLib::PVariable nodeOutput(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+		// }}}
 	// }}}
 };
 

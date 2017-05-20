@@ -31,6 +31,8 @@
 #ifndef NO_SCRIPTENGINE
 
 #include "ScriptEngineClient.h"
+#include "PhpVariableConverter.h"
+#include "php_config_fixes.h"
 #include "../GD/GD.h"
 #include "php_sapi.h"
 #include "PhpEvents.h"
@@ -1052,11 +1054,11 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 		BaseLib::Rpc::PServerInfo serverInfo(new BaseLib::Rpc::ServerInfo::Info());
 		zend_file_handle zendHandle;
 
+		ScriptInfo::ScriptType type = scriptInfo->getType();
 		{
 			std::lock_guard<std::mutex> resourceGuard(_resourceMutex);
 			ts_resource(0); //Replaces TSRMLS_FETCH()
 
-			ScriptInfo::ScriptType type = scriptInfo->getType();
 			if(!scriptInfo->script.empty())
 			{
 				zendHandle.type = ZEND_HANDLE_MAPPED;
@@ -1109,7 +1111,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
 			SG(default_mimetype) = nullptr;
 			SG(default_charset) = nullptr;
-			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)
+			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::node)
 			{
 				PG(register_argc_argv) = 1;
 				PG(implicit_flush) = 1;
@@ -1157,7 +1159,28 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			if(scriptInfo->peerId > 0) GD::out.printInfo("Info: Starting PHP script of peer " + std::to_string(scriptInfo->peerId) + ".");
 		}
 
-		php_execute_script(&zendHandle);
+		std::cerr << "Moin0 " << (int32_t)type << std::endl;
+		if(type == ScriptInfo::ScriptType::node)
+		{
+			std::cerr << "Moin1" << std::endl;
+
+			zval returnValue;
+			zval function;
+			zval parameters[2];
+
+			ZVAL_STRINGL(&function, "input", sizeof("input") - 1);
+			PhpVariableConverter::getPHPVariable(scriptInfo->nodeInfo, &parameters[0]);
+			PhpVariableConverter::getPHPVariable(scriptInfo->message, &parameters[1]);
+			int result = call_user_function(EG(function_table), NULL, &function, &returnValue, 2, parameters);
+			zval_ptr_dtor(&function);
+			zval_ptr_dtor(&parameters[0]);
+			zval_ptr_dtor(&parameters[1]);
+			zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
+
+			std::cerr << "Moin2 " << result << std::endl;
+		}
+		else php_execute_script(&zendHandle);
+
 		scriptInfo->exitCode = EG(exit_status);
 
 		return;
@@ -1198,7 +1221,7 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
 		}
 		ScriptGuard scriptGuard(this, globals, id, scriptInfo);
 
-		if(scriptInfo->script.empty() && scriptInfo->fullPath.size() > 3 && scriptInfo->fullPath.compare(scriptInfo->fullPath.size() - 4, 4, ".hgs") == 0)
+		if(scriptInfo->script.empty() && scriptInfo->fullPath.size() > 3 && (scriptInfo->fullPath.compare(scriptInfo->fullPath.size() - 4, 4, ".hgs") == 0 || scriptInfo->fullPath.compare(scriptInfo->fullPath.size() - 4, 4, ".hgn") == 0))
 		{
 			std::map<std::string, std::shared_ptr<CacheInfo>>::iterator scriptIterator = _scriptCache.find(scriptInfo->fullPath);
 			if(scriptIterator != _scriptCache.end() && scriptIterator->second->lastModified == BaseLib::Io::getFileLastModifiedTime(scriptInfo->fullPath)) scriptInfo->script = scriptIterator->second->script;
@@ -1311,6 +1334,7 @@ void ScriptEngineClient::checkSessionIdThread(std::string sessionId, bool* resul
 
 		ZVAL_STRINGL(&function, "session_start", sizeof("session_start") - 1);
 		call_user_function(EG(function_table), NULL, &function, &returnValue, 0, nullptr);
+		zval_ptr_dtor(&function);
 		zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
 
 		zval* reference = zend_hash_str_find(&EG(symbol_table), "_SESSION", sizeof("_SESSION") - 1);
@@ -1433,6 +1457,15 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 		else if(type == ScriptInfo::ScriptType::device)
 		{
 			scriptInfo.reset(new ScriptInfo(type, parameters->at(2)->stringValue, parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5)->stringValue, parameters->at(6)->integerValue64));
+		}
+		else if(type == ScriptInfo::ScriptType::node)
+		{
+			if(!GD::bl->io.fileExists(scriptInfo->fullPath))
+			{
+				_out.printError("Error: PHP node script \"" + scriptInfo->fullPath + "\" does not exist.");
+				return BaseLib::Variable::createError(-1, "Script file does not exist: " + scriptInfo->fullPath);
+			}
+			scriptInfo.reset(new ScriptInfo(type, parameters->at(2), parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5)));
 		}
 
 		scriptInfo->id = parameters->at(0)->integerValue;
