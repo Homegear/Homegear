@@ -79,6 +79,13 @@ public:
 		virtual BaseLib::PVariable deleteData(std::string& component, std::string& key);
 	// }}}
 
+	// {{{ Node data
+		virtual BaseLib::PVariable setNodeData(std::string& node, std::string& key, BaseLib::PVariable& value);
+		virtual BaseLib::PVariable getNodeData(std::string& node, std::string& key);
+		virtual std::set<std::string> getAllNodeDataNodes();
+		virtual BaseLib::PVariable deleteNodeData(std::string& node, std::string& key);
+	// }}}
+
 	// {{{ Metadata
 		virtual BaseLib::PVariable setMetadata(uint64_t peerID, std::string& serialNumber, std::string& dataID, BaseLib::PVariable& metadata);
 		virtual BaseLib::PVariable getMetadata(uint64_t peerID, std::string& dataID);
@@ -166,6 +173,9 @@ protected:
 
 	std::mutex _dataMutex;
 	std::map<std::string, std::map<std::string, BaseLib::PVariable>> _data;
+
+	std::mutex _nodeDataMutex;
+	std::map<std::string, std::map<std::string, BaseLib::PVariable>> _nodeData;
 
 	std::mutex _metadataMutex;
 	std::map<uint64_t, std::map<std::string, BaseLib::PVariable>> _metadata;

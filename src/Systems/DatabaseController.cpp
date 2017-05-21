@@ -104,6 +104,8 @@ void DatabaseController::initializeDatabase()
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS usersIndex ON users (userID, name)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS events (eventID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, type INTEGER NOT NULL, peerID INTEGER, peerChannel INTEGER, variable TEXT, trigger INTEGER, triggerValue BLOB, eventMethod TEXT, eventMethodParameters BLOB, resetAfter INTEGER, initialTime INTEGER, timeOperation INTEGER, timeFactor REAL, timeLimit INTEGER, resetMethod TEXT, resetMethodParameters BLOB, eventTime INTEGER, endTime INTEGER, recurEvery INTEGER, lastValue BLOB, lastRaised INTEGER, lastReset INTEGER, currentTime INTEGER, enabled INTEGER)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS eventsIndex ON events (eventID, name, type, peerID, peerChannel)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS nodeData (node TEXT, key TEXT, value BLOB)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS nodeDataIndex ON nodeData (node, key)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS data (component TEXT, key TEXT, value BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS dataIndex ON data (component, key)");
 
@@ -563,6 +565,201 @@ BaseLib::PVariable DatabaseController::deleteData(std::string& component, std::s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 //End data
+
+//Node data
+std::set<std::string> DatabaseController::getAllNodeDataNodes()
+{
+	try
+	{
+		std::set<std::string> nodeIds;
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT node FROM nodeData");
+
+		for(auto& row : *rows)
+		{
+			nodeIds.emplace(row.second.at(0)->textValue);
+		}
+
+		return nodeIds;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::set<std::string>();
+}
+
+BaseLib::PVariable DatabaseController::getNodeData(std::string& node, std::string& key)
+{
+	try
+	{
+		BaseLib::PVariable value;
+
+		if(!key.empty())
+		{
+			std::lock_guard<std::mutex> dataGuard(_nodeDataMutex);
+			auto componentIterator = _nodeData.find(node);
+			if(componentIterator != _nodeData.end())
+			{
+				auto keyIterator = componentIterator->second.find(key);
+				if(keyIterator != componentIterator->second.end())
+				{
+					value = keyIterator->second;
+					return value;
+				}
+			}
+		}
+
+		BaseLib::Database::DataRow data;
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(node)));
+		std::string command;
+		if(!key.empty())
+		{
+			command = "SELECT value FROM nodeData WHERE node=? AND key=?";
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(key)));
+		}
+		else command = "SELECT key, value FROM nodeData WHERE node=?";
+
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand(command, data);
+		if(rows->empty() || rows->at(0).empty()) return std::make_shared<BaseLib::Variable>();
+
+		if(key.empty())
+		{
+			value = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			for(auto& row : *rows)
+			{
+				value->structValue->emplace(row.second.at(0)->textValue, _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue));
+			}
+		}
+		else
+		{
+			value = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+			std::lock_guard<std::mutex> dataGuard(_nodeDataMutex);
+			_nodeData[node][key] = value;
+		}
+
+		return value;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::setNodeData(std::string& node, std::string& key, BaseLib::PVariable& value)
+{
+	try
+	{
+		if(!value) return BaseLib::Variable::createError(-32602, "Could not parse data.");
+		if(node.empty()) return BaseLib::Variable::createError(-32602, "component is an empty string.");
+		if(key.empty()) return BaseLib::Variable::createError(-32602, "key is an empty string.");
+		if(node.size() > 250) return BaseLib::Variable::createError(-32602, "node ID has more than 250 characters.");
+		if(key.size() > 250) return BaseLib::Variable::createError(-32602, "key has more than 250 characters.");
+		//Don't check for type here, so base64, string and future data types that use stringValue are handled
+		if(value->type != BaseLib::VariableType::tBase64 && value->type != BaseLib::VariableType::tString && value->type != BaseLib::VariableType::tInteger && value->type != BaseLib::VariableType::tInteger64 && value->type != BaseLib::VariableType::tFloat && value->type != BaseLib::VariableType::tBoolean && value->type != BaseLib::VariableType::tStruct && value->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-32602, "Type " + BaseLib::Variable::getTypeString(value->type) + " is currently not supported.");
+
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT COUNT(*) FROM nodeData");
+		if(rows->size() == 0 || rows->at(0).size() == 0)
+		{
+			return BaseLib::Variable::createError(-32500, "Error counting data in database.");
+		}
+		if(rows->at(0).at(0)->intValue > 1000000)
+		{
+			return BaseLib::Variable::createError(-32500, "Reached limit of 1000000 data entries. Please delete data before adding new entries.");
+		}
+
+		{
+			std::lock_guard<std::mutex> dataGuard(_nodeDataMutex);
+			_nodeData[node][key] = value;
+		}
+
+		BaseLib::Database::DataRow data;
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(node)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(key)));
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM nodeData WHERE node=? AND key=?", data);
+		enqueue(0, entry);
+
+		std::vector<char> encodedValue;
+		_rpcEncoder->encodeResponse(value, encodedValue);
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(encodedValue)));
+		entry = std::make_shared<QueueEntry>("INSERT INTO nodeData VALUES(?, ?, ?)", data);
+		enqueue(0, entry);
+
+		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::deleteNodeData(std::string& node, std::string& key)
+{
+	try
+	{
+		{
+			std::lock_guard<std::mutex> dataGuard(_nodeDataMutex);
+			if(key.empty()) _nodeData.erase(node);
+			else
+			{
+				auto dataIterator = _nodeData.find(node);
+				if(dataIterator != _nodeData.end()) dataIterator->second.erase(key);
+			}
+		}
+
+		BaseLib::Database::DataRow data;
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(node)));
+		std::string command("DELETE FROM nodeData WHERE node=?");
+		if(!key.empty())
+		{
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(key)));
+			command.append(" AND key=?");
+		}
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>(command, data);
+		enqueue(0, entry);
+
+		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+//End node data
 
 //Metadata
 BaseLib::PVariable DatabaseController::getAllMetadata(uint64_t peerID)

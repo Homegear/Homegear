@@ -680,6 +680,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 				GD::out.printError("Error: Flow element has no type.");
 				continue;
 			}
+			if(typeIterator->second->stringValue.compare(0, 8, "subflow:") == 0) continue;
 
 			auto yIterator = element->structValue->find("y");
 			if(yIterator == element->structValue->end())

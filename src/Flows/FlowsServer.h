@@ -135,7 +135,7 @@ private:
 	PFlowsProcess getFreeProcess(uint32_t maxThreadCount);
 	void getMaxThreadCounts();
 	void startFlows();
-	void startFlow(PFlowInfoServer& flowInfo);
+	void startFlow(PFlowInfoServer& flowInfo, std::set<std::string>& nodes);
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 

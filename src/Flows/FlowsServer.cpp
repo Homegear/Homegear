@@ -66,6 +66,7 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 2, 1000)
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("deleteData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteData())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("deleteDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteDevice())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("deleteMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteMetadata())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("deleteNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteNodeData())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("deleteSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteSystemVariable())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("enableEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCEnableEvent())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getAllConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllConfig())));
@@ -85,6 +86,7 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 2, 1000)
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getLinks", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetLinks())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetMetadata())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetName())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetNodeData())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getPairingMethods", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPairingMethods())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamset())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getParamsetDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetDescription())));
@@ -121,6 +123,7 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 2, 1000)
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setLinkInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetLinkInfo())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetMetadata())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetName())));
+	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetNodeData())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetSystemVariable())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setTeam", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetTeam())));
 	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetValue())));
@@ -431,8 +434,10 @@ void FlowsServer::startFlows()
 
 		//{{{ Filter all nodes and assign it to flows
 			BaseLib::PVariable flows = _jsonDecoder->decode(rawFlows);
-			std::unordered_map<std::string, std::vector<BaseLib::PVariable>> flowNodes;
+			std::unordered_map<std::string, BaseLib::PVariable> subflows;
+			std::unordered_map<std::string, std::unordered_map<std::string, BaseLib::PVariable>> flowNodes;
 			std::unordered_map<std::string, std::set<std::string>> nodeIds;
+			std::set<std::string> allNodeIds;
 			for(auto& element : *flows->arrayValue)
 			{
 				auto idIterator = element->structValue->find("id");
@@ -442,40 +447,180 @@ void FlowsServer::startFlows()
 					continue;
 				}
 
-				auto wiresIterator = element->structValue->find("wires");
-				if(wiresIterator == element->structValue->end()) continue; //Element is no node
-
 				auto typeIterator = element->structValue->find("type");
 				if(typeIterator == element->structValue->end()) continue;
 				if(typeIterator->second->stringValue == "comment") continue;
+				if(typeIterator->second->stringValue == "subflow")
+				{
+					subflows.emplace(idIterator->second->stringValue, element);
+					continue;
+				}
+
+				auto wiresIterator = element->structValue->find("wires");
+				if(wiresIterator == element->structValue->end()) continue; //Element is no node
 
 				auto zIterator = element->structValue->find("z");
 				if(zIterator == element->structValue->end()) continue;
 
-				auto& nodeIdElement = nodeIds[zIterator->second->stringValue];
-				if(nodeIdElement.find(idIterator->second->stringValue) != nodeIdElement.end())
+				if(allNodeIds.find(idIterator->second->stringValue) != allNodeIds.end())
 				{
-					GD::out.printError("Error: Flow element is defined twice in same flow: " + idIterator->second->stringValue + ". One of the flows is not working correctly.");
+					GD::out.printError("Error: Flow element is defined twice: " + idIterator->second->stringValue + ". At least one of the flows is not working correctly.");
 					continue;
 				}
 
+				allNodeIds.emplace(idIterator->second->stringValue);
 				nodeIds[zIterator->second->stringValue].emplace(idIterator->second->stringValue);
-				flowNodes[zIterator->second->stringValue].push_back(element);
+				flowNodes[zIterator->second->stringValue].emplace(idIterator->second->stringValue, element);
+			}
+		//}}}
+
+		//{{{ Insert subflows
+			for(auto& element : flowNodes)
+			{
+				std::vector<std::pair<std::string, BaseLib::PVariable>> nodesToAdd;
+				for(auto& node : element.second)
+				{
+					auto typeIterator = node.second->structValue->find("type");
+					if(typeIterator == node.second->structValue->end()) continue;
+					if(typeIterator->second->stringValue.size() < 9 || typeIterator->second->stringValue.compare(0, 8, "subflow:") != 0) continue;
+
+					std::string thisSubflowId = node.second->structValue->at("id")->stringValue;
+					std::string subflowIdPrefix = thisSubflowId + ':';
+					std::string subflowId = typeIterator->second->stringValue.substr(8);
+					auto subflowInfoIterator = subflows.find(subflowId);
+					if(subflowInfoIterator == subflows.end())
+					{
+						GD::out.printError("Error: Could not find subflow info with for subflow with id " + subflowId);
+						continue;
+					}
+
+					auto subflowIterator = flowNodes.find(subflowId);
+					if(subflowIterator == flowNodes.end())
+					{
+						GD::out.printError("Error: Could not find subflow with id " + subflowId);
+						continue;
+					}
+
+					//Copy subflow and prefix all subflow node IDs and wires with subflow ID
+					std::unordered_map<std::string, BaseLib::PVariable> subflow;
+					nodesToAdd.reserve(subflowIterator->second.size());
+					for(auto& subflowElement : subflowIterator->second)
+					{
+						BaseLib::PVariable subflowNode = std::make_shared<BaseLib::Variable>();
+						*subflowNode = *subflowElement.second;
+						subflowNode->structValue->at("id")->stringValue = subflowIdPrefix + subflowNode->structValue->at("id")->stringValue;
+						allNodeIds.emplace(subflowNode->structValue->at("id")->stringValue);
+						nodeIds[element.first].emplace(subflowNode->structValue->at("id")->stringValue);
+
+						auto& subflowNodeWires = subflowNode->structValue->at("wires");
+						for(auto& output : *subflowNodeWires->arrayValue)
+						{
+							for(auto& wire : *output->arrayValue)
+							{
+								wire->stringValue = subflowIdPrefix + wire->stringValue;
+							}
+						}
+
+						subflow.emplace(subflowElement.first, subflowNode);
+						nodesToAdd.push_back(std::make_pair(subflowNode->structValue->at("id")->stringValue, subflowNode));
+					}
+
+					//Find output node and redirect it to the subflow output
+					auto wiresOutIterator = subflowInfoIterator->second->structValue->find("out");
+					if(wiresOutIterator != subflowInfoIterator->second->structValue->end())
+					{
+						for(uint32_t outputIndex = 0; outputIndex < wiresOutIterator->second->arrayValue->size(); ++outputIndex)
+						{
+							auto& element = wiresOutIterator->second->arrayValue->at(outputIndex);
+							auto innerIterator = element->structValue->find("wires");
+							if(innerIterator == element->structValue->end()) continue;
+							for(auto& wireIterator : *innerIterator->second->arrayValue)
+							{
+								auto wireIdIterator = wireIterator->structValue->find("id");
+								if(wireIdIterator == wireIterator->structValue->end()) continue;
+
+								auto wirePortIterator = wireIterator->structValue->find("port");
+								if(wirePortIterator == wireIterator->structValue->end()) continue;
+
+								auto sourceNodeIterator = subflow.find(wireIdIterator->second->stringValue);
+								if(sourceNodeIterator == subflow.end()) continue;
+
+								auto sourceNodeWires = sourceNodeIterator->second->structValue->at("wires");
+								while((signed)sourceNodeWires->arrayValue->size() < wirePortIterator->second->integerValue + 1) sourceNodeWires->arrayValue->push_back(std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray));
+
+								auto& targetNodeWires = node.second->structValue->at("wires");
+								if(outputIndex >= targetNodeWires->arrayValue->size()) continue;
+								*sourceNodeWires->arrayValue->at(wirePortIterator->second->integerValue) = *targetNodeWires->arrayValue->at(outputIndex);
+							}
+						}
+					}
+
+					//Redirect all subflow inputs to subflow nodes
+					auto wiresInIterator = subflowInfoIterator->second->structValue->find("in");
+					if(wiresInIterator != subflowInfoIterator->second->structValue->end())
+					{
+						BaseLib::PArray wiresIn = std::make_shared<BaseLib::Array>();
+						if(!wiresInIterator->second->arrayValue->empty())
+						{
+							auto wiresInWiresIterator = wiresInIterator->second->arrayValue->at(0)->structValue->find("wires");
+							if(wiresInWiresIterator != wiresInIterator->second->arrayValue->at(0)->structValue->end())
+							{
+								for(auto& wiresInWire : *wiresInWiresIterator->second->arrayValue)
+								{
+									auto wiresInWireIdIterator = wiresInWire->structValue->find("id");
+									if(wiresInWireIdIterator == wiresInWire->structValue->end()) continue;
+
+									wiresIn->push_back(std::make_shared<BaseLib::Variable>(subflowIdPrefix + wiresInWireIdIterator->second->stringValue));
+								}
+							}
+						}
+
+						for(auto& node2 : element.second)
+						{
+							auto& node2Wires = node2.second->structValue->at("wires");
+							for(auto& node2WiresOutput : *node2Wires->arrayValue)
+							{
+								bool rebuildArray = false;
+								for(auto& node2Wire : *node2WiresOutput->arrayValue)
+								{
+									if(node2Wire->stringValue == thisSubflowId)
+									{
+										rebuildArray = true;
+										break;
+									}
+								}
+								if(rebuildArray)
+								{
+									BaseLib::PArray wireArray = std::make_shared<BaseLib::Array>();
+									for(auto& node2Wire : *node2WiresOutput->arrayValue)
+									{
+										if(node2Wire->stringValue != thisSubflowId) wireArray->push_back(node2Wire);
+									}
+									wireArray->insert(wireArray->end(), wiresIn->begin(), wiresIn->end());
+									node2WiresOutput->arrayValue = wireArray;
+								}
+							}
+						}
+					}
+				}
+				element.second.insert(nodesToAdd.begin(), nodesToAdd.end());
 			}
 		//}}}
 
 		for(auto& element : flowNodes)
 		{
+			if(subflows.find(element.first) != subflows.end()) continue;
 			BaseLib::PVariable flow = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 			flow->arrayValue->reserve(element.second.size());
 			uint32_t maxThreadCount = 0;
 			for(auto& node : element.second)
 			{
-				if(!node) continue;
-				flow->arrayValue->push_back(node);
-				auto typeIterator = node->structValue->find("type");
-				if(typeIterator != node->structValue->end())
+				if(!node.second) continue;
+				flow->arrayValue->push_back(node.second);
+				auto typeIterator = node.second->structValue->find("type");
+				if(typeIterator != node.second->structValue->end())
 				{
+					if(typeIterator->second->stringValue.compare(0, 8, "subflow:") == 0) continue;
 					auto threadCountIterator = _maxThreadCounts.find(typeIterator->second->stringValue);
 					if(threadCountIterator == _maxThreadCounts.end())
 					{
@@ -489,7 +634,15 @@ void FlowsServer::startFlows()
 			PFlowInfoServer flowInfo = std::make_shared<FlowInfoServer>();
 			flowInfo->maxThreadCount = maxThreadCount;
 			flowInfo->flow = flow;
-			startFlow(flowInfo);
+			flow->print(false, true);
+			startFlow(flowInfo, nodeIds[element.first]);
+		}
+
+		std::set<std::string> nodeData = GD::bl->db->getAllNodeDataNodes();
+		std::string dataKey;
+		for(auto nodeId : nodeData)
+		{
+			if(allNodeIds.find(nodeId) == allNodeIds.end()) GD::bl->db->deleteNodeData(nodeId, dataKey);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1574,7 +1727,7 @@ bool FlowsServer::getFileDescriptor(bool deleteOldSocket)
     return false;
 }
 
-void FlowsServer::startFlow(PFlowInfoServer& flowInfo)
+void FlowsServer::startFlow(PFlowInfoServer& flowInfo, std::set<std::string>& nodes)
 {
 	try
 	{
@@ -1597,6 +1750,14 @@ void FlowsServer::startFlow(PFlowInfoServer& flowInfo)
 
 		PFlowsClientData clientData = process->getClientData();
 
+		{
+			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+			for(auto& node : nodes)
+			{
+				_nodeClientIdMap.emplace(node, clientData->id);
+			}
+		}
+
 		BaseLib::PArray parameters(new BaseLib::Array{
 				BaseLib::PVariable(new BaseLib::Variable(flowInfo->id)),
 				flowInfo->flow
@@ -1608,6 +1769,15 @@ void FlowsServer::startFlow(PFlowInfoServer& flowInfo)
 			_out.printError("Error: Could not execute flow: " + result->structValue->at("faultString")->stringValue);
 			process->invokeFlowFinished(flowInfo->id, result->structValue->at("faultCode")->integerValue);
 			process->unregisterFlow(flowInfo->id);
+
+			{
+				std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+				for(auto& node : nodes)
+				{
+					_nodeClientIdMap.erase(node);
+				}
+			}
+
 			return;
 		}
 		flowInfo->started = true;
@@ -1669,12 +1839,6 @@ BaseLib::PVariable FlowsServer::executePhpNode(PFlowsClientData& clientData, Bas
 	try
 	{
 		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
-
-		{
-			std::string nodeId = parameters->at(0)->structValue->at("id")->stringValue;
-			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
-			_nodeClientIdMap.emplace(nodeId, clientData->id);
-		}
 
 		std::string filename = parameters->at(1)->stringValue.substr(parameters->at(1)->stringValue.find_last_of('/') + 1);
 		BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::node, parameters->at(0), parameters->at(1)->stringValue, filename, parameters->at(2)));
