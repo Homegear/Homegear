@@ -259,6 +259,12 @@ unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
+wget https://github.com/Homegear/libhomegear-node/archive/${1}.zip
+[ $? -ne 0 ] && exit 1
+unzip ${1}.zip
+[ $? -ne 0 ] && exit 1
+rm ${1}.zip
+
 wget https://github.com/Homegear/Homegear/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
@@ -367,9 +373,17 @@ else
 	exit 1
 fi
 
+createPackage libhomegear-node $1 libhomegear-node
+if test -f libhomegear-node*.deb; then
+	dpkg -i libhomegear-node*.deb
+else
+	echo "Error building libhomegear-node."
+	exit 1
+fi
+
 touch /tmp/HOMEGEAR_STATIC_INSTALLATION
 createPackage Homegear $1 homegear
-if test -f libhomegear-base*.deb; then
+if test -f homegear*.deb; then
 	dpkg -i homegear*.deb
 else
 	echo "Error building Homegear."
@@ -430,6 +444,7 @@ function cleanUp {
 cd /build
 
 cleanUp libhomegear-base
+cleanUp libhomegear-node
 cleanUp homegear
 cleanUp homegear-homematicbidcos
 cleanUp homegear-homematicwired
@@ -453,9 +468,10 @@ if [[ -n $1 ]]; then
 fi
 
 EOF
-echo "if test -f libhomegear-base.deb && test -f homegear.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-beckhoff.deb && test -f homegear-knx.deb && test -f homegear-enocean.deb && test -f homegear-intertechno.deb; then
+echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f homegear.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-beckhoff.deb && test -f homegear-knx.deb && test -f homegear-enocean.deb && test -f homegear-intertechno.deb; then
 	isodate=\`date +%Y%m%d\`
 	mv libhomegear-base.deb libhomegear-base_\$[isodate]_${distlc}_${distver}_${arch}.deb
+	mv libhomegear-node.deb libhomegear-node_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear.deb homegear_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-homematicbidcos.deb homegear-homematicbidcos_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-homematicwired.deb homegear-homematicwired_\$[isodate]_${distlc}_${distver}_${arch}.deb
@@ -490,7 +506,7 @@ cat > "$rootfs/build/CreateDebianPackageStable.sh" <<-'EOF'
 
 cd /build
 
-if test -f libhomegear-base*.deb && test -f homegear_*.deb && test -f homegear-homematicbidcos*.deb && test -f homegear-homematicwired*.deb && test -f homegear-insteon*.deb && test -f homegear-max*.deb && test -f homegear-philipshue*.deb && test -f homegear-sonos*.deb && test -f homegear-kodi*.deb && test -f homegear-ipcam*.deb && test -f homegear-beckhoff*.deb && test -f homegear-knx*.deb && test -f homegear-enocean*.deb && test -f homegear-intertechno*.deb; then
+if test -f libhomegear-base*.deb && test -f libhomegear-node*.deb && test -f homegear_*.deb && test -f homegear-homematicbidcos*.deb && test -f homegear-homematicwired*.deb && test -f homegear-insteon*.deb && test -f homegear-max*.deb && test -f homegear-philipshue*.deb && test -f homegear-sonos*.deb && test -f homegear-kodi*.deb && test -f homegear-ipcam*.deb && test -f homegear-beckhoff*.deb && test -f homegear-knx*.deb && test -f homegear-enocean*.deb && test -f homegear-intertechno*.deb; then
 	if test -f /build/UploadStable.sh; then
 		/build/UploadStable.sh
 	fi

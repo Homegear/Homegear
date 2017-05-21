@@ -245,9 +245,6 @@ fi
 git clone https://github.com/krakjoe/pthreads.git pthreads
 cd ..
 
-# Fix bug #74149
-sed -i "s/void zend_signal_startup(void);/BEGIN_EXTERN_C()\nvoid zend_signal_startup(void);\nEND_EXTERN_C()/g" Zend/zend_signal.h
-
 autoconf
 version=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d "+" -f 1 | cut -d "-" -f 1`
 revision=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d "+" -f 1 | cut -d "-" -f 2 | cut -d "~" -f 1`

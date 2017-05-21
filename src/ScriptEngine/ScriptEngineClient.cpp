@@ -1159,11 +1159,9 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			if(scriptInfo->peerId > 0) GD::out.printInfo("Info: Starting PHP script of peer " + std::to_string(scriptInfo->peerId) + ".");
 		}
 
-		std::cerr << "Moin0 " << (int32_t)type << std::endl;
+		php_execute_script(&zendHandle);
 		if(type == ScriptInfo::ScriptType::node)
 		{
-			std::cerr << "Moin1" << std::endl;
-
 			zval returnValue;
 			zval function;
 			zval parameters[2];
@@ -1172,14 +1170,12 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			PhpVariableConverter::getPHPVariable(scriptInfo->nodeInfo, &parameters[0]);
 			PhpVariableConverter::getPHPVariable(scriptInfo->message, &parameters[1]);
 			int result = call_user_function(EG(function_table), NULL, &function, &returnValue, 2, parameters);
+			if(result != 0) _out.printError("Error calling function \"input\".");
 			zval_ptr_dtor(&function);
 			zval_ptr_dtor(&parameters[0]);
 			zval_ptr_dtor(&parameters[1]);
 			zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
-
-			std::cerr << "Moin2 " << result << std::endl;
 		}
-		else php_execute_script(&zendHandle);
 
 		scriptInfo->exitCode = EG(exit_status);
 
@@ -1460,12 +1456,12 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 		}
 		else if(type == ScriptInfo::ScriptType::node)
 		{
+			scriptInfo.reset(new ScriptInfo(type, parameters->at(2), parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5)));
 			if(!GD::bl->io.fileExists(scriptInfo->fullPath))
 			{
 				_out.printError("Error: PHP node script \"" + scriptInfo->fullPath + "\" does not exist.");
 				return BaseLib::Variable::createError(-1, "Script file does not exist: " + scriptInfo->fullPath);
 			}
-			scriptInfo.reset(new ScriptInfo(type, parameters->at(2), parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5)));
 		}
 
 		scriptInfo->id = parameters->at(0)->integerValue;

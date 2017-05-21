@@ -45,14 +45,14 @@ void PhpNode::input(Flows::PNodeInfo nodeInfo, Flows::PVariable message)
 	{
 		if(!_nodeInfo) _nodeInfo = nodeInfo->serialize();
 
-		std::cerr << "Moin a" << std::endl;
-
 		Flows::PArray parameters = std::make_shared<Flows::Array>();
 		parameters->reserve(3);
 		parameters->push_back(_nodeInfo);
 		parameters->push_back(std::make_shared<Flows::Variable>(_path));
 		parameters->push_back(message);
-		invoke("executePhpNode", parameters);
+
+		Flows::PVariable result = invoke("executePhpNode", parameters);
+		if(result->errorStruct) GD::out.printError("Error calling executePhpNode: " + result->structValue->at("faultString")->stringValue);
 	}
     catch(const std::exception& ex)
     {

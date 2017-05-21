@@ -83,7 +83,6 @@ void FlowsClient::dispose()
 
 		_flows.clear();
 		_rpcResponses.clear();
-		_nodeManager.reset();
 	}
     catch(const std::exception& ex)
     {

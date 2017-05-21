@@ -1069,6 +1069,7 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
 			{
 				_out.printError("Error: Script engine client with process ID " + std::to_string(clientData->pid) + " is not responding... Killing it.");
 				kill(clientData->pid, 9);
+				processKilled(clientData->pid, -1, 9, false); //Needs to be called manually
 				break;
 			}
 		}

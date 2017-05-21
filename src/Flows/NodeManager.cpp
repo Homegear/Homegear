@@ -120,6 +120,7 @@ NodeManager::~NodeManager()
 		node.second.reset();
 	}
 	_nodes.clear();
+	std::lock_guard<std::mutex> nodeLoadersGuard(_nodeLoadersMutex);
 	_nodeLoaders.clear();
 }
 
@@ -357,15 +358,12 @@ int32_t NodeManager::unloadNode(std::string id)
 
 		if(!BaseLib::Io::fileExists(path)) return -2;
 
-		auto nodeLoaderIterator = _nodeLoaders.find(nodesIterator->second->getName());
-		if(nodeLoaderIterator != _nodeLoaders.end()) return 1;
-
 		Flows::PINode node = nodesIterator->second;
 
 		if(nodesUsageIterator != _nodesUsage.end())
 		{
 			nodesUsageIterator->second->locked = true;
-			while(node.use_count() > 1) //This is the last node, that's why we can do this
+			while(node.use_count() > 2) //This is the last node, that's why we can do this; At this point, the node is used by "_nodes" and "node".
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(50));
 			}
@@ -373,7 +371,10 @@ int32_t NodeManager::unloadNode(std::string id)
 		_nodes.erase(nodesIterator);
 		node.reset();
 
-		_nodesUsage.erase(nodesUsageIterator);
+		if(nodesUsageIterator != _nodesUsage.end()) _nodesUsage.erase(nodesUsageIterator);
+
+		auto nodeLoaderIterator = _nodeLoaders.find(nodesIterator->second->getName());
+		if(nodeLoaderIterator == _nodeLoaders.end()) return 1;
 
 		nodeLoaderIterator->second.reset();
 		_nodeLoaders.erase(nodeLoaderIterator);

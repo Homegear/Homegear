@@ -431,7 +431,8 @@ void FlowsServer::startFlows()
 
 		//{{{ Filter all nodes and assign it to flows
 			BaseLib::PVariable flows = _jsonDecoder->decode(rawFlows);
-			std::vector<std::unordered_map<std::string, BaseLib::PVariable>> nodeGroups;
+			std::unordered_map<std::string, std::vector<BaseLib::PVariable>> flowNodes;
+			std::unordered_map<std::string, std::set<std::string>> nodeIds;
 			for(auto& element : *flows->arrayValue)
 			{
 				auto idIterator = element->structValue->find("id");
@@ -446,97 +447,44 @@ void FlowsServer::startFlows()
 
 				auto typeIterator = element->structValue->find("type");
 				if(typeIterator == element->structValue->end()) continue;
-
 				if(typeIterator->second->stringValue == "comment") continue;
 
-				bool processed = false;
-				bool next = false;
-				for(auto& nodeGroup : nodeGroups)
+				auto zIterator = element->structValue->find("z");
+				if(zIterator == element->structValue->end()) continue;
+
+				auto& nodeIdElement = nodeIds[zIterator->second->stringValue];
+				if(nodeIdElement.find(idIterator->second->stringValue) != nodeIdElement.end())
 				{
-					auto nodeGroupIterator = nodeGroup.find(idIterator->second->stringValue);
-					if(nodeGroupIterator != nodeGroup.end())
-					{
-						if(nodeGroupIterator->second)
-						{
-							GD::out.printError("Error: Flow element is defined twice: " + idIterator->second->stringValue + ". One of the flows might not work correctly.");
-							next = true;
-							break;
-						}
-						processed = true;
-					}
-
-					if(!processed)
-					{
-						for(BaseLib::PVariable& output : *wiresIterator->second->arrayValue)
-						{
-							for(BaseLib::PVariable& wire : *output->arrayValue)
-							{
-								if(nodeGroup.find(wire->stringValue) != nodeGroup.end())
-								{
-									processed = true;
-									break;
-								}
-							}
-							if(processed) break;
-						}
-					}
-
-					if(processed)
-					{
-						if(nodeGroupIterator != nodeGroup.end()) nodeGroupIterator->second = element;
-						else nodeGroup.emplace(idIterator->second->stringValue, element);
-
-						for(BaseLib::PVariable& output : *wiresIterator->second->arrayValue)
-						{
-							for(BaseLib::PVariable& wire : *output->arrayValue)
-							{
-								nodeGroup.emplace(wire->stringValue, BaseLib::PVariable());
-							}
-						}
-					}
+					GD::out.printError("Error: Flow element is defined twice in same flow: " + idIterator->second->stringValue + ". One of the flows is not working correctly.");
+					continue;
 				}
-				if(next) continue;
-				if(!processed)
-				{
-					if(nodeGroups.size() + 1 > nodeGroups.capacity()) nodeGroups.reserve(nodeGroups.capacity() + 100);
 
-					std::unordered_map<std::string, BaseLib::PVariable> nodeGroup;
-					nodeGroup.emplace(idIterator->second->stringValue, element);
-
-					for(BaseLib::PVariable& output : *wiresIterator->second->arrayValue)
-					{
-						for(BaseLib::PVariable& wire : *output->arrayValue)
-						{
-							if(nodeGroup.find(wire->stringValue) == nodeGroup.end()) nodeGroup.emplace(wire->stringValue, BaseLib::PVariable());
-						}
-					}
-
-					nodeGroups.push_back(nodeGroup);
-				}
+				nodeIds[zIterator->second->stringValue].emplace(idIterator->second->stringValue);
+				flowNodes[zIterator->second->stringValue].push_back(element);
 			}
 		//}}}
 
-		for(auto& nodeGroup : nodeGroups)
+		for(auto& element : flowNodes)
 		{
 			BaseLib::PVariable flow = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-			flow->arrayValue->reserve(nodeGroup.size());
+			flow->arrayValue->reserve(element.second.size());
 			uint32_t maxThreadCount = 0;
-			for(auto& node : nodeGroup)
+			for(auto& node : element.second)
 			{
-				if(!node.second) continue;
-				flow->arrayValue->push_back(node.second);
-				auto typeIterator = node.second->structValue->find("type");
-				if(typeIterator != node.second->structValue->end())
+				if(!node) continue;
+				flow->arrayValue->push_back(node);
+				auto typeIterator = node->structValue->find("type");
+				if(typeIterator != node->structValue->end())
 				{
 					auto threadCountIterator = _maxThreadCounts.find(typeIterator->second->stringValue);
 					if(threadCountIterator == _maxThreadCounts.end())
 					{
-						GD::out.printError("Error: Could not determine maximum thread count of node \"" + node.first + "\". Node is unknown.");
+						GD::out.printError("Error: Could not determine maximum thread count of node \"" + typeIterator->second->stringValue + "\". Node is unknown.");
 						continue;
 					}
 					maxThreadCount += threadCountIterator->second;
 				}
-				else GD::out.printError("Error: Could not determine maximum thread count of node \"" + node.first + "\". No key \"name\".");
+				else GD::out.printError("Error: Could not determine maximum thread count of node. No key \"type\".");
 			}
 			PFlowInfoServer flowInfo = std::make_shared<FlowInfoServer>();
 			flowInfo->maxThreadCount = maxThreadCount;
@@ -584,6 +532,9 @@ void FlowsServer::sendShutdown()
 			collectGarbage();
 			i++;
 		}
+
+		std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+		_nodeClientIdMap.clear();
 	}
 	catch(const std::exception& ex)
     {
@@ -651,6 +602,7 @@ void FlowsServer::restartFlows()
 		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
 		sendShutdown();
 		closeClientConnections();
+		getMaxThreadCounts();
 		startFlows();
 	}
 	catch(const std::exception& ex)
@@ -776,7 +728,7 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 				_jsonEncoder->encode(frontendNodeList, contentString);
 			}
 		}
-		else if(path.compare(0, 6, "flows/") == 0 && path != "flows/index.php")
+		else if(path.compare(0, 6, "flows/") == 0 && path != "flows/index.php" && path != "flows/signin.php")
 		{
 			path = _webroot + path.substr(6);
 			std::cerr << "Requested (5): " << path << std::endl;
@@ -1249,6 +1201,7 @@ BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::s
 			{
 				_out.printError("Error: Flows client with process ID " + std::to_string(clientData->pid) + " is not responding... Killing it.");
 				kill(clientData->pid, 9);
+				processKilled(clientData->pid, -1, 9, false); //Needs to be called manually
 				break;
 			}
 		}
@@ -1715,6 +1668,8 @@ BaseLib::PVariable FlowsServer::executePhpNode(PFlowsClientData& clientData, Bas
 {
 	try
 	{
+		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
+
 		{
 			std::string nodeId = parameters->at(0)->structValue->at("id")->stringValue;
 			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
