@@ -1072,10 +1072,11 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 				std::vector<char> data(&header[0], &header[0] + header.size());
 				sendRPCResponseToClient(client, data, true);
 			}
-			else if(protocol == "client" || pathProtocol == "client")
+			else if(protocol == "client" || pathProtocol == "client" || protocol == "nodeclient" || pathProtocol == "nodeclient")
 			{
 				client->rpcType = BaseLib::RpcType::websocket;
 				client->webSocketClient = true;
+				if(protocol == "nodeclient" || pathProtocol == "nodeclient") client->nodeClient = true;
 				std::string header;
 				header.reserve(133 + websocketAccept.size());
 				header.append("HTTP/1.1 101 Switching Protocols\r\n");
@@ -1089,7 +1090,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 				if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::none)
 				{
 					_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
-					GD::rpcClient->addWebSocketServer(client->socket, client->webSocketClientId, client->address);
+					GD::rpcClient->addWebSocketServer(client->socket, client->webSocketClientId, client->address, client->nodeClient);
 					client->socketDescriptor.reset(new BaseLib::FileDescriptor());
 					client->socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
 					client->closed = true;
@@ -1351,7 +1352,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 							if(client->webSocketClient)
 							{
 								_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
-								GD::rpcClient->addWebSocketServer(client->socket, client->webSocketClientId, client->address);
+								GD::rpcClient->addWebSocketServer(client->socket, client->webSocketClientId, client->address, client->nodeClient);
 								client->socketDescriptor.reset(new BaseLib::FileDescriptor());
 								client->socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
 								client->closed = true;

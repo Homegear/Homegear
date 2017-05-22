@@ -100,14 +100,15 @@ NodeLoader::~NodeLoader()
 	}
 }
 
-Flows::PINode NodeLoader::createNode()
+Flows::PINode NodeLoader::createNode(const std::atomic_bool* nodeEventsEnabled)
 {
 	if (!_factory) return Flows::PINode();
-	return Flows::PINode(_factory->createNode(_path, _name));
+	return Flows::PINode(_factory->createNode(_path, _name, nodeEventsEnabled));
 }
 
-NodeManager::NodeManager()
+NodeManager::NodeManager(const std::atomic_bool* nodeEventsEnabled)
 {
+	_nodeEventsEnabled = nodeEventsEnabled;
 }
 
 NodeManager::~NodeManager()
@@ -124,7 +125,7 @@ NodeManager::~NodeManager()
 	_nodeLoaders.clear();
 }
 
-Flows::PINode NodeManager::getNode(std::string id)
+Flows::PINode NodeManager::getNode(std::string& id)
 {
 	try
 	{
@@ -284,7 +285,7 @@ int32_t NodeManager::loadNode(std::string name, std::string id, Flows::PINode& n
 			std::lock_guard<std::mutex> nodeLoadersGuard(_nodeLoadersMutex);
 			if(_nodeLoaders.find(name) == _nodeLoaders.end()) _nodeLoaders.emplace(name, std::unique_ptr<NodeLoader>(new NodeLoader(name, path)));
 
-			node = _nodeLoaders.at(name)->createNode();
+			node = _nodeLoaders.at(name)->createNode(_nodeEventsEnabled);
 
 			if(node)
 			{
@@ -309,14 +310,14 @@ int32_t NodeManager::loadNode(std::string name, std::string id, Flows::PINode& n
 		else if(BaseLib::Io::fileExists(path + name + ".hgn")) //Encrypted PHP
 		{
 			GD::out.printInfo("Info: Loading node " + name + ".hgn");
-			node = std::make_shared<PhpNode>(path + name + ".hgn", name);
+			node = std::make_shared<PhpNode>(path + name + ".hgn", name, _nodeEventsEnabled);
 			_nodes.emplace(id, node);
 			return 0;
 		}
 		else if(BaseLib::Io::fileExists(path + name + ".php")) //Unencrypted PHP
 		{
 			GD::out.printInfo("Info: Loading node " + name + ".php");
-			node = std::make_shared<PhpNode>(path + name + ".php", name);
+			node = std::make_shared<PhpNode>(path + name + ".php", name, _nodeEventsEnabled);
 			_nodes.emplace(id, node);
 			return 0;
 		}

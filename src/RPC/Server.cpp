@@ -131,6 +131,7 @@ void Server::registerMethods()
 		_server->registerMethod("setMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetMetadata()));
 		_server->registerMethod("setName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetName()));
 		_server->registerMethod("setNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetNodeData()));
+		_server->registerMethod("setNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetNodeVariable()));
 		_server->registerMethod("setSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetSystemVariable()));
 		_server->registerMethod("setTeam", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetTeam()));
 		_server->registerMethod("setValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetValue()));

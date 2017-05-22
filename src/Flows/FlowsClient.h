@@ -98,6 +98,7 @@ private:
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
 	std::unique_ptr<NodeManager> _nodeManager;
+	std::atomic_bool _nodeEventsEnabled;
 
 	std::unique_ptr<Flows::BinaryRpc> _binaryRpc;
 	std::unique_ptr<Flows::RpcDecoder> _rpcDecoder;
@@ -123,6 +124,7 @@ private:
 	void subscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable);
 	void unsubscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable);
 	void queueOutput(std::string nodeId, uint32_t index, Flows::PVariable message);
+	void nodeEvent(std::string nodeId, std::string topic, Flows::PVariable value);
 
 	// {{{ RPC methods
 		/**
@@ -157,6 +159,11 @@ private:
 		Flows::PVariable flowCount(Flows::PArray& parameters);
 
 		Flows::PVariable nodeOutput(Flows::PArray& parameters);
+
+		Flows::PVariable setNodeVariable(Flows::PArray& parameters);
+
+		Flows::PVariable enableNodeEvents(Flows::PArray& parameters);
+		Flows::PVariable disableNodeEvents(Flows::PArray& parameters);
 
 		Flows::PVariable broadcastEvent(Flows::PArray& parameters);
 		Flows::PVariable broadcastNewDevices(Flows::PArray& parameters);

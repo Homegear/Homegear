@@ -38,7 +38,7 @@ class PhpNode : public Flows::INode
 private:
 	Flows::PVariable _nodeInfo;
 public:
-	PhpNode(std::string path, std::string name);
+	PhpNode(std::string path, std::string name, const std::atomic_bool* nodeEventsEnabled);
 	virtual ~PhpNode();
 
 	virtual void input(Flows::PNodeInfo nodeInfo, Flows::PVariable message);

@@ -49,7 +49,7 @@ public:
 	NodeLoader(std::string filename, std::string path);
 	virtual ~NodeLoader();
 
-	Flows::PINode createNode();
+	Flows::PINode createNode(const std::atomic_bool* nodeEventsEnabled);
 private:
 	std::string _filename;
 	std::string _path;
@@ -85,7 +85,7 @@ public:
 	};
 	typedef std::shared_ptr<NodeUsageInfo> PNodeUsageInfo;
 
-	NodeManager();
+	NodeManager(const std::atomic_bool* nodeEventsEnabled);
 	virtual ~NodeManager();
 
 	/**
@@ -113,7 +113,7 @@ public:
 	/*
 	 * Returns the node specified by id.
 	 */
-	Flows::PINode getNode(std::string id);
+	Flows::PINode getNode(std::string& id);
 private:
 	std::mutex _nodeLoadersMutex;
 	std::map<std::string, std::unique_ptr<NodeLoader>> _nodeLoaders;
@@ -124,6 +124,8 @@ private:
 	std::mutex _nodesMutex;
 	std::unordered_map<NodeId, Flows::PINode> _nodes;
 	std::unordered_map<NodeName, PNodeUsageInfo> _nodesUsage;
+
+	const std::atomic_bool* _nodeEventsEnabled;
 
 	NodeManager(const NodeManager&) = delete;
 	NodeManager& operator=(const NodeManager&) = delete;

@@ -59,6 +59,9 @@ public:
 	std::string handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
 	std::string handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
 	void nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message);
+	void setNodeVariable(std::string nodeId, std::string topic, BaseLib::PVariable value);
+	void enableNodeEvents();
+	void disableNodeEvents();
 private:
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
@@ -93,6 +96,7 @@ private:
 	std::string _webroot;
 	std::atomic_bool _shuttingDown;
 	std::atomic_bool _stopServer;
+	std::atomic_bool _nodeEventsEnabled;
 	std::thread _mainThread;
 	int32_t _backlog = 100;
 	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
@@ -143,6 +147,7 @@ private:
 	// {{{ RPC methods
 		BaseLib::PVariable registerFlowsClient(PFlowsClientData& clientData, BaseLib::PArray& parameters);
 		BaseLib::PVariable executePhpNode(PFlowsClientData& clientData, BaseLib::PArray& parameters);
+		BaseLib::PVariable nodeEvent(PFlowsClientData& clientData, BaseLib::PArray& parameters);
 	// }}}
 };
 

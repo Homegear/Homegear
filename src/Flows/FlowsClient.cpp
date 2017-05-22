@@ -37,6 +37,7 @@ namespace Flows
 FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 2, 1000)
 {
 	_stopped = false;
+	_nodeEventsEnabled = false;
 
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	_out.init(GD::bl.get());
@@ -44,7 +45,7 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 2, 1000)
 
 	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
 
-	_nodeManager = std::unique_ptr<NodeManager>(new NodeManager());
+	_nodeManager = std::unique_ptr<NodeManager>(new NodeManager(&_nodeEventsEnabled));
 
 	_binaryRpc = std::unique_ptr<Flows::BinaryRpc>(new Flows::BinaryRpc());
 	_rpcDecoder = std::unique_ptr<Flows::RpcDecoder>(new Flows::RpcDecoder());
@@ -56,6 +57,9 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 2, 1000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("stopFlow", std::bind(&FlowsClient::stopFlow, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("flowCount", std::bind(&FlowsClient::flowCount, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("nodeOutput", std::bind(&FlowsClient::nodeOutput, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("setNodeVariable", std::bind(&FlowsClient::setNodeVariable, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("enableNodeEvents", std::bind(&FlowsClient::enableNodeEvents, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("disableNodeEvents", std::bind(&FlowsClient::disableNodeEvents, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("broadcastEvent", std::bind(&FlowsClient::broadcastEvent, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("broadcastDeleteDevices", std::bind(&FlowsClient::broadcastDeleteDevices, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("broadcastNewDevices", std::bind(&FlowsClient::broadcastNewDevices, this, std::placeholders::_1)));
@@ -569,6 +573,35 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
     }
 }
 
+void FlowsClient::nodeEvent(std::string nodeId, std::string topic, Flows::PVariable value)
+{
+	try
+	{
+		if(!_nodeEventsEnabled || !value) return;
+
+		Flows::PArray parameters = std::make_shared<Flows::Array>();
+		parameters->reserve(3);
+		parameters->push_back(std::make_shared<Flows::Variable>(nodeId));
+		parameters->push_back(std::make_shared<Flows::Variable>(topic));
+		parameters->push_back(value);
+
+		Flows::PVariable result = invoke("nodeEvent", parameters);
+		if(result->errorStruct) GD::out.printError("Error calling nodeEvent: " + result->structValue->at("faultString")->stringValue);
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 // {{{ RPC methods
 Flows::PVariable FlowsClient::reload(Flows::PArray& parameters)
 {
@@ -770,6 +803,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 					nodeObject->setSubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::subscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
 					nodeObject->setUnsubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::unsubscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
 					nodeObject->setOutput(std::function<void(std::string, uint32_t, Flows::PVariable)>(std::bind(&FlowsClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+					nodeObject->setNodeEvent(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&FlowsClient::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 
 					if(!nodeObject->start(node.second))
 					{
@@ -889,6 +923,75 @@ Flows::PVariable FlowsClient::nodeOutput(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
+Flows::PVariable FlowsClient::setNodeVariable(Flows::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+		Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
+		if(node) node->setNodeVariable(parameters->at(1)->stringValue, parameters->at(2));
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable FlowsClient::enableNodeEvents(Flows::PArray& parameters)
+{
+	try
+	{
+		_nodeEventsEnabled = true;
+
+		return Flows::PVariable(new Flows::Variable());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable FlowsClient::disableNodeEvents(Flows::PArray& parameters)
+{
+	try
+	{
+		_nodeEventsEnabled = false;
+
+		return Flows::PVariable(new Flows::Variable());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
 Flows::PVariable FlowsClient::broadcastEvent(Flows::PArray& parameters)
 {
 	try
@@ -914,7 +1017,7 @@ Flows::PVariable FlowsClient::broadcastEvent(Flows::PArray& parameters)
 
 			Flows::PVariable value = parameters->at(3)->arrayValue->at(j);
 
-			for(auto& nodeId : variableIterator->second)
+			for(auto nodeId : variableIterator->second)
 			{
 				Flows::PINode node = _nodeManager->getNode(nodeId);
 				if(node) node->variableEvent(peerId, channel, variableName, value);

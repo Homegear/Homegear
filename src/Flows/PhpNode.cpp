@@ -31,7 +31,7 @@
 #include "PhpNode.h"
 #include "../GD/GD.h"
 
-PhpNode::PhpNode(std::string path, std::string name) : INode(path, name)
+PhpNode::PhpNode(std::string path, std::string name, const std::atomic_bool* nodeEventsEnabled) : INode(path, name, nodeEventsEnabled)
 {
 }
 

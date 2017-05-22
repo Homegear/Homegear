@@ -168,6 +168,48 @@ BaseLib::PVariable Client::getLastEvents(std::set<uint64_t> ids, uint32_t timesp
 	return BaseLib::Variable::createError(-32500, "Unknown application error. See error log for more details.");
 }
 
+void Client::broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib::PVariable& value)
+{
+	try
+	{
+		if(GD::bl->booting)
+		{
+			GD::out.printInfo("Info: Not broadcasting event as I'm still starting up.");
+			return;
+		}
+		{
+			std::lock_guard<std::mutex> serversGuard(_serversMutex);
+			for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
+			{
+				if(!server->second->nodeEvents) continue;
+				if(server->second->removed || (!server->second->socket->connected() && server->second->keepAlive && !server->second->reconnectInfinitely) || (!server->second->initialized && BaseLib::HelperFunctions::getTimeSeconds() - server->second->creationTime > 120)) continue;
+				if(server->second->webSocket || server->second->json)
+				{
+					std::shared_ptr<std::list<BaseLib::PVariable>> parameters = std::make_shared<std::list<BaseLib::PVariable>>();
+					parameters->push_back(std::make_shared<BaseLib::Variable>(nodeId));
+					parameters->push_back(std::make_shared<BaseLib::Variable>(topic));
+					parameters->push_back(value);
+					server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("nodeEvent", parameters));
+				}
+			}
+		}
+
+		if(BaseLib::HelperFunctions::getTime() - _lastGarbageCollection > 60000) collectGarbage();
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>> values)
 {
 	try
@@ -723,18 +765,35 @@ void Client::collectGarbage()
 	{
 		std::vector<int32_t> serversToRemove;
 		int32_t now = BaseLib::HelperFunctions::getTimeSeconds();
+		bool nodeClientRemoved = false;
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
+		_lastGarbageCollection = BaseLib::HelperFunctions::getTime();
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator i = _servers.begin(); i != _servers.end(); ++i)
 		{
 			if(i->second->removed || (!i->second->socket->connected() && i->second->keepAlive && !i->second->reconnectInfinitely) || (!i->second->initialized && now - i->second->creationTime > 120))
 			{
 				i->second->socket->close();
 				serversToRemove.push_back(i->first);
+				if(i->second->nodeEvents)
+				{
+					nodeClientRemoved = true;
+					std::lock_guard<std::mutex> nodeClientsGuard(_nodeClientsMutex);
+					_nodeClients.erase(i->first);
+				}
 			}
 		}
 		for(std::vector<int32_t>::iterator i = serversToRemove.begin(); i != serversToRemove.end(); ++i)
 		{
 			_servers.erase(*i);
+		}
+		if(nodeClientRemoved)
+		{
+			bool nodeClientsEmpty = false;
+			{
+				std::lock_guard<std::mutex> nodeClientsGuard(_nodeClientsMutex);
+				nodeClientsEmpty = _nodeClients.empty();
+			}
+			if(nodeClientsEmpty) GD::flowsServer->disableNodeEvents();
 		}
 	}
 	catch(const std::exception& ex)
@@ -842,7 +901,7 @@ std::shared_ptr<RemoteRpcServer> Client::addServer(std::pair<std::string, std::s
     return std::shared_ptr<RemoteRpcServer>(new RemoteRpcServer(_client));
 }
 
-std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<BaseLib::TcpSocket> socket, std::string clientId, std::string address)
+std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<BaseLib::TcpSocket> socket, std::string clientId, std::string address, bool nodeEvents)
 {
 	try
 	{
@@ -868,7 +927,19 @@ std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<Base
 		server->socket->setReadTimeout(15000000);
 		server->keepAlive = true;
 		server->subscribePeers = true;
+		server->nodeEvents = nodeEvents;
 		server->newFormat = true;
+		if(nodeEvents)
+		{
+			bool nodeClientsEmpty = false;
+			{
+				std::lock_guard<std::mutex> nodeClientsGuard(_nodeClientsMutex);
+				nodeClientsEmpty = _nodeClients.empty();
+			}
+			if(nodeClientsEmpty) GD::flowsServer->enableNodeEvents();
+			std::lock_guard<std::mutex> nodeClientsGuard(_nodeClientsMutex);
+			_nodeClients.emplace(server->uid);
+		}
 		server->settings = GD::clientSettings.get(server->hostname);
 		_servers[server->uid] = server;
 		if(server->settings)
@@ -910,6 +981,16 @@ void Client::removeServer(std::pair<std::string, std::string> server)
 				serversGuard.unlock();
 				//Close waits for all read/write operations to finish and can therefore block. That's why we unlock the mutex first.
 				if(server->socket) server->socket->close();
+				if(server->nodeEvents)
+				{
+					bool nodeClientsEmpty = false;
+					{
+						std::lock_guard<std::mutex> nodeClientsGuard(_nodeClientsMutex);
+						_nodeClients.erase(server->uid);
+						nodeClientsEmpty = _nodeClients.empty();
+					}
+					if(nodeClientsEmpty) GD::flowsServer->disableNodeEvents();
+				}
 				return;
 			}
 		}
@@ -964,8 +1045,26 @@ void Client::removeServer(int32_t uid)
 {
 	try
 	{
-		std::lock_guard<std::mutex> serversGuard(_serversMutex);
-		_servers.erase(uid);
+		std::shared_ptr<RemoteRpcServer> server;
+		{
+			std::lock_guard<std::mutex> serversGuard(_serversMutex);
+			auto serverIterator = _servers.find(uid);
+			if(serverIterator != _servers.end())
+			{
+				 server = serverIterator->second;
+				 _servers.erase(serverIterator);
+			}
+		}
+		if(server && server->nodeEvents)
+		{
+			bool nodeClientsEmpty = false;
+			{
+				std::lock_guard<std::mutex> nodeClientsGuard(_nodeClientsMutex);
+				_nodeClients.erase(server->uid);
+				nodeClientsEmpty = _nodeClients.empty();
+			}
+			if(nodeClientsEmpty) GD::flowsServer->disableNodeEvents();
+		}
 	}
 	catch(const std::exception& ex)
     {

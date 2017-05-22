@@ -68,6 +68,7 @@ public:
 
 	void disconnectRega();
 	void initServerMethods(std::pair<std::string, std::string> address);
+	void broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib::PVariable& value);
 	void broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
 	void systemListMethods(std::pair<std::string, std::string> address);
 	void listDevices(std::pair<std::string, std::string> address);
@@ -81,7 +82,7 @@ public:
 	void sendUnknownDevices(std::pair<std::string, std::string> address);
 	void sendError(std::pair<std::string, std::string> address, int32_t level, std::string message);
 	std::shared_ptr<RemoteRpcServer> addServer(std::pair<std::string, std::string> address, std::string path, std::string id);
-	std::shared_ptr<RemoteRpcServer> addWebSocketServer(std::shared_ptr<BaseLib::TcpSocket> socket, std::string clientId, std::string address);
+	std::shared_ptr<RemoteRpcServer> addWebSocketServer(std::shared_ptr<BaseLib::TcpSocket> socket, std::string clientId, std::string address, bool nodeEvents);
 	void removeServer(std::pair<std::string, std::string> address);
 	void removeServer(int32_t uid);
 	std::shared_ptr<RemoteRpcServer> getServer(std::pair<std::string, std::string>);
@@ -96,6 +97,8 @@ private:
 	std::mutex _serversMutex;
 	int32_t _serverId = 0;
 	std::map<int32_t, std::shared_ptr<RemoteRpcServer>> _servers;
+	std::mutex _nodeClientsMutex;
+	std::set<int32_t> _nodeClients;
 	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
 	std::mutex _lifetick1Mutex;
 	std::pair<int64_t, bool> _lifetick1;
@@ -103,6 +106,7 @@ private:
 	int32_t _eventBufferPosition = 0;
 	std::atomic_int _uniqueEventId;
 	std::array<EventInfo, 1024> _eventBuffer;
+	int64_t _lastGarbageCollection = 0;
 
 	void collectGarbage();
 	std::string getIPAddress(std::string address);
