@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -71,6 +71,7 @@ void Server::registerMethods()
 		_server->registerMethod("deleteData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteData()));
 		_server->registerMethod("deleteDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteDevice()));
 		_server->registerMethod("deleteMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteMetadata()));
+		_server->registerMethod("deleteNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteNodeData()));
 		_server->registerMethod("deleteSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteSystemVariable()));
 		_server->registerMethod("enableEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCEnableEvent()));
 		_server->registerMethod("getAllConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetAllConfig()));
@@ -91,6 +92,7 @@ void Server::registerMethods()
 		_server->registerMethod("getLinks", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetLinks()));
 		_server->registerMethod("getMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetMetadata()));
 		_server->registerMethod("getName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetName()));
+		_server->registerMethod("getNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetNodeData()));
 		_server->registerMethod("getPairingMethods", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetPairingMethods()));
 		_server->registerMethod("getParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetParamset()));
 		_server->registerMethod("getParamsetDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetParamsetDescription()));
@@ -128,6 +130,7 @@ void Server::registerMethods()
 		_server->registerMethod("setLinkInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetLinkInfo()));
 		_server->registerMethod("setMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetMetadata()));
 		_server->registerMethod("setName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetName()));
+		_server->registerMethod("setNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetNodeData()));
 		_server->registerMethod("setSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetSystemVariable()));
 		_server->registerMethod("setTeam", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetTeam()));
 		_server->registerMethod("setValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetValue()));

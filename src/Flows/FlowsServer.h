@@ -135,6 +135,7 @@ private:
 	PFlowsProcess getFreeProcess(uint32_t maxThreadCount);
 	void getMaxThreadCounts();
 	void startFlows();
+	std::set<std::string> insertSubflows(BaseLib::PVariable& subflowNode, std::unordered_map<std::string, BaseLib::PVariable>& subflowInfos, std::unordered_map<std::string, BaseLib::PVariable>& flowNodes, std::unordered_map<std::string, BaseLib::PVariable>& subflowNodes, std::set<std::string>& flowNodeIds, std::set<std::string>& allNodeIds);
 	void startFlow(PFlowInfoServer& flowInfo, std::set<std::string>& nodes);
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
