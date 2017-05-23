@@ -39,16 +39,17 @@ PhpNode::~PhpNode()
 {
 }
 
-void PhpNode::input(Flows::PNodeInfo nodeInfo, Flows::PVariable message)
+void PhpNode::input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message)
 {
 	try
 	{
 		if(!_nodeInfo) _nodeInfo = nodeInfo->serialize();
 
 		Flows::PArray parameters = std::make_shared<Flows::Array>();
-		parameters->reserve(3);
+		parameters->reserve(4);
 		parameters->push_back(_nodeInfo);
 		parameters->push_back(std::make_shared<Flows::Variable>(_path));
+		parameters->push_back(std::make_shared<Flows::Variable>(index));
 		parameters->push_back(message);
 
 		Flows::PVariable result = invoke("executePhpNode", parameters);

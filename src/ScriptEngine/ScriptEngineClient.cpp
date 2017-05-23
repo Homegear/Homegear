@@ -1164,16 +1164,18 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 		{
 			zval returnValue;
 			zval function;
-			zval parameters[2];
+			zval parameters[3];
 
 			ZVAL_STRINGL(&function, "input", sizeof("input") - 1);
 			PhpVariableConverter::getPHPVariable(scriptInfo->nodeInfo, &parameters[0]);
-			PhpVariableConverter::getPHPVariable(scriptInfo->message, &parameters[1]);
-			int result = call_user_function(EG(function_table), NULL, &function, &returnValue, 2, parameters);
+			ZVAL_LONG(&parameters[1], scriptInfo->inputPort);
+			PhpVariableConverter::getPHPVariable(scriptInfo->message, &parameters[2]);
+			int result = call_user_function(EG(function_table), NULL, &function, &returnValue, 3, parameters);
 			if(result != 0) _out.printError("Error calling function \"input\".");
 			zval_ptr_dtor(&function);
 			zval_ptr_dtor(&parameters[0]);
 			zval_ptr_dtor(&parameters[1]);
+			zval_ptr_dtor(&parameters[2]);
 			zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
 		}
 
@@ -1456,7 +1458,7 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 		}
 		else if(type == ScriptInfo::ScriptType::node)
 		{
-			scriptInfo.reset(new ScriptInfo(type, parameters->at(2), parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5)));
+			scriptInfo.reset(new ScriptInfo(type, parameters->at(2), parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5)->integerValue, parameters->at(6)));
 			if(!GD::bl->io.fileExists(scriptInfo->fullPath))
 			{
 				_out.printError("Error: PHP node script \"" + scriptInfo->fullPath + "\" does not exist.");

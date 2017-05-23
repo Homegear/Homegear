@@ -68,7 +68,7 @@ private:
 	public:
 		QueueEntry() {}
 		QueueEntry(std::vector<char>& packet, bool isRequest) { this->packet = packet; this->isRequest = isRequest; }
-		QueueEntry(Flows::PNodeInfo nodeInfo, Flows::PVariable message) { this->nodeInfo = nodeInfo; this->message = message; }
+		QueueEntry(Flows::PNodeInfo nodeInfo, uint32_t targetPort, Flows::PVariable message) { this->nodeInfo = nodeInfo; this->targetPort = targetPort; this->message = message; }
 		virtual ~QueueEntry() {}
 
 		//{{{ IPC
@@ -78,6 +78,7 @@ private:
 
 		//{{{ Node output
 			PNodeInfo nodeInfo;
+			uint32_t targetPort = 0;
 			Flows::PVariable message;
 		//}}}
 	};

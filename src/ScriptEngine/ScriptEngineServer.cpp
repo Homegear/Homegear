@@ -1630,6 +1630,7 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 				scriptInfo->nodeInfo,
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->inputPort)),
 				scriptInfo->message}));
 		}
 

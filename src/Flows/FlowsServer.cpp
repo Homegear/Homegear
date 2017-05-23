@@ -579,7 +579,9 @@ std::set<std::string> FlowsServer::insertSubflows(BaseLib::PVariable& subflowNod
 			{
 				for(auto& wire : *output->arrayValue)
 				{
-					wire->stringValue = subflowIdPrefix + wire->stringValue;
+					auto idIterator = wire->structValue->find("id");
+					if(idIterator == wire->structValue->end()) continue;
+					idIterator->second->stringValue = subflowIdPrefix + wire->stringValue;
 				}
 			}
 
@@ -588,6 +590,7 @@ std::set<std::string> FlowsServer::insertSubflows(BaseLib::PVariable& subflowNod
 		}
 
 		//Find output node and redirect it to the subflow output
+		std::multimap<uint32_t, std::pair<uint32_t, std::string>> passthroughWires;
 		auto wiresOutIterator = subflowInfoIterator->second->structValue->find("out");
 		if(wiresOutIterator != subflowInfoIterator->second->structValue->end())
 		{
@@ -604,14 +607,42 @@ std::set<std::string> FlowsServer::insertSubflows(BaseLib::PVariable& subflowNod
 					auto wirePortIterator = wireIterator->structValue->find("port");
 					if(wirePortIterator == wireIterator->structValue->end()) continue;
 
+					if(wirePortIterator->second->type == BaseLib::VariableType::tString)
+					{
+						wirePortIterator->second->integerValue = BaseLib::Math::getNumber(wirePortIterator->second->stringValue);
+					}
+
+					auto& targetNodeWires = subflowNode->structValue->at("wires");
+					if(outputIndex >= targetNodeWires->arrayValue->size()) continue;
+
+					auto& targetNodeWireOutput = targetNodeWires->arrayValue->at(outputIndex);
+
+					if(wireIdIterator->second->stringValue == subflowId)
+					{
+						for(auto targetNodeWire : *targetNodeWireOutput->arrayValue)
+						{
+							auto targetNodeWireIdIterator = targetNodeWire->structValue->find("id");
+							if(targetNodeWireIdIterator == targetNodeWire->structValue->end()) continue;
+
+							uint32_t port = 0;
+							auto targetNodeWirePortIterator = targetNodeWire->structValue->find("port");
+							if(targetNodeWirePortIterator != targetNodeWire->structValue->end())
+							{
+								if(targetNodeWirePortIterator->second->type == BaseLib::VariableType::tString) port = BaseLib::Math::getNumber(targetNodeWirePortIterator->second->stringValue);
+								else port = targetNodeWirePortIterator->second->integerValue;
+							}
+
+							passthroughWires.emplace(wirePortIterator->second->integerValue, std::make_pair(port, targetNodeWireIdIterator->second->stringValue));
+						}
+						continue;
+					}
+
 					auto sourceNodeIterator = subflow.find(wireIdIterator->second->stringValue);
 					if(sourceNodeIterator == subflow.end()) continue;
 
 					auto sourceNodeWires = sourceNodeIterator->second->structValue->at("wires");
 					while((signed)sourceNodeWires->arrayValue->size() < wirePortIterator->second->integerValue + 1) sourceNodeWires->arrayValue->push_back(std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray));
 
-					auto& targetNodeWires = subflowNode->structValue->at("wires");
-					if(outputIndex >= targetNodeWires->arrayValue->size()) continue;
 					*sourceNodeWires->arrayValue->at(wirePortIterator->second->integerValue) = *targetNodeWires->arrayValue->at(outputIndex);
 				}
 			}
@@ -621,18 +652,32 @@ std::set<std::string> FlowsServer::insertSubflows(BaseLib::PVariable& subflowNod
 		auto wiresInIterator = subflowInfoIterator->second->structValue->find("in");
 		if(wiresInIterator != subflowInfoIterator->second->structValue->end())
 		{
-			BaseLib::PArray wiresIn = std::make_shared<BaseLib::Array>();
-			if(!wiresInIterator->second->arrayValue->empty())
+			std::vector<BaseLib::PArray> wiresIn;
+			wiresIn.reserve(wiresInIterator->second->arrayValue->size());
+			for(uint32_t i = 0; i < wiresInIterator->second->arrayValue->size(); i++)
 			{
-				auto wiresInWiresIterator = wiresInIterator->second->arrayValue->at(0)->structValue->find("wires");
-				if(wiresInWiresIterator != wiresInIterator->second->arrayValue->at(0)->structValue->end())
+				wiresIn.push_back(std::make_shared<BaseLib::Array>());
+				auto wiresInWiresIterator = wiresInIterator->second->arrayValue->at(i)->structValue->find("wires");
+				if(wiresInWiresIterator != wiresInIterator->second->arrayValue->at(i)->structValue->end())
 				{
+					wiresIn.back()->reserve(wiresInIterator->second->arrayValue->at(i)->structValue->size());
 					for(auto& wiresInWire : *wiresInWiresIterator->second->arrayValue)
 					{
 						auto wiresInWireIdIterator = wiresInWire->structValue->find("id");
 						if(wiresInWireIdIterator == wiresInWire->structValue->end()) continue;
 
-						wiresIn->push_back(std::make_shared<BaseLib::Variable>(subflowIdPrefix + wiresInWireIdIterator->second->stringValue));
+						uint32_t port = 0;
+						auto wiresInWirePortIterator = wiresInWire->structValue->find("port");
+						if(wiresInWirePortIterator != wiresInWire->structValue->end())
+						{
+							if(wiresInWirePortIterator->second->type == BaseLib::VariableType::tString) port = BaseLib::Math::getNumber(wiresInWirePortIterator->second->stringValue);
+							else port = wiresInWirePortIterator->second->integerValue;
+						}
+
+						BaseLib::PVariable entry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+						entry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(subflowIdPrefix + wiresInWireIdIterator->second->stringValue));
+						entry->structValue->emplace("port", std::make_shared<BaseLib::Variable>(port));
+						wiresIn.back()->push_back(entry);
 					}
 				}
 			}
@@ -645,7 +690,10 @@ std::set<std::string> FlowsServer::insertSubflows(BaseLib::PVariable& subflowNod
 					bool rebuildArray = false;
 					for(auto& node2Wire : *node2WiresOutput->arrayValue)
 					{
-						if(node2Wire->stringValue == thisSubflowId)
+						auto node2WireIdIterator = node2Wire->structValue->find("id");
+						if(node2WireIdIterator == node2Wire->structValue->end()) continue;
+
+						if(node2WireIdIterator->second->stringValue == thisSubflowId)
 						{
 							rebuildArray = true;
 							break;
@@ -656,9 +704,29 @@ std::set<std::string> FlowsServer::insertSubflows(BaseLib::PVariable& subflowNod
 						BaseLib::PArray wireArray = std::make_shared<BaseLib::Array>();
 						for(auto& node2Wire : *node2WiresOutput->arrayValue)
 						{
-							if(node2Wire->stringValue != thisSubflowId) wireArray->push_back(node2Wire);
+							auto node2WireIdIterator = node2Wire->structValue->find("id");
+							if(node2WireIdIterator == node2Wire->structValue->end()) continue;
+
+							uint32_t port = 0;
+							auto node2WirePortIterator = node2Wire->structValue->find("port");
+							if(node2WirePortIterator != node2Wire->structValue->end())
+							{
+								if(node2WirePortIterator->second->type == BaseLib::VariableType::tString) port = BaseLib::Math::getNumber(node2WirePortIterator->second->stringValue);
+								else port = node2WirePortIterator->second->integerValue;
+							}
+
+							if(node2WireIdIterator->second->stringValue != thisSubflowId) wireArray->push_back(node2Wire);
+							else wireArray->insert(wireArray->end(), wiresIn.at(port)->begin(), wiresIn.at(port)->end());
+
+							auto passthroughWiresIterators = passthroughWires.equal_range(port);
+							for(auto passthroughWiresIterator = passthroughWiresIterators.first; passthroughWiresIterator != passthroughWiresIterators.second; passthroughWiresIterator++)
+							{
+								BaseLib::PVariable entry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+								entry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(passthroughWiresIterator->second.second));
+								entry->structValue->emplace("port", std::make_shared<BaseLib::Variable>(passthroughWiresIterator->second.first));
+								wireArray->push_back(entry);
+							}
 						}
-						wireArray->insert(wireArray->end(), wiresIn->begin(), wiresIn->end());
 						node2WiresOutput->arrayValue = wireArray;
 					}
 				}
@@ -2025,10 +2093,10 @@ BaseLib::PVariable FlowsServer::executePhpNode(PFlowsClientData& clientData, Bas
 {
 	try
 	{
-		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
+		if(parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
 
 		std::string filename = parameters->at(1)->stringValue.substr(parameters->at(1)->stringValue.find_last_of('/') + 1);
-		BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::node, parameters->at(0), parameters->at(1)->stringValue, filename, parameters->at(2)));
+		BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::node, parameters->at(0), parameters->at(1)->stringValue, filename, parameters->at(2)->integerValue, parameters->at(3)));
 		GD::scriptEngineServer->executeScript(scriptInfo, false);
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}

@@ -336,7 +336,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 		{
 			if(!queueEntry->nodeInfo || !queueEntry->message) return;
 			Flows::PINode node = _nodeManager->getNode(queueEntry->nodeInfo->id);
-			if(node) node->input(queueEntry->nodeInfo, queueEntry->message);
+			if(node) node->input(queueEntry->nodeInfo, queueEntry->targetPort, queueEntry->message);
 		}
 	}
 	catch(const std::exception& ex)
@@ -553,9 +553,9 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 		message->structValue->emplace("source", std::make_shared<Flows::Variable>(nodeId));
 		for(auto& node : nodesIterator->second->wiresOut.at(index))
 		{
-			auto nodeIterator = _nodes.find(node);
+			auto nodeIterator = _nodes.find(node.id);
 			if(nodeIterator == _nodes.end()) continue;
-			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(nodeIterator->second, message);
+			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(nodeIterator->second, node.port, message);
 			enqueue(1, queueEntry);
 		}
 	}
@@ -724,17 +724,28 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 
 			node->id = idIterator->second->stringValue;
 			node->type = typeIterator->second->stringValue;
-			node->y = yIterator->second->integerValue;
 			node->info = element;
 
 			node->wiresOut.reserve(wiresIterator->second->arrayValue->size());
 			for(auto& outputIterator : *wiresIterator->second->arrayValue)
 			{
-				std::vector<std::string> output;
-				output.reserve(outputIterator->arrayValue->size());
+				std::vector<Wire> output;
+				output.reserve(outputIterator->structValue->size());
 				for(auto& wireIterator : *outputIterator->arrayValue)
 				{
-					output.push_back(wireIterator->stringValue);
+					auto idIterator = wireIterator->structValue->find("id");
+					if(idIterator == wireIterator->structValue->end()) continue;
+					uint32_t port = 0;
+					auto portIterator = wireIterator->structValue->find("port");
+					if(portIterator != wireIterator->structValue->end())
+					{
+						if(portIterator->second->type == Flows::VariableType::tString) port = BaseLib::Math::getNumber(portIterator->second->stringValue);
+						else port = portIterator->second->integerValue;
+					}
+					Wire wire;
+					wire.id = idIterator->second->stringValue;
+					wire.port = port;
+					output.push_back(wire);
 				}
 				node->wiresOut.push_back(output);
 			}
@@ -752,31 +763,22 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 		}
 
 		//{{{ Set wiresIn
-			//Prefill wiresIn
-			std::unordered_map<std::string, std::map<int32_t, std::string>> wiresIn;
 			for(auto& node : flow->nodes)
 			{
+				int32_t outputIndex = 0;
 				for(auto& output : node.second->wiresOut)
 				{
 					for(auto& wireOut : output)
 					{
-						auto nodeIterator = flow->nodes.find(wireOut);
+						auto nodeIterator = flow->nodes.find(wireOut.id);
 						if(nodeIterator == flow->nodes.end()) continue;
-						wiresIn[wireOut][node.second->y] = node.second->id;
+						if(nodeIterator->second->wiresIn.size() <= wireOut.port) nodeIterator->second->wiresIn.resize(wireOut.port + 1);
+						Flows::Wire wire;
+						wire.id = node.second->id;
+						wire.port = outputIndex;
+						nodeIterator->second->wiresIn.at(wireOut.port).push_back(wire);
 					}
-				}
-			}
-
-			//Sort wiresIn
-			for(auto& nodeId : wiresIn)
-			{
-				auto nodeIterator = flow->nodes.find(nodeId.first);
-				if(nodeIterator == flow->nodes.end()) continue;
-				nodeIterator->second->wiresIn.reserve(nodeId.second.size());
-				for(auto& y : nodeId.second)
-				{
-					nodeIterator->second->wiresIn.push_back(y.second);
-					nodeIterator->second->wiresInMap[y.second] = nodeIterator->second->wiresIn.size() - 1;
+					outputIndex++;
 				}
 			}
 		//}}}
