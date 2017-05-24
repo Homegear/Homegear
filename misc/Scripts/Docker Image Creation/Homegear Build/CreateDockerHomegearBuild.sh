@@ -271,6 +271,12 @@ unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
+wget https://github.com/Homegear/homegear-nodes-core/archive/${1}.zip
+[ $? -ne 0 ] && exit 1
+unzip ${1}.zip
+[ $? -ne 0 ] && exit 1
+rm ${1}.zip
+
 wget https://github.com/Homegear/Homegear-HomeMaticBidCoS/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
@@ -390,6 +396,7 @@ else
 	exit 1
 fi
 
+createPackage homegear-nodes-core $1 homegear-nodes-core
 createPackage Homegear-HomeMaticBidCoS $1 homegear-homematicbidcos
 createPackage Homegear-HomeMaticWired $1 homegear-homematicwired
 createPackage Homegear-Insteon $1 homegear-insteon
