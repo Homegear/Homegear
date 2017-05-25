@@ -262,6 +262,67 @@ std::vector<NodeManager::PNodeInfo> NodeManager::getNodeInfo()
 	return nodeInfoVector;
 }
 
+std::string NodeManager::getNodeLocales(std::string& language)
+{
+	try
+	{
+		std::unique_ptr<BaseLib::Rpc::JsonDecoder> jsonDecoder(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
+		std::string locales = "{";
+		locales.reserve(8192);
+		std::vector<std::string> directories = GD::bl->io.getDirectories(GD::bl->settings.flowsPath() + "nodes/");
+		bool firstFile = true;
+		for(auto& directory : directories)
+		{
+			std::string localePath = GD::bl->settings.flowsPath() + "nodes/" + directory + "/locales/" + language + "/";
+			if(!GD::bl->io.directoryExists(localePath)) continue;
+			std::vector<std::string> files = GD::bl->io.getFiles(localePath);
+			if (files.empty()) continue;
+			for(auto& file : files)
+			{
+				std::string path = localePath + file;
+				try
+				{
+					std::string content = GD::bl->io.getFileContent(path);
+					BaseLib::HelperFunctions::trim(content);
+					BaseLib::PVariable json = jsonDecoder->decode(content); //Check for JSON errors
+					if(json->structValue->empty()) continue;
+					if(locales.size() + content.size() > locales.capacity()) locales.reserve(locales.capacity() + content.size() + 8192);
+					if(!firstFile) locales += ",";
+					else firstFile = false;
+					locales.append(content.begin() + 1, content.end() - 1);
+				}
+				catch(const std::exception& ex)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, "Error opening file " + path + ": " + ex.what());
+				}
+				catch(BaseLib::Exception& ex)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, "Error opening file " + path + ": " + ex.what());
+				}
+				catch(...)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, "Error opening file " + path);
+				}
+			}
+		}
+		locales += "}";
+		return locales;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "";
+}
+
 int32_t NodeManager::loadNode(std::string name, std::string id, Flows::PINode& node)
 {
 	try

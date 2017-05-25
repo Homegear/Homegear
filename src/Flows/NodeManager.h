@@ -94,6 +94,8 @@ public:
 	 */
 	static std::vector<PNodeInfo> getNodeInfo();
 
+	static std::string getNodeLocales(std::string& language);
+
 	/**
 	 * Loads a node. The node needs to be in Homegear's node path.
 	 * @param name The name of the node (e. g. variable).

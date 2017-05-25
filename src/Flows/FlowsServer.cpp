@@ -1027,51 +1027,38 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 	try
 	{
 		std::string contentString;
-		if(path.compare(0, 14, "flows/locales/") == 0)
+		if(path == "flows/locales/nodes")
 		{
-			std::string ending = path.substr(path.size() - 4, 4);
-			if(ending == ".hni")
+			std::string language = "en-US";
+			std::vector<std::string> args = BaseLib::HelperFunctions::splitAll(http.getHeader().args, '&');
+			for(auto& arg : args)
 			{
-				auto pathPair = BaseLib::HelperFunctions::splitFirst(path.substr(14), '/');
-				std::string localePath = _bl->settings.flowsPath() + "nodes/" + pathPair.first + "/locales/";
-				std::string language = "en-US";
-				auto fieldsIterator = http.getHeader().fields.find("accept-language");
-				if(fieldsIterator != http.getHeader().fields.end())
+				auto argPair = BaseLib::HelperFunctions::splitFirst(arg, '=');
+				if(argPair.first == "lng")
 				{
-					std::pair<std::string, std::string> languagePair = BaseLib::HelperFunctions::splitFirst(fieldsIterator->second, ';');
-					std::vector<std::string> languages = BaseLib::HelperFunctions::splitAll(languagePair.first, ',');
-					for(auto& l : languages)
-					{
-						if(GD::bl->io.directoryExists(localePath + l))
-						{
-							language = l;
-							break;
-						}
-					}
+					language = argPair.second;
+					break;
 				}
-				path = localePath + language + '/' + pathPair.second.substr(0, pathPair.second.size() - 4);
 			}
-			else
+			contentString = NodeManager::getNodeLocales(language);
+			responseEncoding = "application/json";
+		}
+		else if(path.compare(0, 14, "flows/locales/") == 0)
+		{
+			std::string localePath = _webroot + "static/locales/";
+			std::string language = "en-US";
+			std::vector<std::string> args = BaseLib::HelperFunctions::splitAll(http.getHeader().args, '&');
+			for(auto& arg : args)
 			{
-				std::string localePath = _webroot + "static/locales/";
-				std::string language = "en-US";
-				auto fieldsIterator = http.getHeader().fields.find("accept-language");
-				if(fieldsIterator != http.getHeader().fields.end())
+				auto argPair = BaseLib::HelperFunctions::splitFirst(arg, '=');
+				if(argPair.first == "lng")
 				{
-					std::pair<std::string, std::string> languagePair = BaseLib::HelperFunctions::splitFirst(fieldsIterator->second, ';');
-					std::vector<std::string> languages = BaseLib::HelperFunctions::splitAll(languagePair.first, ',');
-					for(auto& l : languages)
-					{
-						if(GD::bl->io.directoryExists(localePath + l))
-						{
-							language = l;
-							break;
-						}
-					}
+					if(GD::bl->io.directoryExists(localePath + argPair.second)) language = argPair.second;
+					break;
 				}
-				path = path.substr(13);
-				path = localePath + language + path;
 			}
+			path = path.substr(13);
+			path = localePath + language + path;
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
@@ -1126,6 +1113,17 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 					frontendNodeList->arrayValue->push_back(nodeListEntry);
 				}
 				_jsonEncoder->encode(frontendNodeList, contentString);
+			}
+		}
+		else if(path.compare(0, 12, "flows/icons/") == 0)
+		{
+			auto pathPair = BaseLib::HelperFunctions::splitFirst(path.substr(12), '/');
+			std::string path = _bl->settings.flowsPath() + "nodes/" + pathPair.first + "/" + pathPair.second;
+			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
+			else
+			{
+				path = _webroot + "icons/" + pathPair.second;
+				if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			}
 		}
 		else if(path.compare(0, 6, "flows/") == 0 && path != "flows/index.php" && path != "flows/signin.php")
