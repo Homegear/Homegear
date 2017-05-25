@@ -88,7 +88,7 @@ RED.i18n = (function() {
     return {
         init: function(done) {
             i18n.init({
-                resGetPath: 'locales/__ns__',
+                resGetPath: 'locales/__ns__?lng=__lng__',
                 dynamicLoad: false,
                 load:'current',
                 ns: {
@@ -96,6 +96,7 @@ RED.i18n = (function() {
                     defaultNs: "editor"
                 },
                 fallbackLng: ['en-US'],
+                fallbackNS: ['node-red', 'editor'],
                 useCookie: false
             },function() {
                 done();
@@ -107,6 +108,31 @@ RED.i18n = (function() {
         },
         loadCatalog: function(namespace,done) {
             i18n.loadNamespace(namespace,done);
+        },
+
+        loadNodeCatalogs: function(done) {
+            var languageList = i18n.functions.toLanguages(i18n.detectLanguage());
+            var toLoad = languageList.length;
+
+            languageList.forEach(function(lang) {
+                $.ajax({
+                    headers: {
+                        "Accept":"application/json"
+                    },
+                    cache: false,
+                    url: 'locales/nodes?lng='+lang,
+                    success: function(data) {
+                        var namespaces = Object.keys(data);
+                        namespaces.forEach(function(ns) {
+                            i18n.addResourceBundle(lang,ns,data[ns]);
+                        });
+                        toLoad--;
+                        if (toLoad === 0) {
+                            done();
+                        }
+                    }
+                });
+            })
         }
     }
 })();
@@ -296,7 +322,7 @@ RED.user = (function() {
             autoOpen: false,
             dialogClass: "ui-dialog-no-close",
             modal: true,
-            closeOnEscape: false,
+            closeOnEscape: !!opts.cancelable,
             width: 600,
             resizable: false,
             draggable: false
@@ -307,17 +333,13 @@ RED.user = (function() {
             dataType: "json",
             url: "auth/login",
             success: function(data) {
-                if (data.type == "credentials") {
-                    var i=0;
+                var i=0;
 
-                    if (data.image) {
-                        $("#node-dialog-login-image").attr("src",data.image);
-                    } else {
-                        $("#node-dialog-login-image").attr("src","red/images/node-red-256.png");
-                    }
+                if (data.type == "credentials") {
+
                     for (;i<data.prompts.length;i++) {
                         var field = data.prompts[i];
-                        var row = $("<div/>",{id:"rrr"+i,class:"form-row"});
+                        var row = $("<div/>",{class:"form-row"});
                         $('<label for="node-dialog-login-'+field.id+'">'+field.label+':</label><br/>').appendTo(row);
                         var input = $('<input style="width: 100%" id="node-dialog-login-'+field.id+'" type="'+field.type+'" tabIndex="'+(i+1)+'"/>').appendTo(row);
 
@@ -376,13 +398,48 @@ RED.user = (function() {
                         });
                         event.preventDefault();
                     });
-                    if (opts.cancelable) {
-                        $("#node-dialog-login-cancel").button().click(function( event ) {
-                            $("#node-dialog-login").dialog('destroy').remove();
+
+                } else if (data.type == "strategy") {
+                    i = 0;
+                    for (;i<data.prompts.length;i++) {
+                        var field = data.prompts[i];
+                        var row = $("<div/>",{class:"form-row",style:"text-align: center"}).appendTo("#node-dialog-login-fields");
+
+                        var loginButton = $('<a href="#"></a>',{style: "padding: 10px"}).appendTo(row).click(function() {
+                            document.location = field.url;
                         });
+                        if (field.image) {
+                            $("<img>",{src:field.image}).appendTo(loginButton);
+                        } else if (field.label) {
+                            var label = $('<span></span>').text(field.label);
+                            if (field.icon) {
+                                $('<i></i>',{class: "fa fa-2x "+field.icon, style:"vertical-align: middle"}).appendTo(loginButton);
+                                label.css({
+                                    "verticalAlign":"middle",
+                                    "marginLeft":"8px"
+                                });
+
+                            }
+                            label.appendTo(loginButton);
+                        }
+                        loginButton.button();
                     }
+
+
                 }
-                dialog.dialog("open");
+                if (opts.cancelable) {
+                    $("#node-dialog-login-cancel").button().click(function( event ) {
+                        $("#node-dialog-login").dialog('destroy').remove();
+                    });
+                }
+
+                var loginImageSrc = data.image || "red/images/node-red-256.png";
+
+                $("#node-dialog-login-image").load(function() {
+                    dialog.dialog("open");
+                }).attr("src",loginImageSrc);
+
+
             }
         });
     }
@@ -392,9 +449,13 @@ RED.user = (function() {
             url: "auth/revoke",
             type: "POST",
             data: {token:RED.settings.get("auth-tokens").access_token},
-            success: function() {
+            success: function(data) {
                 RED.settings.remove("auth-tokens");
-                document.location.reload(true);
+                if (data && data.redirect) {
+                    document.location.href = data.redirect;
+                } else {
+                    document.location.reload(true);
+                }
             }
         })
     }
@@ -434,8 +495,15 @@ RED.user = (function() {
         if (RED.settings.user) {
             if (!RED.settings.editorTheme || !RED.settings.editorTheme.hasOwnProperty("userMenu")) {
 
-                $('<li><a id="btn-usermenu" class="button hide" data-toggle="dropdown" href="#"><i class="fa fa-user"></i></a></li>')
+                var userMenu = $('<li><a id="btn-usermenu" class="button hide" data-toggle="dropdown" href="#"></a></li>')
                     .prependTo(".header-toolbar");
+                if (RED.settings.user.image) {
+                    $('<span class="user-profile"></span>').css({
+                        backgroundImage: "url("+RED.settings.user.image+")",
+                    }).appendTo(userMenu.find("a"));
+                } else {
+                    $('<i class="fa fa-user"></i>').appendTo(userMenu.find("a"));
+                }
 
                 RED.menu.init({id:"btn-usermenu",
                     options: []
@@ -2091,6 +2159,10 @@ RED.nodes = (function() {
         var nodeDefinitions = {};
 
         var exports = {
+            setModulePendingUpdated: function(module,version) {
+                moduleList[module].pending_version = version;
+                RED.events.emit("registry:module-updated",{module:module,version:version});
+            },
             getModule: function(module) {
                 return moduleList[module];
             },
@@ -2127,6 +2199,9 @@ RED.nodes = (function() {
                     local:ns.local,
                     sets:{}
                 };
+                if (ns.pending_version) {
+                    moduleList[ns.module].pending_version = ns.pending_version;
+                }
                 moduleList[ns.module].sets[ns.name] = ns;
                 RED.events.emit("registry:node-set-added",ns);
             },
@@ -2164,6 +2239,7 @@ RED.nodes = (function() {
             },
             registerNodeType: function(nt,def) {
                 nodeDefinitions[nt] = def;
+                def.type = nt;
                 if (def.category != "subflows") {
                     def.set = nodeSets[typeToId[nt]];
                     nodeSets[typeToId[nt]].added = true;
@@ -2177,10 +2253,15 @@ RED.nodes = (function() {
                     }
                     def["_"] = function() {
                         var args = Array.prototype.slice.call(arguments, 0);
+                        var original = args[0];
                         if (args[0].indexOf(":") === -1) {
                             args[0] = ns+":"+args[0];
                         }
-                        return RED._.apply(null,args);
+                        var result = RED._.apply(null,args);
+                        if (result === args[0]) {
+                            result = original;
+                        }
+                        return result;
                     }
 
                     // TODO: too tightly coupled into palette UI
@@ -2209,6 +2290,8 @@ RED.nodes = (function() {
     function addNode(n) {
         if (n.type.indexOf("subflow") !== 0) {
             n["_"] = n._def._;
+        } else {
+            n["_"] = RED._;
         }
         if (n._def.category == "config") {
             configNodes[n.id] = n;
@@ -2316,7 +2399,9 @@ RED.nodes = (function() {
         workspaces[ws.id] = ws;
         ws._def = {
             defaults: {
-                label: {value:""}
+                label: {value:""},
+                disabled: {value: false},
+                info: {value: ""}
             }
         };
 
@@ -2371,14 +2456,6 @@ RED.nodes = (function() {
             });
             sf.name = subflowName;
         }
-        sf._def = {
-            defaults:{},
-            icon:"subflow.png",
-            category: "subflows",
-            color: "#da9",
-            inputs: sf.in.length,
-            outputs: sf.out.length
-        }
         subflows[sf.id] = sf;
         RED.nodes.registerType("subflow:"+sf.id, {
             defaults:{name:{value:""}},
@@ -2391,12 +2468,13 @@ RED.nodes = (function() {
             label: function() { return this.name||RED.nodes.subflow(sf.id).name },
             labelStyle: function() { return this.name?"node_label_italic":""; },
             paletteLabel: function() { return RED.nodes.subflow(sf.id).name },
+            inputLabels: function(i) { return sf.inputLabels?sf.inputLabels[i]:null },
+            outputLabels: function(i) { return sf.outputLabels?sf.outputLabels[i]:null },
             set:{
                 module: "node-red"
             }
         });
-
-
+        sf._def = RED.nodes.getType("subflow:"+sf.id);
     }
     function getSubflow(id) {
         return subflows[id];
@@ -2473,6 +2551,7 @@ RED.nodes = (function() {
         node.id = n.id;
         node.type = n.type;
         node.z = n.z;
+
         if (node.type == "unknown") {
             for (var p in n._orig) {
                 if (n._orig.hasOwnProperty(p)) {
@@ -2520,6 +2599,13 @@ RED.nodes = (function() {
                     node.wires[w.sourcePort].push({"id":w.target.id,"port":w.targetPort});
                 }
             }
+
+            if (n.inputs > 0 && n.inputLabels && !/^\s*$/.test(n.inputLabels.join("")))  {
+                node.inputLabels = n.inputLabels.slice();
+            }
+            if (n.outputs > 0 && n.outputLabels && !/^\s*$/.test(n.outputLabels.join(""))) {
+                node.outputLabels = n.outputLabels.slice();
+            }
         }
         return node;
     }
@@ -2556,6 +2642,13 @@ RED.nodes = (function() {
             }
             node.out.push(nOut);
         });
+
+        if (node.in.length > 0 && n.inputLabels && !/^\s*$/.test(n.inputLabels.join("")))  {
+            node.inputLabels = n.inputLabels.slice();
+        }
+        if (node.out.length > 0 && n.outputLabels && !/^\s*$/.test(n.outputLabels.join(""))) {
+            node.outputLabels = n.outputLabels.slice();
+        }
 
 
         return node;
@@ -2935,7 +3028,17 @@ RED.nodes = (function() {
             if (n.type !== "workspace" && n.type !== "tab" && n.type !== "subflow") {
                 def = registry.getNodeType(n.type);
                 if (!def || def.category != "config") {
-                    var node = {x:n.x,y:n.y,z:n.z,type:0,wires:n.wires,changed:false,_config:{}};
+                    var node = {
+                        x:n.x,
+                        y:n.y,
+                        z:n.z,
+                        type:0,
+                        wires:n.wires,
+                        inputLabels: n.inputLabels,
+                        outputLabels: n.outputLabels,
+                        changed:false,
+                        _config:{}
+                    };
                     if (createNewIds) {
                         if (subflow_blacklist[n.z]) {
                             continue;
@@ -3513,7 +3616,7 @@ RED.history = (function() {
                     n.n.x = n.ox;
                     n.n.y = n.oy;
                     n.n.dirty = true;
-                    n.n.changed = n.changed;
+                    n.n.moved = n.moved;
                 }
                 // A move could have caused a link splice
                 if (ev.links) {
@@ -3529,7 +3632,7 @@ RED.history = (function() {
             } else if (ev.t == "edit") {
                 for (i in ev.changes) {
                     if (ev.changes.hasOwnProperty(i)) {
-                        if (ev.node._def.defaults[i].type) {
+                        if (ev.node._def.defaults[i] && ev.node._def.defaults[i].type) {
                             // This is a config node property
                             var currentConfigNode = RED.nodes.node(ev.node[i]);
                             if (currentConfigNode) {
@@ -3577,7 +3680,7 @@ RED.history = (function() {
                     if (ev.outputMap) {
                         outputMap = {};
                         for (var port in ev.outputMap) {
-                            if (ev.outputMap.hasOwnProperty(port) && ev.outputMap[port] !== -1) {
+                            if (ev.outputMap.hasOwnProperty(port) && ev.outputMap[port] !== "-1") {
                                 outputMap[ev.outputMap[port]] = port;
                             }
                         }
@@ -3679,7 +3782,7 @@ RED.history = (function() {
  * limitations under the License.
  **/
 RED.validators = {
-    number: function(){return function(v) { return v!=='' && !isNaN(v);}},
+    number: function(blankAllowed){return function(v) { return (blankAllowed&&(v===''||v===undefined)) || (v!=='' && !isNaN(v));}},
     regex: function(re){return function(v) { return re.test(v);}},
     typedInput: function(ptypeName,isConfig) { return function(v) {
         var ptype = $("#node-"+(isConfig?"config-":"")+"input-"+ptypeName).val() || this[ptypeName];
@@ -3731,7 +3834,7 @@ RED.utils = (function() {
             result = $('<span class="debug-message-object-value debug-message-type-null">null</span>');
         } else if (typeof value === 'object') {
             if (value.hasOwnProperty('type') && value.type === 'Buffer' && value.hasOwnProperty('data')) {
-                result = $('<span class="debug-message-object-value debug-message-type-meta"></span>').html('buffer['+value.data.length+']');
+                result = $('<span class="debug-message-object-value debug-message-type-meta"></span>').html('buffer['+value.length+']');
             } else if (value.hasOwnProperty('type') && value.type === 'array' && value.hasOwnProperty('data')) {
                 result = $('<span class="debug-message-object-value debug-message-type-meta"></span>').html('array['+value.length+']');
             } else {
@@ -3750,7 +3853,7 @@ RED.utils = (function() {
         }
         return result;
     }
-    function makeExpandable(el,onexpand) {
+    function makeExpandable(el,onexpand,expand) {
         el.addClass("debug-message-expandable");
         el.click(function(e) {
             var parent = $(this).parent();
@@ -3765,25 +3868,178 @@ RED.utils = (function() {
             }
             e.preventDefault();
         });
+        if (expand) {
+            el.click();
+        }
     }
 
-    function buildMessageElement(obj,key,typeHint,hideKey) {
+    var pinnedPaths = {};
+    var formattedPaths = {};
+
+    function addMessageControls(obj,sourceId,key,msg,rootPath,strippedKey) {
+        if (!pinnedPaths.hasOwnProperty(sourceId)) {
+            pinnedPaths[sourceId] = {}
+        }
+        var tools = $('<span class="debug-message-tools"></span>').appendTo(obj);
+        var copyTools = $('<span class="debug-message-tools-copy button-group"></span>').appendTo(tools);
+        if (!!key) {
+            var copyPath = $('<button class="editor-button editor-button-small"><i class="fa fa-terminal"></i></button>').appendTo(copyTools).click(function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                RED.clipboard.copyText(key,copyPath,"clipboard.copyMessagePath");
+            })
+        }
+        var copyPayload = $('<button class="editor-button editor-button-small"><i class="fa fa-clipboard"></i></button>').appendTo(copyTools).click(function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            RED.clipboard.copyText(msg,copyPayload,"clipboard.copyMessageValue");
+        })
+        if (strippedKey !== '') {
+            var isPinned = pinnedPaths[sourceId].hasOwnProperty(strippedKey);
+
+            var pinPath = $('<button class="editor-button editor-button-small debug-message-tools-pin"><i class="fa fa-map-pin"></i></button>').appendTo(tools).click(function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (pinnedPaths[sourceId].hasOwnProperty(strippedKey)) {
+                    delete pinnedPaths[sourceId][strippedKey];
+                    $(this).removeClass("selected");
+                    obj.removeClass("debug-message-row-pinned");
+                } else {
+                    var rootedPath = "$"+(strippedKey[0] === '['?"":".")+strippedKey;
+                    pinnedPaths[sourceId][strippedKey] = normalisePropertyExpression(rootedPath);
+                    $(this).addClass("selected");
+                    obj.addClass("debug-message-row-pinned");
+                }
+            }).toggleClass("selected",isPinned);
+            obj.toggleClass("debug-message-row-pinned",isPinned);
+        }
+    }
+    function checkExpanded(strippedKey,expandPaths,minRange,maxRange) {
+        if (expandPaths && expandPaths.length > 0) {
+            if (strippedKey === '' && minRange === undefined) {
+                return true;
+            }
+            for (var i=0;i<expandPaths.length;i++) {
+                var p = expandPaths[i];
+                if (p.indexOf(strippedKey) === 0 && (p[strippedKey.length] === "." ||  p[strippedKey.length] === "[") ) {
+
+                    if (minRange !== undefined && p[strippedKey.length] === "[") {
+                        var subkey = p.substring(strippedKey.length);
+                        var m = (/\[(\d+)\]/.exec(subkey));
+                        if (m) {
+                            var index = parseInt(m[1]);
+                            return minRange<=index && index<=maxRange;
+                        }
+                    } else {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    function formatNumber(element,obj,sourceId,path,cycle,initialFormat) {
+        var format = (formattedPaths[sourceId] && formattedPaths[sourceId][path]) || initialFormat || "dec";
+        if (cycle) {
+            if (format === 'dec') {
+                if ((obj.toString().length===13) && (obj<=2147483647000)) {
+                    format = 'dateMS';
+                } else if ((obj.toString().length===10) && (obj<=2147483647)) {
+                    format = 'dateS';
+                } else {
+                    format = 'hex'
+                }
+            } else if (format === 'dateMS' || format == 'dateS') {
+                format = 'hex';
+            } else {
+                format = 'dec';
+            }
+            formattedPaths[sourceId] = formattedPaths[sourceId]||{};
+            formattedPaths[sourceId][path] = format;
+        } else if (initialFormat !== undefined){
+            formattedPaths[sourceId] = formattedPaths[sourceId]||{};
+            formattedPaths[sourceId][path] = format;
+        }
+        if (format === 'dec') {
+            element.text(""+obj);
+        } else if (format === 'dateMS') {
+            element.text((new Date(obj)).toISOString());
+        } else if (format === 'dateS') {
+            element.text((new Date(obj*1000)).toISOString());
+        } else if (format === 'hex') {
+            element.text("0x"+(obj).toString(16));
+        }
+    }
+
+    function formatBuffer(element,button,sourceId,path,cycle) {
+        var format = (formattedPaths[sourceId] && formattedPaths[sourceId][path]) || "raw";
+        if (cycle) {
+            if (format === 'raw') {
+                format = 'string';
+            } else {
+                format = 'raw';
+            }
+            formattedPaths[sourceId] = formattedPaths[sourceId]||{};
+            formattedPaths[sourceId][path] = format;
+        }
+        if (format === 'raw') {
+            button.text('raw');
+            element.removeClass('debug-message-buffer-string').addClass('debug-message-buffer-raw');
+        } else if (format === 'string') {
+            button.text('string');
+            element.addClass('debug-message-buffer-string').removeClass('debug-message-buffer-raw');
+        }
+    }
+
+    function buildMessageElement(obj,key,typeHint,hideKey,path,sourceId,rootPath,expandPaths) {
         var i;
         var e;
         var entryObj;
         var header;
         var headerHead;
         var value;
+        var strippedKey;
+        if (path !== undefined && rootPath !== undefined) {
+             strippedKey = path.substring(rootPath.length+(path[rootPath.length]==="."?1:0));
+        }
         var element = $('<span class="debug-message-element"></span>');
+        element.collapse = function() {
+            element.find(".debug-message-expandable").parent().addClass("collapsed");
+        }
+        header = $('<span class="debug-message-row"></span>').appendTo(element);
+        if (sourceId) {
+            addMessageControls(header,sourceId,path,obj,rootPath,strippedKey);
+        }
         if (!key) {
             element.addClass("debug-message-top-level");
-        }
-
-        header = $('<span></span>').appendTo(element);
-
-        if (key && !hideKey) {
-            $('<span class="debug-message-object-key"></span>').text(key).appendTo(header);
-            $('<span>: </span>').appendTo(header);
+            if (sourceId) {
+                var pinned = pinnedPaths[sourceId];
+                expandPaths = [];
+                if (pinned) {
+                    for (var pinnedPath in pinned) {
+                        if (pinned.hasOwnProperty(pinnedPath)) {
+                            try {
+                                var res = getMessageProperty({$:obj},pinned[pinnedPath]);
+                                if (res !== undefined) {
+                                    expandPaths.push(pinnedPath);
+                                }
+                            } catch(err) {
+                            }
+                        }
+                    }
+                    expandPaths.sort();
+                }
+                element.clearPinned = function() {
+                    element.find(".debug-message-row-pinned").removeClass("debug-message-row-pinned");
+                    pinnedPaths[sourceId] = {};
+                }
+            }
+        } else {
+            if (!hideKey) {
+                $('<span class="debug-message-object-key"></span>').text(key).appendTo(header);
+                $('<span>: </span>').appendTo(header);
+            }
         }
         entryObj = $('<span class="debug-message-object-value"></span>').appendTo(header);
 
@@ -3804,7 +4060,7 @@ RED.utils = (function() {
                     $('<span class="debug-message-type-meta debug-message-object-type-header"></span>').html(typeHint||'string').appendTo(header);
                     var row = $('<div class="debug-message-object-entry collapsed"></div>').appendTo(element);
                     $('<pre class="debug-message-type-string"></pre>').text(obj).appendTo(row);
-                });
+                },checkExpanded(strippedKey,expandPaths));
             }
             e = $('<span class="debug-message-type-string debug-message-object-header"></span>').html('"'+formatString(sanitize(obj))+'"').appendTo(entryObj);
             if (/^#[0-9a-f]{6}$/i.test(obj)) {
@@ -3812,23 +4068,17 @@ RED.utils = (function() {
             }
 
         } else if (typeof obj === 'number') {
-            e = $('<span class="debug-message-type-number"></span>').text(""+obj).appendTo(entryObj);
+            e = $('<span class="debug-message-type-number"></span>').appendTo(entryObj);
+
             if (Number.isInteger(obj) && (obj >= 0)) { // if it's a +ve integer
                 e.addClass("debug-message-type-number-toggle");
                 e.click(function(evt) {
-                    var format = $(this).data('format') || "date";
-                    if (format === 'dec') {
-                        $(this).text(""+obj).data('format','date');
-                    } else if ((format === 'date') && (obj.toString().length===13) && (obj<=2147483647000)) {
-                        $(this).text((new Date(obj)).toISOString()).data('format','hex');
-                    } else if ((format === 'date') && (obj.toString().length===10) && (obj<=2147483647)) {
-                        $(this).text((new Date(obj*1000)).toISOString()).data('format','hex');
-                    } else {
-                        $(this).text("0x"+(obj).toString(16)).data('format','dec');
-                    }
                     evt.preventDefault();
+                    formatNumber($(this), obj, sourceId, path, true);
                 });
             }
+            formatNumber(e,obj,sourceId,path,false,typeHint==='hex'?'hex':undefined);
+
         } else if (isArray) {
             element.addClass('collapsed');
 
@@ -3855,70 +4105,13 @@ RED.utils = (function() {
             }
             var fullLength = data.length;
 
-            if (originalLength > 0) {
+                if (originalLength > 0) {
                 $('<i class="fa fa-caret-right debug-message-object-handle"></i> ').prependTo(header);
                 var arrayRows = $('<div class="debug-message-array-rows"></div>').appendTo(element);
                 element.addClass('debug-message-buffer-raw');
-                makeExpandable(header,function() {
-                    if (!key) {
-                        headerHead = $('<span class="debug-message-type-meta debug-message-object-type-header"></span>').html(typeHint||(type+'['+originalLength+']')).appendTo(header);
-                    }
-                    if (type === 'buffer') {
-                        var stringRow = $('<div class="debug-message-string-rows"></div>').appendTo(element);
-                        var sr = $('<div class="debug-message-object-entry collapsed"></div>').appendTo(stringRow);
-                        var stringEncoding = "";
-                        try {
-                            stringEncoding = String.fromCharCode.apply(null, new Uint16Array(data))
-                        } catch(err) {
-                            console.log(err);
-                        }
-                        $('<pre class="debug-message-type-string"></pre>').text(stringEncoding).appendTo(sr);
-                        var bufferOpts = $('<span class="debug-message-buffer-opts"></span>').appendTo(headerHead);
-                        $('<a href="#"></a>').addClass('selected').html('raw').appendTo(bufferOpts).click(function(e) {
-                            if ($(this).text() === 'raw') {
-                                $(this).text('string');
-                                element.addClass('debug-message-buffer-string').removeClass('debug-message-buffer-raw');
-                            } else {
-                                $(this).text('raw');
-                                element.removeClass('debug-message-buffer-string').addClass('debug-message-buffer-raw');
-                            }
-                            e.preventDefault();
-                            e.stopPropagation();
-                        })
-                    }
-                    var row;
-                    if (fullLength <= 10) {
-                        for (i=0;i<fullLength;i++) {
-                            row = $('<div class="debug-message-object-entry collapsed"></div>').appendTo(arrayRows);
-                            buildMessageElement(data[i],""+i,false).appendTo(row);
-                        }
-                    } else {
-                        for (i=0;i<fullLength;i+=10) {
-                            var minRange = i;
-                            row = $('<div class="debug-message-object-entry collapsed"></div>').appendTo(arrayRows);
-                            header = $('<span></span>').appendTo(row);
-                            $('<i class="fa fa-caret-right debug-message-object-handle"></i> ').appendTo(header);
-                            makeExpandable(header, (function() {
-                                var min = minRange;
-                                var max = Math.min(fullLength-1,(minRange+9));
-                                var parent = row;
-                                return function() {
-                                    for (var i=min;i<=max;i++) {
-                                        var row = $('<div class="debug-message-object-entry collapsed"></div>').appendTo(parent);
-                                        buildMessageElement(data[i],""+i,false).appendTo(row);
-                                    }
-                                }
-                            })());
-                            $('<span class="debug-message-object-key"></span>').html("["+minRange+" &hellip; "+Math.min(fullLength-1,(minRange+9))+"]").appendTo(header);
-                        }
-                        if (fullLength < originalLength) {
-                             $('<div class="debug-message-object-entry collapsed"><span class="debug-message-object-key">['+fullLength+' &hellip; '+originalLength+']</span></div>').appendTo(arrayRows);
-                        }
-                    }
-                });
             }
             if (key) {
-                headerHead = $('<span class="debug-message-type-meta f"></span>').html(typeHint||(type+'['+originalLength+']')).appendTo(entryObj);
+                headerHead = $('<span class="debug-message-type-meta"></span>').html(typeHint||(type+'['+originalLength+']')).appendTo(entryObj);
             } else {
                 headerHead = $('<span class="debug-message-object-header"></span>').appendTo(entryObj);
                 $('<span>[ </span>').appendTo(headerHead);
@@ -3937,7 +4130,62 @@ RED.utils = (function() {
                 }
                 $('<span> ]</span>').appendTo(headerHead);
             }
+            if (originalLength > 0) {
 
+                makeExpandable(header,function() {
+                    if (!key) {
+                        headerHead = $('<span class="debug-message-type-meta debug-message-object-type-header"></span>').html(typeHint||(type+'['+originalLength+']')).appendTo(header);
+                    }
+                    if (type === 'buffer') {
+                        var stringRow = $('<div class="debug-message-string-rows"></div>').appendTo(element);
+                        var sr = $('<div class="debug-message-object-entry collapsed"></div>').appendTo(stringRow);
+                        var stringEncoding = "";
+                        try {
+                            stringEncoding = String.fromCharCode.apply(null, new Uint16Array(data))
+                        } catch(err) {
+                            console.log(err);
+                        }
+                        $('<pre class="debug-message-type-string"></pre>').text(stringEncoding).appendTo(sr);
+                        var bufferOpts = $('<span class="debug-message-buffer-opts"></span>').appendTo(headerHead);
+                        var switchFormat = $('<a href="#"></a>').addClass('selected').html('raw').appendTo(bufferOpts).click(function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            formatBuffer(element,$(this),sourceId,path,true);
+                        });
+                        formatBuffer(element,switchFormat,sourceId,path,false);
+
+                    }
+                    var row;
+                    if (fullLength <= 10) {
+                        for (i=0;i<fullLength;i++) {
+                            row = $('<div class="debug-message-object-entry collapsed"></div>').appendTo(arrayRows);
+                            buildMessageElement(data[i],""+i,type==='buffer'?'hex':false,false,path+"["+i+"]",sourceId,rootPath,expandPaths).appendTo(row);
+                        }
+                    } else {
+                        for (i=0;i<fullLength;i+=10) {
+                            var minRange = i;
+                            row = $('<div class="debug-message-object-entry collapsed"></div>').appendTo(arrayRows);
+                            header = $('<span></span>').appendTo(row);
+                            $('<i class="fa fa-caret-right debug-message-object-handle"></i> ').appendTo(header);
+                            makeExpandable(header, (function() {
+                                var min = minRange;
+                                var max = Math.min(fullLength-1,(minRange+9));
+                                var parent = row;
+                                return function() {
+                                    for (var i=min;i<=max;i++) {
+                                        var row = $('<div class="debug-message-object-entry collapsed"></div>').appendTo(parent);
+                                        buildMessageElement(data[i],""+i,type==='buffer'?'hex':false,false,path+"["+i+"]",sourceId,rootPath,expandPaths).appendTo(row);
+                                    }
+                                }
+                            })(),checkExpanded(strippedKey,expandPaths,minRange,Math.min(fullLength-1,(minRange+9))));
+                            $('<span class="debug-message-object-key"></span>').html("["+minRange+" &hellip; "+Math.min(fullLength-1,(minRange+9))+"]").appendTo(header);
+                        }
+                        if (fullLength < originalLength) {
+                             $('<div class="debug-message-object-entry collapsed"><span class="debug-message-object-key">['+fullLength+' &hellip; '+originalLength+']</span></div>').appendTo(arrayRows);
+                        }
+                    }
+                },checkExpanded(strippedKey,expandPaths));
+            }
         } else if (typeof obj === 'object') {
             element.addClass('collapsed');
             var keys = Object.keys(obj);
@@ -3949,12 +4197,18 @@ RED.utils = (function() {
                     }
                     for (i=0;i<keys.length;i++) {
                         var row = $('<div class="debug-message-object-entry collapsed"></div>').appendTo(element);
-                        buildMessageElement(obj[keys[i]],keys[i],false).appendTo(row);
+                        var newPath = path;
+                        if (/^[a-zA-Z_$][0-9a-zA-Z_$]*$/.test(keys[i])) {
+                            newPath += (newPath.length > 0?".":"")+keys[i];
+                        } else {
+                            newPath += "[\""+keys[i].replace(/"/,"\\\"")+"\"]"
+                        }
+                        buildMessageElement(obj[keys[i]],keys[i],false,false,newPath,sourceId,rootPath,expandPaths).appendTo(row);
                     }
                     if (keys.length === 0) {
                         $('<div class="debug-message-object-entry debug-message-type-meta collapsed"></div>').text("empty").appendTo(element);
                     }
-                });
+                },checkExpanded(strippedKey,expandPaths));
             }
             if (key) {
                 $('<span class="debug-message-type-meta"></span>').html('object').appendTo(entryObj);
@@ -3984,14 +4238,15 @@ RED.utils = (function() {
         return element;
     }
 
-    function validatePropertyExpression(str) {
-        // This must be kept in sync with normalisePropertyExpression
-        // in red/runtime/util.js
+    function normalisePropertyExpression(str) {
+        // This must be kept in sync with validatePropertyExpression
+        // in editor/js/ui/utils.js
 
         var length = str.length;
         if (length === 0) {
-            return false;
+            throw new Error("Invalid property expression: zero-length");
         }
+        var parts = [];
         var start = 0;
         var inString = false;
         var inBox = false;
@@ -4002,58 +4257,75 @@ RED.utils = (function() {
             if (!inString) {
                 if (c === "'" || c === '"') {
                     if (i != start) {
-                        return false;
+                        throw new Error("Invalid property expression: unexpected "+c+" at position "+i);
                     }
                     inString = true;
                     quoteChar = c;
                     start = i+1;
                 } else if (c === '.') {
-                    if (i===0 || i===length-1) {
-                        return false;
+                    if (i===0) {
+                        throw new Error("Invalid property expression: unexpected . at position 0");
+                    }
+                    if (start != i) {
+                        v = str.substring(start,i);
+                        if (/^\d+$/.test(v)) {
+                            parts.push(parseInt(v));
+                        } else {
+                            parts.push(v);
+                        }
+                    }
+                    if (i===length-1) {
+                        throw new Error("Invalid property expression: unterminated expression");
                     }
                     // Next char is first char of an identifier: a-z 0-9 $ _
                     if (!/[a-z0-9\$\_]/i.test(str[i+1])) {
-                        return false;
+                        throw new Error("Invalid property expression: unexpected "+str[i+1]+" at position "+(i+1));
                     }
                     start = i+1;
                 } else if (c === '[') {
                     if (i === 0) {
-                        return false;
+                        throw new Error("Invalid property expression: unexpected "+c+" at position "+i);
+                    }
+                    if (start != i) {
+                        parts.push(str.substring(start,i));
                     }
                     if (i===length-1) {
-                        return false;
+                        throw new Error("Invalid property expression: unterminated expression");
                     }
                     // Next char is either a quote or a number
                     if (!/["'\d]/.test(str[i+1])) {
-                        return false;
+                        throw new Error("Invalid property expression: unexpected "+str[i+1]+" at position "+(i+1));
                     }
                     start = i+1;
                     inBox = true;
                 } else if (c === ']') {
                     if (!inBox) {
-                        return false;
+                        throw new Error("Invalid property expression: unexpected "+c+" at position "+i);
                     }
                     if (start != i) {
                         v = str.substring(start,i);
-                        if (!/^\d+$/.test(v)) {
-                            return false;
+                        if (/^\d+$/.test(v)) {
+                            parts.push(parseInt(v));
+                        } else {
+                            throw new Error("Invalid property expression: unexpected array expression at position "+start);
                         }
                     }
                     start = i+1;
                     inBox = false;
                 } else if (c === ' ') {
-                    return false;
+                    throw new Error("Invalid property expression: unexpected ' ' at position "+i);
                 }
             } else {
                 if (c === quoteChar) {
                     if (i-start === 0) {
-                        return false;
+                        throw new Error("Invalid property expression: zero-length string at position "+start);
                     }
-                    // Next char must be a ]
+                    parts.push(str.substring(start,i));
+                    // If inBox, next char must be a ]. Otherwise it may be [ or .
                     if (inBox && !/\]/.test(str[i+1])) {
-                        return false;
+                        throw new Error("Invalid property expression: unexpected array expression at position "+start);
                     } else if (!inBox && i+1!==length && !/[\[\.]/.test(str[i+1])) {
-                        return false;
+                        throw new Error("Invalid property expression: unexpected "+str[i+1]+" expression at position "+(i+1));
                     }
                     start = i+1;
                     inString = false;
@@ -4062,14 +4334,92 @@ RED.utils = (function() {
 
         }
         if (inBox || inString) {
+            throw new Error("Invalid property expression: unterminated expression");
+        }
+        if (start < length) {
+            parts.push(str.substring(start));
+        }
+        return parts;
+    }
+
+    function validatePropertyExpression(str) {
+        try {
+            var parts = normalisePropertyExpression(str);
+            return true;
+        } catch(err) {
             return false;
         }
-        return true;
+    }
+
+    function getMessageProperty(msg,expr) {
+        var result = null;
+        var msgPropParts;
+
+        if (typeof expr === 'string') {
+            if (expr.indexOf('msg.')===0) {
+                expr = expr.substring(4);
+            }
+            msgPropParts = normalisePropertyExpression(expr);
+        } else {
+            msgPropParts = expr;
+        }
+        var m;
+        msgPropParts.reduce(function(obj, key) {
+            result = (typeof obj[key] !== "undefined" ? obj[key] : undefined);
+            if (result === undefined && obj.hasOwnProperty('type') && obj.hasOwnProperty('data')&& obj.hasOwnProperty('length')) {
+                result = (typeof obj.data[key] !== "undefined" ? obj.data[key] : undefined);
+            }
+            return result;
+        }, msg);
+        return result;
+    }
+
+    function getNodeIcon(def,node) {
+        if (def.category === 'config') {
+            return "icons/node-red/cog.png"
+        } else if (node && node.type === 'tab') {
+            return "icons/node-red/subflow.png"
+        } else if (node && node.type === 'unknown') {
+            return "icons/node-red/alert.png"
+        }
+        var icon_url;
+        if (typeof def.icon === "function") {
+            try {
+                icon_url = def.icon.call(node);
+            } catch(err) {
+                console.log("Definition error: "+def.type+".icon",err);
+                icon_url = "arrow-in.png";
+            }
+        } else {
+            icon_url = def.icon;
+        }
+        return "icons/"+def.set.module+"/"+icon_url;
+    }
+
+    function getNodeLabel(node,defaultLabel) {
+        defaultLabel = defaultLabel||"";
+        var l;
+        if (node.type === 'tab') {
+            l = node.label || defaultLabel
+        } else {
+            l = node._def.label;
+            try {
+                l = (typeof l === "function" ? l.call(node) : l)||defaultLabel;
+            } catch(err) {
+                console.log("Definition error: "+node.type+".label",err);
+                l = defaultLabel;
+            }
+        }
+        return RED.text.bidi.enforceTextDirectionWithUCC(l);
     }
 
     return {
         createObjectElement: buildMessageElement,
-        validatePropertyExpression: validatePropertyExpression
+        getMessageProperty: getMessageProperty,
+        normalisePropertyExpression: normalisePropertyExpression,
+        validatePropertyExpression: validatePropertyExpression,
+        getNodeIcon: getNodeIcon,
+        getNodeLabel: getNodeLabel,
     }
 })();
 ;/**
@@ -4124,9 +4474,19 @@ RED.utils = (function() {
             this.uiContainer = this.element
                 .wrap( "<div>" )
                 .parent();
-            this.topContainer = this.uiContainer.wrap("<div>").parent();
 
+            if (this.options.header) {
+                this.options.header.addClass("red-ui-editableList-header");
+                this.borderContainer = this.uiContainer.wrap("<div>").parent();
+                this.borderContainer.prepend(this.options.header);
+                this.topContainer = this.borderContainer.wrap("<div>").parent();
+            } else {
+                this.topContainer = this.uiContainer.wrap("<div>").parent();
+            }
             this.topContainer.addClass('red-ui-editableList');
+            if (this.options.class) {
+                this.topContainer.addClass(this.options.class);
+            }
 
             if (this.options.addButton !== false) {
                 var addLabel;
@@ -4159,6 +4519,11 @@ RED.utils = (function() {
                 this.topContainer.css("position","absolute");
                 this.uiContainer.css("position","absolute");
 
+            }
+            if (this.options.header) {
+                this.borderContainer.addClass("red-ui-editableList-border");
+            } else {
+                this.uiContainer.addClass("red-ui-editableList-border");
             }
             this.uiContainer.addClass("red-ui-editableList-container");
 
@@ -4244,7 +4609,7 @@ RED.utils = (function() {
             var that = this;
             var count = 0;
             if (!this.activeFilter) {
-                this.element.children().show();
+                return this.element.children().show();
             }
             var items = this.items();
             items.each(function (i,el) {
@@ -4347,6 +4712,11 @@ RED.utils = (function() {
                 },0);
             }
         },
+        addItems: function(items) {
+            for (var i=0; i<items.length;i++) {
+                this.addItem(items[i]);
+            }
+        },
         removeItem: function(data) {
             var items = this.element.children().filter(function(f) {
                 return data === $(this).find(".red-ui-editableList-item-content").data('data');
@@ -4394,6 +4764,137 @@ RED.utils = (function() {
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
+(function($) {
+    $.widget( "nodered.checkboxSet", {
+        _create: function() {
+            var that = this;
+            this.uiElement = this.element.wrap( "<span>" ).parent();
+            this.uiElement.addClass("red-ui-checkboxSet");
+            if (this.options.parent) {
+                this.parent = this.options.parent;
+                this.parent.checkboxSet('addChild',this.element);
+            }
+            this.children = [];
+            this.partialFlag = false;
+            this.stateValue = 0;
+            var initialState = this.element.prop('checked');
+            this.options = [
+                $('<span class="red-ui-checkboxSet-option hide"><i class="fa fa-square-o"></i></span>').appendTo(this.uiElement),
+                $('<span class="red-ui-checkboxSet-option hide"><i class="fa fa-check-square-o"></i></span>').appendTo(this.uiElement),
+                $('<span class="red-ui-checkboxSet-option hide"><i class="fa fa-minus-square-o"></i></span>').appendTo(this.uiElement)
+            ];
+            if (initialState) {
+                this.options[1].show();
+            } else {
+                this.options[0].show();
+            }
+
+            this.element.change(function() {
+                if (this.checked) {
+                    that.options[0].hide();
+                    that.options[1].show();
+                    that.options[2].hide();
+                } else {
+                    that.options[1].hide();
+                    that.options[0].show();
+                    that.options[2].hide();
+                }
+                var isChecked = this.checked;
+                that.children.forEach(function(child) {
+                    child.checkboxSet('state',isChecked,false,true);
+                })
+            })
+            this.uiElement.click(function(e) {
+                e.stopPropagation();
+                // state returns null for a partial state. Clicking on that should
+                // result in false.
+                that.state((that.state()===false)?true:false);
+            })
+            if (this.parent) {
+                this.parent.checkboxSet('updateChild',this);
+            }
+        },
+        _destroy: function() {
+            if (this.parent) {
+                this.parent.checkboxSet('removeChild',this.element);
+            }
+        },
+        addChild: function(child) {
+            var that = this;
+            this.children.push(child);
+        },
+        removeChild: function(child) {
+            var index = this.children.indexOf(child);
+            if (index > -1) {
+                this.children.splice(index,1);
+            }
+        },
+        updateChild: function(child) {
+            var checkedCount = 0;
+            this.children.forEach(function(c,i) {
+                if (c.checkboxSet('state') === true) {
+                    checkedCount++;
+                }
+            });
+            if (checkedCount === 0) {
+
+                this.state(false,true);
+            } else if (checkedCount === this.children.length) {
+                this.state(true,true);
+            } else {
+                this.state(null,true);
+            }
+        },
+        disable: function() {
+            this.uiElement.addClass('disabled');
+        },
+        state: function(state,suppressEvent,suppressParentUpdate) {
+
+            if (arguments.length === 0) {
+                return this.partialFlag?null:this.element.is(":checked");
+            } else {
+                this.partialFlag = (state === null);
+                var trueState = this.partialFlag||state;
+                this.element.prop('checked',trueState);
+                if (state === true) {
+                    this.options[0].hide();
+                    this.options[1].show();
+                    this.options[2].hide();
+                } else if (state === false) {
+                    this.options[2].hide();
+                    this.options[1].hide();
+                    this.options[0].show();
+                } else if (state === null) {
+                    this.options[0].hide();
+                    this.options[1].hide();
+                    this.options[2].show();
+                }
+                if (!suppressEvent) {
+                    this.element.trigger('change',null);
+                }
+                if (!suppressParentUpdate && this.parent) {
+                    this.parent.checkboxSet('updateChild',this);
+                }
+            }
+        }
+    })
+
+})(jQuery);
+;/**
+ * Copyright JS Foundation and other contributors, http://js.foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
 RED.menu = (function() {
 
     var menuItems = {};
@@ -4409,7 +4910,17 @@ RED.menu = (function() {
         }
 
         function setInitialState() {
-            var savedStateActive = isSavedStateActive(opt.id);
+            var savedStateActive = RED.settings.get("menu-" + opt.id);
+            if (opt.setting) {
+                // May need to migrate pre-0.17 setting
+
+                if (savedStateActive !== null) {
+                    RED.settings.set(opt.setting,savedStateActive);
+                    RED.settings.remove("menu-" + opt.id);
+                } else {
+                    savedStateActive = RED.settings.get(opt.setting);
+                }
+            }
             if (savedStateActive) {
                 link.addClass("active");
                 triggerAction(opt.id,true);
@@ -4463,7 +4974,8 @@ RED.menu = (function() {
             menuItems[opt.id] = opt;
 
             if (opt.onselect) {
-                link.click(function() {
+                link.click(function(e) {
+                    e.preventDefault();
                     if ($(this).parent().hasClass("disabled")) {
                         return;
                     }
@@ -4521,15 +5033,13 @@ RED.menu = (function() {
     }
     function createMenu(options) {
 
-        var button = $("#"+options.id);
+        var menuParent = $("#"+options.id);
 
-        //button.click(function(event) {
-        //    $("#"+options.id+"-submenu").show();
-        //    event.preventDefault();
-        //});
+        var topMenu = $("<ul/>",{id:options.id+"-submenu", class:"dropdown-menu pull-right"});
 
-
-        var topMenu = $("<ul/>",{id:options.id+"-submenu", class:"dropdown-menu pull-right"}).insertAfter(button);
+        if (menuParent.length === 1) {
+            topMenu.insertAfter(menuParent);
+        }
 
         var lastAddedSeparator = false;
         for (var i=0;i<options.options.length;i++) {
@@ -4542,6 +5052,8 @@ RED.menu = (function() {
                 }
             }
         }
+
+        return topMenu;
     }
 
     function triggerAction(id, args) {
@@ -4557,16 +5069,8 @@ RED.menu = (function() {
         }
     }
 
-    function isSavedStateActive(id) {
-        return RED.settings.get("menu-" + id);
-    }
-
     function isSelected(id) {
         return $("#" + id).hasClass("active");
-    }
-
-    function setSavedState(id, state) {
-        RED.settings.set("menu-" + id, state);
     }
 
     function setSelected(id,state) {
@@ -4582,7 +5086,7 @@ RED.menu = (function() {
         if (opt && opt.onselect) {
             triggerAction(opt.id,state);
         }
-        setSavedState(id, state);
+        RED.settings.set(opt.setting||("menu-"+opt.id), state);
     }
 
     function toggleSelected(id) {
@@ -4659,27 +5163,145 @@ RED.menu = (function() {
  * limitations under the License.
  **/
 
+
+RED.panels = (function() {
+
+    function createPanel(options) {
+        var container = options.container || $("#"+options.id);
+        var children = container.children();
+        if (children.length !== 2) {
+            throw new Error("Container must have exactly two children");
+        }
+
+        container.addClass("red-ui-panels");
+        var separator = $('<div class="red-ui-panels-separator"></div>').insertAfter(children[0]);
+        var startPosition;
+        var panelHeights = [];
+        var modifiedHeights = false;
+        var panelRatio;
+
+        separator.draggable({
+                axis: "y",
+                containment: container,
+                scroll: false,
+                start:function(event,ui) {
+                    var height = container.height();
+                    startPosition = ui.position.top;
+                    panelHeights = [$(children[0]).height(),$(children[1]).height()];
+                    console.log("START",height,panelHeights,panelHeights[0]+panelHeights[1],height-(panelHeights[0]+panelHeights[1]));
+                },
+                drag: function(event,ui) {
+                    var height = container.height();
+                    var delta = ui.position.top-startPosition;
+                    var newHeights = [panelHeights[0]+delta,panelHeights[1]-delta];
+                    $(children[0]).height(newHeights[0]);
+                    $(children[1]).height(newHeights[1]);
+                    if (options.resize) {
+                        options.resize(newHeights[0],newHeights[1]);
+                    }
+                    ui.position.top -= delta;
+                    panelRatio = newHeights[0]/height;
+                },
+                stop:function(event,ui) {
+                    modifiedHeights = true;
+                }
+        });
+
+        return {
+            resize: function(height) {
+                var panelHeights = [$(children[0]).height(),$(children[1]).height()];
+                container.height(height);
+                if (modifiedHeights) {
+                    var topPanelHeight = panelRatio*height;
+                    var bottomPanelHeight = height - topPanelHeight - 48;
+                    panelHeights = [topPanelHeight,bottomPanelHeight];
+                    $(children[0]).height(panelHeights[0]);
+                    $(children[1]).height(panelHeights[1]);
+                    console.log("SET",height,panelHeights,panelHeights[0]+panelHeights[1],height-(panelHeights[0]+panelHeights[1]));
+                }
+                if (options.resize) {
+                    options.resize(panelHeights[0],panelHeights[1]);
+                }
+            }
+        }
+    }
+
+    return {
+        create: createPanel
+    }
+})();
+;/**
+ * Copyright JS Foundation and other contributors, http://js.foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+
 RED.popover = (function() {
-
-
+    var deltaSizes = {
+        "default": {
+            top: 10,
+            leftRight: 17,
+            leftLeft: 25
+        },
+        "small": {
+            top: 5,
+            leftRight: 8,
+            leftLeft: 16
+        }
+    }
     function createPopover(options) {
         var target = options.target;
-
+        var direction = options.direction || "right";
+        var trigger = options.trigger;
         var content = options.content;
         var delay = options.delay;
+        var width = options.width||"auto";
+        var size = options.size||"default";
+        if (!deltaSizes[size]) {
+            throw new Error("Invalid RED.popover size value:",size);
+        }
+
         var timer = null;
         var active;
         var div;
 
         var openPopup = function() {
             if (active) {
-                div = $('<div class="red-ui-popover"></div>').html(content).appendTo("body");
+                div = $('<div class="red-ui-popover red-ui-popover-'+direction+'"></div>').appendTo("body");
+                if (size !== "default") {
+                    div.addClass("red-ui-popover-size-"+size);
+                }
+                if (typeof content === 'function') {
+                    content.call(res).appendTo(div);
+                } else {
+                    div.html(content);
+                }
+                if (width !== "auto") {
+                    div.width(width);
+                }
+
+
                 var targetPos = target.offset();
                 var targetWidth = target.width();
                 var targetHeight = target.height();
 
                 var divHeight = div.height();
-                div.css({top: targetPos.top+targetHeight/2-divHeight/2-10,left:targetPos.left+targetWidth+17});
+                var divWidth = div.width();
+                if (direction === 'right') {
+                    div.css({top: targetPos.top+targetHeight/2-divHeight/2-deltaSizes[size].top,left:targetPos.left+targetWidth+deltaSizes[size].leftRight});
+                } else if (direction === 'left') {
+                    div.css({top: targetPos.top+targetHeight/2-divHeight/2-deltaSizes[size].top,left:targetPos.left-deltaSizes[size].leftLeft-divWidth});
+                }
 
                 div.fadeIn("fast");
             }
@@ -4695,24 +5317,45 @@ RED.popover = (function() {
             }
         }
 
-        target.on('mouseenter',function(e) {
-            clearTimeout(timer);
-            active = true;
-            timer = setTimeout(openPopup,delay.show);
-        });
-        target.on('mouseleave', function(e) {
-            if (timer) {
+        if (trigger === 'hover') {
+
+            target.on('mouseenter',function(e) {
                 clearTimeout(timer);
-            }
-            active = false;
-            setTimeout(closePopup,delay.hide);
-        });
+                active = true;
+                timer = setTimeout(openPopup,delay.show);
+            });
+            target.on('mouseleave', function(e) {
+                if (timer) {
+                    clearTimeout(timer);
+                }
+                active = false;
+                setTimeout(closePopup,delay.hide);
+            });
+        } else if (trigger === 'click') {
+            target.click(function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                active = !active;
+                if (!active) {
+                    closePopup();
+                } else {
+                    openPopup();
+                }
+            });
+        }
         var res = {
             setContent: function(_content) {
                 content = _content;
+            },
+            open: function () {
+                active = true;
+                openPopup();
+            },
+            close: function () {
+                active = false;
+                closePopup();
             }
         }
-        target.data('popover',res);
         return res;
 
     }
@@ -4815,6 +5458,9 @@ RED.popover = (function() {
             } else {
                 this.resultCount.text(val).show();
             }
+        },
+        change: function() {
+            this._trigger("change");
         }
     });
 })(jQuery);
@@ -4842,10 +5488,13 @@ RED.tabs = (function() {
         var currentTabWidth;
         var currentActiveTabWidth = 0;
 
-        var ul = $("#"+options.id);
+        var ul = options.element || $("#"+options.id);
         var wrapper = ul.wrap( "<div>" ).parent();
         var scrollContainer = ul.wrap( "<div>" ).parent();
         wrapper.addClass("red-ui-tabs");
+        if (options.vertical) {
+            wrapper.addClass("red-ui-tabs-vertical");
+        }
         if (options.addButton && typeof options.addButton === 'function') {
             wrapper.addClass("red-ui-tabs-add");
             var addButton = $('<div class="red-ui-tab-button"><a href="#"><i class="fa fa-plus"></i></a></div>').appendTo(wrapper);
@@ -4893,6 +5542,9 @@ RED.tabs = (function() {
         ul.children().addClass("red-ui-tab");
 
         function onTabClick() {
+            if (options.onclick) {
+                options.onclick(tabs[$(this).attr('href').slice(1)]);
+            }
             activateTab($(this));
             return false;
         }
@@ -4963,6 +5615,9 @@ RED.tabs = (function() {
         }
 
         function updateTabWidths() {
+            if (options.vertical) {
+                return;
+            }
             var tabs = ul.find("li.red-ui-tab");
             var width = wrapper.width();
             var tabCount = tabs.size();
@@ -5032,6 +5687,7 @@ RED.tabs = (function() {
             addTab: function(tab) {
                 tabs[tab.id] = tab;
                 var li = $("<li/>",{class:"red-ui-tab"}).appendTo(ul);
+                li.attr('id',"red-ui-tab-"+(tab.id.replace(".","-")));
                 li.data("tabId",tab.id);
                 var link = $("<a/>",{href:"#"+tab.id, class:"red-ui-tab-label"}).appendTo(li);
                 if (tab.icon) {
@@ -5047,6 +5703,7 @@ RED.tabs = (function() {
                     closeLink.append('<i class="fa fa-times" />');
 
                     closeLink.on("click",function(event) {
+                        event.preventDefault();
                         removeTab(tab.id);
                     });
                 }
@@ -5151,7 +5808,7 @@ RED.tabs = (function() {
                 tabs[id].label = label;
                 var tab = ul.find("a[href='#"+id+"']");
                 tab.attr("title",label);
-                tab.find("span").text(label).attr('dir', RED.text.bidi.resolveBaseTextDir(label));
+                tab.find("span.bidiAware").text(label).attr('dir', RED.text.bidi.resolveBaseTextDir(label));
                 updateTabWidths();
             },
             order: function(order) {
@@ -5201,6 +5858,125 @@ RED.tabs = (function() {
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
+
+RED.stack = (function() {
+    function createStack(options) {
+        var container = options.container;
+
+        var entries = [];
+
+        var visible = true;
+
+        return {
+            add: function(entry) {
+                entries.push(entry);
+                entry.container = $('<div class="palette-category">').appendTo(container);
+                if (!visible) {
+                    entry.container.hide();
+                }
+                var header = $('<div class="palette-header"></div>').appendTo(entry.container);
+                entry.content = $('<div></div>').appendTo(entry.container);
+                if (entry.collapsible !== false) {
+                    header.click(function() {
+                        if (options.singleExpanded) {
+                            if (!entry.isExpanded()) {
+                                for (var i=0;i<entries.length;i++) {
+                                    if (entries[i].isExpanded()) {
+                                        entries[i].collapse();
+                                    }
+                                }
+                                entry.expand();
+                            }
+                        } else {
+                            entry.toggle();
+                        }
+                    });
+                    var icon = $('<i class="fa fa-angle-down"></i>').appendTo(header);
+
+                    if (entry.expanded) {
+                        icon.addClass("expanded");
+                    } else {
+                        entry.content.hide();
+                    }
+                } else {
+                    header.css("cursor","default");
+                }
+                entry.title = $('<span></span>').html(entry.title).appendTo(header);
+
+
+
+                entry.toggle = function() {
+                    if (entry.isExpanded()) {
+                        entry.collapse();
+                        return false;
+                    } else {
+                        entry.expand();
+                        return true;
+                    }
+                };
+                entry.expand = function() {
+                    if (!entry.isExpanded()) {
+                        if (entry.onexpand) {
+                            entry.onexpand.call(entry);
+                        }
+                        icon.addClass("expanded");
+                        entry.content.slideDown(200);
+                        return true;
+                    }
+                };
+                entry.collapse = function() {
+                    if (entry.isExpanded()) {
+                        icon.removeClass("expanded");
+                        entry.content.slideUp(200);
+                        return true;
+                    }
+                };
+                entry.isExpanded = function() {
+                    return icon.hasClass("expanded");
+                };
+
+                return entry;
+
+            },
+
+            hide: function() {
+                visible = false;
+                entries.forEach(function(entry) {
+                    entry.container.hide();
+                });
+                return this;
+            },
+
+            show: function() {
+                visible = true;
+                entries.forEach(function(entry) {
+                    entry.container.show();
+                });
+                return this;
+            }
+        }
+
+    }
+
+    return {
+        create: createStack
+    }
+})();
+;/**
+ * Copyright JS Foundation and other contributors, http://js.foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
 (function($) {
     var allOptions = {
         msg: {value:"msg",label:"msg.",validate:RED.utils.validatePropertyExpression},
@@ -5209,7 +5985,31 @@ RED.tabs = (function() {
         str: {value:"str",label:"string",icon:"red/images/typedInput/az.png"},
         num: {value:"num",label:"number",icon:"red/images/typedInput/09.png",validate:/^[+-]?[0-9]*\.?[0-9]*([eE][-+]?[0-9]+)?$/},
         bool: {value:"bool",label:"boolean",icon:"red/images/typedInput/bool.png",options:["true","false"]},
-        json: {value:"json",label:"JSON",icon:"red/images/typedInput/json.png", validate: function(v) { try{JSON.parse(v);return true;}catch(e){return false;}}},
+        json: {
+            value:"json",
+            label:"JSON",
+            icon:"red/images/typedInput/json.png",
+            validate: function(v) { try{JSON.parse(v);return true;}catch(e){return false;}},
+            expand: function() {
+                var that = this;
+                var value = this.value();
+                try {
+                    value = JSON.stringify(JSON.parse(value),null,4);
+                } catch(err) {
+                }
+                RED.editor.editJSON({
+                    value: value,
+                    complete: function(v) {
+                        var value = v;
+                        try {
+                            value = JSON.stringify(JSON.parse(v));
+                        } catch(err) {
+                        }
+                        that.value(value);
+                    }
+                })
+            }
+        },
         re: {value:"re",label:"regular expression",icon:"red/images/typedInput/re.png"},
         date: {value:"date",label:"timestamp",hasValue:false},
         jsonata: {
@@ -5643,7 +6443,7 @@ RED.tabs = (function() {
         var result = [];
         Object.keys(actions).forEach(function(action) {
             var shortcut = RED.keyboard.getShortcut(action);
-            result.push({id:action,scope:shortcut?shortcut.scope:undefined,key:shortcut?shortcut.key:undefined})
+            result.push({id:action,scope:shortcut?shortcut.scope:undefined,key:shortcut?shortcut.key:undefined,user:shortcut?shortcut.user:undefined})
         })
         return result;
     }
@@ -5686,6 +6486,8 @@ RED.deploy = (function() {
     }
 
     var deploymentType = "full";
+
+    var deployInflight = false;
 
     var currentDiff = null;
 
@@ -5745,7 +6547,10 @@ RED.deploy = (function() {
               '</span></li>').prependTo(".header-toolbar");
         }
 
-        $('#btn-deploy').click(function() { save(); });
+        $('#btn-deploy').click(function(event) {
+            event.preventDefault();
+            save();
+        });
 
         RED.actions.add("core:deploy-flows",save);
 
@@ -5792,7 +6597,16 @@ RED.deploy = (function() {
                             if (ignoreChecked) {
                                 ignoreDeployWarnings[$( "#node-dialog-confirm-deploy-type" ).val()] = true;
                             }
-                            save(true,$( "#node-dialog-confirm-deploy-type" ).val() === "conflict");
+                            save(true,/conflict/.test($("#node-dialog-confirm-deploy-type" ).val()));
+                            $( this ).dialog( "close" );
+                        }
+                    },
+                    {
+                        id: "node-dialog-confirm-deploy-overwrite",
+                        text: RED._("deploy.confirm.button.overwrite"),
+                        class: "primary",
+                        click: function() {
+                            save(true,/conflict/.test($("#node-dialog-confirm-deploy-type" ).val()));
                             $( this ).dialog( "close" );
                         }
                     }
@@ -5806,10 +6620,13 @@ RED.deploy = (function() {
                                    '</div>');
                 },
                 open: function() {
-                    if ($( "#node-dialog-confirm-deploy-type" ).val() === "conflict") {
+                    var deployType = $("#node-dialog-confirm-deploy-type" ).val();
+                    if (/conflict/.test(deployType)) {
+                        $( "#node-dialog-confirm-deploy" ).dialog('option','title', RED._('deploy.confirm.button.review'));
                         $("#node-dialog-confirm-deploy-deploy").hide();
                         $("#node-dialog-confirm-deploy-review").addClass('disabled').show();
                         $("#node-dialog-confirm-deploy-merge").addClass('disabled').show();
+                        $("#node-dialog-confirm-deploy-overwrite").toggle(deployType === "deploy-conflict");
                         currentDiff = null;
                         $("#node-dialog-confirm-deploy-conflict-checking").show();
                         $("#node-dialog-confirm-deploy-conflict-auto-merge").hide();
@@ -5835,7 +6652,9 @@ RED.deploy = (function() {
 
                         $("#node-dialog-confirm-deploy-hide").parent().hide();
                     } else {
+                        $( "#node-dialog-confirm-deploy" ).dialog('option','title', RED._('deploy.confirm.button.confirm'));
                         $("#node-dialog-confirm-deploy-deploy").show();
+                        $("#node-dialog-confirm-deploy-overwrite").hide();
                         $("#node-dialog-confirm-deploy-review").hide();
                         $("#node-dialog-confirm-deploy-merge").hide();
                         $("#node-dialog-confirm-deploy-hide").parent().show();
@@ -5855,7 +6674,33 @@ RED.deploy = (function() {
             }
         });
 
-
+        var activeNotifyMessage;
+        RED.comms.subscribe("notification/runtime-deploy",function(topic,msg) {
+            if (!activeNotifyMessage) {
+                var currentRev = RED.nodes.version();
+                if (currentRev === null || deployInflight || currentRev === msg.revision) {
+                    return;
+                }
+                var message = $('<div>'+RED._('deploy.confirm.backgroundUpdate')+
+                    '<br><br><div class="ui-dialog-buttonset">'+
+                    '<button>'+RED._('deploy.confirm.button.ignore')+'</button>'+
+                    '<button class="primary">'+RED._('deploy.confirm.button.review')+'</button>'+
+                    '</div></div>');
+                $(message.find('button')[0]).click(function(evt) {
+                    evt.preventDefault();
+                    activeNotifyMessage.close();
+                    activeNotifyMessage = null;
+                })
+                $(message.find('button')[1]).click(function(evt) {
+                    evt.preventDefault();
+                    activeNotifyMessage.close();
+                    var nns = RED.nodes.createCompleteNodeSet();
+                    resolveConflict(nns,false);
+                    activeNotifyMessage = null;
+                })
+                activeNotifyMessage = RED.notify(message,null,true);
+            }
+        });
     }
 
     function getNodeInfo(node) {
@@ -5869,18 +6714,7 @@ RED.deploy = (function() {
                 tabLabel = tab.label;
             }
         }
-        var label = "";
-        if (typeof node._def.label == "function") {
-            try {
-                label = node._def.label.call(node);
-            } catch(err) {
-                console.log("Definition error: "+node_def.type+".label",err);
-                label = node_def.type;
-            }
-        } else {
-            label = node._def.label;
-        }
-        label = label || node.id;
+        var label = RED.utils.getNodeLabel(node,node.id);
         return {tab:tabLabel,type:node.type,label:label};
     }
     function sortNodeInfo(A,B) {
@@ -5893,12 +6727,12 @@ RED.deploy = (function() {
         return 0;
     }
 
-    function resolveConflict(currentNodes) {
+    function resolveConflict(currentNodes, activeDeploy) {
         $( "#node-dialog-confirm-deploy-config" ).hide();
         $( "#node-dialog-confirm-deploy-unknown" ).hide();
         $( "#node-dialog-confirm-deploy-unused" ).hide();
         $( "#node-dialog-confirm-deploy-conflict" ).show();
-        $( "#node-dialog-confirm-deploy-type" ).val("conflict");
+        $( "#node-dialog-confirm-deploy-type" ).val(activeDeploy?"deploy-conflict":"background-conflict");
         $( "#node-dialog-confirm-deploy" ).dialog( "open" );
     }
 
@@ -5983,6 +6817,7 @@ RED.deploy = (function() {
                 data.rev = RED.nodes.version();
             }
 
+            deployInflight = true;
             $.ajax({
                 url:"flows",
                 type: "POST",
@@ -6030,13 +6865,14 @@ RED.deploy = (function() {
                 if (xhr.status === 401) {
                     RED.notify(RED._("deploy.deployFailed",{message:RED._("user.notAuthorized")}),"error");
                 } else if (xhr.status === 409) {
-                    resolveConflict(nns);
+                    resolveConflict(nns, true);
                 } else if (xhr.responseText) {
                     RED.notify(RED._("deploy.deployFailed",{message:xhr.responseText}),"error");
                 } else {
                     RED.notify(RED._("deploy.deployFailed",{message:RED._("deploy.errors.noResponse")}),"error");
                 }
             }).always(function() {
+                deployInflight = false;
                 var delta = Math.max(0,300-(Date.now()-startTime));
                 setTimeout(function() {
                     $(".deploy-button-content").css('opacity',1);
@@ -6393,21 +7229,14 @@ RED.deploy = (function() {
     function createNodeIcon(node,def) {
         var nodeDiv = $("<div>",{class:"node-diff-node-entry-node"});
         var colour = def.color;
-        var icon_url = "arrow-in.png";
+        var icon_url = RED.utils.getNodeIcon(def,node);
         if (node.type === 'tab') {
             colour = "#C0DEED";
-            icon_url = "subflow.png";
-        } else if (def.category === 'config') {
-            icon_url = "cog.png";
-        } else if (node.type === 'unknown') {
-            icon_url = "alert.png";
-        } else {
-            icon_url = def.icon;
         }
         nodeDiv.css('backgroundColor',colour);
 
         var iconContainer = $('<div/>',{class:"palette_icon_container"}).appendTo(nodeDiv);
-        $('<div/>',{class:"palette_icon",style:"background-image: url(icons/"+icon_url+")"}).appendTo(iconContainer);
+        $('<div/>',{class:"palette_icon",style:"background-image: url("+icon_url+")"}).appendTo(iconContainer);
 
         return nodeDiv;
     }
@@ -7377,6 +8206,7 @@ RED.keyboard = (function() {
         93: true
     }
     var actionToKeyMap = {}
+    var defaultKeyMap = {};
 
     // FF generates some different keycodes because reasons.
     var firefoxKeyCodeMap = {
@@ -7386,20 +8216,56 @@ RED.keyboard = (function() {
     }
 
     function init() {
+        var userKeymap = RED.settings.get('keymap') || {};
         $.getJSON("red/keymap.json",function(data) {
             for (var scope in data) {
                 if (data.hasOwnProperty(scope)) {
                     var keys = data[scope];
                     for (var key in keys) {
                         if (keys.hasOwnProperty(key)) {
-                            addHandler(scope,key,keys[key]);
+                            if (!userKeymap.hasOwnProperty(keys[key])) {
+                                addHandler(scope,key,keys[key],false);
+                                defaultKeyMap[keys[key]] = {
+                                    scope:scope,
+                                    key:key,
+                                    user:false
+                                };
+                            }
                         }
                     }
                 }
             }
-        })
-        RED.actions.add("core:show-help", showKeyboardHelp);
+            for (var action in userKeymap) {
+                if (userKeymap.hasOwnProperty(action)) {
+                    var obj = userKeymap[action];
+                    if (obj.hasOwnProperty('key')) {
+                        addHandler(obj.scope, obj.key, action, true);
+                    }
+                }
+            }
+        });
 
+        RED.userSettings.add({
+            id:'keyboard',
+            title: 'Keyboard',
+            get: getSettingsPane,
+            focus: function() {
+                setTimeout(function() {
+                    $("#user-settings-tab-keyboard-filter").focus();
+                },200);
+            }
+        })
+    }
+
+    function revertToDefault(action) {
+        var currentAction = actionToKeyMap[action];
+        if (currentAction) {
+            removeHandler(currentAction.key);
+        }
+        if (defaultKeyMap.hasOwnProperty(action)) {
+            var obj = defaultKeyMap[action];
+            addHandler(obj.scope, obj.key, action, false);
+        }
     }
     function parseKeySpecifier(key) {
         var parts = key.toLowerCase().split("-");
@@ -7455,9 +8321,11 @@ RED.keyboard = (function() {
                 if (partialState) {
                     partialState = null;
                     return resolveKeyEvent(evt);
-                } else {
+                } else if (Object.keys(handler).length > 0) {
                     partialState = handler;
                     evt.preventDefault();
+                    return null;
+                } else {
                     return null;
                 }
             } else if (handler.scope && handler.scope !== "*") {
@@ -7503,6 +8371,9 @@ RED.keyboard = (function() {
         if (typeof key === 'string') {
             if (typeof cbdown === 'string') {
                 actionToKeyMap[cbdown] = {scope:scope,key:key};
+                if (typeof ondown === 'boolean') {
+                    actionToKeyMap[cbdown].user = ondown;
+                }
             }
             var parts = key.split(" ");
             for (i=0;i<parts.length;i++) {
@@ -7510,7 +8381,6 @@ RED.keyboard = (function() {
                 if (parsedKey) {
                     keys.push(parsedKey);
                 } else {
-                    console.log("Unrecognised key specifier:",key)
                     return;
                 }
             }
@@ -7546,7 +8416,7 @@ RED.keyboard = (function() {
         var keys = [];
         var i=0;
         if (typeof key === 'string') {
-            delete actionToKeyMap[key];
+
             var parts = key.split(" ");
             for (i=0;i<parts.length;i++) {
                 var parsedKey = parseKeySpecifier(parts[i]);
@@ -7578,78 +8448,19 @@ RED.keyboard = (function() {
             }
             slot = slot[key];
         }
+        if (typeof slot.ondown === "string") {
+            if (typeof modifiers === 'boolean' && modifiers) {
+                actionToKeyMap[slot.ondown] = {user: modifiers}
+            } else {
+                delete actionToKeyMap[slot.ondown];
+            }
+        }
         delete slot.scope;
         delete slot.ondown;
     }
 
-    var shortcutDialog = null;
-
     var cmdCtrlKey = '<span class="help-key">'+(isMac?'&#8984;':'Ctrl')+'</span>';
 
-    function showKeyboardHelp() {
-        if (!RED.settings.theme("menu.menu-item-keyboard-shortcuts",true)) {
-            return;
-        }
-        if (!shortcutDialog) {
-            shortcutDialog = $('<div id="keyboard-help-dialog" class="hide">'+
-                '<div class="keyboard-shortcut-entry keyboard-shortcut-list-header">'+
-                    '<div class="keyboard-shortcut-entry-key">shortcut</div>'+
-                    '<div class="keyboard-shortcut-entry-key">action</div>'+
-                    '<div class="keyboard-shortcut-entry-scope">scope</div>'+
-                '</div>'+
-                '<ol id="keyboard-shortcut-list"></ol>'+
-                '</div>')
-            .appendTo("body");
-
-            var shortcutList = $('#keyboard-shortcut-list').editableList({
-                addButton: false,
-                scrollOnAdd: false,
-                addItem: function(container,i,object) {
-                    var item = $('<div class="keyboard-shortcut-entry">').appendTo(container);
-
-                    var key = $('<div class="keyboard-shortcut-entry-key">').appendTo(item);
-                    if (object.key) {
-                        key.append(formatKey(object.key));
-                    } else {
-                        item.addClass("keyboard-shortcut-entry-unassigned");
-                        key.html(RED._('keyboard.unassigned'));
-                    }
-
-                    var text = object.id.replace(/(^.+:([a-z]))|(-([a-z]))/g,function() {
-                        if (arguments[5] === 0) {
-                            return arguments[2].toUpperCase();
-                        } else {
-                            return " "+arguments[4].toUpperCase();
-                        }
-                    });
-                    var label = $('<div>').html(text).appendTo(item);
-                    if (object.scope) {
-                        $('<div class="keyboard-shortcut-entry-scope">').html(object.scope).appendTo(item);
-                    }
-
-
-                },
-            });
-            var shortcuts = RED.actions.list();
-            shortcuts.sort(function(A,B) {
-                return A.id.localeCompare(B.id);
-            });
-            shortcuts.forEach(function(s) {
-                shortcutList.editableList('addItem',s);
-            })
-
-            shortcutDialog.dialog({
-                modal: true,
-                autoOpen: false,
-                width: "800",
-                height: "400",
-                title:RED._("keyboard.title"),
-                resizable: false
-            });
-        }
-
-        shortcutDialog.dialog("open");
-    }
     function formatKey(key) {
         var formattedKey = isMac?key.replace(/ctrl-?/,"&#8984;"):key;
         formattedKey = isMac?formattedKey.replace(/alt-?/,"&#8997;"):key;
@@ -7661,6 +8472,206 @@ RED.keyboard = (function() {
         return '<span class="help-key-block"><span class="help-key">'+formattedKey.split(" ").join('</span> <span class="help-key">')+'</span></span>';
     }
 
+    function validateKey(key) {
+        key = key.trim();
+        var parts = key.split(" ");
+        for (i=0;i<parts.length;i++) {
+            var parsedKey = parseKeySpecifier(parts[i]);
+            if (!parsedKey) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function editShortcut(e) {
+        e.preventDefault();
+        var container = $(this);
+        var object = container.data('data');
+
+
+        if (!container.hasClass('keyboard-shortcut-entry-expanded')) {
+            endEditShortcut();
+
+            var key = container.find(".keyboard-shortcut-entry-key");
+            var scope = container.find(".keyboard-shortcut-entry-scope");
+            container.addClass('keyboard-shortcut-entry-expanded');
+
+            var keyInput = $('<input type="text">').attr('placeholder',RED._('keyboard.unassigned')).val(object.key||"").appendTo(key);
+            keyInput.on("keyup",function(e) {
+                if (e.keyCode === 13) {
+                    return endEditShortcut();
+                }
+                var currentVal = $(this).val();
+                currentVal = currentVal.trim();
+                var valid = (currentVal === "" || RED.keyboard.validateKey(currentVal));
+                $(this).toggleClass("input-error",!valid);
+            })
+
+            var scopeSelect = $('<select><option value="*">global</option><option value="workspace">workspace</option></select>').appendTo(scope);
+            scopeSelect.val(object.scope||'*');
+
+            var div = $('<div class="keyboard-shortcut-edit button-group-vertical"></div>').appendTo(scope);
+            var okButton = $('<button class="editor-button editor-button-small"><i class="fa fa-check"></i></button>').appendTo(div);
+            var revertButton = $('<button class="editor-button editor-button-small"><i class="fa fa-reply"></i></button>').appendTo(div);
+
+            okButton.click(function(e) {
+                e.stopPropagation();
+                endEditShortcut();
+            });
+            revertButton.click(function(e) {
+                e.stopPropagation();
+                RED.keyboard.revertToDefault(object.id);
+                container.empty();
+                container.removeClass('keyboard-shortcut-entry-expanded');
+                var shortcut = RED.keyboard.getShortcut(object.id);
+                var userKeymap = RED.settings.get('keymap') || {};
+                delete userKeymap[object.id];
+                RED.settings.set('keymap',userKeymap);
+
+                var obj = {
+                    id:object.id,
+                    scope:shortcut?shortcut.scope:undefined,
+                    key:shortcut?shortcut.key:undefined,
+                    user:shortcut?shortcut.user:undefined
+                }
+                buildShortcutRow(container,obj);
+            })
+
+            keyInput.focus();
+        }
+    }
+
+    function endEditShortcut(cancel) {
+        var container = $('.keyboard-shortcut-entry-expanded');
+        if (container.length === 1) {
+            var object = container.data('data');
+            var keyInput = container.find(".keyboard-shortcut-entry-key input");
+            var scopeSelect = container.find(".keyboard-shortcut-entry-scope select");
+            if (!cancel) {
+                var key = keyInput.val().trim();
+                var scope = scopeSelect.val();
+                var valid = (key === "" || RED.keyboard.validateKey(key));
+                if (valid) {
+                    var current = RED.keyboard.getShortcut(object.id);
+                    if ((!current && key) || (current && (current.scope !== scope || current.key !== key))) {
+                        var keyDiv = container.find(".keyboard-shortcut-entry-key");
+                        var scopeDiv = container.find(".keyboard-shortcut-entry-scope");
+                        keyDiv.empty();
+                        scopeDiv.empty();
+                        if (object.key) {
+                            RED.keyboard.remove(object.key,true);
+                        }
+                        container.find(".keyboard-shortcut-entry-text i").css("opacity",1);
+                        if (key === "") {
+                            keyDiv.parent().addClass("keyboard-shortcut-entry-unassigned");
+                            keyDiv.append($('<span>').text(RED._('keyboard.unassigned'))  );
+                            delete object.key;
+                            delete object.scope;
+                        } else {
+                            keyDiv.parent().removeClass("keyboard-shortcut-entry-unassigned");
+                            keyDiv.append(RED.keyboard.formatKey(key))
+                            $("<span>").text(scope).appendTo(scopeDiv);
+                            object.key = key;
+                            object.scope = scope;
+                            RED.keyboard.add(object.scope,object.key,object.id,true);
+                        }
+                        var userKeymap = RED.settings.get('keymap') || {};
+                        userKeymap[object.id] = RED.keyboard.getShortcut(object.id);
+                        RED.settings.set('keymap',userKeymap);
+                    }
+                }
+            }
+            keyInput.remove();
+            scopeSelect.remove();
+            $('.keyboard-shortcut-edit').remove();
+            container.removeClass('keyboard-shortcut-entry-expanded');
+        }
+    }
+
+    function buildShortcutRow(container,object) {
+        var item = $('<div class="keyboard-shortcut-entry">').appendTo(container);
+        container.data('data',object);
+
+        var text = object.id.replace(/(^.+:([a-z]))|(-([a-z]))/g,function() {
+            if (arguments[5] === 0) {
+                return arguments[2].toUpperCase();
+            } else {
+                return " "+arguments[4].toUpperCase();
+            }
+        });
+        var label = $('<div>').addClass("keyboard-shortcut-entry-text").text(text).appendTo(item);
+
+        var user = $('<i class="fa fa-user"></i>').prependTo(label);
+
+        if (!object.user) {
+            user.css("opacity",0);
+        }
+
+        var key = $('<div class="keyboard-shortcut-entry-key">').appendTo(item);
+        if (object.key) {
+            key.append(RED.keyboard.formatKey(object.key));
+        } else {
+            item.addClass("keyboard-shortcut-entry-unassigned");
+            key.append($('<span>').text(RED._('keyboard.unassigned'))  );
+        }
+
+        var scope = $('<div class="keyboard-shortcut-entry-scope">').appendTo(item);
+
+        $("<span>").text(object.scope === '*'?'global':object.scope||"").appendTo(scope);
+        container.click(editShortcut);
+    }
+
+    function getSettingsPane() {
+        var pane = $('<div id="user-settings-tab-keyboard"></div>');
+
+        $('<div class="keyboard-shortcut-entry keyboard-shortcut-list-header">'+
+        '<div class="keyboard-shortcut-entry-key keyboard-shortcut-entry-text"><input id="user-settings-tab-keyboard-filter" type="text" placeholder="filter actions"></div>'+
+        '<div class="keyboard-shortcut-entry-key">shortcut</div>'+
+        '<div class="keyboard-shortcut-entry-scope">scope</div>'+
+        '</div>').appendTo(pane);
+
+        pane.find("input").searchBox({
+            delay: 100,
+            change: function() {
+                var filterValue = $(this).val().trim();
+                if (filterValue === "") {
+                    shortcutList.editableList('filter', null);
+                } else {
+                    filterValue = filterValue.replace(/\s/g,"");
+                    shortcutList.editableList('filter', function(data) {
+                        return data.id.toLowerCase().replace(/^.*:/,"").replace("-","").indexOf(filterValue) > -1;
+                    })
+                }
+            }
+        });
+
+        var shortcutList = $('<ol class="keyboard-shortcut-list"></ol>').css({
+            position: "absolute",
+            top: "32px",
+            bottom: "0",
+            left: "0",
+            right: "0"
+        }).appendTo(pane).editableList({
+            addButton: false,
+            scrollOnAdd: false,
+            addItem: function(container,i,object) {
+                buildShortcutRow(container,object);
+            },
+
+        });
+        var shortcuts = RED.actions.list();
+        shortcuts.sort(function(A,B) {
+            var Aid = A.id.replace(/^.*:/,"").replace(/[ -]/g,"").toLowerCase();
+            var Bid = B.id.replace(/^.*:/,"").replace(/[ -]/g,"").toLowerCase();
+            return Aid.localeCompare(Bid);
+        });
+        shortcuts.forEach(function(s) {
+            shortcutList.editableList('addItem',s);
+        });
+        return pane;
+    }
+
     return {
         init: init,
         add: addHandler,
@@ -7668,7 +8679,9 @@ RED.keyboard = (function() {
         getShortcut: function(actionName) {
             return actionToKeyMap[actionName];
         },
-        formatKey: formatKey
+        revertToDefault: revertToDefault,
+        formatKey: formatKey,
+        validateKey: validateKey
     }
 
 })();
@@ -7702,7 +8715,7 @@ RED.workspaces = (function() {
             var tabId = RED.nodes.id();
             do {
                 workspaceIndex += 1;
-            } while($("#workspace-tabs a[title='"+RED._('workspace.defaultName',{number:workspaceIndex})+"']").size() !== 0);
+            } while ($("#workspace-tabs a[title='"+RED._('workspace.defaultName',{number:workspaceIndex})+"']").size() !== 0);
 
             ws = {type:"tab",id:tabId,label:RED._('workspace.defaultName',{number:workspaceIndex})};
             RED.nodes.addWorkspace(ws);
@@ -7713,6 +8726,7 @@ RED.workspaces = (function() {
                 RED.nodes.dirty(true);
             }
         }
+        RED.view.focus();
         return ws;
     }
     function deleteWorkspace(ws) {
@@ -7732,6 +8746,7 @@ RED.workspaces = (function() {
     function showRenameWorkspaceDialog(id) {
         var workspace = RED.nodes.workspace(id);
         RED.view.state(RED.state.EDITING);
+        var tabflowEditor;
         var trayOptions = {
             title: RED._("workspace.editFlow",{name:workspace.label}),
             buttons: [
@@ -7757,10 +8772,30 @@ RED.workspaces = (function() {
                     text: RED._("common.label.done"),
                     click: function() {
                         var label = $( "#node-input-name" ).val();
+                        var changed = false;
+                        var changes = {};
                         if (workspace.label != label) {
-                            var changes = {
-                                label:workspace.label
-                            }
+                            changes.label = workspace.label;
+                            changed = true;
+                            workspace.label = label;
+                            workspace_tabs.renameTab(workspace.id,label);
+                        }
+                        var disabled = $("#node-input-disabled").prop("checked");
+                        if (workspace.disabled !== disabled) {
+                            changes.disabled = workspace.disabled;
+                            changed = true;
+                            workspace.disabled = disabled;
+                        }
+                        var info = tabflowEditor.getValue();
+                        if (workspace.info !== info) {
+                            changes.info = workspace.info;
+                            changed = true;
+                            workspace.info = info;
+                        }
+                        $("#red-ui-tab-"+(workspace.id.replace(".","-"))).toggleClass('workspace-disabled',workspace.disabled);
+                        // $("#workspace").toggleClass("workspace-disabled",workspace.disabled);
+
+                        if (changed) {
                             var historyEvent = {
                                 t: "edit",
                                 changes:changes,
@@ -7769,14 +8804,29 @@ RED.workspaces = (function() {
                             }
                             workspace.changed = true;
                             RED.history.push(historyEvent);
-                            workspace_tabs.renameTab(workspace.id,label);
                             RED.nodes.dirty(true);
                             RED.sidebar.config.refresh();
+                            var selection = RED.view.selection();
+                            if (!selection.nodes && !selection.links) {
+                                RED.sidebar.info.refresh(workspace);
+                            }
                         }
                         RED.tray.close();
                     }
                 }
             ],
+            resize: function(dimensions) {
+                var rows = $("#dialog-form>div:not(.node-text-editor-row)");
+                var editorRow = $("#dialog-form>div.node-text-editor-row");
+                var height = $("#dialog-form").height();
+                for (var i=0; i<rows.size(); i++) {
+                    height -= $(rows[i]).outerHeight(true);
+                }
+                height -= (parseInt($("#dialog-form").css("marginTop"))+parseInt($("#dialog-form").css("marginBottom")));
+                height -= 28;
+                $(".node-text-editor").css("height",height+"px");
+                tabflowEditor.resize();
+            },
             open: function(tray) {
                 var trayBody = tray.find('.editor-tray-body');
                 var dialogForm = $('<form id="dialog-form" class="form-horizontal"></form>').appendTo(trayBody);
@@ -7784,16 +8834,65 @@ RED.workspaces = (function() {
                     '<label for="node-input-name" data-i18n="[append]editor:common.label.name"><i class="fa fa-tag"></i> </label>'+
                     '<input type="text" id="node-input-name">'+
                 '</div>').appendTo(dialogForm);
+
+                $('<div class="form-row">'+
+                    '<label for="node-input-disabled-btn" data-i18n="editor:workspace.status"></label>'+
+                    '<button id="node-input-disabled-btn" class="editor-button"><i class="fa fa-toggle-on"></i> <span id="node-input-disabled-label"></span></button> '+
+                    '<input type="checkbox" id="node-input-disabled" style="display: none;"/>'+
+                '</div>').appendTo(dialogForm);
+
+                $('<div class="form-row node-text-editor-row">'+
+                    '<label for="node-input-info" data-i18n="editor:workspace.info" style="width:300px;"></label>'+
+                    '<div style="height:250px;" class="node-text-editor" id="node-input-info"></div>'+
+                '</div>').appendTo(dialogForm);
+                tabflowEditor = RED.editor.createEditor({
+                    id: 'node-input-info',
+                    mode: 'ace/mode/markdown',
+                    value: ""
+                });
+
+                $('<div class="form-tips" data-i18n="editor:workspace.tip"></div>').appendTo(dialogForm);
+
+                dialogForm.find('#node-input-disabled-btn').on("click",function(e) {
+                    var i = $(this).find("i");
+                    if (i.hasClass('fa-toggle-off')) {
+                        i.addClass('fa-toggle-on');
+                        i.removeClass('fa-toggle-off');
+                        $("#node-input-disabled").prop("checked",false);
+                        $("#node-input-disabled-label").html(RED._("editor:workspace.enabled"));
+                    } else {
+                        i.addClass('fa-toggle-off');
+                        i.removeClass('fa-toggle-on');
+                        $("#node-input-disabled").prop("checked",true);
+                        $("#node-input-disabled-label").html(RED._("editor:workspace.disabled"));
+                    }
+                })
+
+                if (workspace.hasOwnProperty("disabled")) {
+                    $("#node-input-disabled").prop("checked",workspace.disabled);
+                    if (workspace.disabled) {
+                        dialogForm.find("#node-input-disabled-btn i").removeClass('fa-toggle-on').addClass('fa-toggle-off');
+                        $("#node-input-disabled-label").html(RED._("editor:workspace.disabled"));
+                    } else {
+                        $("#node-input-disabled-label").html(RED._("editor:workspace.enabled"));
+                    }
+                } else {
+                    workspace.disabled = false;
+                    $("#node-input-disabled-label").html(RED._("editor:workspace.enabled"));
+                }
+
                 $('<input type="text" style="display: none;" />').prependTo(dialogForm);
                 dialogForm.submit(function(e) { e.preventDefault();});
                 $("#node-input-name").val(workspace.label);
-                RED.text.bidi.prepareInput($("#node-input-name"))
+                RED.text.bidi.prepareInput($("#node-input-name"));
+                tabflowEditor.getSession().setValue(workspace.info || "", -1);
                 dialogForm.i18n();
             },
             close: function() {
                 if (RED.view.state() != RED.state.IMPORT_DRAGGING) {
                     RED.view.state(RED.state.DEFAULT);
                 }
+                RED.sidebar.info.refresh(workspace);
             }
         }
         RED.tray.show(trayOptions);
@@ -7801,7 +8900,7 @@ RED.workspaces = (function() {
 
 
     var workspace_tabs;
-    function createWorkspaceTabs(){
+    function createWorkspaceTabs() {
         workspace_tabs = RED.tabs.create({
             id: "workspace-tabs",
             onchange: function(tab) {
@@ -7810,9 +8909,14 @@ RED.workspaces = (function() {
                 }
                 activeWorkspace = tab.id;
                 event.workspace = activeWorkspace;
+                // $("#workspace").toggleClass("workspace-disabled",tab.disabled);
                 RED.events.emit("workspace:change",event);
                 window.location.hash = 'flow/'+tab.id;
                 RED.sidebar.config.refresh();
+                RED.view.focus();
+            },
+            onclick: function(tab) {
+                RED.view.focus();
             },
             ondblclick: function(tab) {
                 if (tab.type != "subflow") {
@@ -7822,6 +8926,10 @@ RED.workspaces = (function() {
                 }
             },
             onadd: function(tab) {
+                $('<span class="workspace-disabled-icon"><i class="fa fa-ban"></i> </span>').prependTo("#red-ui-tab-"+(tab.id.replace(".","-"))+" .red-ui-tab-label");
+                if (tab.disabled) {
+                    $("#red-ui-tab-"+(tab.id.replace(".","-"))).addClass('workspace-disabled');
+                }
                 RED.menu.setDisabled("menu-item-workspace-delete",workspace_tabs.count() == 1);
             },
             onremove: function(tab) {
@@ -7998,6 +9106,9 @@ RED.view = (function() {
         "grey":   "#d3d3d3"
     }
 
+    var PORT_TYPE_INPUT = 1;
+    var PORT_TYPE_OUTPUT = 0;
+
     var outer = d3.select("#chart")
         .append("svg:svg")
         .attr("width", space_width)
@@ -8012,6 +9123,7 @@ RED.view = (function() {
         .append("svg:g")
         .on("dblclick.zoom", null)
         .append("svg:g")
+        .attr('class','innerCanvas')
         .on("mousemove", canvasMouseMove)
         .on("mousedown", canvasMouseDown)
         .on("mouseup", canvasMouseUp)
@@ -8163,6 +9275,41 @@ RED.view = (function() {
            });
     grid.style("visibility","visible");
 
+    updateGrid();
+
+    function updateGrid() {
+        grid.selectAll("line.horizontal").remove();
+        grid.selectAll("line.horizontal").data(gridScale.ticks(space_width/gridSize)).enter()
+            .append("line")
+            .attr(
+                {
+                    "class":"horizontal",
+                    "x1" : 0,
+                    "x2" : space_width,
+                    "y1" : function(d){ return gridScale(d);},
+                    "y2" : function(d){ return gridScale(d);},
+                    "fill" : "none",
+                    "shape-rendering" : "crispEdges",
+                    "stroke" : "#eee",
+                    "stroke-width" : "1px"
+                });
+        grid.selectAll("line.vertical").remove();
+        grid.selectAll("line.vertical").data(gridScale.ticks(space_width/gridSize)).enter()
+            .append("line")
+            .attr(
+                {
+                    "class":"vertical",
+                    "y1" : 0,
+                    "y2" : space_width,
+                    "x1" : function(d){ return gridScale(d);},
+                    "x2" : function(d){ return gridScale(d);},
+                    "fill" : "none",
+                    "shape-rendering" : "crispEdges",
+                    "stroke" : "#eee",
+                    "stroke-width" : "1px"
+                });
+    }
+
     var dragGroup = vis.append("g");
     var drag_lines = [];
 
@@ -8312,6 +9459,12 @@ RED.view = (function() {
                 }
             }
         });
+        $("#chart").focus(function() {
+            $("#workspace-tabs").addClass("workspace-focussed")
+        });
+        $("#chart").blur(function() {
+            $("#workspace-tabs").removeClass("workspace-focussed")
+        });
 
         RED.actions.add("core:copy-selection-to-internal-clipboard",copySelection);
         RED.actions.add("core:cut-selection-to-internal-clipboard",function(){copySelection();deleteSelection();});
@@ -8326,21 +9479,21 @@ RED.view = (function() {
 
         RED.actions.add("core:toggle-show-grid",function(state) {
             if (state === undefined) {
-                RED.menu.toggleSelected("menu-item-view-show-grid");
+                RED.userSettings.toggle("view-show-grid");
             } else {
                 toggleShowGrid(state);
             }
         });
         RED.actions.add("core:toggle-snap-grid",function(state) {
             if (state === undefined) {
-                RED.menu.toggleSelected("menu-item-view-snap-grid");
+                RED.userSettings.toggle("view-snap-grid");
             } else {
                 toggleSnapGrid(state);
             }
         });
         RED.actions.add("core:toggle-status",function(state) {
             if (state === undefined) {
-                RED.menu.toggleSelected("menu-item-status");
+                RED.userSettings.toggle("view-node-status");
             } else {
                 toggleStatus(state);
             }
@@ -8403,6 +9556,7 @@ RED.view = (function() {
         }
 
         nn.changed = true;
+        nn.moved = true;
 
         nn.w = node_width;
         nn.h = Math.max(Math.max(node_height,(nn.outputs||0) * 20),(nn.inputs||0) * 20);
@@ -8470,11 +9624,11 @@ RED.view = (function() {
                                 var drag_line = drag_lines[0];
                                 var src = null,dst,src_port;
 
-                                if (drag_line.portType === 0 && nn.inputs > 0) {
+                                if (drag_line.portType === PORT_TYPE_OUTPUT && nn.inputs > 0) {
                                     src = drag_line.node;
                                     src_port = drag_line.port;
                                     dst = nn;
-                                } else if (drag_line.portType === 1 && nn.outputs > 0) {
+                                } else if (drag_line.portType === PORT_TYPE_INPUT && nn.outputs > 0) {
                                     src = nn;
                                     dst = drag_line.node;
                                     src_port = 0;
@@ -8484,10 +9638,10 @@ RED.view = (function() {
                                     RED.nodes.addLink(link);
                                     historyEvent.links = [link];
                                     hideDragLines();
-                                    if (drag_line.portType === 0 && nn.outputs > 0) {
-                                        showDragLines([{node:nn,port:0,portType:0}]);
-                                    } else if (drag_line.portType === 1 && nn.inputs > 0) {
-                                        showDragLines([{node:nn,port:0,portType:1}]);
+                                    if (drag_line.portType === PORT_TYPE_OUTPUT && nn.outputs > 0) {
+                                        showDragLines([{node:nn,port:0,portType:PORT_TYPE_OUTPUT}]);
+                                    } else if (drag_line.portType === PORT_TYPE_INPUT && nn.inputs > 0) {
+                                        showDragLines([{node:nn,port:0,portType:PORT_TYPE_INPUT}]);
                                     } else {
                                         resetMouseVars();
                                     }
@@ -8497,9 +9651,9 @@ RED.view = (function() {
                                 }
                             } else {
                                 if (nn.outputs > 0) {
-                                    showDragLines([{node:nn,port:0,portType:0}]);
+                                    showDragLines([{node:nn,port:0,portType:PORT_TYPE_OUTPUT}]);
                                 } else if (nn.inputs > 0) {
-                                    showDragLines([{node:nn,port:0,portType:1}]);
+                                    showDragLines([{node:nn,port:0,portType:PORT_TYPE_INPUT}]);
                                 } else {
                                     resetMouseVars();
                                 }
@@ -8599,11 +9753,11 @@ RED.view = (function() {
                     var links = [];
                     var existingLinks = [];
                     if (selected_link &&
-                        ((mousedown_port_type === 0 &&
+                        ((mousedown_port_type === PORT_TYPE_OUTPUT &&
                             selected_link.source === mousedown_node &&
                             selected_link.sourcePort === mousedown_port_index
                         ) ||
-                        (mousedown_port_type === 1 &&
+                        (mousedown_port_type === PORT_TYPE_INPUT &&
                             selected_link.target === mousedown_node &&
                             selected_link.targetPort === mousedown_port_index
                         ))
@@ -8611,7 +9765,7 @@ RED.view = (function() {
                         existingLinks = [selected_link];
                     } else {
                         var filter;
-                        if (mousedown_port_type === 0) {
+                        if (mousedown_port_type === PORT_TYPE_OUTPUT) {
                             filter = {
                                 source:mousedown_node,
                                 sourcePort: mousedown_port_index
@@ -8629,9 +9783,9 @@ RED.view = (function() {
                         RED.nodes.removeLink(link);
                         links.push({
                             link:link,
-                            node: (mousedown_port_type===0)?link.target:link.source,
-                            port: (mousedown_port_type===0)?link.targetPort:link.sourcePort,
-                            portType: (mousedown_port_type===0)?1:0
+                            node: (mousedown_port_type===PORT_TYPE_OUTPUT)?link.target:link.source,
+                            port: (mousedown_port_type===PORT_TYPE_OUTPUT)?link.targetPort:link.sourcePort,
+                            portType: (mousedown_port_type===PORT_TYPE_OUTPUT)?PORT_TYPE_INPUT:PORT_TYPE_OUTPUT
                         })
                     }
                     if (links.length === 0) {
@@ -8652,7 +9806,7 @@ RED.view = (function() {
             mousePos = mouse_position;
             for (i=0;i<drag_lines.length;i++) {
                 var drag_line = drag_lines[i];
-                var numOutputs = (drag_line.portType === 0)?(drag_line.node.outputs || 1):(drag_line.node.inputs || 1);
+                var numOutputs = (drag_line.portType === PORT_TYPE_OUTPUT)?(drag_line.node.outputs || 1):(drag_line.node.inputs || 1);
                 var sourcePort = drag_line.port;
                 if(drag_line.node.type == "subflow") {
                     numOutputs = 1;
@@ -8660,7 +9814,7 @@ RED.view = (function() {
                 } 
                 var portY = -((numOutputs-1)/2)*18 +18*sourcePort;
 
-                var sc = (drag_line.portType === 0)?1:-1;
+                var sc = (drag_line.portType === PORT_TYPE_OUTPUT)?1:-1;
 
                 var dy = mousePos[1]-(drag_line.node.y+portY);
                 var dx = mousePos[0]-(drag_line.node.x+sc*drag_line.node.w/2);
@@ -8877,9 +10031,9 @@ RED.view = (function() {
             if (moving_set.length > 0) {
                 var ns = [];
                 for (var j=0;j<moving_set.length;j++) {
-                    ns.push({n:moving_set[j].n,ox:moving_set[j].ox,oy:moving_set[j].oy,changed:moving_set[j].n.changed});
+                    ns.push({n:moving_set[j].n,ox:moving_set[j].ox,oy:moving_set[j].oy,moved:moving_set[j].n.moved});
                     moving_set[j].n.dirty = true;
-                    moving_set[j].n.changed = true;
+                    moving_set[j].n.moved = true;
                 }
                 historyEvent = {t:"move",nodes:ns,dirty:RED.nodes.dirty()};
                 if (activeSpliceLink) {
@@ -8980,6 +10134,7 @@ RED.view = (function() {
         selected_link = null;
     }
 
+    var lastSelection = null;
     function updateSelection() {
         var selection = {};
 
@@ -9052,8 +10207,18 @@ RED.view = (function() {
             }
         }
 
-
-        RED.events.emit("view:selection-changed",selection);
+        var selectionJSON = JSON.stringify(selection,function(key,value) {
+            if (key === 'nodes') {
+                return value.map(function(n) { return n.id })
+            } else if (key === 'link') {
+                return value.source.id+":"+value.sourcePort+":"+value.target.id;
+            }
+            return value;
+        });
+        if (selectionJSON !== lastSelection) {
+            lastSelection = selectionJSON;
+            RED.events.emit("view:selection-changed",selection);
+        }
     }
 
     function endKeyboardMove() {
@@ -9061,8 +10226,8 @@ RED.view = (function() {
         if (moving_set.length > 0) {
             var ns = [];
             for (var i=0;i<moving_set.length;i++) {
-                ns.push({n:moving_set[i].n,ox:moving_set[i].ox,oy:moving_set[i].oy,changed:moving_set[i].n.changed});
-                moving_set[i].n.changed = true;
+                ns.push({n:moving_set[i].n,ox:moving_set[i].ox,oy:moving_set[i].oy,moved:moving_set[i].n.moved});
+                moving_set[i].n.moved = true;
                 moving_set[i].n.dirty = true;
                 delete moving_set[i].ox;
                 delete moving_set[i].oy;
@@ -9085,7 +10250,7 @@ RED.view = (function() {
 
             for (var i=0;i<moving_set.length;i++) {
                 node = moving_set[i];
-                node.n.changed = true;
+                node.n.moved = true;
                 node.n.dirty = true;
                 if (node.ox == null && node.oy == null) {
                     node.ox = node.n.x;
@@ -9227,6 +10392,10 @@ RED.view = (function() {
 
 
     function calculateTextWidth(str, className, offset) {
+        return calculateTextDimensions(str,className,offset,0)[0];
+    }
+
+    function calculateTextDimensions(str,className,offsetW,offsetH) {
         var sp = document.createElement("span");
         sp.className = className;
         sp.style.position = "absolute";
@@ -9234,8 +10403,9 @@ RED.view = (function() {
         sp.textContent = (str||"");
         document.body.appendChild(sp);
         var w = sp.offsetWidth;
+        var h = sp.offsetHeight;
         document.body.removeChild(sp);
-        return offset+w;
+        return [offsetW+w,offsetH+h];
     }
 
     function resetMouseVars() {
@@ -9243,7 +10413,7 @@ RED.view = (function() {
         mouseup_node = null;
         mousedown_link = null;
         mouse_mode = 0;
-        mousedown_port_type = 0;
+        mousedown_port_type = PORT_TYPE_OUTPUT;
         activeSpliceLink = null;
         spliceActive = false;
         d3.select(".link_splice").classed("link_splice",false);
@@ -9300,7 +10470,7 @@ RED.view = (function() {
                         if (n.x-hw<mouse_position[0] && n.x+hw> mouse_position[0] &&
                             n.y-hh<mouse_position[1] && n.y+hh>mouse_position[1]) {
                                 mouseup_node = n;
-                                portType = mouseup_node.inputs>0?1:0;
+                                portType = mouseup_node.inputs>0?PORT_TYPE_INPUT:PORT_TYPE_OUTPUT;
                                 portIndex = 0;
                         }
                     }
@@ -9318,14 +10488,14 @@ RED.view = (function() {
             }
             for (i=0;i<drag_lines.length;i++) {
                 if (portType != drag_lines[i].portType && mouseup_node !== drag_lines[i].node) {
-                    var src,dst,src_port;
                     var drag_line = drag_lines[i];
-                    if (drag_line.portType === 0) {
+                    var src,dst,src_port;
+                    if (drag_line.portType === PORT_TYPE_OUTPUT) {
                         src = drag_line.node;
                         src_port = drag_line.port;
                         dst = mouseup_node;
                         dst_port = portIndex;
-                    } else if (drag_line.portType == 1) {
+                    } else if (drag_line.portType == PORT_TYPE_INPUT) {
                         src = mouseup_node;
                         src_port = portIndex;
                         dst = drag_line.node;
@@ -9363,10 +10533,10 @@ RED.view = (function() {
             if (mouse_mode === RED.state.QUICK_JOINING) {
                 if (addedLinks.length > 0) {
                     hideDragLines();
-                    if (portType === 1 && d.outputs > 0) {
-                        showDragLines([{node:d,port:0,portType:0}]);
-                    } else if (portType === 0 && d.inputs > 0) {
-                        showDragLines([{node:d,port:0,portType:1}]);
+                    if (portType === PORT_TYPE_INPUT && d.outputs > 0) {
+                        showDragLines([{node:d,port:0,portType:PORT_TYPE_OUTPUT}]);
+                    } else if (portType === PORT_TYPE_OUTPUT && d.inputs > 0) {
+                        showDragLines([{node:d,port:0,portType:PORT_TYPE_INPUT}]);
                     } else {
                         resetMouseVars();
                     }
@@ -9380,6 +10550,108 @@ RED.view = (function() {
             selected_link = null;
             redraw();
         }
+    }
+
+    var portLabelHoverTimeout = null;
+    var portLabelHover = null;
+
+
+    function getElementPosition(node) {
+        var d3Node = d3.select(node);
+        if (d3Node.attr('class') === 'innerCanvas') {
+            return [0,0];
+        }
+        var result = [];
+        var localPos = [0,0];
+        if (node.nodeName.toLowerCase() === 'g') {
+            var transform = d3Node.attr("transform");
+            if (transform) {
+                localPos = d3.transform(transform).translate;
+            }
+        } else {
+            localPos = [d3Node.attr("x")||0,d3Node.attr("y")||0];
+        }
+        var parentPos = getElementPosition(node.parentNode);
+        return [localPos[0]+parentPos[0],localPos[1]+parentPos[1]]
+
+    }
+
+    function getPortLabel(node,portType,portIndex) {
+        /*var result;
+        var nodePortLabels = (portType === PORT_TYPE_INPUT)?node.inputLabels:node.outputLabels;
+        if (nodePortLabels && nodePortLabels[portIndex]) {
+            return nodePortLabels[portIndex];
+        }
+        var portLabels = (portType === PORT_TYPE_INPUT)?node._def.inputLabels:node._def.outputLabels;
+        if (typeof portLabels === 'string') {
+            result = portLabels;
+        } else if (typeof portLabels === 'function') {
+            try {
+                result = portLabels.call(node,portIndex);
+            } catch(err) {
+                console.log("Definition error: "+node.type+"."+((portType === PORT_TYPE_INPUT)?"inputLabels":"outputLabels"),err);
+                result = null;
+            }
+        } else if ($.isArray(portLabels)) {
+            result = portLabels[portIndex];
+        }
+        return result;*/
+    }
+
+    function portMouseOver(port,d,portType,portIndex) {
+        var active = (mouse_mode!=RED.state.JOINING || (drag_lines.length > 0 && drag_lines[0].portType !== portType));
+        /*clearTimeout(portLabelHoverTimeout);
+        var active = (mouse_mode!=RED.state.JOINING || (drag_lines.length > 0 && drag_lines[0].portType !== portType));
+        if (active && ((portType === PORT_TYPE_INPUT && ((d._def && d._def.inputLabels)||d.inputLabels)) || (portType === PORT_TYPE_OUTPUT && ((d._def && d._def.outputLabels)||d.outputLabels)))) {
+            portLabelHoverTimeout = setTimeout(function() {
+                var tooltip = getPortLabel(d,portType,portIndex);
+                if (!tooltip) {
+                    return;
+                }
+                var pos = getElementPosition(port.node());
+                portLabelHoverTimeout = null;
+                portLabelHover = vis.append("g")
+                    .attr("transform","translate("+(pos[0]+(portType===PORT_TYPE_INPUT?-2:12))+","+(pos[1]+5)+")")
+                    .attr("class","port_tooltip");
+                var lines = tooltip.split("\n");
+                var labelWidth = 0;
+                var labelHeight = 4;
+                var labelHeights = [];
+                lines.forEach(function(l) {
+                    var labelDimensions = calculateTextDimensions(l, "port_tooltip_label", 8,0);
+                    labelWidth = Math.max(labelWidth,labelDimensions[0]);
+                    labelHeights.push(0.8*labelDimensions[1]);
+                    labelHeight += 0.8*labelDimensions[1];
+                });
+
+                var labelHeight1 = (labelHeight/2)-5-2;
+                var labelHeight2 = labelHeight - 4;
+                portLabelHover.append("path").attr("d",
+                    portType===PORT_TYPE_INPUT?
+                        "M0 0 l -5 -5 v -"+(labelHeight1)+" q 0 -2 -2 -2 h -"+labelWidth+" q -2 0 -2 2 v "+(labelHeight2)+" q 0 2 2 2 h "+labelWidth+" q 2 0 2 -2 v -"+(labelHeight1)+" l 5 -5"
+                        :
+                        "M0 0 l 5 -5 v -"+(labelHeight1)+" q 0 -2 2 -2 h "+labelWidth+" q 2 0 2 2 v "+(labelHeight2)+" q 0 2 -2 2 h -"+labelWidth+" q -2 0 -2 -2 v -"+(labelHeight1)+" l -5 -5"
+                    );
+                var y = -labelHeight/2-2;
+                lines.forEach(function(l,i) {
+                    //y += labelHeights[i];
+                    portLabelHover.append("svg:text").attr("class","port_tooltip_label")
+                        .attr("x", portType===PORT_TYPE_INPUT?-10:10)
+                        .attr("y", y)
+                        .attr("text-anchor",portType===PORT_TYPE_INPUT?"end":"start")
+                        .text(l)
+                });
+            },500);
+        }*/
+        port.classed("port_hovered",active);
+    }
+    function portMouseOut(port,d,portType,portIndex) {
+        /*clearTimeout(portLabelHoverTimeout);
+        if (portLabelHover) {
+            portLabelHover.remove();
+            portLabelHover = null;
+        }*/
+        port.classed("port_hovered",false);
     }
 
     function nodeMouseUp(d) {
@@ -9495,8 +10767,20 @@ RED.view = (function() {
         d3.event.stopPropagation();
     }
 
+    function isButtonEnabled(d) {
+        var buttonEnabled = true;
+        if (d._def.button.hasOwnProperty('enabled')) {
+            if (typeof d._def.button.enabled === "function") {
+                buttonEnabled = d._def.button.enabled.call(d);
+            } else {
+                buttonEnabled = d._def.button.enabled;
+            }
+        }
+        return buttonEnabled;
+    }
+
     function nodeButtonClicked(d) {
-        if (!activeSubflow && !d.changed) {
+        if (!activeSubflow) {
             if (d._def.button.toggle) {
                 d[d._def.button.toggle] = !d[d._def.button.toggle];
                 d.dirty = true;
@@ -9511,8 +10795,6 @@ RED.view = (function() {
             if (d.dirty) {
                 redraw();
             }
-        } else if (d.changed) {
-            RED.notify(RED._("notification.warning", {message:RED._("notification.warnings.undeployedChanges")}),"warning");
         } else {
             RED.notify(RED._("notification.warning", {message:RED._("notification.warnings.nodeActionDisabled")}),"warning");
         }
@@ -9576,13 +10858,13 @@ RED.view = (function() {
                             nodeMouseUp.call(this,d);
                     });
 
-                outGroup.append("rect").attr("class","port").attr("rx",3).attr("ry",3).attr("width",10).attr("height",10).attr("x",-5).attr("y",15)
-                    .on("mousedown", function(d,i){portMouseDown(d,1,i);} )
-                    .on("touchstart", function(d,i){portMouseDown(d,1,i);} )
-                    .on("mouseup", function(d,i){portMouseUp(d,1,i);})
-                    .on("touchend",function(d,i){portMouseUp(d,1,i);} )
-                    .on("mouseover",function(d,i) { var port = d3.select(this); port.classed("port_hovered",(mouse_mode!=RED.state.JOINING || (drag_lines.length > 0 && drag_lines[0].portType !== 1)));})
-                    .on("mouseout",function(d,i) { var port = d3.select(this); port.classed("port_hovered",false);});
+                outGroup.append("g").attr('transform','translate(-5,15)').append("rect").attr("class","port").attr("rx",3).attr("ry",3).attr("width",10).attr("height",10)
+                    .on("mousedown", function(d,i){portMouseDown(d,PORT_TYPE_INPUT,i);} )
+                    .on("touchstart", function(d,i){portMouseDown(d,PORT_TYPE_INPUT,i);} )
+                    .on("mouseup", function(d,i){portMouseUp(d,PORT_TYPE_INPUT,i);})
+                    .on("touchend",function(d,i){portMouseUp(d,PORT_TYPE_INPUT,i);} )
+                    .on("mouseover",function(d){portMouseOver(d3.select(this),d,PORT_TYPE_INPUT,i);})
+                    .on("mouseout",function(d){portMouseOut(d3.select(this),d,PORT_TYPE_INPUT,i);});
 
                 outGroup.append("svg:text").attr("class","port_label").attr("x",20).attr("y",8).style("font-size","10px").text("output");
                 outGroup.append("svg:text").attr("class","port_label port_index").attr("x",20).attr("y",24).text(function(d,i){ return i+1});
@@ -9619,16 +10901,14 @@ RED.view = (function() {
                             nodeMouseUp.call(this,d);
                     });
 
-                inGroup.append("rect").attr("class","port").attr("rx",3).attr("ry",3).attr("width",10).attr("height",10).attr("x",35).attr("y",15)
-                    .on("mousedown", function(d,i){portMouseDown(d,0,i);} )
-                    .on("touchstart", function(d,i){portMouseDown(d,0,i);} )
-                    .on("mouseup", function(d,i){portMouseUp(d,0,i);})
-                    .on("touchend",function(d,i){portMouseUp(d,0,i);} )
-                    .on("mouseover",function(d,i) { var port = d3.select(this); port.classed("port_hovered",(mouse_mode!=RED.state.JOINING || (drag_lines.length > 0 && drag_lines[0].portType !== 0) ));})
-                    .on("mouseout",function(d,i) { var port = d3.select(this); port.classed("port_hovered",false);});
-                inGroup.append("svg:text").attr("class","port_label").attr("x",20).attr("y",8).style("font-size","10px").text("input");
-                inGroup.append("svg:text").attr("class","port_label port_index").attr("x",20).attr("y",24).text(function(d,i){ return i+1});
-
+                inGroup.append("g").attr('transform','translate(35,15)').append("rect").attr("class","port").attr("rx",3).attr("ry",3).attr("width",10).attr("height",10)
+                    .on("mousedown", function(d,i){portMouseDown(d,PORT_TYPE_OUTPUT,i);} )
+                    .on("touchstart", function(d,i){portMouseDown(d,PORT_TYPE_OUTPUT,i);} )
+                    .on("mouseup", function(d,i){portMouseUp(d,PORT_TYPE_OUTPUT,i);})
+                    .on("touchend",function(d,i){portMouseUp(d,PORT_TYPE_OUTPUT,i);} )
+                    .on("mouseover",function(d){portMouseOver(d3.select(this),d,PORT_TYPE_OUTPUT,i);})
+                    .on("mouseout",function(d) {portMouseOut(d3.select(this),d,PORT_TYPE_OUTPUT,i);});
+                inGroup.append("svg:text").attr("class","port_label").attr("x",18).attr("y",20).style("font-size","10px").text("input");
 
                 subflowOutputs.each(function(d,i) {
                     if (d.dirty) {
@@ -9643,8 +10923,7 @@ RED.view = (function() {
                 subflowInputs.each(function(d,i) {
                     if (d.dirty) {
                         var input = d3.select(this);
-                        input.selectAll(".subflowport").classed("node_selected",function(d) { return d.selected; })
-                        input.selectAll(".port_index").text(function(d){ return d.i+1});
+                        input.selectAll(".subflowport").classed("node_selected",function(d) { return d.selected; })                        
                         input.attr("transform", function(d) { return "translate(" + (d.x-d.w/2) + "," + (d.y-d.h/2) + ")"; });
                         dirtyNodes[d.id] = d;
                         d.dirty = false;
@@ -9667,14 +10946,7 @@ RED.view = (function() {
                     var node = d3.select(this);
                     var isLink = d.type === "link in" || d.type === "link out";
                     node.attr("id",d.id);
-                    var l = d._def.label;
-                    try {
-                        l = (typeof l === "function" ? l.call(d) : l)||"";
-                    } catch(err) {
-                        console.log("Definition error: "+d.type+".label",err);
-                        l = d.type;
-                    }
-
+                    var l = RED.utils.getNodeLabel(d);
                     if (isLink) {
                         d.w = node_height;
                     } else {
@@ -9712,10 +10984,10 @@ RED.view = (function() {
                             .attr("height",node_height-12)
                             .attr("fill",function(d) { return d._def.color;})
                             .attr("cursor","pointer")
-                            .on("mousedown",function(d) {if (!lasso && !d.changed) {focusView();d3.select(this).attr("fill-opacity",0.2);d3.event.preventDefault(); d3.event.stopPropagation();}})
-                            .on("mouseup",function(d) {if (!lasso && !d.changed) { d3.select(this).attr("fill-opacity",0.4);d3.event.preventDefault();d3.event.stopPropagation();}})
-                            .on("mouseover",function(d) {if (!lasso && !d.changed) { d3.select(this).attr("fill-opacity",0.4);}})
-                            .on("mouseout",function(d) {if (!lasso  && !d.changed) {
+                            .on("mousedown",function(d) {if (!lasso && isButtonEnabled(d)) {focusView();d3.select(this).attr("fill-opacity",0.2);d3.event.preventDefault(); d3.event.stopPropagation();}})
+                            .on("mouseup",function(d) {if (!lasso && isButtonEnabled(d)) { d3.select(this).attr("fill-opacity",0.4);d3.event.preventDefault();d3.event.stopPropagation();}})
+                            .on("mouseover",function(d) {if (!lasso && isButtonEnabled(d)) { d3.select(this).attr("fill-opacity",0.4);}})
+                            .on("mouseout",function(d) {if (!lasso && isButtonEnabled(d)) {
                                 var op = 1;
                                 if (d._def.button.toggle) {
                                     op = d[d._def.button.toggle]?1:0.2;
@@ -9769,7 +11041,7 @@ RED.view = (function() {
                    //node.append("rect").attr("class", "node-gradient-bottom").attr("rx", 6).attr("ry", 6).attr("height",30).attr("stroke","none").attr("fill","url(#gradient-bottom)").style("pointer-events","none");
 
                     if (d._def.icon) {
-
+                        var icon_url = RED.utils.getNodeIcon(d._def,d);
                         var icon_group = node.append("g")
                             .attr("class","node_icon_group")
                             .attr("x",0).attr("y",0);
@@ -9784,7 +11056,7 @@ RED.view = (function() {
                             .attr("height",function(d){return Math.min(50,d.h-4);});
 
                         var icon = icon_group.append("image")
-                            .attr("xlink:href","icons/"+d._def.icon)
+                            .attr("xlink:href",icon_url)
                             .attr("class","node_icon")
                             .attr("x",0)
                             .attr("width","30")
@@ -9815,7 +11087,7 @@ RED.view = (function() {
                         //}
 
                         var img = new Image();
-                        img.src = "icons/"+d._def.icon;
+                        img.src = icon_url;
                         img.onload = function() {
                             icon.attr("width",Math.min(img.width,30));
                             icon.attr("height",Math.min(img.height,30));
@@ -9852,8 +11124,10 @@ RED.view = (function() {
                     //node.append("circle").attr({"class":"centerDot","cx":0,"cy":0,"r":5});
 
                     //node.append("path").attr("class","node_error").attr("d","M 3,-3 l 10,0 l -5,-8 z");
-                    node.append("image").attr("class","node_error hidden").attr("xlink:href","icons/node-error.png").attr("x",0).attr("y",-6).attr("width",10).attr("height",9);
-                    node.append("image").attr("class","node_changed hidden").attr("xlink:href","icons/node-changed.png").attr("x",12).attr("y",-6).attr("width",10).attr("height",10);
+
+                    //TODO: these ought to be SVG
+                    node.append("image").attr("class","node_error hidden").attr("xlink:href","icons/node-red/node-error.png").attr("x",0).attr("y",-6).attr("width",10).attr("height",9);
+                    node.append("image").attr("class","node_changed hidden").attr("xlink:href","icons/node-red/node-changed.png").attr("x",12).attr("y",-6).attr("width",10).attr("height",10);
             });
 
             node.each(function(d,i) {
@@ -9862,13 +11136,7 @@ RED.view = (function() {
                         dirtyNodes[d.id] = d;
                         //if (d.x < -50) deleteSelection();  // Delete nodes if dragged back to palette
                         if (!isLink && d.resize) {
-                            var l = d._def.label;
-                            try {
-                                l = (typeof l === "function" ? l.call(d) : l)||"";
-                            } catch(err) {
-                                console.log("Definition error: "+d.type+".label",err);
-                                l = d.type;
-                            }
+                            var l = RED.utils.getNodeLabel(d);
                             var ow = d.w;
                             d.w = Math.max(node_width,gridSize*(Math.ceil((calculateTextWidth(l, "node_label", 50)+(d._def.inputs>0?7:0))/gridSize)) );
                             d.h = Math.max(Math.max(node_height,(d.outputs||0) * 20),(d.inputs||0) * 20);
@@ -9902,12 +11170,12 @@ RED.view = (function() {
                             var input_group = d._inputPorts.enter().append("g").attr("class","port_input");
 
                             input_group.append("rect").attr("class","port").attr("rx",3).attr("ry",3).attr("width",10).attr("height",10)
-                                .on("mousedown",(function(){var node = d; return function(d,i){portMouseDown(node,1,i);}})() )
-                                .on("touchstart",(function(){var node = d; return function(d,i){portMouseDown(node,1,i);}})() )
-                                .on("mouseup",(function(){var node = d; return function(d,i){portMouseUp(node,1,i);}})() )
-                                .on("touchend",(function(){var node = d; return function(d,i){portMouseUp(node,1,i);}})() )
-                                .on("mouseover",function(d,i) { var port = d3.select(this); port.classed("port_hovered",(mouse_mode!=RED.state.JOINING || (drag_lines.length > 0 && drag_lines[0].portType !== 1) ));})
-                                .on("mouseout",function(d,i) { var port = d3.select(this); port.classed("port_hovered",false);});
+                                .on("mousedown",(function(){var node = d; return function(d,i){portMouseDown(node,PORT_TYPE_INPUT,i);}})() )
+                                .on("touchstart",(function(){var node = d; return function(d,i){portMouseDown(node,PORT_TYPE_INPUT,i);}})() )
+                                .on("mouseup",(function(){var node = d; return function(d,i){portMouseUp(node,PORT_TYPE_INPUT,i);}})() )
+                                .on("touchend",(function(){var node = d; return function(d,i){portMouseUp(node,PORT_TYPE_INPUT,i);}})() )
+                                .on("mouseover",(function(){var node = d; return function(d,i){portMouseOver(d3.select(this),node,PORT_TYPE_INPUT,i);}})())
+                                .on("mouseout",(function(){var node = d; return function(d,i) {portMouseOut(d3.select(this),node,PORT_TYPE_INPUT,i);}})());
 
                             d._inputPorts.exit().remove();
                             if (d._inputPorts) {
@@ -9937,7 +11205,7 @@ RED.view = (function() {
                                 d._inputPortLabels.each(function(d,i) {
                                         var label = d3.select(this);
                                         label.attr("transform", function(d) { return "translate("+x+","+((y+18*i)-5)+")";});
-                                        if(node._def.inputLabels && i < node._def.inputLabels.length) label.selectAll(".input_label").text(node._def.inputLabels[i]);
+                                        if(node._def && node._def.inputLabels && i < node._def.inputLabels.length) label.selectAll(".input_label").text(node._def.inputLabels[i]);
                                         else if(numInputs > 1) label.selectAll(".input_label").text(i);
                                 });
                             }
@@ -9949,12 +11217,12 @@ RED.view = (function() {
                             var output_group = d._outputPorts.enter().append("g").attr("class","port_output");
 
                             output_group.append("rect").attr("class","port").attr("rx",3).attr("ry",3).attr("width",10).attr("height",10)
-                                .on("mousedown",(function(){var node = d; return function(d,i){portMouseDown(node,0,i);}})() )
-                                .on("touchstart",(function(){var node = d; return function(d,i){portMouseDown(node,0,i);}})() )
-                                .on("mouseup",(function(){var node = d; return function(d,i){portMouseUp(node,0,i);}})() )
-                                .on("touchend",(function(){var node = d; return function(d,i){portMouseUp(node,0,i);}})() )
-                                .on("mouseover",function(d,i) { var port = d3.select(this); port.classed("port_hovered",(mouse_mode!=RED.state.JOINING || (drag_lines.length > 0 && drag_lines[0].portType !== 0) ));})
-                                .on("mouseout",function(d,i) { var port = d3.select(this); port.classed("port_hovered",false);});
+                                .on("mousedown",(function(){var node = d; return function(d,i){portMouseDown(node,PORT_TYPE_OUTPUT,i);}})() )
+                                .on("touchstart",(function(){var node = d; return function(d,i){portMouseDown(node,PORT_TYPE_OUTPUT,i);}})() )
+                                .on("mouseup",(function(){var node = d; return function(d,i){portMouseUp(node,PORT_TYPE_OUTPUT,i);}})() )
+                                .on("touchend",(function(){var node = d; return function(d,i){portMouseUp(node,PORT_TYPE_OUTPUT,i);}})() )
+                                .on("mouseover",(function(){var node = d; return function(d,i){portMouseOver(d3.select(this),node,PORT_TYPE_OUTPUT,i);}})())
+                                .on("mouseout",(function(){var node = d; return function(d,i) {portMouseOut(d3.select(this),node,PORT_TYPE_OUTPUT,i);}})());
 
                             d._outputPorts.exit().remove();
                             if (d._outputPorts) {
@@ -9984,7 +11252,7 @@ RED.view = (function() {
                                 d._outputPortLabels.each(function(d,i) {
                                         var label = d3.select(this);
                                         label.attr("transform", function(d) { return "translate("+x+","+((y+18*i)-5)+")";});
-                                        if(d._def.outputLabels && i < d._def.outputLabels.length) label.selectAll(".output_label").text(d._def.outputLabels[i]);
+                                        if(node._def !== undefined && node._def.outputLabels && i < node._def.outputLabels.length) label.selectAll(".output_label").text(node._def.outputLabels[i]);
                                         else if(numOutputs > 1) label.selectAll(".output_label").text(i);
                                 });
                             }
@@ -10023,21 +11291,11 @@ RED.view = (function() {
                             if (d._def.icon) {
                                 icon = thisNode.select(".node_icon");
                                 var current_url = icon.attr("xlink:href");
-                                var icon_url;
-                                if (typeof d._def.icon == "function") {
-                                    try {
-                                        icon_url = d._def.icon.call(d);
-                                    } catch(err) {
-                                        console.log("icon",err);
-                                        icon_url = "arrow-in.png";
-                                    }
-                                } else {
-                                    icon_url = d._def.icon;
-                                }
-                                if ("icons/"+icon_url != current_url) {
-                                    icon.attr("xlink:href","icons/"+icon_url);
+                                var new_url = RED.utils.getNodeIcon(d._def,d);
+                                if (new_url !== current_url) {
+                                    icon.attr("xlink:href",new_url);
                                     var img = new Image();
-                                    img.src = "icons/"+d._def.icon;
+                                    img.src = new_url;
                                     img.onload = function() {
                                         icon.attr("width",Math.min(img.width,30));
                                         icon.attr("height",Math.min(img.height,30));
@@ -10067,10 +11325,10 @@ RED.view = (function() {
                             thisNode.selectAll(".node_icon_shade_border").attr("d",function(d){ return "M "+(("right" == d._def.align) ?0:30)+" 1 l 0 "+(d.h-2)});
 
                             thisNode.selectAll(".node_button").attr("opacity",function(d) {
-                                return (activeSubflow||d.changed)?0.4:1
+                                return (activeSubflow||!isButtonEnabled(d))?0.4:1
                             });
                             thisNode.selectAll(".node_button_button").attr("cursor",function(d) {
-                                return (activeSubflow||d.changed)?"":"pointer";
+                                return (activeSubflow||!isButtonEnabled(d))?"":"pointer";
                             });
                             thisNode.selectAll(".node_right_button").attr("transform",function(d){
                                     var x = d.w-6;
@@ -10438,6 +11696,7 @@ RED.view = (function() {
                         node = new_ms[i];
                         node.n.selected = true;
                         node.n.changed = true;
+                        node.n.moved = true;
                         node.n.x -= dx - mouse_position[0];
                         node.n.y -= dy - mouse_position[1];
                         node.dx = node.n.x - mouse_position[0];
@@ -10635,6 +11894,14 @@ RED.view = (function() {
                 } else if (node._def.category === 'config') {
                     RED.sidebar.config.show(id);
                 }
+            }
+        },
+        gridSize: function(v) {
+            if (v === undefined) {
+                return gridSize;
+            } else {
+                gridSize = v;
+                updateGrid();
             }
         }
 
@@ -10971,7 +12238,7 @@ RED.palette = (function() {
             if (label != type) {
                 l = "<p><b>"+RED.text.bidi.enforceTextDirectionWithUCC(label)+"</b><br/><i>"+type+"</i></p>";
             }
-            popOverContent = $(l+(info?info:$("script[data-help-name$='"+type+"']").html()||"<p>"+RED._("palette.noInfo")+"</p>").trim())
+            popOverContent = $(l+(info?info:$("script[data-help-name='"+type+"']").html()||"<p>"+RED._("palette.noInfo")+"</p>").trim())
                                 .filter(function(n) {
                                     return (this.nodeType == 1 && this.nodeName == "P") || (this.nodeType == 3 && this.textContent.trim().length > 0)
                                 }).slice(0,2);
@@ -11019,14 +12286,9 @@ RED.palette = (function() {
 
 
             if (def.icon) {
-                var icon_url = "arrow-in.png";
-                try {
-                    icon_url = (typeof def.icon === "function" ? def.icon.call({}) : def.icon);
-                } catch(err) {
-                    console.log("Definition error: "+nt+".icon",err);
-                }
+                var icon_url = RED.utils.getNodeIcon(def);
                 var iconContainer = $('<div/>',{class:"palette_icon_container"+(def.align=="right"?" palette_icon_container_right":"")}).appendTo(d);
-                $('<div/>',{class:"palette_icon",style:"background-image: url(icons/"+icon_url+")"}).appendTo(iconContainer);
+                $('<div/>',{class:"palette_icon",style:"background-image: url("+icon_url+")"}).appendTo(iconContainer);
             }
 
             d.style.backgroundColor = def.color;
@@ -11060,11 +12322,14 @@ RED.palette = (function() {
             $("#palette-"+category).append(d);
             d.onmousedown = function(e) { e.preventDefault(); };
 
-            RED.popover.create({
+            var popover = RED.popover.create({
                 target:$(d),
+                trigger: "hover",
+                width: "300px",
                 content: "hi",
                 delay: { show: 750, hide: 50 }
             });
+            $(d).data('popover',popover);
 
             // $(d).popover({
             //     title:d.type,
@@ -11080,7 +12345,7 @@ RED.palette = (function() {
                 if (nt.indexOf("subflow:") === 0) {
                     helpText = marked(RED.nodes.subflow(nt.substring(8)).info||"");
                 } else {
-                    helpText = $("script[data-help-name$='"+d.type+"']").html()||"";
+                    helpText = $("script[data-help-name='"+d.type+"']").html()||"";
                 }
                 var help = '<div class="node-help">'+helpText+"</div>";
                 RED.sidebar.info.set(help);
@@ -11106,7 +12371,7 @@ RED.palette = (function() {
                     // it here makes me sad
                     //console.log(ui.helper.position());
                     ui.position.left += 17.5;
-                    
+
                     if (def.inputs > 0 && def.outputs > 0) {
                         mouseX = ui.position.left+(ui.helper.width()/2) - chartOffset.left + chart.scrollLeft();
                         mouseY = ui.position.top+(ui.helper.height()/2) - chartOffset.top + chart.scrollTop();
@@ -11378,15 +12643,57 @@ RED.sidebar.info = (function() {
         smartypants: false
     });
 
-    var content = document.createElement("div");
-    content.style.paddingTop = "4px";
-    content.style.paddingLeft = "4px";
-    content.style.paddingRight = "4px";
-    content.className = "sidebar-node-info"
+    var content;
+    var sections;
+    var nodeSection;
+    var infoSection;
+    var tipBox;
 
-    var propertiesExpanded = false;
+    var expandedSections = {
+        "property": false
+    };
 
     function init() {
+
+        content = document.createElement("div");
+        content.className = "sidebar-node-info"
+
+        RED.actions.add("core:show-info-tab",show);
+
+        var stackContainer = $("<div>",{class:"sidebar-node-info-stack"}).appendTo(content);
+
+        sections = RED.stack.create({
+            container: stackContainer
+        }).hide();
+
+        nodeSection = sections.add({
+            title: "Node",
+            collapsible: false
+        });
+        infoSection = sections.add({
+            title: "Information",
+            collapsible: false
+        });
+        infoSection.content.css("padding","6px");
+        infoSection.container.css("border-bottom","none");
+
+        var tipContainer = $('<div class="node-info-tips"></div>').appendTo(content);
+        tipBox = $('<div class="node-info-tip"></div>').appendTo(tipContainer);
+        var tipButtons = $('<div class="node-info-tips-buttons"></div>').appendTo(tipContainer);
+
+        var tipRefresh = $('<a href="#" class="workspace-footer-button"><i class="fa fa-refresh"></a>').appendTo(tipButtons);
+        tipRefresh.click(function(e) {
+            e.preventDefault();
+            tips.next();
+        })
+
+        var tipClose = $('<a href="#" class="workspace-footer-button"><i class="fa fa-times"></a>').appendTo(tipButtons);
+        tipClose.click(function(e) {
+            e.preventDefault();
+            RED.actions.invoke("core:toggle-show-tips");
+            RED.notify(RED._("sidebar.info.showTips"));
+        });
+
         RED.sidebar.addTab({
             id: "info",
             label: RED._("sidebar.info.label"),
@@ -11394,7 +12701,12 @@ RED.sidebar.info = (function() {
             content: content,
             enableOnEdit: true
         });
-        RED.actions.add("core:show-info-tab",show);
+        if (tips.enabled()) {
+            tips.start();
+        } else {
+            tips.stop();
+        }
+
     }
 
     function show() {
@@ -11428,88 +12740,143 @@ RED.sidebar.info = (function() {
         return el;
     }
     function refresh(node) {
-        tips.stop();
-        $(content).empty();
+        sections.show();
+        $(nodeSection.content).empty();
+        $(infoSection.content).empty();
+
         var table = $('<table class="node-info"></table>');
         var tableBody = $('<tbody>').appendTo(table);
-        $('<tr class="blank"><td colspan="2">'+RED._("sidebar.info.node")+'</td></tr>').appendTo(tableBody);
-        if (node.type != "subflow" && node.name) {
-            $('<tr><td>'+RED._("common.label.name")+'</td><td>&nbsp;<span class="bidiAware" dir="'+RED.text.bidi.resolveBaseTextDir(node.name)+'">'+node.name+'</span></td></tr>').appendTo(tableBody);
-        }
-        $("<tr><td>"+RED._("sidebar.info.type")+"</td><td>&nbsp;"+node.type+"</td></tr>").appendTo(tableBody);
-        $("<tr><td>"+RED._("sidebar.info.id")+"</td><td>&nbsp;"+node.id+"</td></tr>").appendTo(tableBody);
-
-        var m = /^subflow(:(.+))?$/.exec(node.type);
+        var propRow;
         var subflowNode;
-        if (m) {
-            if (m[2]) {
-                subflowNode = RED.nodes.subflow(m[2]);
-            } else {
-                subflowNode = node;
+        if (node.type === "tab") {
+            nodeSection.title.html("Flow");
+            propRow = $('<tr class="node-info-node-row"><td>Name</td><td></td></tr>').appendTo(tableBody);
+            $(propRow.children()[1]).html('&nbsp;'+(node.label||""))
+            propRow = $('<tr class="node-info-node-row"><td>'+RED._("sidebar.info.id")+"</td><td></td></tr>").appendTo(tableBody);
+            RED.utils.createObjectElement(node.id).appendTo(propRow.children()[1]);
+            propRow = $('<tr class="node-info-node-row"><td>Status</td><td></td></tr>').appendTo(tableBody);
+            $(propRow.children()[1]).html((!!!node.disabled)?"Enabled":"Disabled")
+        } else {
+            nodeSection.title.html("Node");
+            if (node.type !== "subflow" && node.name) {
+                $('<tr class="node-info-node-row"><td>'+RED._("common.label.name")+'</td><td>&nbsp;<span class="bidiAware" dir="'+RED.text.bidi.resolveBaseTextDir(node.name)+'">'+node.name+'</span></td></tr>').appendTo(tableBody);
             }
+            $('<tr class="node-info-node-row"><td>'+RED._("sidebar.info.type")+"</td><td>&nbsp;"+node.type+"</td></tr>").appendTo(tableBody);
+            propRow = $('<tr class="node-info-node-row"><td>'+RED._("sidebar.info.id")+"</td><td></td></tr>").appendTo(tableBody);
+            RED.utils.createObjectElement(node.id).appendTo(propRow.children()[1]);
 
-            $('<tr class="blank"><td colspan="2">'+RED._("sidebar.info.subflow")+'</td></tr>').appendTo(tableBody);
+            var m = /^subflow(:(.+))?$/.exec(node.type);
 
-            var userCount = 0;
-            var subflowType = "subflow:"+subflowNode.id;
-            RED.nodes.eachNode(function(n) {
-                if (n.type === subflowType) {
-                    userCount++;
-                }
-            });
-            $('<tr><td>'+RED._("common.label.name")+'</td><td><span class="bidiAware" dir=\"'+RED.text.bidi.resolveBaseTextDir(subflowNode.name)+'">'+subflowNode.name+'</span></td></tr>').appendTo(tableBody);
-            $("<tr><td>"+RED._("sidebar.info.instances")+"</td><td>"+userCount+"</td></tr>").appendTo(tableBody);
-        }
+            if (!m && node.type != "subflow" && node.type != "comment") {
+                if (node._def) {
+                    var count = 0;
+                    var defaults = node._def.defaults;
+                    for (var n in defaults) {
+                        if (n != "name" && defaults.hasOwnProperty(n)) {
+                            var val = node[n];
+                            var type = typeof val;
+                            count++;
+                            propRow = $('<tr class="node-info-property-row'+(expandedSections.property?"":" hide")+'"><td>'+n+"</td><td></td></tr>").appendTo(tableBody);
+                            if (defaults[n].type) {
+                                var configNode = RED.nodes.node(val);
+                                if (!configNode) {
+                                    RED.utils.createObjectElement(undefined).appendTo(propRow.children()[1]);
+                                } else {
+                                    var configLabel = RED.utils.getNodeLabel(configNode,val);
+                                    var container = propRow.children()[1];
 
-        if (!m && node.type != "subflow" && node.type != "comment") {
-            $('<tr class="blank"><td colspan="2"><a href="#" class="node-info-property-header"><i style="width: 10px; text-align: center;" class="fa fa-caret-'+(propertiesExpanded?"down":"right")+'"></i> '+RED._("sidebar.info.properties")+'</a></td></tr>').appendTo(tableBody);
-            if (node._def) {
-                for (var n in node._def.defaults) {
-                    if (n != "name" && node._def.defaults.hasOwnProperty(n)) {
-                        var val = node[n];
-                        var type = typeof val;
-                        var propRow = $('<tr class="node-info-property-row'+(propertiesExpanded?"":" hide")+'"><td>'+n+"</td><td></td></tr>").appendTo(tableBody);
-                        RED.utils.createObjectElement(val).appendTo(propRow.children()[1]);
+                                    var div = $('<span>',{class:""}).appendTo(container);
+                                    var nodeDiv = $('<div>',{class:"palette_node palette_node_small"}).appendTo(div);
+                                    var colour = configNode._def.color;
+                                    var icon_url = RED.utils.getNodeIcon(configNode._def);
+                                    nodeDiv.css({'backgroundColor':colour, "cursor":"pointer"});
+                                    var iconContainer = $('<div/>',{class:"palette_icon_container"}).appendTo(nodeDiv);
+                                    $('<div/>',{class:"palette_icon",style:"background-image: url("+icon_url+")"}).appendTo(iconContainer);
+                                    var nodeContainer = $('<span></span>').css({"verticalAlign":"top","marginLeft":"6px"}).html(configLabel).appendTo(container);
+
+                                    nodeDiv.on('dblclick',function() {
+                                        RED.editor.editConfig("", configNode.type, configNode.id);
+                                    })
+
+                                }
+                            } else {
+                                RED.utils.createObjectElement(val).appendTo(propRow.children()[1]);
+                            }
+                        }
+                    }
+                    if (count > 0) {
+                        $('<tr class="node-info-property-expand blank"><td colspan="2"><a href="#" class=" node-info-property-header'+(expandedSections.property?" expanded":"")+'"><span class="node-info-property-show-more">show more</span><span class="node-info-property-show-less">show less</span> <i class="fa fa-caret-down"></i></a></td></tr>').appendTo(tableBody);
                     }
                 }
             }
+
+            if (m) {
+                if (m[2]) {
+                    subflowNode = RED.nodes.subflow(m[2]);
+                } else {
+                    subflowNode = node;
+                }
+
+                $('<tr class="blank"><th colspan="2">'+RED._("sidebar.info.subflow")+'</th></tr>').appendTo(tableBody);
+
+                var userCount = 0;
+                var subflowType = "subflow:"+subflowNode.id;
+                RED.nodes.eachNode(function(n) {
+                    if (n.type === subflowType) {
+                        userCount++;
+                    }
+                });
+                $('<tr class="node-info-subflow-row"><td>'+RED._("common.label.name")+'</td><td><span class="bidiAware" dir=\"'+RED.text.bidi.resolveBaseTextDir(subflowNode.name)+'">'+subflowNode.name+'</span></td></tr>').appendTo(tableBody);
+                $('<tr class="node-info-subflow-row"><td>'+RED._("sidebar.info.instances")+"</td><td>"+userCount+'</td></tr>').appendTo(tableBody);
+            }
         }
-        $(table).appendTo(content);
-        $("<hr/>").appendTo(content);
-        if (!subflowNode && node.type != "comment") {
+        $(table).appendTo(nodeSection.content);
+
+        var infoText = "";
+
+        if (!subflowNode && node.type !== "comment" && node.type !== "tab") {
             var helpText = $("script[data-help-name='"+node.type+"']").html()||"";
-            addTargetToExternalLinks($('<div class="node-help"><span class="bidiAware" dir=\"'+RED.text.bidi.resolveBaseTextDir(helpText)+'">'+helpText+'</span></div>').appendTo(content));
+            infoText = helpText;
+        } else if (node.type === "tab") {
+            infoText = marked(node.info||"");
         }
+
         if (subflowNode) {
-            addTargetToExternalLinks($('<div class="node-help"><span class="bidiAware" dir=\"'+RED.text.bidi.resolveBaseTextDir(subflowNode.info||"")+'">'+marked(subflowNode.info||"")+'</span></div>').appendTo(content));
+            infoText = infoText + marked(subflowNode.info||"");
         } else if (node._def && node._def.info) {
             var info = node._def.info;
             var textInfo = (typeof info === "function" ? info.call(node) : info);
-            addTargetToExternalLinks($('<div class="node-help"><span class="bidiAware" dir=\"'+RED.text.bidi.resolveBaseTextDir(textInfo)+'">'+marked(textInfo)+'</span></div>').appendTo(content));
-            //$('<div class="node-help">'+(typeof info === "function" ? info.call(node) : info)+'</div>';
+            // TODO: help
+            infoText = infoText + marked(textInfo);
+        }
+        if (infoText) {
+            var info = addTargetToExternalLinks($('<div class="node-help"><span class="bidiAware" dir=\"'+RED.text.bidi.resolveBaseTextDir(infoText)+'">'+infoText+'</span></div>')).appendTo(infoSection.content);
+            info.find(".bidiAware").contents().filter(function() { return this.nodeType === 3 && this.textContent.trim() !== "" }).wrap( "<span></span>" );
+            var foldingHeader = "H3";
+            info.find(foldingHeader).wrapInner('<a class="node-info-header expanded" href="#"></a>')
+                .find("a").prepend('<i class="fa fa-angle-right">').click(function(e) {
+                    e.preventDefault();
+                    var isExpanded = $(this).hasClass('expanded');
+                    var el = $(this).parent().next();
+                    while(el.length === 1 && el[0].nodeName !== foldingHeader) {
+                        el.toggle(!isExpanded);
+                        el = el.next();
+                    }
+                    $(this).toggleClass('expanded',!isExpanded);
+                })
         }
 
-        $(".node-info-property-header").click(function(e) {
-            var icon = $(this).find("i");
-            if (icon.hasClass("fa-caret-right")) {
-                icon.removeClass("fa-caret-right");
-                icon.addClass("fa-caret-down");
-                $(".node-info-property-row").show();
-                propertiesExpanded = true;
-            } else {
-                icon.addClass("fa-caret-right");
-                icon.removeClass("fa-caret-down");
-                $(".node-info-property-row").hide();
-                propertiesExpanded = false;
-            }
 
+        $(".node-info-property-header").click(function(e) {
             e.preventDefault();
+            expandedSections["property"] = !expandedSections["property"];
+            $(this).toggleClass("expanded",expandedSections["property"]);
+            $(".node-info-property-row").toggle(expandedSections["property"]);
         });
     }
 
 
     var tips = (function() {
-        var started = false;
         var enabled = true;
         var startDelay = 1000;
         var cycleDelay = 15000;
@@ -11519,13 +12886,11 @@ RED.sidebar.info = (function() {
 
         RED.actions.add("core:toggle-show-tips",function(state) {
             if (state === undefined) {
-                RED.menu.toggleSelected("menu-item-show-tips");
+                RED.userSettings.toggle("view-show-tips");
             } else {
                 enabled = state;
                 if (enabled) {
-                    if (started) {
-                        startTips();
-                    }
+                    startTips();
                 } else {
                     stopTips();
                 }
@@ -11548,23 +12913,21 @@ RED.sidebar.info = (function() {
             while ((m=/(\[(.*?)\])/.exec(tip))) {
                 tip = tip.replace(m[1],RED.keyboard.formatKey(m[2]));
             }
-            $('<div class="node-info-tip hide">'+tip+'</div>').appendTo(content).fadeIn(200);
+            tipBox.html(tip).fadeIn(200);
             if (startTimeout) {
                 startTimeout = null;
                 refreshTimeout = setInterval(cycleTips,cycleDelay);
             }
         }
         function cycleTips() {
-            $(".node-info-tip").fadeOut(300,function() {
-                $(this).remove();
+            tipBox.fadeOut(300,function() {
                 setTip();
             })
         }
         function startTips() {
-            started = true;
+            $(".sidebar-node-info").addClass('show-tips');
             if (enabled) {
                 if (!startTimeout && !refreshTimeout) {
-                    $(content).html("");
                     if (tipCount === -1) {
                         do {
                             tipCount++;
@@ -11575,26 +12938,36 @@ RED.sidebar.info = (function() {
             }
         }
         function stopTips() {
-            started = false;
+            $(".sidebar-node-info").removeClass('show-tips');
             clearInterval(refreshTimeout);
             clearTimeout(startTimeout);
             refreshTimeout = null;
             startTimeout = null;
-            $(".node-info-tip").remove();
+        }
+        function nextTip() {
+            clearInterval(refreshTimeout);
+            startTimeout = true;
+            setTip();
         }
         return {
             start: startTips,
-            stop: stopTips
+            stop: stopTips,
+            next: nextTip,
+            enabled: function() { return enabled; }
         }
     })();
 
     function clear() {
-        tips.start();
+        sections.hide();
+        //
     }
 
     function set(html) {
-        tips.stop();
-        $(content).html(html);
+        // tips.stop();
+        sections.show();
+        nodeSection.container.hide();
+        var wrapped = $('<div class="node-help"></div>').html(html);
+        $(infoSection.content).empty().append(wrapped);
     }
 
 
@@ -11610,11 +12983,18 @@ RED.sidebar.info = (function() {
                 }
             }
         } else {
-            var subflow = RED.nodes.subflow(RED.workspaces.active());
-            if (subflow) {
-                refresh(subflow);
+            var activeWS = RED.workspaces.active();
+
+            var flow = RED.nodes.workspace(activeWS) || RED.nodes.subflow(activeWS);
+            if (flow) {
+                refresh(flow);
             } else {
-                clear();
+                var workspace = RED.nodes.workspace(RED.workspaces.active());
+                if (workspace.info) {
+                    refresh(workspace);
+                } else {
+                    clear();
+                }
             }
         }
     });
@@ -11760,19 +13140,7 @@ RED.sidebar.config = (function() {
         } else {
             var currentType = "";
             nodes.forEach(function(node) {
-                var label = "";
-                if (typeof node._def.label == "function") {
-                    try {
-                        label = node._def.label.call(node);
-                    } catch(err) {
-                        console.log("Definition error: "+node._def.type+".label",err);
-                        label = node._def.type;
-                    }
-
-                } else {
-                    label = node._def.label;
-                }
-                label = label || node.id;
+                var label = RED.utils.getNodeLabel(node,node.id);
                 if (node.type != currentType) {
                     $('<li class="config_node_type">'+node.type+'</li>').appendTo(list);
                     currentType = node.type;
@@ -11987,6 +13355,17 @@ RED.palette.editor = (function() {
     var eventTimers = {};
     var activeFilter = "";
 
+    function semVerCompare(A,B) {
+        var aParts = A.split(".").map(function(m) { return parseInt(m);});
+        var bParts = B.split(".").map(function(m) { return parseInt(m);});
+        for (var i=0;i<3;i++) {
+            var j = aParts[i]-bParts[i];
+            if (j<0) { return -1 }
+            if (j>0) { return 1 }
+        }
+        return 0;
+    }
+
     function delayCallback(start,callback) {
         var delta = Date.now() - start;
         if (delta < 300) {
@@ -12020,14 +13399,21 @@ RED.palette.editor = (function() {
             });
         })
     }
-    function installNodeModule(id,shade,callback) {
+    function installNodeModule(id,version,shade,callback) {
+        var requestBody = {
+            module: id
+        };
+        if (callback === undefined) {
+            callback = shade;
+            shade = version;
+        } else {
+            requestBody.version = version;
+        }
         shade.show();
         $.ajax({
             url:"nodes",
             type: "POST",
-            data: JSON.stringify({
-                module: id
-            }),
+            data: JSON.stringify(requestBody),
             contentType: "application/json; charset=utf-8"
         }).done(function(data,textStatus,xhr) {
             shade.hide();
@@ -12145,10 +13531,7 @@ RED.palette.editor = (function() {
                 }
             }
             nodeEntries[module].index = index.join(",").toLowerCase();
-
             nodeList.editableList('addItem', nodeEntries[module]);
-            //console.log(nodeList.editableList('items'));
-
         } else {
             var moduleInfo = nodeEntries[module].info;
             var nodeEntry = nodeEntries[module].elements;
@@ -12212,7 +13595,7 @@ RED.palette.editor = (function() {
                 } else {
                     nodeEntry.enableButton.removeClass('disabled');
                     if (moduleInfo.local) {
-                        nodeEntry.removeButton.show();
+                        nodeEntry.removeButton.css('display', 'inline-block');
                     }
                     if (activeTypeCount === 0) {
                         nodeEntry.enableButton.html(RED._('palette.editor.enableall'));
@@ -12222,60 +13605,20 @@ RED.palette.editor = (function() {
                     nodeEntry.container.toggleClass("disabled",(activeTypeCount === 0));
                 }
             }
-
-            nodeEntry.updateButton.hide();
-            // if (loadedIndex.hasOwnProperty(module)) {
-            //     if (moduleInfo.version !== loadedIndex[module].version) {
-            //         nodeEntry.updateButton.show();
-            //         nodeEntry.updateButton.html(RED._('palette.editor.update',{version:loadedIndex[module].version}));
-            //     } else {
-            //         nodeEntry.updateButton.hide();
-            //     }
-            //
-            // } else {
-            //     nodeEntry.updateButton.hide();
-            // }
+            if (moduleInfo.pending_version) {
+                nodeEntry.versionSpan.html(moduleInfo.version+' <i class="fa fa-long-arrow-right"></i> '+moduleInfo.pending_version).appendTo(nodeEntry.metaRow)
+                nodeEntry.updateButton.html(RED._('palette.editor.updated')).addClass('disabled').show();
+            } else if (loadedIndex.hasOwnProperty(module)) {
+                if (semVerCompare(loadedIndex[module].version,moduleInfo.version) === 1) {
+                    nodeEntry.updateButton.show();
+                    nodeEntry.updateButton.html(RED._('palette.editor.update',{version:loadedIndex[module].version}));
+                } else {
+                    nodeEntry.updateButton.hide();
+                }
+            } else {
+                nodeEntry.updateButton.hide();
+            }
         }
-
-    }
-    function showPaletteEditor() {
-        if (RED.settings.theme('palette.editable') === false) {
-            return;
-        }
-        if (disabled) {
-            return;
-        }
-
-        initInstallTab();
-        $("#header-shade").show();
-        $("#editor-shade").show();
-        $("#sidebar-shade").show();
-        $("#sidebar-separator").hide();
-
-        editorTabs.activateTab('nodes');
-
-        $("#main-container").addClass("palette-expanded");
-        setTimeout(function() {
-            editorTabs.resize();
-            filterInput.focus();
-        },250);
-        RED.events.emit("palette-editor:open");
-        RED.keyboard.add("*","escape",function(){hidePaletteEditor()});
-    }
-    function hidePaletteEditor() {
-        RED.keyboard.remove("escape");
-        $("#main-container").removeClass("palette-expanded");
-        $("#header-shade").hide();
-        $("#editor-shade").hide();
-        $("#sidebar-shade").hide();
-        $("#sidebar-separator").show();
-        $("#palette-editor").find('.expanded').each(function(i,el) {
-            $(el).find(".palette-module-content").slideUp();
-            $(el).removeClass('expanded');
-        });
-        filterInput.searchBox('value',"");
-        searchInput.searchBox('value',"");
-        RED.events.emit("palette-editor:close");
 
     }
 
@@ -12341,6 +13684,7 @@ RED.palette.editor = (function() {
             loadedList = [];
             loadedIndex = {};
             packageList.editableList('empty');
+
             $(".palette-module-shade-status").html(RED._('palette.editor.loading'));
             var catalogues = RED.settings.theme('palette.catalogues')||['http://homegear.eu/node-blue/catalog.json'];
             catalogueLoadStatus = [];
@@ -12351,12 +13695,18 @@ RED.palette.editor = (function() {
             }
             $("#palette-module-install-shade").show();
             catalogueLoadStart = Date.now();
+            var handled = 0;
             catalogues.forEach(function(catalog,index) {
                 $.getJSON(catalog, {_: new Date().getTime()},function(v) {
                     handleCatalogResponse(null,catalog,index,v);
                     refreshNodeModuleList();
                 }).fail(function(jqxhr, textStatus, error) {
                     handleCatalogResponse(jqxhr,catalog,index);
+                }).always(function() {
+                    handled++;
+                    if (handled === catalogueCount) {
+                        searchInput.searchBox('change');
+                    }
                 })
             });
         }
@@ -12364,6 +13714,11 @@ RED.palette.editor = (function() {
 
     function refreshFilteredItems() {
         packageList.editableList('empty');
+        var currentFilter = searchInput.searchBox('value').trim();
+        if (currentFilter === ""){
+            packageList.editableList('addItem',{count:loadedList.length})
+            return;
+        }
         filteredList.sort(activeSort);
         for (var i=0;i<Math.min(10,filteredList.length);i++) {
             packageList.editableList('addItem',filteredList[i]);
@@ -12383,392 +13738,35 @@ RED.palette.editor = (function() {
         return -1 * (A.info.timestamp-B.info.timestamp);
     }
 
+
     function init() {
         if (RED.settings.theme('palette.editable') === false) {
             return;
         }
+        createSettingsPane();
 
-        RED.events.on("editor:open",function() { disabled = true; });
-        RED.events.on("editor:close",function() { disabled = false; });
-        RED.events.on("search:open",function() { disabled = true; });
-        RED.events.on("search:close",function() { disabled = false; });
-        RED.events.on("type-search:open",function() { disabled = true; });
-        RED.events.on("type-search:close",function() { disabled = false; });
-
-        RED.actions.add("core:manage-palette",RED.palette.editor.show);
-
-        editorTabs = RED.tabs.create({
-            id:"palette-editor-tabs",
-            onchange:function(tab) {
-                $("#palette-editor .palette-editor-tab").hide();
-                tab.content.show();
-                if (filterInput) {
-                    filterInput.searchBox('value',"");
-                }
-                if (searchInput) {
-                    searchInput.searchBox('value',"");
-                }
-                if (tab.id === 'install') {
-                    if (searchInput) {
-                        searchInput.focus();
-                    }
-                } else {
-                    if (filterInput) {
-                        filterInput.focus();
-                    }
-                }
+        RED.userSettings.add({
+            id:'palette',
+            title: 'Palette',
+            get: getSettingsPane,
+            close: function() {
+                settingsPane.detach();
             },
-            minimumActiveTabWidth: 110
-        });
-
-
-        $("#editor-shade").click(function() {
-            if ($("#main-container").hasClass("palette-expanded")) {
-                hidePaletteEditor();
+            focus: function() {
+                editorTabs.resize();
+                setTimeout(function() {
+                    filterInput.focus();
+                },200);
             }
-        });
-
-        $("#palette-editor-close").on("click", function(e) {
-            hidePaletteEditor();
         })
 
-        var modulesTab = $('<div>',{class:"palette-editor-tab"}).appendTo("#palette-editor");
-
-        editorTabs.addTab({
-            id: 'nodes',
-            label: RED._('palette.editor.tab-nodes'),
-            content: modulesTab
-        })
-
-        var filterDiv = $('<div>',{class:"palette-search"}).appendTo(modulesTab);
-        filterInput = $('<input type="text" data-i18n="[placeholder]palette.filter"></input>')
-            .appendTo(filterDiv)
-            .searchBox({
-                delay: 200,
-                change: function() {
-                    filterChange($(this).val());
-                }
+        RED.actions.add("core:manage-palette",function() {
+                RED.userSettings.show('palette');
             });
 
-
-        nodeList = $('<ol>',{id:"palette-module-list", style:"position: absolute;top: 35px;bottom: 0;left: 0;right: 0px;"}).appendTo(modulesTab).editableList({
-            addButton: false,
-            scrollOnAdd: false,
-            sort: function(A,B) {
-                return A.info.name.localeCompare(B.info.name);
-            },
-            filter: function(data) {
-                if (activeFilter === "" ) {
-                    return true;
-                }
-
-                return (activeFilter==="")||(data.index.indexOf(activeFilter) > -1);
-            },
-            addItem: function(container,i,object) {
-                var entry = object.info;
-                if (entry) {
-                    var headerRow = $('<div>',{class:"palette-module-header"}).appendTo(container);
-                    var titleRow = $('<div class="palette-module-meta palette-module-name"><i class="fa fa-cube"></i></div>').appendTo(headerRow);
-                    $('<span>').html(entry.name).appendTo(titleRow);
-                    var metaRow = $('<div class="palette-module-meta palette-module-version"><i class="fa fa-tag"></i></div>').appendTo(headerRow);
-                    $('<span>').html(entry.version).appendTo(metaRow);
-                    var buttonRow = $('<div>',{class:"palette-module-meta"}).appendTo(headerRow);
-                    var setButton = $('<a href="#" class="editor-button editor-button-small palette-module-set-button"><i class="fa fa-angle-right palette-module-node-chevron"></i> </a>').appendTo(buttonRow);
-                    var setCount = $('<span>').appendTo(setButton);
-                    var buttonGroup = $('<div>',{class:"palette-module-button-group"}).appendTo(buttonRow);
-
-                    var updateButton = $('<a href="#" class="editor-button editor-button-small"></a>').html(RED._('palette.editor.update')).appendTo(buttonGroup);
-                    updateButton.click(function(evt) {
-                        evt.preventDefault();
-                    })
-
-
-                    var removeButton = $('<a href="#" class="editor-button editor-button-small"></a>').html(RED._('palette.editor.remove')).appendTo(buttonGroup);
-                    removeButton.click(function(evt) {
-                        evt.preventDefault();
-
-                        $("#palette-module-install-confirm").data('module',entry.name);
-                        $("#palette-module-install-confirm").data('shade',shade);
-                        $("#palette-module-install-confirm-body").html(RED._("palette.editor.confirm.remove.body"));
-                        $(".palette-module-install-confirm-button-install").hide();
-                        $(".palette-module-install-confirm-button-remove").show();
-                        $("#palette-module-install-confirm")
-                            .dialog('option', 'title', RED._("palette.editor.confirm.remove.title"))
-                            .dialog('open');
-                    })
-                    if (!entry.local) {
-                        removeButton.hide();
-                    }
-                    var enableButton = $('<a href="#" class="editor-button editor-button-small"></a>').html(RED._('palette.editor.disableall')).appendTo(buttonGroup);
-
-                    var contentRow = $('<div>',{class:"palette-module-content"}).appendTo(container);
-                    var shade = $('<div class="palette-module-shade hide"><img src="red/images/spin.svg" class="palette-spinner"/></div>').appendTo(container);
-
-                    object.elements = {
-                        updateButton: updateButton,
-                        removeButton: removeButton,
-                        enableButton: enableButton,
-                        setCount: setCount,
-                        container: container,
-                        shade: shade,
-                        sets: {}
-                    }
-                    setButton.click(function(evt) {
-                        evt.preventDefault();
-                        if (container.hasClass('expanded')) {
-                            container.removeClass('expanded');
-                            contentRow.slideUp();
-                        } else {
-                            container.addClass('expanded');
-                            contentRow.slideDown();
-                        }
-                    })
-
-                    var setList = Object.keys(entry.sets)
-                    setList.sort(function(A,B) {
-                        return A.toLowerCase().localeCompare(B.toLowerCase());
-                    });
-                    setList.forEach(function(setName) {
-                        var set = entry.sets[setName];
-                        var setRow = $('<div>',{class:"palette-module-set"}).appendTo(contentRow);
-                        var buttonGroup = $('<div>',{class:"palette-module-set-button-group"}).appendTo(setRow);
-                        var typeSwatches = {};
-                        set.types.forEach(function(t) {
-                            var typeDiv = $('<div>',{class:"palette-module-type"}).appendTo(setRow);
-                            typeSwatches[t] = $('<span>',{class:"palette-module-type-swatch"}).appendTo(typeDiv);
-                            $('<span>',{class:"palette-module-type-node"}).html(t).appendTo(typeDiv);
-                        })
-
-                        var enableButton = $('<a href="#" class="editor-button editor-button-small"></a>').appendTo(buttonGroup);
-                        enableButton.click(function(evt) {
-                            evt.preventDefault();
-                            if (object.setUseCount[setName] === 0) {
-                                var currentSet = RED.nodes.registry.getNodeSet(set.id);
-                                shade.show();
-                                changeNodeState(set.id,!currentSet.enabled,shade,function(xhr){
-                                    console.log(xhr)
-                                });
-                            }
-                        })
-
-                        object.elements.sets[set.name] = {
-                            setRow: setRow,
-                            enableButton: enableButton,
-                            swatches: typeSwatches
-                        };
-                    });
-                    enableButton.click(function(evt) {
-                        evt.preventDefault();
-                        if (object.totalUseCount === 0) {
-                            changeNodeState(entry.name,(container.hasClass('disabled')),shade,function(xhr){
-                                console.log(xhr)
-                            });
-                        }
-                    })
-                    refreshNodeModule(entry.name);
-                } else {
-                    $('<div>',{class:"red-ui-search-empty"}).html(RED._('search.empty')).appendTo(container);
-                }
-            }
+        RED.events.on('registry:module-updated', function(ns) {
+            refreshNodeModule(ns.module);
         });
-
-
-
-        var installTab = $('<div>',{class:"palette-editor-tab hide"}).appendTo("#palette-editor");
-
-        editorTabs.addTab({
-            id: 'install',
-            label: RED._('palette.editor.tab-install'),
-            content: installTab
-        })
-
-        var toolBar = $('<div>',{class:"palette-editor-toolbar"}).appendTo(installTab);
-
-        var searchDiv = $('<div>',{class:"palette-search"}).appendTo(installTab);
-        searchInput = $('<input type="text" data-i18n="[placeholder]palette.search"></input>')
-            .appendTo(searchDiv)
-            .searchBox({
-                delay: 300,
-                change: function() {
-                    var searchTerm = $(this).val().toLowerCase();
-                    if (searchTerm.length > 0) {
-                        filteredList = loadedList.filter(function(m) {
-                            return (m.index.indexOf(searchTerm) > -1);
-                        }).map(function(f) { return {info:f}});
-                        refreshFilteredItems();
-                        searchInput.searchBox('count',filteredList.length+" / "+loadedList.length);
-                    } else {
-                        searchInput.searchBox('count',loadedList.length);
-                        packageList.editableList('empty');
-                    }
-                }
-            });
-
-
-        $('<span>').html(RED._("palette.editor.sort")+' ').appendTo(toolBar);
-        var sortGroup = $('<span class="button-group"></span>').appendTo(toolBar);
-        var sortAZ = $('<a href="#" class="sidebar-header-button-toggle selected" data-i18n="palette.editor.sortAZ"></a>').appendTo(sortGroup);
-        var sortRecent = $('<a href="#" class="sidebar-header-button-toggle" data-i18n="palette.editor.sortRecent"></a>').appendTo(sortGroup);
-
-        sortAZ.click(function(e) {
-            e.preventDefault();
-            if ($(this).hasClass("selected")) {
-                return;
-            }
-            $(this).addClass("selected");
-            sortRecent.removeClass("selected");
-            activeSort = sortModulesAZ;
-            refreshFilteredItems();
-        });
-
-        sortRecent.click(function(e) {
-            e.preventDefault();
-            if ($(this).hasClass("selected")) {
-                return;
-            }
-            $(this).addClass("selected");
-            sortAZ.removeClass("selected");
-            activeSort = sortModulesRecent;
-            refreshFilteredItems();
-        });
-
-
-        var refreshSpan = $('<span>').appendTo(toolBar);
-        var refreshButton = $('<a href="#" class="sidebar-header-button"><i class="fa fa-refresh"></i></a>').appendTo(refreshSpan);
-        refreshButton.click(function(e) {
-            e.preventDefault();
-            loadedList = [];
-            loadedIndex = {};
-            initInstallTab();
-        })
-
-        packageList = $('<ol>',{style:"position: absolute;top: 78px;bottom: 0;left: 0;right: 0px;"}).appendTo(installTab).editableList({
-            addButton: false,
-            scrollOnAdd: false,
-            addItem: function(container,i,object) {
-
-                if (object.more) {
-                    container.addClass('palette-module-more');
-                    var moreRow = $('<div>',{class:"palette-module-header palette-module"}).appendTo(container);
-                    var moreLink = $('<a href="#"></a>').html(RED._('palette.editor.more',{count:object.more})).appendTo(moreRow);
-                    moreLink.click(function(e) {
-                        e.preventDefault();
-                        packageList.editableList('removeItem',object);
-                        for (var i=object.start;i<Math.min(object.start+10,object.start+object.more);i++) {
-                            packageList.editableList('addItem',filteredList[i]);
-                        }
-                        if (object.more > 10) {
-                            packageList.editableList('addItem',{start:object.start+10, more:object.more-10})
-                        }
-                    })
-                    return;
-                }
-                if (object.info) {
-                    var entry = object.info;
-                    var headerRow = $('<div>',{class:"palette-module-header"}).appendTo(container);
-                    var titleRow = $('<div class="palette-module-meta"><i class="fa fa-cube"></i></div>').appendTo(headerRow);
-                    $('<span>',{class:"palette-module-name"}).html(entry.name||entry.id).appendTo(titleRow);
-                    $('<a target="_blank" class="palette-module-link"><i class="fa fa-external-link"></i></a>').attr('href',entry.url).appendTo(titleRow);
-                    var descRow = $('<div class="palette-module-meta"></div>').appendTo(headerRow);
-                    $('<div>',{class:"palette-module-description"}).html(entry.description).appendTo(descRow);
-
-                    var metaRow = $('<div class="palette-module-meta"></div>').appendTo(headerRow);
-                    $('<span class="palette-module-version"><i class="fa fa-tag"></i> '+entry.version+'</span>').appendTo(metaRow);
-                    $('<span class="palette-module-updated"><i class="fa fa-calendar"></i> '+formatUpdatedAt(entry.updated_at)+'</span>').appendTo(metaRow);
-                    var buttonRow = $('<div>',{class:"palette-module-meta"}).appendTo(headerRow);
-                    var buttonGroup = $('<div>',{class:"palette-module-button-group"}).appendTo(buttonRow);
-                    var shade = $('<div class="palette-module-shade hide"><img src="red/images/spin.svg" class="palette-spinner"/></div>').appendTo(container);
-                    var installButton = $('<a href="#" class="editor-button editor-button-small"></a>').html(RED._('palette.editor.install')).appendTo(buttonGroup);
-                    installButton.click(function(e) {
-                        e.preventDefault();
-                        if (!$(this).hasClass('disabled')) {
-                            $("#palette-module-install-confirm").data('module',entry.id);
-                            $("#palette-module-install-confirm").data('url',entry.url);
-                            $("#palette-module-install-confirm").data('shade',shade);
-                            $("#palette-module-install-confirm-body").html(RED._("palette.editor.confirm.install.body"));
-                            $(".palette-module-install-confirm-button-install").show();
-                            $(".palette-module-install-confirm-button-remove").hide();
-                            $("#palette-module-install-confirm")
-                                .dialog('option', 'title', RED._("palette.editor.confirm.install.title"))
-                                .dialog('open');
-                        }
-                    })
-                    if (nodeEntries.hasOwnProperty(entry.id)) {
-                        installButton.addClass('disabled');
-                        installButton.html(RED._('palette.editor.installed'));
-                    }
-
-                    object.elements = {
-                        installButton:installButton
-                    }
-                } else {
-                    $('<div>',{class:"red-ui-search-empty"}).html(RED._('search.empty')).appendTo(container);
-                }
-            }
-        });
-
-        $('<div id="palette-module-install-shade" class="palette-module-shade hide"><div class="palette-module-shade-status"></div><img src="red/images/spin.svg" class="palette-spinner"/></div>').appendTo(installTab);
-
-        $('<div id="palette-module-install-confirm" class="hide"><form class="form-horizontal"><div id="palette-module-install-confirm-body" class="node-dialog-confirm-row"></div></form></div>').appendTo(document.body);
-        $("#palette-module-install-confirm").dialog({
-            title: RED._('palette.editor.confirm.title'),
-            modal: true,
-            autoOpen: false,
-            width: 550,
-            height: "auto",
-            buttons: [
-                {
-                    text: RED._("common.label.cancel"),
-                    click: function() {
-                        $( this ).dialog( "close" );
-                    }
-                },
-                {
-                    text: RED._("palette.editor.confirm.button.review"),
-                    class: "primary palette-module-install-confirm-button-install",
-                    click: function() {
-                        var url = $(this).data('url');
-                        window.open(url);
-                    }
-                },
-                {
-                    text: RED._("palette.editor.confirm.button.install"),
-                    class: "primary palette-module-install-confirm-button-install",
-                    click: function() {
-                        var id = $(this).data('module');
-                        var shade = $(this).data('shade');
-                        installNodeModule(id,shade,function(xhr) {
-                             if (xhr) {
-                                 if (xhr.responseJSON) {
-                                     RED.notify(RED._('palette.editor.errors.installFailed',{module: id,message:xhr.responseJSON.message}));
-                                 }
-                             }
-                        });
-                        $( this ).dialog( "close" );
-                    }
-                },
-                {
-                    text: RED._("palette.editor.confirm.button.remove"),
-                    class: "primary palette-module-install-confirm-button-remove",
-                    click: function() {
-                        var id = $(this).data('module');
-                        var shade = $(this).data('shade');
-                        shade.show();
-                        removeNodeModule(id, function(xhr) {
-                            shade.hide();
-                            if (xhr) {
-                                if (xhr.responseJSON) {
-                                    RED.notify(RED._('palette.editor.errors.removeFailed',{module: id,message:xhr.responseJSON.message}));
-                                }
-                            }
-                        })
-
-                        $( this ).dialog( "close" );
-                    }
-                }
-            ]
-        })
-
         RED.events.on('registry:node-set-enabled', function(ns) {
             refreshNodeModule(ns.module);
         });
@@ -12835,13 +13833,449 @@ RED.palette.editor = (function() {
                 }
             }
         })
+    }
+
+    var settingsPane;
+
+    function getSettingsPane() {
+        initInstallTab();
+        editorTabs.activateTab('nodes');
+        return settingsPane;
+    }
 
 
+
+    function createSettingsPane() {
+        settingsPane = $('<div id="user-settings-tab-palette"></div>');
+        var content = $('<div id="palette-editor">'+
+            '<ul id="palette-editor-tabs"></ul>'+
+        '</div>').appendTo(settingsPane);
+
+        editorTabs = RED.tabs.create({
+            element: settingsPane.find('#palette-editor-tabs'),
+            onchange:function(tab) {
+                $("#palette-editor .palette-editor-tab").hide();
+                tab.content.show();
+                if (filterInput) {
+                    filterInput.searchBox('value',"");
+                }
+                if (searchInput) {
+                    searchInput.searchBox('value',"");
+                }
+                if (tab.id === 'install') {
+                    if (searchInput) {
+                        searchInput.focus();
+                    }
+                } else {
+                    if (filterInput) {
+                        filterInput.focus();
+                    }
+                }
+            },
+            minimumActiveTabWidth: 110
+        });
+
+
+        var modulesTab = $('<div>',{class:"palette-editor-tab"}).appendTo(content);
+
+        editorTabs.addTab({
+            id: 'nodes',
+            label: RED._('palette.editor.tab-nodes'),
+            content: modulesTab
+        })
+
+        var filterDiv = $('<div>',{class:"palette-search"}).appendTo(modulesTab);
+        filterInput = $('<input type="text" data-i18n="[placeholder]palette.filter"></input>')
+            .appendTo(filterDiv)
+            .searchBox({
+                delay: 200,
+                change: function() {
+                    filterChange($(this).val());
+                }
+            });
+
+
+        nodeList = $('<ol>',{id:"palette-module-list", style:"position: absolute;top: 35px;bottom: 0;left: 0;right: 0px;"}).appendTo(modulesTab).editableList({
+            addButton: false,
+            scrollOnAdd: false,
+            sort: function(A,B) {
+                return A.info.name.localeCompare(B.info.name);
+            },
+            filter: function(data) {
+                if (activeFilter === "" ) {
+                    return true;
+                }
+
+                return (activeFilter==="")||(data.index.indexOf(activeFilter) > -1);
+            },
+            addItem: function(container,i,object) {
+                var entry = object.info;
+                if (entry) {
+                    var headerRow = $('<div>',{class:"palette-module-header"}).appendTo(container);
+                    var titleRow = $('<div class="palette-module-meta palette-module-name"><i class="fa fa-cube"></i></div>').appendTo(headerRow);
+                    $('<span>').html(entry.name).appendTo(titleRow);
+                    var metaRow = $('<div class="palette-module-meta palette-module-version"><i class="fa fa-tag"></i></div>').appendTo(headerRow);
+                    var versionSpan = $('<span>').html(entry.version).appendTo(metaRow);
+                    var buttonRow = $('<div>',{class:"palette-module-meta"}).appendTo(headerRow);
+                    var setButton = $('<a href="#" class="editor-button editor-button-small palette-module-set-button"><i class="fa fa-angle-right palette-module-node-chevron"></i> </a>').appendTo(buttonRow);
+                    var setCount = $('<span>').appendTo(setButton);
+                    var buttonGroup = $('<div>',{class:"palette-module-button-group"}).appendTo(buttonRow);
+
+                    var updateButton = $('<a href="#" class="editor-button editor-button-small"></a>').html(RED._('palette.editor.update')).appendTo(buttonGroup);
+                    updateButton.attr('id','up_'+Math.floor(Math.random()*1000000000));
+                    updateButton.click(function(evt) {
+                        evt.preventDefault();
+                        if ($(this).hasClass('disabled')) {
+                            return;
+                        }
+                        $("#palette-module-install-confirm").data('module',entry.name);
+                        $("#palette-module-install-confirm").data('version',loadedIndex[entry.name].version);
+                        $("#palette-module-install-confirm").data('shade',shade);
+
+                        $("#palette-module-install-confirm-body").html(entry.local?
+                            RED._("palette.editor.confirm.update.body"):
+                            RED._("palette.editor.confirm.cannotUpdate.body")
+                        );
+                        $(".palette-module-install-confirm-button-install").hide();
+                        $(".palette-module-install-confirm-button-remove").hide();
+                        if (entry.local) {
+                            $(".palette-module-install-confirm-button-update").show();
+                        } else {
+                            $(".palette-module-install-confirm-button-update").hide();
+                        }
+                        $("#palette-module-install-confirm")
+                            .dialog('option', 'title',RED._("palette.editor.confirm.update.title"))
+                            .dialog('open');
+                    })
+
+
+                    var removeButton = $('<a href="#" class="editor-button editor-button-small"></a>').html(RED._('palette.editor.remove')).appendTo(buttonGroup);
+                    removeButton.attr('id','up_'+Math.floor(Math.random()*1000000000));
+                    removeButton.click(function(evt) {
+                        evt.preventDefault();
+
+                        $("#palette-module-install-confirm").data('module',entry.name);
+                        $("#palette-module-install-confirm").data('shade',shade);
+                        $("#palette-module-install-confirm-body").html(RED._("palette.editor.confirm.remove.body"));
+                        $(".palette-module-install-confirm-button-install").hide();
+                        $(".palette-module-install-confirm-button-remove").show();
+                        $(".palette-module-install-confirm-button-update").hide();
+                        $("#palette-module-install-confirm")
+                            .dialog('option', 'title', RED._("palette.editor.confirm.remove.title"))
+                            .dialog('open');
+                    })
+                    if (!entry.local) {
+                        removeButton.hide();
+                    }
+                    var enableButton = $('<a href="#" class="editor-button editor-button-small"></a>').html(RED._('palette.editor.disableall')).appendTo(buttonGroup);
+
+                    var contentRow = $('<div>',{class:"palette-module-content"}).appendTo(container);
+                    var shade = $('<div class="palette-module-shade hide"><img src="red/images/spin.svg" class="palette-spinner"/></div>').appendTo(container);
+
+                    object.elements = {
+                        updateButton: updateButton,
+                        removeButton: removeButton,
+                        enableButton: enableButton,
+                        setCount: setCount,
+                        container: container,
+                        shade: shade,
+                        versionSpan: versionSpan,
+                        sets: {}
+                    }
+                    setButton.click(function(evt) {
+                        evt.preventDefault();
+                        if (container.hasClass('expanded')) {
+                            container.removeClass('expanded');
+                            contentRow.slideUp();
+                        } else {
+                            container.addClass('expanded');
+                            contentRow.slideDown();
+                        }
+                    })
+
+                    var setList = Object.keys(entry.sets)
+                    setList.sort(function(A,B) {
+                        return A.toLowerCase().localeCompare(B.toLowerCase());
+                    });
+                    setList.forEach(function(setName) {
+                        var set = entry.sets[setName];
+                        var setRow = $('<div>',{class:"palette-module-set"}).appendTo(contentRow);
+                        var buttonGroup = $('<div>',{class:"palette-module-set-button-group"}).appendTo(setRow);
+                        var typeSwatches = {};
+                        set.types.forEach(function(t) {
+                            var typeDiv = $('<div>',{class:"palette-module-type"}).appendTo(setRow);
+                            typeSwatches[t] = $('<span>',{class:"palette-module-type-swatch"}).appendTo(typeDiv);
+                            $('<span>',{class:"palette-module-type-node"}).html(t).appendTo(typeDiv);
+                        })
+
+                        var enableButton = $('<a href="#" class="editor-button editor-button-small"></a>').appendTo(buttonGroup);
+                        enableButton.click(function(evt) {
+                            evt.preventDefault();
+                            if (object.setUseCount[setName] === 0) {
+                                var currentSet = RED.nodes.registry.getNodeSet(set.id);
+                                shade.show();
+                                var newState = !currentSet.enabled
+                                changeNodeState(set.id,newState,shade,function(xhr){
+                                    if (xhr) {
+                                        if (xhr.responseJSON) {
+                                            RED.notify(RED._('palette.editor.errors.'+(newState?'enable':'disable')+'Failed',{module: id,message:xhr.responseJSON.message}));
+                                        }
+                                    }
+                                });
+                            }
+                        })
+
+                        object.elements.sets[set.name] = {
+                            setRow: setRow,
+                            enableButton: enableButton,
+                            swatches: typeSwatches
+                        };
+                    });
+                    enableButton.click(function(evt) {
+                        evt.preventDefault();
+                        if (object.totalUseCount === 0) {
+                            changeNodeState(entry.name,(container.hasClass('disabled')),shade,function(xhr){
+                                if (xhr) {
+                                    if (xhr.responseJSON) {
+                                        RED.notify(RED._('palette.editor.errors.installFailed',{module: id,message:xhr.responseJSON.message}));
+                                    }
+                                }
+                            });
+                        }
+                    })
+                    refreshNodeModule(entry.name);
+                } else {
+                    $('<div>',{class:"red-ui-search-empty"}).html(RED._('search.empty')).appendTo(container);
+                }
+            }
+        });
+
+
+
+        var installTab = $('<div>',{class:"palette-editor-tab hide"}).appendTo(content);
+
+        editorTabs.addTab({
+            id: 'install',
+            label: RED._('palette.editor.tab-install'),
+            content: installTab
+        })
+
+        var toolBar = $('<div>',{class:"palette-editor-toolbar"}).appendTo(installTab);
+
+        var searchDiv = $('<div>',{class:"palette-search"}).appendTo(installTab);
+        searchInput = $('<input type="text" data-i18n="[placeholder]palette.search"></input>')
+            .appendTo(searchDiv)
+            .searchBox({
+                delay: 300,
+                change: function() {
+                    var searchTerm = $(this).val().trim().toLowerCase();
+                    if (searchTerm.length > 0) {
+                        filteredList = loadedList.filter(function(m) {
+                            return (m.index.indexOf(searchTerm) > -1);
+                        }).map(function(f) { return {info:f}});
+                        refreshFilteredItems();
+                        searchInput.searchBox('count',filteredList.length+" / "+loadedList.length);
+                    } else {
+                        searchInput.searchBox('count',loadedList.length);
+                        packageList.editableList('empty');
+                        packageList.editableList('addItem',{count:loadedList.length});
+
+                    }
+                }
+            });
+
+
+        $('<span>').html(RED._("palette.editor.sort")+' ').appendTo(toolBar);
+        var sortGroup = $('<span class="button-group"></span>').appendTo(toolBar);
+        var sortAZ = $('<a href="#" class="sidebar-header-button-toggle selected" data-i18n="palette.editor.sortAZ"></a>').appendTo(sortGroup);
+        var sortRecent = $('<a href="#" class="sidebar-header-button-toggle" data-i18n="palette.editor.sortRecent"></a>').appendTo(sortGroup);
+
+        sortAZ.click(function(e) {
+            e.preventDefault();
+            if ($(this).hasClass("selected")) {
+                return;
+            }
+            $(this).addClass("selected");
+            sortRecent.removeClass("selected");
+            activeSort = sortModulesAZ;
+            refreshFilteredItems();
+        });
+
+        sortRecent.click(function(e) {
+            e.preventDefault();
+            if ($(this).hasClass("selected")) {
+                return;
+            }
+            $(this).addClass("selected");
+            sortAZ.removeClass("selected");
+            activeSort = sortModulesRecent;
+            refreshFilteredItems();
+        });
+
+
+        var refreshSpan = $('<span>').appendTo(toolBar);
+        var refreshButton = $('<a href="#" class="sidebar-header-button"><i class="fa fa-refresh"></i></a>').appendTo(refreshSpan);
+        refreshButton.click(function(e) {
+            e.preventDefault();
+            loadedList = [];
+            loadedIndex = {};
+            initInstallTab();
+        })
+
+        packageList = $('<ol>',{style:"position: absolute;top: 78px;bottom: 0;left: 0;right: 0px;"}).appendTo(installTab).editableList({
+            addButton: false,
+            scrollOnAdd: false,
+            addItem: function(container,i,object) {
+                if (object.count) {
+                    $('<div>',{class:"red-ui-search-empty"}).html(RED._('palette.editor.moduleCount',{count:object.count})).appendTo(container);
+                    return
+                }
+                if (object.more) {
+                    container.addClass('palette-module-more');
+                    var moreRow = $('<div>',{class:"palette-module-header palette-module"}).appendTo(container);
+                    var moreLink = $('<a href="#"></a>').html(RED._('palette.editor.more',{count:object.more})).appendTo(moreRow);
+                    moreLink.click(function(e) {
+                        e.preventDefault();
+                        packageList.editableList('removeItem',object);
+                        for (var i=object.start;i<Math.min(object.start+10,object.start+object.more);i++) {
+                            packageList.editableList('addItem',filteredList[i]);
+                        }
+                        if (object.more > 10) {
+                            packageList.editableList('addItem',{start:object.start+10, more:object.more-10})
+                        }
+                    })
+                    return;
+                }
+                if (object.info) {
+                    var entry = object.info;
+                    var headerRow = $('<div>',{class:"palette-module-header"}).appendTo(container);
+                    var titleRow = $('<div class="palette-module-meta"><i class="fa fa-cube"></i></div>').appendTo(headerRow);
+                    $('<span>',{class:"palette-module-name"}).html(entry.name||entry.id).appendTo(titleRow);
+                    $('<a target="_blank" class="palette-module-link"><i class="fa fa-external-link"></i></a>').attr('href',entry.url).appendTo(titleRow);
+                    var descRow = $('<div class="palette-module-meta"></div>').appendTo(headerRow);
+                    $('<div>',{class:"palette-module-description"}).html(entry.description).appendTo(descRow);
+
+                    var metaRow = $('<div class="palette-module-meta"></div>').appendTo(headerRow);
+                    $('<span class="palette-module-version"><i class="fa fa-tag"></i> '+entry.version+'</span>').appendTo(metaRow);
+                    $('<span class="palette-module-updated"><i class="fa fa-calendar"></i> '+formatUpdatedAt(entry.updated_at)+'</span>').appendTo(metaRow);
+                    var buttonRow = $('<div>',{class:"palette-module-meta"}).appendTo(headerRow);
+                    var buttonGroup = $('<div>',{class:"palette-module-button-group"}).appendTo(buttonRow);
+                    var shade = $('<div class="palette-module-shade hide"><img src="red/images/spin.svg" class="palette-spinner"/></div>').appendTo(container);
+                    var installButton = $('<a href="#" class="editor-button editor-button-small"></a>').html(RED._('palette.editor.install')).appendTo(buttonGroup);
+                    installButton.click(function(e) {
+                        e.preventDefault();
+                        if (!$(this).hasClass('disabled')) {
+                            $("#palette-module-install-confirm").data('module',entry.id);
+                            $("#palette-module-install-confirm").data('version',entry.version);
+                            $("#palette-module-install-confirm").data('url',entry.url);
+                            $("#palette-module-install-confirm").data('shade',shade);
+                            $("#palette-module-install-confirm-body").html(RED._("palette.editor.confirm.install.body"));
+                            $(".palette-module-install-confirm-button-install").show();
+                            $(".palette-module-install-confirm-button-remove").hide();
+                            $(".palette-module-install-confirm-button-update").hide();
+                            $("#palette-module-install-confirm")
+                                .dialog('option', 'title', RED._("palette.editor.confirm.install.title"))
+                                .dialog('open');
+                        }
+                    })
+                    if (nodeEntries.hasOwnProperty(entry.id)) {
+                        installButton.addClass('disabled');
+                        installButton.html(RED._('palette.editor.installed'));
+                    }
+
+                    object.elements = {
+                        installButton:installButton
+                    }
+                } else {
+                    $('<div>',{class:"red-ui-search-empty"}).html(RED._('search.empty')).appendTo(container);
+                }
+            }
+        });
+
+        $('<div id="palette-module-install-shade" class="palette-module-shade hide"><div class="palette-module-shade-status"></div><img src="red/images/spin.svg" class="palette-spinner"/></div>').appendTo(installTab);
+
+        $('<div id="palette-module-install-confirm" class="hide"><form class="form-horizontal"><div id="palette-module-install-confirm-body" class="node-dialog-confirm-row"></div></form></div>').appendTo(document.body);
+        $("#palette-module-install-confirm").dialog({
+            title: RED._('palette.editor.confirm.title'),
+            modal: true,
+            autoOpen: false,
+            width: 550,
+            height: "auto",
+            buttons: [
+                {
+                    text: RED._("common.label.cancel"),
+                    click: function() {
+                        $( this ).dialog( "close" );
+                    }
+                },
+                {
+                    text: RED._("palette.editor.confirm.button.review"),
+                    class: "primary palette-module-install-confirm-button-install",
+                    click: function() {
+                        var url = $(this).data('url');
+                        window.open(url);
+                    }
+                },
+                {
+                    text: RED._("palette.editor.confirm.button.install"),
+                    class: "primary palette-module-install-confirm-button-install",
+                    click: function() {
+                        var id = $(this).data('module');
+                        var version = $(this).data('version');
+                        var shade = $(this).data('shade');
+                        installNodeModule(id,version,shade,function(xhr) {
+                             if (xhr) {
+                                 if (xhr.responseJSON) {
+                                     RED.notify(RED._('palette.editor.errors.installFailed',{module: id,message:xhr.responseJSON.message}));
+                                 }
+                             }
+                        });
+                        $( this ).dialog( "close" );
+                    }
+                },
+                {
+                    text: RED._("palette.editor.confirm.button.remove"),
+                    class: "primary palette-module-install-confirm-button-remove",
+                    click: function() {
+                        var id = $(this).data('module');
+                        var shade = $(this).data('shade');
+                        shade.show();
+                        removeNodeModule(id, function(xhr) {
+                            shade.hide();
+                            if (xhr) {
+                                if (xhr.responseJSON) {
+                                    RED.notify(RED._('palette.editor.errors.removeFailed',{module: id,message:xhr.responseJSON.message}));
+                                }
+                            }
+                        })
+
+                        $( this ).dialog( "close" );
+                    }
+                },
+                {
+                    text: RED._("palette.editor.confirm.button.update"),
+                    class: "primary palette-module-install-confirm-button-update",
+                    click: function() {
+                        var id = $(this).data('module');
+                        var version = $(this).data('version');
+                        var shade = $(this).data('shade');
+                        shade.show();
+                        installNodeModule(id,version,shade,function(xhr) {
+                             if (xhr) {
+                                 if (xhr.responseJSON) {
+                                     RED.notify(RED._('palette.editor.errors.updateFailed',{module: id,message:xhr.responseJSON.message}));
+                                 }
+                             }
+                        });
+                        $( this ).dialog( "close" );
+                    }
+                }
+            ]
+        })
     }
 
     return {
-        init: init,
-        show: showPaletteEditor
+        init: init
     }
 })();
 ;/** This file was modified by Sathya Laufer */
@@ -13055,7 +14489,7 @@ RED.editor = (function() {
             if (outputMap) {
                 RED.nodes.eachLink(function(l) {
                     if (l.source === node && outputMap.hasOwnProperty(l.sourcePort)) {
-                        if (outputMap[l.sourcePort] === -1) {
+                        if (outputMap[l.sourcePort] === "-1") {
                             removedLinks.push(l);
                         } else {
                             l.sourcePort = outputMap[l.sourcePort];
@@ -13126,17 +14560,8 @@ RED.editor = (function() {
         var configNode = RED.nodes.node(node[property]);
         var node_def = RED.nodes.getType(type);
 
-        if (configNode && node_def.label) {
-            if (typeof node_def.label == "function") {
-                try {
-                    label = node_def.label.call(configNode);
-                } catch(err) {
-                    console.log("Definition error: "+node_def.type+".label",err);
-                    label = node_def.type;
-                }
-            } else {
-                label = node_def.label;
-            }
+        if (configNode) {
+            label = RED.utils.getNodeLabel(configNode,configNode.id);
         }
         input.val(label);
     }
@@ -13363,7 +14788,9 @@ RED.editor = (function() {
             var node = editStack[i];
             var label = node.type;
             if (node.type === '_expression') {
-                label = "Expression editor";
+                label = RED._("expressionEditor.title");
+            } else if (node.type === '_json') {
+                label = RED._("jsonEditor.title");
             } else if (node.type === 'subflow') {
                 label = RED._("subflow.editSubflow",{name:node.name})
             } else if (node.type.indexOf("subflow:")===0) {
@@ -13391,9 +14818,8 @@ RED.editor = (function() {
         return title;
     }
 
-    function buildEditForm(tray,formId,type,ns) {
-        var trayBody = tray.find('.editor-tray-body');
-        var dialogForm = $('<form id="'+formId+'" class="form-horizontal" autocomplete="off"></form>').appendTo(trayBody);
+    function buildEditForm(container,formId,type,ns) {
+        var dialogForm = $('<form id="'+formId+'" class="form-horizontal" autocomplete="off"></form>').appendTo(container);
         dialogForm.html($("script[data-template-name='"+type+"']").html());
         ns = ns||"node-red";
         dialogForm.find('[data-i18n]').each(function() {
@@ -13420,6 +14846,163 @@ RED.editor = (function() {
         $('<input type="text" style="display: none;" />').prependTo(dialogForm);
         dialogForm.submit(function(e) { e.preventDefault();});
         return dialogForm;
+    }
+
+    function refreshLabelForm(container,node) {
+
+        var inputPlaceholder = node._def.inputLabels?RED._("editor.defaultLabel"):RED._("editor.noDefaultLabel");
+        var outputPlaceholder = node._def.outputLabels?RED._("editor.defaultLabel"):RED._("editor.noDefaultLabel");
+
+        var inputsDiv = $("#node-label-form-inputs");
+        var outputsDiv = $("#node-label-form-outputs");
+
+        var inputCount = node.inputs || node._def.inputs || 0;
+        var children = inputsDiv.children();
+        var childCount = children.length;
+        if (childCount === 1 && $(children[0]).hasClass('node-label-form-none')) {
+            childCount--;
+        }
+
+        if (childCount < inputCount) {
+            if (childCount === 0) {
+                // remove the 'none' placeholder
+                $(children[0]).remove();
+            }
+            for (i = childCount;i<inputCount;i++) {
+                buildLabelRow("input",i,"",inputPlaceholder).appendTo(inputsDiv);
+            }
+        } else if (childCount > inputCount) {
+            for (i=inputCount;i<childCount;i++) {
+                $(children[i]).remove();
+            }
+            if (outputCount === 0) {
+                buildLabelRow().appendTo(inputsDiv);
+            }
+        }
+
+        var outputCount;
+        var i;
+        var formOutputs = $("#node-input-outputs").val();
+
+        if (formOutputs === undefined) {
+            outputCount = node.outputs || node._def.outputs || 0;
+        } else if (isNaN(formOutputs)) {
+            var outputMap = JSON.parse(formOutputs);
+            var keys = Object.keys(outputMap);
+            children = outputsDiv.children();
+            childCount = children.length;
+            if (childCount === 1 && $(children[0]).hasClass('node-label-form-none')) {
+                childCount--;
+            }
+
+            outputCount = 0;
+            var rows = [];
+            keys.forEach(function(p) {
+                var row = $("#node-label-form-output-"+p).parent();
+                if (row.length === 0 && outputMap[p] !== -1) {
+                    if (childCount === 0) {
+                        $(children[0]).remove();
+                        childCount = -1;
+                    }
+                    row = buildLabelRow("output",p,"",outputPlaceholder);
+                } else {
+                    row.detach();
+                }
+                if (outputMap[p] !== -1) {
+                    outputCount++;
+                    rows.push({i:parseInt(outputMap[p]),r:row});
+                }
+            });
+            rows.sort(function(A,B) {
+                return A.i-B.i;
+            })
+            rows.forEach(function(r,i) {
+                r.r.find("label").html((i+1)+".");
+                r.r.appendTo(outputsDiv);
+            })
+            if (rows.length === 0) {
+                buildLabelRow("output",i,"").appendTo(outputsDiv);
+            } else {
+
+            }
+        } else {
+            outputCount = Math.max(0,parseInt(formOutputs));
+        }
+        children = outputsDiv.children();
+        childCount = children.length;
+        if (childCount === 1 && $(children[0]).hasClass('node-label-form-none')) {
+            childCount--;
+        }
+        if (childCount < outputCount) {
+            if (childCount === 0) {
+                // remove the 'none' placeholder
+                $(children[0]).remove();
+            }
+            for (i = childCount;i<outputCount;i++) {
+                buildLabelRow("output",i,"").appendTo(outputsDiv);
+            }
+        } else if (childCount > outputCount) {
+            for (i=outputCount;i<childCount;i++) {
+                $(children[i]).remove();
+            }
+            if (outputCount === 0) {
+                buildLabelRow().appendTo(outputsDiv);
+            }
+        }
+    }
+    function buildLabelRow(type, index, value, placeHolder) {
+        var result = $('<div>',{class:"node-label-form-row"});
+        if (type === undefined) {
+            $('<span>').html("none").appendTo(result);
+            result.addClass("node-label-form-none");
+        } else {
+            result.addClass("");
+            var id = "node-label-form-"+type+"-"+index;
+            $('<label>',{for:id}).html((index+1)+".").appendTo(result);
+            var input = $('<input>',{type:"text",id:id, placeholder: placeHolder}).val(value).appendTo(result);
+            var clear = $('<button class="editor-button editor-button-small"><i class="fa fa-times"></i></button>').appendTo(result);
+            clear.click(function(evt) {
+                evt.preventDefault();
+                input.val("");
+            })
+        }
+        return result;
+    }
+    function buildLabelForm(container,node) {
+        var dialogForm = $('<form class="dialog-form form-horizontal" autocomplete="off"></form>').appendTo(container);
+
+        var inputCount = node.inputs || node._def.inputs || 0;
+        var outputCount = node.outputs || node._def.outputs || 0;
+        if (node.type === 'subflow') {
+            inputCount = node.in.length;
+            outputCount = node.out.length;
+        }
+
+        var inputLabels = node.inputLabels || [];
+        var outputLabels = node.outputLabels || [];
+
+        var inputPlaceholder = node._def.inputLabels?RED._("editor.defaultLabel"):RED._("editor.noDefaultLabel");
+        var outputPlaceholder = node._def.outputLabels?RED._("editor.defaultLabel"):RED._("editor.noDefaultLabel");
+
+        var i,row;
+        $('<div class="form-row"><span data-i18n="editor.labelInputs"></span><div id="node-label-form-inputs"></div></div>').appendTo(dialogForm);
+        var inputsDiv = $("#node-label-form-inputs");
+        if (inputCount > 0) {
+            for (i=0;i<inputCount;i++) {
+                buildLabelRow("input",i,inputLabels[i],inputPlaceholder).appendTo(inputsDiv);
+            }
+        } else {
+            buildLabelRow().appendTo(inputsDiv);
+        }
+        $('<div class="form-row"><span data-i18n="editor.labelOutputs"></span><div id="node-label-form-outputs"></div></div>').appendTo(dialogForm);
+        var outputsDiv = $("#node-label-form-outputs");
+        if (outputCount > 0) {
+            for (i=0;i<outputCount;i++) {
+                buildLabelRow("output",i,outputLabels[i],outputPlaceholder).appendTo(outputsDiv);
+            }
+        } else {
+            buildLabelRow().appendTo(outputsDiv);
+        }
     }
 
     function showEditDialog(node) {
@@ -13544,11 +15127,11 @@ RED.editor = (function() {
                             }
                         }
 
+                        var newValue;
                         if (editing_node._def.defaults) {
                             for (d in editing_node._def.defaults) {
                                 if (editing_node._def.defaults.hasOwnProperty(d)) {
                                     var input = $("#node-input-"+d);
-                                    var newValue;
                                     if (input.attr('type') === "checkbox") {
                                         newValue = input.prop('checked');
                                     } else if ("format" in editing_node._def.defaults[d] && editing_node._def.defaults[d].format !== "" && input[0].nodeName === "DIV") {
@@ -13557,8 +15140,42 @@ RED.editor = (function() {
                                         newValue = input.val();
                                     }
                                     if (newValue != null) {
-                                        if (d === "outputs" && (newValue.trim() === "" || isNaN(newValue))) {
-                                            continue;
+                                        if (d === "outputs") {
+                                            if  (newValue.trim() === "") {
+                                                continue;
+                                            }
+                                            if (isNaN(newValue)) {
+                                                outputMap = JSON.parse(newValue);
+                                                var outputCount = 0;
+                                                var outputsChanged = false;
+                                                var keys = Object.keys(outputMap);
+                                                keys.forEach(function(p) {
+                                                    if (isNaN(p)) {
+                                                        // New output;
+                                                        outputCount ++;
+                                                        delete outputMap[p];
+                                                    } else {
+                                                        outputMap[p] = outputMap[p]+"";
+                                                        if (outputMap[p] !== "-1") {
+                                                            outputCount++;
+                                                            if (outputMap[p] !== p) {
+                                                                // Output moved
+                                                                outputsChanged = true;
+                                                            } else {
+                                                                delete outputMap[p];
+                                                            }
+                                                        } else {
+                                                            // Output removed
+                                                            outputsChanged = true;
+                                                        }
+                                                    }
+                                                });
+
+                                                newValue = outputCount;
+                                                if (outputsChanged) {
+                                                    changed = true;
+                                                }
+                                            }
                                         }
                                         if (editing_node[d] != newValue) {
                                             if (editing_node._def.defaults[d].type) {
@@ -13590,14 +15207,52 @@ RED.editor = (function() {
                             var credsChanged = updateNodeCredentials(editing_node,credDefinition,prefix);
                             changed = changed || credsChanged;
                         }
-                        if (editing_node.hasOwnProperty("_outputs")) {
-                            outputMap = editing_node._outputs;
-                            delete editing_node._outputs;
-                            if (Object.keys(outputMap).length > 0) {
-                                changed = true;
-                            }
-                        }
+                        // if (editing_node.hasOwnProperty("_outputs")) {
+                        //     outputMap = editing_node._outputs;
+                        //     delete editing_node._outputs;
+                        //     if (Object.keys(outputMap).length > 0) {
+                        //         changed = true;
+                        //     }
+                        // }
                         var removedLinks = updateNodeProperties(editing_node,outputMap);
+
+                        var inputLabels = $("#node-label-form-inputs").children().find("input");
+                        var outputLabels = $("#node-label-form-outputs").children().find("input");
+
+                        var hasNonBlankLabel = false;
+                        newValue = inputLabels.map(function() {
+                            var v = $(this).val();
+                            hasNonBlankLabel = hasNonBlankLabel || v!== "";
+                            return v;
+                        }).toArray().slice(0,editing_node.inputs);
+                        if ((editing_node.inputLabels === undefined && hasNonBlankLabel) ||
+                            (editing_node.inputLabels !== undefined && JSON.stringify(newValue) !== JSON.stringify(editing_node.inputLabels))) {
+                            changes.inputLabels = editing_node.inputLabels;
+                            editing_node.inputLabels = newValue;
+                            changed = true;
+                        }
+                        hasNonBlankLabel = false;
+                        newValue = new Array(editing_node.outputs);
+                        outputLabels.each(function() {
+                            var index = $(this).attr('id').substring(23); // node-label-form-output-<index>
+                            if (outputMap && outputMap.hasOwnProperty(index)) {
+                                index = parseInt(outputMap[index]);
+                                if (index === -1) {
+                                    return;
+                                }
+                            }
+                            var v = $(this).val();
+                            hasNonBlankLabel = hasNonBlankLabel || v!== "";
+                            newValue[index] = v;
+                        })
+
+                        if ((editing_node.outputLabels === undefined && hasNonBlankLabel) ||
+                            (editing_node.outputLabels !== undefined && JSON.stringify(newValue) !== JSON.stringify(editing_node.outputLabels))) {
+                            changes.outputLabels = editing_node.outputLabels;
+                            editing_node.outputLabels = newValue;
+                            changed = true;
+                        }
+
                         if (changed) {
                             var wasChanged = editing_node.changed;
                             editing_node.changed = true;
@@ -13646,8 +15301,9 @@ RED.editor = (function() {
             ],
             resize: function(dimensions) {
                 editTrayWidthCache[type] = dimensions.width;
+                $(".editor-tray-content").height(dimensions.height - 78);
+                var form = $(".editor-tray-content form").height(dimensions.height - 78 - 40);
                 if (editing_node && editing_node._def.oneditresize) {
-                    var form = $("#dialog-form");
                     try {
                         editing_node._def.oneditresize.call(editing_node,{width:form.width(),height:form.height()});
                     } catch(err) {
@@ -13655,7 +15311,30 @@ RED.editor = (function() {
                     }
                 }
             },
-            open: function(tray,done) {
+            open: function(tray, done) {
+                var trayFooter = tray.find(".editor-tray-footer");
+                var trayBody = tray.find('.editor-tray-body');
+                trayBody.parent().css('overflow','hidden');
+
+                var stack = RED.stack.create({
+                    container: trayBody,
+                    singleExpanded: true
+                });
+                var nodeProperties = stack.add({
+                    title: RED._("editor.nodeProperties"),
+                    expanded: true
+                });
+                nodeProperties.content.addClass("editor-tray-content");
+
+                /*var portLabels = stack.add({
+                    title: RED._("editor.portLabels"),
+                    onexpand: function() {
+                        refreshLabelForm(this.content,node);
+                    }
+                });
+                portLabels.content.addClass("editor-tray-content");*/
+
+
                 if (editing_node) {
                     RED.sidebar.info.refresh(editing_node);
                 }
@@ -13665,12 +15344,13 @@ RED.editor = (function() {
                 } else {
                     ns = node._def.set.id;
                 }
-                var dialogForm = buildEditForm(tray,"dialog-form",type,ns);
+                buildEditForm(nodeProperties.content,"dialog-form",type,ns);
+                //buildLabelForm(portLabels.content,node);
+
                 prepareEditDialog(node,node._def,"node-input", function() {
-                    dialogForm.i18n();
+                    trayBody.i18n();
                     done();
                 });
-
             },
             close: function() {
                 if (RED.view.state() != RED.state.IMPORT_DRAGGING) {
@@ -13768,7 +15448,7 @@ RED.editor = (function() {
                 }
                 trayFooter.append('<span id="node-config-dialog-scope-container"><span id="node-config-dialog-scope-warning" data-i18n="[title]editor.errors.scopeChange"><i class="fa fa-warning"></i></span><select id="node-config-dialog-scope"></select></span>');
 
-                var dialogForm = buildEditForm(tray,"node-config-dialog-edit-form",type,ns);
+                var dialogForm = buildEditForm(tray.find('.editor-tray-body'),"node-config-dialog-edit-form",type,ns);
 
                 prepareEditDialog(editing_config_node,node_def,"node-config-input", function() {
                     if (editing_config_node._def.exclusive) {
@@ -14076,17 +15756,7 @@ RED.editor = (function() {
 
                 RED.nodes.eachConfig(function(config) {
                     if (config.type == type && (!config.z || config.z === activeWorkspace.id)) {
-                        var label = "";
-                        if (typeof node_def.label == "function") {
-                            try {
-                                label = node_def.label.call(config);
-                            } catch(err) {
-                                console.log("Definition error: "+node_def.type+".label",err);
-                                label = node_def.type;
-                            }
-                        } else {
-                            label = node_def.label;
-                        }
+                        var label = RED.utils.getNodeLabel(config,config.id);
                         config.__label__ = label;
                         configNodes.push(config);
                     }
@@ -14153,6 +15823,21 @@ RED.editor = (function() {
                             editing_node.info = newDescription;
                             changed = true;
                         }
+                        var inputLabels = $("#node-label-form-inputs").children().find("input");
+                        var outputLabels = $("#node-label-form-outputs").children().find("input");
+
+                        var newValue = inputLabels.map(function() { return $(this).val();}).toArray().slice(0,editing_node.inputs);
+                        if (JSON.stringify(newValue) !== JSON.stringify(editing_node.inputLabels)) {
+                            changes.inputLabels = editing_node.inputLabels;
+                            editing_node.inputLabels = newValue;
+                            changed = true;
+                        }
+                        newValue = outputLabels.map(function() { return $(this).val();}).toArray().slice(0,editing_node.outputs);
+                        if (JSON.stringify(newValue) !== JSON.stringify(editing_node.outputLabels)) {
+                            changes.outputLabels = editing_node.outputLabels;
+                            editing_node.outputLabels = newValue;
+                            changed = true;
+                        }
 
                         RED.palette.refresh();
 
@@ -14190,7 +15875,10 @@ RED.editor = (function() {
                     }
                 }
             ],
-            resize: function() {
+            resize: function(dimensions) {
+                $(".editor-tray-content").height(dimensions.height - 78);
+                var form = $(".editor-tray-content form").height(dimensions.height - 78 - 40);
+
                 var rows = $("#dialog-form>div:not(.node-text-editor-row)");
                 var editorRow = $("#dialog-form>div.node-text-editor-row");
                 var height = $("#dialog-form").height();
@@ -14202,10 +15890,30 @@ RED.editor = (function() {
                 subflowEditor.resize();
             },
             open: function(tray) {
+                var trayFooter = tray.find(".editor-tray-footer");
+                var trayBody = tray.find('.editor-tray-body');
+                trayBody.parent().css('overflow','hidden');
+
+                var stack = RED.stack.create({
+                    container: trayBody,
+                    singleExpanded: true
+                });
+                var nodeProperties = stack.add({
+                    title: RED._("editor.nodeProperties"),
+                    expanded: true
+                });
+                nodeProperties.content.addClass("editor-tray-content");
+                /*var portLabels = stack.add({
+                    title: RED._("editor.portLabels")
+                });
+                portLabels.content.addClass("editor-tray-content");*/
+
+
+
                 if (editing_node) {
                     RED.sidebar.info.refresh(editing_node);
                 }
-                var dialogForm = buildEditForm(tray,"dialog-form","subflow-template");
+                var dialogForm = buildEditForm(nodeProperties.content,"dialog-form","subflow-template");
                 subflowEditor = RED.editor.createEditor({
                     id: 'subflow-input-info-editor',
                     mode: 'ace/mode/markdown',
@@ -14224,7 +15932,9 @@ RED.editor = (function() {
                     }
                 });
                 $("#subflow-dialog-user-count").html(RED._("subflow.subflowInstances", {count:userCount})).show();
-                dialogForm.i18n();
+
+                //buildLabelForm(portLabels.content,subflow);
+                trayBody.i18n();
             },
             close: function() {
                 if (RED.view.state() != RED.state.IMPORT_DRAGGING) {
@@ -14242,13 +15952,23 @@ RED.editor = (function() {
     }
 
 
+    var expressionTestCache = {};
+
     function editExpression(options) {
+        var expressionTestCacheId = "_";
+        if (editStack.length > 0) {
+            expressionTestCacheId = editStack[editStack.length-1].id;
+        }
+
         var value = options.value;
         var onComplete = options.complete;
         var type = "_expression"
         editStack.push({type:type});
         RED.view.state(RED.state.EDITING);
         var expressionEditor;
+        var testDataEditor;
+        var testResultEditor
+        var panels;
 
         var trayOptions = {
             title: getEditStackTitle(),
@@ -14272,21 +15992,19 @@ RED.editor = (function() {
                 }
             ],
             resize: function(dimensions) {
-                editTrayWidthCache[type] = dimensions.width;
-
-                var rows = $("#dialog-form>div:not(.node-text-editor-row)");
-                var editorRow = $("#dialog-form>div.node-text-editor-row");
-                var height = $("#dialog-form").height();
-                for (var i=0;i<rows.size();i++) {
-                    height -= $(rows[i]).outerHeight(true);
+                if (dimensions) {
+                    editTrayWidthCache[type] = dimensions.width;
                 }
-                height -= (parseInt($("#dialog-form").css("marginTop"))+parseInt($("#dialog-form").css("marginBottom")));
-                $(".node-text-editor").css("height",height+"px");
-                expressionEditor.resize();
+                var height = $("#dialog-form").height();
+                if (panels) {
+                    panels.resize(height);
+                }
+
             },
             open: function(tray) {
                 var trayBody = tray.find('.editor-tray-body');
-                var dialogForm = buildEditForm(tray,'dialog-form','_expression','editor');
+                trayBody.addClass("node-input-expression-editor")
+                var dialogForm = buildEditForm(tray.find('.editor-tray-body'),'dialog-form','_expression','editor');
                 var funcSelect = $("#node-input-expression-func");
                 Object.keys(jsonata.functions).forEach(function(f) {
                     funcSelect.append($("<option></option>").val(f).text(f));
@@ -14389,7 +16107,210 @@ RED.editor = (function() {
                     var snippet = jsonata.getFunctionSnippet(f);
                     expressionEditor.insertSnippet(snippet);
                     expressionEditor.focus();
+                });
+                $("#node-input-expression-reformat").click(function(evt) {
+                    evt.preventDefault();
+                    var v = expressionEditor.getValue()||"";
+                    try {
+                        v = jsonata.format(v);
+                    } catch(err) {
+                        // TODO: do an optimistic auto-format
+                    }
+                    expressionEditor.getSession().setValue(v||"",-1);
+                });
+
+                var tabs = RED.tabs.create({
+                    element: $("#node-input-expression-tabs"),
+                    onchange:function(tab) {
+                        $(".node-input-expression-tab-content").hide();
+                        tab.content.show();
+                        trayOptions.resize();
+                    }
                 })
+
+                tabs.addTab({
+                    id: 'expression-help',
+                    label: 'Function reference',
+                    content: $("#node-input-expression-tab-help")
+                });
+                tabs.addTab({
+                    id: 'expression-tests',
+                    label: 'Test',
+                    content: $("#node-input-expression-tab-test")
+                });
+                testDataEditor = RED.editor.createEditor({
+                    id: 'node-input-expression-test-data',
+                    value: expressionTestCache[expressionTestCacheId] || '{\n    "payload": "hello world"\n}',
+                    mode:"ace/mode/json",
+                    lineNumbers: false
+                });
+                var changeTimer;
+                $(".node-input-expression-legacy").click(function(e) {
+                    e.preventDefault();
+                    RED.sidebar.info.set(RED._("expressionEditor.compatModeDesc"));
+                    RED.sidebar.info.show();
+                })
+                var testExpression = function() {
+                    var value = testDataEditor.getValue();
+                    var parsedData;
+                    var currentExpression = expressionEditor.getValue();
+                    var expr;
+                    var usesContext = false;
+                    var legacyMode = false;
+                    try {
+                        expr = jsonata(currentExpression);
+                        expr.assign('flowContext',function(val) {
+                            usesContext = true;
+                            return null;
+                        });
+                        expr.assign('globalContext',function(val) {
+                            usesContext = true;
+                            return null;
+                        });
+                        legacyMode = /(^|[^a-zA-Z0-9_'"])msg([^a-zA-Z0-9_'"]|$)/.test(currentExpression);
+                    } catch(err) {
+                        testResultEditor.setValue(RED._("expressionEditor.errors.invalid-expr",{message:err.message}));
+                        return;
+                    }
+                    $(".node-input-expression-legacy").toggle(legacyMode);
+                    try {
+                        parsedData = JSON.parse(value);
+                    } catch(err) {
+                        testResultEditor.setValue(RED._("expressionEditor.errors.invalid-msg",{message:err.toString()}))
+                        return;
+                    }
+
+                    try {
+                        var result = expr.evaluate(legacyMode?{msg:parsedData}:parsedData);
+                        if (usesContext) {
+                            testResultEditor.setValue(RED._("expressionEditor.errors.context-unsupported"));
+                            return;
+                        }
+
+                        var formattedResult;
+                        if (result !== undefined) {
+                            formattedResult = JSON.stringify(result,null,4);
+                        } else {
+                            formattedResult = RED._("expressionEditor.noMatch");
+                        }
+                        testResultEditor.setValue(formattedResult);
+                    } catch(err) {
+                        testResultEditor.setValue(RED._("expressionEditor.errors.eval",{message:err.message}));
+                    }
+                }
+
+                testDataEditor.getSession().on('change', function() {
+                    clearTimeout(changeTimer);
+                    changeTimer = setTimeout(testExpression,200);
+                    expressionTestCache[expressionTestCacheId] = testDataEditor.getValue();
+                });
+                expressionEditor.getSession().on('change', function() {
+                    clearTimeout(changeTimer);
+                    changeTimer = setTimeout(testExpression,200);
+                });
+
+                testResultEditor = RED.editor.createEditor({
+                    id: 'node-input-expression-test-result',
+                    value: "",
+                    mode:"ace/mode/json",
+                    lineNumbers: false,
+                    readOnly: true
+                });
+                panels = RED.panels.create({
+                    id:"node-input-expression-panels",
+                    resize: function(p1Height,p2Height) {
+                        var p1 = $("#node-input-expression-panel-expr");
+                        p1Height -= $(p1.children()[0]).outerHeight(true);
+                        var editorRow = $(p1.children()[1]);
+                        p1Height -= (parseInt(editorRow.css("marginTop"))+parseInt(editorRow.css("marginBottom")));
+                        $("#node-input-expression").css("height",(p1Height-5)+"px");
+                        expressionEditor.resize();
+
+                        var p2 = $("#node-input-expression-panel-info > .form-row > div:first-child");
+                        p2Height -= p2.outerHeight(true) + 20;
+                        $(".node-input-expression-tab-content").height(p2Height);
+                        $("#node-input-expression-test-data").css("height",(p2Height-5)+"px");
+                        testDataEditor.resize();
+                        $("#node-input-expression-test-result").css("height",(p2Height-5)+"px");
+                        testResultEditor.resize();
+                    }
+                });
+
+                testExpression();
+            },
+            close: function() {
+                editStack.pop();
+            },
+            show: function() {}
+        }
+        if (editTrayWidthCache.hasOwnProperty(type)) {
+            trayOptions.width = editTrayWidthCache[type];
+        }
+        RED.tray.show(trayOptions);
+    }
+
+
+    function editJSON(options) {
+        var value = options.value;
+        var onComplete = options.complete;
+        var type = "_json"
+        editStack.push({type:type});
+        RED.view.state(RED.state.EDITING);
+        var expressionEditor;
+
+        var trayOptions = {
+            title: getEditStackTitle(),
+            buttons: [
+                {
+                    id: "node-dialog-cancel",
+                    text: RED._("common.label.cancel"),
+                    click: function() {
+                        RED.tray.close();
+                    }
+                },
+                {
+                    id: "node-dialog-ok",
+                    text: RED._("common.label.done"),
+                    class: "primary",
+                    click: function() {
+                        onComplete(expressionEditor.getValue());
+                        RED.tray.close();
+                    }
+                }
+            ],
+            resize: function(dimensions) {
+                editTrayWidthCache[type] = dimensions.width;
+
+                var rows = $("#dialog-form>div:not(.node-text-editor-row)");
+                var editorRow = $("#dialog-form>div.node-text-editor-row");
+                var height = $("#dialog-form").height();
+                for (var i=0;i<rows.size();i++) {
+                    height -= $(rows[i]).outerHeight(true);
+                }
+                height -= (parseInt($("#dialog-form").css("marginTop"))+parseInt($("#dialog-form").css("marginBottom")));
+                $(".node-text-editor").css("height",height+"px");
+                expressionEditor.resize();
+            },
+            open: function(tray) {
+                var trayBody = tray.find('.editor-tray-body');
+                var dialogForm = buildEditForm(tray.find('.editor-tray-body'),'dialog-form',type,'editor');
+                expressionEditor = RED.editor.createEditor({
+                    id: 'node-input-json',
+                    value: "",
+                    mode:"ace/mode/json"
+                });
+                expressionEditor.getSession().setValue(value||"",-1);
+                $("#node-input-expression-reformat").click(function(evt) {
+                    evt.preventDefault();
+                    var v = expressionEditor.getValue()||"";
+                    try {
+                        v = JSON.stringify(JSON.parse(v),null,4);
+                    } catch(err) {
+                        // TODO: do an optimistic auto-format
+                    }
+                    expressionEditor.getSession().setValue(v||"",-1);
+                });
+                dialogForm.i18n();
             },
             close: function() {
                 editStack.pop();
@@ -14418,8 +16339,10 @@ RED.editor = (function() {
         editConfig: showEditConfigNodeDialog,
         editSubflow: showEditSubflowDialog,
         editExpression: editExpression,
+        editJSON: editJSON,
         validateNode: validateNode,
         updateNodeProperties: updateNodeProperties, // TODO: only exposed for edit-undo
+
 
         createEditor: function(options) {
             var editor = ace.edit(options.id);
@@ -14440,6 +16363,12 @@ RED.editor = (function() {
                     enableBasicAutocompletion:true,
                     enableSnippets:true
                 });
+            }
+            if (options.readOnly) {
+                editor.setOption('readOnly',options.readOnly);
+            }
+            if (options.hasOwnProperty('lineNumbers')) {
+                editor.renderer.setOption('showGutter',options.lineNumbers);
             }
             editor.$blockScrolling = Infinity;
             if (options.value) {
@@ -14632,7 +16561,7 @@ RED.tray = (function() {
         if (stack.length > 0) {
             var tray = stack[stack.length-1];
             var trayHeight = tray.tray.height()-tray.header.outerHeight()-tray.footer.outerHeight();
-            tray.body.height(trayHeight-40);
+            tray.body.height(trayHeight);
             if (tray.width > $("#editor-stack").position().left-8) {
                 tray.width = $("#editor-stack").position().left-8;
                 tray.tray.width(tray.width);
@@ -14643,7 +16572,7 @@ RED.tray = (function() {
                 // tray.body.parent().width(tray.width);
             }
             if (tray.options.resize) {
-                tray.options.resize({width:tray.width});
+                tray.options.resize({width:tray.width, height:trayHeight});
             }
         }
     }
@@ -14973,27 +16902,58 @@ RED.clipboard = (function() {
             });
         dialog.dialog("option","title",RED._("clipboard.exportNodes")).dialog( "open" );
 
-        setTimeout(function() {
-            $("#clipboard-export").focus();
-            if (!document.queryCommandEnabled("copy")) {
-                $("#clipboard-dialog-cancel").hide();
-                $("#clipboard-dialog-close").show();
-            } else {
-                $("#clipboard-dialog-cancel").show();
-                $("#clipboard-dialog-copy").show();
-            }
-
-        },0);
+        $("#clipboard-export").focus();
+        if (!document.queryCommandSupported("copy")) {
+            $("#clipboard-dialog-cancel").hide();
+            $("#clipboard-dialog-close").show();
+        } else {
+            $("#clipboard-dialog-cancel").show();
+            $("#clipboard-dialog-copy").show();
+        }
     }
 
     function hideDropTarget() {
         $("#dropTarget").hide();
         RED.keyboard.remove("escape");
     }
-
+    function copyText(value,element,msg) {
+        var truncated = false;
+        if (typeof value !== "string" ) {
+            value = JSON.stringify(value, function(key,value) {
+                if (value !== null && typeof value === 'object') {
+                    if (value.__encoded__ && value.hasOwnProperty('data') && value.hasOwnProperty('length')) {
+                        truncated = value.data.length !== value.length;
+                        return value.data;
+                    }
+                }
+                return value;
+            });
+        }
+        if (truncated) {
+            msg += "_truncated";
+        }
+        $("#clipboard-hidden").val(value).select();
+        var result =  document.execCommand("copy");
+        if (result && element) {
+            var popover = RED.popover.create({
+                target: element,
+                direction: 'left',
+                size: 'small',
+                content: RED._(msg)
+            });
+            setTimeout(function() {
+                popover.close();
+            },1000);
+            popover.open();
+        }
+        return result;
+    }
     return {
         init: function() {
             setupDialogs();
+
+            $('<input type="text" id="clipboard-hidden">').appendTo("body");
+
             RED.events.on("view:selection-changed",function(selection) {
                 if (!selection.nodes) {
                     RED.menu.setDisabled("menu-item-export",true);
@@ -15016,19 +16976,19 @@ RED.clipboard = (function() {
             RED.events.on("search:close",function() { disabled = false; });
             RED.events.on("type-search:open",function() { disabled = true; });
             RED.events.on("type-search:close",function() { disabled = false; });
-            RED.events.on("palette-editor:open",function() { disabled = true; });
-            RED.events.on("palette-editor:close",function() { disabled = false; });
 
 
             $('#chart').on("dragenter",function(event) {
-                if ($.inArray("text/plain",event.originalEvent.dataTransfer.types) != -1) {
+                if ($.inArray("text/plain",event.originalEvent.dataTransfer.types) != -1 ||
+                     $.inArray("Files",event.originalEvent.dataTransfer.types) != -1) {
                     $("#dropTarget").css({display:'table'});
                     RED.keyboard.add("*", "escape" ,hideDropTarget);
                 }
             });
 
             $('#dropTarget').on("dragover",function(event) {
-                if ($.inArray("text/plain",event.originalEvent.dataTransfer.types) != -1) {
+                if ($.inArray("text/plain",event.originalEvent.dataTransfer.types) != -1 ||
+                     $.inArray("Files",event.originalEvent.dataTransfer.types) != -1) {
                     event.preventDefault();
                 }
             })
@@ -15036,16 +16996,31 @@ RED.clipboard = (function() {
                 hideDropTarget();
             })
             .on("drop",function(event) {
-                var data = event.originalEvent.dataTransfer.getData("text/plain");
+                if ($.inArray("text/plain",event.originalEvent.dataTransfer.types) != -1) {
+                    var data = event.originalEvent.dataTransfer.getData("text/plain");
+                    data = data.substring(data.indexOf('['),data.lastIndexOf(']')+1);
+                    RED.view.importNodes(data);
+                } else if ($.inArray("Files",event.originalEvent.dataTransfer.types) != -1) {
+                    var files = event.originalEvent.dataTransfer.files;
+                    if (files.length === 1) {
+                        var file = files[0];
+                        var reader = new FileReader();
+                        reader.onload = (function(theFile) {
+                            return function(e) {
+                                RED.view.importNodes(e.target.result);
+                            };
+                        })(file);
+                        reader.readAsText(file);
+                    }
+                }
                 hideDropTarget();
-                data = data.substring(data.indexOf('['),data.lastIndexOf(']')+1);
-                RED.view.importNodes(data);
                 event.preventDefault();
             });
 
         },
         import: importNodes,
-        export: exportNodes
+        export: exportNodes,
+        copyText: copyText
     }
 })();
 ;/**
@@ -15581,7 +17556,11 @@ RED.notify = (function() {
             n.className = "notification notification-"+type;
         }
         n.style.display = "none";
-        n.innerHTML = msg;
+        if (typeof msg === "string") {
+            n.innerHTML = msg;
+        } else {
+            $(n).append(msg);
+        }
         $("#notifications").append(n);
         $(n).slideDown(300);
         n.close = (function() {
@@ -15597,7 +17576,11 @@ RED.notify = (function() {
         n.update = (function() {
             var nn = n;
             return function(msg,timeout) {
-                nn.innerHTML = msg;
+                if (typeof msg === "string") {
+                    nn.innerHTML = msg;
+                } else {
+                    $(nn).empty().append(msg);
+                }
                 if (timeout !== undefined && timeout > 0) {
                     window.clearTimeout(nn.timeoutid);
                     nn.timeoutid = window.setTimeout(nn.close,timeout);
@@ -15651,19 +17634,11 @@ RED.search = (function() {
     var results = [];
 
     function indexNode(n) {
-        var l = "";
-        if (n._def && n._def.label) {
-            l = n._def.label;
-            try {
-                l = (typeof l === "function" ? l.call(n) : l);
-                if (l) {
-                    l = (""+l).toLowerCase();
-                    index[l] = index[l] || {};
-                    index[l][n.id] = {node:n,label:l}
-                }
-            } catch(err) {
-                console.log("Definition error: "+n.type+".label",err);
-            }
+        var l = RED.utils.getNodeLabel(n);
+        if (l) {
+            l = (""+l).toLowerCase();
+            index[l] = index[l] || {};
+            index[l][n.id] = {node:n,label:l}
         }
         l = l||n.label||n.name||n.id||"";
 
@@ -15813,25 +17788,14 @@ RED.search = (function() {
 
                     var nodeDiv = $('<div>',{class:"red-ui-search-result-node"}).appendTo(div);
                     var colour = def.color;
-                    var icon_url = "arrow-in.png";
+                    var icon_url = RED.utils.getNodeIcon(def,node);
                     if (node.type === 'tab') {
                         colour = "#C0DEED";
-                        icon_url = "subflow.png";
-                    } else if (def.category === 'config') {
-                        icon_url = "cog.png";
-                    } else if (node.type === 'unknown') {
-                        icon_url = "alert.png";
-                    } else {
-                        try {
-                            icon_url = (typeof def.icon === "function" ? def.icon.call({}) : def.icon);
-                        } catch(err) {
-                            console.log("Definition error: "+nt+".icon",err);
-                        }
                     }
                     nodeDiv.css('backgroundColor',colour);
 
                     var iconContainer = $('<div/>',{class:"palette_icon_container"}).appendTo(nodeDiv);
-                    $('<div/>',{class:"palette_icon",style:"background-image: url(icons/"+icon_url+")"}).appendTo(iconContainer);
+                    $('<div/>',{class:"palette_icon",style:"background-image: url("+icon_url+")"}).appendTo(iconContainer);
 
                     var contentDiv = $('<div>',{class:"red-ui-search-result-description"}).appendTo(div);
                     if (node.z) {
@@ -15908,8 +17872,6 @@ RED.search = (function() {
 
         RED.events.on("editor:open",function() { disabled = true; });
         RED.events.on("editor:close",function() { disabled = false; });
-        RED.events.on("palette-editor:open",function() { disabled = true; });
-        RED.events.on("palette-editor:close",function() { disabled = false; });
         RED.events.on("type-search:open",function() { disabled = true; });
         RED.events.on("type-search:close",function() { disabled = false; });
 
@@ -16040,20 +18002,11 @@ RED.search = (function() {
 
                 var nodeDiv = $('<div>',{class:"red-ui-search-result-node"}).appendTo(div);
                 var colour = def.color;
-                var icon_url = "arrow-in.png";
-                if (def.category === 'config') {
-                    icon_url = "cog.png";
-                } else {
-                    try {
-                        icon_url = (typeof def.icon === "function" ? def.icon.call({}) : def.icon);
-                    } catch(err) {
-                        console.log("Definition error: "+object.type+".icon",err);
-                    }
-                }
+                var icon_url = RED.utils.getNodeIcon(def);
                 nodeDiv.css('backgroundColor',colour);
 
                 var iconContainer = $('<div/>',{class:"palette_icon_container"}).appendTo(nodeDiv);
-                $('<div/>',{class:"palette_icon",style:"background-image: url(icons/"+icon_url+")"}).appendTo(iconContainer);
+                $('<div/>',{class:"palette_icon",style:"background-image: url("+icon_url+")"}).appendTo(iconContainer);
 
                 if (def.inputs > 0) {
                     $('<div/>',{class:"red-ui-search-result-node-port"}).appendTo(nodeDiv);
@@ -16881,6 +18834,222 @@ RED.subflow = (function() {
         removeInput: removeSubflowInput,
         removeOutput: removeSubflowOutput
     }
+})();
+;/**
+ * Copyright JS Foundation and other contributors, http://js.foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+
+RED.userSettings = (function() {
+
+    var trayWidth = 700;
+    var settingsVisible = false;
+
+    var panes = [];
+
+    function addPane(options) {
+        panes.push(options);
+    }
+
+    function show(initialTab) {
+        if (settingsVisible) {
+            return;
+        }
+        settingsVisible = true;
+        var tabContainer;
+
+        var trayOptions = {
+            title: "User Settings",
+            buttons: [
+                {
+                    id: "node-dialog-ok",
+                    text: RED._("common.label.close"),
+                    class: "primary",
+                    click: function() {
+                        RED.tray.close();
+                    }
+                }
+            ],
+            resize: function(dimensions) {
+                trayWidth = dimensions.width;
+            },
+            open: function(tray) {
+                var trayBody = tray.find('.editor-tray-body');
+                var settingsContent = $('<div></div>').appendTo(trayBody);
+                var tabContainer = $('<div></div>',{id:"user-settings-tabs-container"}).appendTo(settingsContent);
+
+                $('<ul></ul>',{id:"user-settings-tabs"}).appendTo(tabContainer);
+                var settingsTabs = RED.tabs.create({
+                    id: "user-settings-tabs",
+                    vertical: true,
+                    onchange: function(tab) {
+                        setTimeout(function() {
+                            $("#user-settings-tabs-content").children().hide();
+                            $("#" + tab.id).show();
+                            if (tab.pane.focus) {
+                                tab.pane.focus();
+                            }
+                        },50);
+                    }
+                });
+                var tabContents = $('<div></div>',{id:"user-settings-tabs-content"}).appendTo(settingsContent);
+
+                panes.forEach(function(pane) {
+                    settingsTabs.addTab({
+                        id: "user-settings-tab-"+pane.id,
+                        label: pane.title,
+                        pane: pane
+                    });
+                    pane.get().hide().appendTo(tabContents);
+                });
+                settingsContent.i18n();
+                settingsTabs.activateTab("user-settings-tab-"+(initialTab||'view'))
+                $("#sidebar-shade").show();
+            },
+            close: function() {
+                settingsVisible = false;
+                panes.forEach(function(pane) {
+                    if (pane.close) {
+                        pane.close();
+                    }
+                });
+                $("#sidebar-shade").hide();
+
+            },
+            show: function() {}
+        }
+        if (trayWidth !== null) {
+            trayOptions.width = trayWidth;
+        }
+        RED.tray.show(trayOptions);
+    }
+
+    var viewSettings = [
+        {
+            title: "Grid",
+            options: [
+                {setting:"view-show-grid",label:"menu.label.view.showGrid",toggle:true,onchange:"core:toggle-show-grid"},
+                {setting:"view-snap-grid",label:"menu.label.view.snapGrid",toggle:true,onchange:"core:toggle-snap-grid"},
+                {setting:"view-grid-size",label:"menu.label.view.gridSize",type:"number",default: 20, onchange:RED.view.gridSize}
+            ]
+        },
+        {
+            title: "Nodes",
+            options: [
+                {setting:"view-node-status",label:"menu.label.displayStatus",default: true, toggle:true,onchange:"core:toggle-status"}
+            ]
+        },
+        {
+            title: "Other",
+            options: [
+                {setting:"view-show-tips",label:"menu.label.showTips",toggle:true,default:true,onchange:"core:toggle-show-tips"}
+            ]
+        }
+    ];
+
+    var allSettings = {};
+
+    function createViewPane() {
+
+        var pane = $('<div id="user-settings-tab-view" class="node-help"></div>');
+
+        viewSettings.forEach(function(section) {
+            $('<h3></h3>').text(section.title).appendTo(pane);
+            section.options.forEach(function(opt) {
+                var initialState = RED.settings.get(opt.setting);
+                var row = $('<div class="user-settings-row"></div>').appendTo(pane);
+                var input;
+                if (opt.toggle) {
+                    input = $('<label for="user-settings-'+opt.setting+'"><input id="user-settings-'+opt.setting+'" type="checkbox"> '+RED._(opt.label)+'</label>').appendTo(row).find("input");
+                    input.prop('checked',initialState);
+                } else {
+                    $('<label for="user-settings-'+opt.setting+'">'+RED._(opt.label)+'</label>').appendTo(row);
+                    $('<input id="user-settings-'+opt.setting+'" type="'+(opt.type||"text")+'">').appendTo(row).val(initialState);
+                }
+            });
+        })
+        return pane;
+    }
+
+    function setSelected(id, value) {
+        var opt = allSettings[id];
+        RED.settings.set(opt.setting,value);
+        var callback = opt.onchange;
+        if (typeof callback === 'string') {
+            callback = RED.actions.get(callback);
+        }
+        if (callback) {
+            callback.call(opt,value);
+        }
+    }
+    function toggle(id) {
+        var opt = allSettings[id];
+        var state = RED.settings.get(opt.setting);
+        setSelected(id,!state);
+    }
+
+
+    function init() {
+        RED.actions.add("core:show-user-settings",show);
+        RED.actions.add("core:show-help", function() { show('keyboard')});
+
+        addPane({
+            id:'view',
+            title: 'View',
+            get: createViewPane,
+            close: function() {
+                viewSettings.forEach(function(section) {
+                    section.options.forEach(function(opt) {
+                        var input = $("#user-settings-"+opt.setting);
+                        if (opt.toggle) {
+                            setSelected(opt.setting,input.prop('checked'));
+                        } else {
+                            setSelected(opt.setting,input.val());
+                        }
+                    });
+                })
+            }
+        })
+
+        viewSettings.forEach(function(section) {
+            section.options.forEach(function(opt) {
+                allSettings[opt.setting] = opt;
+                if (opt.onchange) {
+                    var value = RED.settings.get(opt.setting);
+                    if (value === null && opt.hasOwnProperty('default')) {
+                        value = opt.default;
+                        RED.settings.set(opt.setting,value);
+                    }
+
+                    var callback = opt.onchange;
+                    if (typeof callback === 'string') {
+                        callback = RED.actions.get(callback);
+                    }
+                    if (callback) {
+                        callback.call(opt,value);
+                    }
+                }
+            });
+        });
+
+    }
+    return {
+        init: init,
+        toggle: toggle,
+        show: show,
+        add: addPane
+    };
 })();
 ;/**
  * Copyright JS Foundation and other contributors, http://js.foundation

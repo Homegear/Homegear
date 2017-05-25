@@ -96,10 +96,6 @@ if(!$user->checkAuth(true)) die();
         <div id="palette-search" class="palette-search hide">
             <input type="text" data-i18n="[placeholder]palette.filter"></input>
         </div>
-        <div id="palette-editor">
-            <div class="editor-tray-header"><div class="editor-tray-titlebar"><ul class="editor-tray-breadcrumbs"><li data-i18n="palette.editor.title"></li></ul></div><div class="editor-tray-toolbar"><button id="palette-editor-close" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only primary" role="button" aria-disabled="false" data-i18n="common.label.done"></button></div></div>
-            <ul id="palette-editor-tabs"></ul>
-        </div>
         <div id="palette-container" class="palette-scroll hide"></div>
         <div id="palette-footer">
             <a class="palette-button" id="palette-collapse-all" href="#"><i class="fa fa-angle-double-up"></i></a>
@@ -192,10 +188,11 @@ if(!$user->checkAuth(true)) die();
 
 <script type="text/x-red" data-template-name="subflow-template">
     <div class="form-row">
+        <i class="fa fa-tag"></i>
         <label for="subflow-input-name" data-i18n="common.label.name"></label><input type="text" id="subflow-input-name">
     </div>
     <div class="form-row" style="margin-bottom: 0px;">
-        <label for="subflow-input-info" data-i18n="subflow.info"></label>
+        <label for="subflow-input-info" data-i18n="editor:subflow.info"></label>
         <a href="https://help.github.com/articles/markdown-basics/" style="font-size: 0.8em; float: right;" data-i18n="[html]subflow.format"></a>
     </div>
     <div class="form-row node-text-editor-row">
@@ -205,14 +202,44 @@ if(!$user->checkAuth(true)) die();
 </script>
 
 <script type="text/x-red" data-template-name="_expression">
-    <div class="form-row node-text-editor-row">
-        <div style="height: 200px;min-height: 150px;" class="node-text-editor" id="node-input-expression"></div>
+    <div id="node-input-expression-panels">
+        <div id="node-input-expression-panel-expr" class="red-ui-panel">
+            <div class="form-row" style="margin-bottom: 3px; text-align: right;">
+                <span class="node-input-expression-legacy"><i class="fa fa-exclamation-circle"></i> <span data-i18n="expressionEditor.compatMode"></span></span>
+                <button id="node-input-expression-reformat" class="editor-button editor-button-small"><span data-i18n="expressionEditor.format"></span></button>
+            </div>
+            <div class="form-row node-text-editor-row">
+                <div class="node-text-editor" id="node-input-expression"></div>
+            </div>
+        </div>
+        <div id="node-input-expression-panel-info" class="red-ui-panel">
+            <div class="form-row">
+                <ul id="node-input-expression-tabs"></ul>
+                <div id="node-input-expression-tab-help" class="node-input-expression-tab-content hide">
+                    <div>
+                        <select id="node-input-expression-func"></select>
+                        <button id="node-input-expression-func-insert" class="editor-button" data-i18n="expressionEditor.insert"></button>
+                    </div>
+                    <div id="node-input-expression-help"></div>
+                </div>
+                <div id="node-input-expression-tab-test" class="node-input-expression-tab-content hide">
+                    <div>
+                        <span style="display: inline-block; width: calc(50% - 5px);" data-i18n="expressionEditor.data"></span>
+                        <span style="display: inline-block; width: calc(50% - 5px);" data-i18n="expressionEditor.result"></span>
+                    </div>
+                    <div style="display: inline-block; width: calc(50% - 5px);" class="node-text-editor" id="node-input-expression-test-data"></div>
+                    <div style="display: inline-block; width: calc(50% - 5px);" class="node-text-editor" id="node-input-expression-test-result"></div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="form-row">
-        <label for="node-input-expression-func" data-i18n="expressionEditor.functions"></label>
-        <select id="node-input-expression-func"></select>
-        <button id="node-input-expression-func-insert" class="editor-button" data-i18n="expressionEditor.insert"></button>
-        <div style="min-height: 200px;" id="node-input-expression-help"></div>
+</script>
+<script type="text/x-red" data-template-name="_json">
+    <div class="form-row" style="margin-bottom: 3px; text-align: right;">
+        <button id="node-input-expression-reformat" class="editor-button editor-button-small"><span data-i18n="jsonEditor.format"></span></button>
+    </div>
+    <div class="form-row node-text-editor-row">
+        <div style="height: 200px;min-height: 150px;" class="node-text-editor" id="node-input-json"></div>
     </div>
 </script>
 
