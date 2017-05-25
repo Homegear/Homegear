@@ -1064,7 +1064,18 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 		}
 		else if (path == "flows/flows")
 		{
-			std::vector<char> fileContent = _bl->io.getBinaryFileContent(_bl->settings.flowsPath() + "data/flows.json");
+			std::string flowsFile = _bl->settings.flowsPath() + "data/flows.json";
+			std::vector<char> fileContent;
+			if(GD::bl->io.fileExists(flowsFile)) fileContent = _bl->io.getBinaryFileContent(flowsFile);
+			else
+			{
+				std::string randomString1 = BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(-2147483648, 2147483647), 8);
+				BaseLib::HelperFunctions::toLower(randomString1);
+				std::string randomString2 = BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(0, 1048575), 5);
+				BaseLib::HelperFunctions::toLower(randomString2);
+				std::string tempString = "[{\"id\":\"" + randomString1 + "." + randomString2 + "\",\"label\":\"Flow 1\",\"type\":\"tab\"}]";
+				fileContent.insert(fileContent.end(), tempString.begin(), tempString.end());
+			}
 			std::vector<char> md5;
 			BaseLib::Security::Hash::md5(fileContent, md5);
 			std::string md5String = BaseLib::HelperFunctions::getHexString(md5);
