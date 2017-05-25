@@ -9071,8 +9071,8 @@ RED.view = (function() {
 
     var workspaceScrollPositions = {};
 
-    var gridSize = 20;
-    var snapGrid = true;
+    var gridSize = 10;
+    var snapGrid = false;
 
     var activeSpliceLink;
     var spliceActive = false;
@@ -9277,7 +9277,7 @@ RED.view = (function() {
                "stroke" : "#eee",
                "stroke-width" : "1px"
            });
-    grid.style("visibility","visible");
+    grid.style("visibility","hidden");
 
     updateGrid();
 
@@ -18996,9 +18996,9 @@ RED.userSettings = (function() {
         {
             title: "Grid",
             options: [
-                {setting:"view-show-grid",label:"menu.label.view.showGrid",toggle:true,onchange:"core:toggle-show-grid"},
-                {setting:"view-snap-grid",label:"menu.label.view.snapGrid",toggle:true,onchange:"core:toggle-snap-grid"},
-                {setting:"view-grid-size",label:"menu.label.view.gridSize",type:"number",default: 20, onchange:RED.view.gridSize}
+                {setting:"view-show-grid",label:"menu.label.view.showGrid",default:true,toggle:true,onchange:"core:toggle-show-grid"},
+                {setting:"view-snap-grid",label:"menu.label.view.snapGrid",default:true,toggle:true,onchange:"core:toggle-snap-grid"},
+                {setting:"view-grid-size",label:"menu.label.view.gridSize",type:"number",default:10, onchange:RED.view.gridSize}
             ]
         },
         {
