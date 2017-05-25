@@ -98,6 +98,7 @@ private:
 	std::atomic_bool _stopServer;
 	std::atomic_bool _nodeEventsEnabled;
 	std::thread _mainThread;
+	std::thread _maintenanceThread;
 	int32_t _backlog = 100;
 	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
 	std::mutex _newProcessMutex;

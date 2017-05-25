@@ -155,7 +155,8 @@ HomegearWS.prototype.invokeEvent = function(data) {
 }
 
 HomegearWS.prototype.connectServer = function() {
-	this.server = new WebSocket(((this.ssl) ? 'wss://' : 'ws://') + this.host + ':' + this.port + '/' + this.id, "nodeClient");
+	var host = (this.host.indexOf(':') > -1 && this.host.charAt(0) != '[') ? '[' + this.host + ']' : this.host;
+	this.server = new WebSocket(((this.ssl) ? 'wss://' : 'ws://') + host + ':' + this.port + '/' + this.id, "nodeClient");
 	this.server.onmessage = function(event) {
 		response = JSON.parse(event.data);
 		if(!("auth" in response)) {
@@ -198,7 +199,8 @@ HomegearWS.prototype.connectServer = function() {
 }
 
 HomegearWS.prototype.connectClient = function() {
-	this.client = new WebSocket(((this.ssl) ? 'wss://' : 'ws://') + this.host + ':' + this.port + '/' + this.id, 'server');
+	var host = (this.host.indexOf(':') > -1 && this.host.charAt(0) != '[') ? '[' + this.host + ']' : this.host;
+	this.client = new WebSocket(((this.ssl) ? 'wss://' : 'ws://') + host + ':' + this.port + '/' + this.id, 'server');
 	this.client.onmessage = function(event) {
 		this.sending = false;
 		response = JSON.parse(event.data);

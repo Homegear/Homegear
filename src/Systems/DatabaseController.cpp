@@ -596,11 +596,16 @@ std::set<std::string> DatabaseController::getAllNodeDataNodes()
 	return std::set<std::string>();
 }
 
-BaseLib::PVariable DatabaseController::getNodeData(std::string& node, std::string& key)
+BaseLib::PVariable DatabaseController::getNodeData(std::string& node, std::string& key, bool requestFromFlowsServer)
 {
 	try
 	{
 		BaseLib::PVariable value;
+
+		//Only return passwords if request comes from FlowsServer
+		std::string lowerCharKey = key;
+		BaseLib::HelperFunctions::toLower(lowerCharKey);
+		if(!requestFromFlowsServer && lowerCharKey.size() >= 8 && lowerCharKey.compare(lowerCharKey.size() - 8, 8, "password") == 0) return std::make_shared<BaseLib::Variable>(std::string());
 
 		if(!key.empty())
 		{
@@ -635,7 +640,14 @@ BaseLib::PVariable DatabaseController::getNodeData(std::string& node, std::strin
 			value = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 			for(auto& row : *rows)
 			{
-				value->structValue->emplace(row.second.at(0)->textValue, _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue));
+				std::string innerKey = row.second.at(0)->textValue;
+				lowerCharKey = innerKey;
+				BaseLib::HelperFunctions::toLower(lowerCharKey);
+				BaseLib::PVariable innerValue;
+				//Only return passwords if request comes from FlowsServer
+				if(!requestFromFlowsServer && lowerCharKey.size() >= 8 && lowerCharKey.compare(lowerCharKey.size() - 8, 8, "password") == 0) innerValue = std::make_shared<BaseLib::Variable>(std::string());
+				else innerValue = _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue);
+				value->structValue->emplace(innerKey, innerValue);
 			}
 		}
 		else

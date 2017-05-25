@@ -49,6 +49,7 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 2, 1000)
 	_jsonEncoder = std::unique_ptr<BaseLib::Rpc::JsonEncoder>(new BaseLib::Rpc::JsonEncoder(GD::bl.get()));
 	_jsonDecoder = std::unique_ptr<BaseLib::Rpc::JsonDecoder>(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
 	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
+	_dummyClientInfo->flowsServer = true;
 
 	_rpcMethods.emplace("devTest", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDevTest()));
 	_rpcMethods.emplace("system.getCapabilities", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemGetCapabilities()));
@@ -144,6 +145,7 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 2, 1000)
 FlowsServer::~FlowsServer()
 {
 	if(!_stopServer) stop();
+	GD::bl->threadManager.join(_maintenanceThread);
 }
 
 void FlowsServer::collectGarbage()
@@ -1191,7 +1193,7 @@ std::string FlowsServer::handlePost(std::string& path, BaseLib::Http& http, std:
 			std::string md5String = BaseLib::HelperFunctions::getHexString(md5);
 			BaseLib::HelperFunctions::toLower(md5String);
 
-			restartFlows();
+			GD::bl->threadManager.start(_maintenanceThread, true, &FlowsServer::restartFlows, this);
 
 			return "{\"rev\": \"" + md5String + "\"}";
 		}

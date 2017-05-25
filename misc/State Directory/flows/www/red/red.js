@@ -574,13 +574,17 @@ RED.comms = (function() {
 
     function connectWS() {
         var ssl = window.location.protocol == "https:" ? true : false;
-        var hostArray = window.location.host.split(':');
-        var server = hostArray[0];
-        var port = '80';
-        if(hostArray.length > 1) {
-            port = hostArray[1];
-        } else if(ssl) {
-            port = '443';
+        var server = '';
+        var port = ssl ? '443' : '80';
+        var ipEndIndex = window.location.host.indexOf(']');
+        if(ipEndIndex > -1) { //IPv6
+            part2 = window.location.host.substring(ipEndIndex);
+            if(part2.length > 2 && part2.charAt(1) == ':') port = part2.substring(2);
+            server = window.location.host.substring(0, ipEndIndex + 1);
+        } else {
+            var hostArray = window.location.host.splitLast(':');
+            server = hostArray[0];
+            if(hostArray.length > 1) port = hostArray[1];
         }
         var sessionId = readCookie('PHPSESSID');
         homegear = new HomegearWS(server, port, 'hgflows', ssl, sessionId);
