@@ -582,7 +582,7 @@ RED.comms = (function() {
             if(part2.length > 2 && part2.charAt(1) == ':') port = part2.substring(2);
             server = window.location.host.substring(0, ipEndIndex + 1);
         } else {
-            var hostArray = window.location.host.splitLast(':');
+            var hostArray = window.location.host.split(':');
             server = hostArray[0];
             if(hostArray.length > 1) port = hostArray[1];
         }
