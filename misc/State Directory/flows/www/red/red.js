@@ -243,7 +243,7 @@ RED.settings = (function () {
                 if (!RED.settings.user || RED.settings.user.anonymous) {
                     RED.settings.remove("auth-tokens");
                 }
-                console.log("Node-RED: " + data.version);
+                console.log("Node-BLUE: " + data.version);
                 done();
             },
             error: function(jqXHR,textStatus,errorThrown) {
@@ -5267,6 +5267,8 @@ RED.popover = (function() {
         var delay = options.delay;
         var width = options.width||"auto";
         var size = options.size||"default";
+        var offsetX = options.offsetX||0;
+        var offsetY = options.offsetY||0;
         if (!deltaSizes[size]) {
             throw new Error("Invalid RED.popover size value:",size);
         }
@@ -5292,6 +5294,8 @@ RED.popover = (function() {
 
 
                 var targetPos = target.offset();
+                targetPos.top += offsetY;
+                targetPos.left += offsetX;
                 var targetWidth = target.width();
                 var targetHeight = target.height();
 
@@ -11177,6 +11181,34 @@ RED.view = (function() {
                                 .on("mouseover",(function(){var node = d; return function(d,i){portMouseOver(d3.select(this),node,PORT_TYPE_INPUT,i);}})())
                                 .on("mouseout",(function(){var node = d; return function(d,i) {portMouseOut(d3.select(this),node,PORT_TYPE_INPUT,i);}})());
 
+                            input_group.each(function(i){
+                                if(d._def && d._def.inputInfo && i < d._def.inputInfo.length) {
+                                    var inputInfo = d._def.inputInfo[i];
+                                    var infoBody = i18n.t(d.type + "/" + d.type + ".hni:" + d.type + ".input" + (i + 1) + "Description");
+                                    if(inputInfo.types) {
+                                        var content = inputInfo.label ? "<p><b>" + inputInfo.label + "</b></p>" : "";
+                                        content += "<p><i>";
+                                        for(var i = 0; i < inputInfo.types.length; i++) {
+                                            if(i != 0) content += ", ";
+                                            content += inputInfo.types[i];
+                                        }
+                                        content += "</i></p>" + infoBody;
+
+                                        var popover = RED.popover.create({
+                                            target:$(this),
+                                            trigger: "hover",
+                                            width: "250px",
+                                            content: content,
+                                            direction: "left",
+                                            offsetX: -13,
+                                            offsetY: 4,
+                                            delay: { show: 750, hide: 50 }
+                                        });
+                                        $(this).data('popover',popover);
+                                    }
+                                }
+                            });
+
                             d._inputPorts.exit().remove();
                             if (d._inputPorts) {
                                 numInputs = d.inputs || 1;
@@ -11205,7 +11237,7 @@ RED.view = (function() {
                                 d._inputPortLabels.each(function(d,i) {
                                         var label = d3.select(this);
                                         label.attr("transform", function(d) { return "translate("+x+","+((y+18*i)-5)+")";});
-                                        if(node._def && node._def.inputLabels && i < node._def.inputLabels.length) label.selectAll(".input_label").text(node._def.inputLabels[i]);
+                                        if(node._def && node._def.inputInfo && i < node._def.inputInfo.length && node._def.inputInfo[i].label) label.selectAll(".input_label").text(node._def.inputInfo[i].label);
                                         else if(numInputs > 1) label.selectAll(".input_label").text(i);
                                 });
                             }
@@ -11223,6 +11255,33 @@ RED.view = (function() {
                                 .on("touchend",(function(){var node = d; return function(d,i){portMouseUp(node,PORT_TYPE_OUTPUT,i);}})() )
                                 .on("mouseover",(function(){var node = d; return function(d,i){portMouseOver(d3.select(this),node,PORT_TYPE_OUTPUT,i);}})())
                                 .on("mouseout",(function(){var node = d; return function(d,i) {portMouseOut(d3.select(this),node,PORT_TYPE_OUTPUT,i);}})());
+
+                            output_group.each(function(i){
+                                if(d._def && d._def.outputInfo && i < d._def.outputInfo.length) {
+                                    var outputInfo = d._def.outputInfo[i];
+                                    var infoBody = i18n.t(d.type + "/" + d.type + ".hni:" + d.type + ".output" + (i + 1) + "Description");
+                                    if(outputInfo.types) {
+                                        var content = outputInfo.label ? "<p><b>" + outputInfo.label + "</b></p>" : "";
+                                        content += "<p><i>";
+                                        for(var i = 0; i < outputInfo.types.length; i++) {
+                                            if(i != 0) content += ", ";
+                                            content += outputInfo.types[i];
+                                        }
+                                        content += "</i></p>" + infoBody;
+
+                                        var popover = RED.popover.create({
+                                            target:$(this),
+                                            trigger: "hover",
+                                            width: "250px",
+                                            content: content,
+                                            offsetX: 10,
+                                            offsetY: 4,
+                                            delay: { show: 750, hide: 50 }
+                                        });
+                                        $(this).data('popover',popover);
+                                    }
+                                }
+                            });
 
                             d._outputPorts.exit().remove();
                             if (d._outputPorts) {
@@ -11252,7 +11311,7 @@ RED.view = (function() {
                                 d._outputPortLabels.each(function(d,i) {
                                         var label = d3.select(this);
                                         label.attr("transform", function(d) { return "translate("+x+","+((y+18*i)-5)+")";});
-                                        if(node._def !== undefined && node._def.outputLabels && i < node._def.outputLabels.length) label.selectAll(".output_label").text(node._def.outputLabels[i]);
+                                        if(node._def && node._def.outputInfo && i < node._def.outputInfo.length && node._def.outputInfo[i].label) label.selectAll(".input_label").text(node._def.outputInfo[i].label);
                                         else if(numOutputs > 1) label.selectAll(".output_label").text(i);
                                 });
                             }
@@ -12238,10 +12297,8 @@ RED.palette = (function() {
             if (label != type) {
                 l = "<p><b>"+RED.text.bidi.enforceTextDirectionWithUCC(label)+"</b><br/><i>"+type+"</i></p>";
             }
-            popOverContent = $(l+(info?info:$("script[data-help-name='"+type+"']").html()||"<p>"+RED._("palette.noInfo")+"</p>").trim())
-                                .filter(function(n) {
-                                    return (this.nodeType == 1 && this.nodeName == "P") || (this.nodeType == 3 && this.textContent.trim().length > 0)
-                                }).slice(0,2);
+            var helpContent = i18n.t(type + "/" + type + ".hni:" + type + ".paletteHelp");
+            popOverContent = $(l+(info?info:helpContent||"<p>"+RED._("palette.noInfo")+"</p>").trim());
         } catch(err) {
             // Malformed HTML may cause errors. TODO: need to understand what can break
             // NON-NLS: internal debug
@@ -12345,7 +12402,7 @@ RED.palette = (function() {
                 if (nt.indexOf("subflow:") === 0) {
                     helpText = marked(RED.nodes.subflow(nt.substring(8)).info||"");
                 } else {
-                    helpText = $("script[data-help-name='"+d.type+"']").html()||"";
+                    helpText = i18n.t(nt + "/" + nt + ".hni:" + nt + ".help");
                 }
                 var help = '<div class="node-help">'+helpText+"</div>";
                 RED.sidebar.info.set(help);
