@@ -57,6 +57,7 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 2, 1000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("stopFlow", std::bind(&FlowsClient::stopFlow, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("flowCount", std::bind(&FlowsClient::flowCount, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("nodeOutput", std::bind(&FlowsClient::nodeOutput, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("invokeNodeMethod", std::bind(&FlowsClient::invokeExternalNodeMethod, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("setNodeVariable", std::bind(&FlowsClient::setNodeVariable, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("enableNodeEvents", std::bind(&FlowsClient::enableNodeEvents, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("disableNodeEvents", std::bind(&FlowsClient::disableNodeEvents, this, std::placeholders::_1)));
@@ -461,6 +462,36 @@ Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray& para
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
+Flows::PVariable FlowsClient::invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray& parameters)
+{
+	try
+	{
+		Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
+		if(node) return node->invokeLocal(parameters->at(1)->stringValue, parameters->at(2)->arrayValue);
+
+		Flows::PArray parameters = std::make_shared<Flows::Array>();
+		parameters->reserve(3);
+		parameters->push_back(std::make_shared<Flows::Variable>(nodeId));
+		parameters->push_back(std::make_shared<Flows::Variable>(methodName));
+		parameters->push_back(std::make_shared<Flows::Variable>(parameters));
+
+		return invoke("invokeNodeMethod", parameters);
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
 void FlowsClient::sendResponse(Flows::PVariable& packetId, Flows::PVariable& variable)
 {
 	try
@@ -802,6 +833,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 
 					nodeObject->setLog(std::function<void(std::string, int32_t, std::string)>(std::bind(&FlowsClient::log, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 					nodeObject->setInvoke(std::function<Flows::PVariable(std::string, Flows::PArray&)>(std::bind(&FlowsClient::invoke, this, std::placeholders::_1, std::placeholders::_2)));
+					nodeObject->setInvokeNodeMethod(std::function<Flows::PVariable(std::string, std::string, Flows::PArray&)>(std::bind(&FlowsClient::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 					nodeObject->setSubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::subscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
 					nodeObject->setUnsubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::unsubscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
 					nodeObject->setOutput(std::function<void(std::string, uint32_t, Flows::PVariable)>(std::bind(&FlowsClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
@@ -909,6 +941,31 @@ Flows::PVariable FlowsClient::nodeOutput(Flows::PArray& parameters)
 		if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
 		queueOutput(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2));
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable FlowsClient::invokeExternalNodeMethod(Flows::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+
+		Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
+		if(!node) return Flows::Variable::createError(-1, "Unknown node.");
+		return node->invokeLocal(parameters->at(1)->stringValue, parameters->at(2)->arrayValue);
 	}
     catch(const std::exception& ex)
     {

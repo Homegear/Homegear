@@ -116,6 +116,7 @@ private:
 
 	void registerClient();
 	Flows::PVariable invoke(std::string methodName, Flows::PArray& parameters);
+	Flows::PVariable invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray& parameters);
 	void sendResponse(Flows::PVariable& packetId, Flows::PVariable& variable);
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
@@ -160,6 +161,7 @@ private:
 		Flows::PVariable flowCount(Flows::PArray& parameters);
 
 		Flows::PVariable nodeOutput(Flows::PArray& parameters);
+		Flows::PVariable invokeExternalNodeMethod(Flows::PArray& parameters);
 
 		Flows::PVariable setNodeVariable(Flows::PArray& parameters);
 

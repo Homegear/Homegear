@@ -139,6 +139,7 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 2, 1000)
 
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("registerFlowsClient", std::bind(&FlowsServer::registerFlowsClient, this, std::placeholders::_1, std::placeholders::_2)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("executePhpNode", std::bind(&FlowsServer::executePhpNode, this, std::placeholders::_1, std::placeholders::_2)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("invokeNodeMethod", std::bind(&FlowsServer::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("nodeEvent", std::bind(&FlowsServer::nodeEvent, this, std::placeholders::_1, std::placeholders::_2)));
 }
 
@@ -2104,12 +2105,50 @@ BaseLib::PVariable FlowsServer::executePhpNode(PFlowsClientData& clientData, Bas
 {
 	try
 	{
-		if(parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
+		if(parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects exactly four parameters.");
 
 		std::string filename = parameters->at(1)->stringValue.substr(parameters->at(1)->stringValue.find_last_of('/') + 1);
 		BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::node, parameters->at(0), parameters->at(1)->stringValue, filename, parameters->at(2)->integerValue, parameters->at(3)));
 		GD::scriptEngineServer->executeScript(scriptInfo, false);
 		return BaseLib::PVariable(new BaseLib::Variable());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable FlowsServer::invokeNodeMethod(PFlowsClientData& clientData, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
+
+		PFlowsClientData clientData;
+		int32_t clientId = 0;
+		{
+			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+			auto nodeClientIdIterator = _nodeClientIdMap.find(parameters->at(0)->stringValue);
+			if(nodeClientIdIterator == _nodeClientIdMap.end()) return BaseLib::Variable::createError(-1, "Unknown node.");
+			clientId = nodeClientIdIterator->second;
+		}
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			auto clientIterator = _clients.find(clientId);
+			if(clientIterator == _clients.end()) return BaseLib::Variable::createError(-32501, "Node process not found.");
+			clientData = clientIterator->second;
+		}
+
+		return sendRequest(clientData, "invokeNodeMethod", parameters);
 	}
     catch(const std::exception& ex)
     {
