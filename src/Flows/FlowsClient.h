@@ -148,6 +148,12 @@ private:
 		Flows::PVariable startFlow(Flows::PArray& parameters);
 
 		/**
+		 * Executed when all config nodes are available.
+		 * @param parameters
+		 */
+		Flows::PVariable configNodesStarted(Flows::PArray& parameters);
+
+		/**
 		 * Stops a flow.
 		 * @param parameters
 		 */

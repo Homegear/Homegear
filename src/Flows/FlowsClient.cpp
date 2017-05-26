@@ -54,6 +54,7 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 2, 1000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("reload", std::bind(&FlowsClient::reload, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("shutdown", std::bind(&FlowsClient::shutdown, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("startFlow", std::bind(&FlowsClient::startFlow, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("configNodesStarted", std::bind(&FlowsClient::configNodesStarted, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("stopFlow", std::bind(&FlowsClient::stopFlow, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("flowCount", std::bind(&FlowsClient::flowCount, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("nodeOutput", std::bind(&FlowsClient::nodeOutput, this, std::placeholders::_1)));
@@ -852,6 +853,36 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 		_flows.emplace(flow->id, flow);
 
 		return Flows::PVariable(new Flows::Variable());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable FlowsClient::configNodesStarted(Flows::PArray& parameters)
+{
+	try
+	{
+		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+		for(auto& flow : _flows)
+		{
+			for(auto& nodeIterator : flow.second->nodes)
+			{
+				Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
+				if(node) node->configNodesStarted();
+			}
+		}
+		return std::make_shared<Flows::Variable>();
 	}
     catch(const std::exception& ex)
     {

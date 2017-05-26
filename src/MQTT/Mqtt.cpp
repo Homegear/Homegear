@@ -34,6 +34,7 @@ Mqtt::Mqtt() : BaseLib::IQueue(GD::bl.get(), 2, 1000)
 {
 	try
 	{
+		_packetId = 1;
 		_started = false;
 		_reconnecting = false;
 		_connected = false;
