@@ -151,6 +151,12 @@ private:
 		Flows::PVariable startFlow(Flows::PArray& parameters);
 
 		/**
+		 * Executes the method "start" on all nodes. It is run after all nodes are initialized.
+		 * @param parameters
+		 */
+		Flows::PVariable startNodes(Flows::PArray& parameters);
+
+		/**
 		 * Executed when all config nodes are available.
 		 * @param parameters
 		 */

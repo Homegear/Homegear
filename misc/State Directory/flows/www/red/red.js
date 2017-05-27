@@ -11195,7 +11195,7 @@ RED.view = (function() {
                             input_group.each(function(i){
                                 if(d._def && d._def.inputInfo && i < d._def.inputInfo.length) {
                                     var inputInfo = d._def.inputInfo[i];
-                                    var infoBody = i18n.t(d.type + "/" + d.type + ".hni:" + d.type + ".input" + (i + 1) + "Description");
+                                    var infoBody = i18n.t(d.namespace + "/" + d.type + ".hni:" + d.type + ".input" + (i + 1) + "Description");
                                     if(inputInfo.types) {
                                         var content = inputInfo.label ? "<p><b>" + inputInfo.label + "</b></p>" : "";
                                         content += "<p><i>";
@@ -11270,7 +11270,7 @@ RED.view = (function() {
                             output_group.each(function(i){
                                 if(d._def && d._def.outputInfo && i < d._def.outputInfo.length) {
                                     var outputInfo = d._def.outputInfo[i];
-                                    var infoBody = i18n.t(d.type + "/" + d.type + ".hni:" + d.type + ".output" + (i + 1) + "Description");
+                                    var infoBody = i18n.t(d.namespace + "/" + d.type + ".hni:" + d.type + ".output" + (i + 1) + "Description");
                                     if(outputInfo.types) {
                                         var content = outputInfo.label ? "<p><b>" + outputInfo.label + "</b></p>" : "";
                                         content += "<p><i>";

@@ -894,6 +894,32 @@ void FlowsServer::startFlows()
 			startFlow(flowInfo, nodeIds[element.first]);
 		}
 
+		std::vector<PFlowsClientData> clients;
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) continue;
+				clients.push_back(i->second);
+			}
+		}
+
+		_out.printInfo("Info: Starting nodes.");
+		for(auto& client : clients)
+		{
+			BaseLib::PArray parameters(new BaseLib::Array());
+			BaseLib::PVariable response = sendRequest(client, "startNodes", parameters);
+			if(response->errorStruct) _out.printError("Error starting nodes: " + response->structValue->at("faultString")->stringValue);
+		}
+
+		_out.printInfo("Info: Calling \"configNodesStarted\".");
+		for(auto& client : clients)
+		{
+			BaseLib::PArray parameters(new BaseLib::Array());
+			BaseLib::PVariable response = sendRequest(client, "configNodesStarted", parameters);
+			if(response->errorStruct) _out.printError("Error starting nodes: " + response->structValue->at("faultString")->stringValue);
+		}
+
 		std::set<std::string> nodeData = GD::bl->db->getAllNodeDataNodes();
 		std::string dataKey;
 		for(auto nodeId : nodeData)

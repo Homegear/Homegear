@@ -54,6 +54,7 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 2, 1000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("reload", std::bind(&FlowsClient::reload, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("shutdown", std::bind(&FlowsClient::shutdown, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("startFlow", std::bind(&FlowsClient::startFlow, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("startNodes", std::bind(&FlowsClient::startNodes, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("configNodesStarted", std::bind(&FlowsClient::configNodesStarted, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("stopFlow", std::bind(&FlowsClient::stopFlow, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("flowCount", std::bind(&FlowsClient::flowCount, this, std::placeholders::_1)));
@@ -467,8 +468,8 @@ Flows::PVariable FlowsClient::invokeNodeMethod(std::string nodeId, std::string m
 {
 	try
 	{
-		Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
-		if(node) return node->invokeLocal(parameters->at(1)->stringValue, parameters->at(2)->arrayValue);
+		Flows::PINode node = _nodeManager->getNode(nodeId);
+		if(node) return node->invokeLocal(methodName, parameters);
 
 		Flows::PArray parameters = std::make_shared<Flows::Array>();
 		parameters->reserve(3);
@@ -921,7 +922,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 					nodeObject->setGetNodeData(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&FlowsClient::getNodeData, this, std::placeholders::_1, std::placeholders::_2)));
 					nodeObject->setSetNodeData(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&FlowsClient::setNodeData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 
-					if(!nodeObject->start(node.second))
+					if(!nodeObject->init(node.second))
 					{
 						_out.printError("Error: Could not load node " + node.second->type + ". Start failed.");
 						continue;
@@ -934,6 +935,36 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 		_flows.emplace(flow->id, flow);
 
 		return Flows::PVariable(new Flows::Variable());
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable FlowsClient::startNodes(Flows::PArray& parameters)
+{
+	try
+	{
+		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+		for(auto& flow : _flows)
+		{
+			for(auto& nodeIterator : flow.second->nodes)
+			{
+				Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
+				if(node) node->start();
+			}
+		}
+		return std::make_shared<Flows::Variable>();
 	}
     catch(const std::exception& ex)
     {
