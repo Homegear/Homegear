@@ -2536,6 +2536,7 @@ RED.nodes = (function() {
         var node = {};
         node.id = n.id;
         node.type = n.type;
+        node.namespace = n.namespace ? n.namespace : n.type;
         for (var d in n._def.defaults) {
             if (n._def.defaults.hasOwnProperty(d)) {
                 node[d] = n[d];
@@ -2554,6 +2555,7 @@ RED.nodes = (function() {
         var node = {};
         node.id = n.id;
         node.type = n.type;
+        node.namespace = n._def.namespace ? n._def.namespace : n.type;
         node.z = n.z;
 
         if (node.type == "unknown") {
@@ -2618,6 +2620,7 @@ RED.nodes = (function() {
         var node = {};
         node.id = n.id;
         node.type = n.type;
+        node.namespace = n.namespace ? n.namespace : n.type;
         node.name = n.name;
         node.info = n.info;
         node.in = [];
@@ -2998,7 +3001,7 @@ RED.nodes = (function() {
                 }
 
                 if (!existingConfigNode) { //} || !compareNodes(existingConfigNode,n,true) || existingConfigNode._def.exclusive || existingConfigNode.z !== n.z) {
-                    configNode = {id:n.id, z:n.z, type:n.type, users:[], _config:{}};
+                    configNode = {id:n.id, z:n.z, type:n.type, namespace:n.namespace, users:[], _config:{}};
                     for (d in def.defaults) {
                         if (def.defaults.hasOwnProperty(d)) {
                             configNode[d] = n[d];
@@ -3078,6 +3081,7 @@ RED.nodes = (function() {
                         }
                     }
                     node.type = n.type;
+                    node.namespace = n.namespace ? n.namespace : (def.namespace ? def.namespace : n.type);
                     node._def = def;
                     if (n.type.substring(0,7) === "subflow") {
                         var parentId = n.type.split(":")[1];
@@ -3085,6 +3089,7 @@ RED.nodes = (function() {
                         if (createNewIds) {
                             parentId = subflow.id;
                             node.type = "subflow:"+parentId;
+                            node.namespace = node.type;
                             node._def = registry.getNodeType(node.type);
                             delete node.i;
                         }
@@ -3118,6 +3123,7 @@ RED.nodes = (function() {
                             node._orig = orig;
                             node.name = n.type;
                             node.type = "unknown";
+                            node.namespace = "unknown";
                         }
                         if (node._def.category != "config") {
                             node.inputs = n.inputs||node._def.inputs;
@@ -4397,7 +4403,7 @@ RED.utils = (function() {
         } else {
             icon_url = def.icon;
         }
-        return "icons/"+def.set.module+"/"+icon_url;
+        return "icons/"+def.namespace+"/"+icon_url;
     }
 
     function getNodeLabel(node,defaultLabel) {
@@ -9537,6 +9543,7 @@ RED.view = (function() {
 
         nn.type = type;
         nn._def = RED.nodes.getType(nn.type);
+        nn.namespace = nn._def.namespace ? nn._def.namespace : nn.type;
 
         if (!m) {
             nn.inputs = nn._def.inputs || 0;
@@ -12331,6 +12338,7 @@ RED.palette = (function() {
             var d = document.createElement("div");
             d.id = "palette_node_"+nodeTypeId;
             d.type = nt;
+            d.namespace = def.namespace ? def.namespace : nt;
 
             var label = /^(.*?)([ -]in|[ -]out)?$/.exec(nt)[1];
             if (typeof def.paletteLabel !== "undefined") {
@@ -12406,7 +12414,7 @@ RED.palette = (function() {
                 if (nt.indexOf("subflow:") === 0) {
                     helpText = marked(RED.nodes.subflow(nt.substring(8)).info||"");
                 } else {
-                    helpText = i18n.t(nt + "/" + nt + ".hni:" + nt + ".help");
+                    helpText = i18n.t(def.namespace + "/" + nt + ".hni:" + nt + ".help");
                 }
                 var help = '<div class="node-help">'+helpText+"</div>";
                 RED.sidebar.info.set(help);
@@ -12896,7 +12904,7 @@ RED.sidebar.info = (function() {
         var infoText = "";
 
         if (!subflowNode && node.type !== "comment" && node.type !== "tab") {
-            var helpText = $("script[data-help-name='"+node.type+"']").html()||"";
+            var helpText = i18n.t(node._def.namespace + "/" + node.type + ".hni:" + node.type + ".help");
             infoText = helpText;
         } else if (node.type === "tab") {
             infoText = marked(node.info||"");

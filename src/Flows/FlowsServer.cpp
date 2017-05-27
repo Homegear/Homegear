@@ -577,8 +577,9 @@ std::set<std::string> FlowsServer::insertSubflows(BaseLib::PVariable& subflowNod
 				subsubflows.emplace(subflowNode->structValue->at("id")->stringValue);
 			}
 
-			auto& subflowNodeWires = subflowNode->structValue->at("wires");
-			for(auto& output : *subflowNodeWires->arrayValue)
+			auto subflowNodeWiresIterator = subflowNode->structValue->find("wires");
+			if(subflowNodeWiresIterator == subflowNode->structValue->end()) continue;
+			for(auto& output : *subflowNodeWiresIterator->second->arrayValue)
 			{
 				for(auto& wire : *output->arrayValue)
 				{
@@ -615,10 +616,11 @@ std::set<std::string> FlowsServer::insertSubflows(BaseLib::PVariable& subflowNod
 						wirePortIterator->second->integerValue = BaseLib::Math::getNumber(wirePortIterator->second->stringValue);
 					}
 
-					auto& targetNodeWires = subflowNode->structValue->at("wires");
-					if(outputIndex >= targetNodeWires->arrayValue->size()) continue;
+					auto targetNodeWiresIterator = subflowNode->structValue->find("wires");
+					if(targetNodeWiresIterator == subflowNode->structValue->end()) continue;
+					if(outputIndex >= targetNodeWiresIterator->second->arrayValue->size()) continue;
 
-					auto& targetNodeWireOutput = targetNodeWires->arrayValue->at(outputIndex);
+					auto& targetNodeWireOutput = targetNodeWiresIterator->second->arrayValue->at(outputIndex);
 
 					if(wireIdIterator->second->stringValue == subflowId)
 					{
@@ -643,10 +645,11 @@ std::set<std::string> FlowsServer::insertSubflows(BaseLib::PVariable& subflowNod
 					auto sourceNodeIterator = subflow.find(wireIdIterator->second->stringValue);
 					if(sourceNodeIterator == subflow.end()) continue;
 
-					auto sourceNodeWires = sourceNodeIterator->second->structValue->at("wires");
-					while((signed)sourceNodeWires->arrayValue->size() < wirePortIterator->second->integerValue + 1) sourceNodeWires->arrayValue->push_back(std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray));
+					auto sourceNodeWiresIterator = sourceNodeIterator->second->structValue->find("wires");
+					if(sourceNodeWiresIterator == sourceNodeIterator->second->structValue->end()) continue;
+					while((signed)sourceNodeWiresIterator->second->arrayValue->size() < wirePortIterator->second->integerValue + 1) sourceNodeWiresIterator->second->arrayValue->push_back(std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray));
 
-					*sourceNodeWires->arrayValue->at(wirePortIterator->second->integerValue) = *targetNodeWires->arrayValue->at(outputIndex);
+					*sourceNodeWiresIterator->second->arrayValue->at(wirePortIterator->second->integerValue) = *targetNodeWiresIterator->second->arrayValue->at(outputIndex);
 				}
 			}
 		}
@@ -687,8 +690,9 @@ std::set<std::string> FlowsServer::insertSubflows(BaseLib::PVariable& subflowNod
 
 			for(auto& node2 : flowNodes)
 			{
-				auto& node2Wires = node2.second->structValue->at("wires");
-				for(auto& node2WiresOutput : *node2Wires->arrayValue)
+				auto node2WiresIterator = node2.second->structValue->find("wires");
+				if(node2WiresIterator == node2.second->structValue->end()) continue;
+				for(auto& node2WiresOutput : *node2WiresIterator->second->arrayValue)
 				{
 					bool rebuildArray = false;
 					for(auto& node2Wire : *node2WiresOutput->arrayValue)
@@ -780,18 +784,17 @@ void FlowsServer::startFlows()
 
 				auto typeIterator = element->structValue->find("type");
 				if(typeIterator == element->structValue->end()) continue;
-				if(typeIterator->second->stringValue == "comment") continue;
-				if(typeIterator->second->stringValue == "subflow")
+				else if(typeIterator->second->stringValue == "comment" || typeIterator->second->stringValue == "tab") continue;
+				else if(typeIterator->second->stringValue == "subflow")
 				{
 					subflowInfos.emplace(idIterator->second->stringValue, element);
 					continue;
 				}
 
-				auto wiresIterator = element->structValue->find("wires");
-				if(wiresIterator == element->structValue->end()) continue; //Element is no node
-
+				std::string z;
 				auto zIterator = element->structValue->find("z");
-				if(zIterator == element->structValue->end()) continue;
+				if(zIterator != element->structValue->end()) z = zIterator->second->stringValue;
+				if(z.empty()) z = "g";
 
 				if(allNodeIds.find(idIterator->second->stringValue) != allNodeIds.end())
 				{
@@ -800,9 +803,9 @@ void FlowsServer::startFlows()
 				}
 
 				allNodeIds.emplace(idIterator->second->stringValue);
-				nodeIds[zIterator->second->stringValue].emplace(idIterator->second->stringValue);
-				flowNodes[zIterator->second->stringValue].emplace(idIterator->second->stringValue, element);
-				if(typeIterator->second->stringValue.compare(0, 8, "subflow:") == 0) subflowNodeIds[zIterator->second->stringValue].emplace(idIterator->second->stringValue);
+				nodeIds[z].emplace(idIterator->second->stringValue);
+				flowNodes[z].emplace(idIterator->second->stringValue, element);
+				if(typeIterator->second->stringValue.compare(0, 8, "subflow:") == 0) subflowNodeIds[z].emplace(idIterator->second->stringValue);
 			}
 		//}}}
 

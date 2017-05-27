@@ -634,6 +634,87 @@ void FlowsClient::nodeEvent(std::string nodeId, std::string topic, Flows::PVaria
     }
 }
 
+Flows::PVariable FlowsClient::getNodeData(std::string nodeId, std::string key)
+{
+	try
+	{
+		Flows::PArray parameters = std::make_shared<Flows::Array>();
+		parameters->reserve(2);
+		parameters->push_back(std::make_shared<Flows::Variable>(nodeId));
+		parameters->push_back(std::make_shared<Flows::Variable>(key));
+
+		Flows::PVariable result = invoke("getNodeData", parameters);
+		if(result->errorStruct)
+		{
+			GD::out.printError("Error calling setNodeData: " + result->structValue->at("faultString")->stringValue);
+			return std::make_shared<Flows::Variable>();
+		}
+		return result;
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::make_shared<Flows::Variable>();
+}
+
+void FlowsClient::setNodeData(std::string nodeId, std::string key, Flows::PVariable value)
+{
+	try
+	{
+		Flows::PArray parameters = std::make_shared<Flows::Array>();
+		parameters->reserve(3);
+		parameters->push_back(std::make_shared<Flows::Variable>(nodeId));
+		parameters->push_back(std::make_shared<Flows::Variable>(key));
+		parameters->push_back(value);
+
+		Flows::PVariable result = invoke("setNodeData", parameters);
+		if(result->errorStruct) GD::out.printError("Error calling setNodeData: " + result->structValue->at("faultString")->stringValue);
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+Flows::PVariable FlowsClient::getConfigParameter(std::string nodeId, std::string name)
+{
+	try
+	{
+		Flows::PINode node = _nodeManager->getNode(nodeId);
+		if(node) return node->getConfigParameterIncoming(name);
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::make_shared<Flows::Variable>();
+}
+
 // {{{ RPC methods
 Flows::PVariable FlowsClient::reload(Flows::PArray& parameters)
 {
@@ -729,9 +810,6 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 		{
 			PNodeInfo node = std::make_shared<NodeInfo>();
 
-			auto wiresIterator = element->structValue->find("wires");
-			if(wiresIterator == element->structValue->end()) continue; //Element is no node
-
 			auto idIterator = element->structValue->find("id");
 			if(idIterator == element->structValue->end())
 			{
@@ -747,39 +825,40 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 			}
 			if(typeIterator->second->stringValue.compare(0, 8, "subflow:") == 0) continue;
 
-			auto yIterator = element->structValue->find("y");
-			if(yIterator == element->structValue->end())
-			{
-				GD::out.printError("Error: Flow element has no y coordinate.");
-				continue;
-			}
-
 			node->id = idIterator->second->stringValue;
 			node->type = typeIterator->second->stringValue;
 			node->info = element;
 
-			node->wiresOut.reserve(wiresIterator->second->arrayValue->size());
-			for(auto& outputIterator : *wiresIterator->second->arrayValue)
+			auto namespaceIterator = element->structValue->find("namespace");
+			if(namespaceIterator != element->structValue->end()) node->nodeNamespace = namespaceIterator->second->stringValue;
+			else node->nodeNamespace = node->type;
+
+			auto wiresIterator = element->structValue->find("wires");
+			if(wiresIterator != element->structValue->end())
 			{
-				std::vector<Wire> output;
-				output.reserve(outputIterator->structValue->size());
-				for(auto& wireIterator : *outputIterator->arrayValue)
+				node->wiresOut.reserve(wiresIterator->second->arrayValue->size());
+				for(auto& outputIterator : *wiresIterator->second->arrayValue)
 				{
-					auto idIterator = wireIterator->structValue->find("id");
-					if(idIterator == wireIterator->structValue->end()) continue;
-					uint32_t port = 0;
-					auto portIterator = wireIterator->structValue->find("port");
-					if(portIterator != wireIterator->structValue->end())
+					std::vector<Wire> output;
+					output.reserve(outputIterator->structValue->size());
+					for(auto& wireIterator : *outputIterator->arrayValue)
 					{
-						if(portIterator->second->type == Flows::VariableType::tString) port = BaseLib::Math::getNumber(portIterator->second->stringValue);
-						else port = portIterator->second->integerValue;
+						auto idIterator = wireIterator->structValue->find("id");
+						if(idIterator == wireIterator->structValue->end()) continue;
+						uint32_t port = 0;
+						auto portIterator = wireIterator->structValue->find("port");
+						if(portIterator != wireIterator->structValue->end())
+						{
+							if(portIterator->second->type == Flows::VariableType::tString) port = BaseLib::Math::getNumber(portIterator->second->stringValue);
+							else port = portIterator->second->integerValue;
+						}
+						Wire wire;
+						wire.id = idIterator->second->stringValue;
+						wire.port = port;
+						output.push_back(wire);
 					}
-					Wire wire;
-					wire.id = idIterator->second->stringValue;
-					wire.port = port;
-					output.push_back(wire);
+					node->wiresOut.push_back(output);
 				}
-				node->wiresOut.push_back(output);
 			}
 
 			flow->nodes.emplace(node->id, node);
@@ -823,7 +902,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 					if(_bl->debugLevel >= 5) _out.printDebug("Starting node " + node.second->id + " of type " + node.second->type + ".");
 
 					Flows::PINode nodeObject;
-					int32_t result = _nodeManager->loadNode(node.second->type, node.second->id, nodeObject);
+					int32_t result = _nodeManager->loadNode(node.second->nodeNamespace, node.second->type, node.second->id, nodeObject);
 					if(result < 0)
 					{
 						_out.printError("Error: Could not load node " + node.second->type + ". Error code: " + std::to_string(result));
@@ -839,6 +918,8 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 					nodeObject->setUnsubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::unsubscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
 					nodeObject->setOutput(std::function<void(std::string, uint32_t, Flows::PVariable)>(std::bind(&FlowsClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 					nodeObject->setNodeEvent(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&FlowsClient::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+					nodeObject->setGetNodeData(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&FlowsClient::getNodeData, this, std::placeholders::_1, std::placeholders::_2)));
+					nodeObject->setSetNodeData(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&FlowsClient::setNodeData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 
 					if(!nodeObject->start(node.second))
 					{

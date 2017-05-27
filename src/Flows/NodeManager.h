@@ -103,7 +103,7 @@ public:
 	 * @param[out] node If loading was successful, this variable contains the loaded node.
 	 * @return Returns positive values or 0 on success and negative values on error. 0: Node successfully loaded, 1: Node already loaded, -1: System error, -2: Node does not exists, -4: Node initialization failed
 	 */
-	int32_t loadNode(std::string name, std::string id, Flows::PINode& node);
+	int32_t loadNode(std::string nodeNamespace, std::string name, std::string id, Flows::PINode& node);
 
 	/**
 	 * Unloads a previously loaded node.

@@ -323,7 +323,7 @@ std::string NodeManager::getNodeLocales(std::string& language)
     return "";
 }
 
-int32_t NodeManager::loadNode(std::string name, std::string id, Flows::PINode& node)
+int32_t NodeManager::loadNode(std::string nodeNamespace, std::string name, std::string id, Flows::PINode& node)
 {
 	try
 	{
@@ -337,14 +337,19 @@ int32_t NodeManager::loadNode(std::string name, std::string id, Flows::PINode& n
 			}
 		}
 
-		std::string path(GD::bl->settings.flowsPath() + "nodes/" + name + "/");
+		std::string path(GD::bl->settings.flowsPath() + "nodes/" + nodeNamespace + "/");
 		if(BaseLib::Io::fileExists(path + name + ".so")) //C++ module
 		{
 			GD::out.printInfo("Info: Loading node " + name + ".so");
 			path = path + name + ".so";
 
+			bool loaderCreated = false;
 			std::lock_guard<std::mutex> nodeLoadersGuard(_nodeLoadersMutex);
-			if(_nodeLoaders.find(name) == _nodeLoaders.end()) _nodeLoaders.emplace(name, std::unique_ptr<NodeLoader>(new NodeLoader(name, path)));
+			if(_nodeLoaders.find(name) == _nodeLoaders.end())
+			{
+				loaderCreated = true;
+				_nodeLoaders.emplace(name, std::unique_ptr<NodeLoader>(new NodeLoader(name, path)));
+			}
 
 			node = _nodeLoaders.at(name)->createNode(_nodeEventsEnabled);
 
@@ -354,7 +359,11 @@ int32_t NodeManager::loadNode(std::string name, std::string id, Flows::PINode& n
 				if(nodeUsageIterator == _nodesUsage.end())
 				{
 					auto result = _nodesUsage.emplace(name, std::make_shared<NodeUsageInfo>());
-					if(!result.second) return -1;
+					if(!result.second)
+					{
+						if(loaderCreated) _nodeLoaders.erase(name);
+						return -1;
+					}
 					nodeUsageIterator = result.first;
 				}
 
@@ -363,7 +372,7 @@ int32_t NodeManager::loadNode(std::string name, std::string id, Flows::PINode& n
 			}
 			else
 			{
-				_nodeLoaders.erase(name);
+				if(loaderCreated) _nodeLoaders.erase(name);
 				return -3;
 			}
 			return 0;
