@@ -91,6 +91,7 @@ public:
 	void reset();
 
 	BaseLib::PVariable getLastEvents(std::set<uint64_t> ids, uint32_t timespan);
+	BaseLib::PVariable getNodeEvents();
 private:
 	bool _disposing = false;
 	std::shared_ptr<RpcClient> _client;
@@ -107,6 +108,8 @@ private:
 	std::atomic_int _uniqueEventId;
 	std::array<EventInfo, 1024> _eventBuffer;
 	int64_t _lastGarbageCollection = 0;
+	std::mutex _nodeEventCacheMutex;
+	std::unordered_map<std::string, std::unordered_map<std::string, BaseLib::PVariable>> _nodeEventCache;
 
 	void collectGarbage();
 	std::string getIPAddress(std::string address);

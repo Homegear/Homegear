@@ -100,6 +100,50 @@
                         RED.view.redraw();
                     }
                 });
+                RED.comms.subscribe("highlightLink/#",function(topic,msg) {
+                    var parts = topic.split("/");
+                    var node = RED.nodes.node(parts[1]);
+                    if (node) {
+                        var index = 0;
+                        if (msg.hasOwnProperty("index")) {
+                            index = msg.index;
+                        }
+                        activeLinks = RED.nodes.filterLinks({
+                            source:node,
+                            sourcePort:index                            
+                        });
+                        for(var i = 0; i < activeLinks.length; i++) {
+                            activeLinks[i].working = true;
+                        }
+                        setTimeout(function() {
+                            for(var i = 0; i < activeLinks.length; i++) {
+                                activeLinks[i].working = false;
+                            }
+                            node.dirty = true;
+                            RED.view.redraw();
+                        }, 500);
+                        node.dirty = true;
+                        RED.view.redraw();
+                    }
+                });
+                RED.comms.subscribe("highlightNode/#",function(topic,msg) {
+                    var parts = topic.split("/");
+                    var node = RED.nodes.node(parts[1]);
+                    if (node) {
+                        var timeout = 500;
+                        if (msg.hasOwnProperty("timeout")) {
+                            timeout = msg.timeout;
+                        }
+                        node.working = true;
+                        setTimeout(function() {
+                            node.working = false;
+                            node.dirty = true;
+                            RED.view.redraw();
+                        }, timeout);
+                        node.dirty = true;
+                        RED.view.redraw();
+                    }
+                });
                 RED.comms.subscribe("node/#",function(topic,msg) {
                     var i,m;
                     var typeList;
@@ -157,6 +201,7 @@
                     // Refresh flow library to ensure any examples are updated
                     RED.library.loadFlowLibrary();
                 });
+                RED.comms.getEvents();
             }
         });
     }

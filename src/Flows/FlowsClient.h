@@ -99,7 +99,7 @@ private:
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
 	std::unique_ptr<NodeManager> _nodeManager;
-	std::atomic_bool _nodeEventsEnabled;
+	std::atomic_bool _frontendConnected;
 
 	std::unique_ptr<Flows::BinaryRpc> _binaryRpc;
 	std::unique_ptr<Flows::RpcDecoder> _rpcDecoder;

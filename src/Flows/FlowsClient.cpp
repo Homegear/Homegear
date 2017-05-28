@@ -37,7 +37,7 @@ namespace Flows
 FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 2, 1000)
 {
 	_stopped = false;
-	_nodeEventsEnabled = false;
+	_frontendConnected = false;
 
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	_out.init(GD::bl.get());
@@ -45,7 +45,7 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 2, 1000)
 
 	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
 
-	_nodeManager = std::unique_ptr<NodeManager>(new NodeManager(&_nodeEventsEnabled));
+	_nodeManager = std::unique_ptr<NodeManager>(new NodeManager(&_frontendConnected));
 
 	_binaryRpc = std::unique_ptr<Flows::BinaryRpc>(new Flows::BinaryRpc());
 	_rpcDecoder = std::unique_ptr<Flows::RpcDecoder>(new Flows::RpcDecoder());
@@ -339,7 +339,13 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 		{
 			if(!queueEntry->nodeInfo || !queueEntry->message) return;
 			Flows::PINode node = _nodeManager->getNode(queueEntry->nodeInfo->id);
-			if(node) node->input(queueEntry->nodeInfo, queueEntry->targetPort, queueEntry->message);
+			if(node)
+			{
+				Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+				timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(1000));
+				nodeEvent(queueEntry->nodeInfo->id, "highlightNode/" + queueEntry->nodeInfo->id, timeout);
+				node->input(queueEntry->nodeInfo, queueEntry->targetPort, queueEntry->message);
+			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -591,6 +597,13 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(nodeIterator->second, node.port, message);
 			enqueue(1, queueEntry);
 		}
+
+		Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+		timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
+		nodeEvent(nodeId, "highlightNode/" + nodeId, timeout);
+		Flows::PVariable outputIndex = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+		outputIndex->structValue->emplace("index", std::make_shared<Flows::Variable>(index));
+		nodeEvent(nodeId, "highlightLink/" + nodeId, outputIndex);
 	}
 	catch(const std::exception& ex)
     {
@@ -610,7 +623,7 @@ void FlowsClient::nodeEvent(std::string nodeId, std::string topic, Flows::PVaria
 {
 	try
 	{
-		if(!_nodeEventsEnabled || !value) return;
+		if(!value) return;
 
 		Flows::PArray parameters = std::make_shared<Flows::Array>();
 		parameters->reserve(3);
@@ -1152,7 +1165,7 @@ Flows::PVariable FlowsClient::enableNodeEvents(Flows::PArray& parameters)
 {
 	try
 	{
-		_nodeEventsEnabled = true;
+		_frontendConnected = true;
 
 		return Flows::PVariable(new Flows::Variable());
 	}
@@ -1175,7 +1188,7 @@ Flows::PVariable FlowsClient::disableNodeEvents(Flows::PArray& parameters)
 {
 	try
 	{
-		_nodeEventsEnabled = false;
+		_frontendConnected = false;
 
 		return Flows::PVariable(new Flows::Variable());
 	}

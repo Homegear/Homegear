@@ -168,6 +168,38 @@ BaseLib::PVariable Client::getLastEvents(std::set<uint64_t> ids, uint32_t timesp
 	return BaseLib::Variable::createError(-32500, "Unknown application error. See error log for more details.");
 }
 
+BaseLib::PVariable Client::getNodeEvents()
+{
+	try
+	{
+		BaseLib::PVariable events = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+		std::lock_guard<std::mutex> nodeEventCacheGuard(_nodeEventCacheMutex);
+		for(auto& nodeIterator : _nodeEventCache)
+		{
+			BaseLib::PVariable node = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			for(auto& topicIterator : nodeIterator.second)
+			{
+				node->structValue->emplace(topicIterator.first, topicIterator.second);
+			}
+			events->structValue->emplace(nodeIterator.first, node);
+		}
+		return events;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error. See error log for more details.");
+}
+
 void Client::broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib::PVariable& value)
 {
 	try
@@ -190,6 +222,18 @@ void Client::broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib
 					parameters->push_back(std::make_shared<BaseLib::Variable>(topic));
 					parameters->push_back(value);
 					server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("nodeEvent", parameters));
+				}
+			}
+		}
+		{
+			if(topic.compare(0, 14, "highlightNode/") != 0 && topic.compare(0, 14, "highlightLink/") != 0)
+			{
+				std::lock_guard<std::mutex> nodeEventCacheGuard(_nodeEventCacheMutex);
+				_nodeEventCache[nodeId][topic] = value;
+				if(_nodeEventCache.size() > 1000000 || _nodeEventCache[nodeId].size() > 100000)
+				{
+					GD::out.printError("Error: Event cache is full. Clearing it.");
+					_nodeEventCache.clear();
 				}
 			}
 		}

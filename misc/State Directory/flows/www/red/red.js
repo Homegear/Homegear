@@ -623,11 +623,41 @@ RED.comms = (function() {
         }
     }
 
+    function getEvents() {
+        homegear.invoke("getNodeEvents", function(message) {
+            for(var nodeKey in message.result) {
+                if (message.result.hasOwnProperty(nodeKey)) {
+                    var node = message.result[nodeKey];
+                    for(var topicKey in node) {
+                        if (node.hasOwnProperty(topicKey)) {
+                            var value = node[topicKey];
+                            if(value.format && !value.format.match(/string/g)) value.msg = JSON.stringify(value.msg);
+                            for (var t in subscriptions) {
+                                if (subscriptions.hasOwnProperty(t)) {
+                                    var re = new RegExp("^"+t.replace(/([\[\]\?\(\)\\\\$\^\*\.|])/g,"\\$1").replace(/\+/g,"[^/]+").replace(/\/#$/,"(\/.*)?")+"$");
+                                    if (re.test(topicKey)) {
+                                        var subscribers = subscriptions[t];
+                                        if (subscribers) {
+                                            for (var i=0;i<subscribers.length;i++) {
+                                                subscribers[i](topicKey, value);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     return {
         homegear: getHomegear,
         connect: connectWS,
         subscribe: subscribe,
-        unsubscribe: unsubscribe
+        unsubscribe: unsubscribe,
+        getEvents: getEvents
     }
 })();
 ;/**
@@ -10929,6 +10959,7 @@ RED.view = (function() {
                     if (d.dirty) {
                         var output = d3.select(this);
                         output.selectAll(".subflowport").classed("node_selected",function(d) { return d.selected; })
+                        output.selectAll(".subflowport").classed("node_working",function(d) { return d.working; })
                         output.selectAll(".port_index").text(function(d){ return d.i+1});
                         output.attr("transform", function(d) { return "translate(" + (d.x-d.w/2) + "," + (d.y-d.h/2) + ")"; });
                         dirtyNodes[d.id] = d;
@@ -10938,7 +10969,8 @@ RED.view = (function() {
                 subflowInputs.each(function(d,i) {
                     if (d.dirty) {
                         var input = d3.select(this);
-                        input.selectAll(".subflowport").classed("node_selected",function(d) { return d.selected; })                        
+                        input.selectAll(".subflowport").classed("node_selected",function(d) { return d.selected; })
+                        input.selectAll(".subflowport").classed("node_working",function(d) { return d.working; })
                         input.attr("transform", function(d) { return "translate(" + (d.x-d.w/2) + "," + (d.y-d.h/2) + ")"; });
                         dirtyNodes[d.id] = d;
                         d.dirty = false;
@@ -11167,6 +11199,7 @@ RED.view = (function() {
                                 .attr("width",function(d){return d.w})
                                 .attr("height",function(d){return d.h})
                                 .classed("node_selected",function(d) { return d.selected; })
+                                .classed("node_working",function(d) { return d.working; })
                                 .classed("node_highlighted",function(d) { return d.highlighted; })
                             ;
                             //thisNode.selectAll(".node-gradient-top").attr("width",function(d){return d.w});
@@ -11569,6 +11602,7 @@ RED.view = (function() {
             })
 
             link.classed("link_selected", function(d) { return d === selected_link || d.selected; });
+            link.classed("link_working", function(d) { return d.working; });
             link.classed("link_unknown",function(d) {
                 delete d.added;
                 return d.target.type == "unknown" || d.source.type == "unknown"
