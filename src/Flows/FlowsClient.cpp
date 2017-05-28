@@ -604,6 +604,10 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 		Flows::PVariable outputIndex = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
 		outputIndex->structValue->emplace("index", std::make_shared<Flows::Variable>(index));
 		nodeEvent(nodeId, "highlightLink/" + nodeId, outputIndex);
+		Flows::PVariable status = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+		status->structValue->emplace("text", std::make_shared<Flows::Variable>(std::to_string(index) + ": " + message->structValue->at("payload")->toString()));
+		status->structValue->emplace("position", std::make_shared<Flows::Variable>("top"));
+		nodeEvent(nodeId, "statusTop/" + nodeId, status);
 	}
 	catch(const std::exception& ex)
     {

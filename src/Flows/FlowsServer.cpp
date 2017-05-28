@@ -2134,10 +2134,22 @@ BaseLib::PVariable FlowsServer::executePhpNode(PFlowsClientData& clientData, Bas
 {
 	try
 	{
-		if(parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects exactly four parameters.");
+		if(parameters->size() != 3 && parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects exactly three or four parameters.");
 
-		std::string filename = parameters->at(1)->stringValue.substr(parameters->at(1)->stringValue.find_last_of('/') + 1);
-		BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::node, parameters->at(0), parameters->at(1)->stringValue, filename, parameters->at(2)->integerValue, parameters->at(3)));
+		std::string filename;
+		BaseLib::ScriptEngine::PScriptInfo scriptInfo;
+		if(parameters->size() == 4)
+		{
+			filename = parameters->at(1)->stringValue.substr(parameters->at(1)->stringValue.find_last_of('/') + 1);
+			scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode, parameters->at(0), parameters->at(1)->stringValue, filename, parameters->at(2)->integerValue, parameters->at(3));
+		}
+		else
+		{
+			filename = parameters->at(2)->stringValue.substr(parameters->at(2)->stringValue.find_last_of('/') + 1);
+			auto threadCountIterator = _maxThreadCounts.find(parameters->at(0)->stringValue);
+			if(threadCountIterator == _maxThreadCounts.end()) GD::out.printError("Error: Could not determine maximum thread count of node \"" + parameters->at(0)->stringValue + "\". Node is unknown.");
+			scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode, parameters->at(1), parameters->at(2)->stringValue, filename, threadCountIterator->second);
+		}
 		GD::scriptEngineServer->executeScript(scriptInfo, false);
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}

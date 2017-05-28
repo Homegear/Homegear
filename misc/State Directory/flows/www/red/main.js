@@ -86,7 +86,7 @@
                         delete persistentNotifications[notificationId];
                     }
                 });
-                RED.comms.subscribe("status/#",function(topic,msg) {
+                RED.comms.subscribe("statusTop/#",function(topic,msg) {
                     var parts = topic.split("/");
                     var node = RED.nodes.node(parts[1]);
                     if (node) {
@@ -95,14 +95,31 @@
                                 msg.text = node._(msg.text.toString(),{defaultValue:msg.text.toString()});
                             }
                         }
-                        node.status = msg;
+                        node.statusTop = msg;
+                        node.dirty = true;
+                        RED.view.redraw();
+                    }
+                });
+                RED.comms.subscribe("statusBottom/#",function(topic,msg) {
+                    var parts = topic.split("/");
+                    var node = RED.nodes.node(parts[1]);
+                    if (node) {
+                        if (msg.hasOwnProperty("text")) {
+                            if (msg.text[0] !== ".") {
+                                msg.text = node._(msg.text.toString(),{defaultValue:msg.text.toString()});
+                            }
+                        }
+                        node.statusBottom = msg;
                         node.dirty = true;
                         RED.view.redraw();
                     }
                 });
                 RED.comms.subscribe("highlightLink/#",function(topic,msg) {
-                    var parts = topic.split("/");
-                    var node = RED.nodes.node(parts[1]);
+                    var nodeId = topic.split("/")[1];
+                    if(nodeId.indexOf(":") > -1) {
+                        nodeId = nodeId.split(":")[0];
+                    }
+                    var node = RED.nodes.node(nodeId);
                     if (node) {
                         var index = 0;
                         if (msg.hasOwnProperty("index")) {
@@ -127,8 +144,11 @@
                     }
                 });
                 RED.comms.subscribe("highlightNode/#",function(topic,msg) {
-                    var parts = topic.split("/");
-                    var node = RED.nodes.node(parts[1]);
+                    var nodeId = topic.split("/")[1];
+                    if(nodeId.indexOf(":") > -1) {
+                        nodeId = nodeId.split(":")[0];
+                    }
+                    var node = RED.nodes.node(nodeId);
                     if (node) {
                         var timeout = 500;
                         if (msg.hasOwnProperty("timeout")) {

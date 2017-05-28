@@ -28,19 +28,22 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef PHPNODE_H_
-#define PHPNODE_H_
+#ifndef STATEFULPHPNODE_H_
+#define STATEFULPHPNODE_H_
 
 #include <homegear-node/INode.h>
 
-class PhpNode : public Flows::INode
+class StatefulPhpNode : public Flows::INode
 {
 private:
 	Flows::PVariable _nodeInfo;
 public:
-	PhpNode(std::string path, std::string name, const std::atomic_bool* nodeEventsEnabled);
-	virtual ~PhpNode();
+	StatefulPhpNode(std::string path, std::string name, const std::atomic_bool* frontendConnected);
+	virtual ~StatefulPhpNode();
 
+	virtual bool init(Flows::PNodeInfo nodeInfo);
+	virtual bool start();
+	virtual void stop();
 	virtual void input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message);
 };
 

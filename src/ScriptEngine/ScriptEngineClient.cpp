@@ -1111,7 +1111,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
 			SG(default_mimetype) = nullptr;
 			SG(default_charset) = nullptr;
-			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::node)
+			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
 			{
 				PG(register_argc_argv) = 1;
 				PG(implicit_flush) = 1;
@@ -1160,7 +1160,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 		}
 
 		php_execute_script(&zendHandle);
-		if(type == ScriptInfo::ScriptType::node)
+		if(type == ScriptInfo::ScriptType::simpleNode)
 		{
 			zval returnValue;
 			zval function;
@@ -1171,12 +1171,16 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			ZVAL_LONG(&parameters[1], scriptInfo->inputPort);
 			PhpVariableConverter::getPHPVariable(scriptInfo->message, &parameters[2]);
 			int result = call_user_function(EG(function_table), NULL, &function, &returnValue, 3, parameters);
-			if(result != 0) _out.printError("Error calling function \"input\".");
+			if(result != 0) _out.printError("Error calling function \"input\" in file: " + scriptInfo->fullPath);
 			zval_ptr_dtor(&function);
 			zval_ptr_dtor(&parameters[0]);
 			zval_ptr_dtor(&parameters[1]);
 			zval_ptr_dtor(&parameters[2]);
 			zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
+		}
+		else if(type == ScriptInfo::ScriptType::statefulNode)
+		{
+			runStatefulNode(id, scriptInfo);
 		}
 
 		scriptInfo->exitCode = EG(exit_status);
@@ -1197,6 +1201,75 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
     }
     std::string error("Error executing script. Check Homegear log for more details.");
     sendOutput(error);
+}
+
+void ScriptEngineClient::runStatefulNode(int32_t id, PScriptInfo scriptInfo)
+{
+	zend_string* className = nullptr;
+	zend_object* homegearNode = nullptr;
+	try
+	{
+		className = zend_string_init("HomegearNode", sizeof("HomegearNode") - 1, 0);
+		zend_class_entry* classEntry = zend_lookup_class(className);
+		if(classEntry)
+		{
+			homegearNode = (zend_object*)ecalloc(1, sizeof(zend_object) + zend_object_properties_size(classEntry));
+			zend_object_std_init(homegearNode, classEntry);
+			object_properties_init(homegearNode, classEntry);
+			homegearNode->handlers = zend_get_std_object_handlers();
+			zval homegearNodeObject;
+			ZVAL_OBJ(&homegearNodeObject, homegearNode);
+
+			//{{{ __construct
+				{
+					zval returnValue;
+					zval function;
+					zval parameters[1];
+
+					ZVAL_STRINGL(&function, "__construct", sizeof("__construct") - 1);
+					PhpVariableConverter::getPHPVariable(scriptInfo->nodeInfo, &parameters[0]);
+					int result = call_user_function(EG(function_table), &homegearNodeObject, &function, &returnValue, 1, parameters);
+					if(result != 0) _out.printError("Error calling function \"__construct\" in file: " + scriptInfo->fullPath);
+					zval_ptr_dtor(&function);
+					zval_ptr_dtor(&parameters[0]);
+					zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
+				}
+			//}}}
+
+			//{{{ init
+				{
+					zval returnValue;
+					zval function;
+
+					ZVAL_STRINGL(&function, "init", sizeof("init") - 1);
+					int result = call_user_function(EG(function_table), &homegearNodeObject, &function, &returnValue, 0, nullptr);
+					if(result != 0) _out.printError("Error calling function \"init\" in file: " + scriptInfo->fullPath);
+					zval_ptr_dtor(&function);
+					zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
+				}
+			//}}}
+		}
+		else _out.printError("Error: Class HomegearNode not found in file: " + scriptInfo->fullPath);
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	//Maybe cleanup is not necessary - valgrind shows no lost bytes if the lines below are commented out
+	if(homegearNode)
+	{
+		zend_object_std_dtor(homegearNode);
+		efree(homegearNode);
+	}
+	if(className) zend_string_release(className);
 }
 
 void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool sendOutput)
@@ -1456,9 +1529,18 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 		{
 			scriptInfo.reset(new ScriptInfo(type, parameters->at(2)->stringValue, parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5)->stringValue, parameters->at(6)->integerValue64));
 		}
-		else if(type == ScriptInfo::ScriptType::node)
+		else if(type == ScriptInfo::ScriptType::simpleNode)
 		{
 			scriptInfo.reset(new ScriptInfo(type, parameters->at(2), parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5)->integerValue, parameters->at(6)));
+			if(!GD::bl->io.fileExists(scriptInfo->fullPath))
+			{
+				_out.printError("Error: PHP node script \"" + scriptInfo->fullPath + "\" does not exist.");
+				return BaseLib::Variable::createError(-1, "Script file does not exist: " + scriptInfo->fullPath);
+			}
+		}
+		else if(type == ScriptInfo::ScriptType::statefulNode)
+		{
+			scriptInfo.reset(new ScriptInfo(type, parameters->at(2), parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5)->integerValue));
 			if(!GD::bl->io.fileExists(scriptInfo->fullPath))
 			{
 				_out.printError("Error: PHP node script \"" + scriptInfo->fullPath + "\" does not exist.");

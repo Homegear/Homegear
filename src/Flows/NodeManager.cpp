@@ -29,7 +29,8 @@
 */
 
 #include "NodeManager.h"
-#include "PhpNode.h"
+#include "SimplePhpNode.h"
+#include "StatefulPhpNode.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 
@@ -377,17 +378,31 @@ int32_t NodeManager::loadNode(std::string nodeNamespace, std::string name, std::
 			}
 			return 0;
 		}
+		else if(BaseLib::Io::fileExists(path + name + ".s.hgn")) //Encrypted PHP
+		{
+			GD::out.printInfo("Info: Loading node " + name + ".s.hgn");
+			node = std::make_shared<StatefulPhpNode>(path + name + ".s.hgn", name, _nodeEventsEnabled);
+			_nodes.emplace(id, node);
+			return 0;
+		}
+		else if(BaseLib::Io::fileExists(path + name + ".s.php")) //Unencrypted PHP
+		{
+			GD::out.printInfo("Info: Loading node " + name + ".s.php");
+			node = std::make_shared<StatefulPhpNode>(path + name + ".s.php", name, _nodeEventsEnabled);
+			_nodes.emplace(id, node);
+			return 0;
+		}
 		else if(BaseLib::Io::fileExists(path + name + ".hgn")) //Encrypted PHP
 		{
 			GD::out.printInfo("Info: Loading node " + name + ".hgn");
-			node = std::make_shared<PhpNode>(path + name + ".hgn", name, _nodeEventsEnabled);
+			node = std::make_shared<SimplePhpNode>(path + name + ".hgn", name, _nodeEventsEnabled);
 			_nodes.emplace(id, node);
 			return 0;
 		}
 		else if(BaseLib::Io::fileExists(path + name + ".php")) //Unencrypted PHP
 		{
 			GD::out.printInfo("Info: Loading node " + name + ".php");
-			node = std::make_shared<PhpNode>(path + name + ".php", name, _nodeEventsEnabled);
+			node = std::make_shared<SimplePhpNode>(path + name + ".php", name, _nodeEventsEnabled);
 			_nodes.emplace(id, node);
 			return 0;
 		}

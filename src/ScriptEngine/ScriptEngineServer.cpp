@@ -35,7 +35,7 @@
 #include <homegear-base/BaseLib.h>
 
 // Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
-//#define MANUAL_CLIENT_START
+#define MANUAL_CLIENT_START
 
 namespace ScriptEngine
 {
@@ -1256,23 +1256,36 @@ void ScriptEngineServer::mainThread()
     }
 }
 
-PScriptEngineProcess ScriptEngineServer::getFreeProcess()
+PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32_t maxThreadCount)
 {
 	try
 	{
+		if(nodeProcess && GD::bl->settings.maxNodeThreadsPerProcess() != -1 && maxThreadCount > (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
+		{
+			GD::out.printError("Error: Could not get script process for node, because maximum number of threads in node is greater than the number of threads allowed per process.");
+			return std::shared_ptr<ScriptEngineProcess>();
+		}
+
 		std::lock_guard<std::mutex> processGuard(_newProcessMutex);
 		{
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			for(std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
-				if(i->second->scriptCount() < GD::bl->threadManager.getMaxThreadCount() / GD::bl->settings.scriptEngineMaxThreadsPerScript() && (GD::bl->settings.scriptEngineMaxScriptsPerProcess() == -1 || i->second->scriptCount() < (unsigned)GD::bl->settings.scriptEngineMaxScriptsPerProcess()))
+				if(nodeProcess)
+				{
+					if(GD::bl->settings.maxNodeThreadsPerProcess() == -1 || i->second->nodeThreadCount() + maxThreadCount <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
+					{
+						return i->second;
+					}
+				}
+				else if(i->second->scriptCount() < GD::bl->threadManager.getMaxThreadCount() / GD::bl->settings.scriptEngineMaxThreadsPerScript() && (GD::bl->settings.scriptEngineMaxScriptsPerProcess() == -1 || i->second->scriptCount() < (unsigned)GD::bl->settings.scriptEngineMaxScriptsPerProcess()))
 				{
 					return i->second;
 				}
 			}
 		}
 		_out.printInfo("Info: Spawning new script engine process.");
-		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess());
+		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess(nodeProcess));
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rse" };
 #ifdef MANUAL_CLIENT_START
 		process->setPid(1);
@@ -1556,7 +1569,7 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 	try
 	{
 		if(_shuttingDown || GD::bl->shuttingDown) return;
-		PScriptEngineProcess process = getFreeProcess();
+		PScriptEngineProcess process = getFreeProcess(scriptInfo->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode, scriptInfo->maxThreadCount);
 		if(!process)
 		{
 			_out.printError("Error: Could not get free process. Not executing script.");
@@ -1622,7 +1635,7 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->peerId))}));
 		}
-		else if(scriptType == ScriptInfo::ScriptType::node)
+		else if(scriptType == ScriptInfo::ScriptType::simpleNode)
 		{
 			parameters = std::move(BaseLib::PArray(new BaseLib::Array{
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
@@ -1632,6 +1645,16 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->inputPort)),
 				scriptInfo->message}));
+		}
+		else if(scriptType == ScriptInfo::ScriptType::statefulNode)
+		{
+			parameters = std::move(BaseLib::PArray(new BaseLib::Array{
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
+				BaseLib::PVariable(new BaseLib::Variable((int32_t)scriptInfo->getType())),
+				scriptInfo->nodeInfo,
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->maxThreadCount))}));
 		}
 
 		BaseLib::PVariable result = sendRequest(clientData, "executeScript", parameters);

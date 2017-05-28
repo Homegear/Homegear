@@ -28,18 +28,18 @@
  * files in the program, then also delete it here.
 */
 
-#include "PhpNode.h"
+#include "SimplePhpNode.h"
 #include "../GD/GD.h"
 
-PhpNode::PhpNode(std::string path, std::string name, const std::atomic_bool* nodeEventsEnabled) : INode(path, name, nodeEventsEnabled)
+SimplePhpNode::SimplePhpNode(std::string path, std::string name, const std::atomic_bool* frontendConnected) : INode(path, name, frontendConnected)
 {
 }
 
-PhpNode::~PhpNode()
+SimplePhpNode::~SimplePhpNode()
 {
 }
 
-void PhpNode::input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message)
+void SimplePhpNode::input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message)
 {
 	try
 	{

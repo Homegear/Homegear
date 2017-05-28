@@ -11150,7 +11150,7 @@ RED.view = (function() {
                         icon_group.style("pointer-events","none");
                     }
                     if (!isLink) {
-                        var text = node.append("svg:text").attr("class","node_label").attr("x", 38).attr("dy", ".35em").attr("text-anchor","start");
+                        var text = node.append("svg:text").attr("class","node_label").attr("x", 38).attr("dy", ".40em").attr("text-anchor","start");
                         if (d._def.align) {
                             text.attr("class","node_label node_label_"+d._def.align);
                             if (d._def.align === "right") {
@@ -11158,14 +11158,16 @@ RED.view = (function() {
                             }
                         }
 
-                        var status = node.append("svg:g").attr("class","node_status_group").style("display","none");
+                        var statusTop = node.append("svg:text").attr("class","node_status_label_top").attr("x",7).attr("y",-3);
 
-                        var statusRect = status.append("rect").attr("class","node_status")
+                        var statusBottom = node.append("svg:g").attr("class","node_status_group_bottom").style("display","none");
+
+                        var statusBottomRect = statusBottom.append("rect").attr("class","node_status_bottom")
                                             .attr("x",6).attr("y",1).attr("width",9).attr("height",9)
                                             .attr("rx",2).attr("ry",2).attr("stroke-width","3");
 
-                        var statusLabel = status.append("svg:text")
-                            .attr("class","node_status_label")
+                        var statusBottomLabel = statusBottom.append("svg:text")
+                            .attr("class","node_status_label_bottom")
                             .attr("x",20).attr("y",9);
                     }
                     //node.append("circle").attr({"class":"centerDot","cx":0,"cy":0,"r":5});
@@ -11469,36 +11471,44 @@ RED.view = (function() {
                             });
                         }
 
-                        if (!showStatus || !d.status) {
-                            thisNode.selectAll(".node_status_group").style("display","none");
+                        if (!showStatus || !d.statusTop) {
+                            thisNode.selectAll(".node_status_label_top").style("display","none");
                         } else {
-                            thisNode.selectAll(".node_status_group").style("display","inline").attr("transform","translate(3,"+(d.h+3)+")");
-                            var fill = status_colours[d.status.fill]; // Only allow our colours for now
-                            if (d.status.shape == null && fill == null) {
-                                thisNode.selectAll(".node_status").style("display","none");
+                            if (d.statusTop.text) {
+                                thisNode.selectAll(".node_status_label_top").style("display","inline").text(d.statusTop.text);
+                            }
+                        }
+
+                        if (!showStatus || !d.statusBottom) {
+                            thisNode.selectAll(".node_status_group_bottom").style("display","none");
+                        } else {
+                            thisNode.selectAll(".node_status_group_bottom").style("display","inline").attr("transform","translate(3,"+(d.h+3)+")");
+                            var fill = status_colours[d.statusBottom.fill]; // Only allow our colours for now
+                            if (d.statusBottom.shape == null && fill == null) {
+                                thisNode.selectAll(".node_status_bottom").style("display","none");
                             } else {
                                 var style;
-                                if (d.status.shape == null || d.status.shape == "dot") {
+                                if (d.statusBottom.shape == null || d.statusBottom.shape == "dot") {
                                     style = {
                                         display: "inline",
                                         fill: fill,
                                         stroke: fill
                                     };
-                                } else if (d.status.shape == "ring" ){
+                                } else if (d.statusBottom.shape == "ring" ){
                                     style = {
                                         display: "inline",
                                         fill: "#fff",
                                         stroke: fill
                                     }
                                 }
-                                thisNode.selectAll(".node_status").style(style);
+                                thisNode.selectAll(".node_status_bottom").style(style);
                             }
-                            if (d.status.text) {
-                                thisNode.selectAll(".node_status_label").text(d.status.text);
-                                if(d.status.shape == null && fill == null) thisNode.selectAll(".node_status_label").attr("x",0);
-                                else thisNode.selectAll(".node_status_label").attr("x",20);
+                            if (d.statusBottom.text) {
+                                thisNode.selectAll(".node_status_label_bottom").text(d.statusBottom.text);
+                                if(d.statusBottom.shape == null && fill == null) thisNode.selectAll(".node_status_label_bottom").attr("x",0);
+                                else thisNode.selectAll(".node_status_label_bottom").attr("x",20);
                             } else {
-                                thisNode.selectAll(".node_status_label").text("");
+                                thisNode.selectAll(".node_status_label_bottom").text("");
                             }
                         }
 
@@ -12301,7 +12311,7 @@ RED.palette = (function() {
         });
     }
 
-    function setLabel(type, el,label, info) {
+    function setLabel(type, el, label, info, namespace) {
         var nodeWidth = 82;
         var nodeHeight = 25;
         var lineHeight = 20;
@@ -12342,7 +12352,7 @@ RED.palette = (function() {
             if (label != type) {
                 l = "<p><b>"+RED.text.bidi.enforceTextDirectionWithUCC(label)+"</b><br/><i>"+type+"</i></p>";
             }
-            var helpContent = i18n.t(type + "/" + type + ".hni:" + type + ".paletteHelp");
+            var helpContent = i18n.t(namespace + "/" + type + ".hni:" + type + ".paletteHelp");
             popOverContent = $(l+(info?info:helpContent||"<p>"+RED._("palette.noInfo")+"</p>").trim());
         } catch(err) {
             // Malformed HTML may cause errors. TODO: need to understand what can break
@@ -12448,7 +12458,7 @@ RED.palette = (function() {
                 if (nt.indexOf("subflow:") === 0) {
                     helpText = marked(RED.nodes.subflow(nt.substring(8)).info||"");
                 } else {
-                    helpText = i18n.t(def.namespace + "/" + nt + ".hni:" + nt + ".help");
+                    helpText = i18n.t((def.namespace ? def.namespace : nt) + "/" + nt + ".hni:" + nt + ".help");
                 }
                 var help = '<div class="node-help">'+helpText+"</div>";
                 RED.sidebar.info.set(help);
@@ -12544,7 +12554,7 @@ RED.palette = (function() {
                 });
                 nodeInfo = marked(def.info||"");
             }
-            setLabel(nt,$(d),label,nodeInfo);
+            setLabel(nt,$(d),label,nodeInfo, def.namespace ? def.namespace : nt);
 
             var categoryNode = $("#palette-container-"+category);
             if (categoryNode.find(".palette_node").length === 1) {
@@ -12597,7 +12607,7 @@ RED.palette = (function() {
             } else if (portOutput.length !== 0 && sf.out.length === 0) {
                 portOutput.remove();
             }
-            setLabel(sf.type+":"+sf.id,paletteNode,sf.name,marked(sf.info||""));
+            setLabel(sf.type+":"+sf.id,paletteNode,sf.name,marked(sf.info||""),sf.type+":"+sf.id);
         });
     }
 
@@ -12938,7 +12948,7 @@ RED.sidebar.info = (function() {
         var infoText = "";
 
         if (!subflowNode && node.type !== "comment" && node.type !== "tab") {
-            var helpText = i18n.t(node._def.namespace + "/" + node.type + ".hni:" + node.type + ".help");
+            var helpText = i18n.t((node._def.namespace ? node._def.namespace : node.type) + "/" + node.type + ".hni:" + node.type + ".help");
             infoText = helpText;
         } else if (node.type === "tab") {
             infoText = marked(node.info||"");
