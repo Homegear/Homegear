@@ -48,6 +48,8 @@ namespace ScriptEngine
 {
 
 std::mutex ScriptEngineClient::_resourceMutex;
+std::mutex ScriptEngineClient::_nodeInfoMutex;
+std::unordered_map<std::string, ScriptEngineClient::PNodeInfo> ScriptEngineClient::_nodeInfo;
 
 /*void scriptSignalHandler(int32_t signalNumber)
 {
@@ -91,6 +93,7 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 1, 1000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("scriptCount", std::bind(&ScriptEngineClient::scriptCount, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("getRunningScripts", std::bind(&ScriptEngineClient::getRunningScripts, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("checkSessionId", std::bind(&ScriptEngineClient::checkSessionId, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("executePhpNodeMethod", std::bind(&ScriptEngineClient::executePhpNodeMethod, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastEvent", std::bind(&ScriptEngineClient::broadcastEvent, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastNewDevices", std::bind(&ScriptEngineClient::broadcastNewDevices, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastDeleteDevices", std::bind(&ScriptEngineClient::broadcastDeleteDevices, this, std::placeholders::_1)));
@@ -1006,6 +1009,19 @@ ScriptEngineClient::ScriptGuard::~ScriptGuard()
 	}
 
 	{
+		if(_scriptInfo && _scriptInfo->nodeInfo)
+		{
+			auto infoIterator = _scriptInfo->nodeInfo->structValue->find("id");
+			if(infoIterator != _scriptInfo->nodeInfo->structValue->end())
+			{
+
+				std::lock_guard<std::mutex> nodeInfoGuard(ScriptEngineClient::_nodeInfoMutex);
+				ScriptEngineClient::_nodeInfo.erase(infoIterator->second->stringValue);
+			}
+		}
+	}
+
+	{
 		std::lock_guard<std::mutex> resourceGuard(_resourceMutex);
 		if(tsrm_get_ls_cache())
 		{
@@ -1209,9 +1225,19 @@ void ScriptEngineClient::runStatefulNode(int32_t id, PScriptInfo scriptInfo)
 	zend_object* homegearNode = nullptr;
 	try
 	{
+		std::string nodeId = scriptInfo->nodeInfo->structValue->at("id")->stringValue;
+		PNodeInfo nodeInfo = std::make_shared<NodeInfo>();
+
+		{
+			std::lock_guard<std::mutex> nodeInfoGuard(_nodeInfoMutex);
+			_nodeInfo.erase(nodeId);
+			_nodeInfo.emplace(nodeId, nodeInfo);
+		}
+
 		className = zend_string_init("HomegearNode", sizeof("HomegearNode") - 1, 0);
 		zend_class_entry* classEntry = zend_lookup_class(className);
-		if(classEntry)
+		if(!classEntry) _out.printError("Error: Class HomegearNode not found in file: " + scriptInfo->fullPath);
+		else
 		{
 			homegearNode = (zend_object*)ecalloc(1, sizeof(zend_object) + zend_object_properties_size(classEntry));
 			zend_object_std_init(homegearNode, classEntry);
@@ -1220,36 +1246,107 @@ void ScriptEngineClient::runStatefulNode(int32_t id, PScriptInfo scriptInfo)
 			zval homegearNodeObject;
 			ZVAL_OBJ(&homegearNodeObject, homegearNode);
 
-			//{{{ __construct
+			bool stop = false;
+			{
+				if(!zend_hash_str_find_ptr(&(classEntry->function_table), "init", sizeof("init") - 1))
+				{
+					_out.printError("Error: Mandatory method \"init\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
+					stop = true;
+				}
+				if(!zend_hash_str_find_ptr(&(classEntry->function_table), "start", sizeof("start") - 1))
+				{
+					_out.printError("Error: Mandatory method \"start\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
+					stop = true;
+				}
+				if(!zend_hash_str_find_ptr(&(classEntry->function_table), "stop", sizeof("stop") - 1))
+				{
+					_out.printError("Error: Mandatory method \"stop\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
+					stop = true;
+				}
+			}
+
+			if(!stop && zend_hash_str_find_ptr(&(classEntry->function_table), "__construct", sizeof("__construct") - 1))
+			{
+				zval returnValue;
+				zval function;
+
+				ZVAL_STRINGL(&function, "__construct", sizeof("__construct") - 1);
+				int result = call_user_function(&(classEntry->function_table), &homegearNodeObject, &function, &returnValue, 0, nullptr);
+				if(result != 0) _out.printError("Error calling function \"__construct\" in file: " + scriptInfo->fullPath);
+				zval_ptr_dtor(&function);
+				zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
+			}
+
+			while(!GD::bl->shuttingDown && !stop)
+			{
+				std::unique_lock<std::mutex> waitLock(nodeInfo->waitMutex);
+				while (!nodeInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+				{
+					return nodeInfo->ready || GD::bl->shuttingDown;
+				}));
+				if(!nodeInfo->ready || GD::bl->shuttingDown) continue;
+				nodeInfo->ready = false;
+
+				if(nodeInfo->methodName == "init")
 				{
 					zval returnValue;
 					zval function;
 					zval parameters[1];
 
-					ZVAL_STRINGL(&function, "__construct", sizeof("__construct") - 1);
+					ZVAL_STRINGL(&function, "init", sizeof("init") - 1);
 					PhpVariableConverter::getPHPVariable(scriptInfo->nodeInfo, &parameters[0]);
-					int result = call_user_function(EG(function_table), &homegearNodeObject, &function, &returnValue, 1, parameters);
-					if(result != 0) _out.printError("Error calling function \"__construct\" in file: " + scriptInfo->fullPath);
+					int result = call_user_function(&(classEntry->function_table), &homegearNodeObject, &function, &returnValue, 1, parameters);
+					if(result != 0)
+					{
+						_out.printError("Error calling function \"" + nodeInfo->methodName + "\" in file: " + scriptInfo->fullPath);
+						nodeInfo->response = BaseLib::Variable::createError(-3, "Error calling method: " + nodeInfo->methodName);
+					}
+					else nodeInfo->response = PhpVariableConverter::getVariable(&returnValue);
 					zval_ptr_dtor(&function);
 					zval_ptr_dtor(&parameters[0]);
 					zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
 				}
-			//}}}
-
-			//{{{ init
+				else if(nodeInfo->methodName == "start")
 				{
 					zval returnValue;
 					zval function;
 
-					ZVAL_STRINGL(&function, "init", sizeof("init") - 1);
-					int result = call_user_function(EG(function_table), &homegearNodeObject, &function, &returnValue, 0, nullptr);
-					if(result != 0) _out.printError("Error calling function \"init\" in file: " + scriptInfo->fullPath);
+					ZVAL_STRINGL(&function, "start", sizeof("start") - 1);
+					int result = call_user_function(&(classEntry->function_table), &homegearNodeObject, &function, &returnValue, 0, nullptr);
+					if(result != 0)
+					{
+						_out.printError("Error calling function \"" + nodeInfo->methodName + "\" in file: " + scriptInfo->fullPath);
+						nodeInfo->response = BaseLib::Variable::createError(-3, "Error calling method: " + nodeInfo->methodName);
+					}
+					else nodeInfo->response = PhpVariableConverter::getVariable(&returnValue);
 					zval_ptr_dtor(&function);
 					zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
 				}
-			//}}}
+				else if(nodeInfo->methodName == "stop")
+				{
+					zval returnValue;
+					zval function;
+
+					ZVAL_STRINGL(&function, "stop", sizeof("stop") - 1);
+					int result = call_user_function(&(classEntry->function_table), &homegearNodeObject, &function, &returnValue, 0, nullptr);
+					if(result != 0)
+					{
+						_out.printError("Error calling function \"" + nodeInfo->methodName + "\" in file: " + scriptInfo->fullPath);
+						nodeInfo->response = BaseLib::Variable::createError(-3, "Error calling method: " + nodeInfo->methodName);
+					}
+					else nodeInfo->response = std::make_shared<BaseLib::Variable>();
+					zval_ptr_dtor(&function);
+					zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
+					stop = true;
+				}
+				else nodeInfo->response = BaseLib::Variable::createError(-2, "Unknown method: " + nodeInfo->methodName);
+
+				nodeInfo->methodName.clear();
+				nodeInfo->parameters.reset();
+				waitLock.unlock();
+				nodeInfo->conditionVariable.notify_all();
+			}
 		}
-		else _out.printError("Error: Class HomegearNode not found in file: " + scriptInfo->fullPath);
 	}
 	catch(const std::exception& ex)
 	{
@@ -1680,6 +1777,68 @@ BaseLib::PVariable ScriptEngineClient::checkSessionId(BaseLib::PArray& parameter
 		if(_maintenanceThread.joinable()) _maintenanceThread.join();
 
 		return std::make_shared<BaseLib::Variable>(result);
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineClient::executePhpNodeMethod(BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+
+		std::string nodeId = parameters->at(0)->stringValue;
+		PNodeInfo nodeInfo;
+
+		{
+			std::lock_guard<std::mutex> nodeInfoGuard(_nodeInfoMutex);
+			auto nodeIterator = _nodeInfo.find(nodeId);
+			if (nodeIterator == _nodeInfo.end() || !nodeIterator->second) return BaseLib::Variable::createError(-1, "Unknown node.");
+			nodeInfo = nodeIterator->second;
+		}
+
+		std::lock_guard<std::mutex> requestLock(nodeInfo->requestMutex);
+
+		{
+			std::lock_guard<std::mutex> nodeInfoGuard(nodeInfo->waitMutex);
+			nodeInfo->methodName = parameters->at(1)->stringValue;
+			nodeInfo->parameters = parameters->at(2)->arrayValue;
+			nodeInfo->ready = true;
+			nodeInfo->response.reset();
+		}
+		nodeInfo->conditionVariable.notify_all();
+
+		//Wait for response
+		{
+			std::unique_lock<std::mutex> waitLock(nodeInfo->waitMutex);
+			int32_t i = 0;
+			while (!nodeInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+			{
+				return nodeInfo->response || GD::bl->shuttingDown;
+			}))
+			{
+				i++;
+				if(i == 60)
+				{
+					_out.printError("Error: Node with ID " + nodeId + " is not responding...");
+					break;
+				}
+			}
+		}
+
+		return BaseLib::PVariable(new BaseLib::Variable());
 	}
     catch(const std::exception& ex)
     {

@@ -102,6 +102,18 @@ private:
 		bool isRequest = false;
 	};
 
+	struct NodeInfo
+	{
+		std::mutex requestMutex;
+		std::mutex waitMutex;
+		std::condition_variable conditionVariable;
+		bool ready = false;
+		std::string methodName;
+		BaseLib::PArray parameters;
+		BaseLib::PVariable response;
+	};
+	typedef std::shared_ptr<NodeInfo> PNodeInfo;
+
 	BaseLib::Output _out;
 #ifdef DEBUGSESOCKET
 	std::ofstream _socketOutput;
@@ -128,6 +140,8 @@ private:
 	std::map<std::string, std::shared_ptr<CacheInfo>> _scriptCache;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
+	static std::mutex _nodeInfoMutex;
+	static std::unordered_map<std::string, PNodeInfo> _nodeInfo;
 
 	std::unique_ptr<BaseLib::Rpc::BinaryRpc> _binaryRpc;
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
@@ -186,6 +200,7 @@ private:
 		BaseLib::PVariable scriptCount(BaseLib::PArray& parameters);
 		BaseLib::PVariable getRunningScripts(BaseLib::PArray& parameters);
 		BaseLib::PVariable checkSessionId(BaseLib::PArray& parameters);
+		BaseLib::PVariable executePhpNodeMethod(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastEvent(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastNewDevices(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastDeleteDevices(BaseLib::PArray& parameters);

@@ -772,6 +772,17 @@ Flows::PVariable FlowsClient::shutdown(Flows::PArray& parameters)
 			std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
 			for(auto& flow : _flows)
 			{
+				for(auto& nodeIterator : flow.second->nodes)
+				{
+					Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
+					if(node) node->stop();
+				}
+			}
+		}
+		{
+			std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+			for(auto& flow : _flows)
+			{
 				for(auto& node : flow.second->nodes)
 				{
 					{
@@ -938,6 +949,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 					nodeObject->setNodeEvent(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&FlowsClient::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 					nodeObject->setGetNodeData(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&FlowsClient::getNodeData, this, std::placeholders::_1, std::placeholders::_2)));
 					nodeObject->setSetNodeData(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&FlowsClient::setNodeData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+					nodeObject->setGetConfigParameter(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&FlowsClient::getConfigParameter, this, std::placeholders::_1, std::placeholders::_2)));
 
 					if(!nodeObject->init(node.second))
 					{

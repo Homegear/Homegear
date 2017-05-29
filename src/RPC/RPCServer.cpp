@@ -1041,10 +1041,16 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 			std::string pathProtocol;
 			int32_t pos = http.getHeader().path.find('/', 1);
 			if(http.getHeader().path.size() == 7 || pos == 7) pathProtocol = http.getHeader().path.substr(1, 6);
+			else if(http.getHeader().path.size() == 11 || pos == 11) pathProtocol = http.getHeader().path.substr(1, 10);
 			if(pathProtocol == "client" || pathProtocol == "server")
 			{
 				//path starts with "/client/" or "/server/". Both are not part of the client id.
 				if(http.getHeader().path.size() > 8) client->webSocketClientId = http.getHeader().path.substr(8);
+			}
+			else if(pathProtocol == "nodeclient" || pathProtocol == "nodeserver")
+			{
+				//path starts with "/nodeclient/" or "/nodeserver/". Both are not part of the client id.
+				if(http.getHeader().path.size() > 12) client->webSocketClientId = http.getHeader().path.substr(12);
 			}
 			else if(http.getHeader().path.size() > 1)
 			{
@@ -1054,7 +1060,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 			}
 			BaseLib::HelperFunctions::toLower(client->webSocketClientId);
 
-			if(protocol == "server" || pathProtocol == "server")
+			if(protocol == "server" || pathProtocol == "server" || protocol == "nodeserver" || pathProtocol == "nodeserver")
 			{
 				client->rpcType = BaseLib::RpcType::websocket;
 				client->initJsonMode = true;
@@ -1067,7 +1073,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 				header.append("Connection: Upgrade\r\n");
 				header.append("Upgrade: websocket\r\n");
 				header.append("Sec-WebSocket-Accept: ").append(websocketAccept).append("\r\n");
-				if(!protocol.empty()) header.append("Sec-WebSocket-Protocol: server\r\n");
+				if(!protocol.empty()) header.append("Sec-WebSocket-Protocol: " + protocol + "\r\n");
 				header.append("\r\n");
 				std::vector<char> data(&header[0], &header[0] + header.size());
 				sendRPCResponseToClient(client, data, true);
@@ -1083,7 +1089,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 				header.append("Connection: Upgrade\r\n");
 				header.append("Upgrade: websocket\r\n");
 				header.append("Sec-WebSocket-Accept: ").append(websocketAccept).append("\r\n");
-				if(!protocol.empty()) header.append("Sec-WebSocket-Protocol: client\r\n");
+				if(!protocol.empty()) header.append("Sec-WebSocket-Protocol: " + protocol + "\r\n");
 				header.append("\r\n");
 				std::vector<char> data(&header[0], &header[0] + header.size());
 				sendRPCResponseToClient(client, data, true);

@@ -148,6 +148,7 @@ private:
 	// {{{ RPC methods
 		BaseLib::PVariable registerFlowsClient(PFlowsClientData& clientData, BaseLib::PArray& parameters);
 		BaseLib::PVariable executePhpNode(PFlowsClientData& clientData, BaseLib::PArray& parameters);
+		BaseLib::PVariable executePhpNodeMethod(PFlowsClientData& clientData, BaseLib::PArray& parameters);
 		BaseLib::PVariable invokeNodeMethod(PFlowsClientData& clientData, BaseLib::PArray& parameters);
 		BaseLib::PVariable nodeEvent(PFlowsClientData& clientData, BaseLib::PArray& parameters);
 	// }}}

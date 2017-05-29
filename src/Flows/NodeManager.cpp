@@ -432,7 +432,6 @@ int32_t NodeManager::unloadNode(std::string id)
 
 		auto nodesIterator = _nodes.find(id);
 		if(nodesIterator == _nodes.end()) return 1;
-		nodesIterator->second->stop();
 		auto nodesUsageIterator = _nodesUsage.find(nodesIterator->second->getName());
 		if(nodesUsageIterator != _nodesUsage.end())
 		{

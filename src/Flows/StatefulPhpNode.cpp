@@ -56,17 +56,54 @@ bool StatefulPhpNode::init(Flows::PNodeInfo nodeInfo)
 		return false;
 	}
 
+	parameters->clear();
+	parameters->reserve(3);
+	parameters->push_back(std::make_shared<Flows::Variable>(_id));
+	parameters->push_back(std::make_shared<Flows::Variable>("init"));
+	Flows::PVariable innerParameters = std::make_shared<Flows::Variable>(Flows::VariableType::tArray);
+	innerParameters->arrayValue->push_back(_nodeInfo);
+	parameters->push_back(innerParameters);
+
+	result = invoke("executePhpNodeMethod", parameters);
+	if(result->errorStruct)
+	{
+		GD::out.printError("Error calling init: " + result->structValue->at("faultString")->stringValue);
+		return false;
+	}
+
 	return true;
 }
 
 bool StatefulPhpNode::start()
 {
+	Flows::PArray parameters = std::make_shared<Flows::Array>();
+	parameters->reserve(3);
+	parameters->push_back(std::make_shared<Flows::Variable>(_id));
+	parameters->push_back(std::make_shared<Flows::Variable>("start"));
+	Flows::PVariable innerParameters = std::make_shared<Flows::Variable>(Flows::VariableType::tArray);
+	parameters->push_back(innerParameters);
+
+	Flows::PVariable result = invoke("executePhpNodeMethod", parameters);
+	if(result->errorStruct)
+	{
+		GD::out.printError("Error calling executePhpNode: " + result->structValue->at("faultString")->stringValue);
+		return false;
+	}
+
 	return true;
 }
 
 void StatefulPhpNode::stop()
 {
+	Flows::PArray parameters = std::make_shared<Flows::Array>();
+	parameters->reserve(3);
+	parameters->push_back(std::make_shared<Flows::Variable>(_id));
+	parameters->push_back(std::make_shared<Flows::Variable>("stop"));
+	Flows::PVariable innerParameters = std::make_shared<Flows::Variable>(Flows::VariableType::tArray);
+	parameters->push_back(innerParameters);
 
+	Flows::PVariable result = invoke("executePhpNodeMethod", parameters);
+	if(result->errorStruct) GD::out.printError("Error calling executePhpNode: " + result->structValue->at("faultString")->stringValue);
 }
 
 
@@ -74,17 +111,7 @@ void StatefulPhpNode::input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PV
 {
 	try
 	{
-		if(!_nodeInfo) _nodeInfo = nodeInfo->serialize();
 
-		Flows::PArray parameters = std::make_shared<Flows::Array>();
-		parameters->reserve(4);
-		parameters->push_back(_nodeInfo);
-		parameters->push_back(std::make_shared<Flows::Variable>(_path));
-		parameters->push_back(std::make_shared<Flows::Variable>(index));
-		parameters->push_back(message);
-
-		Flows::PVariable result = invoke("bla", parameters);
-		if(result->errorStruct) GD::out.printError("Error calling executePhpNode: " + result->structValue->at("faultString")->stringValue);
 	}
     catch(const std::exception& ex)
     {

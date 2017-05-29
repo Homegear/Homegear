@@ -340,12 +340,21 @@ void ScriptEngineServer::collectGarbage()
 		{
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			bool emptyProcess = false;
+			bool emptyNodeProcess = false;
 			for(std::map<pid_t, PScriptEngineProcess>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
 				if(i->second->scriptCount() == 0 && i->second->getClientData() && !i->second->getClientData()->closed)
 				{
-					if(emptyProcess) closeClientConnection(i->second->getClientData());
-					else emptyProcess = true;
+					if(i->second->isNodeProcess())
+					{
+						if(emptyNodeProcess) closeClientConnection(i->second->getClientData());
+						else emptyNodeProcess = true;
+					}
+					else
+					{
+						if(emptyProcess) closeClientConnection(i->second->getClientData());
+						else emptyProcess = true;
+					}
 				}
 			}
 		}
@@ -709,6 +718,44 @@ std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineSer
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>>();
+}
+
+BaseLib::PVariable ScriptEngineServer::executePhpNodeMethod(BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
+
+		PScriptEngineClientData clientData;
+		int32_t clientId = 0;
+		{
+			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+			auto nodeClientIdIterator = _nodeClientIdMap.find(parameters->at(0)->stringValue);
+			if(nodeClientIdIterator == _nodeClientIdMap.end()) return BaseLib::Variable::createError(-1, "Unknown node.");
+			clientId = nodeClientIdIterator->second;
+		}
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			auto clientIterator = _clients.find(clientId);
+			if(clientIterator == _clients.end()) return BaseLib::Variable::createError(-32501, "Node process not found.");
+			clientData = clientIterator->second;
+		}
+
+		return sendRequest(clientData, "executePhpNodeMethod", parameters);
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 void ScriptEngineServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values)
@@ -1310,6 +1357,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 				_out.printError("Error: Could not start new script engine process.");
 				return std::shared_ptr<ScriptEngineProcess>();
 			}
+			process->setUnregisterNode(std::function<void(std::string&)>(std::bind(&ScriptEngineServer::unregisterNode, this, std::placeholders::_1)));
 			_out.printInfo("Info: Script engine process successfully spawned. Process id is " + std::to_string(process->getPid()) + ". Client id is: " + std::to_string(process->getClientData()->id) + ".");
 			return process;
 		}
@@ -1655,6 +1703,12 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->maxThreadCount))}));
+
+			{
+				std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+				_nodeClientIdMap.erase(scriptInfo->nodeInfo->structValue->at("id")->stringValue);
+				_nodeClientIdMap.emplace(scriptInfo->nodeInfo->structValue->at("id")->stringValue, clientData->id);
+			}
 		}
 
 		BaseLib::PVariable result = sendRequest(clientData, "executeScript", parameters);
@@ -1666,6 +1720,12 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 			{
 				std::lock_guard<std::mutex> scriptFinishedGuard(_scriptFinishedThreadMutex);
 				GD::bl->threadManager.start(_scriptFinishedThread, true, &ScriptEngineServer::invokeScriptFinished, this, process, scriptInfo->id, result->structValue->at("faultCode")->integerValue);
+			}
+
+			if(scriptType == ScriptInfo::ScriptType::statefulNode)
+			{
+				std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+				_nodeClientIdMap.erase(scriptInfo->nodeInfo->structValue->at("id")->stringValue);
 			}
 
 			return;
@@ -1717,6 +1777,29 @@ BaseLib::PVariable ScriptEngineServer::getAllScripts()
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+void ScriptEngineServer::unregisterNode(std::string& nodeId)
+{
+	try
+	{
+		{
+			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+			_nodeClientIdMap.erase(nodeId);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 // {{{ RPC methods
