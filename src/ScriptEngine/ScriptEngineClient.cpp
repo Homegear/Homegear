@@ -1246,24 +1246,28 @@ void ScriptEngineClient::runStatefulNode(int32_t id, PScriptInfo scriptInfo)
 		}
 
 		zend_class_entry* homegearNodeClassEntry = nullptr;
-		bool stop = !php_init_stateful_node(scriptInfo, homegearNodeClassEntry, &homegearNodeObject);
+		bool result = php_init_stateful_node(scriptInfo, homegearNodeClassEntry, &homegearNodeObject);
 
-		while(!GD::bl->shuttingDown && !stop)
+		if(result)
 		{
-			std::unique_lock<std::mutex> waitLock(nodeInfo->waitMutex);
-			while (!nodeInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+			while(!GD::bl->shuttingDown)
 			{
-				return nodeInfo->ready || GD::bl->shuttingDown;
-			}));
-			if(!nodeInfo->ready || GD::bl->shuttingDown) continue;
-			nodeInfo->ready = false;
+				std::unique_lock<std::mutex> waitLock(nodeInfo->waitMutex);
+				while (!nodeInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+				{
+					return nodeInfo->ready || GD::bl->shuttingDown;
+				}));
+				if(!nodeInfo->ready || GD::bl->shuttingDown) continue;
+				nodeInfo->ready = false;
 
-			nodeInfo->response = php_node_object_invoke_local(scriptInfo, &homegearNodeObject, nodeInfo->methodName, nodeInfo->parameters);
+				nodeInfo->response = php_node_object_invoke_local(scriptInfo, &homegearNodeObject, nodeInfo->methodName, nodeInfo->parameters);
 
-			nodeInfo->methodName.clear();
-			nodeInfo->parameters.reset();
-			waitLock.unlock();
-			nodeInfo->conditionVariable.notify_all();
+				nodeInfo->parameters.reset();
+				waitLock.unlock();
+				nodeInfo->conditionVariable.notify_all();
+
+				if(nodeInfo->methodName == "stop") break;
+			}
 		}
 	}
 	catch(const std::exception& ex)
