@@ -1473,9 +1473,9 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 				std::map<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(methodName);
 				if(localMethodIterator != _localRpcMethods.end())
 				{
-					if(GD::bl->debugLevel >= 4)
+					if(GD::bl->debugLevel >= 5)
 					{
-						_out.printDebug("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + methodName);
+						_out.printDebug("Debug: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + methodName);
 						if(GD::bl->debugLevel >= 5)
 						{
 							for(BaseLib::Array::iterator i = parameters->at(2)->arrayValue->begin(); i != parameters->at(2)->arrayValue->end(); ++i)
@@ -1503,7 +1503,7 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 					return;
 				}
 
-				if(GD::bl->debugLevel >= 4)
+				if(GD::bl->debugLevel >= 5)
 				{
 					_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + methodName + " Parameters:");
 					for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(2)->arrayValue->begin(); i != parameters->at(2)->arrayValue->end(); ++i)
@@ -2091,6 +2091,42 @@ void FlowsServer::startFlow(PFlowInfoServer& flowInfo, std::set<std::string>& no
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+BaseLib::PVariable FlowsServer::executePhpNodeBaseMethod(BaseLib::PArray& parameters)
+{
+	try
+	{
+		PFlowsClientData clientData;
+		int32_t clientId = 0;
+		{
+			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+			auto nodeClientIdIterator = _nodeClientIdMap.find(parameters->at(0)->stringValue);
+			if(nodeClientIdIterator == _nodeClientIdMap.end()) return BaseLib::Variable::createError(-1, "Unknown node.");
+			clientId = nodeClientIdIterator->second;
+		}
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			auto clientIterator = _clients.find(clientId);
+			if(clientIterator == _clients.end()) return BaseLib::Variable::createError(-1, "Unknown node.");
+			clientData = clientIterator->second;
+		}
+
+		return sendRequest(clientData, "executePhpNodeBaseMethod", parameters);
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 // {{{ RPC methods

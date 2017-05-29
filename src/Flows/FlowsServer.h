@@ -59,6 +59,7 @@ public:
 	std::string handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
 	std::string handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
 	void nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message);
+	BaseLib::PVariable executePhpNodeBaseMethod(BaseLib::PArray& parameters);
 	void setNodeVariable(std::string nodeId, std::string topic, BaseLib::PVariable value);
 	void enableNodeEvents();
 	void disableNodeEvents();

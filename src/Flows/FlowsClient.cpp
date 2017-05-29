@@ -60,6 +60,7 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 2, 1000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("flowCount", std::bind(&FlowsClient::flowCount, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("nodeOutput", std::bind(&FlowsClient::nodeOutput, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("invokeNodeMethod", std::bind(&FlowsClient::invokeExternalNodeMethod, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("executePhpNodeBaseMethod", std::bind(&FlowsClient::executePhpNodeBaseMethod, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("setNodeVariable", std::bind(&FlowsClient::setNodeVariable, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("enableNodeEvents", std::bind(&FlowsClient::enableNodeEvents, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("disableNodeEvents", std::bind(&FlowsClient::disableNodeEvents, this, std::placeholders::_1)));
@@ -295,7 +296,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 					return;
 				}
 
-				if(GD::bl->debugLevel >= 4) _out.printInfo("Info: Server is calling RPC method: " + methodName);
+				if(GD::bl->debugLevel >= 5) _out.printInfo("Debug: Server is calling RPC method: " + methodName);
 
 				Flows::PVariable result = localMethodIterator->second(parameters->at(1)->arrayValue);
 				if(GD::bl->debugLevel >= 5)
@@ -1138,6 +1139,115 @@ Flows::PVariable FlowsClient::invokeExternalNodeMethod(Flows::PArray& parameters
 		Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
 		if(!node) return Flows::Variable::createError(-1, "Unknown node.");
 		return node->invokeLocal(parameters->at(1)->stringValue, parameters->at(2)->arrayValue);
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable FlowsClient::executePhpNodeBaseMethod(Flows::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+
+		std::string& methodName = parameters->at(1)->stringValue;
+		Flows::PArray& innerParameters = parameters->at(2)->arrayValue;
+
+		if(methodName == "log")
+		{
+			if(innerParameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
+			if(innerParameters->at(1)->type != Flows::VariableType::tInteger64) return Flows::Variable::createError(-1, "Parameter 2 is not of type integer.");
+			if(innerParameters->at(2)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 3 is not of type string.");
+
+			log(innerParameters->at(0)->stringValue, innerParameters->at(1)->integerValue, innerParameters->at(2)->stringValue);
+			return std::make_shared<Flows::Variable>();
+		}
+		else if(methodName == "invokeNodeMethod")
+		{
+			if(innerParameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
+			if(innerParameters->at(1)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 2 is not of type string.");
+			if(innerParameters->at(2)->type != Flows::VariableType::tArray) return Flows::Variable::createError(-1, "Parameter 3 is not of type array.");
+
+			return invokeNodeMethod(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue, innerParameters->at(2)->arrayValue);
+		}
+		else if(methodName == "subscribePeer")
+		{
+			if(innerParameters->size() != 4) return Flows::Variable::createError(-1, "Wrong parameter count.");
+			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
+			if(innerParameters->at(1)->type != Flows::VariableType::tInteger64) return Flows::Variable::createError(-1, "Parameter 2 is not of type integer.");
+			if(innerParameters->at(2)->type != Flows::VariableType::tInteger64) return Flows::Variable::createError(-1, "Parameter 3 is not of type integer.");
+			if(innerParameters->at(2)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 4 is not of type string.");
+
+			subscribePeer(innerParameters->at(0)->stringValue, innerParameters->at(1)->integerValue64, innerParameters->at(2)->integerValue, innerParameters->at(3)->stringValue);
+			return std::make_shared<Flows::Variable>();
+		}
+		else if(methodName == "unsubscribePeer")
+		{
+			if(innerParameters->size() != 4) return Flows::Variable::createError(-1, "Wrong parameter count.");
+			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
+			if(innerParameters->at(1)->type != Flows::VariableType::tInteger64) return Flows::Variable::createError(-1, "Parameter 2 is not of type integer.");
+			if(innerParameters->at(2)->type != Flows::VariableType::tInteger64) return Flows::Variable::createError(-1, "Parameter 3 is not of type integer.");
+			if(innerParameters->at(2)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 4 is not of type string.");
+
+			unsubscribePeer(innerParameters->at(0)->stringValue, innerParameters->at(1)->integerValue64, innerParameters->at(2)->integerValue, innerParameters->at(3)->stringValue);
+			return std::make_shared<Flows::Variable>();
+		}
+		else if(methodName == "output")
+		{
+			if(innerParameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
+			if(innerParameters->at(1)->type != Flows::VariableType::tInteger64) return Flows::Variable::createError(-1, "Parameter 2 is not of type integer.");
+
+			queueOutput(innerParameters->at(0)->stringValue, innerParameters->at(1)->integerValue, innerParameters->at(2));
+			return std::make_shared<Flows::Variable>();
+		}
+		else if(methodName == "nodeEvent")
+		{
+			if(innerParameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
+			if(innerParameters->at(1)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 2 is not of type string.");
+
+			nodeEvent(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue, innerParameters->at(2));
+			return std::make_shared<Flows::Variable>();
+		}
+		else if(methodName == "getNodeData")
+		{
+			if(innerParameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
+			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
+			if(innerParameters->at(1)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 2 is not of type string.");
+
+			return getNodeData(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue);
+		}
+		else if(methodName == "setNodeData")
+		{
+			if(innerParameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
+			if(innerParameters->at(1)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 2 is not of type string.");
+
+			setNodeData(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue, innerParameters->at(2));
+			return std::make_shared<Flows::Variable>();
+		}
+		else if(methodName == "getConfigParameter")
+		{
+			if(innerParameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
+			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
+			if(innerParameters->at(1)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 2 is not of type string.");
+
+			return getConfigParameter(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue);
+		}
 	}
     catch(const std::exception& ex)
     {

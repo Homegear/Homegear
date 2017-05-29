@@ -35,6 +35,7 @@
 #include "php_config_fixes.h"
 #include "../GD/GD.h"
 #include "php_sapi.h"
+#include "php_node.h"
 #include "PhpEvents.h"
 
 #include <sys/types.h>
@@ -594,7 +595,7 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 				return;
 			}
 
-			if(GD::bl->debugLevel >= 4) _out.printInfo("Info: Server is calling RPC method: " + methodName);
+			if(GD::bl->debugLevel >= 5) _out.printInfo("Debug: Server is calling RPC method: " + methodName);
 
 			BaseLib::PVariable result = localMethodIterator->second(parameters->at(1)->arrayValue);
 			if(GD::bl->debugLevel >= 5)
@@ -793,11 +794,16 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string
 			return result;
 		}
 
+		int32_t i = 0;
 		std::unique_lock<std::mutex> waitLock(requestInfo.waitMutex);
-		while (!requestInfo.conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]
+		while (!requestInfo.conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
 		{
 			return response->finished || _stopped;
-		}));
+		}))
+		{
+			i++;
+			if(i == 10) break;
+		}
 
 		if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
 		{
@@ -1113,6 +1119,11 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 				globals->peerId = scriptInfo->peerId;
 			}
 
+			if(type == ScriptInfo::ScriptType::statefulNode)
+			{
+				globals->nodeId = scriptInfo->nodeInfo->structValue->at("id")->stringValue;
+			}
+
 			ZEND_TSRMLS_CACHE_UPDATE();
 
 			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)
@@ -1175,6 +1186,8 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			if(scriptInfo->peerId > 0) GD::out.printInfo("Info: Starting PHP script of peer " + std::to_string(scriptInfo->peerId) + ".");
 		}
 
+		if(type == ScriptInfo::ScriptType::statefulNode) php_node_startup();
+
 		php_execute_script(&zendHandle);
 		if(type == ScriptInfo::ScriptType::simpleNode)
 		{
@@ -1221,131 +1234,36 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 
 void ScriptEngineClient::runStatefulNode(int32_t id, PScriptInfo scriptInfo)
 {
-	zend_string* className = nullptr;
-	zend_object* homegearNode = nullptr;
+	zval homegearNodeObject;
 	try
 	{
 		std::string nodeId = scriptInfo->nodeInfo->structValue->at("id")->stringValue;
-		PNodeInfo nodeInfo = std::make_shared<NodeInfo>();
+		PNodeInfo nodeInfo;
 
 		{
 			std::lock_guard<std::mutex> nodeInfoGuard(_nodeInfoMutex);
-			_nodeInfo.erase(nodeId);
-			_nodeInfo.emplace(nodeId, nodeInfo);
+			nodeInfo = _nodeInfo.at(nodeId);
 		}
 
-		className = zend_string_init("HomegearNode", sizeof("HomegearNode") - 1, 0);
-		zend_class_entry* classEntry = zend_lookup_class(className);
-		if(!classEntry) _out.printError("Error: Class HomegearNode not found in file: " + scriptInfo->fullPath);
-		else
+		zend_class_entry* homegearNodeClassEntry = nullptr;
+		bool stop = !php_init_stateful_node(scriptInfo, homegearNodeClassEntry, &homegearNodeObject);
+
+		while(!GD::bl->shuttingDown && !stop)
 		{
-			homegearNode = (zend_object*)ecalloc(1, sizeof(zend_object) + zend_object_properties_size(classEntry));
-			zend_object_std_init(homegearNode, classEntry);
-			object_properties_init(homegearNode, classEntry);
-			homegearNode->handlers = zend_get_std_object_handlers();
-			zval homegearNodeObject;
-			ZVAL_OBJ(&homegearNodeObject, homegearNode);
-
-			bool stop = false;
+			std::unique_lock<std::mutex> waitLock(nodeInfo->waitMutex);
+			while (!nodeInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
 			{
-				if(!zend_hash_str_find_ptr(&(classEntry->function_table), "init", sizeof("init") - 1))
-				{
-					_out.printError("Error: Mandatory method \"init\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
-					stop = true;
-				}
-				if(!zend_hash_str_find_ptr(&(classEntry->function_table), "start", sizeof("start") - 1))
-				{
-					_out.printError("Error: Mandatory method \"start\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
-					stop = true;
-				}
-				if(!zend_hash_str_find_ptr(&(classEntry->function_table), "stop", sizeof("stop") - 1))
-				{
-					_out.printError("Error: Mandatory method \"stop\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
-					stop = true;
-				}
-			}
+				return nodeInfo->ready || GD::bl->shuttingDown;
+			}));
+			if(!nodeInfo->ready || GD::bl->shuttingDown) continue;
+			nodeInfo->ready = false;
 
-			if(!stop && zend_hash_str_find_ptr(&(classEntry->function_table), "__construct", sizeof("__construct") - 1))
-			{
-				zval returnValue;
-				zval function;
+			nodeInfo->response = php_node_object_invoke_local(scriptInfo, &homegearNodeObject, nodeInfo->methodName, nodeInfo->parameters);
 
-				ZVAL_STRINGL(&function, "__construct", sizeof("__construct") - 1);
-				int result = call_user_function(&(classEntry->function_table), &homegearNodeObject, &function, &returnValue, 0, nullptr);
-				if(result != 0) _out.printError("Error calling function \"__construct\" in file: " + scriptInfo->fullPath);
-				zval_ptr_dtor(&function);
-				zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
-			}
-
-			while(!GD::bl->shuttingDown && !stop)
-			{
-				std::unique_lock<std::mutex> waitLock(nodeInfo->waitMutex);
-				while (!nodeInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
-				{
-					return nodeInfo->ready || GD::bl->shuttingDown;
-				}));
-				if(!nodeInfo->ready || GD::bl->shuttingDown) continue;
-				nodeInfo->ready = false;
-
-				if(nodeInfo->methodName == "init")
-				{
-					zval returnValue;
-					zval function;
-					zval parameters[1];
-
-					ZVAL_STRINGL(&function, "init", sizeof("init") - 1);
-					PhpVariableConverter::getPHPVariable(scriptInfo->nodeInfo, &parameters[0]);
-					int result = call_user_function(&(classEntry->function_table), &homegearNodeObject, &function, &returnValue, 1, parameters);
-					if(result != 0)
-					{
-						_out.printError("Error calling function \"" + nodeInfo->methodName + "\" in file: " + scriptInfo->fullPath);
-						nodeInfo->response = BaseLib::Variable::createError(-3, "Error calling method: " + nodeInfo->methodName);
-					}
-					else nodeInfo->response = PhpVariableConverter::getVariable(&returnValue);
-					zval_ptr_dtor(&function);
-					zval_ptr_dtor(&parameters[0]);
-					zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
-				}
-				else if(nodeInfo->methodName == "start")
-				{
-					zval returnValue;
-					zval function;
-
-					ZVAL_STRINGL(&function, "start", sizeof("start") - 1);
-					int result = call_user_function(&(classEntry->function_table), &homegearNodeObject, &function, &returnValue, 0, nullptr);
-					if(result != 0)
-					{
-						_out.printError("Error calling function \"" + nodeInfo->methodName + "\" in file: " + scriptInfo->fullPath);
-						nodeInfo->response = BaseLib::Variable::createError(-3, "Error calling method: " + nodeInfo->methodName);
-					}
-					else nodeInfo->response = PhpVariableConverter::getVariable(&returnValue);
-					zval_ptr_dtor(&function);
-					zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
-				}
-				else if(nodeInfo->methodName == "stop")
-				{
-					zval returnValue;
-					zval function;
-
-					ZVAL_STRINGL(&function, "stop", sizeof("stop") - 1);
-					int result = call_user_function(&(classEntry->function_table), &homegearNodeObject, &function, &returnValue, 0, nullptr);
-					if(result != 0)
-					{
-						_out.printError("Error calling function \"" + nodeInfo->methodName + "\" in file: " + scriptInfo->fullPath);
-						nodeInfo->response = BaseLib::Variable::createError(-3, "Error calling method: " + nodeInfo->methodName);
-					}
-					else nodeInfo->response = std::make_shared<BaseLib::Variable>();
-					zval_ptr_dtor(&function);
-					zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
-					stop = true;
-				}
-				else nodeInfo->response = BaseLib::Variable::createError(-2, "Unknown method: " + nodeInfo->methodName);
-
-				nodeInfo->methodName.clear();
-				nodeInfo->parameters.reset();
-				waitLock.unlock();
-				nodeInfo->conditionVariable.notify_all();
-			}
+			nodeInfo->methodName.clear();
+			nodeInfo->parameters.reset();
+			waitLock.unlock();
+			nodeInfo->conditionVariable.notify_all();
 		}
 	}
 	catch(const std::exception& ex)
@@ -1360,13 +1278,7 @@ void ScriptEngineClient::runStatefulNode(int32_t id, PScriptInfo scriptInfo)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	//Maybe cleanup is not necessary - valgrind shows no lost bytes if the lines below are commented out
-	if(homegearNode)
-	{
-		zend_object_std_dtor(homegearNode);
-		efree(homegearNode);
-	}
-	if(className) zend_string_release(className);
+	php_deinit_stateful_node(&homegearNodeObject);
 }
 
 void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool sendOutput)
@@ -1643,6 +1555,11 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 				_out.printError("Error: PHP node script \"" + scriptInfo->fullPath + "\" does not exist.");
 				return BaseLib::Variable::createError(-1, "Script file does not exist: " + scriptInfo->fullPath);
 			}
+
+			std::string nodeId = scriptInfo->nodeInfo->structValue->at("id")->stringValue;
+			std::lock_guard<std::mutex> nodeInfoGuard(_nodeInfoMutex);
+			_nodeInfo.erase(nodeId);
+			_nodeInfo.emplace(nodeId, std::make_shared<NodeInfo>());
 		}
 
 		scriptInfo->id = parameters->at(0)->integerValue;
@@ -1838,7 +1755,7 @@ BaseLib::PVariable ScriptEngineClient::executePhpNodeMethod(BaseLib::PArray& par
 			}
 		}
 
-		return BaseLib::PVariable(new BaseLib::Variable());
+		return nodeInfo->response;
 	}
     catch(const std::exception& ex)
     {

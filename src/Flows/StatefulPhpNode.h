@@ -44,7 +44,17 @@ public:
 	virtual bool init(Flows::PNodeInfo nodeInfo);
 	virtual bool start();
 	virtual void stop();
+
+	virtual void configNodesStarted();
+
+	virtual void variableEvent(uint64_t peerId, int32_t channel, std::string variable, Flows::PVariable value);
+	virtual void setNodeVariable(std::string& variable, Flows::PVariable& value);
+
+	virtual Flows::PVariable getConfigParameterIncoming(std::string name);
+
 	virtual void input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message);
+
+	virtual Flows::PVariable invokeLocal(std::string methodName, Flows::PArray& parameters);
 };
 
 #endif

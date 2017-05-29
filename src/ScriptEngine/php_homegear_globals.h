@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -28,35 +28,58 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef HOMEGEAR_PHP_SAPI_H_
-#define HOMEGEAR_PHP_SAPI_H_
-
-#ifndef NO_SCRIPTENGINE
+#ifndef HOMEGEAR_PHP_GLOBALS_H_
+#define HOMEGEAR_PHP_GLOBALS_H_
 
 #include <homegear-base/BaseLib.h>
-#include "PhpEvents.h"
-#include "php_homegear_globals.h"
+#include "../../config.h"
 #include "php_config_fixes.h"
 
-#include <iostream>
-#include <string>
-#include <vector>
-#include <iterator>
-#include <map>
+#include <zend_types.h>
 
-#include <php.h>
-#include <SAPI.h>
-#include <php_main.h>
-#include <php_variables.h>
-#include <php_ini.h>
-#include <zend_API.h>
-#include <zend_ini.h>
-#include <zend_exceptions.h>
-#include <ext/standard/info.h>
+typedef struct _zend_homegear_globals
+{
+	std::function<void(std::string& output)> outputCallback;
+	std::function<void(BaseLib::PVariable& headers)> sendHeadersCallback;
+	std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)> rpcCallback;
+	BaseLib::Http http;
+	BaseLib::ScriptEngine::PScriptInfo scriptInfo;
 
-void php_homegear_build_argv(std::vector<std::string>& arguments);
-int php_homegear_init();
-void php_homegear_shutdown();
+	bool webRequest = false;
+	bool commandLine = false;
+	bool cookiesParsed = false;
+	int64_t peerId = 0;
+	int32_t logLevel = -1;
 
+	zend_class_entry* homegear_exception_class_entry = nullptr;
+	zend_class_entry* homegear_class_entry = nullptr;
+	zend_class_entry* homegear_gpio_class_entry = nullptr;
+	zend_class_entry* homegear_serial_class_entry = nullptr;
+#ifdef I2CSUPPORT
+	zend_class_entry* homegear_i2c_class_entry = nullptr;
 #endif
+	zend_class_entry* homegear_node_base_class_entry = nullptr;
+
+	// {{{ Needed by ScriptEngineClient
+	int32_t id = 0;
+	std::string token;
+	bool executionStarted = false;
+	// }}}
+
+	// {{{ Needed for nodes
+	std::string nodeId;
+	// }}}
+} zend_homegear_globals;
+
+typedef struct _zend_homegear_superglobals
+{
+	BaseLib::Http* http;
+	BaseLib::LowLevel::Gpio* gpio;
+	std::mutex serialDevicesMutex;
+	std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>> serialDevices;
+} zend_homegear_superglobals;
+
+zend_homegear_globals* php_homegear_get_globals();
+pthread_key_t* php_homegear_get_pthread_key();
+
 #endif

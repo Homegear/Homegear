@@ -201,6 +201,7 @@ private:
 
 		// {{{ Flows
 			BaseLib::PVariable nodeOutput(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+			BaseLib::PVariable executePhpNodeBaseMethod(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 		// }}}
 	// }}}
 };

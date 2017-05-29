@@ -177,6 +177,7 @@ private:
 
 		Flows::PVariable nodeOutput(Flows::PArray& parameters);
 		Flows::PVariable invokeExternalNodeMethod(Flows::PArray& parameters);
+		Flows::PVariable executePhpNodeBaseMethod(Flows::PArray& parameters);
 
 		Flows::PVariable setNodeVariable(Flows::PArray& parameters);
 
