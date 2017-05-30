@@ -119,8 +119,11 @@ void FlowsClient::start()
 			_out.printError("Error: Could not redirect errors to log file.");
 		}
 
-		startQueue(0, 5, 0, SCHED_OTHER);
-		startQueue(1, GD::bl->settings.flowsProcessingThreadCountNodes(), 0, SCHED_OTHER);
+		uint32_t flowsProcessingThreadCountNodes = GD::bl->settings.flowsProcessingThreadCountNodes();
+		if(flowsProcessingThreadCountNodes < 5) flowsProcessingThreadCountNodes = 5;
+
+		startQueue(0, flowsProcessingThreadCountNodes, 0, SCHED_OTHER);
+		startQueue(1, flowsProcessingThreadCountNodes, 0, SCHED_OTHER);
 
 		_socketPath = GD::bl->settings.socketPath() + "homegearFE.sock";
 		if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Socket path is " + _socketPath);

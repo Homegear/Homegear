@@ -247,8 +247,10 @@ bool FlowsServer::start()
 		if(!getFileDescriptor(true)) return false;
 		_webroot = GD::bl->settings.flowsPath() + "www/";
 		getMaxThreadCounts();
-		startQueue(0, GD::bl->settings.flowsProcessingThreadCountServer(), 0, SCHED_OTHER);
-		startQueue(1, GD::bl->settings.flowsProcessingThreadCountServer(), 0, SCHED_OTHER);
+		uint32_t flowsProcessingThreadCountServer = GD::bl->settings.flowsProcessingThreadCountServer();
+		if(flowsProcessingThreadCountServer < 5) flowsProcessingThreadCountServer = 5;
+		startQueue(0, flowsProcessingThreadCountServer, 0, SCHED_OTHER);
+		startQueue(1, flowsProcessingThreadCountServer, 0, SCHED_OTHER);
 		GD::bl->threadManager.start(_mainThread, true, &FlowsServer::mainThread, this);
 		startFlows();
 		return true;

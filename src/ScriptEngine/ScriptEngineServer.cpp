@@ -411,8 +411,10 @@ bool ScriptEngineServer::start()
 		_shuttingDown = false;
 		_stopServer = false;
 		if(!getFileDescriptor(true)) return false;
-		startQueue(0, GD::bl->settings.scriptEngineThreadCount(), 0, SCHED_OTHER);
-		startQueue(1, GD::bl->settings.scriptEngineThreadCount(), 0, SCHED_OTHER);
+		uint32_t scriptEngineThreadCount = GD::bl->settings.scriptEngineThreadCount();
+		if(scriptEngineThreadCount < 5) scriptEngineThreadCount = 5;
+		startQueue(0, scriptEngineThreadCount, 0, SCHED_OTHER);
+		startQueue(1, scriptEngineThreadCount, 0, SCHED_OTHER);
 		GD::bl->threadManager.start(_mainThread, true, &ScriptEngineServer::mainThread, this);
 		return true;
 	}
