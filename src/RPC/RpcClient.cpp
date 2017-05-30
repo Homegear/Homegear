@@ -103,9 +103,9 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 			return;
 		}
 		server->sendMutex.lock();
-		_out.printInfo("Info: Calling RPC method \"" + methodName + "\" on server " + (server->hostname.empty() ? server->address.first : server->hostname) + ".");
 		if(GD::bl->debugLevel >= 5)
 		{
+			_out.printDebug("Debug: Calling RPC method \"" + methodName + "\" on server " + (server->hostname.empty() ? server->address.first : server->hostname) + ".");
 			_out.printDebug("Parameters:");
 			for(std::list<BaseLib::PVariable>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 			{
@@ -218,9 +218,9 @@ BaseLib::PVariable RpcClient::invoke(std::shared_ptr<RemoteRpcServer> server, st
 			server->sendMutex.unlock();
 			return BaseLib::Variable::createError(-32300, "Server was removed and has to send \"init\" again.");;
 		}
-		_out.printInfo("Info: Calling RPC method \"" + methodName + "\" on server " + (server->hostname.empty() ? server->address.first : server->hostname) + ".");
 		if(GD::bl->debugLevel >= 5)
 		{
+			_out.printDebug("Debug: Calling RPC method \"" + methodName + "\" on server " + (server->hostname.empty() ? server->address.first : server->hostname) + ".");
 			_out.printDebug("Parameters:");
 			for(std::list<BaseLib::PVariable>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 			{

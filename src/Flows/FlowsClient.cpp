@@ -345,9 +345,13 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 			Flows::PINode node = _nodeManager->getNode(queueEntry->nodeInfo->id);
 			if(node)
 			{
-				Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
-				timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(1000));
-				nodeEvent(queueEntry->nodeInfo->id, "highlightNode/" + queueEntry->nodeInfo->id, timeout);
+				if(BaseLib::HelperFunctions::getTime() - queueEntry->nodeInfo->lastNodeEvent1 >= 1000)
+				{
+					queueEntry->nodeInfo->lastNodeEvent1 = BaseLib::HelperFunctions::getTime();
+					Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+					timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(1000));
+					nodeEvent(queueEntry->nodeInfo->id, "highlightNode/" + queueEntry->nodeInfo->id, timeout);
+				}
 				node->input(queueEntry->nodeInfo, queueEntry->targetPort, queueEntry->message);
 			}
 		}
@@ -602,18 +606,21 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 			enqueue(1, queueEntry);
 		}
 
-		Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
-		timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
-		nodeEvent(nodeId, "highlightNode/" + nodeId, timeout);
-		Flows::PVariable outputIndex = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
-		outputIndex->structValue->emplace("index", std::make_shared<Flows::Variable>(index));
-		nodeEvent(nodeId, "highlightLink/" + nodeId, outputIndex);
-		Flows::PVariable status = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
-		std::string statusText = std::to_string(index) + ": " + message->structValue->at("payload")->toString();
-		if(statusText.size() > 20) statusText = statusText.substr(0, 17) + "...";
-		status->structValue->emplace("text", std::make_shared<Flows::Variable>(statusText));
-		status->structValue->emplace("position", std::make_shared<Flows::Variable>("top"));
-		nodeEvent(nodeId, "statusTop/" + nodeId, status);
+		if(BaseLib::HelperFunctions::getTime() - nodesIterator->second->lastNodeEvent2 >= 1000)
+		{
+			nodesIterator->second->lastNodeEvent2 = BaseLib::HelperFunctions::getTime();
+			Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+			timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
+			nodeEvent(nodeId, "highlightNode/" + nodeId, timeout);
+			Flows::PVariable outputIndex = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+			outputIndex->structValue->emplace("index", std::make_shared<Flows::Variable>(index));
+			nodeEvent(nodeId, "highlightLink/" + nodeId, outputIndex);
+			Flows::PVariable status = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+			std::string statusText = std::to_string(index) + ": " + message->structValue->at("payload")->toString();
+			if(statusText.size() > 20) statusText = statusText.substr(0, 17) + "...";
+			status->structValue->emplace("text", std::make_shared<Flows::Variable>(statusText));
+			nodeEvent(nodeId, "statusTop/" + nodeId, status);
+		}
 	}
 	catch(const std::exception& ex)
     {
