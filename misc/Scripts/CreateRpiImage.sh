@@ -432,6 +432,7 @@ echo "************************************************************"
 sleep 2
 
 mount -o remount,rw /
+mount -o remount,rw /boot
 
 export NCURSES_NO_UTF8_ACS=1
 export DIALOG_OUTPUT=1
