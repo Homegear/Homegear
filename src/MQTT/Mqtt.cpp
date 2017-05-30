@@ -366,7 +366,11 @@ void Mqtt::listen()
 			{
 				if(!_started) return;
 				reconnect();
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				for(int32_t i = 0; i < 300; i++)
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(100));
+					if(_socket->connected() || !_started) break;
+				}
 				continue;
 			}
 			try

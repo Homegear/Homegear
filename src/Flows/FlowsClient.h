@@ -90,7 +90,7 @@ private:
 	std::atomic_bool _stopped;
 	std::mutex _sendMutex;
 	std::mutex _rpcResponsesMutex;
-	std::map<int64_t, std::map<int32_t, PFlowsResponse>> _rpcResponses;
+	std::map<int64_t, std::map<int32_t, PFlowsResponseClient>> _rpcResponses;
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 	std::map<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>> _localRpcMethods;
 	std::thread _maintenanceThread;

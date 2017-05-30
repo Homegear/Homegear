@@ -1530,7 +1530,7 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 					auto responseIterator = queueEntry->clientData->rpcResponses.find(packetId);
 					if(responseIterator != queueEntry->clientData->rpcResponses.end())
 					{
-						PFlowsResponse element = responseIterator->second;
+						PFlowsResponseServer element = responseIterator->second;
 						if(element)
 						{
 							element->response = response;
@@ -1539,7 +1539,7 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 						}
 					}
 				}
-				queueEntry->clientData->requestConditionVariable.notify_one();
+				queueEntry->clientData->requestConditionVariable.notify_all();
 			}
 		}
 		else if(index == 1 && queueEntry->type == QueueEntry::QueueEntryType::broadcast) //Second queue for sending packets. Response is processed by first queue
@@ -1611,10 +1611,10 @@ BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::s
 		std::vector<char> data;
 		_rpcEncoder->encodeRequest(methodName, array, data);
 
-		PFlowsResponse response;
+		PFlowsResponseServer response;
 		{
 			std::lock_guard<std::mutex> responseGuard(clientData->rpcResponsesMutex);
-			auto result = clientData->rpcResponses.emplace(packetId, std::make_shared<FlowsResponse>());
+			auto result = clientData->rpcResponses.emplace(packetId, std::make_shared<FlowsResponseServer>());
 			if(result.second) response = result.first->second;
 		}
 		if(!response)
@@ -2149,7 +2149,7 @@ BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData
 		}
 		clientData->pid = pid;
 		processIterator->second->setClientData(clientData);
-		processIterator->second->requestConditionVariable.notify_one();
+		processIterator->second->requestConditionVariable.notify_all();
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
     catch(const std::exception& ex)

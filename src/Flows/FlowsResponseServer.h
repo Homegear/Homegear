@@ -28,28 +28,28 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef FLOWSRESPONSE_H_
-#define FLOWSRESPONSE_H_
+#ifndef FLOWSRESPONSESERVER_H_
+#define FLOWSRESPONSESERVER_H_
 
 #include <homegear-base/BaseLib.h>
 
 namespace Flows
 {
 
-class FlowsResponse
+class FlowsResponseServer
 {
 public:
 	std::atomic_bool finished;
 	int32_t packetId = 0;
 	BaseLib::PVariable response;
 
-	FlowsResponse()
+	FlowsResponseServer()
 	{
 		finished = false;
 	}
 };
 
-typedef std::shared_ptr<FlowsResponse> PFlowsResponse;
+typedef std::shared_ptr<FlowsResponseServer> PFlowsResponseServer;
 
 }
 

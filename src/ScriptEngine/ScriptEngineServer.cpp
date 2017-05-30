@@ -1015,7 +1015,7 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 						}
 					}
 				}
-				queueEntry->clientData->requestConditionVariable.notify_one();
+				queueEntry->clientData->requestConditionVariable.notify_all();
 			}
 		}
 		else if(index == 1 && queueEntry->type == QueueEntry::QueueEntryType::broadcast) //Second queue for sending packets. Response is processed by first queue
@@ -1826,7 +1826,7 @@ void ScriptEngineServer::unregisterNode(std::string& nodeId)
 			}
 			clientData->pid = pid;
 			processIterator->second->setClientData(clientData);
-			processIterator->second->requestConditionVariable.notify_one();
+			processIterator->second->requestConditionVariable.notify_all();
 			return BaseLib::PVariable(new BaseLib::Variable());
 		}
 		catch(const std::exception& ex)

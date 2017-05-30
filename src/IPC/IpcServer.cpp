@@ -605,7 +605,7 @@ void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueue
 						}
 					}
 				}
-				queueEntry->clientData->requestConditionVariable.notify_one();
+				queueEntry->clientData->requestConditionVariable.notify_all();
 			}
 		}
 		else if(index == 1 && queueEntry->type == QueueEntry::QueueEntryType::broadcast) //Second queue for sending packets. Response is processed by first queue

@@ -28,8 +28,8 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef FLOWSRESPONSE_H_
-#define FLOWSRESPONSE_H_
+#ifndef FLOWSRESPONSECLIENT_H_
+#define FLOWSRESPONSECLIENT_H_
 
 #include <homegear-node/Variable.h>
 
@@ -38,20 +38,20 @@
 namespace Flows
 {
 
-class FlowsResponse
+class FlowsResponseClient
 {
 public:
 	std::atomic_bool finished;
 	int32_t packetId = 0;
 	Flows::PVariable response;
 
-	FlowsResponse()
+	FlowsResponseClient()
 	{
 		finished = false;
 	}
 };
 
-typedef std::shared_ptr<FlowsResponse> PFlowsResponse;
+typedef std::shared_ptr<FlowsResponseClient> PFlowsResponseClient;
 
 }
 

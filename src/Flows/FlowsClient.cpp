@@ -322,7 +322,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 					auto responseIterator = _rpcResponses[threadId].find(packetId);
 					if(responseIterator != _rpcResponses[threadId].end())
 					{
-						PFlowsResponse element = responseIterator->second;
+						PFlowsResponseClient element = responseIterator->second;
 						if(element)
 						{
 							element->response = response;
@@ -414,10 +414,10 @@ Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray& para
 		std::vector<char> data;
 		_rpcEncoder->encodeRequest(methodName, array, data);
 
-		PFlowsResponse response;
+		PFlowsResponseClient response;
 		{
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			auto result = _rpcResponses[threadId].emplace(packetId, std::make_shared<FlowsResponse>());
+			auto result = _rpcResponses[threadId].emplace(packetId, std::make_shared<FlowsResponseClient>());
 			if(result.second) response = result.first->second;
 		}
 		if(!response)
