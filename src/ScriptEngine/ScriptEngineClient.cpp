@@ -1270,6 +1270,9 @@ void ScriptEngineClient::runStatefulNode(int32_t id, PScriptInfo scriptInfo)
 				waitLock.unlock();
 				nodeInfo->conditionVariable.notify_all();
 			}
+			std::string methodName = "__destruct";
+			BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+			php_node_object_invoke_local(scriptInfo, &homegearNodeObject, methodName, parameters);
 		}
 	}
 	catch(const std::exception& ex)

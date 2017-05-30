@@ -1308,7 +1308,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 {
 	try
 	{
-		if(nodeProcess && GD::bl->settings.maxNodeThreadsPerProcess() != -1 && maxThreadCount > (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
+		if(nodeProcess && GD::bl->settings.maxNodeThreadsPerProcess() != -1 && maxThreadCount + 1 > (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
 		{
 			GD::out.printError("Error: Could not get script process for node, because maximum number of threads in node is greater than the number of threads allowed per process.");
 			return std::shared_ptr<ScriptEngineProcess>();
@@ -1321,7 +1321,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 			{
 				if(nodeProcess)
 				{
-					if(GD::bl->settings.maxNodeThreadsPerProcess() == -1 || i->second->nodeThreadCount() + maxThreadCount <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
+					if(GD::bl->settings.maxNodeThreadsPerProcess() == -1 || i->second->nodeThreadCount() + maxThreadCount + 1 <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
 					{
 						return i->second;
 					}
