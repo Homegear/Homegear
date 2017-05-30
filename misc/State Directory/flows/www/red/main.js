@@ -132,13 +132,13 @@
                         for(var i = 0; i < activeLinks.length; i++) {
                             activeLinks[i].working = true;
                         }
-                        setTimeout(function() {
+                        setTimeout(function(activeLinks) {
                             for(var i = 0; i < activeLinks.length; i++) {
                                 activeLinks[i].working = false;
                             }
                             node.dirty = true;
                             RED.view.redraw();
-                        }, 500);
+                        }, 500, activeLinks);
                         node.dirty = true;
                         RED.view.redraw();
                     }
@@ -155,11 +155,11 @@
                             timeout = msg.timeout;
                         }
                         node.working = true;
-                        setTimeout(function() {
+                        setTimeout(function(node) {
                             node.working = false;
                             node.dirty = true;
                             RED.view.redraw();
-                        }, timeout);
+                        }, timeout, node);
                         node.dirty = true;
                         RED.view.redraw();
                     }

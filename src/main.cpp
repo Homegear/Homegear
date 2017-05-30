@@ -1052,15 +1052,6 @@ void startUp()
         if(BaseLib::Io::fileExists(GD::configPath + "physicalinterfaces.conf")) GD::out.printWarning("Warning: File physicalinterfaces.conf exists in config directory. Interface configuration has been moved to " + GD::bl->settings.familyConfigPath());
         GD::familyController->load(); //Don't load before database is open!
 
-        GD::out.printInfo("Start listening for packets...");
-        GD::familyController->physicalInterfaceStartListening();
-        if(!GD::familyController->physicalInterfaceIsOpen())
-        {
-        	GD::out.printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
-        	GD::familyController->physicalInterfaceStopListening();
-        	exitHomegear(1);
-        }
-
         GD::out.printInfo("Initializing RPC client...");
         GD::rpcClient->init();
 
@@ -1090,7 +1081,7 @@ void startUp()
 			if(!GD::flowsServer->start())
 			{
 				GD::out.printCritical("Critical: Cannot start flows server. Exiting Homegear.");
-				exit(1);
+				exitHomegear(1);
 			}
 		}
 
@@ -1099,8 +1090,17 @@ void startUp()
 		if(!GD::ipcServer->start())
 		{
 			GD::out.printCritical("Critical: Cannot start IPC server. Exiting Homegear.");
-			exit(1);
+			exitHomegear(1);
 		}
+
+		GD::out.printInfo("Start listening for packets...");
+        GD::familyController->physicalInterfaceStartListening();
+        if(!GD::familyController->physicalInterfaceIsOpen())
+        {
+        	GD::out.printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
+        	GD::familyController->physicalInterfaceStopListening();
+        	exitHomegear(1);
+        }
 
         GD::out.printMessage("Startup complete. Waiting for physical interfaces to connect.");
 

@@ -11268,6 +11268,7 @@ RED.view = (function() {
 
                             numInputs = d.inputs;
                             y = (d.h/2)-((numInputs-1)/2)*18;
+                            if(d.inputPortLabels && d.inputPortLabels.length != numInputs) d.inputPortLabels = null;
                             d.inputPortLabels = d.inputPortLabels || d3.range(numInputs);
                             d._inputPortLabels = thisNode.selectAll(".port_input_label").data(d.inputPortLabels);
                             var input_labels_group = d._inputPortLabels.enter().append("g").attr("class","port_input_label");
@@ -11285,6 +11286,7 @@ RED.view = (function() {
                                         label.attr("transform", function(d) { return "translate("+x+","+((y+18*i)-5)+")";});
                                         if(node._def && node._def.inputInfo && i < node._def.inputInfo.length && node._def.inputInfo[i].label) label.selectAll(".input_label").text(node._def.inputInfo[i].label);
                                         else if(numInputs > 1) label.selectAll(".input_label").text(i);
+                                        else label.selectAll(".input_label").text("");
                                 });
                             }
 
@@ -11342,6 +11344,7 @@ RED.view = (function() {
 
                             numOutputs = d.outputs;
                             y = (d.h/2)-((numOutputs-1)/2)*18;
+                            if(d.outputPortLabels && d.outputPortLabels.length != numOutputs) d.outputPortLabels = null;
                             d.outputPortLabels = d.outputPortLabels || d3.range(numOutputs);
                             d._outputPortLabels = thisNode.selectAll(".port_output_label").data(d.outputPortLabels);
                             var output_labels_group = d._outputPortLabels.enter().append("g").attr("class","port_output_label");
@@ -11359,6 +11362,7 @@ RED.view = (function() {
                                         label.attr("transform", function(d) { return "translate("+x+","+((y+18*i)-5)+")";});
                                         if(node._def && node._def.outputInfo && i < node._def.outputInfo.length && node._def.outputInfo[i].label) label.selectAll(".input_label").text(node._def.outputInfo[i].label);
                                         else if(numOutputs > 1) label.selectAll(".output_label").text(i);
+                                        else label.selectAll(".output_label").text("");
                                 });
                             }
 

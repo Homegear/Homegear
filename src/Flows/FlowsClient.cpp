@@ -609,7 +609,9 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 		outputIndex->structValue->emplace("index", std::make_shared<Flows::Variable>(index));
 		nodeEvent(nodeId, "highlightLink/" + nodeId, outputIndex);
 		Flows::PVariable status = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
-		status->structValue->emplace("text", std::make_shared<Flows::Variable>(std::to_string(index) + ": " + message->structValue->at("payload")->toString()));
+		std::string statusText = std::to_string(index) + ": " + message->structValue->at("payload")->toString();
+		if(statusText.size() > 20) statusText = statusText.substr(0, 17) + "...";
+		status->structValue->emplace("text", std::make_shared<Flows::Variable>(statusText));
 		status->structValue->emplace("position", std::make_shared<Flows::Variable>("top"));
 		nodeEvent(nodeId, "statusTop/" + nodeId, status);
 	}
@@ -1219,7 +1221,7 @@ Flows::PVariable FlowsClient::executePhpNodeBaseMethod(Flows::PArray& parameters
 			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
 			if(innerParameters->at(1)->type != Flows::VariableType::tInteger64) return Flows::Variable::createError(-1, "Parameter 2 is not of type integer.");
 			if(innerParameters->at(2)->type != Flows::VariableType::tInteger64) return Flows::Variable::createError(-1, "Parameter 3 is not of type integer.");
-			if(innerParameters->at(2)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 4 is not of type string.");
+			if(innerParameters->at(3)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 4 is not of type string.");
 
 			subscribePeer(innerParameters->at(0)->stringValue, innerParameters->at(1)->integerValue64, innerParameters->at(2)->integerValue, innerParameters->at(3)->stringValue);
 			return std::make_shared<Flows::Variable>();
@@ -1230,7 +1232,7 @@ Flows::PVariable FlowsClient::executePhpNodeBaseMethod(Flows::PArray& parameters
 			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
 			if(innerParameters->at(1)->type != Flows::VariableType::tInteger64) return Flows::Variable::createError(-1, "Parameter 2 is not of type integer.");
 			if(innerParameters->at(2)->type != Flows::VariableType::tInteger64) return Flows::Variable::createError(-1, "Parameter 3 is not of type integer.");
-			if(innerParameters->at(2)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 4 is not of type string.");
+			if(innerParameters->at(3)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 4 is not of type string.");
 
 			unsubscribePeer(innerParameters->at(0)->stringValue, innerParameters->at(1)->integerValue64, innerParameters->at(2)->integerValue, innerParameters->at(3)->stringValue);
 			return std::make_shared<Flows::Variable>();
