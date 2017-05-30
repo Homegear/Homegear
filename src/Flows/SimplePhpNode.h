@@ -38,7 +38,7 @@ class SimplePhpNode : public Flows::INode
 private:
 	Flows::PVariable _nodeInfo;
 public:
-	SimplePhpNode(std::string path, std::string name, const std::atomic_bool* frontendConnected);
+	SimplePhpNode(std::string path, std::string nodeNamespace, std::string type, const std::atomic_bool* frontendConnected);
 	virtual ~SimplePhpNode();
 
 	virtual void input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message);

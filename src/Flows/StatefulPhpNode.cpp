@@ -31,7 +31,7 @@
 #include "StatefulPhpNode.h"
 #include "../GD/GD.h"
 
-StatefulPhpNode::StatefulPhpNode(std::string path, std::string name, const std::atomic_bool* frontendConnected) : INode(path, name, frontendConnected)
+StatefulPhpNode::StatefulPhpNode(std::string path, std::string nodeNamespace, std::string type, const std::atomic_bool* frontendConnected) : INode(path, nodeNamespace, type, frontendConnected)
 {
 }
 

@@ -1250,7 +1250,8 @@ void ScriptEngineClient::runStatefulNode(int32_t id, PScriptInfo scriptInfo)
 
 		if(result)
 		{
-			while(!GD::bl->shuttingDown)
+			bool stop = false;
+			while(!GD::bl->shuttingDown && !stop)
 			{
 				std::unique_lock<std::mutex> waitLock(nodeInfo->waitMutex);
 				while (!nodeInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
@@ -1261,12 +1262,13 @@ void ScriptEngineClient::runStatefulNode(int32_t id, PScriptInfo scriptInfo)
 				nodeInfo->ready = false;
 
 				nodeInfo->response = php_node_object_invoke_local(scriptInfo, &homegearNodeObject, nodeInfo->methodName, nodeInfo->parameters);
+				if(nodeInfo->methodName == "init" && !nodeInfo->response->booleanValue) stop = true;
+				else if(nodeInfo->methodName == "start" && !nodeInfo->response->booleanValue) stop = true;
+				else if(nodeInfo->methodName == "stop") stop = true;
 
 				nodeInfo->parameters.reset();
 				waitLock.unlock();
 				nodeInfo->conditionVariable.notify_all();
-
-				if(nodeInfo->methodName == "stop") break;
 			}
 		}
 	}

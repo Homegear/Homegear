@@ -924,8 +924,9 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 			}
 		//}}}
 
-		//{{{ Start nodes
+		//{{{ Init nodes
 			{
+				std::set<std::string> nodesToRemove;
 				std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
 				for(auto& node : _nodes)
 				{
@@ -954,9 +955,17 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 
 					if(!nodeObject->init(node.second))
 					{
-						_out.printError("Error: Could not load node " + node.second->type + ". Start failed.");
+						nodeObject.reset();
+						nodesToRemove.emplace(node.second->id);
+						_out.printError("Error: Could not load node " + node.second->type + " with ID " + node.second->id + ". \"init\" failed.");
 						continue;
 					}
+				}
+				for(auto& node : nodesToRemove)
+				{
+					_nodes.erase(node);
+					flow->nodes.erase(node);
+					_nodeManager->unloadNode(node);
 				}
 			}
 		//}}}
@@ -988,10 +997,28 @@ Flows::PVariable FlowsClient::startNodes(Flows::PArray& parameters)
 		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
 		for(auto& flow : _flows)
 		{
+			std::set<std::string> nodesToRemove;
 			for(auto& nodeIterator : flow.second->nodes)
 			{
 				Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
-				if(node) node->start();
+				if(node)
+				{
+					if(!node->start())
+					{
+						node.reset();
+						nodesToRemove.emplace(nodeIterator.second->id);
+						_out.printError("Error: Could not load node " + nodeIterator.second->type + " with ID " + nodeIterator.second->id + ". \"start\" failed.");
+					}
+				}
+			}
+			for(auto& node : nodesToRemove)
+			{
+				flow.second->nodes.erase(node);
+				{
+					std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+					_nodes.erase(node);
+				}
+				_nodeManager->unloadNode(node);
 			}
 		}
 		return std::make_shared<Flows::Variable>();

@@ -31,7 +31,7 @@
 #include "SimplePhpNode.h"
 #include "../GD/GD.h"
 
-SimplePhpNode::SimplePhpNode(std::string path, std::string name, const std::atomic_bool* frontendConnected) : INode(path, name, frontendConnected)
+SimplePhpNode::SimplePhpNode(std::string path, std::string nodeNamespace, std::string type, const std::atomic_bool* frontendConnected) : INode(path, nodeNamespace, type, frontendConnected)
 {
 }
 

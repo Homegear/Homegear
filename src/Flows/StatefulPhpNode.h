@@ -38,7 +38,7 @@ class StatefulPhpNode : public Flows::INode
 private:
 	Flows::PVariable _nodeInfo;
 public:
-	StatefulPhpNode(std::string path, std::string name, const std::atomic_bool* frontendConnected);
+	StatefulPhpNode(std::string path, std::string nodeNamespace, std::string type, const std::atomic_bool* frontendConnected);
 	virtual ~StatefulPhpNode();
 
 	virtual bool init(Flows::PNodeInfo nodeInfo);
