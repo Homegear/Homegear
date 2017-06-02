@@ -771,7 +771,7 @@ void FlowsServer::startFlows()
 			std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
 			std::string flowsfile = GD::bl->settings.flowsPath() + "data/flows.json";
 			if(!GD::bl->io.fileExists(flowsfile)) return;
-			std::string rawFlows = GD::bl->io.getFileContent(flowsfile);
+			rawFlows = GD::bl->io.getFileContent(flowsfile);
 			if(BaseLib::HelperFunctions::trim(rawFlows).empty()) return;
 		}
 

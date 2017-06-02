@@ -762,6 +762,8 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string
 		RequestInfo& requestInfo = _requestInfo[scriptId];
 		requestInfoGuard.unlock();
 
+		std::lock_guard<std::mutex> requestGuard(requestInfo.requestMutex);
+
 		int32_t packetId;
 		{
 			std::lock_guard<std::mutex> packetIdGuard(_packetIdMutex);

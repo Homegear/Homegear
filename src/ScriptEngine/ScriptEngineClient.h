@@ -76,6 +76,7 @@ private:
 
 	struct RequestInfo
 	{
+		std::mutex requestMutex;
 		std::mutex waitMutex;
 		std::condition_variable conditionVariable;
 	};

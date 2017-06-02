@@ -240,7 +240,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 
 		if (GD::bl->settings.enableFlows() && path.compare(0, 6, "flows/") == 0)
 		{
-			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
+			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: POST)");
 			std::string responseEncoding;
 			std::string contentString = GD::flowsServer->handlePost(path, http, responseEncoding);
 			if (!contentString.empty())
