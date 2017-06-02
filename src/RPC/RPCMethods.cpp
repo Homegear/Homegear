@@ -3683,7 +3683,7 @@ BaseLib::PVariable RPCSetInstallMode::invoke(BaseLib::PRpcClientInfo clientInfo,
 
 		int32_t enableIndex = -1;
 		if(parameters->at(0)->type == BaseLib::VariableType::tBoolean) enableIndex = 0;
-		else if(parameters->size() == 2) enableIndex = 1;
+		else if(parameters->size() == 2 || parameters->size() == 3) enableIndex = 1;
 		int32_t familyIDIndex = (parameters->at(0)->type == BaseLib::VariableType::tInteger) ? 0 : -1;
 		int32_t timeIndex = -1;
 		if(parameters->size() >= 2 && parameters->at(1)->type == BaseLib::VariableType::tInteger) timeIndex = 1;

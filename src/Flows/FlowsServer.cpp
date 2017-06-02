@@ -765,10 +765,15 @@ void FlowsServer::startFlows()
 {
 	try
 	{
-		std::string flowsfile = GD::bl->settings.flowsPath() + "data/flows.json";
-		if(!GD::bl->io.fileExists(flowsfile)) return;
-		std::string rawFlows = GD::bl->io.getFileContent(flowsfile);
-		if(BaseLib::HelperFunctions::trim(rawFlows).empty()) return;
+		std::string rawFlows;
+
+		{
+			std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
+			std::string flowsfile = GD::bl->settings.flowsPath() + "data/flows.json";
+			if(!GD::bl->io.fileExists(flowsfile)) return;
+			std::string rawFlows = GD::bl->io.getFileContent(flowsfile);
+			if(BaseLib::HelperFunctions::trim(rawFlows).empty()) return;
+		}
 
 		//{{{ Filter all nodes and assign it to flows
 			BaseLib::PVariable flows = _jsonDecoder->decode(rawFlows);
@@ -1102,16 +1107,21 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 		{
 			std::string flowsFile = _bl->settings.flowsPath() + "data/flows.json";
 			std::vector<char> fileContent;
-			if(GD::bl->io.fileExists(flowsFile)) fileContent = _bl->io.getBinaryFileContent(flowsFile);
-			else
+
 			{
-				std::string randomString1 = BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(-2147483648, 2147483647), 8);
-				BaseLib::HelperFunctions::toLower(randomString1);
-				std::string randomString2 = BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(0, 1048575), 5);
-				BaseLib::HelperFunctions::toLower(randomString2);
-				std::string tempString = "[{\"id\":\"" + randomString1 + "." + randomString2 + "\",\"label\":\"Flow 1\",\"type\":\"tab\"}]";
-				fileContent.insert(fileContent.end(), tempString.begin(), tempString.end());
+				std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
+				if(GD::bl->io.fileExists(flowsFile)) fileContent = _bl->io.getBinaryFileContent(flowsFile);
+				else
+				{
+					std::string randomString1 = BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(-2147483648, 2147483647), 8);
+					BaseLib::HelperFunctions::toLower(randomString1);
+					std::string randomString2 = BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(0, 1048575), 5);
+					BaseLib::HelperFunctions::toLower(randomString2);
+					std::string tempString = "[{\"id\":\"" + randomString1 + "." + randomString2 + "\",\"label\":\"Flow 1\",\"type\":\"tab\"}]";
+					fileContent.insert(fileContent.end(), tempString.begin(), tempString.end());
+				}
 			}
+
 			std::vector<char> md5;
 			BaseLib::Security::Hash::md5(fileContent, md5);
 			std::string md5String = BaseLib::HelperFunctions::getHexString(md5);

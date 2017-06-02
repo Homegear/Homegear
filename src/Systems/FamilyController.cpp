@@ -586,6 +586,7 @@ int32_t FamilyController::unloadModule(std::string filename)
 	_moduleLoadersMutex.lock();
 	try
 	{
+		GD::out.printInfo("Info: Unloading " + filename + "...");
 		if(_disposed)
 		{
 			_moduleLoadersMutex.unlock();
@@ -613,9 +614,11 @@ int32_t FamilyController::unloadModule(std::string filename)
 				family->lock();
 			}
 
+			if(_currentFamily && family->getFamily() == _currentFamily->getFamily()) _currentFamily.reset();
+
 			family->homegearShuttingDown();
 			family->physicalInterfaces()->stopListening();
-			while(family.use_count() > 1)
+			while(family.use_count() > 2) //At this point, the node is used by "_families" and "family".
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(50));
 			}
@@ -626,13 +629,13 @@ int32_t FamilyController::unloadModule(std::string filename)
 			family.reset();
 		}
 
-
 		moduleLoaderIterator->second->dispose();
 		moduleLoaderIterator->second.reset();
 		_moduleLoaders.erase(moduleLoaderIterator);
 
 		_rpcCache.reset();
 		_moduleLoadersMutex.unlock();
+		GD::out.printInfo("Info: " + filename + " unloaded.");
 		return 0;
 	}
 	catch(const std::exception& ex)
