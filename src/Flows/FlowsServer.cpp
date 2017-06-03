@@ -782,6 +782,7 @@ void FlowsServer::startFlows()
 			std::unordered_map<std::string, std::set<std::string>> subflowNodeIds;
 			std::unordered_map<std::string, std::set<std::string>> nodeIds;
 			std::set<std::string> allNodeIds;
+			std::set<std::string> disabledFlows;
 			for(auto& element : *flows->arrayValue)
 			{
 				auto idIterator = element->structValue->find("id");
@@ -793,10 +794,16 @@ void FlowsServer::startFlows()
 
 				auto typeIterator = element->structValue->find("type");
 				if(typeIterator == element->structValue->end()) continue;
-				else if(typeIterator->second->stringValue == "comment" || typeIterator->second->stringValue == "tab") continue;
+				else if(typeIterator->second->stringValue == "comment") continue;
 				else if(typeIterator->second->stringValue == "subflow")
 				{
 					subflowInfos.emplace(idIterator->second->stringValue, element);
+					continue;
+				}
+				else if(typeIterator->second->stringValue == "tab")
+				{
+					auto disabledIterator = element->structValue->find("disabled");
+					if(disabledIterator != element->structValue->end() && disabledIterator->second->booleanValue) disabledFlows.emplace(idIterator->second->stringValue);
 					continue;
 				}
 
@@ -897,10 +904,14 @@ void FlowsServer::startFlows()
 				}
 				else GD::out.printError("Error: Could not determine maximum thread count of node. No key \"type\".");
 			}
-			PFlowInfoServer flowInfo = std::make_shared<FlowInfoServer>();
-			flowInfo->maxThreadCount = maxThreadCount;
-			flowInfo->flow = flow;
-			startFlow(flowInfo, nodeIds[element.first]);
+
+			if(disabledFlows.find(element.first) == disabledFlows.end())
+			{
+				PFlowInfoServer flowInfo = std::make_shared<FlowInfoServer>();
+				flowInfo->maxThreadCount = maxThreadCount;
+				flowInfo->flow = flow;
+				startFlow(flowInfo, nodeIds[element.first]);
+			}
 		}
 
 		std::vector<PFlowsClientData> clients;
