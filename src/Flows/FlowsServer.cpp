@@ -769,7 +769,7 @@ void FlowsServer::startFlows()
 
 		{
 			std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
-			std::string flowsfile = GD::bl->settings.flowsPath() + "data/flows.json";
+			std::string flowsfile = GD::bl->settings.flowsDataPath() + "flows.json";
 			if(!GD::bl->io.fileExists(flowsfile)) return;
 			rawFlows = GD::bl->io.getFileContent(flowsfile);
 			if(BaseLib::HelperFunctions::trim(rawFlows).empty()) return;
@@ -1105,7 +1105,7 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 		}
 		else if (path == "flows/flows")
 		{
-			std::string flowsFile = _bl->settings.flowsPath() + "data/flows.json";
+			std::string flowsFile = _bl->settings.flowsDataPath() + "flows.json";
 			std::vector<char> fileContent;
 
 			{
@@ -1227,7 +1227,7 @@ std::string FlowsServer::handlePost(std::string& path, BaseLib::Http& http, std:
 
 			{
 				std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
-				std::string filename = _bl->settings.flowsPath() + "data/flows.json";
+				std::string filename = _bl->settings.flowsDataPath() + "flows.json";
 				_bl->io.writeFile(filename, flows, flows.size());
 			}
 
