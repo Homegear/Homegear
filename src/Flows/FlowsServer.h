@@ -141,6 +141,8 @@ private:
 	void closeClientConnection(PFlowsClientData client);
 	PFlowsProcess getFreeProcess(uint32_t maxThreadCount);
 	void getMaxThreadCounts();
+	bool checkIntegrity(std::string flowsFile);
+	void backupFlows();
 	void startFlows();
 	std::set<std::string> insertSubflows(BaseLib::PVariable& subflowNode, std::unordered_map<std::string, BaseLib::PVariable>& subflowInfos, std::unordered_map<std::string, BaseLib::PVariable>& flowNodes, std::unordered_map<std::string, BaseLib::PVariable>& subflowNodes, std::set<std::string>& flowNodeIds, std::set<std::string>& allNodeIds);
 	void startFlow(PFlowInfoServer& flowInfo, std::set<std::string>& nodes);

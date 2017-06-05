@@ -236,11 +236,119 @@ void FlowsServer::getMaxThreadCounts()
     }
 }
 
+bool FlowsServer::checkIntegrity(std::string flowsFile)
+{
+	try
+	{
+		std::string rawFlows = GD::bl->io.getFileContent(flowsFile);
+		if(BaseLib::HelperFunctions::trim(rawFlows).empty()) return false;
+
+		_jsonDecoder->decode(rawFlows);
+		return true;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(const BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
+void FlowsServer::backupFlows()
+{
+	try
+	{
+		int32_t maxBackups = 20;
+		std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
+		std::string flowsFile = GD::bl->settings.flowsDataPath() + "flows.json";
+		std::string flowsBackupFile = GD::bl->settings.flowsDataPath() + "flows.json.bak";
+		if(GD::bl->io.fileExists(flowsFile))
+		{
+			if(!checkIntegrity(flowsFile))
+			{
+				GD::out.printCritical("Critical: Integrity check on flows file failed.");
+				GD::out.printCritical("Critical: Backing up corrupted flows file to: " + flowsFile + ".broken");
+				GD::bl->io.copyFile(flowsFile, flowsFile + ".broken");
+				GD::bl->io.deleteFile(flowsFile);
+				bool restored = false;
+				for(int32_t i = 0; i <= 10000; i++)
+				{
+					if(GD::bl->io.fileExists(flowsBackupFile + std::to_string(i)) && checkIntegrity(flowsBackupFile + std::to_string(i)))
+					{
+						GD::out.printCritical("Critical: Restoring flows file: " + flowsBackupFile + std::to_string(i));
+						if(GD::bl->io.copyFile(flowsBackupFile + std::to_string(i), flowsFile))
+						{
+							restored = true;
+							break;
+						}
+					}
+				}
+				if(!restored)
+				{
+					GD::out.printCritical("Critical: Could not restore flows file.");
+					return;
+				}
+			}
+			else
+			{
+				GD::out.printInfo("Info: Backing up flows file...");
+				if(maxBackups > 1)
+				{
+					if(GD::bl->io.fileExists(flowsBackupFile + std::to_string(maxBackups - 1)))
+					{
+						if(!GD::bl->io.deleteFile(flowsBackupFile + std::to_string(maxBackups - 1)))
+						{
+							GD::out.printError("Error: Cannot delete file: " + flowsBackupFile + std::to_string(maxBackups - 1));
+						}
+					}
+					for(int32_t i = maxBackups - 2; i >= 0; i--)
+					{
+						if(GD::bl->io.fileExists(flowsBackupFile + std::to_string(i)))
+						{
+							if(!GD::bl->io.moveFile(flowsBackupFile + std::to_string(i), flowsBackupFile + std::to_string(i + 1)))
+							{
+								GD::out.printError("Error: Cannot move file: " + flowsBackupFile + std::to_string(i));
+							}
+						}
+					}
+				}
+				if(maxBackups > 0)
+				{
+					if(!GD::bl->io.copyFile(flowsFile, flowsBackupFile + '0'))
+					{
+						GD::out.printError("Error: Cannot copy flows file to: " + flowsBackupFile + '0');
+					}
+				}
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(const BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 bool FlowsServer::start()
 {
 	try
 	{
 		stop();
+		backupFlows();
 		_socketPath = GD::bl->settings.socketPath() + "homegearFE.sock";
 		_shuttingDown = false;
 		_stopServer = false;
@@ -769,9 +877,9 @@ void FlowsServer::startFlows()
 
 		{
 			std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
-			std::string flowsfile = GD::bl->settings.flowsDataPath() + "flows.json";
-			if(!GD::bl->io.fileExists(flowsfile)) return;
-			rawFlows = GD::bl->io.getFileContent(flowsfile);
+			std::string flowsFile = GD::bl->settings.flowsDataPath() + "flows.json";
+			if(!GD::bl->io.fileExists(flowsFile)) return;
+			rawFlows = GD::bl->io.getFileContent(flowsFile);
 			if(BaseLib::HelperFunctions::trim(rawFlows).empty()) return;
 		}
 
@@ -1236,6 +1344,8 @@ std::string FlowsServer::handlePost(std::string& path, BaseLib::Http& http, std:
 
 			std::vector<char> flows;
 			_jsonEncoder->encode(flowsIterator->second, flows);
+
+			backupFlows();
 
 			{
 				std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
