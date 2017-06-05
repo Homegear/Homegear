@@ -12567,7 +12567,7 @@ RED.palette = (function() {
 
             var categoryNode = $("#palette-container-"+category);
             if (categoryNode.find(".palette_node").length === 1) {
-                categoryContainers[category].open();
+                categoryContainers[category].close();
             }
 
         }
@@ -13310,10 +13310,9 @@ RED.sidebar.config = (function() {
     }
 
     function refreshConfigNodeList() {
-        var validList = {"global":true,"devices":true};
+        var validList = {"global":true};
 
         getOrCreateCategory("global",globalCategories);
-        getOrCreateCategory("devices",globalCategories);
 
         RED.nodes.eachWorkspace(function(ws) {
             validList[ws.id.replace(/\./g,"-")] = true;

@@ -1160,7 +1160,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			}
 			catch(const BaseLib::SocketClosedException& ex)
 			{
-				_out.printInfo("Info: " + ex.what());
+				if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: " + ex.what());
 				break;
 			}
 			catch(const BaseLib::SocketOperationException& ex)
@@ -1214,7 +1214,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 							binaryRpc.reset();
 							if(client->socketDescriptor->descriptor == -1)
 							{
-								if(GD::bl->debugLevel >= 4) _out.printInfo("Info: Connection to client number " + std::to_string(client->socketDescriptor->id) + " closed.");
+								if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Connection to client number " + std::to_string(client->socketDescriptor->id) + " closed.");
 								break;
 							}
 						}
@@ -1429,7 +1429,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				http.reset();
 				if(client->socketDescriptor->descriptor == -1)
 				{
-					if(GD::bl->debugLevel >= 4) _out.printInfo("Info: Connection to client number " + std::to_string(client->socketDescriptor->id) + " closed.");
+					if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Connection to client number " + std::to_string(client->socketDescriptor->id) + " closed.");
 					break;
 				}
 			}
