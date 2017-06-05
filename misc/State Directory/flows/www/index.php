@@ -41,34 +41,34 @@ if(!$user->checkAuth(true)) die();
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<!--
-  Copyright JS Foundation and other contributors, http://js.foundation
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <!--
+      Copyright JS Foundation and other contributors, http://js.foundation
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+      http://www.apache.org/licenses/LICENSE-2.0
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
-<title>Node-BLUE</title>
-<link rel="icon" type="image/png" href="favicon.ico">
-<link rel="mask-icon" href="red&#x2F;images&#x2F;node-red-icon-black.svg" color="#8f0000">
-<link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
-<link href="vendor/jquery/css/smoothness/jquery-ui-1.10.3.custom.min.css" rel="stylesheet" media="screen">
-<link rel="stylesheet" href="vendor/font-awesome/css/font-awesome.min.css">
-<link rel="stylesheet" href="vendor/vendor.css">
-<link rel="stylesheet" href="red/style.min.css">
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+    -->
+    <title>Node-BLUE</title>
+    <link rel="icon" type="image/png" href="favicon.ico">
+    <link rel="mask-icon" href="red&#x2F;images&#x2F;node-red-icon-black.svg" color="#8f0000">
+    <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="vendor/jquery/css/smoothness/jquery-ui-1.10.3.custom.min.css" rel="stylesheet" media="screen">
+    <link rel="stylesheet" href="vendor/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="vendor/vendor.css">
+    <link rel="stylesheet" href="red/style.min.css">
 </head>
 <body spellcheck="false">
 <div id="header">

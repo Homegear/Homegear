@@ -6567,16 +6567,16 @@ RED.deploy = (function() {
                 '<span class="deploy-button-spinner hide">'+
                  '<img src="red/images/spin.svg"/>'+
                 '</span>'+
-              '</a>'+
-              '<a id="btn-deploy-options" data-toggle="dropdown" class="deploy-button" href="#"><i class="fa fa-caret-down"></i></a>'+
-              '</span></li>').prependTo(".header-toolbar");
-              RED.menu.init({id:"btn-deploy-options",
+              '</a>').prependTo(".header-toolbar");
+              //'<a id="btn-deploy-options" data-toggle="dropdown" class="deploy-button" href="#"><i class="fa fa-caret-down"></i></a>'+
+              //'</span></li>').prependTo(".header-toolbar");
+              /*RED.menu.init({id:"btn-deploy-options",
                   options: [
                       {id:"deploymenu-item-full",toggle:"deploy-type",icon:"red/images/deploy-full.png",label:RED._("deploy.full"),sublabel:RED._("deploy.fullDesc"),selected: true, onselect:function(s) { if(s){changeDeploymentType("full")}}},
                       {id:"deploymenu-item-flow",toggle:"deploy-type",icon:"red/images/deploy-flows.png",label:RED._("deploy.modifiedFlows"),sublabel:RED._("deploy.modifiedFlowsDesc"), onselect:function(s) {if(s){changeDeploymentType("flows")}}},
                       {id:"deploymenu-item-node",toggle:"deploy-type",icon:"red/images/deploy-nodes.png",label:RED._("deploy.modifiedNodes"),sublabel:RED._("deploy.modifiedNodesDesc"),onselect:function(s) { if(s){changeDeploymentType("nodes")}}}
                   ]
-              });
+              });*/
         } else if (type == "simple") {
             var label = options.label || RED._("deploy.deploy");
             var icon = 'red/images/deploy-full-o.png';
