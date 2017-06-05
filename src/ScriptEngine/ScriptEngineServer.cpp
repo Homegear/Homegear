@@ -1310,13 +1310,14 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 {
 	try
 	{
+		std::lock_guard<std::mutex> processGuard(_newProcessMutex);
+
 		if(nodeProcess && GD::bl->settings.maxNodeThreadsPerProcess() != -1 && maxThreadCount + 1 > (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
 		{
 			GD::out.printError("Error: Could not get script process for node, because maximum number of threads in node is greater than the number of threads allowed per process.");
 			return std::shared_ptr<ScriptEngineProcess>();
 		}
 
-		std::lock_guard<std::mutex> processGuard(_newProcessMutex);
 		{
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			for(std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator i = _processes.begin(); i != _processes.end(); ++i)
@@ -1542,8 +1543,13 @@ bool ScriptEngineServer::checkSessionId(const std::string& sessionId)
 		}
 		if(!client)
 		{
-			GD::out.printError("Error: Could not check session ID. No script engine client is started.");
-			return false;
+			PScriptEngineProcess process = getFreeProcess(false, 0);
+			if(!process)
+			{
+				GD::out.printError("Error: Could not check session ID. Could not get free process.");
+				return false;
+			}
+			client = process->getClientData();
 		}
 		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
 		parameters->push_back(std::make_shared<BaseLib::Variable>(sessionId));
