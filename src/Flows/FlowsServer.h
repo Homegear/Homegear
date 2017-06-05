@@ -117,6 +117,7 @@ private:
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
 	std::mutex _restartFlowsMutex;
+	std::mutex _flowsPostMutex;
 	std::mutex _flowsFileMutex;
 	std::map<std::string, uint32_t> _maxThreadCounts;
 	std::vector<NodeManager::PNodeInfo> _nodeInfo;
