@@ -84,10 +84,35 @@ void FlowsClient::dispose()
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000)); //Wait for shutdown response to be sent.
 
+		_stopped = true;
+
 		stopQueue(0);
 		stopQueue(1);
 
-		_stopped = true;
+		{
+			std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+			for(auto& flow : _flows)
+			{
+				for(auto& node : flow.second->nodes)
+				{
+					{
+						std::lock_guard<std::mutex> peerSubscriptionsGuard(_peerSubscriptionsMutex);
+						for(auto& peerId : _peerSubscriptions)
+						{
+							for(auto& channel : peerId.second)
+							{
+								for(auto& variable : channel.second)
+								{
+									variable.second.erase(node.first);
+								}
+							}
+						}
+					}
+					_nodeManager->unloadNode(node.second->id);
+				}
+			}
+			_flows.clear();
+		}
 
 		_flows.clear();
 		_rpcResponses.clear();
@@ -791,30 +816,6 @@ Flows::PVariable FlowsClient::shutdown(Flows::PArray& parameters)
 					if(node) node->stop();
 				}
 			}
-		}
-		{
-			std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-			for(auto& flow : _flows)
-			{
-				for(auto& node : flow.second->nodes)
-				{
-					{
-						std::lock_guard<std::mutex> peerSubscriptionsGuard(_peerSubscriptionsMutex);
-						for(auto& peerId : _peerSubscriptions)
-						{
-							for(auto& channel : peerId.second)
-							{
-								for(auto& variable : channel.second)
-								{
-									variable.second.erase(node.first);
-								}
-							}
-						}
-					}
-					_nodeManager->unloadNode(node.second->id);
-				}
-			}
-			_flows.clear();
 		}
 
 		if(_maintenanceThread.joinable()) _maintenanceThread.join();
