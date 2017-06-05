@@ -108,6 +108,7 @@ ZEND_FUNCTION(hg_peer_exists);
 ZEND_FUNCTION(hg_subscribe_peer);
 ZEND_FUNCTION(hg_unsubscribe_peer);
 ZEND_FUNCTION(hg_shutting_down);
+ZEND_FUNCTION(hg_gpio_export);
 ZEND_FUNCTION(hg_gpio_open);
 ZEND_FUNCTION(hg_gpio_close);
 ZEND_FUNCTION(hg_gpio_set_direction);
@@ -154,6 +155,7 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_subscribe_peer, NULL)
 	ZEND_FE(hg_unsubscribe_peer, NULL)
 	ZEND_FE(hg_shutting_down, NULL)
+	ZEND_FE(hg_gpio_export, NULL)
 	ZEND_FE(hg_gpio_open, NULL)
 	ZEND_FE(hg_gpio_close, NULL)
 	ZEND_FE(hg_gpio_set_direction, NULL)
@@ -1324,6 +1326,14 @@ ZEND_FUNCTION(hg_shutting_down)
 	RETURN_FALSE
 }
 
+ZEND_FUNCTION(hg_gpio_export)
+{
+	if(_disposed) RETURN_NULL();
+	long gpio = -1;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
+	_superglobals.gpio->exportGpio(gpio);
+}
+
 ZEND_FUNCTION(hg_gpio_open)
 {
 	if(_disposed) RETURN_NULL();
@@ -1819,6 +1829,7 @@ static const zend_function_entry homegear_methods[] = {
 };
 
 static const zend_function_entry homegear_gpio_methods[] = {
+	ZEND_ME_MAPPING(export, hg_gpio_export, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(open, hg_gpio_open, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(close, hg_gpio_close, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(setDirection, hg_gpio_set_direction, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
