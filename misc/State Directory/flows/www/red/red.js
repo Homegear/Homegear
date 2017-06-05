@@ -3190,8 +3190,8 @@ RED.nodes = (function() {
         var nodeTypeArrayReferences = {
             "catch":"scope",
             "status":"scope",
-            "link in":"links",
-            "link out":"links"
+            "link-in":"links",
+            "link-out":"links"
         }
 
         // Remap all wires and config node references
@@ -10205,13 +10205,13 @@ RED.view = (function() {
         var addedLinkLinks = {};
         activeFlowLinks = [];
         for (var i=0;i<moving_set.length;i++) {
-            if (moving_set[i].n.type === "link out" || moving_set[i].n.type === "link in") {
+            if (moving_set[i].n.type === "link-out" || moving_set[i].n.type === "link-in") {
                 var linkNode = moving_set[i].n;
                 var offFlowLinks = {};
                 linkNode.links.forEach(function(id) {
                     var target = RED.nodes.node(id);
                     if (target) {
-                        if (linkNode.type === "link out") {
+                        if (linkNode.type === "link-out") {
                             if (target.z === linkNode.z) {
                                 if (!addedLinkLinks[linkNode.id+":"+target.id]) {
                                     activeLinks.push({
@@ -10993,11 +10993,11 @@ RED.view = (function() {
             var nodeEnter = node.enter().insert("svg:g")
                 .attr("class", "node nodegroup")
                 .classed("node_subflow",function(d) { return activeSubflow != null; })
-                .classed("node_link",function(d) { return d.type === "link in" || d.type === "link out" });
+                .classed("node_link",function(d) { return d.type === "link-in" || d.type === "link-out" });
 
             nodeEnter.each(function(d,i) {
                     var node = d3.select(this);
-                    var isLink = d.type === "link in" || d.type === "link out";
+                    var isLink = d.type === "link-in" || d.type === "link-out";
                     node.attr("id",d.id);
                     var l = RED.utils.getNodeLabel(d);
                     if (isLink) {
@@ -11187,7 +11187,7 @@ RED.view = (function() {
 
             node.each(function(d,i) {
                     if (d.dirty) {
-                        var isLink = d.type === "link in" || d.type === "link out";
+                        var isLink = d.type === "link-in" || d.type === "link-out";
                         dirtyNodes[d.id] = d;
                         //if (d.x < -50) deleteSelection();  // Delete nodes if dragged back to palette
                         if (!isLink && d.resize) {
@@ -11639,7 +11639,7 @@ RED.view = (function() {
                 var g = d3.select(this);
                 var s = 1;
                 var labelAnchor = "start";
-                if (d.node.type === "link in") {
+                if (d.node.type === "link-in") {
                     s = -1;
                     labelAnchor = "end";
                 }
@@ -11736,7 +11736,7 @@ RED.view = (function() {
             offLinks = vis.selectAll(".link_flow_link_g");
             offLinks.each(function(d) {
                 var s = 1;
-                if (d.node.type === "link in") {
+                if (d.node.type === "link-in") {
                     s = -1;
                 }
                 var link = d3.select(this);
