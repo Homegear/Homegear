@@ -16,6 +16,7 @@
  * limitations under the License.
  **/
 (function() {
+    var firstHomegearReady = true;
 
     function loadNodeList() {
         $.ajax({
@@ -238,6 +239,8 @@
     }
 
     function homegearReady() {
+        if(!firstHomegearReady) return;
+        firstHomegearReady = false;
         $("#main-container").show();
         $(".header-toolbar").show();
 
