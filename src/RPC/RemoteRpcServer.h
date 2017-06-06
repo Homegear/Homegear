@@ -63,6 +63,7 @@ public:
 	bool webSocket = false;
 	bool newFormat = false;
 	bool subscribePeers = false;
+	bool nodeEvents = false;
 	bool reconnectInfinitely = false;
 	std::string hostname;
 	std::pair<std::string, std::string> address;

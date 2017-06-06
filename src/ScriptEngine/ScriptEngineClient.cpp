@@ -31,8 +31,11 @@
 #ifndef NO_SCRIPTENGINE
 
 #include "ScriptEngineClient.h"
+#include "PhpVariableConverter.h"
+#include "php_config_fixes.h"
 #include "../GD/GD.h"
 #include "php_sapi.h"
+#include "php_node.h"
 #include "PhpEvents.h"
 
 #include <sys/types.h>
@@ -46,6 +49,8 @@ namespace ScriptEngine
 {
 
 std::mutex ScriptEngineClient::_resourceMutex;
+std::mutex ScriptEngineClient::_nodeInfoMutex;
+std::unordered_map<std::string, ScriptEngineClient::PNodeInfo> ScriptEngineClient::_nodeInfo;
 
 /*void scriptSignalHandler(int32_t signalNumber)
 {
@@ -62,6 +67,8 @@ std::mutex ScriptEngineClient::_resourceMutex;
 
 ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 1, 1000)
 {
+	_stopped = false;
+
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	_out.init(GD::bl.get());
 	_out.setPrefix("Script Engine (" + std::to_string(getpid()) + "): ");
@@ -87,6 +94,7 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 1, 1000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("scriptCount", std::bind(&ScriptEngineClient::scriptCount, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("getRunningScripts", std::bind(&ScriptEngineClient::getRunningScripts, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("checkSessionId", std::bind(&ScriptEngineClient::checkSessionId, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("executePhpNodeMethod", std::bind(&ScriptEngineClient::executePhpNodeMethod, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastEvent", std::bind(&ScriptEngineClient::broadcastEvent, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastNewDevices", std::bind(&ScriptEngineClient::broadcastNewDevices, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastDeleteDevices", std::bind(&ScriptEngineClient::broadcastDeleteDevices, this, std::placeholders::_1)));
@@ -122,9 +130,6 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 {
 	try
 	{
-		if(_disposing) return;
-		std::lock_guard<std::mutex> disposeGuard(_disposeMutex);
-
 		BaseLib::PArray eventData(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(0)), BaseLib::PVariable(new BaseLib::Variable(-1)), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(std::string("DISPOSING")))}))), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(true))}))) });
 
 		GD::bl->shuttingDown = true;
@@ -160,7 +165,9 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 			return;
 		}
 
-		_disposing = true;
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000)); //Wait for shutdown response to be sent.
+
+		_stopped = true;
 		stopEventThreads();
 		stopQueue(0);
 		php_homegear_shutdown();
@@ -338,7 +345,7 @@ void ScriptEngineClient::start()
 			_out.printError("Error: Could not redirect errors to log file.");
 		}
 
-		startQueue(0, 5, 0, SCHED_OTHER);
+		startQueue(0, 10, 0, SCHED_OTHER);
 
 		_socketPath = GD::bl->settings.socketPath() + "homegearSE.sock";
 		if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Socket path is " + _socketPath);
@@ -392,7 +399,7 @@ void ScriptEngineClient::start()
 		int32_t result = 0;
 		int32_t bytesRead = 0;
 		int32_t processedBytes = 0;
-		while(!_disposing)
+		while(!_stopped)
 		{
 			try
 			{
@@ -565,7 +572,6 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 {
 	try
 	{
-		if(_disposing) return;
 		std::shared_ptr<QueueEntry> queueEntry;
 		queueEntry = std::dynamic_pointer_cast<QueueEntry>(entry);
 		if(!queueEntry) return;
@@ -589,7 +595,7 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 				return;
 			}
 
-			if(GD::bl->debugLevel >= 4) _out.printInfo("Info: Server is calling RPC method: " + methodName);
+			if(GD::bl->debugLevel >= 5) _out.printInfo("Debug: Server is calling RPC method: " + methodName);
 
 			BaseLib::PVariable result = localMethodIterator->second(parameters->at(1)->arrayValue);
 			if(GD::bl->debugLevel >= 5)
@@ -756,6 +762,8 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string
 		RequestInfo& requestInfo = _requestInfo[scriptId];
 		requestInfoGuard.unlock();
 
+		std::lock_guard<std::mutex> requestGuard(requestInfo.requestMutex);
+
 		int32_t packetId;
 		{
 			std::lock_guard<std::mutex> packetIdGuard(_packetIdMutex);
@@ -788,11 +796,16 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string
 			return result;
 		}
 
+		int32_t i = 0;
 		std::unique_lock<std::mutex> waitLock(requestInfo.waitMutex);
-		while (!requestInfo.conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]
+		while (!requestInfo.conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
 		{
-			return response->finished || _disposing;
-		}));
+			return response->finished || _stopped;
+		}))
+		{
+			i++;
+			if(i == 10) break;
+		}
 
 		if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
 		{
@@ -862,7 +875,7 @@ BaseLib::PVariable ScriptEngineClient::sendGlobalRequest(std::string methodName,
 
 		std::unique_lock<std::mutex> waitLock(_waitMutex);
 		while(!_requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]{
-			return response->finished || _disposing;
+			return response->finished || _stopped;
 		}));
 
 		if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
@@ -1004,6 +1017,19 @@ ScriptEngineClient::ScriptGuard::~ScriptGuard()
 	}
 
 	{
+		if(_scriptInfo && _scriptInfo->nodeInfo)
+		{
+			auto infoIterator = _scriptInfo->nodeInfo->structValue->find("id");
+			if(infoIterator != _scriptInfo->nodeInfo->structValue->end())
+			{
+
+				std::lock_guard<std::mutex> nodeInfoGuard(ScriptEngineClient::_nodeInfoMutex);
+				ScriptEngineClient::_nodeInfo.erase(infoIterator->second->stringValue);
+			}
+		}
+	}
+
+	{
 		std::lock_guard<std::mutex> resourceGuard(_resourceMutex);
 		if(tsrm_get_ls_cache())
 		{
@@ -1052,11 +1078,11 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 		BaseLib::Rpc::PServerInfo serverInfo(new BaseLib::Rpc::ServerInfo::Info());
 		zend_file_handle zendHandle;
 
+		ScriptInfo::ScriptType type = scriptInfo->getType();
 		{
 			std::lock_guard<std::mutex> resourceGuard(_resourceMutex);
 			ts_resource(0); //Replaces TSRMLS_FETCH()
 
-			ScriptInfo::ScriptType type = scriptInfo->getType();
 			if(!scriptInfo->script.empty())
 			{
 				zendHandle.type = ZEND_HANDLE_MAPPED;
@@ -1095,9 +1121,14 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 				globals->peerId = scriptInfo->peerId;
 			}
 
+			if(type == ScriptInfo::ScriptType::statefulNode)
+			{
+				globals->nodeId = scriptInfo->nodeInfo->structValue->at("id")->stringValue;
+			}
+
 			ZEND_TSRMLS_CACHE_UPDATE();
 
-			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)
+			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::statefulNode)
 			{
 				BaseLib::Base64::encode(BaseLib::HelperFunctions::getRandomBytes(16), globals->token);
 				std::shared_ptr<PhpEvents> phpEvents = std::make_shared<PhpEvents>(globals->token, globals->outputCallback, globals->rpcCallback);
@@ -1109,7 +1140,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
 			SG(default_mimetype) = nullptr;
 			SG(default_charset) = nullptr;
-			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)
+			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
 			{
 				PG(register_argc_argv) = 1;
 				PG(implicit_flush) = 1;
@@ -1157,7 +1188,32 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			if(scriptInfo->peerId > 0) GD::out.printInfo("Info: Starting PHP script of peer " + std::to_string(scriptInfo->peerId) + ".");
 		}
 
+		if(type == ScriptInfo::ScriptType::statefulNode) php_node_startup();
+
 		php_execute_script(&zendHandle);
+		if(type == ScriptInfo::ScriptType::simpleNode)
+		{
+			zval returnValue;
+			zval function;
+			zval parameters[3];
+
+			ZVAL_STRINGL(&function, "input", sizeof("input") - 1);
+			PhpVariableConverter::getPHPVariable(scriptInfo->nodeInfo, &parameters[0]);
+			ZVAL_LONG(&parameters[1], scriptInfo->inputPort);
+			PhpVariableConverter::getPHPVariable(scriptInfo->message, &parameters[2]);
+			int result = call_user_function(EG(function_table), NULL, &function, &returnValue, 3, parameters);
+			if(result != 0) _out.printError("Error calling function \"input\" in file: " + scriptInfo->fullPath);
+			zval_ptr_dtor(&function);
+			zval_ptr_dtor(&parameters[0]);
+			zval_ptr_dtor(&parameters[1]);
+			zval_ptr_dtor(&parameters[2]);
+			zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
+		}
+		else if(type == ScriptInfo::ScriptType::statefulNode)
+		{
+			runStatefulNode(id, scriptInfo);
+		}
+
 		scriptInfo->exitCode = EG(exit_status);
 
 		return;
@@ -1176,6 +1232,64 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
     }
     std::string error("Error executing script. Check Homegear log for more details.");
     sendOutput(error);
+}
+
+void ScriptEngineClient::runStatefulNode(int32_t id, PScriptInfo scriptInfo)
+{
+	zval homegearNodeObject;
+	try
+	{
+		std::string nodeId = scriptInfo->nodeInfo->structValue->at("id")->stringValue;
+		PNodeInfo nodeInfo;
+
+		{
+			std::lock_guard<std::mutex> nodeInfoGuard(_nodeInfoMutex);
+			nodeInfo = _nodeInfo.at(nodeId);
+		}
+
+		zend_class_entry* homegearNodeClassEntry = nullptr;
+		bool result = php_init_stateful_node(scriptInfo, homegearNodeClassEntry, &homegearNodeObject);
+
+		if(result)
+		{
+			bool stop = false;
+			while(!GD::bl->shuttingDown && !stop)
+			{
+				std::unique_lock<std::mutex> waitLock(nodeInfo->waitMutex);
+				while (!nodeInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+				{
+					return nodeInfo->ready || GD::bl->shuttingDown;
+				}));
+				if(!nodeInfo->ready || GD::bl->shuttingDown) continue;
+				nodeInfo->ready = false;
+
+				nodeInfo->response = php_node_object_invoke_local(scriptInfo, &homegearNodeObject, nodeInfo->methodName, nodeInfo->parameters);
+				if(nodeInfo->methodName == "init" && !nodeInfo->response->booleanValue) stop = true;
+				else if(nodeInfo->methodName == "start" && !nodeInfo->response->booleanValue) stop = true;
+				else if(nodeInfo->methodName == "stop") stop = true;
+
+				nodeInfo->parameters.reset();
+				waitLock.unlock();
+				nodeInfo->conditionVariable.notify_all();
+			}
+			std::string methodName = "__destruct";
+			BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+			php_node_object_invoke_local(scriptInfo, &homegearNodeObject, methodName, parameters);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	php_deinit_stateful_node(&homegearNodeObject);
 }
 
 void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool sendOutput)
@@ -1198,7 +1312,7 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
 		}
 		ScriptGuard scriptGuard(this, globals, id, scriptInfo);
 
-		if(scriptInfo->script.empty() && scriptInfo->fullPath.size() > 3 && scriptInfo->fullPath.compare(scriptInfo->fullPath.size() - 4, 4, ".hgs") == 0)
+		if(scriptInfo->script.empty() && scriptInfo->fullPath.size() > 3 && (scriptInfo->fullPath.compare(scriptInfo->fullPath.size() - 4, 4, ".hgs") == 0 || scriptInfo->fullPath.compare(scriptInfo->fullPath.size() - 4, 4, ".hgn") == 0))
 		{
 			std::map<std::string, std::shared_ptr<CacheInfo>>::iterator scriptIterator = _scriptCache.find(scriptInfo->fullPath);
 			if(scriptIterator != _scriptCache.end() && scriptIterator->second->lastModified == BaseLib::Io::getFileLastModifiedTime(scriptInfo->fullPath)) scriptInfo->script = scriptIterator->second->script;
@@ -1311,6 +1425,7 @@ void ScriptEngineClient::checkSessionIdThread(std::string sessionId, bool* resul
 
 		ZVAL_STRINGL(&function, "session_start", sizeof("session_start") - 1);
 		call_user_function(EG(function_table), NULL, &function, &returnValue, 0, nullptr);
+		zval_ptr_dtor(&function);
 		zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
 
 		zval* reference = zend_hash_str_find(&EG(symbol_table), "_SESSION", sizeof("_SESSION") - 1);
@@ -1347,8 +1462,6 @@ BaseLib::PVariable ScriptEngineClient::reload(BaseLib::PArray& parameters)
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
-
 		if(!std::freopen((GD::bl->settings.logfilePath() + "homegear-scriptengine.log").c_str(), "a", stdout))
 		{
 			GD::out.printError("Error: Could not redirect output to new log file.");
@@ -1379,8 +1492,6 @@ BaseLib::PVariable ScriptEngineClient::shutdown(BaseLib::PArray& parameters)
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
-
 		std::lock_guard<std::mutex> maintenanceThreadGuard(_maintenanceThreadMutex);
 		if(_maintenanceThread.joinable()) _maintenanceThread.join();
 		_maintenanceThread = std::thread(&ScriptEngineClient::dispose, this, true);
@@ -1406,7 +1517,6 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
 		if(parameters->size() < 3) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 		PScriptInfo scriptInfo;
 		bool sendOutput = false;
@@ -1438,6 +1548,29 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 		else if(type == ScriptInfo::ScriptType::device)
 		{
 			scriptInfo.reset(new ScriptInfo(type, parameters->at(2)->stringValue, parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5)->stringValue, parameters->at(6)->integerValue64));
+		}
+		else if(type == ScriptInfo::ScriptType::simpleNode)
+		{
+			scriptInfo.reset(new ScriptInfo(type, parameters->at(2), parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5)->integerValue, parameters->at(6)));
+			if(!GD::bl->io.fileExists(scriptInfo->fullPath))
+			{
+				_out.printError("Error: PHP node script \"" + scriptInfo->fullPath + "\" does not exist.");
+				return BaseLib::Variable::createError(-1, "Script file does not exist: " + scriptInfo->fullPath);
+			}
+		}
+		else if(type == ScriptInfo::ScriptType::statefulNode)
+		{
+			scriptInfo.reset(new ScriptInfo(type, parameters->at(2), parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5)->integerValue));
+			if(!GD::bl->io.fileExists(scriptInfo->fullPath))
+			{
+				_out.printError("Error: PHP node script \"" + scriptInfo->fullPath + "\" does not exist.");
+				return BaseLib::Variable::createError(-1, "Script file does not exist: " + scriptInfo->fullPath);
+			}
+
+			std::string nodeId = scriptInfo->nodeInfo->structValue->at("id")->stringValue;
+			std::lock_guard<std::mutex> nodeInfoGuard(_nodeInfoMutex);
+			_nodeInfo.erase(nodeId);
+			_nodeInfo.emplace(nodeId, std::make_shared<NodeInfo>());
 		}
 
 		scriptInfo->id = parameters->at(0)->integerValue;
@@ -1477,8 +1610,6 @@ BaseLib::PVariable ScriptEngineClient::devTest(BaseLib::PArray& parameters)
 {
 	try
 	{
-		if(_disposing) return std::make_shared<BaseLib::Variable>();
-
 		/*std::lock_guard<std::mutex> threadGuard(_scriptThreadMutex);
 		for(std::map<int32_t, PThreadInfo>::iterator i = _scriptThreads.begin(); i != _scriptThreads.end(); ++i)
 		{
@@ -1509,8 +1640,6 @@ BaseLib::PVariable ScriptEngineClient::scriptCount(BaseLib::PArray& parameters)
 {
 	try
 	{
-		if(_disposing) return std::make_shared<BaseLib::Variable>(0);
-
 		collectGarbage();
 
 		return std::make_shared<BaseLib::Variable>((int32_t)_scriptThreads.size());
@@ -1534,8 +1663,6 @@ BaseLib::PVariable ScriptEngineClient::getRunningScripts(BaseLib::PArray& parame
 {
 	try
 	{
-		if(_disposing) return BaseLib::PVariable(new BaseLib::Variable(0));
-
 		BaseLib::PVariable scripts = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 		std::lock_guard<std::mutex> threadGuard(_scriptThreadMutex);
 		for(std::map<int32_t, PThreadInfo>::iterator i = _scriptThreads.begin(); i != _scriptThreads.end(); ++i)
@@ -1567,8 +1694,6 @@ BaseLib::PVariable ScriptEngineClient::checkSessionId(BaseLib::PArray& parameter
 {
 	try
 	{
-		if(_disposing) return BaseLib::PVariable(new BaseLib::Variable(0));
-
 		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
 		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Session ID is empty.");
@@ -1596,11 +1721,72 @@ BaseLib::PVariable ScriptEngineClient::checkSessionId(BaseLib::PArray& parameter
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable ScriptEngineClient::executePhpNodeMethod(BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+
+		std::string nodeId = parameters->at(0)->stringValue;
+		PNodeInfo nodeInfo;
+
+		{
+			std::lock_guard<std::mutex> nodeInfoGuard(_nodeInfoMutex);
+			auto nodeIterator = _nodeInfo.find(nodeId);
+			if (nodeIterator == _nodeInfo.end() || !nodeIterator->second) return BaseLib::Variable::createError(-1, "Unknown node.");
+			nodeInfo = nodeIterator->second;
+		}
+
+		std::lock_guard<std::mutex> requestLock(nodeInfo->requestMutex);
+
+		{
+			std::lock_guard<std::mutex> nodeInfoGuard(nodeInfo->waitMutex);
+			nodeInfo->methodName = parameters->at(1)->stringValue;
+			nodeInfo->parameters = parameters->at(2)->arrayValue;
+			nodeInfo->ready = true;
+			nodeInfo->response.reset();
+		}
+		nodeInfo->conditionVariable.notify_all();
+
+		//Wait for response
+		{
+			std::unique_lock<std::mutex> waitLock(nodeInfo->waitMutex);
+			int32_t i = 0;
+			while (!nodeInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+			{
+				return nodeInfo->response || GD::bl->shuttingDown;
+			}))
+			{
+				i++;
+				if(i == 60)
+				{
+					_out.printError("Error: Node with ID " + nodeId + " is not responding...");
+					break;
+				}
+			}
+		}
+
+		return nodeInfo->response;
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable ScriptEngineClient::broadcastEvent(BaseLib::PArray& parameters)
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
 		if(parameters->size() != 4) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
 		std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
@@ -1646,7 +1832,6 @@ BaseLib::PVariable ScriptEngineClient::broadcastNewDevices(BaseLib::PArray& para
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
 		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
 		std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
@@ -1682,7 +1867,6 @@ BaseLib::PVariable ScriptEngineClient::broadcastDeleteDevices(BaseLib::PArray& p
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
 		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
 		std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
@@ -1718,7 +1902,6 @@ BaseLib::PVariable ScriptEngineClient::broadcastUpdateDevice(BaseLib::PArray& pa
 {
 	try
 	{
-		if(_disposing) return BaseLib::Variable::createError(-1, "Client is disposing.");
 		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
 		std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);

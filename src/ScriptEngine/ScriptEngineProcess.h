@@ -57,8 +57,11 @@ private:
 	std::map<int32_t, PScriptInfo> _scripts;
 	std::map<int32_t, PScriptFinishedInfo> _scriptFinishedInfo;
 	PScriptEngineClientData _clientData;
+	bool _nodeProcess = false;
+	std::atomic_uint _nodeThreadCount;
+	std::function<void(std::string&)> _unregisterNode;
 public:
-	ScriptEngineProcess();
+	ScriptEngineProcess(bool nodeProcess);
 	virtual ~ScriptEngineProcess();
 
 	std::condition_variable requestConditionVariable;
@@ -67,12 +70,15 @@ public:
 	void setPid(pid_t value) { _pid = value; }
 	PScriptEngineClientData& getClientData() { return _clientData; }
 	void setClientData(PScriptEngineClientData& value) { _clientData = value; }
+	void setUnregisterNode(std::function<void(std::string&)> value) { _unregisterNode.swap(value); }
+	bool isNodeProcess() { return _nodeProcess; }
 
 	void invokeScriptOutput(int32_t id, std::string& output);
 	void invokeScriptHeaders(int32_t id, BaseLib::PVariable& headers);
 	void invokeScriptFinished(int32_t exitCode);
 	void invokeScriptFinished(int32_t id, int32_t exitCode);
 	uint32_t scriptCount();
+	uint32_t nodeThreadCount();
 	BaseLib::ScriptEngine::PScriptInfo getScript(int32_t id);
 	PScriptFinishedInfo getScriptFinishedInfo(int32_t id);
 	void registerScript(int32_t id, PScriptInfo& scriptInfo);

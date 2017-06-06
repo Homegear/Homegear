@@ -148,7 +148,7 @@ private:
 	std::mutex _connectMutex;
 	std::atomic_bool _started;
 	std::atomic_bool _connected;
-	int16_t _packetId = 1;
+	std::atomic<int16_t> _packetId;
 	std::mutex _requestsMutex;
 	std::map<int16_t, std::shared_ptr<Request>> _requests;
 	std::mutex _requestsByTypeMutex;

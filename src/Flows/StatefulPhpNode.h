@@ -1,17 +1,17 @@
 /* Copyright 2013-2017 Sathya Laufer
  *
- * Homegear is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
+ * libhomegear-base is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
  *
- * Homegear is distributed in the hope that it will be useful,
+ * libhomegear-base is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with Homegear.  If not, see
+ * License along with libhomegear-base.  If not, see
  * <http://www.gnu.org/licenses/>.
  *
  * In addition, as a special exception, the copyright holders give
@@ -28,29 +28,33 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef FLOWSRESPONSE_H_
-#define FLOWSRESPONSE_H_
+#ifndef STATEFULPHPNODE_H_
+#define STATEFULPHPNODE_H_
 
-#include <homegear-base/BaseLib.h>
+#include <homegear-node/INode.h>
 
-namespace Flows
+class StatefulPhpNode : public Flows::INode
 {
-
-class FlowsResponse
-{
+private:
+	Flows::PVariable _nodeInfo;
 public:
-	std::atomic_bool finished;
-	int32_t packetId = 0;
-	BaseLib::PVariable response;
+	StatefulPhpNode(std::string path, std::string nodeNamespace, std::string type, const std::atomic_bool* frontendConnected);
+	virtual ~StatefulPhpNode();
 
-	FlowsResponse()
-	{
-		finished = false;
-	}
+	virtual bool init(Flows::PNodeInfo nodeInfo);
+	virtual bool start();
+	virtual void stop();
+
+	virtual void configNodesStarted();
+
+	virtual void variableEvent(uint64_t peerId, int32_t channel, std::string variable, Flows::PVariable value);
+	virtual void setNodeVariable(std::string& variable, Flows::PVariable& value);
+
+	virtual Flows::PVariable getConfigParameterIncoming(std::string name);
+
+	virtual void input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message);
+
+	virtual Flows::PVariable invokeLocal(std::string methodName, Flows::PArray& parameters);
 };
-
-typedef std::shared_ptr<FlowsResponse> PFlowsResponse;
-
-}
 
 #endif

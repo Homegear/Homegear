@@ -31,7 +31,7 @@
 #ifndef FLOWSCLIENTDATA_H_
 #define FLOWSCLIENTDATA_H_
 
-#include "FlowsResponse.h"
+#include "FlowsResponseServer.h"
 #include <homegear-base/BaseLib.h>
 
 namespace Flows
@@ -53,7 +53,7 @@ public:
 	std::mutex sendMutex;
 	std::mutex waitMutex;
 	std::mutex rpcResponsesMutex;
-	std::map<int32_t, PFlowsResponse> rpcResponses;
+	std::map<int32_t, PFlowsResponseServer> rpcResponses;
 	std::condition_variable requestConditionVariable;
 };
 

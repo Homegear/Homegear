@@ -34,6 +34,7 @@ Mqtt::Mqtt() : BaseLib::IQueue(GD::bl.get(), 2, 1000)
 {
 	try
 	{
+		_packetId = 1;
 		_started = false;
 		_reconnecting = false;
 		_connected = false;
@@ -95,7 +96,6 @@ void Mqtt::start()
 		_socket.reset(new BaseLib::TcpSocket(GD::bl.get(), _settings.brokerHostname(), _settings.brokerPort(), _settings.enableSSL(), _settings.caFile(), _settings.verifyCertificate(), _settings.certPath(), _settings.keyPath()));
 		GD::bl->threadManager.join(_listenThread);
 		GD::bl->threadManager.start(_listenThread, true, &Mqtt::listen, this);
-		connect();
 		GD::bl->threadManager.join(_pingThread);
 		GD::bl->threadManager.start(_pingThread, true, &Mqtt::ping, this);
 	}
@@ -319,7 +319,7 @@ void Mqtt::ping()
 		{
 			if(_connected)
 			{
-				getResponseByType(ping, pong, 0xD0);
+				getResponseByType(ping, pong, 0xD0, false);
 				if(pong.empty())
 				{
 					_out.printError("Error: No PINGRESP received.");
@@ -366,7 +366,11 @@ void Mqtt::listen()
 			{
 				if(!_started) return;
 				reconnect();
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				for(int32_t i = 0; i < 300; i++)
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(100));
+					if(_socket->connected() || !_started) break;
+				}
 				continue;
 			}
 			try
@@ -948,7 +952,7 @@ void Mqtt::connect()
 				connectPacket.push_back(0x10); //Control packet type
 				connectPacket.insert(connectPacket.end(), lengthBytes.begin(), lengthBytes.end());
 				connectPacket.insert(connectPacket.end(), payload.begin(), payload.end());
-				getResponseByType(connectPacket, response, 0x20);
+				getResponseByType(connectPacket, response, 0x20, false);
 				if(response.size() != 4)
 				{
 					if(response.size() == 0) _out.printError("Error: Connection to MQTT server with protocol version 3 failed.");

@@ -20,8 +20,8 @@ endif
 
 
 bin_PROGRAMS = homegear
-homegear_SOURCES = main.cpp Monitor.cpp CLI/CLIClient.cpp CLI/CLIServer.cpp Database/SQLite3.cpp Events/EventHandler.cpp Flows/FlowsClient.cpp Flows/FlowsClientData.cpp Flows/FlowsProcess.cpp Flows/FlowsServer.cpp Flows/NodeManager.cpp IPC/IpcClientData.cpp IPC/IpcServer.cpp GD/GD.cpp Licensing/LicensingController.cpp MQTT/Mqtt.cpp MQTT/MqttSettings.cpp RPC/Auth.cpp RPC/Client.cpp RPC/ClientSettings.cpp RPC/RemoteRpcServer.cpp RPC/RpcClient.cpp RPC/RPCMethods.cpp RPC/RPCServer.cpp RPC/Server.cpp WebServer/WebServer.cpp Systems/DatabaseController.cpp Systems/FamilyController.cpp UPnP/UPnP.cpp User/User.cpp
-homegear_LDADD = -lpthread -lreadline -lgcrypt -lgnutls -lhomegear-base -lgpg-error -lsqlite3
+homegear_SOURCES = main.cpp Monitor.cpp CLI/CLIClient.cpp CLI/CLIServer.cpp Database/SQLite3.cpp Events/EventHandler.cpp Flows/FlowsClient.cpp Flows/FlowsClientData.cpp Flows/FlowsProcess.cpp Flows/FlowsServer.cpp Flows/NodeManager.cpp Flows/SimplePhpNode.cpp Flows/StatefulPhpNode.cpp IPC/IpcClientData.cpp IPC/IpcServer.cpp GD/GD.cpp Licensing/LicensingController.cpp MQTT/Mqtt.cpp MQTT/MqttSettings.cpp RPC/Auth.cpp RPC/Client.cpp RPC/ClientSettings.cpp RPC/RemoteRpcServer.cpp RPC/RpcClient.cpp RPC/RPCMethods.cpp RPC/RPCServer.cpp RPC/Server.cpp WebServer/WebServer.cpp Systems/DatabaseController.cpp Systems/FamilyController.cpp UPnP/UPnP.cpp User/User.cpp
+homegear_LDADD = -lpthread -lreadline -lgcrypt -lgnutls -lhomegear-base -lhomegear-node -lgpg-error -lsqlite3
 
 if BSDSYSTEM
 else
@@ -30,7 +30,7 @@ endif
 
 #if WITH_SCRIPTENGINE
 noinst_LIBRARIES = libscriptengine.a
-libscriptengine_a_SOURCES = ScriptEngine/php_sapi.cpp ScriptEngine/PhpVariableConverter.cpp ScriptEngine/PhpEvents.cpp ScriptEngine/PhpEvents.h ScriptEngine/ScriptEngineServer.cpp ScriptEngine/ScriptEngineServer.h ScriptEngine/ScriptEngineClient.cpp ScriptEngine/ScriptEngineClient.h ScriptEngine/ScriptEngineClientData.cpp ScriptEngine/ScriptEngineClientData.h ScriptEngine/ScriptEngineProcess.cpp ScriptEngine/ScriptEngineProcess.h
+libscriptengine_a_SOURCES = ScriptEngine/php_homegear_globals.cpp ScriptEngine/php_node.cpp ScriptEngine/php_sapi.cpp ScriptEngine/PhpVariableConverter.cpp ScriptEngine/PhpEvents.cpp ScriptEngine/PhpEvents.h ScriptEngine/ScriptEngineServer.cpp ScriptEngine/ScriptEngineServer.h ScriptEngine/ScriptEngineClient.cpp ScriptEngine/ScriptEngineClient.h ScriptEngine/ScriptEngineClientData.cpp ScriptEngine/ScriptEngineClientData.h ScriptEngine/ScriptEngineProcess.cpp ScriptEngine/ScriptEngineProcess.h
 homegear_LDADD += libscriptengine.a
 libscriptengine_a_CPPFLAGS = -Wall -std=c++11 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
 if BSDSYSTEM

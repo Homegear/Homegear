@@ -104,7 +104,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			}
 		}
 
-		if(!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "flows/index.php")
+		if(!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "flows/index.php" && path != "flows/signin.php")
 		{
 			GD::out.printWarning("Warning: Requested URL not found: " + path);
 			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
@@ -123,7 +123,10 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 #ifndef NO_SCRIPTENGINE
 			if(ending == "php" || ending == "php5" || ending == "php7" || ending == "hgs")
 			{
-				std::string fullPath = path == "flows/index.php" ? GD::bl->settings.flowsPath() + "www/index.php" : _serverInfo->contentPath + path;
+				std::string fullPath;
+				if(path == "flows/index.php") fullPath = GD::bl->settings.flowsPath() + "www/index.php";
+				else if(path == "flows/signin.php") fullPath = GD::bl->settings.flowsPath() + "www/signin.php";
+				else fullPath = _serverInfo->contentPath + path;
 				std::string relativePath = '/' + path;
 				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, relativePath, http, _serverInfo));
 				scriptInfo->socket = socket;
@@ -237,7 +240,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 
 		if (GD::bl->settings.enableFlows() && path.compare(0, 6, "flows/") == 0)
 		{
-			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
+			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: POST)");
 			std::string responseEncoding;
 			std::string contentString = GD::flowsServer->handlePost(path, http, responseEncoding);
 			if (!contentString.empty())
@@ -252,7 +255,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 			}
 		}
 
-		if (!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "flows/index.php")
+		if (!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "flows/index.php" && path != "flows/signin.php")
 		{
 			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 			send(socket, content);
@@ -263,7 +266,10 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 		try
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to: \"" + _serverInfo->contentPath + path + "\", method: POST)");
-			std::string fullPath = path == "flows/index.php" ? GD::bl->settings.flowsPath() + "www/index.php" : _serverInfo->contentPath + path;
+			std::string fullPath;
+			if(path == "flows/index.php") fullPath = GD::bl->settings.flowsPath() + "www/index.php";
+			else if(path == "flows/signin.php") fullPath = GD::bl->settings.flowsPath() + "www/signin.php";
+			else fullPath = _serverInfo->contentPath + path;
 			std::string relativePath = '/' + path;
 			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, relativePath, http, _serverInfo));
 			scriptInfo->socket = socket;

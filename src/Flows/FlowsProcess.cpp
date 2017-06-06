@@ -36,7 +36,7 @@ namespace Flows
 
 FlowsProcess::FlowsProcess()
 {
-
+	_nodeThreadCount = 0;
 }
 
 FlowsProcess::~FlowsProcess()
@@ -64,6 +64,11 @@ uint32_t FlowsProcess::flowCount()
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return (uint32_t)-1;
+}
+
+uint32_t FlowsProcess::nodeThreadCount()
+{
+	return _nodeThreadCount;
 }
 
 void FlowsProcess::invokeFlowFinished(int32_t exitCode)
@@ -181,6 +186,7 @@ void FlowsProcess::registerFlow(int32_t id, PFlowInfoServer& flowInfo)
 		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
 		_flows[id] = flowInfo;
 		_flowFinishedInfo[id] = PFlowFinishedInfo(new FlowFinishedInfo());
+		_nodeThreadCount += flowInfo->maxThreadCount;
 	}
 	catch(const std::exception& ex)
     {

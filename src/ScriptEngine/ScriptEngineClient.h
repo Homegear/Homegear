@@ -76,6 +76,7 @@ private:
 
 	struct RequestInfo
 	{
+		std::mutex requestMutex;
 		std::mutex waitMutex;
 		std::condition_variable conditionVariable;
 	};
@@ -102,8 +103,18 @@ private:
 		bool isRequest = false;
 	};
 
-	std::mutex _disposeMutex;
-	bool _disposing = false;
+	struct NodeInfo
+	{
+		std::mutex requestMutex;
+		std::mutex waitMutex;
+		std::condition_variable conditionVariable;
+		bool ready = false;
+		std::string methodName;
+		BaseLib::PArray parameters;
+		BaseLib::PVariable response;
+	};
+	typedef std::shared_ptr<NodeInfo> PNodeInfo;
+
 	BaseLib::Output _out;
 #ifdef DEBUGSESOCKET
 	std::ofstream _socketOutput;
@@ -111,7 +122,7 @@ private:
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
 	int64_t _lastGargabeCollection = 0;
-	bool _closed = false;
+	std::atomic_bool _stopped;
 	static std::mutex _resourceMutex;
 	std::mutex _sendMutex;
 	std::mutex _requestMutex;
@@ -130,6 +141,8 @@ private:
 	std::map<std::string, std::shared_ptr<CacheInfo>> _scriptCache;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
+	static std::mutex _nodeInfoMutex;
+	static std::unordered_map<std::string, PNodeInfo> _nodeInfo;
 
 	std::unique_ptr<BaseLib::Rpc::BinaryRpc> _binaryRpc;
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
@@ -151,6 +164,7 @@ private:
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 	void scriptThread(int32_t id, PScriptInfo scriptInfo, bool sendOutput);
 	void runScript(int32_t id, PScriptInfo scriptInfo);
+	void runStatefulNode(int32_t id, PScriptInfo scriptInfo);
 	void checkSessionIdThread(std::string sessionId, bool* result);
 	BaseLib::PVariable send(std::vector<char>& data);
 
@@ -187,6 +201,7 @@ private:
 		BaseLib::PVariable scriptCount(BaseLib::PArray& parameters);
 		BaseLib::PVariable getRunningScripts(BaseLib::PArray& parameters);
 		BaseLib::PVariable checkSessionId(BaseLib::PArray& parameters);
+		BaseLib::PVariable executePhpNodeMethod(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastEvent(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastNewDevices(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastDeleteDevices(BaseLib::PArray& parameters);

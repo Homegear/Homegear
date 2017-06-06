@@ -1052,15 +1052,6 @@ void startUp()
         if(BaseLib::Io::fileExists(GD::configPath + "physicalinterfaces.conf")) GD::out.printWarning("Warning: File physicalinterfaces.conf exists in config directory. Interface configuration has been moved to " + GD::bl->settings.familyConfigPath());
         GD::familyController->load(); //Don't load before database is open!
 
-        GD::out.printInfo("Start listening for packets...");
-        GD::familyController->physicalInterfaceStartListening();
-        if(!GD::familyController->physicalInterfaceIsOpen())
-        {
-        	GD::out.printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
-        	GD::familyController->physicalInterfaceStopListening();
-        	exitHomegear(1);
-        }
-
         GD::out.printInfo("Initializing RPC client...");
         GD::rpcClient->init();
 
@@ -1090,7 +1081,7 @@ void startUp()
 			if(!GD::flowsServer->start())
 			{
 				GD::out.printCritical("Critical: Cannot start flows server. Exiting Homegear.");
-				exit(1);
+				exitHomegear(1);
 			}
 		}
 
@@ -1099,8 +1090,17 @@ void startUp()
 		if(!GD::ipcServer->start())
 		{
 			GD::out.printCritical("Critical: Cannot start IPC server. Exiting Homegear.");
-			exit(1);
+			exitHomegear(1);
 		}
+
+		GD::out.printInfo("Start listening for packets...");
+        GD::familyController->physicalInterfaceStartListening();
+        if(!GD::familyController->physicalInterfaceIsOpen())
+        {
+        	GD::out.printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
+        	GD::familyController->physicalInterfaceStopListening();
+        	exitHomegear(1);
+        }
 
         GD::out.printMessage("Startup complete. Waiting for physical interfaces to connect.");
 
@@ -1458,7 +1458,7 @@ int main(int argc, char* argv[])
 					for(std::vector<std::string>::iterator j = subdirs.begin(); j != subdirs.end(); ++j)
 					{
 						std::string subdir = currentPath + *j;
-						if(subdir != GD::bl->settings.scriptPath() && subdir != GD::bl->settings.flowsPath() && subdir != GD::bl->settings.socketPath() && subdir != GD::bl->settings.modulePath() && subdir != GD::bl->settings.logfilePath())
+						if(subdir != GD::bl->settings.scriptPath() && subdir != GD::bl->settings.flowsPath() && subdir != GD::bl->settings.flowsDataPath() && subdir != GD::bl->settings.socketPath() && subdir != GD::bl->settings.modulePath() && subdir != GD::bl->settings.logfilePath())
 						{
 							if(chown(subdir.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set owner on " << subdir << std::endl;
 						}
@@ -1472,7 +1472,7 @@ int main(int argc, char* argv[])
 					for(std::vector<std::string>::iterator j = subdirs.begin(); j != subdirs.end(); ++j)
 					{
 						std::string subdir = currentPath + *j;
-						if(subdir == GD::bl->settings.scriptPath() || subdir == GD::bl->settings.flowsPath() || subdir == GD::bl->settings.socketPath() || subdir == GD::bl->settings.modulePath() || subdir == GD::bl->settings.logfilePath()) continue;
+						if(subdir == GD::bl->settings.scriptPath() || subdir == GD::bl->settings.flowsPath() || subdir == GD::bl->settings.flowsDataPath() || subdir == GD::bl->settings.socketPath() || subdir == GD::bl->settings.modulePath() || subdir == GD::bl->settings.logfilePath()) continue;
 						if(chmod(subdir.c_str(), GD::bl->settings.dataPathPermissions()) == -1) std::cerr << "Could not set permissions on " << subdir << std::endl;
 					}
 				}
@@ -1496,6 +1496,18 @@ int main(int argc, char* argv[])
     			if(chmod(currentPath.c_str(), GD::bl->settings.scriptPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 
     			currentPath = GD::bl->settings.flowsPath();
+    			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
+    			localUserId = GD::bl->hf.userId(GD::bl->settings.flowsPathUser());
+				localGroupId = GD::bl->hf.groupId(GD::bl->settings.flowsPathGroup());
+				if(((int32_t)localUserId) == -1 || ((int32_t)localGroupId) == -1)
+				{
+					localUserId = userId;
+					localGroupId = groupId;
+				}
+				if(chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			if(chmod(currentPath.c_str(), GD::bl->settings.flowsPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+
+    			currentPath = GD::bl->settings.flowsDataPath();
     			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
     			localUserId = GD::bl->hf.userId(GD::bl->settings.flowsPathUser());
 				localGroupId = GD::bl->hf.groupId(GD::bl->settings.flowsPathGroup());

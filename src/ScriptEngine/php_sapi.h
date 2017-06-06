@@ -33,9 +33,10 @@
 
 #ifndef NO_SCRIPTENGINE
 
-#include "php_config_fixes.h"
 #include <homegear-base/BaseLib.h>
 #include "PhpEvents.h"
+#include "php_homegear_globals.h"
+#include "php_config_fixes.h"
 
 #include <iostream>
 #include <string>
@@ -53,41 +54,6 @@
 #include <zend_exceptions.h>
 #include <ext/standard/info.h>
 
-namespace ScriptEngine
-{
-	class ScriptEngineClient;
-}
-
-typedef struct _zend_homegear_globals
-{
-	std::function<void(std::string& output)> outputCallback;
-	std::function<void(BaseLib::PVariable& headers)> sendHeadersCallback;
-	std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)> rpcCallback;
-	BaseLib::Http http;
-	PScriptInfo scriptInfo;
-
-	bool webRequest = false;
-	bool commandLine = false;
-	bool cookiesParsed = false;
-	int64_t peerId = 0;
-	int32_t logLevel = -1;
-
-	// {{{ Needed by ScriptEngineClient
-	int32_t id = 0;
-	std::string token;
-	bool executionStarted = false;
-	// }}}
-} zend_homegear_globals;
-
-typedef struct _zend_homegear_superglobals
-{
-	BaseLib::Http* http;
-	BaseLib::LowLevel::Gpio* gpio;
-	std::mutex serialDevicesMutex;
-	std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>> serialDevices;
-} zend_homegear_superglobals;
-
-zend_homegear_globals* php_homegear_get_globals();
 void php_homegear_build_argv(std::vector<std::string>& arguments);
 int php_homegear_init();
 void php_homegear_shutdown();

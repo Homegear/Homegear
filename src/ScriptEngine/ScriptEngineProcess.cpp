@@ -36,9 +36,10 @@
 namespace ScriptEngine
 {
 
-ScriptEngineProcess::ScriptEngineProcess()
+ScriptEngineProcess::ScriptEngineProcess(bool nodeProcess)
 {
-
+	_nodeProcess = nodeProcess;
+	_nodeThreadCount = 0;
 }
 
 ScriptEngineProcess::~ScriptEngineProcess()
@@ -66,6 +67,11 @@ uint32_t ScriptEngineProcess::scriptCount()
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return (uint32_t)-1;
+}
+
+uint32_t ScriptEngineProcess::nodeThreadCount()
+{
+	return _nodeThreadCount;
 }
 
 void ScriptEngineProcess::invokeScriptOutput(int32_t id, std::string& output)
@@ -154,7 +160,11 @@ void ScriptEngineProcess::invokeScriptFinished(int32_t exitCode)
 		}
 		for(std::map<int32_t, PScriptInfo>::iterator i = _scripts.begin(); i != _scripts.end(); ++i)
 		{
-			GD::out.printInfo("Info: Script with id " + std::to_string(i->first) + " finished with exit code " + std::to_string(exitCode));
+			if(GD::bl->debugLevel >= 5 || (i->second->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode && i->second->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode))
+			{
+				GD::out.printInfo("Info: Script with id " + std::to_string(i->first) + " finished with exit code " + std::to_string(exitCode));
+			}
+			_nodeThreadCount -= i->second->maxThreadCount + 1;
 			i->second->finished = true;
 			i->second->exitCode = exitCode;
 			if(i->second->scriptFinishedCallback) i->second->scriptFinishedCallback(i->second, exitCode);
@@ -178,7 +188,6 @@ void ScriptEngineProcess::invokeScriptFinished(int32_t id, int32_t exitCode)
 {
 	try
 	{
-		GD::out.printInfo("Info: Script with id " + std::to_string(id) + " finished with exit code " + std::to_string(exitCode));
 		std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
 		std::map<int32_t, PScriptFinishedInfo>::iterator scriptFinishedIterator = _scriptFinishedInfo.find(id);
 		if(scriptFinishedIterator != _scriptFinishedInfo.end())
@@ -189,6 +198,15 @@ void ScriptEngineProcess::invokeScriptFinished(int32_t id, int32_t exitCode)
 		std::map<int32_t, PScriptInfo>::iterator scriptsIterator = _scripts.find(id);
 		if(scriptsIterator != _scripts.end())
 		{
+			if(GD::bl->debugLevel >= 5 || (scriptsIterator->second->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode && scriptsIterator->second->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode))
+			{
+				GD::out.printInfo("Info: Script with id " + std::to_string(id) + " finished with exit code " + std::to_string(exitCode));
+			}
+			if(scriptsIterator->second->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode && scriptsIterator->second->nodeInfo)
+			{
+				_nodeThreadCount -= scriptsIterator->second->maxThreadCount + 1;
+				if(_unregisterNode) _unregisterNode(scriptsIterator->second->nodeInfo->structValue->at("id")->stringValue);
+			}
 			scriptsIterator->second->finished = true;
 			scriptsIterator->second->exitCode = exitCode;
 			if(scriptsIterator->second->scriptFinishedCallback) scriptsIterator->second->scriptFinishedCallback(scriptsIterator->second, exitCode);
@@ -261,6 +279,7 @@ void ScriptEngineProcess::registerScript(int32_t id, PScriptInfo& scriptInfo)
 		std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
 		_scripts[id] = scriptInfo;
 		_scriptFinishedInfo[id] = PScriptFinishedInfo(new ScriptFinishedInfo());
+		_nodeThreadCount += scriptInfo->maxThreadCount + 1;
 	}
 	catch(const std::exception& ex)
     {

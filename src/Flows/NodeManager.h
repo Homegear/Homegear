@@ -32,6 +32,8 @@
 #define NODEMANAGER_H_
 
 #include <homegear-base/BaseLib.h>
+#include <homegear-node/INode.h>
+#include <homegear-node/NodeFactory.h>
 
 #include <string>
 #include <iostream>
@@ -44,20 +46,17 @@
 class NodeLoader
 {
 public:
-	NodeLoader(std::string name, std::string path);
+	NodeLoader(std::string nodeNamespace, std::string type, std::string path);
 	virtual ~NodeLoader();
-	void dispose();
-	std::string getNodeName();
-	std::string getVersion();
 
-	std::unique_ptr<BaseLib::Flows::INode> createNode();
+	Flows::PINode createNode(const std::atomic_bool* nodeEventsEnabled);
 private:
-	bool _disposing = false;
-	std::string _name;
-	std::string _nodeName;
-	std::string _version;
+	std::string _filename;
+	std::string _path;
+	std::string _namespace;
+	std::string _type;
 	void* _handle = nullptr;
-	std::unique_ptr<BaseLib::Flows::NodeFactory> _factory;
+	std::unique_ptr<Flows::NodeFactory> _factory;
 
 	NodeLoader(const NodeLoader&) = delete;
 	NodeLoader& operator=(const NodeLoader&) = delete;
@@ -69,70 +68,67 @@ public:
 	struct NodeInfo
 	{
 		std::string filename;
-		std::string baselibVersion;
+		std::string fullPath;
+		std::string nodeId;
 		std::string nodeName;
-		bool loaded;
+		std::string readableName;
+		std::string version;
+		int32_t maxThreadCount;
+		std::string frontendListEntry;
+		std::string frontendCode;
 	};
+	typedef std::shared_ptr<NodeInfo> PNodeInfo;
 
-	NodeManager();
+	struct NodeUsageInfo
+	{
+		std::atomic_bool locked;
+		std::atomic_int referenceCounter;
+	};
+	typedef std::shared_ptr<NodeUsageInfo> PNodeUsageInfo;
+
+	NodeManager(const std::atomic_bool* nodeEventsEnabled);
 	virtual ~NodeManager();
-	void disposeNodes();
-	void dispose();
 
 	/**
-	 * Returns a vector of type NodeInfo with information about all loaded and not loaded nodes.
+	 * Returns a vector of type NodeInfo with information about all nodes.
 	 * @return Returns a vector of type NodeInfo.
 	 */
-	std::vector<std::shared_ptr<NodeInfo>> getNodeInfo();
+	static std::vector<PNodeInfo> getNodeInfo();
+
+	static std::string getNodeLocales(std::string& language);
 
 	/**
 	 * Loads a node. The node needs to be in Homegear's node path.
-	 * @param filename The filename of the node (e. g. node_variable.so).
+	 * @param name The name of the node (e. g. variable).
+	 * @param id The id of the node (e. g. 142947a.387ef34ad)
+	 * @param[out] node If loading was successful, this variable contains the loaded node.
 	 * @return Returns positive values or 0 on success and negative values on error. 0: Node successfully loaded, 1: Node already loaded, -1: System error, -2: Node does not exists, -4: Node initialization failed
 	 */
-	int32_t loadNode(std::string filename);
+	int32_t loadNode(std::string nodeNamespace, std::string type, std::string id, Flows::PINode& node);
 
 	/**
 	 * Unloads a previously loaded node.
-	 * @param filename The filename of the node (e. g. node_variable.so).
+	 * @param id The id of the node (e. g. 142947a.387ef34ad).
 	 * @return Returns positive values or 0 on success and negative values on error. 0: Node successfully loaded, 1: Node not loaded, -1: System error, -2: Node does not exists
 	 */
-	int32_t unloadNode(std::string filename);
-
-	/**
-	 * Unloads and loads a node again. The node needs to be in Homegear's node path.
-	 *
-	 * @param filename The filename of the node (e. g. node_variable.so).
-	 * @return Returns positive values or 0 on success and negative values on error. 0: Node successfully loaded, -1: System error, -2: Node does not exists, -4: Node initialization failed
-	 */
-	int32_t reloadNode(std::string filename);
+	int32_t unloadNode(std::string id);
 
 	/*
-	 * Returns the node specified by name.
+	 * Returns the node specified by id.
 	 */
-	std::shared_ptr<BaseLib::Flows::INode> getNode(std::string name);
-
-	/*
-	 * Returns the node map.
-	 */
-	std::map<std::string, std::shared_ptr<BaseLib::Flows::INode>> getNodes();
-
-	void loadNodes();
+	Flows::PINode getNode(std::string& id);
 private:
 	std::mutex _nodeLoadersMutex;
 	std::map<std::string, std::unique_ptr<NodeLoader>> _nodeLoaders;
 
-	std::mutex _nodesIdNodeMapMutex;
-	typedef std::string NodeId; //Node ID from Node-BLUE
-	std::unordered_map<NodeId, std::shared_ptr<BaseLib::Flows::INode>> _nodesIdNodeMap;
-
-	std::mutex _nodesNameIdMapMutex;
+	typedef std::string NodeId; //Node ID from Homegear
 	typedef std::string NodeName; //Node name from Homegear
-	std::unordered_map<NodeName, std::set<NodeId>> _nodesNameIdMap;
 
-	std::mutex _nodesNameFilenameMapMutex;
-	typedef std::string NodeFilename;
-	std::unordered_map<NodeName, NodeFilename> _nodesNameFilenameMap;
+	std::mutex _nodesMutex;
+	std::unordered_map<NodeId, Flows::PINode> _nodes;
+	std::unordered_map<NodeName, PNodeUsageInfo> _nodesUsage;
+
+	const std::atomic_bool* _nodeEventsEnabled;
 
 	NodeManager(const NodeManager&) = delete;
 	NodeManager& operator=(const NodeManager&) = delete;

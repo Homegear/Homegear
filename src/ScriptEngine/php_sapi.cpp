@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -34,7 +34,6 @@
 #include "../GD/GD.h"
 #include "php_sapi.h"
 #include "PhpVariableConverter.h"
-#include "ScriptEngineClient.h"
 #include "../../config.h"
 
 #ifdef I2CSUPPORT
@@ -52,14 +51,6 @@
 
 static bool _disposed = true;
 static zend_homegear_superglobals _superglobals;
-static pthread_key_t pthread_key;
-static zend_class_entry* homegear_class_entry = nullptr;
-static zend_class_entry* homegear_gpio_class_entry = nullptr;
-static zend_class_entry* homegear_serial_class_entry = nullptr;
-#ifdef I2CSUPPORT
-static zend_class_entry* homegear_i2c_class_entry = nullptr;
-#endif
-static zend_class_entry* homegear_exception_class_entry = nullptr;
 static char* ini_path_override = nullptr;
 static char* ini_entries = nullptr;
 static const char HARDCODED_INI[] =
@@ -117,6 +108,7 @@ ZEND_FUNCTION(hg_peer_exists);
 ZEND_FUNCTION(hg_subscribe_peer);
 ZEND_FUNCTION(hg_unsubscribe_peer);
 ZEND_FUNCTION(hg_shutting_down);
+ZEND_FUNCTION(hg_gpio_export);
 ZEND_FUNCTION(hg_gpio_open);
 ZEND_FUNCTION(hg_gpio_close);
 ZEND_FUNCTION(hg_gpio_set_direction);
@@ -163,6 +155,7 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_subscribe_peer, NULL)
 	ZEND_FE(hg_unsubscribe_peer, NULL)
 	ZEND_FE(hg_shutting_down, NULL)
+	ZEND_FE(hg_gpio_export, NULL)
 	ZEND_FE(hg_gpio_open, NULL)
 	ZEND_FE(hg_gpio_close, NULL)
 	ZEND_FE(hg_gpio_set_direction, NULL)
@@ -244,29 +237,6 @@ static sapi_module_struct php_homegear_sapi_module = {
 void pthread_data_destructor(void* data)
 {
 	if(data) delete (zend_homegear_globals*)data;
-}
-
-zend_homegear_globals* php_homegear_get_globals()
-{
-	zend_homegear_globals* data = (zend_homegear_globals*)pthread_getspecific(pthread_key);
-	if(!data)
-	{
-		data = new zend_homegear_globals();
-		if(!data || pthread_setspecific(pthread_key, data) != 0)
-		{
-			GD::out.printCritical("Critical: Could not set PHP globals data - out of memory?.");
-			if(data) delete data;
-			data = nullptr;
-			return data;
-		}
-		data->id = 0;
-		data->webRequest = false;
-		data->commandLine = false;
-		data->cookiesParsed = false;
-		data->peerId = 0;
-		data->logLevel = -1;
-	}
-	return data;
 }
 
 void php_homegear_build_argv(std::vector<std::string>& arguments)
@@ -529,7 +499,7 @@ void php_homegear_invoke_rpc(std::string& methodName, BaseLib::PVariable& parame
 {
 	if(SEG(id) == 0)
 	{
-		zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Please call \"registerThread\" before calling any Homegear specific method within threads.", -1);
+		zend_throw_exception(SEG(homegear_exception_class_entry), "Script id is unset. Please call \"registerThread\" before calling any Homegear specific method within threads.", -1);
 		RETURN_FALSE
 	}
 	if(!SEG(rpcCallback)) RETURN_FALSE;
@@ -537,7 +507,7 @@ void php_homegear_invoke_rpc(std::string& methodName, BaseLib::PVariable& parame
 	BaseLib::PVariable result = SEG(rpcCallback)(methodName, parameters);
 	if(result->errorStruct)
 	{
-		zend_throw_exception(homegear_exception_class_entry, result->structValue->at("faultString")->stringValue.c_str(), result->structValue->at("faultCode")->integerValue);
+		zend_throw_exception(SEG(homegear_exception_class_entry), result->structValue->at("faultString")->stringValue.c_str(), result->structValue->at("faultCode")->integerValue);
 		RETURN_NULL()
 	}
 	PhpVariableConverter::getPHPVariable(result, return_value);
@@ -874,7 +844,7 @@ ZEND_FUNCTION(hg_poll_event)
 	if(_disposed) RETURN_NULL();
 	if(SEG(id) == 0)
 	{
-		zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Did you call \"registerThread\"?", -1);
+		zend_throw_exception(SEG(homegear_exception_class_entry), "Script id is unset. Did you call \"registerThread\"?", -1);
 		RETURN_FALSE
 	}
 	int argc = 0;
@@ -895,7 +865,7 @@ ZEND_FUNCTION(hg_poll_event)
 		if(eventsIterator == PhpEvents::eventsMap.end())
 		{
 			eventsMapGuard.unlock();
-			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
+			zend_throw_exception(SEG(homegear_exception_class_entry), "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
 		if(!eventsIterator->second) eventsIterator->second = std::make_shared<PhpEvents>(SEG(token), SEG(outputCallback), SEG(rpcCallback));
@@ -964,7 +934,7 @@ ZEND_FUNCTION(hg_subscribe_peer)
 	if(_disposed) RETURN_NULL();
 	if(SEG(id) == 0)
 	{
-		zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Did you call \"registerThread\"?", -1);
+		zend_throw_exception(SEG(homegear_exception_class_entry), "Script id is unset. Did you call \"registerThread\"?", -1);
 		RETURN_FALSE
 	}
 	int argc = 0;
@@ -1011,7 +981,7 @@ ZEND_FUNCTION(hg_subscribe_peer)
 		if(eventsIterator == PhpEvents::eventsMap.end())
 		{
 			eventsMapGuard.unlock();
-			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
+			zend_throw_exception(SEG(homegear_exception_class_entry), "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
 		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
@@ -1025,7 +995,7 @@ ZEND_FUNCTION(hg_unsubscribe_peer)
 	if(_disposed) RETURN_NULL();
 	if(SEG(id) == 0)
 	{
-		zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Did you call \"registerThread\"?", -1);
+		zend_throw_exception(SEG(homegear_exception_class_entry), "Script id is unset. Did you call \"registerThread\"?", -1);
 		RETURN_FALSE
 	}
 	int argc = 0;
@@ -1071,7 +1041,7 @@ ZEND_FUNCTION(hg_unsubscribe_peer)
 		if(eventsIterator == PhpEvents::eventsMap.end())
 		{
 			eventsMapGuard.unlock();
-			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
+			zend_throw_exception(SEG(homegear_exception_class_entry), "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
 		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
@@ -1354,6 +1324,14 @@ ZEND_FUNCTION(hg_shutting_down)
 {
 	if(_disposed || GD::bl->shuttingDown) RETURN_TRUE
 	RETURN_FALSE
+}
+
+ZEND_FUNCTION(hg_gpio_export)
+{
+	if(_disposed) RETURN_NULL();
+	long gpio = -1;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
+	_superglobals.gpio->exportGpio(gpio);
 }
 
 ZEND_FUNCTION(hg_gpio_open)
@@ -1851,6 +1829,7 @@ static const zend_function_entry homegear_methods[] = {
 };
 
 static const zend_function_entry homegear_gpio_methods[] = {
+	ZEND_ME_MAPPING(export, hg_gpio_export, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(open, hg_gpio_open, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(close, hg_gpio_close, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(setDirection, hg_gpio_set_direction, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
@@ -1885,7 +1864,7 @@ int php_homegear_init()
 	_superglobals.http = new BaseLib::Http();
 	_superglobals.gpio = new BaseLib::LowLevel::Gpio(GD::bl.get());
 	_disposed = false;
-	pthread_key_create(&pthread_key, pthread_data_destructor);
+	pthread_key_create(php_homegear_get_pthread_key(), pthread_data_destructor);
 	int32_t maxScriptsPerProcess = GD::bl->settings.scriptEngineMaxScriptsPerProcess();
 	if(maxScriptsPerProcess < 1) maxScriptsPerProcess = 20;
 	int32_t maxThreadsPerScript = GD::bl->settings.scriptEngineMaxThreadsPerScript();
@@ -2060,37 +2039,37 @@ static PHP_MINIT_FUNCTION(homegear)
 	zend_class_entry homegearExceptionCe;
 	INIT_CLASS_ENTRY(homegearExceptionCe, "Homegear\\HomegearException", NULL);
 	//Register child class inherited from Exception (fetched with "zend_exception_get_default")
-	homegear_exception_class_entry = zend_register_internal_class_ex(&homegearExceptionCe, zend_exception_get_default());
-	zend_declare_class_constant_long(homegear_exception_class_entry, "UNKNOWN_DEVICE", sizeof("UNKNOWN_DEVICE") - 1, -2);
+	SEG(homegear_exception_class_entry) = zend_register_internal_class_ex(&homegearExceptionCe, zend_exception_get_default());
+	zend_declare_class_constant_long(SEG(homegear_exception_class_entry), "UNKNOWN_DEVICE", sizeof("UNKNOWN_DEVICE") - 1, -2);
 
 	zend_class_entry homegearCe;
 	INIT_CLASS_ENTRY(homegearCe, "Homegear\\Homegear", homegear_methods);
-	homegear_class_entry = zend_register_internal_class(&homegearCe);
-	zend_declare_class_constant_stringl(homegear_class_entry, "TEMP_PATH", sizeof("TEMP_PATH") - 1, GD::bl->settings.tempPath().c_str(), GD::bl->settings.tempPath().size());
-	zend_declare_class_constant_stringl(homegear_class_entry, "SCRIPT_PATH", sizeof("SCRIPT_PATH") - 1, GD::bl->settings.scriptPath().c_str(), GD::bl->settings.scriptPath().size());
-	zend_declare_class_constant_stringl(homegear_class_entry, "MODULE_PATH", sizeof("MODULE_PATH") - 1, GD::bl->settings.modulePath().c_str(), GD::bl->settings.modulePath().size());
-	zend_declare_class_constant_stringl(homegear_class_entry, "DATA_PATH", sizeof("DATA_PATH") - 1, GD::bl->settings.dataPath().c_str(), GD::bl->settings.dataPath().size());
-	zend_declare_class_constant_stringl(homegear_class_entry, "SOCKET_PATH", sizeof("SOCKET_PATH") - 1, GD::bl->settings.socketPath().c_str(), GD::bl->settings.socketPath().size());
-	zend_declare_class_constant_stringl(homegear_class_entry, "LOGFILE_PATH", sizeof("LOGFILE_PATH") - 1, GD::bl->settings.logfilePath().c_str(), GD::bl->settings.logfilePath().size());
-	zend_declare_class_constant_stringl(homegear_class_entry, "WORKING_DIRECTORY", sizeof("WORKING_DIRECTORY") - 1, GD::bl->settings.workingDirectory().c_str(), GD::bl->settings.workingDirectory().size());
+	SEG(homegear_class_entry) = zend_register_internal_class(&homegearCe);
+	zend_declare_class_constant_stringl(SEG(homegear_class_entry), "TEMP_PATH", sizeof("TEMP_PATH") - 1, GD::bl->settings.tempPath().c_str(), GD::bl->settings.tempPath().size());
+	zend_declare_class_constant_stringl(SEG(homegear_class_entry), "SCRIPT_PATH", sizeof("SCRIPT_PATH") - 1, GD::bl->settings.scriptPath().c_str(), GD::bl->settings.scriptPath().size());
+	zend_declare_class_constant_stringl(SEG(homegear_class_entry), "MODULE_PATH", sizeof("MODULE_PATH") - 1, GD::bl->settings.modulePath().c_str(), GD::bl->settings.modulePath().size());
+	zend_declare_class_constant_stringl(SEG(homegear_class_entry), "DATA_PATH", sizeof("DATA_PATH") - 1, GD::bl->settings.dataPath().c_str(), GD::bl->settings.dataPath().size());
+	zend_declare_class_constant_stringl(SEG(homegear_class_entry), "SOCKET_PATH", sizeof("SOCKET_PATH") - 1, GD::bl->settings.socketPath().c_str(), GD::bl->settings.socketPath().size());
+	zend_declare_class_constant_stringl(SEG(homegear_class_entry), "LOGFILE_PATH", sizeof("LOGFILE_PATH") - 1, GD::bl->settings.logfilePath().c_str(), GD::bl->settings.logfilePath().size());
+	zend_declare_class_constant_stringl(SEG(homegear_class_entry), "WORKING_DIRECTORY", sizeof("WORKING_DIRECTORY") - 1, GD::bl->settings.workingDirectory().c_str(), GD::bl->settings.workingDirectory().size());
 
 	zend_class_entry homegearGpioCe;
 	INIT_CLASS_ENTRY(homegearGpioCe, "Homegear\\HomegearGpio", homegear_gpio_methods);
-	homegear_gpio_class_entry = zend_register_internal_class(&homegearGpioCe);
-	zend_declare_class_constant_long(homegear_gpio_class_entry, "DIRECTION_IN", 12, 0);
-	zend_declare_class_constant_long(homegear_gpio_class_entry, "DIRECTION_OUT", 13, 1);
-	zend_declare_class_constant_long(homegear_gpio_class_entry, "EDGE_RISING", 11, 0);
-	zend_declare_class_constant_long(homegear_gpio_class_entry, "EDGE_FALLING", 12, 1);
-	zend_declare_class_constant_long(homegear_gpio_class_entry, "EDGE_BOTH", 9, 2);
+	SEG(homegear_gpio_class_entry) = zend_register_internal_class(&homegearGpioCe);
+	zend_declare_class_constant_long(SEG(homegear_gpio_class_entry), "DIRECTION_IN", 12, 0);
+	zend_declare_class_constant_long(SEG(homegear_gpio_class_entry), "DIRECTION_OUT", 13, 1);
+	zend_declare_class_constant_long(SEG(homegear_gpio_class_entry), "EDGE_RISING", 11, 0);
+	zend_declare_class_constant_long(SEG(homegear_gpio_class_entry), "EDGE_FALLING", 12, 1);
+	zend_declare_class_constant_long(SEG(homegear_gpio_class_entry), "EDGE_BOTH", 9, 2);
 
 	zend_class_entry homegearSerialCe;
 	INIT_CLASS_ENTRY(homegearSerialCe, "Homegear\\HomegearSerial", homegear_serial_methods);
-	homegear_serial_class_entry = zend_register_internal_class(&homegearSerialCe);
+	SEG(homegear_serial_class_entry) = zend_register_internal_class(&homegearSerialCe);
 
 #ifdef I2CSUPPORT
 	zend_class_entry homegearI2cCe;
 	INIT_CLASS_ENTRY(homegearI2cCe, "Homegear\\HomegearI2c", homegear_i2c_methods);
-	homegear_i2c_class_entry = zend_register_internal_class(&homegearI2cCe);
+	SEG(homegear_i2c_class_entry) = zend_register_internal_class(&homegearI2cCe);
 #endif
 
     return SUCCESS;

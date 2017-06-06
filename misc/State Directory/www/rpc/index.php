@@ -53,7 +53,8 @@ try {
     <title>Homegear RPC Server</title>
 
     <!-- Bootstrap core CSS -->
-    <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="assets/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="assets/css/main.css" rel="stylesheet"/>
 </head>
 <body>
 <div class="jumbotron">
@@ -61,7 +62,7 @@ try {
         <small class="pull-right">
             <b>Version:</b> <?= $hgVersion ?>
         </small>
-        <img style="float: left; margin-top: 13px; margin-right: 40px" src="Logo.png"/>
+        <img style="float: left; margin-top: 13px; margin-right: 40px" src="assets/images/Logo.png"/>
         <h2>Your</h2>
         <h1>Homegear RPC Server</h1>
         <h2>welcomes you!</h2>
@@ -69,24 +70,30 @@ try {
 </div>
 <div class="container marketing">
     <div class="row">
-        <div style="height: 350px" class="col-lg-4">
+        <div style="height: 350px" class="col-lg-3">
+            <span class="icon-nodes" style="font-size: 140px"></span>
+            <h2>Node-BLUE</h2>
+            <p style="height: 40px">To make your home smart use Homegear's logic engine.</p>
+            <p><a class="btn btn-default" href="/flows" role="button">Go there &raquo;</a></p>
+        </div><!-- /.col-lg-3 -->
+        <div style="height: 350px" class="col-lg-3">
             <span class="glyphicon glyphicon-education" style="font-size: 140px"></span>
             <h2>Documentation</h2>
             <p style="height: 40px">For help and tutorials visit the Homegear documentation.</p>
             <p><a class="btn btn-default" href="https://doc.homegear.eu" role="button">Go there &raquo;</a></p>
-        </div><!-- /.col-lg-4 -->
-        <div style="height: 350px" class="col-lg-4">
+        </div><!-- /.col-lg-3 -->
+        <div style="height: 350px" class="col-lg-3">
             <span class="glyphicon glyphicon-wrench" style="font-size: 140px"></span>
             <h2>Reference</h2>
             <p style="height: 40px">Visit the Homegear reference for information about using this RPC server.</p>
             <p><a class="btn btn-default" href="https://ref.homegear.eu" role="button">Go there &raquo;</a></p>
-        </div><!-- /.col-lg-4 -->
-        <div style="height: 350px" class="col-lg-4">
+        </div><!-- /.col-lg-3 -->
+        <div style="height: 350px" class="col-lg-3">
             <span class="glyphicon glyphicon-comment" style="font-size: 140px"></span>
             <h2>Forum</h2>
             <p style="height: 40px">If you still don't know, what to do, get help in our forum.</p>
             <p><a class="btn btn-default" href="https://forum.homegear.eu" role="button">Go there &raquo;</a></p>
-        </div><!-- /.col-lg-4 -->
+        </div><!-- /.col-lg-3 -->
     </div><!-- /.row -->
     <div class="row">
         <?php

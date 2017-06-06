@@ -34,6 +34,7 @@
 #include "FlowsProcess.h"
 #include <homegear-base/BaseLib.h>
 #include "FlowInfoServer.h"
+#include "NodeManager.h"
 
 namespace Flows
 {
@@ -46,6 +47,7 @@ public:
 
 	bool start();
 	void stop();
+	void restartFlows();
 	void homegearShuttingDown();
 	void homegearReloading();
 	void processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped);
@@ -56,6 +58,11 @@ public:
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
 	std::string handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
 	std::string handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
+	void nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message);
+	BaseLib::PVariable executePhpNodeBaseMethod(BaseLib::PArray& parameters);
+	void setNodeVariable(std::string nodeId, std::string topic, BaseLib::PVariable value);
+	void enableNodeEvents();
+	void disableNodeEvents();
 private:
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
@@ -90,7 +97,9 @@ private:
 	std::string _webroot;
 	std::atomic_bool _shuttingDown;
 	std::atomic_bool _stopServer;
+	std::atomic_bool _nodeEventsEnabled;
 	std::thread _mainThread;
+	std::thread _maintenanceThread;
 	int32_t _backlog = 100;
 	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
 	std::mutex _newProcessMutex;
@@ -104,12 +113,18 @@ private:
 	int64_t _lastGargabeCollection = 0;
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 	std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> _rpcMethods;
-	std::map<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>> _localRpcMethods;
+	std::map<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>> _localRpcMethods;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
+	std::mutex _restartFlowsMutex;
+	std::mutex _flowsPostMutex;
 	std::mutex _flowsFileMutex;
+	std::map<std::string, uint32_t> _maxThreadCounts;
+	std::vector<NodeManager::PNodeInfo> _nodeInfo;
 	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
 	std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
+	std::mutex _nodeClientIdMapMutex;
+	std::map<std::string, int32_t> _nodeClientIdMap;
 
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
@@ -121,16 +136,25 @@ private:
 	BaseLib::PVariable send(PFlowsClientData& clientData, std::vector<char>& data);
 	BaseLib::PVariable sendRequest(PFlowsClientData& clientData, std::string methodName, BaseLib::PArray& parameters);
 	void sendResponse(PFlowsClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
+	void sendShutdown();
+	void closeClientConnections();
 	void closeClientConnection(PFlowsClientData client);
-	PFlowsProcess getFreeProcess();
+	PFlowsProcess getFreeProcess(uint32_t maxThreadCount);
+	void getMaxThreadCounts();
+	bool checkIntegrity(std::string flowsFile);
+	void backupFlows();
 	void startFlows();
-	void executeFlow(PFlowInfoServer& flowInfo);
+	std::set<std::string> insertSubflows(BaseLib::PVariable& subflowNode, std::unordered_map<std::string, BaseLib::PVariable>& subflowInfos, std::unordered_map<std::string, BaseLib::PVariable>& flowNodes, std::unordered_map<std::string, BaseLib::PVariable>& subflowNodes, std::set<std::string>& flowNodeIds, std::set<std::string>& allNodeIds);
+	void startFlow(PFlowInfoServer& flowInfo, std::set<std::string>& nodes);
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 
 	// {{{ RPC methods
-		BaseLib::PVariable registerFlowsClient(PFlowsClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-		BaseLib::PVariable flowFinished(PFlowsClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+		BaseLib::PVariable registerFlowsClient(PFlowsClientData& clientData, BaseLib::PArray& parameters);
+		BaseLib::PVariable executePhpNode(PFlowsClientData& clientData, BaseLib::PArray& parameters);
+		BaseLib::PVariable executePhpNodeMethod(PFlowsClientData& clientData, BaseLib::PArray& parameters);
+		BaseLib::PVariable invokeNodeMethod(PFlowsClientData& clientData, BaseLib::PArray& parameters);
+		BaseLib::PVariable nodeEvent(PFlowsClientData& clientData, BaseLib::PArray& parameters);
 	// }}}
 };
 

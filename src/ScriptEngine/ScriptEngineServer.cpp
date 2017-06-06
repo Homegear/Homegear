@@ -59,117 +59,125 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 2, 1000)
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true));
 	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
 
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("devTest", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDevTest())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("system.getCapabilities", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemGetCapabilities())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("system.listMethods", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemListMethods(GD::rpcServers[0].getServer()))));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("system.methodHelp", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMethodHelp(GD::rpcServers[0].getServer()))));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("system.methodSignature", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMethodSignature(GD::rpcServers[0].getServer()))));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("system.multicall", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMulticall(GD::rpcServers[0].getServer()))));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("activateLinkParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCActivateLinkParamset())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("abortEventReset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerEvent())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("addDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddDevice())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("addEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddEvent())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("addLink", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddLink())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("copyConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCopyConfig())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("clientServerInitialized", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCClientServerInitialized())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("createDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateDevice())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("deleteData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteData())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("deleteDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteDevice())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("deleteMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteMetadata())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("deleteSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteSystemVariable())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("enableEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCEnableEvent())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getAllConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllConfig())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getAllMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllMetadata())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getAllScripts", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllScripts())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getAllSystemVariables", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllSystemVariables())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getAllValues", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllValues())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getConfigParameter", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetConfigParameter())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetData())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getDeviceDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDeviceDescription())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getDeviceInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDeviceInfo())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetEvent())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetInstallMode())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getKeyMismatchDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetKeyMismatchDevice())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getLinkInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetLinkInfo())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getLinkPeers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetLinkPeers())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getLinks", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetLinks())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetMetadata())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetName())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getPairingMethods", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPairingMethods())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamset())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getParamsetDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetDescription())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getParamsetId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetId())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getPeerId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPeerId())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getServiceMessages", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetServiceMessages())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetSystemVariable())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getUpdateStatus", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetUpdateStatus())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetValue())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("getVersion", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetVersion())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("init", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCInit())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("listBidcosInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListBidcosInterfaces())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("listClientServers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListClientServers())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("listDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListDevices())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("listEvents", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListEvents())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("listFamilies", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListFamilies())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("listInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListInterfaces())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("listKnownDeviceTypes", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListKnownDeviceTypes())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("listTeams", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListTeams())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("logLevel", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCLogLevel())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("ping", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPing())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("putParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPutParamset())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("removeEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveEvent())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("removeLink", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveLink())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("reportValueUsage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCReportValueUsage())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("rssiInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRssiInfo())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("runScript", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRunScript())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("searchDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSearchDevices())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetData())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetId())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInstallMode())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setInterface", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInterface())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setLinkInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetLinkInfo())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetMetadata())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetName())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetSystemVariable())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setTeam", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetTeam())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("setValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetValue())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("subscribePeers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSubscribePeers())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("triggerEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerEvent())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("triggerRpcEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerRpcEvent())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("unsubscribePeers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUnsubscribePeers())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware())));
-	_rpcMethods.insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCWriteLog())));
+	_rpcMethods.emplace("devTest", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDevTest()));
+	_rpcMethods.emplace("system.getCapabilities", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemGetCapabilities()));
+	_rpcMethods.emplace("system.listMethods", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemListMethods(GD::rpcServers[0].getServer())));
+	_rpcMethods.emplace("system.methodHelp", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMethodHelp(GD::rpcServers[0].getServer())));
+	_rpcMethods.emplace("system.methodSignature", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMethodSignature(GD::rpcServers[0].getServer())));
+	_rpcMethods.emplace("system.multicall", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMulticall(GD::rpcServers[0].getServer())));
+	_rpcMethods.emplace("activateLinkParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCActivateLinkParamset()));
+	_rpcMethods.emplace("abortEventReset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerEvent()));
+	_rpcMethods.emplace("addDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddDevice()));
+	_rpcMethods.emplace("addEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddEvent()));
+	_rpcMethods.emplace("addLink", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddLink()));
+	_rpcMethods.emplace("copyConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCopyConfig()));
+	_rpcMethods.emplace("clientServerInitialized", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCClientServerInitialized()));
+	_rpcMethods.emplace("createDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateDevice()));
+	_rpcMethods.emplace("deleteData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteData()));
+	_rpcMethods.emplace("deleteDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteDevice()));
+	_rpcMethods.emplace("deleteMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteMetadata()));
+	_rpcMethods.emplace("deleteNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteNodeData()));
+	_rpcMethods.emplace("deleteSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteSystemVariable()));
+	_rpcMethods.emplace("enableEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCEnableEvent()));
+	_rpcMethods.emplace("getAllConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllConfig()));
+	_rpcMethods.emplace("getAllMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllMetadata()));
+	_rpcMethods.emplace("getAllScripts", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllScripts()));
+	_rpcMethods.emplace("getAllSystemVariables", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllSystemVariables()));
+	_rpcMethods.emplace("getAllValues", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllValues()));
+	_rpcMethods.emplace("getConfigParameter", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetConfigParameter()));
+	_rpcMethods.emplace("getData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetData()));
+	_rpcMethods.emplace("getDeviceDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDeviceDescription()));
+	_rpcMethods.emplace("getDeviceInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDeviceInfo()));
+	_rpcMethods.emplace("getEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetEvent()));
+	_rpcMethods.emplace("getInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetInstallMode()));
+	_rpcMethods.emplace("getKeyMismatchDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetKeyMismatchDevice()));
+	_rpcMethods.emplace("getLinkInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetLinkInfo()));
+	_rpcMethods.emplace("getLinkPeers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetLinkPeers()));
+	_rpcMethods.emplace("getLinks", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetLinks()));
+	_rpcMethods.emplace("getMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetMetadata()));
+	_rpcMethods.emplace("getName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetName()));
+	_rpcMethods.emplace("getNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetNodeData()));
+	_rpcMethods.emplace("getPairingMethods", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPairingMethods()));
+	_rpcMethods.emplace("getParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamset()));
+	_rpcMethods.emplace("getParamsetDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetDescription()));
+	_rpcMethods.emplace("getParamsetId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetId()));
+	_rpcMethods.emplace("getPeerId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPeerId()));
+	_rpcMethods.emplace("getServiceMessages", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetServiceMessages()));
+	_rpcMethods.emplace("getSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetSystemVariable()));
+	_rpcMethods.emplace("getUpdateStatus", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetUpdateStatus()));
+	_rpcMethods.emplace("getValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetValue()));
+	_rpcMethods.emplace("getVariableDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetVariableDescription()));
+	_rpcMethods.emplace("getVersion", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetVersion()));
+	_rpcMethods.emplace("init", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCInit()));
+	_rpcMethods.emplace("listBidcosInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListBidcosInterfaces()));
+	_rpcMethods.emplace("listClientServers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListClientServers()));
+	_rpcMethods.emplace("listDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListDevices()));
+	_rpcMethods.emplace("listEvents", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListEvents()));
+	_rpcMethods.emplace("listFamilies", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListFamilies()));
+	_rpcMethods.emplace("listInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListInterfaces()));
+	_rpcMethods.emplace("listKnownDeviceTypes", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListKnownDeviceTypes()));
+	_rpcMethods.emplace("listTeams", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListTeams()));
+	_rpcMethods.emplace("logLevel", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCLogLevel()));
+	_rpcMethods.emplace("ping", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPing()));
+	_rpcMethods.emplace("putParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPutParamset()));
+	_rpcMethods.emplace("removeEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveEvent()));
+	_rpcMethods.emplace("removeLink", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveLink()));
+	_rpcMethods.emplace("reportValueUsage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCReportValueUsage()));
+	_rpcMethods.emplace("rssiInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRssiInfo()));
+	_rpcMethods.emplace("runScript", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRunScript()));
+	_rpcMethods.emplace("searchDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSearchDevices()));
+	_rpcMethods.emplace("setData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetData()));
+	_rpcMethods.emplace("setId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetId()));
+	_rpcMethods.emplace("setInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInstallMode()));
+	_rpcMethods.emplace("setInterface", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInterface()));
+	_rpcMethods.emplace("setLinkInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetLinkInfo()));
+	_rpcMethods.emplace("setMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetMetadata()));
+	_rpcMethods.emplace("setName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetName()));
+	_rpcMethods.emplace("setNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetNodeData()));
+	_rpcMethods.emplace("setNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetNodeVariable()));
+	_rpcMethods.emplace("setSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetSystemVariable()));
+	_rpcMethods.emplace("setTeam", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetTeam()));
+	_rpcMethods.emplace("setValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetValue()));
+	_rpcMethods.emplace("subscribePeers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSubscribePeers()));
+	_rpcMethods.emplace("triggerEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerEvent()));
+	_rpcMethods.emplace("triggerRpcEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerRpcEvent()));
+	_rpcMethods.emplace("unsubscribePeers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUnsubscribePeers()));
+	_rpcMethods.emplace("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware()));
+	_rpcMethods.emplace("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCWriteLog()));
 
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("registerScriptEngineClient", std::bind(&ScriptEngineServer::registerScriptEngineClient, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("scriptFinished", std::bind(&ScriptEngineServer::scriptFinished, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("scriptOutput", std::bind(&ScriptEngineServer::scriptOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("scriptHeaders", std::bind(&ScriptEngineServer::scriptHeaders, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("peerExists", std::bind(&ScriptEngineServer::peerExists, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+	_localRpcMethods.emplace("registerScriptEngineClient", std::bind(&ScriptEngineServer::registerScriptEngineClient, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("scriptFinished", std::bind(&ScriptEngineServer::scriptFinished, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("scriptOutput", std::bind(&ScriptEngineServer::scriptOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("scriptHeaders", std::bind(&ScriptEngineServer::scriptHeaders, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("peerExists", std::bind(&ScriptEngineServer::peerExists, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("listRpcClients", std::bind(&ScriptEngineServer::listRpcClients, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("raiseDeleteDevice", std::bind(&ScriptEngineServer::raiseDeleteDevice, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("getFamilySetting", std::bind(&ScriptEngineServer::getFamilySetting, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("setFamilySetting", std::bind(&ScriptEngineServer::setFamilySetting, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("deleteFamilySetting", std::bind(&ScriptEngineServer::deleteFamilySetting, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+	_localRpcMethods.emplace("listRpcClients", std::bind(&ScriptEngineServer::listRpcClients, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("raiseDeleteDevice", std::bind(&ScriptEngineServer::raiseDeleteDevice, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("getFamilySetting", std::bind(&ScriptEngineServer::getFamilySetting, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("setFamilySetting", std::bind(&ScriptEngineServer::setFamilySetting, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("deleteFamilySetting", std::bind(&ScriptEngineServer::deleteFamilySetting, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("mqttPublish", std::bind(&ScriptEngineServer::mqttPublish, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+	_localRpcMethods.emplace("mqttPublish", std::bind(&ScriptEngineServer::mqttPublish, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("auth", std::bind(&ScriptEngineServer::auth, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("createUser", std::bind(&ScriptEngineServer::createUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("deleteUser", std::bind(&ScriptEngineServer::deleteUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("updateUser", std::bind(&ScriptEngineServer::updateUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("userExists", std::bind(&ScriptEngineServer::userExists, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("listUsers", std::bind(&ScriptEngineServer::listUsers, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+	_localRpcMethods.emplace("auth", std::bind(&ScriptEngineServer::auth, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("createUser", std::bind(&ScriptEngineServer::createUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("deleteUser", std::bind(&ScriptEngineServer::deleteUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("updateUser", std::bind(&ScriptEngineServer::updateUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("userExists", std::bind(&ScriptEngineServer::userExists, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("listUsers", std::bind(&ScriptEngineServer::listUsers, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("listModules", std::bind(&ScriptEngineServer::listModules, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("loadModule", std::bind(&ScriptEngineServer::loadModule, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("unloadModule", std::bind(&ScriptEngineServer::unloadModule, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("reloadModule", std::bind(&ScriptEngineServer::reloadModule, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+	_localRpcMethods.emplace("listModules", std::bind(&ScriptEngineServer::listModules, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("loadModule", std::bind(&ScriptEngineServer::loadModule, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("unloadModule", std::bind(&ScriptEngineServer::unloadModule, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("reloadModule", std::bind(&ScriptEngineServer::reloadModule, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("checkLicense", std::bind(&ScriptEngineServer::checkLicense, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("removeLicense", std::bind(&ScriptEngineServer::removeLicense, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("getLicenseStates", std::bind(&ScriptEngineServer::getLicenseStates, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("getTrialStartTime", std::bind(&ScriptEngineServer::getTrialStartTime, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+	_localRpcMethods.emplace("checkLicense", std::bind(&ScriptEngineServer::checkLicense, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("removeLicense", std::bind(&ScriptEngineServer::removeLicense, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("getLicenseStates", std::bind(&ScriptEngineServer::getLicenseStates, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("getTrialStartTime", std::bind(&ScriptEngineServer::getTrialStartTime, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+
+	_localRpcMethods.emplace("nodeOutput", std::bind(&ScriptEngineServer::nodeOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("executePhpNodeBaseMethod", std::bind(&ScriptEngineServer::executePhpNodeBaseMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 }
 
 ScriptEngineServer::~ScriptEngineServer()
@@ -333,12 +341,21 @@ void ScriptEngineServer::collectGarbage()
 		{
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			bool emptyProcess = false;
+			bool emptyNodeProcess = false;
 			for(std::map<pid_t, PScriptEngineProcess>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
 				if(i->second->scriptCount() == 0 && i->second->getClientData() && !i->second->getClientData()->closed)
 				{
-					if(emptyProcess) closeClientConnection(i->second->getClientData());
-					else emptyProcess = true;
+					if(i->second->isNodeProcess())
+					{
+						if(emptyNodeProcess) closeClientConnection(i->second->getClientData());
+						else emptyNodeProcess = true;
+					}
+					else
+					{
+						if(emptyProcess) closeClientConnection(i->second->getClientData());
+						else emptyProcess = true;
+					}
 				}
 			}
 		}
@@ -394,8 +411,10 @@ bool ScriptEngineServer::start()
 		_shuttingDown = false;
 		_stopServer = false;
 		if(!getFileDescriptor(true)) return false;
-		startQueue(0, GD::bl->settings.scriptEngineThreadCount(), 0, SCHED_OTHER);
-		startQueue(1, GD::bl->settings.scriptEngineThreadCount(), 0, SCHED_OTHER);
+		uint32_t scriptEngineThreadCount = GD::bl->settings.scriptEngineThreadCount();
+		if(scriptEngineThreadCount < 5) scriptEngineThreadCount = 5;
+		startQueue(0, scriptEngineThreadCount, 0, SCHED_OTHER);
+		startQueue(1, scriptEngineThreadCount, 0, SCHED_OTHER);
 		GD::bl->threadManager.start(_mainThread, true, &ScriptEngineServer::mainThread, this);
 		return true;
 	}
@@ -449,6 +468,7 @@ void ScriptEngineServer::stop()
 			if(_clients.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		stopQueue(0);
+		stopQueue(1);
 		unlink(_socketPath.c_str());
 	}
 	catch(const std::exception& ex)
@@ -703,6 +723,44 @@ std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineSer
     return std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>>();
 }
 
+BaseLib::PVariable ScriptEngineServer::executePhpNodeMethod(BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
+
+		PScriptEngineClientData clientData;
+		int32_t clientId = 0;
+		{
+			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+			auto nodeClientIdIterator = _nodeClientIdMap.find(parameters->at(0)->stringValue);
+			if(nodeClientIdIterator == _nodeClientIdMap.end()) return BaseLib::Variable::createError(-1, "Unknown node.");
+			clientId = nodeClientIdIterator->second;
+		}
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			auto clientIterator = _clients.find(clientId);
+			if(clientIterator == _clients.end()) return BaseLib::Variable::createError(-32501, "Node process not found.");
+			clientData = clientIterator->second;
+		}
+
+		return sendRequest(clientData, "executePhpNodeMethod", parameters);
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 void ScriptEngineServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values)
 {
 	try
@@ -893,9 +951,9 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 				std::map<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(methodName);
 				if(localMethodIterator != _localRpcMethods.end())
 				{
-					if(GD::bl->debugLevel >= 4)
+					if(GD::bl->debugLevel >= 5)
 					{
-						_out.printDebug("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + methodName);
+						_out.printDebug("Debug: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + methodName);
 						if(GD::bl->debugLevel >= 5)
 						{
 							for(BaseLib::Array::iterator i = parameters->at(2)->arrayValue->begin(); i != parameters->at(2)->arrayValue->end(); ++i)
@@ -923,9 +981,9 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 					return;
 				}
 
-				if(GD::bl->debugLevel >= 4)
+				if(GD::bl->debugLevel >= 5)
 				{
-					_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + methodName + " Parameters:");
+					_out.printInfo("Debug: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + methodName + " Parameters:");
 					for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(2)->arrayValue->begin(); i != parameters->at(2)->arrayValue->end(); ++i)
 					{
 						(*i)->print(true, false);
@@ -959,7 +1017,7 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 						}
 					}
 				}
-				queueEntry->clientData->requestConditionVariable.notify_one();
+				queueEntry->clientData->requestConditionVariable.notify_all();
 			}
 		}
 		else if(index == 1 && queueEntry->type == QueueEntry::QueueEntryType::broadcast) //Second queue for sending packets. Response is processed by first queue
@@ -1065,6 +1123,7 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
 			{
 				_out.printError("Error: Script engine client with process ID " + std::to_string(clientData->pid) + " is not responding... Killing it.");
 				kill(clientData->pid, 9);
+				processKilled(clientData->pid, -1, 9, false); //Needs to be called manually
 				break;
 			}
 		}
@@ -1247,23 +1306,37 @@ void ScriptEngineServer::mainThread()
     }
 }
 
-PScriptEngineProcess ScriptEngineServer::getFreeProcess()
+PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32_t maxThreadCount)
 {
 	try
 	{
 		std::lock_guard<std::mutex> processGuard(_newProcessMutex);
+
+		if(nodeProcess && GD::bl->settings.maxNodeThreadsPerProcess() != -1 && maxThreadCount + 1 > (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
+		{
+			GD::out.printError("Error: Could not get script process for node, because maximum number of threads in node is greater than the number of threads allowed per process.");
+			return std::shared_ptr<ScriptEngineProcess>();
+		}
+
 		{
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			for(std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
-				if(i->second->scriptCount() < GD::bl->threadManager.getMaxThreadCount() / GD::bl->settings.scriptEngineMaxThreadsPerScript() && (GD::bl->settings.scriptEngineMaxScriptsPerProcess() == -1 || i->second->scriptCount() < (unsigned)GD::bl->settings.scriptEngineMaxScriptsPerProcess()))
+				if(nodeProcess)
+				{
+					if(GD::bl->settings.maxNodeThreadsPerProcess() == -1 || i->second->nodeThreadCount() + maxThreadCount + 1 <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
+					{
+						return i->second;
+					}
+				}
+				else if(i->second->scriptCount() < GD::bl->threadManager.getMaxThreadCount() / GD::bl->settings.scriptEngineMaxThreadsPerScript() && (GD::bl->settings.scriptEngineMaxScriptsPerProcess() == -1 || i->second->scriptCount() < (unsigned)GD::bl->settings.scriptEngineMaxScriptsPerProcess()))
 				{
 					return i->second;
 				}
 			}
 		}
 		_out.printInfo("Info: Spawning new script engine process.");
-		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess());
+		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess(nodeProcess));
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rse" };
 #ifdef MANUAL_CLIENT_START
 		process->setPid(1);
@@ -1288,6 +1361,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess()
 				_out.printError("Error: Could not start new script engine process.");
 				return std::shared_ptr<ScriptEngineProcess>();
 			}
+			process->setUnregisterNode(std::function<void(std::string&)>(std::bind(&ScriptEngineServer::unregisterNode, this, std::placeholders::_1)));
 			_out.printInfo("Info: Script engine process successfully spawned. Process id is " + std::to_string(process->getPid()) + ". Client id is: " + std::to_string(process->getClientData()->id) + ".");
 			return process;
 		}
@@ -1469,8 +1543,13 @@ bool ScriptEngineServer::checkSessionId(const std::string& sessionId)
 		}
 		if(!client)
 		{
-			GD::out.printError("Error: Could not check session ID. No script engine client is started.");
-			return false;
+			PScriptEngineProcess process = getFreeProcess(false, 0);
+			if(!process)
+			{
+				GD::out.printError("Error: Could not check session ID. Could not get free process.");
+				return false;
+			}
+			client = process->getClientData();
 		}
 		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
 		parameters->push_back(std::make_shared<BaseLib::Variable>(sessionId));
@@ -1547,7 +1626,7 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 	try
 	{
 		if(_shuttingDown || GD::bl->shuttingDown) return;
-		PScriptEngineProcess process = getFreeProcess();
+		PScriptEngineProcess process = getFreeProcess(scriptInfo->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode, scriptInfo->maxThreadCount);
 		if(!process)
 		{
 			_out.printError("Error: Could not get free process. Not executing script.");
@@ -1567,7 +1646,10 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 			while(scriptInfo->id == 0) scriptInfo->id = _currentScriptId++;
 		}
 
-		_out.printInfo("Info: Starting script \"" + scriptInfo->fullPath + "\" with id " + std::to_string(scriptInfo->id) + ".");
+		if(GD::bl->debugLevel >= 5 || (scriptInfo->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode && scriptInfo->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode))
+		{
+			_out.printInfo("Info: Starting script \"" + scriptInfo->fullPath + "\" with id " + std::to_string(scriptInfo->id) + ".");
+		}
 		process->registerScript(scriptInfo->id, scriptInfo);
 
 		PScriptEngineClientData clientData = process->getClientData();
@@ -1613,6 +1695,33 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->peerId))}));
 		}
+		else if(scriptType == ScriptInfo::ScriptType::simpleNode)
+		{
+			parameters = std::move(BaseLib::PArray(new BaseLib::Array{
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
+				BaseLib::PVariable(new BaseLib::Variable((int32_t)scriptInfo->getType())),
+				scriptInfo->nodeInfo,
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->inputPort)),
+				scriptInfo->message}));
+		}
+		else if(scriptType == ScriptInfo::ScriptType::statefulNode)
+		{
+			parameters = std::move(BaseLib::PArray(new BaseLib::Array{
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
+				BaseLib::PVariable(new BaseLib::Variable((int32_t)scriptInfo->getType())),
+				scriptInfo->nodeInfo,
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->maxThreadCount))}));
+
+			{
+				std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+				_nodeClientIdMap.erase(scriptInfo->nodeInfo->structValue->at("id")->stringValue);
+				_nodeClientIdMap.emplace(scriptInfo->nodeInfo->structValue->at("id")->stringValue, clientData->id);
+			}
+		}
 
 		BaseLib::PVariable result = sendRequest(clientData, "executeScript", parameters);
 		if(result->errorStruct)
@@ -1623,6 +1732,12 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 			{
 				std::lock_guard<std::mutex> scriptFinishedGuard(_scriptFinishedThreadMutex);
 				GD::bl->threadManager.start(_scriptFinishedThread, true, &ScriptEngineServer::invokeScriptFinished, this, process, scriptInfo->id, result->structValue->at("faultCode")->integerValue);
+			}
+
+			if(scriptType == ScriptInfo::ScriptType::statefulNode)
+			{
+				std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+				_nodeClientIdMap.erase(scriptInfo->nodeInfo->structValue->at("id")->stringValue);
 			}
 
 			return;
@@ -1676,6 +1791,29 @@ BaseLib::PVariable ScriptEngineServer::getAllScripts()
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+void ScriptEngineServer::unregisterNode(std::string& nodeId)
+{
+	try
+	{
+		{
+			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+			_nodeClientIdMap.erase(nodeId);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 // {{{ RPC methods
 	BaseLib::PVariable ScriptEngineServer::registerScriptEngineClient(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
 	{
@@ -1699,7 +1837,7 @@ BaseLib::PVariable ScriptEngineServer::getAllScripts()
 			}
 			clientData->pid = pid;
 			processIterator->second->setClientData(clientData);
-			processIterator->second->requestConditionVariable.notify_one();
+			processIterator->second->requestConditionVariable.notify_all();
 			return BaseLib::PVariable(new BaseLib::Variable());
 		}
 		catch(const std::exception& ex)
@@ -2454,6 +2592,61 @@ BaseLib::PVariable ScriptEngineServer::getAllScripts()
 				}
 
 				return BaseLib::PVariable(new BaseLib::Variable(i->second->getTrialStartTime(familyId, deviceId)));
+			}
+			catch(const std::exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		}
+	// }}}
+
+	// {{{ Flows
+		BaseLib::PVariable ScriptEngineServer::nodeOutput(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+		{
+			try
+			{
+				if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
+				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
+				if(parameters->at(1)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type integer.");
+
+				GD::flowsServer->nodeOutput(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2));
+
+				return std::make_shared<BaseLib::Variable>();
+			}
+			catch(const std::exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		}
+
+		BaseLib::PVariable ScriptEngineServer::executePhpNodeBaseMethod(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+		{
+			try
+			{
+				if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
+				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
+				if(parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string.");
+				if(parameters->at(2)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type array.");
+
+				return GD::flowsServer->executePhpNodeBaseMethod(parameters);
 			}
 			catch(const std::exception& ex)
 			{

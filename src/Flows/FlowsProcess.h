@@ -52,6 +52,7 @@ private:
 	std::map<int32_t, PFlowInfoServer> _flows;
 	std::map<int32_t, PFlowFinishedInfo> _flowFinishedInfo;
 	PFlowsClientData _clientData;
+	std::atomic_uint _nodeThreadCount;
 public:
 	FlowsProcess();
 	virtual ~FlowsProcess();
@@ -66,6 +67,7 @@ public:
 	void invokeFlowFinished(int32_t exitCode);
 	void invokeFlowFinished(int32_t id, int32_t exitCode);
 	uint32_t flowCount();
+	uint32_t nodeThreadCount();
 	PFlowInfoServer getFlow(int32_t id);
 	PFlowFinishedInfo getFlowFinishedInfo(int32_t id);
 	void registerFlow(int32_t id, PFlowInfoServer& flowInfo);
