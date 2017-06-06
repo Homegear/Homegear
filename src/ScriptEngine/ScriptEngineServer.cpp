@@ -1646,7 +1646,10 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 			while(scriptInfo->id == 0) scriptInfo->id = _currentScriptId++;
 		}
 
-		_out.printInfo("Info: Starting script \"" + scriptInfo->fullPath + "\" with id " + std::to_string(scriptInfo->id) + ".");
+		if(GD::bl->debugLevel >= 5 || (scriptInfo->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode && scriptInfo->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode))
+		{
+			_out.printInfo("Info: Starting script \"" + scriptInfo->fullPath + "\" with id " + std::to_string(scriptInfo->id) + ".");
+		}
 		process->registerScript(scriptInfo->id, scriptInfo);
 
 		PScriptEngineClientData clientData = process->getClientData();
