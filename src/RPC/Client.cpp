@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -204,11 +204,7 @@ void Client::broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib
 {
 	try
 	{
-		if(GD::bl->booting)
-		{
-			GD::out.printInfo("Info: Not broadcasting event as I'm still starting up.");
-			return;
-		}
+		if(!GD::bl->booting)
 		{
 			std::lock_guard<std::mutex> serversGuard(_serversMutex);
 			for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
@@ -225,6 +221,7 @@ void Client::broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib
 				}
 			}
 		}
+
 		{
 			if(topic.compare(0, 14, "highlightNode/") != 0 && topic.compare(0, 14, "highlightLink/") != 0)
 			{
@@ -238,7 +235,7 @@ void Client::broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib
 			}
 		}
 
-		if(BaseLib::HelperFunctions::getTime() - _lastGarbageCollection > 60000) collectGarbage();
+		if(!GD::bl->booting && BaseLib::HelperFunctions::getTime() - _lastGarbageCollection > 60000) collectGarbage();
 	}
 	catch(const std::exception& ex)
     {
