@@ -307,7 +307,7 @@
         menuOptions.push(null);
         menuOptions.push({id:"menu-item-logout",
             label: RED.settings.theme("menu.menu-item-logout.label","Logout"),
-            href: RED.settings.theme("menu.menu-item-logout.url","signin.php?logout=1")
+            hrefLocal: RED.settings.theme("menu.menu-item-logout.url","signin.php?logout=1")
         });
 
 

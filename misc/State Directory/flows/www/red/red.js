@@ -5045,6 +5045,8 @@ RED.menu = (function() {
                 }
             } else if (opt.href) {
                 link.attr("target","_blank").attr("href",opt.href);
+            } else if (opt.hrefLocal) {
+                link.attr("target","_self").attr("href",opt.hrefLocal);
             } else if (!opt.options) {
                 item.addClass("disabled");
                 link.click(function(event) {
