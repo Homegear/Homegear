@@ -194,7 +194,6 @@ HomegearWS.prototype.connectServer = function() {
 		if(this.auth) this.serverAuthenticated = false;
 		clearTimeout(this.connectServerTimer);
 		this.connectServerTimer = homegearWsSetTimeout.call(this, this.connectServer, 5000);
-		console.log("Moin", event);
 		this.invokeError(event.data);
 	}.bind(this);
 }
