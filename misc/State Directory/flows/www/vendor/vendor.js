@@ -147,8 +147,7 @@ HomegearWS.prototype.event = function(callback) {
 }
 
 HomegearWS.prototype.invokeEvent = function(data) {
-	console.log('Event:');
-	console.log(data);
+	//console.log('Event:', data);
 	for(i in this.onEvent) {
 		if(typeof this.onEvent[i] === 'function') this.onEvent[i](data); 
 	}
@@ -213,7 +212,7 @@ HomegearWS.prototype.connectClient = function() {
 		}
 		else if(typeof response.id !== 'undefined' && typeof this.requests['c' + response.id] === 'function')
 		{
-			console.log('Response to id ' + response.id + ' received: ' + event.data);
+			//console.log('Response to id ' + response.id + ' received', event.data);
 			this.requests['c' + response.id](response);
 			delete this.requests['c' + response.id];
 		}
@@ -333,7 +332,7 @@ HomegearWS.prototype.invoke = function(methodName) {
 		if(typeof arguments[1] === 'function') this.requests['c' + counter] = arguments[1];
 		arguments[0].id = counter;
 		var request = JSON.stringify(arguments[0]);
-		console.log('Invoking RPC method: ' + request);
+		//console.log('Invoking RPC method: ' + request);
 		this.send(request);
 	} else {
 		if(typeof methodName !== 'string') return;
@@ -345,7 +344,7 @@ HomegearWS.prototype.invoke = function(methodName) {
 		if(arguments.length > 1 && typeof arguments[1] === 'function') this.requests['c' + counter] = arguments[1];
 		if(arguments.length > 2) request.params = Array.prototype.slice.call(arguments, 2);
 		request = JSON.stringify(request);
-		console.log('Invoking RPC method: ' + request);
+		//console.log('Invoking RPC method: ' + request);
 		this.send(request);
 	}
 }
