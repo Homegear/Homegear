@@ -44,6 +44,7 @@ public:
 	virtual bool init(Flows::PNodeInfo nodeInfo);
 	virtual bool start();
 	virtual void stop();
+	virtual void waitForStop();
 
 	virtual void configNodesStarted();
 

@@ -818,6 +818,18 @@ Flows::PVariable FlowsClient::shutdown(Flows::PArray& parameters)
 			}
 		}
 
+		{
+			std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+			for(auto& flow : _flows)
+			{
+				for(auto& nodeIterator : flow.second->nodes)
+				{
+					Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
+					if(node) node->waitForStop();
+				}
+			}
+		}
+
 		if(_maintenanceThread.joinable()) _maintenanceThread.join();
 		_maintenanceThread = std::thread(&FlowsClient::dispose, this);
 

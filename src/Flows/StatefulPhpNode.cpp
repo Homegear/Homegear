@@ -106,6 +106,19 @@ void StatefulPhpNode::stop()
 	if(result->errorStruct) GD::out.printError("Error calling stop: " + result->structValue->at("faultString")->stringValue);
 }
 
+void StatefulPhpNode::waitForStop()
+{
+	Flows::PArray parameters = std::make_shared<Flows::Array>();
+	parameters->reserve(3);
+	parameters->push_back(std::make_shared<Flows::Variable>(_id));
+	parameters->push_back(std::make_shared<Flows::Variable>("waitForStop"));
+	Flows::PVariable innerParameters = std::make_shared<Flows::Variable>(Flows::VariableType::tArray);
+	parameters->push_back(innerParameters);
+
+	Flows::PVariable result = invoke("executePhpNodeMethod", parameters);
+	if(result->errorStruct) GD::out.printError("Error calling waitForStop: " + result->structValue->at("faultString")->stringValue);
+}
+
 void StatefulPhpNode::configNodesStarted()
 {
 	try
