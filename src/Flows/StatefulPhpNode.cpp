@@ -147,6 +147,34 @@ void StatefulPhpNode::configNodesStarted()
     }
 }
 
+void StatefulPhpNode::startUpComplete()
+{
+	try
+	{
+		Flows::PArray parameters = std::make_shared<Flows::Array>();
+		parameters->reserve(3);
+		parameters->push_back(std::make_shared<Flows::Variable>(_id));
+		parameters->push_back(std::make_shared<Flows::Variable>("startUpComplete"));
+		Flows::PVariable innerParameters = std::make_shared<Flows::Variable>(Flows::VariableType::tArray);
+		parameters->push_back(innerParameters);
+
+		Flows::PVariable result = invoke("executePhpNodeMethod", parameters);
+		if(result->errorStruct) GD::out.printError("Error calling startUpComplete: " + result->structValue->at("faultString")->stringValue);
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void StatefulPhpNode::variableEvent(uint64_t peerId, int32_t channel, std::string variable, Flows::PVariable value)
 {
 	try

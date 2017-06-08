@@ -47,6 +47,7 @@ public:
 	virtual void waitForStop();
 
 	virtual void configNodesStarted();
+	virtual void startUpComplete();
 
 	virtual void variableEvent(uint64_t peerId, int32_t channel, std::string variable, Flows::PVariable value);
 	virtual void setNodeVariable(std::string& variable, Flows::PVariable& value);

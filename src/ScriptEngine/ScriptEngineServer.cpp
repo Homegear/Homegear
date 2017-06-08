@@ -413,8 +413,8 @@ bool ScriptEngineServer::start()
 		if(!getFileDescriptor(true)) return false;
 		uint32_t scriptEngineThreadCount = GD::bl->settings.scriptEngineThreadCount();
 		if(scriptEngineThreadCount < 5) scriptEngineThreadCount = 5;
-		startQueue(0, scriptEngineThreadCount, 0, SCHED_OTHER);
-		startQueue(1, scriptEngineThreadCount, 0, SCHED_OTHER);
+		startQueue(0, false, scriptEngineThreadCount, 0, SCHED_OTHER);
+		startQueue(1, false, scriptEngineThreadCount, 0, SCHED_OTHER);
 		GD::bl->threadManager.start(_mainThread, true, &ScriptEngineServer::mainThread, this);
 		return true;
 	}

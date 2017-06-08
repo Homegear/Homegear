@@ -163,6 +163,12 @@ private:
 		Flows::PVariable configNodesStarted(Flows::PArray& parameters);
 
 		/**
+		 * Executed when start up is complete. Nodes can output data from within this method.
+		 * @param parameters
+		 */
+		Flows::PVariable startUpComplete(Flows::PArray& parameters);
+
+		/**
 		 * Stops a flow.
 		 * @param parameters
 		 */

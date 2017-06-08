@@ -51,23 +51,24 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 2, 1000)
 	_rpcDecoder = std::unique_ptr<Flows::RpcDecoder>(new Flows::RpcDecoder());
 	_rpcEncoder = std::unique_ptr<Flows::RpcEncoder>(new Flows::RpcEncoder(true));
 
-	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("reload", std::bind(&FlowsClient::reload, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("shutdown", std::bind(&FlowsClient::shutdown, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("startFlow", std::bind(&FlowsClient::startFlow, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("startNodes", std::bind(&FlowsClient::startNodes, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("configNodesStarted", std::bind(&FlowsClient::configNodesStarted, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("stopFlow", std::bind(&FlowsClient::stopFlow, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("flowCount", std::bind(&FlowsClient::flowCount, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("nodeOutput", std::bind(&FlowsClient::nodeOutput, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("invokeNodeMethod", std::bind(&FlowsClient::invokeExternalNodeMethod, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("executePhpNodeBaseMethod", std::bind(&FlowsClient::executePhpNodeBaseMethod, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("setNodeVariable", std::bind(&FlowsClient::setNodeVariable, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("enableNodeEvents", std::bind(&FlowsClient::enableNodeEvents, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("disableNodeEvents", std::bind(&FlowsClient::disableNodeEvents, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("broadcastEvent", std::bind(&FlowsClient::broadcastEvent, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("broadcastDeleteDevices", std::bind(&FlowsClient::broadcastDeleteDevices, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("broadcastNewDevices", std::bind(&FlowsClient::broadcastNewDevices, this, std::placeholders::_1)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>("broadcastUpdateDevice", std::bind(&FlowsClient::broadcastUpdateDevice, this, std::placeholders::_1)));
+	_localRpcMethods.emplace("reload", std::bind(&FlowsClient::reload, this, std::placeholders::_1));
+	_localRpcMethods.emplace("shutdown", std::bind(&FlowsClient::shutdown, this, std::placeholders::_1));
+	_localRpcMethods.emplace("startFlow", std::bind(&FlowsClient::startFlow, this, std::placeholders::_1));
+	_localRpcMethods.emplace("startNodes", std::bind(&FlowsClient::startNodes, this, std::placeholders::_1));
+	_localRpcMethods.emplace("configNodesStarted", std::bind(&FlowsClient::configNodesStarted, this, std::placeholders::_1));
+	_localRpcMethods.emplace("startUpComplete", std::bind(&FlowsClient::startUpComplete, this, std::placeholders::_1));
+	_localRpcMethods.emplace("stopFlow", std::bind(&FlowsClient::stopFlow, this, std::placeholders::_1));
+	_localRpcMethods.emplace("flowCount", std::bind(&FlowsClient::flowCount, this, std::placeholders::_1));
+	_localRpcMethods.emplace("nodeOutput", std::bind(&FlowsClient::nodeOutput, this, std::placeholders::_1));
+	_localRpcMethods.emplace("invokeNodeMethod", std::bind(&FlowsClient::invokeExternalNodeMethod, this, std::placeholders::_1));
+	_localRpcMethods.emplace("executePhpNodeBaseMethod", std::bind(&FlowsClient::executePhpNodeBaseMethod, this, std::placeholders::_1));
+	_localRpcMethods.emplace("setNodeVariable", std::bind(&FlowsClient::setNodeVariable, this, std::placeholders::_1));
+	_localRpcMethods.emplace("enableNodeEvents", std::bind(&FlowsClient::enableNodeEvents, this, std::placeholders::_1));
+	_localRpcMethods.emplace("disableNodeEvents", std::bind(&FlowsClient::disableNodeEvents, this, std::placeholders::_1));
+	_localRpcMethods.emplace("broadcastEvent", std::bind(&FlowsClient::broadcastEvent, this, std::placeholders::_1));
+	_localRpcMethods.emplace("broadcastDeleteDevices", std::bind(&FlowsClient::broadcastDeleteDevices, this, std::placeholders::_1));
+	_localRpcMethods.emplace("broadcastNewDevices", std::bind(&FlowsClient::broadcastNewDevices, this, std::placeholders::_1));
+	_localRpcMethods.emplace("broadcastUpdateDevice", std::bind(&FlowsClient::broadcastUpdateDevice, this, std::placeholders::_1));
 }
 
 FlowsClient::~FlowsClient()
@@ -147,8 +148,8 @@ void FlowsClient::start()
 		uint32_t flowsProcessingThreadCountNodes = GD::bl->settings.flowsProcessingThreadCountNodes();
 		if(flowsProcessingThreadCountNodes < 5) flowsProcessingThreadCountNodes = 5;
 
-		startQueue(0, flowsProcessingThreadCountNodes, 0, SCHED_OTHER);
-		startQueue(1, flowsProcessingThreadCountNodes, 0, SCHED_OTHER);
+		startQueue(0, false, flowsProcessingThreadCountNodes, 0, SCHED_OTHER);
+		startQueue(1, false, flowsProcessingThreadCountNodes, 0, SCHED_OTHER);
 
 		_socketPath = GD::bl->settings.socketPath() + "homegearFE.sock";
 		if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Socket path is " + _socketPath);
@@ -1079,6 +1080,36 @@ Flows::PVariable FlowsClient::configNodesStarted(Flows::PArray& parameters)
 			{
 				Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
 				if(node) node->configNodesStarted();
+			}
+		}
+		return std::make_shared<Flows::Variable>();
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable FlowsClient::startUpComplete(Flows::PArray& parameters)
+{
+	try
+	{
+		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+		for(auto& flow : _flows)
+		{
+			for(auto& nodeIterator : flow.second->nodes)
+			{
+				Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
+				if(node) node->startUpComplete();
 			}
 		}
 		return std::make_shared<Flows::Variable>();
