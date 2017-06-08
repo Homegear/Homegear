@@ -116,6 +116,7 @@ private:
 	typedef std::shared_ptr<NodeInfo> PNodeInfo;
 
 	BaseLib::Output _out;
+	std::atomic_bool _shutdownExecuted;
 #ifdef DEBUGSESOCKET
 	std::ofstream _socketOutput;
 #endif

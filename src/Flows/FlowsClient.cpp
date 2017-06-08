@@ -37,6 +37,7 @@ namespace Flows
 FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 2, 1000)
 {
 	_stopped = false;
+	_shutdownExecuted = false;
 	_frontendConnected = false;
 
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
@@ -83,7 +84,11 @@ void FlowsClient::dispose()
 	{
 		GD::bl->shuttingDown = true;
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000)); //Wait for shutdown response to be sent.
+		for(int32_t i = 0; i < 300; i++)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100)); //Wait for shutdown response to be sent.
+			if(_shutdownExecuted) break;
+		}
 
 		_stopped = true;
 
@@ -334,6 +339,8 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 					result->print(true, false);
 				}
 				sendResponse(parameters->at(0), result);
+
+				if(methodName == "shutdown") _shutdownExecuted = true;
 			}
 			else
 			{

@@ -84,6 +84,7 @@ private:
 	};
 
 	BaseLib::Output _out;
+	std::atomic_bool _shutdownExecuted;
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
 	int64_t _lastGargabeCollection = 0;
