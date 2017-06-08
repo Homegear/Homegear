@@ -377,6 +377,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 					timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
 					nodeEvent(queueEntry->nodeInfo->id, "highlightNode/" + queueEntry->nodeInfo->id, timeout);
 				}
+				std::lock_guard<std::mutex> nodeInputGuard(node->getInputMutex());
 				node->input(queueEntry->nodeInfo, queueEntry->targetPort, queueEntry->message);
 			}
 		}
@@ -442,7 +443,11 @@ Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray& para
 			std::lock_guard<std::mutex> packetIdGuard(_packetIdMutex);
 			packetId = _currentPacketId++;
 		}
-		Flows::PArray array(new Flows::Array{ Flows::PVariable(new Flows::Variable(threadId)), Flows::PVariable(new Flows::Variable(packetId)), Flows::PVariable(new Flows::Variable(parameters)) });
+		Flows::PArray array = std::make_shared<Flows::Array>();
+		array->reserve(3);
+		array->push_back(std::make_shared<Flows::Variable>(threadId));
+		array->push_back(std::make_shared<Flows::Variable>(packetId));
+		array->push_back(std::make_shared<Flows::Variable>(parameters));
 		std::vector<char> data;
 		_rpcEncoder->encodeRequest(methodName, array, data);
 

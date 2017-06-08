@@ -6029,8 +6029,8 @@ RED.stack = (function() {
         string: {value:"string",label:"string",icon:"red/images/typedInput/az.png"},
         int: {value:"int",label:"int",icon:"red/images/typedInput/09.png",validate:/^[+-]?[0-9]*$/},
         float: {value:"float",label:"float",icon:"red/images/typedInput/09.png",validate:/^[+-]?[0-9]*\.?[0-9]*([eE][-+]?[0-9]+)?$/},
-        suntime: {value:"suntime",label:"sun",icon:"red/images/typedInput/bool.png",options:["sunrise","sunset","sunriseEnd", "sunsetStart", "dawn", "dusk", "nauticalDawn", "nauticalDust", "nightEnd", "night", "goldenHourEnd", "goldenHour"]},
-        time: {value:"time",label:"time",icon:"red/images/typedInput/time.png",validate:/^([0-9]|0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/},
+        suntime: {value:"suntime",label:"sun",icon:"red/images/typedInput/bool.png",options:["sunrise","sunset","sunriseEnd", "sunsetStart", "dawn", "dusk", "nauticalDawn", "nauticalDust", "nightEnd", "night", "goldenHourEnd", "goldenHour", "solarNoon", "nadir"]},
+        time: {value:"time",label:"time",icon:"red/images/typedInput/time.png",validate:/^([0-9]|0[0-9]|1[0-9]|2[0-3])(:[0-5][0-9]){1,2}$/},
         array: {
             value:"array",
             label:"array",
