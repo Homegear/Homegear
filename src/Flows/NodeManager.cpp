@@ -443,6 +443,8 @@ int32_t NodeManager::unloadNode(std::string id)
 		GD::out.printInfo("Info: Unloading node " + id);
 
 		Flows::PINode node = nodesIterator->second;
+		std::string nodeNamespace = node->getNamespace();
+		std::string nodeType = node->getType();
 
 		if(nodesUsageIterator != _nodesUsage.end())
 		{
@@ -457,7 +459,7 @@ int32_t NodeManager::unloadNode(std::string id)
 
 		if(nodesUsageIterator != _nodesUsage.end()) _nodesUsage.erase(nodesUsageIterator);
 
-		auto nodeLoaderIterator = _nodeLoaders.find(nodesIterator->second->getNamespace() + "." + nodesIterator->second->getType());
+		auto nodeLoaderIterator = _nodeLoaders.find(nodeNamespace + "." + nodeType);
 		if(nodeLoaderIterator == _nodeLoaders.end()) return 1;
 
 		nodeLoaderIterator->second.reset();
