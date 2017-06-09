@@ -358,6 +358,10 @@ if [[ -n $2 ]]; then
 	[ $? -ne 0 ] && exit 1
 	rm -Rf homegear-licensing-${1}/.git
 
+	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-nodes-extra.git homegear-nodes-extra-${1}
+	[ $? -ne 0 ] && exit 1
+	rm -Rf homegear-nodes-extra-${1}/.git
+
 	git clone ssh://git@gitit.de:44444/EASY/homegear-easycam.git homegear-easycam-${1}
 	[ $? -ne 0 ] && exit 1
 	rm -Rf homegear-easycam-${1}/.git
@@ -425,6 +429,7 @@ if [[ -n $2 ]]; then
 	createPackage homegear-easy-licensing $1 homegear-easy-licensing
 	createPackage homegear-licensing $1 homegear-licensing
 
+	createPackage homegear-nodes-extra $1 homegear-nodes-extra
 	createPackage homegear-easycam $1 homegear-easycam
 	createPackage homegear-easyled $1 homegear-easyled
 	createPackage homegear-easyled2 $1 homegear-easyled2
@@ -470,6 +475,7 @@ if [[ -n $1 ]]; then
 	cleanUp homegear-easy-licensing
 	cleanUp homegear-licensing
 
+	cleanUp homegear-nodes-extra
 	cleanUp homegear-easycam
 	cleanUp homegear-easyled
 	cleanUp homegear-easyled2
@@ -498,6 +504,7 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 		mv homegear-easy-licensing.deb homegear-easy-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-licensing.deb homegear-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
 
+		mv homegear-nodes-extra.deb homegear-nodes-extra_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-easycam.deb homegear-easycam_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-easyled.deb homegear-easyled_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-easyled2.deb homegear-easyled2_\$[isodate]_${distlc}_${distver}_${arch}.deb
