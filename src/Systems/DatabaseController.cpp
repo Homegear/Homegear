@@ -60,7 +60,7 @@ void DatabaseController::init()
 	}
 	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get()));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get()));
-	startQueue(0, 1, 0, SCHED_OTHER);
+	startQueue(0, true, 1, 0, SCHED_OTHER);
 }
 
 //General

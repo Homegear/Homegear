@@ -84,6 +84,7 @@ private:
 	};
 
 	BaseLib::Output _out;
+	std::atomic_bool _shutdownExecuted;
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
 	int64_t _lastGargabeCollection = 0;
@@ -161,6 +162,12 @@ private:
 		 * @param parameters
 		 */
 		Flows::PVariable configNodesStarted(Flows::PArray& parameters);
+
+		/**
+		 * Executed when start up is complete. Nodes can output data from within this method.
+		 * @param parameters
+		 */
+		Flows::PVariable startUpComplete(Flows::PArray& parameters);
 
 		/**
 		 * Stops a flow.

@@ -199,8 +199,8 @@ bool IpcServer::start()
 		if(!getFileDescriptor(true)) return false;
 		uint32_t ipcThreadCount = GD::bl->settings.ipcThreadCount();
 		if(ipcThreadCount < 5) ipcThreadCount = 5;
-		startQueue(0, ipcThreadCount, 0, SCHED_OTHER);
-		startQueue(1, ipcThreadCount, 0, SCHED_OTHER);
+		startQueue(0, false, ipcThreadCount, 0, SCHED_OTHER);
+		startQueue(1, false, ipcThreadCount, 0, SCHED_OTHER);
 		GD::bl->threadManager.start(_mainThread, true, &IpcServer::mainThread, this);
 		return true;
 	}

@@ -3825,20 +3825,9 @@ RED.validators = {
     number: function(blankAllowed){return function(v) { return (blankAllowed&&(v===''||v===undefined)) || (v!=='' && !isNaN(v));}},
     regex: function(re){return function(v) { return re.test(v);}},
     typedInput: function(ptypeName,isConfig) { return function(v) {
-        var ptype = $("#node-"+(isConfig?"config-":"")+"input-"+ptypeName).val() || this[ptypeName];
-        if (ptype === 'json') {
-            try {
-                JSON.parse(v);
-                return true;
-            } catch(err) {
-                return false;
-            }
-        } else if (ptype === 'msg' || ptype === 'flow' || ptype === 'global' ) {
-            return RED.utils.validatePropertyExpression(v);
-        } else if (ptype === 'num') {
-            return /^[+-]?[0-9]*\.?[0-9]*([eE][-+]?[0-9]+)?$/.test(v);
-        }
-        return true;
+        var ptype = $("#node-"+(isConfig?"config-":"")+"input-"+ptypeName);
+        if(!ptype) return true;
+        return ptype.typedInput('validate');
     }}
 };
 ;/**
@@ -5045,6 +5034,8 @@ RED.menu = (function() {
                 }
             } else if (opt.href) {
                 link.attr("target","_blank").attr("href",opt.href);
+            } else if (opt.hrefLocal) {
+                link.attr("target","_self").attr("href",opt.hrefLocal);
             } else if (!opt.options) {
                 item.addClass("disabled");
                 link.click(function(event) {
@@ -6027,6 +6018,8 @@ RED.stack = (function() {
         string: {value:"string",label:"string",icon:"red/images/typedInput/az.png"},
         int: {value:"int",label:"int",icon:"red/images/typedInput/09.png",validate:/^[+-]?[0-9]*$/},
         float: {value:"float",label:"float",icon:"red/images/typedInput/09.png",validate:/^[+-]?[0-9]*\.?[0-9]*([eE][-+]?[0-9]+)?$/},
+        suntime: {value:"suntime",label:"sun",icon:"red/images/typedInput/bool.png",options:["sunrise","sunset","sunriseEnd", "sunsetStart", "dawn", "dusk", "nauticalDawn", "nauticalDust", "nightEnd", "night", "goldenHourEnd", "goldenHour", "solarNoon", "nadir"]},
+        time: {value:"time",defaultValue:"HH:MM[:SS]",label:"time",icon:"red/images/typedInput/time.png",validate:/^([0-9]|0[0-9]|1[0-9]|2[0-3])(:[0-5][0-9]){1,2}$/},
         array: {
             value:"array",
             label:"array",
@@ -6417,6 +6410,7 @@ RED.stack = (function() {
                                 this.element.val(this.oldValue);
                                 delete this.oldValue;
                             }
+                            else if(opt.defaultValue) this.element.val(opt.defaultValue);
                             this.elementDiv.show();
                         }
                         if (opt.expand && typeof opt.expand === 'function') {

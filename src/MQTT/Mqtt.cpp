@@ -86,8 +86,8 @@ void Mqtt::start()
 		if(_started) return;
 		_started = true;
 
-		startQueue(0, 1, 0, SCHED_OTHER);
-		startQueue(1, _settings.processingThreadCount(), 0, SCHED_OTHER);
+		startQueue(0, false, 1, 0, SCHED_OTHER);
+		startQueue(1, false, _settings.processingThreadCount(), 0, SCHED_OTHER);
 
 		_out.init(GD::bl.get());
 		_out.setPrefix("MQTT Client: ");

@@ -357,8 +357,8 @@ bool FlowsServer::start()
 		getMaxThreadCounts();
 		uint32_t flowsProcessingThreadCountServer = GD::bl->settings.flowsProcessingThreadCountServer();
 		if(flowsProcessingThreadCountServer < 5) flowsProcessingThreadCountServer = 5;
-		startQueue(0, flowsProcessingThreadCountServer, 0, SCHED_OTHER);
-		startQueue(1, flowsProcessingThreadCountServer, 0, SCHED_OTHER);
+		startQueue(0, false, flowsProcessingThreadCountServer, 0, SCHED_OTHER);
+		startQueue(1, false, flowsProcessingThreadCountServer, 0, SCHED_OTHER);
 		GD::bl->threadManager.start(_mainThread, true, &FlowsServer::mainThread, this);
 		startFlows();
 		return true;
@@ -1045,6 +1045,14 @@ void FlowsServer::startFlows()
 		{
 			BaseLib::PArray parameters(new BaseLib::Array());
 			BaseLib::PVariable response = sendRequest(client, "configNodesStarted", parameters);
+			if(response->errorStruct) _out.printError("Error starting nodes: " + response->structValue->at("faultString")->stringValue);
+		}
+
+		_out.printInfo("Info: Calling \"startUpComplete\".");
+		for(auto& client : clients)
+		{
+			BaseLib::PArray parameters(new BaseLib::Array());
+			BaseLib::PVariable response = sendRequest(client, "startUpComplete", parameters);
 			if(response->errorStruct) _out.printError("Error starting nodes: " + response->structValue->at("faultString")->stringValue);
 		}
 

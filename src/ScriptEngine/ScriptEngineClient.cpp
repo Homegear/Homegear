@@ -68,6 +68,7 @@ std::unordered_map<std::string, ScriptEngineClient::PNodeInfo> ScriptEngineClien
 ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 1, 1000)
 {
 	_stopped = false;
+	_shutdownExecuted = false;
 
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	_out.init(GD::bl.get());
@@ -136,7 +137,7 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 		if(broadcastShutdown) broadcastEvent(eventData);
 
 		int32_t i = 0;
-		while(_scriptThreads.size() > 0 && i < 31)
+		while(_scriptThreads.size() > 0 && i < 310)
 		{
 			if(i > 0)
 			{
@@ -154,7 +155,7 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 				}
 			}
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			collectGarbage();
 			i++;
 		}
@@ -165,7 +166,11 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 			return;
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000)); //Wait for shutdown response to be sent.
+		for(int32_t i = 0; i < 300; i++)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100)); //Wait for shutdown response to be sent.
+			if(_shutdownExecuted) break;
+		}
 
 		_stopped = true;
 		stopEventThreads();
@@ -345,7 +350,7 @@ void ScriptEngineClient::start()
 			_out.printError("Error: Could not redirect errors to log file.");
 		}
 
-		startQueue(0, 10, 0, SCHED_OTHER);
+		startQueue(0, false, 10, 0, SCHED_OTHER);
 
 		_socketPath = GD::bl->settings.socketPath() + "homegearSE.sock";
 		if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Socket path is " + _socketPath);
@@ -604,6 +609,8 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 				result->print(true, false);
 			}
 			sendResponse(parameters->at(0), result);
+
+			if(methodName == "shutdown") _shutdownExecuted = true;
 		}
 		else
 		{
