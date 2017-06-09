@@ -82,14 +82,13 @@ void FlowsClient::dispose()
 {
 	try
 	{
-		GD::bl->shuttingDown = true;
-
 		for(int32_t i = 0; i < 300; i++)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(100)); //Wait for shutdown response to be sent.
 			if(_shutdownExecuted) break;
 		}
 
+		GD::bl->shuttingDown = true;
 		_stopped = true;
 
 		stopQueue(0);
