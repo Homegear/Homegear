@@ -3926,7 +3926,7 @@ RED.utils = (function() {
         if (strippedKey !== '') {
             var isPinned = pinnedPaths[sourceId].hasOwnProperty(strippedKey);
 
-            var pinPath = $('<button class="editor-button editor-button-small debug-message-tools-pin"><i class="fa fa-map-pin"></i></button>').appendTo(tools).click(function(e) {
+            var pinPath = $('<button class="editor-button editor-button-small debug-message-tools-pin"><i class="fa fa-map-pin"></i></button>').appendTo(tools).click(function(e) {                
                 e.preventDefault();
                 e.stopPropagation();
                 if (pinnedPaths[sourceId].hasOwnProperty(strippedKey)) {
@@ -4031,6 +4031,11 @@ RED.utils = (function() {
         var strippedKey;
         if (path !== undefined && rootPath !== undefined) {
              strippedKey = path.substring(rootPath.length+(path[rootPath.length]==="."?1:0));
+        }
+        else
+        {
+            path = "";
+            rootPath = "";
         }
         var element = $('<span class="debug-message-element"></span>');
         element.collapse = function() {
