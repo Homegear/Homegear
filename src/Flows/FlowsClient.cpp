@@ -121,6 +121,8 @@ void FlowsClient::dispose()
 
 		_flows.clear();
 		_rpcResponses.clear();
+
+		_out.printMessage("Shut down complete.");
 	}
     catch(const std::exception& ex)
     {
@@ -818,6 +820,9 @@ Flows::PVariable FlowsClient::shutdown(Flows::PArray& parameters)
 {
 	try
 	{
+		_out.printMessage("Shutting down...");
+
+		_out.printMessage("Calling stop()...");
 		{
 			std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
 			for(auto& flow : _flows)
@@ -825,11 +830,13 @@ Flows::PVariable FlowsClient::shutdown(Flows::PArray& parameters)
 				for(auto& nodeIterator : flow.second->nodes)
 				{
 					Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
+					if(_bl->debugLevel >= 5) _out.printDebug("Debug: Calling stop() on node " + nodeIterator.second->id + "...");
 					if(node) node->stop();
 				}
 			}
 		}
 
+		_out.printMessage("Calling waitForStop()...");
 		{
 			std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
 			for(auto& flow : _flows)
@@ -837,10 +844,13 @@ Flows::PVariable FlowsClient::shutdown(Flows::PArray& parameters)
 				for(auto& nodeIterator : flow.second->nodes)
 				{
 					Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
+					if(_bl->debugLevel >= 5) _out.printDebug("Debug: Waiting for node " + nodeIterator.second->id + " to stop...");
 					if(node) node->waitForStop();
 				}
 			}
 		}
+
+		_out.printMessage("Nodes are stopped. Disposing...");
 
 		if(_maintenanceThread.joinable()) _maintenanceThread.join();
 		_maintenanceThread = std::thread(&FlowsClient::dispose, this);
