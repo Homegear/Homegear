@@ -153,11 +153,6 @@ void ScriptEngineProcess::invokeScriptFinished(int32_t exitCode)
 	try
 	{
 		std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
-		for(std::map<int32_t, PScriptFinishedInfo>::iterator i = _scriptFinishedInfo.begin(); i != _scriptFinishedInfo.end(); ++i)
-		{
-			i->second->finished = true;
-			i->second->conditionVariable.notify_all();
-		}
 		for(std::map<int32_t, PScriptInfo>::iterator i = _scripts.begin(); i != _scripts.end(); ++i)
 		{
 			if(GD::bl->debugLevel >= 5 || (i->second->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode && i->second->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode))
@@ -167,6 +162,14 @@ void ScriptEngineProcess::invokeScriptFinished(int32_t exitCode)
 			_nodeThreadCount -= i->second->maxThreadCount + 1;
 			i->second->finished = true;
 			i->second->exitCode = exitCode;
+		}
+		for(std::map<int32_t, PScriptFinishedInfo>::iterator i = _scriptFinishedInfo.begin(); i != _scriptFinishedInfo.end(); ++i)
+		{
+			i->second->finished = true;
+			i->second->conditionVariable.notify_all();
+		}
+		for(std::map<int32_t, PScriptInfo>::iterator i = _scripts.begin(); i != _scripts.end(); ++i)
+		{
 			if(i->second->scriptFinishedCallback) i->second->scriptFinishedCallback(i->second, exitCode);
 		}
 	}
@@ -189,12 +192,6 @@ void ScriptEngineProcess::invokeScriptFinished(int32_t id, int32_t exitCode)
 	try
 	{
 		std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
-		std::map<int32_t, PScriptFinishedInfo>::iterator scriptFinishedIterator = _scriptFinishedInfo.find(id);
-		if(scriptFinishedIterator != _scriptFinishedInfo.end())
-		{
-			scriptFinishedIterator->second->finished = true;
-			scriptFinishedIterator->second->conditionVariable.notify_all();
-		}
 		std::map<int32_t, PScriptInfo>::iterator scriptsIterator = _scripts.find(id);
 		if(scriptsIterator != _scripts.end())
 		{
@@ -207,10 +204,16 @@ void ScriptEngineProcess::invokeScriptFinished(int32_t id, int32_t exitCode)
 				_nodeThreadCount -= scriptsIterator->second->maxThreadCount + 1;
 				if(_unregisterNode) _unregisterNode(scriptsIterator->second->nodeInfo->structValue->at("id")->stringValue);
 			}
-			scriptsIterator->second->finished = true;
 			scriptsIterator->second->exitCode = exitCode;
-			if(scriptsIterator->second->scriptFinishedCallback) scriptsIterator->second->scriptFinishedCallback(scriptsIterator->second, exitCode);
+			scriptsIterator->second->finished = true;
 		}
+		std::map<int32_t, PScriptFinishedInfo>::iterator scriptFinishedIterator = _scriptFinishedInfo.find(id);
+		if(scriptFinishedIterator != _scriptFinishedInfo.end())
+		{
+			scriptFinishedIterator->second->finished = true;
+			scriptFinishedIterator->second->conditionVariable.notify_all();
+		}
+		if(scriptsIterator != _scripts.end() && scriptsIterator->second->scriptFinishedCallback) scriptsIterator->second->scriptFinishedCallback(scriptsIterator->second, exitCode);
 	}
 	catch(const std::exception& ex)
     {

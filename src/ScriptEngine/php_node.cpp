@@ -534,7 +534,7 @@ BaseLib::PVariable php_node_object_invoke_local(PScriptInfo& scriptInfo, zval* h
 	{
 		if(!zend_hash_str_find_ptr(&(Z_OBJ_P(homegearNodeObject)->ce->function_table), methodName.c_str(), methodName.size()))
 		{
-			if(methodName != "__destruct" && methodName != "configNodesStarted" && methodName != "variableEvent" && methodName != "setNodeVariable")
+			if(methodName != "__destruct" && methodName != "configNodesStarted" && methodName != "startUpComplete" && methodName != "variableEvent" && methodName != "setNodeVariable" && methodName != "waitForStop")
 			{
 				return BaseLib::Variable::createError(-1, "Unknown method.");
 			}
