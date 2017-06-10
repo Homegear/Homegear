@@ -1507,6 +1507,18 @@ int main(int argc, char* argv[])
 				if(chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
     			if(chmod(currentPath.c_str(), GD::bl->settings.flowsPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 
+    			currentPath = GD::bl->settings.flowsPath() + "nodes/";
+    			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
+    			localUserId = GD::bl->hf.userId(GD::bl->settings.flowsPathUser());
+				localGroupId = GD::bl->hf.groupId(GD::bl->settings.flowsPathGroup());
+				if(((int32_t)localUserId) == -1 || ((int32_t)localGroupId) == -1)
+				{
+					localUserId = userId;
+					localGroupId = groupId;
+				}
+				if(chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			if(chmod(currentPath.c_str(), GD::bl->settings.flowsPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+
     			currentPath = GD::bl->settings.flowsDataPath();
     			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
     			localUserId = GD::bl->hf.userId(GD::bl->settings.flowsPathUser());

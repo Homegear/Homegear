@@ -76,15 +76,15 @@ void FlowsProcess::invokeFlowFinished(int32_t exitCode)
 	try
 	{
 		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-		for(std::map<int32_t, PFlowFinishedInfo>::iterator i = _flowFinishedInfo.begin(); i != _flowFinishedInfo.end(); ++i)
-		{
-			i->second->finished = true;
-		}
 		for(std::map<int32_t, PFlowInfoServer>::iterator i = _flows.begin(); i != _flows.end(); ++i)
 		{
 			GD::out.printInfo("Info: Flow with id " + std::to_string(i->first) + " finished with exit code " + std::to_string(exitCode));
 			i->second->finished = true;
 			i->second->exitCode = exitCode;
+		}
+		for(std::map<int32_t, PFlowFinishedInfo>::iterator i = _flowFinishedInfo.begin(); i != _flowFinishedInfo.end(); ++i)
+		{
+			i->second->finished = true;
 		}
 	}
 	catch(const std::exception& ex)
@@ -107,16 +107,16 @@ void FlowsProcess::invokeFlowFinished(int32_t id, int32_t exitCode)
 	{
 		GD::out.printInfo("Info: Flow with id " + std::to_string(id) + " finished with exit code " + std::to_string(exitCode));
 		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-		std::map<int32_t, PFlowFinishedInfo>::iterator flowFinishedIterator = _flowFinishedInfo.find(id);
-		if(flowFinishedIterator != _flowFinishedInfo.end())
-		{
-			flowFinishedIterator->second->finished = true;
-		}
 		std::map<int32_t, PFlowInfoServer>::iterator flowIterator = _flows.find(id);
 		if(flowIterator != _flows.end())
 		{
 			flowIterator->second->finished = true;
 			flowIterator->second->exitCode = exitCode;
+		}
+		std::map<int32_t, PFlowFinishedInfo>::iterator flowFinishedIterator = _flowFinishedInfo.find(id);
+		if(flowFinishedIterator != _flowFinishedInfo.end())
+		{
+			flowFinishedIterator->second->finished = true;
 		}
 	}
 	catch(const std::exception& ex)
