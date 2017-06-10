@@ -11365,7 +11365,7 @@ RED.view = (function() {
                                 d._outputPortLabels.each(function(d,i) {
                                         var label = d3.select(this);
                                         label.attr("transform", function(d) { return "translate("+x+","+((y+18*i)-5)+")";});
-                                        if(node._def && node._def.outputInfo && i < node._def.outputInfo.length && node._def.outputInfo[i].label) label.selectAll(".input_label").text(node._def.outputInfo[i].label);
+                                        if(node._def && node._def.outputInfo && i < node._def.outputInfo.length && node._def.outputInfo[i].label) label.selectAll(".output_label").text(node._def.outputInfo[i].label);
                                         else if(numOutputs > 1) label.selectAll(".output_label").text(i);
                                         else label.selectAll(".output_label").text("");
                                 });
