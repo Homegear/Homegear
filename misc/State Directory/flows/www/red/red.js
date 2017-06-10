@@ -6415,7 +6415,20 @@ RED.stack = (function() {
                                 this.element.val(this.oldValue);
                                 delete this.oldValue;
                             }
-                            else if(opt.defaultValue) this.element.val(opt.defaultValue);
+                            else if(opt.defaultValue) {
+                                if(!this.element.val()) {
+                                    this.element.val(opt.defaultValue);
+                                } else {
+                                    var result;
+                                    var val = opt.validate;
+                                    if (typeof val === 'function') {
+                                        result = val(this.element.val());
+                                    } else {
+                                        result = val.test(this.element.val());
+                                    }
+                                    if(!result) this.element.val(opt.defaultValue);
+                                }
+                            }
                             this.elementDiv.show();
                         }
                         if (opt.expand && typeof opt.expand === 'function') {
