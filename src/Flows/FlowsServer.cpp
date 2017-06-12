@@ -919,6 +919,7 @@ void FlowsServer::startFlows()
 				auto zIterator = element->structValue->find("z");
 				if(zIterator != element->structValue->end()) z = zIterator->second->stringValue;
 				if(z.empty()) z = "g";
+				element->structValue->emplace("flow", std::make_shared<BaseLib::Variable>(z));
 
 				if(allNodeIds.find(idIterator->second->stringValue) != allNodeIds.end())
 				{
