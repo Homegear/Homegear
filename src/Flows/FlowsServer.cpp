@@ -697,7 +697,7 @@ std::set<std::string> FlowsServer::insertSubflows(BaseLib::PVariable& subflowNod
 				{
 					auto idIterator = wire->structValue->find("id");
 					if(idIterator == wire->structValue->end()) continue;
-					idIterator->second->stringValue = subflowIdPrefix + wire->stringValue;
+					idIterator->second->stringValue = subflowIdPrefix + idIterator->second->stringValue;
 				}
 			}
 
@@ -1060,7 +1060,7 @@ void FlowsServer::startFlows()
 		std::string dataKey;
 		for(auto nodeId : nodeData)
 		{
-			if(allNodeIds.find(nodeId) == allNodeIds.end()) GD::bl->db->deleteNodeData(nodeId, dataKey);
+			if(allNodeIds.find(nodeId) == allNodeIds.end() && nodeIds.find(nodeId) == nodeIds.end() && nodeId != "global") GD::bl->db->deleteNodeData(nodeId, dataKey);
 		}
 	}
 	catch(const std::exception& ex)
@@ -2385,6 +2385,7 @@ BaseLib::PVariable FlowsServer::invokeNodeMethod(PFlowsClientData& clientData, B
 			if(nodeClientIdIterator == _nodeClientIdMap.end()) return BaseLib::Variable::createError(-1, "Unknown node.");
 			clientId = nodeClientIdIterator->second;
 		}
+
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
 			auto clientIterator = _clients.find(clientId);
