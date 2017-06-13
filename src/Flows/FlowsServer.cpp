@@ -501,6 +501,43 @@ void FlowsServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, boo
     }
 }
 
+void FlowsServer::processKilled9(pid_t pid)
+{
+	try
+	{
+		std::shared_ptr<FlowsProcess> process;
+
+		{
+			std::lock_guard<std::mutex> processGuard(_processMutex);
+			std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(pid);
+			if(processIterator != _processes.end())
+			{
+				process = processIterator->second;
+				closeClientConnection(process->getClientData());
+				_processes.erase(processIterator);
+			}
+		}
+
+		if(process)
+		{
+			process->invokeFlowFinished(-1);
+			restartFlows();
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void FlowsServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message)
 {
 	try
@@ -1786,7 +1823,7 @@ BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::s
 			{
 				_out.printError("Error: Flows client with process ID " + std::to_string(clientData->pid) + " is not responding... Killing it.");
 				kill(clientData->pid, 9);
-				processKilled(clientData->pid, -1, 9, false); //Needs to be called manually
+				GD::bl->threadManager.start(_maintenanceThread, true, &FlowsServer::processKilled9, this, clientData->pid);
 				break;
 			}
 		}
