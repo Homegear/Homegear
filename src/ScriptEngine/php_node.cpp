@@ -444,7 +444,7 @@ void php_node_startup()
 	zend_declare_class_constant_stringl(SEG(homegear_node_base_class_entry), "NODE_ID", sizeof("NODE_ID") - 1, SEG(nodeId).c_str(), SEG(nodeId).size());
 }
 
-bool php_init_stateful_node(PScriptInfo scriptInfo, zend_class_entry* homegearNodeClassEntry, zval* homegearNodeObject)
+bool php_init_node(PScriptInfo scriptInfo, zend_class_entry* homegearNodeClassEntry, zval* homegearNodeObject)
 {
 	try
 	{
@@ -469,6 +469,7 @@ bool php_init_stateful_node(PScriptInfo scriptInfo, zend_class_entry* homegearNo
 		ZVAL_OBJ(homegearNodeObject, homegearNode);
 
 		bool stop = false;
+		if(scriptInfo->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode)
 		{
 			if(!zend_hash_str_find_ptr(&(homegearNodeClassEntry->function_table), "init", sizeof("init") - 1))
 			{
@@ -518,7 +519,7 @@ bool php_init_stateful_node(PScriptInfo scriptInfo, zend_class_entry* homegearNo
 	return false;
 }
 
-void php_deinit_stateful_node(zval* homegearNodeObject)
+void php_deinit_node(zval* homegearNodeObject)
 {
 	//Maybe cleanup is not necessary - valgrind shows no lost bytes if the lines below are commented out
 	if(homegearNodeObject && Z_OBJ_P(homegearNodeObject))
