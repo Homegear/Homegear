@@ -345,8 +345,6 @@ ZEND_FUNCTION(hg_node_get_node_data)
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>("getNodeData"));
 	BaseLib::PVariable innerParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	innerParameters->arrayValue->reserve(2);
-	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
 	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
 	parameters->arrayValue->push_back(innerParameters);
 	php_homegear_node_invoke_rpc(methodName, parameters, return_value);
@@ -378,8 +376,7 @@ ZEND_FUNCTION(hg_node_set_node_data)
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>("setNodeData"));
 	BaseLib::PVariable innerParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	innerParameters->arrayValue->reserve(3);
-	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
+	innerParameters->arrayValue->reserve(2);
 	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
 	innerParameters->arrayValue->push_back(value);
 	parameters->arrayValue->push_back(innerParameters);
@@ -413,11 +410,9 @@ ZEND_FUNCTION(hg_node_get_config_parameter)
 	std::string methodName("executePhpNodeBaseMethod");
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 	parameters->arrayValue->reserve(3);
-	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
+	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(nodeId));
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>("getConfigParameter"));
 	BaseLib::PVariable innerParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	innerParameters->arrayValue->reserve(2);
-	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(nodeId));
 	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(name));
 	parameters->arrayValue->push_back(innerParameters);
 	php_homegear_node_invoke_rpc(methodName, parameters, return_value);

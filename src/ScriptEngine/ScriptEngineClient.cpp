@@ -1128,7 +1128,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 				globals->peerId = scriptInfo->peerId;
 			}
 
-			if(type == ScriptInfo::ScriptType::statefulNode)
+			if(type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
 			{
 				globals->nodeId = scriptInfo->nodeInfo->structValue->at("id")->stringValue;
 			}

@@ -41,6 +41,8 @@ public:
 	SimplePhpNode(std::string path, std::string nodeNamespace, std::string type, const std::atomic_bool* frontendConnected);
 	virtual ~SimplePhpNode();
 
+	virtual Flows::PVariable getConfigParameterIncoming(std::string name);
+
 	virtual void input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message);
 };
 

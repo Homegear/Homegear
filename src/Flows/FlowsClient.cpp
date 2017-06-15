@@ -1329,28 +1329,25 @@ Flows::PVariable FlowsClient::executePhpNodeBaseMethod(Flows::PArray& parameters
 		}
 		else if(methodName == "getNodeData")
 		{
-			if(innerParameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
-			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
-			if(innerParameters->at(1)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 2 is not of type string.");
+			if(innerParameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
+			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter is not of type string.");
 
-			return getNodeData(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue);
+			return getNodeData(parameters->at(0)->stringValue, innerParameters->at(0)->stringValue);
 		}
 		else if(methodName == "setNodeData")
 		{
-			if(innerParameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+			if(innerParameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
 			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
-			if(innerParameters->at(1)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 2 is not of type string.");
 
-			setNodeData(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue, innerParameters->at(2));
+			setNodeData(parameters->at(0)->stringValue, innerParameters->at(0)->stringValue, innerParameters->at(1));
 			return std::make_shared<Flows::Variable>();
 		}
 		else if(methodName == "getConfigParameter")
 		{
-			if(innerParameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
-			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
-			if(innerParameters->at(1)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 2 is not of type string.");
+			if(innerParameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
+			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter is not of type string.");
 
-			return getConfigParameter(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue);
+			return getConfigParameter(parameters->at(0)->stringValue, innerParameters->at(0)->stringValue);
 		}
 	}
     catch(const std::exception& ex)

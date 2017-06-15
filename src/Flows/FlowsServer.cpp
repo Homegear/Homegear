@@ -2286,6 +2286,7 @@ BaseLib::PVariable FlowsServer::executePhpNodeBaseMethod(BaseLib::PArray& parame
 			if(nodeClientIdIterator == _nodeClientIdMap.end()) return BaseLib::Variable::createError(-1, "Unknown node.");
 			clientId = nodeClientIdIterator->second;
 		}
+
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
 			auto clientIterator = _clients.find(clientId);
