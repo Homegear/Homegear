@@ -314,6 +314,11 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 		{
 			if(queueEntry->isRequest)
 			{
+				if(GD::bl->settings.devLog())
+				{
+					_out.printInfo("Devlog: " + BaseLib::HelperFunctions::getHexString(queueEntry->packet));
+				}
+
 				std::string methodName;
 				Flows::PArray parameters = _rpcDecoder->decodeRequest(queueEntry->packet, methodName);
 
