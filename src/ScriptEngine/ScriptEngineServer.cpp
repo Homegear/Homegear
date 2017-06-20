@@ -35,7 +35,7 @@
 #include <homegear-base/BaseLib.h>
 
 // Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
-//#define MANUAL_CLIENT_START
+#define MANUAL_CLIENT_START
 
 namespace ScriptEngine
 {

@@ -482,6 +482,14 @@ bool php_init_node(PScriptInfo scriptInfo, zend_class_entry* homegearNodeClassEn
 				stop = true;
 			}
 		}
+		else if(scriptInfo->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode)
+		{
+			if(!zend_hash_str_find_ptr(&(homegearNodeClassEntry->function_table), "input", sizeof("input") - 1))
+			{
+				GD::out.printError("Error: Mandatory method \"input\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
+				stop = true;
+			}
+		}
 
 		if(stop) return false;
 

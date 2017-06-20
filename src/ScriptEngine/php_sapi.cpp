@@ -1931,8 +1931,6 @@ static int php_homegear_startup(sapi_module_struct* sapi_globals)
 			/*
 				<?php
 
-				include("test.php");
-
 				function setGlobals()
 				{
 						global $GLOBALS;
@@ -1963,7 +1961,7 @@ static int php_homegear_startup(sapi_module_struct* sapi_globals)
 				$hg->setValue(200, 1, "PRODUCTION2", (int)rand(0, 1000));
 				$hg->putParamset(200, 1, "MASTER", $hg->getParamset(200, 1, "MASTER"));
 			 */
-		void* global;
+		/*void* global;
 		void* function;
 		void* classEntry;
 
@@ -1989,7 +1987,7 @@ static int php_homegear_startup(sapi_module_struct* sapi_globals)
 				}
 			} ZEND_HASH_FOREACH_END();
 
-		} ZEND_HASH_FOREACH_END();
+		} ZEND_HASH_FOREACH_END();*/
 	// }}}
 	return SUCCESS;
 }
@@ -1997,7 +1995,7 @@ static int php_homegear_startup(sapi_module_struct* sapi_globals)
 static int php_homegear_shutdown(sapi_module_struct* sapi_globals)
 {
 	// {{{ Fix for bug #71115 which causes process to crash when excessively using $_GLOBALS. Remove once bug is fixed.
-		void* global;
+		/*void* global;
 		void* function;
 		void* classEntry;
 
@@ -2019,7 +2017,7 @@ static int php_homegear_shutdown(sapi_module_struct* sapi_globals)
 				}
 			} ZEND_HASH_FOREACH_END();
 
-		} ZEND_HASH_FOREACH_END();
+		} ZEND_HASH_FOREACH_END();*/
 	// }}}
 	return php_module_shutdown_wrapper(sapi_globals);
 }
