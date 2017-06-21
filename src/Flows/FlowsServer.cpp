@@ -2456,7 +2456,7 @@ BaseLib::PVariable FlowsServer::nodeEvent(PFlowsClientData& clientData, BaseLib:
 		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
 
 		GD::rpcClient->broadcastNodeEvent(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
-		return BaseLib::PVariable(new BaseLib::Variable());
+		return std::make_shared<BaseLib::Variable>();
 	}
     catch(const std::exception& ex)
     {

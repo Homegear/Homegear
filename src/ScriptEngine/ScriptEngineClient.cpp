@@ -1276,7 +1276,15 @@ void ScriptEngineClient::runNode(int32_t id, PScriptInfo scriptInfo)
 				PhpVariableConverter::getPHPVariable(scriptInfo->nodeInfo, &parameters[0]);
 				ZVAL_LONG(&parameters[1], scriptInfo->inputPort);
 				PhpVariableConverter::getPHPVariable(scriptInfo->message, &parameters[2]);
-				int result = call_user_function(&(Z_OBJ(homegearNodeObject)->ce->function_table), &homegearNodeObject, &function, &returnValue, 3, parameters);
+
+				int result = 0;
+
+				zend_try
+				{
+					call_user_function(&(Z_OBJ(homegearNodeObject)->ce->function_table), &homegearNodeObject, &function, &returnValue, 3, parameters);
+				}
+				zend_end_try();
+
 				if(result != 0) _out.printError("Error calling function \"input\" in file: " + scriptInfo->fullPath);
 				zval_ptr_dtor(&function);
 				zval_ptr_dtor(&parameters[0]);
@@ -1435,7 +1443,13 @@ void ScriptEngineClient::checkSessionIdThread(std::string sessionId, bool* resul
 		zval function;
 
 		ZVAL_STRINGL(&function, "session_start", sizeof("session_start") - 1);
-		call_user_function(EG(function_table), NULL, &function, &returnValue, 0, nullptr);
+
+		zend_try
+		{
+			call_user_function(EG(function_table), NULL, &function, &returnValue, 0, nullptr);
+		}
+		zend_end_try();
+
 		zval_ptr_dtor(&function);
 		zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
 

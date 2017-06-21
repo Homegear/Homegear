@@ -274,17 +274,12 @@ ZEND_FUNCTION(hg_node_output)
 		message = PhpVariableConverter::getVariable(&(args[1]));
 	}
 
-	std::string methodName("executePhpNodeBaseMethod");
+	std::string methodName("nodeOutput");
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 	parameters->arrayValue->reserve(3);
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
-	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>("output"));
-	BaseLib::PVariable innerParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	innerParameters->arrayValue->reserve(3);
-	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
-	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(outputIndex));
-	innerParameters->arrayValue->push_back(message);
-	parameters->arrayValue->push_back(innerParameters);
+	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(outputIndex));
+	parameters->arrayValue->push_back(message);
 	php_homegear_node_invoke_rpc(methodName, parameters, return_value);
 }
 
@@ -339,14 +334,11 @@ ZEND_FUNCTION(hg_node_get_node_data)
 		}
 	}
 
-	std::string methodName("executePhpNodeBaseMethod");
+	std::string methodName("getNodeData");
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	parameters->arrayValue->reserve(3);
+	parameters->arrayValue->reserve(2);
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
-	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>("getNodeData"));
-	BaseLib::PVariable innerParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
-	parameters->arrayValue->push_back(innerParameters);
+	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
 	php_homegear_node_invoke_rpc(methodName, parameters, return_value);
 }
 
@@ -370,16 +362,12 @@ ZEND_FUNCTION(hg_node_set_node_data)
 		value = PhpVariableConverter::getVariable(&(args[1]));
 	}
 
-	std::string methodName("executePhpNodeBaseMethod");
+	std::string methodName("setNodeData");
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 	parameters->arrayValue->reserve(3);
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
-	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>("setNodeData"));
-	BaseLib::PVariable innerParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	innerParameters->arrayValue->reserve(2);
-	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
-	innerParameters->arrayValue->push_back(value);
-	parameters->arrayValue->push_back(innerParameters);
+	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
+	parameters->arrayValue->push_back(value);
 	php_homegear_node_invoke_rpc(methodName, parameters, return_value);
 }
 
@@ -500,7 +488,14 @@ bool php_init_node(PScriptInfo scriptInfo, zend_class_entry* homegearNodeClassEn
 			zval function;
 
 			ZVAL_STRINGL(&function, "__construct", sizeof("__construct") - 1);
-			int result = call_user_function(&(homegearNodeClassEntry->function_table), homegearNodeObject, &function, &returnValue, 0, nullptr);
+			int result = 0;
+
+			zend_try
+			{
+				result = call_user_function(&(homegearNodeClassEntry->function_table), homegearNodeObject, &function, &returnValue, 0, nullptr);
+			}
+			zend_end_try();
+
 			if(result != 0) GD::out.printError("Error calling function \"__construct\" in file: " + scriptInfo->fullPath);
 			zval_ptr_dtor(&function);
 			zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
@@ -527,7 +522,9 @@ BaseLib::PVariable php_node_object_invoke_local(PScriptInfo& scriptInfo, zval* h
 {
 	try
 	{
-		if(!zend_hash_str_find_ptr(&(Z_OBJ_P(homegearNodeObject)->ce->function_table), methodName.c_str(), methodName.size()))
+		std::string methodName2 = methodName;
+		BaseLib::HelperFunctions::toLower(methodName2);
+		if(!zend_hash_str_find_ptr(&(Z_OBJ_P(homegearNodeObject)->ce->function_table), methodName2.c_str(), methodName2.size()))
 		{
 			if(methodName != "__destruct" && methodName != "configNodesStarted" && methodName != "startUpComplete" && methodName != "variableEvent" && methodName != "setNodeVariable" && methodName != "waitForStop")
 			{
@@ -542,7 +539,11 @@ BaseLib::PVariable php_node_object_invoke_local(PScriptInfo& scriptInfo, zval* h
 		int result = 0;
 		if(methodParameters->size() == 0)
 		{
-			result = call_user_function(&(Z_OBJ_P(homegearNodeObject)->ce->function_table), homegearNodeObject, &function, &returnValue, 0, nullptr);
+			zend_try
+			{
+				result = call_user_function(&(Z_OBJ_P(homegearNodeObject)->ce->function_table), homegearNodeObject, &function, &returnValue, 0, nullptr);
+			}
+			zend_end_try();
 		}
 		else
 		{
@@ -551,7 +552,13 @@ BaseLib::PVariable php_node_object_invoke_local(PScriptInfo& scriptInfo, zval* h
 			{
 				PhpVariableConverter::getPHPVariable(methodParameters->at(i), &parameters[i]);
 			}
-			result = call_user_function(&(Z_OBJ_P(homegearNodeObject)->ce->function_table), homegearNodeObject, &function, &returnValue, methodParameters->size(), parameters);
+
+			zend_try
+			{
+				result = call_user_function(&(Z_OBJ_P(homegearNodeObject)->ce->function_table), homegearNodeObject, &function, &returnValue, methodParameters->size(), parameters);
+			}
+			zend_end_try();
+
 			for(uint32_t i = 0; i < methodParameters->size(); i++)
 			{
 				zval_ptr_dtor(&parameters[i]);

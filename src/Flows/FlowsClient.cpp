@@ -39,6 +39,8 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 2, 1000)
 	_stopped = false;
 	_shutdownExecuted = false;
 	_frontendConnected = false;
+	_droppedOutputs = 0;
+	_lastQueueFullError = 0;
 
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	_out.init(GD::bl.get());
@@ -647,7 +649,16 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 			auto nodeIterator = _nodes.find(node.id);
 			if(nodeIterator == _nodes.end()) continue;
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(nodeIterator->second, node.port, message);
-			enqueue(1, queueEntry);
+			if(!enqueue(1, queueEntry))
+			{
+				uint32_t droppedOutputs = _droppedOutputs++;
+				if(BaseLib::HelperFunctions::getTime() - _lastQueueFullError > 10000)
+				{
+					_lastQueueFullError = BaseLib::HelperFunctions::getTime();
+					_droppedOutputs = 0;
+					_out.printError("Error: Dropping output of node " + nodeId + ". Queue is full. This message won't repeat for 10 seconds. Dropped outputs since last message: " + std::to_string(droppedOutputs));
+				}
+			}
 		}
 
 		if(BaseLib::HelperFunctions::getTime() - nodesIterator->second->lastNodeEvent2 >= 200)
