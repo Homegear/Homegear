@@ -165,7 +165,7 @@ private:
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 	void scriptThread(int32_t id, PScriptInfo scriptInfo, bool sendOutput);
 	void runScript(int32_t id, PScriptInfo scriptInfo);
-	void runStatefulNode(int32_t id, PScriptInfo scriptInfo);
+	void runNode(int32_t id, PScriptInfo scriptInfo);
 	void checkSessionIdThread(std::string sessionId, bool* result);
 	BaseLib::PVariable send(std::vector<char>& data);
 

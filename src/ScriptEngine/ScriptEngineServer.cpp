@@ -176,6 +176,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 2, 1000)
 	_localRpcMethods.emplace("getLicenseStates", std::bind(&ScriptEngineServer::getLicenseStates, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	_localRpcMethods.emplace("getTrialStartTime", std::bind(&ScriptEngineServer::getTrialStartTime, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
+	_localRpcMethods.emplace("nodeEvent", std::bind(&ScriptEngineServer::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	_localRpcMethods.emplace("nodeOutput", std::bind(&ScriptEngineServer::nodeOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	_localRpcMethods.emplace("executePhpNodeBaseMethod", std::bind(&ScriptEngineServer::executePhpNodeBaseMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 }
@@ -1586,6 +1587,7 @@ void ScriptEngineServer::invokeScriptFinished(PScriptEngineProcess process, int3
 			process->invokeScriptFinished(id, exitCode);
 			process->unregisterScript(id);
 		}
+		if(exitCode != 15 && process->isNodeProcess()) GD::flowsServer->restartFlows();
 	}
 	catch(const std::exception& ex)
 	{
@@ -2610,6 +2612,31 @@ void ScriptEngineServer::unregisterNode(std::string& nodeId)
 	// }}}
 
 	// {{{ Flows
+		BaseLib::PVariable ScriptEngineServer::nodeEvent(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+		{
+			try
+			{
+				if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
+
+				GD::rpcClient->broadcastNodeEvent(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
+
+				return std::make_shared<BaseLib::Variable>();
+			}
+			catch(const std::exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		}
+
 		BaseLib::PVariable ScriptEngineServer::nodeOutput(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
 		{
 			try

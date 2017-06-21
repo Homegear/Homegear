@@ -1402,7 +1402,7 @@ BaseLib::PVariable RPCGetDeviceInfo::invoke(BaseLib::PRpcClientInfo clientInfo, 
 				BaseLib::PVariable result = central->getDeviceInfo(clientInfo, peerID, fields);
 				if(result && result->errorStruct)
 				{
-					GD::out.printWarning("Warning: Error calling method \"listDevices\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
+					GD::out.printWarning("Warning: Error calling method \"getDeviceInfo\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
 					continue;
 				}
 				if(result && !result->arrayValue->empty()) deviceInfo->arrayValue->insert(deviceInfo->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());

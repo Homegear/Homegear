@@ -39,6 +39,8 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 2, 1000)
 	_stopped = false;
 	_shutdownExecuted = false;
 	_frontendConnected = false;
+	_droppedOutputs = 0;
+	_lastQueueFullError = 0;
 
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	_out.init(GD::bl.get());
@@ -314,6 +316,11 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 		{
 			if(queueEntry->isRequest)
 			{
+				if(GD::bl->settings.devLog())
+				{
+					_out.printInfo("Devlog: " + BaseLib::HelperFunctions::getHexString(queueEntry->packet));
+				}
+
 				std::string methodName;
 				Flows::PArray parameters = _rpcDecoder->decodeRequest(queueEntry->packet, methodName);
 
@@ -642,7 +649,16 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 			auto nodeIterator = _nodes.find(node.id);
 			if(nodeIterator == _nodes.end()) continue;
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(nodeIterator->second, node.port, message);
-			enqueue(1, queueEntry);
+			if(!enqueue(1, queueEntry))
+			{
+				uint32_t droppedOutputs = _droppedOutputs++;
+				if(BaseLib::HelperFunctions::getTime() - _lastQueueFullError > 10000)
+				{
+					_lastQueueFullError = BaseLib::HelperFunctions::getTime();
+					_droppedOutputs = 0;
+					_out.printError("Error: Dropping output of node " + nodeId + ". Queue is full. This message won't repeat for 10 seconds. Dropped outputs since last message: " + std::to_string(droppedOutputs));
+				}
+			}
 		}
 
 		if(BaseLib::HelperFunctions::getTime() - nodesIterator->second->lastNodeEvent2 >= 200)
@@ -1329,28 +1345,25 @@ Flows::PVariable FlowsClient::executePhpNodeBaseMethod(Flows::PArray& parameters
 		}
 		else if(methodName == "getNodeData")
 		{
-			if(innerParameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
-			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
-			if(innerParameters->at(1)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 2 is not of type string.");
+			if(innerParameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
+			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter is not of type string.");
 
-			return getNodeData(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue);
+			return getNodeData(parameters->at(0)->stringValue, innerParameters->at(0)->stringValue);
 		}
 		else if(methodName == "setNodeData")
 		{
-			if(innerParameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+			if(innerParameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
 			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
-			if(innerParameters->at(1)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 2 is not of type string.");
 
-			setNodeData(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue, innerParameters->at(2));
+			setNodeData(parameters->at(0)->stringValue, innerParameters->at(0)->stringValue, innerParameters->at(1));
 			return std::make_shared<Flows::Variable>();
 		}
 		else if(methodName == "getConfigParameter")
 		{
-			if(innerParameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
-			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
-			if(innerParameters->at(1)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 2 is not of type string.");
+			if(innerParameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
+			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter is not of type string.");
 
-			return getConfigParameter(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue);
+			return getConfigParameter(parameters->at(0)->stringValue, innerParameters->at(0)->stringValue);
 		}
 	}
     catch(const std::exception& ex)

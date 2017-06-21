@@ -1128,7 +1128,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 				globals->peerId = scriptInfo->peerId;
 			}
 
-			if(type == ScriptInfo::ScriptType::statefulNode)
+			if(type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
 			{
 				globals->nodeId = scriptInfo->nodeInfo->structValue->at("id")->stringValue;
 			}
@@ -1137,7 +1137,8 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 
 			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::statefulNode)
 			{
-				BaseLib::Base64::encode(BaseLib::HelperFunctions::getRandomBytes(16), globals->token);
+				//BaseLib::Base64::encode(BaseLib::HelperFunctions::getRandomBytes(16), globals->token);
+				BaseLib::Base64::encode(std::vector<uint8_t>{0, 1, 2, 3, 4, 5}, globals->token);
 				std::shared_ptr<PhpEvents> phpEvents = std::make_shared<PhpEvents>(globals->token, globals->outputCallback, globals->rpcCallback);
 				phpEvents->setPeerId(scriptInfo->peerId);
 				std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
@@ -1195,30 +1196,12 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			if(scriptInfo->peerId > 0) GD::out.printInfo("Info: Starting PHP script of peer " + std::to_string(scriptInfo->peerId) + ".");
 		}
 
-		if(type == ScriptInfo::ScriptType::statefulNode) php_node_startup();
+		if(type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode) php_node_startup();
 
 		php_execute_script(&zendHandle);
-		if(type == ScriptInfo::ScriptType::simpleNode)
+		if(type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
 		{
-			zval returnValue;
-			zval function;
-			zval parameters[3];
-
-			ZVAL_STRINGL(&function, "input", sizeof("input") - 1);
-			PhpVariableConverter::getPHPVariable(scriptInfo->nodeInfo, &parameters[0]);
-			ZVAL_LONG(&parameters[1], scriptInfo->inputPort);
-			PhpVariableConverter::getPHPVariable(scriptInfo->message, &parameters[2]);
-			int result = call_user_function(EG(function_table), NULL, &function, &returnValue, 3, parameters);
-			if(result != 0) _out.printError("Error calling function \"input\" in file: " + scriptInfo->fullPath);
-			zval_ptr_dtor(&function);
-			zval_ptr_dtor(&parameters[0]);
-			zval_ptr_dtor(&parameters[1]);
-			zval_ptr_dtor(&parameters[2]);
-			zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
-		}
-		else if(type == ScriptInfo::ScriptType::statefulNode)
-		{
-			runStatefulNode(id, scriptInfo);
+			runNode(id, scriptInfo);
 		}
 
 		scriptInfo->exitCode = EG(exit_status);
@@ -1241,7 +1224,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
     sendOutput(error);
 }
 
-void ScriptEngineClient::runStatefulNode(int32_t id, PScriptInfo scriptInfo)
+void ScriptEngineClient::runNode(int32_t id, PScriptInfo scriptInfo)
 {
 	zval homegearNodeObject;
 	try
@@ -1249,35 +1232,65 @@ void ScriptEngineClient::runStatefulNode(int32_t id, PScriptInfo scriptInfo)
 		std::string nodeId = scriptInfo->nodeInfo->structValue->at("id")->stringValue;
 		PNodeInfo nodeInfo;
 
+		if(scriptInfo->getType() == ScriptInfo::ScriptType::statefulNode)
 		{
 			std::lock_guard<std::mutex> nodeInfoGuard(_nodeInfoMutex);
 			nodeInfo = _nodeInfo.at(nodeId);
 		}
 
 		zend_class_entry* homegearNodeClassEntry = nullptr;
-		bool result = php_init_stateful_node(scriptInfo, homegearNodeClassEntry, &homegearNodeObject);
+		bool result = php_init_node(scriptInfo, homegearNodeClassEntry, &homegearNodeObject);
 
 		if(result)
 		{
-			bool stop = false;
-			while(!GD::bl->shuttingDown && !stop)
+			if(scriptInfo->getType() == ScriptInfo::ScriptType::statefulNode)
 			{
-				std::unique_lock<std::mutex> waitLock(nodeInfo->waitMutex);
-				while (!nodeInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+				bool stop = false;
+				while(!GD::bl->shuttingDown && !stop)
 				{
-					return nodeInfo->ready || GD::bl->shuttingDown;
-				}));
-				if(!nodeInfo->ready || GD::bl->shuttingDown) continue;
-				nodeInfo->ready = false;
+					std::unique_lock<std::mutex> waitLock(nodeInfo->waitMutex);
+					while (!nodeInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+					{
+						return nodeInfo->ready || GD::bl->shuttingDown;
+					}));
+					if(!nodeInfo->ready || GD::bl->shuttingDown) continue;
+					nodeInfo->ready = false;
 
-				nodeInfo->response = php_node_object_invoke_local(scriptInfo, &homegearNodeObject, nodeInfo->methodName, nodeInfo->parameters);
-				if(nodeInfo->methodName == "init" && !nodeInfo->response->booleanValue) stop = true;
-				else if(nodeInfo->methodName == "start" && !nodeInfo->response->booleanValue) stop = true;
-				else if(nodeInfo->methodName == "stop") stop = true;
+					nodeInfo->response = php_node_object_invoke_local(scriptInfo, &homegearNodeObject, nodeInfo->methodName, nodeInfo->parameters);
+					if(nodeInfo->methodName == "init" && !nodeInfo->response->booleanValue) stop = true;
+					else if(nodeInfo->methodName == "start" && !nodeInfo->response->booleanValue) stop = true;
+					else if(nodeInfo->methodName == "stop") stop = true;
 
-				nodeInfo->parameters.reset();
-				waitLock.unlock();
-				nodeInfo->conditionVariable.notify_all();
+					nodeInfo->parameters.reset();
+					waitLock.unlock();
+					nodeInfo->conditionVariable.notify_all();
+				}
+			}
+			else
+			{
+				zval returnValue;
+				zval function;
+				zval parameters[3];
+
+				ZVAL_STRINGL(&function, "input", sizeof("input") - 1);
+				PhpVariableConverter::getPHPVariable(scriptInfo->nodeInfo, &parameters[0]);
+				ZVAL_LONG(&parameters[1], scriptInfo->inputPort);
+				PhpVariableConverter::getPHPVariable(scriptInfo->message, &parameters[2]);
+
+				int result = 0;
+
+				zend_try
+				{
+					call_user_function(&(Z_OBJ(homegearNodeObject)->ce->function_table), &homegearNodeObject, &function, &returnValue, 3, parameters);
+				}
+				zend_end_try();
+
+				if(result != 0) _out.printError("Error calling function \"input\" in file: " + scriptInfo->fullPath);
+				zval_ptr_dtor(&function);
+				zval_ptr_dtor(&parameters[0]);
+				zval_ptr_dtor(&parameters[1]);
+				zval_ptr_dtor(&parameters[2]);
+				zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
 			}
 			std::string methodName = "__destruct";
 			BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
@@ -1296,7 +1309,6 @@ void ScriptEngineClient::runStatefulNode(int32_t id, PScriptInfo scriptInfo)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	php_deinit_stateful_node(&homegearNodeObject);
 }
 
 void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool sendOutput)
@@ -1431,7 +1443,13 @@ void ScriptEngineClient::checkSessionIdThread(std::string sessionId, bool* resul
 		zval function;
 
 		ZVAL_STRINGL(&function, "session_start", sizeof("session_start") - 1);
-		call_user_function(EG(function_table), NULL, &function, &returnValue, 0, nullptr);
+
+		zend_try
+		{
+			call_user_function(EG(function_table), NULL, &function, &returnValue, 0, nullptr);
+		}
+		zend_end_try();
+
 		zval_ptr_dtor(&function);
 		zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
 
