@@ -47,7 +47,6 @@
 void php_node_startup();
 
 bool php_init_node(PScriptInfo scriptInfo, zend_class_entry* homegearNodeClassEntry, zval* homegearNodeObject);
-void php_deinit_node(zval* homegearNodeObject);
 
 BaseLib::PVariable php_node_object_invoke_local(PScriptInfo& scriptInfo, zval* homegearNodeObject, std::string& methodName, BaseLib::PArray& parameters);
 

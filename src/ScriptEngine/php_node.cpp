@@ -457,6 +457,7 @@ bool php_init_node(PScriptInfo scriptInfo, zend_class_entry* homegearNodeClassEn
 			return false;
 		}
 
+		//Don't use pefree to free the allocated memory => double free in php_request_shutdown (invisible in valgrind and not crashing on at least amd64!).
 		homegearNode = (zend_object*)ecalloc(1, sizeof(zend_object) + zend_object_properties_size(homegearNodeClassEntry));
 		zend_object_std_init(homegearNode, homegearNodeClassEntry);
 		object_properties_init(homegearNode, homegearNodeClassEntry);
@@ -520,16 +521,6 @@ bool php_init_node(PScriptInfo scriptInfo, zend_class_entry* homegearNodeClassEn
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return false;
-}
-
-void php_deinit_node(zval* homegearNodeObject)
-{
-	//Maybe cleanup is not necessary - valgrind shows no lost bytes if the lines below are commented out
-	if(homegearNodeObject && Z_OBJ_P(homegearNodeObject))
-	{
-		zend_object_std_dtor(Z_OBJ_P(homegearNodeObject));
-		efree(Z_OBJ_P(homegearNodeObject));
-	}
 }
 
 BaseLib::PVariable php_node_object_invoke_local(PScriptInfo& scriptInfo, zval* homegearNodeObject, std::string& methodName, BaseLib::PArray& methodParameters)

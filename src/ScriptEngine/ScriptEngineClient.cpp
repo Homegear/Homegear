@@ -1301,7 +1301,6 @@ void ScriptEngineClient::runNode(int32_t id, PScriptInfo scriptInfo)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	php_deinit_node(&homegearNodeObject);
 }
 
 void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool sendOutput)
