@@ -732,7 +732,7 @@ Flows::PVariable FlowsClient::getNodeData(std::string nodeId, std::string key)
 		Flows::PVariable result = invoke("getNodeData", parameters);
 		if(result->errorStruct)
 		{
-			GD::out.printError("Error calling setNodeData: " + result->structValue->at("faultString")->stringValue);
+			GD::out.printError("Error calling getNodeData: " + result->structValue->at("faultString")->stringValue);
 			return std::make_shared<Flows::Variable>();
 		}
 		return result;

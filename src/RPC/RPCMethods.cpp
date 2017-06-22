@@ -1904,7 +1904,7 @@ BaseLib::PVariable RPCGetNodeData::invoke(BaseLib::PRpcClientInfo clientInfo, st
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		std::string key = parameters->size() == 2 ? parameters->at(1)->stringValue : "";
-		return GD::bl->db->getNodeData(parameters->at(0)->stringValue, key, clientInfo->flowsServer);
+		return GD::bl->db->getNodeData(parameters->at(0)->stringValue, key, clientInfo->flowsServer || clientInfo->scriptEngineServer);
 	}
 	catch(const std::exception& ex)
     {
