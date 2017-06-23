@@ -1055,7 +1055,7 @@ BaseLib::PVariable ScriptEngineServer::send(PScriptEngineClientData& clientData,
 			if(sentBytes <= 0)
 			{
 				if(errno == EAGAIN) continue;
-				GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
+				if(clientData->fileDescriptor->descriptor != -1) GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
 				return BaseLib::Variable::createError(-32500, "Unknown application error.");
 			}
 			totallySentBytes += sentBytes;
@@ -1129,9 +1129,7 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
 			i++;
 			if(i == 60)
 			{
-				_out.printError("Error: Script engine client with process ID " + std::to_string(clientData->pid) + " is not responding... Killing it.");
-				kill(clientData->pid, 9);
-				processKilled(clientData->pid, -1, 9, false); //Needs to be called manually
+				_out.printError("Error: Script engine client with process ID " + std::to_string(clientData->pid) + " is not responding...");
 				break;
 			}
 		}

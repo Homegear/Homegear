@@ -423,7 +423,7 @@ Flows::PVariable FlowsClient::send(std::vector<char>& data)
 			if(sentBytes <= 0)
 			{
 				if(errno == EAGAIN) continue;
-				_out.printError("Could not send data to client " + std::to_string(_fileDescriptor->descriptor) + ". Sent bytes: " + std::to_string(totallySentBytes) + " of " + std::to_string(data.size()) + (sentBytes == -1 ? ". Error message: " + std::string(strerror(errno)) : ""));
+				if(_fileDescriptor->descriptor != -1) _out.printError("Could not send data to client " + std::to_string(_fileDescriptor->descriptor) + ". Sent bytes: " + std::to_string(totallySentBytes) + " of " + std::to_string(data.size()) + (sentBytes == -1 ? ". Error message: " + std::string(strerror(errno)) : ""));
 				return Flows::Variable::createError(-32500, "Unknown application error.");
 			}
 			totallySentBytes += sentBytes;

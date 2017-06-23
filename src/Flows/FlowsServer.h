@@ -51,7 +51,6 @@ public:
 	void homegearShuttingDown();
 	void homegearReloading();
 	void processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped);
-	void processKilled9(pid_t pid);
 	uint32_t flowCount();
 	void broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values);
 	void broadcastNewDevices(BaseLib::PVariable deviceDescriptions);

@@ -647,7 +647,7 @@ BaseLib::PVariable IpcServer::send(PIpcClientData& clientData, std::vector<char>
 			if(sentBytes <= 0)
 			{
 				if(errno == EAGAIN) continue;
-				GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
+				if(clientData->fileDescriptor->descriptor != -1) GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
 				return BaseLib::Variable::createError(-32500, "Unknown application error.");
 			}
 			totallySentBytes += sentBytes;

@@ -10,7 +10,7 @@ set -x
 
 deb_mirror="http://mirrordirector.raspbian.org/raspbian/"
 deb_local_mirror=$deb_mirror
-deb_release="jessie"
+deb_release="stretch"
 
 bootsize="64M"
 buildenv="/root/rpi"
@@ -149,10 +149,10 @@ cat /etc/apt/sources.list
 apt -y install apt-transport-https ca-certificates
 update-ca-certificates --fresh
 mkdir -p /etc/apt/sources.list.d/
-echo "deb http://archive.raspberrypi.org/debian/ jessie main ui" > /etc/apt/sources.list.d/raspi.list
+echo "deb http://archive.raspberrypi.org/debian/ stretch main ui" > /etc/apt/sources.list.d/raspi.list
 wget http://archive.raspbian.org/raspbian.public.key && apt-key add raspbian.public.key && rm raspbian.public.key
 wget http://archive.raspberrypi.org/debian/raspberrypi.gpg.key && apt-key add raspberrypi.gpg.key && rm raspberrypi.gpg.key
-echo "deb https://homegear.eu/packages/Raspbian/ jessie/" >> /etc/apt/sources.list.d/homegear.list
+echo "deb https://homegear.eu/packages/Raspbian/ stretch/" >> /etc/apt/sources.list.d/homegear.list
 wget http://homegear.eu/packages/Release.key
 apt-key add - < Release.key
 rm Release.key
@@ -167,7 +167,6 @@ rpi-update
 rm -Rf /boot.bak
 useradd --create-home --shell /bin/bash --user-group pi
 echo "pi:raspberry" | chpasswd
-echo "root:raspberry" | chpasswd
 result=`id -u homegear 2>/dev/null`
 if [ "0$result" -eq "0" ]; then
     adduser --system --no-create-home --shell /bin/false --group homegear >/dev/null 2>&1
@@ -355,16 +354,21 @@ cat > "$rootfs/setupPartitions.sh" <<-'EOF'
 
 stage_one()
 {
+    bytes=$(fdisk -l | grep mmcblk0 | head -1 | cut -d "," -f 2 | cut -d " " -f 2)
+    gigabytes=$(($bytes / 1073741824))
+    maxrootpartitionsize=$(($gigabytes - 1))
+
     rootpartitionsize=""
-    while [ -z $rootpartitionsize ] || ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]]; do
+    while [ -z $rootpartitionsize ] || ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]] || [[ $rootpartitionsize -ge $maxrootpartitionsize ]]; do
         rootpartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter new size of readonly root partition in gigabytes. The minimum partition size is 2 GB. We recommend only using as much space as really necessary so damaged sectors can be placed outside of the used space. It is also recommended to use a SD card as large as possible." 15 50 "2")
         if ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]] || [[ $rootpartitionsize -lt 2 ]]; then
             dialog --title "Partitioning" --msgbox "Please enter a valid size in gigabytes (without unit). E. g. \"2\" or \"4\". Not \"2G\"." 10 50
         fi
     done
 
+    maxdatapartitionsize=$(($gigabytes - $rootpartitionsize))
     datapartitionsize=""
-    while [ -z $datapartitionsize ] || ! [[ $datapartitionsize =~ ^[1-9][0-9]*$ ]]; do
+    while [ -z $datapartitionsize ] || ! [[ $datapartitionsize =~ ^[1-9][0-9]*$ ]] || [[ $datapartitionsize -ge $maxdatapartitionsize ]]; do
         datapartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter size of writeable data partition in gigabytes. We recommend only using as much space as really necessary so damaged sectors can be placed outside of the used space. It is also recommended to use a SD card as large as possible." 15 50 "2")
         if ! [[ $datapartitionsize =~ ^[1-9][0-9]*$ ]]; then
             dialog --title "Partitioning" --msgbox "Please enter a valid size in gigabytes (without unit). E. g. \"2\" or \"4\". Not \"2G\"." 10 50
@@ -465,25 +469,6 @@ while [[ -z $password1 ]] || [[ $password1 != $password2 ]]; do
     if [[ $password1 == $password2 ]]; then
         mount -o remount,rw /
         echo -e "${password1}\n${password2}" | passwd pi
-    else
-        dialog --title "Error changing password" --msgbox "The entered passwords did not match." 10 50
-    fi
-done
-unset password1
-unset passowrd2
-
-password1=""
-password2=""
-while [[ -z $password1 ]] || [[ $password1 != $password2 ]]; do
-    password1=""
-    while [[ -z $password1 ]]; do
-        password1=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter a new password for user \"root\"" 10 50)
-    done
-    password2=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter the same password again" 10 50)
-
-    if [[ $password1 == $password2 ]]; then
-        mount -o remount,rw /
-        echo -e "${password1}\n${password2}" | passwd root
     else
         dialog --title "Error changing password" --msgbox "The entered passwords did not match." 10 50
     fi

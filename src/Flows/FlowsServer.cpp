@@ -505,43 +505,6 @@ void FlowsServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, boo
     }
 }
 
-void FlowsServer::processKilled9(pid_t pid)
-{
-	try
-	{
-		std::shared_ptr<FlowsProcess> process;
-
-		{
-			std::lock_guard<std::mutex> processGuard(_processMutex);
-			std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(pid);
-			if(processIterator != _processes.end())
-			{
-				process = processIterator->second;
-				closeClientConnection(process->getClientData());
-				_processes.erase(processIterator);
-			}
-		}
-
-		if(process)
-		{
-			process->invokeFlowFinished(-1);
-			restartFlows();
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
 void FlowsServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message)
 {
 	try
@@ -1138,7 +1101,7 @@ void FlowsServer::sendShutdown()
 		int32_t i = 0;
 		while(_clients.size() > 0 && i < 60)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			collectGarbage();
 			i++;
 		}
@@ -1210,9 +1173,12 @@ void FlowsServer::restartFlows()
 	try
 	{
 		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
+		_out.printInfo("Info: Stopping Flows...");
 		sendShutdown();
+		_out.printInfo("Info: Closing connections to Flows clients...");
 		closeClientConnections();
 		getMaxThreadCounts();
+		_out.printInfo("Info: Starting Flows...");
 		startFlows();
 	}
 	catch(const std::exception& ex)
@@ -1755,7 +1721,7 @@ BaseLib::PVariable FlowsServer::send(PFlowsClientData& clientData, std::vector<c
 			if(sentBytes <= 0)
 			{
 				if(errno == EAGAIN) continue;
-				GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
+				if(clientData->fileDescriptor->descriptor != -1) GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
 				return BaseLib::Variable::createError(-32500, "Unknown application error.");
 			}
 			totallySentBytes += sentBytes;
@@ -1826,9 +1792,7 @@ BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::s
 			i++;
 			if(i == 60)
 			{
-				_out.printError("Error: Flows client with process ID " + std::to_string(clientData->pid) + " is not responding... Killing it.");
-				kill(clientData->pid, 9);
-				GD::bl->threadManager.start(_maintenanceThread, true, &FlowsServer::processKilled9, this, clientData->pid);
+				_out.printError("Error: Flows client with process ID " + std::to_string(clientData->pid) + " is not responding...");
 				break;
 			}
 		}
