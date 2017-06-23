@@ -67,13 +67,12 @@ private:
 	{
 	public:
 		QueueEntry() {}
-		QueueEntry(std::vector<char>& packet, bool isRequest) { this->packet = packet; this->isRequest = isRequest; }
+		QueueEntry(std::vector<char>& packet) { this->packet = packet; }
 		QueueEntry(Flows::PNodeInfo nodeInfo, uint32_t targetPort, Flows::PVariable message) { this->nodeInfo = nodeInfo; this->targetPort = targetPort; this->message = message; }
 		virtual ~QueueEntry() {}
 
 		//{{{ IPC
 			std::vector<char> packet;
-			bool isRequest = false;
 		//}}}
 
 		//{{{ Node output
@@ -118,7 +117,7 @@ private:
 	std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::set<std::string>>>> _peerSubscriptions;
 
 	void registerClient();
-	Flows::PVariable invoke(std::string methodName, Flows::PArray& parameters);
+	Flows::PVariable invoke(std::string methodName, Flows::PArray& parameters, bool wait);
 	Flows::PVariable invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray& parameters);
 	void sendResponse(Flows::PVariable& packetId, Flows::PVariable& variable);
 

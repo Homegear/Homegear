@@ -35,7 +35,7 @@
 
 #define SEG(v) php_homegear_get_globals()->v
 
-void php_homegear_node_invoke_rpc(std::string& methodName, BaseLib::PVariable& parameters, zval* return_value)
+void php_homegear_node_invoke_rpc(std::string& methodName, BaseLib::PVariable& parameters, zval* return_value, bool wait)
 {
 	if(SEG(id) == 0)
 	{
@@ -44,7 +44,7 @@ void php_homegear_node_invoke_rpc(std::string& methodName, BaseLib::PVariable& p
 	}
 	if(!SEG(rpcCallback)) RETURN_FALSE;
 	if(!parameters) parameters.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	BaseLib::PVariable result = SEG(rpcCallback)(methodName, parameters);
+	BaseLib::PVariable result = SEG(rpcCallback)(methodName, parameters, wait);
 	if(result->errorStruct)
 	{
 		zend_throw_exception(SEG(homegear_exception_class_entry), result->structValue->at("faultString")->stringValue.c_str(), result->structValue->at("faultCode")->integerValue);
@@ -99,7 +99,7 @@ ZEND_FUNCTION(hg_node_log)
 	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(logLevel));
 	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(message));
 	parameters->arrayValue->push_back(innerParameters);
-	php_homegear_node_invoke_rpc(methodName, parameters, return_value);
+	php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
 
 	RETURN_TRUE;
 }
@@ -147,7 +147,7 @@ ZEND_FUNCTION(hg_node_invoke_node_method)
 	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(nodeMethodName));
 	innerParameters->arrayValue->push_back(nodeMethodParameters);
 	parameters->arrayValue->push_back(innerParameters);
-	php_homegear_node_invoke_rpc(methodName, parameters, return_value);
+	php_homegear_node_invoke_rpc(methodName, parameters, return_value, true);
 }
 
 ZEND_FUNCTION(hg_node_subscribe_peer)
@@ -199,7 +199,7 @@ ZEND_FUNCTION(hg_node_subscribe_peer)
 	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channel));
 	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable));
 	parameters->arrayValue->push_back(innerParameters);
-	php_homegear_node_invoke_rpc(methodName, parameters, return_value);
+	php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
 }
 
 ZEND_FUNCTION(hg_node_unsubscribe_peer)
@@ -251,7 +251,7 @@ ZEND_FUNCTION(hg_node_unsubscribe_peer)
 	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channel));
 	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable));
 	parameters->arrayValue->push_back(innerParameters);
-	php_homegear_node_invoke_rpc(methodName, parameters, return_value);
+	php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
 }
 
 ZEND_FUNCTION(hg_node_output)
@@ -280,7 +280,7 @@ ZEND_FUNCTION(hg_node_output)
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(outputIndex));
 	parameters->arrayValue->push_back(message);
-	php_homegear_node_invoke_rpc(methodName, parameters, return_value);
+	php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
 }
 
 ZEND_FUNCTION(hg_node_node_event)
@@ -314,7 +314,7 @@ ZEND_FUNCTION(hg_node_node_event)
 	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
 	innerParameters->arrayValue->push_back(value);
 	parameters->arrayValue->push_back(innerParameters);
-	php_homegear_node_invoke_rpc(methodName, parameters, return_value);
+	php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
 }
 
 ZEND_FUNCTION(hg_node_get_node_data)
@@ -339,7 +339,7 @@ ZEND_FUNCTION(hg_node_get_node_data)
 	parameters->arrayValue->reserve(2);
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
-	php_homegear_node_invoke_rpc(methodName, parameters, return_value);
+	php_homegear_node_invoke_rpc(methodName, parameters, return_value, true);
 }
 
 ZEND_FUNCTION(hg_node_set_node_data)
@@ -368,7 +368,7 @@ ZEND_FUNCTION(hg_node_set_node_data)
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
 	parameters->arrayValue->push_back(value);
-	php_homegear_node_invoke_rpc(methodName, parameters, return_value);
+	php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
 }
 
 ZEND_FUNCTION(hg_node_get_config_parameter)
@@ -403,7 +403,7 @@ ZEND_FUNCTION(hg_node_get_config_parameter)
 	BaseLib::PVariable innerParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(name));
 	parameters->arrayValue->push_back(innerParameters);
-	php_homegear_node_invoke_rpc(methodName, parameters, return_value);
+	php_homegear_node_invoke_rpc(methodName, parameters, return_value, true);
 }
 
 static const zend_function_entry homegear_node_base_methods[] = {

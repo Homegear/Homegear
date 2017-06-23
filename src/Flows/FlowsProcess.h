@@ -57,6 +57,7 @@ public:
 	FlowsProcess();
 	virtual ~FlowsProcess();
 
+	std::atomic<int64_t> lastExecution;
 	std::condition_variable requestConditionVariable;
 
 	pid_t getPid() { return _pid; }

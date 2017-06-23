@@ -75,7 +75,7 @@ private:
 		};
 
 		QueueEntry() {}
-		QueueEntry(PFlowsClientData clientData, std::vector<char>& packet, bool isRequest) { this->clientData = clientData; this->packet = packet; this->isRequest = isRequest; }
+		QueueEntry(PFlowsClientData clientData, std::vector<char>& packet) { this->clientData = clientData; this->packet = packet; }
 		QueueEntry(PFlowsClientData clientData, std::string methodName, BaseLib::PArray parameters) { type = QueueEntryType::broadcast; this->clientData = clientData; this->methodName = methodName; this->parameters = parameters; }
 		virtual ~QueueEntry() {}
 
@@ -84,7 +84,6 @@ private:
 
 		// {{{ defaultType
 			std::vector<char> packet;
-			bool isRequest = false;
 		// }}}
 
 		// {{{ broadcast
@@ -127,6 +126,9 @@ private:
 	std::mutex _nodeClientIdMapMutex;
 	std::map<std::string, int32_t> _nodeClientIdMap;
 
+	std::atomic<int64_t> _lastNodeEvent;
+	std::atomic<uint32_t> _nodeEventCounter;
+
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
@@ -135,7 +137,7 @@ private:
 	void mainThread();
 	void readClient(PFlowsClientData& clientData);
 	BaseLib::PVariable send(PFlowsClientData& clientData, std::vector<char>& data);
-	BaseLib::PVariable sendRequest(PFlowsClientData& clientData, std::string methodName, BaseLib::PArray& parameters);
+	BaseLib::PVariable sendRequest(PFlowsClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait);
 	void sendResponse(PFlowsClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 	void sendShutdown();
 	void closeClientConnections();

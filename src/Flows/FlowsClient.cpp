@@ -34,7 +34,7 @@
 namespace Flows
 {
 
-FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 2, 1000)
+FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 3, 1000)
 {
 	_stopped = false;
 	_shutdownExecuted = false;
@@ -95,6 +95,7 @@ void FlowsClient::dispose()
 
 		stopQueue(0);
 		stopQueue(1);
+		stopQueue(2);
 
 		{
 			std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
@@ -158,6 +159,7 @@ void FlowsClient::start()
 
 		startQueue(0, false, flowsProcessingThreadCountNodes, 0, SCHED_OTHER);
 		startQueue(1, false, flowsProcessingThreadCountNodes, 0, SCHED_OTHER);
+		startQueue(2, false, flowsProcessingThreadCountNodes, 0, SCHED_OTHER);
 
 		_socketPath = GD::bl->settings.socketPath() + "homegearFE.sock";
 		if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Socket path is " + _socketPath);
@@ -247,8 +249,8 @@ void FlowsClient::start()
 					processedBytes += _binaryRpc->process(&buffer[processedBytes], bytesRead - processedBytes);
 					if(_binaryRpc->isFinished())
 					{
-						std::shared_ptr<BaseLib::IQueueEntry> queueEntry(new QueueEntry(_binaryRpc->getData(), _binaryRpc->getType() == Flows::BinaryRpc::Type::request));
-						enqueue(0, queueEntry);
+						std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(_binaryRpc->getData());
+						enqueue(_binaryRpc->getType() == Flows::BinaryRpc::Type::request ? 0 : 1, queueEntry);
 						_binaryRpc->reset();
 					}
 				}
@@ -281,7 +283,7 @@ void FlowsClient::registerClient()
 	{
 		std::string methodName("registerFlowsClient");
 		Flows::PArray parameters(new Flows::Array{Flows::PVariable(new Flows::Variable((int32_t)getpid()))});
-		Flows::PVariable result = invoke(methodName, parameters);
+		Flows::PVariable result = invoke(methodName, parameters, true);
 		if(result->errorStruct)
 		{
 			_out.printCritical("Critical: Could not register client.");
@@ -312,73 +314,70 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 		queueEntry = std::dynamic_pointer_cast<QueueEntry>(entry);
 		if(!queueEntry) return;
 
-		if(index == 0) //IPC
+		if(index == 0) //IPC request
 		{
-			if(queueEntry->isRequest)
+			if(GD::bl->settings.devLog())
 			{
-				if(GD::bl->settings.devLog())
-				{
-					_out.printInfo("Devlog: " + BaseLib::HelperFunctions::getHexString(queueEntry->packet));
-				}
-
-				std::string methodName;
-				Flows::PArray parameters = _rpcDecoder->decodeRequest(queueEntry->packet, methodName);
-
-				if(parameters->size() < 2)
-				{
-					_out.printError("Error: Wrong parameter count while calling method " + methodName);
-					return;
-				}
-				std::map<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(methodName);
-				if(localMethodIterator == _localRpcMethods.end())
-				{
-					_out.printError("Warning: RPC method not found: " + methodName);
-					Flows::PVariable error = Flows::Variable::createError(-32601, "Requested method not found.");
-					sendResponse(parameters->at(0), error);
-					return;
-				}
-
-				if(GD::bl->debugLevel >= 5) _out.printInfo("Debug: Server is calling RPC method: " + methodName);
-
-				Flows::PVariable result = localMethodIterator->second(parameters->at(1)->arrayValue);
-				if(GD::bl->debugLevel >= 5)
-				{
-					_out.printDebug("Response: ");
-					result->print(true, false);
-				}
-				sendResponse(parameters->at(0), result);
-
-				if(methodName == "shutdown") _shutdownExecuted = true;
+				_out.printInfo("Devlog: " + BaseLib::HelperFunctions::getHexString(queueEntry->packet));
 			}
-			else
-			{
-				Flows::PVariable response = _rpcDecoder->decodeResponse(queueEntry->packet);
-				if(response->arrayValue->size() < 3)
-				{
-					_out.printError("Error: Response has wrong array size.");
-					return;
-				}
-				int64_t threadId = response->arrayValue->at(0)->integerValue64;
-				int32_t packetId = response->arrayValue->at(1)->integerValue;
 
+			std::string methodName;
+			Flows::PArray parameters = _rpcDecoder->decodeRequest(queueEntry->packet, methodName);
+
+			if(parameters->size() < 3)
+			{
+				_out.printError("Error: Wrong parameter count while calling method " + methodName);
+				return;
+			}
+			std::map<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(methodName);
+			if(localMethodIterator == _localRpcMethods.end())
+			{
+				_out.printError("Warning: RPC method not found: " + methodName);
+				Flows::PVariable error = Flows::Variable::createError(-32601, "Requested method not found.");
+				if(parameters->at(1)->booleanValue) sendResponse(parameters->at(0), error);
+				return;
+			}
+
+			if(GD::bl->debugLevel >= 5) _out.printInfo("Debug: Server is calling RPC method: " + methodName);
+
+			Flows::PVariable result = localMethodIterator->second(parameters->at(2)->arrayValue);
+			if(GD::bl->debugLevel >= 5)
+			{
+				_out.printDebug("Response: ");
+				result->print(true, false);
+			}
+			if(parameters->at(1)->booleanValue) sendResponse(parameters->at(0), result);
+
+			if(methodName == "shutdown") _shutdownExecuted = true;
+		}
+		else if(index == 1) //IPC response
+		{
+			Flows::PVariable response = _rpcDecoder->decodeResponse(queueEntry->packet);
+			if(response->arrayValue->size() < 3)
+			{
+				_out.printError("Error: Response has wrong array size.");
+				return;
+			}
+			int64_t threadId = response->arrayValue->at(0)->integerValue64;
+			int32_t packetId = response->arrayValue->at(1)->integerValue;
+
+			{
+				std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+				auto responseIterator = _rpcResponses[threadId].find(packetId);
+				if(responseIterator != _rpcResponses[threadId].end())
 				{
-					std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-					auto responseIterator = _rpcResponses[threadId].find(packetId);
-					if(responseIterator != _rpcResponses[threadId].end())
+					PFlowsResponseClient element = responseIterator->second;
+					if(element)
 					{
-						PFlowsResponseClient element = responseIterator->second;
-						if(element)
-						{
-							element->response = response;
-							element->packetId = packetId;
-							element->finished = true;
-						}
+						element->response = response;
+						element->packetId = packetId;
+						element->finished = true;
 					}
 				}
-				std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
-				std::map<int64_t, RequestInfo>::iterator requestIterator = _requestInfo.find(threadId);
-				if (requestIterator != _requestInfo.end()) requestIterator->second.conditionVariable.notify_all();
 			}
+			std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
+			std::map<int64_t, RequestInfo>::iterator requestIterator = _requestInfo.find(threadId);
+			if (requestIterator != _requestInfo.end()) requestIterator->second.conditionVariable.notify_all();
 		}
 		else //Node output
 		{
@@ -386,7 +385,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 			Flows::PINode node = _nodeManager->getNode(queueEntry->nodeInfo->id);
 			if(node)
 			{
-				if(_frontendConnected && BaseLib::HelperFunctions::getTime() - queueEntry->nodeInfo->lastNodeEvent1 >= 200)
+				if(_frontendConnected && GD::bl->settings.nodeBlueDebugOutput() && BaseLib::HelperFunctions::getTime() - queueEntry->nodeInfo->lastNodeEvent1 >= 200)
 				{
 					queueEntry->nodeInfo->lastNodeEvent1 = BaseLib::HelperFunctions::getTime();
 					Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
@@ -394,7 +393,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 					nodeEvent(queueEntry->nodeInfo->id, "highlightNode/" + queueEntry->nodeInfo->id, timeout);
 				}
 				std::lock_guard<std::mutex> nodeInputGuard(node->getInputMutex());
-				node->input(queueEntry->nodeInfo, queueEntry->targetPort, queueEntry->message);
+				node->queueInput(queueEntry->nodeInfo, queueEntry->targetPort, queueEntry->message);
 			}
 		}
 	}
@@ -445,7 +444,7 @@ Flows::PVariable FlowsClient::send(std::vector<char>& data)
     return Flows::PVariable(new Flows::Variable());
 }
 
-Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray& parameters)
+Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray& parameters, bool wait)
 {
 	try
 	{
@@ -460,23 +459,27 @@ Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray& para
 			packetId = _currentPacketId++;
 		}
 		Flows::PArray array = std::make_shared<Flows::Array>();
-		array->reserve(3);
+		array->reserve(4);
 		array->push_back(std::make_shared<Flows::Variable>(threadId));
 		array->push_back(std::make_shared<Flows::Variable>(packetId));
+		array->push_back(std::make_shared<Flows::Variable>(wait));
 		array->push_back(std::make_shared<Flows::Variable>(parameters));
 		std::vector<char> data;
 		_rpcEncoder->encodeRequest(methodName, array, data);
 
 		PFlowsResponseClient response;
+		if(wait)
 		{
-			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			auto result = _rpcResponses[threadId].emplace(packetId, std::make_shared<FlowsResponseClient>());
-			if(result.second) response = result.first->second;
-		}
-		if(!response)
-		{
-			_out.printError("Critical: Could not insert response struct into map.");
-			return Flows::Variable::createError(-32500, "Unknown application error.");
+			{
+				std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+				auto result = _rpcResponses[threadId].emplace(packetId, std::make_shared<FlowsResponseClient>());
+				if(result.second) response = result.first->second;
+			}
+			if(!response)
+			{
+				_out.printError("Critical: Could not insert response struct into map.");
+				return Flows::Variable::createError(-32500, "Unknown application error.");
+			}
 		}
 
 		Flows::PVariable result = send(data);
@@ -487,6 +490,7 @@ Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray& para
 			if (_rpcResponses[threadId].empty()) _rpcResponses.erase(threadId);
 			return result;
 		}
+		if(!wait) return std::make_shared<Flows::Variable>();
 
 		std::unique_lock<std::mutex> waitLock(requestInfo.waitMutex);
 		while (!requestInfo.conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]
@@ -537,7 +541,7 @@ Flows::PVariable FlowsClient::invokeNodeMethod(std::string nodeId, std::string m
 		parametersArray->push_back(std::make_shared<Flows::Variable>(methodName));
 		parametersArray->push_back(std::make_shared<Flows::Variable>(parameters));
 
-		return invoke("invokeNodeMethod", parametersArray);
+		return invoke("invokeNodeMethod", parametersArray, true);
 	}
 	catch(const std::exception& ex)
     {
@@ -649,7 +653,7 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 			auto nodeIterator = _nodes.find(node.id);
 			if(nodeIterator == _nodes.end()) continue;
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(nodeIterator->second, node.port, message);
-			if(!enqueue(1, queueEntry))
+			if(!enqueue(2, queueEntry))
 			{
 				uint32_t droppedOutputs = _droppedOutputs++;
 				if(BaseLib::HelperFunctions::getTime() - _lastQueueFullError > 10000)
@@ -661,7 +665,7 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 			}
 		}
 
-		if(_frontendConnected && BaseLib::HelperFunctions::getTime() - nodesIterator->second->lastNodeEvent2 >= 200)
+		if(_frontendConnected && GD::bl->settings.nodeBlueDebugOutput() && BaseLib::HelperFunctions::getTime() - nodesIterator->second->lastNodeEvent2 >= 200)
 		{
 			nodesIterator->second->lastNodeEvent2 = BaseLib::HelperFunctions::getTime();
 			Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
@@ -703,7 +707,7 @@ void FlowsClient::nodeEvent(std::string nodeId, std::string topic, Flows::PVaria
 		parameters->push_back(std::make_shared<Flows::Variable>(topic));
 		parameters->push_back(value);
 
-		Flows::PVariable result = invoke("nodeEvent", parameters);
+		Flows::PVariable result = invoke("nodeEvent", parameters, false);
 		if(result->errorStruct) GD::out.printError("Error calling nodeEvent: " + result->structValue->at("faultString")->stringValue);
 	}
 	catch(const std::exception& ex)
@@ -729,7 +733,7 @@ Flows::PVariable FlowsClient::getNodeData(std::string nodeId, std::string key)
 		parameters->push_back(std::make_shared<Flows::Variable>(nodeId));
 		parameters->push_back(std::make_shared<Flows::Variable>(key));
 
-		Flows::PVariable result = invoke("getNodeData", parameters);
+		Flows::PVariable result = invoke("getNodeData", parameters, true);
 		if(result->errorStruct)
 		{
 			GD::out.printError("Error calling getNodeData: " + result->structValue->at("faultString")->stringValue);
@@ -762,8 +766,7 @@ void FlowsClient::setNodeData(std::string nodeId, std::string key, Flows::PVaria
 		parameters->push_back(std::make_shared<Flows::Variable>(key));
 		parameters->push_back(value);
 
-		Flows::PVariable result = invoke("setNodeData", parameters);
-		if(result->errorStruct) GD::out.printError("Error calling setNodeData: " + result->structValue->at("faultString")->stringValue);
+		invoke("setNodeData", parameters, false);
 	}
 	catch(const std::exception& ex)
     {
@@ -1006,7 +1009,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 					nodeObject->setId(node.second->id);
 
 					nodeObject->setLog(std::function<void(std::string, int32_t, std::string)>(std::bind(&FlowsClient::log, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-					nodeObject->setInvoke(std::function<Flows::PVariable(std::string, Flows::PArray&)>(std::bind(&FlowsClient::invoke, this, std::placeholders::_1, std::placeholders::_2)));
+					nodeObject->setInvoke(std::function<Flows::PVariable(std::string, Flows::PArray&)>(std::bind(&FlowsClient::invoke, this, std::placeholders::_1, std::placeholders::_2, true)));
 					nodeObject->setInvokeNodeMethod(std::function<Flows::PVariable(std::string, std::string, Flows::PArray&)>(std::bind(&FlowsClient::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 					nodeObject->setSubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::subscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
 					nodeObject->setUnsubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::unsubscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));

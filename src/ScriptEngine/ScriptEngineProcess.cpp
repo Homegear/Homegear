@@ -40,6 +40,7 @@ ScriptEngineProcess::ScriptEngineProcess(bool nodeProcess)
 {
 	_nodeProcess = nodeProcess;
 	_nodeThreadCount = 0;
+	lastExecution = 0;
 }
 
 ScriptEngineProcess::~ScriptEngineProcess()

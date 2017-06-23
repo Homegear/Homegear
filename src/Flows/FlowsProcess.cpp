@@ -37,6 +37,7 @@ namespace Flows
 FlowsProcess::FlowsProcess()
 {
 	_nodeThreadCount = 0;
+	lastExecution = 0;
 }
 
 FlowsProcess::~FlowsProcess()

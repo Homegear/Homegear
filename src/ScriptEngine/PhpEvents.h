@@ -50,7 +50,7 @@ public:
 	static std::mutex eventsMapMutex;
 	static std::map<int32_t, std::shared_ptr<PhpEvents>> eventsMap;
 
-	PhpEvents(std::string& token, std::function<void(std::string& output)>& outputCallback, std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)>& rpcCallback);
+	PhpEvents(std::string& token, std::function<void(std::string& output)>& outputCallback, std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters, bool wait)>& rpcCallback);
 	virtual ~PhpEvents();
 	void stop();
 	bool enqueue(std::shared_ptr<EventData>& entry);
@@ -64,11 +64,11 @@ public:
 	int32_t getPeerId() { return _peerId; }
 
 	std::function<void(std::string& output)>& getOutputCallback() { return _outputCallback; };
-	std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)>& getRpcCallback() { return _rpcCallback; };
+	std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters, bool wait)>& getRpcCallback() { return _rpcCallback; };
 	std::string& getToken() { return _token; }
 private:
 	std::function<void(std::string& output)> _outputCallback;
-	std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters)> _rpcCallback;
+	std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters, bool wait)> _rpcCallback;
 	std::string _token;
 
 	// {{{ Data exchange - e are abusing the events object here for data exchange between main thread and sub threads.

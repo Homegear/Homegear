@@ -88,7 +88,7 @@ private:
 		};
 
 		QueueEntry() {}
-		QueueEntry(PScriptEngineClientData clientData, std::vector<char>& packet, bool isRequest) { this->clientData = clientData; this->packet = packet; this->isRequest = isRequest; }
+		QueueEntry(PScriptEngineClientData clientData, std::vector<char>& packet) { this->clientData = clientData; this->packet = packet; }
 		QueueEntry(PScriptEngineClientData clientData, std::string methodName, BaseLib::PArray parameters) { type = QueueEntryType::broadcast; this->clientData = clientData; this->methodName = methodName; this->parameters = parameters; }
 		virtual ~QueueEntry() {}
 
@@ -97,7 +97,6 @@ private:
 
 		// {{{ defaultType
 			std::vector<char> packet;
-			bool isRequest = false;
 		// }}}
 
 		// {{{ broadcast
@@ -149,7 +148,7 @@ private:
 	void mainThread();
 	void readClient(PScriptEngineClientData& clientData);
 	BaseLib::PVariable send(PScriptEngineClientData& clientData, std::vector<char>& data);
-	BaseLib::PVariable sendRequest(PScriptEngineClientData& clientData, std::string methodName, BaseLib::PArray& parameters);
+	BaseLib::PVariable sendRequest(PScriptEngineClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait);
 	void sendResponse(PScriptEngineClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 	void closeClientConnection(PScriptEngineClientData client);
 	PScriptEngineProcess getFreeProcess(bool nodeProcess, uint32_t maxThreadCount = 0);
