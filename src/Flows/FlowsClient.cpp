@@ -386,7 +386,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 			Flows::PINode node = _nodeManager->getNode(queueEntry->nodeInfo->id);
 			if(node)
 			{
-				if(BaseLib::HelperFunctions::getTime() - queueEntry->nodeInfo->lastNodeEvent1 >= 200)
+				if(_frontendConnected && BaseLib::HelperFunctions::getTime() - queueEntry->nodeInfo->lastNodeEvent1 >= 200)
 				{
 					queueEntry->nodeInfo->lastNodeEvent1 = BaseLib::HelperFunctions::getTime();
 					Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
@@ -661,7 +661,7 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 			}
 		}
 
-		if(BaseLib::HelperFunctions::getTime() - nodesIterator->second->lastNodeEvent2 >= 200)
+		if(_frontendConnected && BaseLib::HelperFunctions::getTime() - nodesIterator->second->lastNodeEvent2 >= 200)
 		{
 			nodesIterator->second->lastNodeEvent2 = BaseLib::HelperFunctions::getTime();
 			Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
