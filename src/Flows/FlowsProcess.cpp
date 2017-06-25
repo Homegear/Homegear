@@ -187,7 +187,7 @@ void FlowsProcess::registerFlow(int32_t id, PFlowInfoServer& flowInfo)
 		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
 		_flows[id] = flowInfo;
 		_flowFinishedInfo[id] = PFlowFinishedInfo(new FlowFinishedInfo());
-		_nodeThreadCount += flowInfo->maxThreadCount;
+		_nodeThreadCount += flowInfo->maxThreadCount + 1;
 	}
 	catch(const std::exception& ex)
     {

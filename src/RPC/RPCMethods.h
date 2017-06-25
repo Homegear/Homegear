@@ -486,6 +486,28 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
+class RPCGetFlowData : public BaseLib::Rpc::RpcMethod
+{
+public:
+	RPCGetFlowData()
+	{
+		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+	}
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+};
+
+class RPCGetGlobalData : public BaseLib::Rpc::RpcMethod
+{
+public:
+	RPCGetGlobalData()
+	{
+		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>());
+		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+	}
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+};
+
 class RPCGetNodeEvents : public BaseLib::Rpc::RpcMethod
 {
 public:
@@ -920,6 +942,26 @@ public:
 	RPCSetNodeData()
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
+	}
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+};
+
+class RPCSetFlowData : public BaseLib::Rpc::RpcMethod
+{
+public:
+	RPCSetFlowData()
+	{
+		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
+	}
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+};
+
+class RPCSetGlobalData : public BaseLib::Rpc::RpcMethod
+{
+public:
+	RPCSetGlobalData()
+	{
+		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
 	}
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };

@@ -98,6 +98,8 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 1000)
 	_rpcMethods.emplace("getMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetMetadata()));
 	_rpcMethods.emplace("getName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetName()));
 	_rpcMethods.emplace("getNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetNodeData()));
+	_rpcMethods.emplace("getFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetFlowData()));
+	_rpcMethods.emplace("getGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetGlobalData()));
 	_rpcMethods.emplace("getPairingMethods", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPairingMethods()));
 	_rpcMethods.emplace("getParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamset()));
 	_rpcMethods.emplace("getParamsetDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetDescription()));
@@ -134,7 +136,9 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 1000)
 	_rpcMethods.emplace("setLinkInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetLinkInfo()));
 	_rpcMethods.emplace("setMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetMetadata()));
 	_rpcMethods.emplace("setName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetName()));
-	_rpcMethods.emplace("setNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetNodeData()));
+	_rpcMethods.emplace("setNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetFlowData()));
+	_rpcMethods.emplace("setFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetGlobalData()));
+	_rpcMethods.emplace("setGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetNodeData()));
 	_rpcMethods.emplace("setNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetNodeVariable()));
 	_rpcMethods.emplace("setSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetSystemVariable()));
 	_rpcMethods.emplace("setTeam", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetTeam()));
@@ -146,7 +150,6 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 1000)
 	_rpcMethods.emplace("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware()));
 	_rpcMethods.emplace("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCWriteLog()));
 
-	_localRpcMethods.emplace("registerScriptEngineClient", std::bind(&ScriptEngineServer::registerScriptEngineClient, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	_localRpcMethods.emplace("scriptFinished", std::bind(&ScriptEngineServer::scriptFinished, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	_localRpcMethods.emplace("scriptOutput", std::bind(&ScriptEngineServer::scriptOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	_localRpcMethods.emplace("scriptHeaders", std::bind(&ScriptEngineServer::scriptHeaders, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -939,92 +942,86 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 		queueEntry = std::dynamic_pointer_cast<QueueEntry>(entry);
 		if(!queueEntry || queueEntry->clientData->closed) return;
 
-		if(queueEntry->type == QueueEntry::QueueEntryType::defaultType)
+		if(index == 0) //Request
 		{
-			if(index == 0) //Request
+			if(queueEntry->parameters->size() != 4)
 			{
-				std::string methodName;
-				BaseLib::PArray parameters = _rpcDecoder->decodeRequest(queueEntry->packet, methodName);
+				_out.printError("Error: Wrong parameter count while calling method " + queueEntry->methodName);
+				return;
+			}
 
-				if(parameters->size() != 4)
-				{
-					_out.printError("Error: Wrong parameter count while calling method " + methodName);
-					return;
-				}
-
-				std::map<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(methodName);
-				if(localMethodIterator != _localRpcMethods.end())
-				{
-					if(GD::bl->debugLevel >= 5)
-					{
-						_out.printDebug("Debug: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + methodName);
-						if(GD::bl->debugLevel >= 5)
-						{
-							for(BaseLib::Array::iterator i = parameters->at(3)->arrayValue->begin(); i != parameters->at(3)->arrayValue->end(); ++i)
-							{
-								(*i)->print(true, false);
-							}
-						}
-					}
-					BaseLib::PVariable result = localMethodIterator->second(queueEntry->clientData, parameters->at(0)->integerValue, parameters->at(3)->arrayValue);
-					if(GD::bl->debugLevel >= 5)
-					{
-						_out.printDebug("Response: ");
-						result->print(true, false);
-					}
-
-					if(parameters->at(2)->booleanValue) sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
-					return;
-				}
-
-				std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>::iterator methodIterator = _rpcMethods.find(methodName);
-				if(methodIterator == _rpcMethods.end())
-				{
-					BaseLib::PVariable result = GD::ipcServer->callRpcMethod(methodName, parameters->at(3)->arrayValue);
-					if(parameters->at(2)->booleanValue) sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
-					return;
-				}
-
+			std::map<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
+			if(localMethodIterator != _localRpcMethods.end())
+			{
 				if(GD::bl->debugLevel >= 5)
 				{
-					_out.printInfo("Debug: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + methodName + " Parameters:");
-					for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(3)->arrayValue->begin(); i != parameters->at(3)->arrayValue->end(); ++i)
+					_out.printDebug("Debug: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
+					if(GD::bl->debugLevel >= 5)
 					{
-						(*i)->print(true, false);
+						for(BaseLib::Array::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
+						{
+							(*i)->print(true, false);
+						}
 					}
 				}
-				BaseLib::PVariable result = _rpcMethods.at(methodName)->invoke(_dummyClientInfo, parameters->at(3)->arrayValue);
+				BaseLib::PVariable result = localMethodIterator->second(queueEntry->clientData, queueEntry->parameters->at(0)->integerValue, queueEntry->parameters->at(3)->arrayValue);
 				if(GD::bl->debugLevel >= 5)
 				{
 					_out.printDebug("Response: ");
 					result->print(true, false);
 				}
 
-				if(parameters->at(2)->booleanValue) sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
+				if(queueEntry->parameters->at(2)->booleanValue) sendResponse(queueEntry->clientData, queueEntry->parameters->at(0), queueEntry->parameters->at(1), result);
+				return;
 			}
-			else if(index == 1) //Response
-			{
-				BaseLib::PVariable response = _rpcDecoder->decodeResponse(queueEntry->packet);
-				int32_t packetId = response->arrayValue->at(0)->integerValue;
 
+			std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>::iterator methodIterator = _rpcMethods.find(queueEntry->methodName);
+			if(methodIterator == _rpcMethods.end())
+			{
+				BaseLib::PVariable result = GD::ipcServer->callRpcMethod(queueEntry->methodName, queueEntry->parameters->at(3)->arrayValue);
+				if(queueEntry->parameters->at(2)->booleanValue) sendResponse(queueEntry->clientData, queueEntry->parameters->at(0), queueEntry->parameters->at(1), result);
+				return;
+			}
+
+			if(GD::bl->debugLevel >= 5)
+			{
+				_out.printInfo("Debug: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName + " Parameters:");
+				for(std::vector<BaseLib::PVariable>::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
 				{
-					std::lock_guard<std::mutex> responseGuard(queueEntry->clientData->rpcResponsesMutex);
-					auto responseIterator = queueEntry->clientData->rpcResponses.find(packetId);
-					if(responseIterator != queueEntry->clientData->rpcResponses.end())
+					(*i)->print(true, false);
+				}
+			}
+			BaseLib::PVariable result = _rpcMethods.at(queueEntry->methodName)->invoke(_dummyClientInfo, queueEntry->parameters->at(3)->arrayValue);
+			if(GD::bl->debugLevel >= 5)
+			{
+				_out.printDebug("Response: ");
+				result->print(true, false);
+			}
+
+			if(queueEntry->parameters->at(2)->booleanValue) sendResponse(queueEntry->clientData, queueEntry->parameters->at(0), queueEntry->parameters->at(1), result);
+		}
+		else if(index == 1) //Response
+		{
+			BaseLib::PVariable response = _rpcDecoder->decodeResponse(queueEntry->packet);
+			int32_t packetId = response->arrayValue->at(0)->integerValue;
+
+			{
+				std::lock_guard<std::mutex> responseGuard(queueEntry->clientData->rpcResponsesMutex);
+				auto responseIterator = queueEntry->clientData->rpcResponses.find(packetId);
+				if(responseIterator != queueEntry->clientData->rpcResponses.end())
+				{
+					PScriptEngineResponse element = responseIterator->second;
+					if(element)
 					{
-						PScriptEngineResponse element = responseIterator->second;
-						if(element)
-						{
-							element->response = response;
-							element->packetId = packetId;
-							element->finished = true;
-						}
+						element->response = response;
+						element->packetId = packetId;
+						element->finished = true;
 					}
 				}
-				queueEntry->clientData->requestConditionVariable.notify_all();
 			}
+			queueEntry->clientData->requestConditionVariable.notify_all();
 		}
-		else if(index == 2 && queueEntry->type == QueueEntry::QueueEntryType::broadcast) //Second queue for sending packets. Response is processed by first queue
+		else if(index == 2) //Second queue for sending packets. Response is processed by first queue
 		{
 			sendRequest(queueEntry->clientData, queueEntry->methodName, queueEntry->parameters, false);
 		}
@@ -1422,8 +1419,32 @@ void ScriptEngineServer::readClient(PScriptEngineClientData& clientData)
 						socketOutput(response->arrayValue->at(0)->integerValue, clientData, true, false, clientData->binaryRpc->getData());
 					}
 #endif
-					std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(clientData, clientData->binaryRpc->getData());
-					enqueue(clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request ? 0 : 1, queueEntry);
+
+					if(clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
+					{
+						std::string methodName;
+						BaseLib::PArray parameters = _rpcDecoder->decodeRequest(clientData->binaryRpc->getData(), methodName);
+
+						if(methodName == "registerScriptEngineClient" && parameters->size() == 4)
+						{
+							BaseLib::PVariable result = registerScriptEngineClient(clientData, parameters->at(0)->integerValue, parameters->at(3)->arrayValue);
+							sendResponse(clientData, parameters->at(0), parameters->at(1), result);
+						}
+						else if(methodName == "scriptFinished" && parameters->size() == 4)
+						{
+							scriptFinished(clientData, parameters->at(0)->integerValue, parameters->at(3)->arrayValue);
+						}
+						else
+						{
+							std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(clientData, methodName, parameters);
+							enqueue(0, queueEntry);
+						}
+					}
+					else //Response
+					{
+						std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(clientData, clientData->binaryRpc->getData());
+						enqueue(1, queueEntry);
+					}
 					clientData->binaryRpc->reset();
 				}
 			}
@@ -1843,6 +1864,7 @@ void ScriptEngineServer::unregisterNode(std::string& nodeId)
 			clientData->pid = pid;
 			processIterator->second->setClientData(clientData);
 			processIterator->second->requestConditionVariable.notify_all();
+			_out.printInfo("Info: Client with pid " + std::to_string(pid) + " successfully registered.");
 			return BaseLib::PVariable(new BaseLib::Variable());
 		}
 		catch(const std::exception& ex)

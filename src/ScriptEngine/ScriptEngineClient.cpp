@@ -1090,7 +1090,7 @@ ScriptEngineClient::ScriptGuard::~ScriptGuard()
 	}
 	if(!GD::bl->shuttingDown) _client->sendScriptFinished(_scriptInfo->exitCode);
 	if(_scriptInfo->peerId > 0) GD::out.printInfo("Info: PHP script of peer " + std::to_string(_scriptInfo->peerId) + " exited with code " + std::to_string(_scriptInfo->exitCode) + ".");
-	else GD::out.printInfo("Info: Script " + std::to_string(_scriptInfo->id) + " exited with code " + std::to_string(_scriptInfo->exitCode) + ".");
+	else if(_scriptInfo->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode || _scriptInfo->exitCode != 0) GD::out.printInfo("Info: Script " + std::to_string(_scriptInfo->id) + " exited with code " + std::to_string(_scriptInfo->exitCode) + ".");
 	_client->setThreadNotRunning(_scriptId);
 }
 
@@ -1147,6 +1147,12 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			if(type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
 			{
 				globals->nodeId = scriptInfo->nodeInfo->structValue->at("id")->stringValue;
+				auto flowIdIterator = scriptInfo->nodeInfo->structValue->at("info")->structValue->find("z");
+				if(flowIdIterator != scriptInfo->nodeInfo->structValue->at("info")->structValue->end())
+				{
+					globals->flowId = flowIdIterator->second->stringValue;
+				}
+				else globals->flowId = "g";
 			}
 
 			ZEND_TSRMLS_CACHE_UPDATE();

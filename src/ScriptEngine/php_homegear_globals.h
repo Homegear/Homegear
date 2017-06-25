@@ -68,6 +68,7 @@ typedef struct _zend_homegear_globals
 
 	// {{{ Needed for nodes
 	std::string nodeId;
+	std::string flowId;
 	// }}}
 } zend_homegear_globals;
 

@@ -85,8 +85,9 @@ mount $bootp $bootfs
 [ $? -ne 0 ] && exit 1
 
 # {{{ Only for stretch - correct errors
-chroot $rootfs apt-get update
-chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get update
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y --allow-unauthenticated install raspbian-keyring raspbian-archive-keyring
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get update
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 # }}}
@@ -164,7 +165,7 @@ wget http://homegear.eu/packages/Release.key
 apt-key add - < Release.key
 rm Release.key
 apt update
-apt -y install libraspberrypi0 libraspberrypi-bin locales console-common ntp openssh-server git-core binutils curl sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 libmodbus5 tmux dialog whiptail
+apt -y install libraspberrypi0 libraspberrypi-bin locales console-common ntp openssh-server git-core binutils curl libcurl3-gnutls sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 libmodbus5 tmux dialog whiptail
 # Wireless packets
 apt -y install bluez-firmware firmware-atheros firmware-libertas firmware-realtek firmware-ralink firmware-brcm80211 wireless-tools wpasupplicant
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update

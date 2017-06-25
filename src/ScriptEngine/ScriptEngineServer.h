@@ -81,27 +81,20 @@ private:
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
 	public:
-		enum class QueueEntryType
-		{
-			defaultType,
-			broadcast
-		};
-
 		QueueEntry() {}
 		QueueEntry(PScriptEngineClientData clientData, std::vector<char>& packet) { this->clientData = clientData; this->packet = packet; }
-		QueueEntry(PScriptEngineClientData clientData, std::string methodName, BaseLib::PArray parameters) { type = QueueEntryType::broadcast; this->clientData = clientData; this->methodName = methodName; this->parameters = parameters; }
+		QueueEntry(PScriptEngineClientData clientData, std::string methodName, BaseLib::PArray parameters) { this->clientData = clientData; this->methodName = methodName; this->parameters = parameters; }
 		virtual ~QueueEntry() {}
 
-		QueueEntryType type = QueueEntryType::defaultType;
 		PScriptEngineClientData clientData;
 
-		// {{{ defaultType
-			std::vector<char> packet;
-		// }}}
-
-		// {{{ broadcast
+		// {{{ Request
 			std::string methodName;
 			BaseLib::PArray parameters;
+		// }}}
+
+		// {{{ Response
+			std::vector<char> packet;
 		// }}}
 	};
 

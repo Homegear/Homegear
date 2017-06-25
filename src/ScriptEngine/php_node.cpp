@@ -59,6 +59,10 @@ ZEND_FUNCTION(hg_node_output);
 ZEND_FUNCTION(hg_node_node_event);
 ZEND_FUNCTION(hg_node_get_node_data);
 ZEND_FUNCTION(hg_node_set_node_data);
+ZEND_FUNCTION(hg_node_get_flow_data);
+ZEND_FUNCTION(hg_node_set_flow_data);
+ZEND_FUNCTION(hg_node_get_global_data);
+ZEND_FUNCTION(hg_node_set_global_data);
 ZEND_FUNCTION(hg_node_get_config_parameter);
 
 ZEND_FUNCTION(hg_node_log)
@@ -265,6 +269,111 @@ ZEND_FUNCTION(hg_node_set_node_data)
 	php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
 }
 
+ZEND_FUNCTION(hg_node_get_flow_data)
+{
+	int argc = 0;
+	zval* args = nullptr;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+	std::string topic;
+	if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::getFlowData().");
+	else if(argc < 1) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::getFlowData().");
+	else
+	{
+		if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "key is not of type string.");
+		else
+		{
+			if(Z_STRLEN(args[0]) > 0) topic = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+		}
+	}
+
+	std::string methodName("getFlowData");
+	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+	parameters->arrayValue->reserve(2);
+	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(flowId)));
+	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
+	php_homegear_node_invoke_rpc(methodName, parameters, return_value, true);
+}
+
+ZEND_FUNCTION(hg_node_set_flow_data)
+{
+	int argc = 0;
+	zval* args = nullptr;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+	std::string topic;
+	BaseLib::PVariable value;
+	if(argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::setFlowData().");
+	else if(argc < 2) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::setFlowData().");
+	else
+	{
+		if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "key is not of type string.");
+		else
+		{
+			if(Z_STRLEN(args[0]) > 0) topic = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+		}
+
+		value = PhpVariableConverter::getVariable(&(args[1]));
+	}
+
+	std::string methodName("setFlowData");
+	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+	parameters->arrayValue->reserve(3);
+	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(flowId)));
+	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
+	parameters->arrayValue->push_back(value);
+	php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
+}
+
+ZEND_FUNCTION(hg_node_get_global_data)
+{
+	int argc = 0;
+	zval* args = nullptr;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+	std::string topic;
+	if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::getGlobalData().");
+	else if(argc < 1) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::getGlobalData().");
+	else
+	{
+		if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "key is not of type string.");
+		else
+		{
+			if(Z_STRLEN(args[0]) > 0) topic = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+		}
+	}
+
+	std::string methodName("getGlobalData");
+	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
+	php_homegear_node_invoke_rpc(methodName, parameters, return_value, true);
+}
+
+ZEND_FUNCTION(hg_node_set_global_data)
+{
+	int argc = 0;
+	zval* args = nullptr;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+	std::string topic;
+	BaseLib::PVariable value;
+	if(argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::setGlobalData().");
+	else if(argc < 2) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::setGlobalData().");
+	else
+	{
+		if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "key is not of type string.");
+		else
+		{
+			if(Z_STRLEN(args[0]) > 0) topic = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+		}
+
+		value = PhpVariableConverter::getVariable(&(args[1]));
+	}
+
+	std::string methodName("setGlobalData");
+	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+	parameters->arrayValue->reserve(2);
+	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
+	parameters->arrayValue->push_back(value);
+	php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
+}
+
 ZEND_FUNCTION(hg_node_get_config_parameter)
 {
 	int argc = 0;
@@ -307,6 +416,10 @@ static const zend_function_entry homegear_node_base_methods[] = {
 	ZEND_ME_MAPPING(nodeEvent, hg_node_node_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(getNodeData, hg_node_get_node_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(setNodeData, hg_node_set_node_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(getFlowData, hg_node_get_node_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(setFlowData, hg_node_set_node_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(getGlobalData, hg_node_get_node_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(setGlobalData, hg_node_set_node_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(getConfigParameter, hg_node_get_config_parameter, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
 };
