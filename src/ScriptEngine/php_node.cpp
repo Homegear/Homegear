@@ -55,8 +55,6 @@ void php_homegear_node_invoke_rpc(std::string& methodName, BaseLib::PVariable& p
 
 ZEND_FUNCTION(hg_node_log);
 ZEND_FUNCTION(hg_node_invoke_node_method);
-ZEND_FUNCTION(hg_node_subscribe_peer);
-ZEND_FUNCTION(hg_node_unsubscribe_peer);
 ZEND_FUNCTION(hg_node_output);
 ZEND_FUNCTION(hg_node_node_event);
 ZEND_FUNCTION(hg_node_get_node_data);
@@ -148,110 +146,6 @@ ZEND_FUNCTION(hg_node_invoke_node_method)
 	innerParameters->arrayValue->push_back(nodeMethodParameters);
 	parameters->arrayValue->push_back(innerParameters);
 	php_homegear_node_invoke_rpc(methodName, parameters, return_value, true);
-}
-
-ZEND_FUNCTION(hg_node_subscribe_peer)
-{
-	int argc = 0;
-	zval* args = nullptr;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
-	int64_t peerId;
-	int32_t channel = -1;
-	std::string variable;
-	if(argc > 3) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::subscribePeer().");
-	else if(argc < 1) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::subscribePeer().");
-	else
-	{
-		if(Z_TYPE(args[0]) != IS_LONG) php_error_docref(NULL, E_WARNING, "peerId is not of type integer.");
-		else
-		{
-			peerId = Z_LVAL(args[0]);
-		}
-
-		if(argc >= 2)
-		{
-			if(Z_TYPE(args[1]) != IS_LONG) php_error_docref(NULL, E_WARNING, "channel is not of type integer.");
-			else
-			{
-				channel = Z_LVAL(args[1]);
-			}
-		}
-
-		if(argc >= 3)
-		{
-			if(Z_TYPE(args[2]) != IS_STRING) php_error_docref(NULL, E_WARNING, "variableName is not of type string.");
-			else
-			{
-				if(Z_STRLEN(args[2]) > 0) variable = std::string(Z_STRVAL(args[2]), Z_STRLEN(args[2]));
-			}
-		}
-	}
-
-	std::string methodName("executePhpNodeBaseMethod");
-	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	parameters->arrayValue->reserve(3);
-	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
-	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>("subscribePeer"));
-	BaseLib::PVariable innerParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	innerParameters->arrayValue->reserve(4);
-	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
-	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerId));
-	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channel));
-	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable));
-	parameters->arrayValue->push_back(innerParameters);
-	php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
-}
-
-ZEND_FUNCTION(hg_node_unsubscribe_peer)
-{
-	int argc = 0;
-	zval* args = nullptr;
-	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
-	int64_t peerId;
-	int32_t channel = -1;
-	std::string variable;
-	if(argc > 3) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::unsubscribePeer().");
-	else if(argc < 1) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::unsubscribePeer().");
-	else
-	{
-		if(Z_TYPE(args[0]) != IS_LONG) php_error_docref(NULL, E_WARNING, "peerId is not of type integer.");
-		else
-		{
-			peerId = Z_LVAL(args[0]);
-		}
-
-		if(argc >= 2)
-		{
-			if(Z_TYPE(args[1]) != IS_LONG) php_error_docref(NULL, E_WARNING, "channel is not of type integer.");
-			else
-			{
-				channel = Z_LVAL(args[1]);
-			}
-		}
-
-		if(argc >= 3)
-		{
-			if(Z_TYPE(args[2]) != IS_STRING) php_error_docref(NULL, E_WARNING, "variableName is not of type string.");
-			else
-			{
-				if(Z_STRLEN(args[2]) > 0) variable = std::string(Z_STRVAL(args[2]), Z_STRLEN(args[2]));
-			}
-		}
-	}
-
-	std::string methodName("executePhpNodeBaseMethod");
-	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	parameters->arrayValue->reserve(3);
-	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
-	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>("unsubscribePeer"));
-	BaseLib::PVariable innerParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	innerParameters->arrayValue->reserve(4);
-	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
-	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerId));
-	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channel));
-	innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable));
-	parameters->arrayValue->push_back(innerParameters);
-	php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
 }
 
 ZEND_FUNCTION(hg_node_output)
@@ -409,8 +303,6 @@ ZEND_FUNCTION(hg_node_get_config_parameter)
 static const zend_function_entry homegear_node_base_methods[] = {
 	ZEND_ME_MAPPING(log, hg_node_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(invokeNodeMethod, hg_node_invoke_node_method, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	ZEND_ME_MAPPING(subscribePeer, hg_node_subscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	ZEND_ME_MAPPING(unsubscribePeer, hg_node_unsubscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(output, hg_node_output, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(nodeEvent, hg_node_node_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(getNodeData, hg_node_get_node_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)

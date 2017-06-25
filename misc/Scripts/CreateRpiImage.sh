@@ -84,6 +84,13 @@ LANG=C chroot $rootfs /debootstrap/debootstrap --second-stage
 mount $bootp $bootfs
 [ $? -ne 0 ] && exit 1
 
+# {{{ Only for stretch - correct errors
+chroot $rootfs apt-get update
+chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
+# }}}
+
 echo "deb $deb_local_mirror $deb_release main contrib non-free rpi
 " > etc/apt/sources.list
 
@@ -360,7 +367,7 @@ stage_one()
 
     rootpartitionsize=""
     while [ -z $rootpartitionsize ] || ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]] || [[ $rootpartitionsize -ge $maxrootpartitionsize ]]; do
-        rootpartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter new size of readonly root partition in gigabytes. The minimum partition size is 2 GB. We recommend only using as much space as really necessary so damaged sectors can be placed outside of the used space. It is also recommended to use a SD card as large as possible." 15 50 "2")
+        rootpartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter new size of readonly root partition in gigabytes. The minimum partition size is 2 GB. The maximum partition size is $maxrootpartitionsize GB. We recommend only using as much space as really necessary so damaged sectors can be placed outside of the used space. It is also recommended to use a SD card as large as possible." 15 50 "2")
         if ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]] || [[ $rootpartitionsize -lt 2 ]]; then
             dialog --title "Partitioning" --msgbox "Please enter a valid size in gigabytes (without unit). E. g. \"2\" or \"4\". Not \"2G\"." 10 50
         fi
@@ -369,7 +376,7 @@ stage_one()
     maxdatapartitionsize=$(($gigabytes - $rootpartitionsize))
     datapartitionsize=""
     while [ -z $datapartitionsize ] || ! [[ $datapartitionsize =~ ^[1-9][0-9]*$ ]] || [[ $datapartitionsize -ge $maxdatapartitionsize ]]; do
-        datapartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter size of writeable data partition in gigabytes. We recommend only using as much space as really necessary so damaged sectors can be placed outside of the used space. It is also recommended to use a SD card as large as possible." 15 50 "2")
+        datapartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter size of writeable data partition in gigabytes. The maximum partition size is $maxdatapartitionsize GB. We recommend only using as much space as really necessary so damaged sectors can be placed outside of the used space. It is also recommended to use a SD card as large as possible." 15 50 "2")
         if ! [[ $datapartitionsize =~ ^[1-9][0-9]*$ ]]; then
             dialog --title "Partitioning" --msgbox "Please enter a valid size in gigabytes (without unit). E. g. \"2\" or \"4\". Not \"2G\"." 10 50
         fi
@@ -515,7 +522,7 @@ sed -i 's/databaseMemoryJournal = false/databaseMemoryJournal = true/g' /etc/hom
 sed -i 's/databaseWALJournal = true/databaseWALJournal = false/g' /etc/homegear/main.conf
 sed -i 's/databaseSynchronous = true/databaseSynchronous = false/g' /etc/homegear/main.conf
 
-sed -i 's/session.save_path = "\/var\/lib\/homegear\/tmp\/php"/session.save_path = "\/var\/tmp\/homegear\/php/g' /etc/homegear/main.conf
+sed -i 's/session.save_path = "\/var\/lib\/homegear\/tmp\/php"/session.save_path = "\/var\/tmp\/homegear\/php/g' /etc/homegear/php.ini
 
 echo "" >> /etc/homegear/homegear-start.sh
 echo "# Delete backuped db.sql." >> /etc/homegear/homegear-start.sh
