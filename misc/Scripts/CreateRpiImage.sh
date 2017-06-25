@@ -85,8 +85,12 @@ mount $bootp $bootfs
 [ $? -ne 0 ] && exit 1
 
 # {{{ Only for stretch - correct errors
+wget http://archive.raspbian.org/raspbian.public.key && apt-key add raspbian.public.key && rm raspbian.public.key
+wget http://archive.raspberrypi.org/debian/raspberrypi.gpg.key && apt-key add raspberrypi.gpg.key && rm raspberrypi.gpg.key
+chroot $rootfs apt-get clean
+rm -rf $rootfs/var/lib/apt/lists/*
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get update
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y --allow-unauthenticated install raspbian-keyring raspbian-archive-keyring
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get update
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
@@ -158,8 +162,6 @@ apt -y install apt-transport-https ca-certificates
 update-ca-certificates --fresh
 mkdir -p /etc/apt/sources.list.d/
 echo "deb http://archive.raspberrypi.org/debian/ stretch main ui" > /etc/apt/sources.list.d/raspi.list
-wget http://archive.raspbian.org/raspbian.public.key && apt-key add raspbian.public.key && rm raspbian.public.key
-wget http://archive.raspberrypi.org/debian/raspberrypi.gpg.key && apt-key add raspberrypi.gpg.key && rm raspberrypi.gpg.key
 echo "deb https://homegear.eu/packages/Raspbian/ stretch/" >> /etc/apt/sources.list.d/homegear.list
 wget http://homegear.eu/packages/Release.key
 apt-key add - < Release.key
