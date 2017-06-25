@@ -250,7 +250,7 @@ void FlowsClient::start()
 					if(_binaryRpc->isFinished())
 					{
 						std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(_binaryRpc->getData());
-						enqueue(_binaryRpc->getType() == Flows::BinaryRpc::Type::request ? 0 : 1, queueEntry);
+						if(!enqueue(_binaryRpc->getType() == Flows::BinaryRpc::Type::request ? 0 : 1, queueEntry)) _out.printError("Error: Could not queue RPC packet because buffer is full. Dropping it.");
 						_binaryRpc->reset();
 					}
 				}

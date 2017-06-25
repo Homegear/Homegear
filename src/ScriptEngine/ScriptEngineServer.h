@@ -122,6 +122,7 @@ private:
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 	std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> _rpcMethods;
 	std::map<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>> _localRpcMethods;
+	std::mutex _executeScriptMutex;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
 	std::mutex _scriptFinishedThreadMutex;

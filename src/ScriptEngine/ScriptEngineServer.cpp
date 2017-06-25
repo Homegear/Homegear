@@ -1652,6 +1652,7 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 	try
 	{
 		if(_shuttingDown || GD::bl->shuttingDown) return;
+		std::unique_lock<std::mutex> executeScriptGuard(_executeScriptMutex);
 		PScriptEngineProcess process = getFreeProcess(scriptInfo->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode, scriptInfo->maxThreadCount);
 		if(!process)
 		{
@@ -1771,6 +1772,7 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 		scriptInfo->started = true;
 		if(wait)
 		{
+			_executeScriptMutex.unlock();
 			while(!scriptFinishedInfo->conditionVariable.wait_for(scriptFinishedLock, std::chrono::milliseconds(10000), [&]{ return scriptFinishedInfo->finished || clientData->closed || _stopServer; }));
 		}
 	}
