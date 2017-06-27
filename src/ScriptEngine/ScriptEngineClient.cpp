@@ -68,7 +68,6 @@ std::unordered_map<std::string, ScriptEngineClient::PNodeInfo> ScriptEngineClien
 ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 1000)
 {
 	_stopped = false;
-	_shutdownExecuted = false;
 
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	_out.init(GD::bl.get());
@@ -164,12 +163,6 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 			GD::out.printError("Error: At least one script did not finish within 30 seconds during shutdown. Killing myself.");
 			kill(getpid(), 9);
 			return;
-		}
-
-		for(int32_t i = 0; i < 300; i++)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(100)); //Wait for shutdown response to be sent.
-			if(_shutdownExecuted) break;
 		}
 
 		_stopped = true;
@@ -466,8 +459,19 @@ void ScriptEngineClient::start()
 								socketOutput(response->arrayValue->at(1)->integerValue, true, false, _binaryRpc->getData());
 							}
 	#endif
-							std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(_binaryRpc->getData());
-							if(!enqueue(_binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request ? 0 : 1, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC packet because buffer is full. Dropping it.");
+							if(_binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
+							{
+								std::string methodName;
+								BaseLib::PArray parameters = _rpcDecoder->decodeRequest(_binaryRpc->getData(), methodName);
+								std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(methodName, parameters);
+								if(methodName == "shutdown") shutdown(parameters->at(2)->arrayValue);
+								else if(!enqueue(0, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC request because buffer is full. Dropping it.");
+							}
+							else
+							{
+								std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(_binaryRpc->getData());
+								if(!enqueue(1, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC response because buffer is full. Dropping it.");
+							}
 							_binaryRpc->reset();
 						}
 					}
@@ -585,34 +589,29 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 
 		if(index == 0) //Request
 		{
-			std::string methodName;
-			BaseLib::PArray parameters = _rpcDecoder->decodeRequest(queueEntry->packet, methodName);
-
-			if(parameters->size() < 3)
+			if(queueEntry->parameters->size() < 3)
 			{
-				_out.printError("Error: Wrong parameter count while calling method " + methodName);
+				_out.printError("Error: Wrong parameter count while calling method " + queueEntry->methodName);
 				return;
 			}
-			std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(methodName);
+			std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
 			if(localMethodIterator == _localRpcMethods.end())
 			{
-				_out.printError("Warning: RPC method not found: " + methodName);
+				_out.printError("Warning: RPC method not found: " + queueEntry->methodName);
 				BaseLib::PVariable error = BaseLib::Variable::createError(-32601, ": Requested method not found.");
-				if(parameters->at(1)->booleanValue) sendResponse(parameters->at(0), error);
+				if(queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), error);
 				return;
 			}
 
-			if(GD::bl->debugLevel >= 5) _out.printInfo("Debug: Server is calling RPC method: " + methodName);
+			if(GD::bl->debugLevel >= 5) _out.printInfo("Debug: Server is calling RPC method: " + queueEntry->methodName);
 
-			BaseLib::PVariable result = localMethodIterator->second(parameters->at(2)->arrayValue);
+			BaseLib::PVariable result = localMethodIterator->second(queueEntry->parameters->at(2)->arrayValue);
 			if(GD::bl->debugLevel >= 5)
 			{
 				_out.printDebug("Response: ");
 				result->print(true, false);
 			}
-			if(parameters->at(1)->booleanValue) sendResponse(parameters->at(0), result);
-
-			if(methodName == "shutdown") _shutdownExecuted = true;
+			if(queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), result);
 		}
 		else //Response
 		{

@@ -67,11 +67,17 @@ private:
 	{
 	public:
 		QueueEntry() {}
+		QueueEntry(std::string& methodName, Flows::PArray parameters) { this->methodName = methodName; this->parameters = parameters; }
 		QueueEntry(std::vector<char>& packet) { this->packet = packet; }
 		QueueEntry(Flows::PNodeInfo nodeInfo, uint32_t targetPort, Flows::PVariable message) { this->nodeInfo = nodeInfo; this->targetPort = targetPort; this->message = message; }
 		virtual ~QueueEntry() {}
 
-		//{{{ IPC
+		//{{{ Request
+			std::string methodName;
+			Flows::PArray parameters;
+		//}}}
+
+		//{{{ Response
 			std::vector<char> packet;
 		//}}}
 
@@ -83,7 +89,7 @@ private:
 	};
 
 	BaseLib::Output _out;
-	std::atomic_bool _shutdownExecuted;
+	std::atomic_bool _disposed;
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
 	int64_t _lastGargabeCollection = 0;

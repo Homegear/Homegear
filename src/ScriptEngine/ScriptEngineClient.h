@@ -97,10 +97,18 @@ private:
 	{
 	public:
 		QueueEntry() {}
+		QueueEntry(std::string& methodName, BaseLib::PArray parameters) { this->methodName = methodName; this->parameters = parameters; }
 		QueueEntry(std::vector<char>& packet) { this->packet = packet; }
 		virtual ~QueueEntry() {}
 
-		std::vector<char> packet;
+		//{{{ Request
+			std::string methodName;
+			BaseLib::PArray parameters;
+		//}}}
+
+		//{{{ Response
+			std::vector<char> packet;
+		//}}}
 	};
 
 	struct NodeInfo
@@ -116,7 +124,6 @@ private:
 	typedef std::shared_ptr<NodeInfo> PNodeInfo;
 
 	BaseLib::Output _out;
-	std::atomic_bool _shutdownExecuted;
 #ifdef DEBUGSESOCKET
 	std::ofstream _socketOutput;
 #endif

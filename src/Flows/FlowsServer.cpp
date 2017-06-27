@@ -2438,14 +2438,14 @@ BaseLib::PVariable FlowsServer::nodeEvent(PFlowsClientData& clientData, BaseLib:
 	{
 		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
 
-		if(BaseLib::HelperFunctions::getTime() - _lastNodeEvent >= 10000)
+		if(BaseLib::HelperFunctions::getTime() - _lastNodeEvent >= 60000)
 		{
 			_lastNodeEvent = BaseLib::HelperFunctions::getTime();
 			_nodeEventCounter = 0;
 		}
-		if(parameters->at(1)->stringValue.compare(0, 14, "highlightNode/") == 0 && _nodeEventCounter > 50) return std::make_shared<BaseLib::Variable>();
-		else if(parameters->at(1)->stringValue != "debug" && _nodeEventCounter > 100) return std::make_shared<BaseLib::Variable>();
-		else if(_nodeEventCounter > 200) return std::make_shared<BaseLib::Variable>();
+		if(parameters->at(1)->stringValue.compare(0, 14, "highlightNode/") == 0 && _nodeEventCounter > 500) return std::make_shared<BaseLib::Variable>();
+		else if(parameters->at(1)->stringValue != "debug" && _nodeEventCounter > 1000) return std::make_shared<BaseLib::Variable>();
+		else if(_nodeEventCounter > 2000) return std::make_shared<BaseLib::Variable>();
 		_nodeEventCounter++;
 
 		GD::rpcClient->broadcastNodeEvent(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));

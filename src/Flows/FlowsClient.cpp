@@ -37,7 +37,7 @@ namespace Flows
 FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 3, 1000)
 {
 	_stopped = false;
-	_shutdownExecuted = false;
+	_disposed = false;
 	_frontendConnected = false;
 
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
@@ -82,11 +82,39 @@ void FlowsClient::dispose()
 {
 	try
 	{
-		for(int32_t i = 0; i < 300; i++)
+		if(_disposed) return;
+		_disposed = true;
+		_out.printMessage("Shutting down...");
+
+		_out.printMessage("Calling stop()...");
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(100)); //Wait for shutdown response to be sent.
-			if(_shutdownExecuted) break;
+			std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+			for(auto& flow : _flows)
+			{
+				for(auto& nodeIterator : flow.second->nodes)
+				{
+					Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
+					if(_bl->debugLevel >= 5) _out.printDebug("Debug: Calling stop() on node " + nodeIterator.second->id + "...");
+					if(node) node->stop();
+				}
+			}
 		}
+
+		_out.printMessage("Calling waitForStop()...");
+		{
+			std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+			for(auto& flow : _flows)
+			{
+				for(auto& nodeIterator : flow.second->nodes)
+				{
+					Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
+					if(_bl->debugLevel >= 5) _out.printDebug("Debug: Waiting for node " + nodeIterator.second->id + " to stop...");
+					if(node) node->waitForStop();
+				}
+			}
+		}
+
+		_out.printMessage("Nodes are stopped. Disposing...");
 
 		GD::bl->shuttingDown = true;
 		_stopped = true;
@@ -247,8 +275,19 @@ void FlowsClient::start()
 					processedBytes += _binaryRpc->process(&buffer[processedBytes], bytesRead - processedBytes);
 					if(_binaryRpc->isFinished())
 					{
-						std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(_binaryRpc->getData());
-						if(!enqueue(_binaryRpc->getType() == Flows::BinaryRpc::Type::request ? 0 : 1, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC packet because buffer is full. Dropping it.");
+						if(_binaryRpc->getType() == Flows::BinaryRpc::Type::request)
+						{
+							std::string methodName;
+							Flows::PArray parameters = _rpcDecoder->decodeRequest(_binaryRpc->getData(), methodName);
+							std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(methodName, parameters);
+							if(methodName == "shutdown") shutdown(parameters->at(2)->arrayValue);
+							else if(!enqueue(0, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC request because buffer is full. Dropping it.");
+						}
+						else
+						{
+							std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(_binaryRpc->getData());
+							if(!enqueue(1, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC response because buffer is full. Dropping it.");
+						}
 						_binaryRpc->reset();
 					}
 				}
@@ -319,34 +358,29 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 				_out.printInfo("Devlog: " + BaseLib::HelperFunctions::getHexString(queueEntry->packet));
 			}
 
-			std::string methodName;
-			Flows::PArray parameters = _rpcDecoder->decodeRequest(queueEntry->packet, methodName);
-
-			if(parameters->size() < 3)
+			if(queueEntry->parameters->size() < 3)
 			{
-				_out.printError("Error: Wrong parameter count while calling method " + methodName);
+				_out.printError("Error: Wrong parameter count while calling method " + queueEntry->methodName);
 				return;
 			}
-			std::map<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(methodName);
+			std::map<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
 			if(localMethodIterator == _localRpcMethods.end())
 			{
-				_out.printError("Warning: RPC method not found: " + methodName);
+				_out.printError("Warning: RPC method not found: " + queueEntry->methodName);
 				Flows::PVariable error = Flows::Variable::createError(-32601, "Requested method not found.");
-				if(parameters->at(1)->booleanValue) sendResponse(parameters->at(0), error);
+				if(queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), error);
 				return;
 			}
 
-			if(GD::bl->debugLevel >= 5) _out.printInfo("Debug: Server is calling RPC method: " + methodName);
+			if(GD::bl->debugLevel >= 5) _out.printInfo("Debug: Server is calling RPC method: " + queueEntry->methodName);
 
-			Flows::PVariable result = localMethodIterator->second(parameters->at(2)->arrayValue);
+			Flows::PVariable result = localMethodIterator->second(queueEntry->parameters->at(2)->arrayValue);
 			if(GD::bl->debugLevel >= 5)
 			{
 				_out.printDebug("Response: ");
 				result->print(true, false);
 			}
-			if(parameters->at(1)->booleanValue) sendResponse(parameters->at(0), result);
-
-			if(methodName == "shutdown") _shutdownExecuted = true;
+			if(queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), result);
 		}
 		else if(index == 1) //IPC response
 		{
@@ -828,38 +862,6 @@ Flows::PVariable FlowsClient::shutdown(Flows::PArray& parameters)
 {
 	try
 	{
-		_out.printMessage("Shutting down...");
-
-		_out.printMessage("Calling stop()...");
-		{
-			std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-			for(auto& flow : _flows)
-			{
-				for(auto& nodeIterator : flow.second->nodes)
-				{
-					Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
-					if(_bl->debugLevel >= 5) _out.printDebug("Debug: Calling stop() on node " + nodeIterator.second->id + "...");
-					if(node) node->stop();
-				}
-			}
-		}
-
-		_out.printMessage("Calling waitForStop()...");
-		{
-			std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-			for(auto& flow : _flows)
-			{
-				for(auto& nodeIterator : flow.second->nodes)
-				{
-					Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
-					if(_bl->debugLevel >= 5) _out.printDebug("Debug: Waiting for node " + nodeIterator.second->id + " to stop...");
-					if(node) node->waitForStop();
-				}
-			}
-		}
-
-		_out.printMessage("Nodes are stopped. Disposing...");
-
 		if(_maintenanceThread.joinable()) _maintenanceThread.join();
 		_maintenanceThread = std::thread(&FlowsClient::dispose, this);
 
