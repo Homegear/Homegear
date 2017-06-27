@@ -100,8 +100,6 @@ private:
 	int32_t _currentPacketId = 0;
 	std::unique_ptr<NodeManager> _nodeManager;
 	std::atomic_bool _frontendConnected;
-	std::atomic<uint32_t> _droppedOutputs;
-	std::atomic<int64_t> _lastQueueFullError;
 
 	std::unique_ptr<Flows::BinaryRpc> _binaryRpc;
 	std::unique_ptr<Flows::RpcDecoder> _rpcDecoder;

@@ -467,7 +467,7 @@ void ScriptEngineClient::start()
 							}
 	#endif
 							std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(_binaryRpc->getData());
-							if(!enqueue(_binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request ? 0 : 1, queueEntry)) _out.printError("Error: Could not queue RPC packet because buffer is full. Dropping it.");
+							if(!enqueue(_binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request ? 0 : 1, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC packet because buffer is full. Dropping it.");
 							_binaryRpc->reset();
 						}
 					}
@@ -1853,7 +1853,7 @@ BaseLib::PVariable ScriptEngineClient::broadcastEvent(BaseLib::PArray& parameter
 					eventData->channel = channel;
 					eventData->variable = variableName;
 					eventData->value = parameters->at(3)->arrayValue->at(j);
-					if(!i->second->enqueue(eventData)) _out.printError("Error: Could not queue event as event buffer is full. Dropping it.");
+					if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event as event buffer is full. Dropping it.");
 				}
 			}
 		}
@@ -1889,7 +1889,7 @@ BaseLib::PVariable ScriptEngineClient::broadcastNewDevices(BaseLib::PArray& para
 				std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
 				eventData->type = "newDevices";
 				eventData->value = parameters->at(0);
-				i->second->enqueue(eventData);
+				if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event as event buffer is full. Dropping it.");
 			}
 		}
 
@@ -1924,7 +1924,7 @@ BaseLib::PVariable ScriptEngineClient::broadcastDeleteDevices(BaseLib::PArray& p
 				std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
 				eventData->type = "deleteDevices";
 				eventData->value = parameters->at(0);
-				i->second->enqueue(eventData);
+				if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event as event buffer is full. Dropping it.");
 			}
 		}
 
@@ -1962,7 +1962,7 @@ BaseLib::PVariable ScriptEngineClient::broadcastUpdateDevice(BaseLib::PArray& pa
 				eventData->id = parameters->at(0)->integerValue64;
 				eventData->channel = parameters->at(1)->integerValue;
 				eventData->hint = parameters->at(2)->integerValue;
-				i->second->enqueue(eventData);
+				if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event as event buffer is full. Dropping it.");
 			}
 		}
 

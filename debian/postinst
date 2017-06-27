@@ -51,6 +51,7 @@ case $1 in
 		chmod -R 550 /var/lib/homegear/modules
 		find /var/lib/homegear/www -type d -exec chmod 550 {} \;
 		find /var/lib/homegear/www -type f -exec chmod 440 {} \;
+		chown -R homegear:homegear /var/lib/homegear/www
 
 		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION; then
 			if test ! -e /etc/homegear/homegear.crt; then

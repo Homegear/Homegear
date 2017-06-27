@@ -526,7 +526,7 @@ void Mqtt::processData(std::vector<char>& data)
 		if(data.size() > 4 && (data[0] & 0xF0) == 0x30) //PUBLISH
 		{
 			std::shared_ptr<BaseLib::IQueueEntry> entry(new QueueEntryReceived(data));
-			if(!enqueue(1, entry)) _out.printError("Error: Too many received packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
+			if(!enqueue(1, entry)) printQueueFullError(_out, "Error: Too many received packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
 		}
 	}
 	catch(const std::exception& ex)
@@ -1170,7 +1170,7 @@ void Mqtt::queueMessage(std::shared_ptr<MqttMessage>& message)
 	{
 		if(!_started || !message) return;
 		std::shared_ptr<BaseLib::IQueueEntry> entry(new QueueEntrySend(message));
-		if(!enqueue(0, entry)) _out.printError("Error: Too many packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
+		if(!enqueue(0, entry)) printQueueFullError(_out, "Error: Too many packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
 	}
 	catch(const std::exception& ex)
 	{
