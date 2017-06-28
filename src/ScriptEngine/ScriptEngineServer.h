@@ -81,28 +81,20 @@ private:
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
 	public:
-		enum class QueueEntryType
-		{
-			defaultType,
-			broadcast
-		};
-
 		QueueEntry() {}
-		QueueEntry(PScriptEngineClientData clientData, std::vector<char>& packet, bool isRequest) { this->clientData = clientData; this->packet = packet; this->isRequest = isRequest; }
-		QueueEntry(PScriptEngineClientData clientData, std::string methodName, BaseLib::PArray parameters) { type = QueueEntryType::broadcast; this->clientData = clientData; this->methodName = methodName; this->parameters = parameters; }
+		QueueEntry(PScriptEngineClientData clientData, std::vector<char>& packet) { this->clientData = clientData; this->packet = packet; }
+		QueueEntry(PScriptEngineClientData clientData, std::string methodName, BaseLib::PArray parameters) { this->clientData = clientData; this->methodName = methodName; this->parameters = parameters; }
 		virtual ~QueueEntry() {}
 
-		QueueEntryType type = QueueEntryType::defaultType;
 		PScriptEngineClientData clientData;
 
-		// {{{ defaultType
-			std::vector<char> packet;
-			bool isRequest = false;
-		// }}}
-
-		// {{{ broadcast
+		// {{{ Request
 			std::string methodName;
 			BaseLib::PArray parameters;
+		// }}}
+
+		// {{{ Response
+			std::vector<char> packet;
 		// }}}
 	};
 
@@ -130,6 +122,7 @@ private:
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 	std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> _rpcMethods;
 	std::map<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>> _localRpcMethods;
+	std::mutex _executeScriptMutex;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
 	std::mutex _scriptFinishedThreadMutex;
@@ -149,7 +142,7 @@ private:
 	void mainThread();
 	void readClient(PScriptEngineClientData& clientData);
 	BaseLib::PVariable send(PScriptEngineClientData& clientData, std::vector<char>& data);
-	BaseLib::PVariable sendRequest(PScriptEngineClientData& clientData, std::string methodName, BaseLib::PArray& parameters);
+	BaseLib::PVariable sendRequest(PScriptEngineClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait);
 	void sendResponse(PScriptEngineClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 	void closeClientConnection(PScriptEngineClientData client);
 	PScriptEngineProcess getFreeProcess(bool nodeProcess, uint32_t maxThreadCount = 0);

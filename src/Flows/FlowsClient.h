@@ -67,13 +67,18 @@ private:
 	{
 	public:
 		QueueEntry() {}
-		QueueEntry(std::vector<char>& packet, bool isRequest) { this->packet = packet; this->isRequest = isRequest; }
+		QueueEntry(std::string& methodName, Flows::PArray parameters) { this->methodName = methodName; this->parameters = parameters; }
+		QueueEntry(std::vector<char>& packet) { this->packet = packet; }
 		QueueEntry(Flows::PNodeInfo nodeInfo, uint32_t targetPort, Flows::PVariable message) { this->nodeInfo = nodeInfo; this->targetPort = targetPort; this->message = message; }
 		virtual ~QueueEntry() {}
 
-		//{{{ IPC
+		//{{{ Request
+			std::string methodName;
+			Flows::PArray parameters;
+		//}}}
+
+		//{{{ Response
 			std::vector<char> packet;
-			bool isRequest = false;
 		//}}}
 
 		//{{{ Node output
@@ -84,7 +89,7 @@ private:
 	};
 
 	BaseLib::Output _out;
-	std::atomic_bool _shutdownExecuted;
+	std::atomic_bool _disposed;
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
 	int64_t _lastGargabeCollection = 0;
@@ -101,8 +106,6 @@ private:
 	int32_t _currentPacketId = 0;
 	std::unique_ptr<NodeManager> _nodeManager;
 	std::atomic_bool _frontendConnected;
-	std::atomic<uint32_t> _droppedOutputs;
-	std::atomic<int64_t> _lastQueueFullError;
 
 	std::unique_ptr<Flows::BinaryRpc> _binaryRpc;
 	std::unique_ptr<Flows::RpcDecoder> _rpcDecoder;
@@ -118,7 +121,7 @@ private:
 	std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::set<std::string>>>> _peerSubscriptions;
 
 	void registerClient();
-	Flows::PVariable invoke(std::string methodName, Flows::PArray& parameters);
+	Flows::PVariable invoke(std::string methodName, Flows::PArray& parameters, bool wait);
 	Flows::PVariable invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray& parameters);
 	void sendResponse(Flows::PVariable& packetId, Flows::PVariable& variable);
 

@@ -35,7 +35,7 @@
 namespace Flows
 {
 
-FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 2, 1000)
+FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 3, 1000)
 {
 	_out.init(GD::bl.get());
 	_out.setPrefix("Flows Engine Server: ");
@@ -43,6 +43,8 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 2, 1000)
 	_shuttingDown = false;
 	_stopServer = false;
 	_nodeEventsEnabled = false;
+	_lastNodeEvent = 0;
+	_nodeEventCounter = 0;
 
 	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true));
@@ -89,6 +91,8 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 2, 1000)
 	_rpcMethods.emplace("getMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetMetadata()));
 	_rpcMethods.emplace("getName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetName()));
 	_rpcMethods.emplace("getNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetNodeData()));
+	_rpcMethods.emplace("getFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetFlowData()));
+	_rpcMethods.emplace("getGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetGlobalData()));
 	_rpcMethods.emplace("getPairingMethods", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPairingMethods()));
 	_rpcMethods.emplace("getParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamset()));
 	_rpcMethods.emplace("getParamsetDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetDescription()));
@@ -126,6 +130,8 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 2, 1000)
 	_rpcMethods.emplace("setMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetMetadata()));
 	_rpcMethods.emplace("setName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetName()));
 	_rpcMethods.emplace("setNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetNodeData()));
+	_rpcMethods.emplace("setFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetFlowData()));
+	_rpcMethods.emplace("setGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetGlobalData()));
 	_rpcMethods.emplace("setNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetNodeVariable()));
 	_rpcMethods.emplace("setSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetSystemVariable()));
 	_rpcMethods.emplace("setTeam", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetTeam()));
@@ -137,7 +143,6 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 2, 1000)
 	_rpcMethods.emplace("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware()));
 	_rpcMethods.emplace("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCWriteLog()));
 
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("registerFlowsClient", std::bind(&FlowsServer::registerFlowsClient, this, std::placeholders::_1, std::placeholders::_2)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("executePhpNode", std::bind(&FlowsServer::executePhpNode, this, std::placeholders::_1, std::placeholders::_2)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("executePhpNodeMethod", std::bind(&FlowsServer::executePhpNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("invokeNodeMethod", std::bind(&FlowsServer::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
@@ -161,7 +166,7 @@ void FlowsServer::collectGarbage()
 			bool emptyProcess = false;
 			for(std::map<pid_t, PFlowsProcess>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
-				if(i->second->flowCount() == 0 && i->second->getClientData() && !i->second->getClientData()->closed)
+				if(i->second->flowCount() == 0 && BaseLib::HelperFunctions::getTime() - i->second->lastExecution > 60000 && i->second->getClientData() && !i->second->getClientData()->closed)
 				{
 					if(emptyProcess) closeClientConnection(i->second->getClientData());
 					else emptyProcess = true;
@@ -359,6 +364,7 @@ bool FlowsServer::start()
 		if(flowsProcessingThreadCountServer < 5) flowsProcessingThreadCountServer = 5;
 		startQueue(0, false, flowsProcessingThreadCountServer, 0, SCHED_OTHER);
 		startQueue(1, false, flowsProcessingThreadCountServer, 0, SCHED_OTHER);
+		startQueue(2, false, flowsProcessingThreadCountServer, 0, SCHED_OTHER);
 		GD::bl->threadManager.start(_mainThread, true, &FlowsServer::mainThread, this);
 		startFlows();
 		return true;
@@ -384,11 +390,12 @@ void FlowsServer::stop()
 	{
 		_shuttingDown = true;
 		_stopServer = true;
+		GD::bl->threadManager.join(_mainThread); //Prevent new connections
 		_out.printDebug("Debug: Waiting for flows engine server's client threads to finish.");
 		closeClientConnections();
-		GD::bl->threadManager.join(_mainThread);
 		stopQueue(0);
 		stopQueue(1);
+		stopQueue(2);
 		unlink(_socketPath.c_str());
 	}
 	catch(const std::exception& ex)
@@ -442,7 +449,7 @@ void FlowsServer::homegearReloading()
 		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array());
-			sendRequest(*i, "reload", parameters);
+			sendRequest(*i, "reload", parameters, false);
 		}
 	}
 	catch(const std::exception& ex)
@@ -501,43 +508,6 @@ void FlowsServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, boo
     }
 }
 
-void FlowsServer::processKilled9(pid_t pid)
-{
-	try
-	{
-		std::shared_ptr<FlowsProcess> process;
-
-		{
-			std::lock_guard<std::mutex> processGuard(_processMutex);
-			std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(pid);
-			if(processIterator != _processes.end())
-			{
-				process = processIterator->second;
-				closeClientConnection(process->getClientData());
-				_processes.erase(processIterator);
-			}
-		}
-
-		if(process)
-		{
-			process->invokeFlowFinished(-1);
-			restartFlows();
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
 void FlowsServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message)
 {
 	try
@@ -562,7 +532,7 @@ void FlowsServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVaria
 		parameters->push_back(std::make_shared<BaseLib::Variable>(nodeId));
 		parameters->push_back(std::make_shared<BaseLib::Variable>(index));
 		parameters->push_back(message);
-		sendRequest(clientData, "nodeOutput", parameters);
+		sendRequest(clientData, "nodeOutput", parameters, false);
 	}
 	catch(const std::exception& ex)
     {
@@ -602,7 +572,7 @@ void FlowsServer::setNodeVariable(std::string nodeId, std::string topic, BaseLib
 		parameters->push_back(std::make_shared<BaseLib::Variable>(nodeId));
 		parameters->push_back(std::make_shared<BaseLib::Variable>(topic));
 		parameters->push_back(value);
-		sendRequest(clientData, "setNodeVariable", parameters);
+		sendRequest(clientData, "setNodeVariable", parameters, false);
 	}
 	catch(const std::exception& ex)
     {
@@ -638,7 +608,7 @@ void FlowsServer::enableNodeEvents()
 		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array());
-			BaseLib::PVariable response = sendRequest(*i, "enableNodeEvents", parameters);
+			sendRequest(*i, "enableNodeEvents", parameters, false);
 		}
 	}
 	catch(const std::exception& ex)
@@ -675,7 +645,7 @@ void FlowsServer::disableNodeEvents()
 		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array());
-			BaseLib::PVariable response = sendRequest(*i, "disableNodeEvents", parameters);
+			sendRequest(*i, "disableNodeEvents", parameters, false);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1074,24 +1044,21 @@ void FlowsServer::startFlows()
 		for(auto& client : clients)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array());
-			BaseLib::PVariable response = sendRequest(client, "startNodes", parameters);
-			if(response->errorStruct) _out.printError("Error starting nodes: " + response->structValue->at("faultString")->stringValue);
+			sendRequest(client, "startNodes", parameters, false);
 		}
 
 		_out.printInfo("Info: Calling \"configNodesStarted\".");
 		for(auto& client : clients)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array());
-			BaseLib::PVariable response = sendRequest(client, "configNodesStarted", parameters);
-			if(response->errorStruct) _out.printError("Error starting nodes: " + response->structValue->at("faultString")->stringValue);
+			sendRequest(client, "configNodesStarted", parameters, false);
 		}
 
 		_out.printInfo("Info: Calling \"startUpComplete\".");
 		for(auto& client : clients)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array());
-			BaseLib::PVariable response = sendRequest(client, "startUpComplete", parameters);
-			if(response->errorStruct) _out.printError("Error starting nodes: " + response->structValue->at("faultString")->stringValue);
+			sendRequest(client, "startUpComplete", parameters, false);
 		}
 
 		std::set<std::string> nodeData = GD::bl->db->getAllNodeDataNodes();
@@ -1130,14 +1097,14 @@ void FlowsServer::sendShutdown()
 		}
 		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
-			BaseLib::PArray parameters(new BaseLib::Array());
-			sendRequest(*i, "shutdown", parameters);
+			BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+			sendRequest(*i, "shutdown", parameters, false);
 		}
 
 		int32_t i = 0;
 		while(_clients.size() > 0 && i < 60)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			collectGarbage();
 			i++;
 		}
@@ -1209,9 +1176,12 @@ void FlowsServer::restartFlows()
 	try
 	{
 		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
+		_out.printInfo("Info: Stopping Flows...");
 		sendShutdown();
+		_out.printInfo("Info: Closing connections to Flows clients...");
 		closeClientConnections();
 		getMaxThreadCounts();
+		_out.printInfo("Info: Starting Flows...");
 		startFlows();
 	}
 	catch(const std::exception& ex)
@@ -1444,7 +1414,7 @@ uint32_t FlowsServer::flowCount()
 		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array());
-			BaseLib::PVariable response = sendRequest(*i, "flowCount", parameters);
+			BaseLib::PVariable response = sendRequest(*i, "flowCount", parameters, true);
 			count += response->integerValue;
 		}
 		return count;
@@ -1483,7 +1453,7 @@ void FlowsServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<s
 		{
 			BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(id)), BaseLib::PVariable(new BaseLib::Variable(channel)), BaseLib::PVariable(new BaseLib::Variable(*variables)), BaseLib::PVariable(new BaseLib::Variable(values))});
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastEvent", parameters);
-			enqueue(1, queueEntry);
+			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastEvent\". Queue is full.");
 		}
 	}
 	catch(const std::exception& ex)
@@ -1519,7 +1489,7 @@ void FlowsServer::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array{deviceDescriptions});
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastNewDevices", parameters);
-			enqueue(1, queueEntry);
+			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastNewDevices\". Queue is full.");
 		}
 	}
 	catch(const std::exception& ex)
@@ -1555,7 +1525,7 @@ void FlowsServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array{deviceInfo});
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastDeleteDevices", parameters);
-			enqueue(1, queueEntry);
+			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastDeleteDevices\". Queue is full.");
 		}
 	}
 	catch(const std::exception& ex)
@@ -1591,7 +1561,7 @@ void FlowsServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hi
 		{
 			BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(id)), BaseLib::PVariable(new BaseLib::Variable(channel)), BaseLib::PVariable(new BaseLib::Variable(hint))});
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastUpdateDevice", parameters);
-			enqueue(1, queueEntry);
+			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastUpdateDevice\". Queue is full.");
 		}
 	}
 	catch(const std::exception& ex)
@@ -1638,98 +1608,88 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 		queueEntry = std::dynamic_pointer_cast<QueueEntry>(entry);
 		if(!queueEntry || queueEntry->clientData->closed) return;
 
-		if(index == 0 && queueEntry->type == QueueEntry::QueueEntryType::defaultType)
+		if(index == 0) //Request
 		{
-			if(queueEntry->isRequest)
+			if(queueEntry->parameters->size() != 4)
 			{
-				std::string methodName;
-				BaseLib::PArray parameters = _rpcDecoder->decodeRequest(queueEntry->packet, methodName);
+				_out.printError("Error: Wrong parameter count while calling method " + queueEntry->methodName);
+				return;
+			}
 
-				if(parameters->size() != 3)
-				{
-					_out.printError("Error: Wrong parameter count while calling method " + methodName);
-					return;
-				}
-
-				std::map<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(methodName);
-				if(localMethodIterator != _localRpcMethods.end())
-				{
-					if(GD::bl->debugLevel >= 5)
-					{
-						_out.printDebug("Debug: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + methodName);
-						if(GD::bl->debugLevel >= 5)
-						{
-							for(BaseLib::Array::iterator i = parameters->at(2)->arrayValue->begin(); i != parameters->at(2)->arrayValue->end(); ++i)
-							{
-								(*i)->print(true, false);
-							}
-						}
-					}
-					BaseLib::PVariable result = localMethodIterator->second(queueEntry->clientData, parameters->at(2)->arrayValue);
-					if(GD::bl->debugLevel >= 5)
-					{
-						_out.printDebug("Response: ");
-						result->print(true, false);
-					}
-
-					sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
-					return;
-				}
-
-				std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>::iterator methodIterator = _rpcMethods.find(methodName);
-				if(methodIterator == _rpcMethods.end())
-				{
-					BaseLib::PVariable result = GD::ipcServer->callRpcMethod(methodName, parameters->at(2)->arrayValue);
-					sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
-					return;
-				}
-
+			std::map<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
+			if(localMethodIterator != _localRpcMethods.end())
+			{
 				if(GD::bl->debugLevel >= 5)
 				{
-					_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + methodName + " Parameters:");
-					for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(2)->arrayValue->begin(); i != parameters->at(2)->arrayValue->end(); ++i)
+					_out.printDebug("Debug: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
+					if(GD::bl->debugLevel >= 5)
 					{
-						(*i)->print(true, false);
+						for(BaseLib::Array::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
+						{
+							(*i)->print(true, false);
+						}
 					}
 				}
-				BaseLib::PVariable result = _rpcMethods.at(methodName)->invoke(_dummyClientInfo, parameters->at(2)->arrayValue);
+				BaseLib::PVariable result = localMethodIterator->second(queueEntry->clientData, queueEntry->parameters->at(3)->arrayValue);
 				if(GD::bl->debugLevel >= 5)
 				{
 					_out.printDebug("Response: ");
 					result->print(true, false);
 				}
 
-				sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
+				if(queueEntry->parameters->at(2)->booleanValue) sendResponse(queueEntry->clientData, queueEntry->parameters->at(0), queueEntry->parameters->at(1), result);
+				return;
 			}
-			else
-			{
-				BaseLib::PVariable response = _rpcDecoder->decodeResponse(queueEntry->packet);
-				int32_t packetId = response->arrayValue->at(0)->integerValue;
 
+			std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>::iterator methodIterator = _rpcMethods.find(queueEntry->methodName);
+			if(methodIterator == _rpcMethods.end())
+			{
+				BaseLib::PVariable result = GD::ipcServer->callRpcMethod(queueEntry->methodName, queueEntry->parameters->at(3)->arrayValue);
+				if(queueEntry->parameters->at(2)->booleanValue) sendResponse(queueEntry->clientData, queueEntry->parameters->at(0), queueEntry->parameters->at(1), result);
+				return;
+			}
+
+			if(GD::bl->debugLevel >= 5)
+			{
+				_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName + " Parameters:");
+				for(std::vector<BaseLib::PVariable>::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
 				{
-					std::lock_guard<std::mutex> responseGuard(queueEntry->clientData->rpcResponsesMutex);
-					auto responseIterator = queueEntry->clientData->rpcResponses.find(packetId);
-					if(responseIterator != queueEntry->clientData->rpcResponses.end())
+					(*i)->print(true, false);
+				}
+			}
+			BaseLib::PVariable result = _rpcMethods.at(queueEntry->methodName)->invoke(_dummyClientInfo, queueEntry->parameters->at(3)->arrayValue);
+			if(GD::bl->debugLevel >= 5)
+			{
+				_out.printDebug("Response: ");
+				result->print(true, false);
+			}
+
+			if(queueEntry->parameters->at(2)->booleanValue) sendResponse(queueEntry->clientData, queueEntry->parameters->at(0), queueEntry->parameters->at(1), result);
+		}
+		else if(index == 1) //Response
+		{
+			BaseLib::PVariable response = _rpcDecoder->decodeResponse(queueEntry->packet);
+			int32_t packetId = response->arrayValue->at(0)->integerValue;
+
+			{
+				std::lock_guard<std::mutex> responseGuard(queueEntry->clientData->rpcResponsesMutex);
+				auto responseIterator = queueEntry->clientData->rpcResponses.find(packetId);
+				if(responseIterator != queueEntry->clientData->rpcResponses.end())
+				{
+					PFlowsResponseServer element = responseIterator->second;
+					if(element)
 					{
-						PFlowsResponseServer element = responseIterator->second;
-						if(element)
-						{
-							element->response = response;
-							element->packetId = packetId;
-							element->finished = true;
-						}
+						element->response = response;
+						element->packetId = packetId;
+						element->finished = true;
 					}
 				}
-				queueEntry->clientData->requestConditionVariable.notify_all();
 			}
+			queueEntry->clientData->requestConditionVariable.notify_all();
 		}
-		else if(index == 1 && queueEntry->type == QueueEntry::QueueEntryType::broadcast) //Second queue for sending packets. Response is processed by first queue
+		else if(index == 2) //Second queue for sending packets. Response is processed by first queue
 		{
-			BaseLib::PVariable response = sendRequest(queueEntry->clientData, queueEntry->methodName, queueEntry->parameters);
-			if(response->errorStruct)
-			{
-				_out.printError("Error calling \"" + queueEntry->methodName + "\" on client " + std::to_string(queueEntry->clientData->id) + ": " + response->structValue->at("faultString")->stringValue);
-			}
+			sendRequest(queueEntry->clientData, queueEntry->methodName, queueEntry->parameters, false);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1758,7 +1718,7 @@ BaseLib::PVariable FlowsServer::send(PFlowsClientData& clientData, std::vector<c
 			if(sentBytes <= 0)
 			{
 				if(errno == EAGAIN) continue;
-				GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
+				if(clientData->fileDescriptor->descriptor != -1) GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
 				return BaseLib::Variable::createError(-32500, "Unknown application error.");
 			}
 			totallySentBytes += sentBytes;
@@ -1779,7 +1739,7 @@ BaseLib::PVariable FlowsServer::send(PFlowsClientData& clientData, std::vector<c
     return BaseLib::PVariable(new BaseLib::Variable());
 }
 
-BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::string methodName, BaseLib::PArray& parameters)
+BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait)
 {
 	try
 	{
@@ -1788,20 +1748,27 @@ BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::s
 			std::lock_guard<std::mutex> packetIdGuard(_packetIdMutex);
 			packetId = _currentPacketId++;
 		}
-		BaseLib::PArray array(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(packetId)), BaseLib::PVariable(new BaseLib::Variable(parameters)) });
+		BaseLib::PArray array = std::make_shared<BaseLib::Array>();
+		array->reserve(3);
+		array->push_back(std::make_shared<BaseLib::Variable>(packetId));
+		array->push_back(std::make_shared<BaseLib::Variable>(wait));
+		array->push_back(std::make_shared<BaseLib::Variable>(parameters));
 		std::vector<char> data;
 		_rpcEncoder->encodeRequest(methodName, array, data);
 
 		PFlowsResponseServer response;
+		if(wait)
 		{
-			std::lock_guard<std::mutex> responseGuard(clientData->rpcResponsesMutex);
-			auto result = clientData->rpcResponses.emplace(packetId, std::make_shared<FlowsResponseServer>());
-			if(result.second) response = result.first->second;
-		}
-		if(!response)
-		{
-			_out.printError("Critical: Could not insert response struct into map.");
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
+			{
+				std::lock_guard<std::mutex> responseGuard(clientData->rpcResponsesMutex);
+				auto result = clientData->rpcResponses.emplace(packetId, std::make_shared<FlowsResponseServer>());
+				if(result.second) response = result.first->second;
+			}
+			if(!response)
+			{
+				_out.printError("Critical: Could not insert response struct into map.");
+				return BaseLib::Variable::createError(-32500, "Unknown application error.");
+			}
 		}
 
 		BaseLib::PVariable result = send(clientData, data);
@@ -1811,6 +1778,7 @@ BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::s
 			clientData->rpcResponses.erase(packetId);
 			return result;
 		}
+		if(!wait) return std::make_shared<BaseLib::Variable>();
 
 		int32_t i = 0;
 		std::unique_lock<std::mutex> waitLock(clientData->waitMutex);
@@ -1821,9 +1789,7 @@ BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::s
 			i++;
 			if(i == 60)
 			{
-				_out.printError("Error: Flows client with process ID " + std::to_string(clientData->pid) + " is not responding... Killing it.");
-				kill(clientData->pid, 9);
-				GD::bl->threadManager.start(_maintenanceThread, true, &FlowsServer::processKilled9, this, clientData->pid);
+				_out.printError("Error: Flows client with process ID " + std::to_string(clientData->pid) + " is not responding...");
 				break;
 			}
 		}
@@ -2020,6 +1986,7 @@ PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
 			{
 				if(GD::bl->settings.maxNodeThreadsPerProcess() == -1 || i->second->nodeThreadCount() + maxThreadCount <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
 				{
+					i->second->lastExecution = BaseLib::HelperFunctions::getTime();
 					return i->second;
 				}
 			}
@@ -2050,11 +2017,7 @@ PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
 			if(_nodeEventsEnabled)
 			{
 				BaseLib::PArray parameters(new BaseLib::Array());
-				BaseLib::PVariable response = sendRequest(process->getClientData(), "enableNodeEvents", parameters);
-				if(response->errorStruct)
-				{
-					_out.printError("Error calling enableNodeEvents.");
-				}
+				sendRequest(process->getClientData(), "enableNodeEvents", parameters, false);
 			}
 			return process;
 		}
@@ -2098,8 +2061,27 @@ void FlowsServer::readClient(PFlowsClientData& clientData)
 				processedBytes += clientData->binaryRpc->process(&(clientData->buffer[processedBytes]), bytesRead - processedBytes);
 				if(clientData->binaryRpc->isFinished())
 				{
-					std::shared_ptr<BaseLib::IQueueEntry> queueEntry(new QueueEntry(clientData, clientData->binaryRpc->getData(), clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request));
-					enqueue(0, queueEntry);
+					if(clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
+					{
+						std::string methodName;
+						BaseLib::PArray parameters = _rpcDecoder->decodeRequest(clientData->binaryRpc->getData(), methodName);
+
+						if(methodName == "registerFlowsClient" && parameters->size() == 4)
+						{
+							BaseLib::PVariable result = registerFlowsClient(clientData, parameters->at(3)->arrayValue);
+							sendResponse(clientData, parameters->at(0), parameters->at(1), result);
+						}
+						else
+						{
+							std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(clientData, methodName, parameters);
+							if(!enqueue(0, queueEntry)) printQueueFullError(_out, "Error: Could not queue incoming RPC method call \"" + methodName + "\". Queue is full.");
+						}
+					}
+					else
+					{
+						std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(clientData, clientData->binaryRpc->getData());
+						if(!enqueue(1, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC response. Queue is full.");
+					}
 					clientData->binaryRpc->reset();
 				}
 			}
@@ -2241,7 +2223,7 @@ void FlowsServer::startFlow(PFlowInfoServer& flowInfo, std::set<std::string>& no
 				flowInfo->flow
 				});
 
-		BaseLib::PVariable result = sendRequest(clientData, "startFlow", parameters);
+		BaseLib::PVariable result = sendRequest(clientData, "startFlow", parameters, true);
 		if(result->errorStruct)
 		{
 			_out.printError("Error: Could not execute flow: " + result->structValue->at("faultString")->stringValue);
@@ -2294,7 +2276,7 @@ BaseLib::PVariable FlowsServer::executePhpNodeBaseMethod(BaseLib::PArray& parame
 			clientData = clientIterator->second;
 		}
 
-		return sendRequest(clientData, "executePhpNodeBaseMethod", parameters);
+		return sendRequest(clientData, "executePhpNodeBaseMethod", parameters, true);
 	}
 	catch(const std::exception& ex)
     {
@@ -2332,6 +2314,7 @@ BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData
 		clientData->pid = pid;
 		processIterator->second->setClientData(clientData);
 		processIterator->second->requestConditionVariable.notify_all();
+		_out.printInfo("Info: Client with pid " + std::to_string(pid) + " successfully registered.");
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
     catch(const std::exception& ex)
@@ -2432,7 +2415,7 @@ BaseLib::PVariable FlowsServer::invokeNodeMethod(PFlowsClientData& clientData, B
 			clientData = clientIterator->second;
 		}
 
-		return sendRequest(clientData, "invokeNodeMethod", parameters);
+		return sendRequest(clientData, "invokeNodeMethod", parameters, true);
 	}
     catch(const std::exception& ex)
     {
@@ -2454,6 +2437,16 @@ BaseLib::PVariable FlowsServer::nodeEvent(PFlowsClientData& clientData, BaseLib:
 	try
 	{
 		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
+
+		if(BaseLib::HelperFunctions::getTime() - _lastNodeEvent >= 60000)
+		{
+			_lastNodeEvent = BaseLib::HelperFunctions::getTime();
+			_nodeEventCounter = 0;
+		}
+		if(parameters->at(1)->stringValue.compare(0, 14, "highlightNode/") == 0 && _nodeEventCounter > 500) return std::make_shared<BaseLib::Variable>();
+		else if(parameters->at(1)->stringValue != "debug" && _nodeEventCounter > 1000) return std::make_shared<BaseLib::Variable>();
+		else if(_nodeEventCounter > 2000) return std::make_shared<BaseLib::Variable>();
+		_nodeEventCounter++;
 
 		GD::rpcClient->broadcastNodeEvent(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
 		return std::make_shared<BaseLib::Variable>();

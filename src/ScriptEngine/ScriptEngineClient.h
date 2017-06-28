@@ -49,7 +49,8 @@ typedef struct _zend_homegear_globals zend_homegear_globals;
 namespace ScriptEngine
 {
 
-class ScriptEngineClient : public BaseLib::IQueue {
+class ScriptEngineClient : public BaseLib::IQueue
+{
 public:
 	ScriptEngineClient();
 	virtual ~ScriptEngineClient();
@@ -96,11 +97,18 @@ private:
 	{
 	public:
 		QueueEntry() {}
-		QueueEntry(std::vector<char>& packet, bool isRequest) { this->packet = packet; this->isRequest = isRequest; }
+		QueueEntry(std::string& methodName, BaseLib::PArray parameters) { this->methodName = methodName; this->parameters = parameters; }
+		QueueEntry(std::vector<char>& packet) { this->packet = packet; }
 		virtual ~QueueEntry() {}
 
-		std::vector<char> packet;
-		bool isRequest = false;
+		//{{{ Request
+			std::string methodName;
+			BaseLib::PArray parameters;
+		//}}}
+
+		//{{{ Response
+			std::vector<char> packet;
+		//}}}
 	};
 
 	struct NodeInfo
@@ -116,7 +124,6 @@ private:
 	typedef std::shared_ptr<NodeInfo> PNodeInfo;
 
 	BaseLib::Output _out;
-	std::atomic_bool _shutdownExecuted;
 #ifdef DEBUGSESOCKET
 	std::ofstream _socketOutput;
 #endif
@@ -154,8 +161,8 @@ private:
 	void registerClient();
 	void sendOutput(std::string& output);
 	void sendHeaders(BaseLib::PVariable& headers);
-	BaseLib::PVariable callMethod(std::string& methodName, BaseLib::PVariable& parameters);
-	BaseLib::PVariable sendRequest(int32_t scriptId, std::string methodName, BaseLib::PArray& parameters);
+	BaseLib::PVariable callMethod(std::string& methodName, BaseLib::PVariable& parameters, bool wait);
+	BaseLib::PVariable sendRequest(int32_t scriptId, std::string methodName, BaseLib::PArray& parameters, bool wait);
 	BaseLib::PVariable sendGlobalRequest(std::string methodName, BaseLib::PArray& parameters);
 	void sendResponse(BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 	void sendScriptFinished(int32_t exitCode);

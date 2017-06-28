@@ -35,7 +35,7 @@
 namespace Ipc
 {
 
-IpcServer::IpcServer() : IQueue(GD::bl.get(), 2, 1000)
+IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 1000)
 {
 	_out.init(GD::bl.get());
 	_out.setPrefix("IPC Server: ");
@@ -85,6 +85,8 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 2, 1000)
 	_rpcMethods.emplace("getMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetMetadata()));
 	_rpcMethods.emplace("getName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetName()));
 	_rpcMethods.emplace("getNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetNodeData()));
+	_rpcMethods.emplace("getFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetFlowData()));
+	_rpcMethods.emplace("getGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetGlobalData()));
 	_rpcMethods.emplace("getPairingMethods", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPairingMethods()));
 	_rpcMethods.emplace("getParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamset()));
 	_rpcMethods.emplace("getParamsetDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetDescription()));
@@ -122,6 +124,8 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 2, 1000)
 	_rpcMethods.emplace("setMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetMetadata()));
 	_rpcMethods.emplace("setName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetName()));
 	_rpcMethods.emplace("setNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetNodeData()));
+	_rpcMethods.emplace("setFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetFlowData()));
+	_rpcMethods.emplace("setGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetGlobalData()));
 	_rpcMethods.emplace("setNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetNodeVariable()));
 	_rpcMethods.emplace("setSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetSystemVariable()));
 	_rpcMethods.emplace("setTeam", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetTeam()));
@@ -201,6 +205,7 @@ bool IpcServer::start()
 		if(ipcThreadCount < 5) ipcThreadCount = 5;
 		startQueue(0, false, ipcThreadCount, 0, SCHED_OTHER);
 		startQueue(1, false, ipcThreadCount, 0, SCHED_OTHER);
+		startQueue(2, false, ipcThreadCount, 0, SCHED_OTHER);
 		GD::bl->threadManager.start(_mainThread, true, &IpcServer::mainThread, this);
 		return true;
 	}
@@ -248,6 +253,7 @@ void IpcServer::stop()
 		}
 		stopQueue(0);
 		stopQueue(1);
+		stopQueue(2);
 		unlink(_socketPath.c_str());
 	}
 	catch(const std::exception& ex)
@@ -320,7 +326,7 @@ void IpcServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std
 		{
 			BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(id)), BaseLib::PVariable(new BaseLib::Variable(channel)), BaseLib::PVariable(new BaseLib::Variable(*variables)), BaseLib::PVariable(new BaseLib::Variable(values))});
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastEvent", parameters);
-			enqueue(1, queueEntry);
+			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastEvent\". Queue is full.");
 		}
 	}
 	catch(const std::exception& ex)
@@ -356,7 +362,7 @@ void IpcServer::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array{deviceDescriptions});
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastNewDevices", parameters);
-			enqueue(1, queueEntry);
+			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastNewDevices\". Queue is full.");
 		}
 	}
 	catch(const std::exception& ex)
@@ -392,7 +398,7 @@ void IpcServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array{deviceInfo});
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastDeleteDevices", parameters);
-			enqueue(1, queueEntry);
+			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastDeleteDevices\". Queue is full.");
 		}
 	}
 	catch(const std::exception& ex)
@@ -428,7 +434,7 @@ void IpcServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint
 		{
 			BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(id)), BaseLib::PVariable(new BaseLib::Variable(channel)), BaseLib::PVariable(new BaseLib::Variable(hint))});
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastUpdateDevice", parameters);
-			enqueue(1, queueEntry);
+			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastUpdateDevice\". Queue is full.");
 		}
 	}
 	catch(const std::exception& ex)
@@ -523,9 +529,9 @@ void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueue
 		queueEntry = std::dynamic_pointer_cast<QueueEntry>(entry);
 		if(!queueEntry || queueEntry->clientData->closed) return;
 
-		if(index == 0 && queueEntry->type == QueueEntry::QueueEntryType::defaultType)
+		if(queueEntry->type == QueueEntry::QueueEntryType::defaultType)
 		{
-			if(queueEntry->isRequest)
+			if(index == 0)
 			{
 				std::string methodName;
 				BaseLib::PArray parameters = _rpcDecoder->decodeRequest(queueEntry->packet, methodName);
@@ -588,7 +594,7 @@ void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueue
 
 				if(queueEntry->clientData->closed) closeClientConnection(queueEntry->clientData); //unregisterIpcClient was called
 			}
-			else
+			else if(index == 1)
 			{
 				BaseLib::PVariable response = _rpcDecoder->decodeResponse(queueEntry->packet);
 				int32_t packetId = response->arrayValue->at(0)->integerValue;
@@ -610,7 +616,7 @@ void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueue
 				queueEntry->clientData->requestConditionVariable.notify_all();
 			}
 		}
-		else if(index == 1 && queueEntry->type == QueueEntry::QueueEntryType::broadcast) //Second queue for sending packets. Response is processed by first queue
+		else if(index == 2 && queueEntry->type == QueueEntry::QueueEntryType::broadcast) //Second queue for sending packets. Response is processed by first queue
 		{
 			BaseLib::PVariable response = sendRequest(queueEntry->clientData, queueEntry->methodName, queueEntry->parameters);
 			if(response->errorStruct)
@@ -645,7 +651,7 @@ BaseLib::PVariable IpcServer::send(PIpcClientData& clientData, std::vector<char>
 			if(sentBytes <= 0)
 			{
 				if(errno == EAGAIN) continue;
-				GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
+				if(clientData->fileDescriptor->descriptor != -1) GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
 				return BaseLib::Variable::createError(-32500, "Unknown application error.");
 			}
 			totallySentBytes += sentBytes;
@@ -913,8 +919,8 @@ void IpcServer::readClient(PIpcClientData& clientData)
 				processedBytes += clientData->binaryRpc->process(&(clientData->buffer[processedBytes]), bytesRead - processedBytes);
 				if(clientData->binaryRpc->isFinished())
 				{
-					std::shared_ptr<BaseLib::IQueueEntry> queueEntry(new QueueEntry(clientData, clientData->binaryRpc->getData(), clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request));
-					enqueue(0, queueEntry);
+					std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(clientData, clientData->binaryRpc->getData());
+					if(!enqueue(clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request ? 0 : 1, queueEntry)) printQueueFullError(_out, "Error: Could not queue incoming RPC packet. Queue is full.");
 					clientData->binaryRpc->reset();
 				}
 			}

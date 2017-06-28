@@ -65,10 +65,9 @@ std::unordered_map<std::string, ScriptEngineClient::PNodeInfo> ScriptEngineClien
 	call_user_function(EG(function_table), NULL, &function, &returnValue, 1, params);
 }*/
 
-ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 1, 1000)
+ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 1000)
 {
 	_stopped = false;
-	_shutdownExecuted = false;
 
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	_out.init(GD::bl.get());
@@ -166,15 +165,10 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 			return;
 		}
 
-		for(int32_t i = 0; i < 300; i++)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(100)); //Wait for shutdown response to be sent.
-			if(_shutdownExecuted) break;
-		}
-
 		_stopped = true;
 		stopEventThreads();
 		stopQueue(0);
+		stopQueue(1);
 		php_homegear_shutdown();
 		_scriptCache.clear();
 		_rpcResponses.clear();
@@ -351,6 +345,7 @@ void ScriptEngineClient::start()
 		}
 
 		startQueue(0, false, 10, 0, SCHED_OTHER);
+		startQueue(1, false, 10, 0, SCHED_OTHER);
 
 		_socketPath = GD::bl->settings.socketPath() + "homegearSE.sock";
 		if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Socket path is " + _socketPath);
@@ -464,8 +459,19 @@ void ScriptEngineClient::start()
 								socketOutput(response->arrayValue->at(1)->integerValue, true, false, _binaryRpc->getData());
 							}
 	#endif
-							std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(_binaryRpc->getData(), _binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request);
-							enqueue(0, queueEntry);
+							if(_binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
+							{
+								std::string methodName;
+								BaseLib::PArray parameters = _rpcDecoder->decodeRequest(_binaryRpc->getData(), methodName);
+								std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(methodName, parameters);
+								if(methodName == "shutdown") shutdown(parameters->at(2)->arrayValue);
+								else if(!enqueue(0, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC request because buffer is full. Dropping it.");
+							}
+							else
+							{
+								std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(_binaryRpc->getData());
+								if(!enqueue(1, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC response because buffer is full. Dropping it.");
+							}
 							_binaryRpc->reset();
 						}
 					}
@@ -529,7 +535,7 @@ void ScriptEngineClient::sendScriptFinished(int32_t exitCode)
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		std::string methodName("scriptFinished");
 		BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(exitCode))});
-		sendRequest(globals->id, methodName, parameters);
+		sendRequest(globals->id, methodName, parameters, false);
 	}
 	catch(const std::exception& ex)
     {
@@ -581,38 +587,33 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 		queueEntry = std::dynamic_pointer_cast<QueueEntry>(entry);
 		if(!queueEntry) return;
 
-		if(queueEntry->isRequest)
+		if(index == 0) //Request
 		{
-			std::string methodName;
-			BaseLib::PArray parameters = _rpcDecoder->decodeRequest(queueEntry->packet, methodName);
-
-			if(parameters->size() < 2)
+			if(queueEntry->parameters->size() < 3)
 			{
-				_out.printError("Error: Wrong parameter count while calling method " + methodName);
+				_out.printError("Error: Wrong parameter count while calling method " + queueEntry->methodName);
 				return;
 			}
-			std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(methodName);
+			std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
 			if(localMethodIterator == _localRpcMethods.end())
 			{
-				_out.printError("Warning: RPC method not found: " + methodName);
+				_out.printError("Warning: RPC method not found: " + queueEntry->methodName);
 				BaseLib::PVariable error = BaseLib::Variable::createError(-32601, ": Requested method not found.");
-				sendResponse(parameters->at(0), error);
+				if(queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), error);
 				return;
 			}
 
-			if(GD::bl->debugLevel >= 5) _out.printInfo("Debug: Server is calling RPC method: " + methodName);
+			if(GD::bl->debugLevel >= 5) _out.printInfo("Debug: Server is calling RPC method: " + queueEntry->methodName);
 
-			BaseLib::PVariable result = localMethodIterator->second(parameters->at(1)->arrayValue);
+			BaseLib::PVariable result = localMethodIterator->second(queueEntry->parameters->at(2)->arrayValue);
 			if(GD::bl->debugLevel >= 5)
 			{
 				_out.printDebug("Response: ");
 				result->print(true, false);
 			}
-			sendResponse(parameters->at(0), result);
-
-			if(methodName == "shutdown") _shutdownExecuted = true;
+			if(queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), result);
 		}
-		else
+		else //Response
 		{
 			BaseLib::PVariable response = _rpcDecoder->decodeResponse(queueEntry->packet);
 			if(response->arrayValue->size() < 3)
@@ -667,7 +668,7 @@ void ScriptEngineClient::sendOutput(std::string& output)
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		std::string methodName("scriptOutput");
 		BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(output))});
-		sendRequest(globals->id, methodName, parameters);
+		sendRequest(globals->id, methodName, parameters, true);
 	}
 	catch(const std::exception& ex)
     {
@@ -690,7 +691,7 @@ void ScriptEngineClient::sendHeaders(BaseLib::PVariable& headers)
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		std::string methodName("scriptHeaders");
 		BaseLib::PArray parameters(new BaseLib::Array{headers});
-		sendRequest(globals->id, methodName, parameters);
+		sendRequest(globals->id, methodName, parameters, true);
 	}
 	catch(const std::exception& ex)
     {
@@ -706,12 +707,12 @@ void ScriptEngineClient::sendHeaders(BaseLib::PVariable& headers)
     }
 }
 
-BaseLib::PVariable ScriptEngineClient::callMethod(std::string& methodName, BaseLib::PVariable& parameters)
+BaseLib::PVariable ScriptEngineClient::callMethod(std::string& methodName, BaseLib::PVariable& parameters, bool wait)
 {
 	try
 	{
 		zend_homegear_globals* globals = php_homegear_get_globals();
-		return sendRequest(globals->id, methodName, parameters->arrayValue);
+		return sendRequest(globals->id, methodName, parameters->arrayValue, wait);
 	}
 	catch(const std::exception& ex)
     {
@@ -740,7 +741,7 @@ BaseLib::PVariable ScriptEngineClient::send(std::vector<char>& data)
 			if(sentBytes <= 0)
 			{
 				if(errno == EAGAIN) continue;
-				_out.printError("Could not send data to client " + std::to_string(_fileDescriptor->descriptor) + ". Sent bytes: " + std::to_string(totallySentBytes) + " of " + std::to_string(data.size()) + (sentBytes == -1 ? ". Error message: " + std::string(strerror(errno)) : ""));
+				if(_fileDescriptor->descriptor != -1) _out.printError("Could not send data to client " + std::to_string(_fileDescriptor->descriptor) + ". Sent bytes: " + std::to_string(totallySentBytes) + " of " + std::to_string(data.size()) + (sentBytes == -1 ? ". Error message: " + std::string(strerror(errno)) : ""));
 				return BaseLib::Variable::createError(-32500, "Unknown application error.");
 			}
 			totallySentBytes += sentBytes;
@@ -761,7 +762,7 @@ BaseLib::PVariable ScriptEngineClient::send(std::vector<char>& data)
     return BaseLib::PVariable(new BaseLib::Variable());
 }
 
-BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string methodName, BaseLib::PArray& parameters)
+BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string methodName, BaseLib::PArray& parameters, bool wait)
 {
 	try
 	{
@@ -776,20 +777,28 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string
 			std::lock_guard<std::mutex> packetIdGuard(_packetIdMutex);
 			packetId = _currentPacketId++;
 		}
-		BaseLib::PArray array(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(scriptId)), BaseLib::PVariable(new BaseLib::Variable(packetId)), BaseLib::PVariable(new BaseLib::Variable(parameters)) });
+		BaseLib::PArray array = std::make_shared<BaseLib::Array>();
+		array->reserve(4);
+		array->push_back(std::make_shared<BaseLib::Variable>(scriptId));
+		array->push_back(std::make_shared<BaseLib::Variable>(packetId));
+		array->push_back(std::make_shared<BaseLib::Variable>(wait));
+		array->push_back(std::make_shared<BaseLib::Variable>(parameters));
 		std::vector<char> data;
 		_rpcEncoder->encodeRequest(methodName, array, data);
 
 		PScriptEngineResponse response;
+		if(wait)
 		{
-			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			auto result = _rpcResponses[scriptId].emplace(packetId, std::make_shared<ScriptEngineResponse>());
-			if(result.second) response = result.first->second;
-		}
-		if(!response)
-		{
-			_out.printCritical("Critical: Could not insert response struct into map.");
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
+			{
+				std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+				auto result = _rpcResponses[scriptId].emplace(packetId, std::make_shared<ScriptEngineResponse>());
+				if(result.second) response = result.first->second;
+			}
+			if(!response)
+			{
+				_out.printCritical("Critical: Could not insert response struct into map.");
+				return BaseLib::Variable::createError(-32500, "Unknown application error.");
+			}
 		}
 
 #ifdef DEBUGSESOCKET
@@ -802,6 +811,7 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string
 			_rpcResponses[scriptId].erase(packetId);
 			return result;
 		}
+		if(!wait) return std::make_shared<BaseLib::Variable>();
 
 		int32_t i = 0;
 		std::unique_lock<std::mutex> waitLock(requestInfo.waitMutex);
@@ -811,7 +821,7 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string
 		}))
 		{
 			i++;
-			if(i == 10) break;
+			if(i == 60) break;
 		}
 
 		if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
@@ -853,7 +863,12 @@ BaseLib::PVariable ScriptEngineClient::sendGlobalRequest(std::string methodName,
 			std::lock_guard<std::mutex> packetIdGuard(_packetIdMutex);
 			packetId = _currentPacketId++;
 		}
-		BaseLib::PArray array(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(0)), BaseLib::PVariable(new BaseLib::Variable(packetId)), BaseLib::PVariable(new BaseLib::Variable(parameters)) });
+		BaseLib::PArray array = std::make_shared<BaseLib::Array>();
+		array->reserve(4);
+		array->push_back(std::make_shared<BaseLib::Variable>(0));
+		array->push_back(std::make_shared<BaseLib::Variable>(packetId));
+		array->push_back(std::make_shared<BaseLib::Variable>(true));
+		array->push_back(std::make_shared<BaseLib::Variable>(parameters));
 		std::vector<char> data;
 		_rpcEncoder->encodeRequest(methodName, array, data);
 
@@ -1074,7 +1089,7 @@ ScriptEngineClient::ScriptGuard::~ScriptGuard()
 	}
 	if(!GD::bl->shuttingDown) _client->sendScriptFinished(_scriptInfo->exitCode);
 	if(_scriptInfo->peerId > 0) GD::out.printInfo("Info: PHP script of peer " + std::to_string(_scriptInfo->peerId) + " exited with code " + std::to_string(_scriptInfo->exitCode) + ".");
-	else GD::out.printInfo("Info: Script " + std::to_string(_scriptInfo->id) + " exited with code " + std::to_string(_scriptInfo->exitCode) + ".");
+	else if(_scriptInfo->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode || _scriptInfo->exitCode != 0) GD::out.printInfo("Info: Script " + std::to_string(_scriptInfo->id) + " exited with code " + std::to_string(_scriptInfo->exitCode) + ".");
 	_client->setThreadNotRunning(_scriptId);
 }
 
@@ -1131,6 +1146,12 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			if(type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
 			{
 				globals->nodeId = scriptInfo->nodeInfo->structValue->at("id")->stringValue;
+				auto flowIdIterator = scriptInfo->nodeInfo->structValue->at("info")->structValue->find("z");
+				if(flowIdIterator != scriptInfo->nodeInfo->structValue->at("info")->structValue->end())
+				{
+					globals->flowId = flowIdIterator->second->stringValue;
+				}
+				else globals->flowId = "g";
 			}
 
 			ZEND_TSRMLS_CACHE_UPDATE();
@@ -1324,7 +1345,7 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
 			globals->outputCallback = std::bind(&ScriptEngineClient::sendOutput, this, std::placeholders::_1);
 			globals->sendHeadersCallback = std::bind(&ScriptEngineClient::sendHeaders, this, std::placeholders::_1);
 		}
-		globals->rpcCallback = std::bind(&ScriptEngineClient::callMethod, this, std::placeholders::_1, std::placeholders::_2);
+		globals->rpcCallback = std::bind(&ScriptEngineClient::callMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 		{
 			std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
 			_requestInfo.emplace(std::piecewise_construct, std::make_tuple(id), std::make_tuple());
@@ -1831,7 +1852,7 @@ BaseLib::PVariable ScriptEngineClient::broadcastEvent(BaseLib::PArray& parameter
 					eventData->channel = channel;
 					eventData->variable = variableName;
 					eventData->value = parameters->at(3)->arrayValue->at(j);
-					if(!i->second->enqueue(eventData)) _out.printError("Error: Could not queue event as event buffer is full. Dropping it.");
+					if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event as event buffer is full. Dropping it.");
 				}
 			}
 		}
@@ -1867,7 +1888,7 @@ BaseLib::PVariable ScriptEngineClient::broadcastNewDevices(BaseLib::PArray& para
 				std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
 				eventData->type = "newDevices";
 				eventData->value = parameters->at(0);
-				i->second->enqueue(eventData);
+				if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event as event buffer is full. Dropping it.");
 			}
 		}
 
@@ -1902,7 +1923,7 @@ BaseLib::PVariable ScriptEngineClient::broadcastDeleteDevices(BaseLib::PArray& p
 				std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
 				eventData->type = "deleteDevices";
 				eventData->value = parameters->at(0);
-				i->second->enqueue(eventData);
+				if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event as event buffer is full. Dropping it.");
 			}
 		}
 
@@ -1940,7 +1961,7 @@ BaseLib::PVariable ScriptEngineClient::broadcastUpdateDevice(BaseLib::PArray& pa
 				eventData->id = parameters->at(0)->integerValue64;
 				eventData->channel = parameters->at(1)->integerValue;
 				eventData->hint = parameters->at(2)->integerValue;
-				i->second->enqueue(eventData);
+				if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event as event buffer is full. Dropping it.");
 			}
 		}
 

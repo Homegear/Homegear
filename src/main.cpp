@@ -252,11 +252,11 @@ void terminate(int signalNumber)
 				GD::uPnP->stop();
 			}
 #ifdef EVENTHANDLER
+			GD::out.printInfo( "(Shutdown) => Stopping Event handler");
 			if(GD::eventHandler) GD::eventHandler->dispose();
 #endif
 			stopRPCServers(true);
 			GD::rpcServers.clear();
-			GD::out.printInfo( "(Shutdown) => Stopping Event handler");
 
 			if(GD::mqtt && GD::mqtt->enabled())
 			{

@@ -10,7 +10,7 @@ endif
 
 if HAVE_CURL
 if HAVE_CURL_HEADERS
-LIBS += -lcurl
+LIBS += -lcurl-gnutls
 endif
 endif
 

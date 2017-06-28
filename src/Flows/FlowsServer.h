@@ -51,7 +51,6 @@ public:
 	void homegearShuttingDown();
 	void homegearReloading();
 	void processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped);
-	void processKilled9(pid_t pid);
 	uint32_t flowCount();
 	void broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values);
 	void broadcastNewDevices(BaseLib::PVariable deviceDescriptions);
@@ -68,28 +67,20 @@ private:
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
 	public:
-		enum class QueueEntryType
-		{
-			defaultType,
-			broadcast
-		};
-
 		QueueEntry() {}
-		QueueEntry(PFlowsClientData clientData, std::vector<char>& packet, bool isRequest) { this->clientData = clientData; this->packet = packet; this->isRequest = isRequest; }
-		QueueEntry(PFlowsClientData clientData, std::string methodName, BaseLib::PArray parameters) { type = QueueEntryType::broadcast; this->clientData = clientData; this->methodName = methodName; this->parameters = parameters; }
+		QueueEntry(PFlowsClientData clientData, std::vector<char>& packet) { this->clientData = clientData; this->packet = packet; }
+		QueueEntry(PFlowsClientData clientData, std::string methodName, BaseLib::PArray parameters) { this->clientData = clientData; this->methodName = methodName; this->parameters = parameters; }
 		virtual ~QueueEntry() {}
 
-		QueueEntryType type = QueueEntryType::defaultType;
 		PFlowsClientData clientData;
 
-		// {{{ defaultType
-			std::vector<char> packet;
-			bool isRequest = false;
-		// }}}
-
-		// {{{ broadcast
+		// {{{ Request
 			std::string methodName;
 			BaseLib::PArray parameters;
+		// }}}
+
+		// {{{ Response
+			std::vector<char> packet;
 		// }}}
 	};
 
@@ -127,6 +118,9 @@ private:
 	std::mutex _nodeClientIdMapMutex;
 	std::map<std::string, int32_t> _nodeClientIdMap;
 
+	std::atomic<int64_t> _lastNodeEvent;
+	std::atomic<uint32_t> _nodeEventCounter;
+
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
@@ -135,7 +129,7 @@ private:
 	void mainThread();
 	void readClient(PFlowsClientData& clientData);
 	BaseLib::PVariable send(PFlowsClientData& clientData, std::vector<char>& data);
-	BaseLib::PVariable sendRequest(PFlowsClientData& clientData, std::string methodName, BaseLib::PArray& parameters);
+	BaseLib::PVariable sendRequest(PFlowsClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait);
 	void sendResponse(PFlowsClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 	void sendShutdown();
 	void closeClientConnections();

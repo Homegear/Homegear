@@ -84,6 +84,18 @@ LANG=C chroot $rootfs /debootstrap/debootstrap --second-stage
 mount $bootp $bootfs
 [ $? -ne 0 ] && exit 1
 
+# {{{ Only for stretch - correct errors
+chroot $rootfs apt-get clean
+rm -rf $rootfs/var/lib/apt/lists/*
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get update
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
+wget http://archive.raspbian.org/raspbian.public.key && chroot $rootfs apt-key add raspbian.public.key && rm raspbian.public.key
+wget http://archive.raspberrypi.org/debian/raspberrypi.gpg.key && chroot $rootfs apt-key add raspberrypi.gpg.key && rm raspberrypi.gpg.key
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get update
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
+# }}}
+
 echo "deb $deb_local_mirror $deb_release main contrib non-free rpi
 " > etc/apt/sources.list
 
@@ -105,7 +117,8 @@ EOF
 
 #Setup network settings
 echo "homegearpi" > etc/hostname
-echo "127.0.0.1       localhost homegearpi
+echo "127.0.0.1       localhost
+127.0.1.1       homegearpi
 ::1             localhost ip6-localhost ip6-loopback
 ff02::1         ip6-allnodes
 ff02::2         ip6-allrouters
@@ -127,11 +140,6 @@ allow-hotplug wlan1
 iface wlan1 inet manual
     wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf
 " > etc/network/interfaces
-
-echo "nameserver 208.67.222.222
-nameserver 208.67.220.220
-nameserver 2620:0:ccc::2
-nameserver 2620:0:ccd::2" > etc/resolv.conf
 #End network settings
 
 echo "console-common    console-data/keymap/policy      select  Select keymap from full list
@@ -150,14 +158,12 @@ apt -y install apt-transport-https ca-certificates
 update-ca-certificates --fresh
 mkdir -p /etc/apt/sources.list.d/
 echo "deb http://archive.raspberrypi.org/debian/ jessie main ui" > /etc/apt/sources.list.d/raspi.list
-wget http://archive.raspbian.org/raspbian.public.key && apt-key add raspbian.public.key && rm raspbian.public.key
-wget http://archive.raspberrypi.org/debian/raspberrypi.gpg.key && apt-key add raspberrypi.gpg.key && rm raspberrypi.gpg.key
 echo "deb https://homegear.eu/packages/Raspbian/ jessie/" >> /etc/apt/sources.list.d/homegear.list
 wget http://homegear.eu/packages/Release.key
 apt-key add - < Release.key
 rm Release.key
 apt update
-apt -y install libraspberrypi0 libraspberrypi-bin locales console-common ntp openssh-server git-core binutils curl sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 libmodbus5 tmux dialog whiptail
+apt -y install libraspberrypi0 libraspberrypi-bin locales console-common ntp resolvconf openssh-server git-core binutils curl libcurl3-gnutls sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 libmodbus5 tmux dialog whiptail
 # Wireless packets
 apt -y install bluez-firmware firmware-atheros firmware-libertas firmware-realtek firmware-ralink firmware-brcm80211 wireless-tools wpasupplicant
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
@@ -167,7 +173,6 @@ rpi-update
 rm -Rf /boot.bak
 useradd --create-home --shell /bin/bash --user-group pi
 echo "pi:raspberry" | chpasswd
-echo "root:raspberry" | chpasswd
 result=`id -u homegear 2>/dev/null`
 if [ "0$result" -eq "0" ]; then
     adduser --system --no-create-home --shell /bin/false --group homegear >/dev/null 2>&1
@@ -355,17 +360,22 @@ cat > "$rootfs/setupPartitions.sh" <<-'EOF'
 
 stage_one()
 {
+    bytes=$(fdisk -l | grep mmcblk0 | head -1 | cut -d "," -f 2 | cut -d " " -f 2)
+    gigabytes=$(($bytes / 1073741824))
+    maxrootpartitionsize=$(($gigabytes - 1))
+
     rootpartitionsize=""
-    while [ -z $rootpartitionsize ] || ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]]; do
-        rootpartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter new size of readonly root partition in gigabytes. The minimum partition size is 2 GB. We recommend only using as much space as really necessary so damaged sectors can be placed outside of the used space. It is also recommended to use a SD card as large as possible." 15 50 "2")
+    while [ -z $rootpartitionsize ] || ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]] || [[ $rootpartitionsize -gt $maxrootpartitionsize ]]; do
+        rootpartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter new size of readonly root partition in gigabytes. The minimum partition size is 2 GB. The maximum partition size is $maxrootpartitionsize GB. We recommend only using as much space as really necessary so damaged sectors can be placed outside of the used space. It is also recommended to use a SD card as large as possible." 15 50 "2")
         if ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]] || [[ $rootpartitionsize -lt 2 ]]; then
             dialog --title "Partitioning" --msgbox "Please enter a valid size in gigabytes (without unit). E. g. \"2\" or \"4\". Not \"2G\"." 10 50
         fi
     done
 
+    maxdatapartitionsize=$(($gigabytes - $rootpartitionsize))
     datapartitionsize=""
-    while [ -z $datapartitionsize ] || ! [[ $datapartitionsize =~ ^[1-9][0-9]*$ ]]; do
-        datapartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter size of writeable data partition in gigabytes. We recommend only using as much space as really necessary so damaged sectors can be placed outside of the used space. It is also recommended to use a SD card as large as possible." 15 50 "2")
+    while [ -z $datapartitionsize ] || ! [[ $datapartitionsize =~ ^[1-9][0-9]*$ ]] || [[ $datapartitionsize -gt $maxdatapartitionsize ]]; do
+        datapartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter size of writeable data partition in gigabytes. The maximum partition size is $maxdatapartitionsize GB. We recommend only using as much space as really necessary so damaged sectors can be placed outside of the used space. It is also recommended to use a SD card as large as possible." 15 50 "2")
         if ! [[ $datapartitionsize =~ ^[1-9][0-9]*$ ]]; then
             dialog --title "Partitioning" --msgbox "Please enter a valid size in gigabytes (without unit). E. g. \"2\" or \"4\". Not \"2G\"." 10 50
         fi
@@ -443,7 +453,7 @@ MAC="homegearpi-""$( ifconfig | grep -m 1 HWaddr | sed "s/^.*HWaddr [0-9a-f:]\{9
 echo "$MAC" > "/etc/hostname"
 grep -q $MAC /etc/hosts
 if [ $? -eq 1 ]; then
-    sed -i "s/127.0.0.1       localhost homegearpi/127.0.0.1       localhost $MAC/g" /etc/hosts
+    sed -i "s/127.0.1.1       homegearpi/127.0.1.1       $MAC/g" /etc/hosts
 fi
 hostname $MAC
 
@@ -472,25 +482,6 @@ done
 unset password1
 unset passowrd2
 
-password1=""
-password2=""
-while [[ -z $password1 ]] || [[ $password1 != $password2 ]]; do
-    password1=""
-    while [[ -z $password1 ]]; do
-        password1=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter a new password for user \"root\"" 10 50)
-    done
-    password2=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter the same password again" 10 50)
-
-    if [[ $password1 == $password2 ]]; then
-        mount -o remount,rw /
-        echo -e "${password1}\n${password2}" | passwd root
-    else
-        dialog --title "Error changing password" --msgbox "The entered passwords did not match." 10 50
-    fi
-done
-unset password1
-unset passowrd2
-
 # Detect Pi 3
 if [ "$boardRev" == "a02082" ] || [ "$boardRev" == "a22082" ]; then
   echo "dwc_otg.lpm_enable=0 console=ttyUSB0,115200 console=tty1 kgdboc=ttyUSB0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline rootwait" > /boot/cmdline.txt
@@ -511,7 +502,7 @@ apt-get -y dist-upgrade | dialog --title "System update (2/2)" --progressbox "Up
 
 TTY_X=$(($(stty size | awk '{print $2}')-6))
 TTY_Y=$(($(stty size | awk '{print $1}')-6))
-apt-get -y install homegear homegear-homematicbidcos homegear-homematicwired homegear-insteon homegear-max homegear-philipshue homegear-sonos homegear-kodi homegear-ipcam homegear-beckhoff homegear-knx homegear-enocean homegear-intertechno | dialog --title "System setup" --progressbox "Installing Homegear..." $TTY_Y $TTY_X
+apt-get -y install homegear homegear-nodes-core homegear-nodes-extra homegear-homematicbidcos homegear-homematicwired homegear-insteon homegear-max homegear-philipshue homegear-sonos homegear-kodi homegear-ipcam homegear-beckhoff homegear-knx homegear-enocean homegear-intertechno | dialog --title "System setup" --progressbox "Installing Homegear..." $TTY_Y $TTY_X
 if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
     TTY_X=$(($(stty size | awk '{print $2}')-6))
     TTY_Y=$(($(stty size | awk '{print $1}')-6))
@@ -530,7 +521,7 @@ sed -i 's/databaseMemoryJournal = false/databaseMemoryJournal = true/g' /etc/hom
 sed -i 's/databaseWALJournal = true/databaseWALJournal = false/g' /etc/homegear/main.conf
 sed -i 's/databaseSynchronous = true/databaseSynchronous = false/g' /etc/homegear/main.conf
 
-sed -i 's/session.save_path = "\/var\/lib\/homegear\/tmp\/php"/session.save_path = "\/var\/tmp\/homegear\/php/g' /etc/homegear/main.conf
+sed -i 's/session.save_path = "\/var\/lib\/homegear\/tmp\/php"/session.save_path = "\/var\/tmp\/homegear\/php"/g' /etc/homegear/php.ini
 
 echo "" >> /etc/homegear/homegear-start.sh
 echo "# Delete backuped db.sql." >> /etc/homegear/homegear-start.sh
@@ -542,6 +533,8 @@ echo "[ -d /data/homegear-data ] && chown homegear:homegear /data/homegear-data/
 echo "sync" >> /etc/homegear/homegear-stop.sh
 
 echo "3 *  * * *   root    /bin/systemctl reload homegear 2>&1 |/usr/bin/logger -t homegear-reload" > /etc/cron.d/homegear
+
+chown -R homegear:homegear /var/lib/homegear/www
 
 echo ""
 echo "Starting raspi-config..."
