@@ -475,6 +475,11 @@ bool php_init_node(PScriptInfo scriptInfo, zend_class_entry* homegearNodeClassEn
 				GD::out.printError("Error: Mandatory method \"stop\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
 				stop = true;
 			}
+			if(!zend_hash_str_find_ptr(&(homegearNodeClassEntry->function_table), "waitForStop", sizeof("stop") - 1))
+			{
+				GD::out.printError("Error: Mandatory method \"waitForStop\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
+				stop = true;
+			}
 		}
 		else if(scriptInfo->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode)
 		{
