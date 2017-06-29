@@ -539,11 +539,12 @@ int32_t FamilyController::loadModule(std::string filename)
 				if(!family->enabled()) GD::out.printInfo("Info: Not initializing device family " + family->getName() + ", because it is disabled in it's configuration file.");
 				else if(familyAvailable(family->getFamily())) GD::out.printError("Error: Could not initialize device family " + family->getName() + ".");
 				else GD::out.printInfo("Info: Not initializing device family " + family->getName() + ", because no physical interface was found.");
+				int32_t familyId = family->getFamily();
 				family->dispose();
 				family.reset();
 				{
 					std::lock_guard<std::mutex> familiesGuard(_familiesMutex);
-					_families[family->getFamily()].reset();
+					_families[familyId].reset();
 				}
 				_moduleLoaders.at(filename)->dispose();
 				_moduleLoaders.erase(filename);
@@ -623,10 +624,11 @@ int32_t FamilyController::unloadModule(std::string filename)
 				std::this_thread::sleep_for(std::chrono::milliseconds(50));
 			}
 			family->save(false);
+			int32_t familyId = family->getFamily();
 			family->dispose();
-			std::lock_guard<std::mutex> familiesGuard(_familiesMutex);
-			_families[family->getFamily()].reset();
 			family.reset();
+			std::lock_guard<std::mutex> familiesGuard(_familiesMutex);
+			_families[familyId].reset();
 		}
 
 		moduleLoaderIterator->second->dispose();
