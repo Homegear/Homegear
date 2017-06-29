@@ -1280,7 +1280,7 @@ void ScriptEngineClient::runNode(int32_t id, PScriptInfo scriptInfo)
 					nodeInfo->response = php_node_object_invoke_local(scriptInfo, &homegearNodeObject, nodeInfo->methodName, nodeInfo->parameters);
 					if(nodeInfo->methodName == "init" && !nodeInfo->response->booleanValue) stop = true;
 					else if(nodeInfo->methodName == "start" && !nodeInfo->response->booleanValue) stop = true;
-					else if(nodeInfo->methodName == "stop") stop = true;
+					else if(nodeInfo->methodName == "waitForStop") stop = true;
 
 					nodeInfo->parameters.reset();
 					waitLock.unlock();
