@@ -1139,7 +1139,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			GD::flowsServer->restartFlows();
+			if(GD::flowsServer) GD::flowsServer->restartFlows();
 
 			stringStream << "Flows restarted." << std::endl;
 

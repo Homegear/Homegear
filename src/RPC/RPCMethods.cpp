@@ -4103,7 +4103,7 @@ BaseLib::PVariable RPCSetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		GD::flowsServer->setNodeVariable(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
+		if(GD::flowsServer) GD::flowsServer->setNodeVariable(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
 		return std::make_shared<BaseLib::Variable>();
 	}
 	catch(const std::exception& ex)

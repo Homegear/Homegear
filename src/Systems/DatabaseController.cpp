@@ -902,7 +902,7 @@ BaseLib::PVariable DatabaseController::setMetadata(uint64_t peerID, std::string&
 #endif
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{dataID});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{metadata});
-		GD::flowsServer->broadcastEvent(peerID, -1, valueKeys, values);
+		if(GD::flowsServer) GD::flowsServer->broadcastEvent(peerID, -1, valueKeys, values);
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(peerID, -1, valueKeys, values);
 #endif
@@ -962,7 +962,7 @@ BaseLib::PVariable DatabaseController::deleteMetadata(uint64_t peerID, std::stri
 #ifdef EVENTHANDLER
 		GD::eventHandler->trigger(peerID, -1, dataID, value);
 #endif
-		GD::flowsServer->broadcastEvent(peerID, -1, valueKeys, values);
+		if(GD::flowsServer) GD::flowsServer->broadcastEvent(peerID, -1, valueKeys, values);
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(peerID, -1, valueKeys, values);
 #endif
@@ -1103,7 +1103,7 @@ BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableID
 #endif
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableID});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{value});
-		GD::flowsServer->broadcastEvent(0, -1, valueKeys, values);
+		if(GD::flowsServer) GD::flowsServer->broadcastEvent(0, -1, valueKeys, values);
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(0, -1, valueKeys, values);
 #endif
@@ -1151,7 +1151,7 @@ BaseLib::PVariable DatabaseController::deleteSystemVariable(std::string& variabl
 #ifdef EVENTHANDLER
 		GD::eventHandler->trigger(variableID, value);
 #endif
-		GD::flowsServer->broadcastEvent(0, -1, valueKeys, values);
+		if(GD::flowsServer) GD::flowsServer->broadcastEvent(0, -1, valueKeys, values);
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(0, -1, valueKeys, values);
 #endif
