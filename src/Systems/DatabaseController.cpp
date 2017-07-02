@@ -34,6 +34,7 @@
 
 DatabaseController::DatabaseController() : IQueue(GD::bl.get(), 1, 100000)
 {
+	_disposing = false;
 }
 
 DatabaseController::~DatabaseController()

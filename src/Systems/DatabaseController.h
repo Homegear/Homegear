@@ -161,7 +161,7 @@ public:
 		virtual void deleteLicenseVariable(int32_t moduleId, uint64_t mapKey);
 	// }}}
 protected:
-	bool _disposing = false;
+	std::atomic_bool _disposing;
 
 	BaseLib::Database::SQLite3 _db;
 
