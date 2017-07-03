@@ -353,11 +353,6 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 
 		if(index == 0) //IPC request
 		{
-			if(GD::bl->settings.devLog())
-			{
-				_out.printInfo("Devlog: " + BaseLib::HelperFunctions::getHexString(queueEntry->packet));
-			}
-
 			if(queueEntry->parameters->size() < 3)
 			{
 				_out.printError("Error: Wrong parameter count while calling method " + queueEntry->methodName);

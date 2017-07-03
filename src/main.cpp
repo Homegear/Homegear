@@ -1022,6 +1022,8 @@ void startUp()
 		GD::eventHandler.reset(new EventHandler());
 #endif
 
+		GD::flowsServer.reset(new Flows::FlowsServer());
+
 		if(!GD::bl->io.directoryExists(GD::bl->settings.tempPath() + "php"))
 		{
 			if(!GD::bl->io.createDirectory(GD::bl->settings.tempPath() + "php", S_IRWXU | S_IRWXG))
@@ -1074,7 +1076,6 @@ void startUp()
         GD::eventHandler->load();
 #endif
 
-		GD::flowsServer.reset(new Flows::FlowsServer());
 		if(GD::bl->settings.enableFlows())
 		{
 			GD::out.printInfo("Starting flows server...");
