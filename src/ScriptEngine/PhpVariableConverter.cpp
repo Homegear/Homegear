@@ -102,7 +102,7 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval* value)
 		}
 		else
 		{
-			variable.reset(new BaseLib::Variable(std::string("")));
+			variable.reset(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 		}
 
 		return variable;
