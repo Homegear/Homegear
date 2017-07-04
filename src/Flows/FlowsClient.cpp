@@ -82,6 +82,7 @@ void FlowsClient::dispose()
 {
 	try
 	{
+		std::lock_guard<std::mutex> startFlowGuard(_startFlowMutex);
 		if(_disposed) return;
 		_disposed = true;
 		_out.printMessage("Shutting down...");
@@ -882,6 +883,9 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 	try
 	{
 		if(parameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
+
+		std::lock_guard<std::mutex> startFlowGuard(_startFlowMutex);
+		if(_disposed) return Flows::Variable::createError(-1, "Client is disposing.");
 
 		PFlowInfoClient flow = std::make_shared<FlowInfoClient>();
 		flow->id = parameters->at(0)->integerValue;

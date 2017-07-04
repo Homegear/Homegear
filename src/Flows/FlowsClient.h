@@ -111,6 +111,8 @@ private:
 	std::unique_ptr<Flows::RpcDecoder> _rpcDecoder;
 	std::unique_ptr<Flows::RpcEncoder> _rpcEncoder;
 
+	std::mutex _startFlowMutex;
+
 	std::mutex _flowsMutex;
 	std::unordered_map<int32_t, PFlowInfoClient> _flows;
 

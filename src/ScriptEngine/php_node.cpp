@@ -35,11 +35,13 @@
 
 #define SEG(v) php_homegear_get_globals()->v
 
+static zend_class_entry* homegear_node_base_class_entry = nullptr;
+
 void php_homegear_node_invoke_rpc(std::string& methodName, BaseLib::PVariable& parameters, zval* return_value, bool wait)
 {
 	if(SEG(id) == 0)
 	{
-		zend_throw_exception(SEG(homegear_exception_class_entry), "Script id is unset. Please call \"registerThread\" before calling any Homegear specific method within threads.", -1);
+		zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Please call \"registerThread\" before calling any Homegear specific method within threads.", -1);
 		RETURN_FALSE
 	}
 	if(!SEG(rpcCallback)) RETURN_FALSE;
@@ -47,7 +49,7 @@ void php_homegear_node_invoke_rpc(std::string& methodName, BaseLib::PVariable& p
 	BaseLib::PVariable result = SEG(rpcCallback)(methodName, parameters, wait);
 	if(result->errorStruct)
 	{
-		zend_throw_exception(SEG(homegear_exception_class_entry), result->structValue->at("faultString")->stringValue.c_str(), result->structValue->at("faultCode")->integerValue);
+		zend_throw_exception(homegear_exception_class_entry, result->structValue->at("faultString")->stringValue.c_str(), result->structValue->at("faultCode")->integerValue);
 		RETURN_NULL()
 	}
 	PhpVariableConverter::getPHPVariable(result, return_value);
@@ -428,8 +430,8 @@ void php_node_startup()
 {
 	zend_class_entry homegearNodeBaseCe;
 	INIT_CLASS_ENTRY(homegearNodeBaseCe, "HomegearNodeBase", homegear_node_base_methods);
-	SEG(homegear_node_base_class_entry) = zend_register_internal_class(&homegearNodeBaseCe);
-	zend_declare_class_constant_stringl(SEG(homegear_node_base_class_entry), "NODE_ID", sizeof("NODE_ID") - 1, SEG(nodeId).c_str(), SEG(nodeId).size());
+	homegear_node_base_class_entry = zend_register_internal_class(&homegearNodeBaseCe);
+	zend_declare_class_constant_stringl(homegear_node_base_class_entry, "NODE_ID", sizeof("NODE_ID") - 1, SEG(nodeId).c_str(), SEG(nodeId).size());
 }
 
 bool php_init_node(PScriptInfo scriptInfo, zend_class_entry* homegearNodeClassEntry, zval* homegearNodeObject)
