@@ -1156,6 +1156,10 @@ void FlowsServer::closeClientConnections()
 			collectGarbage();
 			if(_clients.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
+
+		std::lock_guard<std::mutex> processGuard(_processMutex);
+		if(!_processes.empty()) _out.printWarning("Warning: There are still entries in the processes array. Clearing them.");
+		_processes.clear();
 	}
 	catch(const std::exception& ex)
     {
