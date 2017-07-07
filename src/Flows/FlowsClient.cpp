@@ -889,8 +889,12 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 
 		PFlowInfoClient flow = std::make_shared<FlowInfoClient>();
 		flow->id = parameters->at(0)->integerValue;
+		flow->flow = parameters->at(1)->arrayValue->at(0);
+		std::string flowId;
+		auto flowIdIterator = flow->flow->structValue->find("id");
+		if(flowIdIterator != flow->flow->structValue->end()) flowId = flowIdIterator->second->stringValue;
 
-		_out.printInfo("Info: Starting flow with ID " + std::to_string(flow->id) + "...");
+		_out.printInfo("Info: Starting flow with ID " + std::to_string(flow->id) + " (" + flowId + ")...");
 
 		for(auto& element : *parameters->at(1)->arrayValue)
 		{
@@ -997,6 +1001,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 					}
 
 					nodeObject->setId(node.second->id);
+					nodeObject->setFlowId(flowId);
 
 					nodeObject->setLog(std::function<void(std::string, int32_t, std::string)>(std::bind(&FlowsClient::log, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 					nodeObject->setInvoke(std::function<Flows::PVariable(std::string, Flows::PArray&)>(std::bind(&FlowsClient::invoke, this, std::placeholders::_1, std::placeholders::_2, true)));
