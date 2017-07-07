@@ -418,10 +418,10 @@ static const zend_function_entry homegear_node_base_methods[] = {
 	ZEND_ME_MAPPING(nodeEvent, hg_node_node_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(getNodeData, hg_node_get_node_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(setNodeData, hg_node_set_node_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	ZEND_ME_MAPPING(getFlowData, hg_node_get_node_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	ZEND_ME_MAPPING(setFlowData, hg_node_set_node_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	ZEND_ME_MAPPING(getGlobalData, hg_node_get_node_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-	ZEND_ME_MAPPING(setGlobalData, hg_node_set_node_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(getFlowData, hg_node_get_flow_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(setFlowData, hg_node_set_flow_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(getGlobalData, hg_node_get_global_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(setGlobalData, hg_node_set_global_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(getConfigParameter, hg_node_get_config_parameter, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
 };
