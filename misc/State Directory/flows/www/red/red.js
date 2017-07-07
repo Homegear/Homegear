@@ -9491,12 +9491,14 @@ RED.view = (function() {
                     var link1 = {
                         source:spliceLink.source,
                         sourcePort:spliceLink.sourcePort,
-                        target: nn
+                        target: nn,
+                        targetPort: 0
                     };
                     var link2 = {
                         source:nn,
                         sourcePort:0,
-                        target: spliceLink.target
+                        target: spliceLink.target,
+                        targetPort: 0
                     };
                     RED.nodes.addLink(link1);
                     RED.nodes.addLink(link2);
@@ -10106,15 +10108,18 @@ RED.view = (function() {
                     var link1 = {
                         source:spliceLink.source,
                         sourcePort:spliceLink.sourcePort,
-                        target: moving_set[0].n
+                        target: moving_set[0].n,
+                        targetPort: 0
                     };
                     var link2 = {
                         source:moving_set[0].n,
                         sourcePort:0,
-                        target: spliceLink.target
+                        target: spliceLink.target,
+                        targetPort: 0
                     };
                     RED.nodes.addLink(link1);
                     RED.nodes.addLink(link2);
+                    console.log(link1, link2);
                     historyEvent.links = [link1,link2];
                     historyEvent.removedLinks = [spliceLink];
                     updateActiveNodes();
@@ -10747,12 +10752,14 @@ RED.view = (function() {
                 var link1 = {
                     source:spliceLink.source,
                     sourcePort:spliceLink.sourcePort,
-                    target: moving_set[0].n
+                    target: moving_set[0].n,
+                    targetPort: 0
                 };
                 var link2 = {
                     source:moving_set[0].n,
                     sourcePort:0,
-                    target: spliceLink.target
+                    target: spliceLink.target,
+                    targetPort: 0
                 };
                 RED.nodes.addLink(link1);
                 RED.nodes.addLink(link2);
