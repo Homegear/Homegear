@@ -58,6 +58,7 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 3, 1000)
 	_localRpcMethods.emplace("startNodes", std::bind(&FlowsClient::startNodes, this, std::placeholders::_1));
 	_localRpcMethods.emplace("configNodesStarted", std::bind(&FlowsClient::configNodesStarted, this, std::placeholders::_1));
 	_localRpcMethods.emplace("startUpComplete", std::bind(&FlowsClient::startUpComplete, this, std::placeholders::_1));
+	_localRpcMethods.emplace("stopNodes", std::bind(&FlowsClient::stopNodes, this, std::placeholders::_1));
 	_localRpcMethods.emplace("stopFlow", std::bind(&FlowsClient::stopFlow, this, std::placeholders::_1));
 	_localRpcMethods.emplace("flowCount", std::bind(&FlowsClient::flowCount, this, std::placeholders::_1));
 	_localRpcMethods.emplace("nodeOutput", std::bind(&FlowsClient::nodeOutput, this, std::placeholders::_1));
@@ -86,20 +87,6 @@ void FlowsClient::dispose()
 		if(_disposed) return;
 		_disposed = true;
 		_out.printMessage("Shutting down...");
-
-		_out.printMessage("Calling stop()...");
-		{
-			std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-			for(auto& flow : _flows)
-			{
-				for(auto& nodeIterator : flow.second->nodes)
-				{
-					Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
-					if(_bl->debugLevel >= 5) _out.printDebug("Debug: Calling stop() on node " + nodeIterator.second->id + "...");
-					if(node) node->stop();
-				}
-			}
-		}
 
 		_out.printMessage("Calling waitForStop()...");
 		{
@@ -1140,6 +1127,38 @@ Flows::PVariable FlowsClient::startUpComplete(Flows::PArray& parameters)
 			{
 				Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
 				if(node) node->startUpComplete();
+			}
+		}
+		return std::make_shared<Flows::Variable>();
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable FlowsClient::stopNodes(Flows::PArray& parameters)
+{
+	try
+	{
+		_out.printMessage("Calling stop()...");
+		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+		for(auto& flow : _flows)
+		{
+			for(auto& nodeIterator : flow.second->nodes)
+			{
+				Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
+				if(_bl->debugLevel >= 5) _out.printDebug("Debug: Calling stop() on node " + nodeIterator.second->id + "...");
+				if(node) node->stop();
 			}
 		}
 		return std::make_shared<Flows::Variable>();

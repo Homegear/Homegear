@@ -108,6 +108,7 @@ private:
 	std::map<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>> _localRpcMethods;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
+	std::atomic_bool _flowsRestarting;
 	std::mutex _restartFlowsMutex;
 	std::mutex _flowsPostMutex;
 	std::mutex _flowsFileMutex;
@@ -139,6 +140,7 @@ private:
 	bool checkIntegrity(std::string flowsFile);
 	void backupFlows();
 	void startFlows();
+	void stopNodes();
 	std::set<std::string> insertSubflows(BaseLib::PVariable& subflowNode, std::unordered_map<std::string, BaseLib::PVariable>& subflowInfos, std::unordered_map<std::string, BaseLib::PVariable>& flowNodes, std::unordered_map<std::string, BaseLib::PVariable>& subflowNodes, std::set<std::string>& flowNodeIds, std::set<std::string>& allNodeIds);
 	void startFlow(PFlowInfoServer& flowInfo, std::set<std::string>& nodes);
 

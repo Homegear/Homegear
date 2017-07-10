@@ -177,6 +177,12 @@ private:
 		Flows::PVariable startUpComplete(Flows::PArray& parameters);
 
 		/**
+		 * Executes the method "stop" on all nodes. RPC methods can still be called within "stop", but not afterwards.
+		 * @param parameters
+		 */
+		Flows::PVariable stopNodes(Flows::PArray& parameters);
+
+		/**
 		 * Stops a flow.
 		 * @param parameters
 		 */

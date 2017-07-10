@@ -43,6 +43,7 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 3, 1000)
 	_shuttingDown = false;
 	_stopServer = false;
 	_nodeEventsEnabled = false;
+	_flowsRestarting = false;
 	_lastNodeEvent = 0;
 	_nodeEventCounter = 0;
 
@@ -417,6 +418,7 @@ void FlowsServer::homegearShuttingDown()
 	try
 	{
 		_shuttingDown = true;
+		stopNodes();
 		sendShutdown();
 	}
 	catch(const std::exception& ex)
@@ -491,7 +493,7 @@ void FlowsServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, boo
 
 			if(signal != -1) exitCode = -32500;
 			process->invokeFlowFinished(exitCode);
-			if(signal != -1 && signal != 15) GD::bl->threadManager.start(_maintenanceThread, true, &FlowsServer::restartFlows, this);
+			if(signal != -1 && signal != 15 && !_flowsRestarting) GD::bl->threadManager.start(_maintenanceThread, true, &FlowsServer::restartFlows, this);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1044,21 +1046,21 @@ void FlowsServer::startFlows()
 		for(auto& client : clients)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array());
-			sendRequest(client, "startNodes", parameters, false);
+			sendRequest(client, "startNodes", parameters, true);
 		}
 
 		_out.printInfo("Info: Calling \"configNodesStarted\".");
 		for(auto& client : clients)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array());
-			sendRequest(client, "configNodesStarted", parameters, false);
+			sendRequest(client, "configNodesStarted", parameters, true);
 		}
 
 		_out.printInfo("Info: Calling \"startUpComplete\".");
 		for(auto& client : clients)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array());
-			sendRequest(client, "startUpComplete", parameters, false);
+			sendRequest(client, "startUpComplete", parameters, true);
 		}
 
 		std::set<std::string> nodeData = GD::bl->db->getAllNodeDataNodes();
@@ -1175,11 +1177,47 @@ void FlowsServer::closeClientConnections()
     }
 }
 
+void FlowsServer::stopNodes()
+{
+	try
+	{
+		_out.printInfo("Info: Stopping nodes.");
+		std::vector<PFlowsClientData> clients;
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) continue;
+				clients.push_back(i->second);
+			}
+		}
+		for(auto& client : clients)
+		{
+			BaseLib::PArray parameters(new BaseLib::Array());
+			sendRequest(client, "stopNodes", parameters, true);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void FlowsServer::restartFlows()
 {
 	try
 	{
 		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
+		_flowsRestarting = true;
+		stopNodes();
 		_out.printInfo("Info: Stopping Flows...");
 		sendShutdown();
 		_out.printInfo("Info: Closing connections to Flows clients...");
@@ -1200,6 +1238,7 @@ void FlowsServer::restartFlows()
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _flowsRestarting = false;
 }
 
 std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding)
