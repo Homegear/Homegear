@@ -38,6 +38,7 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 3, 1000)
 {
 	_stopped = false;
 	_disposed = false;
+	_shuttingDown = false;
 	_frontendConnected = false;
 
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
@@ -396,7 +397,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 		}
 		else //Node output
 		{
-			if(!queueEntry->nodeInfo || !queueEntry->message) return;
+			if(!queueEntry->nodeInfo || !queueEntry->message || _shuttingDown) return;
 			Flows::PINode node = _nodeManager->getNode(queueEntry->nodeInfo->id);
 			if(node)
 			{
@@ -648,7 +649,7 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 {
 	try
 	{
-		if(!message) return;
+		if(!message || _shuttingDown) return;
 
 		std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
 		auto nodesIterator = _nodes.find(nodeId);
@@ -1150,6 +1151,7 @@ Flows::PVariable FlowsClient::stopNodes(Flows::PArray& parameters)
 {
 	try
 	{
+		_shuttingDown = true;
 		_out.printMessage("Calling stop()...");
 		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
 		for(auto& flow : _flows)
