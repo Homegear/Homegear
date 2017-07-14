@@ -89,6 +89,7 @@ private:
 	};
 
 	BaseLib::Output _out;
+	std::atomic_bool _shuttingDown;
 	std::atomic_bool _disposed;
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
@@ -110,6 +111,8 @@ private:
 	std::unique_ptr<Flows::BinaryRpc> _binaryRpc;
 	std::unique_ptr<Flows::RpcDecoder> _rpcDecoder;
 	std::unique_ptr<Flows::RpcEncoder> _rpcEncoder;
+
+	std::mutex _startFlowMutex;
 
 	std::mutex _flowsMutex;
 	std::unordered_map<int32_t, PFlowInfoClient> _flows;
@@ -173,6 +176,12 @@ private:
 		 * @param parameters
 		 */
 		Flows::PVariable startUpComplete(Flows::PArray& parameters);
+
+		/**
+		 * Executes the method "stop" on all nodes. RPC methods can still be called within "stop", but not afterwards.
+		 * @param parameters
+		 */
+		Flows::PVariable stopNodes(Flows::PArray& parameters);
 
 		/**
 		 * Stops a flow.

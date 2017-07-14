@@ -1176,6 +1176,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				std::vector<uint8_t> rawPacket(buffer, buffer + bytesRead);
 				_out.printDebug("Debug: Packet received: " + BaseLib::HelperFunctions::getHexString(rawPacket));
 			}
+
 			if(binaryRpc.processingStarted() || (!binaryRpc.processingStarted() && !http.headerProcessingStarted() && !webSocket.dataProcessingStarted() && !strncmp(&buffer[0], "Bin", 3)))
 			{
 				if(!_info->xmlrpcServer) continue;
@@ -1230,7 +1231,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			}
 			else if(!binaryRpc.processingStarted() && !http.headerProcessingStarted() && !webSocket.dataProcessingStarted())
 			{
-				if(!strncmp(&buffer[0], "GET ", 4) || !strncmp(&buffer[0], "HEAD ", 5))
+				if(!strncmp(buffer, "GET ", 4) || !strncmp(buffer, "HEAD ", 5))
 				{
 					buffer[bytesRead] = '\0';
 					packetType = PacketType::Enum::xmlRequest;
@@ -1264,11 +1265,11 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						sendRPCResponseToClient(client, data, false);
 					}
 				}
-				else if(!strncmp(&buffer[0], "POST", 4) || !strncmp(&buffer[0], "HTTP/1.", 7))
+				else if(!strncmp(buffer, "POST", 4) || !strncmp(buffer, "HTTP/1.", 7))
 				{
 					if(bytesRead < 8) continue;
 					buffer[bytesRead] = '\0';
-					packetType = (!strncmp(&buffer[0], "POST", 4)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
+					packetType = (!strncmp(buffer, "POST", 4)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
 
 					try
 					{

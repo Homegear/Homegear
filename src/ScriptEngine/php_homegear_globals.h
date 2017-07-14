@@ -37,6 +37,8 @@
 
 #include <zend_types.h>
 
+__attribute__((unused)) static zend_class_entry* homegear_exception_class_entry = nullptr;
+
 typedef struct _zend_homegear_globals
 {
 	std::function<void(std::string& output)> outputCallback;
@@ -50,15 +52,6 @@ typedef struct _zend_homegear_globals
 	bool cookiesParsed = false;
 	int64_t peerId = 0;
 	int32_t logLevel = -1;
-
-	zend_class_entry* homegear_exception_class_entry = nullptr;
-	zend_class_entry* homegear_class_entry = nullptr;
-	zend_class_entry* homegear_gpio_class_entry = nullptr;
-	zend_class_entry* homegear_serial_class_entry = nullptr;
-#ifdef I2CSUPPORT
-	zend_class_entry* homegear_i2c_class_entry = nullptr;
-#endif
-	zend_class_entry* homegear_node_base_class_entry = nullptr;
 
 	// {{{ Needed by ScriptEngineClient
 	int32_t id = 0;
