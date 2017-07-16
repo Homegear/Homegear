@@ -66,7 +66,7 @@ case $1 in
 					if [[ $platform == "armhf" ]] || [[ $platform == "arm64" ]]; then
 						echo "The generation can take up to 30 minutes."
 					fi
-					openssl dhparam -check -text -5 1024 -out /etc/homegear/dh1024.pem > /dev/null 2>&1 &
+					openssl dhparam -check -text -5 -out /etc/homegear/dh1024.pem 1024 > /dev/null 2>&1 &
 					opensslPid=$!
 					exitcode=0
 					counter=0
@@ -81,7 +81,7 @@ case $1 in
 						sleep 1
 					done
 				else
-					openssl dhparam -check -text -5 1024 -out /etc/homegear/dh1024.pem
+					openssl dhparam -check -text -5 -out /etc/homegear/dh1024.pem 1024
 				fi
 				chown homegear:homegear /etc/homegear/dh1024.pem
 				chmod 400 /etc/homegear/dh1024.pem
