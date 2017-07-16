@@ -441,9 +441,6 @@ void FlowsServer::homegearReloading()
 {
 	try
 	{
-		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
-		if(_flowsRestarting) return;
-
 		std::vector<PFlowsClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -519,9 +516,6 @@ void FlowsServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVaria
 {
 	try
 	{
-		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
-		if(_flowsRestarting) return;
-
 		PFlowsClientData clientData;
 		int32_t clientId = 0;
 		{
@@ -562,9 +556,6 @@ void FlowsServer::setNodeVariable(std::string nodeId, std::string topic, BaseLib
 {
 	try
 	{
-		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
-		if(_flowsRestarting) return;
-
 		PFlowsClientData clientData;
 		int32_t clientId = 0;
 		{
@@ -606,10 +597,6 @@ void FlowsServer::enableNodeEvents()
 	try
 	{
 		if(_shuttingDown) return;
-
-		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
-		if(_flowsRestarting) return;
-
 		_out.printInfo("Info: Enabling node events...");
 		_nodeEventsEnabled = true;
 		std::vector<PFlowsClientData> clients;
@@ -647,10 +634,6 @@ void FlowsServer::disableNodeEvents()
 	try
 	{
 		if(_shuttingDown) return;
-
-		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
-		if(_flowsRestarting) return;
-
 		_out.printInfo("Info: Disabling node events...");
 		_nodeEventsEnabled = false;
 		std::vector<PFlowsClientData> clients;
@@ -1477,10 +1460,6 @@ uint32_t FlowsServer::flowCount()
 	try
 	{
 		if(_shuttingDown) return 0;
-
-		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
-		if(_flowsRestarting) return 0;
-
 		std::vector<PFlowsClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -1700,9 +1679,9 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 			std::map<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
 			if(localMethodIterator != _localRpcMethods.end())
 			{
-				if(GD::bl->debugLevel >= 5)
+				if(GD::bl->debugLevel >= 4)
 				{
-					_out.printDebug("Debug: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
+					_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
 					if(GD::bl->debugLevel >= 5)
 					{
 						for(BaseLib::Array::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
@@ -1730,12 +1709,15 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 				return;
 			}
 
-			if(GD::bl->debugLevel >= 5)
+			if(GD::bl->debugLevel >= 4)
 			{
 				_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName + " Parameters:");
-				for(std::vector<BaseLib::PVariable>::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
+				if(GD::bl->debugLevel >= 5)
 				{
-					(*i)->print(true, false);
+					for(std::vector<BaseLib::PVariable>::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
+					{
+						(*i)->print(true, false);
+					}
 				}
 			}
 			BaseLib::PVariable result = _rpcMethods.at(queueEntry->methodName)->invoke(_dummyClientInfo, queueEntry->parameters->at(3)->arrayValue);
@@ -2341,9 +2323,6 @@ BaseLib::PVariable FlowsServer::executePhpNodeBaseMethod(BaseLib::PArray& parame
 {
 	try
 	{
-		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
-		if(_flowsRestarting) return BaseLib::Variable::createError(-32501, "I'm restarting.");
-
 		PFlowsClientData clientData;
 		int32_t clientId = 0;
 		{
@@ -2483,9 +2462,6 @@ BaseLib::PVariable FlowsServer::invokeNodeMethod(PFlowsClientData& clientData, B
 {
 	try
 	{
-		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
-		if(_flowsRestarting) return BaseLib::Variable::createError(-32501, "I'm restarting.");
-
 		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
 
 		PFlowsClientData clientData;
