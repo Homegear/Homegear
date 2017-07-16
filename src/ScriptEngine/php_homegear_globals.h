@@ -31,6 +31,8 @@
 #ifndef HOMEGEAR_PHP_GLOBALS_H_
 #define HOMEGEAR_PHP_GLOBALS_H_
 
+#ifndef NO_SCRIPTENGINE
+
 #include <homegear-base/BaseLib.h>
 #include "../../config.h"
 #include "php_config_fixes.h"
@@ -76,4 +78,5 @@ typedef struct _zend_homegear_superglobals
 zend_homegear_globals* php_homegear_get_globals();
 pthread_key_t* php_homegear_get_pthread_key();
 
+#endif
 #endif

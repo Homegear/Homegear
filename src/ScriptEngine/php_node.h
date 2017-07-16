@@ -31,6 +31,8 @@
 #ifndef HOMEGEAR_PHP_NODE_H_
 #define HOMEGEAR_PHP_NODE_H_
 
+#ifndef NO_SCRIPTENGINE
+
 #include <homegear-base/BaseLib.h>
 #include "php_homegear_globals.h"
 #include "php_config_fixes.h"
@@ -50,4 +52,5 @@ bool php_init_node(PScriptInfo scriptInfo, zend_class_entry* homegearNodeClassEn
 
 BaseLib::PVariable php_node_object_invoke_local(PScriptInfo& scriptInfo, zval* homegearNodeObject, std::string& methodName, BaseLib::PArray& parameters);
 
+#endif
 #endif

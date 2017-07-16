@@ -28,6 +28,8 @@
  * files in the program, then also delete it here.
 */
 
+#ifndef NO_SCRIPTENGINE
+
 #include "php_config_fixes.h"
 #include "../GD/GD.h"
 #include "php_node.h"
@@ -602,3 +604,4 @@ BaseLib::PVariable php_node_object_invoke_local(PScriptInfo& scriptInfo, zval* h
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+#endif

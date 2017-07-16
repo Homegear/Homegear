@@ -144,8 +144,10 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 3, 1000)
 	_rpcMethods.emplace("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware()));
 	_rpcMethods.emplace("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCWriteLog()));
 
+#ifndef NO_SCRIPTENGINE
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("executePhpNode", std::bind(&FlowsServer::executePhpNode, this, std::placeholders::_1, std::placeholders::_2)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("executePhpNodeMethod", std::bind(&FlowsServer::executePhpNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
+#endif
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("invokeNodeMethod", std::bind(&FlowsServer::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("nodeEvent", std::bind(&FlowsServer::nodeEvent, this, std::placeholders::_1, std::placeholders::_2)));
 }
@@ -2375,6 +2377,7 @@ BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+#ifndef NO_SCRIPTENGINE
 BaseLib::PVariable FlowsServer::executePhpNode(PFlowsClientData& clientData, BaseLib::PArray& parameters)
 {
 	try
@@ -2435,6 +2438,7 @@ BaseLib::PVariable FlowsServer::executePhpNodeMethod(PFlowsClientData& clientDat
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
+#endif
 
 BaseLib::PVariable FlowsServer::invokeNodeMethod(PFlowsClientData& clientData, BaseLib::PArray& parameters)
 {
