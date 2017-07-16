@@ -1107,8 +1107,6 @@ void FlowsServer::sendShutdown()
 {
 	try
 	{
-		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
-
 		std::vector<PFlowsClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
