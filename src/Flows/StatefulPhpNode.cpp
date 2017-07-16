@@ -28,6 +28,8 @@
  * files in the program, then also delete it here.
 */
 
+#ifndef NO_SCRIPTENGINE
+
 #include "StatefulPhpNode.h"
 #include "../GD/GD.h"
 
@@ -330,3 +332,5 @@ Flows::PVariable StatefulPhpNode::invokeLocal(std::string methodName, Flows::PAr
     }
     return Flows::Variable::createError(-32601, ": Requested method not found.");
 }
+
+#endif
