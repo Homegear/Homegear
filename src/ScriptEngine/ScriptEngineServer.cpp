@@ -349,7 +349,7 @@ void ScriptEngineServer::collectGarbage()
 			bool emptyNodeProcess = false;
 			for(std::map<pid_t, PScriptEngineProcess>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
-				if(i->second->scriptCount() == 0 && BaseLib::HelperFunctions::getTime() - i->second->lastExecution > 60000 && i->second->getClientData() && !i->second->getClientData()->closed)
+				if(i->second->scriptCount() == 0 && BaseLib::HelperFunctions::getTime() - i->second->lastExecution > 10000 && i->second->getClientData() && !i->second->getClientData()->closed)
 				{
 					if(i->second->isNodeProcess())
 					{
@@ -1235,7 +1235,7 @@ void ScriptEngineServer::mainThread()
 			result = select(maxfd + 1, &readFileDescriptor, NULL, NULL, &timeout);
 			if(result == 0)
 			{
-				if(GD::bl->hf.getTime() - _lastGargabeCollection > 60000 || _clients.size() > GD::bl->settings.scriptEngineServerMaxConnections() * 100 / 112) collectGarbage();
+				if(GD::bl->hf.getTime() - _lastGargabeCollection > 10000 || _clients.size() > GD::bl->settings.scriptEngineServerMaxConnections() * 100 / 112) collectGarbage();
 				continue;
 			}
 			else if(result == -1)
