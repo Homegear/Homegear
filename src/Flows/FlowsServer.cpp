@@ -441,6 +441,9 @@ void FlowsServer::homegearReloading()
 {
 	try
 	{
+		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
+		if(_flowsRestarting) return;
+
 		std::vector<PFlowsClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -516,6 +519,9 @@ void FlowsServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVaria
 {
 	try
 	{
+		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
+		if(_flowsRestarting) return;
+
 		PFlowsClientData clientData;
 		int32_t clientId = 0;
 		{
@@ -556,6 +562,9 @@ void FlowsServer::setNodeVariable(std::string nodeId, std::string topic, BaseLib
 {
 	try
 	{
+		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
+		if(_flowsRestarting) return;
+
 		PFlowsClientData clientData;
 		int32_t clientId = 0;
 		{
@@ -597,6 +606,10 @@ void FlowsServer::enableNodeEvents()
 	try
 	{
 		if(_shuttingDown) return;
+
+		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
+		if(_flowsRestarting) return;
+
 		_out.printInfo("Info: Enabling node events...");
 		_nodeEventsEnabled = true;
 		std::vector<PFlowsClientData> clients;
@@ -634,6 +647,10 @@ void FlowsServer::disableNodeEvents()
 	try
 	{
 		if(_shuttingDown) return;
+
+		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
+		if(_flowsRestarting) return;
+
 		_out.printInfo("Info: Disabling node events...");
 		_nodeEventsEnabled = false;
 		std::vector<PFlowsClientData> clients;
@@ -1090,6 +1107,8 @@ void FlowsServer::sendShutdown()
 {
 	try
 	{
+		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
+
 		std::vector<PFlowsClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -1460,6 +1479,10 @@ uint32_t FlowsServer::flowCount()
 	try
 	{
 		if(_shuttingDown) return 0;
+
+		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
+		if(_flowsRestarting) return 0;
+
 		std::vector<PFlowsClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -2320,6 +2343,9 @@ BaseLib::PVariable FlowsServer::executePhpNodeBaseMethod(BaseLib::PArray& parame
 {
 	try
 	{
+		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
+		if(_flowsRestarting) return BaseLib::Variable::createError(-32501, "I'm restarting.");
+
 		PFlowsClientData clientData;
 		int32_t clientId = 0;
 		{
@@ -2459,6 +2485,9 @@ BaseLib::PVariable FlowsServer::invokeNodeMethod(PFlowsClientData& clientData, B
 {
 	try
 	{
+		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
+		if(_flowsRestarting) return BaseLib::Variable::createError(-32501, "I'm restarting.");
+
 		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
 
 		PFlowsClientData clientData;
