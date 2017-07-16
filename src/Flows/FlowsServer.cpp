@@ -1247,9 +1247,14 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 {
 	try
 	{
+		bool sessionValid = false;
+		auto sessionId = http.getHeader().cookies.find("PHPSESSID");
+		if(sessionId != http.getHeader().cookies.end()) sessionValid = GD::scriptEngineServer->checkSessionId(sessionId->second);
+
 		std::string contentString;
 		if(path == "flows/locales/nodes")
 		{
+			if(!sessionValid) return "unauthorized";
 			std::string language = "en-US";
 			std::vector<std::string> args = BaseLib::HelperFunctions::splitAll(http.getHeader().args, '&');
 			for(auto& arg : args)
@@ -1266,6 +1271,7 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 		}
 		else if(path.compare(0, 14, "flows/locales/") == 0)
 		{
+			if(!sessionValid) return "unauthorized";
 			std::string localePath = _webroot + "static/locales/";
 			std::string language = "en-US";
 			std::vector<std::string> args = BaseLib::HelperFunctions::splitAll(http.getHeader().args, '&');
@@ -1285,6 +1291,7 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 		}
 		else if (path == "flows/flows")
 		{
+			if(!sessionValid) return "unauthorized";
 			std::string flowsFile = _bl->settings.flowsDataPath() + "flows.json";
 			std::vector<char> fileContent;
 
@@ -1316,12 +1323,14 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 		}
 		else if (path == "flows/settings" || path == "flows/library/flows" || path == "flows/debug/view/debug-utils.js")
 		{
+			if(!sessionValid) return "unauthorized";
 			path = _webroot + "static/" + path.substr(6);
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
 		else if(path == "flows/nodes")
 		{
+			if(!sessionValid) return "unauthorized";
 			path = _webroot + "static/" + path.substr(6);
 
 			std::vector<NodeManager::PNodeInfo> nodeInfo = NodeManager::getNodeInfo();
@@ -1354,6 +1363,7 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 		}
 		else if(path.compare(0, 12, "flows/icons/") == 0)
 		{
+			if(!sessionValid) return "unauthorized";
 			auto pathPair = BaseLib::HelperFunctions::splitFirst(path.substr(12), '/');
 			std::string path = _bl->settings.flowsPath() + "nodes/" + pathPair.first + "/" + pathPair.second;
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
@@ -1396,8 +1406,13 @@ std::string FlowsServer::handlePost(std::string& path, BaseLib::Http& http, std:
 {
 	try
 	{
+		bool sessionValid = false;
+		auto sessionId = http.getHeader().cookies.find("PHPSESSID");
+		if(sessionId != http.getHeader().cookies.end()) sessionValid = GD::scriptEngineServer->checkSessionId(sessionId->second);
+
 		if (path == "flows/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
 		{
+			if(!sessionValid) return "unauthorized";
 			std::lock_guard<std::mutex> flowsPostGuard(_flowsPostMutex);
 			BaseLib::PVariable json = _jsonDecoder->decode(http.getContent());
 			auto flowsIterator = json->structValue->find("flows");
