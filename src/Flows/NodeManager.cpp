@@ -379,6 +379,7 @@ int32_t NodeManager::loadNode(std::string nodeNamespace, std::string type, std::
 			}
 			return 0;
 		}
+#ifndef NO_SCRIPTENGINE
 		else if(BaseLib::Io::fileExists(path + type + ".s.hgn")) //Encrypted PHP
 		{
 			GD::out.printInfo("Info: Loading node " + type + ".s.hgn");
@@ -407,6 +408,7 @@ int32_t NodeManager::loadNode(std::string nodeNamespace, std::string type, std::
 			_nodes.emplace(id, node);
 			return 0;
 		}
+#endif
 		else return -2;
 	}
 	catch(const std::exception& ex)

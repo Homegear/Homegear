@@ -31,6 +31,8 @@
 #ifndef SIMPLEPHPNODE_H_
 #define SIMPLEPHPNODE_H_
 
+#ifndef NO_SCRIPTENGINE
+
 #include <homegear-node/INode.h>
 
 class SimplePhpNode : public Flows::INode
@@ -44,4 +46,5 @@ public:
 	virtual void input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message);
 };
 
+#endif
 #endif

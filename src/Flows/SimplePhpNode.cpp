@@ -28,6 +28,8 @@
  * files in the program, then also delete it here.
 */
 
+#ifndef NO_SCRIPTENGINE
+
 #include "SimplePhpNode.h"
 #include "../GD/GD.h"
 
@@ -68,3 +70,5 @@ void SimplePhpNode::input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVar
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
+
+#endif

@@ -28,6 +28,8 @@
  * files in the program, then also delete it here.
 */
 
+#ifndef NO_SCRIPTENGINE
+
 #include "php_config_fixes.h"
 #include "php_homegear_globals.h"
 #include "php_config_fixes.h"
@@ -62,3 +64,5 @@ zend_homegear_globals* php_homegear_get_globals()
 	}
 	return data;
 }
+
+#endif

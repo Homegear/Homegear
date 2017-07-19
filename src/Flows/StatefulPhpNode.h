@@ -31,6 +31,8 @@
 #ifndef STATEFULPHPNODE_H_
 #define STATEFULPHPNODE_H_
 
+#ifndef NO_SCRIPTENGINE
+
 #include <homegear-node/INode.h>
 
 class StatefulPhpNode : public Flows::INode
@@ -59,4 +61,5 @@ public:
 	virtual Flows::PVariable invokeLocal(std::string methodName, Flows::PArray& parameters);
 };
 
+#endif
 #endif
