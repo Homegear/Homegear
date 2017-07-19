@@ -177,7 +177,6 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 {
 	try
 	{
-		std::cerr << "Moin0" << std::endl;
 		std::vector<char> content;
 		if(!socket)
 		{	_out.printError("Error: Socket is nullptr.");

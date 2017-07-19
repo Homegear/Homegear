@@ -284,6 +284,7 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 	try
 	{
 		if(GD::flowsServer) GD::flowsServer->broadcastEvent(peerID, channel, variables, values);
+		if(GD::ipcServer) GD::ipcServer->broadcastEvent(peerID, channel, variables, values);
 #ifdef EVENTHANDLER
 		GD::eventHandler->trigger(peerID, channel, variables, values);
 #endif
