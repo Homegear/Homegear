@@ -349,7 +349,7 @@ void ScriptEngineServer::collectGarbage()
 			bool emptyNodeProcess = false;
 			for(std::map<pid_t, PScriptEngineProcess>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
-				if(i->second->scriptCount() == 0 && BaseLib::HelperFunctions::getTime() - i->second->lastExecution > 60000 && i->second->getClientData() && !i->second->getClientData()->closed)
+				if(i->second->scriptCount() == 0 && BaseLib::HelperFunctions::getTime() - i->second->lastExecution > 10000 && i->second->getClientData() && !i->second->getClientData()->closed)
 				{
 					if(i->second->isNodeProcess())
 					{
@@ -953,9 +953,9 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 			std::map<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
 			if(localMethodIterator != _localRpcMethods.end())
 			{
-				if(GD::bl->debugLevel >= 5)
+				if(GD::bl->debugLevel >= 4)
 				{
-					_out.printDebug("Debug: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
+					_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
 					if(GD::bl->debugLevel >= 5)
 					{
 						for(BaseLib::Array::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
@@ -983,12 +983,15 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 				return;
 			}
 
-			if(GD::bl->debugLevel >= 5)
+			if(GD::bl->debugLevel >= 4)
 			{
-				_out.printInfo("Debug: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName + " Parameters:");
-				for(std::vector<BaseLib::PVariable>::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
+				_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName + " Parameters:");
+				if(GD::bl->debugLevel >= 5)
 				{
-					(*i)->print(true, false);
+					for(std::vector<BaseLib::PVariable>::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
+					{
+						(*i)->print(true, false);
+					}
 				}
 			}
 			BaseLib::PVariable result = _rpcMethods.at(queueEntry->methodName)->invoke(_dummyClientInfo, queueEntry->parameters->at(3)->arrayValue);
@@ -1232,7 +1235,7 @@ void ScriptEngineServer::mainThread()
 			result = select(maxfd + 1, &readFileDescriptor, NULL, NULL, &timeout);
 			if(result == 0)
 			{
-				if(GD::bl->hf.getTime() - _lastGargabeCollection > 60000 || _clients.size() > GD::bl->settings.scriptEngineServerMaxConnections() * 100 / 112) collectGarbage();
+				if(GD::bl->hf.getTime() - _lastGargabeCollection > 10000 || _clients.size() > GD::bl->settings.scriptEngineServerMaxConnections() * 100 / 112) collectGarbage();
 				continue;
 			}
 			else if(result == -1)

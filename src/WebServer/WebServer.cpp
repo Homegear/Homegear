@@ -93,7 +93,13 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
 			std::string responseEncoding;
 			std::string contentString = GD::flowsServer->handleGet(path, http, responseEncoding);
-			if(!contentString.empty())
+			if(contentString == "unauthorized")
+			{
+				getError(401, _http.getStatusText(401), "You are not logged in.", content);
+				send(socket, content);
+				return;
+			}
+			else if(!contentString.empty())
 			{
 				std::string header;
 				_http.constructHeader(contentString.size(), responseEncoding, 200, "OK", headers, header);
@@ -243,7 +249,13 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: POST)");
 			std::string responseEncoding;
 			std::string contentString = GD::flowsServer->handlePost(path, http, responseEncoding);
-			if (!contentString.empty())
+			if(contentString == "unauthorized")
+			{
+				getError(401, _http.getStatusText(401), "You are not logged in.", content);
+				send(socket, content);
+				return;
+			}
+			else if (!contentString.empty())
 			{
 				std::vector<std::string> headers;
 				std::string header;
