@@ -37,6 +37,7 @@ namespace Flows
 FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 3, 1000)
 {
 	_stopped = false;
+	_nodesStopped = false;
 	_disposed = false;
 	_shuttingDown = false;
 	_frontendConnected = false;
@@ -464,6 +465,8 @@ Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray& para
 {
 	try
 	{
+		if(_nodesStopped) return Flows::Variable::createError(-32501, "RPC calls are forbidden after \"stop()\" has been called.");
+
 		int64_t threadId = pthread_self();
 		std::unique_lock<std::mutex> requestInfoGuard(_requestInfoMutex);
 		RequestInfo& requestInfo = _requestInfo[threadId];
@@ -972,6 +975,8 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 			}
 		//}}}
 
+		_nodesStopped = false;
+
 		//{{{ Init nodes
 			{
 				std::set<std::string> nodesToRemove;
@@ -1163,6 +1168,7 @@ Flows::PVariable FlowsClient::stopNodes(Flows::PArray& parameters)
 				if(node) node->stop();
 			}
 		}
+		_nodesStopped = true;
 		return std::make_shared<Flows::Variable>();
 	}
     catch(const std::exception& ex)
