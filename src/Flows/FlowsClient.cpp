@@ -746,6 +746,7 @@ Flows::PVariable FlowsClient::getNodeData(std::string nodeId, std::string key)
 			GD::out.printError("Error calling getNodeData: " + result->structValue->at("faultString")->stringValue);
 			return std::make_shared<Flows::Variable>();
 		}
+
 		return result;
 	}
 	catch(const std::exception& ex)

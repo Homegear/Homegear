@@ -59,7 +59,7 @@ void DatabaseController::init()
 		GD::out.printCritical("Critical: Could not initialize database controller, because base library is not initialized.");
 		return;
 	}
-	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get()));
+	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), false, true));
 	startQueue(0, true, 1, 0, SCHED_OTHER);
 }
