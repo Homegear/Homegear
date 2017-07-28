@@ -404,6 +404,12 @@ else
 fi
 
 createPackage libhomegear-ipc $1 libhomegear-ipc
+if test -f libhomegear-ipc*.deb; then
+	dpkg -i libhomegear-ipc*.deb
+else
+	echo "Error building libhomegear-ipc."
+	exit 1
+fi
 
 touch /tmp/HOMEGEAR_STATIC_INSTALLATION
 createPackage Homegear $1 homegear
