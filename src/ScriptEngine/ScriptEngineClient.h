@@ -149,6 +149,7 @@ private:
 	std::map<std::string, std::shared_ptr<CacheInfo>> _scriptCache;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
+	std::atomic_bool _nodesStopped;
 	static std::mutex _nodeInfoMutex;
 	static std::unordered_map<std::string, PNodeInfo> _nodeInfo;
 

@@ -68,6 +68,7 @@ std::unordered_map<std::string, ScriptEngineClient::PNodeInfo> ScriptEngineClien
 ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 1000)
 {
 	_stopped = false;
+	_nodesStopped = false;
 
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	_out.init(GD::bl.get());
@@ -711,6 +712,7 @@ BaseLib::PVariable ScriptEngineClient::callMethod(std::string& methodName, BaseL
 {
 	try
 	{
+		if(_nodesStopped) return BaseLib::Variable::createError(-32500, "RPC calls are forbidden after \"stop\" is executed.");
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		return sendRequest(globals->id, methodName, parameters->arrayValue, wait);
 	}
@@ -1278,9 +1280,17 @@ void ScriptEngineClient::runNode(int32_t id, PScriptInfo scriptInfo)
 					nodeInfo->ready = false;
 
 					nodeInfo->response = php_node_object_invoke_local(scriptInfo, &homegearNodeObject, nodeInfo->methodName, nodeInfo->parameters);
-					if(nodeInfo->methodName == "init" && !nodeInfo->response->booleanValue) stop = true;
+					if(nodeInfo->methodName == "init" && !nodeInfo->response->booleanValue)
+					{
+						_nodesStopped = false;
+						stop = true;
+					}
 					else if(nodeInfo->methodName == "start" && !nodeInfo->response->booleanValue) stop = true;
-					else if(nodeInfo->methodName == "waitForStop") stop = true;
+					else if(nodeInfo->methodName == "waitForStop")
+					{
+						_nodesStopped = true;
+						stop = true;
+					}
 
 					nodeInfo->parameters.reset();
 					waitLock.unlock();

@@ -105,6 +105,7 @@ private:
 	std::map<int64_t, RequestInfo> _requestInfo;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
+	std::atomic_bool _nodesStopped;
 	std::unique_ptr<NodeManager> _nodeManager;
 	std::atomic_bool _frontendConnected;
 

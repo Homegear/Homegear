@@ -290,6 +290,7 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(peerID, channel, variables, values);
 #endif
+		GD::ipcServer->broadcastEvent(peerID, channel, variables, values);
 	}
 	catch(const std::exception& ex)
 	{
