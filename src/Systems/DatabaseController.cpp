@@ -907,7 +907,7 @@ BaseLib::PVariable DatabaseController::setMetadata(uint64_t peerID, std::string&
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(peerID, -1, valueKeys, values);
 #endif
-		GD::ipcServer->broadcastEvent(peerID, -1, valueKeys, values);
+		if(GD::ipcServer) GD::ipcServer->broadcastEvent(peerID, -1, valueKeys, values);
 		GD::rpcClient->broadcastEvent(peerID, -1, serialNumber, valueKeys, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
@@ -968,7 +968,7 @@ BaseLib::PVariable DatabaseController::deleteMetadata(uint64_t peerID, std::stri
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(peerID, -1, valueKeys, values);
 #endif
-		GD::ipcServer->broadcastEvent(peerID, -1, valueKeys, values);
+		if(GD::ipcServer) GD::ipcServer->broadcastEvent(peerID, -1, valueKeys, values);
 		GD::rpcClient->broadcastEvent(peerID, -1, serialNumber, valueKeys, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
@@ -1110,7 +1110,7 @@ BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableID
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(0, -1, valueKeys, values);
 #endif
-		GD::ipcServer->broadcastEvent(0, -1, valueKeys, values);
+		if(GD::ipcServer) GD::ipcServer->broadcastEvent(0, -1, valueKeys, values);
 		GD::rpcClient->broadcastEvent(0, -1, "", valueKeys, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
@@ -1159,7 +1159,7 @@ BaseLib::PVariable DatabaseController::deleteSystemVariable(std::string& variabl
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(0, -1, valueKeys, values);
 #endif
-		GD::ipcServer->broadcastEvent(0, -1, valueKeys, values);
+		if(GD::ipcServer) GD::ipcServer->broadcastEvent(0, -1, valueKeys, values);
 		GD::rpcClient->broadcastEvent(0, -1, "", valueKeys, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
