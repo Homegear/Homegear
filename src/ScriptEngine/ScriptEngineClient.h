@@ -160,9 +160,9 @@ private:
 	void collectGarbage();
 	std::vector<std::string> getArgs(const std::string& path, const std::string& args);
 	void registerClient();
-	void sendOutput(std::string& output);
-	void sendHeaders(BaseLib::PVariable& headers);
-	BaseLib::PVariable callMethod(std::string& methodName, BaseLib::PVariable& parameters, bool wait);
+	void sendOutput(std::string output);
+	void sendHeaders(BaseLib::PVariable headers);
+	BaseLib::PVariable callMethod(std::string methodName, BaseLib::PVariable parameters, bool wait);
 	BaseLib::PVariable sendRequest(int32_t scriptId, std::string methodName, BaseLib::PArray& parameters, bool wait);
 	BaseLib::PVariable sendGlobalRequest(std::string methodName, BaseLib::PArray& parameters);
 	void sendResponse(BaseLib::PVariable& packetId, BaseLib::PVariable& variable);

@@ -1365,7 +1365,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 				_out.printError("Error: Could not start new script engine process.");
 				return std::shared_ptr<ScriptEngineProcess>();
 			}
-			process->setUnregisterNode(std::function<void(std::string&)>(std::bind(&ScriptEngineServer::unregisterNode, this, std::placeholders::_1)));
+			process->setUnregisterNode(std::function<void(std::string)>(std::bind(&ScriptEngineServer::unregisterNode, this, std::placeholders::_1)));
 			_out.printInfo("Info: Script engine process successfully spawned. Process id is " + std::to_string(process->getPid()) + ". Client id is: " + std::to_string(process->getClientData()->id) + ".");
 			return process;
 		}
@@ -1822,7 +1822,7 @@ BaseLib::PVariable ScriptEngineServer::getAllScripts()
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-void ScriptEngineServer::unregisterNode(std::string& nodeId)
+void ScriptEngineServer::unregisterNode(std::string nodeId)
 {
 	try
 	{

@@ -43,9 +43,9 @@ __attribute__((unused)) static zend_class_entry* homegear_exception_class_entry 
 
 typedef struct _zend_homegear_globals
 {
-	std::function<void(std::string& output)> outputCallback;
-	std::function<void(BaseLib::PVariable& headers)> sendHeadersCallback;
-	std::function<BaseLib::PVariable(std::string& methodName, BaseLib::PVariable& parameters, bool wait)> rpcCallback;
+	std::function<void(std::string output)> outputCallback;
+	std::function<void(BaseLib::PVariable headers)> sendHeadersCallback;
+	std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)> rpcCallback;
 	BaseLib::Http http;
 	BaseLib::ScriptEngine::PScriptInfo scriptInfo;
 

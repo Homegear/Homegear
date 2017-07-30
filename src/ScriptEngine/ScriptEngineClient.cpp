@@ -662,7 +662,7 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
     }
 }
 
-void ScriptEngineClient::sendOutput(std::string& output)
+void ScriptEngineClient::sendOutput(std::string output)
 {
 	try
 	{
@@ -685,7 +685,7 @@ void ScriptEngineClient::sendOutput(std::string& output)
     }
 }
 
-void ScriptEngineClient::sendHeaders(BaseLib::PVariable& headers)
+void ScriptEngineClient::sendHeaders(BaseLib::PVariable headers)
 {
 	try
 	{
@@ -708,7 +708,7 @@ void ScriptEngineClient::sendHeaders(BaseLib::PVariable& headers)
     }
 }
 
-BaseLib::PVariable ScriptEngineClient::callMethod(std::string& methodName, BaseLib::PVariable& parameters, bool wait)
+BaseLib::PVariable ScriptEngineClient::callMethod(std::string methodName, BaseLib::PVariable parameters, bool wait)
 {
 	try
 	{
