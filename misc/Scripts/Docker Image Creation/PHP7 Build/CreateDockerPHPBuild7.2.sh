@@ -88,13 +88,7 @@ elif [ "$dist" == "Raspbian" ]; then
 	echo "deb http://mirrordirector.raspbian.org/raspbian/ $distver main contrib" > $rootfs/etc/apt/sources.list
 fi
 
-if [ "$distver" == "xenial" ]; then
-	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu xenial main" > $rootfs/etc/apt/sources.list.d/php7-src.list
-elif [ "$distver" == "stretch" ]; then
-	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu xenial main" > $rootfs/etc/apt/sources.list.d/php7-src.list
-else
-	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu xenial main" > $rootfs/etc/apt/sources.list.d/php7-src.list
-fi
+echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu xenial main" > $rootfs/etc/apt/sources.list.d/php7-src.list
 
 # prevent init scripts from running during install/update
 cat > "$rootfs/usr/sbin/policy-rc.d" <<'EOF'
@@ -171,7 +165,7 @@ if [ "$distver" == "stretch" ] || [ "$distver" == "jessie" ] || [ "$distver" == 
 fi
 
 mkdir $rootfs/PHPBuild
-chroot $rootfs bash -c "cd /PHPBuild && apt-get source php7.1"
+chroot $rootfs bash -c "cd /PHPBuild && apt-get source php7.2"
 cd $rootfs/PHPBuild
 tar -xf php7*debian.tar.xz
 cd ..
@@ -234,7 +228,7 @@ rm -Rf /PHPBuild/lib*
 
 cd /PHPBuild
 apt-get update
-apt-get source php7.1
+apt-get source php7.2
 rm php7*.tar.xz
 rm php7*.dsc
 cd php7*
