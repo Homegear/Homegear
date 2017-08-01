@@ -1057,22 +1057,8 @@ ScriptEngineClient::ScriptGuard::~ScriptGuard()
 		std::lock_guard<std::mutex> resourceGuard(_resourceMutex);
 		if(tsrm_get_ls_cache())
 		{
-			SG(server_context) = nullptr; //Pointer is invalid - cleaned up already.
-			if(SG(request_info).path_translated)
-			{
-				efree(SG(request_info).path_translated);
-				SG(request_info).path_translated = nullptr;
-			}
-			if(SG(request_info).query_string)
-			{
-				efree(SG(request_info).query_string);
-				SG(request_info).query_string = nullptr;
-			}
-			if(SG(request_info).request_uri)
-			{
-				efree(SG(request_info).request_uri);
-				SG(request_info).request_uri = nullptr;
-			}
+			//SG(request_info).path_translated, SG(request_info).query_string and SG(request_info).request_uri are cleaned up by PHP
+
 			if(SG(request_info).argv)
 			{
 				free(SG(request_info).argv);
@@ -1198,6 +1184,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 
 			if (php_request_startup() == FAILURE) {
 				GD::bl->out.printError("Error calling php_request_startup...");
+				SG(server_context) = nullptr;
 				return;
 			}
 			globals->executionStarted = true;
@@ -1229,6 +1216,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 
 		scriptInfo->exitCode = EG(exit_status);
 
+		SG(server_context) = nullptr;
 		return;
 	}
 	catch(const std::exception& ex)
@@ -1243,6 +1231,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    SG(server_context) = nullptr;
     std::string error("Error executing script. Check Homegear log for more details.");
     sendOutput(error);
 }
