@@ -48,6 +48,7 @@
 #error "PHP 7.3 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
 /*
  * 1. Compare initialization with the initialization in one of the SAPI modules (e. g. "php_embed_init()" in "sapi/embed/php_embed.c").
+ * 2. Check if fixed bug 71115 is compiled in (last check: June 21, 2017): https://bugs.php.net/bug.php?id=71115. If that's the case, remove workaround from php_homegear_startup and php_homegear_shutdown.
  */
 #endif
 
@@ -1934,11 +1935,99 @@ void php_homegear_shutdown()
 static int php_homegear_startup(sapi_module_struct* sapi_globals)
 {
 	if(php_module_startup(sapi_globals, &homegear_module_entry, 1) == FAILURE) return FAILURE;
+
+	// {{{ Fix for bug #71115 which causes process to crash when excessively using $_GLOBALS. Remove once bug is fixed.
+
+			// Run the test code below a million times (at least 30 executions per second) to check if bug really is fixed. (This part is fixed)
+			// Check if Homegear script engine processes crash on the Raspberry Pi (should crash pretty much immediately and often)
+			/*
+				<?php
+				function setGlobals()
+				{
+						global $GLOBALS;
+						$GLOBALS['ABC'.rand(0, 1000000).rand(1000, 10000000).rand(10000, 100000)] = rand(1000, 10000000)."BLA".rand(10000, 1000000);
+						$GLOBALS['TEST'] = rand(0, 100000).'BLII'.rand(1000, 1000000);
+						for($i = 0; $i < 1000; $i++)
+						{
+								$GLOBALS['TEST'.$i.'-'.rand(0, 10000000)] = $i.'-'.rand(100000, 100000)."TEST$i";
+						}
+				}
+				$hg = new \Homegear\Homegear();
+				$version = $hg->getVersion();
+				$logLevel = $hg->logLevel();
+				$logLevel += 4;
+				setGlobals();
+				$hg->log(4, print_r($GLOBALS, true));
+				$hg->log(4, $version);
+				$hg->writeLog($hg->getVersion(), 4);
+				$hg->writeLog((string)$hg->logLevel(), 4);
+				$hg->log(4, "$version $logLevel Bla");
+				$hg->setValue(200, 1, "BALANCE", (int)rand(0, 1000));
+				$hg->setValue(200, 1, "PRODUCTION", (int)rand(0, 1000));
+				$hg->setValue(200, 1, "CONSUMPTION", (int)rand(0, 1000));
+				$hg->setValue(200, 1, "ACTIVEPOWER", (int)rand(0, 1000));
+				$hg->setValue(200, 1, "OWNCONSUMPTION", (int)rand(0, 1000).$GLOBALS['TEST']);
+				$hg->setValue(200, 1, "PRODUCTION2", (int)rand(0, 1000));
+				$hg->putParamset(200, 1, "MASTER", $hg->getParamset(200, 1, "MASTER"));
+			 */
+		void* global;
+		void* function;
+		void* classEntry;
+
+		ZEND_HASH_FOREACH_PTR(CG(auto_globals), global) {
+			GC_FLAGS(((zend_auto_global*)global)->name) |= IS_STR_INTERNED;
+			zend_string_hash_val(((zend_auto_global*)global)->name);
+		} ZEND_HASH_FOREACH_END();
+
+		ZEND_HASH_FOREACH_PTR(CG(function_table), function) {
+			GC_FLAGS(((zend_internal_function*)function)->function_name) |= IS_STR_INTERNED;
+			zend_string_hash_val(((zend_internal_function*)function)->function_name);
+		} ZEND_HASH_FOREACH_END();
+
+		ZEND_HASH_FOREACH_PTR(CG(class_table), classEntry) {
+			void* property;
+			GC_FLAGS(((zend_class_entry*)classEntry)->name) |= IS_STR_INTERNED;
+			zend_string_hash_val(((zend_class_entry*)classEntry)->name);
+			ZEND_HASH_FOREACH_PTR(&((zend_class_entry*)classEntry)->properties_info, property) {
+				GC_FLAGS(((zend_property_info*)property)->name) |= IS_STR_INTERNED;
+				zend_string_hash_val(((zend_property_info*)property)->name);
+				if (((zend_property_info*)property)->doc_comment) {
+					GC_FLAGS(((zend_property_info*)property)->doc_comment) |= IS_STR_INTERNED;
+				}
+			} ZEND_HASH_FOREACH_END();
+
+		} ZEND_HASH_FOREACH_END();
+	// }}}
 	return SUCCESS;
 }
 
 static int php_homegear_shutdown(sapi_module_struct* sapi_globals)
 {
+	// {{{ Fix for bug #71115 which causes process to crash when excessively using $_GLOBALS. Remove once bug is fixed.
+		void* global;
+		void* function;
+		void* classEntry;
+
+		ZEND_HASH_FOREACH_PTR(CG(auto_globals), global) {
+			GC_FLAGS(((zend_auto_global*)global)->name) &= ~IS_STR_INTERNED;
+		} ZEND_HASH_FOREACH_END();
+
+		ZEND_HASH_FOREACH_PTR(CG(function_table), function) {
+			GC_FLAGS(((zend_internal_function*)function)->function_name) &= ~IS_STR_INTERNED;
+		} ZEND_HASH_FOREACH_END();
+
+		ZEND_HASH_FOREACH_PTR(CG(class_table), classEntry) {
+			void* property;
+			GC_FLAGS(((zend_class_entry*)classEntry)->name) &= ~IS_STR_INTERNED;
+			ZEND_HASH_FOREACH_PTR(&((zend_class_entry*)classEntry)->properties_info, property) {
+				GC_FLAGS(((zend_property_info*)property)->name) &= ~IS_STR_INTERNED;
+				if (((zend_property_info*)property)->doc_comment) {
+					GC_FLAGS(((zend_property_info*)property)->doc_comment) &= ~IS_STR_INTERNED;
+				}
+			} ZEND_HASH_FOREACH_END();
+
+		} ZEND_HASH_FOREACH_END();
+	// }}}
 	return php_module_shutdown_wrapper(sapi_globals);
 }
 
