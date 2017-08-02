@@ -236,8 +236,10 @@ cd ext
 if test ! -f ext_skel.in; then
 	touch ext_skel.in
 fi
-git clone https://github.com/krakjoe/pthreads.git pthreads
-sed -i "s/#if PHP_VERSION_ID < 70200/#if PHP_VERSION_ID < 70100/g" pthreads/php_pthreads.c
+wget https://github.com/krakjoe/pthreads/archive/527286336ffcf5fffb285f1bfeb100bb8bf5ec32.zip
+unzip 527286336ffcf5fffb285f1bfeb100bb8bf5ec32.zip
+rm 527286336ffcf5fffb285f1bfeb100bb8bf5ec32.zip
+mv pthreads* pthreads
 cd ..
 
 autoconf
