@@ -41,14 +41,14 @@
 #include <sys/ioctl.h>
 #endif
 
-#if PHP_VERSION_ID < 70200
+#if PHP_VERSION_ID < 70100
 #error "PHP 7.2 is required as ZTS in versions 7.0 and 7.1 is broken."
 #endif
 #if PHP_VERSION_ID >= 70300
 #error "PHP 7.3 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
 /*
  * 1. Compare initialization with the initialization in one of the SAPI modules (e. g. "php_embed_init()" in "sapi/embed/php_embed.c").
- * 2. Check if fixed bug 71115 is compiled in (last check: June 21, 2017): https://bugs.php.net/bug.php?id=71115. If that's the case, remove workaround from php_homegear_startup and php_homegear_shutdown.
+ * 2. When PHP 7.2 is used, remove the code parts that fix bug #71115 (it is fixed).
  */
 #endif
 
