@@ -357,7 +357,14 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 				return;
 			}
 
-			if(GD::bl->debugLevel >= 5) _out.printInfo("Debug: Server is calling RPC method: " + queueEntry->methodName);
+			if(GD::bl->debugLevel >= 5)
+			{
+				_out.printDebug("Debug: Server is calling RPC method: " + queueEntry->methodName + " Parameters:");
+				for(auto parameter : *queueEntry->parameters)
+				{
+					parameter->print(true, false);
+				}
+			}
 
 			Flows::PVariable result = localMethodIterator->second(queueEntry->parameters->at(2)->arrayValue);
 			if(GD::bl->debugLevel >= 5)
@@ -829,7 +836,7 @@ Flows::PVariable FlowsClient::reload(Flows::PArray& parameters)
 			GD::out.printError("Error: Could not redirect errors to new log file.");
 		}
 
-		return Flows::PVariable(new Flows::Variable());
+		return std::make_shared<Flows::Variable>();
 	}
     catch(const std::exception& ex)
     {
@@ -853,7 +860,7 @@ Flows::PVariable FlowsClient::shutdown(Flows::PArray& parameters)
 		if(_maintenanceThread.joinable()) _maintenanceThread.join();
 		_maintenanceThread = std::thread(&FlowsClient::dispose, this);
 
-		return Flows::PVariable(new Flows::Variable());
+		return std::make_shared<Flows::Variable>();
 	}
     catch(const std::exception& ex)
     {
@@ -1028,7 +1035,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
 		_flows.emplace(flow->id, flow);
 
-		return Flows::PVariable(new Flows::Variable());
+		return std::make_shared<Flows::Variable>();
 	}
     catch(const std::exception& ex)
     {
@@ -1260,6 +1267,7 @@ Flows::PVariable FlowsClient::nodeOutput(Flows::PArray& parameters)
 		if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
 		queueOutput(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2));
+		return std::make_shared<Flows::Variable>();
 	}
     catch(const std::exception& ex)
     {
@@ -1391,6 +1399,7 @@ Flows::PVariable FlowsClient::executePhpNodeBaseMethod(Flows::PArray& parameters
 
 			return getConfigParameter(parameters->at(0)->stringValue, innerParameters->at(0)->stringValue);
 		}
+		return std::make_shared<Flows::Variable>();
 	}
     catch(const std::exception& ex)
     {
@@ -1414,6 +1423,7 @@ Flows::PVariable FlowsClient::setNodeVariable(Flows::PArray& parameters)
 		if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
 		Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
 		if(node) node->setNodeVariable(parameters->at(1)->stringValue, parameters->at(2));
+		return std::make_shared<Flows::Variable>();
 	}
     catch(const std::exception& ex)
     {
@@ -1436,7 +1446,7 @@ Flows::PVariable FlowsClient::enableNodeEvents(Flows::PArray& parameters)
 	{
 		_frontendConnected = true;
 
-		return Flows::PVariable(new Flows::Variable());
+		return std::make_shared<Flows::Variable>();
 	}
     catch(const std::exception& ex)
     {
@@ -1459,7 +1469,7 @@ Flows::PVariable FlowsClient::disableNodeEvents(Flows::PArray& parameters)
 	{
 		_frontendConnected = false;
 
-		return Flows::PVariable(new Flows::Variable());
+		return std::make_shared<Flows::Variable>();
 	}
     catch(const std::exception& ex)
     {
@@ -1508,7 +1518,7 @@ Flows::PVariable FlowsClient::broadcastEvent(Flows::PArray& parameters)
 			}
 		}
 
-		return Flows::PVariable(new Flows::Variable());
+		return std::make_shared<Flows::Variable>();
 	}
     catch(const std::exception& ex)
     {
@@ -1531,7 +1541,7 @@ Flows::PVariable FlowsClient::broadcastNewDevices(Flows::PArray& parameters)
 	{
 		if(parameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
-		return Flows::PVariable(new Flows::Variable());
+		return std::make_shared<Flows::Variable>();
 	}
     catch(const std::exception& ex)
     {
@@ -1554,7 +1564,7 @@ Flows::PVariable FlowsClient::broadcastDeleteDevices(Flows::PArray& parameters)
 	{
 		if(parameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
-		return Flows::PVariable(new Flows::Variable());
+		return std::make_shared<Flows::Variable>();
 	}
     catch(const std::exception& ex)
     {
@@ -1577,7 +1587,7 @@ Flows::PVariable FlowsClient::broadcastUpdateDevice(Flows::PArray& parameters)
 	{
 		if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
-		return Flows::PVariable(new Flows::Variable());
+		return std::make_shared<Flows::Variable>();
 	}
     catch(const std::exception& ex)
     {
