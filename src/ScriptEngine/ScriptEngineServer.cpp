@@ -35,7 +35,7 @@
 #include <homegear-base/BaseLib.h>
 
 // Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
-//#define MANUAL_CLIENT_START
+//#define SE_MANUAL_CLIENT_START
 
 namespace ScriptEngine
 {
@@ -1346,7 +1346,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 		_out.printInfo("Info: Spawning new script engine process.");
 		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess(nodeProcess));
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rse" };
-#ifdef MANUAL_CLIENT_START
+#ifdef SE_MANUAL_CLIENT_START
 		process->setPid(1);
 #else
 		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
@@ -1851,7 +1851,7 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
 		try
 		{
 			pid_t pid = parameters->at(0)->integerValue;
-#ifdef MANUAL_CLIENT_START
+#ifdef SE_MANUAL_CLIENT_START
 			pid = 1;
 #endif
 			std::lock_guard<std::mutex> processGuard(_processMutex);
