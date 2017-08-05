@@ -661,30 +661,39 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 	{
 		if(!message || _shuttingDown) return;
 
-		std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
-		auto nodesIterator = _nodes.find(nodeId);
-		if(nodesIterator == _nodes.end()) return;
+		PNodeInfo nodeInfo;
+		{
+			std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+			auto nodesIterator = _nodes.find(nodeId);
+			if(nodesIterator == _nodes.end()) return;
+			nodeInfo = nodesIterator->second;
+		}
 
 		if(message->structValue->find("payload") == message->structValue->end()) message->structValue->emplace("payload", std::make_shared<Flows::Variable>());
 
-		if(index >= nodesIterator->second->wiresOut.size())
+		if(index >= nodeInfo->wiresOut.size())
 		{
 			_out.printError("Error: " + nodeId + " has no output with index " + std::to_string(index) + ".");
 			return;
 		}
 
 		message->structValue->emplace("source", std::make_shared<Flows::Variable>(nodeId));
-		for(auto& node : nodesIterator->second->wiresOut.at(index))
+		for(auto& node : nodeInfo->wiresOut.at(index))
 		{
-			auto nodeIterator = _nodes.find(node.id);
-			if(nodeIterator == _nodes.end()) continue;
-			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(nodeIterator->second, node.port, message);
+			PNodeInfo outputNodeInfo;
+			{
+				std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+				auto nodeIterator = _nodes.find(node.id);
+				if(nodeIterator == _nodes.end()) continue;
+				outputNodeInfo = nodeIterator->second;
+			}
+			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(outputNodeInfo, node.port, message);
 			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Dropping output of node " + nodeId + ". Queue is full.");
 		}
 
-		if(_frontendConnected && GD::bl->settings.nodeBlueDebugOutput() && BaseLib::HelperFunctions::getTime() - nodesIterator->second->lastNodeEvent2 >= 200)
+		if(_frontendConnected && GD::bl->settings.nodeBlueDebugOutput() && BaseLib::HelperFunctions::getTime() - nodeInfo->lastNodeEvent2 >= 200)
 		{
-			nodesIterator->second->lastNodeEvent2 = BaseLib::HelperFunctions::getTime();
+			nodeInfo->lastNodeEvent2 = BaseLib::HelperFunctions::getTime();
 			Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
 			timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
 			nodeEvent(nodeId, "highlightNode/" + nodeId, timeout);
@@ -987,21 +996,30 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 
 		//{{{ Init nodes
 			{
-				std::set<std::string> nodesToRemove;
-				std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
-				for(auto& node : _nodes)
+
+				std::vector<PNodeInfo> nodes;
+				nodes.reserve(_nodes.size());
 				{
-					if(_bl->debugLevel >= 5) _out.printDebug("Starting node " + node.second->id + " of type " + node.second->type + ".");
+					std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+					for(auto& node : _nodes)
+					{
+						nodes.push_back(node.second);
+					}
+				}
+				std::set<std::string> nodesToRemove;
+				for(auto& node : nodes)
+				{
+					if(_bl->debugLevel >= 5) _out.printDebug("Starting node " + node->id + " of type " + node->type + ".");
 
 					Flows::PINode nodeObject;
-					int32_t result = _nodeManager->loadNode(node.second->nodeNamespace, node.second->type, node.second->id, nodeObject);
+					int32_t result = _nodeManager->loadNode(node->nodeNamespace, node->type, node->id, nodeObject);
 					if(result < 0)
 					{
-						_out.printError("Error: Could not load node " + node.second->type + ". Error code: " + std::to_string(result));
+						_out.printError("Error: Could not load node " + node->type + ". Error code: " + std::to_string(result));
 						continue;
 					}
 
-					nodeObject->setId(node.second->id);
+					nodeObject->setId(node->id);
 					nodeObject->setFlowId(flowId);
 
 					nodeObject->setLog(std::function<void(std::string, int32_t, std::string)>(std::bind(&FlowsClient::log, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
@@ -1015,18 +1033,21 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 					nodeObject->setSetNodeData(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&FlowsClient::setNodeData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 					nodeObject->setGetConfigParameter(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&FlowsClient::getConfigParameter, this, std::placeholders::_1, std::placeholders::_2)));
 
-					if(!nodeObject->init(node.second))
+					if(!nodeObject->init(node))
 					{
 						nodeObject.reset();
-						nodesToRemove.emplace(node.second->id);
-						_out.printError("Error: Could not load node " + node.second->type + " with ID " + node.second->id + ". \"init\" failed.");
+						nodesToRemove.emplace(node->id);
+						_out.printError("Error: Could not load node " + node->type + " with ID " + node->id + ". \"init\" failed.");
 						continue;
 					}
 				}
 				for(auto& node : nodesToRemove)
 				{
-					_nodes.erase(node);
 					flow->nodes.erase(node);
+					{
+						std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+						_nodes.erase(node);
+					}
 					_nodeManager->unloadNode(node);
 				}
 			}
