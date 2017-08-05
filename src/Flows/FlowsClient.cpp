@@ -472,7 +472,12 @@ Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray param
 {
 	try
 	{
-		if(_nodesStopped) return Flows::Variable::createError(-32501, "RPC calls are forbidden after \"stop()\" has been called.");
+		if(_nodesStopped)
+		{
+			if(methodName != "waitForStop" && methodName != "executePhpNodeMethod") return Flows::Variable::createError(-32501, "RPC calls are forbidden after \"stop()\" has been called.");
+			else if(methodName == "executePhpNodeMethod" && (parameters->size() < 2 || parameters->at(1)->stringValue != "waitForStop")) return Flows::Variable::createError(-32501, "RPC calls are forbidden after \"stop()\" has been called.");
+		}
+
 
 		int64_t threadId = pthread_self();
 		std::unique_lock<std::mutex> requestInfoGuard(_requestInfoMutex);

@@ -604,7 +604,14 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 				return;
 			}
 
-			if(GD::bl->debugLevel >= 5) _out.printInfo("Debug: Server is calling RPC method: " + queueEntry->methodName);
+			if(GD::bl->debugLevel >= 5)
+			{
+				_out.printInfo("Debug: Server is calling RPC method: " + queueEntry->methodName);
+				for(auto parameter : *queueEntry->parameters)
+				{
+					parameter->print(true, false);
+				}
+			}
 
 			BaseLib::PVariable result = localMethodIterator->second(queueEntry->parameters->at(2)->arrayValue);
 			if(GD::bl->debugLevel >= 5)
@@ -712,7 +719,7 @@ BaseLib::PVariable ScriptEngineClient::callMethod(std::string methodName, BaseLi
 {
 	try
 	{
-		if(_nodesStopped) return BaseLib::Variable::createError(-32500, "RPC calls are forbidden after \"stop\" is executed.");
+		if(_nodesStopped && methodName != "waitForStop") return BaseLib::Variable::createError(-32500, "RPC calls are forbidden after \"stop\" is executed.");
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		return sendRequest(globals->id, methodName, parameters->arrayValue, wait);
 	}
@@ -1269,10 +1276,10 @@ void ScriptEngineClient::runNode(int32_t id, PScriptInfo scriptInfo)
 					nodeInfo->ready = false;
 
 					nodeInfo->response = php_node_object_invoke_local(scriptInfo, &homegearNodeObject, nodeInfo->methodName, nodeInfo->parameters);
-					if(nodeInfo->methodName == "init" && !nodeInfo->response->booleanValue)
+					if(nodeInfo->methodName == "init")
 					{
 						_nodesStopped = false;
-						stop = true;
+						if(!nodeInfo->response->booleanValue) stop = true;
 					}
 					else if(nodeInfo->methodName == "start" && !nodeInfo->response->booleanValue) stop = true;
 					else if(nodeInfo->methodName == "waitForStop")

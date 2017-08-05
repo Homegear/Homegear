@@ -32,6 +32,9 @@
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 
+// Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
+//#define FLOWS_MANUAL_CLIENT_START
+
 namespace Flows
 {
 
@@ -2057,7 +2060,11 @@ PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
 		_out.printInfo("Info: Spawning new flows process.");
 		PFlowsProcess process(new FlowsProcess());
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rl" };
+#ifdef FLOWS_MANUAL_CLIENT_START
+		process->setPid(1);
+#else
 		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
+#endif
 		if(process->getPid() != -1)
 		{
 			{
@@ -2362,6 +2369,9 @@ BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData
 	try
 	{
 		pid_t pid = parameters->at(0)->integerValue;
+#ifdef FLOWS_MANUAL_CLIENT_START
+		pid = 1;
+#endif
 		std::lock_guard<std::mutex> processGuard(_processMutex);
 		std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(pid);
 		if(processIterator == _processes.end())
