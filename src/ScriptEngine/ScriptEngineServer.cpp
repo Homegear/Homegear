@@ -1614,7 +1614,7 @@ void ScriptEngineServer::invokeScriptFinished(PScriptEngineProcess process, int3
 			process->invokeScriptFinished(id, exitCode);
 			process->unregisterScript(id);
 		}
-		if(exitCode != 15 && process->isNodeProcess()) GD::flowsServer->restartFlows();
+		if(exitCode != 0 && process->isNodeProcess() && !_shuttingDown) GD::flowsServer->restartFlows();
 	}
 	catch(const std::exception& ex)
 	{
