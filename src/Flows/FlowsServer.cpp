@@ -498,7 +498,7 @@ void FlowsServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, boo
 
 			if(signal != -1) exitCode = -32500;
 			process->invokeFlowFinished(exitCode);
-			if(signal != -1 && signal != 15 && !_flowsRestarting) GD::bl->threadManager.start(_maintenanceThread, true, &FlowsServer::restartFlows, this);
+			if(signal != -1 && signal != 15 && !_flowsRestarting && !_shuttingDown) GD::bl->threadManager.start(_maintenanceThread, true, &FlowsServer::restartFlows, this);
 		}
 	}
 	catch(const std::exception& ex)
