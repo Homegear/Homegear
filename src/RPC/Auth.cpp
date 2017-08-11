@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -296,7 +296,7 @@ bool Auth::sessionServer(BaseLib::WebSocket& webSocket)
 void Auth::sendWebSocketAuthorized()
 {
 	std::vector <char> output;
-	std::string json("{'auth':'success'}");
+	std::string json("{\"auth\":\"success\"}");
 	std::vector<char> data(&json[0], &json[0] + json.size());
 	BaseLib::WebSocket::encode(data, BaseLib::WebSocket::Header::Opcode::text, output);
 	_socket->proofwrite(output);
