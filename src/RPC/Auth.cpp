@@ -232,7 +232,7 @@ bool Auth::basicServer(BaseLib::WebSocket& webSocket)
 	}
 	if(variable->structValue->find("user") == variable->structValue->end() || variable->structValue->find("password") == variable->structValue->end())
 	{
-		sendWebSocketUnauthorized("Either \"user\" or \"password\" is not specified.");
+		sendWebSocketUnauthorized("Either 'user' or 'password' is not specified.");
 		return false;
 	}
 	if(User::verify(variable->structValue->at("user")->stringValue, variable->structValue->at("password")->stringValue))
@@ -296,7 +296,7 @@ bool Auth::sessionServer(BaseLib::WebSocket& webSocket)
 void Auth::sendWebSocketAuthorized()
 {
 	std::vector <char> output;
-	std::string json("{\"auth\":\"success\"}");
+	std::string json("{'auth':'success'}");
 	std::vector<char> data(&json[0], &json[0] + json.size());
 	BaseLib::WebSocket::encode(data, BaseLib::WebSocket::Header::Opcode::text, output);
 	_socket->proofwrite(output);
