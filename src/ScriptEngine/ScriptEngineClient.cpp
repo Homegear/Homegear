@@ -68,6 +68,7 @@ std::unordered_map<std::string, ScriptEngineClient::PNodeInfo> ScriptEngineClien
 ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 1000)
 {
 	_stopped = false;
+	_nodesStopped = false;
 
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	_out.init(GD::bl.get());
@@ -603,7 +604,14 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 				return;
 			}
 
-			if(GD::bl->debugLevel >= 5) _out.printInfo("Debug: Server is calling RPC method: " + queueEntry->methodName);
+			if(GD::bl->debugLevel >= 5)
+			{
+				_out.printInfo("Debug: Server is calling RPC method: " + queueEntry->methodName);
+				for(auto parameter : *queueEntry->parameters)
+				{
+					parameter->print(true, false);
+				}
+			}
 
 			BaseLib::PVariable result = localMethodIterator->second(queueEntry->parameters->at(2)->arrayValue);
 			if(GD::bl->debugLevel >= 5)
@@ -661,7 +669,7 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
     }
 }
 
-void ScriptEngineClient::sendOutput(std::string& output)
+void ScriptEngineClient::sendOutput(std::string output)
 {
 	try
 	{
@@ -684,7 +692,7 @@ void ScriptEngineClient::sendOutput(std::string& output)
     }
 }
 
-void ScriptEngineClient::sendHeaders(BaseLib::PVariable& headers)
+void ScriptEngineClient::sendHeaders(BaseLib::PVariable headers)
 {
 	try
 	{
@@ -707,10 +715,11 @@ void ScriptEngineClient::sendHeaders(BaseLib::PVariable& headers)
     }
 }
 
-BaseLib::PVariable ScriptEngineClient::callMethod(std::string& methodName, BaseLib::PVariable& parameters, bool wait)
+BaseLib::PVariable ScriptEngineClient::callMethod(std::string methodName, BaseLib::PVariable parameters, bool wait)
 {
 	try
 	{
+		if(_nodesStopped && methodName != "waitForStop") return BaseLib::Variable::createError(-32500, "RPC calls are forbidden after \"stop\" is executed.");
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		return sendRequest(globals->id, methodName, parameters->arrayValue, wait);
 	}
@@ -1055,22 +1064,8 @@ ScriptEngineClient::ScriptGuard::~ScriptGuard()
 		std::lock_guard<std::mutex> resourceGuard(_resourceMutex);
 		if(tsrm_get_ls_cache())
 		{
-			SG(server_context) = nullptr; //Pointer is invalid - cleaned up already.
-			if(SG(request_info).path_translated)
-			{
-				efree(SG(request_info).path_translated);
-				SG(request_info).path_translated = nullptr;
-			}
-			if(SG(request_info).query_string)
-			{
-				efree(SG(request_info).query_string);
-				SG(request_info).query_string = nullptr;
-			}
-			if(SG(request_info).request_uri)
-			{
-				efree(SG(request_info).request_uri);
-				SG(request_info).request_uri = nullptr;
-			}
+			//SG(request_info).path_translated, SG(request_info).query_string and SG(request_info).request_uri are cleaned up by PHP
+
 			if(SG(request_info).argv)
 			{
 				free(SG(request_info).argv);
@@ -1196,6 +1191,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 
 			if (php_request_startup() == FAILURE) {
 				GD::bl->out.printError("Error calling php_request_startup...");
+				SG(server_context) = nullptr;
 				return;
 			}
 			globals->executionStarted = true;
@@ -1227,6 +1223,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 
 		scriptInfo->exitCode = EG(exit_status);
 
+		SG(server_context) = nullptr;
 		return;
 	}
 	catch(const std::exception& ex)
@@ -1241,6 +1238,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    SG(server_context) = nullptr;
     std::string error("Error executing script. Check Homegear log for more details.");
     sendOutput(error);
 }
@@ -1278,9 +1276,17 @@ void ScriptEngineClient::runNode(int32_t id, PScriptInfo scriptInfo)
 					nodeInfo->ready = false;
 
 					nodeInfo->response = php_node_object_invoke_local(scriptInfo, &homegearNodeObject, nodeInfo->methodName, nodeInfo->parameters);
-					if(nodeInfo->methodName == "init" && !nodeInfo->response->booleanValue) stop = true;
+					if(nodeInfo->methodName == "init")
+					{
+						_nodesStopped = false;
+						if(!nodeInfo->response->booleanValue) stop = true;
+					}
 					else if(nodeInfo->methodName == "start" && !nodeInfo->response->booleanValue) stop = true;
-					else if(nodeInfo->methodName == "waitForStop") stop = true;
+					else if(nodeInfo->methodName == "waitForStop")
+					{
+						_nodesStopped = true;
+						stop = true;
+					}
 
 					nodeInfo->parameters.reset();
 					waitLock.unlock();

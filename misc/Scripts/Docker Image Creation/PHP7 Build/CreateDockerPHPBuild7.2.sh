@@ -165,7 +165,7 @@ if [ "$distver" == "stretch" ] || [ "$distver" == "jessie" ] || [ "$distver" == 
 fi
 
 mkdir $rootfs/PHPBuild
-chroot $rootfs bash -c "cd /PHPBuild && apt-get source php7.1"
+chroot $rootfs bash -c "cd /PHPBuild && apt-get source php7.2"
 cd $rootfs/PHPBuild
 tar -xf php7*debian.tar.xz
 cd ..
@@ -228,7 +228,7 @@ rm -Rf /PHPBuild/lib*
 
 cd /PHPBuild
 apt-get update
-apt-get source php7.1
+apt-get source php7.2
 rm php7*.tar.xz
 rm php7*.dsc
 cd php7*
@@ -236,10 +236,7 @@ cd ext
 if test ! -f ext_skel.in; then
 	touch ext_skel.in
 fi
-wget https://github.com/krakjoe/pthreads/archive/527286336ffcf5fffb285f1bfeb100bb8bf5ec32.zip
-unzip 527286336ffcf5fffb285f1bfeb100bb8bf5ec32.zip
-rm 527286336ffcf5fffb285f1bfeb100bb8bf5ec32.zip
-mv pthreads* pthreads
+git clone https://github.com/krakjoe/pthreads.git pthreads
 cd ..
 
 autoconf

@@ -1023,6 +1023,7 @@ void startUp()
 #endif
 
 		GD::flowsServer.reset(new Flows::FlowsServer());
+		GD::ipcServer.reset(new Ipc::IpcServer());
 
 		if(!GD::bl->io.directoryExists(GD::bl->settings.tempPath() + "php"))
 		{
@@ -1087,7 +1088,6 @@ void startUp()
 		}
 
 		GD::out.printInfo("Starting IPC server...");
-		GD::ipcServer.reset(new Ipc::IpcServer());
 		if(!GD::ipcServer->start())
 		{
 			GD::out.printCritical("Critical: Cannot start IPC server. Exiting Homegear.");

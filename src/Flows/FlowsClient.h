@@ -105,6 +105,7 @@ private:
 	std::map<int64_t, RequestInfo> _requestInfo;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
+	std::atomic_bool _nodesStopped;
 	std::unique_ptr<NodeManager> _nodeManager;
 	std::atomic_bool _frontendConnected;
 
@@ -124,8 +125,8 @@ private:
 	std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::set<std::string>>>> _peerSubscriptions;
 
 	void registerClient();
-	Flows::PVariable invoke(std::string methodName, Flows::PArray& parameters, bool wait);
-	Flows::PVariable invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray& parameters);
+	Flows::PVariable invoke(std::string methodName, Flows::PArray parameters, bool wait);
+	Flows::PVariable invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray parameters);
 	void sendResponse(Flows::PVariable& packetId, Flows::PVariable& variable);
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);

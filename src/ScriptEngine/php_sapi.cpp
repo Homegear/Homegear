@@ -41,11 +41,14 @@
 #include <sys/ioctl.h>
 #endif
 
-#if PHP_VERSION_ID >= 70200
-#error PHP 7.2 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line.
+#if PHP_VERSION_ID < 70100
+#error "PHP 7.2 is required as ZTS in versions 7.0 and 7.1 is broken."
+#endif
+#if PHP_VERSION_ID >= 70300
+#error "PHP 7.3 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
 /*
  * 1. Compare initialization with the initialization in one of the SAPI modules (e. g. "php_embed_init()" in "sapi/embed/php_embed.c").
- * 2. Check if fixed bug 71115 is compiled in (last check: June 21, 2017): https://bugs.php.net/bug.php?id=71115. If that's the case, remove workaround from php_homegear_startup and php_homegear_shutdown.
+ * 2. When PHP 7.2 is used, remove the code parts that fix bug #71115 (it is fixed).
  */
 #endif
 
@@ -1935,14 +1938,13 @@ static int php_homegear_startup(sapi_module_struct* sapi_globals)
 
 	// {{{ Fix for bug #71115 which causes process to crash when excessively using $_GLOBALS. Remove once bug is fixed.
 
-			// Run the test code below a million times (at least 30 executions per second) to check if bug really is fixed.
+			// Run the test code below a million times (at least 30 executions per second) to check if bug really is fixed. (This part is fixed)
+			// Check if Homegear script engine processes crash on the Raspberry Pi (should crash pretty much immediately and often)
 			/*
 				<?php
-
 				function setGlobals()
 				{
 						global $GLOBALS;
-
 						$GLOBALS['ABC'.rand(0, 1000000).rand(1000, 10000000).rand(10000, 100000)] = rand(1000, 10000000)."BLA".rand(10000, 1000000);
 						$GLOBALS['TEST'] = rand(0, 100000).'BLII'.rand(1000, 1000000);
 						for($i = 0; $i < 1000; $i++)
@@ -1950,7 +1952,6 @@ static int php_homegear_startup(sapi_module_struct* sapi_globals)
 								$GLOBALS['TEST'.$i.'-'.rand(0, 10000000)] = $i.'-'.rand(100000, 100000)."TEST$i";
 						}
 				}
-
 				$hg = new \Homegear\Homegear();
 				$version = $hg->getVersion();
 				$logLevel = $hg->logLevel();

@@ -35,7 +35,7 @@
 #include <homegear-base/BaseLib.h>
 
 // Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
-//#define MANUAL_CLIENT_START
+//#define SE_MANUAL_CLIENT_START
 
 namespace ScriptEngine
 {
@@ -1346,7 +1346,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 		_out.printInfo("Info: Spawning new script engine process.");
 		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess(nodeProcess));
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rse" };
-#ifdef MANUAL_CLIENT_START
+#ifdef SE_MANUAL_CLIENT_START
 		process->setPid(1);
 #else
 		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
@@ -1365,7 +1365,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 				_out.printError("Error: Could not start new script engine process.");
 				return std::shared_ptr<ScriptEngineProcess>();
 			}
-			process->setUnregisterNode(std::function<void(std::string&)>(std::bind(&ScriptEngineServer::unregisterNode, this, std::placeholders::_1)));
+			process->setUnregisterNode(std::function<void(std::string)>(std::bind(&ScriptEngineServer::unregisterNode, this, std::placeholders::_1)));
 			_out.printInfo("Info: Script engine process successfully spawned. Process id is " + std::to_string(process->getPid()) + ". Client id is: " + std::to_string(process->getClientData()->id) + ".");
 			return process;
 		}
@@ -1614,7 +1614,7 @@ void ScriptEngineServer::invokeScriptFinished(PScriptEngineProcess process, int3
 			process->invokeScriptFinished(id, exitCode);
 			process->unregisterScript(id);
 		}
-		if(exitCode != 15 && process->isNodeProcess()) GD::flowsServer->restartFlows();
+		if(exitCode != 0 && process->isNodeProcess() && !_shuttingDown) GD::flowsServer->restartFlows();
 	}
 	catch(const std::exception& ex)
 	{
@@ -1822,7 +1822,7 @@ BaseLib::PVariable ScriptEngineServer::getAllScripts()
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-void ScriptEngineServer::unregisterNode(std::string& nodeId)
+void ScriptEngineServer::unregisterNode(std::string nodeId)
 {
 	try
 	{
@@ -1851,7 +1851,7 @@ void ScriptEngineServer::unregisterNode(std::string& nodeId)
 		try
 		{
 			pid_t pid = parameters->at(0)->integerValue;
-#ifdef MANUAL_CLIENT_START
+#ifdef SE_MANUAL_CLIENT_START
 			pid = 1;
 #endif
 			std::lock_guard<std::mutex> processGuard(_processMutex);

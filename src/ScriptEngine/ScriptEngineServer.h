@@ -146,7 +146,7 @@ private:
 	void sendResponse(PScriptEngineClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 	void closeClientConnection(PScriptEngineClientData client);
 	PScriptEngineProcess getFreeProcess(bool nodeProcess, uint32_t maxThreadCount = 0);
-	void unregisterNode(std::string& nodeId);
+	void unregisterNode(std::string nodeId);
 	void invokeScriptFinished(PScriptEngineProcess process, int32_t id, int32_t exitCode);
 	void invokeScriptFinishedEarly(PScriptInfo scriptInfo, int32_t exitCode);
 

@@ -32,6 +32,9 @@
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 
+// Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
+//#define FLOWS_MANUAL_CLIENT_START
+
 namespace Flows
 {
 
@@ -495,7 +498,11 @@ void FlowsServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, boo
 
 			if(signal != -1) exitCode = -32500;
 			process->invokeFlowFinished(exitCode);
-			if(signal != -1 && signal != 15 && !_flowsRestarting) GD::bl->threadManager.start(_maintenanceThread, true, &FlowsServer::restartFlows, this);
+			if(signal != -1 && signal != 15 && !_flowsRestarting && !_shuttingDown)
+			{
+				_out.printError("Error: Restarting flows, because client was killed unexpectedly. Signal was: " + std::to_string(signal) + ", exit code was: " + std::to_string(exitCode));
+				GD::bl->threadManager.start(_maintenanceThread, true, &FlowsServer::restartFlows, this);
+			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -1413,7 +1420,9 @@ std::string FlowsServer::handlePost(std::string& path, BaseLib::Http& http, std:
 		if (path == "flows/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
 		{
 			if(!sessionValid) return "unauthorized";
+			_out.printInfo("Info: Deploying (1)...");
 			std::lock_guard<std::mutex> flowsPostGuard(_flowsPostMutex);
+			_out.printInfo("Info: Deploying (2)...");
 			BaseLib::PVariable json = _jsonDecoder->decode(http.getContent());
 			auto flowsIterator = json->structValue->find("flows");
 			if (flowsIterator == json->structValue->end()) return "";
@@ -1435,6 +1444,7 @@ std::string FlowsServer::handlePost(std::string& path, BaseLib::Http& http, std:
 			std::string md5String = BaseLib::HelperFunctions::getHexString(md5);
 			BaseLib::HelperFunctions::toLower(md5String);
 
+			_out.printInfo("Info: Deploying (3)...");
 			GD::bl->threadManager.start(_maintenanceThread, true, &FlowsServer::restartFlows, this);
 
 			return "{\"rev\": \"" + md5String + "\"}";
@@ -2057,7 +2067,11 @@ PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
 		_out.printInfo("Info: Spawning new flows process.");
 		PFlowsProcess process(new FlowsProcess());
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rl" };
+#ifdef FLOWS_MANUAL_CLIENT_START
+		process->setPid(1);
+#else
 		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
+#endif
 		if(process->getPid() != -1)
 		{
 			{
@@ -2362,6 +2376,9 @@ BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData
 	try
 	{
 		pid_t pid = parameters->at(0)->integerValue;
+#ifdef FLOWS_MANUAL_CLIENT_START
+		pid = 1;
+#endif
 		std::lock_guard<std::mutex> processGuard(_processMutex);
 		std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(pid);
 		if(processIterator == _processes.end())
