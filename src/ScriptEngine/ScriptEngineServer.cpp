@@ -1328,15 +1328,12 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			for(std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
-				if(nodeProcess)
+				if(nodeProcess && i->second->isNodeProcess() && (GD::bl->settings.maxNodeThreadsPerProcess() == -1 || i->second->nodeThreadCount() + maxThreadCount + 1 <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess()))
 				{
-					if(GD::bl->settings.maxNodeThreadsPerProcess() == -1 || i->second->nodeThreadCount() + maxThreadCount + 1 <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
-					{
-						i->second->lastExecution = BaseLib::HelperFunctions::getTime();
-						return i->second;
-					}
+					i->second->lastExecution = BaseLib::HelperFunctions::getTime();
+					return i->second;
 				}
-				else if(i->second->scriptCount() < GD::bl->threadManager.getMaxThreadCount() / GD::bl->settings.scriptEngineMaxThreadsPerScript() && (GD::bl->settings.scriptEngineMaxScriptsPerProcess() == -1 || i->second->scriptCount() < (unsigned)GD::bl->settings.scriptEngineMaxScriptsPerProcess()))
+				else if(!i->second->isNodeProcess() && i->second->scriptCount() < GD::bl->threadManager.getMaxThreadCount() / GD::bl->settings.scriptEngineMaxThreadsPerScript() && (GD::bl->settings.scriptEngineMaxScriptsPerProcess() == -1 || i->second->scriptCount() < (unsigned)GD::bl->settings.scriptEngineMaxScriptsPerProcess()))
 				{
 					i->second->lastExecution = BaseLib::HelperFunctions::getTime();
 					return i->second;
