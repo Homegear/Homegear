@@ -387,6 +387,41 @@ BaseLib::PVariable RPCActivateLinkParamset::invoke(BaseLib::PRpcClientInfo clien
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
+BaseLib::PVariable RPCAddCategoryToDevice::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		if(!GD::bl->db->categoryExists(parameters->at(1)->integerValue)) return BaseLib::Variable::createError(-1, "Unknown category.");
+
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+			if(central && central->peerExists((uint64_t)parameters->at(0)->integerValue64)) return central->addCategoryToDevice(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue64);
+		}
+
+		return BaseLib::Variable::createError(-2, "Device not found.");
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCAddDevice::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	try
@@ -427,6 +462,41 @@ BaseLib::PVariable RPCAddDevice::invoke(BaseLib::PRpcClientInfo clientInfo, std:
 			if(result && !result->errorStruct) returnResult = result;
 		}
 		if(returnResult) return returnResult;
+		return BaseLib::Variable::createError(-2, "Device not found.");
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCAddDeviceToRoom::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		if(!GD::bl->db->roomExists(parameters->at(1)->integerValue)) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+			if(central && central->peerExists((uint64_t)parameters->at(0)->integerValue64)) return central->addDeviceToRoom(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue64);
+		}
+
 		return BaseLib::Variable::createError(-2, "Device not found.");
 	}
 	catch(const std::exception& ex)
@@ -686,6 +756,32 @@ BaseLib::PVariable RPCClientServerInitialized::invoke(BaseLib::PRpcClientInfo cl
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCCreateCategory::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tStruct })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		return GD::bl->db->createCategory(parameters->at(0));
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCCreateDevice::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	try
@@ -703,6 +799,73 @@ BaseLib::PVariable RPCCreateDevice::invoke(BaseLib::PRpcClientInfo clientInfo, s
 		}
 		std::string interfaceId(parameters->size() > 5 ? parameters->at(5)->stringValue : "");
 		return families.at(parameters->at(0)->integerValue)->getCentral()->createDevice(clientInfo, parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->integerValue, parameters->at(4)->integerValue, interfaceId);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCCreateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tStruct })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		return GD::bl->db->createRoom(parameters->at(0));
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCDeleteCategory::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		BaseLib::PVariable result = GD::bl->db->deleteCategory(parameters->at(0)->integerValue64);
+		if(result->errorStruct) return result;
+
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+			if(central)
+			{
+				BaseLib::PVariable devices = central->getDevicesInCategory(clientInfo, parameters->at(0)->integerValue64);
+				for(auto device : *devices->arrayValue)
+				{
+					central->removeCategoryFromDevice(clientInfo, device->integerValue64, parameters->at(0)->integerValue64);
+				}
+			}
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -790,6 +953,47 @@ BaseLib::PVariable RPCDeleteDevice::invoke(BaseLib::PRpcClientInfo clientInfo, s
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
+}
+
+BaseLib::PVariable RPCDeleteRoom::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		BaseLib::PVariable result = GD::bl->db->deleteRoom(parameters->at(0)->integerValue64);
+		if(result->errorStruct) return result;
+
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+			if(central)
+			{
+				BaseLib::PVariable devices = central->getDevicesInRoom(clientInfo, parameters->at(0)->integerValue64);
+				for(auto device : *devices->arrayValue)
+				{
+					central->removeDeviceFromRoom(clientInfo, device->integerValue64, parameters->at(0)->integerValue64);
+				}
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable RPCDeleteMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
@@ -1181,6 +1385,37 @@ BaseLib::PVariable RPCGetAllValues::invoke(BaseLib::PRpcClientInfo clientInfo, s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCGetCategories::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		if(!parameters->empty())
+		{
+			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString })
+			}));
+			if(error != ParameterError::Enum::noError) return getError(error);
+		}
+
+		std::string languageCode = parameters->empty() ? "" : parameters->at(0)->stringValue;
+
+		return GD::bl->db->getCategories(languageCode);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCGetConfigParameter::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	try
@@ -1425,6 +1660,90 @@ BaseLib::PVariable RPCGetDeviceInfo::invoke(BaseLib::PRpcClientInfo clientInfo, 
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
+}
+
+BaseLib::PVariable RPCGetDevicesInCategory::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		if(!GD::bl->db->categoryExists(parameters->at(0)->integerValue)) return BaseLib::Variable::createError(-1, "Unknown category.");
+
+		BaseLib::PVariable result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+			if(central)
+			{
+				BaseLib::PVariable devices = central->getDevicesInCategory(clientInfo, parameters->at(0)->integerValue64);
+				if(result->arrayValue->size() + devices->arrayValue->size() > result->arrayValue->capacity()) result->arrayValue->reserve(result->arrayValue->size() + devices->arrayValue->size() + 1000);
+				result->arrayValue->insert(result->arrayValue->end(), devices->arrayValue->begin(), devices->arrayValue->end());
+			}
+		}
+
+		return result;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCGetDevicesInRoom::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		if(!GD::bl->db->roomExists(parameters->at(0)->integerValue)) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+		BaseLib::PVariable result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+			if(central)
+			{
+				BaseLib::PVariable devices = central->getDevicesInRoom(clientInfo, parameters->at(0)->integerValue64);
+				if(result->arrayValue->size() + devices->arrayValue->size() > result->arrayValue->capacity()) result->arrayValue->reserve(result->arrayValue->size() + devices->arrayValue->size() + 1000);
+				result->arrayValue->insert(result->arrayValue->end(), devices->arrayValue->begin(), devices->arrayValue->end());
+			}
+		}
+
+		return result;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable RPCGetEvent::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
@@ -2345,6 +2664,37 @@ BaseLib::PVariable RPCGetPeerId::invoke(BaseLib::PRpcClientInfo clientInfo, std:
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
+}
+
+BaseLib::PVariable RPCGetRooms::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		if(!parameters->empty())
+		{
+			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString })
+			}));
+			if(error != ParameterError::Enum::noError) return getError(error);
+		}
+
+		std::string languageCode = parameters->empty() ? "" : parameters->at(0)->stringValue;
+
+		return GD::bl->db->getRooms(languageCode);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable RPCGetServiceMessages::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
@@ -3324,6 +3674,76 @@ BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, st
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
+}
+
+BaseLib::PVariable RPCRemoveCategoryFromDevice::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		if(!GD::bl->db->categoryExists(parameters->at(1)->integerValue)) return BaseLib::Variable::createError(-1, "Unknown category.");
+
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+			if(central && central->peerExists((uint64_t)parameters->at(0)->integerValue64)) return central->removeCategoryFromDevice(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue64);
+		}
+
+		return BaseLib::Variable::createError(-2, "Device not found.");
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCRemoveDeviceFromRoom::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		if(!GD::bl->db->roomExists(parameters->at(1)->integerValue)) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+			if(central && central->peerExists((uint64_t)parameters->at(0)->integerValue64)) return central->removeDeviceFromRoom(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue64);
+		}
+
+		return BaseLib::Variable::createError(-2, "Device not found.");
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable RPCRemoveEvent::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
@@ -4579,6 +4999,32 @@ BaseLib::PVariable RPCUnsubscribePeers::invoke(BaseLib::PRpcClientInfo clientInf
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCUpdateCategory::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		return GD::bl->db->updateCategory(parameters->at(0)->integerValue64, parameters->at(1));
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCUpdateFirmware::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	try
@@ -4627,6 +5073,32 @@ BaseLib::PVariable RPCUpdateFirmware::invoke(BaseLib::PRpcClientInfo clientInfo,
 		}
 
 		return BaseLib::Variable::createError(-2, "Device not found.");
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCUpdateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		return GD::bl->db->updateRoom(parameters->at(0)->integerValue64, parameters->at(1));
 	}
 	catch(const std::exception& ex)
     {
