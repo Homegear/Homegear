@@ -866,6 +866,8 @@ BaseLib::PVariable RPCDeleteCategory::invoke(BaseLib::PRpcClientInfo clientInfo,
 				}
 			}
 		}
+
+		return result;
 	}
 	catch(const std::exception& ex)
     {
@@ -980,6 +982,8 @@ BaseLib::PVariable RPCDeleteRoom::invoke(BaseLib::PRpcClientInfo clientInfo, std
 				}
 			}
 		}
+
+		return result;
 	}
 	catch(const std::exception& ex)
     {
