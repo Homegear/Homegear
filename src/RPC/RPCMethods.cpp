@@ -4366,6 +4366,8 @@ BaseLib::PVariable RPCSetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, st
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString }),
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tString }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant })
 		}));
@@ -4380,6 +4382,8 @@ BaseLib::PVariable RPCSetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, st
 			if(pos > -1) serialNumber = parameters->at(0)->stringValue.substr(0, pos);
 			else serialNumber = parameters->at(0)->stringValue;
 		}
+
+		BaseLib::PVariable value = parameters->size() > 2 ? parameters->at(2) : std::make_shared<BaseLib::Variable>();
 
 		std::shared_ptr<BaseLib::Systems::Peer> peer;
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
@@ -4412,7 +4416,7 @@ BaseLib::PVariable RPCSetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, st
 			return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 		}
 		serialNumber = peer->getSerialNumber();
-		return GD::bl->db->setMetadata(peer->getID(), serialNumber, parameters->at(1)->stringValue, parameters->at(2));
+		return GD::bl->db->setMetadata(peer->getID(), serialNumber, parameters->at(1)->stringValue, value);
 	}
 	catch(const std::exception& ex)
     {
@@ -4575,10 +4579,15 @@ BaseLib::PVariable RPCSetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
 {
 	try
 	{
-		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tVariant }));
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }),
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tVariant })
+		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::bl->db->setSystemVariable(parameters->at(0)->stringValue, parameters->at(1));
+		BaseLib::PVariable value = parameters->size() > 1 ? parameters->at(1) : std::make_shared<BaseLib::Variable>();
+
+		return GD::bl->db->setSystemVariable(parameters->at(0)->stringValue, value);
 	}
 	catch(const std::exception& ex)
     {
