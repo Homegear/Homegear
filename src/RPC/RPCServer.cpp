@@ -850,41 +850,6 @@ void RPCServer::packetReceived(std::shared_ptr<Client> client, std::vector<char>
     }
 }
 
-int32_t RPCServer::isAddonClient(int32_t clientID)
-{
-	try
-	{
-		_stateMutex.lock();
-		if(_clients.find(clientID) != _clients.end())
-		{
-			if(_clients.at(clientID)->addon)
-			{
-				_stateMutex.unlock();
-				return 1;
-			}
-			else
-			{
-				_stateMutex.unlock();
-				return 0;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _stateMutex.unlock();
-    return -1;
-}
-
 const std::vector<BaseLib::PRpcClientInfo> RPCServer::getClientInfo()
 {
 	std::vector<BaseLib::PRpcClientInfo> clients;
@@ -911,34 +876,6 @@ const std::vector<BaseLib::PRpcClientInfo> RPCServer::getClientInfo()
 	}
 	_stateMutex.unlock();
 	return clients;
-}
-
-std::string RPCServer::getClientIP(int32_t clientID)
-{
-	try
-	{
-		_stateMutex.lock();
-		if(_clients.find(clientID) != _clients.end())
-		{
-			std::string ipAddress = _clients.at(clientID)->address;
-			_stateMutex.unlock();
-			return ipAddress;
-		}
-	}
-	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	_stateMutex.unlock();
-	return "";
 }
 
 BaseLib::PEventHandler RPCServer::addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler)

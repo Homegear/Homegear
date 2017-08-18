@@ -56,24 +56,6 @@ public:
 	uint32_t connectionCount();
 	BaseLib::PVariable callMethod(std::string methodName, BaseLib::PVariable parameters);
 
-	/**
-	 * Checks if a client is an addon on all RPC servers.
-	 *
-	 * @param clientID The id of the client to check.
-	 * @return Returns 1 if the client is known and is an addon, 0 if the client is known and no addon and -1 if the client is unknown.
-	 */
-	static int32_t isAddonClientAll(int32_t clientID);
-
-	/**
-	 * Searches for a client on all RPC servers and returns the IP address.
-	 *
-	 * @param clientID The id of the client to check.
-	 * @return Returns the IP address or an empty string if the client is unknown.
-	 */
-	static std::string getClientIPAll(int32_t clientID);
-
-	int32_t isAddonClient(int32_t clientID);
-	std::string getClientIP(int32_t clientID);
 	BaseLib::PEventHandler addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler);
 	void removeWebserverEventHandler(BaseLib::PEventHandler eventHandler);
 protected:

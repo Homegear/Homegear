@@ -226,29 +226,6 @@ const BaseLib::Rpc::PServerInfo Server::getInfo()
 	if(!_server) return BaseLib::Rpc::PServerInfo(); return _server->getInfo();
 }
 
-int32_t Server::isAddonClient(int32_t clientID)
-{
-	if(!_server) return -1;
-	return _server->isAddonClient(clientID);
-}
-
-int32_t Server::isAddonClientAll(int32_t clientID)
-{
-	int32_t result = -1;
-	for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
-	{
-		result = i->second.isAddonClient(clientID);
-		if(result != -1) return result;
-	}
-	return -1;
-}
-
-std::string Server::getClientIP(int32_t clientID)
-{
-	if(!_server) return "";
-	return _server->getClientIP(clientID);
-}
-
 BaseLib::PEventHandler Server::addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler)
 {
 	if(!_server) return BaseLib::PEventHandler();
@@ -259,17 +236,6 @@ void Server::removeWebserverEventHandler(BaseLib::PEventHandler eventHandler)
 {
 	if(!_server) return;
 	_server->removeWebserverEventHandler(eventHandler);
-}
-
-std::string Server::getClientIPAll(int32_t clientID)
-{
-	std::string ipAddress;
-	for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
-	{
-		ipAddress = i->second.getClientIP(clientID);
-		if(!ipAddress.empty()) return ipAddress;
-	}
-	return "";
 }
 
 }

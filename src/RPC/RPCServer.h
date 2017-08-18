@@ -84,21 +84,6 @@ namespace Rpc
 			uint32_t connectionCount();
 			BaseLib::PVariable callMethod(std::string& methodName, BaseLib::PVariable& parameters);
 
-			/**
-			 * Checks if a client is an addon.
-			 *
-			 * @param clientID The id of the client to check.
-			 * @return Returns 1 if the client is known and is an addon, 0 if the client is known and no addon and -1 if the client is unknown.
-			 */
-			int32_t isAddonClient(int32_t clientID);
-
-			/**
-			 * Returns the clients IP address.
-			 *
-			 * @param clientID The id of the client to return the IP address for.
-			 * @return Returns the IP address or an empty string if the client is unknown.
-			 */
-			std::string getClientIP(int32_t clientID);
 			BaseLib::PEventHandler addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler);
 			void removeWebserverEventHandler(BaseLib::PEventHandler eventHandler);
 		protected:

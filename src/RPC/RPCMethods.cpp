@@ -3021,6 +3021,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, std::shar
 	try
 	{
 		if(_disposing) return BaseLib::Variable::createError(-32500, "Method is disposing.");
+		if(!clientInfo) return BaseLib::Variable::createError(-32500, "clientInfo is nullptr.");
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString }),
@@ -3028,10 +3029,12 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, std::shar
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
+		if(!clientInfo->address.empty()) GD::out.printInfo("Info: Client with IP " + clientInfo->address + " is calling \"init\".");
+
 		if(GD::bl->settings.clientAddressesToReplace().find(parameters->at(0)->stringValue) != GD::bl->settings.clientAddressesToReplace().end())
 		{
 			std::string newAddress = GD::bl->settings.clientAddressesToReplace().at(parameters->at(0)->stringValue);
-			std::string remoteIP = Rpc::Server::getClientIPAll(clientInfo->id);
+			std::string remoteIP = clientInfo->address;
 			if(remoteIP.empty()) return BaseLib::Variable::createError(-32500, "Could not get client's IP address.");
 			GD::bl->hf.stringReplace(newAddress, "$remoteip", remoteIP);
 			GD::out.printInfo("Info: Replacing address " + parameters->at(0)->stringValue + " with " + newAddress);

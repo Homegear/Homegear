@@ -931,7 +931,7 @@ PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channe
 			else if(value->type == VariableType::tInteger) serviceMessages->set(valueKey, value->integerValue, channel);
 		}
 		if(rpcParameter->logical->type == ILogical::Type::tAction && !value->booleanValue) return Variable::createError(-5, "Parameter of type action cannot be set to \"false\".");
-		if(!rpcParameter->writeable && clientInfo->id != -1 && !(rpcParameter->addonWriteable && raiseIsAddonClient(clientInfo->id) == 1)) return Variable::createError(-6, "parameter is read only");
+		if(!rpcParameter->writeable && clientInfo->id != -1 && !(rpcParameter->addonWriteable && clientInfo->addon)) return Variable::createError(-6, "parameter is read only");
 		BaseLib::Systems::RpcConfigurationParameter& parameter = valuesCentral[channel][valueKey];
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
 		std::shared_ptr<std::vector<PVariable>> values(new std::vector<PVariable>());

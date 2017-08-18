@@ -88,7 +88,6 @@ public:
 		virtual void onRPCDeleteDevices(BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo);
 		virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
 		virtual void onRunScript(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, bool wait);
-		virtual int32_t onIsAddonClient(int32_t clientID);
 		virtual int32_t onCheckLicense(int32_t moduleId, int32_t familyId, int32_t deviceId, const std::string& licenseKey);
 
 		//Device description
