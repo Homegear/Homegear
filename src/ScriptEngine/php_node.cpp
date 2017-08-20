@@ -67,6 +67,7 @@ ZEND_FUNCTION(hg_node_get_flow_data);
 ZEND_FUNCTION(hg_node_set_flow_data);
 ZEND_FUNCTION(hg_node_get_global_data);
 ZEND_FUNCTION(hg_node_set_global_data);
+ZEND_FUNCTION(hg_node_set_internal_message);
 ZEND_FUNCTION(hg_node_get_config_parameter);
 
 ZEND_FUNCTION(hg_node_log)
@@ -378,6 +379,27 @@ ZEND_FUNCTION(hg_node_set_global_data)
 	php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
 }
 
+ZEND_FUNCTION(hg_node_set_internal_message)
+{
+	int argc = 0;
+	zval* args = nullptr;
+	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+	BaseLib::PVariable value;
+	if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::setInternalMessage().");
+	else if(argc < 1) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::setInternalMessage().");
+	else value = PhpVariableConverter::getVariable(&(args[0]));
+
+	std::string methodName("executePhpNodeBaseMethod");
+	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+	parameters->arrayValue->reserve(3);
+	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
+	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>("setInternalMessage"));
+	BaseLib::PVariable innerParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+	innerParameters->arrayValue->push_back(value);
+	parameters->arrayValue->push_back(innerParameters);
+	php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
+}
+
 ZEND_FUNCTION(hg_node_get_config_parameter)
 {
 	int argc = 0;
@@ -424,6 +446,7 @@ static const zend_function_entry homegear_node_base_methods[] = {
 	ZEND_ME_MAPPING(setFlowData, hg_node_set_flow_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(getGlobalData, hg_node_get_global_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(setGlobalData, hg_node_set_global_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(setInternalMessage, hg_node_set_internal_message, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(getConfigParameter, hg_node_get_config_parameter, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
 };

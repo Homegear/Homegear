@@ -124,6 +124,9 @@ private:
 	std::mutex _peerSubscriptionsMutex;
 	std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::set<std::string>>>> _peerSubscriptions;
 
+	std::mutex _internalMessagesMutex;
+	std::unordered_map<std::string, Flows::PVariable> _internalMessages;
+
 	void registerClient();
 	Flows::PVariable invoke(std::string methodName, Flows::PArray parameters, bool wait);
 	Flows::PVariable invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray parameters);
@@ -139,6 +142,7 @@ private:
 	void nodeEvent(std::string nodeId, std::string topic, Flows::PVariable value);
 	Flows::PVariable getNodeData(std::string nodeId, std::string key);
 	void setNodeData(std::string nodeId, std::string key, Flows::PVariable value);
+	void setInternalMessage(std::string nodeId, Flows::PVariable message);
 	Flows::PVariable getConfigParameter(std::string nodeId, std::string name);
 
 	// {{{ RPC methods

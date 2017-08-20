@@ -416,6 +416,8 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 					timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
 					nodeEvent(queueEntry->nodeInfo->id, "highlightNode/" + queueEntry->nodeInfo->id, timeout);
 				}
+				auto internalMessageIterator = queueEntry->message->structValue->find("_internal");
+				if(internalMessageIterator != queueEntry->message->structValue->end()) setInternalMessage(queueEntry->nodeInfo->id, internalMessageIterator->second);
 				std::lock_guard<std::mutex> nodeInputGuard(node->getInputMutex());
 				node->input(queueEntry->nodeInfo, queueEntry->targetPort, queueEntry->message);
 			}
@@ -674,6 +676,12 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 			nodeInfo = nodesIterator->second;
 		}
 
+		{
+			std::lock_guard<std::mutex> internalMessagesGuard(_internalMessagesMutex);
+			auto internalMessagesIterator = _internalMessages.find(nodeId);
+			if(internalMessagesIterator != _internalMessages.end()) message->structValue->emplace("_internal", internalMessagesIterator->second);
+		}
+
 		if(message->structValue->find("payload") == message->structValue->end()) message->structValue->emplace("payload", std::make_shared<Flows::Variable>());
 
 		if(index >= nodeInfo->wiresOut.size())
@@ -799,6 +807,36 @@ void FlowsClient::setNodeData(std::string nodeId, std::string key, Flows::PVaria
 		parameters->push_back(value);
 
 		invoke("setNodeData", parameters, false);
+	}
+	catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void FlowsClient::setInternalMessage(std::string nodeId, Flows::PVariable message)
+{
+	try
+	{
+		std::lock_guard<std::mutex> internalMessagesGuard(_internalMessagesMutex);
+		auto internalMessageIterator = _internalMessages.find(nodeId);
+		if(internalMessageIterator != _internalMessages.end())
+		{
+			for(auto element : *message->structValue)
+			{
+				internalMessageIterator->second->structValue->erase(element.first);
+				internalMessageIterator->second->structValue->emplace(element.first, element.second);
+			}
+		}
+		else _internalMessages[nodeId] = message;
 	}
 	catch(const std::exception& ex)
     {
@@ -1036,6 +1074,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 					nodeObject->setNodeEvent(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&FlowsClient::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 					nodeObject->setGetNodeData(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&FlowsClient::getNodeData, this, std::placeholders::_1, std::placeholders::_2)));
 					nodeObject->setSetNodeData(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&FlowsClient::setNodeData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+					nodeObject->setSetInternalMessage(std::function<void(std::string, Flows::PVariable)>(std::bind(&FlowsClient::setInternalMessage, this, std::placeholders::_1, std::placeholders::_2)));
 					nodeObject->setGetConfigParameter(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&FlowsClient::getConfigParameter, this, std::placeholders::_1, std::placeholders::_2)));
 
 					if(!nodeObject->init(node))
@@ -1416,6 +1455,13 @@ Flows::PVariable FlowsClient::executePhpNodeBaseMethod(Flows::PArray& parameters
 			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
 
 			setNodeData(parameters->at(0)->stringValue, innerParameters->at(0)->stringValue, innerParameters->at(1));
+			return std::make_shared<Flows::Variable>();
+		}
+		else if(methodName == "setInternalMessage")
+		{
+			if(innerParameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
+
+			setInternalMessage(parameters->at(0)->stringValue, innerParameters->at(0));
 			return std::make_shared<Flows::Variable>();
 		}
 		else if(methodName == "getConfigParameter")
