@@ -317,7 +317,7 @@ void RPCServer::registerMethod(std::string methodName, std::shared_ptr<BaseLib::
 	{
 		if(_rpcMethods->find(methodName) != _rpcMethods->end())
 		{
-			_out.printWarning("Warning: Could not register RPC method, because a method with this name already exists.");
+			_out.printWarning("Warning: Could not register RPC method \"" + methodName + "\", because a method with this name already exists.");
 			return;
 		}
 		_rpcMethods->insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>(methodName, method));

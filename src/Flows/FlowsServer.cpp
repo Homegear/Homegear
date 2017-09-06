@@ -873,15 +873,18 @@ std::set<std::string> FlowsServer::insertSubflows(BaseLib::PVariable& subflowNod
 							}
 
 							if(node2WireIdIterator->second->stringValue != thisSubflowId) wireArray->push_back(node2Wire);
-							else wireArray->insert(wireArray->end(), wiresIn.at(port)->begin(), wiresIn.at(port)->end());
-
-							auto passthroughWiresIterators = passthroughWires.equal_range(port);
-							for(auto passthroughWiresIterator = passthroughWiresIterators.first; passthroughWiresIterator != passthroughWiresIterators.second; passthroughWiresIterator++)
+							else
 							{
-								BaseLib::PVariable entry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-								entry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(passthroughWiresIterator->second.second));
-								entry->structValue->emplace("port", std::make_shared<BaseLib::Variable>(passthroughWiresIterator->second.first));
-								wireArray->push_back(entry);
+								wireArray->insert(wireArray->end(), wiresIn.at(port)->begin(), wiresIn.at(port)->end());
+
+								auto passthroughWiresIterators = passthroughWires.equal_range(port);
+								for(auto passthroughWiresIterator = passthroughWiresIterators.first; passthroughWiresIterator != passthroughWiresIterators.second; passthroughWiresIterator++)
+								{
+									BaseLib::PVariable entry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+									entry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(passthroughWiresIterator->second.second));
+									entry->structValue->emplace("port", std::make_shared<BaseLib::Variable>(passthroughWiresIterator->second.first));
+									wireArray->push_back(entry);
+								}
 							}
 						}
 						node2WiresOutput->arrayValue = wireArray;

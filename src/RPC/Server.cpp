@@ -133,7 +133,6 @@ void Server::registerMethods()
 		_server->registerMethod("putParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCPutParamset()));
 		_server->registerMethod("removeCategoryFromDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveCategoryFromDevice()));
 		_server->registerMethod("removeDeviceFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveDeviceFromRoom()));
-		_server->registerMethod("getDevicesInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetDevicesInRoom()));
 		_server->registerMethod("removeEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveEvent()));
 		_server->registerMethod("removeLink", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveLink()));
 		_server->registerMethod("reportValueUsage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCReportValueUsage()));
@@ -203,17 +202,20 @@ void Server::stop()
 
 bool Server::lifetick()
 {
-	if(!_server) return true; return _server->lifetick();
+	if(!_server) return true;
+	return _server->lifetick();
 }
 
 bool Server::isRunning()
 {
-	if(!_server) return false; return _server->isRunning();
+	if(!_server) return false;
+	return _server->isRunning();
 }
 
 const std::vector<std::shared_ptr<BaseLib::RpcClientInfo>> Server::getClientInfo()
 {
-	if(!_server) return std::vector<std::shared_ptr<BaseLib::RpcClientInfo>>(); return _server->getClientInfo();
+	if(!_server) return std::vector<std::shared_ptr<BaseLib::RpcClientInfo>>();
+	return _server->getClientInfo();
 }
 
 const std::shared_ptr<RPCServer> Server::getServer()
@@ -223,7 +225,8 @@ const std::shared_ptr<RPCServer> Server::getServer()
 
 const BaseLib::Rpc::PServerInfo Server::getInfo()
 {
-	if(!_server) return BaseLib::Rpc::PServerInfo(); return _server->getInfo();
+	if(!_server) return BaseLib::Rpc::PServerInfo();
+	return _server->getInfo();
 }
 
 BaseLib::PEventHandler Server::addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler)
