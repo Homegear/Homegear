@@ -246,7 +246,7 @@ function createPackage {
  -- Sathya Laufer <sathya@laufers.net>  $date" > $sourcePath/debian/changelog
 	tar -zcpf ${3}_$version.orig.tar.gz $sourcePath
 	cd $sourcePath
-	debuild -j${buildthreads} -us -uc
+	debuild -j${buildthreads} -us -uc -sd
 	cd ..
 	rm -Rf $sourcePath
 }
