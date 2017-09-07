@@ -41,6 +41,7 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 3, 1000)
 	_disposed = false;
 	_shuttingDown = false;
 	_frontendConnected = false;
+	_startUpComplete = false;
 
 	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	_out.init(GD::bl.get());
@@ -271,12 +272,12 @@ void FlowsClient::start()
 							Flows::PArray parameters = _rpcDecoder->decodeRequest(_binaryRpc->getData(), methodName);
 							std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(methodName, parameters);
 							if(methodName == "shutdown") shutdown(parameters->at(2)->arrayValue);
-							else if(!enqueue(0, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC request because buffer is full. Dropping it.");
+							else if(!enqueue(0, queueEntry, !_startUpComplete)) printQueueFullError(_out, "Error: Could not queue RPC request because buffer is full. Dropping it.");
 						}
 						else
 						{
 							std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(_binaryRpc->getData());
-							if(!enqueue(1, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC response because buffer is full. Dropping it.");
+							if(!enqueue(1, queueEntry, !_startUpComplete)) printQueueFullError(_out, "Error: Could not queue RPC response because buffer is full. Dropping it.");
 						}
 						_binaryRpc->reset();
 					}
@@ -409,7 +410,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 			Flows::PINode node = _nodeManager->getNode(queueEntry->nodeInfo->id);
 			if(node)
 			{
-				if(_frontendConnected && GD::bl->settings.nodeBlueDebugOutput() && BaseLib::HelperFunctions::getTime() - queueEntry->nodeInfo->lastNodeEvent1 >= 200)
+				if(GD::bl->settings.nodeBlueDebugOutput() && _startUpComplete && _frontendConnected && BaseLib::HelperFunctions::getTime() - queueEntry->nodeInfo->lastNodeEvent1 >= 100)
 				{
 					queueEntry->nodeInfo->lastNodeEvent1 = BaseLib::HelperFunctions::getTime();
 					Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
@@ -701,18 +702,21 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 				outputNodeInfo = nodeIterator->second;
 			}
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(outputNodeInfo, node.port, message);
-			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Dropping output of node " + nodeId + ". Queue is full.");
+			if(!enqueue(2, queueEntry, !_startUpComplete)) printQueueFullError(_out, "Error: Dropping output of node " + nodeId + ". Queue is full.");
 		}
 
-		if(_frontendConnected && GD::bl->settings.nodeBlueDebugOutput() && BaseLib::HelperFunctions::getTime() - nodeInfo->lastNodeEvent2 >= 200)
+		if(GD::bl->settings.nodeBlueDebugOutput() && BaseLib::HelperFunctions::getTime() - nodeInfo->lastNodeEvent2 >= 100)
 		{
 			nodeInfo->lastNodeEvent2 = BaseLib::HelperFunctions::getTime();
-			Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
-			timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
-			nodeEvent(nodeId, "highlightNode/" + nodeId, timeout);
-			Flows::PVariable outputIndex = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
-			outputIndex->structValue->emplace("index", std::make_shared<Flows::Variable>(index));
-			nodeEvent(nodeId, "highlightLink/" + nodeId, outputIndex);
+			if(_frontendConnected && _startUpComplete)
+			{
+				Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+				timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
+				nodeEvent(nodeId, "highlightNode/" + nodeId, timeout);
+				Flows::PVariable outputIndex = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+				outputIndex->structValue->emplace("index", std::make_shared<Flows::Variable>(index));
+				nodeEvent(nodeId, "highlightLink/" + nodeId, outputIndex);
+			}
 			Flows::PVariable status = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
 			std::string statusText = std::to_string(index) + ": " + message->structValue->at("payload")->toString();
 			if(statusText.size() > 20) statusText = statusText.substr(0, 17) + "...";
@@ -937,6 +941,8 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 
 		std::lock_guard<std::mutex> startFlowGuard(_startFlowMutex);
 		if(_disposed) return Flows::Variable::createError(-1, "Client is disposing.");
+
+		_startUpComplete = false;
 
 		PFlowInfoClient flow = std::make_shared<FlowInfoClient>();
 		flow->id = parameters->at(0)->integerValue;
@@ -1208,6 +1214,7 @@ Flows::PVariable FlowsClient::startUpComplete(Flows::PArray& parameters)
 				if(node) node->startUpComplete();
 			}
 		}
+		_startUpComplete = true;
 		return std::make_shared<Flows::Variable>();
 	}
     catch(const std::exception& ex)

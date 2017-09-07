@@ -89,6 +89,7 @@ private:
 	};
 
 	BaseLib::Output _out;
+	std::atomic_bool _startUpComplete;
 	std::atomic_bool _shuttingDown;
 	std::atomic_bool _disposed;
 	std::string _socketPath;

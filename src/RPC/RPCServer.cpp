@@ -152,67 +152,88 @@ void RPCServer::start(BaseLib::Rpc::PServerInfo& info)
 			{
 				_out.printError("Error: Could not load certificate or key file: " + std::string(gnutls_strerror(result)));
 				gnutls_certificate_free_credentials(_x509Cred);
+				_x509Cred = nullptr;
 				return;
 			}
 			if(!_dhParams)
 			{
-			if(GD::bl->settings.loadDHParamsFromFile())
-			{
-				if((result = gnutls_dh_params_init(&_dhParams)) != GNUTLS_E_SUCCESS)
+				if(GD::bl->settings.loadDHParamsFromFile())
 				{
-					_out.printError("Error: Could not initialize DH parameters: " + std::string(gnutls_strerror(result)));
-					gnutls_certificate_free_credentials(_x509Cred);
-					return;
+					if((result = gnutls_dh_params_init(&_dhParams)) != GNUTLS_E_SUCCESS)
+					{
+						_out.printError("Error: Could not initialize DH parameters: " + std::string(gnutls_strerror(result)));
+						gnutls_certificate_free_credentials(_x509Cred);
+						_x509Cred = nullptr;
+						_dhParams = nullptr;
+						return;
+					}
+					std::vector<uint8_t> binaryData;
+					try
+					{
+						binaryData = GD::bl->io.getUBinaryFileContent(GD::bl->settings.dhParamPath().c_str());
+						binaryData.push_back(0); //gnutls_datum_t.data needs to be null terminated
+					}
+					catch(BaseLib::Exception& ex)
+					{
+						_out.printError("Error: Could not load DH parameter file \"" + GD::bl->settings.dhParamPath() + "\": " + std::string(ex.what()));
+						gnutls_certificate_free_credentials(_x509Cred);
+						gnutls_dh_params_deinit(_dhParams);
+						_x509Cred = nullptr;
+						_dhParams = nullptr;
+						return;
+					}
+					catch(...)
+					{
+						_out.printError("Error: Could not load DH parameter file \"" + GD::bl->settings.dhParamPath() + "\".");
+						gnutls_certificate_free_credentials(_x509Cred);
+						gnutls_dh_params_deinit(_dhParams);
+						_x509Cred = nullptr;
+						_dhParams = nullptr;
+						return;
+					}
+					gnutls_datum_t data;
+					data.data = &binaryData.at(0);
+					data.size = binaryData.size();
+					if((result = gnutls_dh_params_import_pkcs3(_dhParams, &data, GNUTLS_X509_FMT_PEM)) != GNUTLS_E_SUCCESS)
+					{
+						_out.printError("Error: Could not import DH parameters: " + std::string(gnutls_strerror(result)));
+						gnutls_certificate_free_credentials(_x509Cred);
+						gnutls_dh_params_deinit(_dhParams);
+						_x509Cred = nullptr;
+						_dhParams = nullptr;
+						return;
+					}
 				}
-				std::vector<uint8_t> binaryData;
-				try
+				else
 				{
-					binaryData = GD::bl->io.getUBinaryFileContent(GD::bl->settings.dhParamPath().c_str());
-					binaryData.push_back(0); //gnutls_datum_t.data needs to be null terminated
+					uint32_t bits = gnutls_sec_param_to_pk_bits(GNUTLS_PK_DH, GNUTLS_SEC_PARAM_ULTRA);
+					if((result = gnutls_dh_params_init(&_dhParams)) != GNUTLS_E_SUCCESS)
+					{
+						_out.printError("Error: Could not initialize DH parameters: " + std::string(gnutls_strerror(result)));
+						gnutls_certificate_free_credentials(_x509Cred);
+						_x509Cred = nullptr;
+						return;
+					}
+					if((result = gnutls_dh_params_generate2(_dhParams, bits)) != GNUTLS_E_SUCCESS)
+					{
+						_out.printError("Error: Could not generate DH parameters: " + std::string(gnutls_strerror(result)));
+						gnutls_certificate_free_credentials(_x509Cred);
+						gnutls_dh_params_deinit(_dhParams);
+						_x509Cred = nullptr;
+						_dhParams = nullptr;
+						return;
+					}
 				}
-				catch(BaseLib::Exception& ex)
-				{
-					_out.printError("Error: Could not load DH parameter file \"" + GD::bl->settings.dhParamPath() + "\": " + std::string(ex.what()));
-					gnutls_certificate_free_credentials(_x509Cred);
-					return;
-				}
-				catch(...)
-				{
-					_out.printError("Error: Could not load DH parameter file \"" + GD::bl->settings.dhParamPath() + "\".");
-					gnutls_certificate_free_credentials(_x509Cred);
-					return;
-				}
-				gnutls_datum_t data;
-				data.data = &binaryData.at(0);
-				data.size = binaryData.size();
-				if((result = gnutls_dh_params_import_pkcs3(_dhParams, &data, GNUTLS_X509_FMT_PEM)) != GNUTLS_E_SUCCESS)
-				{
-					_out.printError("Error: Could not import DH parameters: " + std::string(gnutls_strerror(result)));
-					gnutls_certificate_free_credentials(_x509Cred);
-					return;
-				}
-			}
-			else
-			{
-				uint32_t bits = gnutls_sec_param_to_pk_bits(GNUTLS_PK_DH, GNUTLS_SEC_PARAM_ULTRA);
-				if((result = gnutls_dh_params_init(&_dhParams)) != GNUTLS_E_SUCCESS)
-				{
-					_out.printError("Error: Could not initialize DH parameters: " + std::string(gnutls_strerror(result)));
-					gnutls_certificate_free_credentials(_x509Cred);
-					return;
-				}
-				if((result = gnutls_dh_params_generate2(_dhParams, bits)) != GNUTLS_E_SUCCESS)
-				{
-					_out.printError("Error: Could not generate DH parameters: " + std::string(gnutls_strerror(result)));
-					gnutls_certificate_free_credentials(_x509Cred);
-					return;
-				}
-			}
 			}
 			if((result = gnutls_priority_init(&_tlsPriorityCache, "NORMAL", NULL)) != GNUTLS_E_SUCCESS)
 			{
 				_out.printError("Error: Could not initialize cipher priorities: " + std::string(gnutls_strerror(result)));
 				gnutls_certificate_free_credentials(_x509Cred);
+				if(_dhParams)
+				{
+					gnutls_dh_params_deinit(_dhParams);
+					_dhParams = nullptr;
+				}
 				return;
 			}
 			gnutls_certificate_set_dh_params(_x509Cred, _dhParams);
@@ -1487,11 +1508,13 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 		if(!_tlsPriorityCache)
 		{
 			_out.printError("Error: Could not initiate TLS connection. _tlsPriorityCache is nullptr.");
+			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
 		if(!_x509Cred)
 		{
 			_out.printError("Error: Could not initiate TLS connection. _x509Cred is nullptr.");
+			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
 		int32_t result = 0;
@@ -1499,11 +1522,13 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 		{
 			_out.printError("Error: Could not initialize TLS session: " + std::string(gnutls_strerror(result)));
 			client->socketDescriptor->tlsSession = nullptr;
+			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
 		if(!client->socketDescriptor->tlsSession)
 		{
 			_out.printError("Error: Client TLS session is nullptr.");
+			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
 		if((result = gnutls_priority_set(client->socketDescriptor->tlsSession, _tlsPriorityCache)) != GNUTLS_E_SUCCESS)
