@@ -389,11 +389,11 @@ if [[ -n $2 ]]; then
 	[ $? -ne 0 ] && exit 1
 	rm -Rf homegear-easyled2-${1}/.git
 
-	git clone ssh://git@gitit.de:44444/EASY/homegear-rsl.git homegear-rsl-${1}
+	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-rsl.git homegear-rsl-${1}
 	[ $? -ne 0 ] && exit 1
 	rm -Rf homegear-rsl-${1}/.git
 
-	git clone ssh://git@gitit.de:44444/EASY/homegear-rs2w.git homegear-rs2w-${1}
+	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-rs2w.git homegear-rs2w-${1}
 	[ $? -ne 0 ] && exit 1
 	rm -Rf homegear-rs2w-${1}/.git
 fi
