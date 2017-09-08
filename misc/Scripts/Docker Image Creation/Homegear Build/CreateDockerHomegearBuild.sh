@@ -388,6 +388,14 @@ if [[ -n $2 ]]; then
 	git clone ssh://git@gitit.de:44444/EASY/homegear-easyled2.git homegear-easyled2-${1}
 	[ $? -ne 0 ] && exit 1
 	rm -Rf homegear-easyled2-${1}/.git
+
+	git clone ssh://git@gitit.de:44444/EASY/homegear-rsl.git homegear-rsl-${1}
+	[ $? -ne 0 ] && exit 1
+	rm -Rf homegear-rsl-${1}/.git
+
+	git clone ssh://git@gitit.de:44444/EASY/homegear-rs2w.git homegear-rs2w-${1}
+	[ $? -ne 0 ] && exit 1
+	rm -Rf homegear-rs2w-${1}/.git
 fi
 
 createPackage libhomegear-base $1 libhomegear-base
@@ -457,6 +465,8 @@ if [[ -n $2 ]]; then
 	createPackage homegear-easycam $1 homegear-easycam
 	createPackage homegear-easyled $1 homegear-easyled
 	createPackage homegear-easyled2 $1 homegear-easyled2
+	createPackage homegear-rsl $1 homegear-rsl
+	createPackage homegear-rs2w $1 homegear-rs2w
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackage.sh
@@ -505,6 +515,8 @@ if [[ -n $1 ]]; then
 	cleanUp homegear-easycam
 	cleanUp homegear-easyled
 	cleanUp homegear-easyled2
+	cleanUp homegear-rsl
+	cleanUp homegear-rs2w
 fi
 
 EOF
@@ -536,6 +548,8 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 		mv homegear-easycam.deb homegear-easycam_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-easyled.deb homegear-easyled_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-easyled2.deb homegear-easyled2_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv homegear-rsl.deb homegear-rsl_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv homegear-rs2w.deb homegear-rs2w_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	fi
 	if test -f /build/UploadNightly.sh; then
 		/build/UploadNightly.sh
