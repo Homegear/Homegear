@@ -113,6 +113,8 @@ void FlowsClient::dispose()
 		std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
 		for(auto& request : _requestInfo)
 		{
+			std::unique_lock<std::mutex> waitLock(request.second->waitMutex);
+			waitLock.unlock();
 			request.second->conditionVariable.notify_all();
 		}
 

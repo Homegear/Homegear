@@ -1185,6 +1185,8 @@ void FlowsServer::closeClientConnections()
 		{
 			for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 			{
+				std::unique_lock<std::mutex> waitLock((*i)->waitMutex);
+				waitLock.unlock();
 				(*i)->requestConditionVariable.notify_all();
 			}
 			collectGarbage();
@@ -1781,6 +1783,8 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 					}
 				}
 			}
+			std::unique_lock<std::mutex> waitLock(queueEntry->clientData->waitMutex);
+			waitLock.unlock();
 			queueEntry->clientData->requestConditionVariable.notify_all();
 		}
 		else if(index == 2) //Second queue for sending packets. Response is processed by first queue
@@ -2415,6 +2419,8 @@ BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData
 		}
 		clientData->pid = pid;
 		processIterator->second->setClientData(clientData);
+		std::unique_lock<std::mutex> requestLock(_processRequestMutex);
+		requestLock.unlock();
 		processIterator->second->requestConditionVariable.notify_all();
 		_out.printInfo("Info: Client with pid " + std::to_string(pid) + " successfully registered.");
 		return BaseLib::PVariable(new BaseLib::Variable());

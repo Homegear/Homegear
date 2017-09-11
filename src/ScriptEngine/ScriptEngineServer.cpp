@@ -488,6 +488,8 @@ void ScriptEngineServer::stop()
 		{
 			for(std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 			{
+				std::unique_lock<std::mutex> waitLock((*i)->waitMutex);
+				waitLock.unlock();
 				(*i)->requestConditionVariable.notify_all();
 			}
 			collectGarbage();
@@ -1042,6 +1044,8 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 					}
 				}
 			}
+			std::unique_lock<std::mutex> waitLock(queueEntry->clientData->waitMutex);
+			waitLock.unlock();
 			queueEntry->clientData->requestConditionVariable.notify_all();
 		}
 		else if(index == 2) //Second queue for sending packets. Response is processed by first queue

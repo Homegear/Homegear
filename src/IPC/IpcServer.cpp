@@ -267,6 +267,8 @@ void IpcServer::stop()
 		{
 			for(std::vector<PIpcClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 			{
+				std::unique_lock<std::mutex> waitLock((*i)->waitMutex);
+				waitLock.unlock();
 				(*i)->requestConditionVariable.notify_all();
 			}
 			collectGarbage();
@@ -634,6 +636,8 @@ void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueue
 						}
 					}
 				}
+				std::unique_lock<std::mutex> waitLock(queueEntry->clientData->waitMutex);
+				waitLock.unlock();
 				queueEntry->clientData->requestConditionVariable.notify_all();
 			}
 		}
