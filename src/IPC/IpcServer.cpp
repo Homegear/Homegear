@@ -35,7 +35,7 @@
 namespace Ipc
 {
 
-IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 1000)
+IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 {
 	_out.init(GD::bl.get());
 	_out.setPrefix("IPC Server: ");

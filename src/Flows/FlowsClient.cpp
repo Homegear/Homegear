@@ -34,7 +34,7 @@
 namespace Flows
 {
 
-FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 3, 1000)
+FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 3, 100000)
 {
 	_stopped = false;
 	_nodesStopped = false;
@@ -109,6 +109,12 @@ void FlowsClient::dispose()
 
 		GD::bl->shuttingDown = true;
 		_stopped = true;
+
+		std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
+		for(auto& request : _requestInfo)
+		{
+			request.second->conditionVariable.notify_all();
+		}
 
 		stopQueue(0);
 		stopQueue(1);
@@ -386,6 +392,9 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 			int64_t threadId = response->arrayValue->at(0)->integerValue64;
 			int32_t packetId = response->arrayValue->at(1)->integerValue;
 
+			std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
+			std::map<int64_t, PRequestInfo>::iterator requestIterator = _requestInfo.find(threadId);
+			if (requestIterator != _requestInfo.end())
 			{
 				std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
 				auto responseIterator = _rpcResponses[threadId].find(packetId);
@@ -399,10 +408,8 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 						element->finished = true;
 					}
 				}
+				requestIterator->second->conditionVariable.notify_all();
 			}
-			std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
-			std::map<int64_t, RequestInfo>::iterator requestIterator = _requestInfo.find(threadId);
-			if (requestIterator != _requestInfo.end()) requestIterator->second.conditionVariable.notify_all();
 		}
 		else //Node output
 		{
@@ -481,11 +488,16 @@ Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray param
 			else if(methodName == "executePhpNodeMethod" && (parameters->size() < 2 || parameters->at(1)->stringValue != "waitForStop")) return Flows::Variable::createError(-32501, "RPC calls are forbidden after \"stop()\" has been called.");
 		}
 
-
 		int64_t threadId = pthread_self();
-		std::unique_lock<std::mutex> requestInfoGuard(_requestInfoMutex);
-		RequestInfo& requestInfo = _requestInfo[threadId];
-		requestInfoGuard.unlock();
+
+		PRequestInfo requestInfo;
+		if(wait)
+		{
+			std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
+			auto emplaceResult = _requestInfo.emplace(std::piecewise_construct, std::make_tuple(threadId), std::make_tuple(std::make_shared<RequestInfo>()));
+			if(!emplaceResult.second) _out.printError("Error: Thread is executing invoke() more than once.");
+			requestInfo = emplaceResult.first->second;
+		}
 
 		int32_t packetId;
 		{
@@ -515,19 +527,21 @@ Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray param
 				return Flows::Variable::createError(-32500, "Unknown application error.");
 			}
 		}
-
 		Flows::PVariable result = send(data);
-		if(result->errorStruct)
+		if(result->errorStruct || !wait)
 		{
-			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			_rpcResponses[threadId].erase(packetId);
-			if (_rpcResponses[threadId].empty()) _rpcResponses.erase(threadId);
-			return result;
+			if(!wait) return std::make_shared<Flows::Variable>();
+			else
+			{
+				std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+				_rpcResponses[threadId].erase(packetId);
+				if (_rpcResponses[threadId].empty()) _rpcResponses.erase(threadId);
+				return result;
+			}
 		}
-		if(!wait) return std::make_shared<Flows::Variable>();
 
-		std::unique_lock<std::mutex> waitLock(requestInfo.waitMutex);
-		while (!requestInfo.conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]
+		std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
+		while (!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]
 		{
 			return response->finished || _stopped;
 		}));
@@ -543,6 +557,11 @@ Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray param
 			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
 			_rpcResponses[threadId].erase(packetId);
 			if (_rpcResponses[threadId].empty()) _rpcResponses.erase(threadId);
+		}
+
+		{
+			std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
+			_requestInfo.erase(threadId);
 		}
 
 		return result;
@@ -702,7 +721,11 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 				outputNodeInfo = nodeIterator->second;
 			}
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(outputNodeInfo, node.port, message);
-			if(!enqueue(2, queueEntry, !_startUpComplete)) printQueueFullError(_out, "Error: Dropping output of node " + nodeId + ". Queue is full.");
+			if(!enqueue(2, queueEntry, !_startUpComplete))
+			{
+				printQueueFullError(_out, "Error: Dropping output of node " + nodeId + ". Queue is full.");
+				return;
+			}
 		}
 
 		if(GD::bl->settings.nodeBlueDebugOutput() && BaseLib::HelperFunctions::getTime() - nodeInfo->lastNodeEvent2 >= 100)

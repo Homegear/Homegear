@@ -38,7 +38,7 @@
 namespace Flows
 {
 
-FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 3, 1000)
+FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 3, 100000)
 {
 	_out.init(GD::bl.get());
 	_out.setPrefix("Flows Engine Server: ");
@@ -1867,17 +1867,17 @@ BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::s
 			}
 		}
 
+		std::unique_lock<std::mutex> waitLock(clientData->waitMutex);
 		BaseLib::PVariable result = send(clientData, data);
-		if(result->errorStruct)
+		if(result->errorStruct || !wait)
 		{
 			std::lock_guard<std::mutex> responseGuard(clientData->rpcResponsesMutex);
 			clientData->rpcResponses.erase(packetId);
-			return result;
+			if(!wait) return std::make_shared<BaseLib::Variable>();
+			else return result;
 		}
-		if(!wait) return std::make_shared<BaseLib::Variable>();
 
 		int32_t i = 0;
-		std::unique_lock<std::mutex> waitLock(clientData->waitMutex);
 		while(!clientData->requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]{
 			return response->finished || clientData->closed || _stopServer;
 		}))
@@ -2102,8 +2102,7 @@ PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
 				_processes[process->getPid()] = process;
 			}
 
-			std::mutex requestMutex;
-			std::unique_lock<std::mutex> requestLock(requestMutex);
+			std::unique_lock<std::mutex> requestLock(_processRequestMutex);
 			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(30000), [&]{ return (bool)(process->getClientData()); });
 
 			if(!process->getClientData())

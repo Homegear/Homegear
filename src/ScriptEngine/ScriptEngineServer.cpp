@@ -40,7 +40,7 @@
 namespace ScriptEngine
 {
 
-ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 1000)
+ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 {
 	_out.init(GD::bl.get());
 	_out.setPrefix("Script Engine Server: ");
@@ -1131,17 +1131,17 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
 #ifdef DEBUGSESOCKET
 		socketOutput(packetId, clientData, true, true, data);
 #endif
+		std::unique_lock<std::mutex> waitLock(clientData->waitMutex);
 		BaseLib::PVariable result = send(clientData, data);
-		if(result->errorStruct)
+		if(result->errorStruct || !wait)
 		{
 			std::lock_guard<std::mutex> responseGuard(clientData->rpcResponsesMutex);
 			clientData->rpcResponses.erase(packetId);
-			return result;
+			if(!wait) return std::make_shared<BaseLib::Variable>();
+			else return result;
 		}
-		if(!wait) return std::make_shared<BaseLib::Variable>();
 
 		int32_t i = 0;
-		std::unique_lock<std::mutex> waitLock(clientData->waitMutex);
 		while(!clientData->requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]{
 			return response->finished || clientData->closed || _stopServer;
 		}))
@@ -1871,7 +1871,7 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
 #ifdef SE_MANUAL_CLIENT_START
 			pid = 1;
 #endif
-			std::lock_guard<std::mutex> processGuard(_processMutex);
+			std::unique_lock<std::mutex> processGuard(_processMutex);
 			std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(pid);
 			if(processIterator == _processes.end())
 			{
@@ -1885,6 +1885,7 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
 			}
 			clientData->pid = pid;
 			processIterator->second->setClientData(clientData);
+			processGuard.unlock();
 			processIterator->second->requestConditionVariable.notify_all();
 			_out.printInfo("Info: Client with pid " + std::to_string(pid) + " successfully registered.");
 			return BaseLib::PVariable(new BaseLib::Variable());
