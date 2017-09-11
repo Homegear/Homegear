@@ -650,9 +650,51 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 			{
 				std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
 				std::map<int32_t, PRequestInfo>::iterator requestIterator = _requestInfo.find(scriptId);
-				if (requestIterator != _requestInfo.end()) requestIterator->second->conditionVariable.notify_all();
+				if (requestIterator != _requestInfo.end())
+				{
+					std::unique_lock<std::mutex> waitLock(requestIterator->second->waitMutex);
+
+					{
+						std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+						auto responseIterator = _rpcResponses[scriptId].find(packetId);
+						if(responseIterator != _rpcResponses[scriptId].end())
+						{
+							PScriptEngineResponse element = responseIterator->second;
+							if(element)
+							{
+								element->response = response;
+								element->packetId = packetId;
+								element->finished = true;
+							}
+						}
+					}
+
+					waitLock.unlock();
+					requestIterator->second->conditionVariable.notify_all();
+				}
 			}
-			else _requestConditionVariable.notify_all();
+			else
+			{
+				std::unique_lock<std::mutex> waitLock(_waitMutex);
+
+				{
+					std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+					auto responseIterator = _rpcResponses[scriptId].find(packetId);
+					if(responseIterator != _rpcResponses[scriptId].end())
+					{
+						PScriptEngineResponse element = responseIterator->second;
+						if(element)
+						{
+							element->response = response;
+							element->packetId = packetId;
+							element->finished = true;
+						}
+					}
+				}
+
+				waitLock.unlock();
+				_requestConditionVariable.notify_all();
+			}
 		}
 	}
 	catch(const std::exception& ex)

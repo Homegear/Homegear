@@ -110,6 +110,7 @@ private:
 	std::atomic_bool _nodesStopped;
 	std::unique_ptr<NodeManager> _nodeManager;
 	std::atomic_bool _frontendConnected;
+	std::atomic<int64_t> _lastQueueSize;
 
 	std::unique_ptr<Flows::BinaryRpc> _binaryRpc;
 	std::unique_ptr<Flows::RpcDecoder> _rpcDecoder;

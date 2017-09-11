@@ -398,18 +398,22 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 			std::map<int64_t, PRequestInfo>::iterator requestIterator = _requestInfo.find(threadId);
 			if (requestIterator != _requestInfo.end())
 			{
-				std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-				auto responseIterator = _rpcResponses[threadId].find(packetId);
-				if(responseIterator != _rpcResponses[threadId].end())
+				std::unique_lock<std::mutex> waitLock(requestIterator->second->waitMutex);
 				{
-					PFlowsResponseClient element = responseIterator->second;
-					if(element)
+					std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+					auto responseIterator = _rpcResponses[threadId].find(packetId);
+					if(responseIterator != _rpcResponses[threadId].end())
 					{
-						element->response = response;
-						element->packetId = packetId;
-						element->finished = true;
+						PFlowsResponseClient element = responseIterator->second;
+						if(element)
+						{
+							element->response = response;
+							element->packetId = packetId;
+							element->finished = true;
+						}
 					}
 				}
+				waitLock.unlock();
 				requestIterator->second->conditionVariable.notify_all();
 			}
 		}
