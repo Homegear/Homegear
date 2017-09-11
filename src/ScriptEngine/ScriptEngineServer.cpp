@@ -773,7 +773,9 @@ BaseLib::PVariable ScriptEngineServer::executePhpNodeMethod(BaseLib::PArray& par
 			clientData = clientIterator->second;
 		}
 
-		return sendRequest(clientData, "executePhpNodeMethod", parameters, true);
+		BaseLib::PVariable result = sendRequest(clientData, "executePhpNodeMethod", parameters, true);
+		if(parameters->at(1)->stringValue == "waitForStop") closeClientConnection(clientData);
+		return result;
 	}
 	catch(const std::exception& ex)
     {
@@ -1352,6 +1354,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			for(std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
+				if(i->second->getClientData()->closed) continue;
 				if(nodeProcess && i->second->isNodeProcess() && (GD::bl->settings.maxNodeThreadsPerProcess() == -1 || i->second->nodeThreadCount() + maxThreadCount + 1 <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess()))
 				{
 					i->second->lastExecution = BaseLib::HelperFunctions::getTime();

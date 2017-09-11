@@ -761,7 +761,7 @@ BaseLib::PVariable ScriptEngineClient::callMethod(std::string methodName, BaseLi
 {
 	try
 	{
-		if(_nodesStopped && methodName != "waitForStop") return BaseLib::Variable::createError(-32500, "RPC calls are forbidden after \"stop\" is executed.");
+		if(_nodesStopped) return BaseLib::Variable::createError(-32500, "RPC calls are forbidden after \"stop\" is executed.");
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		return sendRequest(globals->id, methodName, parameters->arrayValue, wait);
 	}

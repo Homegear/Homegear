@@ -2084,6 +2084,7 @@ PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			for(std::map<pid_t, PFlowsProcess>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
+				if(i->second->getClientData()->closed) continue;
 				if(GD::bl->settings.maxNodeThreadsPerProcess() == -1 || i->second->nodeThreadCount() + maxThreadCount <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
 				{
 					i->second->lastExecution = BaseLib::HelperFunctions::getTime();
