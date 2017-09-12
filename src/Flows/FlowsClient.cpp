@@ -726,6 +726,12 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 				if(nodeIterator == _nodes.end()) continue;
 				outputNodeInfo = nodeIterator->second;
 			}
+			if(queueSize(2) > 1000 && BaseLib::HelperFunctions::getTime() - _lastQueueSize > 1000)
+			{
+				_lastQueueSize = BaseLib::HelperFunctions::getTime();
+				if(_startUpComplete) _out.printWarning("Warning: Node output queue has " + std::to_string(queueSize(2)) + " entries.");
+				else _out.printInfo("Info: Node output queue has " + std::to_string(queueSize(2)) + " entries.");
+			}
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(outputNodeInfo, node.port, message);
 			if(!enqueue(2, queueEntry, !_startUpComplete))
 			{
