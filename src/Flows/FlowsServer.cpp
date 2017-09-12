@@ -185,7 +185,7 @@ void FlowsServer::collectGarbage()
 {
 	try
 	{
-		_lastGargabeCollection = GD::bl->hf.getTime();
+		_lastGarbageCollection = GD::bl->hf.getTime();
 		std::vector<PFlowsProcess> processesToShutdown;
 		{
 			std::lock_guard<std::mutex> processGuard(_processMutex);
@@ -1992,7 +1992,7 @@ void FlowsServer::mainThread()
 			result = select(maxfd + 1, &readFileDescriptor, NULL, NULL, &timeout);
 			if(result == 0)
 			{
-				if(GD::bl->hf.getTime() - _lastGargabeCollection > 60000 || _clients.size() > GD::bl->settings.flowsServerMaxConnections() * 100 / 112) collectGarbage();
+				if(GD::bl->hf.getTime() - _lastGarbageCollection > 60000 || _clients.size() > GD::bl->settings.flowsServerMaxConnections() * 100 / 112) collectGarbage();
 				continue;
 			}
 			else if(result == -1)
