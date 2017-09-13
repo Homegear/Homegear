@@ -907,10 +907,12 @@ BaseLib::PVariable DatabaseController::getNodeData(std::string& node, std::strin
 	{
 		BaseLib::PVariable value;
 
+		bool obfuscate = false;
+
 		//Only return passwords if request comes from FlowsServer
 		std::string lowerCharKey = key;
 		BaseLib::HelperFunctions::toLower(lowerCharKey);
-		if(!requestFromTrustedServer && lowerCharKey.size() >= 8 && lowerCharKey.compare(lowerCharKey.size() - 8, 8, "password") == 0) return std::make_shared<BaseLib::Variable>(std::string("*"));
+		if(!requestFromTrustedServer && lowerCharKey.size() >= 8 && lowerCharKey.compare(lowerCharKey.size() - 8, 8, "password") == 0) obfuscate = true;
 
 		if(!key.empty())
 		{
@@ -922,6 +924,7 @@ BaseLib::PVariable DatabaseController::getNodeData(std::string& node, std::strin
 				if(keyIterator != componentIterator->second.end())
 				{
 					value = keyIterator->second;
+					if(obfuscate) value = value->stringValue.empty() ? std::make_shared<BaseLib::Variable>(std::string()) : std::make_shared<BaseLib::Variable>(std::string("*"));
 					return value;
 				}
 			}
@@ -950,8 +953,11 @@ BaseLib::PVariable DatabaseController::getNodeData(std::string& node, std::strin
 				BaseLib::HelperFunctions::toLower(lowerCharKey);
 				BaseLib::PVariable innerValue;
 				//Only return passwords if request comes from FlowsServer
-				if(!requestFromTrustedServer && lowerCharKey.size() >= 8 && lowerCharKey.compare(lowerCharKey.size() - 8, 8, "password") == 0) innerValue = std::make_shared<BaseLib::Variable>(std::string("*"));
-				else innerValue = _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue);
+				innerValue = _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue);
+				if(!requestFromTrustedServer && lowerCharKey.size() >= 8 && lowerCharKey.compare(lowerCharKey.size() - 8, 8, "password") == 0)
+				{
+					innerValue = innerValue->stringValue.empty() ? std::make_shared<BaseLib::Variable>(std::string()) : std::make_shared<BaseLib::Variable>(std::string("*"));
+				}
 				value->structValue->emplace(innerKey, innerValue);
 			}
 		}
@@ -962,6 +968,7 @@ BaseLib::PVariable DatabaseController::getNodeData(std::string& node, std::strin
 			_nodeData[node][key] = value;
 		}
 
+		if(obfuscate) value = value->stringValue.empty() ? std::make_shared<BaseLib::Variable>(std::string()) : std::make_shared<BaseLib::Variable>(std::string("*"));
 		return value;
 	}
 	catch(const std::exception& ex)
