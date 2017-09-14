@@ -755,6 +755,8 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 			Flows::PVariable status = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
 			std::string statusText = std::to_string(index) + ": " + message->structValue->at("payload")->toString();
 			if(statusText.size() > 20) statusText = statusText.substr(0, 17) + "...";
+			statusText = BaseLib::Http::encodeURL(statusText);
+			if(statusText.size() > 20) statusText = statusText.substr(0, 17) + "...";
 			status->structValue->emplace("text", std::make_shared<Flows::Variable>(statusText));
 			nodeEvent(nodeId, "statusTop/" + nodeId, status);
 		}
