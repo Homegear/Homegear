@@ -126,6 +126,16 @@ bool RPCServer::lifetick()
     return false;
 }
 
+int verifyClientCert(gnutls_session_t tlsSession)
+{
+	//Called during handshake just after the certificate message has been received.
+
+	uint32_t status = (uint32_t)-1;
+	if(gnutls_certificate_verify_peers3(tlsSession, 0, &status) != GNUTLS_E_SUCCESS) return -1; //Terminate handshake
+	if(status > 0) return -1;
+	return 0;
+}
+
 void RPCServer::start(BaseLib::Rpc::PServerInfo& info)
 {
 	try
@@ -154,6 +164,35 @@ void RPCServer::start(BaseLib::Rpc::PServerInfo& info)
 				gnutls_certificate_free_credentials(_x509Cred);
 				_x509Cred = nullptr;
 				return;
+			}
+			if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
+			{
+				if(!GD::bl->settings.caPath().empty())
+				{
+					if((result = gnutls_certificate_set_x509_trust_file(_x509Cred, GD::bl->settings.caPath().c_str(), GNUTLS_X509_FMT_PEM)) < 0)
+					{
+						gnutls_certificate_free_credentials(_x509Cred);
+						_x509Cred = nullptr;
+						return;
+					}
+				}
+				else
+				{
+					_out.printError("Client certificate authentication is enabled, but \"caFile\" is not specified in main.conf.");
+					gnutls_certificate_free_credentials(_x509Cred);
+					_x509Cred = nullptr;
+					return;
+				}
+
+				if(result == 0)
+				{
+					_out.printError("Client certificate authentication is enabled, but no CA certificates specified.");
+					gnutls_certificate_free_credentials(_x509Cred);
+					_x509Cred = nullptr;
+					return;
+				}
+
+				gnutls_certificate_set_verify_function(_x509Cred, &verifyClientCert);
 			}
 			if(!_dhParams)
 			{
@@ -1543,7 +1582,7 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
-		gnutls_certificate_server_set_request(client->socketDescriptor->tlsSession, GNUTLS_CERT_IGNORE);
+		gnutls_certificate_server_set_request(client->socketDescriptor->tlsSession, _info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert ? GNUTLS_CERT_REQUIRE : GNUTLS_CERT_IGNORE);
 		if(!client->socketDescriptor || client->socketDescriptor->descriptor == -1)
 		{
 			_out.printError("Error setting TLS socket descriptor: Provided socket descriptor is invalid.");
