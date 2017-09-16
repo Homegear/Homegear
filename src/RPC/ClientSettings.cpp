@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -111,6 +111,16 @@ void ClientSettings::load(std::string filename)
 					settings->caFile = value;
 					GD::out.printDebug("Debug: caFile of RPC client " + settings->name + " set to " + settings->caFile);
 				}
+				else if(name == "certfile")
+				{
+					settings->certFile = value;
+					GD::out.printDebug("Debug: certFile of RPC client " + settings->name + " set to " + settings->certFile);
+				}
+				else if(name == "keyfile")
+				{
+					settings->keyFile = value;
+					GD::out.printDebug("Debug: keyFile of RPC client " + settings->name + " set to " + settings->keyFile);
+				}
 				else if(name == "forcessl")
 				{
 					BaseLib::HelperFunctions::toLower(value);
@@ -121,6 +131,7 @@ void ClientSettings::load(std::string filename)
 				{
 					BaseLib::HelperFunctions::toLower(value);
 					if(value == "basic") settings->authType = Settings::AuthType::basic;
+					else if(value == "cert") settings->authType = Settings::AuthType::cert;
 					GD::out.printDebug("Debug: authType of RPC client " + settings->name + " set to " + std::to_string(settings->authType));
 				}
 				else if(name == "verifycertificate")
