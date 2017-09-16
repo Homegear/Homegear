@@ -86,6 +86,7 @@ void RPCServer::dispose()
 	stop();
 	_rpcMethods->clear();
 	_webServer.reset();
+	_restServer.reset();
 }
 
 bool RPCServer::lifetick()
@@ -148,7 +149,7 @@ void RPCServer::start(BaseLib::Rpc::PServerInfo& info)
 			_out.printError("Error: Settings is nullptr.");
 			return;
 		}
-		if(!_info->webServer && !_info->xmlrpcServer && !_info->jsonrpcServer) return;
+		if(!_info->webServer && !_info->xmlrpcServer && !_info->jsonrpcServer && !_info->restServer) return;
 		_out.setPrefix("RPC Server (Port " + std::to_string(info->port) + "): ");
 		if(_info->ssl)
 		{
@@ -278,6 +279,7 @@ void RPCServer::start(BaseLib::Rpc::PServerInfo& info)
 			gnutls_certificate_set_dh_params(_x509Cred, _dhParams);
 		}
 		_webServer.reset(new WebServer::WebServer(_info));
+		_restServer.reset(new RestServer(_info));
 		GD::bl->threadManager.start(_mainThread, true, _threadPriority, _threadPolicy, &RPCServer::mainThread, this);
 		_stopped = false;
 	}
@@ -331,6 +333,7 @@ void RPCServer::stop()
 			_dhParams = nullptr;
 		}
 		_webServer.reset();
+		_restServer.reset();
 	}
 	catch(const std::exception& ex)
     {
@@ -1241,7 +1244,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						sendRPCResponseToClient(client, data, false);
 						continue;
 					}
-					if(!_info->webServer)
+					if(!_info->webServer && !_info->restServer)
 					{
 						std::vector<char> data;
 						_webServer->getError(400, "Bad Request", "Your client sent a request that this server could not understand.", data);
@@ -1262,11 +1265,11 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						sendRPCResponseToClient(client, data, false);
 					}
 				}
-				else if(!strncmp(buffer, "POST", 4) || !strncmp(buffer, "HTTP/1.", 7))
+				else if(!strncmp(buffer, "POST", 4) || !strncmp(buffer, "PUT", 3) || !strncmp(buffer, "HTTP/1.", 7))
 				{
 					if(bytesRead < 8) continue;
 					buffer[bytesRead] = '\0';
-					packetType = (!strncmp(buffer, "POST", 4)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
+					packetType = (!strncmp(buffer, "POST", 4)) || (!strncmp(buffer, "PUT", 3)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
 
 					try
 					{
@@ -1304,11 +1307,11 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						sendRPCResponseToClient(client, data, false);
 					}
 
-					if(http.getContentSize() > 10485760)
+					if(http.getContentSize() > 104857600)
 					{
 						http.reset();
 						std::vector<char> data;
-						_webServer->getError(400, "Bad Request", "Your client sent a request larger than 10 MiB.", data);
+						_webServer->getError(400, "Bad Request", "Your client sent a request larger than 100 MiB.", data);
 						sendRPCResponseToClient(client, data, false);
 					}
 				}
@@ -1411,12 +1414,16 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						break;
 					}
 				}
-				if(_info->webServer && (!_info->xmlrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml")) && (!_info->jsonrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") || http.getHeader().path == "/flows/flows"))
+				if(_info->restServer && http.getHeader().path.compare(0, 5, "/api/") == 0)
+				{
+					_restServer->process(http, client->socket);
+				}
+				else if(_info->webServer && (!_info->xmlrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml")) && (!_info->jsonrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") || http.getHeader().path == "/flows/flows"))
 				{
 
 					http.getHeader().remoteAddress = client->address;
 					http.getHeader().remotePort = client->port;
-					if(http.getHeader().method == "POST") _webServer->post(http, client->socket);
+					if(http.getHeader().method == "POST" || http.getHeader().method == "PUT") _webServer->post(http, client->socket);
 					else if(http.getHeader().method == "GET" || http.getHeader().method == "HEAD") _webServer->get(http, client->socket);
 				}
 				else if(http.getContentSize() > 0 && (_info->xmlrpcServer || _info->jsonrpcServer))

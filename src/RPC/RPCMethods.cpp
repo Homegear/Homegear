@@ -2855,7 +2855,7 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 		std::string serialNumber;
-		uint64_t peerId = parameters->at(0)->integerValue;
+		uint64_t peerId = parameters->at(0)->integerValue64;
 		int32_t channel = 0;
 		bool useSerialNumber = false;
 		bool requestFromDevice = false;
@@ -3312,7 +3312,7 @@ BaseLib::PVariable RPCListEvents::invoke(BaseLib::PRpcClientInfo clientInfo, std
 			if(parameters->size() == 1) type = parameters->at(0)->integerValue;
 			else
 			{
-				peerID = parameters->at(0)->integerValue;
+				peerID = parameters->at(0)->integerValue64;
 				channel = parameters->at(1)->integerValue;
 			}
 			if(parameters->size() == 3) variable = parameters->at(2)->stringValue;
@@ -4700,7 +4700,7 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 		std::string serialNumber;
-		uint64_t peerId = parameters->at(0)->integerValue;
+		uint64_t peerId = parameters->at(0)->integerValue64;
 		int32_t channel = 0;
 		bool useSerialNumber = false;
 		if(parameters->at(0)->type == BaseLib::VariableType::tString)

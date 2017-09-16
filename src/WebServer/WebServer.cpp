@@ -377,7 +377,7 @@ void WebServer::send(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<ch
 		try
 		{
 			//Sleep a tiny little bit. Some clients like don't accept responses too fast.
-			std::this_thread::sleep_for(std::chrono::milliseconds(22));
+			//std::this_thread::sleep_for(std::chrono::milliseconds(22));
 			socket->proofwrite(data);
 		}
 		catch(BaseLib::SocketDataLimitException& ex)
