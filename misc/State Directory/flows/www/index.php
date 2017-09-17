@@ -72,7 +72,7 @@ if(!$user->checkAuth(true)) die();
 </head>
 <body spellcheck="false">
 <div id="header">
-    <span class="logo"><img src="red/images/node-blue.png" title="0.16.2-git"> <span>Node-BLUE</span></span>
+    <span class="logo"><img src="red/images/node-blue.png" title="0.17.5-git"> <span>Node-BLUE</span></span>
     <ul class="header-toolbar hide">
         <li><a id="btn-sidemenu" class="button" data-toggle="dropdown" href="#"><i class="fa fa-bars"></i></a></li>
     </ul>

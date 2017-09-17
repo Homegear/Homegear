@@ -62,6 +62,7 @@ private:
 		std::mutex waitMutex;
 		std::condition_variable conditionVariable;
 	};
+	typedef std::shared_ptr<RequestInfo> PRequestInfo;
 
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
@@ -89,6 +90,7 @@ private:
 	};
 
 	BaseLib::Output _out;
+	std::atomic_bool _startUpComplete;
 	std::atomic_bool _shuttingDown;
 	std::atomic_bool _disposed;
 	std::string _socketPath;
@@ -102,12 +104,13 @@ private:
 	std::map<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>> _localRpcMethods;
 	std::thread _maintenanceThread;
 	std::mutex _requestInfoMutex;
-	std::map<int64_t, RequestInfo> _requestInfo;
+	std::map<int64_t, PRequestInfo> _requestInfo;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
 	std::atomic_bool _nodesStopped;
 	std::unique_ptr<NodeManager> _nodeManager;
 	std::atomic_bool _frontendConnected;
+	std::atomic<int64_t> _lastQueueSize;
 
 	std::unique_ptr<Flows::BinaryRpc> _binaryRpc;
 	std::unique_ptr<Flows::RpcDecoder> _rpcDecoder;
@@ -124,6 +127,9 @@ private:
 	std::mutex _peerSubscriptionsMutex;
 	std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::set<std::string>>>> _peerSubscriptions;
 
+	std::mutex _internalMessagesMutex;
+	std::unordered_map<std::string, Flows::PVariable> _internalMessages;
+
 	void registerClient();
 	Flows::PVariable invoke(std::string methodName, Flows::PArray parameters, bool wait);
 	Flows::PVariable invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray parameters);
@@ -139,6 +145,7 @@ private:
 	void nodeEvent(std::string nodeId, std::string topic, Flows::PVariable value);
 	Flows::PVariable getNodeData(std::string nodeId, std::string key);
 	void setNodeData(std::string nodeId, std::string key, Flows::PVariable value);
+	void setInternalMessage(std::string nodeId, Flows::PVariable message);
 	Flows::PVariable getConfigParameter(std::string nodeId, std::string name);
 
 	// {{{ RPC methods

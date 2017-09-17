@@ -86,6 +86,7 @@ void RPCServer::dispose()
 	stop();
 	_rpcMethods->clear();
 	_webServer.reset();
+	_restServer.reset();
 }
 
 bool RPCServer::lifetick()
@@ -126,6 +127,16 @@ bool RPCServer::lifetick()
     return false;
 }
 
+int verifyClientCert(gnutls_session_t tlsSession)
+{
+	//Called during handshake just after the certificate message has been received.
+
+	uint32_t status = (uint32_t)-1;
+	if(gnutls_certificate_verify_peers3(tlsSession, 0, &status) != GNUTLS_E_SUCCESS) return -1; //Terminate handshake
+	if(status > 0) return -1;
+	return 0;
+}
+
 void RPCServer::start(BaseLib::Rpc::PServerInfo& info)
 {
 	try
@@ -138,7 +149,7 @@ void RPCServer::start(BaseLib::Rpc::PServerInfo& info)
 			_out.printError("Error: Settings is nullptr.");
 			return;
 		}
-		if(!_info->webServer && !_info->xmlrpcServer && !_info->jsonrpcServer) return;
+		if(!_info->webServer && !_info->xmlrpcServer && !_info->jsonrpcServer && !_info->restServer) return;
 		_out.setPrefix("RPC Server (Port " + std::to_string(info->port) + "): ");
 		if(_info->ssl)
 		{
@@ -152,72 +163,123 @@ void RPCServer::start(BaseLib::Rpc::PServerInfo& info)
 			{
 				_out.printError("Error: Could not load certificate or key file: " + std::string(gnutls_strerror(result)));
 				gnutls_certificate_free_credentials(_x509Cred);
+				_x509Cred = nullptr;
 				return;
+			}
+			if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
+			{
+				if(!GD::bl->settings.caPath().empty())
+				{
+					if((result = gnutls_certificate_set_x509_trust_file(_x509Cred, GD::bl->settings.caPath().c_str(), GNUTLS_X509_FMT_PEM)) < 0)
+					{
+						gnutls_certificate_free_credentials(_x509Cred);
+						_x509Cred = nullptr;
+						return;
+					}
+				}
+				else
+				{
+					_out.printError("Client certificate authentication is enabled, but \"caFile\" is not specified in main.conf.");
+					gnutls_certificate_free_credentials(_x509Cred);
+					_x509Cred = nullptr;
+					return;
+				}
+
+				if(result == 0)
+				{
+					_out.printError("Client certificate authentication is enabled, but no CA certificates specified.");
+					gnutls_certificate_free_credentials(_x509Cred);
+					_x509Cred = nullptr;
+					return;
+				}
+
+				gnutls_certificate_set_verify_function(_x509Cred, &verifyClientCert);
 			}
 			if(!_dhParams)
 			{
-			if(GD::bl->settings.loadDHParamsFromFile())
-			{
-				if((result = gnutls_dh_params_init(&_dhParams)) != GNUTLS_E_SUCCESS)
+				if(GD::bl->settings.loadDHParamsFromFile())
 				{
-					_out.printError("Error: Could not initialize DH parameters: " + std::string(gnutls_strerror(result)));
-					gnutls_certificate_free_credentials(_x509Cred);
-					return;
+					if((result = gnutls_dh_params_init(&_dhParams)) != GNUTLS_E_SUCCESS)
+					{
+						_out.printError("Error: Could not initialize DH parameters: " + std::string(gnutls_strerror(result)));
+						gnutls_certificate_free_credentials(_x509Cred);
+						_x509Cred = nullptr;
+						_dhParams = nullptr;
+						return;
+					}
+					std::vector<uint8_t> binaryData;
+					try
+					{
+						binaryData = GD::bl->io.getUBinaryFileContent(GD::bl->settings.dhParamPath().c_str());
+						binaryData.push_back(0); //gnutls_datum_t.data needs to be null terminated
+					}
+					catch(BaseLib::Exception& ex)
+					{
+						_out.printError("Error: Could not load DH parameter file \"" + GD::bl->settings.dhParamPath() + "\": " + std::string(ex.what()));
+						gnutls_certificate_free_credentials(_x509Cred);
+						gnutls_dh_params_deinit(_dhParams);
+						_x509Cred = nullptr;
+						_dhParams = nullptr;
+						return;
+					}
+					catch(...)
+					{
+						_out.printError("Error: Could not load DH parameter file \"" + GD::bl->settings.dhParamPath() + "\".");
+						gnutls_certificate_free_credentials(_x509Cred);
+						gnutls_dh_params_deinit(_dhParams);
+						_x509Cred = nullptr;
+						_dhParams = nullptr;
+						return;
+					}
+					gnutls_datum_t data;
+					data.data = &binaryData.at(0);
+					data.size = binaryData.size();
+					if((result = gnutls_dh_params_import_pkcs3(_dhParams, &data, GNUTLS_X509_FMT_PEM)) != GNUTLS_E_SUCCESS)
+					{
+						_out.printError("Error: Could not import DH parameters: " + std::string(gnutls_strerror(result)));
+						gnutls_certificate_free_credentials(_x509Cred);
+						gnutls_dh_params_deinit(_dhParams);
+						_x509Cred = nullptr;
+						_dhParams = nullptr;
+						return;
+					}
 				}
-				std::vector<uint8_t> binaryData;
-				try
+				else
 				{
-					binaryData = GD::bl->io.getUBinaryFileContent(GD::bl->settings.dhParamPath().c_str());
-					binaryData.push_back(0); //gnutls_datum_t.data needs to be null terminated
+					uint32_t bits = gnutls_sec_param_to_pk_bits(GNUTLS_PK_DH, GNUTLS_SEC_PARAM_ULTRA);
+					if((result = gnutls_dh_params_init(&_dhParams)) != GNUTLS_E_SUCCESS)
+					{
+						_out.printError("Error: Could not initialize DH parameters: " + std::string(gnutls_strerror(result)));
+						gnutls_certificate_free_credentials(_x509Cred);
+						_x509Cred = nullptr;
+						return;
+					}
+					if((result = gnutls_dh_params_generate2(_dhParams, bits)) != GNUTLS_E_SUCCESS)
+					{
+						_out.printError("Error: Could not generate DH parameters: " + std::string(gnutls_strerror(result)));
+						gnutls_certificate_free_credentials(_x509Cred);
+						gnutls_dh_params_deinit(_dhParams);
+						_x509Cred = nullptr;
+						_dhParams = nullptr;
+						return;
+					}
 				}
-				catch(BaseLib::Exception& ex)
-				{
-					_out.printError("Error: Could not load DH parameter file \"" + GD::bl->settings.dhParamPath() + "\": " + std::string(ex.what()));
-					gnutls_certificate_free_credentials(_x509Cred);
-					return;
-				}
-				catch(...)
-				{
-					_out.printError("Error: Could not load DH parameter file \"" + GD::bl->settings.dhParamPath() + "\".");
-					gnutls_certificate_free_credentials(_x509Cred);
-					return;
-				}
-				gnutls_datum_t data;
-				data.data = &binaryData.at(0);
-				data.size = binaryData.size();
-				if((result = gnutls_dh_params_import_pkcs3(_dhParams, &data, GNUTLS_X509_FMT_PEM)) != GNUTLS_E_SUCCESS)
-				{
-					_out.printError("Error: Could not import DH parameters: " + std::string(gnutls_strerror(result)));
-					gnutls_certificate_free_credentials(_x509Cred);
-					return;
-				}
-			}
-			else
-			{
-				uint32_t bits = gnutls_sec_param_to_pk_bits(GNUTLS_PK_DH, GNUTLS_SEC_PARAM_ULTRA);
-				if((result = gnutls_dh_params_init(&_dhParams)) != GNUTLS_E_SUCCESS)
-				{
-					_out.printError("Error: Could not initialize DH parameters: " + std::string(gnutls_strerror(result)));
-					gnutls_certificate_free_credentials(_x509Cred);
-					return;
-				}
-				if((result = gnutls_dh_params_generate2(_dhParams, bits)) != GNUTLS_E_SUCCESS)
-				{
-					_out.printError("Error: Could not generate DH parameters: " + std::string(gnutls_strerror(result)));
-					gnutls_certificate_free_credentials(_x509Cred);
-					return;
-				}
-			}
 			}
 			if((result = gnutls_priority_init(&_tlsPriorityCache, "NORMAL", NULL)) != GNUTLS_E_SUCCESS)
 			{
 				_out.printError("Error: Could not initialize cipher priorities: " + std::string(gnutls_strerror(result)));
 				gnutls_certificate_free_credentials(_x509Cred);
+				if(_dhParams)
+				{
+					gnutls_dh_params_deinit(_dhParams);
+					_dhParams = nullptr;
+				}
 				return;
 			}
 			gnutls_certificate_set_dh_params(_x509Cred, _dhParams);
 		}
 		_webServer.reset(new WebServer::WebServer(_info));
+		_restServer.reset(new RestServer(_info));
 		GD::bl->threadManager.start(_mainThread, true, _threadPriority, _threadPolicy, &RPCServer::mainThread, this);
 		_stopped = false;
 	}
@@ -271,6 +333,7 @@ void RPCServer::stop()
 			_dhParams = nullptr;
 		}
 		_webServer.reset();
+		_restServer.reset();
 	}
 	catch(const std::exception& ex)
     {
@@ -317,7 +380,7 @@ void RPCServer::registerMethod(std::string methodName, std::shared_ptr<BaseLib::
 	{
 		if(_rpcMethods->find(methodName) != _rpcMethods->end())
 		{
-			_out.printWarning("Warning: Could not register RPC method, because a method with this name already exists.");
+			_out.printWarning("Warning: Could not register RPC method \"" + methodName + "\", because a method with this name already exists.");
 			return;
 		}
 		_rpcMethods->insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>(methodName, method));
@@ -850,41 +913,6 @@ void RPCServer::packetReceived(std::shared_ptr<Client> client, std::vector<char>
     }
 }
 
-int32_t RPCServer::isAddonClient(int32_t clientID)
-{
-	try
-	{
-		_stateMutex.lock();
-		if(_clients.find(clientID) != _clients.end())
-		{
-			if(_clients.at(clientID)->addon)
-			{
-				_stateMutex.unlock();
-				return 1;
-			}
-			else
-			{
-				_stateMutex.unlock();
-				return 0;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _stateMutex.unlock();
-    return -1;
-}
-
 const std::vector<BaseLib::PRpcClientInfo> RPCServer::getClientInfo()
 {
 	std::vector<BaseLib::PRpcClientInfo> clients;
@@ -911,34 +939,6 @@ const std::vector<BaseLib::PRpcClientInfo> RPCServer::getClientInfo()
 	}
 	_stateMutex.unlock();
 	return clients;
-}
-
-std::string RPCServer::getClientIP(int32_t clientID)
-{
-	try
-	{
-		_stateMutex.lock();
-		if(_clients.find(clientID) != _clients.end())
-		{
-			std::string ipAddress = _clients.at(clientID)->address;
-			_stateMutex.unlock();
-			return ipAddress;
-		}
-	}
-	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	_stateMutex.unlock();
-	return "";
 }
 
 BaseLib::PEventHandler RPCServer::addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler)
@@ -1244,7 +1244,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						sendRPCResponseToClient(client, data, false);
 						continue;
 					}
-					if(!_info->webServer)
+					if(!_info->webServer && !_info->restServer)
 					{
 						std::vector<char> data;
 						_webServer->getError(400, "Bad Request", "Your client sent a request that this server could not understand.", data);
@@ -1265,11 +1265,11 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						sendRPCResponseToClient(client, data, false);
 					}
 				}
-				else if(!strncmp(buffer, "POST", 4) || !strncmp(buffer, "HTTP/1.", 7))
+				else if(!strncmp(buffer, "POST", 4) || !strncmp(buffer, "PUT", 3) || !strncmp(buffer, "HTTP/1.", 7))
 				{
 					if(bytesRead < 8) continue;
 					buffer[bytesRead] = '\0';
-					packetType = (!strncmp(buffer, "POST", 4)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
+					packetType = (!strncmp(buffer, "POST", 4)) || (!strncmp(buffer, "PUT", 3)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
 
 					try
 					{
@@ -1307,11 +1307,11 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						sendRPCResponseToClient(client, data, false);
 					}
 
-					if(http.getContentSize() > 10485760)
+					if(http.getContentSize() > 104857600)
 					{
 						http.reset();
 						std::vector<char> data;
-						_webServer->getError(400, "Bad Request", "Your client sent a request larger than 10 MiB.", data);
+						_webServer->getError(400, "Bad Request", "Your client sent a request larger than 100 MiB.", data);
 						sendRPCResponseToClient(client, data, false);
 					}
 				}
@@ -1414,12 +1414,16 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						break;
 					}
 				}
-				if(_info->webServer && (!_info->xmlrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml")) && (!_info->jsonrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") || http.getHeader().path == "/flows/flows"))
+				if(_info->restServer && http.getHeader().path.compare(0, 5, "/api/") == 0)
+				{
+					_restServer->process(http, client->socket);
+				}
+				else if(_info->webServer && (!_info->xmlrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml")) && (!_info->jsonrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") || http.getHeader().path == "/flows/flows"))
 				{
 
 					http.getHeader().remoteAddress = client->address;
 					http.getHeader().remotePort = client->port;
-					if(http.getHeader().method == "POST") _webServer->post(http, client->socket);
+					if(http.getHeader().method == "POST" || http.getHeader().method == "PUT") _webServer->post(http, client->socket);
 					else if(http.getHeader().method == "GET" || http.getHeader().method == "HEAD") _webServer->get(http, client->socket);
 				}
 				else if(http.getContentSize() > 0 && (_info->xmlrpcServer || _info->jsonrpcServer))
@@ -1550,11 +1554,13 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 		if(!_tlsPriorityCache)
 		{
 			_out.printError("Error: Could not initiate TLS connection. _tlsPriorityCache is nullptr.");
+			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
 		if(!_x509Cred)
 		{
 			_out.printError("Error: Could not initiate TLS connection. _x509Cred is nullptr.");
+			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
 		int32_t result = 0;
@@ -1562,11 +1568,13 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 		{
 			_out.printError("Error: Could not initialize TLS session: " + std::string(gnutls_strerror(result)));
 			client->socketDescriptor->tlsSession = nullptr;
+			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
 		if(!client->socketDescriptor->tlsSession)
 		{
 			_out.printError("Error: Client TLS session is nullptr.");
+			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
 		if((result = gnutls_priority_set(client->socketDescriptor->tlsSession, _tlsPriorityCache)) != GNUTLS_E_SUCCESS)
@@ -1581,7 +1589,7 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
-		gnutls_certificate_server_set_request(client->socketDescriptor->tlsSession, GNUTLS_CERT_IGNORE);
+		gnutls_certificate_server_set_request(client->socketDescriptor->tlsSession, _info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert ? GNUTLS_CERT_REQUIRE : GNUTLS_CERT_IGNORE);
 		if(!client->socketDescriptor || client->socketDescriptor->descriptor == -1)
 		{
 			_out.printError("Error setting TLS socket descriptor: Provided socket descriptor is invalid.");

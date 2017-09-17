@@ -624,6 +624,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 			{
 				GD::out.printInfo("Info: MQTT RPC call received. Method: setSystemVariable");
 				BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+				parameters->arrayValue->reserve(2);
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));
 				parameters->arrayValue->push_back(value);
 				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("setSystemVariable", parameters);
@@ -632,6 +633,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 			{
 				GD::out.printInfo("Info: MQTT RPC call received. Method: setMetadata");
 				BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+				parameters->arrayValue->reserve(3);
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));
 				parameters->arrayValue->push_back(value);
@@ -641,6 +643,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 			{
 				GD::out.printInfo("Info: MQTT RPC call received. Method: setValue");
 				BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+				parameters->arrayValue->reserve(4);
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));
@@ -654,6 +657,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 			int32_t channel = BaseLib::Math::getNumber(parts.at(4));
 			GD::out.printInfo("Info: MQTT RPC call received. Method: putParamset");
 			BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+			parameters->arrayValue->reserve(4);
 			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
 			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
 			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));

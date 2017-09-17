@@ -62,16 +62,22 @@ void Server::registerMethods()
 		_server->registerMethod("system.multicall", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSystemMulticall(_server)));
 		_server->registerMethod("activateLinkParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCActivateLinkParamset()));
 		_server->registerMethod("abortEventReset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCTriggerEvent()));
+		_server->registerMethod("addCategoryToDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddCategoryToDevice()));
 		_server->registerMethod("addDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddDevice()));
+		_server->registerMethod("addDeviceToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddDeviceToRoom()));
 		_server->registerMethod("addEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddEvent()));
 		_server->registerMethod("addLink", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddLink()));
 		_server->registerMethod("copyConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCCopyConfig()));
 		_server->registerMethod("clientServerInitialized", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCClientServerInitialized()));
+		_server->registerMethod("createCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCCreateCategory()));
 		_server->registerMethod("createDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCCreateDevice()));
+		_server->registerMethod("createRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCCreateRoom()));
+		_server->registerMethod("deleteCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteCategory()));
 		_server->registerMethod("deleteData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteData()));
 		_server->registerMethod("deleteDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteDevice()));
 		_server->registerMethod("deleteMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteMetadata()));
 		_server->registerMethod("deleteNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteNodeData()));
+		_server->registerMethod("deleteRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteRoom()));
 		_server->registerMethod("deleteSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteSystemVariable()));
 		_server->registerMethod("enableEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCEnableEvent()));
 		_server->registerMethod("getAllConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetAllConfig()));
@@ -79,10 +85,13 @@ void Server::registerMethods()
 		_server->registerMethod("getAllScripts", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetAllScripts()));
 		_server->registerMethod("getAllSystemVariables", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetAllSystemVariables()));
 		_server->registerMethod("getAllValues", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetAllValues()));
+		_server->registerMethod("getCategories", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetCategories()));
 		_server->registerMethod("getConfigParameter", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetConfigParameter()));
 		_server->registerMethod("getData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetData()));
 		_server->registerMethod("getDeviceDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetDeviceDescription()));
 		_server->registerMethod("getDeviceInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetDeviceInfo()));
+		_server->registerMethod("getDevicesInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetDevicesInCategory()));
+		_server->registerMethod("getDevicesInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetDevicesInRoom()));
 		_server->registerMethod("getEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetEvent()));
 		_server->registerMethod("getLastEvents", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetLastEvents()));
 		_server->registerMethod("getInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetInstallMode()));
@@ -101,6 +110,7 @@ void Server::registerMethods()
 		_server->registerMethod("getParamsetDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetParamsetDescription()));
 		_server->registerMethod("getParamsetId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetParamsetId()));
 		_server->registerMethod("getPeerId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetPeerId()));
+		_server->registerMethod("getRooms", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetRooms()));
 		_server->registerMethod("getServiceMessages", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetServiceMessages()));
 		_server->registerMethod("getSniffedDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetSniffedDevices()));
 		_server->registerMethod("getSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetSystemVariable()));
@@ -121,6 +131,8 @@ void Server::registerMethods()
 		_server->registerMethod("nodeOutput", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCNodeOutput()));
 		_server->registerMethod("ping", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCPing()));
 		_server->registerMethod("putParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCPutParamset()));
+		_server->registerMethod("removeCategoryFromDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveCategoryFromDevice()));
+		_server->registerMethod("removeDeviceFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveDeviceFromRoom()));
 		_server->registerMethod("removeEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveEvent()));
 		_server->registerMethod("removeLink", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveLink()));
 		_server->registerMethod("reportValueUsage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCReportValueUsage()));
@@ -147,7 +159,9 @@ void Server::registerMethods()
 		_server->registerMethod("triggerEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCTriggerEvent()));
 		_server->registerMethod("triggerRpcEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCTriggerRpcEvent()));
 		_server->registerMethod("unsubscribePeers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCUnsubscribePeers()));
+		_server->registerMethod("updateCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCUpdateCategory()));
 		_server->registerMethod("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCUpdateFirmware()));
+		_server->registerMethod("updateRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCUpdateRoom()));
 		_server->registerMethod("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCWriteLog()));
 	}
 	catch(const std::exception& ex)
@@ -188,17 +202,20 @@ void Server::stop()
 
 bool Server::lifetick()
 {
-	if(!_server) return true; return _server->lifetick();
+	if(!_server) return true;
+	return _server->lifetick();
 }
 
 bool Server::isRunning()
 {
-	if(!_server) return false; return _server->isRunning();
+	if(!_server) return false;
+	return _server->isRunning();
 }
 
 const std::vector<std::shared_ptr<BaseLib::RpcClientInfo>> Server::getClientInfo()
 {
-	if(!_server) return std::vector<std::shared_ptr<BaseLib::RpcClientInfo>>(); return _server->getClientInfo();
+	if(!_server) return std::vector<std::shared_ptr<BaseLib::RpcClientInfo>>();
+	return _server->getClientInfo();
 }
 
 const std::shared_ptr<RPCServer> Server::getServer()
@@ -208,30 +225,8 @@ const std::shared_ptr<RPCServer> Server::getServer()
 
 const BaseLib::Rpc::PServerInfo Server::getInfo()
 {
-	if(!_server) return BaseLib::Rpc::PServerInfo(); return _server->getInfo();
-}
-
-int32_t Server::isAddonClient(int32_t clientID)
-{
-	if(!_server) return -1;
-	return _server->isAddonClient(clientID);
-}
-
-int32_t Server::isAddonClientAll(int32_t clientID)
-{
-	int32_t result = -1;
-	for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
-	{
-		result = i->second.isAddonClient(clientID);
-		if(result != -1) return result;
-	}
-	return -1;
-}
-
-std::string Server::getClientIP(int32_t clientID)
-{
-	if(!_server) return "";
-	return _server->getClientIP(clientID);
+	if(!_server) return BaseLib::Rpc::PServerInfo();
+	return _server->getInfo();
 }
 
 BaseLib::PEventHandler Server::addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler)
@@ -244,17 +239,6 @@ void Server::removeWebserverEventHandler(BaseLib::PEventHandler eventHandler)
 {
 	if(!_server) return;
 	_server->removeWebserverEventHandler(eventHandler);
-}
-
-std::string Server::getClientIPAll(int32_t clientID)
-{
-	std::string ipAddress;
-	for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
-	{
-		ipAddress = i->second.getClientIP(clientID);
-		if(!ipAddress.empty()) return ipAddress;
-	}
-	return "";
 }
 
 }

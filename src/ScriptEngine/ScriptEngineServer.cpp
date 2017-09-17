@@ -40,7 +40,7 @@
 namespace ScriptEngine
 {
 
-ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 1000)
+ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 {
 	_out.init(GD::bl.get());
 	_out.setPrefix("Script Engine Server: ");
@@ -149,6 +149,26 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 1000)
 	_rpcMethods.emplace("unsubscribePeers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUnsubscribePeers()));
 	_rpcMethods.emplace("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware()));
 	_rpcMethods.emplace("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCWriteLog()));
+
+	//{{{ Rooms
+		_rpcMethods.emplace("addDeviceToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddDeviceToRoom()));
+		_rpcMethods.emplace("createRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateRoom()));
+		_rpcMethods.emplace("deleteRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteRoom()));
+		_rpcMethods.emplace("getDevicesInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDevicesInRoom()));
+		_rpcMethods.emplace("getRooms", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRooms()));
+		_rpcMethods.emplace("removeDeviceFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveDeviceFromRoom()));
+		_rpcMethods.emplace("updateRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateRoom()));
+	//}}}
+
+	//{{{ Categories
+		_rpcMethods.emplace("addCategoryToDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddCategoryToDevice()));
+		_rpcMethods.emplace("createCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateCategory()));
+		_rpcMethods.emplace("deleteCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteCategory()));
+		_rpcMethods.emplace("getCategories", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetCategories()));
+		_rpcMethods.emplace("getDevicesInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDevicesInCategory()));
+		_rpcMethods.emplace("removeCategoryFromDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveCategoryFromDevice()));
+		_rpcMethods.emplace("updateCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateCategory()));
+	//}}}
 
 	_localRpcMethods.emplace("scriptFinished", std::bind(&ScriptEngineServer::scriptFinished, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	_localRpcMethods.emplace("scriptOutput", std::bind(&ScriptEngineServer::scriptOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -468,6 +488,8 @@ void ScriptEngineServer::stop()
 		{
 			for(std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 			{
+				std::unique_lock<std::mutex> waitLock((*i)->waitMutex);
+				waitLock.unlock();
 				(*i)->requestConditionVariable.notify_all();
 			}
 			collectGarbage();
@@ -751,7 +773,9 @@ BaseLib::PVariable ScriptEngineServer::executePhpNodeMethod(BaseLib::PArray& par
 			clientData = clientIterator->second;
 		}
 
-		return sendRequest(clientData, "executePhpNodeMethod", parameters, true);
+		BaseLib::PVariable result = sendRequest(clientData, "executePhpNodeMethod", parameters, true);
+		if(parameters->at(1)->stringValue == "waitForStop") closeClientConnection(clientData);
+		return result;
 	}
 	catch(const std::exception& ex)
     {
@@ -1022,6 +1046,8 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 					}
 				}
 			}
+			std::unique_lock<std::mutex> waitLock(queueEntry->clientData->waitMutex);
+			waitLock.unlock();
 			queueEntry->clientData->requestConditionVariable.notify_all();
 		}
 		else if(index == 2) //Second queue for sending packets. Response is processed by first queue
@@ -1111,17 +1137,17 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
 #ifdef DEBUGSESOCKET
 		socketOutput(packetId, clientData, true, true, data);
 #endif
+		std::unique_lock<std::mutex> waitLock(clientData->waitMutex);
 		BaseLib::PVariable result = send(clientData, data);
-		if(result->errorStruct)
+		if(result->errorStruct || !wait)
 		{
 			std::lock_guard<std::mutex> responseGuard(clientData->rpcResponsesMutex);
 			clientData->rpcResponses.erase(packetId);
-			return result;
+			if(!wait) return std::make_shared<BaseLib::Variable>();
+			else return result;
 		}
-		if(!wait) return std::make_shared<BaseLib::Variable>();
 
 		int32_t i = 0;
-		std::unique_lock<std::mutex> waitLock(clientData->waitMutex);
 		while(!clientData->requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]{
 			return response->finished || clientData->closed || _stopServer;
 		}))
@@ -1328,6 +1354,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			for(std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
+				if(i->second->getClientData()->closed) continue;
 				if(nodeProcess && i->second->isNodeProcess() && (GD::bl->settings.maxNodeThreadsPerProcess() == -1 || i->second->nodeThreadCount() + maxThreadCount + 1 <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess()))
 				{
 					i->second->lastExecution = BaseLib::HelperFunctions::getTime();
@@ -1851,7 +1878,7 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
 #ifdef SE_MANUAL_CLIENT_START
 			pid = 1;
 #endif
-			std::lock_guard<std::mutex> processGuard(_processMutex);
+			std::unique_lock<std::mutex> processGuard(_processMutex);
 			std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(pid);
 			if(processIterator == _processes.end())
 			{
@@ -1865,6 +1892,7 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
 			}
 			clientData->pid = pid;
 			processIterator->second->setClientData(clientData);
+			processGuard.unlock();
 			processIterator->second->requestConditionVariable.notify_all();
 			_out.printInfo("Info: Client with pid " + std::to_string(pid) + " successfully registered.");
 			return BaseLib::PVariable(new BaseLib::Variable());

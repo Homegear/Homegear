@@ -65,7 +65,7 @@ std::unordered_map<std::string, ScriptEngineClient::PNodeInfo> ScriptEngineClien
 	call_user_function(EG(function_table), NULL, &function, &returnValue, 1, params);
 }*/
 
-ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 1000)
+ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000)
 {
 	_stopped = false;
 	_nodesStopped = false;
@@ -649,10 +649,52 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 			if(scriptId != 0)
 			{
 				std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
-				std::map<int32_t, RequestInfo>::iterator requestIterator = _requestInfo.find(scriptId);
-				if (requestIterator != _requestInfo.end()) requestIterator->second.conditionVariable.notify_all();
+				std::map<int32_t, PRequestInfo>::iterator requestIterator = _requestInfo.find(scriptId);
+				if (requestIterator != _requestInfo.end())
+				{
+					std::unique_lock<std::mutex> waitLock(requestIterator->second->waitMutex);
+
+					{
+						std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+						auto responseIterator = _rpcResponses[scriptId].find(packetId);
+						if(responseIterator != _rpcResponses[scriptId].end())
+						{
+							PScriptEngineResponse element = responseIterator->second;
+							if(element)
+							{
+								element->response = response;
+								element->packetId = packetId;
+								element->finished = true;
+							}
+						}
+					}
+
+					waitLock.unlock();
+					requestIterator->second->conditionVariable.notify_all();
+				}
 			}
-			else _requestConditionVariable.notify_all();
+			else
+			{
+				std::unique_lock<std::mutex> waitLock(_waitMutex);
+
+				{
+					std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+					auto responseIterator = _rpcResponses[scriptId].find(packetId);
+					if(responseIterator != _rpcResponses[scriptId].end())
+					{
+						PScriptEngineResponse element = responseIterator->second;
+						if(element)
+						{
+							element->response = response;
+							element->packetId = packetId;
+							element->finished = true;
+						}
+					}
+				}
+
+				waitLock.unlock();
+				_requestConditionVariable.notify_all();
+			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -719,7 +761,7 @@ BaseLib::PVariable ScriptEngineClient::callMethod(std::string methodName, BaseLi
 {
 	try
 	{
-		if(_nodesStopped && methodName != "waitForStop") return BaseLib::Variable::createError(-32500, "RPC calls are forbidden after \"stop\" is executed.");
+		if(_nodesStopped) return BaseLib::Variable::createError(-32500, "RPC calls are forbidden after \"stop\" is executed.");
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		return sendRequest(globals->id, methodName, parameters->arrayValue, wait);
 	}
@@ -776,10 +818,15 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string
 	try
 	{
 		std::unique_lock<std::mutex> requestInfoGuard(_requestInfoMutex);
-		RequestInfo& requestInfo = _requestInfo[scriptId];
+		PRequestInfo requestInfo = _requestInfo[scriptId];
+		if(!requestInfo)
+		{
+			_out.printError("Error: Request info does not exist.");
+			return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		}
 		requestInfoGuard.unlock();
 
-		std::lock_guard<std::mutex> requestGuard(requestInfo.requestMutex);
+		std::lock_guard<std::mutex> requestGuard(requestInfo->requestMutex);
 
 		int32_t packetId;
 		{
@@ -814,17 +861,20 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string
 		socketOutput(packetId, true, true, data);
 #endif
 		BaseLib::PVariable result = send(data);
-		if(result->errorStruct)
+		if(result->errorStruct || !wait)
 		{
-			std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-			_rpcResponses[scriptId].erase(packetId);
-			return result;
+			if(!wait) return std::make_shared<BaseLib::Variable>();
+			else
+			{
+				std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+				_rpcResponses[scriptId].erase(packetId);
+				return result;
+			}
 		}
-		if(!wait) return std::make_shared<BaseLib::Variable>();
 
 		int32_t i = 0;
-		std::unique_lock<std::mutex> waitLock(requestInfo.waitMutex);
-		while (!requestInfo.conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+		std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
+		while (!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
 		{
 			return response->finished || _stopped;
 		}))
@@ -1354,7 +1404,7 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
 		globals->rpcCallback = std::bind(&ScriptEngineClient::callMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 		{
 			std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
-			_requestInfo.emplace(std::piecewise_construct, std::make_tuple(id), std::make_tuple());
+			_requestInfo.emplace(std::piecewise_construct, std::make_tuple(id), std::make_tuple(std::make_shared<RequestInfo>()));
 		}
 		ScriptGuard scriptGuard(this, globals, id, scriptInfo);
 

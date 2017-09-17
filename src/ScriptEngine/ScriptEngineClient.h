@@ -81,6 +81,7 @@ private:
 		std::mutex waitMutex;
 		std::condition_variable conditionVariable;
 	};
+	typedef std::shared_ptr<RequestInfo> PRequestInfo;
 
 	class ScriptGuard
 	{
@@ -145,7 +146,7 @@ private:
 	std::mutex _scriptThreadMutex;
 	std::map<int32_t, PThreadInfo> _scriptThreads;
 	std::mutex _requestInfoMutex;
-	std::map<int32_t, RequestInfo> _requestInfo;
+	std::map<int32_t, PRequestInfo> _requestInfo;
 	std::map<std::string, std::shared_ptr<CacheInfo>> _scriptCache;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;

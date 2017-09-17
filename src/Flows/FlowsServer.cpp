@@ -38,7 +38,7 @@
 namespace Flows
 {
 
-FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 3, 1000)
+FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 3, 100000)
 {
 	_out.init(GD::bl.get());
 	_out.setPrefix("Flows Engine Server: ");
@@ -147,6 +147,26 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 3, 1000)
 	_rpcMethods.emplace("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware()));
 	_rpcMethods.emplace("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCWriteLog()));
 
+	//{{{ Rooms
+		_rpcMethods.emplace("addDeviceToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddDeviceToRoom()));
+		_rpcMethods.emplace("createRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateRoom()));
+		_rpcMethods.emplace("deleteRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteRoom()));
+		_rpcMethods.emplace("getDevicesInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDevicesInRoom()));
+		_rpcMethods.emplace("getRooms", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRooms()));
+		_rpcMethods.emplace("removeDeviceFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveDeviceFromRoom()));
+		_rpcMethods.emplace("updateRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateRoom()));
+	//}}}
+
+	//{{{ Categories
+		_rpcMethods.emplace("addCategoryToDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddCategoryToDevice()));
+		_rpcMethods.emplace("createCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateCategory()));
+		_rpcMethods.emplace("deleteCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteCategory()));
+		_rpcMethods.emplace("getCategories", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetCategories()));
+		_rpcMethods.emplace("getDevicesInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDevicesInCategory()));
+		_rpcMethods.emplace("removeCategoryFromDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveCategoryFromDevice()));
+		_rpcMethods.emplace("updateCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateCategory()));
+	//}}}
+
 #ifndef NO_SCRIPTENGINE
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("executePhpNode", std::bind(&FlowsServer::executePhpNode, this, std::placeholders::_1, std::placeholders::_2)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("executePhpNodeMethod", std::bind(&FlowsServer::executePhpNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
@@ -165,7 +185,7 @@ void FlowsServer::collectGarbage()
 {
 	try
 	{
-		_lastGargabeCollection = GD::bl->hf.getTime();
+		_lastGarbageCollection = GD::bl->hf.getTime();
 		std::vector<PFlowsProcess> processesToShutdown;
 		{
 			std::lock_guard<std::mutex> processGuard(_processMutex);
@@ -853,15 +873,18 @@ std::set<std::string> FlowsServer::insertSubflows(BaseLib::PVariable& subflowNod
 							}
 
 							if(node2WireIdIterator->second->stringValue != thisSubflowId) wireArray->push_back(node2Wire);
-							else wireArray->insert(wireArray->end(), wiresIn.at(port)->begin(), wiresIn.at(port)->end());
-
-							auto passthroughWiresIterators = passthroughWires.equal_range(port);
-							for(auto passthroughWiresIterator = passthroughWiresIterators.first; passthroughWiresIterator != passthroughWiresIterators.second; passthroughWiresIterator++)
+							else
 							{
-								BaseLib::PVariable entry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-								entry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(passthroughWiresIterator->second.second));
-								entry->structValue->emplace("port", std::make_shared<BaseLib::Variable>(passthroughWiresIterator->second.first));
-								wireArray->push_back(entry);
+								wireArray->insert(wireArray->end(), wiresIn.at(port)->begin(), wiresIn.at(port)->end());
+
+								auto passthroughWiresIterators = passthroughWires.equal_range(port);
+								for(auto passthroughWiresIterator = passthroughWiresIterators.first; passthroughWiresIterator != passthroughWiresIterators.second; passthroughWiresIterator++)
+								{
+									BaseLib::PVariable entry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+									entry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(passthroughWiresIterator->second.second));
+									entry->structValue->emplace("port", std::make_shared<BaseLib::Variable>(passthroughWiresIterator->second.first));
+									wireArray->push_back(entry);
+								}
 							}
 						}
 						node2WiresOutput->arrayValue = wireArray;
@@ -1162,6 +1185,8 @@ void FlowsServer::closeClientConnections()
 		{
 			for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 			{
+				std::unique_lock<std::mutex> waitLock((*i)->waitMutex);
+				waitLock.unlock();
 				(*i)->requestConditionVariable.notify_all();
 			}
 			collectGarbage();
@@ -1758,6 +1783,8 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 					}
 				}
 			}
+			std::unique_lock<std::mutex> waitLock(queueEntry->clientData->waitMutex);
+			waitLock.unlock();
 			queueEntry->clientData->requestConditionVariable.notify_all();
 		}
 		else if(index == 2) //Second queue for sending packets. Response is processed by first queue
@@ -1844,17 +1871,17 @@ BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::s
 			}
 		}
 
+		std::unique_lock<std::mutex> waitLock(clientData->waitMutex);
 		BaseLib::PVariable result = send(clientData, data);
-		if(result->errorStruct)
+		if(result->errorStruct || !wait)
 		{
 			std::lock_guard<std::mutex> responseGuard(clientData->rpcResponsesMutex);
 			clientData->rpcResponses.erase(packetId);
-			return result;
+			if(!wait) return std::make_shared<BaseLib::Variable>();
+			else return result;
 		}
-		if(!wait) return std::make_shared<BaseLib::Variable>();
 
 		int32_t i = 0;
-		std::unique_lock<std::mutex> waitLock(clientData->waitMutex);
 		while(!clientData->requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]{
 			return response->finished || clientData->closed || _stopServer;
 		}))
@@ -1965,7 +1992,7 @@ void FlowsServer::mainThread()
 			result = select(maxfd + 1, &readFileDescriptor, NULL, NULL, &timeout);
 			if(result == 0)
 			{
-				if(GD::bl->hf.getTime() - _lastGargabeCollection > 60000 || _clients.size() > GD::bl->settings.flowsServerMaxConnections() * 100 / 112) collectGarbage();
+				if(GD::bl->hf.getTime() - _lastGarbageCollection > 60000 || _clients.size() > GD::bl->settings.flowsServerMaxConnections() * 100 / 112) collectGarbage();
 				continue;
 			}
 			else if(result == -1)
@@ -2057,6 +2084,7 @@ PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			for(std::map<pid_t, PFlowsProcess>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
+				if(i->second->getClientData()->closed) continue;
 				if(GD::bl->settings.maxNodeThreadsPerProcess() == -1 || i->second->nodeThreadCount() + maxThreadCount <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
 				{
 					i->second->lastExecution = BaseLib::HelperFunctions::getTime();
@@ -2079,8 +2107,7 @@ PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
 				_processes[process->getPid()] = process;
 			}
 
-			std::mutex requestMutex;
-			std::unique_lock<std::mutex> requestLock(requestMutex);
+			std::unique_lock<std::mutex> requestLock(_processRequestMutex);
 			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(30000), [&]{ return (bool)(process->getClientData()); });
 
 			if(!process->getClientData())
@@ -2393,6 +2420,8 @@ BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData
 		}
 		clientData->pid = pid;
 		processIterator->second->setClientData(clientData);
+		std::unique_lock<std::mutex> requestLock(_processRequestMutex);
+		requestLock.unlock();
 		processIterator->second->requestConditionVariable.notify_all();
 		_out.printInfo("Info: Client with pid " + std::to_string(pid) + " successfully registered.");
 		return BaseLib::PVariable(new BaseLib::Variable());

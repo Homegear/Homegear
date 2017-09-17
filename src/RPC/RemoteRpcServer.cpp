@@ -46,13 +46,15 @@ RemoteRpcServer::RemoteRpcServer(std::shared_ptr<RpcClient> client)
 	path = "/RPC2";
 
 	_stopMethodProcessingThread = false;
-	_methodProcessingMessageAvailable = false;
 	_methodBufferHead = 0;
 	_methodBufferTail = 0;
 	if(!GD::bl->threadManager.start(_methodProcessingThread, false, GD::bl->settings.rpcClientThreadPriority(), GD::bl->settings.rpcClientThreadPolicy(), &RemoteRpcServer::processMethods, this))
 	{
 		removed = true;
 	}
+
+	_droppedEntries = 0;
+	_lastQueueFullError = 0;
 }
 
 RemoteRpcServer::~RemoteRpcServer()
@@ -71,14 +73,19 @@ void RemoteRpcServer::queueMethod(std::shared_ptr<std::pair<std::string, std::sh
 	try
 	{
 		if(removed) return;
-		_methodBufferMutex.lock();
+		std::unique_lock<std::mutex> lock(_methodProcessingThreadMutex);
 		int32_t tempHead = _methodBufferHead + 1;
 		if(tempHead >= _methodBufferSize) tempHead = 0;
 		if(tempHead == _methodBufferTail)
 		{
-			_methodBufferMutex.unlock();
-			std::cout << "Error: More than " << std::to_string(_methodBufferSize) << " methods are queued to be sent to server " << address.first << ". Your packet processing is too slow. Dropping method." << std::endl;
-			std::cerr << "Error: More than " << std::to_string(_methodBufferSize) << " methods are queued to be sent to server " << address.first << ". Your packet processing is too slow. Dropping method." << std::endl;
+			uint32_t droppedEntries = ++_droppedEntries;
+			if(BaseLib::HelperFunctions::getTime() - _lastQueueFullError > 10000)
+			{
+				_lastQueueFullError = BaseLib::HelperFunctions::getTime();
+				_droppedEntries = 0;
+				std::cout << "Error: More than " << std::to_string(_methodBufferSize) << " methods are queued to be sent to server " << address.first << ". Your packet processing is too slow. Dropping method. This message won't repeat for 10 seconds. Dropped outputs since last message: " << droppedEntries << std::endl;
+				std::cerr << "Error: More than " << std::to_string(_methodBufferSize) << " methods are queued to be sent to server " << address.first << ". Your packet processing is too slow. Dropping method. This message won't repeat for 10 seconds. Dropped outputs since last message: " << droppedEntries << std::endl;
+			}
 			return;
 		}
 
@@ -89,26 +96,23 @@ void RemoteRpcServer::queueMethod(std::shared_ptr<std::pair<std::string, std::sh
 			_methodBufferHead = 0;
 		}
 		_methodProcessingMessageAvailable = true;
-		_methodBufferMutex.unlock();
 
+		lock.unlock();
 		_methodProcessingConditionVariable.notify_one();
 	}
 	catch(const std::exception& ex)
 	{
-		_methodBufferMutex.unlock();
 		//Don't use the output object here => would cause deadlock because of error callback which is calling queueMethod again.
 		std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
 		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		_methodBufferMutex.unlock();
 		std::cout << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
 		std::cerr << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
 	}
 	catch(...)
 	{
-		_methodBufferMutex.unlock();
 		std::cout << "Unknown error in file " << __FILE__ <<  " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
 		std::cerr << "Unknown error in file " << __FILE__ <<  " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
 	}
@@ -116,34 +120,24 @@ void RemoteRpcServer::queueMethod(std::shared_ptr<std::pair<std::string, std::sh
 
 void RemoteRpcServer::processMethods()
 {
+	std::unique_lock<std::mutex> lock(_methodProcessingThreadMutex);
 	while(!_stopMethodProcessingThread)
 	{
-		std::unique_lock<std::mutex> lock(_methodProcessingThreadMutex);
 		try
 		{
-			_methodBufferMutex.lock();
-			if(_methodBufferHead == _methodBufferTail) //Only lock, when there is really no packet to process. This check is necessary, because the check of the while loop condition is outside of the mutex
-			{
-				_methodBufferMutex.unlock();
-				_methodProcessingConditionVariable.wait(lock, [&]{ return _methodProcessingMessageAvailable; });
-			}
-			else _methodBufferMutex.unlock();
-			if(_stopMethodProcessingThread)
-			{
-				lock.unlock();
-				return;
-			}
+			_methodProcessingConditionVariable.wait(lock, [&]{ return _methodProcessingMessageAvailable || _stopMethodProcessingThread; });
+			if(_stopMethodProcessingThread) return;
 
 			while(_methodBufferHead != _methodBufferTail)
 			{
-				_methodBufferMutex.lock();
 				std::shared_ptr<std::pair<std::string, std::shared_ptr<std::list<BaseLib::PVariable>>>> message = _methodBuffer[_methodBufferTail];
 				_methodBuffer[_methodBufferTail].reset();
 				_methodBufferTail++;
 				if(_methodBufferTail >= _methodBufferSize) _methodBufferTail = 0;
 				if(_methodBufferHead == _methodBufferTail) _methodProcessingMessageAvailable = false; //Set here, because otherwise it might be set to "true" in publish and then set to false again after the while loop
-				_methodBufferMutex.unlock();
+				lock.unlock();
 				if(!removed) _client->invokeBroadcast(this, message->first, message->second);
+				lock.lock();
 			}
 		}
 		catch(const std::exception& ex)
@@ -158,7 +152,6 @@ void RemoteRpcServer::processMethods()
 		{
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
-		lock.unlock();
 	}
 }
 

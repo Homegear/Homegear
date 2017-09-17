@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -34,6 +34,7 @@
 #include "../../config.h"
 #include <homegear-base/BaseLib.h>
 #include "Auth.h"
+#include "RestServer.h"
 #include "../WebServer/WebServer.h"
 
 #include <thread>
@@ -84,21 +85,6 @@ namespace Rpc
 			uint32_t connectionCount();
 			BaseLib::PVariable callMethod(std::string& methodName, BaseLib::PVariable& parameters);
 
-			/**
-			 * Checks if a client is an addon.
-			 *
-			 * @param clientID The id of the client to check.
-			 * @return Returns 1 if the client is known and is an addon, 0 if the client is known and no addon and -1 if the client is unknown.
-			 */
-			int32_t isAddonClient(int32_t clientID);
-
-			/**
-			 * Returns the clients IP address.
-			 *
-			 * @param clientID The id of the client to return the IP address for.
-			 * @return Returns the IP address or an empty string if the client is unknown.
-			 */
-			std::string getClientIP(int32_t clientID);
 			BaseLib::PEventHandler addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler);
 			void removeWebserverEventHandler(BaseLib::PEventHandler eventHandler);
 		protected:
@@ -129,6 +115,7 @@ namespace Rpc
 			std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
 			std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
 			std::unique_ptr<WebServer::WebServer> _webServer;
+			std::unique_ptr<RestServer> _restServer;
 			std::mutex _lifetick1Mutex;
 			std::pair<int64_t, bool> _lifetick1;
 			std::mutex _lifetick2Mutex;

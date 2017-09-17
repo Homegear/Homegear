@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -28,39 +28,31 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef SERVER_H_
-#define SERVER_H_
-
-#include <memory>
-#include <string>
+#ifndef RESTSERVER_H_
+#define RESTSERVER_H_
 
 #include <homegear-base/BaseLib.h>
-#include "RPCServer.h"
-#include "RPCMethods.h"
 
-namespace Rpc {
-class Server {
-public:
-	Server();
-	virtual ~Server();
+namespace Rpc
+{
+	class RestServer
+	{
+		public:
+			RestServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo);
+			virtual ~RestServer();
 
-	void dispose();
-	void registerMethods();
-	void start(BaseLib::Rpc::PServerInfo& serverInfo);
-	void stop();
-	bool lifetick();
-	bool isRunning();
-	const std::vector<std::shared_ptr<BaseLib::RpcClientInfo>> getClientInfo();
-	const std::shared_ptr<RPCServer> getServer();
-	const BaseLib::Rpc::PServerInfo getInfo();
-	uint32_t connectionCount();
-	BaseLib::PVariable callMethod(std::string methodName, BaseLib::PVariable parameters);
+			void process(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket);
+		private:
+			BaseLib::Output _out;
+			BaseLib::Rpc::PServerInfo _serverInfo;
+			BaseLib::Http _http;
+			std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
+			std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
 
-	BaseLib::PEventHandler addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler);
-	void removeWebserverEventHandler(BaseLib::PEventHandler eventHandler);
-protected:
-	std::shared_ptr<RPCServer> _server;
-};
+			void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content);
+			void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content, std::vector<std::string>& additionalHeaders);
 
-} /* namespace Rpc */
-#endif /* SERVER_H_ */
+			void send(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<char>& data);
+	};
+}
+#endif

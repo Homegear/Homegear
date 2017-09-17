@@ -329,11 +329,6 @@ void FamilyController::onRunScript(BaseLib::ScriptEngine::PScriptInfo& scriptInf
 	}
 }
 
-int32_t FamilyController::onIsAddonClient(int32_t clientID)
-{
-	return Rpc::Server::isAddonClientAll(clientID);
-}
-
 int32_t FamilyController::onCheckLicense(int32_t moduleId, int32_t familyId, int32_t deviceId, const std::string& licenseKey)
 {
 	try

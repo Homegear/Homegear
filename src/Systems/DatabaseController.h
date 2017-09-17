@@ -79,6 +79,22 @@ public:
 		virtual BaseLib::PVariable deleteData(std::string& component, std::string& key);
 	// }}}
 
+	// {{{ Rooms
+		virtual BaseLib::PVariable createRoom(BaseLib::PVariable translations);
+		virtual BaseLib::PVariable deleteRoom(uint64_t roomId);
+		virtual BaseLib::PVariable getRooms(std::string languageCode);
+		virtual bool roomExists(uint64_t roomId);
+		virtual BaseLib::PVariable updateRoom(uint64_t roomId, BaseLib::PVariable translations);
+	// }}}
+
+	// {{{ Categories
+		virtual BaseLib::PVariable createCategory(BaseLib::PVariable translations);
+		virtual BaseLib::PVariable deleteCategory(uint64_t categoryId);
+		virtual BaseLib::PVariable getCategories(std::string languageCode);
+		virtual bool categoryExists(uint64_t categoryId);
+		virtual BaseLib::PVariable updateCategory(uint64_t categoryId, BaseLib::PVariable translations);
+	// }}}
+
 	// {{{ Node data
 		virtual BaseLib::PVariable setNodeData(std::string& node, std::string& key, BaseLib::PVariable& value);
 		virtual BaseLib::PVariable getNodeData(std::string& node, std::string& key, bool requestFromTrustedServer = false);

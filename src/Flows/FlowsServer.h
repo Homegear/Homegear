@@ -94,6 +94,7 @@ private:
 	std::thread _maintenanceThread;
 	int32_t _backlog = 100;
 	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
+	std::mutex _processRequestMutex;
 	std::mutex _newProcessMutex;
 	std::mutex _processMutex;
 	std::map<pid_t, PFlowsProcess> _processes;
@@ -102,7 +103,7 @@ private:
 	std::mutex _stateMutex;
 	std::map<int32_t, PFlowsClientData> _clients;
 	int32_t _currentClientId = 0;
-	int64_t _lastGargabeCollection = 0;
+	int64_t _lastGarbageCollection = 0;
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 	std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> _rpcMethods;
 	std::map<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>> _localRpcMethods;

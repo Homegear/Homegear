@@ -10,7 +10,7 @@ set -x
 
 deb_mirror="http://mirrordirector.raspbian.org/raspbian/"
 deb_local_mirror=$deb_mirror
-deb_release="jessie"
+deb_release="stretch"
 
 bootsize="64M"
 buildenv="/root/rpi"
@@ -157,8 +157,8 @@ cat /etc/apt/sources.list
 apt -y install apt-transport-https ca-certificates
 update-ca-certificates --fresh
 mkdir -p /etc/apt/sources.list.d/
-echo "deb http://archive.raspberrypi.org/debian/ jessie main ui" > /etc/apt/sources.list.d/raspi.list
-echo "deb https://homegear.eu/packages/Raspbian/ jessie/" >> /etc/apt/sources.list.d/homegear.list
+echo "deb http://archive.raspberrypi.org/debian/ stretch main ui" > /etc/apt/sources.list.d/raspi.list
+echo "deb https://homegear.eu/packages/Raspbian/ stretch/" >> /etc/apt/sources.list.d/homegear.list
 wget http://homegear.eu/packages/Release.key
 apt-key add - < Release.key
 rm Release.key
