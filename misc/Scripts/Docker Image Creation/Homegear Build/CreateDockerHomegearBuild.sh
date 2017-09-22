@@ -519,6 +519,7 @@ if [[ -n $1 ]]; then
 	cleanUp homegear-rs2w
 fi
 
+sed -i '/\.orig\.tar\.gz/d' *.dsc
 EOF
 echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f libhomegear-ipc.deb && test -f homegear.deb && test -f homegear-nodes-core.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-intertechno.deb && test -f homegear-influxdb.deb; then
 	isodate=\`date +%Y%m%d\`
