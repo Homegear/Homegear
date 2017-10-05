@@ -959,7 +959,12 @@ void FlowsServer::startFlows()
 				std::string z;
 				auto zIterator = element->structValue->find("z");
 				if(zIterator != element->structValue->end()) z = zIterator->second->stringValue;
-				if(z.empty()) z = "g";
+				if(z.empty())
+				{
+					z = "g";
+					if(zIterator != element->structValue->end()) zIterator->second->stringValue = "g";
+					else element->structValue->emplace("z", std::make_shared<BaseLib::Variable>("g"));
+				}
 				element->structValue->emplace("flow", std::make_shared<BaseLib::Variable>(z));
 
 				if(allNodeIds.find(idIterator->second->stringValue) != allNodeIds.end())

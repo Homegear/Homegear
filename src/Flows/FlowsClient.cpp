@@ -980,6 +980,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 
 		_startUpComplete = false;
 
+		std::set<PNodeInfo> nodes;
 		PFlowInfoClient flow = std::make_shared<FlowInfoClient>();
 		flow->id = parameters->at(0)->integerValue;
 		flow->flow = parameters->at(1)->arrayValue->at(0);
@@ -1045,7 +1046,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 			}
 
 			flow->nodes.emplace(node->id, node);
-
+			nodes.emplace(node);
 			std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
 			_nodes.emplace(node->id, node);
 		}
@@ -1081,16 +1082,6 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 
 		//{{{ Init nodes
 			{
-
-				std::vector<PNodeInfo> nodes;
-				nodes.reserve(_nodes.size());
-				{
-					std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
-					for(auto& node : _nodes)
-					{
-						nodes.push_back(node.second);
-					}
-				}
 				std::set<std::string> nodesToRemove;
 				for(auto& node : nodes)
 				{

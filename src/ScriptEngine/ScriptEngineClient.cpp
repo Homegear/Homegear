@@ -139,27 +139,23 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 		int32_t i = 0;
 		while(_scriptThreads.size() > 0 && i < 310)
 		{
-			if(i > 0)
+			if(i > 0 && i % 10 == 0)
 			{
 				GD::out.printInfo("Info: Waiting for script threads to finish (1). Scripts still running: " + std::to_string(_scriptThreads.size()));
-
-				if(i % 10 == 0)
+				std::string ids = "IDs of running scripts: ";
+				std::lock_guard<std::mutex> threadGuard(_scriptThreadMutex);
+				for(std::map<int32_t, PThreadInfo>::iterator i = _scriptThreads.begin(); i != _scriptThreads.end(); ++i)
 				{
-					std::string ids = "IDs of running scripts: ";
-					std::lock_guard<std::mutex> threadGuard(_scriptThreadMutex);
-					for(std::map<int32_t, PThreadInfo>::iterator i = _scriptThreads.begin(); i != _scriptThreads.end(); ++i)
-					{
-						ids.append(std::to_string(i->first) + " ");
-					}
-					GD::out.printInfo(ids);
+					ids.append(std::to_string(i->first) + " ");
 				}
+				GD::out.printInfo(ids);
 			}
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			collectGarbage();
 			i++;
 		}
-		if(i == 30)
+		if(_scriptThreads.size() > 0)
 		{
 			GD::out.printError("Error: At least one script did not finish within 30 seconds during shutdown. Killing myself.");
 			kill(getpid(), 9);
