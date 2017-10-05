@@ -246,7 +246,11 @@ function createPackage {
  -- Sathya Laufer <sathya@laufers.net>  $date" > $sourcePath/debian/changelog
 	tar -zcpf ${3}_$version.orig.tar.gz $sourcePath
 	cd $sourcePath
-	debuild -j${buildthreads} -us -uc -sd
+	if [ $4 -eq 1 ]; then
+		debuild -j${buildthreads} -us -uc -sd
+	else
+		debuild -j${buildthreads} -us -uc
+	fi
 	cd ..
 	rm -Rf $sourcePath
 }
@@ -398,7 +402,7 @@ if [[ -n $2 ]]; then
 	rm -Rf homegear-rs2w-${1}/.git
 fi
 
-createPackage libhomegear-base $1 libhomegear-base
+createPackage libhomegear-base $1 libhomegear-base 0
 if test -f libhomegear-base*.deb; then
 	dpkg -i libhomegear-base*.deb
 else
@@ -406,7 +410,7 @@ else
 	exit 1
 fi
 
-createPackage libhomegear-node $1 libhomegear-node
+createPackage libhomegear-node $1 libhomegear-node 0
 if test -f libhomegear-node*.deb; then
 	dpkg -i libhomegear-node*.deb
 else
@@ -414,7 +418,7 @@ else
 	exit 1
 fi
 
-createPackage libhomegear-ipc $1 libhomegear-ipc
+createPackage libhomegear-ipc $1 libhomegear-ipc 0
 if test -f libhomegear-ipc*.deb; then
 	dpkg -i libhomegear-ipc*.deb
 else
@@ -423,7 +427,7 @@ else
 fi
 
 touch /tmp/HOMEGEAR_STATIC_INSTALLATION
-createPackage Homegear $1 homegear
+createPackage Homegear $1 homegear 0
 if test -f homegear*.deb; then
 	dpkg -i homegear*.deb
 else
@@ -431,17 +435,17 @@ else
 	exit 1
 fi
 
-createPackage homegear-nodes-core $1 homegear-nodes-core
-createPackage Homegear-HomeMaticBidCoS $1 homegear-homematicbidcos
-createPackage Homegear-HomeMaticWired $1 homegear-homematicwired
-createPackage Homegear-Insteon $1 homegear-insteon
-createPackage Homegear-MAX $1 homegear-max
-createPackage Homegear-PhilipsHue $1 homegear-philipshue
-createPackage Homegear-Sonos $1 homegear-sonos
-createPackage Homegear-Kodi $1 homegear-kodi
-createPackage Homegear-IPCam $1 homegear-ipcam
-createPackage Homegear-Intertechno $1 homegear-intertechno
-createPackage homegear-influxdb $1 homegear-influxdb
+createPackage homegear-nodes-core $1 homegear-nodes-core 0
+createPackage Homegear-HomeMaticBidCoS $1 homegear-homematicbidcos 0
+createPackage Homegear-HomeMaticWired $1 homegear-homematicwired 0
+createPackage Homegear-Insteon $1 homegear-insteon 0
+createPackage Homegear-MAX $1 homegear-max 0
+createPackage Homegear-PhilipsHue $1 homegear-philipshue 0
+createPackage Homegear-Sonos $1 homegear-sonos 0
+createPackage Homegear-Kodi $1 homegear-kodi 0
+createPackage Homegear-IPCam $1 homegear-ipcam 0
+createPackage Homegear-Intertechno $1 homegear-intertechno 0
+createPackage homegear-influxdb $1 homegear-influxdb 0
 if [[ -n $2 ]]; then
 	sha512=`sha512sum /usr/bin/homegear | awk '{print toupper($0)}' | cut -d ' ' -f 1`
 	sed -i '/if(sha512(homegearPath) != /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
@@ -455,18 +459,18 @@ if [[ -n $2 ]]; then
 	sed -i '/if(sha512(baselibPath) == /d' homegear-licensing-${1}/src/Licensing.cpp
 	sed -i "/if(baselibPath.empty()) return false;/aif(sha512(baselibPath) == \"$sha512\") return true;" homegear-licensing-${1}/src/Licensing.cpp
 
-	createPackage homegear-easy-licensing $1 homegear-easy-licensing
-	createPackage homegear-licensing $1 homegear-licensing
+	createPackage homegear-easy-licensing $1 homegear-easy-licensing 1
+	createPackage homegear-licensing $1 homegear-licensing 1
 
-	createPackage homegear-nodes-extra $1 homegear-nodes-extra
-	createPackage Homegear-Beckhoff $1 homegear-beckhoff
-	createPackage Homegear-KNX $1 homegear-knx
-	createPackage Homegear-EnOcean $1 homegear-enocean
-	createPackage homegear-easycam $1 homegear-easycam
-	createPackage homegear-easyled $1 homegear-easyled
-	createPackage homegear-easyled2 $1 homegear-easyled2
-	createPackage homegear-rsl $1 homegear-rsl
-	createPackage homegear-rs2w $1 homegear-rs2w
+	createPackage homegear-nodes-extra $1 homegear-nodes-extra 1
+	createPackage Homegear-Beckhoff $1 homegear-beckhoff 1
+	createPackage Homegear-KNX $1 homegear-knx 1
+	createPackage Homegear-EnOcean $1 homegear-enocean 1
+	createPackage homegear-easycam $1 homegear-easycam 1
+	createPackage homegear-easyled $1 homegear-easyled 1
+	createPackage homegear-easyled2 $1 homegear-easyled2 1
+	createPackage homegear-rsl $1 homegear-rsl 1
+	createPackage homegear-rs2w $1 homegear-rs2w 1
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackage.sh
