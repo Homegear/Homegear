@@ -389,6 +389,7 @@ void terminate(int signalNumber)
 			{
 				_shuttingDownMutex.unlock();
 				terminate(SIGTERM);
+				return;
 			}
 			_shuttingDownMutex.unlock();
 			GD::out.printInfo("Info: Reload complete.");

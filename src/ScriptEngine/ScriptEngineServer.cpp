@@ -1384,7 +1384,6 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 
 			if(!process->getClientData())
 			{
-				std::lock_guard<std::mutex> processGuard(_processMutex);
 				_processes.erase(process->getPid());
 				_out.printError("Error: Could not start new script engine process.");
 				return std::shared_ptr<ScriptEngineProcess>();
@@ -1799,7 +1798,7 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 		scriptInfo->started = true;
 		if(wait)
 		{
-			_executeScriptMutex.unlock();
+			executeScriptGuard.unlock();
 			while(!scriptFinishedInfo->conditionVariable.wait_for(scriptFinishedLock, std::chrono::milliseconds(10000), [&]{ return scriptFinishedInfo->finished || clientData->closed || _stopServer; }));
 		}
 	}

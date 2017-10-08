@@ -394,11 +394,15 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 			int64_t threadId = response->arrayValue->at(0)->integerValue64;
 			int32_t packetId = response->arrayValue->at(1)->integerValue;
 
-			std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
-			std::map<int64_t, PRequestInfo>::iterator requestIterator = _requestInfo.find(threadId);
-			if (requestIterator != _requestInfo.end())
+			PRequestInfo requestInfo;
 			{
-				std::unique_lock<std::mutex> waitLock(requestIterator->second->waitMutex);
+				std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
+				std::map<int64_t, PRequestInfo>::iterator requestIterator = _requestInfo.find(threadId);
+				if (requestIterator != _requestInfo.end()) requestInfo = requestIterator->second;
+			}
+			if(requestInfo)
+			{
+				std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
 				{
 					std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
 					auto responseIterator = _rpcResponses[threadId].find(packetId);
@@ -414,7 +418,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 					}
 				}
 				waitLock.unlock();
-				requestIterator->second->conditionVariable.notify_all();
+				requestInfo->conditionVariable.notify_all();
 			}
 		}
 		else //Node output

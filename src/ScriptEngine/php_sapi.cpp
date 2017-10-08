@@ -1791,7 +1791,7 @@ ZEND_FUNCTION(hg_i2c_write)
 	}
 	if(data.empty()) RETURN_FALSE;
 
-	if (write(descriptor, &data.at(0), data.size()) != (signed)data.size()) RETURN_FALSE;
+	if (write(descriptor, data.data(), data.size()) != (signed)data.size()) RETURN_FALSE;
 	RETURN_TRUE;
 }
 #endif

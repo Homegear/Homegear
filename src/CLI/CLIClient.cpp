@@ -77,7 +77,11 @@ void Client::ping()
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 			_sendMutex.lock();
-			if(_closed) return;
+			if(_closed)
+			{
+				_sendMutex.unlock();
+				return;
+			}
 			if(send(_fileDescriptor->descriptor, buffer, 1, MSG_NOSIGNAL) == -1)
 			{
 				_closed = true;

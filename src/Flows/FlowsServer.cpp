@@ -2411,23 +2411,27 @@ BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData
 #ifdef FLOWS_MANUAL_CLIENT_START
 		pid = 1;
 #endif
-		std::lock_guard<std::mutex> processGuard(_processMutex);
-		std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(pid);
-		if(processIterator == _processes.end())
+		PFlowsProcess process;
 		{
-			_out.printError("Error: Cannot register client. No process with pid " + std::to_string(pid) + " found.");
-			return BaseLib::Variable::createError(-1, "No matching process found.");
+			std::lock_guard<std::mutex> processGuard(_processMutex);
+			std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(pid);
+			if(processIterator == _processes.end())
+			{
+				_out.printError("Error: Cannot register client. No process with pid " + std::to_string(pid) + " found.");
+				return BaseLib::Variable::createError(-1, "No matching process found.");
+			}
+			process = processIterator->second;
 		}
-		if(processIterator->second->getClientData())
+		if(process->getClientData())
 		{
 			_out.printError("Error: Cannot register client, because it already is registered.");
 			return BaseLib::PVariable(new BaseLib::Variable());
 		}
 		clientData->pid = pid;
-		processIterator->second->setClientData(clientData);
+		process->setClientData(clientData);
 		std::unique_lock<std::mutex> requestLock(_processRequestMutex);
 		requestLock.unlock();
-		processIterator->second->requestConditionVariable.notify_all();
+		process->requestConditionVariable.notify_all();
 		_out.printInfo("Info: Client with pid " + std::to_string(pid) + " successfully registered.");
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
@@ -2464,7 +2468,11 @@ BaseLib::PVariable FlowsServer::executePhpNode(PFlowsClientData& clientData, Bas
 		{
 			filename = parameters->at(2)->stringValue.substr(parameters->at(2)->stringValue.find_last_of('/') + 1);
 			auto threadCountIterator = _maxThreadCounts.find(parameters->at(0)->stringValue);
-			if(threadCountIterator == _maxThreadCounts.end()) GD::out.printError("Error: Could not determine maximum thread count of node \"" + parameters->at(0)->stringValue + "\". Node is unknown.");
+			if(threadCountIterator == _maxThreadCounts.end())
+			{
+				GD::out.printError("Error: Could not determine maximum thread count of node \"" + parameters->at(0)->stringValue + "\". Node is unknown.");
+				return BaseLib::Variable::createError(-32500, "Unknown application error.");
+			}
 			scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode, parameters->at(1), parameters->at(2)->stringValue, filename, threadCountIterator->second);
 		}
 		GD::scriptEngineServer->executeScript(scriptInfo, false);
