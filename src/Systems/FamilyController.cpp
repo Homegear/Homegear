@@ -355,6 +355,38 @@ int32_t FamilyController::onCheckLicense(int32_t moduleId, int32_t familyId, int
     return -1;
 }
 
+uint64_t FamilyController::onGetRoomIdByName(std::string& name)
+{
+	try
+	{
+		BaseLib::PVariable rooms = GD::bl->db->getRooms("");
+		for(auto& room : *rooms->arrayValue)
+		{
+			auto idIterator = room->structValue->find("ID");
+			if(idIterator == room->structValue->end()) continue;
+			auto translationsIterator = room->structValue->find("TRANSLATIONS");
+			if(translationsIterator == room->structValue->end()) continue;
+			for(auto& translation : *translationsIterator->second->structValue)
+			{
+				if(translation.second->stringValue == name) return idIterator->second->integerValue64;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return 0;
+}
+
 void FamilyController::onDecryptDeviceDescription(int32_t moduleId, const std::vector<char>& input, std::vector<char>& output)
 {
 	try

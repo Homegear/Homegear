@@ -645,7 +645,12 @@ BaseLib::PVariable DatabaseController::getRooms(std::string languageCode)
 			{
 				auto translationIterator = translations->structValue->find(languageCode);
 				if(translationIterator != translations->structValue->end()) room->structValue->emplace("NAME", translationIterator->second);
-				else room->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+				else
+				{
+					translationIterator = translations->structValue->find("en-US");
+					if(translationIterator != translations->structValue->end()) room->structValue->emplace("NAME", translationIterator->second);
+					else room->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+				}
 			}
 			rooms->arrayValue->push_back(room);
 		}
@@ -795,7 +800,12 @@ BaseLib::PVariable DatabaseController::getCategories(std::string languageCode)
 			{
 				auto translationIterator = translations->structValue->find(languageCode);
 				if(translationIterator != translations->structValue->end()) category->structValue->emplace("NAME", translationIterator->second);
-				else category->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+				else
+				{
+					translationIterator = translations->structValue->find("en-US");
+					if(translationIterator != translations->structValue->end()) category->structValue->emplace("NAME", translationIterator->second);
+					else category->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+				}
 			}
 			categories->arrayValue->push_back(category);
 		}
