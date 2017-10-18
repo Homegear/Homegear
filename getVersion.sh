@@ -9,7 +9,7 @@ int main(int argc, char** argv)
 	return 0;
 }
 EOF
-g++ -std=c++11 -o $dir/libhomegear-base-version $dir/libhomegear-base-version.cpp -lhomegear-base -lgcrypt -lgnutls -lpthread
+g++ -std=c++11 -o $dir/libhomegear-base-version $dir/libhomegear-base-version.cpp -lhomegear-base -lgcrypt -lgnutls -lpthread -latomic
 chmod 755 $dir/libhomegear-base-version
 $dir/libhomegear-base-version
 rm -Rf $dir
