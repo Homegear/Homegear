@@ -9740,7 +9740,7 @@ RED.view = (function() {
                         source:nn,
                         sourcePort:0,
                         target: spliceLink.target,
-                        targetPort: 0
+                        targetPort: spliceLink.targetPort
                     };
                     RED.nodes.addLink(link1);
                     RED.nodes.addLink(link2);
@@ -10361,7 +10361,7 @@ RED.view = (function() {
                             source:moving_set[0].n,
                             sourcePort:0,
                             target: spliceLink.target,
-                            targetPort: 0
+                            targetPort: spliceLink.targetPort
                         };
                         RED.nodes.addLink(link1);
                         RED.nodes.addLink(link2);
@@ -11224,7 +11224,8 @@ RED.view = (function() {
                     .on("touchend",function(d,i){portMouseUp(d,PORT_TYPE_OUTPUT,i);} )
                     .on("mouseover",function(d){portMouseOver(d3.select(this),d,PORT_TYPE_OUTPUT,i);})
                     .on("mouseout",function(d) {portMouseOut(d3.select(this),d,PORT_TYPE_OUTPUT,i);});
-                inGroup.append("svg:text").attr("class","port_label").attr("x",18).attr("y",20).style("font-size","10px").text("input");
+                inGroup.append("svg:text").attr("class","port_label").attr("x",20).attr("y",8).style("font-size","10px").text("input");
+                inGroup.append("svg:text").attr("class","port_label port_index").attr("x",20).attr("y",24).text(function(d,i){ return i+1});
 
                 subflowOutputs.each(function(d,i) {
                     if (d.dirty) {

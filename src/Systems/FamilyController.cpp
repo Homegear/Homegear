@@ -356,6 +356,38 @@ int32_t FamilyController::onCheckLicense(int32_t moduleId, int32_t familyId, int
     return -1;
 }
 
+uint64_t FamilyController::onGetRoomIdByName(std::string& name)
+{
+	try
+	{
+		BaseLib::PVariable rooms = GD::bl->db->getRooms("");
+		for(auto& room : *rooms->arrayValue)
+		{
+			auto idIterator = room->structValue->find("ID");
+			if(idIterator == room->structValue->end()) continue;
+			auto translationsIterator = room->structValue->find("TRANSLATIONS");
+			if(translationsIterator == room->structValue->end()) continue;
+			for(auto& translation : *translationsIterator->second->structValue)
+			{
+				if(translation.second->stringValue == name) return idIterator->second->integerValue64;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return 0;
+}
+
 void FamilyController::onDecryptDeviceDescription(int32_t moduleId, const std::vector<char>& input, std::vector<char>& output)
 {
 	try
@@ -1256,17 +1288,26 @@ void FamilyController::physicalInterfaceSetup(int32_t userID, int32_t groupID, b
     }
 }
 
-BaseLib::PVariable FamilyController::listInterfaces(int32_t familyID)
+BaseLib::PVariable FamilyController::listInterfaces(int32_t familyId)
 {
 	try
 	{
 		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::VariableType::tArray));
 
-		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
-		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		if(familyId != -1)
 		{
-			BaseLib::PVariable tempArray = i->second->physicalInterfaces()->listInterfaces();
-			array->arrayValue->insert(array->arrayValue->end(), tempArray->arrayValue->begin(), tempArray->arrayValue->end());
+			auto family = getFamily(familyId);
+			if(!family) return array;
+			return family->physicalInterfaces()->listInterfaces();
+		}
+		else
+		{
+			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
+			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+			{
+				BaseLib::PVariable tempArray = i->second->physicalInterfaces()->listInterfaces();
+				array->arrayValue->insert(array->arrayValue->end(), tempArray->arrayValue->begin(), tempArray->arrayValue->end());
+			}
 		}
 
 		return array;

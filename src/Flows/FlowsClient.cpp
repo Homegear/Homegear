@@ -394,11 +394,15 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 			int64_t threadId = response->arrayValue->at(0)->integerValue64;
 			int32_t packetId = response->arrayValue->at(1)->integerValue;
 
-			std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
-			std::map<int64_t, PRequestInfo>::iterator requestIterator = _requestInfo.find(threadId);
-			if (requestIterator != _requestInfo.end())
+			PRequestInfo requestInfo;
 			{
-				std::unique_lock<std::mutex> waitLock(requestIterator->second->waitMutex);
+				std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
+				std::map<int64_t, PRequestInfo>::iterator requestIterator = _requestInfo.find(threadId);
+				if (requestIterator != _requestInfo.end()) requestInfo = requestIterator->second;
+			}
+			if(requestInfo)
+			{
+				std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
 				{
 					std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
 					auto responseIterator = _rpcResponses[threadId].find(packetId);
@@ -414,7 +418,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 					}
 				}
 				waitLock.unlock();
-				requestIterator->second->conditionVariable.notify_all();
+				requestInfo->conditionVariable.notify_all();
 			}
 		}
 		else //Node output
@@ -980,6 +984,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 
 		_startUpComplete = false;
 
+		std::set<PNodeInfo> nodes;
 		PFlowInfoClient flow = std::make_shared<FlowInfoClient>();
 		flow->id = parameters->at(0)->integerValue;
 		flow->flow = parameters->at(1)->arrayValue->at(0);
@@ -1045,7 +1050,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 			}
 
 			flow->nodes.emplace(node->id, node);
-
+			nodes.emplace(node);
 			std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
 			_nodes.emplace(node->id, node);
 		}
@@ -1081,16 +1086,6 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 
 		//{{{ Init nodes
 			{
-
-				std::vector<PNodeInfo> nodes;
-				nodes.reserve(_nodes.size());
-				{
-					std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
-					for(auto& node : _nodes)
-					{
-						nodes.push_back(node.second);
-					}
-				}
 				std::set<std::string> nodesToRemove;
 				for(auto& node : nodes)
 				{
