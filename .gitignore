@@ -79,3 +79,7 @@ stamp-h?
 .libs/
 *.l[ao]
 *~
+
+#CLion
+cmake-build-debug
+.idea
