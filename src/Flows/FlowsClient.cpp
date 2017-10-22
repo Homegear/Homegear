@@ -29,6 +29,8 @@
 */
 
 #include "FlowsClient.h"
+
+#include <utility>
 #include "../GD/GD.h"
 
 namespace Flows
@@ -43,7 +45,7 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 3, 100000)
 	_frontendConnected = false;
 	_startUpComplete = false;
 
-	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
+	_fileDescriptor = std::make_shared<BaseLib::FileDescriptor>();
 	_out.init(GD::bl.get());
 	_out.setPrefix("Flows Engine (" + std::to_string(getpid()) + "): ");
 
@@ -198,7 +200,7 @@ void FlowsClient::start()
 			}
 
 			if(GD::bl->debugLevel >= 4 && i == 0) std::cout << "Info: Trying to connect..." << std::endl;
-			sockaddr_un remoteAddress;
+			sockaddr_un remoteAddress{};
 			remoteAddress.sun_family = AF_LOCAL;
 			//104 is the size on BSD systems - slightly smaller than in Linux
 			if(_socketPath.length() > 104)
@@ -209,7 +211,7 @@ void FlowsClient::start()
 			}
 			strncpy(remoteAddress.sun_path, _socketPath.c_str(), 104);
 			remoteAddress.sun_path[103] = 0; //Just to make sure it is null terminated.
-			if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + 1 + sizeof(remoteAddress.sun_family)) == -1)
+			if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, static_cast<socklen_t>(strlen(remoteAddress.sun_path) + 1 + sizeof(remoteAddress.sun_family))) == -1)
 			{
 				if(i == 0)
 				{
@@ -237,10 +239,10 @@ void FlowsClient::start()
 		int32_t processedBytes = 0;
 		while(!_stopped)
 		{
-			timeval timeout;
+			timeval timeout{};
 			timeout.tv_sec = 0;
 			timeout.tv_usec = 100000;
-			fd_set readFileDescriptor;
+			fd_set readFileDescriptor{};
 			FD_ZERO(&readFileDescriptor);
 			{
 				auto fileDescriptorGuard = GD::bl->fileDescriptorManager.getLock();
@@ -248,7 +250,7 @@ void FlowsClient::start()
 				FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
 			}
 
-			result = select(_fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
+			result = select(_fileDescriptor->descriptor + 1, &readFileDescriptor, nullptr, nullptr, &timeout);
 			if(result == 0) continue;
 			else if(result == -1)
 			{
@@ -257,14 +259,14 @@ void FlowsClient::start()
 				return;
 			}
 
-			bytesRead = read(_fileDescriptor->descriptor, &buffer[0], 1024);
+			bytesRead = static_cast<int32_t>(read(_fileDescriptor->descriptor, &buffer[0], 1024));
 			if(bytesRead <= 0) //read returns 0, when connection is disrupted.
 			{
 				_out.printMessage("Connection to flows server closed (2). Exiting.");
 				return;
 			}
 
-			if(bytesRead > (signed)buffer.size()) bytesRead = buffer.size();
+			if(bytesRead > (signed)buffer.size()) bytesRead = static_cast<int32_t>(buffer.size());
 
 			try
 			{
@@ -318,7 +320,7 @@ void FlowsClient::registerClient()
 	try
 	{
 		std::string methodName("registerFlowsClient");
-		Flows::PArray parameters(new Flows::Array{Flows::PVariable(new Flows::Variable((int32_t)getpid()))});
+		Flows::PArray parameters(new Flows::Array{std::make_shared<Flows::Variable>((int32_t)getpid())});
 		Flows::PVariable result = invoke(methodName, parameters, true);
 		if(result->errorStruct)
 		{
@@ -357,7 +359,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 				_out.printError("Error: Wrong parameter count while calling method " + queueEntry->methodName);
 				return;
 			}
-			std::map<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
+            auto localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
 			if(localMethodIterator == _localRpcMethods.end())
 			{
 				_out.printError("Warning: RPC method not found: " + queueEntry->methodName);
@@ -369,7 +371,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 			if(GD::bl->debugLevel >= 5)
 			{
 				_out.printDebug("Debug: Server is calling RPC method: " + queueEntry->methodName + " Parameters:");
-				for(auto parameter : *queueEntry->parameters)
+				for(const auto& parameter : *queueEntry->parameters)
 				{
 					parameter->print(true, false);
 				}
@@ -397,7 +399,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 			PRequestInfo requestInfo;
 			{
 				std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
-				std::map<int64_t, PRequestInfo>::iterator requestIterator = _requestInfo.find(threadId);
+                auto requestIterator = _requestInfo.find(threadId);
 				if (requestIterator != _requestInfo.end()) requestInfo = requestIterator->second;
 			}
 			if(requestInfo)
@@ -463,7 +465,7 @@ Flows::PVariable FlowsClient::send(std::vector<char>& data)
 		std::lock_guard<std::mutex> sendGuard(_sendMutex);
 		while (totallySentBytes < (signed)data.size())
 		{
-			int32_t sentBytes = ::send(_fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
+			auto sentBytes = static_cast<int32_t>(::send(_fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL));
 			if(sentBytes <= 0)
 			{
 				if(errno == EAGAIN) continue;
@@ -485,7 +487,7 @@ Flows::PVariable FlowsClient::send(std::vector<char>& data)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return Flows::PVariable(new Flows::Variable());
+    return std::make_shared<Flows::Variable>();
 }
 
 Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray parameters, bool wait)
@@ -901,7 +903,7 @@ Flows::PVariable FlowsClient::getConfigParameter(std::string nodeId, std::string
 	try
 	{
 		Flows::PINode node = _nodeManager->getNode(nodeId);
-		if(node) return node->getConfigParameterIncoming(name);
+		if(node) return node->getConfigParameterIncoming(std::move(name));
 	}
 	catch(const std::exception& ex)
     {
@@ -1031,17 +1033,17 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 					output.reserve(outputIterator->structValue->size());
 					for(auto& wireIterator : *outputIterator->arrayValue)
 					{
-						auto idIterator = wireIterator->structValue->find("id");
-						if(idIterator == wireIterator->structValue->end()) continue;
+						auto innerIdIterator = wireIterator->structValue->find("id");
+						if(innerIdIterator == wireIterator->structValue->end()) continue;
 						uint32_t port = 0;
 						auto portIterator = wireIterator->structValue->find("port");
 						if(portIterator != wireIterator->structValue->end())
 						{
-							if(portIterator->second->type == Flows::VariableType::tString) port = BaseLib::Math::getNumber(portIterator->second->stringValue);
-							else port = portIterator->second->integerValue;
+							if(portIterator->second->type == Flows::VariableType::tString) port = static_cast<uint32_t>(BaseLib::Math::getNumber(portIterator->second->stringValue));
+							else port = static_cast<uint32_t>(portIterator->second->integerValue);
 						}
 						Wire wire;
-						wire.id = idIterator->second->stringValue;
+						wire.id = innerIdIterator->second->stringValue;
 						wire.port = port;
 						output.push_back(wire);
 					}
@@ -1074,7 +1076,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 						if(nodeIterator->second->wiresIn.size() <= wireOut.port) nodeIterator->second->wiresIn.resize(wireOut.port + 1);
 						Flows::Wire wire;
 						wire.id = node.second->id;
-						wire.port = outputIndex;
+						wire.port = static_cast<uint32_t>(outputIndex);
 						nodeIterator->second->wiresIn.at(wireOut.port).push_back(wire);
 					}
 					outputIndex++;
@@ -1369,7 +1371,7 @@ Flows::PVariable FlowsClient::nodeOutput(Flows::PArray& parameters)
 	{
 		if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
-		queueOutput(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2));
+		queueOutput(parameters->at(0)->stringValue, static_cast<uint32_t>(parameters->at(1)->integerValue), parameters->at(2));
 		return std::make_shared<Flows::Variable>();
 	}
     catch(const std::exception& ex)
@@ -1448,7 +1450,7 @@ Flows::PVariable FlowsClient::executePhpNodeBaseMethod(Flows::PArray& parameters
 			if(innerParameters->at(2)->type != Flows::VariableType::tInteger64) return Flows::Variable::createError(-1, "Parameter 3 is not of type integer.");
 			if(innerParameters->at(3)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 4 is not of type string.");
 
-			subscribePeer(innerParameters->at(0)->stringValue, innerParameters->at(1)->integerValue64, innerParameters->at(2)->integerValue, innerParameters->at(3)->stringValue);
+			subscribePeer(innerParameters->at(0)->stringValue, static_cast<uint64_t>(innerParameters->at(1)->integerValue64), innerParameters->at(2)->integerValue, innerParameters->at(3)->stringValue);
 			return std::make_shared<Flows::Variable>();
 		}
 		else if(methodName == "unsubscribePeer")
@@ -1459,7 +1461,7 @@ Flows::PVariable FlowsClient::executePhpNodeBaseMethod(Flows::PArray& parameters
 			if(innerParameters->at(2)->type != Flows::VariableType::tInteger64) return Flows::Variable::createError(-1, "Parameter 3 is not of type integer.");
 			if(innerParameters->at(3)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 4 is not of type string.");
 
-			unsubscribePeer(innerParameters->at(0)->stringValue, innerParameters->at(1)->integerValue64, innerParameters->at(2)->integerValue, innerParameters->at(3)->stringValue);
+			unsubscribePeer(innerParameters->at(0)->stringValue, static_cast<uint64_t>(innerParameters->at(1)->integerValue64), innerParameters->at(2)->integerValue, innerParameters->at(3)->stringValue);
 			return std::make_shared<Flows::Variable>();
 		}
 		else if(methodName == "output")
@@ -1468,7 +1470,7 @@ Flows::PVariable FlowsClient::executePhpNodeBaseMethod(Flows::PArray& parameters
 			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
 			if(innerParameters->at(1)->type != Flows::VariableType::tInteger64) return Flows::Variable::createError(-1, "Parameter 2 is not of type integer.");
 
-			queueOutput(innerParameters->at(0)->stringValue, innerParameters->at(1)->integerValue, innerParameters->at(2));
+			queueOutput(innerParameters->at(0)->stringValue, static_cast<uint32_t>(innerParameters->at(1)->integerValue), innerParameters->at(2));
 			return std::make_shared<Flows::Variable>();
 		}
 		else if(methodName == "nodeEvent")
@@ -1603,14 +1605,14 @@ Flows::PVariable FlowsClient::broadcastEvent(Flows::PArray& parameters)
 		if(parameters->size() != 4) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
 		std::lock_guard<std::mutex> eventsGuard(_peerSubscriptionsMutex);
-		uint64_t peerId = parameters->at(0)->integerValue64;
+		auto peerId = static_cast<uint64_t>(parameters->at(0)->integerValue64);
 		int32_t channel = parameters->at(1)->integerValue;
 
 		auto peerIterator = _peerSubscriptions.find(peerId);
-		if(peerIterator == _peerSubscriptions.end()) return Flows::PVariable(new Flows::Variable());
+		if(peerIterator == _peerSubscriptions.end()) return std::make_shared<Flows::Variable>();
 
 		auto channelIterator = peerIterator->second.find(channel);
-		if(channelIterator == peerIterator->second.end()) return Flows::PVariable(new Flows::Variable());
+		if(channelIterator == peerIterator->second.end()) return std::make_shared<Flows::Variable>();
 
 		for(uint32_t j = 0; j < parameters->at(2)->arrayValue->size(); j++)
 		{

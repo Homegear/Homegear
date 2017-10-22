@@ -3,6 +3,8 @@ project(Homegear)
 
 set(CMAKE_CXX_STANDARD 11)
 
+include_directories(/usr/include/php7-homegear/ext /usr/include/php7-homegear/main /usr/include/php7-homegear/sapi /usr/include/php7-homegear/TSRM /usr/include/php7-homegear/Zend)
+
 set(SOURCE_FILES
         homegear-miscellaneous/src/Factory.cpp
         homegear-miscellaneous/src/Factory.h
@@ -106,6 +108,6 @@ set(SOURCE_FILES
         src/Monitor.h
         config.h)
 
-add_custom_target(homegear COMMAND /home/sathya/Projekte/Homegear/makeAll.sh SOURCES ${SOURCE_FILES})
+add_custom_target(homegear COMMAND ../../makeAll.sh SOURCES ${SOURCE_FILES})
 
 add_library(homegear-dummy ${SOURCE_FILES})
