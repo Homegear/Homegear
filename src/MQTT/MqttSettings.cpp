@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -51,6 +51,7 @@ void MqttSettings::reset()
 	_verifyCertificate = true;
 	_certPath = "";
 	_keyPath = "";
+	_bmxTopic = false;
 }
 
 void MqttSettings::load(std::string filename)
@@ -165,6 +166,61 @@ void MqttSettings::load(std::string filename)
 				{
 					_jsonobjTopic = (BaseLib::HelperFunctions::toLower(value) == "true");
 					GD::bl->out.printDebug("Debug (MQTT settings): jsonobjTopic set to " + std::to_string(_jsonobjTopic));
+				}
+				else if(name == "bmxtopic")
+				{
+					_bmxTopic = (BaseLib::HelperFunctions::toLower(value) == "true");
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxTopic set to " + std::to_string(_bmxTopic));
+					if (_bmxTopic) {
+						GD::bl->out.printWarning("Warning (MQTT settings): bmxTopic is enabled, so all other topics will be blocked.");
+					}
+				}
+				else if(name == "bmxhostname")
+				{
+					_bmxHostname = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxHostname set to " + _bmxHostname);
+				}
+				else if(name == "bmxport")
+				{
+					_bmxPort = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxPort set to " + _bmxPort);
+				}
+				else if(name == "bmxprefix")
+				{
+					_bmxPrefix = value;
+					if(!_bmxPrefix.empty() && _bmxPrefix.back() != '/') _bmxPrefix.push_back('/');
+					if(_bmxPrefix == "/") _bmxPrefix = "";
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxPrefix set to " + _bmxPrefix);
+				}
+				else if(name == "bmxorgid")
+				{
+					_bmxOrgId = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxOrgId set to " + _bmxOrgId);
+				}
+				else if(name == "bmxdevtypeid")
+				{
+					_bmxDevTypeId = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxDevTypeId set to " + _bmxDevTypeId);
+				}
+				else if(name == "bmxgwtypeid")
+				{
+					_bmxGwTypeId = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxGwTypeId set to " + _bmxGwTypeId);
+				}
+				else if(name == "bmxdeviceid")
+				{
+					_bmxDeviceId = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxDeviceId set to " + _bmxDeviceId);
+				}
+				else if(name == "bmxusername")
+				{
+					_bmxUsername = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxUsername set to " + _bmxUsername);
+				}
+				else if(name == "bmxtoken")
+				{
+					_bmxToken = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxToken set to " + _bmxToken );
 				}
 				else if(name == "enablessl")
 				{
