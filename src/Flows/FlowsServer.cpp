@@ -35,6 +35,10 @@
 // Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
 //#define FLOWS_MANUAL_CLIENT_START
 
+#ifdef FLOWS_MANUAL_CLIENT_START
+	pid_t _manualClientCurrentProcessId = 1;
+#endif
+
 namespace Flows
 {
 
@@ -2101,7 +2105,7 @@ PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
 		PFlowsProcess process(new FlowsProcess());
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rl" };
 #ifdef FLOWS_MANUAL_CLIENT_START
-		process->setPid(1);
+		process->setPid(_manualClientCurrentProcessId);
 #else
 		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
 #endif
@@ -2409,7 +2413,7 @@ BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData
 	{
 		pid_t pid = parameters->at(0)->integerValue;
 #ifdef FLOWS_MANUAL_CLIENT_START
-		pid = 1;
+		pid = _manualClientCurrentProcessId++;
 #endif
 		PFlowsProcess process;
 		{

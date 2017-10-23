@@ -40,6 +40,10 @@
 namespace ScriptEngine
 {
 
+#ifdef SE_MANUAL_CLIENT_START
+    pid_t _manualClientCurrentProcessId = 1;
+#endif
+
 ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 {
 	_out.init(GD::bl.get());
@@ -1371,7 +1375,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess(nodeProcess));
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rse" };
 #ifdef SE_MANUAL_CLIENT_START
-		process->setPid(1);
+		process->setPid(_manualClientCurrentProcessId);
 #else
 		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
 #endif
@@ -1875,7 +1879,7 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
 		{
 			pid_t pid = parameters->at(0)->integerValue;
 #ifdef SE_MANUAL_CLIENT_START
-			pid = 1;
+			pid = _manualClientCurrentProcessId++;
 #endif
 			std::unique_lock<std::mutex> processGuard(_processMutex);
 			std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(pid);
