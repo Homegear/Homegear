@@ -453,7 +453,7 @@ static const zend_function_entry homegear_node_base_methods[] = {
 
 void php_node_startup()
 {
-	zend_class_entry homegearNodeBaseCe;
+	zend_class_entry homegearNodeBaseCe{};
 	INIT_CLASS_ENTRY(homegearNodeBaseCe, "HomegearNodeBase", homegear_node_base_methods);
 	homegear_node_base_class_entry = zend_register_internal_class(&homegearNodeBaseCe);
 	zend_declare_class_constant_stringl(homegear_node_base_class_entry, "NODE_ID", sizeof("NODE_ID") - 1, SEG(nodeId).c_str(), SEG(nodeId).size());

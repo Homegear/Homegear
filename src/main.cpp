@@ -78,6 +78,7 @@ std::shared_ptr<std::function<void(int32_t, std::string)>> _errorCallback;
 
 void exitHomegear(int exitCode)
 {
+	if(GD::eventHandler) GD::eventHandler->dispose();
 	if(GD::familyController) GD::familyController->disposeDeviceFamilies();
 	if(GD::bl->db)
 	{

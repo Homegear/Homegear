@@ -54,6 +54,8 @@
 #include <zend_exceptions.h>
 #include <ext/standard/info.h>
 
+static std::function<void()> _phpNodeStartup;
+
 void php_homegear_build_argv(std::vector<std::string>& arguments);
 int php_homegear_init();
 void php_homegear_shutdown();

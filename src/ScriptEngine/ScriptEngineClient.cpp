@@ -83,6 +83,8 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastDeleteDevices", std::bind(&ScriptEngineClient::broadcastDeleteDevices, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastUpdateDevice", std::bind(&ScriptEngineClient::broadcastUpdateDevice, this, std::placeholders::_1)));
 
+	_phpNodeStartup = std::bind(&php_node_startup);
+
 	php_homegear_init();
 }
 
@@ -1123,13 +1125,13 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			std::lock_guard<std::mutex> resourceGuard(_resourceMutex);
 			ts_resource(0); //Replaces TSRMLS_FETCH()
 
-			if(!scriptInfo->script.empty())
+			if (!scriptInfo->script.empty())
 			{
 				zendHandle.type = ZEND_HANDLE_MAPPED;
 				zendHandle.handle.fp = nullptr;
 				zendHandle.handle.stream.handle = nullptr;
 				zendHandle.handle.stream.closer = nullptr;
-				zendHandle.handle.stream.mmap.buf = (char*)scriptInfo->script.c_str(); //String is not modified
+				zendHandle.handle.stream.mmap.buf = (char*) scriptInfo->script.c_str(); //String is not modified
 				zendHandle.handle.stream.mmap.len = scriptInfo->script.size();
 				zendHandle.filename = scriptInfo->fullPath.c_str();
 				zendHandle.opened_path = nullptr;
@@ -1144,9 +1146,9 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			}
 
 			zend_homegear_globals* globals = php_homegear_get_globals();
-			if(!globals) return;
+			if (!globals) return;
 
-			if(type == ScriptInfo::ScriptType::web)
+			if (type == ScriptInfo::ScriptType::web)
 			{
 				globals->webRequest = true;
 				globals->commandLine = false;
@@ -1161,11 +1163,11 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 				globals->peerId = scriptInfo->peerId;
 			}
 
-			if(type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
+			if (type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
 			{
 				globals->nodeId = scriptInfo->nodeInfo->structValue->at("id")->stringValue;
 				auto flowIdIterator = scriptInfo->nodeInfo->structValue->at("info")->structValue->find("z");
-				if(flowIdIterator != scriptInfo->nodeInfo->structValue->at("info")->structValue->end())
+				if (flowIdIterator != scriptInfo->nodeInfo->structValue->at("info")->structValue->end())
 				{
 					globals->flowId = flowIdIterator->second->stringValue;
 				}
@@ -1174,7 +1176,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 
 			ZEND_TSRMLS_CACHE_UPDATE();
 
-			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::statefulNode)
+			if (type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::statefulNode)
 			{
 				//BaseLib::Base64::encode(BaseLib::HelperFunctions::getRandomBytes(16), globals->token);
 				BaseLib::Base64::encode(std::vector<uint8_t>{0, 1, 2, 3, 4, 5}, globals->token);
@@ -1184,10 +1186,10 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 				PhpEvents::eventsMap.emplace(id, phpEvents);
 			}
 
-			SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
+			SG(server_context) = (void*) serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
 			SG(default_mimetype) = nullptr;
 			SG(default_charset) = nullptr;
-			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
+			if (type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
 			{
 				PG(register_argc_argv) = 1;
 				PG(implicit_flush) = 1;
@@ -1197,46 +1199,45 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 				SG(request_info).no_headers = 1;
 				SG(request_info).path_translated = estrndup(scriptInfo->fullPath.c_str(), scriptInfo->fullPath.size());
 			}
-			else if(type == ScriptInfo::ScriptType::web)
+			else if (type == ScriptInfo::ScriptType::web)
 			{
 				SG(sapi_headers).http_response_code = 200;
 				SG(request_info).content_length = globals->http.getHeader().contentLength;
-				if(!globals->http.getHeader().contentTypeFull.empty()) SG(request_info).content_type = globals->http.getHeader().contentTypeFull.c_str();
+				if (!globals->http.getHeader().contentTypeFull.empty()) SG(request_info).content_type = globals->http.getHeader().contentTypeFull.c_str();
 				SG(request_info).request_method = globals->http.getHeader().method.c_str();
 				SG(request_info).proto_num = globals->http.getHeader().protocol == BaseLib::Http::Protocol::http10 ? 1000 : 1001;
 				std::string uri = globals->http.getHeader().path + globals->http.getHeader().pathInfo;
-				if(!globals->http.getHeader().args.empty()) uri.append('?' + globals->http.getHeader().args);
-				if(!globals->http.getHeader().args.empty()) SG(request_info).query_string = estrndup(&globals->http.getHeader().args.at(0), globals->http.getHeader().args.size());
-				if(!uri.empty()) SG(request_info).request_uri = estrndup(&uri.at(0), uri.size());
+				if (!globals->http.getHeader().args.empty()) uri.append('?' + globals->http.getHeader().args);
+				if (!globals->http.getHeader().args.empty()) SG(request_info).query_string = estrndup(&globals->http.getHeader().args.at(0), globals->http.getHeader().args.size());
+				if (!uri.empty()) SG(request_info).request_uri = estrndup(&uri.at(0), uri.size());
 				std::string pathTranslated = serverInfo->contentPath.substr(0, serverInfo->contentPath.size() - 1) + scriptInfo->relativePath;
 				SG(request_info).path_translated = estrndup(&pathTranslated.at(0), pathTranslated.size());
 			}
 
-			if (php_request_startup() == FAILURE) {
+			if (php_request_startup() == FAILURE)
+			{
 				GD::bl->out.printError("Error calling php_request_startup...");
 				SG(server_context) = nullptr;
 				return;
 			}
 			globals->executionStarted = true;
 
-			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)
+			if (type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)
 			{
 				std::vector<std::string> argv = getArgs(scriptInfo->fullPath, scriptInfo->arguments);
-				if(type == ScriptInfo::ScriptType::device) argv[0] = std::to_string(scriptInfo->peerId);
+				if (type == ScriptInfo::ScriptType::device) argv[0] = std::to_string(scriptInfo->peerId);
 				php_homegear_build_argv(argv);
 				SG(request_info).argc = static_cast<int>(argv.size());
-				SG(request_info).argv = (char**)malloc((argv.size() + 1) * sizeof(char*));
-				for(uint32_t i = 0; i < argv.size(); ++i)
+				SG(request_info).argv = (char**) malloc((argv.size() + 1) * sizeof(char*));
+				for (uint32_t i = 0; i < argv.size(); ++i)
 				{
-					SG(request_info).argv[i] = (char*)argv[i].c_str(); //Value is not modified.
+					SG(request_info).argv[i] = (char*) argv[i].c_str(); //Value is not modified.
 				}
 				SG(request_info).argv[argv.size()] = nullptr;
 			}
 
-			if(scriptInfo->peerId > 0) GD::out.printInfo("Info: Starting PHP script of peer " + std::to_string(scriptInfo->peerId) + ".");
+			if (scriptInfo->peerId > 0) GD::out.printInfo("Info: Starting PHP script of peer " + std::to_string(scriptInfo->peerId) + ".");
 		}
-
-		if(type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode) php_node_startup();
 
 		php_execute_script(&zendHandle);
 		if(type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
