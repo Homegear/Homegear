@@ -78,7 +78,7 @@ public:
 private:
 	bool _enabled = false;
 	int32_t _processingThreadCount = 5;
-	std::string _brokerHostname;
+	std::string _brokerHostname; 
 	std::string _brokerPort;
 	std::string _clientName;
 	std::string _prefix;
