@@ -36,6 +36,7 @@
 #include <homegear-base/BaseLib.h>
 #include "PhpEvents.h"
 #include "php_homegear_globals.h"
+#include "php_node.h"
 #include "php_config_fixes.h"
 
 #include <iostream>
@@ -53,8 +54,6 @@
 #include <zend_ini.h>
 #include <zend_exceptions.h>
 #include <ext/standard/info.h>
-
-static std::function<void()> _phpNodeStartup;
 
 void php_homegear_build_argv(std::vector<std::string>& arguments);
 int php_homegear_init();

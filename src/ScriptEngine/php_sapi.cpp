@@ -2079,7 +2079,7 @@ static PHP_MINIT_FUNCTION(homegear)
 	homegear_i2c_class_entry = zend_register_internal_class(&homegearI2cCe);
 #endif
 
-	if(_phpNodeStartup) _phpNodeStartup();
+	php_node_startup();
 
     return SUCCESS;
 }

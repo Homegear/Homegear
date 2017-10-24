@@ -37,8 +37,6 @@
 
 #define SEG(v) php_homegear_get_globals()->v
 
-static zend_class_entry* homegear_node_base_class_entry = nullptr;
-
 void php_homegear_node_invoke_rpc(std::string& methodName, BaseLib::PVariable& parameters, zval* return_value, bool wait)
 {
 	if(SEG(id) == 0)

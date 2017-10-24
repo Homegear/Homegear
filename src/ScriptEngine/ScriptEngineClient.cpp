@@ -83,8 +83,6 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastDeleteDevices", std::bind(&ScriptEngineClient::broadcastDeleteDevices, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastUpdateDevice", std::bind(&ScriptEngineClient::broadcastUpdateDevice, this, std::placeholders::_1)));
 
-	_phpNodeStartup = std::bind(&php_node_startup);
-
 	php_homegear_init();
 }
 
