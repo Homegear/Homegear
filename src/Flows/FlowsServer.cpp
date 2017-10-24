@@ -33,7 +33,7 @@
 #include <homegear-base/BaseLib.h>
 
 // Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
-#define FLOWS_MANUAL_CLIENT_START
+//#define FLOWS_MANUAL_CLIENT_START
 
 #ifdef FLOWS_MANUAL_CLIENT_START
 	pid_t _manualClientCurrentProcessId = 1;
