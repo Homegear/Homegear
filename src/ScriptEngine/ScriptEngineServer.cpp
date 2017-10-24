@@ -35,13 +35,15 @@
 #include <homegear-base/BaseLib.h>
 
 // Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
-//#define SE_MANUAL_CLIENT_START
+#define SE_MANUAL_CLIENT_START
 
 namespace ScriptEngine
 {
 
 #ifdef SE_MANUAL_CLIENT_START
     pid_t _manualClientCurrentProcessId = 1;
+	std::mutex _unconnectedProcessesMutex;
+	std::queue<pid_t> _unconnectedProcesses;
 #endif
 
 ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
@@ -1375,7 +1377,12 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess(nodeProcess));
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rse" };
 #ifdef SE_MANUAL_CLIENT_START
-		process->setPid(_manualClientCurrentProcessId);
+        pid_t currentProcessId = _manualClientCurrentProcessId++;
+        process->setPid(currentProcessId);
+        {
+            std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
+            _unconnectedProcesses.push(currentProcessId);
+        }
 #else
 		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
 #endif
@@ -1879,7 +1886,14 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
 		{
 			pid_t pid = parameters->at(0)->integerValue;
 #ifdef SE_MANUAL_CLIENT_START
-			pid = _manualClientCurrentProcessId++;
+            {
+                std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
+                if (!_unconnectedProcesses.empty())
+                {
+                    pid = _unconnectedProcesses.front();
+                    _unconnectedProcesses.pop();
+                }
+            }
 #endif
 			std::unique_lock<std::mutex> processGuard(_processMutex);
 			std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(pid);

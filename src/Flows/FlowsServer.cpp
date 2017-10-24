@@ -33,10 +33,12 @@
 #include <homegear-base/BaseLib.h>
 
 // Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
-//#define FLOWS_MANUAL_CLIENT_START
+#define FLOWS_MANUAL_CLIENT_START
 
 #ifdef FLOWS_MANUAL_CLIENT_START
 	pid_t _manualClientCurrentProcessId = 1;
+    std::mutex _unconnectedProcessesMutex;
+    std::queue<pid_t> _unconnectedProcesses;
 #endif
 
 namespace Flows
@@ -2105,7 +2107,12 @@ PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
 		PFlowsProcess process(new FlowsProcess());
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rl" };
 #ifdef FLOWS_MANUAL_CLIENT_START
-		process->setPid(_manualClientCurrentProcessId);
+        pid_t currentProcessId = _manualClientCurrentProcessId++;
+		process->setPid(currentProcessId);
+        {
+            std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
+            _unconnectedProcesses.push(currentProcessId);
+        }
 #else
 		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
 #endif
@@ -2413,7 +2420,14 @@ BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData
 	{
 		pid_t pid = parameters->at(0)->integerValue;
 #ifdef FLOWS_MANUAL_CLIENT_START
-		pid = _manualClientCurrentProcessId++;
+        {
+            std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
+            if (!_unconnectedProcesses.empty())
+            {
+                pid = _unconnectedProcesses.front();
+                _unconnectedProcesses.pop();
+            }
+        }
 #endif
 		PFlowsProcess process;
 		{

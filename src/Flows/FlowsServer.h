@@ -36,6 +36,8 @@
 #include "FlowInfoServer.h"
 #include "NodeManager.h"
 
+#include <queue>
+
 namespace Flows
 {
 

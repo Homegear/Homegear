@@ -799,7 +799,7 @@ void Mqtt::subscribe(std::string topic)
 				}
 				else break;
 			}
-			catch(BaseLib::SocketClosedException&)
+			catch(BaseLib::SocketClosedException& ex)
 			{
 				_out.printError("Error: Socket closed while sending packet.");
 				break;
