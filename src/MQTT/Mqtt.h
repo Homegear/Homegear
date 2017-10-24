@@ -32,8 +32,8 @@
 #define MQTT_H_
 
 #include <homegear-base/BaseLib.h>
-
 #include "MqttSettings.h"
+
 #define MQTT_PACKET_CONNECT 0x10
 #define MQTT_PACKET_CONNACK 0x20
 #define MQTT_PACKET_PUBLISH 0x30
@@ -49,9 +49,6 @@
 #define MQTT_PACKET_PINGREQ  0xC0
 #define MQTT_PACKET_PINGRESP 0xD0
 #define MQTT_PACKET_DISCONN  0xE0
-
-
-
 
 class Mqtt : public BaseLib::IQueue
 {
