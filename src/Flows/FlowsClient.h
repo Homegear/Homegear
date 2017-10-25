@@ -132,7 +132,7 @@ private:
 
 	void registerClient();
 	Flows::PVariable invoke(std::string methodName, Flows::PArray parameters, bool wait);
-	Flows::PVariable invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray parameters);
+	Flows::PVariable invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray parameters, bool wait);
 	void sendResponse(Flows::PVariable& packetId, Flows::PVariable& variable);
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);

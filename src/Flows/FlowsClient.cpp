@@ -593,7 +593,7 @@ Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray param
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray parameters)
+Flows::PVariable FlowsClient::invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray parameters, bool wait)
 {
 	try
 	{
@@ -606,7 +606,7 @@ Flows::PVariable FlowsClient::invokeNodeMethod(std::string nodeId, std::string m
 		parametersArray->push_back(std::make_shared<Flows::Variable>(methodName));
 		parametersArray->push_back(std::make_shared<Flows::Variable>(parameters));
 
-		return invoke("invokeNodeMethod", parametersArray, true);
+		return invoke("invokeNodeMethod", parametersArray, wait);
 	}
 	catch(const std::exception& ex)
     {
@@ -1106,7 +1106,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 
 					nodeObject->setLog(std::function<void(std::string, int32_t, std::string)>(std::bind(&FlowsClient::log, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 					nodeObject->setInvoke(std::function<Flows::PVariable(std::string, Flows::PArray)>(std::bind(&FlowsClient::invoke, this, std::placeholders::_1, std::placeholders::_2, true)));
-					nodeObject->setInvokeNodeMethod(std::function<Flows::PVariable(std::string, std::string, Flows::PArray)>(std::bind(&FlowsClient::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+					nodeObject->setInvokeNodeMethod(std::function<Flows::PVariable(std::string, std::string, Flows::PArray, bool)>(std::bind(&FlowsClient::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
 					nodeObject->setSubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::subscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
 					nodeObject->setUnsubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::unsubscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
 					nodeObject->setOutput(std::function<void(std::string, uint32_t, Flows::PVariable)>(std::bind(&FlowsClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
@@ -1435,12 +1435,13 @@ Flows::PVariable FlowsClient::executePhpNodeBaseMethod(Flows::PArray& parameters
 		}
 		else if(methodName == "invokeNodeMethod")
 		{
-			if(innerParameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+			if(innerParameters->size() != 4) return Flows::Variable::createError(-1, "Wrong parameter count.");
 			if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
 			if(innerParameters->at(1)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 2 is not of type string.");
 			if(innerParameters->at(2)->type != Flows::VariableType::tArray) return Flows::Variable::createError(-1, "Parameter 3 is not of type array.");
+			if(innerParameters->at(3)->type != Flows::VariableType::tBoolean) return Flows::Variable::createError(-1, "Parameter 4 is not of type boolean.");
 
-			return invokeNodeMethod(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue, innerParameters->at(2)->arrayValue);
+			return invokeNodeMethod(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue, innerParameters->at(2)->arrayValue, innerParameters->at(3)->booleanValue);
 		}
 		else if(methodName == "subscribePeer")
 		{
