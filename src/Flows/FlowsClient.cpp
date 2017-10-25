@@ -601,10 +601,11 @@ Flows::PVariable FlowsClient::invokeNodeMethod(std::string nodeId, std::string m
 		if(node) return node->invokeLocal(methodName, parameters);
 
 		Flows::PArray parametersArray = std::make_shared<Flows::Array>();
-		parametersArray->reserve(3);
+		parametersArray->reserve(4);
 		parametersArray->push_back(std::make_shared<Flows::Variable>(nodeId));
 		parametersArray->push_back(std::make_shared<Flows::Variable>(methodName));
 		parametersArray->push_back(std::make_shared<Flows::Variable>(parameters));
+        parametersArray->push_back(std::make_shared<Flows::Variable>(wait));
 
 		return invoke("invokeNodeMethod", parametersArray, wait);
 	}
