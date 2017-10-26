@@ -99,6 +99,7 @@ private:
     std::atomic<int64_t> _processingThreadCountMaxReached3;
 	std::atomic_bool _startUpComplete;
 	std::atomic_bool _shuttingDown;
+    std::atomic_bool _shutdownComplete;
 	std::atomic_bool _disposed;
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;

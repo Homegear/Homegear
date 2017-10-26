@@ -406,6 +406,7 @@ void ScriptEngineClient::start()
 					if(errno == EINTR) continue;
 					GD::bl->fileDescriptorManager.close(_fileDescriptor);
 					_out.printMessage("Connection to script server closed (1). Exiting.");
+                    if(_maintenanceThread.joinable()) _maintenanceThread.join();
 					return;
 				}
 
@@ -414,6 +415,7 @@ void ScriptEngineClient::start()
 				{
 					GD::bl->fileDescriptorManager.close(_fileDescriptor);
 					_out.printMessage("Connection to script server closed (2). Exiting.");
+                    if(_maintenanceThread.joinable()) _maintenanceThread.join();
 					return;
 				}
 

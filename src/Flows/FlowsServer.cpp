@@ -1147,7 +1147,7 @@ void FlowsServer::sendShutdown()
 		}
 
 		int32_t i = 0;
-		while(_clients.size() > 0 && i < 60)
+		while(_clients.size() > 0 && i < 300)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			collectGarbage();
@@ -1544,7 +1544,7 @@ void FlowsServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<s
 {
 	try
 	{
-		if(_shuttingDown) return;
+		if(_shuttingDown || _flowsRestarting) return;
 		std::vector<PFlowsClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -1580,7 +1580,7 @@ void FlowsServer::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
 {
 	try
 	{
-		if(_shuttingDown) return;
+		if(_shuttingDown || _flowsRestarting) return;
 		std::vector<PFlowsClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -1616,7 +1616,7 @@ void FlowsServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
 {
 	try
 	{
-		if(_shuttingDown) return;
+		if(_shuttingDown || _flowsRestarting) return;
 		std::vector<PFlowsClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -1652,7 +1652,7 @@ void FlowsServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hi
 {
 	try
 	{
-		if(_shuttingDown) return;
+		if(_shuttingDown || _flowsRestarting) return;
 		std::vector<PFlowsClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -1800,7 +1800,7 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 		}
 		else if(index == 2) //Second queue for sending packets. Response is processed by first queue
 		{
-			sendRequest(queueEntry->clientData, queueEntry->methodName, queueEntry->parameters, false);
+			if(!_shuttingDown && !_flowsRestarting) sendRequest(queueEntry->clientData, queueEntry->methodName, queueEntry->parameters, false);
 		}
 	}
 	catch(const std::exception& ex)
