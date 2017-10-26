@@ -90,6 +90,7 @@ ScriptEngineClient::~ScriptEngineClient()
 {
 	dispose(true);
 	if(_maintenanceThread.joinable()) _maintenanceThread.join();
+    if(_watchdogThread.joinable()) _watchdogThread.join();
 #ifdef DEBUGSESOCKET
 	_socketOutput.close();
 #endif
@@ -318,8 +319,14 @@ void ScriptEngineClient::start()
 			_out.printError("Error: Could not redirect errors to log file.");
 		}
 
-		startQueue(0, false, 10, 0, SCHED_OTHER);
-		startQueue(1, false, 10, 0, SCHED_OTHER);
+        _threadCount = 10;
+        _processingThreadCount1 = 0;
+        _processingThreadCount2 = 0;
+
+		startQueue(0, false, _threadCount, 0, SCHED_OTHER);
+		startQueue(1, false, _threadCount, 0, SCHED_OTHER);
+
+        _watchdogThread = std::thread(&ScriptEngineClient::watchdog, this);
 
 		_socketPath = GD::bl->settings.socketPath() + "homegearSE.sock";
 		if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Socket path is " + _socketPath);
@@ -563,111 +570,149 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 
 		if(index == 0) //Request
 		{
-			if(queueEntry->parameters->size() < 3)
-			{
-				_out.printError("Error: Wrong parameter count while calling method " + queueEntry->methodName);
-				return;
-			}
-			std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
-			if(localMethodIterator == _localRpcMethods.end())
-			{
-				_out.printError("Warning: RPC method not found: " + queueEntry->methodName);
-				BaseLib::PVariable error = BaseLib::Variable::createError(-32601, ": Requested method not found.");
-				if(queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), error);
-				return;
-			}
+            _processingThreadCount1++;
+            try
+            {
+                if(_processingThreadCount1 == _threadCount) _processingThreadCountMaxReached1 = BaseLib::HelperFunctions::getTime();
+                if (queueEntry->parameters->size() < 3)
+                {
+                    _out.printError("Error: Wrong parameter count while calling method " + queueEntry->methodName);
+                    return;
+                }
+                std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
+                if (localMethodIterator == _localRpcMethods.end())
+                {
+                    _out.printError("Warning: RPC method not found: " + queueEntry->methodName);
+                    BaseLib::PVariable error = BaseLib::Variable::createError(-32601, ": Requested method not found.");
+                    if (queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), error);
+                    return;
+                }
 
-			if(GD::bl->debugLevel >= 5)
-			{
-				_out.printInfo("Debug: Server is calling RPC method: " + queueEntry->methodName);
-				for(auto parameter : *queueEntry->parameters)
-				{
-					parameter->print(true, false);
-				}
-			}
+                if (GD::bl->debugLevel >= 5)
+                {
+                    _out.printInfo("Debug: Server is calling RPC method: " + queueEntry->methodName);
+                    for (auto parameter : *queueEntry->parameters)
+                    {
+                        parameter->print(true, false);
+                    }
+                }
 
-			BaseLib::PVariable result = localMethodIterator->second(queueEntry->parameters->at(2)->arrayValue);
-			if(GD::bl->debugLevel >= 5)
-			{
-				_out.printDebug("Response: ");
-				result->print(true, false);
-			}
-			if(queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), result);
+                BaseLib::PVariable result = localMethodIterator->second(queueEntry->parameters->at(2)->arrayValue);
+                if (GD::bl->debugLevel >= 5)
+                {
+                    _out.printDebug("Response: ");
+                    result->print(true, false);
+                }
+                if (queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), result);
+            }
+            catch(const std::exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(BaseLib::Exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(...)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+            }
+            _processingThreadCountMaxReached1 = 0;
+            _processingThreadCount1--;
 		}
 		else //Response
 		{
-			BaseLib::PVariable response = _rpcDecoder->decodeResponse(queueEntry->packet);
-			if(response->arrayValue->size() < 3)
-			{
-				_out.printError("Error: Response has wrong array size.");
-				return;
-			}
-			int32_t scriptId = response->arrayValue->at(0)->integerValue;
-			int32_t packetId = response->arrayValue->at(1)->integerValue;
+            _processingThreadCount2++;
+            try
+            {
+                if(_processingThreadCount2 == _threadCount) _processingThreadCountMaxReached2 = BaseLib::HelperFunctions::getTime();
+                BaseLib::PVariable response = _rpcDecoder->decodeResponse(queueEntry->packet);
+                if (response->arrayValue->size() < 3)
+                {
+                    _out.printError("Error: Response has wrong array size.");
+                    return;
+                }
+                int32_t scriptId = response->arrayValue->at(0)->integerValue;
+                int32_t packetId = response->arrayValue->at(1)->integerValue;
 
-			{
-				std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-				auto responseIterator = _rpcResponses[scriptId].find(packetId);
-				if(responseIterator != _rpcResponses[scriptId].end())
-				{
-					PScriptEngineResponse element = responseIterator->second;
-					if(element)
-					{
-						element->response = response;
-						element->packetId = packetId;
-						element->finished = true;
-					}
-				}
-			}
-			if(scriptId != 0)
-			{
-				std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
-				std::map<int32_t, PRequestInfo>::iterator requestIterator = _requestInfo.find(scriptId);
-				if (requestIterator != _requestInfo.end())
-				{
-					std::unique_lock<std::mutex> waitLock(requestIterator->second->waitMutex);
+                {
+                    std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+                    auto responseIterator = _rpcResponses[scriptId].find(packetId);
+                    if (responseIterator != _rpcResponses[scriptId].end())
+                    {
+                        PScriptEngineResponse element = responseIterator->second;
+                        if (element)
+                        {
+                            element->response = response;
+                            element->packetId = packetId;
+                            element->finished = true;
+                        }
+                    }
+                }
+                if (scriptId != 0)
+                {
+                    std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
+                    std::map<int32_t, PRequestInfo>::iterator requestIterator = _requestInfo.find(scriptId);
+                    if (requestIterator != _requestInfo.end())
+                    {
+                        std::unique_lock<std::mutex> waitLock(requestIterator->second->waitMutex);
 
-					{
-						std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-						auto responseIterator = _rpcResponses[scriptId].find(packetId);
-						if(responseIterator != _rpcResponses[scriptId].end())
-						{
-							PScriptEngineResponse element = responseIterator->second;
-							if(element)
-							{
-								element->response = response;
-								element->packetId = packetId;
-								element->finished = true;
-							}
-						}
-					}
+                        {
+                            std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+                            auto responseIterator = _rpcResponses[scriptId].find(packetId);
+                            if (responseIterator != _rpcResponses[scriptId].end())
+                            {
+                                PScriptEngineResponse element = responseIterator->second;
+                                if (element)
+                                {
+                                    element->response = response;
+                                    element->packetId = packetId;
+                                    element->finished = true;
+                                }
+                            }
+                        }
 
-					waitLock.unlock();
-					requestIterator->second->conditionVariable.notify_all();
-				}
-			}
-			else
-			{
-				std::unique_lock<std::mutex> waitLock(_waitMutex);
+                        waitLock.unlock();
+                        requestIterator->second->conditionVariable.notify_all();
+                    }
+                }
+                else
+                {
+                    std::unique_lock<std::mutex> waitLock(_waitMutex);
 
-				{
-					std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-					auto responseIterator = _rpcResponses[scriptId].find(packetId);
-					if(responseIterator != _rpcResponses[scriptId].end())
-					{
-						PScriptEngineResponse element = responseIterator->second;
-						if(element)
-						{
-							element->response = response;
-							element->packetId = packetId;
-							element->finished = true;
-						}
-					}
-				}
+                    {
+                        std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+                        auto responseIterator = _rpcResponses[scriptId].find(packetId);
+                        if (responseIterator != _rpcResponses[scriptId].end())
+                        {
+                            PScriptEngineResponse element = responseIterator->second;
+                            if (element)
+                            {
+                                element->response = response;
+                                element->packetId = packetId;
+                                element->finished = true;
+                            }
+                        }
+                    }
 
-				waitLock.unlock();
-				_requestConditionVariable.notify_all();
-			}
+                    waitLock.unlock();
+                    _requestConditionVariable.notify_all();
+                }
+            }
+            catch(const std::exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(BaseLib::Exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(...)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+            }
+            _processingThreadCountMaxReached2 = 0;
+            _processingThreadCount2--;
 		}
 	}
 	catch(const std::exception& ex)
@@ -1529,6 +1574,51 @@ void ScriptEngineClient::checkSessionIdThread(std::string sessionId, bool* resul
 	}
 	php_request_shutdown(nullptr);
 	ts_free_thread();
+}
+
+void ScriptEngineClient::watchdog()
+{
+    while(!_stopped)
+    {
+        try
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+            if(_processingThreadCount1 == _threadCount)
+            {
+                int64_t time = _processingThreadCountMaxReached1;
+                if(time != 0 && BaseLib::HelperFunctions::getTime() - time > GD::bl->settings.scriptEngineWatchdogTimeout())
+                {
+                    std::cout << "Watchdog 1 timed out. Killing process." << std::endl;
+                    std::cerr << "Watchdog 1 timed out. Killing process." << std::endl;
+                    kill(getpid(), 9);
+                }
+            }
+
+            if(_processingThreadCount2 == _threadCount)
+            {
+                int64_t time = _processingThreadCountMaxReached2;
+                if(time != 0 && BaseLib::HelperFunctions::getTime() - time > GD::bl->settings.scriptEngineWatchdogTimeout())
+                {
+                    std::cout << "Watchdog 2 timed out. Killing process." << std::endl;
+                    std::cerr << "Watchdog 2 timed out. Killing process." << std::endl;
+                    kill(getpid(), 9);
+                }
+            }
+        }
+        catch(const std::exception& ex)
+        {
+            _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        }
+        catch(BaseLib::Exception& ex)
+        {
+            _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        }
+        catch(...)
+        {
+            _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        }
+    }
 }
 
 // {{{ RPC methods

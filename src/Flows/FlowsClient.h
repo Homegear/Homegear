@@ -90,6 +90,13 @@ private:
 	};
 
 	BaseLib::Output _out;
+    std::atomic_int _threadCount;
+    std::atomic_int _processingThreadCount1;
+    std::atomic_int _processingThreadCount2;
+    std::atomic_int _processingThreadCount3;
+    std::atomic<int64_t> _processingThreadCountMaxReached1;
+    std::atomic<int64_t> _processingThreadCountMaxReached2;
+    std::atomic<int64_t> _processingThreadCountMaxReached3;
 	std::atomic_bool _startUpComplete;
 	std::atomic_bool _shuttingDown;
 	std::atomic_bool _disposed;
@@ -103,6 +110,7 @@ private:
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 	std::map<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>> _localRpcMethods;
 	std::thread _maintenanceThread;
+    std::thread _watchdogThread;
 	std::mutex _requestInfoMutex;
 	std::map<int64_t, PRequestInfo> _requestInfo;
 	std::mutex _packetIdMutex;
@@ -129,6 +137,8 @@ private:
 
 	std::mutex _internalMessagesMutex;
 	std::unordered_map<std::string, Flows::PVariable> _internalMessages;
+
+    void watchdog();
 
 	void registerClient();
 	Flows::PVariable invoke(std::string methodName, Flows::PArray parameters, bool wait);

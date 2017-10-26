@@ -82,6 +82,7 @@ FlowsClient::~FlowsClient()
 {
 	dispose();
 	if(_maintenanceThread.joinable()) _maintenanceThread.join();
+    if(_watchdogThread.joinable()) _watchdogThread.join();
 }
 
 void FlowsClient::dispose()
@@ -183,10 +184,17 @@ void FlowsClient::start()
 
 		uint32_t flowsProcessingThreadCountNodes = GD::bl->settings.flowsProcessingThreadCountNodes();
 		if(flowsProcessingThreadCountNodes < 5) flowsProcessingThreadCountNodes = 5;
+        _threadCount = flowsProcessingThreadCountNodes;
 
-		startQueue(0, false, flowsProcessingThreadCountNodes, 0, SCHED_OTHER);
-		startQueue(1, false, flowsProcessingThreadCountNodes, 0, SCHED_OTHER);
-		startQueue(2, false, flowsProcessingThreadCountNodes, 0, SCHED_OTHER);
+        _processingThreadCount1 = 0;
+        _processingThreadCount2 = 0;
+        _processingThreadCount3 = 0;
+
+		startQueue(0, false, _threadCount, 0, SCHED_OTHER);
+		startQueue(1, false, _threadCount, 0, SCHED_OTHER);
+		startQueue(2, false, _threadCount, 0, SCHED_OTHER);
+
+        _watchdogThread = std::thread(&FlowsClient::watchdog, this);
 
 		_socketPath = GD::bl->settings.socketPath() + "homegearFE.sock";
 		if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Socket path is " + _socketPath);
@@ -354,93 +362,152 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 
 		if(index == 0) //IPC request
 		{
-			if(queueEntry->parameters->size() < 3)
-			{
-				_out.printError("Error: Wrong parameter count while calling method " + queueEntry->methodName);
-				return;
-			}
-            auto localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
-			if(localMethodIterator == _localRpcMethods.end())
-			{
-				_out.printError("Warning: RPC method not found: " + queueEntry->methodName);
-				Flows::PVariable error = Flows::Variable::createError(-32601, "Requested method not found.");
-				if(queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), error);
-				return;
-			}
+            _processingThreadCount1++;
+            try
+            {
+                if(_processingThreadCount1 == _threadCount) _processingThreadCountMaxReached1 = BaseLib::HelperFunctions::getTime();
+                if (queueEntry->parameters->size() < 3)
+                {
+                    _out.printError("Error: Wrong parameter count while calling method " + queueEntry->methodName);
+                    return;
+                }
+                auto localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
+                if (localMethodIterator == _localRpcMethods.end())
+                {
+                    _out.printError("Warning: RPC method not found: " + queueEntry->methodName);
+                    Flows::PVariable error = Flows::Variable::createError(-32601, "Requested method not found.");
+                    if (queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), error);
+                    return;
+                }
 
-			if(GD::bl->debugLevel >= 5)
-			{
-				_out.printDebug("Debug: Server is calling RPC method: " + queueEntry->methodName + " Parameters:");
-				for(const auto& parameter : *queueEntry->parameters)
-				{
-					parameter->print(true, false);
-				}
-			}
+                if (GD::bl->debugLevel >= 5)
+                {
+                    _out.printDebug("Debug: Server is calling RPC method: " + queueEntry->methodName + " Parameters:");
+                    for (const auto& parameter : *queueEntry->parameters)
+                    {
+                        parameter->print(true, false);
+                    }
+                }
 
-			Flows::PVariable result = localMethodIterator->second(queueEntry->parameters->at(2)->arrayValue);
-			if(GD::bl->debugLevel >= 5)
-			{
-				_out.printDebug("Response: ");
-				result->print(true, false);
-			}
-			if(queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), result);
+                Flows::PVariable result = localMethodIterator->second(queueEntry->parameters->at(2)->arrayValue);
+                if (GD::bl->debugLevel >= 5)
+                {
+                    _out.printDebug("Response: ");
+                    result->print(true, false);
+                }
+                if (queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), result);
+            }
+            catch(const std::exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(BaseLib::Exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(...)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+            }
+            _processingThreadCountMaxReached1 = 0;
+            _processingThreadCount1--;
 		}
 		else if(index == 1) //IPC response
 		{
-			Flows::PVariable response = _rpcDecoder->decodeResponse(queueEntry->packet);
-			if(response->arrayValue->size() < 3)
-			{
-				_out.printError("Error: Response has wrong array size.");
-				return;
-			}
-			int64_t threadId = response->arrayValue->at(0)->integerValue64;
-			int32_t packetId = response->arrayValue->at(1)->integerValue;
+            _processingThreadCount2++;
+            try
+            {
+                if(_processingThreadCount2 == _threadCount) _processingThreadCountMaxReached2 = BaseLib::HelperFunctions::getTime();
 
-			PRequestInfo requestInfo;
-			{
-				std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
-                auto requestIterator = _requestInfo.find(threadId);
-				if (requestIterator != _requestInfo.end()) requestInfo = requestIterator->second;
-			}
-			if(requestInfo)
-			{
-				std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
-				{
-					std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-					auto responseIterator = _rpcResponses[threadId].find(packetId);
-					if(responseIterator != _rpcResponses[threadId].end())
-					{
-						PFlowsResponseClient element = responseIterator->second;
-						if(element)
-						{
-							element->response = response;
-							element->packetId = packetId;
-							element->finished = true;
-						}
-					}
-				}
-				waitLock.unlock();
-				requestInfo->conditionVariable.notify_all();
-			}
+                Flows::PVariable response = _rpcDecoder->decodeResponse(queueEntry->packet);
+                if (response->arrayValue->size() < 3)
+                {
+                    _out.printError("Error: Response has wrong array size.");
+                    return;
+                }
+                int64_t threadId = response->arrayValue->at(0)->integerValue64;
+                int32_t packetId = response->arrayValue->at(1)->integerValue;
+
+                PRequestInfo requestInfo;
+                {
+                    std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
+                    auto requestIterator = _requestInfo.find(threadId);
+                    if (requestIterator != _requestInfo.end()) requestInfo = requestIterator->second;
+                }
+                if (requestInfo)
+                {
+                    std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
+                    {
+                        std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+                        auto responseIterator = _rpcResponses[threadId].find(packetId);
+                        if (responseIterator != _rpcResponses[threadId].end())
+                        {
+                            PFlowsResponseClient element = responseIterator->second;
+                            if (element)
+                            {
+                                element->response = response;
+                                element->packetId = packetId;
+                                element->finished = true;
+                            }
+                        }
+                    }
+                    waitLock.unlock();
+                    requestInfo->conditionVariable.notify_all();
+                }
+            }
+            catch(const std::exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(BaseLib::Exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(...)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+            }
+            _processingThreadCountMaxReached2 = 0;
+            _processingThreadCount2--;
 		}
 		else //Node output
 		{
-			if(!queueEntry->nodeInfo || !queueEntry->message || _shuttingDown) return;
-			Flows::PINode node = _nodeManager->getNode(queueEntry->nodeInfo->id);
-			if(node)
-			{
-				if(GD::bl->settings.nodeBlueDebugOutput() && _startUpComplete && _frontendConnected && BaseLib::HelperFunctions::getTime() - queueEntry->nodeInfo->lastNodeEvent1 >= 100)
-				{
-					queueEntry->nodeInfo->lastNodeEvent1 = BaseLib::HelperFunctions::getTime();
-					Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
-					timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
-					nodeEvent(queueEntry->nodeInfo->id, "highlightNode/" + queueEntry->nodeInfo->id, timeout);
-				}
-				auto internalMessageIterator = queueEntry->message->structValue->find("_internal");
-				if(internalMessageIterator != queueEntry->message->structValue->end()) setInternalMessage(queueEntry->nodeInfo->id, internalMessageIterator->second);
-				std::lock_guard<std::mutex> nodeInputGuard(node->getInputMutex());
-				node->input(queueEntry->nodeInfo, queueEntry->targetPort, queueEntry->message);
-			}
+            _processingThreadCount3++;
+            try
+            {
+                if(_processingThreadCount3 == _threadCount) _processingThreadCountMaxReached3 = BaseLib::HelperFunctions::getTime();
+
+                if (!queueEntry->nodeInfo || !queueEntry->message || _shuttingDown) return;
+                Flows::PINode node = _nodeManager->getNode(queueEntry->nodeInfo->id);
+                if (node)
+                {
+                    if (GD::bl->settings.nodeBlueDebugOutput() && _startUpComplete && _frontendConnected && BaseLib::HelperFunctions::getTime() - queueEntry->nodeInfo->lastNodeEvent1 >= 100)
+                    {
+                        queueEntry->nodeInfo->lastNodeEvent1 = BaseLib::HelperFunctions::getTime();
+                        Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+                        timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
+                        nodeEvent(queueEntry->nodeInfo->id, "highlightNode/" + queueEntry->nodeInfo->id, timeout);
+                    }
+                    auto internalMessageIterator = queueEntry->message->structValue->find("_internal");
+                    if (internalMessageIterator != queueEntry->message->structValue->end()) setInternalMessage(queueEntry->nodeInfo->id, internalMessageIterator->second);
+                    std::lock_guard<std::mutex> nodeInputGuard(node->getInputMutex());
+                    node->input(queueEntry->nodeInfo, queueEntry->targetPort, queueEntry->message);
+                }
+            }
+            catch(const std::exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(BaseLib::Exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(...)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+            }
+            _processingThreadCountMaxReached3 = 0;
+            _processingThreadCount3--;
 		}
 	}
 	catch(const std::exception& ex)
@@ -921,6 +988,62 @@ Flows::PVariable FlowsClient::getConfigParameter(std::string nodeId, std::string
     return std::make_shared<Flows::Variable>();
 }
 
+void FlowsClient::watchdog()
+{
+    while(!_stopped)
+	{
+		try
+		{
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+			if(_processingThreadCount1 == _threadCount)
+            {
+                int64_t time = _processingThreadCountMaxReached1;
+                if(time != 0 && BaseLib::HelperFunctions::getTime() - time > GD::bl->settings.flowsWatchdogTimeout())
+                {
+                    std::cout << "Watchdog 1 timed out. Killing process." << std::endl;
+                    std::cerr << "Watchdog 1 timed out. Killing process." << std::endl;
+                    kill(getpid(), 9);
+                }
+            }
+
+            if(_processingThreadCount2 == _threadCount)
+            {
+                int64_t time = _processingThreadCountMaxReached2;
+                if(time != 0 && BaseLib::HelperFunctions::getTime() - time > GD::bl->settings.flowsWatchdogTimeout())
+                {
+                    std::cout << "Watchdog 2 timed out. Killing process." << std::endl;
+                    std::cerr << "Watchdog 2 timed out. Killing process." << std::endl;
+                    kill(getpid(), 9);
+                }
+            }
+
+            if(_processingThreadCount3 == _threadCount)
+            {
+                int64_t time = _processingThreadCountMaxReached3;
+                if(time != 0 && BaseLib::HelperFunctions::getTime() - time > GD::bl->settings.flowsWatchdogTimeout())
+                {
+                    std::cout << "Watchdog 3 timed out. Killing process." << std::endl;
+                    std::cerr << "Watchdog 3 timed out. Killing process." << std::endl;
+                    kill(getpid(), 9);
+                }
+            }
+		}
+		catch(const std::exception& ex)
+		{
+			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(BaseLib::Exception& ex)
+		{
+			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+	}
+}
+
 // {{{ RPC methods
 Flows::PVariable FlowsClient::reload(Flows::PArray& parameters)
 {
@@ -1282,6 +1405,7 @@ Flows::PVariable FlowsClient::stopNodes(Flows::PArray& parameters)
 				if(node) node->stop();
 			}
 		}
+        _out.printMessage("Call to stop() completed.");
 		_nodesStopped = true;
 		return std::make_shared<Flows::Variable>();
 	}

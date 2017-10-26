@@ -125,6 +125,11 @@ private:
 	typedef std::shared_ptr<NodeInfo> PNodeInfo;
 
 	BaseLib::Output _out;
+	std::atomic_int _threadCount;
+	std::atomic_int _processingThreadCount1;
+	std::atomic_int _processingThreadCount2;
+	std::atomic<int64_t> _processingThreadCountMaxReached1;
+	std::atomic<int64_t> _processingThreadCountMaxReached2;
 #ifdef DEBUGSESOCKET
 	std::ofstream _socketOutput;
 #endif
@@ -143,6 +148,7 @@ private:
 	std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>> _localRpcMethods;
 	std::mutex _maintenanceThreadMutex;
 	std::thread _maintenanceThread;
+    std::thread _watchdogThread;
 	std::mutex _scriptThreadMutex;
 	std::map<int32_t, PThreadInfo> _scriptThreads;
 	std::mutex _requestInfoMutex;
@@ -157,6 +163,8 @@ private:
 	std::unique_ptr<BaseLib::Rpc::BinaryRpc> _binaryRpc;
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+
+    void watchdog();
 
 	void collectGarbage();
 	std::vector<std::string> getArgs(const std::string& path, const std::string& args);
