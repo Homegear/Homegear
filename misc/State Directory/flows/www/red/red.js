@@ -4748,6 +4748,7 @@ RED.utils = (function() {
                 this.element.css("minHeight",0);
             }
             if (this.options.height !== 'auto') {
+                this.uiContainer.css("overflow-x","hidden");
                 this.uiContainer.css("overflow-y","scroll");
                 if (!isNaN(this.options.height)) {
                     this.uiHeight = this.options.height;
