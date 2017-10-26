@@ -326,7 +326,7 @@ void ScriptEngineClient::start()
 		startQueue(0, false, _threadCount, 0, SCHED_OTHER);
 		startQueue(1, false, _threadCount, 0, SCHED_OTHER);
 
-        _watchdogThread = std::thread(&ScriptEngineClient::watchdog, this);
+        if(GD::bl->settings.scriptEngineWatchdogTimeout() >= 1000) _watchdogThread = std::thread(&ScriptEngineClient::watchdog, this);
 
 		_socketPath = GD::bl->settings.socketPath() + "homegearSE.sock";
 		if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Socket path is " + _socketPath);

@@ -194,7 +194,7 @@ void FlowsClient::start()
 		startQueue(1, false, _threadCount, 0, SCHED_OTHER);
 		startQueue(2, false, _threadCount, 0, SCHED_OTHER);
 
-        _watchdogThread = std::thread(&FlowsClient::watchdog, this);
+        if(GD::bl->settings.flowsWatchdogTimeout() >= 1000) _watchdogThread = std::thread(&FlowsClient::watchdog, this);
 
 		_socketPath = GD::bl->settings.socketPath() + "homegearFE.sock";
 		if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Socket path is " + _socketPath);
