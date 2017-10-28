@@ -876,11 +876,11 @@ void startUp()
 			}
         }
 
+        bindRPCServers();
+
     	GD::licensingController->loadModules();
 
 		GD::familyController->loadModules();
-
-		bindRPCServers();
 
     	if(getuid() == 0 && !GD::runAsUser.empty() && !GD::runAsGroup.empty())
     	{
