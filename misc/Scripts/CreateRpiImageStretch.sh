@@ -99,6 +99,8 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 echo "deb $deb_local_mirror $deb_release main contrib non-free rpi
 " > etc/apt/sources.list
 
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install dhcpcd
+
 echo "blacklist i2c-bcm2708" > $rootfs/etc/modprobe.d/raspi-blacklist.conf
 
 echo "dwc_otg.lpm_enable=0 console=ttyUSB0,115200 console=tty1 kgdboc=ttyUSB0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline rootwait" > boot/cmdline.txt
@@ -124,21 +126,13 @@ ff02::1         ip6-allnodes
 ff02::2         ip6-allrouters
 " > etc/hosts
 
-echo "auto lo
-iface lo inet loopback
-iface lo inet6 loopback
+echo "# interfaces(5) file used by ifup(8) and ifdown(8)
 
-allow-hotplug eth0
-iface eth0 inet dhcp
-iface eth0 inet6 auto
+# Please note that this file is written to be used with dhcpcd
+# For static IP, consult /etc/dhcpcd.conf and 'man dhcpcd.conf'
 
-allow-hotplug wlan0
-iface wlan0 inet manual
-    wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf
-
-allow-hotplug wlan1
-iface wlan1 inet manual
-    wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf
+# Include files from /etc/network/interfaces.d:
+source-directory /etc/network/interfaces.d
 " > etc/network/interfaces
 #End network settings
 
