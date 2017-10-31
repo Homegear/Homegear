@@ -99,8 +99,6 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 echo "deb $deb_local_mirror $deb_release main contrib non-free rpi
 " > etc/apt/sources.list
 
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install dhcpcd
-
 echo "blacklist i2c-bcm2708" > $rootfs/etc/modprobe.d/raspi-blacklist.conf
 
 echo "dwc_otg.lpm_enable=0 console=ttyUSB0,115200 console=tty1 kgdboc=ttyUSB0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline rootwait" > boot/cmdline.txt
@@ -156,8 +154,11 @@ echo "deb https://homegear.eu/packages/Raspbian/ stretch/" >> /etc/apt/sources.l
 wget http://homegear.eu/packages/Release.key
 apt-key add - < Release.key
 rm Release.key
+wget http://archive.raspberrypi.org/debian/raspberrypi.gpg.key
+apt-key add - < raspberrypi.gpg.key
+rm raspberrypi.gpg.key
 apt update
-apt -y install libraspberrypi0 libraspberrypi-bin locales console-common ntp resolvconf openssh-server git-core binutils curl libcurl3-gnutls sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 libmodbus5 tmux dialog whiptail
+apt -y install libraspberrypi0 libraspberrypi-bin locales console-common dhcpcd5 ntp resolvconf openssh-server git-core binutils curl libcurl3-gnutls sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 libmodbus5 tmux dialog whiptail
 # Wireless packets
 apt -y install bluez-firmware firmware-atheros firmware-libertas firmware-realtek firmware-ralink firmware-brcm80211 wireless-tools wpasupplicant
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
@@ -175,22 +176,12 @@ if [ "0$result" -eq "0" ]; then
     usermod -a -G spi homegear 2>/dev/null
 fi
 echo "pi ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-sed -i -e 's/KERNEL!="eth*|/KERNEL!="/' /lib/udev/rules.d/75-persistent-net-generator.rules
-dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-reconfigure locales
 service ssh stop
 service ntp stop
 systemctl disable serial-getty@ttyAMA0.service
 systemctl disable serial-getty@serial0.service
 systemctl disable serial-getty@ttyS0.service
-
-cd /tmp/
-git clone --depth 1 git://github.com/raspberrypi/firmware/
-cp -R /tmp/firmware/hardfp/opt/vc /opt/
-rm -Rf /tmp/firmware
-echo "PATH=\"\$PATH:/opt/vc/bin:/opt/vc/sbin\"" >> /etc/bash.bashrc
-echo "/opt/vc/lib" >> /etc/ld.so.conf.d/vcgencmd.conf
-ldconfig
 
 rm -rf /var/log/homegear/*
 EOF
