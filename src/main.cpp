@@ -876,7 +876,21 @@ void startUp()
 			}
         }
 
-        bindRPCServers();
+        for(int32_t i = 0; i < 60; i++)
+        {
+            try
+            {
+                bindRPCServers();
+                break;
+            }
+            catch (BaseLib::NetException& ex)
+            {
+                if(_shutdownQueued) exitHomegear(1);
+                GD::out.printError("Error binding RPC servers: " + ex.what() + " Retrying in 5 seconds...");
+                std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+                continue;
+            }
+        }
 
     	GD::licensingController->loadModules();
 
@@ -1015,6 +1029,7 @@ void startUp()
 
 		while(BaseLib::HelperFunctions::getTime() < 1000000000000)
 		{
+            if(_shutdownQueued) exitHomegear(1);
 			GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
 			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 		}
