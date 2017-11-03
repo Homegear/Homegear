@@ -152,6 +152,7 @@ private:
 
 	BaseLib::Output _out;
 	MqttSettings _settings;
+	uint32_t _prefixParts = 0;
 	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
 	std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
 	std::unique_ptr<BaseLib::TcpSocket> _socket;
