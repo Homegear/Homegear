@@ -860,6 +860,94 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
     }
 }
 
+void FlowsClient::outputSequence(std::string nodeId, Flows::PVariable message)
+{
+    try
+    {
+        if(!message || _shuttingDown) return;
+
+        PNodeInfo nodeInfo;
+        {
+            std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+            auto nodesIterator = _nodes.find(nodeId);
+            if(nodesIterator == _nodes.end()) return;
+            nodeInfo = nodesIterator->second;
+        }
+
+        {
+            std::lock_guard<std::mutex> internalMessagesGuard(_internalMessagesMutex);
+            auto internalMessagesIterator = _internalMessages.find(nodeId);
+            if(internalMessagesIterator != _internalMessages.end()) message->structValue->emplace("_internal", internalMessagesIterator->second);
+        }
+
+        if(message->structValue->find("payload") == message->structValue->end()) message->structValue->emplace("payload", std::make_shared<Flows::Variable>());
+        message->structValue->emplace("source", std::make_shared<Flows::Variable>(nodeId));
+
+
+        for(uint32_t outputIndex = 0; outputIndex < nodeInfo->wiresOut.size(); outputIndex++)
+        {
+            if(GD::bl->settings.nodeBlueDebugOutput() && BaseLib::HelperFunctions::getTime() - nodeInfo->lastNodeEvent2 >= 100)
+            {
+                nodeInfo->lastNodeEvent2 = BaseLib::HelperFunctions::getTime();
+                if(_frontendConnected && _startUpComplete)
+                {
+                    Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+                    timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
+                    nodeEvent(nodeId, "highlightNode/" + nodeId, timeout);
+                    Flows::PVariable outputIndexEntry = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+                    outputIndexEntry->structValue->emplace("index", std::make_shared<Flows::Variable>((int32_t)outputIndex));
+                    nodeEvent(nodeId, "highlightLink/" + nodeId, outputIndexEntry);
+                }
+                Flows::PVariable status = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+                std::string statusText = message->structValue->at("payload")->toString();
+                if(statusText.size() > 20) statusText = statusText.substr(0, 17) + "...";
+                statusText = std::to_string(outputIndex) + ": " + BaseLib::HelperFunctions::stripNonPrintable(statusText);
+                status->structValue->emplace("text", std::make_shared<Flows::Variable>(statusText));
+                nodeEvent(nodeId, "statusTop/" + nodeId, status);
+            }
+
+            for (auto& node : nodeInfo->wiresOut.at(outputIndex))
+            {
+                PNodeInfo outputNodeInfo;
+                {
+                    std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+                    auto nodeIterator = _nodes.find(node.id);
+                    if (nodeIterator == _nodes.end()) continue;
+                    outputNodeInfo = nodeIterator->second;
+                }
+
+                Flows::PINode nextNode = _nodeManager->getNode(outputNodeInfo->id);
+                if (nextNode)
+                {
+                    if (GD::bl->settings.nodeBlueDebugOutput() && _startUpComplete && _frontendConnected && BaseLib::HelperFunctions::getTime() - outputNodeInfo->lastNodeEvent1 >= 100)
+                    {
+                        outputNodeInfo->lastNodeEvent1 = BaseLib::HelperFunctions::getTime();
+                        Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+                        timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
+                        nodeEvent(outputNodeInfo->id, "highlightNode/" + outputNodeInfo->id, timeout);
+                    }
+                    auto internalMessageIterator = message->structValue->find("_internal");
+                    if (internalMessageIterator != message->structValue->end()) setInternalMessage(outputNodeInfo->id, internalMessageIterator->second);
+                    std::lock_guard<std::mutex> nodeInputGuard(nextNode->getInputMutex());
+                    nextNode->input(outputNodeInfo, node.port, message);
+                }
+            }
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void FlowsClient::nodeEvent(std::string nodeId, std::string topic, Flows::PVariable value)
 {
     try
@@ -1246,6 +1334,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
                     nodeObject->setSubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::subscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
                     nodeObject->setUnsubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::unsubscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
                     nodeObject->setOutput(std::function<void(std::string, uint32_t, Flows::PVariable)>(std::bind(&FlowsClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+                    nodeObject->setOutputSequence(std::function<void(std::string, Flows::PVariable)>(std::bind(&FlowsClient::outputSequence, this, std::placeholders::_1, std::placeholders::_2)));
                     nodeObject->setNodeEvent(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&FlowsClient::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
                     nodeObject->setGetNodeData(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&FlowsClient::getNodeData, this, std::placeholders::_1, std::placeholders::_2)));
                     nodeObject->setSetNodeData(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&FlowsClient::setNodeData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
