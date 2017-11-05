@@ -152,8 +152,7 @@ private:
 	void log(std::string nodeId, int32_t logLevel, std::string message);
 	void subscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable);
 	void unsubscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable);
-	void queueOutput(std::string nodeId, uint32_t index, Flows::PVariable message);
-	void outputSequence(std::string nodeId, Flows::PVariable message);
+	void queueOutput(std::string nodeId, uint32_t index, Flows::PVariable message, bool synchronous);
 	void nodeEvent(std::string nodeId, std::string topic, Flows::PVariable value);
 	Flows::PVariable getNodeData(std::string nodeId, std::string key);
 	void setNodeData(std::string nodeId, std::string key, Flows::PVariable value);

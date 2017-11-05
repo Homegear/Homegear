@@ -60,7 +60,7 @@ public:
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
 	std::string handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
 	std::string handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
-	void nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message);
+	void nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message, bool synchronous);
 	BaseLib::PVariable executePhpNodeBaseMethod(BaseLib::PArray& parameters);
 	void setNodeVariable(std::string nodeId, std::string topic, BaseLib::PVariable value);
 	void enableNodeEvents();

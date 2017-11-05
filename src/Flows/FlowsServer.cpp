@@ -545,7 +545,7 @@ void FlowsServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, boo
     }
 }
 
-void FlowsServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message)
+void FlowsServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message, bool synchronous)
 {
 	try
 	{
@@ -565,10 +565,11 @@ void FlowsServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVaria
 		}
 
 		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
-		parameters->reserve(3);
+		parameters->reserve(4);
 		parameters->push_back(std::make_shared<BaseLib::Variable>(nodeId));
 		parameters->push_back(std::make_shared<BaseLib::Variable>(index));
 		parameters->push_back(message);
+		parameters->push_back(std::make_shared<BaseLib::Variable>(synchronous));
 		sendRequest(clientData, "nodeOutput", parameters, false);
 	}
 	catch(const std::exception& ex)

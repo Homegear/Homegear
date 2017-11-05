@@ -162,7 +162,8 @@ ZEND_FUNCTION(hg_node_output)
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
 	int32_t outputIndex = 0;
 	BaseLib::PVariable message;
-	if(argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::output().");
+	bool synchronousOutput = false;
+	if(argc > 3) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::output().");
 	else if(argc < 2) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::output().");
 	else
 	{
@@ -173,14 +174,24 @@ ZEND_FUNCTION(hg_node_output)
 		}
 
 		message = PhpVariableConverter::getVariable(&(args[1]));
+
+		if(argc == 3)
+		{
+			if(Z_TYPE(args[2]) != IS_TRUE && Z_TYPE(args[2]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "synchronousOutput is not of type boolean.");
+			else
+			{
+				synchronousOutput = Z_TYPE(args[2]) == IS_TRUE;
+			}
+		}
 	}
 
 	std::string methodName("nodeOutput");
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	parameters->arrayValue->reserve(3);
+	parameters->arrayValue->reserve(4);
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(outputIndex));
 	parameters->arrayValue->push_back(message);
+	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(synchronousOutput));
 	php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
 }
 
