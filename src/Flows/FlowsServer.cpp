@@ -2478,10 +2478,17 @@ BaseLib::PVariable FlowsServer::executePhpNode(PFlowsClientData& clientData, Bas
 
 		std::string filename;
 		BaseLib::ScriptEngine::PScriptInfo scriptInfo;
+        bool wait = false;
 		if(parameters->size() == 4)
 		{
 			filename = parameters->at(1)->stringValue.substr(parameters->at(1)->stringValue.find_last_of('/') + 1);
 			scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode, parameters->at(0), parameters->at(1)->stringValue, filename, parameters->at(2)->integerValue, parameters->at(3));
+            auto internalMessagesIterator = parameters->at(3)->structValue->find("_internal");
+            if(internalMessagesIterator != parameters->at(3)->structValue->end())
+            {
+                auto synchronousOutputIterator = internalMessagesIterator->second->structValue->find("synchronousOutput");
+                if(synchronousOutputIterator != internalMessagesIterator->second->structValue->end()) wait = synchronousOutputIterator->second->booleanValue;
+            }
 		}
 		else
 		{
@@ -2494,7 +2501,7 @@ BaseLib::PVariable FlowsServer::executePhpNode(PFlowsClientData& clientData, Bas
 			}
 			scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode, parameters->at(1), parameters->at(2)->stringValue, filename, threadCountIterator->second);
 		}
-		GD::scriptEngineServer->executeScript(scriptInfo, false);
+		GD::scriptEngineServer->executeScript(scriptInfo, wait);
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
     catch(const std::exception& ex)

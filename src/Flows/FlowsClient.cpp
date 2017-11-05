@@ -867,6 +867,7 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
                         Flows::PVariable internalMessage = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
                         internalMessage->structValue->emplace("synchronousOutput", std::make_shared<Flows::Variable>(true));
                         setInternalMessage(outputNodeInfo->id, internalMessage);
+                        message->structValue->emplace("_internal", internalMessage);
                     }
                     std::lock_guard<std::mutex> nodeInputGuard(nextNode->getInputMutex());
                     nextNode->input(outputNodeInfo, node.port, message);
