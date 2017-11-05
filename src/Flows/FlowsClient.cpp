@@ -813,10 +813,9 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
             return;
         }
 
-        if(synchronous && GD::bl->settings.nodeBlueDebugOutput() && BaseLib::HelperFunctions::getTime() - nodeInfo->lastNodeEvent2 >= 100)
+        if(synchronous && GD::bl->settings.nodeBlueDebugOutput())
         {
             //Output node events before execution of input
-            nodeInfo->lastNodeEvent2 = BaseLib::HelperFunctions::getTime();
             if(_frontendConnected && _startUpComplete)
             {
                 Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
@@ -866,7 +865,7 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
                     else
                     {
                         Flows::PVariable internalMessage = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
-                        internalMessageIterator->second->structValue->emplace("synchronousOutput", std::make_shared<Flows::Variable>(true));
+                        internalMessage->structValue->emplace("synchronousOutput", std::make_shared<Flows::Variable>(true));
                         setInternalMessage(outputNodeInfo->id, internalMessage);
                     }
                     std::lock_guard<std::mutex> nodeInputGuard(nextNode->getInputMutex());
@@ -890,9 +889,8 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
             }
         }
 
-        if(!synchronous && GD::bl->settings.nodeBlueDebugOutput() && BaseLib::HelperFunctions::getTime() - nodeInfo->lastNodeEvent2 >= 100)
+        if(!synchronous && GD::bl->settings.nodeBlueDebugOutput())
         {
-            nodeInfo->lastNodeEvent2 = BaseLib::HelperFunctions::getTime();
             if(_frontendConnected && _startUpComplete)
             {
                 Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
