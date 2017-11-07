@@ -1019,6 +1019,7 @@ void FlowsClient::setInternalMessage(std::string nodeId, Flows::PVariable messag
         auto internalMessageIterator = _internalMessages.find(nodeId);
         if(internalMessageIterator != _internalMessages.end())
         {
+            if(internalMessageIterator->second == message) return;
             for(auto element : *message->structValue)
             {
                 internalMessageIterator->second->structValue->erase(element.first);
