@@ -1595,7 +1595,7 @@ Flows::PVariable FlowsClient::invokeExternalNodeMethod(Flows::PArray& parameters
 {
     try
     {
-        if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+        if(parameters->size() != 4) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
         Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
         if(!node) return Flows::Variable::createError(-1, "Unknown node.");

@@ -2547,7 +2547,7 @@ BaseLib::PVariable FlowsServer::invokeNodeMethod(PFlowsClientData& clientData, B
 {
 	try
 	{
-		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
+		if(parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects exactly four parameters.");
 
 		PFlowsClientData clientData;
 		int32_t clientId = 0;
@@ -2565,7 +2565,7 @@ BaseLib::PVariable FlowsServer::invokeNodeMethod(PFlowsClientData& clientData, B
 			clientData = clientIterator->second;
 		}
 
-		return sendRequest(clientData, "invokeNodeMethod", parameters, true);
+		return sendRequest(clientData, "invokeNodeMethod", parameters, parameters->at(3)->booleanValue);
 	}
     catch(const std::exception& ex)
     {
