@@ -1232,8 +1232,9 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			}
 
 			SG(server_context) = (void*) serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
-			SG(default_mimetype) = nullptr;
-			SG(default_charset) = nullptr;
+			std::string charset = "UTF-8";
+			SG(default_charset) = estrndup(charset.data(), charset.size());
+            SG(default_mimetype) = nullptr;
 			if (type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
 			{
 				PG(register_argc_argv) = 1;
@@ -1254,9 +1255,9 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 				std::string uri = globals->http.getHeader().path + globals->http.getHeader().pathInfo;
 				if (!globals->http.getHeader().args.empty()) uri.append('?' + globals->http.getHeader().args);
 				if (!globals->http.getHeader().args.empty()) SG(request_info).query_string = estrndup(&globals->http.getHeader().args.at(0), globals->http.getHeader().args.size());
-				if (!uri.empty()) SG(request_info).request_uri = estrndup(&uri.at(0), uri.size());
+				if (!uri.empty()) SG(request_info).request_uri = estrndup(uri.data(), uri.size());
 				std::string pathTranslated = serverInfo->contentPath.substr(0, serverInfo->contentPath.size() - 1) + scriptInfo->relativePath;
-				SG(request_info).path_translated = estrndup(&pathTranslated.at(0), pathTranslated.size());
+				SG(request_info).path_translated = estrndup(pathTranslated.data(), pathTranslated.size());
 			}
 
 			if (php_request_startup() == FAILURE)

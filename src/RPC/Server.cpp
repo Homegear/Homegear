@@ -143,6 +143,7 @@ void Server::registerMethods()
 		_server->registerMethod("setId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetId()));
 		_server->registerMethod("setInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetInstallMode()));
 		_server->registerMethod("setInterface", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetInterface()));
+		_server->registerMethod("setLanguage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetLanguage()));
 		_server->registerMethod("setLinkInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetLinkInfo()));
 		_server->registerMethod("setMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetMetadata()));
 		_server->registerMethod("setName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetName()));
