@@ -435,7 +435,7 @@ mount -o remount,rw /boot
 export NCURSES_NO_UTF8_ACS=1
 export DIALOG_OUTPUT=1
 
-MAC="homegearpi-""$( ifconfig | grep -m 1 HWaddr | sed "s/^.*HWaddr [0-9a-f:]\{9\}\([0-9a-f:]*\) .*$/\1/;s/:/-/g" )"
+MAC="homegearpi-""$( ifconfig | grep -m 1 ether | sed "s/^.*ether [0-9a-f:]\{9\}\([0-9a-f:]*\) .*$/\1/;s/:/-/g" )"
 echo "$MAC" > "/etc/hostname"
 grep -q $MAC /etc/hosts
 if [ $? -eq 1 ]; then
