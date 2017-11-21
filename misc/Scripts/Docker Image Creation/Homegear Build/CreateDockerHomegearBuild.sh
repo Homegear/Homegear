@@ -374,12 +374,10 @@ if [[ -n $2 ]]; then
 	cd ..
 	rm -Rf Homegear-KNX-${1}/.git
 
-	git clone ssh://git@gitit.de:44444/Homegear-Addons/Homegear-EnOcean.git Homegear-EnOcean-${1}
+	git clone -b ${1} --recursive ssh://git@gitit.de:44444/Homegear-Addons/Homegear-EnOcean.git Homegear-EnOcean-${1}
 	[ $? -ne 0 ] && exit 1
-	cd Homegear-EnOcean-${1}
-	git checkout ${1}
-	cd ..
 	rm -Rf Homegear-EnOcean-${1}/.git
+	rm -Rf Homegear-EnOcean-${1}/misc/Device\ Description\ Files/.git
 
 	git clone ssh://git@gitit.de:44444/EASY/homegear-easycam.git homegear-easycam-${1}
 	[ $? -ne 0 ] && exit 1
