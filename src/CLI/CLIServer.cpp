@@ -1456,7 +1456,6 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
 	{
 		if(!command.empty() && command.at(0) == 0) return;
 		std::string response = handleCommand(command);
-		response.push_back(0);
 		send(clientData, response);
 	}
     catch(const std::exception& ex)

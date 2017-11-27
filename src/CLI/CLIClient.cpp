@@ -258,7 +258,7 @@ int32_t Client::start(std::string command)
 				{
 					timeoutCounter = 0;
 					receiveBuffer.at(bytes) = 0;
-					std::string response(receiveBuffer.data());
+					std::string response(receiveBuffer.data(), bytes);
 					if(response.size() > 15)
 					{
 						if(response.compare(7, 6, "family") == 0)
