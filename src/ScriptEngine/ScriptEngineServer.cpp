@@ -1395,7 +1395,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 			std::unique_lock<std::mutex> processGuard(_processMutex);
 			_processes[process->getPid()] = process;
 
-			process->requestConditionVariable.wait_for(processGuard, std::chrono::milliseconds(60000), [&]{ return (bool)(process->getClientData()); });
+			process->requestConditionVariable.wait_for(processGuard, std::chrono::milliseconds(120000), [&]{ return (bool)(process->getClientData()); });
 
 			if(!process->getClientData())
 			{

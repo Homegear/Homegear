@@ -2126,7 +2126,7 @@ PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
 			}
 
 			std::unique_lock<std::mutex> requestLock(_processRequestMutex);
-			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(30000), [&]{ return (bool)(process->getClientData()); });
+			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(120000), [&]{ return (bool)(process->getClientData()); });
 
 			if(!process->getClientData())
 			{
