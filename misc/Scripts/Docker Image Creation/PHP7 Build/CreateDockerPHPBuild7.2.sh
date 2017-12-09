@@ -237,6 +237,9 @@ if test ! -f ext_skel.in; then
 	touch ext_skel.in
 fi
 git clone https://github.com/krakjoe/pthreads.git pthreads
+# Todo: Remove the next two lines when fixed (probably in RC6)
+sed -i '/.*#include <ctype.h>/a#include <limits.h>' xmlrpc/libxmlrpc/base64.c
+sed -i "s/if(queue_index == NULL)/if(index == NULL)/g" xmlrpc/libxmlrpc/queue.c
 cd ..
 
 autoconf

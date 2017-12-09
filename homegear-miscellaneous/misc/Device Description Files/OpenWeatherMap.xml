@@ -1,0 +1,545 @@
+<homegearDevice version="1">
+	<supportedDevices>
+		<device id="OpenWeatherMap">
+			<description>OpenWeatherMap</description>
+			<typeNumber>0x100</typeNumber>
+		</device>
+	</supportedDevices>
+	<runProgram>
+		<startType>permanent</startType>
+		<script>
+<![CDATA[<?php
+/**
+ * Class to share data between the main script and the event thread.
+ */
+class SharedData extends Threaded
+{
+    public $scriptId = 0;
+    public $peerId = 0;
+    public $interval = 60;
+
+    public function run() {}
+}
+
+class EventThread extends Thread
+{
+    private $sharedData;
+
+	public function __construct($sharedData)
+	{
+		$this->sharedData = $sharedData;
+	}
+
+	public function run()
+	{
+		$hg = new \Homegear\Homegear();
+		if($hg->registerThread($this->sharedData->scriptId) === false)
+		{
+			$hg->log(2, "Could not register thread.");
+			return;
+		}
+		$hg->subscribePeer($this->sharedData->peerId);
+		while(!$hg->shuttingDown() && $hg->peerExists($this->sharedData->peerId))
+		{
+			$result = $hg->pollEvent();
+			if($result["TYPE"] == "event" && $result["PEERID"] == $this->sharedData->peerId)
+			{
+				if($result["VARIABLE"] == "REQUEST")
+				{
+					$this->sharedData->interval = 0;
+					$this->synchronized(function($thread){ $thread->notify(); }, $this);
+				}
+			}
+			else if($result["TYPE"] == "updateDevice" && $result["PEERID"] == $this->sharedData->peerId)
+			{
+				$this->sharedData->interval = 0;
+				$this->synchronized(function($thread){ $thread->notify(); }, $this);
+			}
+		}
+	}
+}
+
+$peerId = (integer)$argv[0];
+$hg = new \Homegear\Homegear();
+
+$sharedData = new SharedData();
+$sharedData->peerId = $peerId;
+$sharedData->scriptId = $hg->getScriptId();
+$thread = new EventThread($sharedData);
+$thread->start();
+
+while(!$hg->shuttingDown() && $hg->peerExists($peerId))
+{
+	$config = $hg->getParamset($peerId, 0, "MASTER");
+    if(!array_key_exists("LANGUAGE_CODE", $config) || !array_key_exists("CITY_ID", $config))
+    {
+    	$hg->log(2, "Error: Peer does not seem to be an OpenWeatherMap device.");
+    	$thread->synchronized(function($thread){ $thread->wait(5000000); }, $thread);
+    	continue;
+    }
+    if($config["API_KEY"] == "")
+    {
+    	$hg->log(2, "Warning: No API key set.");
+    	$thread->synchronized(function($thread){ $thread->wait(5000000); }, $thread);
+    	continue;
+    }
+
+    $sharedData->interval = $config["REQUEST_INTERVAL"];
+    if($sharedData->interval < 60) $sharedData->interval = 60;
+
+    $url = "http://api.openweathermap.org/data/2.5/weather?id=".$config["CITY_ID"]."&units=metric&cnt=7&lang=".$config["LANGUAGE_CODE"]."&APPID=".$config["API_KEY"];
+    for($i = 0; $i < 3; $i++)
+    {
+	    $json = @file_get_contents($url);
+	    if($json) break;
+	}
+	if(!$json)
+    {
+        $hg->log(3, "Warning: Response from openweathermap.org is empty.");
+				$thread->synchronized(function($thread){ $thread->wait(10000000); }, $thread);
+        continue;
+    }
+    $data = json_decode($json, true);
+    if(!$data || count($data) == 0)
+    {
+    	$hg->log(3, "Warning: Response from openweathermap.org is empty.");
+			$thread->synchronized(function($thread){ $thread->wait(10000000); }, $thread);
+        continue;
+    }
+    if($data["cod"] != "404")
+    {
+    	$hg->setValue($peerId, 1, "LAST_DATA", time());
+        $hg->setValue($peerId, 1, "CITY_LONGITUDE", (double)$data["coord"]["lon"]);
+        $hg->setValue($peerId, 1, "CITY_LATITUDE", (double)$data["coord"]["lat"]);
+        $hg->setValue($peerId, 1, "SUNRISE", (integer)$data["sys"]["sunrise"]);
+        $hg->setValue($peerId, 1, "SUNSET", (integer)$data["sys"]["sunset"]);
+        if(array_key_exists("weather", $data) && count($data["weather"]) > 0)
+        {
+            $hg->setValue($peerId, 1, "WEATHER", (string)$data["weather"][0]["main"]);
+            $hg->setValue($peerId, 1, "WEATHER_DESCRIPTION", (string)$data["weather"][0]["description"]);
+            $hg->setValue($peerId, 1, "WEATHER_ICON", (string)$data["weather"][0]["icon"]);
+            $hg->setValue($peerId, 1, "WEATHER_ICON_URL", "http://openweathermap.org/img/w/".$data["weather"][0]["icon"].".png");
+        }
+        else
+        {
+            $hg->setValue($peerId, 1, "WEATHER", "");
+            $hg->setValue($peerId, 1, "WEATHER_DESCRIPTION", "");
+            $hg->setValue($peerId, 1, "WEATHER_ICON", "");
+            $hg->setValue($peerId, 1, "WEATHER_ICON_URL", "");
+        }
+        $hg->setValue($peerId, 1, "TEMPERATURE", (double)$data["main"]["temp"]);
+        $hg->setValue($peerId, 1, "HUMIDITY", (integer)$data["main"]["humidity"]);
+        $hg->setValue($peerId, 1, "PRESSURE", (double)$data["main"]["pressure"]);
+        $hg->setValue($peerId, 1, "WIND_SPEED", (double)$data["wind"]["speed"]);
+        $hg->setValue($peerId, 1, "WIND_GUST", array_key_exists("gust", $data["wind"]) ? (double)$data["wind"]["gust"] : 0.0);
+        $hg->setValue($peerId, 1, "WIND_DIRECTION", array_key_exists("deg", $data["wind"]) ? (double)$data["wind"]["deg"] : 0.0);
+        $hg->setValue($peerId, 1, "RAIN_3H", array_key_exists("rain", $data) && array_key_exists("3h", $data["rain"]) ? (double)$data["rain"]["3h"] : 0.0);
+        $hg->setValue($peerId, 1, "SNOW_3H", array_key_exists("snow", $data) && array_key_exists("3h", $data["snow"]) ? (double)$data["snow"]["3h"] : 0.0);
+        $hg->setValue($peerId, 1, "CLOUD_COVERAGE", (integer)$data["clouds"]["all"]);
+    }
+    else
+    {
+    	$hg->log(2, "Error: City or country not found.");
+        $hg->setValue($peerId, 1, "CITY_LONGITUDE", 0.0);
+        $hg->setValue($peerId, 1, "CITY_LATITUDE", 0.0);
+        $hg->setValue($peerId, 1, "SUNRISE", 0);
+        $hg->setValue($peerId, 1, "SUNSET", 0);
+        $hg->setValue($peerId, 1, "WEATHER", "");
+        $hg->setValue($peerId, 1, "WEATHER_DESCRIPTION", "");
+        $hg->setValue($peerId, 1, "WEATHER_ICON", "");
+        $hg->setValue($peerId, 1, "WEATHER_ICON_URL", "");
+        $hg->setValue($peerId, 1, "TEMPERATURE", 0.0);
+        $hg->setValue($peerId, 1, "HUMIDITY", 0);
+        $hg->setValue($peerId, 1, "PRESSURE", 0.0);
+        $hg->setValue($peerId, 1, "WIND_SPEED", 0.0);
+        $hg->setValue($peerId, 1, "WIND_GUST", 0.0);
+        $hg->setValue($peerId, 1, "WIND_DIRECTION", 0.0);
+        $hg->setValue($peerId, 1, "RAIN_3H", 0.0);
+        $hg->setValue($peerId, 1, "SNOW_3H", 0.0);
+        $hg->setValue($peerId, 1, "CLOUD_COVERAGE", 0);
+    }
+
+    $waited = 0;
+    while($waited < $sharedData->interval && !$hg->shuttingDown() && $hg->peerExists($peerId))
+    {
+    	$thread->synchronized(function($thread){ $thread->wait(5000000); }, $thread);
+    	$waited += 5;
+    }
+}
+
+$thread->join();
+?>]]>
+		</script>
+	</runProgram>
+	<properties/>
+	<functions>
+		<function channel="0" type="" channelCount="1">
+			<properties/>
+			<configParameters>custom_ch0_master</configParameters>
+		</function>
+		<function channel="1" type="OpenWeatherMap" channelCount="1">
+			<properties/>
+			<configParameters>config</configParameters>
+			<variables>custom_ch1_values</variables>
+		</function>
+	</functions>
+	<packets/>
+	<parameterGroups>
+		<configParameters id="config"/>
+		<configParameters id="custom_ch0_master">
+			<parameter id="REQUEST_INTERVAL">
+				<properties>
+					<unit>s</unit>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalInteger>
+					<minimumValue>60</minimumValue>
+					<maximumValue>86400</maximumValue>
+					<defaultValue>900</defaultValue>
+				</logicalInteger>
+				<physicalInteger>
+					<operationType>config</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="API_KEY">
+				<properties>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalString/>
+				<physicalString>
+					<operationType>config</operationType>
+				</physicalString>
+			</parameter>
+			<parameter id="CITY_ID">
+				<properties>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalInteger>
+					<defaultValue>2891122</defaultValue>
+				</logicalInteger>
+				<physicalInteger>
+					<operationType>config</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="LANGUAGE_CODE">
+				<properties>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalString>
+					<defaultValue>EN</defaultValue>
+				</logicalString>
+				<physicalString>
+					<operationType>config</operationType>
+				</physicalString>
+			</parameter>
+		</configParameters>
+		<variables id="custom_ch1_values">
+			<parameter id="REQUEST">
+				<properties>
+					<readable>false</readable>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalAction/>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="LAST_DATA">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<unit>s</unit>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+				</logicalInteger>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="CITY_LONGITUDE">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<signed>true</signed>
+					<unit>°</unit>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>-180.000000</minimumValue>
+					<maximumValue>180.000000</maximumValue>
+				</logicalDecimal>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="CITY_LATITUDE">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<signed>true</signed>
+					<unit>°</unit>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>-90.000000</minimumValue>
+					<maximumValue>90.000000</maximumValue>
+				</logicalDecimal>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="SUNRISE">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<unit>s</unit>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+				</logicalInteger>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="SUNSET">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<unit>s</unit>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+				</logicalInteger>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="WEATHER">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalString/>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="WEATHER_DESCRIPTION">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalString/>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="WEATHER_ICON">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalString/>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="WEATHER_ICON_URL">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalString/>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="TEMPERATURE">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<signed>true</signed>
+					<unit>°C</unit>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>-100.000000</minimumValue>
+					<maximumValue>100.000000</maximumValue>
+				</logicalDecimal>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="HUMIDITY">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<unit>%</unit>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>100</maximumValue>
+				</logicalInteger>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="PRESSURE">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<unit>hPa</unit>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>0.000000</minimumValue>
+					<maximumValue>2000.000000</maximumValue>
+				</logicalDecimal>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="WIND_SPEED">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<unit>km/h</unit>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>0.000000</minimumValue>
+				</logicalDecimal>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="WIND_GUST">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<unit>km/h</unit>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>0.000000</minimumValue>
+				</logicalDecimal>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="WIND_DIRECTION">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<unit>°</unit>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>0.000000</minimumValue>
+					<maximumValue>360.000000</maximumValue>
+				</logicalDecimal>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="RAIN_3H">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<unit>mm</unit>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>0.000000</minimumValue>
+				</logicalDecimal>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="SNOW_3H">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<unit>mm</unit>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>0.000000</minimumValue>
+				</logicalDecimal>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="CLOUD_COVERAGE">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<unit>%</unit>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>100</maximumValue>
+				</logicalInteger>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+		</variables>
+	</parameterGroups>
+</homegearDevice>

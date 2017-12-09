@@ -124,21 +124,13 @@ ff02::1         ip6-allnodes
 ff02::2         ip6-allrouters
 " > etc/hosts
 
-echo "auto lo
-iface lo inet loopback
-iface lo inet6 loopback
+echo "# interfaces(5) file used by ifup(8) and ifdown(8)
 
-allow-hotplug eth0
-iface eth0 inet dhcp
-iface eth0 inet6 auto
+# Please note that this file is written to be used with dhcpcd
+# For static IP, consult /etc/dhcpcd.conf and 'man dhcpcd.conf'
 
-allow-hotplug wlan0
-iface wlan0 inet manual
-    wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf
-
-allow-hotplug wlan1
-iface wlan1 inet manual
-    wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf
+# Include files from /etc/network/interfaces.d:
+source-directory /etc/network/interfaces.d
 " > etc/network/interfaces
 #End network settings
 
@@ -162,8 +154,11 @@ echo "deb https://homegear.eu/packages/Raspbian/ stretch/" >> /etc/apt/sources.l
 wget http://homegear.eu/packages/Release.key
 apt-key add - < Release.key
 rm Release.key
+wget http://archive.raspberrypi.org/debian/raspberrypi.gpg.key
+apt-key add - < raspberrypi.gpg.key
+rm raspberrypi.gpg.key
 apt update
-apt -y install libraspberrypi0 libraspberrypi-bin locales console-common ntp resolvconf openssh-server git-core binutils curl libcurl3-gnutls sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 libmodbus5 tmux dialog whiptail
+apt -y install libraspberrypi0 libraspberrypi-bin locales console-common dhcpcd5 ntp resolvconf openssh-server git-core binutils curl libcurl3-gnutls sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libmcrypt4 libxslt1.1 libmodbus5 tmux dialog whiptail
 # Wireless packets
 apt -y install bluez-firmware firmware-atheros firmware-libertas firmware-realtek firmware-ralink firmware-brcm80211 wireless-tools wpasupplicant
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
@@ -181,22 +176,12 @@ if [ "0$result" -eq "0" ]; then
     usermod -a -G spi homegear 2>/dev/null
 fi
 echo "pi ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-sed -i -e 's/KERNEL!="eth*|/KERNEL!="/' /lib/udev/rules.d/75-persistent-net-generator.rules
-dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-reconfigure locales
 service ssh stop
 service ntp stop
 systemctl disable serial-getty@ttyAMA0.service
 systemctl disable serial-getty@serial0.service
 systemctl disable serial-getty@ttyS0.service
-
-cd /tmp/
-git clone --depth 1 git://github.com/raspberrypi/firmware/
-cp -R /tmp/firmware/hardfp/opt/vc /opt/
-rm -Rf /tmp/firmware
-echo "PATH=\"\$PATH:/opt/vc/bin:/opt/vc/sbin\"" >> /etc/bash.bashrc
-echo "/opt/vc/lib" >> /etc/ld.so.conf.d/vcgencmd.conf
-ldconfig
 
 rm -rf /var/log/homegear/*
 EOF
@@ -274,6 +259,7 @@ chown -R homegear:homegear /var/lib/homegear
 # }}}
 
 systemctl enable setup-tmpfs
+sed -i "s/#SystemMaxUse=/SystemMaxUse=10M/g" /etc/systemd/journald.conf
 EOF
 chmod +x $rootfs/fourth-stage
 LANG=C chroot $rootfs /fourth-stage
@@ -449,7 +435,7 @@ mount -o remount,rw /boot
 export NCURSES_NO_UTF8_ACS=1
 export DIALOG_OUTPUT=1
 
-MAC="homegearpi-""$( ifconfig | grep -m 1 HWaddr | sed "s/^.*HWaddr [0-9a-f:]\{9\}\([0-9a-f:]*\) .*$/\1/;s/:/-/g" )"
+MAC="homegearpi-""$( ifconfig | grep -m 1 ether | sed "s/^.*ether [0-9a-f:]\{9\}\([0-9a-f:]*\) .*$/\1/;s/:/-/g" )"
 echo "$MAC" > "/etc/hostname"
 grep -q $MAC /etc/hosts
 if [ $? -eq 1 ]; then

@@ -48,7 +48,6 @@
 #error "PHP 7.3 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
 /*
  * 1. Compare initialization with the initialization in one of the SAPI modules (e. g. "php_embed_init()" in "sapi/embed/php_embed.c").
- * 2. When PHP 7.2 is used, remove the code parts that fix bug #71115 (it is fixed).
  */
 #endif
 
@@ -1970,6 +1969,7 @@ static int php_homegear_startup(sapi_module_struct* sapi_globals)
 				$hg->setValue(200, 1, "PRODUCTION2", (int)rand(0, 1000));
 				$hg->putParamset(200, 1, "MASTER", $hg->getParamset(200, 1, "MASTER"));
 			 */
+#if PHP_VERSION_ID < 70200
 		void* global;
 		void* function;
 		void* classEntry;
@@ -1997,6 +1997,7 @@ static int php_homegear_startup(sapi_module_struct* sapi_globals)
 			} ZEND_HASH_FOREACH_END();
 
 		} ZEND_HASH_FOREACH_END();
+#endif
 	// }}}
 	return SUCCESS;
 }
@@ -2004,6 +2005,7 @@ static int php_homegear_startup(sapi_module_struct* sapi_globals)
 static int php_homegear_shutdown(sapi_module_struct* sapi_globals)
 {
 	// {{{ Fix for bug #71115 which causes process to crash when excessively using $_GLOBALS. Remove once bug is fixed.
+#if PHP_VERSION_ID < 70200
 		void* global;
 		void* function;
 		void* classEntry;
@@ -2027,6 +2029,7 @@ static int php_homegear_shutdown(sapi_module_struct* sapi_globals)
 			} ZEND_HASH_FOREACH_END();
 
 		} ZEND_HASH_FOREACH_END();
+#endif
 	// }}}
 	return php_module_shutdown_wrapper(sapi_globals);
 }
@@ -2043,13 +2046,13 @@ static int php_homegear_deactivate()
 
 static PHP_MINIT_FUNCTION(homegear)
 {
-	zend_class_entry homegearExceptionCe;
+	zend_class_entry homegearExceptionCe{};
 	INIT_CLASS_ENTRY(homegearExceptionCe, "Homegear\\HomegearException", NULL);
 	//Register child class inherited from Exception (fetched with "zend_exception_get_default")
 	homegear_exception_class_entry = zend_register_internal_class_ex(&homegearExceptionCe, zend_exception_get_default());
 	zend_declare_class_constant_long(homegear_exception_class_entry, "UNKNOWN_DEVICE", sizeof("UNKNOWN_DEVICE") - 1, -2);
 
-	zend_class_entry homegearCe;
+	zend_class_entry homegearCe{};
 	INIT_CLASS_ENTRY(homegearCe, "Homegear\\Homegear", homegear_methods);
 	homegear_class_entry = zend_register_internal_class(&homegearCe);
 	zend_declare_class_constant_stringl(homegear_class_entry, "TEMP_PATH", sizeof("TEMP_PATH") - 1, GD::bl->settings.tempPath().c_str(), GD::bl->settings.tempPath().size());
@@ -2060,7 +2063,7 @@ static PHP_MINIT_FUNCTION(homegear)
 	zend_declare_class_constant_stringl(homegear_class_entry, "LOGFILE_PATH", sizeof("LOGFILE_PATH") - 1, GD::bl->settings.logfilePath().c_str(), GD::bl->settings.logfilePath().size());
 	zend_declare_class_constant_stringl(homegear_class_entry, "WORKING_DIRECTORY", sizeof("WORKING_DIRECTORY") - 1, GD::bl->settings.workingDirectory().c_str(), GD::bl->settings.workingDirectory().size());
 
-	zend_class_entry homegearGpioCe;
+	zend_class_entry homegearGpioCe{};
 	INIT_CLASS_ENTRY(homegearGpioCe, "Homegear\\HomegearGpio", homegear_gpio_methods);
 	homegear_gpio_class_entry = zend_register_internal_class(&homegearGpioCe);
 	zend_declare_class_constant_long(homegear_gpio_class_entry, "DIRECTION_IN", 12, 0);
@@ -2069,15 +2072,17 @@ static PHP_MINIT_FUNCTION(homegear)
 	zend_declare_class_constant_long(homegear_gpio_class_entry, "EDGE_FALLING", 12, 1);
 	zend_declare_class_constant_long(homegear_gpio_class_entry, "EDGE_BOTH", 9, 2);
 
-	zend_class_entry homegearSerialCe;
+	zend_class_entry homegearSerialCe{};
 	INIT_CLASS_ENTRY(homegearSerialCe, "Homegear\\HomegearSerial", homegear_serial_methods);
 	homegear_serial_class_entry = zend_register_internal_class(&homegearSerialCe);
 
 #ifdef I2CSUPPORT
-	zend_class_entry homegearI2cCe;
+	zend_class_entry homegearI2cCe{};
 	INIT_CLASS_ENTRY(homegearI2cCe, "Homegear\\HomegearI2c", homegear_i2c_methods);
 	homegear_i2c_class_entry = zend_register_internal_class(&homegearI2cCe);
 #endif
+
+	php_node_startup();
 
     return SUCCESS;
 }

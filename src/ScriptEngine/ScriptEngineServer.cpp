@@ -40,6 +40,12 @@
 namespace ScriptEngine
 {
 
+#ifdef SE_MANUAL_CLIENT_START
+    pid_t _manualClientCurrentProcessId = 1;
+	std::mutex _unconnectedProcessesMutex;
+	std::queue<pid_t> _unconnectedProcesses;
+#endif
+
 ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 {
 	_out.init(GD::bl.get());
@@ -106,6 +112,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("getParamsetId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetId()));
 	_rpcMethods.emplace("getPeerId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPeerId()));
 	_rpcMethods.emplace("getServiceMessages", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetServiceMessages()));
+    _rpcMethods.emplace("getSniffedDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetSniffedDevices()));
 	_rpcMethods.emplace("getSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetSystemVariable()));
 	_rpcMethods.emplace("getUpdateStatus", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetUpdateStatus()));
 	_rpcMethods.emplace("getValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetValue()));
@@ -133,6 +140,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("setId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetId()));
 	_rpcMethods.emplace("setInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInstallMode()));
 	_rpcMethods.emplace("setInterface", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInterface()));
+	_rpcMethods.emplace("setLanguage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetLanguage()));
 	_rpcMethods.emplace("setLinkInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetLinkInfo()));
 	_rpcMethods.emplace("setMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetMetadata()));
 	_rpcMethods.emplace("setName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetName()));
@@ -143,6 +151,8 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("setSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetSystemVariable()));
 	_rpcMethods.emplace("setTeam", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetTeam()));
 	_rpcMethods.emplace("setValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetValue()));
+    _rpcMethods.emplace("startSniffing", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCStartSniffing()));
+    _rpcMethods.emplace("stopSniffing", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCStopSniffing()));
 	_rpcMethods.emplace("subscribePeers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSubscribePeers()));
 	_rpcMethods.emplace("triggerEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerEvent()));
 	_rpcMethods.emplace("triggerRpcEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerRpcEvent()));
@@ -979,7 +989,7 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 			{
 				if(GD::bl->debugLevel >= 4)
 				{
-					_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
+                    if(GD::bl->debugLevel >= 5 || queueEntry->methodName != "peerExists") _out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
 					if(GD::bl->debugLevel >= 5)
 					{
 						for(BaseLib::Array::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
@@ -1360,7 +1370,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 					i->second->lastExecution = BaseLib::HelperFunctions::getTime();
 					return i->second;
 				}
-				else if(!i->second->isNodeProcess() && i->second->scriptCount() < GD::bl->threadManager.getMaxThreadCount() / GD::bl->settings.scriptEngineMaxThreadsPerScript() && (GD::bl->settings.scriptEngineMaxScriptsPerProcess() == -1 || i->second->scriptCount() < (unsigned)GD::bl->settings.scriptEngineMaxScriptsPerProcess()))
+				else if(!nodeProcess && !i->second->isNodeProcess() && i->second->scriptCount() < GD::bl->threadManager.getMaxThreadCount() / GD::bl->settings.scriptEngineMaxThreadsPerScript() && (GD::bl->settings.scriptEngineMaxScriptsPerProcess() == -1 || i->second->scriptCount() < (unsigned)GD::bl->settings.scriptEngineMaxScriptsPerProcess()))
 				{
 					i->second->lastExecution = BaseLib::HelperFunctions::getTime();
 					return i->second;
@@ -1371,7 +1381,12 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess(nodeProcess));
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rse" };
 #ifdef SE_MANUAL_CLIENT_START
-		process->setPid(1);
+        pid_t currentProcessId = _manualClientCurrentProcessId++;
+        process->setPid(currentProcessId);
+        {
+            std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
+            _unconnectedProcesses.push(currentProcessId);
+        }
 #else
 		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
 #endif
@@ -1380,7 +1395,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 			std::unique_lock<std::mutex> processGuard(_processMutex);
 			_processes[process->getPid()] = process;
 
-			process->requestConditionVariable.wait_for(processGuard, std::chrono::milliseconds(60000), [&]{ return (bool)(process->getClientData()); });
+			process->requestConditionVariable.wait_for(processGuard, std::chrono::milliseconds(120000), [&]{ return (bool)(process->getClientData()); });
 
 			if(!process->getClientData())
 			{
@@ -1875,7 +1890,14 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
 		{
 			pid_t pid = parameters->at(0)->integerValue;
 #ifdef SE_MANUAL_CLIENT_START
-			pid = 1;
+            {
+                std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
+                if (!_unconnectedProcesses.empty())
+                {
+                    pid = _unconnectedProcesses.front();
+                    _unconnectedProcesses.pop();
+                }
+            }
 #endif
 			std::unique_lock<std::mutex> processGuard(_processMutex);
 			std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(pid);
@@ -2695,11 +2717,12 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
 		{
 			try
 			{
-				if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
+				if(parameters->size() != 3 && parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
 				if(parameters->at(1)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type integer.");
+				if(parameters->size() == 4 && parameters->at(3)->type != BaseLib::VariableType::tBoolean) return BaseLib::Variable::createError(-1, "Parameter 4 is not of type boolean.");
 
-				if(GD::flowsServer) GD::flowsServer->nodeOutput(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2));
+				if(GD::flowsServer) GD::flowsServer->nodeOutput(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2), parameters->size() == 4 ? parameters->at(3)->booleanValue : false);
 
 				return std::make_shared<BaseLib::Variable>();
 			}

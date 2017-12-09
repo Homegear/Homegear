@@ -66,7 +66,6 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 Monitor _monitor;
 std::mutex _shuttingDownMutex;
-std::atomic_bool _reloading;
 bool _fork = false;
 std::atomic_bool _monitorProcess;
 pid_t _mainProcessId = 0;
@@ -79,6 +78,7 @@ std::shared_ptr<std::function<void(int32_t, std::string)>> _errorCallback;
 
 void exitHomegear(int exitCode)
 {
+	if(GD::eventHandler) GD::eventHandler->dispose();
 	if(GD::familyController) GD::familyController->disposeDeviceFamilies();
 	if(GD::bl->db)
 	{
@@ -102,7 +102,7 @@ void bindRPCServers()
 		if(settings->port > 1024) continue;
 		std::string info = "Info: Binding XML RPC server " + settings->name + " listening on " + settings->interface + ":" + std::to_string(settings->port);
 		if(settings->ssl) info += ", SSL enabled";
-		else GD::bl->rpcPort = settings->port;
+		else GD::bl->rpcPort = static_cast<uint32_t>(settings->port);
 		if(settings->authType != BaseLib::Rpc::ServerInfo::Info::AuthType::none) info += ", authentication enabled";
 		info += "...";
 		GD::out.printInfo(info);
@@ -118,13 +118,13 @@ void startRPCServers()
 		BaseLib::Rpc::PServerInfo settings = GD::serverInfo.get(i);
 		std::string info = "Starting XML RPC server " + settings->name + " listening on " + settings->interface + ":" + std::to_string(settings->port);
 		if(settings->ssl) info += ", SSL enabled";
-		else GD::bl->rpcPort = settings->port;
+		else GD::bl->rpcPort = static_cast<uint32_t>(settings->port);
 		if(settings->authType != BaseLib::Rpc::ServerInfo::Info::AuthType::none) info += ", authentication enabled";
 		info += "...";
 		GD::out.printInfo(info);
 		GD::rpcServers[i].start(settings);
 	}
-	if(GD::rpcServers.size() == 0)
+	if(GD::rpcServers.empty())
 	{
 		GD::out.printCritical("Critical: No RPC servers are running. Terminating Homegear.");
 		exitHomegear(1);
@@ -135,7 +135,7 @@ void startRPCServers()
 void stopRPCServers(bool dispose)
 {
 	GD::out.printInfo( "(Shutdown) => Stopping RPC servers");
-	for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+	for(auto i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 	{
 		i->second.stop();
 		if(dispose) i->second.dispose();
@@ -876,11 +876,25 @@ void startUp()
 			}
         }
 
+        for(int32_t i = 0; i < 60; i++)
+        {
+            try
+            {
+                bindRPCServers();
+                break;
+            }
+            catch (BaseLib::NetException& ex)
+            {
+                if(_shutdownQueued) exitHomegear(1);
+                GD::out.printError("Error binding RPC servers: " + ex.what() + " Retrying in 5 seconds...");
+                std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+                continue;
+            }
+        }
+
     	GD::licensingController->loadModules();
 
 		GD::familyController->loadModules();
-
-		bindRPCServers();
 
     	if(getuid() == 0 && !GD::runAsUser.empty() && !GD::runAsGroup.empty())
     	{
@@ -1015,6 +1029,7 @@ void startUp()
 
 		while(BaseLib::HelperFunctions::getTime() < 1000000000000)
 		{
+            if(_shutdownQueued) exitHomegear(1);
 			GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
 			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 		}
@@ -1191,7 +1206,6 @@ int main(int argc, char* argv[])
 {
 	try
     {
-		_reloading = false;
 		_startUpComplete = false;
 		_shutdownQueued = false;
 		_monitorProcess = false;

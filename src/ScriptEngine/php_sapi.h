@@ -36,6 +36,7 @@
 #include <homegear-base/BaseLib.h>
 #include "PhpEvents.h"
 #include "php_homegear_globals.h"
+#include "php_node.h"
 #include "php_config_fixes.h"
 
 #include <iostream>

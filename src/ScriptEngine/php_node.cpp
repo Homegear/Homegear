@@ -37,8 +37,6 @@
 
 #define SEG(v) php_homegear_get_globals()->v
 
-static zend_class_entry* homegear_node_base_class_entry = nullptr;
-
 void php_homegear_node_invoke_rpc(std::string& methodName, BaseLib::PVariable& parameters, zval* return_value, bool wait)
 {
 	if(SEG(id) == 0)
@@ -164,7 +162,8 @@ ZEND_FUNCTION(hg_node_output)
 	if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
 	int32_t outputIndex = 0;
 	BaseLib::PVariable message;
-	if(argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::output().");
+	bool synchronousOutput = false;
+	if(argc > 3) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::output().");
 	else if(argc < 2) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::output().");
 	else
 	{
@@ -175,14 +174,24 @@ ZEND_FUNCTION(hg_node_output)
 		}
 
 		message = PhpVariableConverter::getVariable(&(args[1]));
+
+		if(argc == 3)
+		{
+			if(Z_TYPE(args[2]) != IS_TRUE && Z_TYPE(args[2]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "synchronousOutput is not of type boolean.");
+			else
+			{
+				synchronousOutput = Z_TYPE(args[2]) == IS_TRUE;
+			}
+		}
 	}
 
 	std::string methodName("nodeOutput");
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-	parameters->arrayValue->reserve(3);
+	parameters->arrayValue->reserve(4);
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
 	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(outputIndex));
 	parameters->arrayValue->push_back(message);
+	parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(synchronousOutput));
 	php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
 }
 
@@ -453,7 +462,7 @@ static const zend_function_entry homegear_node_base_methods[] = {
 
 void php_node_startup()
 {
-	zend_class_entry homegearNodeBaseCe;
+	zend_class_entry homegearNodeBaseCe{};
 	INIT_CLASS_ENTRY(homegearNodeBaseCe, "HomegearNodeBase", homegear_node_base_methods);
 	homegear_node_base_class_entry = zend_register_internal_class(&homegearNodeBaseCe);
 	zend_declare_class_constant_stringl(homegear_node_base_class_entry, "NODE_ID", sizeof("NODE_ID") - 1, SEG(nodeId).c_str(), SEG(nodeId).size());

@@ -88,7 +88,6 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval* value)
 					if(key) variable.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 					else variable.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
 				}
-				if(!element) continue;
 				BaseLib::PVariable arrayElement = getVariable(element);
 				if(!arrayElement) continue;
 				if(key)

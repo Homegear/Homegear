@@ -1,0 +1,38 @@
+<homegearDevice version="1">
+	<supportedDevices>
+		<device id="VirtualWindowContact">
+			<description>Virtual Window Contact</description>
+			<typeNumber>0xF000</typeNumber>
+		</device>
+	</supportedDevices>
+	<properties/>
+	<functions>
+		<function channel="0" type="" channelCount="1">
+			<properties/>
+			<configParameters>custom_ch0_master</configParameters>
+		</function>
+		<function channel="1" type="VirtualWindowContact" channelCount="1">
+			<properties/>
+			<configParameters>config</configParameters>
+			<variables>custom_ch1_values</variables>
+		</function>
+	</functions>
+	<packets/>
+	<parameterGroups>
+		<configParameters id="config"/>
+		<configParameters id="custom_ch0_master" />
+		<variables id="custom_ch1_values">
+			<parameter id="STATE">
+				<properties>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+	</parameterGroups>
+</homegearDevice>

@@ -1059,8 +1059,13 @@ std::string Server::handleGlobalCommand(std::string& command)
 			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli, fullPath, relativePath, argumentsString));
 			scriptInfo->returnOutput = true;
 			GD::scriptEngineServer->executeScript(scriptInfo, true);
-			if(!scriptInfo->output.empty()) stringStream << scriptInfo->output;
-			stringStream << "Exit code: " << std::dec << scriptInfo->exitCode << std::endl;
+			bool addNewLine = false;
+			if(!scriptInfo->output.empty())
+			{
+				stringStream << scriptInfo->output;
+                if(scriptInfo->output.back() != '\n') addNewLine = true;
+			}
+			stringStream << (addNewLine ? "\n" : "") << "Exit code: " << std::dec << scriptInfo->exitCode << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 10, "runcommand") == 0 || command.compare(0, 3, "rc ") == 0 || command.compare(0, 1, "$") == 0)
@@ -1094,8 +1099,13 @@ std::string Server::handleGlobalCommand(std::string& command)
 			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli, fullPath, relativePath, script, arguments));
 			scriptInfo->returnOutput = true;
 			GD::scriptEngineServer->executeScript(scriptInfo, true);
-			if(!scriptInfo->output.empty()) stringStream << scriptInfo->output;
-			stringStream << "Exit code: " << std::dec << scriptInfo->exitCode << std::endl;
+            bool addNewLine = false;
+            if(!scriptInfo->output.empty())
+            {
+                stringStream << scriptInfo->output;
+                if(scriptInfo->output.back() != '\n') addNewLine = true;
+            }
+            stringStream << (addNewLine ? "\n" : "") << "Exit code: " << std::dec << scriptInfo->exitCode << std::endl;
 			return stringStream.str();
 		}
 		else if(BaseLib::HelperFunctions::checkCliCommand(command, "scriptcount", "sc", "", 0, arguments, showHelp))

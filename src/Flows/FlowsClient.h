@@ -90,8 +90,16 @@ private:
 	};
 
 	BaseLib::Output _out;
+    std::atomic_int _threadCount;
+    std::atomic_int _processingThreadCount1;
+    std::atomic_int _processingThreadCount2;
+    std::atomic_int _processingThreadCount3;
+    std::atomic<int64_t> _processingThreadCountMaxReached1;
+    std::atomic<int64_t> _processingThreadCountMaxReached2;
+    std::atomic<int64_t> _processingThreadCountMaxReached3;
 	std::atomic_bool _startUpComplete;
 	std::atomic_bool _shuttingDown;
+    std::atomic_bool _shutdownComplete;
 	std::atomic_bool _disposed;
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
@@ -103,6 +111,7 @@ private:
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 	std::map<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>> _localRpcMethods;
 	std::thread _maintenanceThread;
+    std::thread _watchdogThread;
 	std::mutex _requestInfoMutex;
 	std::map<int64_t, PRequestInfo> _requestInfo;
 	std::mutex _packetIdMutex;
@@ -130,9 +139,11 @@ private:
 	std::mutex _internalMessagesMutex;
 	std::unordered_map<std::string, Flows::PVariable> _internalMessages;
 
+    void watchdog();
+
 	void registerClient();
 	Flows::PVariable invoke(std::string methodName, Flows::PArray parameters, bool wait);
-	Flows::PVariable invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray parameters);
+	Flows::PVariable invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray parameters, bool wait);
 	void sendResponse(Flows::PVariable& packetId, Flows::PVariable& variable);
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
@@ -141,7 +152,7 @@ private:
 	void log(std::string nodeId, int32_t logLevel, std::string message);
 	void subscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable);
 	void unsubscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable);
-	void queueOutput(std::string nodeId, uint32_t index, Flows::PVariable message);
+	void queueOutput(std::string nodeId, uint32_t index, Flows::PVariable message, bool synchronous);
 	void nodeEvent(std::string nodeId, std::string topic, Flows::PVariable value);
 	Flows::PVariable getNodeData(std::string nodeId, std::string key);
 	void setNodeData(std::string nodeId, std::string key, Flows::PVariable value);

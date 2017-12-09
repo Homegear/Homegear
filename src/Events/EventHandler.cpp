@@ -486,6 +486,7 @@ BaseLib::PVariable EventHandler::remove(std::string name)
 		}
 		if(!event)
 		{
+			bool breakLoop = false;
 			for(std::map<uint64_t, std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>>::iterator peerID = _triggeredEvents.begin(); peerID != _triggeredEvents.end(); ++peerID)
 			{
 				for(std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator channel = peerID->second.begin(); channel != peerID->second.end(); ++channel)
@@ -503,11 +504,15 @@ BaseLib::PVariable EventHandler::remove(std::string name)
 								if(_triggeredEvents[peerID->first].empty()) _triggeredEvents.erase(peerID->first);
 								std::lock_guard<std::mutex> disposingGuard(event->disposingMutex);
 								event->disposing = true;
+								breakLoop = true;
 								break;
 							}
 						}
+						if(breakLoop) break;
 					}
+					if(breakLoop) break;
 				}
+				if(breakLoop) break;
 			}
 		}
 		_eventsMutex.unlock();

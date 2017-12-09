@@ -35,6 +35,12 @@
 // Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
 //#define FLOWS_MANUAL_CLIENT_START
 
+#ifdef FLOWS_MANUAL_CLIENT_START
+	pid_t _manualClientCurrentProcessId = 1;
+    std::mutex _unconnectedProcessesMutex;
+    std::queue<pid_t> _unconnectedProcesses;
+#endif
+
 namespace Flows
 {
 
@@ -130,6 +136,7 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("setId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetId()));
 	_rpcMethods.emplace("setInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInstallMode()));
 	_rpcMethods.emplace("setInterface", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInterface()));
+    _rpcMethods.emplace("setLanguage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetLanguage()));
 	_rpcMethods.emplace("setLinkInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetLinkInfo()));
 	_rpcMethods.emplace("setMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetMetadata()));
 	_rpcMethods.emplace("setName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetName()));
@@ -539,7 +546,7 @@ void FlowsServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, boo
     }
 }
 
-void FlowsServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message)
+void FlowsServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message, bool synchronous)
 {
 	try
 	{
@@ -559,10 +566,11 @@ void FlowsServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVaria
 		}
 
 		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
-		parameters->reserve(3);
+		parameters->reserve(4);
 		parameters->push_back(std::make_shared<BaseLib::Variable>(nodeId));
 		parameters->push_back(std::make_shared<BaseLib::Variable>(index));
 		parameters->push_back(message);
+		parameters->push_back(std::make_shared<BaseLib::Variable>(synchronous));
 		sendRequest(clientData, "nodeOutput", parameters, false);
 	}
 	catch(const std::exception& ex)
@@ -1141,7 +1149,7 @@ void FlowsServer::sendShutdown()
 		}
 
 		int32_t i = 0;
-		while(_clients.size() > 0 && i < 60)
+		while(_clients.size() > 0 && i < 300)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			collectGarbage();
@@ -1538,7 +1546,7 @@ void FlowsServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<s
 {
 	try
 	{
-		if(_shuttingDown) return;
+		if(_shuttingDown || _flowsRestarting) return;
 		std::vector<PFlowsClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -1574,7 +1582,7 @@ void FlowsServer::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
 {
 	try
 	{
-		if(_shuttingDown) return;
+		if(_shuttingDown || _flowsRestarting) return;
 		std::vector<PFlowsClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -1610,7 +1618,7 @@ void FlowsServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
 {
 	try
 	{
-		if(_shuttingDown) return;
+		if(_shuttingDown || _flowsRestarting) return;
 		std::vector<PFlowsClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -1646,7 +1654,7 @@ void FlowsServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hi
 {
 	try
 	{
-		if(_shuttingDown) return;
+		if(_shuttingDown || _flowsRestarting) return;
 		std::vector<PFlowsClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -1721,7 +1729,7 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 			{
 				if(GD::bl->debugLevel >= 4)
 				{
-					_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
+					if(GD::bl->debugLevel >= 5 || queueEntry->methodName != "nodeEvent") _out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
 					if(GD::bl->debugLevel >= 5)
 					{
 						for(BaseLib::Array::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
@@ -1794,7 +1802,7 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 		}
 		else if(index == 2) //Second queue for sending packets. Response is processed by first queue
 		{
-			sendRequest(queueEntry->clientData, queueEntry->methodName, queueEntry->parameters, false);
+			if(!_shuttingDown && !_flowsRestarting) sendRequest(queueEntry->clientData, queueEntry->methodName, queueEntry->parameters, false);
 		}
 	}
 	catch(const std::exception& ex)
@@ -2101,7 +2109,12 @@ PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
 		PFlowsProcess process(new FlowsProcess());
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rl" };
 #ifdef FLOWS_MANUAL_CLIENT_START
-		process->setPid(1);
+        pid_t currentProcessId = _manualClientCurrentProcessId++;
+		process->setPid(currentProcessId);
+        {
+            std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
+            _unconnectedProcesses.push(currentProcessId);
+        }
 #else
 		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
 #endif
@@ -2113,7 +2126,7 @@ PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
 			}
 
 			std::unique_lock<std::mutex> requestLock(_processRequestMutex);
-			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(30000), [&]{ return (bool)(process->getClientData()); });
+			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(120000), [&]{ return (bool)(process->getClientData()); });
 
 			if(!process->getClientData())
 			{
@@ -2409,7 +2422,14 @@ BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData
 	{
 		pid_t pid = parameters->at(0)->integerValue;
 #ifdef FLOWS_MANUAL_CLIENT_START
-		pid = 1;
+        {
+            std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
+            if (!_unconnectedProcesses.empty())
+            {
+                pid = _unconnectedProcesses.front();
+                _unconnectedProcesses.pop();
+            }
+        }
 #endif
 		PFlowsProcess process;
 		{
@@ -2459,10 +2479,17 @@ BaseLib::PVariable FlowsServer::executePhpNode(PFlowsClientData& clientData, Bas
 
 		std::string filename;
 		BaseLib::ScriptEngine::PScriptInfo scriptInfo;
+        bool wait = false;
 		if(parameters->size() == 4)
 		{
 			filename = parameters->at(1)->stringValue.substr(parameters->at(1)->stringValue.find_last_of('/') + 1);
 			scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode, parameters->at(0), parameters->at(1)->stringValue, filename, parameters->at(2)->integerValue, parameters->at(3));
+            auto internalMessagesIterator = parameters->at(3)->structValue->find("_internal");
+            if(internalMessagesIterator != parameters->at(3)->structValue->end())
+            {
+                auto synchronousOutputIterator = internalMessagesIterator->second->structValue->find("synchronousOutput");
+                if(synchronousOutputIterator != internalMessagesIterator->second->structValue->end()) wait = synchronousOutputIterator->second->booleanValue;
+            }
 		}
 		else
 		{
@@ -2475,7 +2502,7 @@ BaseLib::PVariable FlowsServer::executePhpNode(PFlowsClientData& clientData, Bas
 			}
 			scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode, parameters->at(1), parameters->at(2)->stringValue, filename, threadCountIterator->second);
 		}
-		GD::scriptEngineServer->executeScript(scriptInfo, false);
+		GD::scriptEngineServer->executeScript(scriptInfo, wait);
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
     catch(const std::exception& ex)
@@ -2521,7 +2548,7 @@ BaseLib::PVariable FlowsServer::invokeNodeMethod(PFlowsClientData& clientData, B
 {
 	try
 	{
-		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
+		if(parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects exactly four parameters.");
 
 		PFlowsClientData clientData;
 		int32_t clientId = 0;
@@ -2539,7 +2566,7 @@ BaseLib::PVariable FlowsServer::invokeNodeMethod(PFlowsClientData& clientData, B
 			clientData = clientIterator->second;
 		}
 
-		return sendRequest(clientData, "invokeNodeMethod", parameters, true);
+		return sendRequest(clientData, "invokeNodeMethod", parameters, parameters->at(3)->booleanValue);
 	}
     catch(const std::exception& ex)
     {
@@ -2567,9 +2594,9 @@ BaseLib::PVariable FlowsServer::nodeEvent(PFlowsClientData& clientData, BaseLib:
 			_lastNodeEvent = BaseLib::HelperFunctions::getTime();
 			_nodeEventCounter = 0;
 		}
-		if(parameters->at(1)->stringValue.compare(0, 14, "highlightNode/") == 0 && _nodeEventCounter > 500) return std::make_shared<BaseLib::Variable>();
-		else if(parameters->at(1)->stringValue != "debug" && _nodeEventCounter > 1000) return std::make_shared<BaseLib::Variable>();
-		else if(_nodeEventCounter > 2000) return std::make_shared<BaseLib::Variable>();
+		if(parameters->at(1)->stringValue.compare(0, 14, "highlightNode/") == 0 && _nodeEventCounter > 60) return std::make_shared<BaseLib::Variable>();
+		else if(parameters->at(1)->stringValue != "debug" && _nodeEventCounter > 300) return std::make_shared<BaseLib::Variable>();
+		else if(_nodeEventCounter > 600) return std::make_shared<BaseLib::Variable>();
 		_nodeEventCounter++;
 
 		GD::rpcClient->broadcastNodeEvent(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));

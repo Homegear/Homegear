@@ -4748,6 +4748,7 @@ RED.utils = (function() {
                 this.element.css("minHeight",0);
             }
             if (this.options.height !== 'auto') {
+                this.uiContainer.css("overflow-x","hidden");
                 this.uiContainer.css("overflow-y","scroll");
                 if (!isNaN(this.options.height)) {
                     this.uiHeight = this.options.height;
@@ -15532,6 +15533,43 @@ RED.editor = (function() {
                                         newValue = input.val();
                                     }
                                     if (newValue != null) {
+                                        if (d === "inputs") {
+                                            if  (newValue.trim() === "") {
+                                                continue;
+                                            }
+                                            if (isNaN(newValue)) {
+                                                inputMap = JSON.parse(newValue);
+                                                var inputCount = 0;
+                                                var inputsChanged = false;
+                                                var keys = Object.keys(inputMap);
+                                                keys.forEach(function(p) {
+                                                    if (isNaN(p)) {
+                                                        // New input;
+                                                        inputCount ++;
+                                                        delete inputMap[p];
+                                                    } else {
+                                                        inputMap[p] = inputMap[p]+"";
+                                                        if (inputMap[p] !== "-1") {
+                                                            inputCount++;
+                                                            if (inputMap[p] !== p) {
+                                                                // Input moved
+                                                                inputsChanged = true;
+                                                            } else {
+                                                                delete inputMap[p];
+                                                            }
+                                                        } else {
+                                                            // Input removed
+                                                            inputsChanged = true;
+                                                        }
+                                                    }
+                                                });
+
+                                                newValue = inputCount;
+                                                if (inputsChanged) {
+                                                    changed = true;
+                                                }
+                                            }
+                                        }
                                         if (d === "outputs") {
                                             if  (newValue.trim() === "") {
                                                 continue;

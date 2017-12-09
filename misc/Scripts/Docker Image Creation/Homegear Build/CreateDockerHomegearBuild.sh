@@ -144,7 +144,7 @@ chroot $rootfs apt-key add Release.key
 rm $rootfs/Release.key
 
 chroot $rootfs apt-get update
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libmcrypt-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libmodbus-dev libzip-dev p7zip-full ntp
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libmodbus-dev libzip-dev p7zip-full ntp
 
 if [ "$distver" == "stretch" ];  then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install default-libmysqlclient-dev dirmngr
@@ -374,12 +374,10 @@ if [[ -n $2 ]]; then
 	cd ..
 	rm -Rf Homegear-KNX-${1}/.git
 
-	git clone ssh://git@gitit.de:44444/Homegear-Addons/Homegear-EnOcean.git Homegear-EnOcean-${1}
+	git clone -b ${1} --recursive ssh://git@gitit.de:44444/Homegear-Addons/Homegear-EnOcean.git Homegear-EnOcean-${1}
 	[ $? -ne 0 ] && exit 1
-	cd Homegear-EnOcean-${1}
-	git checkout ${1}
-	cd ..
 	rm -Rf Homegear-EnOcean-${1}/.git
+	rm -Rf Homegear-EnOcean-${1}/misc/Device\ Description\ Files/.git
 
 	git clone ssh://git@gitit.de:44444/EASY/homegear-easycam.git homegear-easycam-${1}
 	[ $? -ne 0 ] && exit 1
@@ -400,6 +398,13 @@ if [[ -n $2 ]]; then
 	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-rs2w.git homegear-rs2w-${1}
 	[ $? -ne 0 ] && exit 1
 	rm -Rf homegear-rs2w-${1}/.git
+
+	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-gateway.git homegear-gateway-${1}
+	[ $? -ne 0 ] && exit 1
+	cd homegear-gateway-${1}
+	git checkout ${1}
+	cd ..
+	rm -Rf homegear-gateway-${1}/.git
 fi
 
 createPackage libhomegear-base $1 libhomegear-base 0
@@ -471,6 +476,7 @@ if [[ -n $2 ]]; then
 	createPackage homegear-easyled2 $1 homegear-easyled2 1
 	createPackage homegear-rsl $1 homegear-rsl 1
 	createPackage homegear-rs2w $1 homegear-rs2w 1
+	createPackage homegear-gateway $1 homegear-gateway 1
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackage.sh
@@ -521,6 +527,7 @@ if [[ -n $1 ]]; then
 	cleanUp homegear-easyled2
 	cleanUp homegear-rsl
 	cleanUp homegear-rs2w
+	cleanUp homegear-gateway
 fi
 
 sed -i '/\.orig\.tar\.gz/d' *.dsc
@@ -555,6 +562,7 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 		mv homegear-easyled2.deb homegear-easyled2_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-rsl.deb homegear-rsl_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-rs2w.deb homegear-rs2w_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv homegear-gateway.deb homegear-gateway_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	fi
 	if test -f /build/UploadNightly.sh; then
 		/build/UploadNightly.sh

@@ -258,7 +258,7 @@ int32_t Client::start(std::string command)
 				{
 					timeoutCounter = 0;
 					receiveBuffer.at(bytes) = 0;
-					std::string response(receiveBuffer.data());
+					std::string response(receiveBuffer.data(), bytes);
 					if(response.size() > 15)
 					{
 						if(response.compare(7, 6, "family") == 0)
@@ -311,7 +311,7 @@ int32_t Client::start(std::string command)
 
 								int32_t count = (response.c_str() + response.size()) - pos - 1;
 								std::string lastLine(pos, count);
-								if(lastLine.compare(0, 11, "Exit code: ") == 0 && lastLine.size() > 11)
+								if(lastLine.size() > 11 && lastLine.compare(0, 11, "Exit code: ") == 0)
 								{
 									count = pos - response.c_str();
 									response = response.substr(0, count);

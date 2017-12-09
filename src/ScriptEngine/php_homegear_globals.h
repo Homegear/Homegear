@@ -40,6 +40,7 @@
 #include <zend_types.h>
 
 __attribute__((unused)) static zend_class_entry* homegear_exception_class_entry = nullptr;
+__attribute__((unused)) static zend_class_entry* homegear_node_base_class_entry = nullptr;
 
 typedef struct _zend_homegear_globals
 {
