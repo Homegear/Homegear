@@ -7,7 +7,7 @@ set -x
 print_usage() {
 	echo "Usage: CreateDockerHomegearBuild.sh DIST DISTVER ARCH"
 	echo "  DIST:           The Linux distribution (debian, raspbian or ubuntu)"
-	echo "  DISTVER:		The version of the distribution (e. g. for Ubuntu: trusty, utopic or vivid)"
+	echo "  DISTVER:        The version of the distribution (e. g. for Ubuntu: trusty, utopic or vivid)"
 	echo "  ARCH:           The CPU architecture (armhf, armel, arm64, i386, amd64 or mips)"
 }
 
@@ -252,6 +252,10 @@ function createPackage {
 		debuild -j${buildthreads} -us -uc
 	fi
 	cd ..
+	if [ $4 -eq 1 ]; then
+		rm -f ${3}-dbgsym*.deb
+		sed -i '/\.orig\.tar\.gz/d' ${3}_*.dsc
+	fi
 	rm -Rf $sourcePath
 }
 
@@ -495,6 +499,16 @@ function cleanUp {
 	mv ${1}_*.deb ${1}.deb
 }
 
+function cleanUp2 {
+	rm ${1}_*.build
+	rm ${1}_*.changes
+	rm ${1}_*.debian.tar.?z
+	rm ${1}_*.dsc
+	rm ${1}_*.orig.tar.gz
+	rm ${1}-dbgsym*.deb
+	mv ${1}_*.deb ${1}.deb
+}
+
 /build/CreateDebianPackage.sh dev $1
 
 cd /build
@@ -515,19 +529,19 @@ cleanUp homegear-ipcam
 cleanUp homegear-intertechno
 cleanUp homegear-influxdb
 if [[ -n $1 ]]; then
-	cleanUp homegear-easy-licensing
-	cleanUp homegear-licensing
+	cleanUp2 homegear-easy-licensing
+	cleanUp2 homegear-licensing
 
-	cleanUp homegear-nodes-extra
-	cleanUp homegear-beckhoff
-	cleanUp homegear-knx
-	cleanUp homegear-enocean
-	cleanUp homegear-easycam
-	cleanUp homegear-easyled
-	cleanUp homegear-easyled2
-	cleanUp homegear-rsl
-	cleanUp homegear-rs2w
-	cleanUp homegear-gateway
+	cleanUp2 homegear-nodes-extra
+	cleanUp2 homegear-beckhoff
+	cleanUp2 homegear-knx
+	cleanUp2 homegear-enocean
+	cleanUp2 homegear-easycam
+	cleanUp2 homegear-easyled
+	cleanUp2 homegear-easyled2
+	cleanUp2 homegear-rsl
+	cleanUp2 homegear-rs2w
+	cleanUp2 homegear-gateway
 fi
 
 sed -i '/\.orig\.tar\.gz/d' *.dsc
