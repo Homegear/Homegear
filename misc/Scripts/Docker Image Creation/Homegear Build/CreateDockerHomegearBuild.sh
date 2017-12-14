@@ -159,6 +159,8 @@ if [ "$distver" == "wheezy" ]; then
 	rm $rootfs/usr/bin/gcc
 	ln -s g++-4.7 $rootfs/usr/bin/g++
 	ln -s gcc-4.7 $rootfs/usr/bin/gcc
+elif [ "$distver" == "trusty" ]; then
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt11-dev libgnutls-dev libcurl4-gnutls-dev
 else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
 	if [ "$distver" == "stretch" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "jessie" ] || [ "$distver" == "xenial" ]; then
