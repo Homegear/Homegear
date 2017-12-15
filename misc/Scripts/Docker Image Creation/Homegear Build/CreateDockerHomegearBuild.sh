@@ -347,6 +347,12 @@ unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
+wget https://github.com/Homegear/Homegear-Nanoleaf/archive/${1}.zip
+[ $? -ne 0 ] && exit 1
+unzip ${1}.zip
+[ $? -ne 0 ] && exit 1
+rm ${1}.zip
+
 wget https://github.com/Homegear/homegear-influxdb/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
@@ -456,6 +462,7 @@ createPackage Homegear-Sonos $1 homegear-sonos 0
 createPackage Homegear-Kodi $1 homegear-kodi 0
 createPackage Homegear-IPCam $1 homegear-ipcam 0
 createPackage Homegear-Intertechno $1 homegear-intertechno 0
+createPackage Homegear-Nanoleaf $1 homegear-nanoleaf 0
 createPackage homegear-influxdb $1 homegear-influxdb 0
 if [[ -n $2 ]]; then
 	sha512=`sha512sum /usr/bin/homegear | awk '{print toupper($0)}' | cut -d ' ' -f 1`
@@ -529,6 +536,7 @@ cleanUp homegear-sonos
 cleanUp homegear-kodi
 cleanUp homegear-ipcam
 cleanUp homegear-intertechno
+cleanUp homegear-nanoleaf
 cleanUp homegear-influxdb
 if [[ -n $1 ]]; then
 	cleanUp2 homegear-easy-licensing
@@ -548,7 +556,7 @@ fi
 
 sed -i '/\.orig\.tar\.gz/d' *.dsc
 EOF
-echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f libhomegear-ipc.deb && test -f homegear.deb && test -f homegear-nodes-core.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-intertechno.deb && test -f homegear-influxdb.deb; then
+echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f libhomegear-ipc.deb && test -f homegear.deb && test -f homegear-nodes-core.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-intertechno.deb && test -f homegear-nanoleaf.deb && test -f homegear-influxdb.deb; then
 	isodate=\`date +%Y%m%d\`
 	mv libhomegear-base.deb libhomegear-base_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv libhomegear-node.deb libhomegear-node_\$[isodate]_${distlc}_${distver}_${arch}.deb
@@ -564,6 +572,7 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 	mv homegear-kodi.deb homegear-kodi_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-ipcam.deb homegear-ipcam_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-intertechno.deb homegear-intertechno_\$[isodate]_${distlc}_${distver}_${arch}.deb
+	mv homegear-nanoleaf.deb homegear-nanoleaf_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-influxdb.deb homegear-influxdb_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	if [[ -n \$1 ]]; then
 		mv homegear-easy-licensing.deb homegear-easy-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
@@ -593,7 +602,7 @@ cat > "$rootfs/build/CreateDebianPackageStable.sh" <<-'EOF'
 
 cd /build
 
-if test -f libhomegear-base*.deb && test -f libhomegear-node*.deb && test -f libhomegear-ipc*.deb && test -f homegear_*.deb && test -f homegear-nodes-core*.deb && test -f homegear-homematicbidcos*.deb && test -f homegear-homematicwired*.deb && test -f homegear-insteon*.deb && test -f homegear-max*.deb && test -f homegear-philipshue*.deb && test -f homegear-sonos*.deb && test -f homegear-kodi*.deb && test -f homegear-ipcam*.deb && test -f homegear-intertechno*.deb && test -f homegear-influxdb*.deb; then
+if test -f libhomegear-base*.deb && test -f libhomegear-node*.deb && test -f libhomegear-ipc*.deb && test -f homegear_*.deb && test -f homegear-nodes-core*.deb && test -f homegear-homematicbidcos*.deb && test -f homegear-homematicwired*.deb && test -f homegear-insteon*.deb && test -f homegear-max*.deb && test -f homegear-philipshue*.deb && test -f homegear-sonos*.deb && test -f homegear-kodi*.deb && test -f homegear-ipcam*.deb && test -f homegear-intertechno*.deb && test -f homegear-nanoleaf*.deb && test -f homegear-influxdb*.deb; then
 	if test -f /build/UploadStable.sh; then
 		/build/UploadStable.sh
 	fi
