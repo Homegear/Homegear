@@ -230,7 +230,7 @@ function createPackage {
 	fi' $sourcePath/debian/preinst
 	fi
 	sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-	if [ "$distributionVersion" == "wheezy" ]; then
+	if [ "$distributionVersion" == "wheezy" || "$distributionVersion" == "trusty" ]; then
 		sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
 		sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
 		sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
