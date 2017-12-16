@@ -334,26 +334,26 @@ unzip ${1}.zip
 rm ${1}.zip
 
 if [[ -n $2 ]]; then
-	wget --https-only https://gitit.de/Homegear-Addons/homegear-easy-licensing/repository/dev/archive.zip?private_token=${2} -O ${1}
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-easy-licensing/repository/master/archive.zip?private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
-	unzip ${1}.zip
+	unzip master.zip
 	[ $? -ne 0 ] && exit 1
-	rm ${1}.zip
-	mv homegear-easy-licensing-${1}* homegear-easy-licensing-${1}
+	rm master.zip
+	mv homegear-easy-licensing-master* homegear-easy-licensing-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/homegear-licensing/repository/dev/archive.zip?private_token=${2} -O ${1}
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-licensing/repository/master/archive.zip?private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
-	unzip ${1}.zip
+	unzip master.zip
 	[ $? -ne 0 ] && exit 1
-	rm ${1}.zip
-	mv homegear-licensing-${1}* homegear-licensing-${1}
+	rm master.zip
+	mv homegear-licensing-master* homegear-licensing-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/homegear-nodes-extra/repository/dev/archive.zip?private_token=${2} -O ${1}
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-nodes-extra/repository/master/archive.zip?private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
-	unzip ${1}.zip
+	unzip master.zip
 	[ $? -ne 0 ] && exit 1
-	rm ${1}.zip
-	mv homegear-nodes-extra-${1}* homegear-nodes-extra-${1}
+	rm master.zip
+	mv homegear-nodes-extra-master* homegear-nodes-extra-${1}
 
 	wget --https-only https://gitit.de/Homegear-Addons/Homegear-Beckhoff/repository/dev/archive.zip?private_token=${2} -O ${1}
 	[ $? -ne 0 ] && exit 1
@@ -385,40 +385,40 @@ if [[ -n $2 ]]; then
 	rm -Rf Homegear-EnOcean-XML-master master.zip
 	cd ../../..
 
-	wget --https-only https://gitit.de/Homegear-Addons/homegear-easycam/repository/dev/archive.zip?private_token=${2} -O ${1}
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-easycam/repository/master/archive.zip?private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
-	unzip ${1}.zip
+	unzip master.zip
 	[ $? -ne 0 ] && exit 1
-	rm ${1}.zip
-	mv homegear-easycam-${1}* homegear-easycam-${1}
+	rm master.zip
+	mv homegear-easycam-master* homegear-easycam-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/homegear-easyled/repository/dev/archive.zip?private_token=${2} -O ${1}
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-easyled/repository/master/archive.zip?private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
-	unzip ${1}.zip
+	unzip master.zip
 	[ $? -ne 0 ] && exit 1
-	rm ${1}.zip
-	mv homegear-easyled-${1}* homegear-easyled-${1}
+	rm master.zip
+	mv homegear-easyled-master* homegear-easyled-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/homegear-easyled2/repository/dev/archive.zip?private_token=${2} -O ${1}
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-easyled2/repository/master/archive.zip?private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
-	unzip ${1}.zip
+	unzip master.zip
 	[ $? -ne 0 ] && exit 1
-	rm ${1}.zip
-	mv homegear-easyled2-${1}* homegear-easyled2-${1}
+	rm master.zip
+	mv homegear-easyled2-master* homegear-easyled2-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/homegear-rsl/repository/dev/archive.zip?private_token=${2} -O ${1}
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-rsl/repository/master/archive.zip?private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
-	unzip ${1}.zip
+	unzip master.zip
 	[ $? -ne 0 ] && exit 1
-	rm ${1}.zip
-	mv homegear-rsl-${1}* homegear-rsl-${1}
+	rm master.zip
+	mv homegear-rsl-master* homegear-rsl-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/homegear-rs2w/repository/dev/archive.zip?private_token=${2} -O ${1}
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-rs2w/repository/master/archive.zip?private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
-	unzip ${1}.zip
+	unzip master.zip
 	[ $? -ne 0 ] && exit 1
-	rm ${1}.zip
-	mv homegear-rs2w-${1}* homegear-rs2w-${1}
+	rm master.zip
+	mv homegear-rs2w-master* homegear-rs2w-${1}
 
 	wget --https-only https://gitit.de/Homegear-Addons/homegear-gateway/repository/dev/archive.zip?private_token=${2} -O ${1}
 	[ $? -ne 0 ] && exit 1
