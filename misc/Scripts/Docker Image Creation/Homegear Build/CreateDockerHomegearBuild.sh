@@ -159,11 +159,11 @@ if [ "$distver" == "wheezy" ]; then
 	rm $rootfs/usr/bin/gcc
 	ln -s g++-4.7 $rootfs/usr/bin/g++
 	ln -s gcc-4.7 $rootfs/usr/bin/gcc
-elif [ "$distver" == "trusty" ]; then
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt11-dev libgnutls-dev libcurl4-gnutls-dev
 else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
-	if [ "$distver" == "stretch" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "jessie" ] || [ "$distver" == "xenial" ]; then
+	if [ "$distver" == "trusty" ]; then
+		DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install git
+	elif [ "$distver" == "stretch" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "jessie" ] || [ "$distver" == "xenial" ]; then
 		DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 	fi
 fi
@@ -178,7 +178,8 @@ fi
 # }}}
 
 # {{{ Git from repository craches for some architectures when qemu is used. Compiling without pthreads solves the issue.
-cat > "$rootfs/build-git.sh" <<-'EOF'
+if [ "$distver" != "trusty" ]; then
+	cat > "$rootfs/build-git.sh" <<-'EOF'
 cd /tmp
 wget https://github.com/git/git/archive/master.zip
 unzip master.zip
@@ -196,9 +197,10 @@ make -j2
 make install
 rm -Rf /tmp/git-master
 EOF
-chmod 755 $rootfs/build-git.sh
-chroot $rootfs /build-git.sh
-rm $rootfs/build-git.sh
+	chmod 755 $rootfs/build-git.sh
+	chroot $rootfs /build-git.sh
+	rm $rootfs/build-git.sh
+fi
 # }}}
 
 mkdir $rootfs/build
@@ -230,7 +232,7 @@ function createPackage {
 	fi' $sourcePath/debian/preinst
 	fi
 	sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-	if [ "$distributionVersion" == "wheezy" ] || [ "$distributionVersion" == "trusty" ]; then
+	if [ "$distributionVersion" == "wheezy" ]; then
 		sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
 		sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
 		sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
