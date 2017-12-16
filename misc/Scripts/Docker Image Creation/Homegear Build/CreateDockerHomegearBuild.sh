@@ -161,9 +161,7 @@ if [ "$distver" == "wheezy" ]; then
 	ln -s gcc-4.7 $rootfs/usr/bin/gcc
 else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
-	if [ "$distver" == "trusty" ]; then
-		DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install git
-	elif [ "$distver" == "stretch" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "jessie" ] || [ "$distver" == "xenial" ]; then
+	if [ "$distver" == "stretch" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "jessie" ] || [ "$distver" == "xenial" ]; then
 		DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 	fi
 fi
@@ -174,32 +172,6 @@ if [ "$distver" == "stretch" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline7 libreadline-dev
 else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline6 libreadline6-dev
-fi
-# }}}
-
-# {{{ Git from repository craches for some architectures when qemu is used. Compiling without pthreads solves the issue.
-if [ "$distver" != "trusty" ]; then
-	cat > "$rootfs/build-git.sh" <<-'EOF'
-cd /tmp
-wget https://github.com/git/git/archive/master.zip
-unzip master.zip
-rm master.zip
-cd git-master
-sed -i '/#define GREP_NUM_THREADS_DEFAULT 8/a\
-struct work_item {\
-        struct grep_source source;\
-        char done;\
-        struct strbuf out;\
-};' builtin/grep.c
-make configure
-./configure --prefix=/usr --disable-pthreads
-make -j2
-make install
-rm -Rf /tmp/git-master
-EOF
-	chmod 755 $rootfs/build-git.sh
-	chroot $rootfs /build-git.sh
-	rm $rootfs/build-git.sh
 fi
 # }}}
 
@@ -265,160 +237,195 @@ function createPackage {
 
 cd /build
 
-wget https://github.com/Homegear/libhomegear-base/archive/${1}.zip
+wget --https-only https://github.com/Homegear/libhomegear-base/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-wget https://github.com/Homegear/libhomegear-node/archive/${1}.zip
+wget --https-only https://github.com/Homegear/libhomegear-node/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-wget https://github.com/Homegear/libhomegear-ipc/archive/${1}.zip
+wget --https-only https://github.com/Homegear/libhomegear-ipc/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-wget https://github.com/Homegear/Homegear/archive/${1}.zip
+wget --https-only https://github.com/Homegear/Homegear/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-wget https://github.com/Homegear/homegear-nodes-core/archive/${1}.zip
+wget --https-only https://github.com/Homegear/homegear-nodes-core/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-wget https://github.com/Homegear/Homegear-HomeMaticBidCoS/archive/${1}.zip
+wget --https-only https://github.com/Homegear/Homegear-HomeMaticBidCoS/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-wget https://github.com/Homegear/Homegear-HomeMaticWired/archive/${1}.zip
+wget --https-only https://github.com/Homegear/Homegear-HomeMaticWired/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-wget https://github.com/Homegear/Homegear-Insteon/archive/${1}.zip
+wget --https-only https://github.com/Homegear/Homegear-Insteon/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-wget https://github.com/Homegear/Homegear-MAX/archive/${1}.zip
+wget --https-only https://github.com/Homegear/Homegear-MAX/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-wget https://github.com/Homegear/Homegear-PhilipsHue/archive/${1}.zip
+wget --https-only https://github.com/Homegear/Homegear-PhilipsHue/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-wget https://github.com/Homegear/Homegear-Sonos/archive/${1}.zip
+wget --https-only https://github.com/Homegear/Homegear-Sonos/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-wget https://github.com/Homegear/Homegear-Kodi/archive/${1}.zip
+wget --https-only https://github.com/Homegear/Homegear-Kodi/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-wget https://github.com/Homegear/Homegear-IPCam/archive/${1}.zip
+wget --https-only https://github.com/Homegear/Homegear-IPCam/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-wget https://github.com/Homegear/Homegear-Intertechno/archive/${1}.zip
+wget --https-only https://github.com/Homegear/Homegear-Intertechno/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-wget https://github.com/Homegear/Homegear-Nanoleaf/archive/${1}.zip
+wget --https-only https://github.com/Homegear/Homegear-Nanoleaf/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-wget https://github.com/Homegear/homegear-influxdb/archive/${1}.zip
+wget --https-only https://github.com/Homegear/homegear-influxdb/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
 if [[ -n $2 ]]; then
-	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-easy-licensing.git homegear-easy-licensing-${1}
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-easy-licensing/repository/dev/archive.zip?private_token=${2} -O ${1}
 	[ $? -ne 0 ] && exit 1
-	rm -Rf homegear-easy-licensing-${1}/.git
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv homegear-easy-licensing-${1}* homegear-easy-licensing-${1}
 
-	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-licensing.git homegear-licensing-${1}
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-licensing/repository/dev/archive.zip?private_token=${2} -O ${1}
 	[ $? -ne 0 ] && exit 1
-	rm -Rf homegear-licensing-${1}/.git
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv homegear-licensing-${1}* homegear-licensing-${1}
 
-	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-nodes-extra.git homegear-nodes-extra-${1}
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-nodes-extra/repository/dev/archive.zip?private_token=${2} -O ${1}
 	[ $? -ne 0 ] && exit 1
-	rm -Rf homegear-nodes-extra-${1}/.git
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv homegear-nodes-extra-${1}* homegear-nodes-extra-${1}
 
-	git clone ssh://git@gitit.de:44444/Homegear-Addons/Homegear-Beckhoff.git Homegear-Beckhoff-${1}
+	wget --https-only https://gitit.de/Homegear-Addons/Homegear-Beckhoff/repository/dev/archive.zip?private_token=${2} -O ${1}
 	[ $? -ne 0 ] && exit 1
-	cd Homegear-Beckhoff-${1}
-	git checkout ${1}
-	cd ..
-	rm -Rf Homegear-Beckhoff-${1}/.git
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv Homegear-Beckhoff-${1}* Homegear-Beckhoff-${1}
 
-	git clone ssh://git@gitit.de:44444/Homegear-Addons/Homegear-KNX.git Homegear-KNX-${1}
+	wget --https-only https://gitit.de/Homegear-Addons/Homegear-KNX/repository/dev/archive.zip?private_token=${2} -O ${1}
 	[ $? -ne 0 ] && exit 1
-	cd Homegear-KNX-${1}
-	git checkout ${1}
-	cd ..
-	rm -Rf Homegear-KNX-${1}/.git
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv Homegear-KNX-${1}* Homegear-KNX-${1}
 
-	git clone -b ${1} --recursive ssh://git@gitit.de:44444/Homegear-Addons/Homegear-EnOcean.git Homegear-EnOcean-${1}
+	wget --https-only https://gitit.de/Homegear-Addons/Homegear-EnOcean/repository/dev/archive.zip?private_token=${2} -O ${1}
 	[ $? -ne 0 ] && exit 1
-	rm -Rf Homegear-EnOcean-${1}/.git
-	rm -Rf Homegear-EnOcean-${1}/misc/Device\ Description\ Files/.git
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv Homegear-EnOcean-${1}* Homegear-EnOcean-${1}
+	cd Homegear-EnOcean-${1}/misc/Device\ Description\ Files/
+	wget --https-only https://github.com/Homegear/Homegear-EnOcean-XML/archive/master.zip
+	[ $? -ne 0 ] && exit 1
+	unzip master.zip
+	[ $? -ne 0 ] && exit 1
+	mv Homegear-EnOcean-XML-master/* .
+	[ $? -ne 0 ] && exit 1
+	rm -Rf Homegear-EnOcean-XML-master master.zip
+	cd ../../..
 
-	git clone ssh://git@gitit.de:44444/EASY/homegear-easycam.git homegear-easycam-${1}
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-easycam/repository/dev/archive.zip?private_token=${2} -O ${1}
 	[ $? -ne 0 ] && exit 1
-	rm -Rf homegear-easycam-${1}/.git
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv homegear-easycam-${1}* homegear-easycam-${1}
 
-	git clone ssh://git@gitit.de:44444/EASY/homegear-easyled.git homegear-easyled-${1}
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-easyled/repository/dev/archive.zip?private_token=${2} -O ${1}
 	[ $? -ne 0 ] && exit 1
-	rm -Rf homegear-easyled-${1}/.git
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv homegear-easyled-${1}* homegear-easyled-${1}
 
-	git clone ssh://git@gitit.de:44444/EASY/homegear-easyled2.git homegear-easyled2-${1}
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-easyled2/repository/dev/archive.zip?private_token=${2} -O ${1}
 	[ $? -ne 0 ] && exit 1
-	rm -Rf homegear-easyled2-${1}/.git
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv homegear-easyled2-${1}* homegear-easyled2-${1}
 
-	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-rsl.git homegear-rsl-${1}
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-rsl/repository/dev/archive.zip?private_token=${2} -O ${1}
 	[ $? -ne 0 ] && exit 1
-	rm -Rf homegear-rsl-${1}/.git
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv homegear-rsl-${1}* homegear-rsl-${1}
 
-	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-rs2w.git homegear-rs2w-${1}
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-rs2w/repository/dev/archive.zip?private_token=${2} -O ${1}
 	[ $? -ne 0 ] && exit 1
-	rm -Rf homegear-rs2w-${1}/.git
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv homegear-rs2w-${1}* homegear-rs2w-${1}
 
-	git clone ssh://git@gitit.de:44444/Homegear-Addons/homegear-gateway.git homegear-gateway-${1}
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-gateway/repository/dev/archive.zip?private_token=${2} -O ${1}
 	[ $? -ne 0 ] && exit 1
-	cd homegear-gateway-${1}
-	git checkout ${1}
-	cd ..
-	rm -Rf homegear-gateway-${1}/.git
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv homegear-gateway-${1}* homegear-gateway-${1}
 fi
 
 createPackage libhomegear-base $1 libhomegear-base 0
@@ -768,9 +775,9 @@ chmod 755 /build/UploadNightly.sh
 rm /FirstStart.sh
 
 if [ "$HOMEGEARBUILD_TYPE" = "stable" ]; then
-	/build/CreateDebianPackageStable.sh ${HOMEGEARBUILD_DEPLOY_KEY}
+	/build/CreateDebianPackageStable.sh ${HOMEGEARBUILD_API_KEY}
 elif [ "$HOMEGEARBUILD_TYPE" = "nightly" ]; then
-	/build/CreateDebianPackageNightly.sh ${HOMEGEARBUILD_DEPLOY_KEY}
+	/build/CreateDebianPackageNightly.sh ${HOMEGEARBUILD_API_KEY}
 else
 	echo "Container setup successful. You can now execute \"/build/CreateDebianPackageStable.sh\" or \"/build/CreateDebianPackageNightly.sh\"."
 	/bin/bash
