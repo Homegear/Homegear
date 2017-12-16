@@ -385,21 +385,21 @@ if [[ -n $2 ]]; then
 	rm -Rf Homegear-EnOcean-XML-master master.zip
 	cd ../../..
 
-	wget --https-only https://gitit.de/Homegear-Addons/homegear-easycam/repository/master/archive.zip?private_token=${2} -O master.zip
+	wget --https-only https://gitit.de/EASY/homegear-easycam/repository/master/archive.zip?private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
 	unzip master.zip
 	[ $? -ne 0 ] && exit 1
 	rm master.zip
 	mv homegear-easycam-master* homegear-easycam-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/homegear-easyled/repository/master/archive.zip?private_token=${2} -O master.zip
+	wget --https-only https://gitit.de/EASY/homegear-easyled/repository/master/archive.zip?private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
 	unzip master.zip
 	[ $? -ne 0 ] && exit 1
 	rm master.zip
 	mv homegear-easyled-master* homegear-easyled-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/homegear-easyled2/repository/master/archive.zip?private_token=${2} -O master.zip
+	wget --https-only https://gitit.de/EASY/homegear-easyled2/repository/master/archive.zip?private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
 	unzip master.zip
 	[ $? -ne 0 ] && exit 1
