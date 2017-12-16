@@ -12,7 +12,7 @@ else
   if(isset($_POST["username"]) && isset($_POST["password"]) && $_POST["username"] && $_POST["password"])
   {
     $user = new User();
-    if($user->login($_POST["username"], $_POST["password"]))
+    if($user->login($_POST["username"], urldecode($_POST["password"])))
     {
       header("Location: index.php");
     }

@@ -501,7 +501,7 @@ sed -i 's/debugLevel = 4/debugLevel = 3/g' /etc/homegear/main.conf
 sed -i 's/tempPath = \/var\/lib\/homegear\/tmp/tempPath = \/var\/tmp\/homegear/g' /etc/homegear/main.conf
 sed -i 's/# databasePath =/databasePath = \/var\/lib\/homegear\/db/g' /etc/homegear/main.conf
 sed -i 's/# databaseBackupPath =/databaseBackupPath = \/data\/homegear-data/g' /etc/homegear/main.conf
-sed -i 's/familyDataPath = \/var\/lib\/homegear\/families/familyDataPath = /data\/homegear-data\/families/g' /etc/homegear/main.conf
+sed -i 's/familyDataPath = \/var\/lib\/homegear\/families/familyDataPath = \/data\/homegear-data\/families/g' /etc/homegear/main.conf
 sed -i 's/flowsDataPath = \/var\/lib\/homegear\/flows\/data/flowsDataPath = \/data\/homegear-data\/flows/g' /etc/homegear/main.conf
 sed -i 's/databaseMemoryJournal = false/databaseMemoryJournal = true/g' /etc/homegear/main.conf
 sed -i 's/databaseWALJournal = true/databaseWALJournal = false/g' /etc/homegear/main.conf
