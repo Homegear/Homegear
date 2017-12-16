@@ -355,21 +355,21 @@ if [[ -n $2 ]]; then
 	rm master.zip
 	mv homegear-nodes-extra-master* homegear-nodes-extra-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/Homegear-Beckhoff/repository/dev/archive.zip?private_token=${2} -O ${1}.zip
+	wget --https-only https://gitit.de/Homegear-Addons/Homegear-Beckhoff/repository/${1}/archive.zip?private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	rm ${1}.zip
 	mv Homegear-Beckhoff-${1}* Homegear-Beckhoff-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/Homegear-KNX/repository/dev/archive.zip?private_token=${2} -O ${1}.zip
+	wget --https-only https://gitit.de/Homegear-Addons/Homegear-KNX/repository/${1}/archive.zip?private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	rm ${1}.zip
 	mv Homegear-KNX-${1}* Homegear-KNX-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/Homegear-EnOcean/repository/dev/archive.zip?private_token=${2} -O ${1}.zip
+	wget --https-only https://gitit.de/Homegear-Addons/Homegear-EnOcean/repository/${1}/archive.zip?private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
@@ -420,7 +420,7 @@ if [[ -n $2 ]]; then
 	rm master.zip
 	mv homegear-rs2w-master* homegear-rs2w-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/homegear-gateway/repository/dev/archive.zip?private_token=${2} -O ${1}.zip
+	wget --https-only https://gitit.de/Homegear-Addons/homegear-gateway/repository/${1}/archive.zip?private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
