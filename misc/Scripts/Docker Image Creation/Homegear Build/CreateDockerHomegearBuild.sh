@@ -231,6 +231,11 @@ function createPackage {
 	if [ $4 -eq 1 ]; then
 		rm -f ${3}-dbgsym*.deb
 		sed -i '/\.orig\.tar\.gz/d' ${3}_*.dsc
+		dscfile=$(ls ${3}_*.dsc)
+		sed -i "/${dscfile}/d" ${3}_*.changes
+		sed -i "/Checksums-Sha1:/a\ $(sha1sum ${3}_*.dsc | cut -d ' ' -f 1) $(stat --printf='%s' ${3}_*.dsc) ${dscfile}" ${3}_*.changes
+		sed -i "/Checksums-Sha256:/a\ $(sha256sum ${3}_*.dsc | cut -d ' ' -f 1) $(stat --printf='%s' ${3}_*.dsc) ${dscfile}" ${3}_*.changes
+		sed -i "/Files:/a\ $(md5sum ${3}_*.dsc | cut -d ' ' -f 1) $(stat --printf='%s' ${3}_*.dsc) ${dscfile}" ${3}_*.changes
 	fi
 	rm -Rf $sourcePath
 }
@@ -562,8 +567,6 @@ if [[ -n $1 ]]; then
 	cleanUp2 homegear-rs2w
 	cleanUp2 homegear-gateway
 fi
-
-sed -i '/\.orig\.tar\.gz/d' *.dsc
 EOF
 echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f libhomegear-ipc.deb && test -f homegear.deb && test -f homegear-nodes-core.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-intertechno.deb && test -f homegear-nanoleaf.deb && test -f homegear-influxdb.deb; then
 	isodate=\`date +%Y%m%d\`
