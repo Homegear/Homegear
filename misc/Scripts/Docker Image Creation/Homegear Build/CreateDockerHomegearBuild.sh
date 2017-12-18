@@ -232,6 +232,7 @@ function createPackage {
 		rm -f ${3}-dbgsym*.deb
 		sed -i '/\.orig\.tar\.gz/d' ${3}_*.dsc
 		dscfile=$(ls ${3}_*.dsc)
+		sed -i "/-dbgsym_/d" ${3}_*.changes
 		sed -i "/${dscfile}/d" ${3}_*.changes
 		sed -i "/Checksums-Sha1:/a\ $(sha1sum ${3}_*.dsc | cut -d ' ' -f 1) $(stat --printf='%s' ${3}_*.dsc) ${dscfile}" ${3}_*.changes
 		sed -i "/Checksums-Sha256:/a\ $(sha256sum ${3}_*.dsc | cut -d ' ' -f 1) $(stat --printf='%s' ${3}_*.dsc) ${dscfile}" ${3}_*.changes
