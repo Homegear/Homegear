@@ -2638,7 +2638,7 @@ BaseLib::PVariable FlowsServer::nodeEvent(PFlowsClientData& clientData, BaseLib:
 			_lastNodeEvent = BaseLib::HelperFunctions::getTime();
 			_nodeEventCounter = 0;
 		}
-		if(parameters->at(1)->stringValue.compare(0, 14, "highlightNode/") == 0 && _nodeEventCounter > 60) return std::make_shared<BaseLib::Variable>();
+		if((parameters->at(1)->stringValue.compare(0, 14, "highlightNode/") == 0 || parameters->at(1)->stringValue.compare(0, 14, "highlightLink/") == 0) && _nodeEventCounter > 60) return std::make_shared<BaseLib::Variable>();
 		else if(parameters->at(1)->stringValue != "debug" && _nodeEventCounter > 300) return std::make_shared<BaseLib::Variable>();
 		else if(_nodeEventCounter > 600) return std::make_shared<BaseLib::Variable>();
 		_nodeEventCounter++;

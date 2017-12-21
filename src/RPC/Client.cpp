@@ -223,7 +223,7 @@ void Client::broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib
 		}
 
 		{
-			if(topic.compare(0, 14, "highlightNode/") != 0 && topic.compare(0, 14, "highlightLink/") != 0)
+			if(topic.compare(0, 13, "statusBottom/") == 0) //Only save statusBottom
 			{
 				std::lock_guard<std::mutex> nodeEventCacheGuard(_nodeEventCacheMutex);
 				_nodeEventCache[nodeId][topic] = value;

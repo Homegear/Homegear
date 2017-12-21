@@ -203,7 +203,7 @@ void FlowsClient::resetClient(Flows::PVariable packetId)
                 request.second->conditionVariable.notify_all();
             }
         }
-        
+
         stopQueue(0);
         stopQueue(1);
         stopQueue(2);
@@ -952,13 +952,14 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
                 Flows::PVariable outputIndex = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
                 outputIndex->structValue->emplace("index", std::make_shared<Flows::Variable>(index));
                 nodeEvent(nodeId, "highlightLink/" + nodeId, outputIndex);
+
+                Flows::PVariable status = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+                std::string statusText = message->structValue->at("payload")->toString();
+                if(statusText.size() > 20) statusText = statusText.substr(0, 17) + "...";
+                statusText = std::to_string(index) + ": " + BaseLib::HelperFunctions::stripNonPrintable(statusText);
+                status->structValue->emplace("text", std::make_shared<Flows::Variable>(statusText));
+                nodeEvent(nodeId, "statusTop/" + nodeId, status);
             }
-            Flows::PVariable status = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
-            std::string statusText = message->structValue->at("payload")->toString();
-            if(statusText.size() > 20) statusText = statusText.substr(0, 17) + "...";
-            statusText = std::to_string(index) + ": " + BaseLib::HelperFunctions::stripNonPrintable(statusText);
-            status->structValue->emplace("text", std::make_shared<Flows::Variable>(statusText));
-            nodeEvent(nodeId, "statusTop/" + nodeId, status);
         }
 
         message->structValue->emplace("source", std::make_shared<Flows::Variable>(nodeId));
@@ -1028,13 +1029,14 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
                 Flows::PVariable outputIndex = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
                 outputIndex->structValue->emplace("index", std::make_shared<Flows::Variable>(index));
                 nodeEvent(nodeId, "highlightLink/" + nodeId, outputIndex);
+
+                Flows::PVariable status = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+                std::string statusText = message->structValue->at("payload")->toString();
+                if(statusText.size() > 20) statusText = statusText.substr(0, 17) + "...";
+                statusText = std::to_string(index) + ": " + BaseLib::HelperFunctions::stripNonPrintable(statusText);
+                status->structValue->emplace("text", std::make_shared<Flows::Variable>(statusText));
+                nodeEvent(nodeId, "statusTop/" + nodeId, status);
             }
-            Flows::PVariable status = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
-            std::string statusText = message->structValue->at("payload")->toString();
-            if(statusText.size() > 20) statusText = statusText.substr(0, 17) + "...";
-            statusText = std::to_string(index) + ": " + BaseLib::HelperFunctions::stripNonPrintable(statusText);
-            status->structValue->emplace("text", std::make_shared<Flows::Variable>(statusText));
-            nodeEvent(nodeId, "statusTop/" + nodeId, status);
         }
     }
     catch(const std::exception& ex)
@@ -1055,7 +1057,9 @@ void FlowsClient::nodeEvent(std::string nodeId, std::string topic, Flows::PVaria
 {
     try
     {
-        if(!value) return;
+        if(!value || !_startUpComplete) return;
+
+        if(!_frontendConnected && topic.compare(0, 13, "statusBottom/") != 0) return;
 
         Flows::PArray parameters = std::make_shared<Flows::Array>();
         parameters->reserve(3);
