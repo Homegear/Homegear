@@ -762,7 +762,7 @@ Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray param
         std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
         while (!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]
         {
-            return response->finished || _stopped || _shuttingDownOrRestarting;
+            return response->finished || _stopped;
         }));
 
         if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
