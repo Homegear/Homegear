@@ -1173,6 +1173,46 @@ void FlowsServer::sendShutdown()
     }
 }
 
+bool FlowsServer::sendReset()
+{
+	try
+	{
+        _out.printInfo("Info: Resetting flows client process.");
+		std::vector<PFlowsClientData> clients;
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) continue;
+				clients.push_back(i->second);
+			}
+		}
+		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		{
+			BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+			if(sendRequest(*i, "reset", parameters, true)->errorStruct) return false;
+		}
+
+		std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+		_nodeClientIdMap.clear();
+
+        return true;
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+    return false;
+}
+
 void FlowsServer::closeClientConnections()
 {
 	try
@@ -1265,10 +1305,14 @@ void FlowsServer::restartFlows()
 		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
 		_flowsRestarting = true;
 		stopNodes();
-		_out.printInfo("Info: Stopping Flows...");
-		sendShutdown();
-		_out.printInfo("Info: Closing connections to Flows clients...");
-		closeClientConnections();
+		bool result = sendReset();
+        if(!result)
+        {
+            _out.printInfo("Info: Stopping Flows...");
+            sendShutdown();
+            _out.printInfo("Info: Closing connections to Flows clients...");
+            closeClientConnections();
+        }
 		getMaxThreadCounts();
 		_out.printInfo("Info: Starting Flows...");
 		startFlows();

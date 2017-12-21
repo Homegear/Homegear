@@ -98,12 +98,11 @@ private:
     std::atomic<int64_t> _processingThreadCountMaxReached2;
     std::atomic<int64_t> _processingThreadCountMaxReached3;
 	std::atomic_bool _startUpComplete;
-	std::atomic_bool _shuttingDown;
+	std::atomic_bool _shuttingDownOrRestarting;
     std::atomic_bool _shutdownComplete;
 	std::atomic_bool _disposed;
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
-	int64_t _lastGargabeCollection = 0;
 	std::atomic_bool _stopped;
 	std::mutex _sendMutex;
 	std::mutex _rpcResponsesMutex;
@@ -140,6 +139,8 @@ private:
 	std::unordered_map<std::string, Flows::PVariable> _internalMessages;
 
     void watchdog();
+
+    void resetClient(Flows::PVariable packetId);
 
 	void registerClient();
 	Flows::PVariable invoke(std::string methodName, Flows::PArray parameters, bool wait);

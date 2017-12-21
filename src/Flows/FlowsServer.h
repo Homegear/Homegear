@@ -136,6 +136,7 @@ private:
 	BaseLib::PVariable sendRequest(PFlowsClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait);
 	void sendResponse(PFlowsClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 	void sendShutdown();
+	bool sendReset();
 	void closeClientConnections();
 	void closeClientConnection(PFlowsClientData client);
 	PFlowsProcess getFreeProcess(uint32_t maxThreadCount);

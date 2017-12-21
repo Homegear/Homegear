@@ -41,10 +41,11 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 3, 100000)
     _stopped = false;
     _nodesStopped = false;
     _disposed = false;
-    _shuttingDown = false;
+    _shuttingDownOrRestarting = false;
     _frontendConnected = false;
     _startUpComplete = false;
     _shutdownComplete = false;
+    _lastQueueSize = 0;
 
     _fileDescriptor = std::make_shared<BaseLib::FileDescriptor>();
     _out.init(GD::bl.get());
@@ -151,8 +152,10 @@ void FlowsClient::dispose()
             _flows.clear();
         }
 
-        _flows.clear();
-        _rpcResponses.clear();
+        {
+            std::lock_guard<std::mutex> rpcResponsesGuard(_rpcResponsesMutex);
+            _rpcResponses.clear();
+        }
 
         _shutdownComplete = true;
         _out.printMessage("Shut down complete.");
@@ -169,6 +172,126 @@ void FlowsClient::dispose()
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+void FlowsClient::resetClient(Flows::PVariable packetId)
+{
+    try
+    {
+        std::lock_guard<std::mutex> startFlowGuard(_startFlowMutex);
+        _out.printMessage("Calling waitForStop()...");
+        {
+            std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+            for(auto& flow : _flows)
+            {
+                for(auto& nodeIterator : flow.second->nodes)
+                {
+                    Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
+                    if(_bl->debugLevel >= 5) _out.printDebug("Debug: Waiting for node " + nodeIterator.second->id + " to stop...");
+                    if(node) node->waitForStop();
+                }
+            }
+        }
+
+        _out.printMessage("Nodes are stopped. Stopping queues...");
+
+        {
+            std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
+            for (auto &request : _requestInfo) {
+                std::unique_lock<std::mutex> waitLock(request.second->waitMutex);
+                waitLock.unlock();
+                request.second->conditionVariable.notify_all();
+            }
+        }
+        
+        stopQueue(0);
+        stopQueue(1);
+        stopQueue(2);
+
+        _out.printMessage("Doing final cleanups...");
+
+        {
+            std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+            for(auto& flow : _flows)
+            {
+                for(auto& node : flow.second->nodes)
+                {
+                    {
+                        std::lock_guard<std::mutex> peerSubscriptionsGuard(_peerSubscriptionsMutex);
+                        for(auto& peerId : _peerSubscriptions)
+                        {
+                            for(auto& channel : peerId.second)
+                            {
+                                for(auto& variable : channel.second)
+                                {
+                                    variable.second.erase(node.first);
+                                }
+                            }
+                        }
+                    }
+                    _nodeManager->unloadNode(node.second->id);
+                }
+            }
+            _flows.clear();
+        }
+
+        {
+            std::lock_guard<std::mutex> rpcResponsesGuard(_rpcResponsesMutex);
+            _rpcResponses.clear();
+        }
+
+        {
+            std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
+            _requestInfo.clear();
+        }
+
+        {
+            std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+            _nodes.clear();
+        }
+
+        {
+            std::lock_guard<std::mutex> peerSubscriptionsGuard(_peerSubscriptionsMutex);
+            _peerSubscriptions.clear();
+        }
+
+        {
+            std::lock_guard<std::mutex> internalMessagesGuard(_internalMessagesMutex);
+            _internalMessages.clear();
+        }
+
+        _out.printMessage("Reinitializing...");
+
+        _shuttingDownOrRestarting = false;
+        _startUpComplete = false;
+        _nodesStopped = false;
+        _lastQueueSize = 0;
+
+        startQueue(0, false, _threadCount, 0, SCHED_OTHER);
+        startQueue(1, false, _threadCount, 0, SCHED_OTHER);
+        startQueue(2, false, _threadCount, 0, SCHED_OTHER);
+
+        if(_watchdogThread.joinable()) _watchdogThread.join();
+        if(GD::bl->settings.flowsWatchdogTimeout() >= 1000) _watchdogThread = std::thread(&FlowsClient::watchdog, this);
+
+        _out.printMessage("Reset complete.");
+        Flows::PVariable result = std::make_shared<Flows::Variable>();
+        sendResponse(packetId, result);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    Flows::PVariable result = Flows::Variable::createError(-32500, "Unknown application error.");
+    sendResponse(packetId, result);
 }
 
 void FlowsClient::start()
@@ -302,6 +425,11 @@ void FlowsClient::start()
                             Flows::PArray parameters = _rpcDecoder->decodeRequest(_binaryRpc->getData(), methodName);
                             std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(methodName, parameters);
                             if(methodName == "shutdown") shutdown(parameters->at(2)->arrayValue);
+                            else if(methodName == "reset")
+                            {
+                                if(_maintenanceThread.joinable()) _maintenanceThread.join();
+                                _maintenanceThread = std::thread(&FlowsClient::resetClient, this, parameters->at(0));
+                            }
                             else if(!enqueue(0, queueEntry, !_startUpComplete)) printQueueFullError(_out, "Error: Could not queue RPC request because buffer is full. Dropping it.");
                         }
                         else
@@ -489,7 +617,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
             {
                 if(_processingThreadCount3 == _threadCount) _processingThreadCountMaxReached3 = BaseLib::HelperFunctions::getTime();
 
-                if (!queueEntry->nodeInfo || !queueEntry->message || _shuttingDown) return;
+                if (!queueEntry->nodeInfo || !queueEntry->message || _shuttingDownOrRestarting) return;
                 Flows::PINode node = _nodeManager->getNode(queueEntry->nodeInfo->id);
                 if (node)
                 {
@@ -634,7 +762,7 @@ Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray param
         std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
         while (!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]
         {
-            return response->finished || _stopped;
+            return response->finished || _stopped || _shuttingDownOrRestarting;
         }));
 
         if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
@@ -778,7 +906,7 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 {
     try
     {
-        if(!message || _shuttingDown) return;
+        if(!message || _shuttingDownOrRestarting) return;
 
         PNodeInfo nodeInfo;
         {
@@ -1066,7 +1194,7 @@ Flows::PVariable FlowsClient::getConfigParameter(std::string nodeId, std::string
 
 void FlowsClient::watchdog()
 {
-    while(!_stopped)
+    while(!_stopped && !_shuttingDownOrRestarting)
     {
         try
         {
@@ -1469,7 +1597,7 @@ Flows::PVariable FlowsClient::stopNodes(Flows::PArray& parameters)
 {
     try
     {
-        _shuttingDown = true;
+        _shuttingDownOrRestarting = true;
         _out.printMessage("Calling stop()...");
         std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
         for(auto& flow : _flows)
