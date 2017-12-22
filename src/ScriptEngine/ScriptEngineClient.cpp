@@ -49,6 +49,8 @@ std::unordered_map<std::string, ScriptEngineClient::PNodeInfo> ScriptEngineClien
 
 ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000)
 {
+	signal(SIGPIPE, SIG_IGN);
+
 	_stopped = false;
 	_nodesStopped = false;
 

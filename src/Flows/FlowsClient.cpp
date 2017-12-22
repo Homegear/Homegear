@@ -277,6 +277,7 @@ void FlowsClient::resetClient(Flows::PVariable packetId)
         _out.printMessage("Reset complete.");
         Flows::PVariable result = std::make_shared<Flows::Variable>();
         sendResponse(packetId, result);
+        return;
     }
     catch(const std::exception& ex)
     {

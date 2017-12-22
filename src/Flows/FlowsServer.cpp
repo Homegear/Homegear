@@ -1190,7 +1190,18 @@ bool FlowsServer::sendReset()
 		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
-			if(sendRequest(*i, "reset", parameters, true)->errorStruct) return false;
+            auto result = sendRequest(*i, "reset", parameters, true);
+			if(result->errorStruct)
+            {
+                _out.printError("Error executing reset: " + result->structValue->at("faultString")->stringValue);
+                return false;
+            }
+            else
+            {
+                std::lock_guard<std::mutex> processGuard(_processMutex);
+                std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find((*i)->pid);
+                if(processIterator != _processes.end()) processIterator->second->reset();
+            }
 		}
 
 		std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);

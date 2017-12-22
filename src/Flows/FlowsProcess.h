@@ -68,6 +68,7 @@ public:
 	void invokeFlowFinished(int32_t exitCode);
 	void invokeFlowFinished(int32_t id, int32_t exitCode);
 	uint32_t flowCount();
+	void reset();
 	uint32_t nodeThreadCount();
 	PFlowInfoServer getFlow(int32_t id);
 	PFlowFinishedInfo getFlowFinishedInfo(int32_t id);
