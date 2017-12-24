@@ -4056,7 +4056,7 @@ RED.utils = (function() {
     }
 
     function formatNumber(element,obj,sourceId,path,cycle,initialFormat) {
-        var format = (formattedPaths[sourceId] && formattedPaths[sourceId][path]) || initialFormat || "dec";
+        var format = (formattedPaths[sourceId] && formattedPaths[sourceId][path] && formattedPaths[sourceId][path]['number']) || initialFormat || "dec";
         if (cycle) {
             if (format === 'dec') {
                 if ((obj.toString().length===13) && (obj<=2147483647000)) {
@@ -4072,10 +4072,12 @@ RED.utils = (function() {
                 format = 'dec';
             }
             formattedPaths[sourceId] = formattedPaths[sourceId]||{};
-            formattedPaths[sourceId][path] = format;
+            formattedPaths[sourceId][path] = formattedPaths[sourceId][path]||{};
+            formattedPaths[sourceId][path]['number'] = format;
         } else if (initialFormat !== undefined){
             formattedPaths[sourceId] = formattedPaths[sourceId]||{};
-            formattedPaths[sourceId][path] = format;
+            formattedPaths[sourceId][path] = formattedPaths[sourceId][path]||{};
+            formattedPaths[sourceId][path]['number'] = format;
         }
         if (format === 'dec') {
             element.text(""+obj);
@@ -4089,7 +4091,7 @@ RED.utils = (function() {
     }
 
     function formatBuffer(element,button,sourceId,path,cycle) {
-        var format = (formattedPaths[sourceId] && formattedPaths[sourceId][path]) || "raw";
+        var format = (formattedPaths[sourceId] && formattedPaths[sourceId][path] && formattedPaths[sourceId][path]['buffer']) || "raw";
         if (cycle) {
             if (format === 'raw') {
                 format = 'string';
@@ -4097,7 +4099,8 @@ RED.utils = (function() {
                 format = 'raw';
             }
             formattedPaths[sourceId] = formattedPaths[sourceId]||{};
-            formattedPaths[sourceId][path] = format;
+            formattedPaths[sourceId][path] = formattedPaths[sourceId][path]||{};
+            formattedPaths[sourceId][path]['buffer'] = format;
         }
         if (format === 'raw') {
             button.text('raw');
@@ -6283,7 +6286,7 @@ RED.stack = (function() {
             this.uiSelect = this.elementDiv.wrap( "<div>" ).parent();
             var attrStyle = this.element.attr('style');
             var m;
-            if ((m = /width\s*:\s*(\d+(%|px))/i.exec(attrStyle)) !== null) {
+            if ((m = /width\s*:\s*(calc\s*\(.*\)|\d+(%|px))/i.exec(attrStyle)) !== null) {
                 this.element.css('width','100%');
                 this.uiSelect.width(m[1]);
                 this.uiWidth = null;
@@ -9237,6 +9240,7 @@ RED.workspaces = (function() {
         workspace_tabs = RED.tabs.create({
             id: "workspace-tabs",
             onchange: function(tab) {
+                RED.comms.homegear().invoke('setNodeVariable', null, tab.id, "enableEvents", true);
                 var event = {
                     old: activeWorkspace
                 }
@@ -12549,7 +12553,7 @@ RED.palette = (function() {
 
     var categoryContainers = {};
 
-    function createCategoryContainer(category, label){
+    function createCategoryContainer(category, label) {
         label = (label || category).replace(/_/g, " ");
         var catDiv = $('<div id="palette-container-'+category+'" class="palette-category palette-close hide">'+
             '<div id="palette-header-'+category+'" class="palette-header"><i class="expanded fa fa-angle-down"></i><span>'+label+'</span></div>'+
@@ -12852,14 +12856,26 @@ RED.palette = (function() {
             }
         }
     }
+
     function hideNodeType(nt) {
         var nodeTypeId = escapeNodeType(nt);
-        $("#palette_node_"+nodeTypeId).hide();
+        var paletteNode = $("#palette_node_"+nodeTypeId);
+        paletteNode.hide();
+        var categoryNode = paletteNode.closest(".palette-category");
+        var cl = categoryNode.find(".palette_node");
+        var c = 0;
+        for (var i = 0; i < cl.length; i++) {
+            if ($(cl[i]).css('display') === 'none') { c += 1; }
+        }
+        if (c === cl.length) { categoryNode.hide(); }
     }
 
     function showNodeType(nt) {
         var nodeTypeId = escapeNodeType(nt);
-        $("#palette_node_"+nodeTypeId).show();
+        var paletteNode = $("#palette_node_"+nodeTypeId);
+        var categoryNode = paletteNode.closest(".palette-category");
+        categoryNode.show();
+        paletteNode.show();
     }
 
     function refreshNodeTypes() {
@@ -12923,7 +12939,6 @@ RED.palette = (function() {
         RED.events.on('registry:node-type-removed', function(nodeType) {
             removeNodeType(nodeType);
         });
-
         RED.events.on('registry:node-set-enabled', function(nodeSet) {
             for (var j=0;j<nodeSet.types.length;j++) {
                 showNodeType(nodeSet.types[j]);
@@ -12953,7 +12968,6 @@ RED.palette = (function() {
                 }
             }
         });
-
 
         $("#palette > .palette-spinner").show();
 
@@ -15605,6 +15619,8 @@ RED.editor = (function() {
                                                 if (outputsChanged) {
                                                     changed = true;
                                                 }
+                                            } else {
+                                                newValue = parseInt(newValue);
                                             }
                                         }
                                         if (editing_node[d] != newValue) {
@@ -16561,12 +16577,12 @@ RED.editor = (function() {
 
                 tabs.addTab({
                     id: 'expression-help',
-                    label: 'Function reference',
+                    label: RED._('expressionEditor.functionReference'),
                     content: $("#node-input-expression-tab-help")
                 });
                 tabs.addTab({
                     id: 'expression-tests',
-                    label: 'Test',
+                    label: RED._('expressionEditor.test'),
                     content: $("#node-input-expression-tab-test")
                 });
                 testDataEditor = RED.editor.createEditor({
@@ -18786,16 +18802,19 @@ RED.search = (function() {
         var commonCount = 0;
         var item;
         for(i=0;i<common.length;i++) {
-            item = {
-                type: common[i],
-                common: true,
-                def: RED.nodes.getType(common[i])
-            };
-            item.label = getTypeLabel(item.type,item.def);
-            if (i === common.length-1) {
-                item.separator = true;
+            var itemDef = RED.nodes.getType(common[i]);
+            if (itemDef) {
+                item = {
+                    type: common[i],
+                    common: true,
+                    def: itemDef
+                };
+                item.label = getTypeLabel(item.type,item.def);
+                if (i === common.length-1) {
+                    item.separator = true;
+                }
+                searchResults.editableList('addItem', item);
             }
-            searchResults.editableList('addItem', item);
         }
         for(i=0;i<Math.min(5,recentlyUsed.length);i++) {
             item = {
