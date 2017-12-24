@@ -119,6 +119,8 @@ private:
 	std::unique_ptr<NodeManager> _nodeManager;
 	std::atomic_bool _frontendConnected;
 	std::atomic<int64_t> _lastQueueSize;
+    std::mutex _eventFlowIdMutex;
+    std::string _eventFlowId;
 
 	std::unique_ptr<Flows::BinaryRpc> _binaryRpc;
 	std::unique_ptr<Flows::RpcDecoder> _rpcDecoder;
@@ -222,6 +224,7 @@ private:
 
 		Flows::PVariable setNodeVariable(Flows::PArray& parameters);
 
+        Flows::PVariable setFlowVariable(Flows::PArray& parameters);
 		Flows::PVariable enableNodeEvents(Flows::PArray& parameters);
 		Flows::PVariable disableNodeEvents(Flows::PArray& parameters);
 

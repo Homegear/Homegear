@@ -40,6 +40,7 @@ class FlowInfoServer
 {
 public:
 	int32_t id = 0;
+	std::string nodeBlueId;
 	uint32_t maxThreadCount = 0;
 
 	// {{{ Input parameters

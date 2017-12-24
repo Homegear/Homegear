@@ -593,10 +593,17 @@ void FlowsServer::setNodeVariable(std::string nodeId, std::string topic, BaseLib
 	{
 		PFlowsClientData clientData;
 		int32_t clientId = 0;
+        bool isFlow = false;
 		{
 			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
 			auto nodeClientIdIterator = _nodeClientIdMap.find(nodeId);
-			if(nodeClientIdIterator == _nodeClientIdMap.end()) return;
+			if(nodeClientIdIterator == _nodeClientIdMap.end())
+            {
+                std::lock_guard<std::mutex> flowClientIdMapGuard(_flowClientIdMapMutex);
+                nodeClientIdIterator = _flowClientIdMap.find(nodeId);
+                if(nodeClientIdIterator == _nodeClientIdMap.end()) return;
+                isFlow = true;
+            }
 			clientId = nodeClientIdIterator->second;
 		}
 		{
@@ -606,12 +613,12 @@ void FlowsServer::setNodeVariable(std::string nodeId, std::string topic, BaseLib
 			clientData = clientIterator->second;
 		}
 
-		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
-		parameters->reserve(3);
-		parameters->push_back(std::make_shared<BaseLib::Variable>(nodeId));
-		parameters->push_back(std::make_shared<BaseLib::Variable>(topic));
-		parameters->push_back(value);
-		sendRequest(clientData, "setNodeVariable", parameters, false);
+        BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+        parameters->reserve(3);
+        parameters->push_back(std::make_shared<BaseLib::Variable>(nodeId));
+        parameters->push_back(std::make_shared<BaseLib::Variable>(topic));
+        parameters->push_back(value);
+        sendRequest(clientData, isFlow ? "setFlowVariable" : "setNodeVariable", parameters, false);
 	}
 	catch(const std::exception& ex)
     {
@@ -1071,6 +1078,7 @@ void FlowsServer::startFlows()
 			if(disabledFlows.find(element.first) == disabledFlows.end())
 			{
 				PFlowInfoServer flowInfo = std::make_shared<FlowInfoServer>();
+                flowInfo->nodeBlueId = element.first;
 				flowInfo->maxThreadCount = maxThreadCount;
 				flowInfo->flow = flow;
 				startFlow(flowInfo, nodeIds[element.first]);
@@ -2394,6 +2402,11 @@ void FlowsServer::startFlow(PFlowInfoServer& flowInfo, std::set<std::string>& no
 				_nodeClientIdMap.emplace(node, clientData->id);
 			}
 		}
+
+        {
+            std::lock_guard<std::mutex> flowClientIdMapGuard(_flowClientIdMapMutex);
+            _flowClientIdMap.emplace(flowInfo->nodeBlueId, clientData->id);
+        }
 
 		BaseLib::PArray parameters(new BaseLib::Array{
 				BaseLib::PVariable(new BaseLib::Variable(flowInfo->id)),

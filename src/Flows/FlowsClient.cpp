@@ -71,6 +71,7 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 3, 100000)
     _localRpcMethods.emplace("nodeOutput", std::bind(&FlowsClient::nodeOutput, this, std::placeholders::_1));
     _localRpcMethods.emplace("invokeNodeMethod", std::bind(&FlowsClient::invokeExternalNodeMethod, this, std::placeholders::_1));
     _localRpcMethods.emplace("executePhpNodeBaseMethod", std::bind(&FlowsClient::executePhpNodeBaseMethod, this, std::placeholders::_1));
+    _localRpcMethods.emplace("setFlowVariable", std::bind(&FlowsClient::setFlowVariable, this, std::placeholders::_1));
     _localRpcMethods.emplace("setNodeVariable", std::bind(&FlowsClient::setNodeVariable, this, std::placeholders::_1));
     _localRpcMethods.emplace("enableNodeEvents", std::bind(&FlowsClient::enableNodeEvents, this, std::placeholders::_1));
     _localRpcMethods.emplace("disableNodeEvents", std::bind(&FlowsClient::disableNodeEvents, this, std::placeholders::_1));
@@ -622,7 +623,12 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
                 Flows::PINode node = _nodeManager->getNode(queueEntry->nodeInfo->id);
                 if (node)
                 {
-                    if (GD::bl->settings.nodeBlueDebugOutput() && _startUpComplete && _frontendConnected && BaseLib::HelperFunctions::getTime() - queueEntry->nodeInfo->lastNodeEvent1 >= 100)
+                    std::string eventFlowId;
+                    {
+                        std::lock_guard<std::mutex> eventFlowIdGuard(_eventFlowIdMutex);
+                        eventFlowId = _eventFlowId;
+                    }
+                    if (GD::bl->settings.nodeBlueDebugOutput() && _startUpComplete && _frontendConnected && node->getFlowId() == eventFlowId && BaseLib::HelperFunctions::getTime() - queueEntry->nodeInfo->lastNodeEvent1 >= 100)
                     {
                         queueEntry->nodeInfo->lastNodeEvent1 = BaseLib::HelperFunctions::getTime();
                         Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
@@ -942,10 +948,16 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
             return;
         }
 
+        std::string eventFlowId;
+        {
+            std::lock_guard<std::mutex> eventFlowIdGuard(_eventFlowIdMutex);
+            eventFlowId = _eventFlowId;
+        }
+
         if(synchronous && GD::bl->settings.nodeBlueDebugOutput())
         {
             //Output node events before execution of input
-            if(_frontendConnected && _startUpComplete)
+            if(_frontendConnected && _startUpComplete && nodeInfo->info->structValue->at("flow")->stringValue == eventFlowId)
             {
                 Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
                 timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
@@ -978,7 +990,7 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
                 Flows::PINode nextNode = _nodeManager->getNode(outputNodeInfo->id);
                 if (nextNode)
                 {
-                    if (GD::bl->settings.nodeBlueDebugOutput() && _startUpComplete && _frontendConnected && BaseLib::HelperFunctions::getTime() - outputNodeInfo->lastNodeEvent1 >= 100)
+                    if (GD::bl->settings.nodeBlueDebugOutput() && _startUpComplete && _frontendConnected && nextNode->getFlowId() == eventFlowId && BaseLib::HelperFunctions::getTime() - outputNodeInfo->lastNodeEvent1 >= 100)
                     {
                         outputNodeInfo->lastNodeEvent1 = BaseLib::HelperFunctions::getTime();
                         Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
@@ -1022,7 +1034,7 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 
         if(!synchronous && GD::bl->settings.nodeBlueDebugOutput())
         {
-            if(_frontendConnected && _startUpComplete)
+            if(_frontendConnected && _startUpComplete && nodeInfo->info->structValue->at("flow")->stringValue == eventFlowId)
             {
                 Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
                 timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
@@ -1871,6 +1883,35 @@ Flows::PVariable FlowsClient::setNodeVariable(Flows::PArray& parameters)
         if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
         Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
         if(node) node->setNodeVariable(parameters->at(1)->stringValue, parameters->at(2));
+        return std::make_shared<Flows::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable FlowsClient::setFlowVariable(Flows::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+        if(parameters->at(1)->stringValue == "enableEvents" && parameters->at(2)->booleanValue)
+        {
+            std::lock_guard<std::mutex> eventFlowGuard(_eventFlowIdMutex);
+            _eventFlowId = parameters->at(0)->stringValue;
+            _out.printInfo("Info: Events are now sent to flow " + _eventFlowId);
+        }
+
         return std::make_shared<Flows::Variable>();
     }
     catch(const std::exception& ex)

@@ -121,6 +121,8 @@ private:
 	std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
 	std::mutex _nodeClientIdMapMutex;
 	std::map<std::string, int32_t> _nodeClientIdMap;
+    std::mutex _flowClientIdMapMutex;
+    std::map<std::string, int32_t> _flowClientIdMap;
 
 	std::atomic<int64_t> _lastNodeEvent;
 	std::atomic<uint32_t> _nodeEventCounter;
