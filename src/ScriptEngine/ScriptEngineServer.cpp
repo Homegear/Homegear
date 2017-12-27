@@ -2127,7 +2127,21 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
 			if(!setting) return BaseLib::Variable::createError(-3, "Setting not found.");
 
 			if(!setting->stringValue.empty()) return BaseLib::PVariable(new BaseLib::Variable(setting->stringValue));
-			else if(!setting->binaryValue.empty()) return BaseLib::PVariable(new BaseLib::Variable(setting->binaryValue));
+			else if(!setting->binaryValue.empty())
+			{
+				if(setting->binaryValue.size() > 3 && setting->binaryValue[0] == 'B' && setting->binaryValue[1] == 'i' && setting->binaryValue[2] == 'n')
+				{
+					try
+					{
+						return _rpcDecoder->decodeResponse(setting->binaryValue);
+					}
+					catch(BaseLib::Exception& ex)
+					{
+						return BaseLib::PVariable(new BaseLib::Variable(setting->binaryValue));
+					}
+				}
+				else return BaseLib::PVariable(new BaseLib::Variable(setting->binaryValue));
+			}
 			else return BaseLib::PVariable(new BaseLib::Variable(setting->integerValue));
 		}
 		catch(const std::exception& ex)
