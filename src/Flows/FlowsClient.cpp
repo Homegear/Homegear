@@ -97,6 +97,7 @@ void FlowsClient::dispose()
         _disposed = true;
         _out.printMessage("Shutting down...");
 
+        int64_t startTime = 0;
         _out.printMessage("Calling waitForStop()...");
         {
             std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
@@ -105,8 +106,10 @@ void FlowsClient::dispose()
                 for(auto& nodeIterator : flow.second->nodes)
                 {
                     Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
-                    if(_bl->debugLevel >= 5) _out.printDebug("Debug: Waiting for node " + nodeIterator.second->id + " to stop...");
+                    if(_bl->debugLevel >= 4) _out.printInfo("Info: Waiting for node " + nodeIterator.second->id + " to stop...");
+                    startTime = BaseLib::HelperFunctions::getTime();
                     if(node) node->waitForStop();
+                    if(BaseLib::HelperFunctions::getTime() - startTime > 1000) _out.printWarning("Warning: Waiting for stop on node " + nodeIterator.second->id + " of type " + nodeIterator.second->type + " in namespace " + nodeIterator.second->type + " in flow " + nodeIterator.second->info->structValue->at("flow")->stringValue + " took longer than 1 second.");
                 }
             }
         }
@@ -1617,13 +1620,16 @@ Flows::PVariable FlowsClient::stopNodes(Flows::PArray& parameters)
         _shuttingDownOrRestarting = true;
         _out.printMessage("Calling stop()...");
         std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+        int64_t startTime = 0;
         for(auto& flow : _flows)
         {
             for(auto& nodeIterator : flow.second->nodes)
             {
                 Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
                 if(_bl->debugLevel >= 5) _out.printDebug("Debug: Calling stop() on node " + nodeIterator.second->id + "...");
+                startTime = BaseLib::HelperFunctions::getTime();
                 if(node) node->stop();
+                if(BaseLib::HelperFunctions::getTime() - startTime > 100) _out.printWarning("Warning: Stop of node " + nodeIterator.second->id + " of type " + nodeIterator.second->type + " in namespace " + nodeIterator.second->type + " in flow " + nodeIterator.second->info->structValue->at("flow")->stringValue + " took longer than 100ms.");
                 if(_bl->debugLevel >= 5) _out.printDebug("Debug: Node " + nodeIterator.second->id + " stopped.");
             }
         }
