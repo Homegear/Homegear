@@ -266,6 +266,8 @@ void FlowsClient::resetClient(Flows::PVariable packetId)
 
         _out.printMessage("Reinitializing...");
 
+        if(_watchdogThread.joinable()) _watchdogThread.join();
+
         _shuttingDownOrRestarting = false;
         _startUpComplete = false;
         _nodesStopped = false;
@@ -275,7 +277,6 @@ void FlowsClient::resetClient(Flows::PVariable packetId)
         startQueue(1, false, _threadCount, 0, SCHED_OTHER);
         startQueue(2, false, _threadCount, 0, SCHED_OTHER);
 
-        if(_watchdogThread.joinable()) _watchdogThread.join();
         if(GD::bl->settings.flowsWatchdogTimeout() >= 1000) _watchdogThread = std::thread(&FlowsClient::watchdog, this);
 
         _out.printMessage("Reset complete.");
