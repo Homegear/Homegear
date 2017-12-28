@@ -34,17 +34,12 @@
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 
-// Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
-//#define SE_MANUAL_CLIENT_START
-
 namespace ScriptEngine
 {
 
-#ifdef SE_MANUAL_CLIENT_START
-    pid_t _manualClientCurrentProcessId = 1;
-	std::mutex _unconnectedProcessesMutex;
-	std::queue<pid_t> _unconnectedProcesses;
-#endif
+pid_t _manualClientCurrentProcessId = 1;
+std::mutex _unconnectedProcessesMutex;
+std::queue<pid_t> _unconnectedProcesses;
 
 ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 {
@@ -1380,16 +1375,19 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 		_out.printInfo("Info: Spawning new script engine process.");
 		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess(nodeProcess));
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rse" };
-#ifdef SE_MANUAL_CLIENT_START
-        pid_t currentProcessId = _manualClientCurrentProcessId++;
-        process->setPid(currentProcessId);
-        {
-            std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
-            _unconnectedProcesses.push(currentProcessId);
-        }
-#else
-		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
-#endif
+		if(GD::bl->settings.scriptEngineManualClientStart())
+		{
+			pid_t currentProcessId = _manualClientCurrentProcessId++;
+			process->setPid(currentProcessId);
+			{
+				std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
+				_unconnectedProcesses.push(currentProcessId);
+			}
+		}
+		else
+		{
+			process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
+		}
 		if(process->getPid() != -1)
 		{
 			std::unique_lock<std::mutex> processGuard(_processMutex);
@@ -1887,18 +1885,17 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
 	BaseLib::PVariable ScriptEngineServer::registerScriptEngineClient(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
 	{
 		try
-		{
-			pid_t pid = parameters->at(0)->integerValue;
-#ifdef SE_MANUAL_CLIENT_START
+        {
+            pid_t pid = parameters->at(0)->integerValue;
+            if(GD::bl->settings.scriptEngineManualClientStart())
             {
                 std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
-                if (!_unconnectedProcesses.empty())
+                if(!_unconnectedProcesses.empty())
                 {
                     pid = _unconnectedProcesses.front();
                     _unconnectedProcesses.pop();
                 }
             }
-#endif
 			std::unique_lock<std::mutex> processGuard(_processMutex);
 			std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(pid);
 			if(processIterator == _processes.end())
