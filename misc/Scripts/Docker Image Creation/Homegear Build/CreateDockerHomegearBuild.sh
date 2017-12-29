@@ -426,6 +426,13 @@ if [[ -n $2 ]]; then
 	rm master.zip
 	mv homegear-rs2w-master* homegear-rs2w-${1}
 
+	wget --https-only https://gitit.de/Homegear-Addons/Homegear-M-Bus/repository/master/archive.zip?private_token=${2} -O ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv Homegear-M-Bus-${1}* homegear-mbus-${1}
+
 	wget --https-only https://gitit.de/Homegear-Addons/homegear-gateway/repository/${1}/archive.zip?private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
@@ -504,6 +511,7 @@ if [[ -n $2 ]]; then
 	createPackage homegear-easyled2 $1 homegear-easyled2 1
 	createPackage homegear-rsl $1 homegear-rsl 1
 	createPackage homegear-rs2w $1 homegear-rs2w 1
+	createPackage homegear-mbus $1 homegear-mbus 1
 	createPackage homegear-gateway $1 homegear-gateway 1
 fi
 EOF
@@ -566,6 +574,7 @@ if [[ -n $1 ]]; then
 	cleanUp2 homegear-easyled2
 	cleanUp2 homegear-rsl
 	cleanUp2 homegear-rs2w
+	cleanUp2 homegear-mbus
 	cleanUp2 homegear-gateway
 fi
 EOF
@@ -588,6 +597,10 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 	mv homegear-nanoleaf.deb homegear-nanoleaf_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-influxdb.deb homegear-influxdb_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	if [[ -n \$1 ]]; then
+		if test ! -f homegear-easy-licensing.deb || test ! -f homegear-licensing.deb || test ! -f homegear-nodes-extra.deb || test ! -f homegear-beckhoff.deb || test ! -f homegear-knx.deb || test ! -f homegear-enocean.deb || test ! -f homegear-easycam.deb || test ! -f homegear-easyled.deb || test ! -f homegear-easyled2.deb || test ! -f homegear-rsl.deb || test ! -f homegear-rs2w.deb || test ! -f homegear-mbus.deb || test ! -f homegear-gateway.deb; then
+			echo \"Error: Some or all packages from gitit.de could not be created.\"
+			exit 1
+		fi
 		mv homegear-easy-licensing.deb homegear-easy-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-licensing.deb homegear-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
 
@@ -600,6 +613,7 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 		mv homegear-easyled2.deb homegear-easyled2_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-rsl.deb homegear-rsl_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-rs2w.deb homegear-rs2w_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv homegear-mbus.deb homegear-mbus_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-gateway.deb homegear-gateway_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	fi
 	if test -f /build/UploadNightly.sh; then
