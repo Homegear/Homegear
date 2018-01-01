@@ -426,7 +426,7 @@ if [[ -n $2 ]]; then
 	rm master.zip
 	mv homegear-rs2w-master* homegear-rs2w-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/Homegear-M-Bus/repository/master/archive.zip?private_token=${2} -O ${1}.zip
+	wget --https-only https://gitit.de/Homegear-Addons/Homegear-M-Bus/repository/${1}/archive.zip?private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
