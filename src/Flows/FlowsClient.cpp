@@ -182,6 +182,8 @@ void FlowsClient::resetClient(Flows::PVariable packetId)
 {
     try
     {
+        _shuttingDownOrRestarting = true;
+
         std::lock_guard<std::mutex> startFlowGuard(_startFlowMutex);
         _out.printMessage("Calling waitForStop()...");
         {
