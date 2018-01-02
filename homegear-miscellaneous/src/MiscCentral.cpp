@@ -688,7 +688,7 @@ PVariable MiscCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t 
 {
 	try
 	{
-		if(serialNumber.size() != 10) return Variable::createError(-1, "The serial number needs to have a size of 10.");
+		if(serialNumber.size() < 10 || serialNumber.size() > 20) return Variable::createError(-1, "The serial number needs to have a size between 10 and 20.");
 		if(peerExists(serialNumber)) return Variable::createError(-5, "This peer is already paired to this central.");
 
 		std::shared_ptr<MiscPeer> peer = createPeer(deviceType, serialNumber, false);
@@ -696,35 +696,29 @@ PVariable MiscCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t 
 
 		try
 		{
-			_peersMutex.lock();
-			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
-			_peersMutex.unlock();
 			peer->save(true, true, false);
 			peer->initializeCentralConfig();
-			_peersMutex.lock();
+			std::lock_guard<std::mutex> peersGuard(_peersMutex);
 			_peersById[peer->getID()] = peer;
-			_peersMutex.unlock();
+			_peersBySerial[serialNumber] = peer;
 		}
 		catch(const std::exception& ex)
 		{
-			_peersMutex.unlock();
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		catch(BaseLib::Exception& ex)
 		{
-			_peersMutex.unlock();
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		catch(...)
 		{
-			_peersMutex.unlock();
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
 
 		PVariable deviceDescriptions(new Variable(VariableType::tArray));
 		deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
 		raiseRPCNewDevices(deviceDescriptions);
-		GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(peer->getID()) + ".");
+		GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + " with serial number " + serialNumber + ".");
 		peer->initProgram();
 
 		return PVariable(new Variable((uint32_t)peer->getID()));

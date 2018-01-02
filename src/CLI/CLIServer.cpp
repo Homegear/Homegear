@@ -1195,7 +1195,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			}
 
 			int32_t idWidth = 10;
-			int32_t addressWidth = 15;
+			int32_t addressWidth = 32;
 			int32_t urlWidth = 30;
 			int32_t interfaceIdWidth = 30;
 			int32_t xmlWidth = 10;
