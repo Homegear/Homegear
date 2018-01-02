@@ -49,6 +49,7 @@ typedef struct _zend_homegear_globals
 	std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)> rpcCallback;
 	BaseLib::Http http;
 	BaseLib::ScriptEngine::PScriptInfo scriptInfo;
+	std::forward_list<std::string> additionalStrings;
 
 	bool webRequest = false;
 	bool commandLine = false;

@@ -48,11 +48,14 @@
 #error "PHP 7.3 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
 /*
  * 1. Compare initialization with the initialization in one of the SAPI modules (e. g. "php_embed_init()" in "sapi/embed/php_embed.c").
+ * 2. Check if content of hg_stream_open() equals zend_stream_open() in zend_stream.c
  */
 #endif
 
 static bool _disposed = true;
 static zend_homegear_superglobals _superglobals;
+static std::mutex _scriptCacheMutex;
+static std::map<std::string, std::shared_ptr<ScriptEngine::CacheInfo>> _scriptCache;
 
 static zend_class_entry* homegear_class_entry = nullptr;
 static zend_class_entry* homegear_gpio_class_entry = nullptr;
@@ -273,6 +276,93 @@ void php_homegear_build_argv(std::vector<std::string>& arguments)
 
 	//zval_ptr_dtor(&argc); //Not needed
 	//zval_ptr_dtor(&argv);
+}
+
+int hg_stream_open(const char *filename, zend_file_handle *handle)
+{
+	std::string file(filename);
+	if(file.size() > 3 && (file.compare(file.size() - 4, 4, ".hgs") == 0 || file.compare(file.size() - 4, 4, ".hgn") == 0))
+	{
+        std::lock_guard<std::mutex> scriptCacheGuard(_scriptCacheMutex);
+		zend_homegear_globals* globals = php_homegear_get_globals();
+        std::map<std::string, std::shared_ptr<ScriptEngine::CacheInfo>>::iterator scriptIterator = _scriptCache.find(file);
+        if(scriptIterator != _scriptCache.end() && scriptIterator->second->lastModified == BaseLib::Io::getFileLastModifiedTime(file))
+        {
+			globals->additionalStrings.push_front(scriptIterator->second->script);
+            handle->type = ZEND_HANDLE_MAPPED;
+            handle->handle.fp = nullptr;
+            handle->handle.stream.handle = nullptr;
+            handle->handle.stream.closer = nullptr;
+            memset(&handle->handle.stream.mmap, 0, sizeof(zend_mmap));
+            handle->handle.stream.mmap.buf = (char*)globals->additionalStrings.front().c_str(); //String is not modified
+            handle->handle.stream.mmap.len = scriptIterator->second->script.size();
+            handle->filename = filename;
+            handle->opened_path = nullptr;
+            handle->free_filename = 0;
+			return SUCCESS;
+        }
+        else
+        {
+            std::vector<char> data = BaseLib::Io::getBinaryFileContent(file);
+            int32_t pos = -1;
+            for(uint32_t i = 0; i < 11 && i < data.size(); i++)
+            {
+                if(data[i] == ' ')
+                {
+                    pos = (int32_t)i;
+                    break;
+                }
+            }
+            if(pos == -1)
+            {
+                GD::bl->out.printError("Error: License module id is missing in encrypted script file \"" + file + "\"");
+                return FAILURE;
+            }
+            std::string moduleIdString(&data.at(0), static_cast<unsigned long>(pos));
+            int32_t moduleId = BaseLib::Math::getNumber(moduleIdString);
+            std::vector<char> input(&data.at(static_cast<unsigned long>(pos + 1)), &data.at(data.size() - 1) + 1);
+            if(input.empty()) return FAILURE;
+            std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
+            if(i == GD::licensingModules.end() || !i->second)
+            {
+                GD::out.printError("Error: Could not decrypt script file. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
+                return FAILURE;
+            }
+            std::shared_ptr<ScriptEngine::CacheInfo> cacheInfo = std::make_shared<ScriptEngine::CacheInfo>();
+            i->second->decryptScript(input, cacheInfo->script);
+            cacheInfo->lastModified = BaseLib::Io::getFileLastModifiedTime(file);
+            if(!cacheInfo->script.empty())
+            {
+				globals->additionalStrings.push_front(cacheInfo->script);
+                _scriptCache[file] = cacheInfo;
+                handle->type = ZEND_HANDLE_MAPPED;
+                handle->handle.fp = nullptr;
+                handle->handle.stream.handle = nullptr;
+                handle->handle.stream.closer = nullptr;
+                memset(&handle->handle.stream.mmap, 0, sizeof(zend_mmap));
+                handle->handle.stream.mmap.buf = (char*)globals->additionalStrings.front().c_str(); //String is not modified
+                handle->handle.stream.mmap.len = cacheInfo->script.size();
+                handle->filename = filename;
+                handle->opened_path = nullptr;
+                handle->free_filename = 0;
+				return SUCCESS;
+            }
+			else return FAILURE;
+        }
+	}
+	else
+	{
+		//{{{ 100% from zend_stream_open in zend_stream.c */
+		handle->type = ZEND_HANDLE_FP;
+		handle->opened_path = nullptr;
+		handle->handle.fp = zend_fopen(filename, &handle->opened_path);
+		handle->filename = filename;
+		handle->free_filename = 0;
+		memset(&handle->handle.stream.mmap, 0, sizeof(zend_mmap));
+		//}}}
+	}
+
+    return (handle->handle.fp) ? SUCCESS : FAILURE;
 }
 
 static size_t php_homegear_read_post(char *buf, size_t count_bytes)
@@ -1999,6 +2089,9 @@ static int php_homegear_startup(sapi_module_struct* sapi_globals)
 		} ZEND_HASH_FOREACH_END();
 #endif
 	// }}}
+
+    zend_stream_open_function = hg_stream_open;
+
 	return SUCCESS;
 }
 

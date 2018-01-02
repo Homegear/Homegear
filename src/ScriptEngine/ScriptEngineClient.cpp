@@ -39,6 +39,7 @@
 #include <wordexp.h>
 
 #include <utility>
+#include <zend_stream.h>
 
 namespace ScriptEngine
 {
@@ -1178,6 +1179,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 				zendHandle.handle.fp = nullptr;
 				zendHandle.handle.stream.handle = nullptr;
 				zendHandle.handle.stream.closer = nullptr;
+                memset(&zendHandle.handle.stream.mmap, 0, sizeof(zend_mmap));
 				zendHandle.handle.stream.mmap.buf = (char*) scriptInfo->script.c_str(); //String is not modified
 				zendHandle.handle.stream.mmap.len = scriptInfo->script.size();
 				zendHandle.filename = scriptInfo->fullPath.c_str();
@@ -1190,6 +1192,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 				zendHandle.filename = scriptInfo->fullPath.c_str();
 				zendHandle.opened_path = nullptr;
 				zendHandle.free_filename = 0;
+                memset(&zendHandle.handle.stream.mmap, 0, sizeof(zend_mmap));
 			}
 
 			zend_homegear_globals* globals = php_homegear_get_globals();
@@ -1432,6 +1435,7 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
 
 		if(scriptInfo->script.empty() && scriptInfo->fullPath.size() > 3 && (scriptInfo->fullPath.compare(scriptInfo->fullPath.size() - 4, 4, ".hgs") == 0 || scriptInfo->fullPath.compare(scriptInfo->fullPath.size() - 4, 4, ".hgn") == 0))
 		{
+            std::lock_guard<std::mutex> scriptCacheGuard(_scriptCacheMutex);
 			std::map<std::string, std::shared_ptr<CacheInfo>>::iterator scriptIterator = _scriptCache.find(scriptInfo->fullPath);
 			if(scriptIterator != _scriptCache.end() && scriptIterator->second->lastModified == BaseLib::Io::getFileLastModifiedTime(scriptInfo->fullPath)) scriptInfo->script = scriptIterator->second->script;
 			else
@@ -1461,7 +1465,7 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
 					GD::out.printError("Error: Could not decrypt script file. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
 					return;
 				}
-				std::shared_ptr<CacheInfo> cacheInfo(new CacheInfo());
+				std::shared_ptr<CacheInfo> cacheInfo = std::make_shared<ScriptEngine::CacheInfo>();
 				i->second->decryptScript(input, cacheInfo->script);
 				cacheInfo->lastModified = BaseLib::Io::getFileLastModifiedTime(scriptInfo->fullPath);
 				if(!cacheInfo->script.empty())

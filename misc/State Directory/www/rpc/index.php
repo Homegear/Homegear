@@ -1,8 +1,13 @@
 <?php
 
+require_once("include.hgs");
+
 $hgDevices = [];
 $hgVersion = '-';
 $hgError = false;
+
+$bla = new Bla();
+$bla->setValue();
 
 try {
 
