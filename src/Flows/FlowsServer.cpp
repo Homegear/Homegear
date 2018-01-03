@@ -98,6 +98,7 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("getNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetNodeData()));
 	_rpcMethods.emplace("getFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetFlowData()));
 	_rpcMethods.emplace("getGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetGlobalData()));
+	_rpcMethods.emplace("getNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetNodeVariable()));
 	_rpcMethods.emplace("getPairingMethods", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPairingMethods()));
 	_rpcMethods.emplace("getParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamset()));
 	_rpcMethods.emplace("getParamsetDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetDescription()));
@@ -580,6 +581,53 @@ void FlowsServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVaria
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+BaseLib::PVariable FlowsServer::getNodeVariable(std::string nodeId, std::string topic)
+{
+	try
+	{
+		PFlowsClientData clientData;
+		int32_t clientId = 0;
+		bool isFlow = false;
+		{
+			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+			auto nodeClientIdIterator = _nodeClientIdMap.find(nodeId);
+			if(nodeClientIdIterator == _nodeClientIdMap.end())
+			{
+				std::lock_guard<std::mutex> flowClientIdMapGuard(_flowClientIdMapMutex);
+				nodeClientIdIterator = _flowClientIdMap.find(nodeId);
+				if(nodeClientIdIterator == _nodeClientIdMap.end()) return std::make_shared<BaseLib::Variable>();
+				isFlow = true;
+			}
+			clientId = nodeClientIdIterator->second;
+		}
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			auto clientIterator = _clients.find(clientId);
+			if(clientIterator == _clients.end()) return std::make_shared<BaseLib::Variable>();
+			clientData = clientIterator->second;
+		}
+
+		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+		parameters->reserve(2);
+		parameters->push_back(std::make_shared<BaseLib::Variable>(nodeId));
+		parameters->push_back(std::make_shared<BaseLib::Variable>(topic));
+		return sendRequest(clientData, isFlow ? "getFlowVariable" : "getNodeVariable", parameters, true);
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 void FlowsServer::setNodeVariable(std::string nodeId, std::string topic, BaseLib::PVariable value)

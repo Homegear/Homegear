@@ -609,6 +609,16 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
+class RPCGetNodeVariable : public BaseLib::Rpc::RpcMethod
+{
+public:
+	RPCGetNodeVariable()
+	{
+		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+	}
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+};
+
 class RPCGetPairingMethods : public BaseLib::Rpc::RpcMethod
 {
 public:

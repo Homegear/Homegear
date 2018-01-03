@@ -6,8 +6,8 @@ $hgDevices = [];
 $hgVersion = '-';
 $hgError = false;
 
-$bla = new Bla();
-$bla->setValue();
+$bla = new Blackbox();
+echo $bla->secret();
 
 try {
 

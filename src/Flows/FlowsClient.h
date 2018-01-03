@@ -140,6 +140,9 @@ private:
 	std::mutex _internalMessagesMutex;
 	std::unordered_map<std::string, Flows::PVariable> _internalMessages;
 
+    std::mutex _inputValuesMutex;
+    std::unordered_map<std::string, std::unordered_map<int32_t, Flows::PVariable>> _inputValues;
+
     void watchdog();
 
     void resetClient(Flows::PVariable packetId);
@@ -160,6 +163,7 @@ private:
 	Flows::PVariable getNodeData(std::string nodeId, std::string key);
 	void setNodeData(std::string nodeId, std::string key, Flows::PVariable value);
 	void setInternalMessage(std::string nodeId, Flows::PVariable message);
+    void setInputValue(std::string& nodeId, int32_t inputIndex, Flows::PVariable message);
 	Flows::PVariable getConfigParameter(std::string nodeId, std::string name);
 
 	// {{{ RPC methods
@@ -222,9 +226,12 @@ private:
 		Flows::PVariable invokeExternalNodeMethod(Flows::PArray& parameters);
 		Flows::PVariable executePhpNodeBaseMethod(Flows::PArray& parameters);
 
-		Flows::PVariable setNodeVariable(Flows::PArray& parameters);
+		Flows::PVariable getNodeVariable(Flows::PArray& parameters);
+		Flows::PVariable getFlowVariable(Flows::PArray& parameters);
 
+		Flows::PVariable setNodeVariable(Flows::PArray& parameters);
         Flows::PVariable setFlowVariable(Flows::PArray& parameters);
+
 		Flows::PVariable enableNodeEvents(Flows::PArray& parameters);
 		Flows::PVariable disableNodeEvents(Flows::PArray& parameters);
 

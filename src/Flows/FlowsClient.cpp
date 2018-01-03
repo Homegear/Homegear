@@ -71,6 +71,8 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 3, 100000)
     _localRpcMethods.emplace("nodeOutput", std::bind(&FlowsClient::nodeOutput, this, std::placeholders::_1));
     _localRpcMethods.emplace("invokeNodeMethod", std::bind(&FlowsClient::invokeExternalNodeMethod, this, std::placeholders::_1));
     _localRpcMethods.emplace("executePhpNodeBaseMethod", std::bind(&FlowsClient::executePhpNodeBaseMethod, this, std::placeholders::_1));
+    _localRpcMethods.emplace("getFlowVariable", std::bind(&FlowsClient::getFlowVariable, this, std::placeholders::_1));
+    _localRpcMethods.emplace("getNodeVariable", std::bind(&FlowsClient::getNodeVariable, this, std::placeholders::_1));
     _localRpcMethods.emplace("setFlowVariable", std::bind(&FlowsClient::setFlowVariable, this, std::placeholders::_1));
     _localRpcMethods.emplace("setNodeVariable", std::bind(&FlowsClient::setNodeVariable, this, std::placeholders::_1));
     _localRpcMethods.emplace("enableNodeEvents", std::bind(&FlowsClient::enableNodeEvents, this, std::placeholders::_1));
@@ -264,6 +266,11 @@ void FlowsClient::resetClient(Flows::PVariable packetId)
         {
             std::lock_guard<std::mutex> internalMessagesGuard(_internalMessagesMutex);
             _internalMessages.clear();
+        }
+
+        {
+            std::lock_guard<std::mutex> inputValuesGuard(_inputValuesMutex);
+            _inputValues.clear();
         }
 
         _out.printMessage("Reinitializing...");
@@ -643,8 +650,11 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
                     }
                     auto internalMessageIterator = queueEntry->message->structValue->find("_internal");
                     if (internalMessageIterator != queueEntry->message->structValue->end()) setInternalMessage(queueEntry->nodeInfo->id, internalMessageIterator->second);
-                    std::lock_guard<std::mutex> nodeInputGuard(node->getInputMutex());
-                    node->input(queueEntry->nodeInfo, queueEntry->targetPort, queueEntry->message);
+                    {
+                        std::lock_guard<std::mutex> nodeInputGuard(node->getInputMutex());
+                        node->input(queueEntry->nodeInfo, queueEntry->targetPort, queueEntry->message);
+                    }
+                    setInputValue(queueEntry->nodeInfo->id, queueEntry->targetPort, queueEntry->message);
                 }
             }
             catch(const std::exception& ex)
@@ -1017,8 +1027,13 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
                         setInternalMessage(outputNodeInfo->id, internalMessage);
                         message->structValue->emplace("_internal", internalMessage);
                     }
-                    std::lock_guard<std::mutex> nodeInputGuard(nextNode->getInputMutex());
-                    nextNode->input(outputNodeInfo, node.port, message);
+
+                    {
+                        std::lock_guard<std::mutex> nodeInputGuard(nextNode->getInputMutex());
+                        nextNode->input(outputNodeInfo, node.port, message);
+                    }
+
+                    setInputValue(outputNodeInfo->id, node.port, message);
                 }
             }
             else
@@ -1178,6 +1193,45 @@ void FlowsClient::setInternalMessage(std::string nodeId, Flows::PVariable messag
             }
         }
         else _internalMessages[nodeId] = message;
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void FlowsClient::setInputValue(std::string& nodeId, int32_t inputIndex, Flows::PVariable message)
+{
+    try
+    {
+        std::lock_guard<std::mutex> inputValuesGuard(_inputValuesMutex);
+        Flows::PVariable payload = message->structValue->at("payload");
+        if(payload->type == Flows::VariableType::tArray)
+        {
+            payload = std::make_shared<Flows::Variable>(std::string("Array"));
+        }
+        else if(payload->type == Flows::VariableType::tStruct)
+        {
+            payload = std::make_shared<Flows::Variable>(std::string("Struct"));
+        }
+        else if(payload->type == Flows::VariableType::tBinary)
+        {
+            if(payload->binaryValue.size() > 10) payload = std::make_shared<Flows::Variable>(BaseLib::HelperFunctions::getHexString(payload->binaryValue.data(), 10) + "...");
+            else payload = std::make_shared<Flows::Variable>(BaseLib::HelperFunctions::getHexString(payload->binaryValue.data(), payload->binaryValue.size()));
+        }
+        else if(payload->type == Flows::VariableType::tString && payload->stringValue.size() > 20)
+        {
+            payload = std::make_shared<Flows::Variable>(payload->stringValue.substr(0, 20) + "...");
+        }
+        _inputValues[nodeId][inputIndex] = payload;
     }
     catch(const std::exception& ex)
     {
@@ -1868,6 +1922,68 @@ Flows::PVariable FlowsClient::executePhpNodeBaseMethod(Flows::PArray& parameters
 
             return getConfigParameter(parameters->at(0)->stringValue, innerParameters->at(0)->stringValue);
         }
+        return std::make_shared<Flows::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable FlowsClient::getNodeVariable(Flows::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
+        if(parameters->at(1)->stringValue.compare(0, sizeof("inputValue") - 1, "inputValue") == 0 && parameters->at(1)->stringValue.size() > 10)
+        {
+            std::string indexString = parameters->at(1)->stringValue.substr(10);
+            int32_t index = Flows::Math::getNumber(indexString);
+            std::lock_guard<std::mutex> inputValuesGuard(_inputValuesMutex);
+            auto nodeIterator = _inputValues.find(parameters->at(0)->stringValue);
+            if(nodeIterator != _inputValues.end())
+            {
+                auto inputIterator = nodeIterator->second.find(index);
+                if(inputIterator != nodeIterator->second.end()) return inputIterator->second;
+            }
+        }
+        else
+        {
+            Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
+            if(node) return node->getNodeVariable(parameters->at(1)->stringValue);
+        }
+        return std::make_shared<Flows::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable FlowsClient::getFlowVariable(Flows::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
+
         return std::make_shared<Flows::Variable>();
     }
     catch(const std::exception& ex)

@@ -11505,31 +11505,40 @@ RED.view = (function() {
                                 .on("mouseout",(function(){var node = d; return function(d,i) {portMouseOut(d3.select(this),node,PORT_TYPE_INPUT,i);}})());
 
                             input_group.each(function(i){
+                                var label = "";
+                                var types = "";
+                                var content = "";
                                 if(d._def && d._def.inputInfo && i < d._def.inputInfo.length) {
                                     var inputInfo = d._def.inputInfo[i];
                                     var infoBody = i18n.t(d.namespace + "/" + d.type + ".hni:" + d.type + ".input" + (i + 1) + "Description");
                                     if(inputInfo.types) {
-                                        var content = inputInfo.label ? "<p><b>" + inputInfo.label + "</b></p>" : "";
-                                        content += "<p><i>";
-                                        for(var i = 0; i < inputInfo.types.length; i++) {
-                                            if(i != 0) content += ", ";
-                                            content += inputInfo.types[i];
+                                        label = inputInfo.label ? "<p><b>" + inputInfo.label + "</b></p>" : "";
+                                        types = "<p><b>Types:</b> <i>";
+                                        for(var j = 0; j < inputInfo.types.length; j++) {
+                                            if(j != 0) types += ", ";
+                                            types += inputInfo.types[j];
                                         }
-                                        content += "</i></p>" + infoBody;
-
-                                        var popover = RED.popover.create({
-                                            target:$(this),
-                                            trigger: "hover",
-                                            width: "250px",
-                                            content: content,
-                                            direction: "left",
-                                            offsetX: -13,
-                                            offsetY: 4,
-                                            delay: { show: 750, hide: 50 }
-                                        });
-                                        $(this).data('popover',popover);
+                                        types = "</i></p>";
+                                        content = infoBody;
                                     }
                                 }
+                                var nodeId = d.id;
+                                var valueVariableName = "inputValue" + i;
+                                dynamicContent = function() {
+                                    RED.comms.homegear().invoke("getNodeVariable", function(response) { setTimeout(function() {$(".last_value").text(JSON.stringify(response.result)); }, 100); }, nodeId, valueVariableName);
+                                    return $(label + types + "<p><b>Last value:</b> <span class=\"last_value\">-</span></p>" + content);
+                                };
+                                var popover = RED.popover.create({
+                                    target:$(this),
+                                    trigger: "hover",
+                                    width: "250px",
+                                    content: dynamicContent,
+                                    direction: "left",
+                                    offsetX: -13,
+                                    offsetY: 4,
+                                    delay: { show: 750, hide: 50 }
+                                });
+                                $(this).data('popover',popover);
                             });
 
                             d._inputPorts.exit().remove();

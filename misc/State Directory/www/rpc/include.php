@@ -1,9 +1,9 @@
 <?php
 
-class Bla
+class Blackbox
 {
-public function setValue()
+public function secret()
 {
-	print "Hi";
+	return time();
 }
 };
