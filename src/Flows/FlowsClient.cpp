@@ -1231,7 +1231,13 @@ void FlowsClient::setInputValue(std::string& nodeId, int32_t inputIndex, Flows::
         {
             payload = std::make_shared<Flows::Variable>(payload->stringValue.substr(0, 20) + "...");
         }
-        _inputValues[nodeId][inputIndex] = payload;
+
+        auto& element = _inputValues[nodeId][inputIndex];
+        InputValue inputValue;
+        inputValue.time = BaseLib::HelperFunctions::getTime();
+        inputValue.value = payload;
+        element.push_front(std::move(inputValue));
+        while(element.size() > 10) element.pop_back();
     }
     catch(const std::exception& ex)
     {
@@ -1953,7 +1959,32 @@ Flows::PVariable FlowsClient::getNodeVariable(Flows::PArray& parameters)
             if(nodeIterator != _inputValues.end())
             {
                 auto inputIterator = nodeIterator->second.find(index);
-                if(inputIterator != nodeIterator->second.end()) return inputIterator->second;
+                if(inputIterator != nodeIterator->second.end()) return inputIterator->second.front().value;
+            }
+        }
+        else if(parameters->at(1)->stringValue.compare(0, sizeof("inputHistory") - 1, "inputHistory") == 0 && parameters->at(1)->stringValue.size() > 12)
+        {
+            std::string indexString = parameters->at(1)->stringValue.substr(12);
+            int32_t index = Flows::Math::getNumber(indexString);
+            std::lock_guard<std::mutex> inputValuesGuard(_inputValuesMutex);
+            auto nodeIterator = _inputValues.find(parameters->at(0)->stringValue);
+            if(nodeIterator != _inputValues.end())
+            {
+                auto inputIterator = nodeIterator->second.find(index);
+                if(inputIterator != nodeIterator->second.end())
+                {
+                    Flows::PVariable array = std::make_shared<Flows::Variable>(Flows::VariableType::tArray);
+                    array->arrayValue->reserve(inputIterator->second.size());
+                    for(auto& inputValue : inputIterator->second)
+                    {
+                        Flows::PVariable innerArray = std::make_shared<Flows::Variable>(Flows::VariableType::tArray);
+                        innerArray->arrayValue->reserve(2);
+                        innerArray->arrayValue->push_back(std::make_shared<Flows::Variable>(inputValue.time));
+                        innerArray->arrayValue->push_back(inputValue.value);
+                        array->arrayValue->push_back(innerArray);
+                    }
+                    return array;
+                }
             }
         }
         else

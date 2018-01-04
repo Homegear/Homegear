@@ -5480,16 +5480,21 @@ RED.popover = (function() {
         var size = options.size||"default";
         var offsetX = options.offsetX||0;
         var offsetY = options.offsetY||0;
+        var intervalCallback = options.intervalCallback||null;
+        var dialog1 = options.dialog1||null;
         if (!deltaSizes[size]) {
             throw new Error("Invalid RED.popover size value:",size);
         }
 
         var timer = null;
+        var interval = null;
         var active;
+        var divHover = false;
         var div;
 
         var openPopup = function() {
             if (active) {
+                $('.red-ui-popover').remove();
                 div = $('<div class="red-ui-popover red-ui-popover-'+direction+'"></div>').appendTo("body");
                 if (size !== "default") {
                     div.addClass("red-ui-popover-size-"+size);
@@ -5519,10 +5524,41 @@ RED.popover = (function() {
                 }
 
                 div.fadeIn("fast");
+
+                if(trigger === 'hover') {
+                    div.on('mouseenter', function(e) {
+                        if (timer) {
+                            clearTimeout(timer);
+                        }
+                        divHover = true;
+                    });
+
+                    div.on('mouseleave', function(e) {
+                        if (timer) {
+                            clearTimeout(timer);
+                        }
+                        divHover = false;
+                        if(!active) timer = setTimeout(closePopup,delay.hide);
+                    });
+                }
+
+                if(dialog1) {
+                    $(".popover-dialog1").on("click", function(e) {
+                        if(interval) clearInterval(interval);
+                        dialog1();
+                        div.remove();
+                        div = null;
+                    });
+                }
+
+                if(intervalCallback) {
+                    interval = setInterval(intervalCallback, 1000);
+                }
             }
         }
         var closePopup = function() {
             if (!active) {
+                if(interval) clearInterval(interval);
                 if (div) {
                     div.fadeOut("fast",function() {
                         $(this).remove();
@@ -5535,7 +5571,9 @@ RED.popover = (function() {
         if (trigger === 'hover') {
 
             target.on('mouseenter',function(e) {
-                clearTimeout(timer);
+                if (timer) {
+                    clearTimeout(timer);
+                }
                 active = true;
                 timer = setTimeout(openPopup,delay.show);
             });
@@ -5544,7 +5582,7 @@ RED.popover = (function() {
                     clearTimeout(timer);
                 }
                 active = false;
-                setTimeout(closePopup,delay.hide);
+                if(!divHover) timer = setTimeout(closePopup,delay.hide);
             });
         } else if (trigger === 'click') {
             target.click(function(e) {
@@ -11524,10 +11562,69 @@ RED.view = (function() {
                                 }
                                 var nodeId = d.id;
                                 var valueVariableName = "inputValue" + i;
+                                var historyVariableName = "inputHistory" + i;
                                 dynamicContent = function() {
-                                    RED.comms.homegear().invoke("getNodeVariable", function(response) { setTimeout(function() {$(".last_value").text(JSON.stringify(response.result)); }, 100); }, nodeId, valueVariableName);
-                                    return $(label + types + "<p><b>Last value:</b> <span class=\"last_value\">-</span></p>" + content);
+                                    RED.comms.homegear().invoke("getNodeVariable", function(response) { setTimeout(function() {$(".red-ui-popover .last_value").text(JSON.stringify(response.result)); }, 100); }, nodeId, valueVariableName);
+                                    return $("<div style=\"float: right\"><a class=\"popover-dialog1\" href=\"#\">Hist.</a></div>" + label + types + "<p><b>Last value:</b> <span class=\"last_value\">-</span></p><div style=\"clear: both\">" + content + "</div>");
                                 };
+
+                                var intervalCallback = function() {
+                                    RED.comms.homegear().invoke("getNodeVariable", function(response) { $(".red-ui-popover .last_value").text(JSON.stringify(response.result)); }, nodeId, valueVariableName);
+                                }
+
+                                openDialog1 = function() {
+                                    var historyDialog = $('<div id="popover-dialog" class="hide node-red-dialog"><div class="history-values"></div></div>')
+                                        .appendTo("body")
+                                        .dialog({
+                                            modal: true,
+                                            autoOpen: false,
+                                            width: 500,
+                                            height: 450,
+                                            resizable: false,
+                                            buttons: [
+                                                {
+                                                    id: "popover-dialog-close",
+                                                    class: "primary",
+                                                    text: RED._("common.label.close"),
+                                                    click: function() {
+                                                        $( this ).dialog( "close" );
+                                                    }
+                                                }
+                                            ],
+                                            open: function(e) {
+                                                $(this).parent().find(".ui-dialog-titlebar-close").hide();
+                                                $("#popover-dialog-close").button("enable");
+                                                RED.comms.homegear().invoke("getNodeVariable", function(response) {
+                                                    var html = "";
+                                                    $.each(response.result, function(key, value) {
+                                                        var date = new Date(value[0]);
+                                                        html += "<p><span class=\"value-history-date\">" + date.toLocaleDateString(undefined, { "year": "numeric", "day": "2-digit", "month": "2-digit" }) + " " + date.toLocaleTimeString() + "." + ("000" + (value[0] % 1000)).slice(-3) + ": </span><span>" + value[1] + "</span></p>";
+                                                    });
+                                                    $("#popover-dialog .history-values").html(html); 
+                                                }, nodeId, historyVariableName);
+
+                                                var interval = setInterval(function() {
+                                                    RED.comms.homegear().invoke("getNodeVariable", function(response) {
+                                                        var html = "";
+                                                        $.each(response.result, function(key, value) {
+                                                            var date = new Date(value[0]);
+                                                            html += "<p><span class=\"value-history-date\">" + date.toLocaleDateString(undefined, { "year": "numeric", "day": "2-digit", "month": "2-digit" }) + " " + date.toLocaleTimeString() + "." + ("000" + (value[0] % 1000)).slice(-3) + ": </span><span>" + value[1] + "</span></p>";
+                                                        });
+                                                        $("#popover-dialog .history-values").html(html); 
+                                                    }, nodeId, historyVariableName);
+                                                }, 1000);
+
+                                                $(this).dialog("option", "interval", interval);
+                                            },
+                                            close: function(e) {
+                                                var interval = $(this).dialog("option", "interval");
+                                                if(interval) clearInterval(interval);
+                                                $(this).remove();
+                                            }
+                                        });
+                                    historyDialog.dialog("option", "title", "History").dialog("open");
+                                };
+
                                 var popover = RED.popover.create({
                                     target:$(this),
                                     trigger: "hover",
@@ -11536,7 +11633,9 @@ RED.view = (function() {
                                     direction: "left",
                                     offsetX: -13,
                                     offsetY: 4,
-                                    delay: { show: 750, hide: 50 }
+                                    delay: { show: 300, hide: 300 },
+                                    dialog1: openDialog1,
+                                    intervalCallback: intervalCallback
                                 });
                                 $(this).data('popover',popover);
                             });

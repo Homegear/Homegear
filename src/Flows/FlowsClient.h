@@ -64,6 +64,12 @@ private:
 	};
 	typedef std::shared_ptr<RequestInfo> PRequestInfo;
 
+    struct InputValue
+    {
+        int64_t time = 0;
+        Flows::PVariable value;
+    };
+
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
 	public:
@@ -141,7 +147,7 @@ private:
 	std::unordered_map<std::string, Flows::PVariable> _internalMessages;
 
     std::mutex _inputValuesMutex;
-    std::unordered_map<std::string, std::unordered_map<int32_t, Flows::PVariable>> _inputValues;
+    std::unordered_map<std::string, std::unordered_map<int32_t, std::list<InputValue>>> _inputValues;
 
     void watchdog();
 

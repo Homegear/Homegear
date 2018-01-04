@@ -1,13 +1,8 @@
 <?php
 
-require_once("include.hgs");
-
 $hgDevices = [];
 $hgVersion = '-';
 $hgError = false;
-
-$bla = new Blackbox();
-echo $bla->secret();
 
 try {
 
