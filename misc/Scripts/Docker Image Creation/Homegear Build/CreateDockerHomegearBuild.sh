@@ -345,6 +345,12 @@ unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
+wget --https-only https://github.com/Homegear/homegear-management/archive/${1}.zip
+[ $? -ne 0 ] && exit 1
+unzip ${1}.zip
+[ $? -ne 0 ] && exit 1
+rm ${1}.zip
+
 if [[ -n $2 ]]; then
 	wget --https-only https://gitit.de/Homegear-Addons/homegear-easy-licensing/repository/master/archive.zip?private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
@@ -486,6 +492,7 @@ createPackage Homegear-Intertechno $1 homegear-intertechno 0
 createPackage Homegear-Nanoleaf $1 homegear-nanoleaf 0
 createPackage homegear-influxdb $1 homegear-influxdb 0
 createPackage homegear-gateway $1 homegear-gateway 0
+createPackage homegear-management $1 homegear-management 0
 if [[ -n $2 ]]; then
 	sha512=`sha512sum /usr/bin/homegear | awk '{print toupper($0)}' | cut -d ' ' -f 1`
 	sed -i '/if(sha512(homegearPath) != /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
@@ -561,6 +568,7 @@ cleanUp homegear-intertechno
 cleanUp homegear-nanoleaf
 cleanUp homegear-influxdb
 cleanUp homegear-gateway
+cleanUp homegear-management
 if [[ -n $1 ]]; then
 	cleanUp2 homegear-easy-licensing
 	cleanUp2 homegear-licensing
@@ -577,7 +585,7 @@ if [[ -n $1 ]]; then
 	cleanUp2 homegear-mbus
 fi
 EOF
-echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f libhomegear-ipc.deb && test -f homegear.deb && test -f homegear-nodes-core.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-intertechno.deb && test -f homegear-nanoleaf.deb && test -f homegear-influxdb.deb && test -f homegear-gateway.deb; then
+echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f libhomegear-ipc.deb && test -f homegear.deb && test -f homegear-nodes-core.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-intertechno.deb && test -f homegear-nanoleaf.deb && test -f homegear-influxdb.deb && test -f homegear-gateway.deb && test -f homegear-management.deb; then
 	isodate=\`date +%Y%m%d\`
 	mv libhomegear-base.deb libhomegear-base_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv libhomegear-node.deb libhomegear-node_\$[isodate]_${distlc}_${distver}_${arch}.deb
@@ -596,6 +604,7 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 	mv homegear-nanoleaf.deb homegear-nanoleaf_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-influxdb.deb homegear-influxdb_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-gateway.deb homegear-gateway_\$[isodate]_${distlc}_${distver}_${arch}.deb
+	mv homegear-management.deb homegear-management_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	if [[ -n \$1 ]]; then
 		if test ! -f homegear-easy-licensing.deb || test ! -f homegear-licensing.deb || test ! -f homegear-nodes-extra.deb || test ! -f homegear-beckhoff.deb || test ! -f homegear-knx.deb || test ! -f homegear-enocean.deb || test ! -f homegear-easycam.deb || test ! -f homegear-easyled.deb || test ! -f homegear-easyled2.deb || test ! -f homegear-rsl.deb || test ! -f homegear-rs2w.deb || test ! -f homegear-mbus.deb; then
 			echo \"Error: Some or all packages from gitit.de could not be created.\"
