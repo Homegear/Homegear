@@ -1186,11 +1186,14 @@ void FlowsClient::setInternalMessage(std::string nodeId, Flows::PVariable messag
         if(internalMessageIterator != _internalMessages.end())
         {
             if(internalMessageIterator->second == message) return;
+            Flows::PVariable copy = std::make_shared<Flows::Variable>();
+            *copy = *internalMessageIterator->second;
             for(auto element : *message->structValue)
             {
-                internalMessageIterator->second->structValue->erase(element.first);
-                internalMessageIterator->second->structValue->emplace(element.first, element.second);
+                copy->structValue->erase(element.first);
+                copy->structValue->emplace(element.first, element.second);
             }
+            _internalMessages[nodeId] = copy;
         }
         else _internalMessages[nodeId] = message;
     }
