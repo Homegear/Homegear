@@ -140,6 +140,7 @@ void Server::registerMethods()
 		_server->registerMethod("rssiInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRssiInfo()));
 		_server->registerMethod("runScript", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRunScript()));
 		_server->registerMethod("searchDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSearchDevices()));
+        _server->registerMethod("searchInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSearchInterfaces()));
 		_server->registerMethod("setData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetData()));
 		_server->registerMethod("setId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetId()));
 		_server->registerMethod("setInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetInstallMode()));

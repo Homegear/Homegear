@@ -4145,6 +4145,58 @@ BaseLib::PVariable RPCSearchDevices::invoke(BaseLib::PRpcClientInfo clientInfo, 
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCSearchInterfaces::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+    try
+    {
+        int32_t familyID = -1;
+        BaseLib::PVariable metadata;
+        if(!parameters->empty())
+        {
+            ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger }),
+                std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tVariant })
+            }));
+            if(error != ParameterError::Enum::noError) return getError(error);
+
+            familyID = parameters->at(0)->integerValue;
+            if(parameters->size() > 1) metadata = parameters->at(1);
+        }
+
+        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+        if(familyID > -1)
+        {
+            if(families.find(familyID) == families.end())
+            {
+                return BaseLib::Variable::createError(-2, "Device family is unknown.");
+            }
+            return families.at(familyID)->getCentral()->searchInterfaces(clientInfo, metadata);
+        }
+
+        BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tInteger));
+        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        {
+            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+            if(central) result->integerValue += central->searchInterfaces(clientInfo, metadata)->integerValue;
+        }
+
+        return result;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCSetData::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	try

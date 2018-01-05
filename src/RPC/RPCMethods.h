@@ -1004,6 +1004,18 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
 };
 
+class RPCSearchInterfaces : public BaseLib::Rpc::RpcMethod
+{
+public:
+	RPCSearchInterfaces()
+	{
+		addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>());
+		addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+		addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tVariant});
+	}
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+};
+
 class RPCSetLinkInfo : public BaseLib::Rpc::RpcMethod
 {
 public:
