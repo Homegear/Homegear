@@ -29,9 +29,10 @@
 */
 
 #include "FlowsClient.h"
-
-#include <utility>
+#include <homegear-node/JsonEncoder.h>
+#include <homegear-node/JsonDecoder.h>
 #include "../GD/GD.h"
+#include <utility>
 
 namespace Flows
 {
@@ -650,10 +651,26 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
                     }
                     auto internalMessageIterator = queueEntry->message->structValue->find("_internal");
                     if (internalMessageIterator != queueEntry->message->structValue->end()) setInternalMessage(queueEntry->nodeInfo->id, internalMessageIterator->second);
+
+                    std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
+                    auto nodeIterator = _fixedInputValues.find(queueEntry->nodeInfo->id);
+                    if(nodeIterator != _fixedInputValues.end())
+                    {
+                        auto inputIterator = nodeIterator->second.find(queueEntry->targetPort);
+                        if (inputIterator != nodeIterator->second.end())
+                        {
+                            auto messageCopy = std::make_shared<Flows::Variable>();
+                            *messageCopy = *(queueEntry->message);
+                            (*messageCopy->structValue)["payload"] = inputIterator->second;
+                            queueEntry->message = messageCopy;
+                        }
+                    }
+
                     {
                         std::lock_guard<std::mutex> nodeInputGuard(node->getInputMutex());
                         node->input(queueEntry->nodeInfo, queueEntry->targetPort, queueEntry->message);
                     }
+
                     setInputValue(queueEntry->nodeInfo->id, queueEntry->targetPort, queueEntry->message);
                 }
             }
@@ -1026,6 +1043,20 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
                         internalMessage->structValue->emplace("synchronousOutput", std::make_shared<Flows::Variable>(true));
                         setInternalMessage(outputNodeInfo->id, internalMessage);
                         message->structValue->emplace("_internal", internalMessage);
+                    }
+
+                    std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
+                    auto nodeIterator = _fixedInputValues.find(outputNodeInfo->id);
+                    if(nodeIterator != _fixedInputValues.end())
+                    {
+                        auto inputIterator = nodeIterator->second.find(node.port);
+                        if (inputIterator != nodeIterator->second.end())
+                        {
+                            auto messageCopy = std::make_shared<Flows::Variable>();
+                            *messageCopy = *message;
+                            (*messageCopy->structValue)["payload"] = inputIterator->second;
+                            message = messageCopy;
+                        }
                     }
 
                     {
@@ -1990,6 +2021,43 @@ Flows::PVariable FlowsClient::getNodeVariable(Flows::PArray& parameters)
                 }
             }
         }
+        else if(parameters->at(1)->stringValue.compare(0, sizeof("fixedInput") - 1, "fixedInput") == 0 && parameters->at(1)->stringValue.size() > 10)
+        {
+            std::string indexString = parameters->at(1)->stringValue.substr(10);
+            int32_t index = Flows::Math::getNumber(indexString);
+            std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
+            auto nodeIterator = _fixedInputValues.find(parameters->at(0)->stringValue);
+            if(nodeIterator != _fixedInputValues.end())
+            {
+                auto inputIterator = nodeIterator->second.find(index);
+                if(inputIterator != nodeIterator->second.end())
+                {
+                    std::string type;
+                    if(inputIterator->second->type == Flows::VariableType::tBoolean) type = "bool";
+                    else if(inputIterator->second->type == Flows::VariableType::tInteger || inputIterator->second->type == Flows::VariableType::tInteger64) type = "int";
+                    else if(inputIterator->second->type == Flows::VariableType::tFloat) type = "float";
+                    else if(inputIterator->second->type == Flows::VariableType::tString) type = "string";
+                    else if(inputIterator->second->type == Flows::VariableType::tArray) type = "array";
+                    else if(inputIterator->second->type == Flows::VariableType::tStruct) type = "struct";
+                    else if(inputIterator->second->type == Flows::VariableType::tBinary) type = "bin";
+                    else return std::make_shared<Flows::Variable>();
+
+                    std::string value = inputIterator->second->toString();
+                    if(inputIterator->second->type == Flows::VariableType::tArray || inputIterator->second->type == Flows::VariableType::tStruct)
+                    {
+                        Flows::JsonEncoder jsonEncoder;
+                        value = jsonEncoder.getString(inputIterator->second);
+                    }
+
+                    Flows::PVariable array = std::make_shared<Flows::Variable>(Flows::VariableType::tArray);
+                    array->arrayValue->reserve(2);
+                    array->arrayValue->push_back(std::make_shared<Flows::Variable>(type));
+                    array->arrayValue->push_back(std::make_shared<Flows::Variable>(value));
+
+                    return array;
+                }
+            }
+        }
         else
         {
             Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
@@ -2040,6 +2108,58 @@ Flows::PVariable FlowsClient::setNodeVariable(Flows::PArray& parameters)
     try
     {
         if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+
+        if(parameters->at(1)->stringValue.compare(0, sizeof("fixedInput") - 1, "fixedInput") == 0 && parameters->at(1)->stringValue.size() > 10) {
+            std::string indexString = parameters->at(1)->stringValue.substr(10);
+            int32_t index = Flows::Math::getNumber(indexString);
+
+            if(parameters->at(2)->arrayValue->size() != 2) return Flows::Variable::createError(-2, "Wrong number of array elements.");
+
+            std::string payloadType = parameters->at(2)->arrayValue->at(0)->stringValue;
+            std::string payload = parameters->at(2)->arrayValue->at(1)->stringValue;
+
+            Flows::PVariable value = std::make_shared<Flows::Variable>();
+            if(payloadType == "bool")
+            {
+                value->setType(Flows::VariableType::tBoolean);
+                value->booleanValue = payload == "true";
+            }
+            else if(payloadType == "int")
+            {
+                value->setType(Flows::VariableType::tInteger64);
+                value->integerValue64 = Flows::Math::getNumber64(payload);
+                value->integerValue = (int32_t)value->integerValue64;
+                value->floatValue = value->integerValue64;
+            }
+            else if(payloadType == "float")
+            {
+                value->setType(Flows::VariableType::tFloat);
+                value->floatValue = Flows::Math::getDouble(payload);
+                value->integerValue = value->floatValue;
+                value->integerValue64 = value->floatValue;
+            }
+            else if(payloadType == "string")
+            {
+                value->setType(Flows::VariableType::tString);
+                value->stringValue = payload;
+            }
+            else if(payloadType == "array" || payloadType == "struct")
+            {
+                Flows::JsonDecoder jsonDecoder;
+                value = jsonDecoder.decode(payload);
+            }
+            else if(payloadType == "bin")
+            {
+                value->setType(Flows::VariableType::tBinary);
+                value->binaryValue = _bl->hf.getUBinary(payload);
+            }
+            else return Flows::Variable::createError(-3, "Unknown payload type.");
+
+            std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
+            _fixedInputValues[parameters->at(0)->stringValue][index] = value;
+            return std::make_shared<Flows::Variable>();
+        }
+
         Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
         if(node) node->setNodeVariable(parameters->at(1)->stringValue, parameters->at(2));
         return std::make_shared<Flows::Variable>();

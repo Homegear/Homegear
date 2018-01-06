@@ -3083,6 +3083,7 @@ RED.nodes = (function() {
                         inputLabels: n.inputLabels,
                         outputLabels: n.outputLabels,
                         changed:false,
+                        fixedInput:false,
                         _config:{}
                     };
                     if (createNewIds) {
@@ -5482,6 +5483,7 @@ RED.popover = (function() {
         var offsetY = options.offsetY||0;
         var intervalCallback = options.intervalCallback||null;
         var dialog1 = options.dialog1||null;
+        var dialog2 = options.dialog2||null;
         if (!deltaSizes[size]) {
             throw new Error("Invalid RED.popover size value:",size);
         }
@@ -5546,8 +5548,15 @@ RED.popover = (function() {
                     $(".popover-dialog1").on("click", function(e) {
                         if(interval) clearInterval(interval);
                         dialog1();
-                        div.remove();
-                        div = null;
+                        closePopup(false);
+                    });
+                }
+
+                if(dialog2) {
+                    $(".popover-dialog2").on("click", function(e) {
+                        if(interval) clearInterval(interval);
+                        dialog2();
+                        closePopup(false);
                     });
                 }
 
@@ -5556,13 +5565,15 @@ RED.popover = (function() {
                 }
             }
         }
-        var closePopup = function() {
+        var closePopup = function(fadeOut) {
             if (!active) {
                 if(interval) clearInterval(interval);
                 if (div) {
-                    div.fadeOut("fast",function() {
-                        $(this).remove();
-                    });
+                    if(fadeOut) {
+                        div.fadeOut("fast",function() {
+                            $(this).remove();
+                        });
+                    } else div.remove();
                     div = null;
                 }
             }
@@ -6263,6 +6274,12 @@ RED.stack = (function() {
                 })
             }
         },
+        arraySimple: {
+            value:"array",
+            label:"array",
+            icon:"red/images/typedInput/array.png",
+            validate: function(v) { try{JSON.parse(v);return true;}catch(e){return false;}}
+        },
         struct: {
             value:"struct",
             label:"struct",
@@ -6288,6 +6305,12 @@ RED.stack = (function() {
                 })
             }
         },
+        structSimple: {
+            value:"struct",
+            label:"struct",
+            icon:"red/images/typedInput/json.png",
+            validate: function(v) { try{JSON.parse(v);return true;}catch(e){return false;}}
+        },
         bin: {
             value: "bin",
             label: "buffer",
@@ -6301,6 +6324,11 @@ RED.stack = (function() {
                     }
                 })
             }
+        },
+        binSimple: {
+            value: "bin",
+            label: "buffer",
+            icon: "red/images/typedInput/bin.png"
         }
     };
     var nlsd = false;
@@ -11490,8 +11518,9 @@ RED.view = (function() {
                     //node.append("path").attr("class","node_error").attr("d","M 3,-3 l 10,0 l -5,-8 z");
 
                     //TODO: these ought to be SVG
-                    node.append("image").attr("class","node_error hidden").attr("xlink:href","icons/node-red/node-error.png").attr("x",0).attr("y",-6).attr("width",10).attr("height",9);
-                    node.append("image").attr("class","node_changed hidden").attr("xlink:href","icons/node-red/node-changed.png").attr("x",12).attr("y",-6).attr("width",10).attr("height",10);
+                    node.append("image").attr("class","node_fixed_input hidden").attr("xlink:href","icons/node-red/node-fixed-input.svg").attr("x",0).attr("y",-6).attr("width",10).attr("height",10);
+                    node.append("image").attr("class","node_error hidden").attr("xlink:href","icons/node-red/node-error.svg").attr("x",12).attr("y",-6).attr("width",10).attr("height",10);
+                    node.append("image").attr("class","node_changed hidden").attr("xlink:href","icons/node-red/node-changed.svg").attr("x",24).attr("y",-6).attr("width",10).attr("height",10);
             });
 
             node.each(function(d,i) {
@@ -11560,12 +11589,15 @@ RED.view = (function() {
                                         content = infoBody;
                                     }
                                 }
+                                
                                 var nodeId = d.id;
                                 var valueVariableName = "inputValue" + i;
                                 var historyVariableName = "inputHistory" + i;
+                                var fixedInputVariableName = "fixedInput" + i;
+
                                 dynamicContent = function() {
                                     RED.comms.homegear().invoke("getNodeVariable", function(response) { setTimeout(function() {$(".red-ui-popover .last_value").text(JSON.stringify(response.result)); }, 100); }, nodeId, valueVariableName);
-                                    return $("<div style=\"float: right\"><a class=\"popover-dialog1\" href=\"#\">Hist.</a></div>" + label + types + "<p><b>Last value:</b> <span class=\"last_value\">-</span></p><div style=\"clear: both\">" + content + "</div>");
+                                    return $("<div style=\"float: right\"><a class=\"popover-dialog1\" href=\"#\">History</a>&nbsp;&nbsp;<a class=\"popover-dialog2\" href=\"#\">Set</a></div>" + label + types + "<p><b>Last value:</b> <span class=\"last_value\">-</span></p><div style=\"clear: both\">" + content + "</div>");
                                 };
 
                                 var intervalCallback = function() {
@@ -11593,12 +11625,12 @@ RED.view = (function() {
                                             ],
                                             open: function(e) {
                                                 $(this).parent().find(".ui-dialog-titlebar-close").hide();
-                                                $("#popover-dialog-close").button("enable");
+                                                
                                                 RED.comms.homegear().invoke("getNodeVariable", function(response) {
                                                     var html = "";
                                                     $.each(response.result, function(key, value) {
                                                         var date = new Date(value[0]);
-                                                        html += "<p><span class=\"value-history-date\">" + date.toLocaleDateString(undefined, { "year": "numeric", "day": "2-digit", "month": "2-digit" }) + " " + date.toLocaleTimeString() + "." + ("000" + (value[0] % 1000)).slice(-3) + ": </span><span>" + value[1] + "</span></p>";
+                                                        html += "<p><span class=\"value-history-date\">" + date.toLocaleDateString(undefined, { "year": "numeric", "day": "2-digit", "month": "2-digit" }) + " " + date.toLocaleTimeString(undefined, { "hour12": false }) + "." + ("000" + (value[0] % 1000)).slice(-3) + ": </span><span>" + value[1] + "</span></p>";
                                                     });
                                                     $("#popover-dialog .history-values").html(html); 
                                                 }, nodeId, historyVariableName);
@@ -11608,7 +11640,7 @@ RED.view = (function() {
                                                         var html = "";
                                                         $.each(response.result, function(key, value) {
                                                             var date = new Date(value[0]);
-                                                            html += "<p><span class=\"value-history-date\">" + date.toLocaleDateString(undefined, { "year": "numeric", "day": "2-digit", "month": "2-digit" }) + " " + date.toLocaleTimeString() + "." + ("000" + (value[0] % 1000)).slice(-3) + ": </span><span>" + value[1] + "</span></p>";
+                                                            html += "<p><span class=\"value-history-date\">" + date.toLocaleDateString(undefined, { "year": "numeric", "day": "2-digit", "month": "2-digit" }) + " " + date.toLocaleTimeString(undefined, { "hour12": false }) + "." + ("000" + (value[0] % 1000)).slice(-3) + ": </span><span>" + value[1] + "</span></p>";
                                                         });
                                                         $("#popover-dialog .history-values").html(html); 
                                                     }, nodeId, historyVariableName);
@@ -11625,6 +11657,66 @@ RED.view = (function() {
                                     historyDialog.dialog("option", "title", "History").dialog("open");
                                 };
 
+                                openDialog2 = function() {
+                                    var fixedInputDialog = $('<div id="popover-dialog" class="hide node-red-dialog"><div class="fixed-input"><p>You can set the input to a fixed value here. The fixed input is reset upon restart of Homegear.</p><form><input type="text" id="fixed-input-payload" style="width:100%"/><input type="hidden" id="fixed-input-payloadType"/></form></div></div>')
+                                        .appendTo("body")
+                                        .dialog({
+                                            modal: true,
+                                            autoOpen: false,
+                                            width: 400,
+                                            resizable: false,
+                                            buttons: [
+                                                {
+                                                    id: "popover-dialog-cancel",
+                                                    class: "primary",
+                                                    text: RED._("common.label.cancel"),
+                                                    click: function() {
+                                                        $( this ).dialog( "close" );
+                                                    }
+                                                },
+                                                {
+                                                    id: "popover-dialog-set",
+                                                    class: "primary",
+                                                    text: RED._("common.label.set"),
+                                                    click: function() {
+                                                        var element = $("#fixed-input-payload");
+                                                        RED.comms.homegear().invoke("setNodeVariable", null, nodeId, fixedInputVariableName, [element.typedInput('type'), element.typedInput('value')]);
+
+                                                        d.fixedInput = true;
+                                                        d.dirty = true;
+                                                        $( this ).dialog( "close" );
+                                                        redraw();
+                                                    }
+                                                }
+                                            ],
+                                            open: function(e) {
+                                                $(this).parent().find(".ui-dialog-titlebar-close").hide();
+
+                                                RED.comms.homegear().invoke("getNodeVariable", function(response) {
+                                                    var payloadType = response.result ? response.result[0] : 'int';
+                                                    var payload = response.result ? response.result[1] : '';
+                                                    console.log(payload);
+
+                                                    $("#fixed-input-payloadType").val(payloadType);
+
+                                                    $("#fixed-input-payload").typedInput({
+                                                        default: 'int',
+                                                        typeField: $("#fixed-input-payloadType"),
+                                                        types:['bool','int','float','string','arraySimple','structSimple','binSimple']
+                                                    });
+
+                                                    $("#fixed-input-payload").typedInput('type', payloadType);
+
+                                                    $("#fixed-input-payload").typedInput('value', payload);
+                                                }, nodeId, fixedInputVariableName);
+                                            },
+                                            close: function(e) {
+                                                $(this).remove();
+                                            }
+                                        });
+                                    fixedInputDialog.dialog("option", "title", "Set fixed input").dialog("open");
+                                };
+
                                 var popover = RED.popover.create({
                                     target:$(this),
                                     trigger: "hover",
@@ -11635,6 +11727,7 @@ RED.view = (function() {
                                     offsetY: 4,
                                     delay: { show: 300, hide: 300 },
                                     dialog1: openDialog1,
+                                    dialog2: openDialog2,
                                     intervalCallback: intervalCallback
                                 });
                                 $(this).data('popover',popover);
@@ -11808,6 +11901,10 @@ RED.view = (function() {
                             thisNode.selectAll(".node_error")
                                 .attr("x",function(d){return d.w-10-((d.changed||d.moved)?13:0)})
                                 .classed("hidden",function(d) { return d.valid; });
+
+                            thisNode.selectAll(".node_fixed_input")
+                                .attr("x",function(d){return d.w-10-((d.changed||d.moved)?13:0)-((!d.valid)?13:0)})
+                                .classed("hidden",function(d) { return !d.fixedInput; });
 
                             /*thisNode.selectAll(".port_input").each(function(d,i) {
                                     var port = d3.select(this);

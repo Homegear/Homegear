@@ -149,6 +149,9 @@ private:
     std::mutex _inputValuesMutex;
     std::unordered_map<std::string, std::unordered_map<int32_t, std::list<InputValue>>> _inputValues;
 
+	std::mutex _fixedInputValuesMutex;
+	std::unordered_map<std::string, std::unordered_map<int32_t, Flows::PVariable>> _fixedInputValues;
+
     void watchdog();
 
     void resetClient(Flows::PVariable packetId);
