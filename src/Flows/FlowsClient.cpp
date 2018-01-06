@@ -2113,7 +2113,18 @@ Flows::PVariable FlowsClient::setNodeVariable(Flows::PArray& parameters)
             std::string indexString = parameters->at(1)->stringValue.substr(10);
             int32_t index = Flows::Math::getNumber(indexString);
 
-            if(parameters->at(2)->arrayValue->size() != 2) return Flows::Variable::createError(-2, "Wrong number of array elements.");
+            if(parameters->at(2)->arrayValue->size() != 2)
+            {
+                std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
+                auto fixedInputIterator = _fixedInputValues.find(parameters->at(0)->stringValue);
+                if(fixedInputIterator != _fixedInputValues.end())
+                {
+                    fixedInputIterator->second.erase(index);
+                    if(fixedInputIterator->second.empty()) _fixedInputValues.erase(fixedInputIterator);
+                }
+
+                return std::make_shared<Flows::Variable>();
+            }
 
             std::string payloadType = parameters->at(2)->arrayValue->at(0)->stringValue;
             std::string payload = parameters->at(2)->arrayValue->at(1)->stringValue;

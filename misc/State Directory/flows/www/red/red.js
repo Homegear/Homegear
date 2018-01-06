@@ -3083,7 +3083,7 @@ RED.nodes = (function() {
                         inputLabels: n.inputLabels,
                         outputLabels: n.outputLabels,
                         changed:false,
-                        fixedInput:false,
+                        fixedInputs:0,
                         _config:{}
                     };
                     if (createNewIds) {
@@ -11675,6 +11675,19 @@ RED.view = (function() {
                                                     }
                                                 },
                                                 {
+                                                    id: "popover-dialog-clear",
+                                                    class: "primary",
+                                                    text: RED._("common.label.clear"),
+                                                    click: function() {
+                                                        RED.comms.homegear().invoke("setNodeVariable", null, nodeId, fixedInputVariableName, false);
+
+                                                        d.fixedInputs -= 1;
+                                                        d.dirty = true;
+                                                        $( this ).dialog( "close" );
+                                                        redraw();
+                                                    }
+                                                },
+                                                {
                                                     id: "popover-dialog-set",
                                                     class: "primary",
                                                     text: RED._("common.label.set"),
@@ -11682,7 +11695,7 @@ RED.view = (function() {
                                                         var element = $("#fixed-input-payload");
                                                         RED.comms.homegear().invoke("setNodeVariable", null, nodeId, fixedInputVariableName, [element.typedInput('type'), element.typedInput('value')]);
 
-                                                        d.fixedInput = true;
+                                                        if(!$("#fixed-input-payload").data('oldPayload')) d.fixedInputs += 1;
                                                         d.dirty = true;
                                                         $( this ).dialog( "close" );
                                                         redraw();
@@ -11695,7 +11708,7 @@ RED.view = (function() {
                                                 RED.comms.homegear().invoke("getNodeVariable", function(response) {
                                                     var payloadType = response.result ? response.result[0] : 'int';
                                                     var payload = response.result ? response.result[1] : '';
-                                                    console.log(payload);
+                                                    oldPayload = response.result ? true : false;
 
                                                     $("#fixed-input-payloadType").val(payloadType);
 
@@ -11708,6 +11721,8 @@ RED.view = (function() {
                                                     $("#fixed-input-payload").typedInput('type', payloadType);
 
                                                     $("#fixed-input-payload").typedInput('value', payload);
+
+                                                    $("#fixed-input-payload").data('oldPayload', oldPayload);
                                                 }, nodeId, fixedInputVariableName);
                                             },
                                             close: function(e) {
@@ -11904,7 +11919,7 @@ RED.view = (function() {
 
                             thisNode.selectAll(".node_fixed_input")
                                 .attr("x",function(d){return d.w-10-((d.changed||d.moved)?13:0)-((!d.valid)?13:0)})
-                                .classed("hidden",function(d) { return !d.fixedInput; });
+                                .classed("hidden",function(d) { return d.fixedInputs == 0; });
 
                             /*thisNode.selectAll(".port_input").each(function(d,i) {
                                     var port = d3.select(this);
