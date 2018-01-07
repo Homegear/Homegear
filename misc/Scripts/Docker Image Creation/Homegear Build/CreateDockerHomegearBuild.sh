@@ -231,6 +231,12 @@ function createPackage {
 	if [ $4 -eq 1 ]; then
 		rm -f ${3}-dbgsym*.deb
 		sed -i '/\.orig\.tar\.gz/d' ${3}_*.dsc
+		dscfile=$(ls ${3}_*.dsc)
+		sed -i "/-dbgsym_/d" ${3}_*.changes
+		sed -i "/${dscfile}/d" ${3}_*.changes
+		sed -i "/Checksums-Sha1:/a\ $(sha1sum ${3}_*.dsc | cut -d ' ' -f 1) $(stat --printf='%s' ${3}_*.dsc) ${dscfile}" ${3}_*.changes
+		sed -i "/Checksums-Sha256:/a\ $(sha256sum ${3}_*.dsc | cut -d ' ' -f 1) $(stat --printf='%s' ${3}_*.dsc) ${dscfile}" ${3}_*.changes
+		sed -i "/Files:/a\ $(md5sum ${3}_*.dsc | cut -d ' ' -f 1) $(stat --printf='%s' ${3}_*.dsc) misc optional ${dscfile}" ${3}_*.changes
 	fi
 	rm -Rf $sourcePath
 }
@@ -333,6 +339,18 @@ unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
+wget --https-only https://github.com/Homegear/homegear-gateway/archive/${1}.zip
+[ $? -ne 0 ] && exit 1
+unzip ${1}.zip
+[ $? -ne 0 ] && exit 1
+rm ${1}.zip
+
+wget --https-only https://github.com/Homegear/homegear-management/archive/${1}.zip
+[ $? -ne 0 ] && exit 1
+unzip ${1}.zip
+[ $? -ne 0 ] && exit 1
+rm ${1}.zip
+
 if [[ -n $2 ]]; then
 	wget --https-only https://gitit.de/Homegear-Addons/homegear-easy-licensing/repository/master/archive.zip?private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
@@ -355,21 +373,21 @@ if [[ -n $2 ]]; then
 	rm master.zip
 	mv homegear-nodes-extra-master* homegear-nodes-extra-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/Homegear-Beckhoff/repository/dev/archive.zip?private_token=${2} -O ${1}.zip
+	wget --https-only https://gitit.de/Homegear-Addons/Homegear-Beckhoff/repository/${1}/archive.zip?private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	rm ${1}.zip
 	mv Homegear-Beckhoff-${1}* Homegear-Beckhoff-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/Homegear-KNX/repository/dev/archive.zip?private_token=${2} -O ${1}.zip
+	wget --https-only https://gitit.de/Homegear-Addons/Homegear-KNX/repository/${1}/archive.zip?private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	rm ${1}.zip
 	mv Homegear-KNX-${1}* Homegear-KNX-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/Homegear-EnOcean/repository/dev/archive.zip?private_token=${2} -O ${1}.zip
+	wget --https-only https://gitit.de/Homegear-Addons/Homegear-EnOcean/repository/${1}/archive.zip?private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
@@ -420,12 +438,12 @@ if [[ -n $2 ]]; then
 	rm master.zip
 	mv homegear-rs2w-master* homegear-rs2w-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/homegear-gateway/repository/dev/archive.zip?private_token=${2} -O ${1}.zip
+	wget --https-only https://gitit.de/Homegear-Addons/Homegear-M-Bus/repository/${1}/archive.zip?private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	rm ${1}.zip
-	mv homegear-gateway-${1}* homegear-gateway-${1}
+	mv Homegear-M-Bus-${1}* homegear-mbus-${1}
 fi
 
 createPackage libhomegear-base $1 libhomegear-base 0
@@ -473,6 +491,8 @@ createPackage Homegear-IPCam $1 homegear-ipcam 0
 createPackage Homegear-Intertechno $1 homegear-intertechno 0
 createPackage Homegear-Nanoleaf $1 homegear-nanoleaf 0
 createPackage homegear-influxdb $1 homegear-influxdb 0
+createPackage homegear-gateway $1 homegear-gateway 0
+createPackage homegear-management $1 homegear-management 0
 if [[ -n $2 ]]; then
 	sha512=`sha512sum /usr/bin/homegear | awk '{print toupper($0)}' | cut -d ' ' -f 1`
 	sed -i '/if(sha512(homegearPath) != /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
@@ -498,7 +518,7 @@ if [[ -n $2 ]]; then
 	createPackage homegear-easyled2 $1 homegear-easyled2 1
 	createPackage homegear-rsl $1 homegear-rsl 1
 	createPackage homegear-rs2w $1 homegear-rs2w 1
-	createPackage homegear-gateway $1 homegear-gateway 1
+	createPackage homegear-mbus $1 homegear-mbus 1
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackage.sh
@@ -547,6 +567,8 @@ cleanUp homegear-ipcam
 cleanUp homegear-intertechno
 cleanUp homegear-nanoleaf
 cleanUp homegear-influxdb
+cleanUp homegear-gateway
+cleanUp homegear-management
 if [[ -n $1 ]]; then
 	cleanUp2 homegear-easy-licensing
 	cleanUp2 homegear-licensing
@@ -560,12 +582,10 @@ if [[ -n $1 ]]; then
 	cleanUp2 homegear-easyled2
 	cleanUp2 homegear-rsl
 	cleanUp2 homegear-rs2w
-	cleanUp2 homegear-gateway
+	cleanUp2 homegear-mbus
 fi
-
-sed -i '/\.orig\.tar\.gz/d' *.dsc
 EOF
-echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f libhomegear-ipc.deb && test -f homegear.deb && test -f homegear-nodes-core.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-intertechno.deb && test -f homegear-nanoleaf.deb && test -f homegear-influxdb.deb; then
+echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f libhomegear-ipc.deb && test -f homegear.deb && test -f homegear-nodes-core.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-intertechno.deb && test -f homegear-nanoleaf.deb && test -f homegear-influxdb.deb && test -f homegear-gateway.deb && test -f homegear-management.deb; then
 	isodate=\`date +%Y%m%d\`
 	mv libhomegear-base.deb libhomegear-base_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv libhomegear-node.deb libhomegear-node_\$[isodate]_${distlc}_${distver}_${arch}.deb
@@ -583,7 +603,13 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 	mv homegear-intertechno.deb homegear-intertechno_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-nanoleaf.deb homegear-nanoleaf_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-influxdb.deb homegear-influxdb_\$[isodate]_${distlc}_${distver}_${arch}.deb
+	mv homegear-gateway.deb homegear-gateway_\$[isodate]_${distlc}_${distver}_${arch}.deb
+	mv homegear-management.deb homegear-management_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	if [[ -n \$1 ]]; then
+		if test ! -f homegear-easy-licensing.deb || test ! -f homegear-licensing.deb || test ! -f homegear-nodes-extra.deb || test ! -f homegear-beckhoff.deb || test ! -f homegear-knx.deb || test ! -f homegear-enocean.deb || test ! -f homegear-easycam.deb || test ! -f homegear-easyled.deb || test ! -f homegear-easyled2.deb || test ! -f homegear-rsl.deb || test ! -f homegear-rs2w.deb || test ! -f homegear-mbus.deb; then
+			echo \"Error: Some or all packages from gitit.de could not be created.\"
+			exit 1
+		fi
 		mv homegear-easy-licensing.deb homegear-easy-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-licensing.deb homegear-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
 
@@ -596,7 +622,7 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 		mv homegear-easyled2.deb homegear-easyled2_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-rsl.deb homegear-rsl_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-rs2w.deb homegear-rs2w_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-gateway.deb homegear-gateway_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv homegear-mbus.deb homegear-mbus_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	fi
 	if test -f /build/UploadNightly.sh; then
 		/build/UploadNightly.sh

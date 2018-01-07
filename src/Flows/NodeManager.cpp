@@ -439,7 +439,11 @@ int32_t NodeManager::unloadNode(std::string id)
 		if(nodesUsageIterator != _nodesUsage.end())
 		{
 			nodesUsageIterator->second->referenceCounter--;
-			if(nodesUsageIterator->second->referenceCounter > 0) return 0;
+			if(nodesUsageIterator->second->referenceCounter > 0)
+            {
+                _nodes.erase(nodesIterator);
+                return 0;
+            }
 		}
 
 		GD::out.printInfo("Info: Unloading node " + id);

@@ -105,6 +105,7 @@ void Server::registerMethods()
 		_server->registerMethod("getFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetGlobalData()));
 		_server->registerMethod("getGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetNodeData()));
 		_server->registerMethod("getNodeEvents", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetNodeEvents()));
+		_server->registerMethod("getNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetNodeVariable()));
 		_server->registerMethod("getPairingMethods", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetPairingMethods()));
 		_server->registerMethod("getParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetParamset()));
 		_server->registerMethod("getParamsetDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetParamsetDescription()));
@@ -139,6 +140,7 @@ void Server::registerMethods()
 		_server->registerMethod("rssiInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRssiInfo()));
 		_server->registerMethod("runScript", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRunScript()));
 		_server->registerMethod("searchDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSearchDevices()));
+        _server->registerMethod("searchInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSearchInterfaces()));
 		_server->registerMethod("setData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetData()));
 		_server->registerMethod("setId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetId()));
 		_server->registerMethod("setInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetInstallMode()));

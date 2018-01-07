@@ -62,6 +62,7 @@ public:
 	std::string handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
 	void nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message, bool synchronous);
 	BaseLib::PVariable executePhpNodeBaseMethod(BaseLib::PArray& parameters);
+	BaseLib::PVariable getNodeVariable(std::string nodeId, std::string topic);
 	void setNodeVariable(std::string nodeId, std::string topic, BaseLib::PVariable value);
 	void enableNodeEvents();
 	void disableNodeEvents();
@@ -121,6 +122,8 @@ private:
 	std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
 	std::mutex _nodeClientIdMapMutex;
 	std::map<std::string, int32_t> _nodeClientIdMap;
+    std::mutex _flowClientIdMapMutex;
+    std::map<std::string, int32_t> _flowClientIdMap;
 
 	std::atomic<int64_t> _lastNodeEvent;
 	std::atomic<uint32_t> _nodeEventCounter;
@@ -136,6 +139,7 @@ private:
 	BaseLib::PVariable sendRequest(PFlowsClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait);
 	void sendResponse(PFlowsClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 	void sendShutdown();
+	bool sendReset();
 	void closeClientConnections();
 	void closeClientConnection(PFlowsClientData client);
 	PFlowsProcess getFreeProcess(uint32_t maxThreadCount);

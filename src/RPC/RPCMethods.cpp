@@ -2322,6 +2322,32 @@ BaseLib::PVariable RPCGetNodeEvents::invoke(BaseLib::PRpcClientInfo clientInfo, 
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCGetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString })
+        }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		if(GD::flowsServer) return GD::flowsServer->getNodeVariable(parameters->at(0)->stringValue, parameters->at(1)->stringValue);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCGetPairingMethods::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	try
@@ -4119,6 +4145,58 @@ BaseLib::PVariable RPCSearchDevices::invoke(BaseLib::PRpcClientInfo clientInfo, 
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCSearchInterfaces::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+{
+    try
+    {
+        int32_t familyID = -1;
+        BaseLib::PVariable metadata;
+        if(!parameters->empty())
+        {
+            ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger }),
+                std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tVariant })
+            }));
+            if(error != ParameterError::Enum::noError) return getError(error);
+
+            familyID = parameters->at(0)->integerValue;
+            if(parameters->size() > 1) metadata = parameters->at(1);
+        }
+
+        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+        if(familyID > -1)
+        {
+            if(families.find(familyID) == families.end())
+            {
+                return BaseLib::Variable::createError(-2, "Device family is unknown.");
+            }
+            return families.at(familyID)->getCentral()->searchInterfaces(clientInfo, metadata);
+        }
+
+        BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tInteger));
+        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        {
+            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+            if(central) result->integerValue += central->searchInterfaces(clientInfo, metadata)->integerValue;
+        }
+
+        return result;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCSetData::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
 {
 	try
@@ -4190,20 +4268,27 @@ BaseLib::PVariable RPCSetInstallMode::invoke(BaseLib::PRpcClientInfo clientInfo,
 			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tBoolean, BaseLib::VariableType::tInteger }),
 			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tBoolean, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger }),
 			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean }),
-			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tInteger })
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tStruct }),
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tInteger }),
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		int32_t enableIndex = -1;
 		if(parameters->at(0)->type == BaseLib::VariableType::tBoolean) enableIndex = 0;
-		else if(parameters->size() == 2 || parameters->size() == 3) enableIndex = 1;
+		else if(parameters->size() >= 2) enableIndex = 1;
 		int32_t familyIDIndex = (parameters->at(0)->type == BaseLib::VariableType::tInteger) ? 0 : -1;
 		int32_t timeIndex = -1;
-		if(parameters->size() >= 2 && parameters->at(1)->type == BaseLib::VariableType::tInteger) timeIndex = 1;
-		else if(parameters->size() == 3) timeIndex = 2;
+		if(parameters->size() == 2 && parameters->at(1)->type == BaseLib::VariableType::tInteger) timeIndex = 1;
+		else if(parameters->size() >= 3 && parameters->at(2)->type == BaseLib::VariableType::tInteger) timeIndex = 2;
+        int32_t metadataIndex = -1;
+        if(parameters->size() == 3 && parameters->at(2)->type == BaseLib::VariableType::tStruct) metadataIndex = 2;
+        else if(parameters->size() == 4) metadataIndex = 3;
 
 		bool enable = (enableIndex > -1) ? parameters->at(enableIndex)->booleanValue : false;
 		int32_t familyID = (familyIDIndex > -1) ? parameters->at(familyIDIndex)->integerValue : -1;
+        BaseLib::PVariable metadata;
+        if(metadataIndex != -1) metadata = parameters->at(metadataIndex);
 
 		uint32_t time = (timeIndex > -1) ? parameters->at(timeIndex)->integerValue : 60;
 		if(time < 5) time = 60;
@@ -4216,13 +4301,13 @@ BaseLib::PVariable RPCSetInstallMode::invoke(BaseLib::PRpcClientInfo clientInfo,
 			{
 				return BaseLib::Variable::createError(-2, "Device family is unknown.");
 			}
-			return families.at(familyID)->getCentral()->setInstallMode(clientInfo, enable, time);
+			return families.at(familyID)->getCentral()->setInstallMode(clientInfo, enable, time, metadata);
 		}
 
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
-			if(central) central->setInstallMode(clientInfo, enable, time);
+			if(central) central->setInstallMode(clientInfo, enable, time, metadata);
 		}
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));

@@ -28,55 +28,20 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef FLOWSPROCESS_H_
-#define FLOWSPROCESS_H_
+#ifndef HOMEGEAR_CACHEINFO_H
+#define HOMEGEAR_CACHEINFO_H
 
-#include "FlowsClientData.h"
-#include <homegear-base/BaseLib.h>
-#include "FlowInfoServer.h"
+#include <string>
 
-namespace Flows
+namespace ScriptEngine
 {
 
-struct FlowFinishedInfo
+struct CacheInfo
 {
-	bool finished = false;
+    int32_t lastModified;
+    std::string script;
 };
-typedef std::shared_ptr<FlowFinishedInfo> PFlowFinishedInfo;
-
-class FlowsProcess
-{
-private:
-	pid_t _pid = 0;
-	std::mutex _flowsMutex;
-	std::map<int32_t, PFlowInfoServer> _flows;
-	std::map<int32_t, PFlowFinishedInfo> _flowFinishedInfo;
-	PFlowsClientData _clientData;
-	std::atomic_uint _nodeThreadCount;
-public:
-	FlowsProcess();
-	virtual ~FlowsProcess();
-
-	std::atomic<int64_t> lastExecution;
-	std::condition_variable requestConditionVariable;
-
-	pid_t getPid() { return _pid; }
-	void setPid(pid_t value) { _pid = value; }
-	PFlowsClientData& getClientData() { return _clientData; }
-	void setClientData(PFlowsClientData& value) { _clientData = value; }
-
-	void invokeFlowFinished(int32_t exitCode);
-	void invokeFlowFinished(int32_t id, int32_t exitCode);
-	uint32_t flowCount();
-	void reset();
-	uint32_t nodeThreadCount();
-	PFlowInfoServer getFlow(int32_t id);
-	PFlowFinishedInfo getFlowFinishedInfo(int32_t id);
-	void registerFlow(int32_t id, PFlowInfoServer& flowInfo);
-	void unregisterFlow(int32_t id);
-};
-
-typedef std::shared_ptr<FlowsProcess> PFlowsProcess;
 
 }
+
 #endif

@@ -106,7 +106,7 @@ set(SOURCE_FILES
         src/main.cpp
         src/Monitor.cpp
         src/Monitor.h
-        config.h)
+        config.h src/ScriptEngine/CacheInfo.h)
 
 add_custom_target(homegear COMMAND ../../makeAll.sh SOURCES ${SOURCE_FILES})
 

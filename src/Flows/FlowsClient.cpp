@@ -29,9 +29,10 @@
 */
 
 #include "FlowsClient.h"
-
-#include <utility>
+#include <homegear-node/JsonEncoder.h>
+#include <homegear-node/JsonDecoder.h>
 #include "../GD/GD.h"
+#include <utility>
 
 namespace Flows
 {
@@ -41,10 +42,11 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 3, 100000)
     _stopped = false;
     _nodesStopped = false;
     _disposed = false;
-    _shuttingDown = false;
+    _shuttingDownOrRestarting = false;
     _frontendConnected = false;
     _startUpComplete = false;
     _shutdownComplete = false;
+    _lastQueueSize = 0;
 
     _fileDescriptor = std::make_shared<BaseLib::FileDescriptor>();
     _out.init(GD::bl.get());
@@ -70,6 +72,9 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 3, 100000)
     _localRpcMethods.emplace("nodeOutput", std::bind(&FlowsClient::nodeOutput, this, std::placeholders::_1));
     _localRpcMethods.emplace("invokeNodeMethod", std::bind(&FlowsClient::invokeExternalNodeMethod, this, std::placeholders::_1));
     _localRpcMethods.emplace("executePhpNodeBaseMethod", std::bind(&FlowsClient::executePhpNodeBaseMethod, this, std::placeholders::_1));
+    _localRpcMethods.emplace("getFlowVariable", std::bind(&FlowsClient::getFlowVariable, this, std::placeholders::_1));
+    _localRpcMethods.emplace("getNodeVariable", std::bind(&FlowsClient::getNodeVariable, this, std::placeholders::_1));
+    _localRpcMethods.emplace("setFlowVariable", std::bind(&FlowsClient::setFlowVariable, this, std::placeholders::_1));
     _localRpcMethods.emplace("setNodeVariable", std::bind(&FlowsClient::setNodeVariable, this, std::placeholders::_1));
     _localRpcMethods.emplace("enableNodeEvents", std::bind(&FlowsClient::enableNodeEvents, this, std::placeholders::_1));
     _localRpcMethods.emplace("disableNodeEvents", std::bind(&FlowsClient::disableNodeEvents, this, std::placeholders::_1));
@@ -95,6 +100,7 @@ void FlowsClient::dispose()
         _disposed = true;
         _out.printMessage("Shutting down...");
 
+        int64_t startTime = 0;
         _out.printMessage("Calling waitForStop()...");
         {
             std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
@@ -103,8 +109,10 @@ void FlowsClient::dispose()
                 for(auto& nodeIterator : flow.second->nodes)
                 {
                     Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
-                    if(_bl->debugLevel >= 5) _out.printDebug("Debug: Waiting for node " + nodeIterator.second->id + " to stop...");
+                    if(_bl->debugLevel >= 4) _out.printInfo("Info: Waiting for node " + nodeIterator.second->id + " to stop...");
+                    startTime = BaseLib::HelperFunctions::getTime();
                     if(node) node->waitForStop();
+                    if(BaseLib::HelperFunctions::getTime() - startTime > 1000) _out.printWarning("Warning: Waiting for stop on node " + nodeIterator.second->id + " of type " + nodeIterator.second->type + " in namespace " + nodeIterator.second->type + " in flow " + nodeIterator.second->info->structValue->at("flow")->stringValue + " took longer than 1 second.");
                 }
             }
         }
@@ -151,8 +159,10 @@ void FlowsClient::dispose()
             _flows.clear();
         }
 
-        _flows.clear();
-        _rpcResponses.clear();
+        {
+            std::lock_guard<std::mutex> rpcResponsesGuard(_rpcResponsesMutex);
+            _rpcResponses.clear();
+        }
 
         _shutdownComplete = true;
         _out.printMessage("Shut down complete.");
@@ -169,6 +179,135 @@ void FlowsClient::dispose()
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+void FlowsClient::resetClient(Flows::PVariable packetId)
+{
+    try
+    {
+        _shuttingDownOrRestarting = true;
+
+        std::lock_guard<std::mutex> startFlowGuard(_startFlowMutex);
+        _out.printMessage("Calling waitForStop()...");
+        {
+            std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+            for(auto& flow : _flows)
+            {
+                for(auto& nodeIterator : flow.second->nodes)
+                {
+                    Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
+                    if(_bl->debugLevel >= 5) _out.printDebug("Debug: Waiting for node " + nodeIterator.second->id + " to stop...");
+                    if(node) node->waitForStop();
+                }
+            }
+        }
+
+        _out.printMessage("Nodes are stopped. Stopping queues...");
+
+        {
+            std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
+            for (auto &request : _requestInfo) {
+                std::unique_lock<std::mutex> waitLock(request.second->waitMutex);
+                waitLock.unlock();
+                request.second->conditionVariable.notify_all();
+            }
+        }
+
+        stopQueue(0);
+        stopQueue(1);
+        stopQueue(2);
+
+        _out.printMessage("Doing final cleanups...");
+
+        {
+            std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+            for(auto& flow : _flows)
+            {
+                for(auto& node : flow.second->nodes)
+                {
+                    {
+                        std::lock_guard<std::mutex> peerSubscriptionsGuard(_peerSubscriptionsMutex);
+                        for(auto& peerId : _peerSubscriptions)
+                        {
+                            for(auto& channel : peerId.second)
+                            {
+                                for(auto& variable : channel.second)
+                                {
+                                    variable.second.erase(node.first);
+                                }
+                            }
+                        }
+                    }
+                    _nodeManager->unloadNode(node.second->id);
+                }
+            }
+            _flows.clear();
+        }
+
+        {
+            std::lock_guard<std::mutex> rpcResponsesGuard(_rpcResponsesMutex);
+            _rpcResponses.clear();
+        }
+
+        {
+            std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
+            _requestInfo.clear();
+        }
+
+        {
+            std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+            _nodes.clear();
+        }
+
+        {
+            std::lock_guard<std::mutex> peerSubscriptionsGuard(_peerSubscriptionsMutex);
+            _peerSubscriptions.clear();
+        }
+
+        {
+            std::lock_guard<std::mutex> internalMessagesGuard(_internalMessagesMutex);
+            _internalMessages.clear();
+        }
+
+        {
+            std::lock_guard<std::mutex> inputValuesGuard(_inputValuesMutex);
+            _inputValues.clear();
+        }
+
+        _out.printMessage("Reinitializing...");
+
+        if(_watchdogThread.joinable()) _watchdogThread.join();
+
+        _shuttingDownOrRestarting = false;
+        _startUpComplete = false;
+        _nodesStopped = false;
+        _lastQueueSize = 0;
+
+        startQueue(0, false, _threadCount, 0, SCHED_OTHER);
+        startQueue(1, false, _threadCount, 0, SCHED_OTHER);
+        startQueue(2, false, _threadCount, 0, SCHED_OTHER);
+
+        if(GD::bl->settings.flowsWatchdogTimeout() >= 1000) _watchdogThread = std::thread(&FlowsClient::watchdog, this);
+
+        _out.printMessage("Reset complete.");
+        Flows::PVariable result = std::make_shared<Flows::Variable>();
+        sendResponse(packetId, result);
+        return;
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    Flows::PVariable result = Flows::Variable::createError(-32500, "Unknown application error.");
+    sendResponse(packetId, result);
 }
 
 void FlowsClient::start()
@@ -302,6 +441,11 @@ void FlowsClient::start()
                             Flows::PArray parameters = _rpcDecoder->decodeRequest(_binaryRpc->getData(), methodName);
                             std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(methodName, parameters);
                             if(methodName == "shutdown") shutdown(parameters->at(2)->arrayValue);
+                            else if(methodName == "reset")
+                            {
+                                if(_maintenanceThread.joinable()) _maintenanceThread.join();
+                                _maintenanceThread = std::thread(&FlowsClient::resetClient, this, parameters->at(0));
+                            }
                             else if(!enqueue(0, queueEntry, !_startUpComplete)) printQueueFullError(_out, "Error: Could not queue RPC request because buffer is full. Dropping it.");
                         }
                         else
@@ -489,11 +633,16 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
             {
                 if(_processingThreadCount3 == _threadCount) _processingThreadCountMaxReached3 = BaseLib::HelperFunctions::getTime();
 
-                if (!queueEntry->nodeInfo || !queueEntry->message || _shuttingDown) return;
+                if (!queueEntry->nodeInfo || !queueEntry->message || _shuttingDownOrRestarting) return;
                 Flows::PINode node = _nodeManager->getNode(queueEntry->nodeInfo->id);
                 if (node)
                 {
-                    if (GD::bl->settings.nodeBlueDebugOutput() && _startUpComplete && _frontendConnected && BaseLib::HelperFunctions::getTime() - queueEntry->nodeInfo->lastNodeEvent1 >= 100)
+                    std::string eventFlowId;
+                    {
+                        std::lock_guard<std::mutex> eventFlowIdGuard(_eventFlowIdMutex);
+                        eventFlowId = _eventFlowId;
+                    }
+                    if (GD::bl->settings.nodeBlueDebugOutput() && _startUpComplete && _frontendConnected && node->getFlowId() == eventFlowId && BaseLib::HelperFunctions::getTime() - queueEntry->nodeInfo->lastNodeEvent1 >= 100)
                     {
                         queueEntry->nodeInfo->lastNodeEvent1 = BaseLib::HelperFunctions::getTime();
                         Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
@@ -502,8 +651,27 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
                     }
                     auto internalMessageIterator = queueEntry->message->structValue->find("_internal");
                     if (internalMessageIterator != queueEntry->message->structValue->end()) setInternalMessage(queueEntry->nodeInfo->id, internalMessageIterator->second);
-                    std::lock_guard<std::mutex> nodeInputGuard(node->getInputMutex());
-                    node->input(queueEntry->nodeInfo, queueEntry->targetPort, queueEntry->message);
+
+                    std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
+                    auto nodeIterator = _fixedInputValues.find(queueEntry->nodeInfo->id);
+                    if(nodeIterator != _fixedInputValues.end())
+                    {
+                        auto inputIterator = nodeIterator->second.find(queueEntry->targetPort);
+                        if (inputIterator != nodeIterator->second.end())
+                        {
+                            auto messageCopy = std::make_shared<Flows::Variable>();
+                            *messageCopy = *(queueEntry->message);
+                            (*messageCopy->structValue)["payload"] = inputIterator->second;
+                            queueEntry->message = messageCopy;
+                        }
+                    }
+
+                    {
+                        std::lock_guard<std::mutex> nodeInputGuard(node->getInputMutex());
+                        node->input(queueEntry->nodeInfo, queueEntry->targetPort, queueEntry->message);
+                    }
+
+                    setInputValue(queueEntry->nodeInfo->id, queueEntry->targetPort, queueEntry->message);
                 }
             }
             catch(const std::exception& ex)
@@ -778,7 +946,7 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 {
     try
     {
-        if(!message || _shuttingDown) return;
+        if(!message || _shuttingDownOrRestarting) return;
 
         PNodeInfo nodeInfo;
         {
@@ -813,10 +981,16 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
             return;
         }
 
+        std::string eventFlowId;
+        {
+            std::lock_guard<std::mutex> eventFlowIdGuard(_eventFlowIdMutex);
+            eventFlowId = _eventFlowId;
+        }
+
         if(synchronous && GD::bl->settings.nodeBlueDebugOutput())
         {
             //Output node events before execution of input
-            if(_frontendConnected && _startUpComplete)
+            if(_frontendConnected && _startUpComplete && nodeInfo->info->structValue->at("flow")->stringValue == eventFlowId)
             {
                 Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
                 timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
@@ -824,13 +998,14 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
                 Flows::PVariable outputIndex = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
                 outputIndex->structValue->emplace("index", std::make_shared<Flows::Variable>(index));
                 nodeEvent(nodeId, "highlightLink/" + nodeId, outputIndex);
+
+                Flows::PVariable status = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+                std::string statusText = message->structValue->at("payload")->toString();
+                if(statusText.size() > 20) statusText = statusText.substr(0, 17) + "...";
+                statusText = std::to_string(index) + ": " + BaseLib::HelperFunctions::stripNonPrintable(statusText);
+                status->structValue->emplace("text", std::make_shared<Flows::Variable>(statusText));
+                nodeEvent(nodeId, "statusTop/" + nodeId, status);
             }
-            Flows::PVariable status = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
-            std::string statusText = message->structValue->at("payload")->toString();
-            if(statusText.size() > 20) statusText = statusText.substr(0, 17) + "...";
-            statusText = std::to_string(index) + ": " + BaseLib::HelperFunctions::stripNonPrintable(statusText);
-            status->structValue->emplace("text", std::make_shared<Flows::Variable>(statusText));
-            nodeEvent(nodeId, "statusTop/" + nodeId, status);
         }
 
         message->structValue->emplace("source", std::make_shared<Flows::Variable>(nodeId));
@@ -848,7 +1023,7 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
                 Flows::PINode nextNode = _nodeManager->getNode(outputNodeInfo->id);
                 if (nextNode)
                 {
-                    if (GD::bl->settings.nodeBlueDebugOutput() && _startUpComplete && _frontendConnected && BaseLib::HelperFunctions::getTime() - outputNodeInfo->lastNodeEvent1 >= 100)
+                    if (GD::bl->settings.nodeBlueDebugOutput() && _startUpComplete && _frontendConnected && nextNode->getFlowId() == eventFlowId && BaseLib::HelperFunctions::getTime() - outputNodeInfo->lastNodeEvent1 >= 100)
                     {
                         outputNodeInfo->lastNodeEvent1 = BaseLib::HelperFunctions::getTime();
                         Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
@@ -869,8 +1044,27 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
                         setInternalMessage(outputNodeInfo->id, internalMessage);
                         message->structValue->emplace("_internal", internalMessage);
                     }
-                    std::lock_guard<std::mutex> nodeInputGuard(nextNode->getInputMutex());
-                    nextNode->input(outputNodeInfo, node.port, message);
+
+                    std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
+                    auto nodeIterator = _fixedInputValues.find(outputNodeInfo->id);
+                    if(nodeIterator != _fixedInputValues.end())
+                    {
+                        auto inputIterator = nodeIterator->second.find(node.port);
+                        if (inputIterator != nodeIterator->second.end())
+                        {
+                            auto messageCopy = std::make_shared<Flows::Variable>();
+                            *messageCopy = *message;
+                            (*messageCopy->structValue)["payload"] = inputIterator->second;
+                            message = messageCopy;
+                        }
+                    }
+
+                    {
+                        std::lock_guard<std::mutex> nodeInputGuard(nextNode->getInputMutex());
+                        nextNode->input(outputNodeInfo, node.port, message);
+                    }
+
+                    setInputValue(outputNodeInfo->id, node.port, message);
                 }
             }
             else
@@ -892,7 +1086,7 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
 
         if(!synchronous && GD::bl->settings.nodeBlueDebugOutput())
         {
-            if(_frontendConnected && _startUpComplete)
+            if(_frontendConnected && _startUpComplete && nodeInfo->info->structValue->at("flow")->stringValue == eventFlowId)
             {
                 Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
                 timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
@@ -900,13 +1094,14 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
                 Flows::PVariable outputIndex = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
                 outputIndex->structValue->emplace("index", std::make_shared<Flows::Variable>(index));
                 nodeEvent(nodeId, "highlightLink/" + nodeId, outputIndex);
+
+                Flows::PVariable status = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+                std::string statusText = message->structValue->at("payload")->toString();
+                if(statusText.size() > 20) statusText = statusText.substr(0, 17) + "...";
+                statusText = std::to_string(index) + ": " + BaseLib::HelperFunctions::stripNonPrintable(statusText);
+                status->structValue->emplace("text", std::make_shared<Flows::Variable>(statusText));
+                nodeEvent(nodeId, "statusTop/" + nodeId, status);
             }
-            Flows::PVariable status = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
-            std::string statusText = message->structValue->at("payload")->toString();
-            if(statusText.size() > 20) statusText = statusText.substr(0, 17) + "...";
-            statusText = std::to_string(index) + ": " + BaseLib::HelperFunctions::stripNonPrintable(statusText);
-            status->structValue->emplace("text", std::make_shared<Flows::Variable>(statusText));
-            nodeEvent(nodeId, "statusTop/" + nodeId, status);
         }
     }
     catch(const std::exception& ex)
@@ -927,7 +1122,9 @@ void FlowsClient::nodeEvent(std::string nodeId, std::string topic, Flows::PVaria
 {
     try
     {
-        if(!value) return;
+        if(!value || !_startUpComplete) return;
+
+        if(!_frontendConnected && topic.compare(0, 13, "statusBottom/") != 0) return;
 
         Flows::PArray parameters = std::make_shared<Flows::Array>();
         parameters->reserve(3);
@@ -1020,13 +1217,61 @@ void FlowsClient::setInternalMessage(std::string nodeId, Flows::PVariable messag
         if(internalMessageIterator != _internalMessages.end())
         {
             if(internalMessageIterator->second == message) return;
+            Flows::PVariable copy = std::make_shared<Flows::Variable>();
+            *copy = *internalMessageIterator->second;
             for(auto element : *message->structValue)
             {
-                internalMessageIterator->second->structValue->erase(element.first);
-                internalMessageIterator->second->structValue->emplace(element.first, element.second);
+                copy->structValue->erase(element.first);
+                copy->structValue->emplace(element.first, element.second);
             }
+            _internalMessages[nodeId] = copy;
         }
         else _internalMessages[nodeId] = message;
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void FlowsClient::setInputValue(std::string& nodeId, int32_t inputIndex, Flows::PVariable message)
+{
+    try
+    {
+        std::lock_guard<std::mutex> inputValuesGuard(_inputValuesMutex);
+        Flows::PVariable payload = message->structValue->at("payload");
+        if(payload->type == Flows::VariableType::tArray)
+        {
+            payload = std::make_shared<Flows::Variable>(std::string("Array"));
+        }
+        else if(payload->type == Flows::VariableType::tStruct)
+        {
+            payload = std::make_shared<Flows::Variable>(std::string("Struct"));
+        }
+        else if(payload->type == Flows::VariableType::tBinary)
+        {
+            if(payload->binaryValue.size() > 10) payload = std::make_shared<Flows::Variable>(BaseLib::HelperFunctions::getHexString(payload->binaryValue.data(), 10) + "...");
+            else payload = std::make_shared<Flows::Variable>(BaseLib::HelperFunctions::getHexString(payload->binaryValue.data(), payload->binaryValue.size()));
+        }
+        else if(payload->type == Flows::VariableType::tString && payload->stringValue.size() > 20)
+        {
+            payload = std::make_shared<Flows::Variable>(payload->stringValue.substr(0, 20) + "...");
+        }
+
+        auto& element = _inputValues[nodeId][inputIndex];
+        InputValue inputValue;
+        inputValue.time = BaseLib::HelperFunctions::getTime();
+        inputValue.value = payload;
+        element.push_front(std::move(inputValue));
+        while(element.size() > 10) element.pop_back();
     }
     catch(const std::exception& ex)
     {
@@ -1066,7 +1311,7 @@ Flows::PVariable FlowsClient::getConfigParameter(std::string nodeId, std::string
 
 void FlowsClient::watchdog()
 {
-    while(!_stopped)
+    while(!_stopped && !_shuttingDownOrRestarting)
     {
         try
         {
@@ -1469,16 +1714,19 @@ Flows::PVariable FlowsClient::stopNodes(Flows::PArray& parameters)
 {
     try
     {
-        _shuttingDown = true;
+        _shuttingDownOrRestarting = true;
         _out.printMessage("Calling stop()...");
         std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+        int64_t startTime = 0;
         for(auto& flow : _flows)
         {
             for(auto& nodeIterator : flow.second->nodes)
             {
                 Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
                 if(_bl->debugLevel >= 5) _out.printDebug("Debug: Calling stop() on node " + nodeIterator.second->id + "...");
+                startTime = BaseLib::HelperFunctions::getTime();
                 if(node) node->stop();
+                if(BaseLib::HelperFunctions::getTime() - startTime > 100) _out.printWarning("Warning: Stop of node " + nodeIterator.second->id + " of type " + nodeIterator.second->type + " in namespace " + nodeIterator.second->type + " in flow " + nodeIterator.second->info->structValue->at("flow")->stringValue + " took longer than 100ms.");
                 if(_bl->debugLevel >= 5) _out.printDebug("Debug: Node " + nodeIterator.second->id + " stopped.");
             }
         }
@@ -1731,13 +1979,249 @@ Flows::PVariable FlowsClient::executePhpNodeBaseMethod(Flows::PArray& parameters
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
+Flows::PVariable FlowsClient::getNodeVariable(Flows::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
+        if(parameters->at(1)->stringValue.compare(0, sizeof("inputValue") - 1, "inputValue") == 0 && parameters->at(1)->stringValue.size() > 10)
+        {
+            std::string indexString = parameters->at(1)->stringValue.substr(10);
+            int32_t index = Flows::Math::getNumber(indexString);
+            std::lock_guard<std::mutex> inputValuesGuard(_inputValuesMutex);
+            auto nodeIterator = _inputValues.find(parameters->at(0)->stringValue);
+            if(nodeIterator != _inputValues.end())
+            {
+                auto inputIterator = nodeIterator->second.find(index);
+                if(inputIterator != nodeIterator->second.end()) return inputIterator->second.front().value;
+            }
+        }
+        else if(parameters->at(1)->stringValue.compare(0, sizeof("inputHistory") - 1, "inputHistory") == 0 && parameters->at(1)->stringValue.size() > 12)
+        {
+            std::string indexString = parameters->at(1)->stringValue.substr(12);
+            int32_t index = Flows::Math::getNumber(indexString);
+            std::lock_guard<std::mutex> inputValuesGuard(_inputValuesMutex);
+            auto nodeIterator = _inputValues.find(parameters->at(0)->stringValue);
+            if(nodeIterator != _inputValues.end())
+            {
+                auto inputIterator = nodeIterator->second.find(index);
+                if(inputIterator != nodeIterator->second.end())
+                {
+                    Flows::PVariable array = std::make_shared<Flows::Variable>(Flows::VariableType::tArray);
+                    array->arrayValue->reserve(inputIterator->second.size());
+                    for(auto& inputValue : inputIterator->second)
+                    {
+                        Flows::PVariable innerArray = std::make_shared<Flows::Variable>(Flows::VariableType::tArray);
+                        innerArray->arrayValue->reserve(2);
+                        innerArray->arrayValue->push_back(std::make_shared<Flows::Variable>(inputValue.time));
+                        innerArray->arrayValue->push_back(inputValue.value);
+                        array->arrayValue->push_back(innerArray);
+                    }
+                    return array;
+                }
+            }
+        }
+        else if(parameters->at(1)->stringValue.compare(0, sizeof("fixedInput") - 1, "fixedInput") == 0 && parameters->at(1)->stringValue.size() > 10)
+        {
+            std::string indexString = parameters->at(1)->stringValue.substr(10);
+            int32_t index = Flows::Math::getNumber(indexString);
+            std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
+            auto nodeIterator = _fixedInputValues.find(parameters->at(0)->stringValue);
+            if(nodeIterator != _fixedInputValues.end())
+            {
+                auto inputIterator = nodeIterator->second.find(index);
+                if(inputIterator != nodeIterator->second.end())
+                {
+                    std::string type;
+                    if(inputIterator->second->type == Flows::VariableType::tBoolean) type = "bool";
+                    else if(inputIterator->second->type == Flows::VariableType::tInteger || inputIterator->second->type == Flows::VariableType::tInteger64) type = "int";
+                    else if(inputIterator->second->type == Flows::VariableType::tFloat) type = "float";
+                    else if(inputIterator->second->type == Flows::VariableType::tString) type = "string";
+                    else if(inputIterator->second->type == Flows::VariableType::tArray) type = "array";
+                    else if(inputIterator->second->type == Flows::VariableType::tStruct) type = "struct";
+                    else if(inputIterator->second->type == Flows::VariableType::tBinary) type = "bin";
+                    else return std::make_shared<Flows::Variable>();
+
+                    std::string value = inputIterator->second->toString();
+                    if(inputIterator->second->type == Flows::VariableType::tArray || inputIterator->second->type == Flows::VariableType::tStruct)
+                    {
+                        Flows::JsonEncoder jsonEncoder;
+                        value = jsonEncoder.getString(inputIterator->second);
+                    }
+
+                    Flows::PVariable array = std::make_shared<Flows::Variable>(Flows::VariableType::tArray);
+                    array->arrayValue->reserve(2);
+                    array->arrayValue->push_back(std::make_shared<Flows::Variable>(type));
+                    array->arrayValue->push_back(std::make_shared<Flows::Variable>(value));
+
+                    return array;
+                }
+            }
+        }
+        else
+        {
+            Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
+            if(node) return node->getNodeVariable(parameters->at(1)->stringValue);
+        }
+        return std::make_shared<Flows::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable FlowsClient::getFlowVariable(Flows::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
+
+        return std::make_shared<Flows::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
 Flows::PVariable FlowsClient::setNodeVariable(Flows::PArray& parameters)
 {
     try
     {
         if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+
+        if(parameters->at(1)->stringValue.compare(0, sizeof("fixedInput") - 1, "fixedInput") == 0 && parameters->at(1)->stringValue.size() > 10) {
+            std::string indexString = parameters->at(1)->stringValue.substr(10);
+            int32_t index = Flows::Math::getNumber(indexString);
+
+            if(parameters->at(2)->arrayValue->size() != 2)
+            {
+                std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
+                auto fixedInputIterator = _fixedInputValues.find(parameters->at(0)->stringValue);
+                if(fixedInputIterator != _fixedInputValues.end())
+                {
+                    fixedInputIterator->second.erase(index);
+                    if(fixedInputIterator->second.empty()) _fixedInputValues.erase(fixedInputIterator);
+                }
+
+                return std::make_shared<Flows::Variable>();
+            }
+
+            std::string payloadType = parameters->at(2)->arrayValue->at(0)->stringValue;
+            std::string payload = parameters->at(2)->arrayValue->at(1)->stringValue;
+
+            Flows::PVariable value = std::make_shared<Flows::Variable>();
+            if(payloadType == "bool")
+            {
+                value->setType(Flows::VariableType::tBoolean);
+                value->booleanValue = payload == "true";
+            }
+            else if(payloadType == "int")
+            {
+                value->setType(Flows::VariableType::tInteger64);
+                value->integerValue64 = Flows::Math::getNumber64(payload);
+                value->integerValue = (int32_t)value->integerValue64;
+                value->floatValue = value->integerValue64;
+            }
+            else if(payloadType == "float")
+            {
+                value->setType(Flows::VariableType::tFloat);
+                value->floatValue = Flows::Math::getDouble(payload);
+                value->integerValue = value->floatValue;
+                value->integerValue64 = value->floatValue;
+            }
+            else if(payloadType == "string")
+            {
+                value->setType(Flows::VariableType::tString);
+                value->stringValue = payload;
+            }
+            else if(payloadType == "array" || payloadType == "struct")
+            {
+                Flows::JsonDecoder jsonDecoder;
+                value = jsonDecoder.decode(payload);
+            }
+            else if(payloadType == "bin")
+            {
+                value->setType(Flows::VariableType::tBinary);
+                value->binaryValue = _bl->hf.getUBinary(payload);
+            }
+            else return Flows::Variable::createError(-3, "Unknown payload type.");
+
+            std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
+            _fixedInputValues[parameters->at(0)->stringValue][index] = value;
+
+            PNodeInfo nodeInfo;
+            {
+                std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+                auto nodesIterator = _nodes.find(parameters->at(0)->stringValue);
+                if(nodesIterator != _nodes.end()) nodeInfo = nodesIterator->second;
+            }
+
+            Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
+            if(nodeInfo && node)
+            {
+                auto message = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+                message->structValue->emplace("payload", value);
+
+                {
+                    std::lock_guard<std::mutex> nodeInputGuard(node->getInputMutex());
+                    node->input(nodeInfo, index, message);
+                }
+            }
+
+            return std::make_shared<Flows::Variable>();
+        }
+
         Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
         if(node) node->setNodeVariable(parameters->at(1)->stringValue, parameters->at(2));
+        return std::make_shared<Flows::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable FlowsClient::setFlowVariable(Flows::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+        if(parameters->at(1)->stringValue == "enableEvents" && parameters->at(2)->booleanValue)
+        {
+            std::lock_guard<std::mutex> eventFlowGuard(_eventFlowIdMutex);
+            _eventFlowId = parameters->at(0)->stringValue;
+            _out.printInfo("Info: Events are now sent to flow " + _eventFlowId);
+        }
+
         return std::make_shared<Flows::Variable>();
     }
     catch(const std::exception& ex)

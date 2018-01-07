@@ -67,6 +67,15 @@ uint32_t FlowsProcess::flowCount()
     return (uint32_t)-1;
 }
 
+
+void FlowsProcess::reset()
+{
+    std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+	_nodeThreadCount = 0;
+    _flows.clear();
+    _flowFinishedInfo.clear();
+}
+
 uint32_t FlowsProcess::nodeThreadCount()
 {
 	return _nodeThreadCount;
@@ -224,5 +233,6 @@ void FlowsProcess::unregisterFlow(int32_t id)
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
+
 
 }

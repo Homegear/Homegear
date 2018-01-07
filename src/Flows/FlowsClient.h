@@ -64,6 +64,12 @@ private:
 	};
 	typedef std::shared_ptr<RequestInfo> PRequestInfo;
 
+    struct InputValue
+    {
+        int64_t time = 0;
+        Flows::PVariable value;
+    };
+
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
 	public:
@@ -98,12 +104,11 @@ private:
     std::atomic<int64_t> _processingThreadCountMaxReached2;
     std::atomic<int64_t> _processingThreadCountMaxReached3;
 	std::atomic_bool _startUpComplete;
-	std::atomic_bool _shuttingDown;
+	std::atomic_bool _shuttingDownOrRestarting;
     std::atomic_bool _shutdownComplete;
 	std::atomic_bool _disposed;
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
-	int64_t _lastGargabeCollection = 0;
 	std::atomic_bool _stopped;
 	std::mutex _sendMutex;
 	std::mutex _rpcResponsesMutex;
@@ -120,6 +125,8 @@ private:
 	std::unique_ptr<NodeManager> _nodeManager;
 	std::atomic_bool _frontendConnected;
 	std::atomic<int64_t> _lastQueueSize;
+    std::mutex _eventFlowIdMutex;
+    std::string _eventFlowId;
 
 	std::unique_ptr<Flows::BinaryRpc> _binaryRpc;
 	std::unique_ptr<Flows::RpcDecoder> _rpcDecoder;
@@ -139,7 +146,15 @@ private:
 	std::mutex _internalMessagesMutex;
 	std::unordered_map<std::string, Flows::PVariable> _internalMessages;
 
+    std::mutex _inputValuesMutex;
+    std::unordered_map<std::string, std::unordered_map<int32_t, std::list<InputValue>>> _inputValues;
+
+	std::mutex _fixedInputValuesMutex;
+	std::unordered_map<std::string, std::unordered_map<int32_t, Flows::PVariable>> _fixedInputValues;
+
     void watchdog();
+
+    void resetClient(Flows::PVariable packetId);
 
 	void registerClient();
 	Flows::PVariable invoke(std::string methodName, Flows::PArray parameters, bool wait);
@@ -157,6 +172,7 @@ private:
 	Flows::PVariable getNodeData(std::string nodeId, std::string key);
 	void setNodeData(std::string nodeId, std::string key, Flows::PVariable value);
 	void setInternalMessage(std::string nodeId, Flows::PVariable message);
+    void setInputValue(std::string& nodeId, int32_t inputIndex, Flows::PVariable message);
 	Flows::PVariable getConfigParameter(std::string nodeId, std::string name);
 
 	// {{{ RPC methods
@@ -219,7 +235,11 @@ private:
 		Flows::PVariable invokeExternalNodeMethod(Flows::PArray& parameters);
 		Flows::PVariable executePhpNodeBaseMethod(Flows::PArray& parameters);
 
+		Flows::PVariable getNodeVariable(Flows::PArray& parameters);
+		Flows::PVariable getFlowVariable(Flows::PArray& parameters);
+
 		Flows::PVariable setNodeVariable(Flows::PArray& parameters);
+        Flows::PVariable setFlowVariable(Flows::PArray& parameters);
 
 		Flows::PVariable enableNodeEvents(Flows::PArray& parameters);
 		Flows::PVariable disableNodeEvents(Flows::PArray& parameters);

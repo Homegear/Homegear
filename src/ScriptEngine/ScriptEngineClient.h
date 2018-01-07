@@ -36,6 +36,7 @@
 #include "php_config_fixes.h"
 #include "../../config.h"
 #include "ScriptEngineResponse.h"
+#include "CacheInfo.h"
 #include <homegear-base/BaseLib.h>
 
 #include <thread>
@@ -58,12 +59,6 @@ public:
 
 	void start();
 private:
-	struct CacheInfo
-	{
-		int32_t lastModified;
-		std::string script;
-	};
-
 	struct ThreadInfo
 	{
 		std::thread thread;
@@ -153,6 +148,7 @@ private:
 	std::map<int32_t, PThreadInfo> _scriptThreads;
 	std::mutex _requestInfoMutex;
 	std::map<int32_t, PRequestInfo> _requestInfo;
+    std::mutex _scriptCacheMutex;
 	std::map<std::string, std::shared_ptr<CacheInfo>> _scriptCache;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;

@@ -3083,6 +3083,7 @@ RED.nodes = (function() {
                         inputLabels: n.inputLabels,
                         outputLabels: n.outputLabels,
                         changed:false,
+                        fixedInputs:0,
                         _config:{}
                     };
                     if (createNewIds) {
@@ -4056,7 +4057,7 @@ RED.utils = (function() {
     }
 
     function formatNumber(element,obj,sourceId,path,cycle,initialFormat) {
-        var format = (formattedPaths[sourceId] && formattedPaths[sourceId][path]) || initialFormat || "dec";
+        var format = (formattedPaths[sourceId] && formattedPaths[sourceId][path] && formattedPaths[sourceId][path]['number']) || initialFormat || "dec";
         if (cycle) {
             if (format === 'dec') {
                 if ((obj.toString().length===13) && (obj<=2147483647000)) {
@@ -4072,10 +4073,12 @@ RED.utils = (function() {
                 format = 'dec';
             }
             formattedPaths[sourceId] = formattedPaths[sourceId]||{};
-            formattedPaths[sourceId][path] = format;
+            formattedPaths[sourceId][path] = formattedPaths[sourceId][path]||{};
+            formattedPaths[sourceId][path]['number'] = format;
         } else if (initialFormat !== undefined){
             formattedPaths[sourceId] = formattedPaths[sourceId]||{};
-            formattedPaths[sourceId][path] = format;
+            formattedPaths[sourceId][path] = formattedPaths[sourceId][path]||{};
+            formattedPaths[sourceId][path]['number'] = format;
         }
         if (format === 'dec') {
             element.text(""+obj);
@@ -4089,7 +4092,7 @@ RED.utils = (function() {
     }
 
     function formatBuffer(element,button,sourceId,path,cycle) {
-        var format = (formattedPaths[sourceId] && formattedPaths[sourceId][path]) || "raw";
+        var format = (formattedPaths[sourceId] && formattedPaths[sourceId][path] && formattedPaths[sourceId][path]['buffer']) || "raw";
         if (cycle) {
             if (format === 'raw') {
                 format = 'string';
@@ -4097,7 +4100,8 @@ RED.utils = (function() {
                 format = 'raw';
             }
             formattedPaths[sourceId] = formattedPaths[sourceId]||{};
-            formattedPaths[sourceId][path] = format;
+            formattedPaths[sourceId][path] = formattedPaths[sourceId][path]||{};
+            formattedPaths[sourceId][path]['buffer'] = format;
         }
         if (format === 'raw') {
             button.text('raw');
@@ -5477,16 +5481,22 @@ RED.popover = (function() {
         var size = options.size||"default";
         var offsetX = options.offsetX||0;
         var offsetY = options.offsetY||0;
+        var intervalCallback = options.intervalCallback||null;
+        var dialog1 = options.dialog1||null;
+        var dialog2 = options.dialog2||null;
         if (!deltaSizes[size]) {
             throw new Error("Invalid RED.popover size value:",size);
         }
 
         var timer = null;
+        var interval = null;
         var active;
+        var divHover = false;
         var div;
 
         var openPopup = function() {
             if (active) {
+                $('.red-ui-popover').remove();
                 div = $('<div class="red-ui-popover red-ui-popover-'+direction+'"></div>').appendTo("body");
                 if (size !== "default") {
                     div.addClass("red-ui-popover-size-"+size);
@@ -5516,14 +5526,54 @@ RED.popover = (function() {
                 }
 
                 div.fadeIn("fast");
+
+                if(trigger === 'hover') {
+                    div.on('mouseenter', function(e) {
+                        if (timer) {
+                            clearTimeout(timer);
+                        }
+                        divHover = true;
+                    });
+
+                    div.on('mouseleave', function(e) {
+                        if (timer) {
+                            clearTimeout(timer);
+                        }
+                        divHover = false;
+                        if(!active) timer = setTimeout(closePopup,delay.hide);
+                    });
+                }
+
+                if(dialog1) {
+                    $(".popover-dialog1").on("click", function(e) {
+                        if(interval) clearInterval(interval);
+                        dialog1();
+                        closePopup(false);
+                    });
+                }
+
+                if(dialog2) {
+                    $(".popover-dialog2").on("click", function(e) {
+                        if(interval) clearInterval(interval);
+                        dialog2();
+                        closePopup(false);
+                    });
+                }
+
+                if(intervalCallback) {
+                    interval = setInterval(intervalCallback, 1000);
+                }
             }
         }
-        var closePopup = function() {
+        var closePopup = function(fadeOut) {
             if (!active) {
+                if(interval) clearInterval(interval);
                 if (div) {
-                    div.fadeOut("fast",function() {
-                        $(this).remove();
-                    });
+                    if(fadeOut) {
+                        div.fadeOut("fast",function() {
+                            $(this).remove();
+                        });
+                    } else div.remove();
                     div = null;
                 }
             }
@@ -5532,7 +5582,9 @@ RED.popover = (function() {
         if (trigger === 'hover') {
 
             target.on('mouseenter',function(e) {
-                clearTimeout(timer);
+                if (timer) {
+                    clearTimeout(timer);
+                }
                 active = true;
                 timer = setTimeout(openPopup,delay.show);
             });
@@ -5541,7 +5593,7 @@ RED.popover = (function() {
                     clearTimeout(timer);
                 }
                 active = false;
-                setTimeout(closePopup,delay.hide);
+                if(!divHover) timer = setTimeout(closePopup,delay.hide);
             });
         } else if (trigger === 'click') {
             target.click(function(e) {
@@ -6222,6 +6274,12 @@ RED.stack = (function() {
                 })
             }
         },
+        arraySimple: {
+            value:"array",
+            label:"array",
+            icon:"red/images/typedInput/array.png",
+            validate: function(v) { try{JSON.parse(v);return true;}catch(e){return false;}}
+        },
         struct: {
             value:"struct",
             label:"struct",
@@ -6247,6 +6305,12 @@ RED.stack = (function() {
                 })
             }
         },
+        structSimple: {
+            value:"struct",
+            label:"struct",
+            icon:"red/images/typedInput/json.png",
+            validate: function(v) { try{JSON.parse(v);return true;}catch(e){return false;}}
+        },
         bin: {
             value: "bin",
             label: "buffer",
@@ -6260,6 +6324,11 @@ RED.stack = (function() {
                     }
                 })
             }
+        },
+        binSimple: {
+            value: "bin",
+            label: "buffer",
+            icon: "red/images/typedInput/bin.png"
         }
     };
     var nlsd = false;
@@ -6283,7 +6352,7 @@ RED.stack = (function() {
             this.uiSelect = this.elementDiv.wrap( "<div>" ).parent();
             var attrStyle = this.element.attr('style');
             var m;
-            if ((m = /width\s*:\s*(\d+(%|px))/i.exec(attrStyle)) !== null) {
+            if ((m = /width\s*:\s*(calc\s*\(.*\)|\d+(%|px))/i.exec(attrStyle)) !== null) {
                 this.element.css('width','100%');
                 this.uiSelect.width(m[1]);
                 this.uiWidth = null;
@@ -9237,6 +9306,7 @@ RED.workspaces = (function() {
         workspace_tabs = RED.tabs.create({
             id: "workspace-tabs",
             onchange: function(tab) {
+                RED.comms.homegear().invoke('setNodeVariable', null, tab.id, "enableEvents", true);
                 var event = {
                     old: activeWorkspace
                 }
@@ -11448,8 +11518,9 @@ RED.view = (function() {
                     //node.append("path").attr("class","node_error").attr("d","M 3,-3 l 10,0 l -5,-8 z");
 
                     //TODO: these ought to be SVG
-                    node.append("image").attr("class","node_error hidden").attr("xlink:href","icons/node-red/node-error.png").attr("x",0).attr("y",-6).attr("width",10).attr("height",9);
-                    node.append("image").attr("class","node_changed hidden").attr("xlink:href","icons/node-red/node-changed.png").attr("x",12).attr("y",-6).attr("width",10).attr("height",10);
+                    node.append("image").attr("class","node_fixed_input hidden").attr("xlink:href","icons/node-red/node-fixed-input.svg").attr("x",0).attr("y",-6).attr("width",10).attr("height",10);
+                    node.append("image").attr("class","node_error hidden").attr("xlink:href","icons/node-red/node-error.svg").attr("x",12).attr("y",-6).attr("width",10).attr("height",10);
+                    node.append("image").attr("class","node_changed hidden").attr("xlink:href","icons/node-red/node-changed.svg").attr("x",24).attr("y",-6).attr("width",10).attr("height",10);
             });
 
             node.each(function(d,i) {
@@ -11501,31 +11572,180 @@ RED.view = (function() {
                                 .on("mouseout",(function(){var node = d; return function(d,i) {portMouseOut(d3.select(this),node,PORT_TYPE_INPUT,i);}})());
 
                             input_group.each(function(i){
+                                var label = "";
+                                var types = "";
+                                var content = "";
                                 if(d._def && d._def.inputInfo && i < d._def.inputInfo.length) {
                                     var inputInfo = d._def.inputInfo[i];
                                     var infoBody = i18n.t(d.namespace + "/" + d.type + ".hni:" + d.type + ".input" + (i + 1) + "Description");
                                     if(inputInfo.types) {
-                                        var content = inputInfo.label ? "<p><b>" + inputInfo.label + "</b></p>" : "";
-                                        content += "<p><i>";
-                                        for(var i = 0; i < inputInfo.types.length; i++) {
-                                            if(i != 0) content += ", ";
-                                            content += inputInfo.types[i];
+                                        label = inputInfo.label ? "<p><b>" + inputInfo.label + "</b></p>" : "";
+                                        types = "<p><b>Types:</b> <i>";
+                                        for(var j = 0; j < inputInfo.types.length; j++) {
+                                            if(j != 0) types += ", ";
+                                            types += inputInfo.types[j];
                                         }
-                                        content += "</i></p>" + infoBody;
-
-                                        var popover = RED.popover.create({
-                                            target:$(this),
-                                            trigger: "hover",
-                                            width: "250px",
-                                            content: content,
-                                            direction: "left",
-                                            offsetX: -13,
-                                            offsetY: 4,
-                                            delay: { show: 750, hide: 50 }
-                                        });
-                                        $(this).data('popover',popover);
+                                        types = "</i></p>";
+                                        content = infoBody;
                                     }
                                 }
+                                
+                                var nodeId = d.id;
+                                var valueVariableName = "inputValue" + i;
+                                var historyVariableName = "inputHistory" + i;
+                                var fixedInputVariableName = "fixedInput" + i;
+
+                                dynamicContent = function() {
+                                    RED.comms.homegear().invoke("getNodeVariable", function(response) { setTimeout(function() {$(".red-ui-popover .last_value").text(JSON.stringify(response.result)); }, 100); }, nodeId, valueVariableName);
+                                    return $("<div style=\"float: right\"><a class=\"popover-dialog1\" href=\"#\">History</a>&nbsp;&nbsp;<a class=\"popover-dialog2\" href=\"#\">Set</a></div>" + label + types + "<p><b>Last value:</b> <span class=\"last_value\">-</span></p><div style=\"clear: both\">" + content + "</div>");
+                                };
+
+                                var intervalCallback = function() {
+                                    RED.comms.homegear().invoke("getNodeVariable", function(response) { $(".red-ui-popover .last_value").text(JSON.stringify(response.result)); }, nodeId, valueVariableName);
+                                }
+
+                                openDialog1 = function() {
+                                    var historyDialog = $('<div id="popover-dialog" class="hide node-red-dialog"><div class="history-values"></div></div>')
+                                        .appendTo("body")
+                                        .dialog({
+                                            modal: true,
+                                            autoOpen: false,
+                                            width: 500,
+                                            height: 450,
+                                            resizable: false,
+                                            buttons: [
+                                                {
+                                                    id: "popover-dialog-close",
+                                                    class: "primary",
+                                                    text: RED._("common.label.close"),
+                                                    click: function() {
+                                                        $( this ).dialog( "close" );
+                                                    }
+                                                }
+                                            ],
+                                            open: function(e) {
+                                                $(this).parent().find(".ui-dialog-titlebar-close").hide();
+                                                
+                                                RED.comms.homegear().invoke("getNodeVariable", function(response) {
+                                                    var html = "";
+                                                    $.each(response.result, function(key, value) {
+                                                        var date = new Date(value[0]);
+                                                        html += "<p><span class=\"value-history-date\">" + date.toLocaleDateString(undefined, { "year": "numeric", "day": "2-digit", "month": "2-digit" }) + " " + date.toLocaleTimeString(undefined, { "hour12": false }) + "." + ("000" + (value[0] % 1000)).slice(-3) + ": </span><span>" + value[1] + "</span></p>";
+                                                    });
+                                                    $("#popover-dialog .history-values").html(html); 
+                                                }, nodeId, historyVariableName);
+
+                                                var interval = setInterval(function() {
+                                                    RED.comms.homegear().invoke("getNodeVariable", function(response) {
+                                                        var html = "";
+                                                        $.each(response.result, function(key, value) {
+                                                            var date = new Date(value[0]);
+                                                            html += "<p><span class=\"value-history-date\">" + date.toLocaleDateString(undefined, { "year": "numeric", "day": "2-digit", "month": "2-digit" }) + " " + date.toLocaleTimeString(undefined, { "hour12": false }) + "." + ("000" + (value[0] % 1000)).slice(-3) + ": </span><span>" + value[1] + "</span></p>";
+                                                        });
+                                                        $("#popover-dialog .history-values").html(html); 
+                                                    }, nodeId, historyVariableName);
+                                                }, 1000);
+
+                                                $(this).dialog("option", "interval", interval);
+                                            },
+                                            close: function(e) {
+                                                var interval = $(this).dialog("option", "interval");
+                                                if(interval) clearInterval(interval);
+                                                $(this).remove();
+                                            }
+                                        });
+                                    historyDialog.dialog("option", "title", "History").dialog("open");
+                                };
+
+                                openDialog2 = function() {
+                                    var fixedInputDialog = $('<div id="popover-dialog" class="hide node-red-dialog"><div class="fixed-input"><p>You can set the input to a fixed value here. The fixed input is reset upon restart of Homegear.</p><form><input type="text" id="fixed-input-payload" style="width:100%"/><input type="hidden" id="fixed-input-payloadType"/></form></div></div>')
+                                        .appendTo("body")
+                                        .dialog({
+                                            modal: true,
+                                            autoOpen: false,
+                                            width: 400,
+                                            resizable: false,
+                                            buttons: [
+                                                {
+                                                    id: "popover-dialog-cancel",
+                                                    class: "primary",
+                                                    text: RED._("common.label.cancel"),
+                                                    click: function() {
+                                                        $( this ).dialog( "close" );
+                                                    }
+                                                },
+                                                {
+                                                    id: "popover-dialog-clear",
+                                                    class: "primary",
+                                                    text: RED._("common.label.clear"),
+                                                    click: function() {
+                                                        RED.comms.homegear().invoke("setNodeVariable", null, nodeId, fixedInputVariableName, false);
+
+                                                        d.fixedInputs -= 1;
+                                                        d.dirty = true;
+                                                        $( this ).dialog( "close" );
+                                                        redraw();
+                                                    }
+                                                },
+                                                {
+                                                    id: "popover-dialog-set",
+                                                    class: "primary",
+                                                    text: RED._("common.label.set"),
+                                                    click: function() {
+                                                        var element = $("#fixed-input-payload");
+                                                        RED.comms.homegear().invoke("setNodeVariable", null, nodeId, fixedInputVariableName, [element.typedInput('type'), element.typedInput('value')]);
+
+                                                        if(!$("#fixed-input-payload").data('oldPayload')) d.fixedInputs += 1;
+                                                        d.dirty = true;
+                                                        $( this ).dialog( "close" );
+                                                        redraw();
+                                                    }
+                                                }
+                                            ],
+                                            open: function(e) {
+                                                $(this).parent().find(".ui-dialog-titlebar-close").hide();
+
+                                                RED.comms.homegear().invoke("getNodeVariable", function(response) {
+                                                    var payloadType = response.result ? response.result[0] : 'int';
+                                                    var payload = response.result ? response.result[1] : '';
+                                                    oldPayload = response.result ? true : false;
+
+                                                    $("#fixed-input-payloadType").val(payloadType);
+
+                                                    $("#fixed-input-payload").typedInput({
+                                                        default: 'int',
+                                                        typeField: $("#fixed-input-payloadType"),
+                                                        types:['bool','int','float','string','arraySimple','structSimple','binSimple']
+                                                    });
+
+                                                    $("#fixed-input-payload").typedInput('type', payloadType);
+
+                                                    $("#fixed-input-payload").typedInput('value', payload);
+
+                                                    $("#fixed-input-payload").data('oldPayload', oldPayload);
+                                                }, nodeId, fixedInputVariableName);
+                                            },
+                                            close: function(e) {
+                                                $(this).remove();
+                                            }
+                                        });
+                                    fixedInputDialog.dialog("option", "title", "Set fixed input").dialog("open");
+                                };
+
+                                var popover = RED.popover.create({
+                                    target:$(this),
+                                    trigger: "hover",
+                                    width: "250px",
+                                    content: dynamicContent,
+                                    direction: "left",
+                                    offsetX: -13,
+                                    offsetY: 4,
+                                    delay: { show: 300, hide: 300 },
+                                    dialog1: openDialog1,
+                                    dialog2: openDialog2,
+                                    intervalCallback: intervalCallback
+                                });
+                                $(this).data('popover',popover);
                             });
 
                             d._inputPorts.exit().remove();
@@ -11696,6 +11916,10 @@ RED.view = (function() {
                             thisNode.selectAll(".node_error")
                                 .attr("x",function(d){return d.w-10-((d.changed||d.moved)?13:0)})
                                 .classed("hidden",function(d) { return d.valid; });
+
+                            thisNode.selectAll(".node_fixed_input")
+                                .attr("x",function(d){return d.w-10-((d.changed||d.moved)?13:0)-((!d.valid)?13:0)})
+                                .classed("hidden",function(d) { return d.fixedInputs == 0; });
 
                             /*thisNode.selectAll(".port_input").each(function(d,i) {
                                     var port = d3.select(this);
@@ -12549,7 +12773,7 @@ RED.palette = (function() {
 
     var categoryContainers = {};
 
-    function createCategoryContainer(category, label){
+    function createCategoryContainer(category, label) {
         label = (label || category).replace(/_/g, " ");
         var catDiv = $('<div id="palette-container-'+category+'" class="palette-category palette-close hide">'+
             '<div id="palette-header-'+category+'" class="palette-header"><i class="expanded fa fa-angle-down"></i><span>'+label+'</span></div>'+
@@ -12852,14 +13076,26 @@ RED.palette = (function() {
             }
         }
     }
+
     function hideNodeType(nt) {
         var nodeTypeId = escapeNodeType(nt);
-        $("#palette_node_"+nodeTypeId).hide();
+        var paletteNode = $("#palette_node_"+nodeTypeId);
+        paletteNode.hide();
+        var categoryNode = paletteNode.closest(".palette-category");
+        var cl = categoryNode.find(".palette_node");
+        var c = 0;
+        for (var i = 0; i < cl.length; i++) {
+            if ($(cl[i]).css('display') === 'none') { c += 1; }
+        }
+        if (c === cl.length) { categoryNode.hide(); }
     }
 
     function showNodeType(nt) {
         var nodeTypeId = escapeNodeType(nt);
-        $("#palette_node_"+nodeTypeId).show();
+        var paletteNode = $("#palette_node_"+nodeTypeId);
+        var categoryNode = paletteNode.closest(".palette-category");
+        categoryNode.show();
+        paletteNode.show();
     }
 
     function refreshNodeTypes() {
@@ -12923,7 +13159,6 @@ RED.palette = (function() {
         RED.events.on('registry:node-type-removed', function(nodeType) {
             removeNodeType(nodeType);
         });
-
         RED.events.on('registry:node-set-enabled', function(nodeSet) {
             for (var j=0;j<nodeSet.types.length;j++) {
                 showNodeType(nodeSet.types[j]);
@@ -12953,7 +13188,6 @@ RED.palette = (function() {
                 }
             }
         });
-
 
         $("#palette > .palette-spinner").show();
 
@@ -15605,6 +15839,8 @@ RED.editor = (function() {
                                                 if (outputsChanged) {
                                                     changed = true;
                                                 }
+                                            } else {
+                                                newValue = parseInt(newValue);
                                             }
                                         }
                                         if (editing_node[d] != newValue) {
@@ -16561,12 +16797,12 @@ RED.editor = (function() {
 
                 tabs.addTab({
                     id: 'expression-help',
-                    label: 'Function reference',
+                    label: RED._('expressionEditor.functionReference'),
                     content: $("#node-input-expression-tab-help")
                 });
                 tabs.addTab({
                     id: 'expression-tests',
-                    label: 'Test',
+                    label: RED._('expressionEditor.test'),
                     content: $("#node-input-expression-tab-test")
                 });
                 testDataEditor = RED.editor.createEditor({
@@ -18786,16 +19022,19 @@ RED.search = (function() {
         var commonCount = 0;
         var item;
         for(i=0;i<common.length;i++) {
-            item = {
-                type: common[i],
-                common: true,
-                def: RED.nodes.getType(common[i])
-            };
-            item.label = getTypeLabel(item.type,item.def);
-            if (i === common.length-1) {
-                item.separator = true;
+            var itemDef = RED.nodes.getType(common[i]);
+            if (itemDef) {
+                item = {
+                    type: common[i],
+                    common: true,
+                    def: itemDef
+                };
+                item.label = getTypeLabel(item.type,item.def);
+                if (i === common.length-1) {
+                    item.separator = true;
+                }
+                searchResults.editableList('addItem', item);
             }
-            searchResults.editableList('addItem', item);
         }
         for(i=0;i<Math.min(5,recentlyUsed.length);i++) {
             item = {

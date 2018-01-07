@@ -32,14 +32,9 @@
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 
-// Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
-//#define FLOWS_MANUAL_CLIENT_START
-
-#ifdef FLOWS_MANUAL_CLIENT_START
-	pid_t _manualClientCurrentProcessId = 1;
-    std::mutex _unconnectedProcessesMutex;
-    std::queue<pid_t> _unconnectedProcesses;
-#endif
+pid_t _manualClientCurrentProcessId = 1;
+std::mutex _unconnectedProcessesMutex;
+std::queue<pid_t> _unconnectedProcesses;
 
 namespace Flows
 {
@@ -103,6 +98,7 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("getNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetNodeData()));
 	_rpcMethods.emplace("getFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetFlowData()));
 	_rpcMethods.emplace("getGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetGlobalData()));
+	_rpcMethods.emplace("getNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetNodeVariable()));
 	_rpcMethods.emplace("getPairingMethods", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPairingMethods()));
 	_rpcMethods.emplace("getParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamset()));
 	_rpcMethods.emplace("getParamsetDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetDescription()));
@@ -132,6 +128,7 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("rssiInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRssiInfo()));
 	_rpcMethods.emplace("runScript", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRunScript()));
 	_rpcMethods.emplace("searchDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSearchDevices()));
+    _rpcMethods.emplace("searchInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSearchInterfaces()));
 	_rpcMethods.emplace("setData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetData()));
 	_rpcMethods.emplace("setId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetId()));
 	_rpcMethods.emplace("setInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInstallMode()));
@@ -587,16 +584,70 @@ void FlowsServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVaria
     }
 }
 
+BaseLib::PVariable FlowsServer::getNodeVariable(std::string nodeId, std::string topic)
+{
+	try
+	{
+		PFlowsClientData clientData;
+		int32_t clientId = 0;
+		bool isFlow = false;
+		{
+			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+			auto nodeClientIdIterator = _nodeClientIdMap.find(nodeId);
+			if(nodeClientIdIterator == _nodeClientIdMap.end())
+			{
+				std::lock_guard<std::mutex> flowClientIdMapGuard(_flowClientIdMapMutex);
+				nodeClientIdIterator = _flowClientIdMap.find(nodeId);
+				if(nodeClientIdIterator == _nodeClientIdMap.end()) return std::make_shared<BaseLib::Variable>();
+				isFlow = true;
+			}
+			clientId = nodeClientIdIterator->second;
+		}
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			auto clientIterator = _clients.find(clientId);
+			if(clientIterator == _clients.end()) return std::make_shared<BaseLib::Variable>();
+			clientData = clientIterator->second;
+		}
+
+		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+		parameters->reserve(2);
+		parameters->push_back(std::make_shared<BaseLib::Variable>(nodeId));
+		parameters->push_back(std::make_shared<BaseLib::Variable>(topic));
+		return sendRequest(clientData, isFlow ? "getFlowVariable" : "getNodeVariable", parameters, true);
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 void FlowsServer::setNodeVariable(std::string nodeId, std::string topic, BaseLib::PVariable value)
 {
 	try
 	{
 		PFlowsClientData clientData;
 		int32_t clientId = 0;
+        bool isFlow = false;
 		{
 			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
 			auto nodeClientIdIterator = _nodeClientIdMap.find(nodeId);
-			if(nodeClientIdIterator == _nodeClientIdMap.end()) return;
+			if(nodeClientIdIterator == _nodeClientIdMap.end())
+            {
+                std::lock_guard<std::mutex> flowClientIdMapGuard(_flowClientIdMapMutex);
+                nodeClientIdIterator = _flowClientIdMap.find(nodeId);
+                if(nodeClientIdIterator == _nodeClientIdMap.end()) return;
+                isFlow = true;
+            }
 			clientId = nodeClientIdIterator->second;
 		}
 		{
@@ -606,12 +657,12 @@ void FlowsServer::setNodeVariable(std::string nodeId, std::string topic, BaseLib
 			clientData = clientIterator->second;
 		}
 
-		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
-		parameters->reserve(3);
-		parameters->push_back(std::make_shared<BaseLib::Variable>(nodeId));
-		parameters->push_back(std::make_shared<BaseLib::Variable>(topic));
-		parameters->push_back(value);
-		sendRequest(clientData, "setNodeVariable", parameters, false);
+        BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+        parameters->reserve(3);
+        parameters->push_back(std::make_shared<BaseLib::Variable>(nodeId));
+        parameters->push_back(std::make_shared<BaseLib::Variable>(topic));
+        parameters->push_back(value);
+        sendRequest(clientData, isFlow ? "setFlowVariable" : "setNodeVariable", parameters, false);
 	}
 	catch(const std::exception& ex)
     {
@@ -1071,6 +1122,7 @@ void FlowsServer::startFlows()
 			if(disabledFlows.find(element.first) == disabledFlows.end())
 			{
 				PFlowInfoServer flowInfo = std::make_shared<FlowInfoServer>();
+                flowInfo->nodeBlueId = element.first;
 				flowInfo->maxThreadCount = maxThreadCount;
 				flowInfo->flow = flow;
 				startFlow(flowInfo, nodeIds[element.first]);
@@ -1173,6 +1225,57 @@ void FlowsServer::sendShutdown()
     }
 }
 
+bool FlowsServer::sendReset()
+{
+	try
+	{
+        _out.printInfo("Info: Resetting flows client process.");
+		std::vector<PFlowsClientData> clients;
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) continue;
+				clients.push_back(i->second);
+			}
+		}
+		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		{
+			BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+            auto result = sendRequest(*i, "reset", parameters, true);
+			if(result->errorStruct)
+            {
+                _out.printError("Error executing reset: " + result->structValue->at("faultString")->stringValue);
+                return false;
+            }
+            else
+            {
+                std::lock_guard<std::mutex> processGuard(_processMutex);
+                std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find((*i)->pid);
+                if(processIterator != _processes.end()) processIterator->second->reset();
+            }
+		}
+
+		std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+		_nodeClientIdMap.clear();
+
+        return true;
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+    return false;
+}
+
 void FlowsServer::closeClientConnections()
 {
 	try
@@ -1265,10 +1368,14 @@ void FlowsServer::restartFlows()
 		std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
 		_flowsRestarting = true;
 		stopNodes();
-		_out.printInfo("Info: Stopping Flows...");
-		sendShutdown();
-		_out.printInfo("Info: Closing connections to Flows clients...");
-		closeClientConnections();
+		bool result = sendReset();
+        if(!result)
+        {
+            _out.printInfo("Info: Stopping Flows...");
+            sendShutdown();
+            _out.printInfo("Info: Closing connections to Flows clients...");
+            closeClientConnections();
+        }
 		getMaxThreadCounts();
 		_out.printInfo("Info: Starting Flows...");
 		startFlows();
@@ -1759,7 +1866,7 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 
 			if(GD::bl->debugLevel >= 4)
 			{
-				_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName + " Parameters:");
+				_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
 				if(GD::bl->debugLevel >= 5)
 				{
 					for(std::vector<BaseLib::PVariable>::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
@@ -2108,16 +2215,19 @@ PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
 		_out.printInfo("Info: Spawning new flows process.");
 		PFlowsProcess process(new FlowsProcess());
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rl" };
-#ifdef FLOWS_MANUAL_CLIENT_START
-        pid_t currentProcessId = _manualClientCurrentProcessId++;
-		process->setPid(currentProcessId);
+        if(GD::bl->settings.flowsManualClientStart())
         {
-            std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
-            _unconnectedProcesses.push(currentProcessId);
+            pid_t currentProcessId = _manualClientCurrentProcessId++;
+            process->setPid(currentProcessId);
+            {
+                std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
+                _unconnectedProcesses.push(currentProcessId);
+            }
         }
-#else
-		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
-#endif
+        else
+        {
+            process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
+        }
 		if(process->getPid() != -1)
 		{
 			{
@@ -2340,6 +2450,11 @@ void FlowsServer::startFlow(PFlowInfoServer& flowInfo, std::set<std::string>& no
 			}
 		}
 
+        {
+            std::lock_guard<std::mutex> flowClientIdMapGuard(_flowClientIdMapMutex);
+            _flowClientIdMap.emplace(flowInfo->nodeBlueId, clientData->id);
+        }
+
 		BaseLib::PArray parameters(new BaseLib::Array{
 				BaseLib::PVariable(new BaseLib::Variable(flowInfo->id)),
 				flowInfo->flow
@@ -2421,7 +2536,7 @@ BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData
 	try
 	{
 		pid_t pid = parameters->at(0)->integerValue;
-#ifdef FLOWS_MANUAL_CLIENT_START
+		if(GD::bl->settings.flowsManualClientStart())
         {
             std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
             if (!_unconnectedProcesses.empty())
@@ -2430,7 +2545,6 @@ BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData
                 _unconnectedProcesses.pop();
             }
         }
-#endif
 		PFlowsProcess process;
 		{
 			std::lock_guard<std::mutex> processGuard(_processMutex);
@@ -2594,9 +2708,10 @@ BaseLib::PVariable FlowsServer::nodeEvent(PFlowsClientData& clientData, BaseLib:
 			_lastNodeEvent = BaseLib::HelperFunctions::getTime();
 			_nodeEventCounter = 0;
 		}
-		if(parameters->at(1)->stringValue.compare(0, 14, "highlightNode/") == 0 && _nodeEventCounter > 60) return std::make_shared<BaseLib::Variable>();
-		else if(parameters->at(1)->stringValue != "debug" && _nodeEventCounter > 300) return std::make_shared<BaseLib::Variable>();
-		else if(_nodeEventCounter > 600) return std::make_shared<BaseLib::Variable>();
+
+		if((parameters->at(1)->stringValue.compare(0, 14, "highlightNode/") == 0 || parameters->at(1)->stringValue.compare(0, 14, "highlightLink/") == 0) && _nodeEventCounter > 300) return std::make_shared<BaseLib::Variable>();
+		else if(parameters->at(1)->stringValue != "debug" && _nodeEventCounter > 600) return std::make_shared<BaseLib::Variable>();
+		else if(_nodeEventCounter > 900) return std::make_shared<BaseLib::Variable>();
 		_nodeEventCounter++;
 
 		GD::rpcClient->broadcastNodeEvent(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));

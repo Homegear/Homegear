@@ -34,17 +34,12 @@
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 
-// Use e. g. for debugging with valgrind. Note that only one client can be started if activated.
-//#define SE_MANUAL_CLIENT_START
-
 namespace ScriptEngine
 {
 
-#ifdef SE_MANUAL_CLIENT_START
-    pid_t _manualClientCurrentProcessId = 1;
-	std::mutex _unconnectedProcessesMutex;
-	std::queue<pid_t> _unconnectedProcesses;
-#endif
+pid_t _manualClientCurrentProcessId = 1;
+std::mutex _unconnectedProcessesMutex;
+std::queue<pid_t> _unconnectedProcesses;
 
 ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 {
@@ -106,6 +101,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("getNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetNodeData()));
 	_rpcMethods.emplace("getFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetFlowData()));
 	_rpcMethods.emplace("getGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetGlobalData()));
+	_rpcMethods.emplace("getNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetNodeVariable()));
 	_rpcMethods.emplace("getPairingMethods", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPairingMethods()));
 	_rpcMethods.emplace("getParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamset()));
 	_rpcMethods.emplace("getParamsetDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetDescription()));
@@ -136,6 +132,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("rssiInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRssiInfo()));
 	_rpcMethods.emplace("runScript", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRunScript()));
 	_rpcMethods.emplace("searchDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSearchDevices()));
+    _rpcMethods.emplace("searchInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSearchInterfaces()));
 	_rpcMethods.emplace("setData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetData()));
 	_rpcMethods.emplace("setId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetId()));
 	_rpcMethods.emplace("setInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInstallMode()));
@@ -1019,7 +1016,7 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 
 			if(GD::bl->debugLevel >= 4)
 			{
-				_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName + " Parameters:");
+				_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
 				if(GD::bl->debugLevel >= 5)
 				{
 					for(std::vector<BaseLib::PVariable>::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
@@ -1380,16 +1377,19 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 		_out.printInfo("Info: Spawning new script engine process.");
 		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess(nodeProcess));
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rse" };
-#ifdef SE_MANUAL_CLIENT_START
-        pid_t currentProcessId = _manualClientCurrentProcessId++;
-        process->setPid(currentProcessId);
-        {
-            std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
-            _unconnectedProcesses.push(currentProcessId);
-        }
-#else
-		process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
-#endif
+		if(GD::bl->settings.scriptEngineManualClientStart())
+		{
+			pid_t currentProcessId = _manualClientCurrentProcessId++;
+			process->setPid(currentProcessId);
+			{
+				std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
+				_unconnectedProcesses.push(currentProcessId);
+			}
+		}
+		else
+		{
+			process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
+		}
 		if(process->getPid() != -1)
 		{
 			std::unique_lock<std::mutex> processGuard(_processMutex);
@@ -1887,18 +1887,17 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
 	BaseLib::PVariable ScriptEngineServer::registerScriptEngineClient(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
 	{
 		try
-		{
-			pid_t pid = parameters->at(0)->integerValue;
-#ifdef SE_MANUAL_CLIENT_START
+        {
+            pid_t pid = parameters->at(0)->integerValue;
+            if(GD::bl->settings.scriptEngineManualClientStart())
             {
                 std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
-                if (!_unconnectedProcesses.empty())
+                if(!_unconnectedProcesses.empty())
                 {
                     pid = _unconnectedProcesses.front();
                     _unconnectedProcesses.pop();
                 }
             }
-#endif
 			std::unique_lock<std::mutex> processGuard(_processMutex);
 			std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(pid);
 			if(processIterator == _processes.end())
@@ -2127,7 +2126,21 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
 			if(!setting) return BaseLib::Variable::createError(-3, "Setting not found.");
 
 			if(!setting->stringValue.empty()) return BaseLib::PVariable(new BaseLib::Variable(setting->stringValue));
-			else if(!setting->binaryValue.empty()) return BaseLib::PVariable(new BaseLib::Variable(setting->binaryValue));
+			else if(!setting->binaryValue.empty())
+			{
+				if(setting->binaryValue.size() > 3 && setting->binaryValue[0] == 'B' && setting->binaryValue[1] == 'i' && setting->binaryValue[2] == 'n')
+				{
+					try
+					{
+						return _rpcDecoder->decodeResponse(setting->binaryValue);
+					}
+					catch(BaseLib::Exception& ex)
+					{
+						return BaseLib::PVariable(new BaseLib::Variable(setting->binaryValue));
+					}
+				}
+				else return BaseLib::PVariable(new BaseLib::Variable(setting->binaryValue));
+			}
 			else return BaseLib::PVariable(new BaseLib::Variable(setting->integerValue));
 		}
 		catch(const std::exception& ex)
