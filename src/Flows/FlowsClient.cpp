@@ -652,17 +652,19 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
                     auto internalMessageIterator = queueEntry->message->structValue->find("_internal");
                     if (internalMessageIterator != queueEntry->message->structValue->end()) setInternalMessage(queueEntry->nodeInfo->id, internalMessageIterator->second);
 
-                    std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
-                    auto nodeIterator = _fixedInputValues.find(queueEntry->nodeInfo->id);
-                    if(nodeIterator != _fixedInputValues.end())
                     {
-                        auto inputIterator = nodeIterator->second.find(queueEntry->targetPort);
-                        if (inputIterator != nodeIterator->second.end())
+                        std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
+                        auto nodeIterator = _fixedInputValues.find(queueEntry->nodeInfo->id);
+                        if(nodeIterator != _fixedInputValues.end())
                         {
-                            auto messageCopy = std::make_shared<Flows::Variable>();
-                            *messageCopy = *(queueEntry->message);
-                            (*messageCopy->structValue)["payload"] = inputIterator->second;
-                            queueEntry->message = messageCopy;
+                            auto inputIterator = nodeIterator->second.find(queueEntry->targetPort);
+                            if(inputIterator != nodeIterator->second.end())
+                            {
+                                auto messageCopy = std::make_shared<Flows::Variable>();
+                                *messageCopy = *(queueEntry->message);
+                                (*messageCopy->structValue)["payload"] = inputIterator->second;
+                                queueEntry->message = messageCopy;
+                            }
                         }
                     }
 
@@ -1045,17 +1047,19 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
                         message->structValue->emplace("_internal", internalMessage);
                     }
 
-                    std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
-                    auto nodeIterator = _fixedInputValues.find(outputNodeInfo->id);
-                    if(nodeIterator != _fixedInputValues.end())
                     {
-                        auto inputIterator = nodeIterator->second.find(node.port);
-                        if (inputIterator != nodeIterator->second.end())
+                        std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
+                        auto nodeIterator = _fixedInputValues.find(outputNodeInfo->id);
+                        if(nodeIterator != _fixedInputValues.end())
                         {
-                            auto messageCopy = std::make_shared<Flows::Variable>();
-                            *messageCopy = *message;
-                            (*messageCopy->structValue)["payload"] = inputIterator->second;
-                            message = messageCopy;
+                            auto inputIterator = nodeIterator->second.find(node.port);
+                            if(inputIterator != nodeIterator->second.end())
+                            {
+                                auto messageCopy = std::make_shared<Flows::Variable>();
+                                *messageCopy = *message;
+                                (*messageCopy->structValue)["payload"] = inputIterator->second;
+                                message = messageCopy;
+                            }
                         }
                     }
 
@@ -2166,8 +2170,10 @@ Flows::PVariable FlowsClient::setNodeVariable(Flows::PArray& parameters)
             }
             else return Flows::Variable::createError(-3, "Unknown payload type.");
 
-            std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
-            _fixedInputValues[parameters->at(0)->stringValue][index] = value;
+            {
+                std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
+                _fixedInputValues[parameters->at(0)->stringValue][index] = value;
+            }
 
             PNodeInfo nodeInfo;
             {
