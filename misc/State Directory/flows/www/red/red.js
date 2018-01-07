@@ -11627,6 +11627,7 @@ RED.view = (function() {
                                                 $(this).parent().find(".ui-dialog-titlebar-close").hide();
                                                 
                                                 RED.comms.homegear().invoke("getNodeVariable", function(response) {
+                                                    if(!response.result) return;
                                                     var html = "";
                                                     $.each(response.result, function(key, value) {
                                                         var date = new Date(value[0]);
@@ -11637,6 +11638,7 @@ RED.view = (function() {
 
                                                 var interval = setInterval(function() {
                                                     RED.comms.homegear().invoke("getNodeVariable", function(response) {
+                                                        if(!response.result) return;
                                                         var html = "";
                                                         $.each(response.result, function(key, value) {
                                                             var date = new Date(value[0]);
