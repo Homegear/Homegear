@@ -2168,6 +2168,26 @@ Flows::PVariable FlowsClient::setNodeVariable(Flows::PArray& parameters)
 
             std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
             _fixedInputValues[parameters->at(0)->stringValue][index] = value;
+
+            PNodeInfo nodeInfo;
+            {
+                std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+                auto nodesIterator = _nodes.find(parameters->at(0)->stringValue);
+                if(nodesIterator != _nodes.end()) nodeInfo = nodesIterator->second;
+            }
+
+            Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
+            if(nodeInfo && node)
+            {
+                auto message = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+                message->structValue->emplace("payload", value);
+
+                {
+                    std::lock_guard<std::mutex> nodeInputGuard(node->getInputMutex());
+                    node->input(nodeInfo, index, message);
+                }
+            }
+
             return std::make_shared<Flows::Variable>();
         }
 
