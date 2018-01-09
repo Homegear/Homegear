@@ -11541,6 +11541,8 @@ RED.view = (function() {
                         thisNode.attr("transform", function(d) { return "translate(" + (d.x-d.w/2) + "," + (d.y-d.h/2) + ")"; });
 
                         if (mouse_mode != RED.state.MOVING_ACTIVE) {
+                            if(!d.hasOwnProperty("fixedInputs")) d.fixedInputs = 0;
+                            
                             thisNode.selectAll(".node")
                                 .attr("width",function(d){return d.w})
                                 .attr("height",function(d){return d.h})
@@ -11682,7 +11684,6 @@ RED.view = (function() {
                                                     text: RED._("common.label.clear"),
                                                     click: function() {
                                                         RED.comms.homegear().invoke("setNodeVariable", null, nodeId, fixedInputVariableName, false);
-
                                                         d.fixedInputs -= 1;
                                                         d.dirty = true;
                                                         $( this ).dialog( "close" );
@@ -11742,7 +11743,7 @@ RED.view = (function() {
                                     direction: "left",
                                     offsetX: -13,
                                     offsetY: 4,
-                                    delay: { show: 300, hide: 300 },
+                                    delay: { show: 750, hide: 300 },
                                     dialog1: openDialog1,
                                     dialog2: openDialog2,
                                     intervalCallback: intervalCallback

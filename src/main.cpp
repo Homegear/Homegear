@@ -106,7 +106,8 @@ void bindRPCServers()
 		if(settings->authType != BaseLib::Rpc::ServerInfo::Info::AuthType::none) info += ", authentication enabled";
 		info += "...";
 		GD::out.printInfo(info);
-		settings->socketDescriptor = tcpSocket.bindAndReturnSocket(GD::bl->fileDescriptorManager, settings->interface, std::to_string(settings->port), settings->address);
+        int32_t listenPort = -1;
+		settings->socketDescriptor = tcpSocket.bindAndReturnSocket(GD::bl->fileDescriptorManager, settings->interface, std::to_string(settings->port), settings->address, listenPort);
 		if(settings->socketDescriptor) GD::out.printInfo("Info: Server successfully bound.");
 	}
 }
