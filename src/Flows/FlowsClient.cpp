@@ -432,7 +432,7 @@ void FlowsClient::start()
                 processedBytes = 0;
                 while(processedBytes < bytesRead)
                 {
-                    processedBytes += _binaryRpc->process(&buffer[processedBytes], bytesRead - processedBytes);
+                    processedBytes += _binaryRpc->process(buffer.data() + processedBytes, bytesRead - processedBytes);
                     if(_binaryRpc->isFinished())
                     {
                         if(_binaryRpc->getType() == Flows::BinaryRpc::Type::request)
