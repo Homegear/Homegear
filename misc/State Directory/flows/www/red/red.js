@@ -5471,6 +5471,7 @@ RED.popover = (function() {
             leftLeft: 16
         }
     }
+    var popoverCallbackInterval = null;
     function createPopover(options) {
         var target = options.target;
         var direction = options.direction || "right";
@@ -5489,13 +5490,13 @@ RED.popover = (function() {
         }
 
         var timer = null;
-        var interval = null;
         var active;
         var divHover = false;
         var div;
 
         var openPopup = function() {
             if (active) {
+                if(popoverCallbackInterval) clearInterval(popoverCallbackInterval);
                 $('.red-ui-popover').remove();
                 div = $('<div class="red-ui-popover red-ui-popover-'+direction+'"></div>').appendTo("body");
                 if (size !== "default") {
@@ -5546,28 +5547,28 @@ RED.popover = (function() {
 
                 if(dialog1) {
                     $(".popover-dialog1").on("click", function(e) {
-                        if(interval) clearInterval(interval);
                         dialog1();
+                        active = false;
                         closePopup(false);
                     });
                 }
 
                 if(dialog2) {
                     $(".popover-dialog2").on("click", function(e) {
-                        if(interval) clearInterval(interval);
                         dialog2();
+                        active = false;
                         closePopup(false);
                     });
                 }
 
-                if(intervalCallback) {
-                    interval = setInterval(intervalCallback, 1000);
+                if(intervalCallback) {                    
+                    popoverCallbackInterval = setInterval(intervalCallback, 1000);
                 }
             }
         }
         var closePopup = function(fadeOut) {
             if (!active) {
-                if(interval) clearInterval(interval);
+                if(popoverCallbackInterval) clearInterval(popoverCallbackInterval);
                 if (div) {
                     if(fadeOut) {
                         div.fadeOut("fast",function() {
@@ -11541,8 +11542,6 @@ RED.view = (function() {
                         thisNode.attr("transform", function(d) { return "translate(" + (d.x-d.w/2) + "," + (d.y-d.h/2) + ")"; });
 
                         if (mouse_mode != RED.state.MOVING_ACTIVE) {
-                            if(!d.hasOwnProperty("fixedInputs")) d.fixedInputs = 0;
-                            
                             thisNode.selectAll(".node")
                                 .attr("width",function(d){return d.w})
                                 .attr("height",function(d){return d.h})
@@ -11684,6 +11683,7 @@ RED.view = (function() {
                                                     text: RED._("common.label.clear"),
                                                     click: function() {
                                                         RED.comms.homegear().invoke("setNodeVariable", null, nodeId, fixedInputVariableName, false);
+
                                                         d.fixedInputs -= 1;
                                                         d.dirty = true;
                                                         $( this ).dialog( "close" );
@@ -11743,7 +11743,7 @@ RED.view = (function() {
                                     direction: "left",
                                     offsetX: -13,
                                     offsetY: 4,
-                                    delay: { show: 750, hide: 300 },
+                                    delay: { show: 300, hide: 300 },
                                     dialog1: openDialog1,
                                     dialog2: openDialog2,
                                     intervalCallback: intervalCallback
