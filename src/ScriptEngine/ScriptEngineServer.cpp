@@ -1692,9 +1692,10 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 {
 	try
 	{
-		if(_shuttingDown || GD::bl->shuttingDown) return;
 		std::unique_lock<std::mutex> executeScriptGuard(_executeScriptMutex);
+		if(_shuttingDown || GD::bl->shuttingDown) return;
 		PScriptEngineProcess process = getFreeProcess(scriptInfo->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode, scriptInfo->maxThreadCount);
+		if(_shuttingDown || GD::bl->shuttingDown) return;
 		if(!process)
 		{
 			_out.printError("Error: Could not get free process. Not executing script.");
