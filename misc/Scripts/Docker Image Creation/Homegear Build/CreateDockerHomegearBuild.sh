@@ -624,7 +624,7 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 	mv homegear-gateway.deb homegear-gateway_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-management.deb homegear-management_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	if [[ -n \$1 ]]; then
-		if test ! -f homegear-easy-licensing.deb || test ! -f homegear-licensing.deb || test ! -f homegear-nodes-extra.deb || test ! -f homegear-beckhoff.deb || test ! -f homegear-knx.deb || test ! -f homegear-enocean.deb || test ! -f homegear-easycam.deb || test ! -f homegear-easyled.deb || test ! -f homegear-easyled2.deb || test ! -f homegear-rsl.deb || test ! -f homegear-rs2w.deb || test ! -f homegear-mbus.deb || test ! -f homegear-zwave.deb; then
+		if test ! -f homegear-easy-licensing.deb || test ! -f homegear-licensing.deb || test ! -f homegear-nodes-extra.deb || test ! -f homegear-beckhoff.deb || test ! -f homegear-knx.deb || test ! -f homegear-enocean.deb || test ! -f homegear-easycam.deb || test ! -f homegear-easyled.deb || test ! -f homegear-easyled2.deb || test ! -f homegear-rsl.deb || test ! -f homegear-rs2w.deb || test ! -f homegear-mbus.deb; then
 			echo \"Error: Some or all packages from gitit.de could not be created.\"
 			exit 1
 		fi
