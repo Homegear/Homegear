@@ -1195,6 +1195,7 @@ bool FamilyController::physicalInterfaceIsOpen()
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
+			if(!i->second->hasPhysicalInterface()) continue;
 			std::shared_ptr<BaseLib::Systems::PhysicalInterfaces> interface = i->second->physicalInterfaces();
 			if(!interface->isOpen()) return false;
 		}
