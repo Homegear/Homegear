@@ -81,6 +81,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("deleteNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteNodeData()));
 	_rpcMethods.emplace("deleteSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteSystemVariable()));
 	_rpcMethods.emplace("enableEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCEnableEvent()));
+    _rpcMethods.emplace("executeMiscellaneousDeviceMethod", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCExecuteMiscellaneousDeviceMethod()));
 	_rpcMethods.emplace("getAllConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllConfig()));
 	_rpcMethods.emplace("getAllMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllMetadata()));
 	_rpcMethods.emplace("getAllScripts", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllScripts()));
@@ -526,6 +527,7 @@ void ScriptEngineServer::homegearShuttingDown()
 	try
 	{
 		_shuttingDown = true;
+		stopDevices();
 		std::vector<PScriptEngineClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -781,7 +783,6 @@ BaseLib::PVariable ScriptEngineServer::executePhpNodeMethod(BaseLib::PArray& par
 		}
 
 		BaseLib::PVariable result = sendRequest(clientData, "executePhpNodeMethod", parameters, true);
-		if(parameters->at(1)->stringValue == "waitForStop") closeClientConnection(clientData);
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -795,6 +796,45 @@ BaseLib::PVariable ScriptEngineServer::executePhpNodeMethod(BaseLib::PArray& par
     catch(...)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::executeDeviceMethod(BaseLib::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
+
+        PScriptEngineClientData clientData;
+        int32_t clientId = 0;
+        {
+            std::lock_guard<std::mutex> deviceClientIdMapGuard(_deviceClientIdMapMutex);
+            auto deviceClientIdIterator = _deviceClientIdMap.find(parameters->at(0)->integerValue64);
+            if(deviceClientIdIterator == _deviceClientIdMap.end()) return BaseLib::Variable::createError(-1, "Unknown device.");
+            clientId = deviceClientIdIterator->second;
+        }
+        {
+            std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            auto clientIterator = _clients.find(clientId);
+            if(clientIterator == _clients.end()) return BaseLib::Variable::createError(-32501, "Device's process not found.");
+            clientData = clientIterator->second;
+        }
+
+        BaseLib::PVariable result = sendRequest(clientData, "executeDeviceMethod", parameters, true);
+        return result;
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
@@ -963,6 +1003,40 @@ void ScriptEngineServer::closeClientConnection(PScriptEngineClientData client)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+void ScriptEngineServer::stopDevices()
+{
+	try
+	{
+		_out.printInfo("Info: Stopping devices.");
+		std::vector<PScriptEngineClientData> clients;
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			for(std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) continue;
+				clients.push_back(i->second);
+			}
+		}
+		for(auto& client : clients)
+		{
+			BaseLib::PArray parameters(new BaseLib::Array());
+			sendRequest(client, "stopDevices", parameters, true);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry)
@@ -1404,6 +1478,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 				return std::shared_ptr<ScriptEngineProcess>();
 			}
 			process->setUnregisterNode(std::function<void(std::string)>(std::bind(&ScriptEngineServer::unregisterNode, this, std::placeholders::_1)));
+            process->setUnregisterDevice(std::function<void(uint64_t)>(std::bind(&ScriptEngineServer::unregisterDevice, this, std::placeholders::_1)));
 			_out.printInfo("Info: Script engine process successfully spawned. Process id is " + std::to_string(process->getPid()) + ". Client id is: " + std::to_string(process->getClientData()->id) + ".");
 			return process;
 		}
@@ -1753,7 +1828,7 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 				scriptInfo->http.serialize(),
 				scriptInfo->serverInfo->serialize()}));
 		}
-		else if(scriptType == ScriptInfo::ScriptType::device)
+		else if(scriptType == ScriptInfo::ScriptType::device || scriptType == ScriptInfo::ScriptType::device2)
 		{
 			parameters = std::move(BaseLib::PArray(new BaseLib::Array{
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
@@ -1763,6 +1838,13 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->script)),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->peerId))}));
+
+            if(scriptType == ScriptInfo::ScriptType::device2)
+            {
+                std::lock_guard<std::mutex> deviceClientIdMapGuard(_deviceClientIdMapMutex);
+                _deviceClientIdMap.erase(scriptInfo->peerId);
+                _deviceClientIdMap.emplace(scriptInfo->peerId, clientData->id);
+            }
 		}
 		else if(scriptType == ScriptInfo::ScriptType::simpleNode)
 		{
@@ -1808,6 +1890,11 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 				std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
 				_nodeClientIdMap.erase(scriptInfo->nodeInfo->structValue->at("id")->stringValue);
 			}
+            else if(scriptType == ScriptInfo::ScriptType::device2)
+            {
+                std::lock_guard<std::mutex> deviceClientIdMapGuard(_deviceClientIdMapMutex);
+                _deviceClientIdMap.erase(scriptInfo->peerId);
+            }
 
 			return;
 		}
@@ -1865,10 +1952,8 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
 {
 	try
 	{
-		{
-			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
-			_nodeClientIdMap.erase(nodeId);
-		}
+        std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+        _nodeClientIdMap.erase(nodeId);
 	}
 	catch(const std::exception& ex)
 	{
@@ -1882,6 +1967,27 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+}
+
+void ScriptEngineServer::unregisterDevice(uint64_t peerId)
+{
+    try
+    {
+        std::lock_guard<std::mutex> deviceClientIdMapGuard(_deviceClientIdMapMutex);
+        _deviceClientIdMap.erase(peerId);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 // {{{ RPC methods

@@ -70,6 +70,8 @@ public:
 	 */
     virtual void homegearShuttingDown();
 
+	bool stop();
+
 	//RPC methods
 	virtual PVariable getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, std::map<std::string, bool> fields);
 	virtual PVariable getParamsetDescription(BaseLib::PRpcClientInfo clientInfo, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
@@ -78,6 +80,7 @@ public:
 	virtual PVariable setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel, std::string valueKey, PVariable value, bool wait);
 	//End RPC methods
 protected:
+    std::atomic_long _lastScriptFinished;
 	std::atomic_bool _shuttingDown;
 	std::atomic_bool _scriptRunning;
 	std::atomic_bool _stopRunProgramThread;
@@ -93,7 +96,7 @@ protected:
     virtual void savePeers() {}
 
 	void runProgram();
-	void runScript(bool delay = false);
+	void runScript(int32_t delay = 0);
 	void scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, int32_t exitCode);
 
 	virtual std::shared_ptr<BaseLib::Systems::ICentral> getCentral();

@@ -205,6 +205,10 @@ void ScriptEngineProcess::invokeScriptFinished(int32_t id, int32_t exitCode)
 				_nodeThreadCount -= scriptsIterator->second->maxThreadCount + 1;
 				if(_unregisterNode) _unregisterNode(scriptsIterator->second->nodeInfo->structValue->at("id")->stringValue);
 			}
+			else if(scriptsIterator->second->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::device2)
+			{
+				if(_unregisterDevice) _unregisterDevice(scriptsIterator->second->peerId);
+			}
 			scriptsIterator->second->exitCode = exitCode;
 			scriptsIterator->second->finished = true;
 		}

@@ -922,7 +922,7 @@ BaseLib::PVariable DatabaseController::getNodeData(std::string& node, std::strin
 		//Only return passwords if request comes from FlowsServer
 		std::string lowerCharKey = key;
 		BaseLib::HelperFunctions::toLower(lowerCharKey);
-		if(!requestFromTrustedServer && lowerCharKey.size() >= 8 && lowerCharKey.compare(lowerCharKey.size() - 8, 8, "password") == 0) obfuscate = true;
+		if(!requestFromTrustedServer && lowerCharKey.size() >= 8 && (lowerCharKey.compare(lowerCharKey.size() - 8, 8, "password") == 0 || lowerCharKey.compare(lowerCharKey.size() - 11, 11, "private_key") == 0)) obfuscate = true;
 
 		if(!key.empty())
 		{
@@ -964,7 +964,7 @@ BaseLib::PVariable DatabaseController::getNodeData(std::string& node, std::strin
 				BaseLib::PVariable innerValue;
 				//Only return passwords if request comes from FlowsServer
 				innerValue = _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue);
-				if(!requestFromTrustedServer && lowerCharKey.size() >= 8 && lowerCharKey.compare(lowerCharKey.size() - 8, 8, "password") == 0)
+				if(!requestFromTrustedServer && lowerCharKey.size() >= 8 && (lowerCharKey.compare(lowerCharKey.size() - 8, 8, "password") == 0 || lowerCharKey.compare(lowerCharKey.size() - 11, 11, "private_key") == 0))
 				{
 					innerValue = innerValue->stringValue.empty() ? std::make_shared<BaseLib::Variable>(std::string()) : std::make_shared<BaseLib::Variable>(std::string("*"));
 				}

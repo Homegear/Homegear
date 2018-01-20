@@ -49,7 +49,7 @@ public:
 		setHelp("Test method for development.");
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>());
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSystemGetCapabilities : public BaseLib::Rpc::RpcMethod
@@ -60,7 +60,7 @@ public:
 		setHelp("Lists server's RPC capabilities.");
 		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>());
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSystemListMethods : public BaseLib::Rpc::RpcMethod
@@ -72,7 +72,7 @@ public:
 		setHelp("Lists all RPC methods.");
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 private:
 	std::shared_ptr<RPCServer> _server;
 };
@@ -86,7 +86,7 @@ public:
 		setHelp("Returns a description of a RPC method.");
 		addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 private:
 	std::shared_ptr<RPCServer> _server;
 };
@@ -100,7 +100,7 @@ public:
 		setHelp("Returns the method's signature.");
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 private:
 	std::shared_ptr<RPCServer> _server;
 };
@@ -114,7 +114,7 @@ public:
 		setHelp("Calls multiple RPC methods at once to reduce traffic.");
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tArray});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 private:
 	std::shared_ptr<RPCServer> _server;
 };
@@ -126,7 +126,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCActivateLinkParamset : public BaseLib::Rpc::RpcMethod
@@ -140,7 +140,7 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean});
 
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCAddCategoryToDevice : public BaseLib::Rpc::RpcMethod
@@ -150,7 +150,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCAddDevice : public BaseLib::Rpc::RpcMethod
@@ -161,7 +161,7 @@ public:
 		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCAddDeviceToRoom : public BaseLib::Rpc::RpcMethod
@@ -171,7 +171,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCAddEvent : public BaseLib::Rpc::RpcMethod
@@ -181,7 +181,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCAddLink : public BaseLib::Rpc::RpcMethod
@@ -195,7 +195,7 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCCopyConfig : public BaseLib::Rpc::RpcMethod
@@ -206,7 +206,7 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCClientServerInitialized : public BaseLib::Rpc::RpcMethod
@@ -216,7 +216,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCCreateCategory : public BaseLib::Rpc::RpcMethod
@@ -226,7 +226,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCCreateDevice : public BaseLib::Rpc::RpcMethod
@@ -237,7 +237,7 @@ public:
 		addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 		addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCCreateRoom : public BaseLib::Rpc::RpcMethod
@@ -247,7 +247,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCDeleteData : public BaseLib::Rpc::RpcMethod
@@ -258,7 +258,7 @@ public:
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCDeleteCategory : public BaseLib::Rpc::RpcMethod
@@ -268,7 +268,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCDeleteDevice : public BaseLib::Rpc::RpcMethod
@@ -279,7 +279,7 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCDeleteRoom : public BaseLib::Rpc::RpcMethod
@@ -289,7 +289,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCDeleteMetadata : public BaseLib::Rpc::RpcMethod
@@ -302,7 +302,7 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCDeleteNodeData : public BaseLib::Rpc::RpcMethod
@@ -313,7 +313,7 @@ public:
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCDeleteSystemVariable : public BaseLib::Rpc::RpcMethod
@@ -323,7 +323,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCEnableEvent : public BaseLib::Rpc::RpcMethod
@@ -333,7 +333,17 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
+class RPCExecuteMiscellaneousDeviceMethod : public BaseLib::Rpc::RpcMethod
+{
+public:
+	RPCExecuteMiscellaneousDeviceMethod()
+	{
+		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
+	}
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetAllMetadata : public BaseLib::Rpc::RpcMethod
@@ -344,7 +354,7 @@ public:
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetAllScripts : public BaseLib::Rpc::RpcMethod
@@ -354,7 +364,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetAllConfig : public BaseLib::Rpc::RpcMethod
@@ -365,7 +375,7 @@ public:
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetAllValues : public BaseLib::Rpc::RpcMethod
@@ -378,7 +388,7 @@ public:
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetAllSystemVariables : public BaseLib::Rpc::RpcMethod
@@ -388,7 +398,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>());
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetCategories : public BaseLib::Rpc::RpcMethod
@@ -399,7 +409,7 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetConfigParameter : public BaseLib::Rpc::RpcMethod
@@ -410,7 +420,7 @@ public:
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{ BaseLib::VariableType::tString, BaseLib::VariableType::tString });
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString });
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetData : public BaseLib::Rpc::RpcMethod
@@ -421,7 +431,7 @@ public:
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetDeviceDescription : public BaseLib::Rpc::RpcMethod
@@ -432,7 +442,7 @@ public:
 		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetDeviceInfo : public BaseLib::Rpc::RpcMethod
@@ -445,7 +455,7 @@ public:
 		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tArray});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetDevicesInCategory : public BaseLib::Rpc::RpcMethod
@@ -455,7 +465,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetDevicesInRoom : public BaseLib::Rpc::RpcMethod
@@ -465,7 +475,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetEvent : public BaseLib::Rpc::RpcMethod
@@ -475,7 +485,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetLastEvents : public BaseLib::Rpc::RpcMethod
@@ -485,7 +495,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tArray, BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetInstallMode : public BaseLib::Rpc::RpcMethod
@@ -496,7 +506,7 @@ public:
 		addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>());
 		addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetKeyMismatchDevice : public BaseLib::Rpc::RpcMethod
@@ -506,7 +516,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tBoolean});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetLinkInfo : public BaseLib::Rpc::RpcMethod
@@ -517,7 +527,7 @@ public:
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetLinkPeers : public BaseLib::Rpc::RpcMethod
@@ -528,7 +538,7 @@ public:
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetLinks : public BaseLib::Rpc::RpcMethod
@@ -542,7 +552,7 @@ public:
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetMetadata : public BaseLib::Rpc::RpcMethod
@@ -553,7 +563,7 @@ public:
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetName : public BaseLib::Rpc::RpcMethod
@@ -563,7 +573,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetNodeData : public BaseLib::Rpc::RpcMethod
@@ -574,7 +584,7 @@ public:
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetFlowData : public BaseLib::Rpc::RpcMethod
@@ -585,7 +595,7 @@ public:
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetGlobalData : public BaseLib::Rpc::RpcMethod
@@ -596,7 +606,7 @@ public:
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>());
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetNodeEvents : public BaseLib::Rpc::RpcMethod
@@ -606,7 +616,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>());
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetNodeVariable : public BaseLib::Rpc::RpcMethod
@@ -616,7 +626,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetPairingMethods : public BaseLib::Rpc::RpcMethod
@@ -626,7 +636,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetParamsetDescription : public BaseLib::Rpc::RpcMethod
@@ -639,7 +649,7 @@ public:
 		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetParamsetId : public BaseLib::Rpc::RpcMethod
@@ -651,7 +661,7 @@ public:
 		addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetParamset : public BaseLib::Rpc::RpcMethod
@@ -664,7 +674,7 @@ public:
 		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetPeerId : public BaseLib::Rpc::RpcMethod
@@ -675,7 +685,7 @@ public:
 		addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 		addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetRooms : public BaseLib::Rpc::RpcMethod
@@ -686,7 +696,7 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetServiceMessages : public BaseLib::Rpc::RpcMethod
@@ -697,7 +707,7 @@ public:
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tBoolean});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetSniffedDevices : public BaseLib::Rpc::RpcMethod
@@ -707,7 +717,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetSystemVariable : public BaseLib::Rpc::RpcMethod
@@ -717,7 +727,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetUpdateStatus : public BaseLib::Rpc::RpcMethod
@@ -727,7 +737,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>());
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetValue : public BaseLib::Rpc::RpcMethod
@@ -742,7 +752,7 @@ public:
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean });
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tBoolean });
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetVariableDescription : public BaseLib::Rpc::RpcMethod
@@ -752,7 +762,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCGetVersion : public BaseLib::Rpc::RpcMethod
@@ -762,7 +772,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCInit : public BaseLib::Rpc::RpcMethod
@@ -776,7 +786,7 @@ public:
 	}
 	virtual ~RPCInit();
 
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 private:
 	bool _disposing = false;
 	std::mutex _initServerThreadMutex;
@@ -790,7 +800,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCListClientServers : public BaseLib::Rpc::RpcMethod
@@ -801,7 +811,7 @@ public:
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCListDevices : public BaseLib::Rpc::RpcMethod
@@ -813,7 +823,7 @@ public:
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray}));
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray, BaseLib::VariableType::tInteger}));
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCListEvents : public BaseLib::Rpc::RpcMethod
@@ -825,7 +835,7 @@ public:
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger}));
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString}));
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCListFamilies : public BaseLib::Rpc::RpcMethod
@@ -835,7 +845,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCListInterfaces : public BaseLib::Rpc::RpcMethod
@@ -846,7 +856,7 @@ public:
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCListKnownDeviceTypes : public BaseLib::Rpc::RpcMethod
@@ -859,7 +869,7 @@ public:
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray}));
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray}));
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCListTeams : public BaseLib::Rpc::RpcMethod
@@ -869,7 +879,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCLogLevel : public BaseLib::Rpc::RpcMethod
@@ -880,7 +890,7 @@ public:
 		addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 		addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>());
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCNodeOutput : public BaseLib::Rpc::RpcMethod
@@ -891,7 +901,7 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tVariant});
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tVariant, BaseLib::VariableType::tBoolean});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCPing : public BaseLib::Rpc::RpcMethod
@@ -902,7 +912,7 @@ public:
 		addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCPutParamset : public BaseLib::Rpc::RpcMethod
@@ -916,7 +926,7 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
 
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCRemoveCategoryFromDevice : public BaseLib::Rpc::RpcMethod
@@ -926,7 +936,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCRemoveDeviceFromRoom : public BaseLib::Rpc::RpcMethod
@@ -936,7 +946,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCRemoveEvent : public BaseLib::Rpc::RpcMethod
@@ -946,7 +956,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCRemoveLink : public BaseLib::Rpc::RpcMethod
@@ -957,7 +967,7 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCReportValueUsage : public BaseLib::Rpc::RpcMethod
@@ -967,7 +977,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger}));
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCRssiInfo : public BaseLib::Rpc::RpcMethod
@@ -977,7 +987,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>());
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCRunScript : public BaseLib::Rpc::RpcMethod
@@ -990,7 +1000,7 @@ public:
 		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSearchDevices : public BaseLib::Rpc::RpcMethod
@@ -1001,7 +1011,7 @@ public:
 		addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>());
 		addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSearchInterfaces : public BaseLib::Rpc::RpcMethod
@@ -1013,7 +1023,7 @@ public:
 		addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 		addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tVariant});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSetLinkInfo : public BaseLib::Rpc::RpcMethod
@@ -1024,7 +1034,7 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSetMetadata : public BaseLib::Rpc::RpcMethod
@@ -1035,7 +1045,7 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSetData : public BaseLib::Rpc::RpcMethod
@@ -1045,7 +1055,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSetId : public BaseLib::Rpc::RpcMethod
@@ -1055,7 +1065,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSetInstallMode : public BaseLib::Rpc::RpcMethod
@@ -1070,7 +1080,7 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tInteger});
         addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSetInterface : public BaseLib::Rpc::RpcMethod
@@ -1080,7 +1090,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSetLanguage : public BaseLib::Rpc::RpcMethod
@@ -1090,7 +1100,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSetName : public BaseLib::Rpc::RpcMethod
@@ -1100,7 +1110,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSetNodeData : public BaseLib::Rpc::RpcMethod
@@ -1110,7 +1120,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSetFlowData : public BaseLib::Rpc::RpcMethod
@@ -1120,7 +1130,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSetGlobalData : public BaseLib::Rpc::RpcMethod
@@ -1130,7 +1140,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSetNodeVariable : public BaseLib::Rpc::RpcMethod
@@ -1140,7 +1150,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSetSystemVariable : public BaseLib::Rpc::RpcMethod
@@ -1150,7 +1160,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSetTeam : public BaseLib::Rpc::RpcMethod
@@ -1163,7 +1173,7 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSetValue : public BaseLib::Rpc::RpcMethod
@@ -1178,7 +1188,7 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCStartSniffing : public BaseLib::Rpc::RpcMethod
@@ -1188,7 +1198,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCStopSniffing : public BaseLib::Rpc::RpcMethod
@@ -1198,7 +1208,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCSubscribePeers : public BaseLib::Rpc::RpcMethod
@@ -1208,7 +1218,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCTriggerEvent : public BaseLib::Rpc::RpcMethod
@@ -1218,7 +1228,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCTriggerRpcEvent : public BaseLib::Rpc::RpcMethod
@@ -1228,7 +1238,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCUnsubscribePeers : public BaseLib::Rpc::RpcMethod
@@ -1238,7 +1248,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCUpdateCategory : public BaseLib::Rpc::RpcMethod
@@ -1248,7 +1258,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCUpdateFirmware : public BaseLib::Rpc::RpcMethod
@@ -1262,7 +1272,7 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean});
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tArray});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCUpdateRoom : public BaseLib::Rpc::RpcMethod
@@ -1272,7 +1282,7 @@ public:
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 class RPCWriteLog : public BaseLib::Rpc::RpcMethod
@@ -1283,7 +1293,7 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tVoid, BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tVoid, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
 	}
-	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 }

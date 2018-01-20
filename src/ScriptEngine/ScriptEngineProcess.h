@@ -60,6 +60,7 @@ private:
 	bool _nodeProcess = false;
 	std::atomic_uint _nodeThreadCount;
 	std::function<void(std::string)> _unregisterNode;
+    std::function<void(uint64_t)> _unregisterDevice;
 public:
 	ScriptEngineProcess(bool nodeProcess);
 	virtual ~ScriptEngineProcess();
@@ -72,6 +73,7 @@ public:
 	PScriptEngineClientData& getClientData() { return _clientData; }
 	void setClientData(PScriptEngineClientData& value) { _clientData = value; }
 	void setUnregisterNode(std::function<void(std::string)> value) { _unregisterNode.swap(value); }
+	void setUnregisterDevice(std::function<void(uint64_t)> value) { _unregisterDevice.swap(value); }
 	bool isNodeProcess() { return _nodeProcess; }
 
 	void invokeScriptOutput(int32_t id, std::string& output);

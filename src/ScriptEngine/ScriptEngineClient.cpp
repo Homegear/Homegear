@@ -36,6 +36,7 @@
 #include "../GD/GD.h"
 #include "php_sapi.h"
 #include "php_node.h"
+#include "php_device.h"
 #include <wordexp.h>
 
 #include <utility>
@@ -47,6 +48,8 @@ namespace ScriptEngine
 std::mutex ScriptEngineClient::_resourceMutex;
 std::mutex ScriptEngineClient::_nodeInfoMutex;
 std::unordered_map<std::string, ScriptEngineClient::PNodeInfo> ScriptEngineClient::_nodeInfo;
+std::mutex ScriptEngineClient::_deviceInfoMutex;
+std::unordered_map<uint64_t, ScriptEngineClient::PDeviceInfo> ScriptEngineClient::_deviceInfo;
 
 ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000)
 {
@@ -76,11 +79,13 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("devTest", std::bind(&ScriptEngineClient::devTest, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("reload", std::bind(&ScriptEngineClient::reload, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("shutdown", std::bind(&ScriptEngineClient::shutdown, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("stopDevices", std::bind(&ScriptEngineClient::stopDevices, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("executeScript", std::bind(&ScriptEngineClient::executeScript, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("scriptCount", std::bind(&ScriptEngineClient::scriptCount, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("getRunningScripts", std::bind(&ScriptEngineClient::getRunningScripts, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("checkSessionId", std::bind(&ScriptEngineClient::checkSessionId, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("executePhpNodeMethod", std::bind(&ScriptEngineClient::executePhpNodeMethod, this, std::placeholders::_1)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("executeDeviceMethod", std::bind(&ScriptEngineClient::executeDeviceMethod, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastEvent", std::bind(&ScriptEngineClient::broadcastEvent, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastNewDevices", std::bind(&ScriptEngineClient::broadcastNewDevices, this, std::placeholders::_1)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastDeleteDevices", std::bind(&ScriptEngineClient::broadcastDeleteDevices, this, std::placeholders::_1)));
@@ -1226,7 +1231,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 
 			ZEND_TSRMLS_CACHE_UPDATE();
 
-			if (type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::statefulNode)
+			if (type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::device2 || type == ScriptInfo::ScriptType::statefulNode)
 			{
 				//BaseLib::Base64::encode(BaseLib::HelperFunctions::getRandomBytes(16), globals->token);
 				BaseLib::Base64::encode(std::vector<uint8_t>{0, 1, 2, 3, 4, 5}, globals->token);
@@ -1240,7 +1245,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			std::string charset = "UTF-8";
 			SG(default_charset) = estrndup(charset.data(), charset.size());
             SG(default_mimetype) = nullptr;
-			if (type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
+			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::device2 || type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
 			{
 				PG(register_argc_argv) = 1;
 				PG(implicit_flush) = 1;
@@ -1250,7 +1255,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 				SG(request_info).no_headers = 1;
 				SG(request_info).path_translated = estrndup(scriptInfo->fullPath.c_str(), scriptInfo->fullPath.size());
 			}
-			else if (type == ScriptInfo::ScriptType::web)
+			else if(type == ScriptInfo::ScriptType::web)
 			{
 				SG(sapi_headers).http_response_code = 200;
 				SG(request_info).content_length = globals->http.getHeader().contentLength;
@@ -1273,10 +1278,10 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			}
 			globals->executionStarted = true;
 
-			if (type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)
+			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device)
 			{
 				std::vector<std::string> argv = getArgs(scriptInfo->fullPath, scriptInfo->arguments);
-				if (type == ScriptInfo::ScriptType::device) argv[0] = std::to_string(scriptInfo->peerId);
+				if(type == ScriptInfo::ScriptType::device) argv[0] = std::to_string(scriptInfo->peerId);
 				php_homegear_build_argv(argv);
 				SG(request_info).argc = static_cast<int>(argv.size());
 				SG(request_info).argv = (char**) malloc((argv.size() + 1) * sizeof(char*));
@@ -1294,6 +1299,10 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 		if(type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
 		{
 			runNode(id, scriptInfo);
+		}
+		else if(type == ScriptInfo::ScriptType::device2)
+		{
+            runDevice(id, scriptInfo);
 		}
 
 		scriptInfo->exitCode = EG(exit_status);
@@ -1411,6 +1420,69 @@ void ScriptEngineClient::runNode(int32_t id, PScriptInfo scriptInfo)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+}
+
+void ScriptEngineClient::runDevice(int32_t id, PScriptInfo scriptInfo)
+{
+    zval homegearDeviceObject{};
+    try
+    {
+        uint64_t peerId = scriptInfo->peerId;
+        PDeviceInfo deviceInfo;
+
+        {
+            std::lock_guard<std::mutex> deviceInfoGuard(_deviceInfoMutex);
+            deviceInfo = _deviceInfo.at(peerId);
+        }
+
+        zend_class_entry* homegearDeviceClassEntry = nullptr;
+        bool result = php_init_device(scriptInfo, homegearDeviceClassEntry, &homegearDeviceObject);
+
+        if(result)
+        {
+            bool stop = false;
+            while(!GD::bl->shuttingDown && !stop)
+            {
+                std::unique_lock<std::mutex> waitLock(deviceInfo->waitMutex);
+                while(!deviceInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+                {
+                    return deviceInfo->ready || GD::bl->shuttingDown;
+                }));
+                if(!deviceInfo->ready || GD::bl->shuttingDown) continue;
+                deviceInfo->ready = false;
+
+                deviceInfo->response = php_device_object_invoke_local(scriptInfo, &homegearDeviceObject, deviceInfo->methodName, deviceInfo->parameters);
+                if(deviceInfo->methodName == "init")
+                {
+                    if(!deviceInfo->response->booleanValue) stop = true;
+                }
+                else if(deviceInfo->methodName == "start" && !deviceInfo->response->booleanValue) stop = true;
+                else if(deviceInfo->methodName == "waitForStop")
+                {
+                    stop = true;
+                }
+
+                deviceInfo->parameters.reset();
+                waitLock.unlock();
+                deviceInfo->conditionVariable.notify_all();
+            }
+            std::string methodName = "__destruct";
+            BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+            php_device_object_invoke_local(scriptInfo, &homegearDeviceObject, methodName, parameters);
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool sendOutput)
@@ -1686,6 +1758,67 @@ BaseLib::PVariable ScriptEngineClient::shutdown(BaseLib::PArray& parameters)
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable ScriptEngineClient::stopDevices(BaseLib::PArray& parameters)
+{
+	try
+	{
+		_out.printMessage("Calling stop() on devices...");
+
+		std::unordered_map<uint64_t, PDeviceInfo> deviceInfo;
+
+		{
+			std::lock_guard<std::mutex> deviceInfoGuard(_deviceInfoMutex);
+			deviceInfo = _deviceInfo;
+		}
+
+		for(auto& device : deviceInfo)
+		{
+            BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+            parameters->reserve(3);
+            parameters->push_back(std::make_shared<BaseLib::Variable>(device.first));
+            parameters->push_back(std::make_shared<BaseLib::Variable>("stop"));
+            BaseLib::PVariable innerParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+            parameters->push_back(innerParameters);
+
+			BaseLib::PVariable result = executeDeviceMethod(parameters);
+			if(result->errorStruct) GD::out.printError("Error calling stop on peer " + std::to_string(device.first) + ": " + result->structValue->at("faultString")->stringValue);
+		}
+
+		_out.printMessage("Call to stop() on devices completed.");
+
+        _out.printMessage("Calling waitForStop() on devices...");
+
+        for(auto& device : deviceInfo)
+        {
+            BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+            parameters->reserve(3);
+            parameters->push_back(std::make_shared<BaseLib::Variable>(device.first));
+            parameters->push_back(std::make_shared<BaseLib::Variable>("waitForStop"));
+            BaseLib::PVariable innerParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+            parameters->push_back(innerParameters);
+
+            BaseLib::PVariable result = executeDeviceMethod(parameters);
+            if(result->errorStruct) GD::out.printError("Error calling waitForStop on peer " + std::to_string(device.first) + ": " + result->structValue->at("faultString")->stringValue);
+        }
+
+        _out.printMessage("Call to waitForStop() on devices completed.");
+		return std::make_shared<BaseLib::Variable>();
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters)
 {
 	try
@@ -1718,9 +1851,15 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 			}
 			sendOutput = true;
 		}
-		else if(type == ScriptInfo::ScriptType::device)
+		else if(type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::device2)
 		{
 			scriptInfo.reset(new ScriptInfo(type, parameters->at(2)->stringValue, parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5)->stringValue, parameters->at(6)->integerValue64));
+			if(type == ScriptInfo::ScriptType::device2)
+			{
+				std::lock_guard<std::mutex> deviceInfoGuard(_deviceInfoMutex);
+				_deviceInfo.erase(scriptInfo->peerId);
+				_deviceInfo.emplace(scriptInfo->peerId, std::make_shared<DeviceInfo>());
+			}
 		}
 		else if(type == ScriptInfo::ScriptType::simpleNode)
 		{
@@ -1757,6 +1896,36 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 				threadInfo->peerId = static_cast<uint64_t>(scriptInfo->peerId);
 				threadInfo->thread = std::thread(&ScriptEngineClient::scriptThread, this, scriptInfo->id, scriptInfo, sendOutput);
 				_scriptThreads.emplace(scriptInfo->id, threadInfo);
+
+                if(type == ScriptInfo::ScriptType::device2)
+                {
+                    BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+                    parameters->reserve(3);
+                    parameters->push_back(std::make_shared<BaseLib::Variable>(scriptInfo->peerId));
+                    parameters->push_back(std::make_shared<BaseLib::Variable>("init"));
+                    BaseLib::PVariable innerParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                    innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(scriptInfo->peerId));
+                    parameters->push_back(innerParameters);
+
+                    BaseLib::PVariable result = executeDeviceMethod(parameters);
+                    if(result->errorStruct) GD::out.printError("Error calling init on peer " + std::to_string(scriptInfo->peerId) + ": " + result->structValue->at("faultString")->stringValue);
+
+                    if(!result->booleanValue)
+                    {
+                        GD::out.printError("Error calling init on peer " + std::to_string(scriptInfo->peerId) + ".");
+                    }
+                    else
+                    {
+                        parameters->at(1)->stringValue = "start";
+                        result = executeDeviceMethod(parameters);
+                        if(result->errorStruct) GD::out.printError("Error calling start on peer " + std::to_string(scriptInfo->peerId) + ": " + result->structValue->at("faultString")->stringValue);
+
+                        if(!result->booleanValue)
+                        {
+                            GD::out.printError("Error calling start on peer " + std::to_string(scriptInfo->peerId) + ".");
+                        }
+                    }
+                }
 			}
 			else _out.printError("Error: Tried to execute script with ID of already running script.");
 		}
@@ -1954,6 +2123,68 @@ BaseLib::PVariable ScriptEngineClient::executePhpNodeMethod(BaseLib::PArray& par
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineClient::executeDeviceMethod(BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+
+		uint64_t peerId = parameters->at(0)->integerValue64;
+		PDeviceInfo deviceInfo;
+
+		{
+			std::lock_guard<std::mutex> deviceInfoGuard(_deviceInfoMutex);
+			auto deviceIterator = _deviceInfo.find(peerId);
+			if(deviceIterator == _deviceInfo.end() || !deviceIterator->second) return BaseLib::Variable::createError(-1, "Unknown peer.");
+			deviceInfo = deviceIterator->second;
+		}
+
+		std::lock_guard<std::mutex> requestLock(deviceInfo->requestMutex);
+
+		{
+			std::lock_guard<std::mutex> deviceInfoGuard(deviceInfo->waitMutex);
+			deviceInfo->methodName = parameters->at(1)->stringValue;
+			deviceInfo->parameters = parameters->at(2)->arrayValue;
+			deviceInfo->ready = true;
+			deviceInfo->response.reset();
+		}
+		deviceInfo->conditionVariable.notify_all();
+
+		//Wait for response
+		{
+			std::unique_lock<std::mutex> waitLock(deviceInfo->waitMutex);
+			int32_t i = 0;
+			while (!deviceInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+			{
+				return deviceInfo->response || GD::bl->shuttingDown;
+			}))
+			{
+				i++;
+				if(i == 10)
+				{
+					_out.printError("Error: Peer with ID " + std::to_string(peerId) + " is not responding...");
+					break;
+				}
+			}
+		}
+
+		return deviceInfo->response;
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable ScriptEngineClient::broadcastEvent(BaseLib::PArray& parameters)

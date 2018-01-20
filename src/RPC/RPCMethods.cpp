@@ -38,7 +38,7 @@
 namespace Rpc
 {
 
-BaseLib::PVariable RPCDevTest::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCDevTest::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -46,7 +46,7 @@ BaseLib::PVariable RPCDevTest::invoke(BaseLib::PRpcClientInfo clientInfo, std::s
 		if(parameters->size() > 0) value = parameters->at(0)->booleanValue;
 
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{ "PRESS_SHORT" });
-		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{ BaseLib::PVariable(new BaseLib::Variable(value)) });
+		BaseLib::PArray values(new std::vector<BaseLib::PVariable>{ BaseLib::PVariable(new BaseLib::Variable(value)) });
 		GD::rpcClient->broadcastEvent(90, 1, "OPNWEATHES:1", valueKeys, values);
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
@@ -65,7 +65,7 @@ BaseLib::PVariable RPCDevTest::invoke(BaseLib::PRpcClientInfo clientInfo, std::s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSystemGetCapabilities::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSystemGetCapabilities::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -105,7 +105,7 @@ BaseLib::PVariable RPCSystemGetCapabilities::invoke(BaseLib::PRpcClientInfo clie
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSystemListMethods::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSystemListMethods::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -140,7 +140,7 @@ BaseLib::PVariable RPCSystemListMethods::invoke(BaseLib::PRpcClientInfo clientIn
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSystemMethodHelp::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSystemMethodHelp::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -179,7 +179,7 @@ BaseLib::PVariable RPCSystemMethodHelp::invoke(BaseLib::PRpcClientInfo clientInf
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSystemMethodSignature::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSystemMethodSignature::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -224,7 +224,7 @@ BaseLib::PVariable RPCSystemMethodSignature::invoke(BaseLib::PRpcClientInfo clie
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -256,7 +256,7 @@ BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo
 				continue;
 			}
 			std::string methodName = (*i)->structValue->at("methodName")->stringValue;
-			std::shared_ptr<std::vector<BaseLib::PVariable>> parameters = (*i)->structValue->at("params")->arrayValue;
+			BaseLib::PArray parameters = (*i)->structValue->at("params")->arrayValue;
 
 			if(methodName == "system.multicall") returns->arrayValue->push_back(BaseLib::Variable::createError(-32602, "Recursive calls to system.multicall are not allowed."));
 			else if(methods->find(methodName) == methods->end()) returns->arrayValue->push_back(BaseLib::Variable::createError(-32601, "Requested method not found."));
@@ -280,7 +280,7 @@ BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCAbortEventReset::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCAbortEventReset::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 #ifdef EVENTHANDLER
 	try
@@ -308,7 +308,7 @@ BaseLib::PVariable RPCAbortEventReset::invoke(BaseLib::PRpcClientInfo clientInfo
 #endif
 }
 
-BaseLib::PVariable RPCActivateLinkParamset::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCActivateLinkParamset::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -387,7 +387,7 @@ BaseLib::PVariable RPCActivateLinkParamset::invoke(BaseLib::PRpcClientInfo clien
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-BaseLib::PVariable RPCAddCategoryToDevice::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCAddCategoryToDevice::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -422,7 +422,7 @@ BaseLib::PVariable RPCAddCategoryToDevice::invoke(BaseLib::PRpcClientInfo client
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCAddDevice::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCAddDevice::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -479,7 +479,7 @@ BaseLib::PVariable RPCAddDevice::invoke(BaseLib::PRpcClientInfo clientInfo, std:
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCAddDeviceToRoom::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCAddDeviceToRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -514,7 +514,7 @@ BaseLib::PVariable RPCAddDeviceToRoom::invoke(BaseLib::PRpcClientInfo clientInfo
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCAddEvent::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCAddEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 #ifdef EVENTHANDLER
 	try
@@ -542,7 +542,7 @@ BaseLib::PVariable RPCAddEvent::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 #endif
 }
 
-BaseLib::PVariable RPCAddLink::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCAddLink::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -632,7 +632,7 @@ BaseLib::PVariable RPCAddLink::invoke(BaseLib::PRpcClientInfo clientInfo, std::s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCCopyConfig::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCCopyConfig::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -732,7 +732,7 @@ BaseLib::PVariable RPCCopyConfig::invoke(BaseLib::PRpcClientInfo clientInfo, std
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-BaseLib::PVariable RPCClientServerInitialized::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCClientServerInitialized::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -756,7 +756,7 @@ BaseLib::PVariable RPCClientServerInitialized::invoke(BaseLib::PRpcClientInfo cl
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCCreateCategory::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCCreateCategory::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -782,7 +782,7 @@ BaseLib::PVariable RPCCreateCategory::invoke(BaseLib::PRpcClientInfo clientInfo,
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCCreateDevice::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCCreateDevice::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -815,7 +815,7 @@ BaseLib::PVariable RPCCreateDevice::invoke(BaseLib::PRpcClientInfo clientInfo, s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCCreateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCCreateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -841,7 +841,7 @@ BaseLib::PVariable RPCCreateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, std
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCDeleteCategory::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCDeleteCategory::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -884,7 +884,7 @@ BaseLib::PVariable RPCDeleteCategory::invoke(BaseLib::PRpcClientInfo clientInfo,
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCDeleteData::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCDeleteData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -912,7 +912,7 @@ BaseLib::PVariable RPCDeleteData::invoke(BaseLib::PRpcClientInfo clientInfo, std
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCDeleteDevice::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCDeleteDevice::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -957,7 +957,7 @@ BaseLib::PVariable RPCDeleteDevice::invoke(BaseLib::PRpcClientInfo clientInfo, s
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-BaseLib::PVariable RPCDeleteRoom::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCDeleteRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1000,7 +1000,7 @@ BaseLib::PVariable RPCDeleteRoom::invoke(BaseLib::PRpcClientInfo clientInfo, std
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCDeleteMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCDeleteMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1064,7 +1064,7 @@ BaseLib::PVariable RPCDeleteMetadata::invoke(BaseLib::PRpcClientInfo clientInfo,
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCDeleteNodeData::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCDeleteNodeData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1092,7 +1092,7 @@ BaseLib::PVariable RPCDeleteNodeData::invoke(BaseLib::PRpcClientInfo clientInfo,
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCDeleteSystemVariable::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCDeleteSystemVariable::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1116,7 +1116,7 @@ BaseLib::PVariable RPCDeleteSystemVariable::invoke(BaseLib::PRpcClientInfo clien
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCEnableEvent::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCEnableEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 #ifdef EVENTHANDLER
 	try
@@ -1144,7 +1144,35 @@ BaseLib::PVariable RPCEnableEvent::invoke(BaseLib::PRpcClientInfo clientInfo, st
 #endif
 }
 
-BaseLib::PVariable RPCGetAllConfig::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCExecuteMiscellaneousDeviceMethod::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+#ifndef NO_SCRIPTENGINE
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString, BaseLib::VariableType::tArray }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		return GD::scriptEngineServer->executeDeviceMethod(parameters);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+#else
+	return BaseLib::Variable::createError(-32500, "This version of Homegear is compiled without script engine.");
+#endif
+}
+
+BaseLib::PVariable RPCGetAllConfig::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1196,7 +1224,7 @@ BaseLib::PVariable RPCGetAllConfig::invoke(BaseLib::PRpcClientInfo clientInfo, s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetAllMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetAllMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1272,7 +1300,7 @@ BaseLib::PVariable RPCGetAllMetadata::invoke(BaseLib::PRpcClientInfo clientInfo,
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetAllScripts::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetAllScripts::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1299,7 +1327,7 @@ BaseLib::PVariable RPCGetAllScripts::invoke(BaseLib::PRpcClientInfo clientInfo, 
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetAllSystemVariables::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetAllSystemVariables::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1322,7 +1350,7 @@ BaseLib::PVariable RPCGetAllSystemVariables::invoke(BaseLib::PRpcClientInfo clie
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetAllValues::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetAllValues::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1389,7 +1417,7 @@ BaseLib::PVariable RPCGetAllValues::invoke(BaseLib::PRpcClientInfo clientInfo, s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetCategories::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetCategories::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1420,7 +1448,7 @@ BaseLib::PVariable RPCGetCategories::invoke(BaseLib::PRpcClientInfo clientInfo, 
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetConfigParameter::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetConfigParameter::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1478,7 +1506,7 @@ BaseLib::PVariable RPCGetConfigParameter::invoke(BaseLib::PRpcClientInfo clientI
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-BaseLib::PVariable RPCGetData::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1506,7 +1534,7 @@ BaseLib::PVariable RPCGetData::invoke(BaseLib::PRpcClientInfo clientInfo, std::s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetDeviceDescription::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetDeviceDescription::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1588,7 +1616,7 @@ BaseLib::PVariable RPCGetDeviceDescription::invoke(BaseLib::PRpcClientInfo clien
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-BaseLib::PVariable RPCGetDeviceInfo::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetDeviceInfo::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1666,7 +1694,7 @@ BaseLib::PVariable RPCGetDeviceInfo::invoke(BaseLib::PRpcClientInfo clientInfo, 
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-BaseLib::PVariable RPCGetDevicesInCategory::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetDevicesInCategory::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1708,7 +1736,7 @@ BaseLib::PVariable RPCGetDevicesInCategory::invoke(BaseLib::PRpcClientInfo clien
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetDevicesInRoom::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetDevicesInRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1750,7 +1778,7 @@ BaseLib::PVariable RPCGetDevicesInRoom::invoke(BaseLib::PRpcClientInfo clientInf
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetEvent::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 #ifdef EVENTHANDLER
 	try
@@ -1778,7 +1806,7 @@ BaseLib::PVariable RPCGetEvent::invoke(BaseLib::PRpcClientInfo clientInfo, std::
 #endif
 }
 
-BaseLib::PVariable RPCGetLastEvents::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetLastEvents::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1810,7 +1838,7 @@ BaseLib::PVariable RPCGetLastEvents::invoke(BaseLib::PRpcClientInfo clientInfo, 
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetInstallMode::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetInstallMode::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1862,7 +1890,7 @@ BaseLib::PVariable RPCGetInstallMode::invoke(BaseLib::PRpcClientInfo clientInfo,
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetKeyMismatchDevice::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetKeyMismatchDevice::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1886,7 +1914,7 @@ BaseLib::PVariable RPCGetKeyMismatchDevice::invoke(BaseLib::PRpcClientInfo clien
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetLinkInfo::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetLinkInfo::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -1956,7 +1984,7 @@ BaseLib::PVariable RPCGetLinkInfo::invoke(BaseLib::PRpcClientInfo clientInfo, st
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetLinkPeers::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetLinkPeers::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2019,7 +2047,7 @@ BaseLib::PVariable RPCGetLinkPeers::invoke(BaseLib::PRpcClientInfo clientInfo, s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetLinks::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetLinks::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2108,7 +2136,7 @@ BaseLib::PVariable RPCGetLinks::invoke(BaseLib::PRpcClientInfo clientInfo, std::
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2180,7 +2208,7 @@ BaseLib::PVariable RPCGetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, st
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetName::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetName::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2216,7 +2244,7 @@ BaseLib::PVariable RPCGetName::invoke(BaseLib::PRpcClientInfo clientInfo, std::s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetNodeData::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetNodeData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2244,7 +2272,7 @@ BaseLib::PVariable RPCGetNodeData::invoke(BaseLib::PRpcClientInfo clientInfo, st
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetFlowData::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetFlowData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2272,7 +2300,7 @@ BaseLib::PVariable RPCGetFlowData::invoke(BaseLib::PRpcClientInfo clientInfo, st
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetGlobalData::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetGlobalData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2301,7 +2329,7 @@ BaseLib::PVariable RPCGetGlobalData::invoke(BaseLib::PRpcClientInfo clientInfo, 
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetNodeEvents::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetNodeEvents::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2322,7 +2350,7 @@ BaseLib::PVariable RPCGetNodeEvents::invoke(BaseLib::PRpcClientInfo clientInfo, 
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2348,7 +2376,7 @@ BaseLib::PVariable RPCGetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetPairingMethods::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetPairingMethods::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2377,7 +2405,7 @@ BaseLib::PVariable RPCGetPairingMethods::invoke(BaseLib::PRpcClientInfo clientIn
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetParamsetDescription::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetParamsetDescription::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2476,7 +2504,7 @@ BaseLib::PVariable RPCGetParamsetDescription::invoke(BaseLib::PRpcClientInfo cli
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetParamsetId::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetParamsetId::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2566,7 +2594,7 @@ BaseLib::PVariable RPCGetParamsetId::invoke(BaseLib::PRpcClientInfo clientInfo, 
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-BaseLib::PVariable RPCGetParamset::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetParamset::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2655,7 +2683,7 @@ BaseLib::PVariable RPCGetParamset::invoke(BaseLib::PRpcClientInfo clientInfo, st
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-BaseLib::PVariable RPCGetPeerId::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetPeerId::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2696,7 +2724,7 @@ BaseLib::PVariable RPCGetPeerId::invoke(BaseLib::PRpcClientInfo clientInfo, std:
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-BaseLib::PVariable RPCGetRooms::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetRooms::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2727,7 +2755,7 @@ BaseLib::PVariable RPCGetRooms::invoke(BaseLib::PRpcClientInfo clientInfo, std::
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetServiceMessages::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetServiceMessages::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2769,7 +2797,7 @@ BaseLib::PVariable RPCGetServiceMessages::invoke(BaseLib::PRpcClientInfo clientI
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetSniffedDevices::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetSniffedDevices::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2802,7 +2830,7 @@ BaseLib::PVariable RPCGetSniffedDevices::invoke(BaseLib::PRpcClientInfo clientIn
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetSystemVariable::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetSystemVariable::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2826,7 +2854,7 @@ BaseLib::PVariable RPCGetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetUpdateStatus::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetUpdateStatus::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2867,7 +2895,7 @@ BaseLib::PVariable RPCGetUpdateStatus::invoke(BaseLib::PRpcClientInfo clientInfo
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2958,7 +2986,7 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-BaseLib::PVariable RPCGetVariableDescription::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetVariableDescription::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2994,7 +3022,7 @@ BaseLib::PVariable RPCGetVariableDescription::invoke(BaseLib::PRpcClientInfo cli
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-BaseLib::PVariable RPCGetVersion::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCGetVersion::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3042,7 +3070,7 @@ RPCInit::~RPCInit()
     }
 }
 
-BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3181,7 +3209,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, std::shar
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCListBidcosInterfaces::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCListBidcosInterfaces::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3218,7 +3246,7 @@ BaseLib::PVariable RPCListBidcosInterfaces::invoke(BaseLib::PRpcClientInfo clien
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCListClientServers::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCListClientServers::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3246,7 +3274,7 @@ BaseLib::PVariable RPCListClientServers::invoke(BaseLib::PRpcClientInfo clientIn
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCListDevices::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCListDevices::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3314,7 +3342,7 @@ BaseLib::PVariable RPCListDevices::invoke(BaseLib::PRpcClientInfo clientInfo, st
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCListEvents::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCListEvents::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 #ifdef EVENTHANDLER
 	try
@@ -3363,7 +3391,7 @@ BaseLib::PVariable RPCListEvents::invoke(BaseLib::PRpcClientInfo clientInfo, std
 #endif
 }
 
-BaseLib::PVariable RPCListFamilies::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCListFamilies::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3386,7 +3414,7 @@ BaseLib::PVariable RPCListFamilies::invoke(BaseLib::PRpcClientInfo clientInfo, s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCListInterfaces::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCListInterfaces::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3418,7 +3446,7 @@ BaseLib::PVariable RPCListInterfaces::invoke(BaseLib::PRpcClientInfo clientInfo,
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCListKnownDeviceTypes::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCListKnownDeviceTypes::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3487,7 +3515,7 @@ BaseLib::PVariable RPCListKnownDeviceTypes::invoke(BaseLib::PRpcClientInfo clien
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCListTeams::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCListTeams::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3521,7 +3549,7 @@ BaseLib::PVariable RPCListTeams::invoke(BaseLib::PRpcClientInfo clientInfo, std:
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCLogLevel::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCLogLevel::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3551,7 +3579,7 @@ BaseLib::PVariable RPCLogLevel::invoke(BaseLib::PRpcClientInfo clientInfo, std::
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCNodeOutput::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCNodeOutput::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3580,7 +3608,7 @@ BaseLib::PVariable RPCNodeOutput::invoke(BaseLib::PRpcClientInfo clientInfo, std
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCPing::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCPing::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3616,7 +3644,7 @@ BaseLib::PVariable RPCPing::invoke(BaseLib::PRpcClientInfo clientInfo, std::shar
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3712,7 +3740,7 @@ BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, st
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-BaseLib::PVariable RPCRemoveCategoryFromDevice::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCRemoveCategoryFromDevice::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3747,7 +3775,7 @@ BaseLib::PVariable RPCRemoveCategoryFromDevice::invoke(BaseLib::PRpcClientInfo c
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCRemoveDeviceFromRoom::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCRemoveDeviceFromRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3782,7 +3810,7 @@ BaseLib::PVariable RPCRemoveDeviceFromRoom::invoke(BaseLib::PRpcClientInfo clien
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCRemoveEvent::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCRemoveEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 #ifdef EVENTHANDLER
 	try
@@ -3810,7 +3838,7 @@ BaseLib::PVariable RPCRemoveEvent::invoke(BaseLib::PRpcClientInfo clientInfo, st
 #endif
 }
 
-BaseLib::PVariable RPCRemoveLink::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCRemoveLink::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3878,7 +3906,7 @@ BaseLib::PVariable RPCRemoveLink::invoke(BaseLib::PRpcClientInfo clientInfo, std
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCReportValueUsage::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCReportValueUsage::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3921,7 +3949,7 @@ BaseLib::PVariable RPCReportValueUsage::invoke(BaseLib::PRpcClientInfo clientInf
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-BaseLib::PVariable RPCRssiInfo::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCRssiInfo::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -3960,7 +3988,7 @@ BaseLib::PVariable RPCRssiInfo::invoke(BaseLib::PRpcClientInfo clientInfo, std::
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4096,7 +4124,7 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, std:
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSearchDevices::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSearchDevices::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4145,7 +4173,7 @@ BaseLib::PVariable RPCSearchDevices::invoke(BaseLib::PRpcClientInfo clientInfo, 
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSearchInterfaces::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSearchInterfaces::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
     try
     {
@@ -4197,7 +4225,7 @@ BaseLib::PVariable RPCSearchInterfaces::invoke(BaseLib::PRpcClientInfo clientInf
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSetData::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSetData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4223,7 +4251,7 @@ BaseLib::PVariable RPCSetData::invoke(BaseLib::PRpcClientInfo clientInfo, std::s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSetId::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSetId::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4259,7 +4287,7 @@ BaseLib::PVariable RPCSetId::invoke(BaseLib::PRpcClientInfo clientInfo, std::sha
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSetInstallMode::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSetInstallMode::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4327,7 +4355,7 @@ BaseLib::PVariable RPCSetInstallMode::invoke(BaseLib::PRpcClientInfo clientInfo,
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSetInterface::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSetInterface::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4363,7 +4391,7 @@ BaseLib::PVariable RPCSetInterface::invoke(BaseLib::PRpcClientInfo clientInfo, s
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-BaseLib::PVariable RPCSetLanguage::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSetLanguage::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4391,7 +4419,7 @@ BaseLib::PVariable RPCSetLanguage::invoke(BaseLib::PRpcClientInfo clientInfo, st
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSetLinkInfo::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSetLinkInfo::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4480,7 +4508,7 @@ BaseLib::PVariable RPCSetLinkInfo::invoke(BaseLib::PRpcClientInfo clientInfo, st
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4552,7 +4580,7 @@ BaseLib::PVariable RPCSetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, st
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSetName::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSetName::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4588,7 +4616,7 @@ BaseLib::PVariable RPCSetName::invoke(BaseLib::PRpcClientInfo clientInfo, std::s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSetNodeData::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSetNodeData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4614,7 +4642,7 @@ BaseLib::PVariable RPCSetNodeData::invoke(BaseLib::PRpcClientInfo clientInfo, st
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSetFlowData::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSetFlowData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4640,7 +4668,7 @@ BaseLib::PVariable RPCSetFlowData::invoke(BaseLib::PRpcClientInfo clientInfo, st
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSetGlobalData::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSetGlobalData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4667,7 +4695,7 @@ BaseLib::PVariable RPCSetGlobalData::invoke(BaseLib::PRpcClientInfo clientInfo, 
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4694,7 +4722,7 @@ BaseLib::PVariable RPCSetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSetSystemVariable::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSetSystemVariable::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4723,7 +4751,7 @@ BaseLib::PVariable RPCSetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSetTeam::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSetTeam::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4802,7 +4830,7 @@ BaseLib::PVariable RPCSetTeam::invoke(BaseLib::PRpcClientInfo clientInfo, std::s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4899,7 +4927,7 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, std::
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
-BaseLib::PVariable RPCStartSniffing::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCStartSniffing::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4932,7 +4960,7 @@ BaseLib::PVariable RPCStartSniffing::invoke(BaseLib::PRpcClientInfo clientInfo, 
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCStopSniffing::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCStopSniffing::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -4965,7 +4993,7 @@ BaseLib::PVariable RPCStopSniffing::invoke(BaseLib::PRpcClientInfo clientInfo, s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSubscribePeers::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCSubscribePeers::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -5014,7 +5042,7 @@ BaseLib::PVariable RPCSubscribePeers::invoke(BaseLib::PRpcClientInfo clientInfo,
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCTriggerEvent::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCTriggerEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 #ifdef EVENTHANDLER
 	try
@@ -5042,7 +5070,7 @@ BaseLib::PVariable RPCTriggerEvent::invoke(BaseLib::PRpcClientInfo clientInfo, s
 #endif
 }
 
-BaseLib::PVariable RPCTriggerRpcEvent::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCTriggerRpcEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -5082,7 +5110,7 @@ BaseLib::PVariable RPCTriggerRpcEvent::invoke(BaseLib::PRpcClientInfo clientInfo
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCUnsubscribePeers::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCUnsubscribePeers::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -5131,7 +5159,7 @@ BaseLib::PVariable RPCUnsubscribePeers::invoke(BaseLib::PRpcClientInfo clientInf
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCUpdateCategory::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCUpdateCategory::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -5157,7 +5185,7 @@ BaseLib::PVariable RPCUpdateCategory::invoke(BaseLib::PRpcClientInfo clientInfo,
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCUpdateFirmware::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCUpdateFirmware::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -5221,7 +5249,7 @@ BaseLib::PVariable RPCUpdateFirmware::invoke(BaseLib::PRpcClientInfo clientInfo,
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCUpdateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCUpdateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -5247,7 +5275,7 @@ BaseLib::PVariable RPCUpdateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, std
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCWriteLog::invoke(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RPCWriteLog::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{

@@ -71,6 +71,7 @@ public:
 	void executeScript(PScriptInfo& scriptInfo, bool wait);
 	bool checkSessionId(const std::string& sessionId);
 	BaseLib::PVariable executePhpNodeMethod(BaseLib::PArray& parameters);
+	BaseLib::PVariable executeDeviceMethod(BaseLib::PArray& parameters);
 	void broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values);
 	void broadcastNewDevices(BaseLib::PVariable deviceDescriptions);
 	void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
@@ -129,6 +130,8 @@ private:
 	std::thread _scriptFinishedThread;
 	std::mutex _nodeClientIdMapMutex;
 	std::map<std::string, int32_t> _nodeClientIdMap;
+    std::mutex _deviceClientIdMapMutex;
+    std::map<uint64_t, int32_t> _deviceClientIdMap;
 
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
@@ -147,8 +150,10 @@ private:
 	void closeClientConnection(PScriptEngineClientData client);
 	PScriptEngineProcess getFreeProcess(bool nodeProcess, uint32_t maxThreadCount = 0);
 	void unregisterNode(std::string nodeId);
+    void unregisterDevice(uint64_t peerId);
 	void invokeScriptFinished(PScriptEngineProcess process, int32_t id, int32_t exitCode);
 	void invokeScriptFinishedEarly(PScriptInfo scriptInfo, int32_t exitCode);
+	void stopDevices();
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 
