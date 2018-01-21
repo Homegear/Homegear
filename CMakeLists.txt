@@ -76,6 +76,8 @@ set(SOURCE_FILES
         src/ScriptEngine/php_config_fixes.h
         src/ScriptEngine/php_homegear_globals.cpp
         src/ScriptEngine/php_homegear_globals.h
+        src/ScriptEngine/php_device.cpp
+        src/ScriptEngine/php_device.h
         src/ScriptEngine/php_node.cpp
         src/ScriptEngine/php_node.h
         src/ScriptEngine/php_sapi.cpp

@@ -2176,6 +2176,7 @@ static PHP_MINIT_FUNCTION(homegear)
 #endif
 
 	php_node_startup();
+	php_device_startup();
 
     return SUCCESS;
 }

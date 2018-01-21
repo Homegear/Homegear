@@ -71,6 +71,7 @@ MiscPeer::MiscPeer(int32_t id, std::string serialNumber, uint32_t parentID, IPee
 
 void MiscPeer::init()
 {
+    _lastScriptFinished.store(0);
 	_shuttingDown = false;
 	_scriptRunning = false;
 	_stopRunProgramThread = true;
@@ -154,6 +155,53 @@ void MiscPeer::homegearShuttingDown()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+}
+
+bool MiscPeer::stop()
+{
+	try
+	{
+        if(_rpcDevice->runProgram->script2.empty()) return false;
+
+        std::string methodName = "executeMiscellaneousDeviceMethod";
+
+		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+		parameters->reserve(3);
+		parameters->push_back(std::make_shared<BaseLib::Variable>(_peerID));
+		parameters->push_back(std::make_shared<BaseLib::Variable>("stop"));
+		BaseLib::PVariable innerParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+		parameters->push_back(innerParameters);
+
+        bool noError = true;
+		BaseLib::PVariable result = raiseInvokeRpc(methodName, parameters);
+		if(result->errorStruct)
+        {
+            GD::out.printError("Error calling stop on peer " + std::to_string(_peerID) + ": " + result->structValue->at("faultString")->stringValue);
+            noError = false;
+        }
+
+        parameters->at(1)->stringValue = "waitForStop";
+        result = raiseInvokeRpc(methodName, parameters);
+        if(result->errorStruct)
+        {
+            GD::out.printError("Error calling waitForStop on peer " + std::to_string(_peerID) + ": " + result->structValue->at("faultString")->stringValue);
+            noError = false;
+        }
+        return noError;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+    return false;
 }
 
 void MiscPeer::runProgram()
@@ -271,8 +319,10 @@ void MiscPeer::scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, in
 		_scriptRunning = false;
 		if(!_shuttingDown && !GD::bl->shuttingDown && !deleting)
 		{
-			GD::out.printError("Error: Script of peer " + std::to_string(_peerID) + " was killed. Restarting in 10 seconds...");
-			_bl->threadManager.start(_runProgramThread, true, &MiscPeer::runScript, this, true);
+            if(exitCode == 0) GD::out.printInfo("Info: Script of peer " + std::to_string(_peerID) + " finished with exit code 0. Restarting...");
+			else GD::out.printError("Error: Script of peer " + std::to_string(_peerID) + " was killed. Restarting...");
+            _bl->threadManager.start(_runProgramThread, true, &MiscPeer::runScript, this, BaseLib::HelperFunctions::getTime() - _lastScriptFinished.load() < 10000 ? 10000 : 0);
+            _lastScriptFinished.store(BaseLib::HelperFunctions::getTime());
 		}
 		else if(deleting) GD::out.printInfo("Info: Script of peer " + std::to_string(_peerID) + " finished.");
 	}
@@ -290,23 +340,23 @@ void MiscPeer::scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, in
 	}
 }
 
-void MiscPeer::runScript(bool delay)
+void MiscPeer::runScript(int32_t delay)
 {
 	try
 	{
-		if(!_rpcDevice->runProgram || _shuttingDown) return;
+		if(!_rpcDevice->runProgram || _shuttingDown || deleting) return;
 		while(GD::bl->booting && !_stopRunProgramThread)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			continue;
 		}
 		if(_stopRunProgramThread) return;
-		if(delay)
+		if(delay > 0)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+			std::this_thread::sleep_for(std::chrono::milliseconds(delay));
 			if(_stopRunProgramThread) return;
 		}
-		std::string script = _rpcDevice->runProgram->script;
+		std::string script = _rpcDevice->runProgram->script.empty() ? _rpcDevice->runProgram->script2 : _rpcDevice->runProgram->script;
 		if(script.empty()) return;
 
 		std::string path = _rpcDevice->getPath();
@@ -324,7 +374,7 @@ void MiscPeer::runScript(bool delay)
 
 		std::lock_guard<std::mutex> scriptInfoGuard(_scriptInfoMutex);
 		if(_shuttingDown) return;
-		_scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(BaseLib::ScriptEngine::ScriptInfo::ScriptType::device, path, path, script, args, _peerID);
+		_scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(!_rpcDevice->runProgram->script2.empty() ? BaseLib::ScriptEngine::ScriptInfo::ScriptType::device2 : BaseLib::ScriptEngine::ScriptInfo::ScriptType::device, path, path, script, args, _peerID);
 		if(_rpcDevice->runProgram->startType != RunProgram::StartType::once)
 		{
 			_scriptInfo->scriptFinishedCallback = std::bind(&MiscPeer::scriptFinished, this, std::placeholders::_1, std::placeholders::_2);
@@ -597,7 +647,7 @@ void MiscPeer::initProgram()
 			_stopRunProgramThread = true;
 			_bl->threadManager.join(_runProgramThread);
 			_stopRunProgramThread = false;
-			if(!_rpcDevice->runProgram->script.empty()) _bl->threadManager.start(_runProgramThread, true, &MiscPeer::runScript, this, false);
+			if(!_rpcDevice->runProgram->script.empty() || !_rpcDevice->runProgram->script2.empty()) _bl->threadManager.start(_runProgramThread, true, &MiscPeer::runScript, this, false);
 			else _bl->threadManager.start(_runProgramThread, true, &MiscPeer::runProgram, this);
 		}
 	}

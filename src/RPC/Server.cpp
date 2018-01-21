@@ -80,6 +80,7 @@ void Server::registerMethods()
 		_server->registerMethod("deleteRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteRoom()));
 		_server->registerMethod("deleteSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteSystemVariable()));
 		_server->registerMethod("enableEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCEnableEvent()));
+		_server->registerMethod("executeMiscellaneousDeviceMethod", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCExecuteMiscellaneousDeviceMethod()));
 		_server->registerMethod("getAllConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetAllConfig()));
 		_server->registerMethod("getAllMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetAllMetadata()));
 		_server->registerMethod("getAllScripts", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetAllScripts()));

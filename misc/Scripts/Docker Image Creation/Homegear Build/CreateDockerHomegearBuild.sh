@@ -657,6 +657,12 @@ cat > "$rootfs/build/CreateDebianPackageStable.sh" <<-'EOF'
 cd /build
 
 if test -f libhomegear-base*.deb && test -f libhomegear-node*.deb && test -f libhomegear-ipc*.deb && test -f homegear_*.deb && test -f homegear-nodes-core*.deb && test -f homegear-homematicbidcos*.deb && test -f homegear-homematicwired*.deb && test -f homegear-insteon*.deb && test -f homegear-max*.deb && test -f homegear-philipshue*.deb && test -f homegear-sonos*.deb && test -f homegear-kodi*.deb && test -f homegear-ipcam*.deb && test -f homegear-intertechno*.deb && test -f homegear-nanoleaf*.deb && test -f homegear-ccu2*.deb && test -f homegear-influxdb*.deb; then
+	if [[ -n \$1 ]]; then
+		if test ! -f homegear-easy-licensing*.deb || test ! -f homegear-licensing*.deb || test ! -f homegear-nodes-extra*.deb || test ! -f homegear-beckhoff*.deb || test ! -f homegear-knx*.deb || test ! -f homegear-enocean*.deb || test ! -f homegear-easycam*.deb || test ! -f homegear-easyled*.deb || test ! -f homegear-easyled2*.deb || test ! -f homegear-rsl*.deb || test ! -f homegear-rs2w*.deb || test ! -f homegear-mbus*.deb || test ! -f homegear-zwave*.deb; then
+			echo \"Error: Some or all packages from gitit.de could not be created.\"
+			exit 1
+		fi
+	fi
 	if test -f /build/UploadStable.sh; then
 		/build/UploadStable.sh
 	fi

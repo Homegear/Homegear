@@ -119,6 +119,18 @@ private:
 	};
 	typedef std::shared_ptr<NodeInfo> PNodeInfo;
 
+    struct DeviceInfo
+    {
+        std::mutex requestMutex;
+        std::mutex waitMutex;
+        std::condition_variable conditionVariable;
+        bool ready = false;
+        std::string methodName;
+        BaseLib::PArray parameters;
+        BaseLib::PVariable response;
+    };
+    typedef std::shared_ptr<DeviceInfo> PDeviceInfo;
+
 	BaseLib::Output _out;
 	std::atomic_int _threadCount;
 	std::atomic_int _processingThreadCount1;
@@ -155,6 +167,8 @@ private:
 	std::atomic_bool _nodesStopped;
 	static std::mutex _nodeInfoMutex;
 	static std::unordered_map<std::string, PNodeInfo> _nodeInfo;
+    static std::mutex _deviceInfoMutex;
+    static std::unordered_map<uint64_t, PDeviceInfo> _deviceInfo;
 
 	std::unique_ptr<BaseLib::Rpc::BinaryRpc> _binaryRpc;
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
@@ -179,6 +193,7 @@ private:
 	void scriptThread(int32_t id, PScriptInfo scriptInfo, bool sendOutput);
 	void runScript(int32_t id, PScriptInfo scriptInfo);
 	void runNode(int32_t id, PScriptInfo scriptInfo);
+	void runDevice(int32_t id, PScriptInfo scriptInfo);
 	void checkSessionIdThread(std::string sessionId, bool* result);
 	BaseLib::PVariable send(std::vector<char>& data);
 
@@ -207,6 +222,13 @@ private:
 		BaseLib::PVariable executeScript(BaseLib::PArray& parameters);
 
 		BaseLib::PVariable devTest(BaseLib::PArray& parameters);
+
+        /**
+         * Executes the method "stop" on all nodes. RPC methods can still be called within "stop", but not afterwards.
+         * @param parameters
+         */
+        BaseLib::PVariable stopDevices(BaseLib::PArray& parameters);
+
 		/**
 		 * Returns the number of scripts currently running.
 		 * @param parameters Irrelevant for this method.
@@ -216,6 +238,7 @@ private:
 		BaseLib::PVariable getRunningScripts(BaseLib::PArray& parameters);
 		BaseLib::PVariable checkSessionId(BaseLib::PArray& parameters);
 		BaseLib::PVariable executePhpNodeMethod(BaseLib::PArray& parameters);
+        BaseLib::PVariable executeDeviceMethod(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastEvent(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastNewDevices(BaseLib::PArray& parameters);
 		BaseLib::PVariable broadcastDeleteDevices(BaseLib::PArray& parameters);

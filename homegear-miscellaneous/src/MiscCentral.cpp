@@ -124,6 +124,7 @@ void MiscCentral::deletePeer(uint64_t id)
 		std::shared_ptr<MiscPeer> peer(getPeer(id));
 		if(!peer) return;
 		peer->deleting = true;
+		peer->stop();
 		PVariable deviceAddresses(new Variable(VariableType::tArray));
 		deviceAddresses->arrayValue->push_back(PVariable(new Variable(peer->getSerialNumber())));
 
@@ -254,6 +255,8 @@ std::string MiscCentral::handleCliCommand(std::string command)
 	try
 	{
 		std::ostringstream stringStream;
+		std::vector<std::string> arguments;
+		bool showHelp = false;
 		if(_currentPeer)
 		{
 			if(command == "unselect" || command == "u")
@@ -267,12 +270,13 @@ std::string MiscCentral::handleCliCommand(std::string command)
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "peers create (pc)\t\tCreates a new peer" << std::endl;
-			stringStream << "peers list (ls)\t\tList all peers" << std::endl;
-			stringStream << "peers remove (pr)\tRemove a peer" << std::endl;
-			stringStream << "peers select (ps)\tSelect a peer" << std::endl;
-			stringStream << "peers setname (pn)\tName a peer" << std::endl;
-			stringStream << "unselect (u)\t\tUnselect this device" << std::endl;
+			stringStream << "peers create (pc)   Creates a new peer" << std::endl;
+			stringStream << "peers list (ls)     List all peers" << std::endl;
+			stringStream << "peers remove (pr)   Remove a peer" << std::endl;
+			stringStream << "peers select (ps)   Select a peer" << std::endl;
+			stringStream << "peers setname (pn)  Name a peer" << std::endl;
+			stringStream << "peers restart (prs) Restarts the peer" << std::endl;
+			stringStream << "unselect (u)        Unselect this device" << std::endl;
 			return stringStream.str();
 		}
 		if(command.compare(0, 12, "peers create") == 0 || command.compare(0, 2, "pc") == 0)
@@ -355,44 +359,26 @@ std::string MiscCentral::handleCliCommand(std::string command)
 			}
 			return stringStream.str();
 		}
-		else if(command.compare(0, 12, "peers remove") == 0 || command.compare(0, 2, "pr") == 0)
-		{
-			uint64_t peerID = 0;
+        else if(BaseLib::HelperFunctions::checkCliCommand(command, "peers remove", "pr", "", 1, arguments, showHelp))
+        {
+            if(showHelp)
+            {
+                stringStream << "Description: This command removes a peer." << std::endl;
+                stringStream << "Usage: peers unpair PEERID" << std::endl << std::endl;
+                stringStream << "Parameters:" << std::endl;
+                stringStream << "  PEERID:\tThe id of the peer to remove. Example: 513" << std::endl;
+                return stringStream.str();
+            }
 
-			std::stringstream stream(command);
-			std::string element;
-			int32_t offset = (command.at(1) == 'r') ? 0 : 1;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index < 1 + offset)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1 + offset)
-				{
-					if(element == "help") break;
-					peerID = BaseLib::Math::getNumber(element, false);
-					if(peerID == 0) return "Invalid id.\n";
-				}
-				index++;
-			}
-			if(index == 1 + offset)
-			{
-				stringStream << "Description: This command removes a peer." << std::endl;
-				stringStream << "Usage: peers unpair PEERID" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  PEERID:\tThe id of the peer to remove. Example: 513" << std::endl;
-				return stringStream.str();
-			}
+			uint64_t peerId = BaseLib::Math::getNumber64(arguments.at(0));
+            if(peerId == 0)  return "Invalid id.\n";
 
-			if(!peerExists(peerID)) stringStream << "This peer is not paired to this central." << std::endl;
+			if(!peerExists(peerId)) stringStream << "This peer is not paired to this central." << std::endl;
 			else
 			{
-				if(_currentPeer && _currentPeer->getID() == peerID) _currentPeer.reset();
-				stringStream << "Removing peer " << std::to_string(peerID) << std::endl;
-				deletePeer(peerID);
+				if(_currentPeer && _currentPeer->getID() == peerId) _currentPeer.reset();
+				stringStream << "Removing peer " << std::to_string(peerId) << std::endl;
+				deletePeer(peerId);
 			}
 			return stringStream.str();
 		}
@@ -597,6 +583,28 @@ std::string MiscCentral::handleCliCommand(std::string command)
 				peer->setName(name);
 				stringStream << "Name set to \"" << name << "\"." << std::endl;
 			}
+			return stringStream.str();
+		}
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "peers restart", "prs", "", 1, arguments, showHelp))
+		{
+			if(showHelp)
+			{
+				stringStream << "Description: This command restarts the peer." << std::endl;
+				stringStream << "Usage: peers restart PEERID" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  PEERID: The ID of the peer to restart. Example: 513" << std::endl;
+				return stringStream.str();
+			}
+
+			uint64_t peerId = BaseLib::Math::getNumber64(arguments.at(0));
+			if(peerId == 0) return "Invalid peer ID.\n";
+
+			auto peer = getPeer(peerId);
+            if(!peer) return "Unknown peer.\n";
+
+            if(!peer->stop()) return "Could not restart peer. Note that restarting is only supported by PHP devices of type 2.\n";
+
+			stringStream << "Peer restarts." << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 12, "peers select") == 0 || command.compare(0, 2, "ps") == 0)

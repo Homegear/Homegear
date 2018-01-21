@@ -329,6 +329,27 @@ void FamilyController::onRunScript(BaseLib::ScriptEngine::PScriptInfo& scriptInf
 	}
 }
 
+BaseLib::PVariable FamilyController::onInvokeRpc(std::string& methodName, BaseLib::PArray& parameters)
+{
+	try
+	{
+		return GD::rpcServers.begin()->second.callMethod(methodName, std::make_shared<BaseLib::Variable>(parameters));
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+    return BaseLib::Variable::createError(-32500, "Homegear is compiled without script engine.");
+}
+
 int32_t FamilyController::onCheckLicense(int32_t moduleId, int32_t familyId, int32_t deviceId, const std::string& licenseKey)
 {
 	try
@@ -1196,6 +1217,7 @@ bool FamilyController::physicalInterfaceIsOpen()
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
+			if(!i->second->hasPhysicalInterface()) continue;
 			std::shared_ptr<BaseLib::Systems::PhysicalInterfaces> interface = i->second->physicalInterfaces();
 			if(!interface->isOpen()) return false;
 		}
