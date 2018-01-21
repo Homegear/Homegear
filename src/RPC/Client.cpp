@@ -102,9 +102,12 @@ void Client::initServerMethods(std::pair<std::string, std::string> address)
 		systemListMethods(address);
 		server = getServer(address);
 		if(!server) return; //server is empty when connection timed out
-		listDevices(address);
-		sendUnknownDevices(address);
-		server = getServer(address);
+        if(server->sendNewDevices)
+        {
+            listDevices(address);
+            sendUnknownDevices(address);
+            server = getServer(address);
+        }
 		if(server) server->initialized = true;
 
 		if(BaseLib::Io::fileExists(GD::bl->settings.workingDirectory() + "core"))

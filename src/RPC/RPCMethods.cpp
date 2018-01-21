@@ -3149,25 +3149,27 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 			clientInfo->initUrl = parameters->at(0)->stringValue;
 			clientInfo->initInterfaceId = parameters->at(1)->stringValue;
 
+            int32_t flags = parameters->size() >= 3 ? parameters->at(2)->integerValue : 0;
 			if(parameters->size() >= 3)
 			{
-				int32_t flags = parameters->at(2)->integerValue;
 				clientInfo->initKeepAlive = flags & 1;
 				clientInfo->initBinaryMode = flags & 2;
 				clientInfo->initNewFormat = flags & 4;
 				clientInfo->initSubscribePeers = flags & 8;
 				clientInfo->initJsonMode = flags & 0x10;
+                clientInfo->initSendNewDevices = !(flags & 0x20);
 			}
 
 			eventServer->type = clientInfo->clientType;
-			if(parameters->size() > 2)
+			if(parameters->size() >= 3)
 			{
-				eventServer->keepAlive = (parameters->at(2)->integerValue & 1);
-				eventServer->binary = (parameters->at(2)->integerValue & 2);
-				eventServer->newFormat = (parameters->at(2)->integerValue & 4);
-				eventServer->subscribePeers = (parameters->at(2)->integerValue & 8);
-				eventServer->json = (parameters->at(2)->integerValue & 16);
-				if(!eventServer->reconnectInfinitely) eventServer->reconnectInfinitely = (parameters->at(2)->integerValue & 128);
+				eventServer->keepAlive = flags & 1;
+				eventServer->binary = flags & 2;
+				eventServer->newFormat = flags & 4;
+				eventServer->subscribePeers = flags & 8;
+				eventServer->json = flags & 0x10;
+                eventServer->sendNewDevices = !(flags & 0x20);
+				if(!eventServer->reconnectInfinitely) eventServer->reconnectInfinitely = (flags & 128);
 			}
 
 			_initServerThreadMutex.lock();

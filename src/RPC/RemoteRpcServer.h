@@ -65,6 +65,7 @@ public:
 	bool subscribePeers = false;
 	bool nodeEvents = false;
 	bool reconnectInfinitely = false;
+	bool sendNewDevices = true;
 	std::string hostname;
 	std::pair<std::string, std::string> address;
 	std::string path;
