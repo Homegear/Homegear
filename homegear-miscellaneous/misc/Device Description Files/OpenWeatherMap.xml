@@ -267,6 +267,7 @@ class HomegearDevice extends HomegearDeviceBase
 			</parameter>
 			<parameter id="API_KEY">
 				<properties>
+					<password>true</password>
 					<casts>
 						<rpcBinary/>
 					</casts>

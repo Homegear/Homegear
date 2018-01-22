@@ -814,7 +814,7 @@ PVariable MiscPeer::getParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
 				if(configCentral[channel].find(i->second->id) == configCentral[channel].end()) continue;
 				std::vector<uint8_t> parameterData = configCentral[channel][i->second->id].getBinaryData();
 				element = i->second->convertFromPacket(parameterData);
-				//if(i->second->password) element.reset(new Variable(element->type));
+				if(i->second->password && (!clientInfo || !clientInfo->scriptEngineServer)) element.reset(new Variable(element->type));
 			}
 			else if(type == ParameterGroup::Type::Enum::link)
 			{
