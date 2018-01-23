@@ -124,6 +124,8 @@ void MiscPeer::homegearShuttingDown()
 		_shuttingDown = true;
 		Peer::homegearShuttingDown();
 
+        stop();
+
 		int32_t i = 0;
 		_stopRunProgramThread = true;
 		while(_scriptRunning && i < 30)
