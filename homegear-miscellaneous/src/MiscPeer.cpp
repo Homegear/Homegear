@@ -74,6 +74,8 @@ void MiscPeer::init()
     _lastScriptFinished.store(0);
 	_shuttingDown = false;
 	_scriptRunning = false;
+	_stopScript = false;
+    _stopped = true;
 	_stopRunProgramThread = true;
 }
 
@@ -124,26 +126,7 @@ void MiscPeer::homegearShuttingDown()
 		_shuttingDown = true;
 		Peer::homegearShuttingDown();
 
-        stop();
-
-		int32_t i = 0;
-		_stopRunProgramThread = true;
-		while(_scriptRunning && i < 30)
-		{
-			GD::out.printInfo("Info: Peer " + std::to_string(_peerID) + " Waiting for script to finish...");
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-			i++;
-		}
-		if(i == 30) GD::out.printError("Error: Script of peer " + std::to_string(_peerID) + " did not finish.");
-
-		if(_programPID != -1)
-		{
-			kill(_programPID, 15);
-			_programPID = -1;
-		}
-
-		if(_programPID != -1) GD::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
-		_bl->threadManager.join(_runProgramThread);
+        stopScript(false);
 	}
 	catch(const std::exception& ex)
 	{
@@ -159,11 +142,59 @@ void MiscPeer::homegearShuttingDown()
 	}
 }
 
+void MiscPeer::stopScript(bool callStop)
+{
+    try
+    {
+        if(_stopScript) return;
+        _stopScript = true;
+
+        if(callStop) stop();
+
+        int32_t i = 0;
+        _stopRunProgramThread = true;
+        if(!(!_rpcDevice->runProgram->script2.empty() && _shuttingDown))
+        {
+            while(_scriptRunning && i < 30)
+            {
+                GD::out.printInfo("Info: Peer " + std::to_string(_peerID) + " Waiting for script to finish...");
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                i++;
+            }
+            if(i == 30) GD::out.printError("Error: Script of peer " + std::to_string(_peerID) + " did not finish.");
+        }
+
+        if(_programPID != -1)
+        {
+            kill(_programPID, 15);
+            _programPID = -1;
+        }
+
+        if(_programPID != -1) GD::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
+        _bl->threadManager.join(_runProgramThread);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 bool MiscPeer::stop()
 {
 	try
 	{
         if(_rpcDevice->runProgram->script2.empty()) return false;
+        if(_stopped) return true;
+
+        _stopped = true;
 
         std::string methodName = "executeMiscellaneousDeviceMethod";
 
@@ -319,7 +350,7 @@ void MiscPeer::scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, in
 	try
 	{
 		_scriptRunning = false;
-		if(!_shuttingDown && !GD::bl->shuttingDown && !deleting)
+		if(!_shuttingDown && !GD::bl->shuttingDown && !deleting && !_stopScript)
 		{
             if(exitCode == 0) GD::out.printInfo("Info: Script of peer " + std::to_string(_peerID) + " finished with exit code 0. Restarting...");
 			else GD::out.printError("Error: Script of peer " + std::to_string(_peerID) + " was killed. Restarting...");
@@ -381,6 +412,8 @@ void MiscPeer::runScript(int32_t delay)
 		{
 			_scriptInfo->scriptFinishedCallback = std::bind(&MiscPeer::scriptFinished, this, std::placeholders::_1, std::placeholders::_2);
 		}
+
+        _stopped = false;
 
 		raiseRunScript(_scriptInfo, false);
 		_scriptRunning = _scriptInfo->started;
@@ -644,11 +677,12 @@ void MiscPeer::initProgram()
 {
 	try
     {
-		if(_rpcDevice->runProgram)
+		if(_rpcDevice->runProgram && !GD::bl->shuttingDown && !deleting && !_shuttingDown)
 		{
 			_stopRunProgramThread = true;
 			_bl->threadManager.join(_runProgramThread);
 			_stopRunProgramThread = false;
+            _stopScript = false;
             _lastScriptFinished.store(0);
             _scriptRunning = false;
 			if(!_rpcDevice->runProgram->script.empty() || !_rpcDevice->runProgram->script2.empty()) _bl->threadManager.start(_runProgramThread, true, &MiscPeer::runScript, this, false);

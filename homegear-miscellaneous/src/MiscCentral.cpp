@@ -124,7 +124,7 @@ void MiscCentral::deletePeer(uint64_t id)
 		std::shared_ptr<MiscPeer> peer(getPeer(id));
 		if(!peer) return;
 		peer->deleting = true;
-		peer->stop();
+		peer->stopScript();
 		PVariable deviceAddresses(new Variable(VariableType::tArray));
 		deviceAddresses->arrayValue->push_back(PVariable(new Variable(peer->getSerialNumber())));
 
@@ -353,7 +353,7 @@ std::string MiscCentral::handleCliCommand(std::string command)
 				PVariable deviceDescriptions(new Variable(VariableType::tArray));
 				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
 				raiseRPCNewDevices(deviceDescriptions);
-				GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(peer->getID()) + ".");
+				GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
 				stringStream << "Added peer " + std::to_string(peer->getID()) + " of type 0x" << BaseLib::HelperFunctions::getHexString(deviceType) << " with serial number " << serialNumber << "." << std::dec << std::endl;
 				peer->initProgram();
 			}
@@ -605,15 +605,14 @@ std::string MiscCentral::handleCliCommand(std::string command)
             std::string serialNumber = peer->getSerialNumber();
             uint32_t typeId = peer->getDeviceType();
 
-            peer->deleting = true;
-            peer->stop();
+            peer->stopScript();
 
             std::unique_lock<std::mutex> lockGuard(_peersMutex);
             if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
             if(_peersById.find(peerId) != _peersById.end()) _peersById.erase(peerId);
             lockGuard.unlock();
 
-            peer->deleting = false;
+			GD::family->reloadRpcDevices();
             peer->setRpcDevice(GD::family->getRpcDevices()->find(typeId, 0x10, -1));
             if(!peer->getRpcDevice()) return "RPC device could not be found anymore. Check for errors in the XML file. Please note the device still exists in the database and will be loaded on module restart once the error is fixed.\n";
 
