@@ -643,12 +643,14 @@ void MiscPeer::saveVariables()
 void MiscPeer::initProgram()
 {
 	try
-	{
+    {
 		if(_rpcDevice->runProgram)
 		{
 			_stopRunProgramThread = true;
 			_bl->threadManager.join(_runProgramThread);
 			_stopRunProgramThread = false;
+            _lastScriptFinished.store(0);
+            _scriptRunning = false;
 			if(!_rpcDevice->runProgram->script.empty() || !_rpcDevice->runProgram->script2.empty()) _bl->threadManager.start(_runProgramThread, true, &MiscPeer::runScript, this, false);
 			else _bl->threadManager.start(_runProgramThread, true, &MiscPeer::runProgram, this);
 		}

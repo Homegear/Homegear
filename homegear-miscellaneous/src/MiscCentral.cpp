@@ -602,9 +602,31 @@ std::string MiscCentral::handleCliCommand(std::string command)
 			auto peer = getPeer(peerId);
             if(!peer) return "Unknown peer.\n";
 
-            if(!peer->stop()) return "Could not restart peer. Note that restarting is only supported by PHP devices of type 2.\n";
+            std::string serialNumber = peer->getSerialNumber();
+            uint32_t typeId = peer->getDeviceType();
 
-			stringStream << "Peer restarts." << std::endl;
+            peer->deleting = true;
+            peer->stop();
+
+            std::unique_lock<std::mutex> lockGuard(_peersMutex);
+            if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
+            if(_peersById.find(peerId) != _peersById.end()) _peersById.erase(peerId);
+            lockGuard.unlock();
+
+            peer->deleting = false;
+            peer->setRpcDevice(GD::family->getRpcDevices()->find(typeId, 0x10, -1));
+            if(!peer->getRpcDevice()) return "RPC device could not be found anymore. Check for errors in the XML file. Please note the device still exists in the database and will be loaded on module restart once the error is fixed.\n";
+
+            lockGuard.lock();
+            if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
+            _peersById[peer->getID()] = peer;
+            lockGuard.unlock();
+
+            peer->initProgram();
+
+            raiseRPCUpdateDevice(peerId, 0, serialNumber + ":" + std::to_string(0), 0);
+
+			stringStream << "Peer restarted." << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 12, "peers select") == 0 || command.compare(0, 2, "ps") == 0)
