@@ -3153,7 +3153,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 			if(parameters->size() >= 3)
 			{
 				clientInfo->initKeepAlive = flags & 1;
-				clientInfo->initBinaryMode = flags & 2;
+				clientInfo->initBinaryMode = (flags & 2) || eventServer->binary;
 				clientInfo->initNewFormat = flags & 4;
 				clientInfo->initSubscribePeers = flags & 8;
 				clientInfo->initJsonMode = flags & 0x10;
@@ -3164,7 +3164,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 			if(parameters->size() >= 3)
 			{
 				eventServer->keepAlive = flags & 1;
-				eventServer->binary = flags & 2;
+				eventServer->binary = (flags & 2) || eventServer->binary;
 				eventServer->newFormat = flags & 4;
 				eventServer->subscribePeers = flags & 8;
 				eventServer->json = flags & 0x10;
