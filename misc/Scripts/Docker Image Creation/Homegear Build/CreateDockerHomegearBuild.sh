@@ -139,7 +139,11 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install apt-transport-h
 echo "deb https://homegear.eu/packages/$dist/ $distver/
 " > $rootfs/etc/apt/sources.list.d/homegear.list
 
-wget -P $rootfs/etc/apt/trusted.gpg.d/homegear.gpg https://homegear.eu/packages/Release.key
+chroot $rootfs mount proc /proc -t proc
+wget -P $rootfs https://homegear.eu/packages/Release.key
+chroot $rootfs apt-key add Release.key
+rm $rootfs/Release.key
+chroot $rootfs umount /proc
 
 chroot $rootfs apt-get update
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev
