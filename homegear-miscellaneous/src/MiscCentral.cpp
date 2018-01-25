@@ -602,9 +602,6 @@ std::string MiscCentral::handleCliCommand(std::string command)
 			auto peer = getPeer(peerId);
             if(!peer) return "Unknown peer.\n";
 
-            std::string serialNumber = peer->getSerialNumber();
-            uint32_t typeId = peer->getDeviceType();
-
             peer->stopScript();
 
             std::unique_lock<std::mutex> lockGuard(_peersMutex);
@@ -613,7 +610,7 @@ std::string MiscCentral::handleCliCommand(std::string command)
             lockGuard.unlock();
 
 			GD::family->reloadRpcDevices();
-            peer->setRpcDevice(GD::family->getRpcDevices()->find(typeId, 0x10, -1));
+            peer->setRpcDevice(GD::family->getRpcDevices()->find(peer->getDeviceType(), 0x10, -1));
             if(!peer->getRpcDevice()) return "RPC device could not be found anymore. Check for errors in the XML file. Please note the device still exists in the database and will be loaded on module restart once the error is fixed.\n";
 
             lockGuard.lock();
@@ -623,7 +620,7 @@ std::string MiscCentral::handleCliCommand(std::string command)
 
             peer->initProgram();
 
-            raiseRPCUpdateDevice(peerId, 0, serialNumber + ":" + std::to_string(0), 0);
+            raiseRPCUpdateDevice(peerId, 0, peer->getSerialNumber() + ":" + std::to_string(0), 0);
 
 			stringStream << "Peer restarted." << std::endl;
 			return stringStream.str();
