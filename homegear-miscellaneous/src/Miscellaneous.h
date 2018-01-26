@@ -47,7 +47,7 @@ public:
 	virtual void dispose();
 
 	virtual bool hasPhysicalInterface() { return false; }
-	virtual PVariable getPairingMethods();
+	virtual PVariable getPairingInfo();
 	void reloadRpcDevices();
 
 protected:

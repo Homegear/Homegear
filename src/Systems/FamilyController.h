@@ -168,11 +168,11 @@ public:
 	void physicalInterfaceStopListening();
 	void physicalInterfaceStartListening();
 	bool physicalInterfaceIsOpen();
-	void physicalInterfaceSetup(int32_t userID, int32_t groupID, bool setPermissions);
-	BaseLib::PVariable listInterfaces(int32_t familyID);
+	void physicalInterfaceSetup(int32_t userId, int32_t groupId, bool setPermissions);
+	BaseLib::PVariable listInterfaces(int32_t familyId);
 	// }}}
 
-	BaseLib::PVariable listFamilies();
+	BaseLib::PVariable listFamilies(int32_t familyId);
 private:
 	bool _disposed = false;
 	BaseLib::PVariable _rpcCache;

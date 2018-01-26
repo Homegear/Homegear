@@ -107,7 +107,7 @@ void Server::registerMethods()
 		_server->registerMethod("getGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetNodeData()));
 		_server->registerMethod("getNodeEvents", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetNodeEvents()));
 		_server->registerMethod("getNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetNodeVariable()));
-		_server->registerMethod("getPairingMethods", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetPairingMethods()));
+		_server->registerMethod("getPairingInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetPairingInfo()));
 		_server->registerMethod("getParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetParamset()));
 		_server->registerMethod("getParamsetDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetParamsetDescription()));
 		_server->registerMethod("getParamsetId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetParamsetId()));

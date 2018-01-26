@@ -87,14 +87,28 @@ void Miscellaneous::createCentral()
     }
 }
 
-PVariable Miscellaneous::getPairingMethods()
+PVariable Miscellaneous::getPairingInfo()
 {
 	try
 	{
-		if(!_central) return PVariable(new Variable(VariableType::tArray));
-		PVariable array(new Variable(VariableType::tArray));
-		array->arrayValue->push_back(PVariable(new Variable(std::string("createDevice"))));
-		return array;
+		if(!_central) return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+		PVariable info = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+		//{{{ Pairing methods
+			PVariable pairingMethods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+			PVariable createDeviceInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			PVariable createDeviceFields = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+			createDeviceFields->arrayValue->reserve(2);
+			createDeviceFields->arrayValue->push_back(std::make_shared<BaseLib::Variable>(std::string("typeId")));
+			createDeviceFields->arrayValue->push_back(std::make_shared<BaseLib::Variable>(std::string("serialNumber")));
+			createDeviceInfo->structValue->emplace("requiredParameters", createDeviceFields);
+
+			pairingMethods->structValue->emplace("createDevice", createDeviceInfo);
+			info->structValue->emplace("pairingMethods", pairingMethods);
+		//}}}
+
+		return info;
 	}
 	catch(const std::exception& ex)
 	{

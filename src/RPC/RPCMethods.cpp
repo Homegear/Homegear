@@ -2376,7 +2376,7 @@ BaseLib::PVariable RPCGetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetPairingMethods::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+BaseLib::PVariable RPCGetPairingInfo::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
@@ -2386,7 +2386,7 @@ BaseLib::PVariable RPCGetPairingMethods::invoke(BaseLib::PRpcClientInfo clientIn
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		std::shared_ptr<BaseLib::Systems::DeviceFamily> family = GD::familyController->getFamily(parameters->at(0)->integerValue);
-		if(family) return family->getPairingMethods();
+		if(family) return family->getPairingInfo();
 
 		return BaseLib::Variable::createError(-2, "Device family not found.");
 	}
@@ -3397,9 +3397,17 @@ BaseLib::PVariable RPCListFamilies::invoke(BaseLib::PRpcClientInfo clientInfo, B
 {
 	try
 	{
-		if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
+		if(!parameters->empty())
+		{
+			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
+			}));
+			if(error != ParameterError::Enum::noError) return getError(error);
+		}
 
-		return GD::familyController->listFamilies();
+        int32_t familyId = parameters->size() > 0 ? parameters->at(0)->integerValue : -1;
+
+		return GD::familyController->listFamilies(familyId);
 	}
 	catch(const std::exception& ex)
     {
