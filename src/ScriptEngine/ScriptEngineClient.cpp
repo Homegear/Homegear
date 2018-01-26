@@ -1781,7 +1781,7 @@ BaseLib::PVariable ScriptEngineClient::stopDevices(BaseLib::PArray& parameters)
             parameters->push_back(innerParameters);
 
 			BaseLib::PVariable result = executeDeviceMethod(parameters);
-			if(result->errorStruct) GD::out.printError("Error calling stop on peer " + std::to_string(device.first) + ": " + result->structValue->at("faultString")->stringValue);
+			if(result->errorStruct) _out.printError("Error calling stop on peer " + std::to_string(device.first) + ": " + result->structValue->at("faultString")->stringValue);
 		}
 
 		_out.printMessage("Call to stop() on devices completed.");
@@ -1798,7 +1798,7 @@ BaseLib::PVariable ScriptEngineClient::stopDevices(BaseLib::PArray& parameters)
             parameters->push_back(innerParameters);
 
             BaseLib::PVariable result = executeDeviceMethod(parameters);
-            if(result->errorStruct) GD::out.printError("Error calling waitForStop on peer " + std::to_string(device.first) + ": " + result->structValue->at("faultString")->stringValue);
+            if(result->errorStruct) _out.printError("Error calling waitForStop on peer " + std::to_string(device.first) + ": " + result->structValue->at("faultString")->stringValue);
         }
 
         _out.printMessage("Call to waitForStop() on devices completed.");
@@ -2108,7 +2108,7 @@ BaseLib::PVariable ScriptEngineClient::executePhpNodeMethod(BaseLib::PArray& par
 			}
 		}
 
-		return nodeInfo->response;
+		return nodeInfo->response ? nodeInfo->response : std::make_shared<BaseLib::Variable>();
 	}
     catch(const std::exception& ex)
     {
@@ -2170,7 +2170,7 @@ BaseLib::PVariable ScriptEngineClient::executeDeviceMethod(BaseLib::PArray& para
 			}
 		}
 
-		return deviceInfo->response;
+		return deviceInfo->response ? deviceInfo->response : std::make_shared<BaseLib::Variable>();
 	}
 	catch(const std::exception& ex)
 	{

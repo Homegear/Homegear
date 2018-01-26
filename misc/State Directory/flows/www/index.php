@@ -62,12 +62,10 @@ if(!$user->checkAuth(true)) die();
       limitations under the License.
     -->
     <title>Node-BLUE</title>
-    <link rel="icon" type="image/png" href="favicon.ico">
     <link rel="mask-icon" href="red&#x2F;images&#x2F;node-red-icon-black.svg" color="#8f0000">
     <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
     <link href="vendor/jquery/css/smoothness/jquery-ui-1.10.3.custom.min.css" rel="stylesheet" media="screen">
     <link rel="stylesheet" href="vendor/font-awesome/css/font-awesome.min.css">
-    <link rel="stylesheet" href="vendor/vendor.css">
     <link rel="stylesheet" href="red/style.min.css">
 </head>
 <body spellcheck="false">
@@ -245,7 +243,6 @@ if(!$user->checkAuth(true)) die();
 
 
 <script src="vendor/vendor.js"></script>
-<script src="vendor/jsonata/jsonata.min.js"></script>
 <script src="vendor/ace/ace.js"></script>
 <script src="vendor/ace/ext-language_tools.js"></script>
 <script src="red/red.min.js"></script>

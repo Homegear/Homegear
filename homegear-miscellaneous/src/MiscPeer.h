@@ -71,6 +71,7 @@ public:
     virtual void homegearShuttingDown();
 
 	bool stop();
+    void stopScript(bool callStop = true);
 
 	//RPC methods
 	virtual PVariable getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, std::map<std::string, bool> fields);
@@ -81,6 +82,8 @@ public:
 	//End RPC methods
 protected:
     std::atomic_long _lastScriptFinished;
+    std::atomic_bool _stopScript;
+    std::atomic_bool _stopped;
 	std::atomic_bool _shuttingDown;
 	std::atomic_bool _scriptRunning;
 	std::atomic_bool _stopRunProgramThread;

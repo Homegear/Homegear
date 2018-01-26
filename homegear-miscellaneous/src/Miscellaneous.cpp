@@ -55,6 +55,12 @@ void Miscellaneous::dispose()
 	DeviceFamily::dispose();
 }
 
+void Miscellaneous::reloadRpcDevices()
+{
+	_bl->out.printInfo("Reloading XML RPC devices...");
+	_rpcDevices->load();
+}
+
 std::shared_ptr<BaseLib::Systems::ICentral> Miscellaneous::initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber)
 {
 	return std::shared_ptr<MiscCentral>(new MiscCentral(deviceId, serialNumber, this));

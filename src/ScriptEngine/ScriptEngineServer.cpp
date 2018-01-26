@@ -2278,7 +2278,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 			else if(parameters->at(2)->type == BaseLib::VariableType::tInteger) family->setFamilySetting(parameters->at(1)->stringValue, parameters->at(2)->integerValue);
 			else if(parameters->at(2)->type == BaseLib::VariableType::tBinary)
 			{
-				std::vector<char> data(&parameters->at(2)->binaryValue.at(0), &parameters->at(2)->binaryValue.at(0) + parameters->at(2)->binaryValue.size());
+				std::vector<char> data(parameters->at(2)->binaryValue.data(), parameters->at(2)->binaryValue.data() + parameters->at(2)->binaryValue.size());
 				family->setFamilySetting(parameters->at(1)->stringValue, data);
 			}
 			else return BaseLib::Variable::createError(-3, "Unsupported variable type.");

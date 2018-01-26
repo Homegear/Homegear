@@ -139,9 +139,11 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install apt-transport-h
 echo "deb https://homegear.eu/packages/$dist/ $distver/
 " > $rootfs/etc/apt/sources.list.d/homegear.list
 
+chroot $rootfs mount proc /proc -t proc
 wget -P $rootfs https://homegear.eu/packages/Release.key
 chroot $rootfs apt-key add Release.key
 rm $rootfs/Release.key
+chroot $rootfs umount /proc
 
 chroot $rootfs apt-get update
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev
@@ -656,10 +658,10 @@ cat > "$rootfs/build/CreateDebianPackageStable.sh" <<-'EOF'
 
 cd /build
 
-if test -f libhomegear-base*.deb && test -f libhomegear-node*.deb && test -f libhomegear-ipc*.deb && test -f homegear_*.deb && test -f homegear-nodes-core*.deb && test -f homegear-homematicbidcos*.deb && test -f homegear-homematicwired*.deb && test -f homegear-insteon*.deb && test -f homegear-max*.deb && test -f homegear-philipshue*.deb && test -f homegear-sonos*.deb && test -f homegear-kodi*.deb && test -f homegear-ipcam*.deb && test -f homegear-intertechno*.deb && test -f homegear-nanoleaf*.deb && test -f homegear-ccu2*.deb && test -f homegear-influxdb*.deb; then
-	if [[ -n \$1 ]]; then
-		if test ! -f homegear-easy-licensing*.deb || test ! -f homegear-licensing*.deb || test ! -f homegear-nodes-extra*.deb || test ! -f homegear-beckhoff*.deb || test ! -f homegear-knx*.deb || test ! -f homegear-enocean*.deb || test ! -f homegear-easycam*.deb || test ! -f homegear-easyled*.deb || test ! -f homegear-easyled2*.deb || test ! -f homegear-rsl*.deb || test ! -f homegear-rs2w*.deb || test ! -f homegear-mbus*.deb || test ! -f homegear-zwave*.deb; then
-			echo \"Error: Some or all packages from gitit.de could not be created.\"
+if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu2_*.deb && test -f homegear-influxdb_*.deb; then
+	if [[ -n $1 ]]; then
+		if test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb; then
+			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
 		fi
 	fi
