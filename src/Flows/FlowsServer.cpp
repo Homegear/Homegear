@@ -1474,13 +1474,20 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 			_jsonEncoder->encode(responseJson, contentString);
 			responseEncoding = "application/json";
 		}
-		else if (path == "flows/settings" || path == "flows/library/flows" || path == "flows/debug/view/debug-utils.js")
+		else if(path == "flows/settings" || path == "flows/library/flows" || path == "flows/icons" || path == "flows/debug/view/debug-utils.js")
 		{
 			if(!sessionValid) return "unauthorized";
 			path = _webroot + "static/" + path.substr(6);
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
+        else if(path == "flows/settings/user")
+        {
+            if(!sessionValid) return "unauthorized";
+            path = _webroot + "static/" + path.substr(15);
+            if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
+            responseEncoding = "application/json";
+        }
 		else if(path == "flows/nodes")
 		{
 			if(!sessionValid) return "unauthorized";
