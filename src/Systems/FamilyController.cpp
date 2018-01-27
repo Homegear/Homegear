@@ -1147,7 +1147,7 @@ std::string FamilyController::handleCliCommand(std::string& command)
     return "Error executing command. See log file for more details.\n";
 }
 
-BaseLib::PVariable FamilyController::listFamilies()
+BaseLib::PVariable FamilyController::listFamilies(int32_t familyId)
 {
 	try
 	{
@@ -1159,6 +1159,7 @@ BaseLib::PVariable FamilyController::listFamilies()
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
+            if(familyId != -1 && i->first != familyId) continue;
 			std::shared_ptr<BaseLib::Systems::ICentral> central = families.at(i->first)->getCentral();
 			if(!central) continue;
 
@@ -1166,7 +1167,7 @@ BaseLib::PVariable FamilyController::listFamilies()
 
 			familyDescription->structValue->insert(BaseLib::StructElement("ID", BaseLib::PVariable(new BaseLib::Variable((int32_t)i->first))));
 			familyDescription->structValue->insert(BaseLib::StructElement("NAME", BaseLib::PVariable(new BaseLib::Variable(i->second->getName()))));
-			familyDescription->structValue->insert(BaseLib::StructElement("PAIRING_METHODS", i->second->getPairingMethods()));
+			familyDescription->structValue->insert(BaseLib::StructElement("PAIRING_INFO", i->second->getPairingInfo()));
 			array->arrayValue->push_back(familyDescription);
 		}
 		_rpcCache = array;

@@ -629,10 +629,10 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCGetPairingMethods : public BaseLib::Rpc::RpcMethod
+class RPCGetPairingInfo : public BaseLib::Rpc::RpcMethod
 {
 public:
-	RPCGetPairingMethods()
+    RPCGetPairingInfo()
 	{
 		addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 	}
@@ -844,6 +844,7 @@ public:
 	RPCListFamilies()
 	{
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
+		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger}));
 	}
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
