@@ -923,7 +923,7 @@ void startUp()
 
 			if(setgid(GD::bl->groupId) != 0)
 			{
-				GD::out.printCritical("Critical: Could not drop group privileges.");
+				GD::out.printCritical("Critical: Could not drop group privileges: " + std::string(strerror(errno)));
 				exitHomegear(1);
 			}
 
@@ -935,7 +935,7 @@ void startUp()
 
 			if(setuid(GD::bl->userId) != 0)
 			{
-				GD::out.printCritical("Critical: Could not drop user privileges.");
+				GD::out.printCritical("Critical: Could not drop user privileges: " + std::string(strerror(errno)));
 				exitHomegear(1);
 			}
 
