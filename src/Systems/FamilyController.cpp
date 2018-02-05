@@ -1166,7 +1166,6 @@ BaseLib::PVariable FamilyController::listFamilies(int32_t familyId)
 
 			familyDescription->structValue->insert(BaseLib::StructElement("ID", BaseLib::PVariable(new BaseLib::Variable((int32_t)i->first))));
 			familyDescription->structValue->insert(BaseLib::StructElement("NAME", BaseLib::PVariable(new BaseLib::Variable(i->second->getName()))));
-			familyDescription->structValue->insert(BaseLib::StructElement("PAIRING_INFO", i->second->getPairingInfo()));
 			array->arrayValue->push_back(familyDescription);
 		}
 		_rpcCache = array;
