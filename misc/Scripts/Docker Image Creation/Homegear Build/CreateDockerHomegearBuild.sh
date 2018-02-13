@@ -170,7 +170,7 @@ fi
 # }}}
 
 # {{{ Readline
-if [ "$distver" == "stretch" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "bionic" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline7 libreadline-dev
 else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline6 libreadline6-dev
