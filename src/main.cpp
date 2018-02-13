@@ -1113,7 +1113,7 @@ void startUp()
 
 		GD::out.printInfo("Start listening for packets...");
         GD::familyController->physicalInterfaceStartListening();
-        if(!GD::familyController->physicalInterfaceIsOpen())
+		if(!GD::familyController->physicalInterfaceIsOpen())
         {
         	GD::out.printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
         	GD::familyController->physicalInterfaceStopListening();

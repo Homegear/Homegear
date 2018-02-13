@@ -135,7 +135,6 @@ public:
 	void save(bool full);
 	bool familySelected() { return (bool)_currentFamily; }
 	std::string handleCliCommand(std::string& command);
-	bool familyAvailable(int32_t family);
 
 	/*
 	 * Returns the family map.
@@ -177,7 +176,6 @@ private:
 	bool _disposed = false;
 	BaseLib::PVariable _rpcCache;
 
-	std::set<int32_t> _familiesWithoutPhysicalInterface;
 	std::mutex _moduleLoadersMutex;
 	std::map<std::string, std::unique_ptr<ModuleLoader>> _moduleLoaders;
 	std::map<int32_t, std::string> _moduleFilenames;
