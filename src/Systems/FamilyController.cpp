@@ -753,7 +753,6 @@ void FamilyController::loadModules()
 			if(family)
 			{
 				_moduleFilenames[family->getFamily()] = *i;
-				if(!family->hasPhysicalInterface()) _familiesWithoutPhysicalInterface.insert(family->getFamily());
 				std::string name = family->getName();
 				BaseLib::HelperFunctions::toLower(name);
 				BaseLib::HelperFunctions::stringReplace(name, " ", "");
@@ -1058,7 +1057,7 @@ std::string FamilyController::handleCliCommand(std::string& command)
 			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
 			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 			{
-				if(i->first == -1 || !familyAvailable(i->first)) continue;
+				if(i->first == -1) continue;
 				std::string name = i->second->getName();
 				name.resize(nameWidth, ' ');
 				stringStream
@@ -1104,7 +1103,7 @@ std::string FamilyController::handleCliCommand(std::string& command)
 				std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
 				for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 				{
-					if(i->first == -1 || !familyAvailable(i->first)) continue;
+					if(i->first == -1) continue;
 					stringStream << "  FAMILYID: 0x" << std::hex << std::setfill('0') << std::setw(2) << (uint32_t)i->first << ":\t" << i->second->getName() << std::endl << std::dec;
 				}
 				return stringStream.str();
