@@ -358,7 +358,7 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 					server->socket->setPort(server->address.second);
 					if(server->settings)
 					{
-						server->socket->setCAFile(server->settings->caFile);
+						server->socket->setCaFile(server->settings->caFile);
 						server->socket->setCertFile(server->settings->certFile);
 						server->socket->setKeyFile(server->settings->keyFile);
 						server->socket->setVerifyCertificate(server->settings->verifyCertificate);
