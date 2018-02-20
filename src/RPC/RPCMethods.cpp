@@ -4275,18 +4275,21 @@ BaseLib::PVariable RPCSetId::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib:
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
-			if(central && central->peerExists((uint64_t)parameters->at(1)->integerValue))
+			if(central && central->peerExists((uint64_t)parameters->at(1)->integerValue64))
 			{
 				return BaseLib::Variable::createError(101, "New Peer ID is already in use.");
 			}
+
+            //Double check and also check in database
+            if(GD::bl->db->peerExists(parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(101, "New Peer ID is already in use.");
 		}
 
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
-			if(central && central->peerExists((uint64_t)parameters->at(0)->integerValue))
+			if(central && central->peerExists((uint64_t)parameters->at(0)->integerValue64))
 			{
-				return central->setId(clientInfo, parameters->at(0)->integerValue, parameters->at(1)->integerValue);
+				return central->setId(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue64);
 			}
 		}
 

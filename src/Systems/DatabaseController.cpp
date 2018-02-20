@@ -2366,6 +2366,13 @@ void DatabaseController::deletePeerParameter(uint64_t peerID, BaseLib::Database:
 	}
 }
 
+bool DatabaseController::peerExists(uint64_t id)
+{
+    BaseLib::Database::DataRow data({std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id))});
+    std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT 1 FROM peers WHERE peerID=?", data);
+    return !result->empty();
+}
+
 bool DatabaseController::setPeerID(uint64_t oldPeerID, uint64_t newPeerID)
 {
 	try
