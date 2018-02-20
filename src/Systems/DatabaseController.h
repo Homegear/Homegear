@@ -157,6 +157,7 @@ public:
 		virtual std::shared_ptr<BaseLib::Database::DataTable> getPeerParameters(uint64_t peerID);
 		virtual std::shared_ptr<BaseLib::Database::DataTable> getPeerVariables(uint64_t peerID);
 		virtual void deletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow& data);
+		virtual bool peerExists(uint64_t peerId);
 
 		/**
 		 * {@inheritDoc}

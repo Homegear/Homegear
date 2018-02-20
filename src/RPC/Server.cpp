@@ -102,9 +102,9 @@ void Server::registerMethods()
 		_server->registerMethod("getLinks", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetLinks()));
 		_server->registerMethod("getMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetMetadata()));
 		_server->registerMethod("getName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetName()));
-		_server->registerMethod("getNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetFlowData()));
-		_server->registerMethod("getFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetGlobalData()));
-		_server->registerMethod("getGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetNodeData()));
+		_server->registerMethod("getNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetNodeData()));
+		_server->registerMethod("getFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetFlowData()));
+		_server->registerMethod("getGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetGlobalData()));
 		_server->registerMethod("getNodeEvents", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetNodeEvents()));
 		_server->registerMethod("getNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetNodeVariable()));
 		_server->registerMethod("getPairingInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetPairingInfo()));

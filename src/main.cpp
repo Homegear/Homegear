@@ -473,7 +473,7 @@ void getExecutablePath(int argc, char* argv[])
 	}
 	if((unsigned)length > sizeof(path))
 	{
-		std::cerr << "The path the homegear binary is in has more than 1024 characters." << std::endl;
+		std::cerr << "The path to the homegear binary is in has more than 1024 characters." << std::endl;
 		exit(1);
 	}
 	path[length] = '\0';
@@ -923,7 +923,7 @@ void startUp()
 
 			if(setgid(GD::bl->groupId) != 0)
 			{
-				GD::out.printCritical("Critical: Could not drop group privileges.");
+				GD::out.printCritical("Critical: Could not drop group privileges: " + std::string(strerror(errno)));
 				exitHomegear(1);
 			}
 
@@ -935,7 +935,7 @@ void startUp()
 
 			if(setuid(GD::bl->userId) != 0)
 			{
-				GD::out.printCritical("Critical: Could not drop user privileges.");
+				GD::out.printCritical("Critical: Could not drop user privileges: " + std::string(strerror(errno)));
 				exitHomegear(1);
 			}
 
@@ -1113,7 +1113,7 @@ void startUp()
 
 		GD::out.printInfo("Start listening for packets...");
         GD::familyController->physicalInterfaceStartListening();
-        if(!GD::familyController->physicalInterfaceIsOpen())
+		if(!GD::familyController->physicalInterfaceIsOpen())
         {
         	GD::out.printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
         	GD::familyController->physicalInterfaceStopListening();

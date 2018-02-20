@@ -88,7 +88,11 @@ elif [ "$dist" == "Raspbian" ]; then
 	echo "deb http://mirrordirector.raspbian.org/raspbian/ $distver main contrib" > $rootfs/etc/apt/sources.list
 fi
 
-echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu xenial main" > $rootfs/etc/apt/sources.list.d/php7-src.list
+if [ "$distver" == "bionic" ]; then
+	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" > $rootfs/etc/apt/sources.list.d/php7-src.list
+else
+	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu xenial main" > $rootfs/etc/apt/sources.list.d/php7-src.list
+fi
 
 # prevent init scripts from running during install/update
 cat > "$rootfs/usr/sbin/policy-rc.d" <<'EOF'
@@ -147,7 +151,7 @@ chroot $rootfs apt-key add /php-gpg.key
 rm $rootfs/php-gpg.key
 
 chroot $rootfs apt-get update
-if [ "$distver" == "stretch" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
@@ -160,7 +164,7 @@ else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
 fi
 
-if [ "$distver" == "stretch" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" || [ "$distver" == "bionic" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
 

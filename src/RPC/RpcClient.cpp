@@ -358,9 +358,13 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 					server->socket->setPort(server->address.second);
 					if(server->settings)
 					{
-						server->socket->setCAFile(server->settings->caFile);
-						server->socket->setCertFile(server->settings->certFile);
-						server->socket->setKeyFile(server->settings->keyFile);
+                        std::unordered_map<std::string, BaseLib::TcpSocket::PCertificateInfo> certificates;
+                        BaseLib::TcpSocket::PCertificateInfo certificateInfo = std::make_shared<BaseLib::TcpSocket::CertificateInfo>();
+                        certificateInfo->caFile = server->settings->caFile;
+                        certificateInfo->certFile = server->settings->certFile;
+                        certificateInfo->keyFile = server->settings->keyFile;
+                        certificates.emplace("*", certificateInfo);
+                        server->socket->setCertificates(certificates);
 						server->socket->setVerifyCertificate(server->settings->verifyCertificate);
 					}
 					server->socket->setUseSSL(server->useSSL);

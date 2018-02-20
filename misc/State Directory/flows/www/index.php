@@ -40,37 +40,23 @@ if(!$user->checkAuth(true)) die();
 ?>
 <!DOCTYPE html>
 <html>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <!--
-      Copyright JS Foundation and other contributors, http://js.foundation
+<title>Node-BLUE</title>
+<link rel="mask-icon" href="red/images/node-red-icon-black.svg" color="#8f0000">
+<link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+<link href="vendor/jquery/css/smoothness/jquery-ui-1.10.3.custom.min.css" rel="stylesheet" media="screen">
+<link rel="stylesheet" href="vendor/font-awesome/css/font-awesome.min.css">
+<link rel="stylesheet" href="red/style.min.css">
 
-      Licensed under the Apache License, Version 2.0 (the "License");
-      you may not use this file except in compliance with the License.
-      You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-      Unless required by applicable law or agreed to in writing, software
-      distributed under the License is distributed on an "AS IS" BASIS,
-      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-      See the License for the specific language governing permissions and
-      limitations under the License.
-    -->
-    <title>Node-BLUE</title>
-    <link rel="mask-icon" href="red&#x2F;images&#x2F;node-red-icon-black.svg" color="#8f0000">
-    <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
-    <link href="vendor/jquery/css/smoothness/jquery-ui-1.10.3.custom.min.css" rel="stylesheet" media="screen">
-    <link rel="stylesheet" href="vendor/font-awesome/css/font-awesome.min.css">
-    <link rel="stylesheet" href="red/style.min.css">
 </head>
 <body spellcheck="false">
 <div id="header">
-    <span class="logo"><img src="red/images/node-blue.png" title="0.17.5-git"> <span>Node-BLUE</span></span>
+    <span class="logo"><img src="red/images/node-blue.png" title="0.18.0-git"> <span>Node-BLUE</span></span>
     <ul class="header-toolbar hide">
         <li><a id="btn-sidemenu" class="button" data-toggle="dropdown" href="#"><i class="fa fa-bars"></i></a></li>
     </ul>
@@ -111,34 +97,10 @@ if(!$user->checkAuth(true)) die();
     <div id="sidebar-separator"></div>
 
 </div>
+<div id="full-shade" class="hide"></div>
 
 <div id="notifications"></div>
 <div id="dropTarget"><div data-i18n="[append]workspace.dropFlowHere"><br/><i class="fa fa-download"></i></div></div>
-
-<div id="node-dialog-confirm-deploy" class="hide">
-    <form class="form-horizontal">
-        <div id="node-dialog-confirm-deploy-config" class="node-dialog-confirm-row" data-i18n="[prepend]deploy.confirm.improperlyConfigured;[append]deploy.confirm.confirm">
-            <ul id="node-dialog-confirm-deploy-invalid-list"></ul>
-        </div>
-        <div id="node-dialog-confirm-deploy-unknown" class="node-dialog-confirm-row" data-i18n="[prepend]deploy.confirm.unknown;[append]deploy.confirm.confirm">
-            <ul id="node-dialog-confirm-deploy-unknown-list"></ul>
-        </div>
-        <div id="node-dialog-confirm-deploy-conflict" class="node-dialog-confirm-row">
-            <div style="margin-left: 40px; margin-bottom: 10px;">
-                <span data-i18n="deploy.confirm.conflict"></span>
-            </div>
-            <div id="node-dialog-confirm-deploy-conflict-checking" class="node-dialog-confirm-conflict-row">
-                <img src="red/images/spin.svg"/><div data-i18n="deploy.confirm.conflictChecking"></div>
-            </div>
-            <div id="node-dialog-confirm-deploy-conflict-auto-merge" class="node-dialog-confirm-conflict-row">
-                <i style="color: #3a3;" class="fa fa-check"></i><div data-i18n="deploy.confirm.conflictAutoMerge"></div>
-            </div>
-            <div id="node-dialog-confirm-deploy-conflict-manual-merge" class="node-dialog-confirm-conflict-row">
-                <i style="color: #999;" class="fa fa-exclamation"></i><div data-i18n="deploy.confirm.conflictManualMerge"></div>
-            </div>
-        </div>
-    </form>
-</div>
 
 <div id="node-dialog-library-save-confirm" class="hide">
     <form class="form-horizontal">
@@ -222,7 +184,10 @@ if(!$user->checkAuth(true)) die();
                 </div>
                 <div id="node-input-expression-tab-test" class="node-input-expression-tab-content hide">
                     <div>
-                        <span style="display: inline-block; width: calc(50% - 5px);" data-i18n="expressionEditor.data"></span>
+                        <span style="display: inline-block; width: calc(50% - 5px);">
+                            <span data-i18n="expressionEditor.data"></span>
+                            <button style="float: right; margin-right: 5px;" id="node-input-example-reformat" class="editor-button editor-button-small"><span data-i18n="jsonEditor.format"></span></button>
+                        </span>
                         <span style="display: inline-block; width: calc(50% - 5px);" data-i18n="expressionEditor.result"></span>
                     </div>
                     <div style="display: inline-block; width: calc(50% - 5px);" class="node-text-editor" id="node-input-expression-test-data"></div>
@@ -234,14 +199,37 @@ if(!$user->checkAuth(true)) die();
 </script>
 <script type="text/x-red" data-template-name="_json">
     <div class="form-row" style="margin-bottom: 3px; text-align: right;">
-        <button id="node-input-expression-reformat" class="editor-button editor-button-small"><span data-i18n="jsonEditor.format"></span></button>
+        <button id="node-input-json-reformat" class="editor-button editor-button-small"><span data-i18n="jsonEditor.format"></span></button>
     </div>
     <div class="form-row node-text-editor-row">
         <div style="height: 200px;min-height: 150px;" class="node-text-editor" id="node-input-json"></div>
     </div>
 </script>
+<script type="text/x-red" data-template-name="_markdown">
+    <div class="form-row" id="node-input-markdown-title" style="margin-bottom: 3px; text-align: right;">
 
-
+    </div>
+    <div class="form-row node-text-editor-row">
+        <div style="height: 200px;min-height: 150px;" class="node-text-editor" id="node-input-markdown"></div>
+    </div>
+</script>
+<script type="text/x-red" data-template-name="_buffer">
+    <div id="node-input-buffer-panels">
+        <div id="node-input-buffer-panel-str" class="red-ui-panel">
+            <div class="form-row" style="margin-bottom: 3px; text-align: right;">
+                <span class="node-input-buffer-type"><i class="fa fa-exclamation-circle"></i> <span id="node-input-buffer-type-string" data-i18n="bufferEditor.modeString"></span><span id="node-input-buffer-type-array" data-i18n="bufferEditor.modeArray"></span></span>
+            </div>
+            <div class="form-row node-text-editor-row">
+                <div class="node-text-editor" id="node-input-buffer-str"></div>
+            </div>
+        </div>
+        <div id="node-input-buffer-panel-bin" class="red-ui-panel">
+            <div class="form-row node-text-editor-row" style="margin-top: 10px">
+                <div class="node-text-editor" id="node-input-buffer-bin"></div>
+            </div>
+        </div>
+    </div>
+</script>
 <script src="vendor/vendor.js"></script>
 <script src="vendor/ace/ace.js"></script>
 <script src="vendor/ace/ext-language_tools.js"></script>

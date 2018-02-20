@@ -486,11 +486,6 @@ void FamilyController::homegearShuttingDown()
     }
 }
 
-bool FamilyController::familyAvailable(int32_t family)
-{
-	return physicalInterfaceCount(family) > 0 || _familiesWithoutPhysicalInterface.find(family) != _familiesWithoutPhysicalInterface.end();
-}
-
 std::vector<std::shared_ptr<FamilyController::ModuleInfo>> FamilyController::getModuleInfo()
 {
 	std::vector<std::shared_ptr<FamilyController::ModuleInfo>> moduleInfoVector;
@@ -576,7 +571,6 @@ int32_t FamilyController::loadModule(std::string filename)
 		if(family)
 		{
 			_moduleFilenames[family->getFamily()] = filename;
-			if(!family->hasPhysicalInterface()) _familiesWithoutPhysicalInterface.insert(family->getFamily());
 			std::string name = family->getName();
 			BaseLib::HelperFunctions::toLower(name);
 			BaseLib::HelperFunctions::stringReplace(name, " ", "");
@@ -584,11 +578,10 @@ int32_t FamilyController::loadModule(std::string filename)
 				std::lock_guard<std::mutex> familiesGuard(_familiesMutex);
 				_families[family->getFamily()] = family;
 			}
-			if(!family->enabled() || !familyAvailable(family->getFamily()) || !family->init())
+			if(!family->enabled() || !family->init())
 			{
 				if(!family->enabled()) GD::out.printInfo("Info: Not initializing device family " + family->getName() + ", because it is disabled in it's configuration file.");
-				else if(familyAvailable(family->getFamily())) GD::out.printError("Error: Could not initialize device family " + family->getName() + ".");
-				else GD::out.printInfo("Info: Not initializing device family " + family->getName() + ", because no physical interface was found.");
+				else GD::out.printError("Error: Could not initialize device family " + family->getName() + ".");
 				int32_t familyId = family->getFamily();
 				family->dispose();
 				family.reset();
@@ -761,7 +754,6 @@ void FamilyController::loadModules()
 			if(family)
 			{
 				_moduleFilenames[family->getFamily()] = *i;
-				if(!family->hasPhysicalInterface()) _familiesWithoutPhysicalInterface.insert(family->getFamily());
 				std::string name = family->getName();
 				BaseLib::HelperFunctions::toLower(name);
 				BaseLib::HelperFunctions::stringReplace(name, " ", "");
@@ -801,11 +793,10 @@ void FamilyController::load()
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
-			if(!i->second->enabled() || !familyAvailable(i->first) || !i->second->init())
+			if(!i->second->enabled() || !i->second->init())
 			{
 				if(!i->second->enabled()) GD::out.printInfo("Info: Not initializing device family " + i->second->getName() + ", because it is disabled in it's configuration file.");
-				else if(familyAvailable(i->first)) GD::out.printError("Error: Could not initialize device family " + i->second->getName() + ".");
-				else GD::out.printInfo("Info: Not initializing device family " + i->second->getName() + ", because no physical interface was found.");
+				else GD::out.printError("Error: Could not initialize device family " + i->second->getName() + ".");
 				i->second->dispose();
 				i->second.reset();
 				_families[i->first].reset();
@@ -1067,7 +1058,7 @@ std::string FamilyController::handleCliCommand(std::string& command)
 			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
 			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 			{
-				if(i->first == -1 || !familyAvailable(i->first)) continue;
+				if(i->first == -1) continue;
 				std::string name = i->second->getName();
 				name.resize(nameWidth, ' ');
 				stringStream
@@ -1113,7 +1104,7 @@ std::string FamilyController::handleCliCommand(std::string& command)
 				std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
 				for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 				{
-					if(i->first == -1 || !familyAvailable(i->first)) continue;
+					if(i->first == -1) continue;
 					stringStream << "  FAMILYID: 0x" << std::hex << std::setfill('0') << std::setw(2) << (uint32_t)i->first << ":\t" << i->second->getName() << std::endl << std::dec;
 				}
 				return stringStream.str();
@@ -1167,7 +1158,6 @@ BaseLib::PVariable FamilyController::listFamilies(int32_t familyId)
 
 			familyDescription->structValue->insert(BaseLib::StructElement("ID", BaseLib::PVariable(new BaseLib::Variable((int32_t)i->first))));
 			familyDescription->structValue->insert(BaseLib::StructElement("NAME", BaseLib::PVariable(new BaseLib::Variable(i->second->getName()))));
-			familyDescription->structValue->insert(BaseLib::StructElement("PAIRING_INFO", i->second->getPairingInfo()));
 			array->arrayValue->push_back(familyDescription);
 		}
 		_rpcCache = array;
@@ -1219,8 +1209,8 @@ bool FamilyController::physicalInterfaceIsOpen()
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			if(!i->second->hasPhysicalInterface()) continue;
-			std::shared_ptr<BaseLib::Systems::PhysicalInterfaces> interface = i->second->physicalInterfaces();
-			if(!interface->isOpen()) return false;
+			std::shared_ptr<BaseLib::Systems::PhysicalInterfaces> interfaces = i->second->physicalInterfaces();
+			if(!interfaces->isOpen()) return false;
 		}
 		return true;
 	}
