@@ -120,10 +120,18 @@ public:
 		virtual std::shared_ptr<BaseLib::Database::DataTable> getUsers();
 		virtual bool userNameExists(const std::string& name);
 		virtual uint64_t getUserID(const std::string& name);
-		virtual bool createUser(const std::string& name, const std::vector<uint8_t>& passwordHash, const std::vector<uint8_t>& salt);
-		virtual bool updateUser(uint64_t id, const std::vector<uint8_t>& passwordHash, const std::vector<uint8_t>& salt);
+		virtual bool createUser(const std::string& name, const std::vector<uint8_t>& passwordHash, const std::vector<uint8_t>& salt, const std::vector<uint64_t>& groups);
+		virtual bool updateUser(uint64_t id, const std::vector<uint8_t>& passwordHash, const std::vector<uint8_t>& salt, const std::vector<uint64_t>& groups);
 		virtual bool deleteUser(uint64_t id);
 		virtual std::shared_ptr<BaseLib::Database::DataTable> getPassword(const std::string& name);
+	// }}}
+
+	// {{{ Groups
+		virtual BaseLib::PVariable createGroup(BaseLib::PVariable translations, BaseLib::PVariable acl);
+		virtual BaseLib::PVariable deleteGroup(uint64_t groupId);
+		virtual BaseLib::PVariable getGroups(std::string languageCode);
+		virtual bool groupExists(uint64_t groupId);
+		virtual BaseLib::PVariable updateGroup(uint64_t groupId, BaseLib::PVariable translations, BaseLib::PVariable acl);
 	// }}}
 
 	// {{{ Events
