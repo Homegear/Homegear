@@ -826,7 +826,9 @@ ZEND_FUNCTION(hg_register_thread)
 		if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
 		std::string name;
 		std::string password;
-		if(argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::createUser().");
+		BaseLib::PVariable groups;
+
+		if(argc > 3) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::createUser().");
 		else if(argc == 2)
 		{
 			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
@@ -841,12 +843,34 @@ ZEND_FUNCTION(hg_register_thread)
 				if(Z_STRLEN(args[1]) > 0) password = std::string(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
 			}
 		}
+		else if(argc == 3)
+		{
+			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
+			else
+			{
+				if(Z_STRLEN(args[0]) > 0) name = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+			}
+
+			if(Z_TYPE(args[1]) != IS_STRING) php_error_docref(NULL, E_WARNING, "password is not of type string.");
+			else
+			{
+				if(Z_STRLEN(args[1]) > 0) password = std::string(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
+			}
+
+			if(Z_TYPE(args[2]) != IS_ARRAY) php_error_docref(NULL, E_WARNING, "groups is not of type string.");
+			else
+			{
+				groups = PhpVariableConverter::getVariable(&args[2]);
+			}
+		}
 		if(name.empty() || password.empty()) RETURN_FALSE;
 
 		std::string methodName("createUser");
-		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(name)));
-		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(password)));
+		BaseLib::PVariable parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+		parameters->arrayValue->reserve(groups ? 3 : 2);
+		parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(name));
+		parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(password));
+		if(groups) parameters->arrayValue->push_back(groups);
 		php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 	}
 
@@ -882,7 +906,8 @@ ZEND_FUNCTION(hg_register_thread)
 		if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
 		std::string name;
 		std::string password;
-		if(argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::updateUser().");
+        BaseLib::PVariable groups;
+		if(argc > 3) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::updateUser().");
 		else if(argc == 2)
 		{
 			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
@@ -897,12 +922,34 @@ ZEND_FUNCTION(hg_register_thread)
 				if(Z_STRLEN(args[1]) > 0) password = std::string(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
 			}
 		}
+		else if(argc == 3)
+		{
+			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
+			else
+			{
+				if(Z_STRLEN(args[0]) > 0) name = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+			}
+
+			if(Z_TYPE(args[1]) != IS_STRING) php_error_docref(NULL, E_WARNING, "password is not of type string.");
+			else
+			{
+				if(Z_STRLEN(args[1]) > 0) password = std::string(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
+			}
+
+            if(Z_TYPE(args[2]) != IS_ARRAY) php_error_docref(NULL, E_WARNING, "groups is not of type string.");
+            else
+            {
+                groups = PhpVariableConverter::getVariable(&args[2]);
+            }
+		}
 		if(name.empty() || password.empty()) RETURN_FALSE;
 
 		std::string methodName("updateUser");
-		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(name)));
-		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(password)));
+        BaseLib::PVariable parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+        parameters->arrayValue->reserve(groups ? 3 : 2);
+        parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(name));
+        parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(password));
+        if(groups) parameters->arrayValue->push_back(groups);
 		php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 	}
 

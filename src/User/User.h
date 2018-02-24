@@ -48,8 +48,10 @@ public:
 	static uint64_t getID(const std::string& userName);
 	static bool verify(const std::string& userName, const std::string& password);
 	static bool exists(const std::string& userName);
-	static bool create(const std::string& userName, const std::string& password);
-	static bool update(const std::string& userName, const std::string& password);
+	static bool create(const std::string& userName, const std::string& password, const std::vector<uint64_t>& groups);
+    static bool update(const std::string& userName, const std::string& password);
+    static bool update(const std::string& userName, const std::vector<uint64_t>& groups);
+	static bool update(const std::string& userName, const std::string& password, const std::vector<uint64_t>& groups);
 	static bool remove(const std::string& userName);
 	static bool getAll(std::map<uint64_t, std::string>& users);
 };

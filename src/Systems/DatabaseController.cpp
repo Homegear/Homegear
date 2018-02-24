@@ -101,7 +101,7 @@ void DatabaseController::initializeDatabase()
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS deviceVariablesIndex ON deviceVariables (variableID, deviceID, variableIndex)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS licenseVariables (variableID INTEGER PRIMARY KEY UNIQUE, moduleID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS licenseVariablesIndex ON licenseVariables (variableID, moduleID, variableIndex)");
-		_db.executeCommand("CREATE TABLE IF NOT EXISTS users (userID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, password BLOB NOT NULL, salt BLOB NOT NULL, groups BLOB NOT NULL)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS users (userID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, password BLOB NOT NULL, salt BLOB NOT NULL, groups BLOB NOT NULL, metadata BLOB NOT NULL)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS usersIndex ON users (userID, name)");
         _db.executeCommand("CREATE TABLE IF NOT EXISTS groups (id INTEGER PRIMARY KEY UNIQUE, translations BLOB NOT NULL, acl BLOB NOT NULL)");
         _db.executeCommand("CREATE INDEX IF NOT EXISTS groupsIndex ON groups (id)");
@@ -368,7 +368,12 @@ bool DatabaseController::convertDatabase()
 			std::vector<char> groupBlob;
 			_rpcEncoder->encodeResponse(groups, groupBlob);
 
+            BaseLib::PVariable metadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            std::vector<char> metadataBlob;
+            _rpcEncoder->encodeResponse(metadata, metadataBlob);
+
             _db.executeCommand("ALTER TABLE users ADD COLUMN groups BLOB NOT NULL DEFAULT x'" + BaseLib::HelperFunctions::getHexString(groupBlob) + "'");
+            _db.executeCommand("ALTER TABLE users ADD COLUMN metadata BLOB NOT NULL DEFAULT x'" + BaseLib::HelperFunctions::getHexString(metadataBlob) + "'");
 
             data.clear();
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
@@ -1592,6 +1597,8 @@ bool DatabaseController::createUser(const std::string& name, const std::vector<u
 {
 	try
 	{
+        if(passwordHash.empty() || salt.empty() || groups.empty()) return false;
+
 		BaseLib::PVariable groupArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 		groupArray->arrayValue->reserve(groups.size());
 		for(auto& groupId : groups)
@@ -1601,12 +1608,17 @@ bool DatabaseController::createUser(const std::string& name, const std::vector<u
 		std::vector<char> groupBlob;
 		_rpcEncoder->encodeResponse(groupArray, groupBlob);
 
+        BaseLib::PVariable metadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+        std::vector<char> metadataBlob;
+        _rpcEncoder->encodeResponse(metadata, metadataBlob);
+
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(name)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(passwordHash)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(salt)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(groupBlob)));
-		_db.executeCommand("INSERT INTO users VALUES(NULL, ?, ?, ?, ?)", data);
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(name));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(passwordHash));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(salt));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(groupBlob));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+		_db.executeCommand("INSERT INTO users VALUES(NULL, ?, ?, ?, ?, ?)", data);
 		if(userNameExists(name)) return true;
 	}
 	catch(const std::exception& ex)
@@ -1637,14 +1649,39 @@ bool DatabaseController::updateUser(uint64_t id, const std::vector<uint8_t>& pas
 		std::vector<char> groupBlob;
 		_rpcEncoder->encodeResponse(groupArray, groupBlob);
 
-		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(passwordHash)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(salt)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(groupBlob)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
-		_db.executeCommand("UPDATE users SET password=?, salt=?, groups=? WHERE userID=?", data);
+        std::shared_ptr<BaseLib::Database::DataTable> rows;
+        if(!passwordHash.empty() && !groups.empty())
+        {
+            if(salt.empty()) return false;
+            BaseLib::Database::DataRow data;
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(passwordHash)));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(salt)));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(groupBlob)));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
+            _db.executeCommand("UPDATE users SET password=?, salt=?, groups=? WHERE userID=?", data);
 
-		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT userID FROM users WHERE password=? AND salt=? AND userID=?", data);
+            rows = _db.executeCommand("SELECT userID FROM users WHERE password=? AND salt=? AND userID=?", data);
+        }
+        else if(groups.empty())
+        {
+            BaseLib::Database::DataRow data;
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(passwordHash)));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(salt)));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
+            _db.executeCommand("UPDATE users SET password=?, salt=? WHERE userID=?", data);
+
+            rows = _db.executeCommand("SELECT userID FROM users WHERE password=? AND salt=? AND userID=?", data);
+        }
+        else
+        {
+            BaseLib::Database::DataRow data;
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(groupBlob)));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
+            _db.executeCommand("UPDATE users SET groups=? WHERE userID=?", data);
+
+            rows = _db.executeCommand("SELECT userID FROM users WHERE userID=?", data);
+        }
+
 		return !rows->empty();
 	}
 	catch(const std::exception& ex)
@@ -1711,7 +1748,7 @@ bool DatabaseController::userNameExists(const std::string& name)
 	return false;
 }
 
-uint64_t DatabaseController::getUserID(const std::string& name)
+uint64_t DatabaseController::getUserId(const std::string& name)
 {
 	try
 	{
@@ -1736,6 +1773,33 @@ uint64_t DatabaseController::getUserID(const std::string& name)
 	return 0;
 }
 
+BaseLib::PVariable DatabaseController::getUserMetadata(uint64_t userId)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(userId));
+        auto rows = _db.executeCommand("SELECT metadata FROM users WHERE id=?", data);
+
+        if(rows->empty()) return BaseLib::Variable::createError(-1, "Unknown user.");
+
+        return _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPassword(const std::string& name)
 {
 	try
@@ -1758,6 +1822,37 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPassword(co
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::shared_ptr<BaseLib::Database::DataTable>();
+}
+
+BaseLib::PVariable DatabaseController::setUserMetadata(uint64_t userId, BaseLib::PVariable metadata)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(userId));
+        if(_db.executeCommand("SELECT id FROM users WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown user.");
+
+        std::vector<char> metadataBlob;
+        _rpcEncoder->encodeResponse(metadata, metadataBlob);
+
+        data.push_front(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+        _db.executeCommand("UPDATE users SET metadata=? WHERE id=?", data);
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 //End users
 

@@ -95,7 +95,7 @@ bool User::verify(const std::string& userName, const std::string& password)
 
 uint64_t User::getID(const std::string& userName)
 {
-	uint64_t userID = GD::bl->db->getUserID(userName);
+	uint64_t userID = GD::bl->db->getUserId(userName);
 	return userID;
 }
 
@@ -108,7 +108,7 @@ bool User::remove(const std::string& userName)
 {
 	try
 	{
-		uint64_t userID = GD::bl->db->getUserID(userName);
+		uint64_t userID = GD::bl->db->getUserId(userName);
 		if(userID == 0) return false;
 
 		if(GD::bl->db->deleteUser(userID)) return true;
@@ -125,7 +125,7 @@ bool User::remove(const std::string& userName)
 	return false;
 }
 
-bool User::create(const std::string& userName, const std::string& password)
+bool User::create(const std::string& userName, const std::string& password, const std::vector<uint64_t>& groups)
 {
 	try
 	{
@@ -134,7 +134,7 @@ bool User::create(const std::string& userName, const std::string& password)
 		std::vector<uint8_t> salt;
 		std::vector<uint8_t> passwordHash = generateWHIRLPOOL(password, salt);
 
-		if(GD::bl->db->createUser(userName, passwordHash, salt)) return true;
+		if(GD::bl->db->createUser(userName, passwordHash, salt, groups)) return true;
 	}
 	catch(std::exception& ex)
 	{
@@ -149,23 +149,59 @@ bool User::create(const std::string& userName, const std::string& password)
 
 bool User::update(const std::string& userName, const std::string& password)
 {
+    try
+    {
+        std::vector<uint64_t> groups;
+        return update(userName, password, groups);
+    }
+    catch(std::exception& ex)
+    {
+        GD::out.printError("Error updating user: " + std::string(ex.what()));
+    }
+    catch(...)
+    {
+        GD::out.printError("Unknown error updating user.");
+    }
+    return false;
+}
+
+bool User::update(const std::string& userName, const std::vector<uint64_t>& groups)
+{
+    try
+    {
+        std::string password;
+        return update(userName, password, groups);
+    }
+    catch(std::exception& ex)
+    {
+        GD::out.printError("Error updating user: " + std::string(ex.what()));
+    }
+    catch(...)
+    {
+        GD::out.printError("Unknown error updating user.");
+    }
+    return false;
+}
+
+bool User::update(const std::string& userName, const std::string& password, const std::vector<uint64_t>& groups)
+{
 	try
 	{
-		uint64_t userID = GD::bl->db->getUserID(userName);
-		if(userID == 0) return false;
+		uint64_t userId = GD::bl->db->getUserId(userName);
+		if(userId == 0) return false;
 
 		std::vector<uint8_t> salt;
-		std::vector<uint8_t> passwordHash = User::generateWHIRLPOOL(password, salt);
+		std::vector<uint8_t> passwordHash = password.empty() ? std::vector<uint8_t>() : User::generateWHIRLPOOL(password, salt);
 
-		if(GD::bl->db->updateUser(userID, passwordHash, salt)) return true;
+		if(GD::bl->db->updateUser(userId, passwordHash, salt, groups)) return true;
 	}
 	catch(std::exception& ex)
 	{
-		GD::out.printError("Error creating user: " + std::string(ex.what()));
+		GD::out.printError("Error updating user: " + std::string(ex.what()));
 	}
 	catch(...)
 	{
-		GD::out.printError("Unknown error creating user.");
+		GD::out.printError("Unknown error updating user.");
 	}
 	return false;
 }

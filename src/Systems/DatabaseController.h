@@ -117,13 +117,15 @@ public:
 	// }}}
 
 	// {{{ Users
-		virtual std::shared_ptr<BaseLib::Database::DataTable> getUsers();
-		virtual bool userNameExists(const std::string& name);
-		virtual uint64_t getUserID(const std::string& name);
 		virtual bool createUser(const std::string& name, const std::vector<uint8_t>& passwordHash, const std::vector<uint8_t>& salt, const std::vector<uint64_t>& groups);
-		virtual bool updateUser(uint64_t id, const std::vector<uint8_t>& passwordHash, const std::vector<uint8_t>& salt, const std::vector<uint64_t>& groups);
-		virtual bool deleteUser(uint64_t id);
+		virtual bool deleteUser(uint64_t userId);
 		virtual std::shared_ptr<BaseLib::Database::DataTable> getPassword(const std::string& name);
+		virtual uint64_t getUserId(const std::string& name);
+        virtual BaseLib::PVariable getUserMetadata(uint64_t userId);
+		virtual std::shared_ptr<BaseLib::Database::DataTable> getUsers();
+		virtual bool updateUser(uint64_t userId, const std::vector<uint8_t>& passwordHash, const std::vector<uint8_t>& salt, const std::vector<uint64_t>& groups);
+        virtual BaseLib::PVariable setUserMetadata(uint64_t userId, BaseLib::PVariable metadata);
+		virtual bool userNameExists(const std::string& name);
 	// }}}
 
 	// {{{ Groups

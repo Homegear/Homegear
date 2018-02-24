@@ -29,7 +29,7 @@ try {
             'id' => ($item["ID"] > 999999 ? "0x" . dechex($item["ID"]) : $item["ID"]),
             'address' => $item["ADDRESS"],
             'type' => $item["TYPE"],
-            'interface' => (array_key_exists("INTERFACE", $info) ? $info["INTERFACE"] : "&nbsp;"),
+            'interface' => (array_key_exists("INTERFACE", $info) ? $info["INTERFACE"] : " "),
             'firmware' => $item["FIRMWARE"]
         ];
     }

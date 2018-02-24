@@ -2388,13 +2388,22 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
+				if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameters are not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
 				if(parameters->at(1)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is empty.");
+                if(parameters->at(2)->arrayValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 3 is empty or no array.");
 				if(!BaseLib::HelperFunctions::isAlphaNumeric(parameters->at(0)->stringValue)) return BaseLib::Variable::createError(-1, "Parameter 1 is not alphanumeric.");
 
-				return BaseLib::PVariable(new BaseLib::Variable(User::create(parameters->at(0)->stringValue, parameters->at(1)->stringValue)));
+                std::vector<uint64_t> groups;
+                groups.reserve(parameters->at(2)->arrayValue->size());
+                for(auto& element : *parameters->at(2)->arrayValue)
+                {
+                    if(element->integerValue64 != 0) groups.push_back(element->integerValue64);
+                }
+                if(groups.empty()) return BaseLib::Variable::createError(-1, "No groups specified.");
+
+				return BaseLib::PVariable(new BaseLib::Variable(User::create(parameters->at(0)->stringValue, parameters->at(1)->stringValue, groups)));
 			}
 			catch(const std::exception& ex)
 			{
@@ -2440,12 +2449,23 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
+				if(parameters->size() != 2 && parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects two or three parameters.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameters are not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
 				if(parameters->at(1)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is empty.");
 
-				return BaseLib::PVariable(new BaseLib::Variable(User::update(parameters->at(0)->stringValue, parameters->at(1)->stringValue)));
+				if(parameters->size() == 3)
+				{
+					std::vector<uint64_t> groups;
+					groups.reserve(parameters->at(2)->arrayValue->size());
+					for(auto& element : *parameters->at(2)->arrayValue)
+					{
+						if(element->integerValue64 != 0) groups.push_back(element->integerValue64);
+					}
+
+					return std::make_shared<BaseLib::Variable>(User::update(parameters->at(0)->stringValue, parameters->at(1)->stringValue, groups));
+				}
+				else return std::make_shared<BaseLib::Variable>(User::update(parameters->at(0)->stringValue, parameters->at(1)->stringValue));
 			}
 			catch(const std::exception& ex)
 			{
