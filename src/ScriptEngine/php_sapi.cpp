@@ -105,6 +105,8 @@ ZEND_FUNCTION(hg_reload_module);
 ZEND_FUNCTION(hg_auth);
 ZEND_FUNCTION(hg_create_user);
 ZEND_FUNCTION(hg_delete_user);
+ZEND_FUNCTION(hg_get_user_metadata);
+ZEND_FUNCTION(hg_set_user_metadata);
 ZEND_FUNCTION(hg_update_user);
 ZEND_FUNCTION(hg_user_exists);
 ZEND_FUNCTION(hg_users);
@@ -152,6 +154,8 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_auth, NULL)
 	ZEND_FE(hg_create_user, NULL)
 	ZEND_FE(hg_delete_user, NULL)
+    ZEND_FE(hg_get_user_metadata, NULL)
+    ZEND_FE(hg_set_user_metadata, NULL)
 	ZEND_FE(hg_update_user, NULL)
 	ZEND_FE(hg_user_exists, NULL)
 	ZEND_FE(hg_users, NULL)
@@ -897,6 +901,65 @@ ZEND_FUNCTION(hg_register_thread)
 		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(name)));
 		php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 	}
+
+    ZEND_FUNCTION(hg_get_user_metadata)
+    {
+        if(_disposed) RETURN_NULL();
+        int argc = 0;
+        zval* args = nullptr;
+        if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+        std::string name;
+
+        if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::getUserMetadata().");
+        else if(argc == 1)
+        {
+            if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
+            else
+            {
+                if(Z_STRLEN(args[0]) > 0) name = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+            }
+        }
+        if(name.empty()) RETURN_FALSE;
+
+        std::string methodName("getUserMetadata");
+        BaseLib::PVariable parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+        parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(name));
+        php_homegear_invoke_rpc(methodName, parameters, return_value, true);
+    }
+
+    ZEND_FUNCTION(hg_set_user_metadata)
+    {
+        if(_disposed) RETURN_NULL();
+        int argc = 0;
+        zval* args = nullptr;
+        if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+        std::string name;
+        BaseLib::PVariable metadata;
+
+        if(argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::setUserMetadata().");
+        else if(argc == 2)
+        {
+            if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
+            else
+            {
+                if(Z_STRLEN(args[0]) > 0) name = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+            }
+
+            if(Z_TYPE(args[1]) != IS_ARRAY) php_error_docref(NULL, E_WARNING, "metadata is not of type string.");
+            else
+            {
+                metadata = PhpVariableConverter::getVariable(&args[1]);
+            }
+        }
+        if(name.empty() || !metadata) RETURN_FALSE;
+
+        std::string methodName("setUserMetadata");
+        BaseLib::PVariable parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+        parameters->arrayValue->reserve(2);
+        parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(name));
+        parameters->arrayValue->push_back(metadata);
+        php_homegear_invoke_rpc(methodName, parameters, return_value, true);
+    }
 
 	ZEND_FUNCTION(hg_update_user)
 	{

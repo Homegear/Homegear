@@ -93,7 +93,7 @@ bool User::verify(const std::string& userName, const std::string& password)
 	return false;
 }
 
-uint64_t User::getID(const std::string& userName)
+uint64_t User::getId(const std::string& userName)
 {
 	uint64_t userID = GD::bl->db->getUserId(userName);
 	return userID;
@@ -206,17 +206,31 @@ bool User::update(const std::string& userName, const std::string& password, cons
 	return false;
 }
 
-bool User::getAll(std::map<uint64_t, std::string>& users)
+bool User::getAll(std::map<uint64_t, UserInfo>& users)
 {
 	try
 	{
 		users.clear();
+
+        BaseLib::Rpc::RpcDecoder decoder(GD::bl.get(), false, false);
+
 		std::shared_ptr<BaseLib::Database::DataTable> rows = GD::bl->db->getUsers();
 		if(rows->size() == 0) return true;
 
 		for(BaseLib::Database::DataTable::const_iterator i = rows->begin(); i != rows->end(); ++i)
 		{
-			users[i->second.at(0)->intValue] = i->second.at(1)->textValue;
+            UserInfo info;
+
+            info.name = i->second.at(1)->textValue;
+            info.metadata = decoder.decodeResponse(*i->second.at(3)->binaryValue);
+            auto groups = decoder.decodeResponse(*i->second.at(2)->binaryValue);
+            info.groups.reserve(groups->arrayValue->size());
+            for(auto& group : *groups->arrayValue)
+            {
+                info.groups.push_back(group->integerValue64);
+            }
+
+			users[i->second.at(0)->intValue] = std::move(info);
 		}
 		return true;
 	}
@@ -229,4 +243,46 @@ bool User::getAll(std::map<uint64_t, std::string>& users)
 		GD::out.printError("Unknown error creating user.");
 	}
 	return false;
+}
+
+BaseLib::PVariable User::getMetadata(const std::string& userName)
+{
+    try
+    {
+        uint64_t userId = GD::bl->db->getUserId(userName);
+        if(userId == 0) return false;
+
+        return GD::bl->db->getUserMetadata(userId);
+    }
+    catch(std::exception& ex)
+    {
+        GD::out.printError("Error updating user: " + std::string(ex.what()));
+    }
+    catch(...)
+    {
+        GD::out.printError("Unknown error updating user.");
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
+{
+    try
+    {
+        uint64_t userId = GD::bl->db->getUserId(userName);
+        if(userId == 0) return false;
+
+        auto result = GD::bl->db->setUserMetadata(userId, metadata);
+
+        if(!result->errorStruct) return true;
+    }
+    catch(std::exception& ex)
+    {
+        GD::out.printError("Error updating user: " + std::string(ex.what()));
+    }
+    catch(...)
+    {
+        GD::out.printError("Unknown error updating user.");
+    }
+    return false;
 }

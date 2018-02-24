@@ -166,7 +166,7 @@ void DatabaseController::initializeDatabase()
 			}
 
 			GD::out.printMessage("Default password for user \"homegear\" set to: " + password);
-			std::string content = "Default password for user \"homegear\": " + password;
+			std::string content = "Default password for user \"homegear\": " + password + "\nPlease write down the password and delete this file.\n";
 			std::string path = GD::bl->settings.dataPath() + "defaultPassword.txt";
 			BaseLib::Io::writeFile(path, content);
 
@@ -1575,7 +1575,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getUsers()
 {
 	try
 	{
-		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT userID, name FROM users");
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT userID, name, groups, metadata FROM users");
 		return rows;
 	}
 	catch(const std::exception& ex)
@@ -1597,7 +1597,11 @@ bool DatabaseController::createUser(const std::string& name, const std::vector<u
 {
 	try
 	{
-        if(passwordHash.empty() || salt.empty() || groups.empty()) return false;
+        if(passwordHash.empty() || salt.empty() || groups.empty())
+        {
+            GD::out.printError("Error: Could not create user. Password and/or groups are not specified.");
+            return false;
+        }
 
 		BaseLib::PVariable groupArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 		groupArray->arrayValue->reserve(groups.size());
@@ -1662,8 +1666,9 @@ bool DatabaseController::updateUser(uint64_t id, const std::vector<uint8_t>& pas
 
             rows = _db.executeCommand("SELECT userID FROM users WHERE password=? AND salt=? AND userID=?", data);
         }
-        else if(groups.empty())
+        else if(!passwordHash.empty())
         {
+            if(salt.empty()) return false;
             BaseLib::Database::DataRow data;
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(passwordHash)));
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(salt)));
@@ -1672,7 +1677,7 @@ bool DatabaseController::updateUser(uint64_t id, const std::vector<uint8_t>& pas
 
             rows = _db.executeCommand("SELECT userID FROM users WHERE password=? AND salt=? AND userID=?", data);
         }
-        else
+        else if(!groups.empty())
         {
             BaseLib::Database::DataRow data;
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(groupBlob)));
@@ -1681,6 +1686,7 @@ bool DatabaseController::updateUser(uint64_t id, const std::vector<uint8_t>& pas
 
             rows = _db.executeCommand("SELECT userID FROM users WHERE userID=?", data);
         }
+        else return true; //Nothing to update
 
 		return !rows->empty();
 	}
@@ -1779,7 +1785,7 @@ BaseLib::PVariable DatabaseController::getUserMetadata(uint64_t userId)
     {
         BaseLib::Database::DataRow data;
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(userId));
-        auto rows = _db.executeCommand("SELECT metadata FROM users WHERE id=?", data);
+        auto rows = _db.executeCommand("SELECT metadata FROM users WHERE userID=?", data);
 
         if(rows->empty()) return BaseLib::Variable::createError(-1, "Unknown user.");
 
@@ -1830,13 +1836,13 @@ BaseLib::PVariable DatabaseController::setUserMetadata(uint64_t userId, BaseLib:
     {
         BaseLib::Database::DataRow data;
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(userId));
-        if(_db.executeCommand("SELECT id FROM users WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown user.");
+        if(_db.executeCommand("SELECT userID FROM users WHERE userID=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown user.");
 
         std::vector<char> metadataBlob;
         _rpcEncoder->encodeResponse(metadata, metadataBlob);
 
         data.push_front(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
-        _db.executeCommand("UPDATE users SET metadata=? WHERE id=?", data);
+        _db.executeCommand("UPDATE users SET metadata=? WHERE userID=?", data);
 
         return std::make_shared<BaseLib::Variable>();
     }

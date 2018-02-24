@@ -31,6 +31,7 @@
 #include "CLIServer.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
+#include <homegear-base/Security/Acl.h>
 
 namespace CLI {
 
@@ -477,13 +478,46 @@ std::string Server::handleUserCommand(std::string& command)
 		{
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
+            stringStream << "groups list (gl)  Lists all groups." << std::endl;
 			stringStream << "users list (ul)   Lists all users." << std::endl;
 			stringStream << "users create (uc) Create a new user." << std::endl;
 			stringStream << "users update (uu) Change the password of an existing user." << std::endl;
 			stringStream << "users delete (ud) Delete an existing user." << std::endl;
 			return stringStream.str();
 		}
-		if(command.compare(0, 10, "users list") == 0 || command.compare(0, 2, "ul") == 0 || command.compare(0, 2, "ls") == 0)
+        if(BaseLib::HelperFunctions::checkCliCommand(command, "groups list", "gl", "", 0, arguments, showHelp))
+        {
+            if(showHelp)
+            {
+                stringStream << "Description: This command lists all known groups." << std::endl;
+                stringStream << "Usage: groups list" << std::endl << std::endl;
+                return stringStream.str();
+            }
+
+            auto groups = GD::bl->db->getGroups("en-US");
+            for(auto& group : *groups->arrayValue)
+            {
+                auto nameIterator = group->structValue->find("NAME");
+                if(nameIterator == group->structValue->end()) continue;
+
+                auto idIterator = group->structValue->find("ID");
+                if(idIterator == group->structValue->end()) continue;
+
+                auto aclIterator = group->structValue->find("ACL");
+                if(aclIterator == group->structValue->end()) continue;
+
+				BaseLib::Security::Acl acl;
+				acl.fromVariable(aclIterator->second);
+
+                stringStream << nameIterator->second->stringValue << ":" << std::endl;
+                stringStream << "  ID: " << (uint64_t)idIterator->second->integerValue64 << std::endl;
+                stringStream << "  ACL: " << std::endl;
+				stringStream << acl.toString(4) << std::endl;
+            }
+
+            return stringStream.str();
+        }
+		else if(command.compare(0, 10, "users list") == 0 || command.compare(0, 2, "ul") == 0 || command.compare(0, 2, "ls") == 0)
 		{
 			std::stringstream stream(command);
 			std::string element;
@@ -512,15 +546,19 @@ std::string Server::handleUserCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			std::map<uint64_t, std::string> users;
+			std::map<uint64_t, User::UserInfo> users;
 			User::getAll(users);
 			if(users.size() == 0) return "No users exist.\n";
 
-			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(30) << "Name" << std::endl;
-			for(std::map<uint64_t, std::string>::iterator i = users.begin(); i != users.end(); ++i)
+			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(30) << "Name" << "Groups" << std::endl;
+			for(auto& user : users)
 			{
-				if(i->second.size() < 2 || !i->second.at(0) || !i->second.at(1)) continue;
-				stringStream << std::setw(6) << i->first << std::setw(30) << i->second << std::endl;
+				stringStream << std::setw(6) << user.first << std::setw(30) << user.second.name;
+                for(auto& group : user.second.groups)
+                {
+                    stringStream << group << " ";
+                }
+                stringStream << std::endl;
 			}
 
 			return stringStream.str();
@@ -1416,7 +1454,7 @@ std::string Server::handleCommand(std::string& command)
 		if(response.empty())
 		{
 			//User commands can be executed when family is selected
-			if(command.compare(0, 5, "users") == 0 || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'u' && !GD::familyController->familySelected())) response = handleUserCommand(command);
+			if(command.compare(0, 5, "users") == 0 || command.compare(0, 6, "groups") == 0 || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'u' && !GD::familyController->familySelected()) || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'g' && !GD::familyController->familySelected())) response = handleUserCommand(command);
 			//Do not execute module commands when family is selected
 			else if((command.compare(0, 7, "modules") == 0 || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'm')) && !GD::familyController->familySelected()) response = handleModuleCommand(command);
 			else response = GD::familyController->handleCliCommand(command);

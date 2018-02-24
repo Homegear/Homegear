@@ -178,6 +178,8 @@ private:
 			BaseLib::PVariable auth(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 			BaseLib::PVariable createUser(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 			BaseLib::PVariable deleteUser(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+			BaseLib::PVariable getUserMetadata(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+			BaseLib::PVariable setUserMetadata(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 			BaseLib::PVariable updateUser(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 			BaseLib::PVariable userExists(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 			BaseLib::PVariable listUsers(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);

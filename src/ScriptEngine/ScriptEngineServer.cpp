@@ -191,12 +191,16 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 
 	_localRpcMethods.emplace("mqttPublish", std::bind(&ScriptEngineServer::mqttPublish, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
-	_localRpcMethods.emplace("auth", std::bind(&ScriptEngineServer::auth, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-	_localRpcMethods.emplace("createUser", std::bind(&ScriptEngineServer::createUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-	_localRpcMethods.emplace("deleteUser", std::bind(&ScriptEngineServer::deleteUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-	_localRpcMethods.emplace("updateUser", std::bind(&ScriptEngineServer::updateUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-	_localRpcMethods.emplace("userExists", std::bind(&ScriptEngineServer::userExists, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-	_localRpcMethods.emplace("listUsers", std::bind(&ScriptEngineServer::listUsers, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    //{{{ Users
+	    _localRpcMethods.emplace("auth", std::bind(&ScriptEngineServer::auth, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	    _localRpcMethods.emplace("createUser", std::bind(&ScriptEngineServer::createUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	    _localRpcMethods.emplace("deleteUser", std::bind(&ScriptEngineServer::deleteUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+        _localRpcMethods.emplace("getUserMetadata", std::bind(&ScriptEngineServer::getUserMetadata, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+        _localRpcMethods.emplace("listUsers", std::bind(&ScriptEngineServer::listUsers, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+        _localRpcMethods.emplace("setUserMetadata", std::bind(&ScriptEngineServer::setUserMetadata, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	    _localRpcMethods.emplace("updateUser", std::bind(&ScriptEngineServer::updateUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	    _localRpcMethods.emplace("userExists", std::bind(&ScriptEngineServer::userExists, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    //}}}
 
 	_localRpcMethods.emplace("listModules", std::bind(&ScriptEngineServer::listModules, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	_localRpcMethods.emplace("loadModule", std::bind(&ScriptEngineServer::loadModule, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -2367,7 +2371,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
 				if(parameters->at(1)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is empty.");
 
-				return BaseLib::PVariable(new BaseLib::Variable(User::verify(parameters->at(0)->stringValue, parameters->at(1)->stringValue)));
+				return std::make_shared<BaseLib::Variable>(User::verify(parameters->at(0)->stringValue, parameters->at(1)->stringValue));
 			}
 			catch(const std::exception& ex)
 			{
@@ -2389,7 +2393,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 			try
 			{
 				if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
-				if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameters are not of type string.");
+				if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 or 2 is not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
 				if(parameters->at(1)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is empty.");
                 if(parameters->at(2)->arrayValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 3 is empty or no array.");
@@ -2403,7 +2407,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
                 }
                 if(groups.empty()) return BaseLib::Variable::createError(-1, "No groups specified.");
 
-				return BaseLib::PVariable(new BaseLib::Variable(User::create(parameters->at(0)->stringValue, parameters->at(1)->stringValue, groups)));
+				return std::make_shared<BaseLib::Variable>(User::create(parameters->at(0)->stringValue, parameters->at(1)->stringValue, groups));
 			}
 			catch(const std::exception& ex)
 			{
@@ -2428,7 +2432,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
 
-				return BaseLib::PVariable(new BaseLib::Variable(User::remove(parameters->at(0)->stringValue)));
+				return std::make_shared<BaseLib::Variable>(User::remove(parameters->at(0)->stringValue));
 			}
 			catch(const std::exception& ex)
 			{
@@ -2444,6 +2448,55 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 			}
 			return BaseLib::Variable::createError(-32500, "Unknown application error.");
 		}
+
+        BaseLib::PVariable ScriptEngineServer::getUserMetadata(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+        {
+            try
+            {
+                if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+                if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
+
+                return User::getMetadata(parameters->at(0)->stringValue);
+            }
+            catch(const std::exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(BaseLib::Exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(...)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+            }
+            return BaseLib::Variable::createError(-32500, "Unknown application error.");
+        }
+
+        BaseLib::PVariable ScriptEngineServer::setUserMetadata(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+        {
+            try
+            {
+                if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
+                if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
+                if(parameters->at(1)->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type struct.");
+
+                return std::make_shared<BaseLib::Variable>(User::setMetadata(parameters->at(0)->stringValue, parameters->at(1)));
+            }
+            catch(const std::exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(BaseLib::Exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(...)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+            }
+            return BaseLib::Variable::createError(-32500, "Unknown application error.");
+        }
 
 		BaseLib::PVariable ScriptEngineServer::updateUser(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
 		{
@@ -2490,7 +2543,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
 
-				return BaseLib::PVariable(new BaseLib::Variable(User::exists(parameters->at(0)->stringValue)));
+				return std::make_shared<BaseLib::Variable>(User::exists(parameters->at(0)->stringValue));
 			}
 			catch(const std::exception& ex)
 			{
@@ -2513,14 +2566,28 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 			{
 				if(parameters->size() != 0) return BaseLib::Variable::createError(-1, "Method doesn't expect any parameters.");
 
-				std::map<uint64_t, std::string> users;
+				std::map<uint64_t, User::UserInfo> users;
 				User::getAll(users);
 
 				BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tArray));
 				result->arrayValue->reserve(users.size());
-				for(std::map<uint64_t, std::string>::iterator i = users.begin(); i != users.end(); ++i)
+				for(auto& user : users)
 				{
-					result->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(i->second)));
+                    BaseLib::PVariable entry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                    entry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(user.first));
+                    entry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(user.second.name));
+
+                    BaseLib::PVariable groups = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                    groups->arrayValue->reserve(user.second.groups.size());
+                    for(auto& group : user.second.groups)
+                    {
+                        groups->arrayValue->push_back(std::make_shared<BaseLib::Variable>(group));
+                    }
+                    entry->structValue->emplace("groups", groups);
+
+                    entry->structValue->emplace("metadata", user.second.metadata);
+
+					result->arrayValue->push_back(entry);
 				}
 
 				return result;
