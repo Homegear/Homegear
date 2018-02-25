@@ -69,7 +69,7 @@ public:
 	uint32_t scriptCount();
 	std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> getRunningScripts();
 	void executeScript(PScriptInfo& scriptInfo, bool wait);
-	bool checkSessionId(const std::string& sessionId);
+	std::string checkSessionId(const std::string& sessionId);
 	BaseLib::PVariable executePhpNodeMethod(BaseLib::PArray& parameters);
 	BaseLib::PVariable executeDeviceMethod(BaseLib::PArray& parameters);
 	void broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values);
@@ -184,6 +184,14 @@ private:
 			BaseLib::PVariable userExists(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 			BaseLib::PVariable listUsers(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
 		// }}}
+
+        // {{{ Group methods
+            BaseLib::PVariable createGroup(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+            BaseLib::PVariable deleteGroup(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+            BaseLib::PVariable getGroups(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+            BaseLib::PVariable groupExists(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+            BaseLib::PVariable updateGroup(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+        // }}}
 
 		// {{{ Module methods
 			BaseLib::PVariable listModules(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);

@@ -994,7 +994,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "scriptcount (sc)     Returns the number of currently running scripts" << std::endl;
 			stringStream << "scriptsrunning (sr)  Returns the ID and filename of all running scripts" << std::endl;
 #endif
-			if(GD::bl->settings.enableFlows())
+			if(GD::bl->settings.enableNodeBlue())
 			{
 				stringStream << "flowcount (fc)     Restarts the number of currently running flows" << std::endl;
 				stringStream << "flowsrestart (fr)    Restarts all flows" << std::endl;
@@ -1176,7 +1176,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			if(GD::flowsServer) stringStream << std::dec << GD::flowsServer->flowCount() << std::endl;
+			if(GD::nodeBlueServer) stringStream << std::dec << GD::nodeBlueServer->flowCount() << std::endl;
 			return stringStream.str();
 		}
 		else if(BaseLib::HelperFunctions::checkCliCommand(command, "flowsrestart", "fr", "", 0, arguments, showHelp))
@@ -1188,7 +1188,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			if(GD::flowsServer) GD::flowsServer->restartFlows();
+			if(GD::nodeBlueServer) GD::nodeBlueServer->restartFlows();
 
 			stringStream << "Flows restarted." << std::endl;
 

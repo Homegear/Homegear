@@ -28,24 +28,24 @@
  * files in the program, then also delete it here.
 */
 
-#include "FlowsProcess.h"
+#include "NodeBlueProcess.h"
 #include "../GD/GD.h"
 
-namespace Flows
+namespace NodeBlue
 {
 
-FlowsProcess::FlowsProcess()
+NodeBlueProcess::NodeBlueProcess()
 {
 	_nodeThreadCount = 0;
 	lastExecution = 0;
 }
 
-FlowsProcess::~FlowsProcess()
+NodeBlueProcess::~NodeBlueProcess()
 {
 
 }
 
-uint32_t FlowsProcess::flowCount()
+uint32_t NodeBlueProcess::flowCount()
 {
 	try
 	{
@@ -68,7 +68,7 @@ uint32_t FlowsProcess::flowCount()
 }
 
 
-void FlowsProcess::reset()
+void NodeBlueProcess::reset()
 {
     std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
 	_nodeThreadCount = 0;
@@ -76,12 +76,12 @@ void FlowsProcess::reset()
     _flowFinishedInfo.clear();
 }
 
-uint32_t FlowsProcess::nodeThreadCount()
+uint32_t NodeBlueProcess::nodeThreadCount()
 {
 	return _nodeThreadCount;
 }
 
-void FlowsProcess::invokeFlowFinished(int32_t exitCode)
+void NodeBlueProcess::invokeFlowFinished(int32_t exitCode)
 {
 	try
 	{
@@ -111,7 +111,7 @@ void FlowsProcess::invokeFlowFinished(int32_t exitCode)
     }
 }
 
-void FlowsProcess::invokeFlowFinished(int32_t id, int32_t exitCode)
+void NodeBlueProcess::invokeFlowFinished(int32_t id, int32_t exitCode)
 {
 	try
 	{
@@ -143,7 +143,7 @@ void FlowsProcess::invokeFlowFinished(int32_t id, int32_t exitCode)
     }
 }
 
-PFlowInfoServer FlowsProcess::getFlow(int32_t id)
+PFlowInfoServer NodeBlueProcess::getFlow(int32_t id)
 {
 	try
 	{
@@ -166,7 +166,7 @@ PFlowInfoServer FlowsProcess::getFlow(int32_t id)
     return PFlowInfoServer();
 }
 
-PFlowFinishedInfo FlowsProcess::getFlowFinishedInfo(int32_t id)
+PFlowFinishedInfo NodeBlueProcess::getFlowFinishedInfo(int32_t id)
 {
 	try
 	{
@@ -189,7 +189,7 @@ PFlowFinishedInfo FlowsProcess::getFlowFinishedInfo(int32_t id)
     return PFlowFinishedInfo();
 }
 
-void FlowsProcess::registerFlow(int32_t id, PFlowInfoServer& flowInfo)
+void NodeBlueProcess::registerFlow(int32_t id, PFlowInfoServer& flowInfo)
 {
 	try
 	{
@@ -212,7 +212,7 @@ void FlowsProcess::registerFlow(int32_t id, PFlowInfoServer& flowInfo)
     }
 }
 
-void FlowsProcess::unregisterFlow(int32_t id)
+void NodeBlueProcess::unregisterFlow(int32_t id)
 {
 	try
 	{

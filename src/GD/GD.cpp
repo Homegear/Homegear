@@ -59,4 +59,4 @@ std::unique_ptr<EventHandler> GD::eventHandler;
 std::unique_ptr<ScriptEngine::ScriptEngineServer> GD::scriptEngineServer;
 #endif
 std::unique_ptr<Ipc::IpcServer> GD::ipcServer;
-std::unique_ptr<Flows::FlowsServer> GD::flowsServer;
+std::unique_ptr<NodeBlue::NodeBlueServer> GD::nodeBlueServer;

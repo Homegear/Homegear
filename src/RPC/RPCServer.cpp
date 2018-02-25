@@ -31,6 +31,7 @@
 #include "RPCServer.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
+#include <gnutls/gnutls.h>
 
 using namespace Rpc;
 
@@ -61,7 +62,6 @@ RPCServer::RPCServer()
 	_jsonEncoder = std::unique_ptr<BaseLib::Rpc::JsonEncoder>(new BaseLib::Rpc::JsonEncoder(GD::bl.get()));
 
 	_info.reset(new BaseLib::Rpc::ServerInfo::Info());
-	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
 	_rpcMethods.reset(new std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>);
 	_serverFileDescriptor.reset(new BaseLib::FileDescriptor);
 	_threadPriority = GD::bl->settings.rpcServerThreadPriority();
@@ -132,8 +132,9 @@ int verifyClientCert(gnutls_session_t tlsSession)
 	//Called during handshake just after the certificate message has been received.
 
 	uint32_t status = (uint32_t)-1;
-	if(gnutls_certificate_verify_peers3(tlsSession, 0, &status) != GNUTLS_E_SUCCESS) return -1; //Terminate handshake
+	if(gnutls_certificate_verify_peers3(tlsSession, nullptr, &status) != GNUTLS_E_SUCCESS) return -1; //Terminate handshake
 	if(status > 0) return -1;
+
 	return 0;
 }
 
@@ -738,7 +739,7 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, BaseLib:
     }
 }
 
-BaseLib::PVariable RPCServer::callMethod(std::string& methodName, BaseLib::PVariable& parameters)
+BaseLib::PVariable RPCServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PVariable& parameters)
 {
 	try
 	{
@@ -761,7 +762,7 @@ BaseLib::PVariable RPCServer::callMethod(std::string& methodName, BaseLib::PVari
 				(*i)->print(true, false);
 			}
 		}
-		BaseLib::PVariable ret = _rpcMethods->at(methodName)->invoke(_dummyClientInfo, parameters->arrayValue);
+		BaseLib::PVariable ret = _rpcMethods->at(methodName)->invoke(clientInfo, parameters->arrayValue);
 		if(GD::bl->debugLevel >= 5)
 		{
 			_out.printDebug("Response: ");
@@ -1416,7 +1417,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				}
 				if(_info->restServer && http.getHeader().path.compare(0, 5, "/api/") == 0)
 				{
-					_restServer->process(http, client->socket);
+					_restServer->process(client, http, client->socket);
 				}
 				else if(_info->webServer && (!_info->xmlrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml")) && (!_info->jsonrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") || http.getHeader().path == "/flows/flows"))
 				{
@@ -1607,6 +1608,37 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
+
+		if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
+		{
+			const gnutls_datum_t* derClientCertificates = gnutls_certificate_get_peers(client->socketDescriptor->tlsSession, nullptr);
+			if(!derClientCertificates)
+			{
+				_out.printError("Error retrieving client certificate.");
+				GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+				return;
+			}
+			gnutls_x509_crt_t clientCertificates;
+			unsigned int certMax = 1;
+			if(gnutls_x509_crt_list_import(&clientCertificates, &certMax, derClientCertificates, GNUTLS_X509_FMT_DER, 0) < 1)
+			{
+				_out.printError("Error importing client certificate.");
+				GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+				return;
+			}
+			gnutls_datum_t distinguishedName;
+			if(gnutls_x509_crt_get_dn2(clientCertificates, &distinguishedName) != GNUTLS_E_SUCCESS)
+			{
+				_out.printError("Error getting client certificate's distinguished name.");
+				GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+				return;
+			}
+
+            std::string userName = std::string((char*)distinguishedName.data, distinguishedName.size);
+			client->auth.setUserName(userName);
+			_out.printInfo("Info: Logged in with distinguished name: " + userName);
+		}
+
 		return;
 	}
     catch(const std::exception& ex)

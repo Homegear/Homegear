@@ -202,6 +202,14 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 	    _localRpcMethods.emplace("userExists", std::bind(&ScriptEngineServer::userExists, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     //}}}
 
+    //{{{ Groups
+        _localRpcMethods.emplace("createGroup", std::bind(&ScriptEngineServer::createGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+        _localRpcMethods.emplace("deleteGroup", std::bind(&ScriptEngineServer::deleteGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+        _localRpcMethods.emplace("getGroups", std::bind(&ScriptEngineServer::getGroups, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+        _localRpcMethods.emplace("groupExists", std::bind(&ScriptEngineServer::groupExists, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+        _localRpcMethods.emplace("updateGroup", std::bind(&ScriptEngineServer::updateGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    //}}}
+
 	_localRpcMethods.emplace("listModules", std::bind(&ScriptEngineServer::listModules, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	_localRpcMethods.emplace("loadModule", std::bind(&ScriptEngineServer::loadModule, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	_localRpcMethods.emplace("unloadModule", std::bind(&ScriptEngineServer::unloadModule, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -1670,11 +1678,11 @@ bool ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
     return false;
 }
 
-bool ScriptEngineServer::checkSessionId(const std::string& sessionId)
+std::string ScriptEngineServer::checkSessionId(const std::string& sessionId)
 {
 	try
 	{
-		if(_shuttingDown) return false;
+		if(_shuttingDown) return "";
 		PScriptEngineClientData client;
 
 		{
@@ -1692,7 +1700,7 @@ bool ScriptEngineServer::checkSessionId(const std::string& sessionId)
 			if(!process)
 			{
 				GD::out.printError("Error: Could not check session ID. Could not get free process.");
-				return false;
+				return "";
 			}
 			client = process->getClientData();
 		}
@@ -1702,9 +1710,9 @@ bool ScriptEngineServer::checkSessionId(const std::string& sessionId)
 		if(result->errorStruct)
 		{
 			GD::out.printError("Error: checkSessionId returned: " + result->structValue->at("faultString")->stringValue);
-			return false;
+			return "";
 		}
-		return result->booleanValue;
+		return result->stringValue;
 	}
 	catch(const std::exception& ex)
 	{
@@ -1718,7 +1726,7 @@ bool ScriptEngineServer::checkSessionId(const std::string& sessionId)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return false;
+	return "";
 }
 
 void ScriptEngineServer::invokeScriptFinished(PScriptEngineProcess process, int32_t id, int32_t exitCode)
@@ -1731,7 +1739,7 @@ void ScriptEngineServer::invokeScriptFinished(PScriptEngineProcess process, int3
 			process->invokeScriptFinished(id, exitCode);
 			process->unregisterScript(id);
 		}
-		if(exitCode != 0 && process->isNodeProcess() && !_shuttingDown) GD::flowsServer->restartFlows();
+		if(exitCode != 0 && process->isNodeProcess() && !_shuttingDown) GD::nodeBlueServer->restartFlows();
 	}
 	catch(const std::exception& ex)
 	{
@@ -2608,6 +2616,131 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		}
 	// }}}
 
+    // {{{ Group methods
+        BaseLib::PVariable ScriptEngineServer::createGroup(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+        {
+            try
+            {
+                if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
+                if(parameters->at(0)->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type struct.");
+                if(parameters->at(1)->type != BaseLib::VariableType::tStruct || parameters->at(1)->structValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type struct or is empty.");
+
+                return _bl->db->createGroup(parameters->at(0), parameters->at(1));
+            }
+            catch(const std::exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(BaseLib::Exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(...)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+            }
+            return BaseLib::Variable::createError(-32500, "Unknown application error.");
+        }
+
+        BaseLib::PVariable ScriptEngineServer::deleteGroup(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+        {
+            try
+            {
+                if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+                if(parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
+
+                return _bl->db->deleteGroup(parameters->at(0)->integerValue64);
+            }
+            catch(const std::exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(BaseLib::Exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(...)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+            }
+            return BaseLib::Variable::createError(-32500, "Unknown application error.");
+        }
+
+        BaseLib::PVariable ScriptEngineServer::getGroups(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+        {
+            try
+            {
+                if(parameters->size() > 1) return BaseLib::Variable::createError(-1, "Method expects one or two parameters.");
+                if(parameters->size() == 1 && parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
+
+                return _bl->db->getGroups(parameters->empty() ? "" : parameters->at(0)->stringValue);
+            }
+            catch(const std::exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(BaseLib::Exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(...)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+            }
+            return BaseLib::Variable::createError(-32500, "Unknown application error.");
+        }
+
+        BaseLib::PVariable ScriptEngineServer::groupExists(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+        {
+            try
+            {
+                if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+                if(parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
+
+                return std::make_shared<BaseLib::Variable>(_bl->db->groupExists(parameters->at(0)->integerValue64));
+            }
+            catch(const std::exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(BaseLib::Exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(...)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+            }
+            return BaseLib::Variable::createError(-32500, "Unknown application error.");
+        }
+
+        BaseLib::PVariable ScriptEngineServer::updateGroup(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+        {
+            try
+            {
+                if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
+                if(parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
+                if(parameters->at(1)->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type struct.");
+                if(parameters->at(2)->type != BaseLib::VariableType::tStruct || parameters->at(2)->structValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type struct or is empty.");
+
+                return _bl->db->updateGroup(parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
+            }
+            catch(const std::exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(BaseLib::Exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(...)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+            }
+            return BaseLib::Variable::createError(-32500, "Unknown application error.");
+        }
+    // }}}
+
 	// {{{ Module methods
 		BaseLib::PVariable ScriptEngineServer::listModules(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
 		{
@@ -2929,7 +3062,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 				if(parameters->at(1)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type integer.");
 				if(parameters->size() == 4 && parameters->at(3)->type != BaseLib::VariableType::tBoolean) return BaseLib::Variable::createError(-1, "Parameter 4 is not of type boolean.");
 
-				if(GD::flowsServer) GD::flowsServer->nodeOutput(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2), parameters->size() == 4 ? parameters->at(3)->booleanValue : false);
+				if(GD::nodeBlueServer) GD::nodeBlueServer->nodeOutput(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2), parameters->size() == 4 ? parameters->at(3)->booleanValue : false);
 
 				return std::make_shared<BaseLib::Variable>();
 			}
@@ -2952,14 +3085,14 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(GD::flowsServer)
+				if(GD::nodeBlueServer)
 				{
 					if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
 					if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
 					if(parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string.");
 					if(parameters->at(2)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type array.");
 
-					return GD::flowsServer->executePhpNodeBaseMethod(parameters);
+					return GD::nodeBlueServer->executePhpNodeBaseMethod(parameters);
 				}
 			}
 			catch(const std::exception& ex)

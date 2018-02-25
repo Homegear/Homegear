@@ -1564,9 +1564,9 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
     }
 }
 
-void ScriptEngineClient::checkSessionIdThread(std::string sessionId, bool* result)
+void ScriptEngineClient::checkSessionIdThread(std::string sessionId, std::string* result)
 {
-	*result = false;
+	*result = "";
 	std::shared_ptr<BaseLib::Rpc::ServerInfo::Info> serverInfo(new BaseLib::Rpc::ServerInfo::Info());
 
 	{
@@ -1636,7 +1636,14 @@ void ScriptEngineClient::checkSessionIdThread(std::string sessionId, bool* resul
 				zval* token = zend_hash_str_find(Z_ARRVAL_P(Z_REFVAL_P(reference)), "authorized", sizeof("authorized") - 1);
 				if(token != nullptr)
 				{
-					*result = (Z_TYPE_P(token) == IS_TRUE);
+					if(Z_TYPE_P(token) == IS_TRUE)
+					{
+						zval* token2 = zend_hash_str_find(Z_ARRVAL_P(Z_REFVAL_P(reference)), "user", sizeof("user") - 1);
+						if(token2 != nullptr && Z_STRLEN_P(token2) > 0)
+						{
+							*result = std::string(Z_STRVAL_P(token2), Z_STRLEN_P(token2));
+						}
+					}
 				}
 			}
         }
@@ -2040,7 +2047,7 @@ BaseLib::PVariable ScriptEngineClient::checkSessionId(BaseLib::PArray& parameter
 		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
 		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Session ID is empty.");
 
-		bool result = false;
+		std::string result = "";
 		std::lock_guard<std::mutex> maintenanceThreadGuard(_maintenanceThreadMutex);
 		if(_maintenanceThread.joinable()) _maintenanceThread.join();
 		_maintenanceThread = std::thread(&ScriptEngineClient::checkSessionIdThread, this, parameters->at(0)->stringValue, &result);

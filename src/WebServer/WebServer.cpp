@@ -88,11 +88,11 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			}
 		}
 
-		if(GD::bl->settings.enableFlows() && path.compare(0, 6, "flows/") == 0)
+		if(GD::bl->settings.enableNodeBlue() && path.compare(0, 6, "flows/") == 0)
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
 			std::string responseEncoding;
-			std::string contentString = GD::flowsServer->handleGet(path, http, responseEncoding);
+			std::string contentString = GD::nodeBlueServer->handleGet(path, http, responseEncoding);
 			if(contentString == "unauthorized")
 			{
 				getError(401, _http.getStatusText(401), "You are not logged in.", content);
@@ -130,8 +130,8 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			if(ending == "php" || ending == "php5" || ending == "php7" || ending == "hgs")
 			{
 				std::string fullPath;
-				if(path == "flows/index.php") fullPath = GD::bl->settings.flowsPath() + "www/index.php";
-				else if(path == "flows/signin.php") fullPath = GD::bl->settings.flowsPath() + "www/signin.php";
+				if(path == "flows/index.php") fullPath = GD::bl->settings.nodeBluePath() + "www/index.php";
+				else if(path == "flows/signin.php") fullPath = GD::bl->settings.nodeBluePath() + "www/signin.php";
 				else fullPath = _serverInfo->contentPath + path;
 				std::string relativePath = '/' + path;
 				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, relativePath, http, _serverInfo));
@@ -244,11 +244,11 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 			}
 		}
 
-		if (GD::bl->settings.enableFlows() && path.compare(0, 6, "flows/") == 0)
+		if (GD::bl->settings.enableNodeBlue() && path.compare(0, 6, "flows/") == 0)
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: POST)");
 			std::string responseEncoding;
-			std::string contentString = GD::flowsServer->handlePost(path, http, responseEncoding);
+			std::string contentString = GD::nodeBlueServer->handlePost(path, http, responseEncoding);
 			if(contentString == "unauthorized")
 			{
 				getError(401, _http.getStatusText(401), "You are not logged in.", content);
@@ -279,8 +279,8 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to: \"" + _serverInfo->contentPath + path + "\", method: POST)");
 			std::string fullPath;
-			if(path == "flows/index.php") fullPath = GD::bl->settings.flowsPath() + "www/index.php";
-			else if(path == "flows/signin.php") fullPath = GD::bl->settings.flowsPath() + "www/signin.php";
+			if(path == "flows/index.php") fullPath = GD::bl->settings.nodeBluePath() + "www/index.php";
+			else if(path == "flows/signin.php") fullPath = GD::bl->settings.nodeBluePath() + "www/signin.php";
 			else fullPath = _serverInfo->contentPath + path;
 			std::string relativePath = '/' + path;
 			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, relativePath, http, _serverInfo));

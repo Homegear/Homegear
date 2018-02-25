@@ -164,14 +164,14 @@ std::vector<NodeManager::PNodeInfo> NodeManager::getNodeInfo()
 	try
 	{
 		std::unique_ptr<BaseLib::Rpc::JsonDecoder> jsonDecoder(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
-		std::vector<std::string> directories = GD::bl->io.getDirectories(GD::bl->settings.flowsPath() + "nodes/");
+		std::vector<std::string> directories = GD::bl->io.getDirectories(GD::bl->settings.nodeBluePath() + "nodes/");
 		for(auto& directory : directories)
 		{
-			std::vector<std::string> files = GD::bl->io.getFiles(GD::bl->settings.flowsPath() + "nodes/" + directory);
+			std::vector<std::string> files = GD::bl->io.getFiles(GD::bl->settings.nodeBluePath() + "nodes/" + directory);
 			if (files.empty()) continue;
 			for(auto& file : files)
 			{
-				std::string path = GD::bl->settings.flowsPath() + "nodes/" + directory + "/" + file;
+				std::string path = GD::bl->settings.nodeBluePath() + "nodes/" + directory + "/" + file;
 				try
 				{
 					if(file.size() < 6) continue; //?*.hni
@@ -271,11 +271,11 @@ std::string NodeManager::getNodeLocales(std::string& language)
 		std::unique_ptr<BaseLib::Rpc::JsonDecoder> jsonDecoder(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
 		std::string locales = "{";
 		locales.reserve(8192);
-		std::vector<std::string> directories = GD::bl->io.getDirectories(GD::bl->settings.flowsPath() + "nodes/");
+		std::vector<std::string> directories = GD::bl->io.getDirectories(GD::bl->settings.nodeBluePath() + "nodes/");
 		bool firstFile = true;
 		for(auto& directory : directories)
 		{
-			std::string localePath = GD::bl->settings.flowsPath() + "nodes/" + directory + "/locales/" + language + "/";
+			std::string localePath = GD::bl->settings.nodeBluePath() + "nodes/" + directory + "/locales/" + language + "/";
 			if(!GD::bl->io.directoryExists(localePath)) continue;
 			std::vector<std::string> files = GD::bl->io.getFiles(localePath);
 			if (files.empty()) continue;
@@ -339,7 +339,7 @@ int32_t NodeManager::loadNode(std::string nodeNamespace, std::string type, std::
 			}
 		}
 
-		std::string path(GD::bl->settings.flowsPath() + "nodes/" + nodeNamespace + "/");
+		std::string path(GD::bl->settings.nodeBluePath() + "nodes/" + nodeNamespace + "/");
 		if(BaseLib::Io::fileExists(path + type + ".so")) //C++ module
 		{
 			GD::out.printInfo("Info: Loading node " + type + ".so");

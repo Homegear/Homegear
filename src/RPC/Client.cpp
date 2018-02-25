@@ -837,7 +837,7 @@ void Client::collectGarbage()
 				std::lock_guard<std::mutex> nodeClientsGuard(_nodeClientsMutex);
 				nodeClientsEmpty = _nodeClients.empty();
 			}
-			if(nodeClientsEmpty && GD::flowsServer) GD::flowsServer->disableNodeEvents();
+			if(nodeClientsEmpty && GD::nodeBlueServer) GD::nodeBlueServer->disableNodeEvents();
 		}
 	}
 	catch(const std::exception& ex)
@@ -980,7 +980,7 @@ std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<Base
 				std::lock_guard<std::mutex> nodeClientsGuard(_nodeClientsMutex);
 				nodeClientsEmpty = _nodeClients.empty();
 			}
-			if(nodeClientsEmpty && GD::flowsServer) GD::flowsServer->enableNodeEvents();
+			if(nodeClientsEmpty && GD::nodeBlueServer) GD::nodeBlueServer->enableNodeEvents();
 			std::lock_guard<std::mutex> nodeClientsGuard(_nodeClientsMutex);
 			_nodeClients.emplace(server->uid);
 		}
@@ -1033,7 +1033,7 @@ void Client::removeServer(std::pair<std::string, std::string> server)
 						_nodeClients.erase(server->uid);
 						nodeClientsEmpty = _nodeClients.empty();
 					}
-					if(nodeClientsEmpty && GD::flowsServer) GD::flowsServer->disableNodeEvents();
+					if(nodeClientsEmpty && GD::nodeBlueServer) GD::nodeBlueServer->disableNodeEvents();
 				}
 				return;
 			}
@@ -1107,7 +1107,7 @@ void Client::removeServer(int32_t uid)
 				_nodeClients.erase(server->uid);
 				nodeClientsEmpty = _nodeClients.empty();
 			}
-			if(nodeClientsEmpty && GD::flowsServer) GD::flowsServer->disableNodeEvents();
+			if(nodeClientsEmpty && GD::nodeBlueServer) GD::nodeBlueServer->disableNodeEvents();
 		}
 	}
 	catch(const std::exception& ex)

@@ -28,16 +28,16 @@
  * files in the program, then also delete it here.
 */
 
-#include "FlowsClient.h"
+#include "NodeBlueClient.h"
 #include <homegear-node/JsonEncoder.h>
 #include <homegear-node/JsonDecoder.h>
 #include "../GD/GD.h"
 #include <utility>
 
-namespace Flows
+namespace NodeBlue
 {
 
-FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 3, 100000)
+NodeBlueClient::NodeBlueClient() : IQueue(GD::bl.get(), 3, 100000)
 {
     _stopped = false;
     _nodesStopped = false;
@@ -60,38 +60,38 @@ FlowsClient::FlowsClient() : IQueue(GD::bl.get(), 3, 100000)
     _rpcDecoder = std::unique_ptr<Flows::RpcDecoder>(new Flows::RpcDecoder());
     _rpcEncoder = std::unique_ptr<Flows::RpcEncoder>(new Flows::RpcEncoder(true));
 
-    _localRpcMethods.emplace("reload", std::bind(&FlowsClient::reload, this, std::placeholders::_1));
-    _localRpcMethods.emplace("shutdown", std::bind(&FlowsClient::shutdown, this, std::placeholders::_1));
-    _localRpcMethods.emplace("startFlow", std::bind(&FlowsClient::startFlow, this, std::placeholders::_1));
-    _localRpcMethods.emplace("startNodes", std::bind(&FlowsClient::startNodes, this, std::placeholders::_1));
-    _localRpcMethods.emplace("configNodesStarted", std::bind(&FlowsClient::configNodesStarted, this, std::placeholders::_1));
-    _localRpcMethods.emplace("startUpComplete", std::bind(&FlowsClient::startUpComplete, this, std::placeholders::_1));
-    _localRpcMethods.emplace("stopNodes", std::bind(&FlowsClient::stopNodes, this, std::placeholders::_1));
-    _localRpcMethods.emplace("stopFlow", std::bind(&FlowsClient::stopFlow, this, std::placeholders::_1));
-    _localRpcMethods.emplace("flowCount", std::bind(&FlowsClient::flowCount, this, std::placeholders::_1));
-    _localRpcMethods.emplace("nodeOutput", std::bind(&FlowsClient::nodeOutput, this, std::placeholders::_1));
-    _localRpcMethods.emplace("invokeNodeMethod", std::bind(&FlowsClient::invokeExternalNodeMethod, this, std::placeholders::_1));
-    _localRpcMethods.emplace("executePhpNodeBaseMethod", std::bind(&FlowsClient::executePhpNodeBaseMethod, this, std::placeholders::_1));
-    _localRpcMethods.emplace("getFlowVariable", std::bind(&FlowsClient::getFlowVariable, this, std::placeholders::_1));
-    _localRpcMethods.emplace("getNodeVariable", std::bind(&FlowsClient::getNodeVariable, this, std::placeholders::_1));
-    _localRpcMethods.emplace("setFlowVariable", std::bind(&FlowsClient::setFlowVariable, this, std::placeholders::_1));
-    _localRpcMethods.emplace("setNodeVariable", std::bind(&FlowsClient::setNodeVariable, this, std::placeholders::_1));
-    _localRpcMethods.emplace("enableNodeEvents", std::bind(&FlowsClient::enableNodeEvents, this, std::placeholders::_1));
-    _localRpcMethods.emplace("disableNodeEvents", std::bind(&FlowsClient::disableNodeEvents, this, std::placeholders::_1));
-    _localRpcMethods.emplace("broadcastEvent", std::bind(&FlowsClient::broadcastEvent, this, std::placeholders::_1));
-    _localRpcMethods.emplace("broadcastDeleteDevices", std::bind(&FlowsClient::broadcastDeleteDevices, this, std::placeholders::_1));
-    _localRpcMethods.emplace("broadcastNewDevices", std::bind(&FlowsClient::broadcastNewDevices, this, std::placeholders::_1));
-    _localRpcMethods.emplace("broadcastUpdateDevice", std::bind(&FlowsClient::broadcastUpdateDevice, this, std::placeholders::_1));
+    _localRpcMethods.emplace("reload", std::bind(&NodeBlueClient::reload, this, std::placeholders::_1));
+    _localRpcMethods.emplace("shutdown", std::bind(&NodeBlueClient::shutdown, this, std::placeholders::_1));
+    _localRpcMethods.emplace("startFlow", std::bind(&NodeBlueClient::startFlow, this, std::placeholders::_1));
+    _localRpcMethods.emplace("startNodes", std::bind(&NodeBlueClient::startNodes, this, std::placeholders::_1));
+    _localRpcMethods.emplace("configNodesStarted", std::bind(&NodeBlueClient::configNodesStarted, this, std::placeholders::_1));
+    _localRpcMethods.emplace("startUpComplete", std::bind(&NodeBlueClient::startUpComplete, this, std::placeholders::_1));
+    _localRpcMethods.emplace("stopNodes", std::bind(&NodeBlueClient::stopNodes, this, std::placeholders::_1));
+    _localRpcMethods.emplace("stopFlow", std::bind(&NodeBlueClient::stopFlow, this, std::placeholders::_1));
+    _localRpcMethods.emplace("flowCount", std::bind(&NodeBlueClient::flowCount, this, std::placeholders::_1));
+    _localRpcMethods.emplace("nodeOutput", std::bind(&NodeBlueClient::nodeOutput, this, std::placeholders::_1));
+    _localRpcMethods.emplace("invokeNodeMethod", std::bind(&NodeBlueClient::invokeExternalNodeMethod, this, std::placeholders::_1));
+    _localRpcMethods.emplace("executePhpNodeBaseMethod", std::bind(&NodeBlueClient::executePhpNodeBaseMethod, this, std::placeholders::_1));
+    _localRpcMethods.emplace("getFlowVariable", std::bind(&NodeBlueClient::getFlowVariable, this, std::placeholders::_1));
+    _localRpcMethods.emplace("getNodeVariable", std::bind(&NodeBlueClient::getNodeVariable, this, std::placeholders::_1));
+    _localRpcMethods.emplace("setFlowVariable", std::bind(&NodeBlueClient::setFlowVariable, this, std::placeholders::_1));
+    _localRpcMethods.emplace("setNodeVariable", std::bind(&NodeBlueClient::setNodeVariable, this, std::placeholders::_1));
+    _localRpcMethods.emplace("enableNodeEvents", std::bind(&NodeBlueClient::enableNodeEvents, this, std::placeholders::_1));
+    _localRpcMethods.emplace("disableNodeEvents", std::bind(&NodeBlueClient::disableNodeEvents, this, std::placeholders::_1));
+    _localRpcMethods.emplace("broadcastEvent", std::bind(&NodeBlueClient::broadcastEvent, this, std::placeholders::_1));
+    _localRpcMethods.emplace("broadcastDeleteDevices", std::bind(&NodeBlueClient::broadcastDeleteDevices, this, std::placeholders::_1));
+    _localRpcMethods.emplace("broadcastNewDevices", std::bind(&NodeBlueClient::broadcastNewDevices, this, std::placeholders::_1));
+    _localRpcMethods.emplace("broadcastUpdateDevice", std::bind(&NodeBlueClient::broadcastUpdateDevice, this, std::placeholders::_1));
 }
 
-FlowsClient::~FlowsClient()
+NodeBlueClient::~NodeBlueClient()
 {
     dispose();
     if(_maintenanceThread.joinable()) _maintenanceThread.join();
     if(_watchdogThread.joinable()) _watchdogThread.join();
 }
 
-void FlowsClient::dispose()
+void NodeBlueClient::dispose()
 {
     try
     {
@@ -181,7 +181,7 @@ void FlowsClient::dispose()
     }
 }
 
-void FlowsClient::resetClient(Flows::PVariable packetId)
+void NodeBlueClient::resetClient(Flows::PVariable packetId)
 {
     try
     {
@@ -287,7 +287,7 @@ void FlowsClient::resetClient(Flows::PVariable packetId)
         startQueue(1, false, _threadCount, 0, SCHED_OTHER);
         startQueue(2, false, _threadCount, 0, SCHED_OTHER);
 
-        if(GD::bl->settings.flowsWatchdogTimeout() >= 1000) _watchdogThread = std::thread(&FlowsClient::watchdog, this);
+        if(GD::bl->settings.nodeBlueWatchdogTimeout() >= 1000) _watchdogThread = std::thread(&NodeBlueClient::watchdog, this);
 
         _out.printMessage("Reset complete.");
         Flows::PVariable result = std::make_shared<Flows::Variable>();
@@ -310,7 +310,7 @@ void FlowsClient::resetClient(Flows::PVariable packetId)
     sendResponse(packetId, result);
 }
 
-void FlowsClient::start()
+void NodeBlueClient::start()
 {
     try
     {
@@ -323,7 +323,7 @@ void FlowsClient::start()
             _out.printError("Error: Could not redirect errors to log file.");
         }
 
-        uint32_t flowsProcessingThreadCountNodes = GD::bl->settings.flowsProcessingThreadCountNodes();
+        uint32_t flowsProcessingThreadCountNodes = GD::bl->settings.nodeBlueProcessingThreadCountNodes();
         if(flowsProcessingThreadCountNodes < 5) flowsProcessingThreadCountNodes = 5;
         _threadCount = flowsProcessingThreadCountNodes;
 
@@ -335,7 +335,7 @@ void FlowsClient::start()
         startQueue(1, false, _threadCount, 0, SCHED_OTHER);
         startQueue(2, false, _threadCount, 0, SCHED_OTHER);
 
-        if(GD::bl->settings.flowsWatchdogTimeout() >= 1000) _watchdogThread = std::thread(&FlowsClient::watchdog, this);
+        if(GD::bl->settings.nodeBlueWatchdogTimeout() >= 1000) _watchdogThread = std::thread(&NodeBlueClient::watchdog, this);
 
         _socketPath = GD::bl->settings.socketPath() + "homegearFE.sock";
         if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Socket path is " + _socketPath);
@@ -380,7 +380,7 @@ void FlowsClient::start()
         if(GD::bl->debugLevel >= 4) _out.printMessage("Connected.");
 
         if(_maintenanceThread.joinable()) _maintenanceThread.join();
-        _maintenanceThread = std::thread(&FlowsClient::registerClient, this);
+        _maintenanceThread = std::thread(&NodeBlueClient::registerClient, this);
 
         std::vector<char> buffer(1024);
         int32_t result = 0;
@@ -444,7 +444,7 @@ void FlowsClient::start()
                             else if(methodName == "reset")
                             {
                                 if(_maintenanceThread.joinable()) _maintenanceThread.join();
-                                _maintenanceThread = std::thread(&FlowsClient::resetClient, this, parameters->at(0));
+                                _maintenanceThread = std::thread(&NodeBlueClient::resetClient, this, parameters->at(0));
                             }
                             else if(!enqueue(0, queueEntry, !_startUpComplete)) printQueueFullError(_out, "Error: Could not queue RPC request because buffer is full. Dropping it.");
                         }
@@ -479,7 +479,7 @@ void FlowsClient::start()
     }
 }
 
-void FlowsClient::registerClient()
+void NodeBlueClient::registerClient()
 {
     try
     {
@@ -508,7 +508,7 @@ void FlowsClient::registerClient()
     }
 }
 
-void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry)
+void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry)
 {
     try
     {
@@ -598,7 +598,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
                         auto responseIterator = _rpcResponses[threadId].find(packetId);
                         if (responseIterator != _rpcResponses[threadId].end())
                         {
-                            PFlowsResponseClient element = responseIterator->second;
+                            PNodeBlueResponseClient element = responseIterator->second;
                             if (element)
                             {
                                 element->response = response;
@@ -706,7 +706,7 @@ void FlowsClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
     }
 }
 
-Flows::PVariable FlowsClient::send(std::vector<char>& data)
+Flows::PVariable NodeBlueClient::send(std::vector<char>& data)
 {
     try
     {
@@ -739,7 +739,7 @@ Flows::PVariable FlowsClient::send(std::vector<char>& data)
     return std::make_shared<Flows::Variable>();
 }
 
-Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray parameters, bool wait)
+Flows::PVariable NodeBlueClient::invoke(std::string methodName, Flows::PArray parameters, bool wait)
 {
     try
     {
@@ -774,12 +774,12 @@ Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray param
         std::vector<char> data;
         _rpcEncoder->encodeRequest(methodName, array, data);
 
-        PFlowsResponseClient response;
+        PNodeBlueResponseClient response;
         if(wait)
         {
             {
                 std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-                auto result = _rpcResponses[threadId].emplace(packetId, std::make_shared<FlowsResponseClient>());
+                auto result = _rpcResponses[threadId].emplace(packetId, std::make_shared<NodeBlueResponseClient>());
                 if(result.second) response = result.first->second;
             }
             if(!response)
@@ -842,7 +842,7 @@ Flows::PVariable FlowsClient::invoke(std::string methodName, Flows::PArray param
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray parameters, bool wait)
+Flows::PVariable NodeBlueClient::invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray parameters, bool wait)
 {
     try
     {
@@ -873,7 +873,7 @@ Flows::PVariable FlowsClient::invokeNodeMethod(std::string nodeId, std::string m
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-void FlowsClient::sendResponse(Flows::PVariable& packetId, Flows::PVariable& variable)
+void NodeBlueClient::sendResponse(Flows::PVariable& packetId, Flows::PVariable& variable)
 {
     try
     {
@@ -897,12 +897,12 @@ void FlowsClient::sendResponse(Flows::PVariable& packetId, Flows::PVariable& var
     }
 }
 
-void FlowsClient::log(std::string nodeId, int32_t logLevel, std::string message)
+void NodeBlueClient::log(std::string nodeId, int32_t logLevel, std::string message)
 {
     _out.printMessage("Node " + nodeId + ": " + message, logLevel, logLevel <= 3);
 }
 
-void FlowsClient::subscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable)
+void NodeBlueClient::subscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable)
 {
     try
     {
@@ -923,7 +923,7 @@ void FlowsClient::subscribePeer(std::string nodeId, uint64_t peerId, int32_t cha
     }
 }
 
-void FlowsClient::unsubscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable)
+void NodeBlueClient::unsubscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable)
 {
     try
     {
@@ -944,13 +944,13 @@ void FlowsClient::unsubscribePeer(std::string nodeId, uint64_t peerId, int32_t c
     }
 }
 
-void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariable message, bool synchronous)
+void NodeBlueClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariable message, bool synchronous)
 {
     try
     {
         if(!message || _shuttingDownOrRestarting) return;
 
-        PNodeInfo nodeInfo;
+        Flows::PNodeInfo nodeInfo;
         {
             std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
             auto nodesIterator = _nodes.find(nodeId);
@@ -1013,7 +1013,7 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
         message->structValue->emplace("source", std::make_shared<Flows::Variable>(nodeId));
         for(auto& node : nodeInfo->wiresOut.at(index))
         {
-            PNodeInfo outputNodeInfo;
+            Flows::PNodeInfo outputNodeInfo;
             {
                 std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
                 auto nodeIterator = _nodes.find(node.id);
@@ -1122,7 +1122,7 @@ void FlowsClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariab
     }
 }
 
-void FlowsClient::nodeEvent(std::string nodeId, std::string topic, Flows::PVariable value)
+void NodeBlueClient::nodeEvent(std::string nodeId, std::string topic, Flows::PVariable value)
 {
     try
     {
@@ -1153,7 +1153,7 @@ void FlowsClient::nodeEvent(std::string nodeId, std::string topic, Flows::PVaria
     }
 }
 
-Flows::PVariable FlowsClient::getNodeData(std::string nodeId, std::string key)
+Flows::PVariable NodeBlueClient::getNodeData(std::string nodeId, std::string key)
 {
     try
     {
@@ -1186,7 +1186,7 @@ Flows::PVariable FlowsClient::getNodeData(std::string nodeId, std::string key)
     return std::make_shared<Flows::Variable>();
 }
 
-void FlowsClient::setNodeData(std::string nodeId, std::string key, Flows::PVariable value)
+void NodeBlueClient::setNodeData(std::string nodeId, std::string key, Flows::PVariable value)
 {
     try
     {
@@ -1212,7 +1212,7 @@ void FlowsClient::setNodeData(std::string nodeId, std::string key, Flows::PVaria
     }
 }
 
-void FlowsClient::setInternalMessage(std::string nodeId, Flows::PVariable message)
+void NodeBlueClient::setInternalMessage(std::string nodeId, Flows::PVariable message)
 {
     try
     {
@@ -1246,7 +1246,7 @@ void FlowsClient::setInternalMessage(std::string nodeId, Flows::PVariable messag
     }
 }
 
-void FlowsClient::setInputValue(std::string& nodeId, int32_t inputIndex, Flows::PVariable message)
+void NodeBlueClient::setInputValue(std::string& nodeId, int32_t inputIndex, Flows::PVariable message)
 {
     try
     {
@@ -1291,7 +1291,7 @@ void FlowsClient::setInputValue(std::string& nodeId, int32_t inputIndex, Flows::
     }
 }
 
-Flows::PVariable FlowsClient::getConfigParameter(std::string nodeId, std::string name)
+Flows::PVariable NodeBlueClient::getConfigParameter(std::string nodeId, std::string name)
 {
     try
     {
@@ -1313,7 +1313,7 @@ Flows::PVariable FlowsClient::getConfigParameter(std::string nodeId, std::string
     return std::make_shared<Flows::Variable>();
 }
 
-void FlowsClient::watchdog()
+void NodeBlueClient::watchdog()
 {
     while(!_stopped && !_shuttingDownOrRestarting)
     {
@@ -1324,7 +1324,7 @@ void FlowsClient::watchdog()
             if(_processingThreadCount1 == _threadCount)
             {
                 int64_t time = _processingThreadCountMaxReached1;
-                if(time != 0 && BaseLib::HelperFunctions::getTime() - time > GD::bl->settings.flowsWatchdogTimeout())
+                if(time != 0 && BaseLib::HelperFunctions::getTime() - time > GD::bl->settings.nodeBlueWatchdogTimeout())
                 {
                     std::cout << "Watchdog 1 timed out. Killing process." << std::endl;
                     std::cerr << "Watchdog 1 timed out. Killing process." << std::endl;
@@ -1335,7 +1335,7 @@ void FlowsClient::watchdog()
             if(_processingThreadCount2 == _threadCount)
             {
                 int64_t time = _processingThreadCountMaxReached2;
-                if(time != 0 && BaseLib::HelperFunctions::getTime() - time > GD::bl->settings.flowsWatchdogTimeout())
+                if(time != 0 && BaseLib::HelperFunctions::getTime() - time > GD::bl->settings.nodeBlueWatchdogTimeout())
                 {
                     std::cout << "Watchdog 2 timed out. Killing process." << std::endl;
                     std::cerr << "Watchdog 2 timed out. Killing process." << std::endl;
@@ -1346,7 +1346,7 @@ void FlowsClient::watchdog()
             if(_processingThreadCount3 == _threadCount)
             {
                 int64_t time = _processingThreadCountMaxReached3;
-                if(time != 0 && BaseLib::HelperFunctions::getTime() - time > GD::bl->settings.flowsWatchdogTimeout())
+                if(time != 0 && BaseLib::HelperFunctions::getTime() - time > GD::bl->settings.nodeBlueWatchdogTimeout())
                 {
                     std::cout << "Watchdog 3 timed out. Killing process." << std::endl;
                     std::cerr << "Watchdog 3 timed out. Killing process." << std::endl;
@@ -1370,7 +1370,7 @@ void FlowsClient::watchdog()
 }
 
 // {{{ RPC methods
-Flows::PVariable FlowsClient::reload(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::reload(Flows::PArray& parameters)
 {
     try
     {
@@ -1400,12 +1400,12 @@ Flows::PVariable FlowsClient::reload(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::shutdown(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::shutdown(Flows::PArray& parameters)
 {
     try
     {
         if(_maintenanceThread.joinable()) _maintenanceThread.join();
-        _maintenanceThread = std::thread(&FlowsClient::dispose, this);
+        _maintenanceThread = std::thread(&NodeBlueClient::dispose, this);
 
         return std::make_shared<Flows::Variable>();
     }
@@ -1424,7 +1424,7 @@ Flows::PVariable FlowsClient::shutdown(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::startFlow(Flows::PArray& parameters)
 {
     try
     {
@@ -1435,7 +1435,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 
         _startUpComplete = false;
 
-        std::set<PNodeInfo> nodes;
+        std::set<Flows::PNodeInfo> nodes;
         PFlowInfoClient flow = std::make_shared<FlowInfoClient>();
         flow->id = parameters->at(0)->integerValue;
         flow->flow = parameters->at(1)->arrayValue->at(0);
@@ -1447,7 +1447,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
 
         for(auto& element : *parameters->at(1)->arrayValue)
         {
-            PNodeInfo node = std::make_shared<NodeInfo>();
+            Flows::PNodeInfo node = std::make_shared<Flows::NodeInfo>();
 
             auto idIterator = element->structValue->find("id");
             if(idIterator == element->structValue->end())
@@ -1478,7 +1478,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
                 node->wiresOut.reserve(wiresIterator->second->arrayValue->size());
                 for(auto& outputIterator : *wiresIterator->second->arrayValue)
                 {
-                    std::vector<Wire> output;
+                    std::vector<Flows::Wire> output;
                     output.reserve(outputIterator->structValue->size());
                     for(auto& wireIterator : *outputIterator->arrayValue)
                     {
@@ -1491,7 +1491,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
                             if(portIterator->second->type == Flows::VariableType::tString) port = static_cast<uint32_t>(BaseLib::Math::getNumber(portIterator->second->stringValue));
                             else port = static_cast<uint32_t>(portIterator->second->integerValue);
                         }
-                        Wire wire;
+                        Flows::Wire wire;
                         wire.id = innerIdIterator->second->stringValue;
                         wire.port = port;
                         output.push_back(wire);
@@ -1553,17 +1553,17 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
                     nodeObject->setId(node->id);
                     nodeObject->setFlowId(flowId);
 
-                    nodeObject->setLog(std::function<void(std::string, int32_t, std::string)>(std::bind(&FlowsClient::log, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-                    nodeObject->setInvoke(std::function<Flows::PVariable(std::string, Flows::PArray)>(std::bind(&FlowsClient::invoke, this, std::placeholders::_1, std::placeholders::_2, true)));
-                    nodeObject->setInvokeNodeMethod(std::function<Flows::PVariable(std::string, std::string, Flows::PArray, bool)>(std::bind(&FlowsClient::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
-                    nodeObject->setSubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::subscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
-                    nodeObject->setUnsubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&FlowsClient::unsubscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
-                    nodeObject->setOutput(std::function<void(std::string, uint32_t, Flows::PVariable, bool)>(std::bind(&FlowsClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
-                    nodeObject->setNodeEvent(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&FlowsClient::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-                    nodeObject->setGetNodeData(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&FlowsClient::getNodeData, this, std::placeholders::_1, std::placeholders::_2)));
-                    nodeObject->setSetNodeData(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&FlowsClient::setNodeData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-                    nodeObject->setSetInternalMessage(std::function<void(std::string, Flows::PVariable)>(std::bind(&FlowsClient::setInternalMessage, this, std::placeholders::_1, std::placeholders::_2)));
-                    nodeObject->setGetConfigParameter(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&FlowsClient::getConfigParameter, this, std::placeholders::_1, std::placeholders::_2)));
+                    nodeObject->setLog(std::function<void(std::string, int32_t, std::string)>(std::bind(&NodeBlueClient::log, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+                    nodeObject->setInvoke(std::function<Flows::PVariable(std::string, Flows::PArray)>(std::bind(&NodeBlueClient::invoke, this, std::placeholders::_1, std::placeholders::_2, true)));
+                    nodeObject->setInvokeNodeMethod(std::function<Flows::PVariable(std::string, std::string, Flows::PArray, bool)>(std::bind(&NodeBlueClient::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
+                    nodeObject->setSubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&NodeBlueClient::subscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
+                    nodeObject->setUnsubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&NodeBlueClient::unsubscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
+                    nodeObject->setOutput(std::function<void(std::string, uint32_t, Flows::PVariable, bool)>(std::bind(&NodeBlueClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
+                    nodeObject->setNodeEvent(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+                    nodeObject->setGetNodeData(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&NodeBlueClient::getNodeData, this, std::placeholders::_1, std::placeholders::_2)));
+                    nodeObject->setSetNodeData(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::setNodeData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+                    nodeObject->setSetInternalMessage(std::function<void(std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::setInternalMessage, this, std::placeholders::_1, std::placeholders::_2)));
+                    nodeObject->setGetConfigParameter(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&NodeBlueClient::getConfigParameter, this, std::placeholders::_1, std::placeholders::_2)));
 
                     if(!nodeObject->init(node))
                     {
@@ -1605,7 +1605,7 @@ Flows::PVariable FlowsClient::startFlow(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::startNodes(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::startNodes(Flows::PArray& parameters)
 {
     try
     {
@@ -1653,7 +1653,7 @@ Flows::PVariable FlowsClient::startNodes(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::configNodesStarted(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::configNodesStarted(Flows::PArray& parameters)
 {
     try
     {
@@ -1683,7 +1683,7 @@ Flows::PVariable FlowsClient::configNodesStarted(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::startUpComplete(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::startUpComplete(Flows::PArray& parameters)
 {
     try
     {
@@ -1714,7 +1714,7 @@ Flows::PVariable FlowsClient::startUpComplete(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::stopNodes(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::stopNodes(Flows::PArray& parameters)
 {
     try
     {
@@ -1753,7 +1753,7 @@ Flows::PVariable FlowsClient::stopNodes(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::stopFlow(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::stopFlow(Flows::PArray& parameters)
 {
     try
     {
@@ -1797,7 +1797,7 @@ Flows::PVariable FlowsClient::stopFlow(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::flowCount(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::flowCount(Flows::PArray& parameters)
 {
     try
     {
@@ -1819,7 +1819,7 @@ Flows::PVariable FlowsClient::flowCount(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::nodeOutput(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::nodeOutput(Flows::PArray& parameters)
 {
     try
     {
@@ -1843,7 +1843,7 @@ Flows::PVariable FlowsClient::nodeOutput(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::invokeExternalNodeMethod(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::invokeExternalNodeMethod(Flows::PArray& parameters)
 {
     try
     {
@@ -1868,7 +1868,7 @@ Flows::PVariable FlowsClient::invokeExternalNodeMethod(Flows::PArray& parameters
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::executePhpNodeBaseMethod(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::executePhpNodeBaseMethod(Flows::PArray& parameters)
 {
     try
     {
@@ -1983,7 +1983,7 @@ Flows::PVariable FlowsClient::executePhpNodeBaseMethod(Flows::PArray& parameters
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::getNodeVariable(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::getNodeVariable(Flows::PArray& parameters)
 {
     try
     {
@@ -2084,7 +2084,7 @@ Flows::PVariable FlowsClient::getNodeVariable(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::getFlowVariable(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::getFlowVariable(Flows::PArray& parameters)
 {
     try
     {
@@ -2107,7 +2107,7 @@ Flows::PVariable FlowsClient::getFlowVariable(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::setNodeVariable(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::setNodeVariable(Flows::PArray& parameters)
 {
     try
     {
@@ -2175,7 +2175,7 @@ Flows::PVariable FlowsClient::setNodeVariable(Flows::PArray& parameters)
                 _fixedInputValues[parameters->at(0)->stringValue][index] = value;
             }
 
-            PNodeInfo nodeInfo;
+            Flows::PNodeInfo nodeInfo;
             {
                 std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
                 auto nodesIterator = _nodes.find(parameters->at(0)->stringValue);
@@ -2216,7 +2216,7 @@ Flows::PVariable FlowsClient::setNodeVariable(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::setFlowVariable(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::setFlowVariable(Flows::PArray& parameters)
 {
     try
     {
@@ -2245,7 +2245,7 @@ Flows::PVariable FlowsClient::setFlowVariable(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::enableNodeEvents(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::enableNodeEvents(Flows::PArray& parameters)
 {
     try
     {
@@ -2268,7 +2268,7 @@ Flows::PVariable FlowsClient::enableNodeEvents(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::disableNodeEvents(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::disableNodeEvents(Flows::PArray& parameters)
 {
     try
     {
@@ -2291,7 +2291,7 @@ Flows::PVariable FlowsClient::disableNodeEvents(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::broadcastEvent(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::broadcastEvent(Flows::PArray& parameters)
 {
     try
     {
@@ -2340,7 +2340,7 @@ Flows::PVariable FlowsClient::broadcastEvent(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::broadcastNewDevices(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::broadcastNewDevices(Flows::PArray& parameters)
 {
     try
     {
@@ -2363,7 +2363,7 @@ Flows::PVariable FlowsClient::broadcastNewDevices(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::broadcastDeleteDevices(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::broadcastDeleteDevices(Flows::PArray& parameters)
 {
     try
     {
@@ -2386,7 +2386,7 @@ Flows::PVariable FlowsClient::broadcastDeleteDevices(Flows::PArray& parameters)
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable FlowsClient::broadcastUpdateDevice(Flows::PArray& parameters)
+Flows::PVariable NodeBlueClient::broadcastUpdateDevice(Flows::PArray& parameters)
 {
     try
     {

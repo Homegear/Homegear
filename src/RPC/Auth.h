@@ -37,6 +37,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <homegear-base/Security/Acls.h>
 
 namespace Rpc
 {
@@ -62,6 +63,11 @@ public:
 	bool basicServer(BaseLib::WebSocket& webSocket);
 	bool sessionServer(BaseLib::WebSocket& webSocket);
 
+	std::string getUserName() { return _userName; }
+	void setUserName(std::string value);
+
+    BaseLib::Security::PAcls getAcls() { return _acls; }
+
 	void sendBasicUnauthorized(bool binary);
 	void sendWebSocketAuthorized();
 	void sendWebSocketUnauthorized(std::string reason);
@@ -79,6 +85,7 @@ protected:
 	BaseLib::Http _http;
 	std::shared_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 	std::shared_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
+	BaseLib::Security::PAcls _acls;
 };
 
 }

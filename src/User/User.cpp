@@ -95,8 +95,14 @@ bool User::verify(const std::string& userName, const std::string& password)
 
 uint64_t User::getId(const std::string& userName)
 {
-	uint64_t userID = GD::bl->db->getUserId(userName);
-	return userID;
+	uint64_t userId = GD::bl->db->getUserId(userName);
+	return userId;
+}
+
+std::vector<uint64_t> User::getGroups(const std::string& userName)
+{
+	uint64_t userId = GD::bl->db->getUserId(userName);
+	return GD::bl->db->getUsersGroups(userId);
 }
 
 bool User::exists(const std::string& userName)
@@ -108,10 +114,10 @@ bool User::remove(const std::string& userName)
 {
 	try
 	{
-		uint64_t userID = GD::bl->db->getUserId(userName);
-		if(userID == 0) return false;
+		uint64_t userId = GD::bl->db->getUserId(userName);
+		if(userId == 0) return false;
 
-		if(GD::bl->db->deleteUser(userID)) return true;
+		if(GD::bl->db->deleteUser(userId)) return true;
 		return false;
 	}
 	catch(std::exception& ex)

@@ -831,23 +831,10 @@ ZEND_FUNCTION(hg_register_thread)
 		std::string name;
 		std::string password;
 		BaseLib::PVariable groups;
+        BaseLib::PVariable metadata;
 
-		if(argc > 3) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::createUser().");
-		else if(argc == 2)
-		{
-			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
-			else
-			{
-				if(Z_STRLEN(args[0]) > 0) name = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
-			}
-
-			if(Z_TYPE(args[1]) != IS_STRING) php_error_docref(NULL, E_WARNING, "password is not of type string.");
-			else
-			{
-				if(Z_STRLEN(args[1]) > 0) password = std::string(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
-			}
-		}
-		else if(argc == 3)
+		if(argc > 4) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::createUser().");
+		else if(argc > 3)
 		{
 			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
 			else
@@ -861,20 +848,30 @@ ZEND_FUNCTION(hg_register_thread)
 				if(Z_STRLEN(args[1]) > 0) password = std::string(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
 			}
 
-			if(Z_TYPE(args[2]) != IS_ARRAY) php_error_docref(NULL, E_WARNING, "groups is not of type string.");
+			if(Z_TYPE(args[2]) != IS_ARRAY) php_error_docref(NULL, E_WARNING, "groups is not of type array.");
 			else
 			{
 				groups = PhpVariableConverter::getVariable(&args[2]);
 			}
 		}
-		if(name.empty() || password.empty()) RETURN_FALSE;
+        if(argc == 4)
+        {
+            if(Z_TYPE(args[3]) != IS_ARRAY) php_error_docref(NULL, E_WARNING, "metadata is not of type array.");
+            else
+            {
+                metadata = PhpVariableConverter::getVariable(&args[3]);
+            }
+        }
+
+		if(name.empty() || password.empty() || !groups || groups->arrayValue->empty()) RETURN_FALSE;
 
 		std::string methodName("createUser");
 		BaseLib::PVariable parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-		parameters->arrayValue->reserve(groups ? 3 : 2);
+		parameters->arrayValue->reserve(metadata ? 4 : 3);
 		parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(name));
 		parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(password));
-		if(groups) parameters->arrayValue->push_back(groups);
+		parameters->arrayValue->push_back(groups);
+        if(metadata) parameters->arrayValue->push_back(metadata);
 		php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 	}
 
@@ -999,7 +996,7 @@ ZEND_FUNCTION(hg_register_thread)
 				if(Z_STRLEN(args[1]) > 0) password = std::string(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
 			}
 
-            if(Z_TYPE(args[2]) != IS_ARRAY) php_error_docref(NULL, E_WARNING, "groups is not of type string.");
+            if(Z_TYPE(args[2]) != IS_ARRAY) php_error_docref(NULL, E_WARNING, "groups is not of type array.");
             else
             {
                 groups = PhpVariableConverter::getVariable(&args[2]);

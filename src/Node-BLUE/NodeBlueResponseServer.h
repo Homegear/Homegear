@@ -28,30 +28,28 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef FLOWSRESPONSECLIENT_H_
-#define FLOWSRESPONSECLIENT_H_
+#ifndef NODEBLUERESPONSESERVER_H_
+#define NODEBLUERESPONSESERVER_H_
 
-#include <homegear-node/Variable.h>
+#include <homegear-base/BaseLib.h>
 
-#include <atomic>
-
-namespace Flows
+namespace NodeBlue
 {
 
-class FlowsResponseClient
+class NodeBlueResponseServer
 {
 public:
 	std::atomic_bool finished;
 	int32_t packetId = 0;
-	Flows::PVariable response;
+	BaseLib::PVariable response;
 
-	FlowsResponseClient()
+	NodeBlueResponseServer()
 	{
 		finished = false;
 	}
 };
 
-typedef std::shared_ptr<FlowsResponseClient> PFlowsResponseClient;
+typedef std::shared_ptr<NodeBlueResponseServer> PNodeBlueResponseServer;
 
 }
 

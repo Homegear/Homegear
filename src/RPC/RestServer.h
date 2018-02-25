@@ -41,7 +41,7 @@ namespace Rpc
 			RestServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo);
 			virtual ~RestServer();
 
-			void process(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket);
+			void process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket);
 		private:
 			BaseLib::Output _out;
 			BaseLib::Rpc::PServerInfo _serverInfo;

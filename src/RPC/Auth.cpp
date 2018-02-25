@@ -36,6 +36,7 @@ namespace Rpc
 Auth::Auth()
 {
 	_socket =  std::shared_ptr<BaseLib::TcpSocket>(new BaseLib::TcpSocket(GD::bl.get()));
+    _acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
 }
 
 Auth::Auth(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<std::string>& validUsers)
@@ -45,14 +46,27 @@ Auth::Auth(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<std::string>
 	_initialized = true;
 	_rpcEncoder = std::shared_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get()));
 	_jsonDecoder = std::shared_ptr<BaseLib::Rpc::JsonDecoder>(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
+    _acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
 }
 
 Auth::Auth(std::shared_ptr<BaseLib::TcpSocket>& socket, std::string userName, std::string password)
 {
 	_socket = socket;
-	_userName = userName;
+	setUserName(userName);
 	_password = password;
 	if(!_userName.empty() && !_password.empty()) _initialized = true;
+}
+
+void Auth::setUserName(std::string value)
+{
+    _acls->clear();
+    _userName = value;
+    if(_userName.empty()) return;
+    if(!_acls->fromUser(value))
+    {
+        _userName = "";
+        throw AuthException("Could not set ACLs.");
+    }
 }
 
 std::pair<std::string, std::string> Auth::basicClient()
@@ -135,7 +149,11 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::Rpc::RpcHeader>& binaryHeader)
 		sendBasicUnauthorized(true);
 		throw AuthException("User name " + credentials.first + " is not in the list of valid users in /etc/homegear/rpcservers.conf.");
 	}
-	if(User::verify(credentials.first, credentials.second)) return true;
+	if(User::verify(credentials.first, credentials.second))
+	{
+		setUserName(credentials.first);
+		return true;
+	}
 	sendBasicUnauthorized(true);
 	return false;
 }
@@ -202,7 +220,11 @@ bool Auth::basicServer(BaseLib::Http& httpPacket)
 		sendBasicUnauthorized(false);
 		throw AuthException("User name " + credentials.first + " is not in the list of valid users in /etc/homegear/rpcservers.conf.");
 	}
-	if(User::verify(credentials.first, credentials.second)) return true;
+	if(User::verify(credentials.first, credentials.second))
+	{
+		setUserName(credentials.first);
+		return true;
+	}
 	sendBasicUnauthorized(false);
 	return false;
 }
@@ -237,6 +259,7 @@ bool Auth::basicServer(BaseLib::WebSocket& webSocket)
 	}
 	if(User::verify(variable->structValue->at("user")->stringValue, variable->structValue->at("password")->stringValue))
 	{
+		setUserName(variable->structValue->at("user")->stringValue);
 		sendWebSocketAuthorized();
 		return true;
 	}
@@ -270,8 +293,10 @@ bool Auth::sessionServer(BaseLib::WebSocket& webSocket)
 	}
 	if(variable->structValue->find("user") != variable->structValue->end())
 	{
-		if(GD::scriptEngineServer->checkSessionId(variable->structValue->at("user")->stringValue))
+		std::string userName = GD::scriptEngineServer->checkSessionId(variable->structValue->at("user")->stringValue);
+		if(!userName.empty())
 		{
+			setUserName(userName);
 			sendWebSocketAuthorized();
 			return true;
 		}

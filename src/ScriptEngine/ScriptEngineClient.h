@@ -194,7 +194,7 @@ private:
 	void runScript(int32_t id, PScriptInfo scriptInfo);
 	void runNode(int32_t id, PScriptInfo scriptInfo);
 	void runDevice(int32_t id, PScriptInfo scriptInfo);
-	void checkSessionIdThread(std::string sessionId, bool* result);
+	void checkSessionIdThread(std::string sessionId, std::string* result);
 	BaseLib::PVariable send(std::vector<char>& data);
 
 #ifdef DEBUGSESOCKET

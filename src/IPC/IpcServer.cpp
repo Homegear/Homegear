@@ -510,7 +510,7 @@ void IpcServer::closeClientConnection(PIpcClientData client)
     }
 }
 
-BaseLib::PVariable IpcServer::callRpcMethod(std::string& methodName, BaseLib::PArray& parameters)
+BaseLib::PVariable IpcServer::callRpcMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PArray& parameters)
 {
 	try
 	{

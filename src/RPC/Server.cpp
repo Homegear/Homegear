@@ -187,10 +187,10 @@ uint32_t Server::connectionCount()
 	if(_server) return _server->connectionCount(); else return 0;
 }
 
-BaseLib::PVariable Server::callMethod(std::string methodName, BaseLib::PVariable parameters)
+BaseLib::PVariable Server::callMethod(BaseLib::PRpcClientInfo clientInfo, std::string methodName, BaseLib::PVariable parameters)
 {
 	if(!_server) return BaseLib::Variable::createError(-32500, "Server is nullptr.");
-	return _server->callMethod(methodName, parameters);
+	return _server->callMethod(clientInfo, methodName, parameters);
 }
 
 void Server::start(BaseLib::Rpc::PServerInfo& serverInfo)

@@ -28,37 +28,32 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef FLOWINFOSERVER_H_
-#define FLOWINFOSERVER_H_
+#ifndef FLOWINFOCLIENT_H_
+#define FLOWINFOCLIENT_H_
 
 #include <homegear-base/BaseLib.h>
+#include <homegear-node/NodeInfo.h>
 
-namespace Flows
+namespace NodeBlue
 {
 
-class FlowInfoServer
+class FlowInfoClient
 {
 public:
 	int32_t id = 0;
-	std::string nodeBlueId;
-	uint32_t maxThreadCount = 0;
 
 	// {{{ Input parameters
-		BaseLib::PVariable flow;
+		Flows::PVariable flow;
 	// }}}
 
-	// {{{ Output parameters
-		bool started = false;
-		bool finished = false;
-		int32_t exitCode = -1;
-	// }}}
+	std::unordered_map<std::string, Flows::PNodeInfo> nodes;
 
-	FlowInfoServer() {}
-	virtual ~FlowInfoServer() {}
+	FlowInfoClient() {}
+	virtual ~FlowInfoClient() {}
 protected:
 };
 
-typedef std::shared_ptr<FlowInfoServer> PFlowInfoServer;
+typedef std::shared_ptr<FlowInfoClient> PFlowInfoClient;
 
 }
 #endif

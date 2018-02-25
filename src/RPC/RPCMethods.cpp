@@ -2359,7 +2359,7 @@ BaseLib::PVariable RPCGetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo
         }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		if(GD::flowsServer) return GD::flowsServer->getNodeVariable(parameters->at(0)->stringValue, parameters->at(1)->stringValue);
+		if(GD::nodeBlueServer) return GD::nodeBlueServer->getNodeVariable(parameters->at(0)->stringValue, parameters->at(1)->stringValue);
 	}
 	catch(const std::exception& ex)
 	{
@@ -3599,7 +3599,7 @@ BaseLib::PVariable RPCNodeOutput::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
         }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		if(GD::flowsServer) GD::flowsServer->nodeOutput(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2), parameters->size() == 4 ? parameters->at(3)->booleanValue : false);
+		if(GD::nodeBlueServer) GD::nodeBlueServer->nodeOutput(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2), parameters->size() == 4 ? parameters->at(3)->booleanValue : false);
 
 		return std::make_shared<BaseLib::Variable>();
 	}
@@ -4727,7 +4727,7 @@ BaseLib::PVariable RPCSetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		if(GD::flowsServer) GD::flowsServer->setNodeVariable(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
+		if(GD::nodeBlueServer) GD::nodeBlueServer->setNodeVariable(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
 		return std::make_shared<BaseLib::Variable>();
 	}
 	catch(const std::exception& ex)
