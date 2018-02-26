@@ -33,7 +33,7 @@
 
 #include "../../config.h"
 #include "../ScriptEngine/ScriptEngineServer.h"
-#include "../Flows/FlowsServer.h"
+#include "../Node-BLUE/NodeBlueServer.h"
 #include "../IPC/IpcServer.h"
 #include "../CLI/CLIServer.h"
 #include "../Events/EventHandler.h"
@@ -75,7 +75,7 @@ public:
 	static std::unique_ptr<ScriptEngine::ScriptEngineServer> scriptEngineServer;
 #endif
 	static std::unique_ptr<Ipc::IpcServer> ipcServer;
-	static std::unique_ptr<Flows::FlowsServer> flowsServer;
+	static std::unique_ptr<NodeBlue::NodeBlueServer> nodeBlueServer;
 	static std::unique_ptr<CLI::Server> cliServer;
 	static BaseLib::Rpc::ServerInfo serverInfo;
 	static Rpc::ClientSettings clientSettings;

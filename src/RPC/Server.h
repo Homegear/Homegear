@@ -54,7 +54,7 @@ public:
 	const std::shared_ptr<RPCServer> getServer();
 	const BaseLib::Rpc::PServerInfo getInfo();
 	uint32_t connectionCount();
-	BaseLib::PVariable callMethod(std::string methodName, BaseLib::PVariable parameters);
+	BaseLib::PVariable callMethod(BaseLib::PRpcClientInfo clientInfo, std::string methodName, BaseLib::PVariable parameters);
 
 	BaseLib::PEventHandler addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler);
 	void removeWebserverEventHandler(BaseLib::PEventHandler eventHandler);

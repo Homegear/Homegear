@@ -28,36 +28,55 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef FLOWSCLIENTDATA_H_
-#define FLOWSCLIENTDATA_H_
+#ifndef NODEBLUEPROCESS_H_
+#define NODEBLUEPROCESS_H_
 
-#include "FlowsResponseServer.h"
+#include "NodeBlueClientData.h"
 #include <homegear-base/BaseLib.h>
+#include "FlowInfoServer.h"
 
-namespace Flows
+namespace NodeBlue
 {
 
-class FlowsClientData
+struct FlowFinishedInfo
 {
+	bool finished = false;
+};
+typedef std::shared_ptr<FlowFinishedInfo> PFlowFinishedInfo;
+
+class NodeBlueProcess
+{
+private:
+	pid_t _pid = 0;
+	std::mutex _flowsMutex;
+	std::map<int32_t, PFlowInfoServer> _flows;
+	std::map<int32_t, PFlowFinishedInfo> _flowFinishedInfo;
+	PNodeBlueClientData _clientData;
+	std::atomic_uint _nodeThreadCount;
 public:
-	FlowsClientData();
-	FlowsClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor);
-	virtual ~FlowsClientData();
+	NodeBlueProcess();
+	virtual ~NodeBlueProcess();
 
-	int32_t id = 0;
-	pid_t pid = 0;
-	bool closed = false;
-	std::vector<char> buffer;
-	std::unique_ptr<BaseLib::Rpc::BinaryRpc> binaryRpc;
-	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
-	std::mutex sendMutex;
-	std::mutex waitMutex;
-	std::mutex rpcResponsesMutex;
-	std::map<int32_t, PFlowsResponseServer> rpcResponses;
+	std::atomic<int64_t> lastExecution;
 	std::condition_variable requestConditionVariable;
+
+	pid_t getPid() { return _pid; }
+	void setPid(pid_t value) { _pid = value; }
+	PNodeBlueClientData& getClientData() { return _clientData; }
+	void setClientData(PNodeBlueClientData& value) { _clientData = value; }
+
+	void invokeFlowFinished(int32_t exitCode);
+	void invokeFlowFinished(int32_t id, int32_t exitCode);
+	uint32_t flowCount();
+	void reset();
+	uint32_t nodeThreadCount();
+	PFlowInfoServer getFlow(int32_t id);
+	PFlowFinishedInfo getFlowFinishedInfo(int32_t id);
+	void registerFlow(int32_t id, PFlowInfoServer& flowInfo);
+	void unregisterFlow(int32_t id);
 };
 
-typedef std::shared_ptr<FlowsClientData> PFlowsClientData;
+typedef std::shared_ptr<NodeBlueProcess> PNodeBlueProcess;
 
 }
 #endif

@@ -1,17 +1,17 @@
 /* Copyright 2013-2017 Sathya Laufer
  *
- * Homegear is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
+ * libhomegear-base is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
  *
- * Homegear is distributed in the hope that it will be useful,
+ * libhomegear-base is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with Homegear.  If not, see
+ * License along with libhomegear-base.  If not, see
  * <http://www.gnu.org/licenses/>.
  *
  * In addition, as a special exception, the copyright holders give
@@ -28,29 +28,39 @@
  * files in the program, then also delete it here.
 */
 
-#include "FlowsClientData.h"
-#include "../GD/GD.h"
+#ifndef FLOWINFOSERVER_H_
+#define FLOWINFOSERVER_H_
 
-namespace Flows
+#include <homegear-base/BaseLib.h>
+
+namespace NodeBlue
 {
 
-FlowsClientData::FlowsClientData()
+class FlowInfoServer
 {
-	fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
-	binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
-	buffer.resize(1024);
-}
+public:
+	int32_t id = 0;
+	std::string nodeBlueId;
+	uint32_t maxThreadCount = 0;
 
-FlowsClientData::FlowsClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor)
-{
-	fileDescriptor = clientFileDescriptor;
-	binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
-	buffer.resize(1024);
+	// {{{ Input parameters
+		BaseLib::PVariable flow;
+	// }}}
+
+	// {{{ Output parameters
+		bool started = false;
+		bool finished = false;
+		int32_t exitCode = -1;
+	// }}}
+
+	FlowInfoServer() {}
+	virtual ~FlowInfoServer() {}
+protected:
+};
+
+typedef std::shared_ptr<FlowInfoServer> PFlowInfoServer;
+
 }
+#endif
 
 
-FlowsClientData::~FlowsClientData()
-{
-}
-
-}

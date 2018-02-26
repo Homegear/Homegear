@@ -24,24 +24,24 @@ set(SOURCE_FILES
         src/Database/SQLite3.h
         src/Events/EventHandler.cpp
         src/Events/EventHandler.h
-        src/Flows/FlowInfoClient.h
-        src/Flows/FlowInfoServer.h
-        src/Flows/FlowsClient.cpp
-        src/Flows/FlowsClient.h
-        src/Flows/FlowsClientData.cpp
-        src/Flows/FlowsClientData.h
-        src/Flows/FlowsProcess.cpp
-        src/Flows/FlowsProcess.h
-        src/Flows/FlowsResponseClient.h
-        src/Flows/FlowsResponseServer.h
-        src/Flows/FlowsServer.cpp
-        src/Flows/FlowsServer.h
-        src/Flows/NodeManager.cpp
-        src/Flows/NodeManager.h
-        src/Flows/SimplePhpNode.cpp
-        src/Flows/SimplePhpNode.h
-        src/Flows/StatefulPhpNode.cpp
-        src/Flows/StatefulPhpNode.h
+        src/Node-BLUE/FlowInfoClient.h
+        src/Node-BLUE/FlowInfoServer.h
+        src/Node-BLUE/NodeBlueClient.cpp
+        src/Node-BLUE/NodeBlueClient.h
+        src/Node-BLUE/NodeBlueClientData.cpp
+        src/Node-BLUE/NodeBlueClientData.h
+        src/Node-BLUE/NodeBlueProcess.cpp
+        src/Node-BLUE/NodeBlueProcess.h
+        src/Node-BLUE/NodeBlueResponseClient.h
+        src/Node-BLUE/NodeBlueResponseServer.h
+        src/Node-BLUE/NodeBlueServer.cpp
+        src/Node-BLUE/NodeBlueServer.h
+        src/Node-BLUE/NodeManager.cpp
+        src/Node-BLUE/NodeManager.h
+        src/Node-BLUE/SimplePhpNode.cpp
+        src/Node-BLUE/SimplePhpNode.h
+        src/Node-BLUE/StatefulPhpNode.cpp
+        src/Node-BLUE/StatefulPhpNode.h
         src/GD/GD.cpp
         src/GD/GD.h
         src/IPC/IpcClientData.cpp

@@ -32,7 +32,7 @@
 #include "Monitor.h"
 #include "CLI/CLIClient.h"
 #include "ScriptEngine/ScriptEngineClient.h"
-#include "Flows/FlowsClient.h"
+#include "Node-BLUE/NodeBlueClient.h"
 #include "UPnP/UPnP.h"
 #include "MQTT/Mqtt.h"
 #include <homegear-base/BaseLib.h>
@@ -190,7 +190,7 @@ void sigchld_handler(int32_t signalNumber)
 #ifndef NO_SCRIPTENGINE
 				if(GD::scriptEngineServer) GD::scriptEngineServer->processKilled(pid, exitStatus, signal, coreDumped);
 #endif
-				if(GD::flowsServer) GD::flowsServer->processKilled(pid, exitStatus, signal, coreDumped);
+				if(GD::nodeBlueServer) GD::nodeBlueServer->processKilled(pid, exitStatus, signal, coreDumped);
 			}
 		}
 	}
@@ -239,7 +239,7 @@ void terminate(int signalNumber)
 			GD::bl->shuttingDown = true;
 			_shuttingDownMutex.unlock();
 			if(GD::ipcServer) GD::ipcServer->homegearShuttingDown();
-			if(GD::flowsServer) GD::flowsServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
+			if(GD::nodeBlueServer) GD::nodeBlueServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
 #ifndef NO_SCRIPTENGINE
 			if(GD::scriptEngineServer) GD::scriptEngineServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
 #endif
@@ -270,8 +270,8 @@ void terminate(int signalNumber)
 			if(GD::familyController) GD::familyController->physicalInterfaceStopListening();
 			GD::out.printInfo("(Shutdown) => Stopping IPC server...");
 			if(GD::ipcServer) GD::ipcServer->stop();
-			if(GD::bl->settings.enableFlows()) GD::out.printInfo("(Shutdown) => Stopping flows server...");
-			if(GD::flowsServer) GD::flowsServer->stop();
+			if(GD::bl->settings.enableNodeBlue()) GD::out.printInfo("(Shutdown) => Stopping Node-BLUE server...");
+			if(GD::nodeBlueServer) GD::nodeBlueServer->stop();
 #ifndef NO_SCRIPTENGINE
 			GD::out.printInfo("(Shutdown) => Stopping script engine server...");
 			if(GD::scriptEngineServer) GD::scriptEngineServer->stop();
@@ -378,8 +378,8 @@ void terminate(int signalNumber)
 				GD::out.printCritical("Critical: Can't reopen database. Exiting...");
 				_exit(1);
 			}
-			GD::out.printInfo("Reloading flows server...");
-			if(GD::flowsServer) GD::flowsServer->homegearReloading();
+			GD::out.printInfo("Reloading Node-BLUE server...");
+			if(GD::nodeBlueServer) GD::nodeBlueServer->homegearReloading();
 #ifndef NO_SCRIPTENGINE
 			GD::out.printInfo("Reloading script engine server...");
 			if(GD::scriptEngineServer) GD::scriptEngineServer->homegearReloading();
@@ -1039,7 +1039,7 @@ void startUp()
 		GD::eventHandler.reset(new EventHandler());
 #endif
 
-		GD::flowsServer.reset(new Flows::FlowsServer());
+		GD::nodeBlueServer.reset(new NodeBlue::NodeBlueServer());
 		GD::ipcServer.reset(new Ipc::IpcServer());
 
 		if(!GD::bl->io.directoryExists(GD::bl->settings.tempPath() + "php"))
@@ -1094,12 +1094,12 @@ void startUp()
         GD::eventHandler->load();
 #endif
 
-		if(GD::bl->settings.enableFlows())
+		if(GD::bl->settings.enableNodeBlue())
 		{
-			GD::out.printInfo("Starting flows server...");
-			if(!GD::flowsServer->start())
+			GD::out.printInfo("Starting Node-BLUE server...");
+			if(!GD::nodeBlueServer->start())
 			{
-				GD::out.printCritical("Critical: Cannot start flows server. Exiting Homegear.");
+				GD::out.printCritical("Critical: Cannot start Node-BLUE server. Exiting Homegear.");
 				exitHomegear(1);
 			}
 		}
@@ -1381,8 +1381,8 @@ int main(int argc, char* argv[])
     			GD::licensingController->loadModules();
     			GD::licensingController->init();
     			GD::licensingController->load();
-    			Flows::FlowsClient flowsClient;
-    			flowsClient.start();
+    			NodeBlue::NodeBlueClient nodeBlueClient;
+    			nodeBlueClient.start();
     			GD::licensingController->dispose();
     			exit(0);
     		}
@@ -1475,7 +1475,7 @@ int main(int argc, char* argv[])
 					for(std::vector<std::string>::iterator j = subdirs.begin(); j != subdirs.end(); ++j)
 					{
 						std::string subdir = currentPath + *j;
-						if(subdir != GD::bl->settings.scriptPath() && subdir != GD::bl->settings.flowsPath() && subdir != GD::bl->settings.flowsDataPath() && subdir != GD::bl->settings.socketPath() && subdir != GD::bl->settings.modulePath() && subdir != GD::bl->settings.logfilePath())
+						if(subdir != GD::bl->settings.scriptPath() && subdir != GD::bl->settings.nodeBluePath() && subdir != GD::bl->settings.nodeBlueDataPath() && subdir != GD::bl->settings.socketPath() && subdir != GD::bl->settings.modulePath() && subdir != GD::bl->settings.logfilePath())
 						{
 							if(chown(subdir.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set owner on " << subdir << std::endl;
 						}
@@ -1489,7 +1489,7 @@ int main(int argc, char* argv[])
 					for(std::vector<std::string>::iterator j = subdirs.begin(); j != subdirs.end(); ++j)
 					{
 						std::string subdir = currentPath + *j;
-						if(subdir == GD::bl->settings.scriptPath() || subdir == GD::bl->settings.flowsPath() || subdir == GD::bl->settings.flowsDataPath() || subdir == GD::bl->settings.socketPath() || subdir == GD::bl->settings.modulePath() || subdir == GD::bl->settings.logfilePath()) continue;
+						if(subdir == GD::bl->settings.scriptPath() || subdir == GD::bl->settings.nodeBluePath() || subdir == GD::bl->settings.nodeBlueDataPath() || subdir == GD::bl->settings.socketPath() || subdir == GD::bl->settings.modulePath() || subdir == GD::bl->settings.logfilePath()) continue;
 						if(chmod(subdir.c_str(), GD::bl->settings.dataPathPermissions()) == -1) std::cerr << "Could not set permissions on " << subdir << std::endl;
 					}
 				}
@@ -1512,41 +1512,41 @@ int main(int argc, char* argv[])
 				if(chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
     			if(chmod(currentPath.c_str(), GD::bl->settings.scriptPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 
-    			currentPath = GD::bl->settings.flowsPath();
+    			currentPath = GD::bl->settings.nodeBluePath();
     			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
-    			localUserId = GD::bl->hf.userId(GD::bl->settings.flowsPathUser());
-				localGroupId = GD::bl->hf.groupId(GD::bl->settings.flowsPathGroup());
+    			localUserId = GD::bl->hf.userId(GD::bl->settings.nodeBluePathUser());
+				localGroupId = GD::bl->hf.groupId(GD::bl->settings.nodeBluePathGroup());
 				if(((int32_t)localUserId) == -1 || ((int32_t)localGroupId) == -1)
 				{
 					localUserId = userId;
 					localGroupId = groupId;
 				}
 				if(chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
-    			if(chmod(currentPath.c_str(), GD::bl->settings.flowsPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			if(chmod(currentPath.c_str(), GD::bl->settings.nodeBluePathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 
-    			currentPath = GD::bl->settings.flowsPath() + "nodes/";
+    			currentPath = GD::bl->settings.nodeBluePath() + "nodes/";
     			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
-    			localUserId = GD::bl->hf.userId(GD::bl->settings.flowsPathUser());
-				localGroupId = GD::bl->hf.groupId(GD::bl->settings.flowsPathGroup());
+    			localUserId = GD::bl->hf.userId(GD::bl->settings.nodeBluePathUser());
+				localGroupId = GD::bl->hf.groupId(GD::bl->settings.nodeBluePathGroup());
 				if(((int32_t)localUserId) == -1 || ((int32_t)localGroupId) == -1)
 				{
 					localUserId = userId;
 					localGroupId = groupId;
 				}
 				if(chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
-    			if(chmod(currentPath.c_str(), GD::bl->settings.flowsPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			if(chmod(currentPath.c_str(), GD::bl->settings.nodeBluePathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 
-    			currentPath = GD::bl->settings.flowsDataPath();
+    			currentPath = GD::bl->settings.nodeBlueDataPath();
     			if(!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
-    			localUserId = GD::bl->hf.userId(GD::bl->settings.flowsPathUser());
-				localGroupId = GD::bl->hf.groupId(GD::bl->settings.flowsPathGroup());
+    			localUserId = GD::bl->hf.userId(GD::bl->settings.nodeBluePathUser());
+				localGroupId = GD::bl->hf.groupId(GD::bl->settings.nodeBluePathGroup());
 				if(((int32_t)localUserId) == -1 || ((int32_t)localGroupId) == -1)
 				{
 					localUserId = userId;
 					localGroupId = groupId;
 				}
 				if(chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
-    			if(chmod(currentPath.c_str(), GD::bl->settings.flowsPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+    			if(chmod(currentPath.c_str(), GD::bl->settings.nodeBluePathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 
     			if(GD::bl->settings.socketPath() != GD::bl->settings.dataPath() && GD::bl->settings.socketPath() != GD::executablePath)
     			{

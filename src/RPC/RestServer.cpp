@@ -68,7 +68,7 @@ void RestServer::getError(int32_t code, std::string codeDescription, std::string
     }
 }
 
-void RestServer::process(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket)
+void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket)
 {
 	std::vector<char> content;
 	try
@@ -118,7 +118,7 @@ void RestServer::process(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(typeOrVariable)));
-				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("getValue", parameters);
+				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(clientInfo, "getValue", parameters);
 				if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
 				else
 				{
@@ -162,7 +162,7 @@ void RestServer::process(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket
 					parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
 					parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(typeOrVariable)));
 					parameters->arrayValue->push_back(structIterator->second);
-					BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("setValue", parameters);
+					BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(clientInfo, "setValue", parameters);
 					if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
 					else contentString = "{\"result\":\"success\"}";
 				}
@@ -177,7 +177,7 @@ void RestServer::process(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));
 				BaseLib::PVariable value = structIterator->second;
 				if(value) parameters->arrayValue->push_back(value);
-				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("putParamset", parameters);
+				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(clientInfo, "putParamset", parameters);
 				if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
 				else contentString = "{\"result\":\"success\"}";
 			}

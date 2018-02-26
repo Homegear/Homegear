@@ -118,9 +118,10 @@ void DatabaseController::initializeDatabase()
 
 		//{{{ Create default groups
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT count(*) FROM groups");
-		if(result->empty() || result->at(0).at(0)->intValue == 0)
+		if(result->empty() || result->at(0).at(0)->intValue < 7)
 		{
-			{ //Administrators
+            if(result->at(0).at(0)->intValue < 1)
+			{ //Administrators (1)
 				BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 				translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("Administrators"));
 				translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("Administratoren"));
@@ -140,6 +141,137 @@ void DatabaseController::initializeDatabase()
 				data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
 				_db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
 			}
+
+            if(result->at(0).at(0)->intValue < 2)
+            { //Script engine (2)
+                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("Script Engine"));
+                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("Skriptengine"));
+                std::vector<char> translationsBlob;
+                _rpcEncoder->encodeResponse(translations, translationsBlob);
+
+                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+                acl->structValue->emplace("methods", methods);
+                std::vector<char> aclBlob;
+                _rpcEncoder->encodeResponse(acl, aclBlob);
+
+                BaseLib::Database::DataRow data;
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
+                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
+            }
+
+            if(result->at(0).at(0)->intValue < 3)
+            { //IPC (3)
+                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("IPC"));
+                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("IPC"));
+                std::vector<char> translationsBlob;
+                _rpcEncoder->encodeResponse(translations, translationsBlob);
+
+                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+                acl->structValue->emplace("methods", methods);
+                std::vector<char> aclBlob;
+                _rpcEncoder->encodeResponse(acl, aclBlob);
+
+                BaseLib::Database::DataRow data;
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
+                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
+            }
+
+            if(result->at(0).at(0)->intValue < 4)
+            { //Node-BLUE (4)
+                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("Node-BLUE"));
+                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("Node-BLUE"));
+                std::vector<char> translationsBlob;
+                _rpcEncoder->encodeResponse(translations, translationsBlob);
+
+                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+                acl->structValue->emplace("methods", methods);
+                std::vector<char> aclBlob;
+                _rpcEncoder->encodeResponse(acl, aclBlob);
+
+                BaseLib::Database::DataRow data;
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
+                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
+            }
+
+            if(result->at(0).at(0)->intValue < 5)
+            { //Event handler (5)
+                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("Event Handler"));
+                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("Ereignisverarbeitung"));
+                std::vector<char> translationsBlob;
+                _rpcEncoder->encodeResponse(translations, translationsBlob);
+
+                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+                acl->structValue->emplace("methods", methods);
+                std::vector<char> aclBlob;
+                _rpcEncoder->encodeResponse(acl, aclBlob);
+
+                BaseLib::Database::DataRow data;
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
+                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
+            }
+
+            if(result->at(0).at(0)->intValue < 6)
+            { //MQTT (6)
+                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("MQTT"));
+                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("MQTT"));
+                std::vector<char> translationsBlob;
+                _rpcEncoder->encodeResponse(translations, translationsBlob);
+
+                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+                acl->structValue->emplace("methods", methods);
+                std::vector<char> aclBlob;
+                _rpcEncoder->encodeResponse(acl, aclBlob);
+
+                BaseLib::Database::DataRow data;
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
+                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
+            }
+
+            { //Family Module (7)
+                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("Family Modules"));
+                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("Familienmodule"));
+                std::vector<char> translationsBlob;
+                _rpcEncoder->encodeResponse(translations, translationsBlob);
+
+                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+                acl->structValue->emplace("methods", methods);
+                std::vector<char> aclBlob;
+                _rpcEncoder->encodeResponse(acl, aclBlob);
+
+                BaseLib::Database::DataRow data;
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
+                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
+            }
 		}
 		//}}}
 
@@ -1293,7 +1425,7 @@ BaseLib::PVariable DatabaseController::setMetadata(uint64_t peerID, std::string&
 #endif
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{dataID});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{metadata});
-		if(GD::flowsServer) GD::flowsServer->broadcastEvent(peerID, -1, valueKeys, values);
+		if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(peerID, -1, valueKeys, values);
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(peerID, -1, valueKeys, values);
 #endif
@@ -1354,7 +1486,7 @@ BaseLib::PVariable DatabaseController::deleteMetadata(uint64_t peerID, std::stri
 #ifdef EVENTHANDLER
 		GD::eventHandler->trigger(peerID, -1, dataID, value);
 #endif
-		if(GD::flowsServer) GD::flowsServer->broadcastEvent(peerID, -1, valueKeys, values);
+		if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(peerID, -1, valueKeys, values);
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(peerID, -1, valueKeys, values);
 #endif
@@ -1496,7 +1628,7 @@ BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableID
 #endif
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableID});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{value});
-		if(GD::flowsServer) GD::flowsServer->broadcastEvent(0, -1, valueKeys, values);
+		if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(0, -1, valueKeys, values);
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(0, -1, valueKeys, values);
 #endif
@@ -1545,7 +1677,7 @@ BaseLib::PVariable DatabaseController::deleteSystemVariable(std::string& variabl
 #ifdef EVENTHANDLER
 		GD::eventHandler->trigger(variableID, value);
 #endif
-		if(GD::flowsServer) GD::flowsServer->broadcastEvent(0, -1, valueKeys, values);
+		if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(0, -1, valueKeys, values);
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(0, -1, valueKeys, values);
 #endif
@@ -1779,6 +1911,38 @@ uint64_t DatabaseController::getUserId(const std::string& name)
 	return 0;
 }
 
+std::vector<uint64_t> DatabaseController::getUsersGroups(uint64_t userId)
+{
+	try
+	{
+		BaseLib::Database::DataRow data;
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(userId)));
+		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT groups FROM users WHERE userID=?", data);
+		if(result->empty()) return std::vector<uint64_t>();
+		auto decodedData = _rpcDecoder->decodeResponse(*result->at(0).at(0)->binaryValue);
+		std::vector<uint64_t> groups;
+		groups.reserve(decodedData->arrayValue->size());
+		for(auto& group : *decodedData->arrayValue)
+		{
+			groups.push_back(group->integerValue64);
+		}
+		return groups;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::vector<uint64_t>();
+}
+
 BaseLib::PVariable DatabaseController::getUserMetadata(uint64_t userId)
 {
     try
@@ -1867,6 +2031,14 @@ BaseLib::PVariable DatabaseController::createGroup(BaseLib::PVariable translatio
 {
     try
     {
+        std::shared_ptr<BaseLib::Database::DataTable> idResult = _db.executeCommand("SELECT id FROM groups ORDER BY id DESC LIMIT 1");
+        if(idResult->empty())
+        {
+            GD::out.printError("Error: Could not retrieve largest group ID.");
+            return BaseLib::Variable::createError(-32500, "Unknown application error.");
+        }
+        uint64_t largestId = idResult->at(0).at(0)->intValue;
+
         std::vector<char> translationsBlob;
         _rpcEncoder->encodeResponse(translations, translationsBlob);
 
@@ -1874,7 +2046,8 @@ BaseLib::PVariable DatabaseController::createGroup(BaseLib::PVariable translatio
         _rpcEncoder->encodeResponse(acl, aclBlob);
 
         BaseLib::Database::DataRow data;
-        data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+        if(largestId < 100) data.push_back(std::make_shared<BaseLib::Database::DataColumn>(100));
+        else data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
         uint64_t result = _db.executeWriteCommand("REPLACE INTO groups VALUES(?, ?, ?)", data);
@@ -1900,6 +2073,8 @@ BaseLib::PVariable DatabaseController::deleteGroup(uint64_t groupId)
 {
     try
     {
+        if(groupId <= 4) return BaseLib::Variable::createError(-1, "Can't delete system group.");
+
         BaseLib::Database::DataRow data;
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(groupId));
         if(_db.executeCommand("SELECT id FROM groups WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown group.");
@@ -1907,6 +2082,35 @@ BaseLib::PVariable DatabaseController::deleteGroup(uint64_t groupId)
         _db.executeWriteCommand("DELETE FROM groups WHERE id=?", data);
 
         return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::getAcl(uint64_t groupId)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(groupId));
+        std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT acl FROM groups WHERE id=?");
+        if(rows->empty()) return BaseLib::Variable::createError(-1, "Unknown group ID.");
+
+        auto acls = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+        if(acls->structValue->empty()) return BaseLib::Variable::createError(-1, "Group has no ACLs.");
+
+        return acls;
     }
     catch(const std::exception& ex)
     {

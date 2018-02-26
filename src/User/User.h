@@ -54,6 +54,7 @@ public:
 	virtual ~User() {}
 	static std::vector<unsigned char> generateWHIRLPOOL(const std::string& password, std::vector<unsigned char>& salt);
 	static uint64_t getId(const std::string& userName);
+	static std::vector<uint64_t> getGroups(const std::string& userName);
 	static bool verify(const std::string& userName, const std::string& password);
 	static bool exists(const std::string& userName);
 	static bool create(const std::string& userName, const std::string& password, const std::vector<uint64_t>& groups);

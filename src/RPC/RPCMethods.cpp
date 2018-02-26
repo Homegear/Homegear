@@ -2359,7 +2359,7 @@ BaseLib::PVariable RPCGetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo
         }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		if(GD::flowsServer) return GD::flowsServer->getNodeVariable(parameters->at(0)->stringValue, parameters->at(1)->stringValue);
+		if(GD::nodeBlueServer) return GD::nodeBlueServer->getNodeVariable(parameters->at(0)->stringValue, parameters->at(1)->stringValue);
 	}
 	catch(const std::exception& ex)
 	{
@@ -2940,7 +2940,7 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 			{
 				BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 				requestParameters->arrayValue->push_back(parameters->at(2));
-				return GD::rpcServers.begin()->second.callMethod("getSystemVariable", requestParameters);
+				return GD::rpcServers.begin()->second.callMethod(clientInfo, "getSystemVariable", requestParameters);
 			}
 			else if(peerId != 0 && channel < 0)
 			{
@@ -2948,7 +2948,7 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 				requestParameters->arrayValue->reserve(2);
 				requestParameters->arrayValue->push_back(parameters->at(0));
 				requestParameters->arrayValue->push_back(parameters->at(2));
-				return GD::rpcServers.begin()->second.callMethod("getMetadata", requestParameters);
+				return GD::rpcServers.begin()->second.callMethod(clientInfo, "getMetadata", requestParameters);
 			}
 		}
 
@@ -3599,7 +3599,7 @@ BaseLib::PVariable RPCNodeOutput::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
         }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		if(GD::flowsServer) GD::flowsServer->nodeOutput(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2), parameters->size() == 4 ? parameters->at(3)->booleanValue : false);
+		if(GD::nodeBlueServer) GD::nodeBlueServer->nodeOutput(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2), parameters->size() == 4 ? parameters->at(3)->booleanValue : false);
 
 		return std::make_shared<BaseLib::Variable>();
 	}
@@ -4727,7 +4727,7 @@ BaseLib::PVariable RPCSetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		if(GD::flowsServer) GD::flowsServer->setNodeVariable(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
+		if(GD::nodeBlueServer) GD::nodeBlueServer->setNodeVariable(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
 		return std::make_shared<BaseLib::Variable>();
 	}
 	catch(const std::exception& ex)
@@ -4903,7 +4903,7 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 				requestParameters->arrayValue->reserve(2);
 				requestParameters->arrayValue->push_back(parameters->at(2));
 				requestParameters->arrayValue->push_back(value);
-				return GD::rpcServers.begin()->second.callMethod("setSystemVariable", requestParameters);
+				return GD::rpcServers.begin()->second.callMethod(clientInfo, "setSystemVariable", requestParameters);
 			}
 			else if(peerId != 0 && channel < 0)
 			{
@@ -4912,7 +4912,7 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 				requestParameters->arrayValue->push_back(parameters->at(0));
 				requestParameters->arrayValue->push_back(parameters->at(2));
 				requestParameters->arrayValue->push_back(value);
-				return GD::rpcServers.begin()->second.callMethod("setMetadata", requestParameters);
+				return GD::rpcServers.begin()->second.callMethod(clientInfo, "setMetadata", requestParameters);
 			}
 		}
 

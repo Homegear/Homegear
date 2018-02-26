@@ -1,17 +1,17 @@
 /* Copyright 2013-2017 Sathya Laufer
  *
- * libhomegear-base is free software: you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public License as
+ * Homegear is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
  *
- * libhomegear-base is distributed in the hope that it will be useful,
+ * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with libhomegear-base.  If not, see
+ * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
  *
  * In addition, as a special exception, the copyright holders give
@@ -28,34 +28,31 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef FLOWINFOCLIENT_H_
-#define FLOWINFOCLIENT_H_
+#ifndef NODEBLUERESPONSECLIENT_H_
+#define NODEBLUERESPONSECLIENT_H_
 
-#include <homegear-base/BaseLib.h>
-#include <homegear-node/NodeInfo.h>
+#include <homegear-node/Variable.h>
 
-namespace Flows
+#include <atomic>
+
+namespace NodeBlue
 {
 
-class FlowInfoClient
+class NodeBlueResponseClient
 {
 public:
-	int32_t id = 0;
+	std::atomic_bool finished;
+	int32_t packetId = 0;
+	Flows::PVariable response;
 
-	// {{{ Input parameters
-		PVariable flow;
-	// }}}
-
-	std::unordered_map<std::string, PNodeInfo> nodes;
-
-	FlowInfoClient() {}
-	virtual ~FlowInfoClient() {}
-protected:
+	NodeBlueResponseClient()
+	{
+		finished = false;
+	}
 };
 
-typedef std::shared_ptr<FlowInfoClient> PFlowInfoClient;
+typedef std::shared_ptr<NodeBlueResponseClient> PNodeBlueResponseClient;
 
 }
+
 #endif
-
-

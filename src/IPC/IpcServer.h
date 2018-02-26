@@ -51,7 +51,7 @@ public:
 	void broadcastNewDevices(BaseLib::PVariable deviceDescriptions);
 	void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
-	BaseLib::PVariable callRpcMethod(std::string& methodName, BaseLib::PArray& parameters);
+	BaseLib::PVariable callRpcMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PArray& parameters);
 	std::unordered_map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> getRpcMethods();
 private:
 	class QueueEntry : public BaseLib::IQueueEntry

@@ -31,6 +31,7 @@
 #include "RPCServer.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
+#include <gnutls/gnutls.h>
 
 using namespace Rpc;
 
@@ -61,7 +62,6 @@ RPCServer::RPCServer()
 	_jsonEncoder = std::unique_ptr<BaseLib::Rpc::JsonEncoder>(new BaseLib::Rpc::JsonEncoder(GD::bl.get()));
 
 	_info.reset(new BaseLib::Rpc::ServerInfo::Info());
-	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
 	_rpcMethods.reset(new std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>);
 	_serverFileDescriptor.reset(new BaseLib::FileDescriptor);
 	_threadPriority = GD::bl->settings.rpcServerThreadPriority();
@@ -132,8 +132,9 @@ int verifyClientCert(gnutls_session_t tlsSession)
 	//Called during handshake just after the certificate message has been received.
 
 	uint32_t status = (uint32_t)-1;
-	if(gnutls_certificate_verify_peers3(tlsSession, 0, &status) != GNUTLS_E_SUCCESS) return -1; //Terminate handshake
+	if(gnutls_certificate_verify_peers3(tlsSession, nullptr, &status) != GNUTLS_E_SUCCESS) return -1; //Terminate handshake
 	if(status > 0) return -1;
+
 	return 0;
 }
 
@@ -441,7 +442,9 @@ void RPCServer::mainThread()
 				}
 				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = getClientSocketDescriptor(address, port);
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
-				std::shared_ptr<Client> client(new Client());
+				std::shared_ptr<Client> client = std::make_shared<Client>();
+				client->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+
 				{
 					std::lock_guard<std::mutex> stateGuard(_stateMutex);
 					client->id = _currentClientID++;
@@ -738,7 +741,7 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, BaseLib:
     }
 }
 
-BaseLib::PVariable RPCServer::callMethod(std::string& methodName, BaseLib::PVariable& parameters)
+BaseLib::PVariable RPCServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PVariable& parameters)
 {
 	try
 	{
@@ -746,7 +749,7 @@ BaseLib::PVariable RPCServer::callMethod(std::string& methodName, BaseLib::PVari
 		if(_stopped || GD::bl->shuttingDown) return BaseLib::Variable::createError(100000, "Server is stopped.");
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
-			BaseLib::PVariable result = GD::ipcServer->callRpcMethod(methodName, parameters->arrayValue);
+			BaseLib::PVariable result = GD::ipcServer->callRpcMethod(clientInfo, methodName, parameters->arrayValue);
 			return result;
 		}
 		_lifetick1Mutex.lock();
@@ -761,7 +764,7 @@ BaseLib::PVariable RPCServer::callMethod(std::string& methodName, BaseLib::PVari
 				(*i)->print(true, false);
 			}
 		}
-		BaseLib::PVariable ret = _rpcMethods->at(methodName)->invoke(_dummyClientInfo, parameters->arrayValue);
+		BaseLib::PVariable ret = _rpcMethods->at(methodName)->invoke(clientInfo, parameters->arrayValue);
 		if(GD::bl->debugLevel >= 5)
 		{
 			_out.printDebug("Response: ");
@@ -807,7 +810,7 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
-			BaseLib::PVariable result = GD::ipcServer->callRpcMethod(methodName, parameters);
+			BaseLib::PVariable result = GD::ipcServer->callRpcMethod(client, methodName, parameters);
 			sendRPCResponseToClient(client, result, messageId, responseType, keepAlive);
 			return;
 		}
@@ -1195,7 +1198,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 								if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
 								try
 								{
-									if(!client->auth.basicServer(header))
+									if(!client->auth.basicServer(header, client->user, client->acls))
 									{
 										_out.printError("Error: Authorization failed. Closing connection.");
 										break;
@@ -1335,7 +1338,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
 					try
 					{
-						if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic && !client->auth.basicServer(webSocket))
+						if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic && !client->auth.basicServer(webSocket, client->user, client->acls))
 						{
 							_out.printError("Error: Basic authentication failed for host " + client->address + ". Closing connection.");
 							std::vector <char> output;
@@ -1343,7 +1346,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 							sendRPCResponseToClient(client, output, false);
 							break;
 						}
-						else if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session && !client->auth.sessionServer(webSocket))
+						else if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session && !client->auth.sessionServer(webSocket, client->user, client->acls))
 						{
 							_out.printError("Error: Session authentication failed for host " + client->address + ". Closing connection.");
 							std::vector <char> output;
@@ -1401,7 +1404,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
 					try
 					{
-						if(!client->auth.basicServer(http))
+						if(!client->auth.basicServer(http, client->user, client->acls))
 						{
 							_out.printError("Error: Authorization failed for host " + http.getHeader().host + ". Closing connection.");
 							break;
@@ -1416,7 +1419,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				}
 				if(_info->restServer && http.getHeader().path.compare(0, 5, "/api/") == 0)
 				{
-					_restServer->process(http, client->socket);
+					_restServer->process(client, http, client->socket);
 				}
 				else if(_info->webServer && (!_info->xmlrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml")) && (!_info->jsonrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") || http.getHeader().path == "/flows/flows"))
 				{
@@ -1607,6 +1610,44 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
+
+		if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
+		{
+			const gnutls_datum_t* derClientCertificates = gnutls_certificate_get_peers(client->socketDescriptor->tlsSession, nullptr);
+			if(!derClientCertificates)
+			{
+				_out.printError("Error retrieving client certificate.");
+				GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+				return;
+			}
+			gnutls_x509_crt_t clientCertificates;
+			unsigned int certMax = 1;
+			if(gnutls_x509_crt_list_import(&clientCertificates, &certMax, derClientCertificates, GNUTLS_X509_FMT_DER, 0) < 1)
+			{
+				_out.printError("Error importing client certificate.");
+				GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+				return;
+			}
+			gnutls_datum_t distinguishedName;
+			if(gnutls_x509_crt_get_dn2(clientCertificates, &distinguishedName) != GNUTLS_E_SUCCESS)
+			{
+				_out.printError("Error getting client certificate's distinguished name.");
+				GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+				return;
+			}
+
+            std::string userName = std::string((char*)distinguishedName.data, distinguishedName.size);
+			client->user = userName;
+            if(!client->acls) client->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+            if(!client->acls->fromUser(userName))
+            {
+                _out.printError("Error getting ACLs for client.");
+                GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+                return;
+            }
+			_out.printInfo("Info: Logged in with distinguished name: " + userName);
+		}
+
 		return;
 	}
     catch(const std::exception& ex)

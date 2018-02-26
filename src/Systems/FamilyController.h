@@ -184,6 +184,8 @@ private:
 	std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> _families;
 	std::shared_ptr<BaseLib::Systems::DeviceFamily> _currentFamily;
 
+	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
+
 	FamilyController(const FamilyController&);
 	FamilyController& operator=(const FamilyController&);
 };
