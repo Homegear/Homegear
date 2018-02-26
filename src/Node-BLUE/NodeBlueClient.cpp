@@ -50,7 +50,7 @@ NodeBlueClient::NodeBlueClient() : IQueue(GD::bl.get(), 3, 100000)
 
     _fileDescriptor = std::make_shared<BaseLib::FileDescriptor>();
     _out.init(GD::bl.get());
-    _out.setPrefix("Flows Engine (" + std::to_string(getpid()) + "): ");
+    _out.setPrefix("Node-BLUE (" + std::to_string(getpid()) + "): ");
 
     _dummyClientInfo.reset(new BaseLib::RpcClientInfo());
 

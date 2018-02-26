@@ -442,7 +442,9 @@ void RPCServer::mainThread()
 				}
 				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = getClientSocketDescriptor(address, port);
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
-				std::shared_ptr<Client> client(new Client());
+				std::shared_ptr<Client> client = std::make_shared<Client>();
+				client->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+
 				{
 					std::lock_guard<std::mutex> stateGuard(_stateMutex);
 					client->id = _currentClientID++;
@@ -747,7 +749,7 @@ BaseLib::PVariable RPCServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std
 		if(_stopped || GD::bl->shuttingDown) return BaseLib::Variable::createError(100000, "Server is stopped.");
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
-			BaseLib::PVariable result = GD::ipcServer->callRpcMethod(methodName, parameters->arrayValue);
+			BaseLib::PVariable result = GD::ipcServer->callRpcMethod(clientInfo, methodName, parameters->arrayValue);
 			return result;
 		}
 		_lifetick1Mutex.lock();
@@ -808,7 +810,7 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
-			BaseLib::PVariable result = GD::ipcServer->callRpcMethod(methodName, parameters);
+			BaseLib::PVariable result = GD::ipcServer->callRpcMethod(client, methodName, parameters);
 			sendRPCResponseToClient(client, result, messageId, responseType, keepAlive);
 			return;
 		}
@@ -1196,7 +1198,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 								if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
 								try
 								{
-									if(!client->auth.basicServer(header))
+									if(!client->auth.basicServer(header, client->user, client->acls))
 									{
 										_out.printError("Error: Authorization failed. Closing connection.");
 										break;
@@ -1336,7 +1338,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
 					try
 					{
-						if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic && !client->auth.basicServer(webSocket))
+						if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic && !client->auth.basicServer(webSocket, client->user, client->acls))
 						{
 							_out.printError("Error: Basic authentication failed for host " + client->address + ". Closing connection.");
 							std::vector <char> output;
@@ -1344,7 +1346,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 							sendRPCResponseToClient(client, output, false);
 							break;
 						}
-						else if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session && !client->auth.sessionServer(webSocket))
+						else if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session && !client->auth.sessionServer(webSocket, client->user, client->acls))
 						{
 							_out.printError("Error: Session authentication failed for host " + client->address + ". Closing connection.");
 							std::vector <char> output;
@@ -1402,7 +1404,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
 					try
 					{
-						if(!client->auth.basicServer(http))
+						if(!client->auth.basicServer(http, client->user, client->acls))
 						{
 							_out.printError("Error: Authorization failed for host " + http.getHeader().host + ". Closing connection.");
 							break;
@@ -1635,7 +1637,14 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 			}
 
             std::string userName = std::string((char*)distinguishedName.data, distinguishedName.size);
-			client->auth.setUserName(userName);
+			client->user = userName;
+            if(!client->acls) client->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+            if(!client->acls->fromUser(userName))
+            {
+                _out.printError("Error getting ACLs for client.");
+                GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+                return;
+            }
 			_out.printInfo("Info: Logged in with distinguished name: " + userName);
 		}
 

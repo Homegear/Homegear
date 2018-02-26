@@ -118,7 +118,7 @@ void DatabaseController::initializeDatabase()
 
 		//{{{ Create default groups
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT count(*) FROM groups");
-		if(result->empty() || result->at(0).at(0)->intValue < 4)
+		if(result->empty() || result->at(0).at(0)->intValue < 7)
 		{
             if(result->at(0).at(0)->intValue < 1)
 			{ //Administrators (1)
@@ -186,10 +186,76 @@ void DatabaseController::initializeDatabase()
                 _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
             }
 
+            if(result->at(0).at(0)->intValue < 4)
             { //Node-BLUE (4)
                 BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("Node-BLUE"));
                 translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("Node-BLUE"));
+                std::vector<char> translationsBlob;
+                _rpcEncoder->encodeResponse(translations, translationsBlob);
+
+                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+                acl->structValue->emplace("methods", methods);
+                std::vector<char> aclBlob;
+                _rpcEncoder->encodeResponse(acl, aclBlob);
+
+                BaseLib::Database::DataRow data;
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
+                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
+            }
+
+            if(result->at(0).at(0)->intValue < 5)
+            { //Event handler (5)
+                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("Event Handler"));
+                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("Ereignisverarbeitung"));
+                std::vector<char> translationsBlob;
+                _rpcEncoder->encodeResponse(translations, translationsBlob);
+
+                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+                acl->structValue->emplace("methods", methods);
+                std::vector<char> aclBlob;
+                _rpcEncoder->encodeResponse(acl, aclBlob);
+
+                BaseLib::Database::DataRow data;
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
+                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
+            }
+
+            if(result->at(0).at(0)->intValue < 6)
+            { //MQTT (6)
+                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("MQTT"));
+                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("MQTT"));
+                std::vector<char> translationsBlob;
+                _rpcEncoder->encodeResponse(translations, translationsBlob);
+
+                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+                acl->structValue->emplace("methods", methods);
+                std::vector<char> aclBlob;
+                _rpcEncoder->encodeResponse(acl, aclBlob);
+
+                BaseLib::Database::DataRow data;
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
+                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
+            }
+
+            { //Family Module (7)
+                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("Family Modules"));
+                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("Familienmodule"));
                 std::vector<char> translationsBlob;
                 _rpcEncoder->encodeResponse(translations, translationsBlob);
 

@@ -58,8 +58,12 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 
 	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, true));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true, true));
-	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
+	_dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
 	_dummyClientInfo->scriptEngineServer = true;
+    _dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+    std::vector<uint64_t> groups{ 2 };
+    _dummyClientInfo->acls->fromGroups(groups);
+    _dummyClientInfo->user = "SYSTEM (2)";
 
 	_rpcMethods.emplace("devTest", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDevTest()));
 	_rpcMethods.emplace("system.getCapabilities", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemGetCapabilities()));
@@ -1095,7 +1099,7 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 			std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>::iterator methodIterator = _rpcMethods.find(queueEntry->methodName);
 			if(methodIterator == _rpcMethods.end())
 			{
-				BaseLib::PVariable result = GD::ipcServer->callRpcMethod(queueEntry->methodName, queueEntry->parameters->at(3)->arrayValue);
+				BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_dummyClientInfo, queueEntry->methodName, queueEntry->parameters->at(3)->arrayValue);
 				if(queueEntry->parameters->at(2)->booleanValue) sendResponse(queueEntry->clientData, queueEntry->parameters->at(0), queueEntry->parameters->at(1), result);
 				return;
 			}

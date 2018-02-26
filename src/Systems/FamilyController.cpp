@@ -176,6 +176,12 @@ std::unique_ptr<BaseLib::Systems::DeviceFamily> ModuleLoader::createModule(BaseL
 
 FamilyController::FamilyController()
 {
+	_dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
+	_dummyClientInfo->familyModule = true;
+	_dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+	std::vector<uint64_t> groups{ 7 };
+	_dummyClientInfo->acls->fromGroups(groups);
+	_dummyClientInfo->user = "SYSTEM (7)";
 }
 
 FamilyController::~FamilyController()
@@ -332,7 +338,7 @@ BaseLib::PVariable FamilyController::onInvokeRpc(std::string& methodName, BaseLi
 {
 	try
 	{
-		return GD::rpcServers.begin()->second.callMethod(methodName, std::make_shared<BaseLib::Variable>(parameters));
+		return GD::rpcServers.begin()->second.callMethod(_dummyClientInfo, methodName, std::make_shared<BaseLib::Variable>(parameters));
 	}
 	catch(const std::exception& ex)
 	{

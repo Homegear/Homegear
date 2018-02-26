@@ -36,7 +36,6 @@ namespace Rpc
 Auth::Auth()
 {
 	_socket =  std::shared_ptr<BaseLib::TcpSocket>(new BaseLib::TcpSocket(GD::bl.get()));
-    _acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
 }
 
 Auth::Auth(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<std::string>& validUsers)
@@ -46,27 +45,13 @@ Auth::Auth(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<std::string>
 	_initialized = true;
 	_rpcEncoder = std::shared_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get()));
 	_jsonDecoder = std::shared_ptr<BaseLib::Rpc::JsonDecoder>(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
-    _acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
 }
 
 Auth::Auth(std::shared_ptr<BaseLib::TcpSocket>& socket, std::string userName, std::string password)
 {
 	_socket = socket;
-	setUserName(userName);
 	_password = password;
 	if(!_userName.empty() && !_password.empty()) _initialized = true;
-}
-
-void Auth::setUserName(std::string value)
-{
-    _acls->clear();
-    _userName = value;
-    if(_userName.empty()) return;
-    if(!_acls->fromUser(value))
-    {
-        _userName = "";
-        throw AuthException("Could not set ACLs.");
-    }
 }
 
 std::pair<std::string, std::string> Auth::basicClient()
@@ -124,8 +109,11 @@ void Auth::sendBasicUnauthorized(bool binary)
 	}
 }
 
-bool Auth::basicServer(std::shared_ptr<BaseLib::Rpc::RpcHeader>& binaryHeader)
+bool Auth::basicServer(std::shared_ptr<BaseLib::Rpc::RpcHeader>& binaryHeader, std::string& userName, BaseLib::Security::PAcls& acls)
 {
+	userName = "";
+	if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+	acls->clear();
 	if(!_initialized) throw AuthException("Not initialized.");
 	if(!binaryHeader) throw AuthException("Header is nullptr.");
 	if(binaryHeader->authorization.empty())
@@ -144,6 +132,7 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::Rpc::RpcHeader>& binaryHeader)
 	BaseLib::Base64::decode(authData.second, decodedData);
 	std::pair<std::string, std::string> credentials = BaseLib::HelperFunctions::splitLast(decodedData, ':');
 	BaseLib::HelperFunctions::toLower(credentials.first);
+	if(credentials.first.empty()) throw AuthException("User name is empty.");
 	if(std::find(_validUsers.begin(), _validUsers.end(), credentials.first) == _validUsers.end())
 	{
 		sendBasicUnauthorized(true);
@@ -151,15 +140,23 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::Rpc::RpcHeader>& binaryHeader)
 	}
 	if(User::verify(credentials.first, credentials.second))
 	{
-		setUserName(credentials.first);
+		userName = credentials.first;
+		if(!acls->fromUser(userName))
+		{
+			_userName = "";
+			throw AuthException("Could not set ACLs.");
+		}
 		return true;
 	}
 	sendBasicUnauthorized(true);
 	return false;
 }
 
-bool Auth::basicServer(BaseLib::Http& httpPacket)
+bool Auth::basicServer(BaseLib::Http& httpPacket, std::string& userName, BaseLib::Security::PAcls& acls)
 {
+	userName = "";
+	if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+	acls->clear();
 	if(!_initialized) throw AuthException("Not initialized.");
 	_http.reset();
 	uint32_t bufferLength = 1024;
@@ -215,6 +212,7 @@ bool Auth::basicServer(BaseLib::Http& httpPacket)
 	BaseLib::Base64::decode(authData.second, decodedData);
 	std::pair<std::string, std::string> credentials = BaseLib::HelperFunctions::splitLast(decodedData, ':');
 	BaseLib::HelperFunctions::toLower(credentials.first);
+	if(credentials.first.empty()) throw AuthException("User name is empty.");
 	if(std::find(_validUsers.begin(), _validUsers.end(), credentials.first) == _validUsers.end())
 	{
 		sendBasicUnauthorized(false);
@@ -222,15 +220,23 @@ bool Auth::basicServer(BaseLib::Http& httpPacket)
 	}
 	if(User::verify(credentials.first, credentials.second))
 	{
-		setUserName(credentials.first);
+		userName = credentials.first;
+		if(!acls->fromUser(userName))
+		{
+			_userName = "";
+			throw AuthException("Could not set ACLs.");
+		}
 		return true;
 	}
 	sendBasicUnauthorized(false);
 	return false;
 }
 
-bool Auth::basicServer(BaseLib::WebSocket& webSocket)
+bool Auth::basicServer(BaseLib::WebSocket& webSocket, std::string& userName, BaseLib::Security::PAcls& acls)
 {
+	userName = "";
+	if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+	acls->clear();
 	if(!_initialized) throw AuthException("Not initialized.");
 	if(webSocket.getContent().empty())
 	{
@@ -257,9 +263,15 @@ bool Auth::basicServer(BaseLib::WebSocket& webSocket)
 		sendWebSocketUnauthorized("Either 'user' or 'password' is not specified.");
 		return false;
 	}
+	BaseLib::HelperFunctions::toLower(variable->structValue->at("user")->stringValue);
+	if(variable->structValue->at("user")->stringValue.empty()) throw AuthException("User name is empty.");
 	if(User::verify(variable->structValue->at("user")->stringValue, variable->structValue->at("password")->stringValue))
 	{
-		setUserName(variable->structValue->at("user")->stringValue);
+		if(!acls->fromUser(variable->structValue->at("user")->stringValue))
+		{
+			_userName = "";
+			throw AuthException("Could not set ACLs.");
+		}
 		sendWebSocketAuthorized();
 		return true;
 	}
@@ -267,8 +279,11 @@ bool Auth::basicServer(BaseLib::WebSocket& webSocket)
 	return false;
 }
 
-bool Auth::sessionServer(BaseLib::WebSocket& webSocket)
+bool Auth::sessionServer(BaseLib::WebSocket& webSocket, std::string& userName, BaseLib::Security::PAcls& acls)
 {
+	userName = "";
+	if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+	acls->clear();
 	if(!_initialized) throw AuthException("Not initialized.");
 	if(webSocket.getContent().empty())
 	{
@@ -294,9 +309,14 @@ bool Auth::sessionServer(BaseLib::WebSocket& webSocket)
 	if(variable->structValue->find("user") != variable->structValue->end())
 	{
 		std::string userName = GD::scriptEngineServer->checkSessionId(variable->structValue->at("user")->stringValue);
+		BaseLib::HelperFunctions::toLower(userName);
 		if(!userName.empty())
 		{
-			setUserName(userName);
+			if(!acls->fromUser(userName))
+			{
+				_userName = "";
+				throw AuthException("Could not set ACLs.");
+			}
 			sendWebSocketAuthorized();
 			return true;
 		}

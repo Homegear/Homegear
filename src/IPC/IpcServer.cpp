@@ -45,7 +45,13 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 
 	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true, true));
-	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
+	_dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
+	_dummyClientInfo->ipcServer = true;
+	_dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+	std::vector<uint64_t> groups{ 3 };
+	_dummyClientInfo->acls->fromGroups(groups);
+	_dummyClientInfo->user = "SYSTEM (3)";
+
 
 	_rpcMethods.emplace("devTest", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDevTest()));
 	_rpcMethods.emplace("system.getCapabilities", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemGetCapabilities()));
@@ -597,7 +603,7 @@ void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueue
 				auto methodIterator = _rpcMethods.find(methodName);
 				if(methodIterator == _rpcMethods.end())
 				{
-					BaseLib::PVariable result = callRpcMethod(methodName, parameters->at(2)->arrayValue);
+					BaseLib::PVariable result = callRpcMethod(_dummyClientInfo, methodName, parameters->at(2)->arrayValue);
 					sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
 					return;
 				}

@@ -2940,7 +2940,7 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 			{
 				BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 				requestParameters->arrayValue->push_back(parameters->at(2));
-				return GD::rpcServers.begin()->second.callMethod("getSystemVariable", requestParameters);
+				return GD::rpcServers.begin()->second.callMethod(clientInfo, "getSystemVariable", requestParameters);
 			}
 			else if(peerId != 0 && channel < 0)
 			{
@@ -2948,7 +2948,7 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 				requestParameters->arrayValue->reserve(2);
 				requestParameters->arrayValue->push_back(parameters->at(0));
 				requestParameters->arrayValue->push_back(parameters->at(2));
-				return GD::rpcServers.begin()->second.callMethod("getMetadata", requestParameters);
+				return GD::rpcServers.begin()->second.callMethod(clientInfo, "getMetadata", requestParameters);
 			}
 		}
 
@@ -4903,7 +4903,7 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 				requestParameters->arrayValue->reserve(2);
 				requestParameters->arrayValue->push_back(parameters->at(2));
 				requestParameters->arrayValue->push_back(value);
-				return GD::rpcServers.begin()->second.callMethod("setSystemVariable", requestParameters);
+				return GD::rpcServers.begin()->second.callMethod(clientInfo, "setSystemVariable", requestParameters);
 			}
 			else if(peerId != 0 && channel < 0)
 			{
@@ -4912,7 +4912,7 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 				requestParameters->arrayValue->push_back(parameters->at(0));
 				requestParameters->arrayValue->push_back(parameters->at(2));
 				requestParameters->arrayValue->push_back(value);
-				return GD::rpcServers.begin()->second.callMethod("setMetadata", requestParameters);
+				return GD::rpcServers.begin()->second.callMethod(clientInfo, "setMetadata", requestParameters);
 			}
 		}
 

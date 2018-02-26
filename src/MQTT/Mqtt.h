@@ -169,6 +169,7 @@ private:
 	std::map<int16_t, std::shared_ptr<Request>> _requests;
 	std::mutex _requestsByTypeMutex;
 	std::map<uint8_t, std::shared_ptr<RequestByType>> _requestsByType;
+	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 
 	Mqtt(const Mqtt&);
 	Mqtt& operator=(const Mqtt&);
