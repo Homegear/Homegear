@@ -112,7 +112,7 @@ void Auth::sendBasicUnauthorized(bool binary)
 bool Auth::basicServer(std::shared_ptr<BaseLib::Rpc::RpcHeader>& binaryHeader, std::string& userName, BaseLib::Security::PAcls& acls)
 {
 	userName = "";
-	if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+	if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
 	acls->clear();
 	if(!_initialized) throw AuthException("Not initialized.");
 	if(!binaryHeader) throw AuthException("Header is nullptr.");
@@ -155,7 +155,7 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::Rpc::RpcHeader>& binaryHeader, s
 bool Auth::basicServer(BaseLib::Http& httpPacket, std::string& userName, BaseLib::Security::PAcls& acls)
 {
 	userName = "";
-	if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+	if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
 	acls->clear();
 	if(!_initialized) throw AuthException("Not initialized.");
 	_http.reset();
@@ -235,7 +235,7 @@ bool Auth::basicServer(BaseLib::Http& httpPacket, std::string& userName, BaseLib
 bool Auth::basicServer(BaseLib::WebSocket& webSocket, std::string& userName, BaseLib::Security::PAcls& acls)
 {
 	userName = "";
-	if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+	if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
 	acls->clear();
 	if(!_initialized) throw AuthException("Not initialized.");
 	if(webSocket.getContent().empty())
@@ -282,7 +282,7 @@ bool Auth::basicServer(BaseLib::WebSocket& webSocket, std::string& userName, Bas
 bool Auth::sessionServer(BaseLib::WebSocket& webSocket, std::string& userName, BaseLib::Security::PAcls& acls)
 {
 	userName = "";
-	if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+	if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
 	acls->clear();
 	if(!_initialized) throw AuthException("Not initialized.");
 	if(webSocket.getContent().empty())

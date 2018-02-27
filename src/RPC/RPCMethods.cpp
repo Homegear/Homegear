@@ -600,6 +600,14 @@ BaseLib::PVariable RPCAddLink::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
 			else receiverSerialNumber = parameters->at(1)->stringValue;
 		}
 
+        if(!clientInfo) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+		if(!clientInfo->acls->checkMethodAccess("addLink")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        if(clientInfo->acls->devicesWriteSet())
+        {
+            if(useSerialNumber) return BaseLib::Variable::createError(-32011, "Unauthorized. Device ACLs are set for this client. Usage of serial numbers to address devices is not allowed.");
+            if(!clientInfo->acls->checkDeviceWriteAccess(parameters->at(0)->integerValue64) || !clientInfo->acls->checkDeviceWriteAccess(parameters->at(2)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        }
+
 		std::string name;
 		if((signed)parameters->size() > nameIndex)
 		{
@@ -626,7 +634,29 @@ BaseLib::PVariable RPCAddLink::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
 				}
 				else
 				{
-					if(central->peerExists((uint64_t)parameters->at(0)->integerValue)) return central->addLink(clientInfo, parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->integerValue, parameters->at(3)->integerValue, name, description);
+                    if(!central->peerExists((uint64_t)parameters->at(0)->integerValue64) || !central->peerExists((uint64_t)parameters->at(2)->integerValue64)) continue;
+
+                    if(clientInfo->acls->roomsWriteSet())
+                    {
+                        auto peer1 = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
+                        auto peer2 = central->getPeer((uint64_t)parameters->at(2)->integerValue64);
+                        auto room1 = peer1->getRoom();
+                        auto room2 = peer2->getRoom();
+                        if(room1 != 0 && !clientInfo->acls->checkRoomWriteAccess(room1)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+                        if(room2 != 0 && !clientInfo->acls->checkRoomWriteAccess(room2)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+                    }
+
+					if(clientInfo->acls->categoriesWriteSet())
+                    {
+                        auto peer1 = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
+                        auto peer2 = central->getPeer((uint64_t)parameters->at(2)->integerValue64);
+                        auto categories1 = peer1->getCategories();
+                        auto categories2 = peer2->getCategories();
+                        if(!categories1.empty() && !clientInfo->acls->checkCategoriesWriteAccess(categories1)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+                        if(!categories2.empty() && !clientInfo->acls->checkCategoriesWriteAccess(categories2)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+                    }
+
+					return central->addLink(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue, parameters->at(2)->integerValue64, parameters->at(3)->integerValue, name, description);
 				}
 			}
 		}

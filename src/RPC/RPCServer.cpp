@@ -443,12 +443,11 @@ void RPCServer::mainThread()
 				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = getClientSocketDescriptor(address, port);
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
 				std::shared_ptr<Client> client = std::make_shared<Client>();
-				client->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
 
 				{
 					std::lock_guard<std::mutex> stateGuard(_stateMutex);
 					client->id = _currentClientID++;
-					if(client->id == -1) client->id = _currentClientID++; //-1 is not allowed
+					while(client->id == -1) client->id = _currentClientID++; //-1 is not allowed
 					client->socketDescriptor = clientFileDescriptor;
 					while(_clients.find(client->id) != _clients.end())
 					{
@@ -459,6 +458,8 @@ void RPCServer::mainThread()
 					_clients[client->id] = client;
 					_out.printInfo("Info: RPC server client id for client number " + std::to_string(client->socketDescriptor->id) + " is: " + std::to_string(client->id));
 				}
+
+				client->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), client->id);
 
 				try
 				{
@@ -1638,7 +1639,7 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 
             std::string userName = std::string((char*)distinguishedName.data, distinguishedName.size);
 			client->user = userName;
-            if(!client->acls) client->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+            if(!client->acls) client->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), client->id);
             if(!client->acls->fromUser(userName))
             {
                 _out.printError("Error getting ACLs for client.");

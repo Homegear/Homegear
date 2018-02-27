@@ -57,7 +57,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 	_jsonDecoder = std::unique_ptr<BaseLib::Rpc::JsonDecoder>(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
 	_dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
 	_dummyClientInfo->flowsServer = true;
-	_dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+	_dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
 	std::vector<uint64_t> groups{ 4 };
 	_dummyClientInfo->acls->fromGroups(groups);
 	_dummyClientInfo->user = "SYSTEM (4)";
