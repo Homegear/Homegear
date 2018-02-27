@@ -39,13 +39,6 @@ Mqtt::Mqtt() : BaseLib::IQueue(GD::bl.get(), 2, 1000)
 		_reconnecting = false;
 		_connected = false;
 		_socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
-
-		_dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
-		_dummyClientInfo->mqttClient = true;
-		_dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
-		std::vector<uint64_t> groups{ 6 };
-		_dummyClientInfo->acls->fromGroups(groups);
-		_dummyClientInfo->user = "SYSTEM (6)";
 	}
 	catch(const std::exception& ex)
 	{
@@ -94,6 +87,13 @@ void Mqtt::start()
 	{
 		if(_started) return;
 		_started = true;
+
+        _dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
+        _dummyClientInfo->mqttClient = true;
+        _dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+        std::vector<uint64_t> groups{ 6 };
+        _dummyClientInfo->acls->fromGroups(groups);
+        _dummyClientInfo->user = "SYSTEM (6)";
 
 		startQueue(0, false, 1, 0, SCHED_OTHER);
 		startQueue(1, false, _settings.processingThreadCount(), 0, SCHED_OTHER);

@@ -52,7 +52,6 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 	_dummyClientInfo->acls->fromGroups(groups);
 	_dummyClientInfo->user = "SYSTEM (3)";
 
-
 	_rpcMethods.emplace("devTest", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDevTest()));
 	_rpcMethods.emplace("system.getCapabilities", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemGetCapabilities()));
 	_rpcMethods.emplace("system.listMethods", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemListMethods(GD::rpcServers[0].getServer())));
