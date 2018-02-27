@@ -122,11 +122,11 @@ bool User::remove(const std::string& userName)
 	}
 	catch(std::exception& ex)
 	{
-		GD::out.printError("Error creating user: " + std::string(ex.what()));
+		GD::out.printError("Error removing user: " + std::string(ex.what()));
 	}
 	catch(...)
 	{
-		GD::out.printError("Unknown error creating user.");
+		GD::out.printError("Unknown error removing user.");
 	}
 	return false;
 }
@@ -256,7 +256,7 @@ BaseLib::PVariable User::getMetadata(const std::string& userName)
     try
     {
         uint64_t userId = GD::bl->db->getUserId(userName);
-        if(userId == 0) return false;
+        if(userId == 0) return BaseLib::Variable::createError(-1, "Unknown user ID.");
 
         return GD::bl->db->getUserMetadata(userId);
     }
