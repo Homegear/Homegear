@@ -895,6 +895,7 @@ void startUp()
 
     	GD::licensingController->loadModules();
 
+        GD::familyController->init();
 		GD::familyController->loadModules();
 
     	if(getuid() == 0 && !GD::runAsUser.empty() && !GD::runAsGroup.empty())

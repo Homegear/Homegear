@@ -176,12 +176,6 @@ std::unique_ptr<BaseLib::Systems::DeviceFamily> ModuleLoader::createModule(BaseL
 
 FamilyController::FamilyController()
 {
-	_dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
-	_dummyClientInfo->familyModule = true;
-	_dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
-	std::vector<uint64_t> groups{ 7 };
-	_dummyClientInfo->acls->fromGroups(groups);
-	_dummyClientInfo->user = "SYSTEM (7)";
 }
 
 FamilyController::~FamilyController()
@@ -726,6 +720,31 @@ int32_t FamilyController::reloadModule(std::string filename)
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return -1;
+}
+
+void FamilyController::init()
+{
+	try
+	{
+		_dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
+		_dummyClientInfo->familyModule = true;
+		_dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get());
+		std::vector<uint64_t> groups{ 7 };
+		_dummyClientInfo->acls->fromGroups(groups);
+		_dummyClientInfo->user = "SYSTEM (7)";
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void FamilyController::loadModules()

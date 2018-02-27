@@ -130,6 +130,7 @@ public:
 	 */
 	int32_t reloadModule(std::string filename);
 
+	void init();
 	void loadModules();
 	void load();
 	void save(bool full);
