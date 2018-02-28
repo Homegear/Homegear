@@ -202,6 +202,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
         _localRpcMethods.emplace("getUserMetadata", std::bind(&ScriptEngineServer::getUserMetadata, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
         _localRpcMethods.emplace("listUsers", std::bind(&ScriptEngineServer::listUsers, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
         _localRpcMethods.emplace("setUserMetadata", std::bind(&ScriptEngineServer::setUserMetadata, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+        _localRpcMethods.emplace("getUsersGroups", std::bind(&ScriptEngineServer::getUsersGroups, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	    _localRpcMethods.emplace("updateUser", std::bind(&ScriptEngineServer::updateUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	    _localRpcMethods.emplace("userExists", std::bind(&ScriptEngineServer::userExists, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     //}}}
@@ -2469,6 +2470,39 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
                 if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
 
                 return User::getMetadata(parameters->at(0)->stringValue);
+            }
+            catch(const std::exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(BaseLib::Exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(...)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+            }
+            return BaseLib::Variable::createError(-32500, "Unknown application error.");
+        }
+
+        BaseLib::PVariable ScriptEngineServer::getUsersGroups(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+        {
+            try
+            {
+                if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+                if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
+
+                auto groups = User::getGroups(parameters->at(0)->stringValue);
+                auto groupArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                groupArray->arrayValue->reserve(groups.size());
+
+                for(auto& group : groups)
+                {
+                    groupArray->arrayValue->push_back(std::make_shared<BaseLib::Variable>(group));
+                }
+                
+                return groupArray;
             }
             catch(const std::exception& ex)
             {
