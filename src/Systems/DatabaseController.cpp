@@ -2104,7 +2104,7 @@ BaseLib::PVariable DatabaseController::getAcl(uint64_t groupId)
     {
         BaseLib::Database::DataRow data;
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(groupId));
-        std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT acl FROM groups WHERE id=?");
+        std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT acl FROM groups WHERE id=?", data);
         if(rows->empty()) return BaseLib::Variable::createError(-1, "Unknown group ID.");
 
         auto acls = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);

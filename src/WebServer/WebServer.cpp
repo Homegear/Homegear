@@ -61,9 +61,18 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 		std::vector<char> content;
 		if(!path.empty() && path.front() == '/') path = path.substr(1);
 
+		if(GD::bl->settings.enableNodeBlue() && (path.compare(0, 6, "flows/") == 0 || path == "flows"))
+		{
+			path = "/node-blue/";
+			std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
+			getError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
+			send(socket, content);
+			return;
+		}
+
 		bool isDirectory = false;
 		BaseLib::Io::isDirectory(_serverInfo->contentPath + path, isDirectory);
-		if(isDirectory || path == "flows" || path == "flows/")
+		if(isDirectory || path == "node-blue" || path == "node-blue/")
 		{
 			if(!path.empty() && path.back() != '/')
 			{
@@ -73,7 +82,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 				send(socket, content);
 				return;
 			}
-			if(path == "flows/") path = "flows/index.php";
+			if(path == "node-blue/") path = "node-blue/index.php";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
@@ -88,7 +97,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			}
 		}
 
-		if(GD::bl->settings.enableNodeBlue() && path.compare(0, 6, "flows/") == 0)
+		if(GD::bl->settings.enableNodeBlue() && path.compare(0, 10, "node-blue/") == 0)
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
 			std::string responseEncoding;
@@ -110,7 +119,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			}
 		}
 
-		if(!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "flows/index.php" && path != "flows/signin.php")
+		if(!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "node-blue/index.php" && path != "node-blue/signin.php")
 		{
 			GD::out.printWarning("Warning: Requested URL not found: " + path);
 			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
@@ -130,8 +139,8 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			if(ending == "php" || ending == "php5" || ending == "php7" || ending == "hgs")
 			{
 				std::string fullPath;
-				if(path == "flows/index.php") fullPath = GD::bl->settings.nodeBluePath() + "www/index.php";
-				else if(path == "flows/signin.php") fullPath = GD::bl->settings.nodeBluePath() + "www/signin.php";
+				if(path == "node-blue/index.php") fullPath = GD::bl->settings.nodeBluePath() + "www/index.php";
+				else if(path == "node-blue/signin.php") fullPath = GD::bl->settings.nodeBluePath() + "www/signin.php";
 				else fullPath = _serverInfo->contentPath + path;
 				std::string relativePath = '/' + path;
 				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, relativePath, http, _serverInfo));
@@ -221,7 +230,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 
 		bool isDirectory = false;
 		BaseLib::Io::isDirectory(_serverInfo->contentPath + path, isDirectory);
-		if (isDirectory || path == "flows" || path == "flows/")
+		if (isDirectory || path == "node-blue" || path == "node-blue/")
 		{
 			if(!path.empty() && path.back() != '/')
 			{
@@ -231,7 +240,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 				send(socket, content);
 				return;
 			}
-			if (path == "flows/") path = "flows/index.php";
+			if (path == "node-blue/") path = "node-blue/index.php";
 			else if (GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
@@ -244,7 +253,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 			}
 		}
 
-		if (GD::bl->settings.enableNodeBlue() && path.compare(0, 6, "flows/") == 0)
+		if (GD::bl->settings.enableNodeBlue() && path.compare(0, 10, "node-blue/") == 0)
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: POST)");
 			std::string responseEncoding;
@@ -267,7 +276,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 			}
 		}
 
-		if (!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "flows/index.php" && path != "flows/signin.php")
+		if (!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "node-blue/index.php" && path != "node-blue/signin.php")
 		{
 			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 			send(socket, content);
@@ -279,8 +288,8 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to: \"" + _serverInfo->contentPath + path + "\", method: POST)");
 			std::string fullPath;
-			if(path == "flows/index.php") fullPath = GD::bl->settings.nodeBluePath() + "www/index.php";
-			else if(path == "flows/signin.php") fullPath = GD::bl->settings.nodeBluePath() + "www/signin.php";
+			if(path == "node-blue/index.php") fullPath = GD::bl->settings.nodeBluePath() + "www/index.php";
+			else if(path == "node-blue/signin.php") fullPath = GD::bl->settings.nodeBluePath() + "www/signin.php";
 			else fullPath = _serverInfo->contentPath + path;
 			std::string relativePath = '/' + path;
 			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, relativePath, http, _serverInfo));

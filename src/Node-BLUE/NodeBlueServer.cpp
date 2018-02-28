@@ -1409,7 +1409,7 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 		if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
 
 		std::string contentString;
-		if(path == "flows/locales/nodes")
+		if(path == "node-blue/locales/nodes")
 		{
 			if(!sessionValid) return "unauthorized";
 			std::string language = "en-US";
@@ -1426,7 +1426,7 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 			contentString = NodeManager::getNodeLocales(language);
 			responseEncoding = "application/json";
 		}
-		else if(path.compare(0, 14, "flows/locales/") == 0)
+		else if(path.compare(0, 18, "node-blue/locales/") == 0)
 		{
 			if(!sessionValid) return "unauthorized";
 			std::string localePath = _webroot + "static/locales/";
@@ -1441,12 +1441,12 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 					break;
 				}
 			}
-			path = path.substr(13);
+			path = path.substr(17);
 			path = localePath + language + path;
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
-		else if (path == "flows/flows")
+		else if (path == "node-blue/flows")
 		{
 			if(!sessionValid) return "unauthorized";
 			std::string flowsFile = _bl->settings.nodeBlueDataPath() + "flows.json";
@@ -1478,24 +1478,24 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 			_jsonEncoder->encode(responseJson, contentString);
 			responseEncoding = "application/json";
 		}
-		else if(path == "flows/settings" || path == "flows/library/flows" || path == "flows/icons" || path == "flows/debug/view/debug-utils.js")
+		else if(path == "node-blue/settings" || path == "node-blue/library/flows" || path == "node-blue/icons" || path == "node-blue/debug/view/debug-utils.js")
 		{
 			if(!sessionValid) return "unauthorized";
-			path = _webroot + "static/" + path.substr(6);
+			path = _webroot + "static/" + path.substr(10);
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
-        else if(path == "flows/settings/user")
+        else if(path == "node-blue/settings/user")
         {
             if(!sessionValid) return "unauthorized";
-            path = _webroot + "static/" + path.substr(15);
+            path = _webroot + "static/" + path.substr(19);
             if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
             responseEncoding = "application/json";
         }
-		else if(path == "flows/nodes")
+		else if(path == "node-blue/nodes")
 		{
 			if(!sessionValid) return "unauthorized";
-			path = _webroot + "static/" + path.substr(6);
+			path = _webroot + "static/" + path.substr(10);
 
 			std::vector<NodeManager::PNodeInfo> nodeInfo = NodeManager::getNodeInfo();
 			if(http.getHeader().fields["accept"] == "text/html")
@@ -1525,10 +1525,10 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 				_jsonEncoder->encode(frontendNodeList, contentString);
 			}
 		}
-		else if(path.compare(0, 12, "flows/icons/") == 0)
+		else if(path.compare(0, 16, "node-blue/icons/") == 0)
 		{
 			if(!sessionValid) return "unauthorized";
-			auto pathPair = BaseLib::HelperFunctions::splitFirst(path.substr(12), '/');
+			auto pathPair = BaseLib::HelperFunctions::splitFirst(path.substr(16), '/');
 			std::string path = _bl->settings.nodeBluePath() + "nodes/" + pathPair.first + "/" + pathPair.second;
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			else
@@ -1537,9 +1537,9 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 				if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			}
 		}
-		else if(path.compare(0, 6, "flows/") == 0 && path != "flows/index.php" && path != "flows/signin.php")
+		else if(path.compare(0, 10, "node-blue/") == 0 && path != "node-blue/index.php" && path != "node-blue/signin.php")
 		{
-			path = _webroot + path.substr(6);
+			path = _webroot + path.substr(10);
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 
 			std::string ending = "";
@@ -1574,7 +1574,7 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 		auto sessionId = http.getHeader().cookies.find("PHPSESSID");
 		if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
 
-		if (path == "flows/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
+		if (path == "node-blue/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
 		{
 			if(!sessionValid) return "unauthorized";
 			_out.printInfo("Info: Deploying (1)...");
