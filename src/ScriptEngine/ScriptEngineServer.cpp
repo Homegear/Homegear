@@ -2501,7 +2501,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
                 {
                     groupArray->arrayValue->push_back(std::make_shared<BaseLib::Variable>(group));
                 }
-                
+
                 return groupArray;
             }
             catch(const std::exception& ex)
@@ -2524,7 +2524,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
             try
             {
                 if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
-                if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
+                if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
                 if(parameters->at(1)->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type struct.");
 
                 return std::make_shared<BaseLib::Variable>(User::setMetadata(parameters->at(0)->stringValue, parameters->at(1)));
