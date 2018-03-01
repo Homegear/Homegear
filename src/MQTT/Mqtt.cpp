@@ -1265,6 +1265,28 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::vector<std::strin
 
 		for(int32_t i = 0; i < (signed)keys.size(); i++)
 		{
+			bool checkAcls = _dummyClientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+			if(checkAcls)
+			{
+				if(peerId == 0)
+				{
+					if(!_dummyClientInfo->acls->checkSystemVariableReadAccess(keys.at(i))) continue;
+				}
+				else
+				{
+					std::shared_ptr<BaseLib::Systems::Peer> peer;
+					std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+					for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+					{
+						std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+						if(central) peer = central->getPeer(peerId);
+						if(peer) break;
+					}
+
+					if(!peer || !_dummyClientInfo->acls->checkVariableReadAccess(peer, channel, keys.at(i))) continue;
+				}
+			}
+
 			bool retain = keys.at(i).compare(0, 5, "PRESS") != 0;
 
 			std::shared_ptr<MqttMessage> messageJson1;

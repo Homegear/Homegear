@@ -1100,7 +1100,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 				if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::none)
 				{
 					_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
-					GD::rpcClient->addWebSocketServer(client->socket, client->webSocketClientId, client->address, client->nodeClient);
+					auto server = GD::rpcClient->addWebSocketServer(client->socket, client->webSocketClientId, client, client->address, client->nodeClient);
 					client->socketDescriptor.reset(new BaseLib::FileDescriptor());
 					client->socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
 					client->closed = true;
@@ -1363,7 +1363,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 							if(client->webSocketClient)
 							{
 								_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
-								GD::rpcClient->addWebSocketServer(client->socket, client->webSocketClientId, client->address, client->nodeClient);
+								auto server = GD::rpcClient->addWebSocketServer(client->socket, client->webSocketClientId, client, client->address, client->nodeClient);
 								client->socketDescriptor.reset(new BaseLib::FileDescriptor());
 								client->socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
 								client->closed = true;

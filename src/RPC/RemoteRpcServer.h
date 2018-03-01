@@ -80,6 +80,7 @@ public:
 	Auth auth;
 	int32_t lastPacketSent = -1;
 	std::set<uint64_t> subscribedPeers;
+	BaseLib::PRpcClientInfo clientInfo;
 
 	RemoteRpcServer(std::shared_ptr<RpcClient> client);
 	virtual ~RemoteRpcServer();
