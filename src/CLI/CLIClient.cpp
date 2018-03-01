@@ -296,8 +296,7 @@ int32_t Client::start(std::string command)
 							// {{{ Get last line and check if it contains the exit code.
 							if(response.size() > 2)
 							{
-
-								const char* pos = response.c_str() + response.size() - 2; // -2, because last line ends with new line
+								const char* pos = response.c_str() + response.size() - 3; // -3, because last line ends with new line
 								while(pos >= response.c_str())
 								{
 									if(*pos == 'E') break;

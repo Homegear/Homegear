@@ -88,6 +88,8 @@ case $1 in
 			fi
 		fi
 
+		sed -i -e 's/\/var\/lib\/homegear\/flows/\/var\/lib\/homegear\/node-blue/g' /etc/homegear/main.conf
+
 		systemctl enable homegear.service
 		;;
 

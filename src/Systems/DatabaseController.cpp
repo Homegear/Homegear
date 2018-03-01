@@ -828,7 +828,7 @@ BaseLib::PVariable DatabaseController::deleteRoom(uint64_t roomId)
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable DatabaseController::getRooms(std::string languageCode)
+BaseLib::PVariable DatabaseController::getRooms(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls)
 {
 	try
 	{
@@ -838,6 +838,7 @@ BaseLib::PVariable DatabaseController::getRooms(std::string languageCode)
 		rooms->arrayValue->reserve(rows->size());
 		for(auto row : *rows)
 		{
+            if(checkAcls && !clientInfo->acls->checkRoomReadAccess(row.second.at(0)->intValue)) continue;
 			BaseLib::PVariable room = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 			room->structValue->emplace("ID", std::make_shared<BaseLib::Variable>(row.second.at(0)->intValue));
 			BaseLib::PVariable translations = _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue);
@@ -983,7 +984,7 @@ BaseLib::PVariable DatabaseController::deleteCategory(uint64_t categoryId)
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable DatabaseController::getCategories(std::string languageCode)
+BaseLib::PVariable DatabaseController::getCategories(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls)
 {
 	try
 	{
@@ -993,6 +994,7 @@ BaseLib::PVariable DatabaseController::getCategories(std::string languageCode)
 		categories->arrayValue->reserve(rows->size());
 		for(auto row : *rows)
 		{
+            if(checkAcls && !clientInfo->acls->checkCategoryReadAccess(row.second.at(0)->intValue)) continue;
 			BaseLib::PVariable category = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 			category->structValue->emplace("ID", std::make_shared<BaseLib::Variable>(row.second.at(0)->intValue));
 			BaseLib::PVariable translations = _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue);
@@ -2073,7 +2075,7 @@ BaseLib::PVariable DatabaseController::deleteGroup(uint64_t groupId)
 {
     try
     {
-        if(groupId <= 4) return BaseLib::Variable::createError(-1, "Can't delete system group.");
+        if(groupId < 100) return BaseLib::Variable::createError(-1, "Can't delete system group.");
 
         BaseLib::Database::DataRow data;
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(groupId));

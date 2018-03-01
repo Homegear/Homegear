@@ -82,7 +82,7 @@ public:
 	// {{{ Rooms
 		virtual BaseLib::PVariable createRoom(BaseLib::PVariable translations);
 		virtual BaseLib::PVariable deleteRoom(uint64_t roomId);
-		virtual BaseLib::PVariable getRooms(std::string languageCode);
+		virtual BaseLib::PVariable getRooms(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls);
 		virtual bool roomExists(uint64_t roomId);
 		virtual BaseLib::PVariable updateRoom(uint64_t roomId, BaseLib::PVariable translations);
 	// }}}
@@ -90,7 +90,7 @@ public:
 	// {{{ Categories
 		virtual BaseLib::PVariable createCategory(BaseLib::PVariable translations);
 		virtual BaseLib::PVariable deleteCategory(uint64_t categoryId);
-		virtual BaseLib::PVariable getCategories(std::string languageCode);
+		virtual BaseLib::PVariable getCategories(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls);
 		virtual bool categoryExists(uint64_t categoryId);
 		virtual BaseLib::PVariable updateCategory(uint64_t categoryId, BaseLib::PVariable translations);
 	// }}}

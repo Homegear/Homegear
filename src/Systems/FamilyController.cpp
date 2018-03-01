@@ -380,7 +380,7 @@ uint64_t FamilyController::onGetRoomIdByName(std::string& name)
 {
 	try
 	{
-		BaseLib::PVariable rooms = GD::bl->db->getRooms("");
+		BaseLib::PVariable rooms = GD::bl->db->getRooms(_dummyClientInfo, "", _dummyClientInfo->acls->roomsReadSet());
 		for(auto& room : *rooms->arrayValue)
 		{
 			auto idIterator = room->structValue->find("ID");
