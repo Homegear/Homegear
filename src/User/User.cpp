@@ -71,6 +71,7 @@ bool User::verify(const std::string& userName, const std::string& password)
 {
 	try
 	{
+		if(password.empty()) return false;
 		std::shared_ptr<BaseLib::Database::DataTable> rows = GD::bl->db->getPassword(userName);
 		if(rows->empty() || rows->at(0).empty() || rows->at(0).size() != 2) return false;
 		std::vector<unsigned char> salt;
@@ -138,7 +139,7 @@ bool User::create(const std::string& userName, const std::string& password, cons
 		if(exists(userName)) return false;
 
 		std::vector<uint8_t> salt;
-		std::vector<uint8_t> passwordHash = generateWHIRLPOOL(password, salt);
+		std::vector<uint8_t> passwordHash = password.empty() ? std::vector<uint8_t>() : generateWHIRLPOOL(password, salt);
 
 		if(GD::bl->db->createUser(userName, passwordHash, salt, groups)) return true;
 	}

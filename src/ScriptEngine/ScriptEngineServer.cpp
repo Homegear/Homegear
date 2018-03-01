@@ -2409,7 +2409,6 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 				if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 or 2 is not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
-				if(parameters->at(1)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is empty.");
                 if(parameters->at(2)->arrayValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 3 is empty or no array.");
 				if(!BaseLib::HelperFunctions::isAlphaNumeric(parameters->at(0)->stringValue)) return BaseLib::Variable::createError(-1, "Parameter 1 is not alphanumeric.");
 
@@ -2553,7 +2552,6 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
                 if(parameters->at(1)->type != BaseLib::VariableType::tString && parameters->at(1)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string or array.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
-				if(parameters->at(1)->type == BaseLib::VariableType::tString && parameters->at(1)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is empty.");
                 if(parameters->at(1)->type == BaseLib::VariableType::tArray && parameters->at(1)->arrayValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is empty.");
 
                 int32_t groupsIndex = parameters->size() == 3 ? 2 : (parameters->at(1)->type == BaseLib::VariableType::tArray ? 1 : -1);

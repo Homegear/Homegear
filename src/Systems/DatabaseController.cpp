@@ -118,7 +118,7 @@ void DatabaseController::initializeDatabase()
 
 		//{{{ Create default groups
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT count(*) FROM groups");
-		if(result->empty() || result->at(0).at(0)->intValue < 7)
+		if(result->empty() || result->at(0).at(0)->intValue < 9)
 		{
             if(result->at(0).at(0)->intValue < 1)
 			{ //Administrators (1)
@@ -132,6 +132,7 @@ void DatabaseController::initializeDatabase()
 				BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 				methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
 				acl->structValue->emplace("methods", methods);
+                acl->structValue->emplace("eventServerMethods", methods);
 				std::vector<char> aclBlob;
 				_rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -154,6 +155,7 @@ void DatabaseController::initializeDatabase()
                 BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
                 acl->structValue->emplace("methods", methods);
+                acl->structValue->emplace("eventServerMethods", methods);
                 std::vector<char> aclBlob;
                 _rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -176,6 +178,7 @@ void DatabaseController::initializeDatabase()
                 BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
                 acl->structValue->emplace("methods", methods);
+                acl->structValue->emplace("eventServerMethods", methods);
                 std::vector<char> aclBlob;
                 _rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -198,6 +201,7 @@ void DatabaseController::initializeDatabase()
                 BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
                 acl->structValue->emplace("methods", methods);
+                acl->structValue->emplace("eventServerMethods", methods);
                 std::vector<char> aclBlob;
                 _rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -220,6 +224,7 @@ void DatabaseController::initializeDatabase()
                 BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
                 acl->structValue->emplace("methods", methods);
+                acl->structValue->emplace("eventServerMethods", methods);
                 std::vector<char> aclBlob;
                 _rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -242,6 +247,7 @@ void DatabaseController::initializeDatabase()
                 BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
                 acl->structValue->emplace("methods", methods);
+                acl->structValue->emplace("eventServerMethods", methods);
                 std::vector<char> aclBlob;
                 _rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -252,6 +258,7 @@ void DatabaseController::initializeDatabase()
                 _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
             }
 
+            if(result->at(0).at(0)->intValue < 7)
             { //Family Module (7)
                 BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("Family Modules"));
@@ -263,6 +270,51 @@ void DatabaseController::initializeDatabase()
                 BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
                 acl->structValue->emplace("methods", methods);
+                acl->structValue->emplace("eventServerMethods", methods);
+                std::vector<char> aclBlob;
+                _rpcEncoder->encodeResponse(acl, aclBlob);
+
+                BaseLib::Database::DataRow data;
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
+                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
+            }
+
+            { //No User (8)
+                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("No User"));
+                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("Kein Benutzer"));
+                std::vector<char> translationsBlob;
+                _rpcEncoder->encodeResponse(translations, translationsBlob);
+
+                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+                acl->structValue->emplace("methods", methods);
+                acl->structValue->emplace("eventServerMethods", methods);
+                std::vector<char> aclBlob;
+                _rpcEncoder->encodeResponse(acl, aclBlob);
+
+                BaseLib::Database::DataRow data;
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
+                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
+            }
+
+            { //Unauthorized (9)
+                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("Unauthorized"));
+                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("Unauthorisiert"));
+                std::vector<char> translationsBlob;
+                _rpcEncoder->encodeResponse(translations, translationsBlob);
+
+                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                acl->structValue->emplace("methods", methods);
+                acl->structValue->emplace("eventServerMethods", methods);
                 std::vector<char> aclBlob;
                 _rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -1731,9 +1783,9 @@ bool DatabaseController::createUser(const std::string& name, const std::vector<u
 {
 	try
 	{
-        if(passwordHash.empty() || salt.empty() || groups.empty())
+        if(groups.empty())
         {
-            GD::out.printError("Error: Could not create user. Password and/or groups are not specified.");
+            GD::out.printError("Error: Could not create user. Groups are not specified.");
             return false;
         }
 

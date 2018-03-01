@@ -1247,6 +1247,8 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::vector<std::strin
 	{
 		if(keys.empty() || keys.size() != values.size()) return;
 
+		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("event")) return;
+
 		std::shared_ptr<MqttMessage> messageJson2;
 		BaseLib::PVariable jsonObj;
 		if(_settings.bmxTopic())

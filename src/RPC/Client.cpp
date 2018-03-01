@@ -214,6 +214,7 @@ void Client::broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib
 			{
 				if(!server->second->nodeEvents) continue;
 				if(server->second->removed || (!server->second->socket->connected() && server->second->keepAlive && !server->second->reconnectInfinitely) || (!server->second->initialized && BaseLib::HelperFunctions::getTimeSeconds() - server->second->creationTime > 120)) continue;
+                if(!server->second->clientInfo->acls->checkEventServerMethodAccess("nodeEvent")) continue;
 				if(server->second->webSocket || server->second->json)
 				{
 					std::shared_ptr<std::list<BaseLib::PVariable>> parameters = std::make_shared<std::list<BaseLib::PVariable>>();
@@ -280,6 +281,7 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 		{
 			if(server->second->removed || (!server->second->socket->connected() && server->second->keepAlive && !server->second->reconnectInfinitely) || (!server->second->initialized && BaseLib::HelperFunctions::getTimeSeconds() - server->second->creationTime > 120)) continue;
 			if((!server->second->initialized && valueKeys->at(0) != "PONG") || (!server->second->knownMethods.empty() && (server->second->knownMethods.find("event") == server->second->knownMethods.end() || server->second->knownMethods.find("system.multicall") == server->second->knownMethods.end()))) continue;
+            if(!server->second->clientInfo->acls->checkEventServerMethodAccess("event")) continue;
 			if(id > 0 && server->second->subscribePeers && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end()) continue;
 
 			if(server->second->webSocket || server->second->json)
@@ -466,6 +468,7 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 		std::shared_ptr<RemoteRpcServer> server = getServer(address);
 		if(!server) return;
 		if(!server->knownMethods.empty() && server->knownMethods.find("listDevices") == server->knownMethods.end()) return;
+        if(!server->clientInfo->acls->checkEventServerMethodAccess("listDevices")) return;
 		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable> { BaseLib::PVariable(new BaseLib::Variable(server->id)) });
 		BaseLib::PVariable result = _client->invoke(server, "listDevices", parameters);
 		if(result->errorStruct)
@@ -533,6 +536,7 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 		std::shared_ptr<RemoteRpcServer> server = getServer(address);
 		if(!server) return;
 		if(!server->knownMethods.empty() && server->knownMethods.find("newDevices") == server->knownMethods.end()) return;
+        if(!server->clientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
 
 		bool checkAcls = server->clientInfo->acls->roomsCategoriesDevicesReadSet();
 
@@ -577,6 +581,7 @@ void Client::sendError(std::pair<std::string, std::string> address, int32_t leve
 		std::shared_ptr<RemoteRpcServer> server = getServer(address);
 		if(!server) return;
 		if(!server->knownMethods.empty() && server->knownMethods.find("error") == server->knownMethods.end()) return;
+        if(!server->clientInfo->acls->checkEventServerMethodAccess("error")) return;
 		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 		parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->id)));
 		parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(level)));
@@ -605,6 +610,7 @@ void Client::broadcastError(int32_t level, std::string message)
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("error") == server->second->knownMethods.end())) continue;
+			if(!server->second->clientInfo->acls->checkEventServerMethodAccess("error")) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(level)));
@@ -643,6 +649,7 @@ void Client::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("newDevices") == server->second->knownMethods.end())) continue;
+            if(!server->second->clientInfo->acls->checkEventServerMethodAccess(methodName)) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
 			parameters->push_back(deviceDescriptions);
@@ -672,6 +679,7 @@ void Client::broadcastNewEvent(BaseLib::PVariable eventDescription)
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("newEvent") == server->second->knownMethods.end())) continue;
+            if(!server->second->clientInfo->acls->checkEventServerMethodAccess("newEvent")) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
 			parameters->push_back(eventDescription);
@@ -704,6 +712,7 @@ void Client::broadcastDeleteDevices(BaseLib::PVariable deviceAddresses, BaseLib:
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("deleteDevices") == server->second->knownMethods.end())) continue;
+            if(!server->second->clientInfo->acls->checkEventServerMethodAccess("deleteDevices")) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
 			if(server->second->newFormat) parameters->push_back(deviceInfo);
@@ -734,6 +743,7 @@ void Client::broadcastDeleteEvent(std::string id, int32_t type, uint64_t peerID,
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("deleteEvent") == server->second->knownMethods.end())) continue;
+            if(!server->second->clientInfo->acls->checkEventServerMethodAccess("deleteEvent")) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(id)));
@@ -770,6 +780,7 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("updateDevice") == server->second->knownMethods.end())) continue;
+            if(!server->second->clientInfo->acls->checkEventServerMethodAccess("updateDevice")) continue;
 			if(id > 0 && server->second->subscribePeers && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end()) continue;
 
             if(server->second->clientInfo->acls->roomsCategoriesDevicesReadSet())
@@ -821,6 +832,7 @@ void Client::broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID,
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("updateEvent") == server->second->knownMethods.end())) continue;
+            if(!server->second->clientInfo->acls->checkEventServerMethodAccess("updateEvent")) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(id)));

@@ -152,6 +152,21 @@ void RPCServer::start(BaseLib::Rpc::PServerInfo& info)
 		}
 		if(!_info->webServer && !_info->xmlrpcServer && !_info->jsonrpcServer && !_info->restServer) return;
 		_out.setPrefix("RPC Server (Port " + std::to_string(info->port) + "): ");
+
+		if(!_info->ssl)
+		{
+			_out.printWarning("Warning: SSL is not enabled for this RPC server. It is strongly recommended to disable all unencrypted RPC servers when the connected clients support it.");
+		}
+
+		if((_info->xmlrpcServer || _info->jsonrpcServer || _info->restServer) && _info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::none)
+		{
+			_out.printWarning("Warning: RPC server has no authorization enabled. Everybody on your local network can login into this installation. It is strongly recommended to enable authorization on all RPC servers when the connected clients support it.");
+		}
+
+		if(_info->webSocket && _info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::none)
+		{
+			_out.printWarning("Warning: RPC server has no WebSocket authorization enabled. This is very dangerous as every webpage opened in a browser (also remote one's!!!) can control this installation.");
+		}
 		if(_info->ssl)
 		{
 			int32_t result = 0;
@@ -460,6 +475,16 @@ void RPCServer::mainThread()
 				}
 
 				client->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), client->id);
+				if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::none)
+				{
+					std::vector<uint64_t> groups{8}; //No user
+					client->acls->fromGroups(groups);
+				}
+				else
+				{
+					std::vector<uint64_t> groups{9}; //Unauthorized
+					client->acls->fromGroups(groups);
+				}
 
 				try
 				{
