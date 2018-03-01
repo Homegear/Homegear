@@ -210,6 +210,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
     //{{{ Groups
         _localRpcMethods.emplace("createGroup", std::bind(&ScriptEngineServer::createGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
         _localRpcMethods.emplace("deleteGroup", std::bind(&ScriptEngineServer::deleteGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+		_localRpcMethods.emplace("getGroup", std::bind(&ScriptEngineServer::getGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
         _localRpcMethods.emplace("getGroups", std::bind(&ScriptEngineServer::getGroups, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
         _localRpcMethods.emplace("groupExists", std::bind(&ScriptEngineServer::groupExists, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
         _localRpcMethods.emplace("updateGroup", std::bind(&ScriptEngineServer::updateGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -2689,7 +2690,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
             try
             {
                 if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
-                if(parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
+                if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
 
                 return _bl->db->deleteGroup(parameters->at(0)->integerValue64);
             }
@@ -2707,6 +2708,33 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
             }
             return BaseLib::Variable::createError(-32500, "Unknown application error.");
         }
+
+		BaseLib::PVariable ScriptEngineServer::getGroup(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+		{
+			try
+			{
+				if(parameters->size() != 1 && parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects one or two parameters.");
+				if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
+                if(parameters->size() == 2 && parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string.");
+
+                std::string languageCode = parameters->size() == 2 ? parameters->at(1)->stringValue : "";
+
+				return _bl->db->getGroup(parameters->at(0)->integerValue64, languageCode);
+			}
+			catch(const std::exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		}
 
         BaseLib::PVariable ScriptEngineServer::getGroups(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
         {
@@ -2737,7 +2765,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
             try
             {
                 if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
-                if(parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
+                if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
 
                 return std::make_shared<BaseLib::Variable>(_bl->db->groupExists(parameters->at(0)->integerValue64));
             }
@@ -2761,7 +2789,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
             try
             {
                 if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
-                if(parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
+                if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
                 if(parameters->at(1)->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type struct.");
                 if(parameters->at(2)->type != BaseLib::VariableType::tStruct || parameters->at(2)->structValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type struct or is empty.");
 

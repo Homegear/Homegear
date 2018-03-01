@@ -189,6 +189,7 @@ private:
         // {{{ Group methods
             BaseLib::PVariable createGroup(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
             BaseLib::PVariable deleteGroup(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+			BaseLib::PVariable getGroup(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
             BaseLib::PVariable getGroups(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
             BaseLib::PVariable groupExists(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
             BaseLib::PVariable updateGroup(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);

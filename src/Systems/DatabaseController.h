@@ -133,6 +133,7 @@ public:
 		virtual BaseLib::PVariable createGroup(BaseLib::PVariable translations, BaseLib::PVariable acl);
 		virtual BaseLib::PVariable deleteGroup(uint64_t groupId);
 		virtual BaseLib::PVariable getAcl(uint64_t groupId);
+		virtual BaseLib::PVariable getGroup(uint64_t groupId, std::string languageCode);
 		virtual BaseLib::PVariable getGroups(std::string languageCode);
 		virtual bool groupExists(uint64_t groupId);
 		virtual BaseLib::PVariable updateGroup(uint64_t groupId, BaseLib::PVariable translations, BaseLib::PVariable acl);

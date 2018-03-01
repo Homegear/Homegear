@@ -2129,6 +2129,54 @@ BaseLib::PVariable DatabaseController::getAcl(uint64_t groupId)
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable DatabaseController::getGroup(uint64_t groupId, std::string languageCode)
+{
+	try
+	{
+		BaseLib::Database::DataRow data;
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(groupId));
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, acl FROM groups WHERE id=?", data);
+
+		if(rows->empty()) return BaseLib::Variable::createError(-1, "Unknown group.");
+
+		BaseLib::PVariable group = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+		group->structValue->emplace("ID", std::make_shared<BaseLib::Variable>(rows->at(0).at(0)->intValue));
+
+		BaseLib::PVariable translations = _rpcDecoder->decodeResponse(*rows->at(0).at(1)->binaryValue);
+		if(languageCode.empty()) group->structValue->emplace("TRANSLATIONS", translations);
+		else
+		{
+			auto translationIterator = translations->structValue->find(languageCode);
+			if(translationIterator != translations->structValue->end()) group->structValue->emplace("NAME", translationIterator->second);
+			else
+			{
+				translationIterator = translations->structValue->find("en-US");
+				if(translationIterator != translations->structValue->end()) group->structValue->emplace("NAME", translationIterator->second);
+				else group->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+			}
+		}
+
+		BaseLib::PVariable acl = _rpcDecoder->decodeResponse(*rows->at(0).at(2)->binaryValue);
+		group->structValue->emplace("ACL", acl);
+
+		return group;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable DatabaseController::getGroups(std::string languageCode)
 {
     try
