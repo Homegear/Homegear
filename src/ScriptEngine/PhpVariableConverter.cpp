@@ -94,6 +94,7 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval* value)
 				{
 					std::string keyName;
 					keyName = std::string(key->val, key->len);
+					if(keyName.size() > 1 && keyName.at(0) == '\\') keyName = keyName.substr(1);
 					variable->structValue->insert(BaseLib::StructElement(keyName, arrayElement));
 				}
 				else variable->arrayValue->push_back(arrayElement);
