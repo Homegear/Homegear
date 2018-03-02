@@ -1447,7 +1447,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				{
 					_restServer->process(client, http, client->socket);
 				}
-				else if(_info->webServer && (!_info->xmlrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml")) && (!_info->jsonrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") || http.getHeader().path == "/flows/flows"))
+				else if(_info->webServer && (!_info->xmlrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml")) && (!_info->jsonrpcServer || http.getHeader().method != "POST" || (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") || http.getHeader().path == "/node-blue/flows"))
 				{
 
 					http.getHeader().remoteAddress = client->address;

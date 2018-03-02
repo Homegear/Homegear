@@ -656,24 +656,27 @@ std::string Server::handleUserCommand(std::string& command)
 				BaseLib::HelperFunctions::stringReplace(password, "\\\"", "\"");
 				BaseLib::HelperFunctions::stringReplace(password, "\\\\", "\\");
 			}
-			if(password.size() < 8)
+			if(!password.empty() && password.size() < 8)
 			{
 				stringStream << "The password is too short. Please choose a password with at least 8 characters." << std::endl;
 				return stringStream.str();
 			}
 
 			std::vector<uint64_t> groups;
-			std::string groupString = arguments.at(2);
-			if(groupString.front() == '"' && groupString.back() == '"')
+			if(arguments.size() > 2)
 			{
-				groupString = groupString.substr(1, groupString.size() - 2);
-				std::vector<std::string> splitGroupString = BaseLib::HelperFunctions::splitAll(groupString, ',');
-				groups.reserve(splitGroupString.size());
-				for(auto& element : splitGroupString)
+				std::string groupString = arguments.at(2);
+				if(groupString.front() == '"' && groupString.back() == '"')
 				{
-					BaseLib::HelperFunctions::trim(element);
-					uint64_t id = BaseLib::Math::getNumber64(element, false);
-					if(id != 0) groups.push_back(id);
+					groupString = groupString.substr(1, groupString.size() - 2);
+					std::vector<std::string> splitGroupString = BaseLib::HelperFunctions::splitAll(groupString, ',');
+					groups.reserve(splitGroupString.size());
+					for(auto& element : splitGroupString)
+					{
+						BaseLib::HelperFunctions::trim(element);
+						uint64_t id = BaseLib::Math::getNumber64(element, false);
+						if(id != 0) groups.push_back(id);
+					}
 				}
 			}
 
