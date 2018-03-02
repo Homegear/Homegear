@@ -4081,7 +4081,7 @@ BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 			}
 			else
 			{
-				if(central->peerExists((uint64_t)parameters->at(0)->integerValue64)) continue;
+				if(!central->peerExists((uint64_t)parameters->at(0)->integerValue64)) continue;
 
                 if(checkAcls)
                 {
