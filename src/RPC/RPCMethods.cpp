@@ -759,7 +759,7 @@ BaseLib::PVariable RPCCopyConfig::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
 			else
 			{
                 if(!central->peerExists((uint64_t)parameters->at(0)->integerValue64) || !central->peerExists((uint64_t)parameters->at(2)->integerValue64)) continue;
-				return central->putParamset(clientInfo, parameters->at(2)->integerValue64, parameters->at(3)->integerValue, BaseLib::DeviceDescription::ParameterGroup::Type::Enum::config, 0, -1, resultSet);
+				return central->putParamset(clientInfo, (uint64_t)parameters->at(2)->integerValue64, parameters->at(3)->integerValue, BaseLib::DeviceDescription::ParameterGroup::Type::Enum::config, 0, -1, resultSet, checkAcls);
 			}
 		}
 	}
@@ -3026,7 +3026,7 @@ BaseLib::PVariable RPCGetRooms::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 	try
 	{
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("getRooms")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
-        bool checkAcls = clientInfo->acls->categoriesReadSet();
+        bool checkAcls = clientInfo->acls->roomsReadSet();
 		if(!parameters->empty())
 		{
 			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
@@ -4005,6 +4005,9 @@ BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 {
 	try
 	{
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("putParamset")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesDevicesWriteSet();
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tStruct }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct }),
@@ -4031,7 +4034,9 @@ BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 			else serialNumber = parameters->at(0)->stringValue;
 		}
 
-		uint64_t remoteID = 0;
+        if(useSerialNumber && checkAcls) return BaseLib::Variable::createError(-32011, "Unauthorized. Device, category or room ACLs are set for this client. Usage of serial numbers to address devices is not allowed.");
+
+		uint64_t remoteId = 0;
 		int32_t parameterSetIndex = useSerialNumber ? 1 : 2;
 		BaseLib::DeviceDescription::ParameterGroup::Type::Enum type;
 		if(parameters->at(parameterSetIndex)->type == BaseLib::VariableType::tString)
@@ -4061,7 +4066,7 @@ BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 		else
 		{
 			type = BaseLib::DeviceDescription::ParameterGroup::Type::Enum::link;
-			remoteID = parameters->at(2)->integerValue;
+			remoteId = parameters->at(2)->integerValue64;
 			remoteChannel = parameters->at(3)->integerValue;
 		}
 
@@ -4076,7 +4081,21 @@ BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 			}
 			else
 			{
-				if(central->peerExists((uint64_t)parameters->at(0)->integerValue)) return central->putParamset(clientInfo, parameters->at(0)->integerValue, parameters->at(1)->integerValue, type, remoteID, remoteChannel, parameters->back());
+				if(central->peerExists((uint64_t)parameters->at(0)->integerValue64)) continue;
+
+                if(checkAcls)
+                {
+                    auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
+                    if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
+                    if(remoteId != 0)
+                    {
+                        peer = central->getPeer(remoteId);
+                        if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+                    }
+                }
+
+                return central->putParamset(clientInfo, (uint64_t)parameters->at(0)->integerValue64, parameters->at(1)->integerValue, type, remoteId, remoteChannel, parameters->back(), checkAcls);
 			}
 		}
 

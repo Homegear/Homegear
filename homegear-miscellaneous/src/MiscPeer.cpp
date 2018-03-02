@@ -918,7 +918,7 @@ PVariable MiscPeer::getParamsetDescription(BaseLib::PRpcClientInfo clientInfo, i
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MiscPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, PVariable variables, bool onlyPushing)
+PVariable MiscPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, PVariable variables, bool checkAcls, bool onlyPushing)
 {
 	try
 	{
@@ -931,6 +931,9 @@ PVariable MiscPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
 		PParameterGroup parameterGroup = functionIterator->second->getParameterGroup(type);
 		if(!parameterGroup) return Variable::createError(-3, "Unknown parameter set.");
 		if(variables->structValue->empty()) return PVariable(new Variable(VariableType::tVoid));
+
+		auto central = getCentral();
+		if(!central) return Variable::createError(-32500, "Could not get central.");
 
 		if(type == ParameterGroup::Type::Enum::config)
 		{
@@ -979,6 +982,9 @@ PVariable MiscPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
 			for(Struct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
 				if(i->first.empty() || !i->second) continue;
+
+				if(checkAcls && !clientInfo->acls->checkVariableWriteAccess(central->getPeer(_peerID), channel, i->first)) continue;
+
 				setValue(clientInfo, channel, i->first, i->second, false);
 			}
 		}
