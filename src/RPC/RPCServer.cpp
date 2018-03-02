@@ -1663,7 +1663,7 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 			}
 
             std::string userName = std::string((char*)distinguishedName.data, distinguishedName.size);
-			client->user = userName;
+			client->user = BaseLib::HelperFunctions::toLower(userName);
             if(!client->acls) client->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), client->id);
             if(!client->acls->fromUser(userName))
             {

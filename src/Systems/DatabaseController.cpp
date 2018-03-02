@@ -2312,14 +2312,18 @@ BaseLib::PVariable DatabaseController::updateGroup(uint64_t groupId, BaseLib::PV
         if(_db.executeCommand("SELECT id FROM groups WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown group.");
 
         std::vector<char> translationsBlob;
-        _rpcEncoder->encodeResponse(translations, translationsBlob);
+        if(!translations->structValue->empty()) _rpcEncoder->encodeResponse(translations, translationsBlob);
 
         std::vector<char> aclBlob;
         _rpcEncoder->encodeResponse(acl, aclBlob);
 
         data.push_front(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
-        data.push_front(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
-        _db.executeCommand("UPDATE groups SET translations=?, acl=? WHERE id=?", data);
+        if(!translationsBlob.empty())
+		{
+			data.push_front(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+			_db.executeCommand("UPDATE groups SET translations=?, acl=? WHERE id=?", data);
+		}
+		else _db.executeCommand("UPDATE groups SET acl=? WHERE id=?", data);
 
         return std::make_shared<BaseLib::Variable>();
     }

@@ -550,10 +550,10 @@ std::string Server::handleUserCommand(std::string& command)
 			User::getAll(users);
 			if(users.size() == 0) return "No users exist.\n";
 
-			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(30) << "Name" << "Groups" << std::endl;
+			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(100) << "Name" << "Groups" << std::endl;
 			for(auto& user : users)
 			{
-				stringStream << std::setw(6) << user.first << std::setw(30) << user.second.name;
+				stringStream << std::setw(6) << user.first << std::setw(100) << user.second.name;
                 for(auto& group : user.second.groups)
                 {
                     stringStream << group << " ";
@@ -582,11 +582,18 @@ std::string Server::handleUserCommand(std::string& command)
 			}
 
 			std::string userName = BaseLib::HelperFunctions::toLower(BaseLib::HelperFunctions::trim(arguments.at(0)));
-			if(userName.empty() || !BaseLib::HelperFunctions::isAlphaNumeric(userName, std::unordered_set<char>{'-', '_', '=', ',', '.'}))
+			if(userName.empty() || userName == "\"\"")
 			{
-				stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;
+				stringStream << "No user name supplied." << std::endl;
 				return stringStream.str();
 			}
+
+            if(userName.size() > 2 && userName.front() == '"' && userName.back() == '"')
+            {
+                userName = userName.substr(1, userName.size() - 2);
+                BaseLib::HelperFunctions::stringReplace(userName, "\\\"", "\"");
+                BaseLib::HelperFunctions::stringReplace(userName, "\\\\", "\\");
+            }
 
 			std::string password = BaseLib::HelperFunctions::trim(arguments.at(1));
 			if(password.size() > 2 && password.front() == '"' && password.back() == '"')

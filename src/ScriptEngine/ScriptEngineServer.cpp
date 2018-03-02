@@ -2410,7 +2410,6 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 				if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 or 2 is not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
                 if(parameters->at(2)->arrayValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 3 is empty or no array.");
-				if(!BaseLib::HelperFunctions::isAlphaNumeric(parameters->at(0)->stringValue, std::unordered_set<char>{'-', '_', '=', ',', '.'})) return BaseLib::Variable::createError(-1, "Parameter 1 is not alphanumeric.");
 
                 std::vector<uint64_t> groups;
                 groups.reserve(parameters->at(2)->arrayValue->size());
@@ -2786,12 +2785,13 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
         {
             try
             {
-                if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
+                if(parameters->size() != 2 && parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly two or three parameters.");
                 if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
-                if(parameters->at(1)->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type struct.");
-                if(parameters->at(2)->type != BaseLib::VariableType::tStruct || parameters->at(2)->structValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type struct or is empty.");
+                if(parameters->at(1)->type != BaseLib::VariableType::tStruct || parameters->at(1)->structValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type struct or is empty.");
+                if(parameters->size() == 3 && (parameters->at(2)->type != BaseLib::VariableType::tStruct || parameters->at(2)->structValue->empty())) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type struct or is empty.");
 
-                return _bl->db->updateGroup(parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
+                if(parameters->size() == 2) return _bl->db->updateGroup(parameters->at(0)->integerValue64, std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct), parameters->at(1));
+				else return _bl->db->updateGroup(parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
             }
             catch(const std::exception& ex)
             {
