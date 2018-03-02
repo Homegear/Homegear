@@ -4928,6 +4928,9 @@ BaseLib::PVariable RPCSetLinkInfo::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 {
 	try
 	{
+		if(!clientInfo || !clientInfo->acls->checkMethodAccess("setLinkInfo")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+		bool checkAcls = clientInfo->acls->roomsCategoriesDevicesWriteSet();
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tString }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tString }),
@@ -4965,6 +4968,8 @@ BaseLib::PVariable RPCSetLinkInfo::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 			else receiverSerialNumber = parameters->at(1)->stringValue;
 		}
 
+		if(useSerialNumber && checkAcls) return BaseLib::Variable::createError(-32011, "Unauthorized. Device, category or room ACLs are set for this client. Usage of serial numbers to address devices is not allowed.");
+
 		std::string name;
 		if((signed)parameters->size() > nameIndex)
 		{
@@ -4991,7 +4996,17 @@ BaseLib::PVariable RPCSetLinkInfo::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 				}
 				else
 				{
-					if(central->peerExists((uint64_t)parameters->at(0)->integerValue)) return central->setLinkInfo(clientInfo, parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->integerValue, parameters->at(3)->integerValue, name, description);
+					if(!central->peerExists((uint64_t)parameters->at(0)->integerValue64)) continue;
+
+					if(checkAcls)
+					{
+						auto peer1 = central->getPeer((uint64_t) parameters->at(0)->integerValue64);
+						auto peer2 = central->getPeer((uint64_t) parameters->at(2)->integerValue64);
+						if(!peer1 || !clientInfo->acls->checkDeviceWriteAccess(peer1)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+						if(!peer2 || !clientInfo->acls->checkDeviceWriteAccess(peer2)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+					}
+
+					return central->setLinkInfo(clientInfo, (uint64_t)parameters->at(0)->integerValue64, parameters->at(1)->integerValue, (uint64_t)parameters->at(2)->integerValue64, parameters->at(3)->integerValue, name, description);
 				}
 			}
 		}
@@ -5017,6 +5032,9 @@ BaseLib::PVariable RPCSetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 {
 	try
 	{
+		if(!clientInfo || !clientInfo->acls->checkMethodAccess("setMetadata")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+		bool checkAcls = clientInfo->acls->variablesRoomsCategoriesDevicesWriteSet();
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tString }),
@@ -5035,6 +5053,8 @@ BaseLib::PVariable RPCSetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 			else serialNumber = parameters->at(0)->stringValue;
 		}
 
+		if(useSerialNumber && checkAcls) return BaseLib::Variable::createError(-32011, "Unauthorized. Device, category or room ACLs are set for this client. Usage of serial numbers to address devices is not allowed.");
+
 		BaseLib::PVariable value = parameters->size() > 2 ? parameters->at(2) : std::make_shared<BaseLib::Variable>();
 
 		std::shared_ptr<BaseLib::Systems::Peer> peer;
@@ -5051,13 +5071,15 @@ BaseLib::PVariable RPCSetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 				}
 				else
 				{
-					peer = central->getPeer((uint64_t)parameters->at(0)->integerValue);
+					peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
 					if(peer) break;
 				}
 			}
 		}
 
 		if(!peer) return BaseLib::Variable::createError(-2, "Device not found.");
+
+		if(checkAcls && !clientInfo->acls->checkVariableWriteAccess(peer, -2, parameters->at(1)->stringValue)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 
 		if(parameters->at(1)->stringValue == "NAME")
 		{
@@ -5089,6 +5111,9 @@ BaseLib::PVariable RPCSetName::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
 {
 	try
 	{
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("setName")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->roomsCategoriesDevicesWriteSet();
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tString })
 		}));
@@ -5100,7 +5125,13 @@ BaseLib::PVariable RPCSetName::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central && central->peerExists((uint64_t)parameters->at(0)->integerValue))
 			{
-				return central->setName(clientInfo, parameters->at(0)->integerValue, parameters->at(1)->stringValue);
+                if(checkAcls)
+                {
+                    auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
+                    if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+                }
+
+				return central->setName(clientInfo, (uint64_t)parameters->at(0)->integerValue64, parameters->at(1)->stringValue);
 			}
 		}
 
@@ -5125,6 +5156,8 @@ BaseLib::PVariable RPCSetNodeData::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 {
 	try
 	{
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("setNodeData")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant })
 		}));
@@ -5151,6 +5184,8 @@ BaseLib::PVariable RPCSetFlowData::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 {
 	try
 	{
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("setFlowData")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant })
 		}));
@@ -5177,6 +5212,8 @@ BaseLib::PVariable RPCSetGlobalData::invoke(BaseLib::PRpcClientInfo clientInfo, 
 {
 	try
 	{
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("setGlobalData")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tVariant })
 		}));
@@ -5204,6 +5241,8 @@ BaseLib::PVariable RPCSetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo
 {
 	try
 	{
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("setNodeVariable")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant })
 		}));
@@ -5231,11 +5270,16 @@ BaseLib::PVariable RPCSetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
 {
 	try
 	{
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("setSystemVariable")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->variablesWriteSet();
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tVariant })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(parameters->at(0)->stringValue)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 
 		BaseLib::PVariable value = parameters->size() > 1 ? parameters->at(1) : std::make_shared<BaseLib::Variable>();
 
@@ -5260,6 +5304,9 @@ BaseLib::PVariable RPCSetTeam::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
 {
 	try
 	{
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("setTeam")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->roomsCategoriesDevicesWriteSet();
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString }),
@@ -5270,7 +5317,7 @@ BaseLib::PVariable RPCSetTeam::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
 
 		int32_t deviceChannel = -1;
 		std::string deviceSerialNumber;
-		uint64_t teamID = 0;
+		uint64_t teamId = 0;
 		int32_t teamChannel = -1;
 		std::string teamSerialNumber;
 
@@ -5299,9 +5346,11 @@ BaseLib::PVariable RPCSetTeam::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
 		}
 		else if(parameters->size() > 2)
 		{
-			teamID = (parameters->at(2)->integerValue == -1) ? 0 : parameters->at(2)->integerValue;
+			teamId = (parameters->at(2)->integerValue64 == -1) ? 0 : parameters->at(2)->integerValue64;
 			teamChannel = parameters->at(3)->integerValue;
 		}
+
+        if(useSerialNumber && checkAcls) return BaseLib::Variable::createError(-32011, "Unauthorized. Device, category or room ACLs are set for this client. Usage of serial numbers to address devices is not allowed.");
 
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -5314,7 +5363,18 @@ BaseLib::PVariable RPCSetTeam::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
 			}
 			else
 			{
-				if(central->peerExists((uint64_t)parameters->at(0)->integerValue)) return central->setTeam(clientInfo, parameters->at(0)->integerValue, parameters->at(1)->integerValue, teamID, teamChannel);
+				if(!central->peerExists((uint64_t)parameters->at(0)->integerValue64) || !central->peerExists(teamId)) continue;
+
+                if(checkAcls)
+                {
+                    auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
+                    if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
+                    peer = central->getPeer(teamId);
+                    if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+                }
+
+                return central->setTeam(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue, teamId, teamChannel);
 			}
 		}
 
@@ -5339,6 +5399,9 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 {
 	try
 	{
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("setValue")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesDevicesWriteSet();
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant, BaseLib::VariableType::tBoolean }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant }),
@@ -5349,7 +5412,7 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 		std::string serialNumber;
-		uint64_t peerId = parameters->at(0)->integerValue64;
+		uint64_t peerId = (uint64_t)parameters->at(0)->integerValue64;
 		int32_t channel = 0;
 		bool useSerialNumber = false;
 		if(parameters->at(0)->type == BaseLib::VariableType::tString)
@@ -5367,6 +5430,8 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 		{
 			channel = parameters->at(1)->integerValue;
 		}
+
+        if(useSerialNumber && checkAcls) return BaseLib::Variable::createError(-32011, "Unauthorized. Device, category or room ACLs are set for this client. Usage of serial numbers to address devices is not allowed.");
 
 		BaseLib::PVariable value;
 		if(useSerialNumber && parameters->size() >= 3) value = parameters->at(2);
@@ -5410,7 +5475,15 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 				}
 				else
 				{
-					if(central->peerExists(peerId)) return central->setValue(clientInfo, peerId, channel, parameters->at(2)->stringValue, value, wait);
+					if(!central->peerExists(peerId)) continue;
+
+                    if(checkAcls)
+                    {
+                        auto peer = central->getPeer(peerId);
+                        if(!peer || !clientInfo->acls->checkVariableWriteAccess(peer, channel, parameters->at(2)->stringValue)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+                    }
+
+                    return central->setValue(clientInfo, peerId, channel, parameters->at(2)->stringValue, value, wait);
 				}
 			}
 		}
@@ -5436,6 +5509,8 @@ BaseLib::PVariable RPCStartSniffing::invoke(BaseLib::PRpcClientInfo clientInfo, 
 {
 	try
 	{
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("startSniffing")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
 		}));
@@ -5469,6 +5544,8 @@ BaseLib::PVariable RPCStopSniffing::invoke(BaseLib::PRpcClientInfo clientInfo, B
 {
 	try
 	{
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("stopSniffing")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
 		}));
@@ -5502,6 +5579,8 @@ BaseLib::PVariable RPCSubscribePeers::invoke(BaseLib::PRpcClientInfo clientInfo,
 {
 	try
 	{
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("subscribePeers")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tArray })
 		}));
@@ -5527,7 +5606,7 @@ BaseLib::PVariable RPCSubscribePeers::invoke(BaseLib::PRpcClientInfo clientInfo,
 		if(!eventServer) return BaseLib::Variable::createError(-1, "Event server is unknown.");
 		for(BaseLib::Array::iterator i = parameters->at(1)->arrayValue->begin(); i != parameters->at(1)->arrayValue->end(); ++i)
 		{
-			if((*i)->integerValue != 0) eventServer->subscribedPeers.insert((*i)->integerValue);
+			if((*i)->integerValue64 != 0) eventServer->subscribedPeers.insert((*i)->integerValue64);
 		}
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
@@ -5552,6 +5631,8 @@ BaseLib::PVariable RPCTriggerEvent::invoke(BaseLib::PRpcClientInfo clientInfo, B
 #ifdef EVENTHANDLER
 	try
 	{
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("triggerEvent")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
@@ -5579,6 +5660,8 @@ BaseLib::PVariable RPCTriggerRpcEvent::invoke(BaseLib::PRpcClientInfo clientInfo
 {
 	try
 	{
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("triggerRpcEvent")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tArray }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
@@ -5619,6 +5702,8 @@ BaseLib::PVariable RPCUnsubscribePeers::invoke(BaseLib::PRpcClientInfo clientInf
 {
 	try
 	{
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("unsubscribePeers")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tArray })
 		}));
@@ -5673,7 +5758,9 @@ BaseLib::PVariable RPCUpdateCategory::invoke(BaseLib::PRpcClientInfo clientInfo,
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::bl->db->updateCategory(parameters->at(0)->integerValue64, parameters->at(1));
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("updateCategory", (uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
+		return GD::bl->db->updateCategory((uint64_t)parameters->at(0)->integerValue64, parameters->at(1));
 	}
 	catch(const std::exception& ex)
     {
@@ -5694,6 +5781,9 @@ BaseLib::PVariable RPCUpdateFirmware::invoke(BaseLib::PRpcClientInfo clientInfo,
 {
 	try
 	{
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("updateFirmware")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->roomsCategoriesDevicesWriteSet();
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean }),
@@ -5721,18 +5811,46 @@ BaseLib::PVariable RPCUpdateFirmware::invoke(BaseLib::PRpcClientInfo clientInfo,
 				std::vector<uint64_t> ids;
 				for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(0)->arrayValue->begin(); i != parameters->at(0)->arrayValue->end(); ++i)
 				{
-					if(((*i)->type == BaseLib::VariableType::tInteger || (*i)->type == BaseLib::VariableType::tInteger64) && (*i)->integerValue != 0 && central->peerExists((uint64_t)(*i)->integerValue)) ids.push_back((*i)->integerValue);
-					else if((*i)->type == BaseLib::VariableType::tString && central->peerExists((*i)->stringValue)) ids.push_back(central->getPeerId(clientInfo, (*i)->stringValue)->integerValue);
+					if(((*i)->type == BaseLib::VariableType::tInteger || (*i)->type == BaseLib::VariableType::tInteger64) && (*i)->integerValue != 0 && central->peerExists((uint64_t)(*i)->integerValue64))
+                    {
+                        if(checkAcls)
+                        {
+                            auto peer = central->getPeer((uint64_t)(*i)->integerValue64);
+                            if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+                        }
+
+                        ids.push_back((uint64_t)(*i)->integerValue64);
+                    }
+					else if((*i)->type == BaseLib::VariableType::tString && central->peerExists((*i)->stringValue))
+                    {
+                        if(checkAcls) return BaseLib::Variable::createError(-32011, "Unauthorized. Device, category or room ACLs are set for this client. Usage of serial numbers to address devices is not allowed.");
+
+                        ids.push_back(central->getPeerId(clientInfo, (*i)->stringValue)->integerValue);
+                    }
 				}
 				if(ids.size() > 0 && ids.size() != parameters->at(0)->arrayValue->size()) return BaseLib::Variable::createError(-2, "Please provide only devices of one device family.");
 				if(ids.size() > 0) return central->updateFirmware(clientInfo, ids, manual);
 			}
-			else if(((parameters->at(0)->type == BaseLib::VariableType::tInteger || parameters->at(0)->type == BaseLib::VariableType::tInteger64) && central->peerExists((uint64_t)parameters->at(0)->integerValue)) ||
+			else if(((parameters->at(0)->type == BaseLib::VariableType::tInteger || parameters->at(0)->type == BaseLib::VariableType::tInteger64) && central->peerExists((uint64_t)parameters->at(0)->integerValue64)) ||
 					(parameters->at(0)->type == BaseLib::VariableType::tString && central->peerExists(parameters->at(0)->stringValue)))
 			{
 				std::vector<uint64_t> ids;
-				if(parameters->at(0)->type == BaseLib::VariableType::tString) ids.push_back(central->getPeerId(clientInfo, parameters->at(0)->stringValue)->integerValue);
-				else ids.push_back(parameters->at(0)->integerValue);
+				if(parameters->at(0)->type == BaseLib::VariableType::tString)
+                {
+                    if(checkAcls) return BaseLib::Variable::createError(-32011, "Unauthorized. Device, category or room ACLs are set for this client. Usage of serial numbers to address devices is not allowed.");
+
+                    ids.push_back(central->getPeerId(clientInfo, parameters->at(0)->stringValue)->integerValue);
+                }
+				else
+                {
+                    if(checkAcls)
+                    {
+                        auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
+                        if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+                    }
+
+                    ids.push_back((uint64_t)parameters->at(0)->integerValue64);
+                }
 				return central->updateFirmware(clientInfo, ids, manual);
 			}
 		}
@@ -5763,7 +5881,9 @@ BaseLib::PVariable RPCUpdateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::bl->db->updateRoom(parameters->at(0)->integerValue64, parameters->at(1));
+        if(!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("updateRoom", (uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
+		return GD::bl->db->updateRoom((uint64_t)parameters->at(0)->integerValue64, parameters->at(1));
 	}
 	catch(const std::exception& ex)
     {
@@ -5784,6 +5904,8 @@ BaseLib::PVariable RPCWriteLog::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 {
 	try
 	{
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("writeLog")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tInteger })
