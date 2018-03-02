@@ -2410,7 +2410,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 				if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 or 2 is not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
                 if(parameters->at(2)->arrayValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 3 is empty or no array.");
-				if(!BaseLib::HelperFunctions::isAlphaNumeric(parameters->at(0)->stringValue)) return BaseLib::Variable::createError(-1, "Parameter 1 is not alphanumeric.");
+				if(!BaseLib::HelperFunctions::isAlphaNumeric(parameters->at(0)->stringValue, std::unordered_set<char>{'-', '_', '=', ',', '.'})) return BaseLib::Variable::createError(-1, "Parameter 1 is not alphanumeric.");
 
                 std::vector<uint64_t> groups;
                 groups.reserve(parameters->at(2)->arrayValue->size());

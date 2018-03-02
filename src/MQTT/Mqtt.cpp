@@ -1256,37 +1256,37 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::vector<std::strin
 			//Topic has to be set to: id/deviceName/evt/eventName/fmt/json
 			messageJson2.reset(new MqttMessage());
 			messageJson2->topic = "id/" + std::to_string(peerId) + "/evt/ch-" + std::to_string(channel) + "/fmt/json";
-			jsonObj.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+			jsonObj = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 		}
         else if(_settings.jsonobjTopic())
 		{
 			messageJson2.reset(new MqttMessage());
 			messageJson2->topic = "jsonobj/" + std::to_string(peerId) + '/' + std::to_string(channel);
-			jsonObj.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+            jsonObj = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 		}
+
+        bool checkAcls = _dummyClientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+        std::shared_ptr<BaseLib::Systems::Peer> peer;
+        if(checkAcls && peerId != 0)
+        {
+            std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+            for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+            {
+                std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+                if(central) peer = central->getPeer(peerId);
+                if(peer) break;
+            }
+        }
 
 		for(int32_t i = 0; i < (signed)keys.size(); i++)
 		{
-			bool checkAcls = _dummyClientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
 			if(checkAcls)
 			{
 				if(peerId == 0)
 				{
 					if(!_dummyClientInfo->acls->checkSystemVariableReadAccess(keys.at(i))) continue;
 				}
-				else
-				{
-					std::shared_ptr<BaseLib::Systems::Peer> peer;
-					std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-					for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
-					{
-						std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
-						if(central) peer = central->getPeer(peerId);
-						if(peer) break;
-					}
-
-					if(!peer || !_dummyClientInfo->acls->checkVariableReadAccess(peer, channel, keys.at(i))) continue;
-				}
+				else if(!peer || !_dummyClientInfo->acls->checkVariableReadAccess(peer, channel, keys.at(i))) continue;
 			}
 
 			bool retain = keys.at(i).compare(0, 5, "PRESS") != 0;
@@ -1294,7 +1294,7 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::vector<std::strin
 			std::shared_ptr<MqttMessage> messageJson1;
 			if(_settings.bmxTopic())
             {
-				jsonObj->structValue->insert(BaseLib::StructElement(keys.at(i), values.at(i)));
+				jsonObj->structValue->emplace(keys.at(i), values.at(i));
 				if(!retain) messageJson2->retain = false;
 			}
             else
@@ -1326,13 +1326,13 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::vector<std::strin
 
 				if(_settings.jsonobjTopic())
 				{
-					jsonObj->structValue->insert(BaseLib::StructElement(keys.at(i), values.at(i)));
+					jsonObj->structValue->emplace(keys.at(i), values.at(i));
 					if(!retain) messageJson2->retain = false;
 				}
 			}
 		}
 
-		if(_settings.jsonobjTopic() || _settings.bmxTopic())
+		if((_settings.jsonobjTopic() || _settings.bmxTopic()) && !jsonObj->structValue->empty())
 		{
 			_jsonEncoder->encode(jsonObj, messageJson2->message);
 			queueMessage(messageJson2);

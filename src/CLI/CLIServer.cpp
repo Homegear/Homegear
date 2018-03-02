@@ -582,7 +582,7 @@ std::string Server::handleUserCommand(std::string& command)
 			}
 
 			std::string userName = BaseLib::HelperFunctions::toLower(BaseLib::HelperFunctions::trim(arguments.at(0)));
-			if(userName.empty() || !BaseLib::HelperFunctions::isAlphaNumeric(userName))
+			if(userName.empty() || !BaseLib::HelperFunctions::isAlphaNumeric(userName, std::unordered_set<char>{'-', '_', '=', ',', '.'}))
 			{
 				stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;
 				return stringStream.str();
@@ -595,7 +595,7 @@ std::string Server::handleUserCommand(std::string& command)
 				BaseLib::HelperFunctions::stringReplace(password, "\\\"", "\"");
 				BaseLib::HelperFunctions::stringReplace(password, "\\\\", "\\");
 			}
-			if(!password.empty() && password.size() < 8)
+			if(!password.empty() && password != "\"\"" && password.size() < 8)
 			{
 				stringStream << "The password is too short. Please choose a password with at least 8 characters." << std::endl;
 				return stringStream.str();

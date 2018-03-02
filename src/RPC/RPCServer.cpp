@@ -1667,11 +1667,11 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
             if(!client->acls) client->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), client->id);
             if(!client->acls->fromUser(userName))
             {
-                _out.printError("Error getting ACLs for client.");
+                _out.printError("Error getting ACLs for client or the user doesn't exist. User (= distinguished name): " + userName);
                 GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
                 return;
             }
-			_out.printInfo("Info: Logged in with distinguished name: " + userName);
+			_out.printInfo("Info: Successfully logged in with distinguished name: " + userName);
 		}
 
 		return;
