@@ -344,6 +344,45 @@ void IpcServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std
 	try
 	{
 		if(_shuttingDown) return;
+        if(!_dummyClientInfo->acls->checkEventServerMethodAccess("event")) return;
+
+        if(_dummyClientInfo->acls->variablesRoomsCategoriesDevicesReadSet())
+        {
+            std::shared_ptr<BaseLib::Systems::Peer> peer;
+            std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+            for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+            {
+                std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+                if(central) peer = central->getPeer(id);
+                if(peer) break;
+            }
+
+            if(!peer) return;
+
+            std::shared_ptr<std::vector<std::string>> newVariables;
+            BaseLib::PArray newValues;
+            newVariables->reserve(variables->size());
+            newValues->reserve(values->size());
+            for(int32_t i = 0; i < (int32_t)variables->size(); i++)
+            {
+                if(id == 0)
+                {
+                    if(_dummyClientInfo->acls->checkSystemVariableReadAccess(variables->at(i)))
+                    {
+                        newVariables->push_back(variables->at(i));
+                        newValues->push_back(values->at(i));
+                    }
+                }
+                else if(peer && _dummyClientInfo->acls->checkVariableReadAccess(peer, channel, variables->at(i)))
+                {
+                    newVariables->push_back(variables->at(i));
+                    newValues->push_back(values->at(i));
+                }
+            }
+            variables = newVariables;
+            values = newValues;
+        }
+
 		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -380,6 +419,9 @@ void IpcServer::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
 	try
 	{
 		if(_shuttingDown) return;
+
+        if(!_dummyClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
+
 		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -416,6 +458,9 @@ void IpcServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
 	try
 	{
 		if(_shuttingDown) return;
+
+        if(!_dummyClientInfo->acls->checkEventServerMethodAccess("deleteDevices")) return;
+
 		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -452,6 +497,20 @@ void IpcServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint
 	try
 	{
 		if(_shuttingDown) return;
+
+        if(!_dummyClientInfo->acls->checkEventServerMethodAccess("updateDevice")) return;
+        if(_dummyClientInfo->acls->roomsCategoriesDevicesReadSet())
+        {
+            std::shared_ptr<BaseLib::Systems::Peer> peer;
+            std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+            for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+            {
+                std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+                if(central) peer = central->getPeer(id);
+                if(!peer || !_dummyClientInfo->acls->checkDeviceReadAccess(peer)) return;
+            }
+        }
+
 		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);

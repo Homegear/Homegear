@@ -284,31 +284,31 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
             if(!server->second->clientInfo->acls->checkEventServerMethodAccess("event")) continue;
 			if(id > 0 && server->second->subscribePeers && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end()) continue;
 
+            bool checkAcls = server->second->clientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+            std::shared_ptr<BaseLib::Systems::Peer> peer;
+            if(checkAcls)
+            {
+                std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+                for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+                {
+                    std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+                    if(central) peer = central->getPeer(id);
+                    if(peer) break;
+                }
+            }
+
 			if(server->second->webSocket || server->second->json)
 			{
 				//No system.multicall
-				for(uint32_t i = 0; i < valueKeys->size(); i++)
+				for(int32_t i = 0; i < (int32_t)valueKeys->size(); i++)
 				{
-					bool checkAcls = server->second->clientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
 					if(checkAcls)
 					{
 						if(id == 0)
 						{
 							if(!server->second->clientInfo->acls->checkSystemVariableReadAccess(valueKeys->at(i))) continue;
 						}
-						else
-						{
-							std::shared_ptr<BaseLib::Systems::Peer> peer;
-							std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-							for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
-							{
-								std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
-								if(central) peer = central->getPeer(id);
-								if(peer) break;
-							}
-
-							if(!peer || !server->second->clientInfo->acls->checkVariableReadAccess(peer, channel, valueKeys->at(i))) continue;
-						}
+						else if(!peer || !server->second->clientInfo->acls->checkVariableReadAccess(peer, channel, valueKeys->at(i))) continue;
 					}
 
 					std::shared_ptr<std::list<BaseLib::PVariable>> parameters = std::make_shared<std::list<BaseLib::PVariable>>();
@@ -329,29 +329,16 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 				std::shared_ptr<std::list<BaseLib::PVariable>> parameters = std::make_shared<std::list<BaseLib::PVariable>>();
 				BaseLib::PVariable array = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 				BaseLib::PVariable method;
-				for(uint32_t i = 0; i < valueKeys->size(); i++)
+				for(int32_t i = 0; i < (int32_t)valueKeys->size(); i++)
 				{
-					bool checkAcls = server->second->clientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
-					if(checkAcls)
-					{
-						if(id == 0)
-						{
-							if(!server->second->clientInfo->acls->checkSystemVariableReadAccess(valueKeys->at(i))) continue;
-						}
-						else
-						{
-							std::shared_ptr<BaseLib::Systems::Peer> peer;
-							std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-							for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
-							{
-								std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
-								if(central) peer = central->getPeer(id);
-								if(peer) break;
-							}
-
-							if(!peer || !server->second->clientInfo->acls->checkVariableReadAccess(peer, channel, valueKeys->at(i))) continue;
-						}
-					}
+                    if(checkAcls)
+                    {
+                        if(id == 0)
+                        {
+                            if(!server->second->clientInfo->acls->checkSystemVariableReadAccess(valueKeys->at(i))) continue;
+                        }
+                        else if(!peer || !server->second->clientInfo->acls->checkVariableReadAccess(peer, channel, valueKeys->at(i))) continue;
+                    }
 
 					method.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 					array->arrayValue->push_back(method);
@@ -636,14 +623,16 @@ void Client::broadcastError(int32_t level, std::string message)
     }
 }
 
-void Client::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
+void Client::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions)
 {
 	try
 	{
 		if(!deviceDescriptions) return;
+		GD::nodeBlueServer->broadcastNewDevices(deviceDescriptions);
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastNewDevices(deviceDescriptions);
 #endif
+        GD::ipcServer->broadcastNewDevices(deviceDescriptions);
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		std::string methodName("newDevices");
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
@@ -700,14 +689,17 @@ void Client::broadcastNewEvent(BaseLib::PVariable eventDescription)
     }
 }
 
-void Client::broadcastDeleteDevices(BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo)
+void Client::broadcastDeleteDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo)
 {
 	try
 	{
 		if(!deviceAddresses || !deviceInfo) return;
+		GD::nodeBlueServer->broadcastDeleteDevices(deviceInfo);
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastDeleteDevices(deviceInfo);
 #endif
+        GD::ipcServer->broadcastDeleteDevices(deviceInfo);
+
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
@@ -773,9 +765,12 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
 	try
 	{
 		if(id == 0 || address.empty()) return;
+		GD::nodeBlueServer->broadcastUpdateDevice(id, channel, hint);
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastUpdateDevice(id, channel, hint);
 #endif
+        GD::ipcServer->broadcastUpdateDevice(id, channel, hint);
+
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{

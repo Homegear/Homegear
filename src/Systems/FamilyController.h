@@ -84,8 +84,8 @@ public:
 
 		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
 		virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint);
-		virtual void onRPCNewDevices(BaseLib::PVariable deviceDescriptions);
-		virtual void onRPCDeleteDevices(BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo);
+		virtual void onRPCNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions);
+		virtual void onRPCDeleteDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo);
 		virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
 		virtual void onRunScript(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, bool wait);
 		virtual BaseLib::PVariable onInvokeRpc(std::string& methodName, BaseLib::PArray& parameters);

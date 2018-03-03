@@ -73,9 +73,9 @@ public:
 	void systemListMethods(std::pair<std::string, std::string> address);
 	void listDevices(std::pair<std::string, std::string> address);
 	void broadcastError(int32_t level, std::string message);
-	void broadcastNewDevices(BaseLib::PVariable deviceDescriptions);
+	void broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions);
 	void broadcastNewEvent(BaseLib::PVariable eventDescription);
-	void broadcastDeleteDevices(BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo);
+	void broadcastDeleteDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo);
 	void broadcastDeleteEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable);
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, std::string address, Hint::Enum hint);
 	void broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable);

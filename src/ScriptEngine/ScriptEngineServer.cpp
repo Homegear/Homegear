@@ -2219,7 +2219,8 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			if(parameters->size() != 1 || parameters->at(0)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Method expects device address array as parameter.");
 
-			GD::familyController->onRPCDeleteDevices(parameters->at(0), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{ 0 }))));
+            std::vector<uint64_t> newIds{};
+			GD::familyController->onRPCDeleteDevices(newIds, parameters->at(0), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{ 0 }))));
 
 			return BaseLib::PVariable(new BaseLib::Variable());
 		}

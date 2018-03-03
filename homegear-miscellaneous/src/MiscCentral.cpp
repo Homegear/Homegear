@@ -141,11 +141,15 @@ void MiscCentral::deletePeer(uint64_t id)
 		}
 
 		peer->deleteFromDatabase();
-		_peersMutex.lock();
-		if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
-		if(_peersById.find(id) != _peersById.end()) _peersById.erase(id);
-		_peersMutex.unlock();
-		raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
+
+		{
+			std::lock_guard<std::mutex> peersGuard(_peersMutex);
+			if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
+			if(_peersById.find(id) != _peersById.end()) _peersById.erase(id);
+		}
+
+		std::vector<uint64_t> newIds{ id };
+		raiseRPCDeleteDevices(newIds, deviceAddresses, deviceInfo);
 		GD::out.printMessage("Removed Miscellaneous peer " + std::to_string(peer->getID()));
 	}
 	catch(const std::exception& ex)
@@ -352,7 +356,8 @@ std::string MiscCentral::handleCliCommand(std::string command)
 
 				PVariable deviceDescriptions(new Variable(VariableType::tArray));
 				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
-				raiseRPCNewDevices(deviceDescriptions);
+                std::vector<uint64_t> newIds{ peer->getID() };
+				raiseRPCNewDevices(newIds, deviceDescriptions);
 				GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
 				stringStream << "Added peer " + std::to_string(peer->getID()) + " of type 0x" << BaseLib::HelperFunctions::getHexString(deviceType) << " with serial number " << serialNumber << "." << std::dec << std::endl;
 				peer->initProgram();
@@ -743,7 +748,8 @@ PVariable MiscCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t 
 
 		PVariable deviceDescriptions(new Variable(VariableType::tArray));
 		deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
-		raiseRPCNewDevices(deviceDescriptions);
+        std::vector<uint64_t> newIds{ peer->getID() };
+		raiseRPCNewDevices(newIds, deviceDescriptions);
 		GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + " with serial number " + serialNumber + ".");
 		peer->initProgram();
 

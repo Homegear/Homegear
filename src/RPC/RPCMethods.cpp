@@ -5665,19 +5665,10 @@ BaseLib::PVariable RPCTriggerRpcEvent::invoke(BaseLib::PRpcClientInfo clientInfo
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tArray }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		if(parameters->at(0)->stringValue == "deleteDevices")
-		{
-			if(parameters->at(1)->arrayValue->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count. You need to pass (in this order): Array<String> deviceAddresses, Array<Struct> deviceInfo");
-			GD::rpcClient->broadcastDeleteDevices(parameters->at(1)->arrayValue->at(0), parameters->at(1)->arrayValue->at(1));
-		}
-		else if(parameters->at(0)->stringValue == "newDevices")
-		{
-			GD::rpcClient->broadcastNewDevices(parameters->at(1));
-		}
-		else if(parameters->at(0)->stringValue == "updateDevice")
+		if(parameters->at(0)->stringValue == "updateDevice")
 		{
 			if(parameters->at(1)->arrayValue->size() != 4) return BaseLib::Variable::createError(-1, "Wrong parameter count. You need to pass (in this order): Integer peerID, Integer channel, String address, Integer flags");
-			GD::rpcClient->broadcastUpdateDevice(parameters->at(1)->arrayValue->at(0)->integerValue, parameters->at(1)->arrayValue->at(1)->integerValue, parameters->at(1)->arrayValue->at(2)->stringValue, (Rpc::Client::Hint::Enum)parameters->at(1)->arrayValue->at(3)->integerValue);
+			GD::rpcClient->broadcastUpdateDevice((uint64_t)parameters->at(1)->arrayValue->at(0)->integerValue64, parameters->at(1)->arrayValue->at(1)->integerValue, parameters->at(1)->arrayValue->at(2)->stringValue, (Rpc::Client::Hint::Enum)parameters->at(1)->arrayValue->at(3)->integerValue);
 		}
 		else return BaseLib::Variable::createError(-1, "Invalid function.");
 

@@ -239,11 +239,11 @@ void FamilyController::onRPCUpdateDevice(uint64_t id, int32_t channel, std::stri
 	}
 }
 
-void FamilyController::onRPCNewDevices(BaseLib::PVariable deviceDescriptions)
+void FamilyController::onRPCNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions)
 {
 	try
 	{
-		GD::rpcClient->broadcastNewDevices(deviceDescriptions);
+		GD::rpcClient->broadcastNewDevices(ids, deviceDescriptions);
 	}
 	catch(const std::exception& ex)
 	{
@@ -259,11 +259,11 @@ void FamilyController::onRPCNewDevices(BaseLib::PVariable deviceDescriptions)
 	}
 }
 
-void FamilyController::onRPCDeleteDevices(BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo)
+void FamilyController::onRPCDeleteDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo)
 {
 	try
 	{
-		GD::rpcClient->broadcastDeleteDevices(deviceAddresses, deviceInfo);
+		GD::rpcClient->broadcastDeleteDevices(ids, deviceAddresses, deviceInfo);
 	}
 	catch(const std::exception& ex)
 	{
