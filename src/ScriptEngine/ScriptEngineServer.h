@@ -73,7 +73,7 @@ public:
 	BaseLib::PVariable executePhpNodeMethod(BaseLib::PArray& parameters);
 	BaseLib::PVariable executeDeviceMethod(BaseLib::PArray& parameters);
 	void broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values);
-	void broadcastNewDevices(BaseLib::PVariable deviceDescriptions);
+	void broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions);
 	void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
 

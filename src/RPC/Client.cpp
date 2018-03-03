@@ -627,18 +627,51 @@ void Client::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable 
 {
 	try
 	{
-		if(!deviceDescriptions) return;
-		GD::nodeBlueServer->broadcastNewDevices(deviceDescriptions);
+		if(!deviceDescriptions || ids.empty()) return;
+		GD::nodeBlueServer->broadcastNewDevices(ids, deviceDescriptions);
 #ifndef NO_SCRIPTENGINE
-		GD::scriptEngineServer->broadcastNewDevices(deviceDescriptions);
+		GD::scriptEngineServer->broadcastNewDevices(ids, deviceDescriptions);
 #endif
-        GD::ipcServer->broadcastNewDevices(deviceDescriptions);
+        GD::ipcServer->broadcastNewDevices(ids, deviceDescriptions);
+
+        std::vector<std::shared_ptr<BaseLib::Systems::Peer>> peers;
+        peers.reserve(ids.size());
+        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        {
+            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+            if(central && central->peerExists((uint64_t)ids.front())) //All ids are from the same family
+            {
+                for(auto id : ids)
+                {
+                    auto peer = central->getPeer((uint64_t)id);
+                    if(!peer) return;
+                    peers.push_back(peer);
+                }
+            }
+        }
+        if(peers.size() != ids.size()) return;
+
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		std::string methodName("newDevices");
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("newDevices") == server->second->knownMethods.end())) continue;
             if(!server->second->clientInfo->acls->checkEventServerMethodAccess(methodName)) continue;
+            if(server->second->clientInfo->acls->roomsCategoriesDevicesReadSet())
+            {
+                bool abort = false;
+                for(auto& peer : peers)
+                {
+                    if(!server->second->clientInfo->acls->checkDeviceReadAccess(peer))
+                    {
+                        abort = true;
+                        break;
+                    }
+                }
+                if(abort) continue;
+            }
+
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
 			parameters->push_back(deviceDescriptions);
@@ -705,6 +738,7 @@ void Client::broadcastDeleteDevices(std::vector<uint64_t>& ids, BaseLib::PVariab
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("deleteDevices") == server->second->knownMethods.end())) continue;
             if(!server->second->clientInfo->acls->checkEventServerMethodAccess("deleteDevices")) continue;
+
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
 			if(server->second->newFormat) parameters->push_back(deviceInfo);
@@ -776,6 +810,7 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("updateDevice") == server->second->knownMethods.end())) continue;
             if(!server->second->clientInfo->acls->checkEventServerMethodAccess("updateDevice")) continue;
+            bool checkAcls = server->second->clientInfo->acls->devicesReadSet();
 			if(id > 0 && server->second->subscribePeers && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end()) continue;
 
             if(server->second->clientInfo->acls->roomsCategoriesDevicesReadSet())
@@ -789,7 +824,7 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
                     if(peer) break;
                 }
 
-                if(!peer || !server->second->clientInfo->acls->checkDeviceReadAccess(peer)) continue;
+                if(checkAcls && (!peer || !server->second->clientInfo->acls->checkDeviceReadAccess(peer))) continue;
             }
 
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());

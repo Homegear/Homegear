@@ -1666,6 +1666,46 @@ void NodeBlueServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_pt
 	try
 	{
 		if(_shuttingDown || _flowsRestarting) return;
+		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("event")) return;
+
+		bool checkAcls = _dummyClientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+		std::shared_ptr<BaseLib::Systems::Peer> peer;
+		if(checkAcls)
+		{
+			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+			{
+				std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+				if(central) peer = central->getPeer(id);
+				if(peer) break;
+			}
+
+			if(!peer) return;
+
+			std::shared_ptr<std::vector<std::string>> newVariables;
+			BaseLib::PArray newValues;
+			newVariables->reserve(variables->size());
+			newValues->reserve(values->size());
+			for(int32_t i = 0; i < (int32_t)variables->size(); i++)
+			{
+				if(id == 0)
+				{
+					if(_dummyClientInfo->acls->checkSystemVariableReadAccess(variables->at(i)))
+					{
+						newVariables->push_back(variables->at(i));
+						newValues->push_back(values->at(i));
+					}
+				}
+				else if(peer && _dummyClientInfo->acls->checkVariableReadAccess(peer, channel, variables->at(i)))
+				{
+					newVariables->push_back(variables->at(i));
+					newValues->push_back(values->at(i));
+				}
+			}
+			variables = newVariables;
+			values = newValues;
+		}
+
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -1697,11 +1737,30 @@ void NodeBlueServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_pt
     }
 }
 
-void NodeBlueServer::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
+void NodeBlueServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions)
 {
 	try
 	{
 		if(_shuttingDown || _flowsRestarting) return;
+
+		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
+		if(_dummyClientInfo->acls->roomsCategoriesDevicesReadSet())
+		{
+			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+			{
+				std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+				if(central && central->peerExists((uint64_t)ids.front())) //All ids are from the same family
+				{
+					for(auto id : ids)
+					{
+						auto peer = central->getPeer((uint64_t)id);
+						if(!peer || !_dummyClientInfo->acls->checkDeviceReadAccess(peer)) return;
+					}
+				}
+			}
+		}
+
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -1774,6 +1833,20 @@ void NodeBlueServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t
 	try
 	{
 		if(_shuttingDown || _flowsRestarting) return;
+
+		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("updateDevice")) return;
+		if(_dummyClientInfo->acls->roomsCategoriesDevicesReadSet())
+		{
+			std::shared_ptr<BaseLib::Systems::Peer> peer;
+			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+			{
+				std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+				if(central) peer = central->getPeer(id);
+				if(!peer || !_dummyClientInfo->acls->checkDeviceReadAccess(peer)) return;
+			}
+		}
+
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);

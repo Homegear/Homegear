@@ -414,13 +414,29 @@ void IpcServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std
     }
 }
 
-void IpcServer::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
+void IpcServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions)
 {
 	try
 	{
 		if(_shuttingDown) return;
 
         if(!_dummyClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
+		if(_dummyClientInfo->acls->roomsCategoriesDevicesReadSet())
+		{
+			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+			{
+				std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+				if(central && central->peerExists((uint64_t)ids.front())) //All ids are from the same family
+				{
+					for(auto id : ids)
+					{
+						auto peer = central->getPeer((uint64_t)id);
+						if(!peer || !_dummyClientInfo->acls->checkDeviceReadAccess(peer)) return;
+					}
+				}
+			}
+		}
 
 		std::vector<PIpcClientData> clients;
 		{
