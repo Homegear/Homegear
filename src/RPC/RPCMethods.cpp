@@ -1399,7 +1399,7 @@ BaseLib::PVariable RPCGetAllMetadata::invoke(BaseLib::PRpcClientInfo clientInfo,
 
 		if(!peer) return BaseLib::Variable::createError(-2, "Device not found.");
 
-        if(!clientInfo->acls->checkDeviceReadAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        if(checkAcls && !clientInfo->acls->checkDeviceReadAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 
 		std::string peerName = peer->getName();
 		if(clientInfo->clientType == BaseLib::RpcClientType::homematicconfigurator)
