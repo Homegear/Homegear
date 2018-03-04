@@ -140,16 +140,26 @@ void MiscCentral::deletePeer(uint64_t id)
 			channels->arrayValue->push_back(PVariable(new Variable(i->first)));
 		}
 
+        std::vector<uint64_t> deletedIds{ id };
+        raiseRPCDeleteDevices(deletedIds, deviceAddresses, deviceInfo);
+
+        {
+            std::lock_guard<std::mutex> peersGuard(_peersMutex);
+            if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
+            if(_peersById.find(id) != _peersById.end()) _peersById.erase(id);
+        }
+
+        int32_t i = 0;
+        while(peer.use_count() > 1 && i < 600)
+        {
+            if(_currentPeer && _currentPeer->getID() == id) _currentPeer.reset();
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            i++;
+        }
+        if(i == 600) GD::out.printError("Error: Peer deletion took too long.");
+
 		peer->deleteFromDatabase();
 
-		{
-			std::lock_guard<std::mutex> peersGuard(_peersMutex);
-			if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
-			if(_peersById.find(id) != _peersById.end()) _peersById.erase(id);
-		}
-
-		std::vector<uint64_t> newIds{ id };
-		raiseRPCDeleteDevices(newIds, deviceAddresses, deviceInfo);
 		GD::out.printMessage("Removed Miscellaneous peer " + std::to_string(peer->getID()));
 	}
 	catch(const std::exception& ex)
@@ -613,6 +623,15 @@ std::string MiscCentral::handleCliCommand(std::string command)
             if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
             if(_peersById.find(peerId) != _peersById.end()) _peersById.erase(peerId);
             lockGuard.unlock();
+
+            int32_t i = 0;
+            while(peer.use_count() > 1 && i < 600)
+            {
+                if(_currentPeer && _currentPeer->getID() == peerId) _currentPeer.reset();
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                i++;
+            }
+            if(i == 600) GD::out.printError("Error: Peer deletion took too long.");
 
 			GD::family->reloadRpcDevices();
             peer->setRpcDevice(GD::family->getRpcDevices()->find(peer->getDeviceType(), 0x10, -1));

@@ -89,11 +89,11 @@ void DatabaseController::initializeDatabase()
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS peerVariablesIndex ON peerVariables (variableID, peerID, variableIndex)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON peerVariables (variableID, peerID, variableIndex)");
-		_db.executeCommand("CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB, room INTEGER, categories TEXT)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS parametersIndex ON parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS metadataIndex ON metadata (objectID, dataID)");
-		_db.executeCommand("CREATE TABLE IF NOT EXISTS systemVariables (variableID TEXT, serializedObject BLOB)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS systemVariables (variableID TEXT PRIMARY KEY UNIQUE NOT NULL, serializedObject BLOB, room INTEGER, categories TEXT)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS systemVariablesIndex ON systemVariables (variableID)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS devices (deviceID INTEGER PRIMARY KEY UNIQUE, address INTEGER NOT NULL, serialNumber TEXT NOT NULL, deviceType INTEGER NOT NULL, deviceFamily INTEGER NOT NULL)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS devicesIndex ON devices (deviceID, address, deviceType, deviceFamily)");
@@ -111,9 +111,9 @@ void DatabaseController::initializeDatabase()
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS nodeDataIndex ON nodeData (node, key)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS data (component TEXT, key TEXT, value BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS dataIndex ON data (component, key)");
-		_db.executeCommand("CREATE TABLE IF NOT EXISTS rooms (id INTEGER PRIMARY KEY UNIQUE, translations BLOB)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS rooms (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, metadata BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS roomsIndex ON rooms (id)");
-		_db.executeCommand("CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY UNIQUE, translations BLOB)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, metadata BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS categoriesIndex ON categories (id)");
 
 		//{{{ Create default groups
@@ -336,7 +336,7 @@ void DatabaseController::initializeDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.0")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.1")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
@@ -403,8 +403,8 @@ bool DatabaseController::convertDatabase()
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data);
 		if(result->empty()) return false; //Handled in initializeDatabase
 		std::string version = result->at(0).at(3)->textValue;
-		if(version == "0.7.0") return false; //Up to date
-		if(version != "0.3.1" && version != "0.4.3" && version != "0.5.0" && version != "0.5.1" && version != "0.6.0" && version != "0.6.1")
+		if(version == "0.7.1") return false; //Up to date
+		if(version != "0.3.1" && version != "0.4.3" && version != "0.5.0" && version != "0.5.1" && version != "0.6.0" && version != "0.6.1" && version != "0.7.0")
 		{
 			GD::out.printCritical("Critical: Unknown database version: " + version);
 			return true; //Don't know, what to do
@@ -568,6 +568,53 @@ bool DatabaseController::convertDatabase()
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
             _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
         }
+		if(version == "0.7.0")
+		{
+			GD::out.printMessage("Converting database from version " + version + " to version 0.7.1...");
+
+			BaseLib::PVariable groups = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+			groups->arrayValue->push_back(std::make_shared<BaseLib::Variable>(1));
+			std::vector<char> groupBlob;
+			_rpcEncoder->encodeResponse(groups, groupBlob);
+
+			BaseLib::PVariable metadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			std::vector<char> metadataBlob;
+			_rpcEncoder->encodeResponse(metadata, metadataBlob);
+
+			_db.executeCommand("ALTER TABLE rooms ADD COLUMN metadata BLOB");
+			_db.executeCommand("ALTER TABLE categories ADD COLUMN metadata BLOB");
+			_db.executeCommand("ALTER TABLE parameters ADD COLUMN room INTEGER");
+			_db.executeCommand("ALTER TABLE parameters ADD COLUMN categories TEXT");
+
+			_db.executeCommand("CREATE TABLE IF NOT EXISTS systemVariables2 (variableID TEXT PRIMARY KEY UNIQUE NOT NULL, serializedObject BLOB, room INTEGER, categories TEXT)");
+			std::shared_ptr<BaseLib::Database::DataTable> systemVariablesRows = _db.executeCommand("SELECT variableID, serializedObject FROM systemVariables");
+			for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
+			{
+				if(i->second.size() < 2) continue;
+				data.clear();
+				data.push_back(i->second.at(0));
+				data.push_back(i->second.at(1));
+				_db.executeCommand("INSERT OR REPLACE INTO systemVariables2(variableID, serializedObject) VALUES(?, ?)", data);
+			}
+			_db.executeCommand("DROP TABLE systemVariables");
+			_db.executeCommand("DROP INDEX systemVariablesIndex");
+			_db.executeCommand("ALTER TABLE systemVariables2 RENAME TO systemVariables");
+			_db.executeCommand("CREATE INDEX IF NOT EXISTS systemVariablesIndex ON systemVariables (variableID)");
+
+			_db.executeCommand("ALTER TABLE systemVariables ADD COLUMN room INTEGER");
+			_db.executeCommand("ALTER TABLE systemVariables ADD COLUMN categories TEXT");
+
+
+
+			data.clear();
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			//Don't forget to set new version in initializeDatabase!!!
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.1")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+		}
 		return false;
 	}
 	catch(const std::exception& ex)
@@ -825,16 +872,22 @@ BaseLib::PVariable DatabaseController::deleteData(std::string& component, std::s
 //}}}
 
 //{{{ Rooms
-BaseLib::PVariable DatabaseController::createRoom(BaseLib::PVariable translations)
+BaseLib::PVariable DatabaseController::createRoom(BaseLib::PVariable translations, BaseLib::PVariable metadata)
 {
 	try
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-		std::vector<char> binaryTranslations;
-		_rpcEncoder->encodeResponse(translations, binaryTranslations);
-		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(binaryTranslations));
-		uint64_t result = _db.executeWriteCommand("REPLACE INTO rooms VALUES(?, ?)", data);
+
+		std::vector<char> translationsBlob;
+		_rpcEncoder->encodeResponse(translations, translationsBlob);
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+
+		std::vector<char> metadataBlob;
+		_rpcEncoder->encodeResponse(metadata, metadataBlob);
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+
+		uint64_t result = _db.executeWriteCommand("REPLACE INTO rooms VALUES(?, ?, ?)", data);
 
 		return std::make_shared<BaseLib::Variable>(result);
 	}
@@ -880,13 +933,40 @@ BaseLib::PVariable DatabaseController::deleteRoom(uint64_t roomId)
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable DatabaseController::getRoomMetadata(uint64_t roomId)
+{
+	try
+	{
+		BaseLib::Database::DataRow data;
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(roomId));
+		auto rows = _db.executeCommand("SELECT metadata FROM rooms WHERE id=?", data);
+
+		if(rows->empty()) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+		return _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable DatabaseController::getRooms(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls)
 {
 	try
 	{
 		BaseLib::PVariable rooms = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 
-		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations FROM rooms");
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, metadata FROM rooms");
 		rooms->arrayValue->reserve(rows->size());
 		for(auto row : *rows)
 		{
@@ -906,6 +986,13 @@ BaseLib::PVariable DatabaseController::getRooms(BaseLib::PRpcClientInfo clientIn
 					else room->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
 				}
 			}
+			if(!row.second.at(2)->binaryValue->empty())
+			{
+				BaseLib::PVariable metadata = _rpcDecoder->decodeResponse(*row.second.at(2)->binaryValue);
+				room->structValue->emplace("METADATA", metadata);
+			}
+			else room->structValue->emplace("METADATA", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+
 			rooms->arrayValue->push_back(room);
 		}
 
@@ -949,7 +1036,7 @@ bool DatabaseController::roomExists(uint64_t roomId)
     return false;
 }
 
-BaseLib::PVariable DatabaseController::updateRoom(uint64_t roomId, BaseLib::PVariable translations)
+BaseLib::PVariable DatabaseController::setRoomMetadata(uint64_t roomId, BaseLib::PVariable metadata)
 {
 	try
 	{
@@ -957,10 +1044,46 @@ BaseLib::PVariable DatabaseController::updateRoom(uint64_t roomId, BaseLib::PVar
 		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(roomId));
 		if(_db.executeCommand("SELECT id FROM rooms WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown room.");
 
-		std::vector<char> binaryTranslations;
-		_rpcEncoder->encodeResponse(translations, binaryTranslations);
-		data.push_front(std::make_shared<BaseLib::Database::DataColumn>(binaryTranslations));
-		_db.executeCommand("UPDATE rooms SET translations=? WHERE id=?", data);
+		std::vector<char> metadataBlob;
+		_rpcEncoder->encodeResponse(metadata, metadataBlob);
+
+		data.push_front(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+		_db.executeCommand("UPDATE rooms SET metadata=? WHERE id=?", data);
+
+		return std::make_shared<BaseLib::Variable>();
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::updateRoom(uint64_t roomId, BaseLib::PVariable translations, BaseLib::PVariable metadata)
+{
+	try
+	{
+		BaseLib::Database::DataRow data;
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(roomId));
+		if(_db.executeCommand("SELECT id FROM rooms WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+		std::vector<char> metadataBlob;
+		_rpcEncoder->encodeResponse(metadata, metadataBlob);
+		data.push_front(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+
+		std::vector<char> translationsBlob;
+		_rpcEncoder->encodeResponse(translations, translationsBlob);
+		data.push_front(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+
+		_db.executeCommand("UPDATE rooms SET translations=?, metadata=? WHERE id=?", data);
 
 		return std::make_shared<BaseLib::Variable>();
 	}
@@ -981,16 +1104,22 @@ BaseLib::PVariable DatabaseController::updateRoom(uint64_t roomId, BaseLib::PVar
 //}}}
 
 //{{{ Categories
-BaseLib::PVariable DatabaseController::createCategory(BaseLib::PVariable translations)
+BaseLib::PVariable DatabaseController::createCategory(BaseLib::PVariable translations, BaseLib::PVariable metadata)
 {
 	try
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-		std::vector<char> binaryTranslations;
-		_rpcEncoder->encodeResponse(translations, binaryTranslations);
-		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(binaryTranslations));
-		uint64_t result = _db.executeWriteCommand("REPLACE INTO categories VALUES(?, ?)", data);
+
+		std::vector<char> translationsBlob;
+		_rpcEncoder->encodeResponse(translations, translationsBlob);
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+
+		std::vector<char> metadataBlob;
+		_rpcEncoder->encodeResponse(metadata, metadataBlob);
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+
+		uint64_t result = _db.executeWriteCommand("REPLACE INTO categories VALUES(?, ?, ?)", data);
 
 		return std::make_shared<BaseLib::Variable>(result);
 	}
@@ -1062,6 +1191,12 @@ BaseLib::PVariable DatabaseController::getCategories(BaseLib::PRpcClientInfo cli
 					else category->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
 				}
 			}
+			if(!row.second.at(2)->binaryValue->empty())
+			{
+				BaseLib::PVariable metadata = _rpcDecoder->decodeResponse(*row.second.at(2)->binaryValue);
+				category->structValue->emplace("METADATA", metadata);
+			}
+			else category->structValue->emplace("METADATA", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
 			categories->arrayValue->push_back(category);
 		}
 
@@ -1080,6 +1215,33 @@ BaseLib::PVariable DatabaseController::getCategories(BaseLib::PRpcClientInfo cli
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::getCategoryMetadata(uint64_t categoryId)
+{
+	try
+	{
+		BaseLib::Database::DataRow data;
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(categoryId));
+		auto rows = _db.executeCommand("SELECT metadata FROM categories WHERE id=?", data);
+
+		if(rows->empty()) return BaseLib::Variable::createError(-1, "Unknown category.");
+
+		return _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 bool DatabaseController::categoryExists(uint64_t categoryId)
@@ -1105,7 +1267,7 @@ bool DatabaseController::categoryExists(uint64_t categoryId)
     return false;
 }
 
-BaseLib::PVariable DatabaseController::updateCategory(uint64_t categoryId, BaseLib::PVariable translations)
+BaseLib::PVariable DatabaseController::setCategoryMetadata(uint64_t categoryId, BaseLib::PVariable metadata)
 {
 	try
 	{
@@ -1113,10 +1275,46 @@ BaseLib::PVariable DatabaseController::updateCategory(uint64_t categoryId, BaseL
 		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(categoryId));
 		if(_db.executeCommand("SELECT id FROM categories WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown category.");
 
-		std::vector<char> binaryTranslations;
-		_rpcEncoder->encodeResponse(translations, binaryTranslations);
-		data.push_front(std::make_shared<BaseLib::Database::DataColumn>(binaryTranslations));
-		_db.executeCommand("UPDATE categories SET translations=? WHERE id=?", data);
+		std::vector<char> metadataBlob;
+		_rpcEncoder->encodeResponse(metadata, metadataBlob);
+
+		data.push_front(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+		_db.executeCommand("UPDATE categories SET metadata=? WHERE id=?", data);
+
+		return std::make_shared<BaseLib::Variable>();
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::updateCategory(uint64_t categoryId, BaseLib::PVariable translations, BaseLib::PVariable metadata)
+{
+	try
+	{
+		BaseLib::Database::DataRow data;
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(categoryId));
+		if(_db.executeCommand("SELECT id FROM categories WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown category.");
+
+		std::vector<char> metadataBlob;
+		_rpcEncoder->encodeResponse(metadata, metadataBlob);
+		data.push_front(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+
+		std::vector<char> translationsBlob;
+		_rpcEncoder->encodeResponse(translations, translationsBlob);
+		data.push_front(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+
+		_db.executeCommand("UPDATE categories SET translations=?, metadata=? WHERE id=?", data);
 
 		return std::make_shared<BaseLib::Variable>();
 	}
@@ -1661,20 +1859,18 @@ BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableID
 			return BaseLib::Variable::createError(-32500, "Reached limit of 1000000 system variable entries. Please delete system variables before adding new ones.");
 		}
 
-		_systemVariableMutex.lock();
-		_systemVariables[variableID] = value;
-		_systemVariableMutex.unlock();
+		{
+			std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+			_systemVariables[variableID] = value;
+		}
 
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableID)));
-		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM systemVariables WHERE variableID=?", data);
-		enqueue(0, entry);
-
 		std::vector<char> encodedValue;
 		_rpcEncoder->encodeResponse(value, encodedValue);
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(encodedValue)));
 
-		entry = std::make_shared<QueueEntry>("INSERT INTO systemVariables VALUES(?, ?)", data);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO systemVariables(variableID, serializedObject) VALUES(?, ?)", data);
 		enqueue(0, entry);
 
 #ifdef EVENTHANDLER
@@ -1712,9 +1908,10 @@ BaseLib::PVariable DatabaseController::deleteSystemVariable(std::string& variabl
 	{
 		if(variableID.size() > 250) return BaseLib::Variable::createError(-32602, "variableID has more than 250 characters.");
 
-		_systemVariableMutex.lock();
-		if(_systemVariables.find(variableID) != _systemVariables.end()) _systemVariables.erase(variableID);
-		_systemVariableMutex.unlock();
+		{
+			std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+			if(_systemVariables.find(variableID) != _systemVariables.end()) _systemVariables.erase(variableID);
+		}
 
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableID)));
@@ -2828,7 +3025,7 @@ uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t ad
 	return 0;
 }
 
-void DatabaseController::savePeerParameterAsynchronous(uint64_t peerID, BaseLib::Database::DataRow& data)
+void DatabaseController::savePeerParameterAsynchronous(BaseLib::Database::DataRow& data)
 {
 	try
 	{
@@ -2852,7 +3049,7 @@ void DatabaseController::savePeerParameterAsynchronous(uint64_t peerID, BaseLib:
 			}
 			else if(data.size() == 8 && data.at(0)->intValue != 0)
 			{
-				std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
+				std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("REPLACE INTO parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName, value) VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
 				enqueue(0, entry);
 			}
 			else GD::out.printError("Error: Either parameterID is 0 or the number of columns is invalid.");
@@ -2872,7 +3069,65 @@ void DatabaseController::savePeerParameterAsynchronous(uint64_t peerID, BaseLib:
 	}
 }
 
-void DatabaseController::savePeerVariableAsynchronous(uint64_t peerID, BaseLib::Database::DataRow& data)
+void DatabaseController::savePeerParameterRoomAsynchronous(BaseLib::Database::DataRow& data)
+{
+	try
+	{
+		if(data.size() == 2)
+		{
+			if(data.at(1)->intValue == 0)
+			{
+				GD::out.printError("Error: Could not save room of peer parameter. Parameter ID is \"0\".");
+				return ;
+			}
+			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE parameters SET room=? WHERE parameterID=?", data);
+			enqueue(0, entry);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void DatabaseController::savePeerParameterCategoriesAsynchronous(BaseLib::Database::DataRow& data)
+{
+	try
+	{
+		if(data.size() == 2)
+		{
+			if(data.at(1)->intValue == 0)
+			{
+				GD::out.printError("Error: Could not save categories of peer parameter. Parameter ID is \"0\".");
+				return ;
+			}
+			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE parameters SET categories=? WHERE parameterID=?", data);
+			enqueue(0, entry);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void DatabaseController::savePeerVariableAsynchronous(BaseLib::Database::DataRow& data)
 {
 	try
 	{

@@ -829,11 +829,11 @@ BaseLib::PVariable RPCCreateCategory::invoke(BaseLib::PRpcClientInfo clientInfo,
 	{
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("createCategory")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tStruct })
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::bl->db->createCategory(parameters->at(0));
+		return GD::bl->db->createCategory(parameters->at(0), parameters->at(1));
 	}
 	catch(const std::exception& ex)
     {
@@ -890,11 +890,11 @@ BaseLib::PVariable RPCCreateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
 	{
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("createRoom")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tStruct })
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::bl->db->createRoom(parameters->at(0));
+		return GD::bl->db->createRoom(parameters->at(0), parameters->at(1));
 	}
 	catch(const std::exception& ex)
     {
@@ -4476,8 +4476,8 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, Base
 
 		filename = parameters->at(0)->stringValue;
 		std::string ending = "";
-		int32_t pos = filename.find_last_of('.');
-		if(pos != (signed)std::string::npos) ending = filename.substr(pos);
+		auto pos = filename.find_last_of('.');
+		if(pos != std::string::npos) ending = filename.substr(pos);
 		GD::bl->hf.toLower(ending);
 		if(ending == ".php" || ending == ".php5" || ending == ".php7" || ending == ".hgs")
 		{
@@ -5745,13 +5745,13 @@ BaseLib::PVariable RPCUpdateCategory::invoke(BaseLib::PRpcClientInfo clientInfo,
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct })
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
         if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("updateCategory", (uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 
-		return GD::bl->db->updateCategory((uint64_t)parameters->at(0)->integerValue64, parameters->at(1));
+		return GD::bl->db->updateCategory((uint64_t)parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
 	}
 	catch(const std::exception& ex)
     {
@@ -5868,13 +5868,13 @@ BaseLib::PVariable RPCUpdateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct })
+			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
         if(!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("updateRoom", (uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 
-		return GD::bl->db->updateRoom((uint64_t)parameters->at(0)->integerValue64, parameters->at(1));
+		return GD::bl->db->updateRoom((uint64_t)parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
 	}
 	catch(const std::exception& ex)
     {
