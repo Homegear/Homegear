@@ -1921,7 +1921,7 @@ void NodeBlueServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
 			{
 				if(GD::bl->debugLevel >= 4)
 				{
-					if(GD::bl->debugLevel >= 5 || queueEntry->methodName != "nodeEvent") _out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
+					if(GD::bl->debugLevel >= 5 || (queueEntry->methodName != "nodeEvent" && queueEntry->methodName != "setNodeData" && queueEntry->methodName != "getNodeData")) _out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
 					if(GD::bl->debugLevel >= 5)
 					{
 						for(BaseLib::Array::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
