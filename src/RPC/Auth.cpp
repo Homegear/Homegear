@@ -314,8 +314,7 @@ bool Auth::sessionServer(BaseLib::WebSocket& webSocket, std::string& userName, B
 		{
 			if(!acls->fromUser(userName))
 			{
-				_userName = "";
-				throw AuthException("Could not set ACLs.");
+				throw AuthException("Could not set ACLs (user: " + userName + ")");
 			}
 			sendWebSocketAuthorized();
 			return true;

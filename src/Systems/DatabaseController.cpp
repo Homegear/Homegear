@@ -1174,7 +1174,7 @@ BaseLib::PVariable DatabaseController::getCategories(BaseLib::PRpcClientInfo cli
 	{
 		BaseLib::PVariable categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 
-		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations FROM categories");
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, metadata FROM categories");
 		categories->arrayValue->reserve(rows->size());
 		for(auto row : *rows)
 		{
