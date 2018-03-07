@@ -1284,7 +1284,11 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::vector<std::strin
 			{
 				if(peerId == 0)
 				{
-					if(!_dummyClientInfo->acls->checkSystemVariableReadAccess(keys.at(i))) continue;
+					if(_dummyClientInfo->acls->variablesRoomsCategoriesReadSet())
+					{
+						auto systemVariable = GD::bl->db->getSystemVariableInternal(keys.at(i));
+						if(!systemVariable || !_dummyClientInfo->acls->checkSystemVariableReadAccess(systemVariable)) continue;
+					}
 				}
 				else if(!peer || !_dummyClientInfo->acls->checkVariableReadAccess(peer, channel, keys.at(i))) continue;
 			}

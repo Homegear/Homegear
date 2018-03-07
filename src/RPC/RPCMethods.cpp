@@ -395,6 +395,53 @@ BaseLib::PVariable RPCActivateLinkParamset::invoke(BaseLib::PRpcClientInfo clien
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
+BaseLib::PVariable RPCAddCategoryToChannel::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger })
+        }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("addCategoryToChannel", parameters->at(2)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+		bool checkAcls = clientInfo->acls->roomsCategoriesDevicesWriteSet();
+
+		if(!GD::bl->db->categoryExists(parameters->at(2)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
+
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+			if(central && central->peerExists((uint64_t)parameters->at(0)->integerValue64))
+			{
+				if(checkAcls)
+				{
+					auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
+					if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				}
+
+				return central->addCategoryToChannel(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue, parameters->at(2)->integerValue64);
+			}
+		}
+
+		return BaseLib::Variable::createError(-2, "Device not found.");
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCAddCategoryToDevice::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
@@ -421,7 +468,7 @@ BaseLib::PVariable RPCAddCategoryToDevice::invoke(BaseLib::PRpcClientInfo client
 					if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 				}
 
-				return central->addCategoryToChannel(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue64, -1);
+				return central->addCategoryToChannel(clientInfo, parameters->at(0)->integerValue64, -1, parameters->at(1)->integerValue64);
 			}
 		}
 
@@ -438,6 +485,139 @@ BaseLib::PVariable RPCAddCategoryToDevice::invoke(BaseLib::PRpcClientInfo client
     catch(...)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCAddCategoryToSystemVariable::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tInteger })
+        }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("addCategoryToSystemVariable", parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+		bool checkAcls = clientInfo->acls->variablesRoomsCategoriesWriteSet();
+
+		if(!GD::bl->db->categoryExists(parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
+
+		auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+		if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
+
+		if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
+		if(parameters->at(1)->integerValue64 != 0) systemVariable->categories.emplace(parameters->at(1)->integerValue64);
+
+		return GD::bl->db->setSystemVariableCategories(systemVariable->name, systemVariable->categories);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCAddCategoryToVariable::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger })
+        }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("addCategoryToVariable", parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+		bool checkAcls = clientInfo->acls->variablesRoomsCategoriesDevicesWriteSet();
+
+		if(!GD::bl->db->categoryExists(parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
+
+		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+			if(!central) continue;
+			auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
+			if(!peer) continue;
+
+			if(checkAcls)
+			{
+				if(!clientInfo->acls->checkVariableWriteAccess(peer, parameters->at(1)->integerValue, parameters->at(2)->stringValue)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+			}
+
+			bool result = peer->addCategoryToVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->integerValue64);
+			return std::make_shared<BaseLib::Variable>(result);
+		}
+
+		return BaseLib::Variable::createError(-2, "Device not found.");
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCAddChannelToRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                         std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger })
+                                                                                                                 }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("addChannelToRoom", parameters->at(2)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->roomsCategoriesDevicesWriteSet();
+
+        if(!GD::bl->db->roomExists(parameters->at(2)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        {
+            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+            if(central && central->peerExists((uint64_t)parameters->at(0)->integerValue64))
+            {
+                if(checkAcls)
+                {
+                    auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
+                    if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+                }
+
+                return central->addChannelToRoom(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue, parameters->at(2)->integerValue64);
+            }
+        }
+
+        return BaseLib::Variable::createError(-2, "Device not found.");
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
@@ -527,7 +707,7 @@ BaseLib::PVariable RPCAddDeviceToRoom::invoke(BaseLib::PRpcClientInfo clientInfo
 					if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 				}
 
-				return central->addChannelToRoom(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue64, -1);
+				return central->addChannelToRoom(clientInfo, parameters->at(0)->integerValue64, -1, parameters->at(1)->integerValue64);
 			}
 		}
 
@@ -678,6 +858,90 @@ BaseLib::PVariable RPCAddLink::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
     catch(...)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCAddSystemVariableToRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tInteger })
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("addSystemVariableToRoom", parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesWriteSet();
+
+        if(!GD::bl->db->roomExists(parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+        auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+        if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
+
+        if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
+        return GD::bl->db->setSystemVariableRoom(systemVariable->name, systemVariable->room);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCAddVariableToRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger })
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("addVariableToRoom", parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesDevicesWriteSet();
+
+        if(!GD::bl->db->roomExists(parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        {
+            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+            if(!central) continue;
+            auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
+            if(!peer) continue;
+
+            if(checkAcls)
+            {
+                if(!clientInfo->acls->checkVariableWriteAccess(peer, parameters->at(1)->integerValue, parameters->at(2)->stringValue)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+            }
+
+            bool result = peer->setVariableRoom(parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->integerValue64);
+            return std::make_shared<BaseLib::Variable>(result);
+        }
+
+        return BaseLib::Variable::createError(-2, "Device not found.");
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
@@ -1214,8 +1478,14 @@ BaseLib::PVariable RPCDeleteSystemVariable::invoke(BaseLib::PRpcClientInfo clien
 	try
 	{
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("deleteSystemVariable")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+		bool checkAcls = clientInfo->acls->variablesRoomsCategoriesReadSet();
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
+
+		auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+		if(!systemVariable) return std::make_shared<BaseLib::Variable>();
+
+		if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 
 		return GD::bl->db->deleteSystemVariable(parameters->at(0)->stringValue);
 	}
@@ -1490,6 +1760,7 @@ BaseLib::PVariable RPCGetAllSystemVariables::invoke(BaseLib::PRpcClientInfo clie
 	try
 	{
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("getAllSystemVariables")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+		bool checkAcls = clientInfo->acls->variablesRoomsCategoriesReadSet();
         bool returnRoomsAndCategories = false;
 		if(parameters->size() > 0)
         {
@@ -1501,7 +1772,7 @@ BaseLib::PVariable RPCGetAllSystemVariables::invoke(BaseLib::PRpcClientInfo clie
             returnRoomsAndCategories = parameters->at(0)->booleanValue;
         }
 
-		return GD::bl->db->getAllSystemVariables(returnRoomsAndCategories);
+		return GD::bl->db->getAllSystemVariables(clientInfo, returnRoomsAndCategories, checkAcls);
 	}
 	catch(const std::exception& ex)
     {
@@ -1623,6 +1894,122 @@ BaseLib::PVariable RPCGetCategories::invoke(BaseLib::PRpcClientInfo clientInfo, 
     catch(...)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCGetCategoryMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryReadAccess("getCategoryMetadata", (uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
+        return GD::bl->db->getCategoryMetadata((uint64_t)parameters->at(0)->integerValue64);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCGetChannelsInCategory::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryReadAccess("getChannelsInCategory", parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->roomsCategoriesDevicesReadSet();
+
+        if(!GD::bl->db->categoryExists(parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
+
+        BaseLib::PVariable result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        {
+            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+            if(central)
+            {
+                BaseLib::PVariable devices = central->getChannelsInCategory(clientInfo, parameters->at(0)->integerValue64, checkAcls);
+                result->structValue->insert(devices->structValue->begin(), devices->structValue->end());
+            }
+        }
+
+        return result;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCGetChannelsInRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                         std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
+                                                                                                                 }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndRoomReadAccess("getChannelsInRoom", parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->roomsCategoriesDevicesReadSet();
+
+        if(!GD::bl->db->roomExists(parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+        BaseLib::PVariable result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+
+        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        {
+            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+            if(central)
+            {
+                BaseLib::PVariable devices = central->getChannelsInRoom(clientInfo, parameters->at(0)->integerValue64, checkAcls);
+                result->structValue->insert(devices->structValue->begin(), devices->structValue->end());
+            }
+        }
+
+        return result;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
@@ -3072,6 +3459,34 @@ BaseLib::PVariable RPCGetPeerId::invoke(BaseLib::PRpcClientInfo clientInfo, Base
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
+BaseLib::PVariable RPCGetRoomMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndRoomReadAccess("getRoomMetadata", (uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
+        return GD::bl->db->getRoomMetadata((uint64_t)parameters->at(0)->integerValue64);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCGetRooms::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
@@ -3187,14 +3602,17 @@ BaseLib::PVariable RPCGetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
 	try
 	{
 		if(!clientInfo || !clientInfo->acls->checkMethodAccess("getSystemVariable")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
-        bool checkAcls = clientInfo->acls->variablesReadSet();
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesReadSet();
 
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(parameters->at(0)->stringValue)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+		auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+		if(!systemVariable) return std::make_shared<BaseLib::Variable>();
 
-		return GD::bl->db->getSystemVariable(parameters->at(0)->stringValue);
+		if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
+		return systemVariable->value;
 	}
 	catch(const std::exception& ex)
     {
@@ -3207,6 +3625,158 @@ BaseLib::PVariable RPCGetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
     catch(...)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCGetSystemVariablesInCategory::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryReadAccess("getSystemVariablesInCategory", (uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesReadSet();
+
+        if(!GD::bl->db->categoryExists((uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
+
+        return GD::bl->db->getSystemVariablesInCategory(clientInfo, (uint64_t)parameters->at(0)->integerValue64, checkAcls);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCGetSystemVariablesInRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryReadAccess("getSystemVariablesInRoom", (uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesReadSet();
+
+        if(!GD::bl->db->roomExists((uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+        return GD::bl->db->getSystemVariablesInRoom(clientInfo, (uint64_t)parameters->at(0)->integerValue64, checkAcls);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCGetVariablesInCategory::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryReadAccess("getVariablesInCategory", parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+		bool checkDeviceAcls = clientInfo->acls->roomsCategoriesDevicesReadSet();
+        bool checkVariableAcls = clientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+
+        if(!GD::bl->db->categoryExists(parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
+
+        BaseLib::PVariable result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        {
+            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+            if(central)
+            {
+                auto variables = central->getVariablesInCategory(clientInfo, parameters->at(0)->integerValue64, checkDeviceAcls, checkVariableAcls);
+                result->structValue->insert(variables->structValue->begin(), variables->structValue->end());
+            }
+        }
+
+        return result;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCGetVariablesInRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                         std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger })
+                                                                                                                 }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryReadAccess("getVariablesInRoom", parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkDeviceAcls = clientInfo->acls->roomsCategoriesDevicesReadSet();
+        bool checkVariableAcls = clientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+
+        if(!GD::bl->db->roomExists(parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+        BaseLib::PVariable result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        {
+            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+            if(central)
+            {
+                auto variables = central->getVariablesInRoom(clientInfo, parameters->at(0)->integerValue64, checkDeviceAcls, checkVariableAcls);
+                result->structValue->insert(variables->structValue->begin(), variables->structValue->end());
+            }
+        }
+
+        return result;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
@@ -4176,6 +4746,53 @@ BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
     return BaseLib::Variable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
+BaseLib::PVariable RPCRemoveCategoryFromChannel::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                         std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger })
+                                                                                                                 }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("removeCategoryFromChannel", (uint64_t)parameters->at(2)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->roomsCategoriesDevicesWriteSet();
+
+        if(!GD::bl->db->categoryExists((uint64_t)parameters->at(2)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
+
+        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        {
+            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+            if(central && central->peerExists((uint64_t)parameters->at(0)->integerValue64))
+            {
+                if(checkAcls)
+                {
+                    auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
+                    if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+                }
+
+                return central->removeCategoryFromChannel(clientInfo, (uint64_t)parameters->at(0)->integerValue64, parameters->at(1)->integerValue, (uint64_t)parameters->at(2)->integerValue64);
+            }
+        }
+
+        return BaseLib::Variable::createError(-2, "Device not found.");
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCRemoveCategoryFromDevice::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
@@ -4223,6 +4840,139 @@ BaseLib::PVariable RPCRemoveCategoryFromDevice::invoke(BaseLib::PRpcClientInfo c
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCRemoveCategoryFromSystemVariable::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                         std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tInteger })
+                                                                                                                 }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("removeCategoryFromSystemVariable", parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesWriteSet();
+
+        if(!GD::bl->db->categoryExists((uint64_t)parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
+
+        auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+        if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
+
+        if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
+        if(parameters->at(1)->integerValue64 != 0) systemVariable->categories.erase((uint64_t)parameters->at(1)->integerValue64);
+
+        return GD::bl->db->setSystemVariableCategories(systemVariable->name, systemVariable->categories);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCRemoveCategoryFromVariable::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                         std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger })
+                                                                                                                 }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("removeCategoryFromVariable", (uint64_t)parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesDevicesWriteSet();
+
+        if(!GD::bl->db->categoryExists((uint64_t)parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
+
+        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        {
+            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+            if(!central) continue;
+            auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
+            if(!peer) continue;
+
+            if(checkAcls)
+            {
+                if(!clientInfo->acls->checkVariableWriteAccess(peer, parameters->at(1)->integerValue, parameters->at(2)->stringValue)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+            }
+
+            bool result = peer->removeCategoryFromVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, (uint64_t)parameters->at(3)->integerValue64);
+            return std::make_shared<BaseLib::Variable>(result);
+        }
+
+        return BaseLib::Variable::createError(-2, "Device not found.");
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCRemoveChannelFromRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger })
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("removeChannelFromRoom", (uint64_t)parameters->at(2)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->roomsCategoriesDevicesWriteSet();
+
+        if(!GD::bl->db->roomExists((uint64_t)parameters->at(2)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        {
+            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+            if(central && central->peerExists((uint64_t)parameters->at(0)->integerValue64))
+            {
+                if(checkAcls)
+                {
+                    auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
+                    if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+                }
+
+                return central->removeChannelFromRoom(clientInfo, (uint64_t)parameters->at(0)->integerValue64, parameters->at(1)->integerValue, (uint64_t)parameters->at(2)->integerValue64);
+            }
+        }
+
+        return BaseLib::Variable::createError(-2, "Device not found.");
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCRemoveDeviceFromRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
@@ -4232,10 +4982,10 @@ BaseLib::PVariable RPCRemoveDeviceFromRoom::invoke(BaseLib::PRpcClientInfo clien
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("removeDeviceFromRoom", parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+		if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("removeDeviceFromRoom", (uint64_t)parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 		bool checkAcls = clientInfo->acls->roomsCategoriesDevicesWriteSet();
 
-		if(!GD::bl->db->roomExists(parameters->at(1)->integerValue)) return BaseLib::Variable::createError(-1, "Unknown room.");
+		if(!GD::bl->db->roomExists((uint64_t)parameters->at(1)->integerValue)) return BaseLib::Variable::createError(-1, "Unknown room.");
 
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -4249,7 +4999,7 @@ BaseLib::PVariable RPCRemoveDeviceFromRoom::invoke(BaseLib::PRpcClientInfo clien
 					if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 				}
 
-				return central->removeChannelFromRoom(clientInfo, parameters->at(0)->integerValue64, -1, parameters->at(1)->integerValue64);
+				return central->removeChannelFromRoom(clientInfo, (uint64_t)parameters->at(0)->integerValue64, -1, (uint64_t)parameters->at(1)->integerValue64);
 			}
 		}
 
@@ -4379,6 +5129,99 @@ BaseLib::PVariable RPCRemoveLink::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
     catch(...)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCRemoveSystemVariableFromRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tInteger })
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("removeSystemVariableFromRoom", (uint64_t)parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesWriteSet();
+
+        uint64_t roomId = (uint64_t)parameters->at(1)->integerValue64;
+
+        if(!GD::bl->db->roomExists(roomId)) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+        auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+        if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
+
+        if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
+        if(systemVariable->room == roomId) return GD::bl->db->setSystemVariableRoom(systemVariable->name, 0);
+        else return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCRemoveVariableFromRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger })
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("removeVariableFromRoom", (uint64_t)parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesDevicesWriteSet();
+
+        uint64_t roomId = (uint64_t)parameters->at(3)->integerValue64;
+
+        if(!GD::bl->db->roomExists(roomId)) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        {
+            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+            if(!central) continue;
+            auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
+            if(!peer) continue;
+
+            if(checkAcls)
+            {
+                if(!clientInfo->acls->checkVariableWriteAccess(peer, parameters->at(1)->integerValue, parameters->at(2)->stringValue)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+            }
+
+            bool result = false;
+            if(peer->getVariableRoom(parameters->at(1)->integerValue, parameters->at(2)->stringValue) == roomId)
+            {
+                result = peer->setVariableRoom(parameters->at(1)->integerValue, parameters->at(2)->stringValue, roomId);
+            }
+            return std::make_shared<BaseLib::Variable>(result);
+        }
+
+        return BaseLib::Variable::createError(-2, "Device not found.");
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
@@ -4706,6 +5549,34 @@ BaseLib::PVariable RPCSearchInterfaces::invoke(BaseLib::PRpcClientInfo clientInf
         }
 
         return result;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCSetCategoryMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct })
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("setCategoryMetadata", (uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
+        return GD::bl->db->setCategoryMetadata((uint64_t)parameters->at(0)->integerValue64, parameters->at(1));
     }
     catch(const std::exception& ex)
     {
@@ -5297,12 +6168,40 @@ BaseLib::PVariable RPCSetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCSetRoomMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct })
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("setRoomMetadata", (uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
+        return GD::bl->db->setRoomMetadata((uint64_t)parameters->at(0)->integerValue64, parameters->at(1));
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCSetSystemVariable::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
 	{
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("setSystemVariable")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
-        bool checkAcls = clientInfo->acls->variablesWriteSet();
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesWriteSet();
 
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }),
@@ -5310,7 +6209,17 @@ BaseLib::PVariable RPCSetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-        if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(parameters->at(0)->stringValue)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        if(checkAcls)
+		{
+			auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+			if(!systemVariable)
+			{
+				systemVariable = std::make_shared<BaseLib::Database::SystemVariable>();
+				systemVariable->name = parameters->at(0)->stringValue;
+				systemVariable->value = std::make_shared<BaseLib::Variable>();
+			}
+			if(!clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+		}
 
 		BaseLib::PVariable value = parameters->size() > 1 ? parameters->at(1) : std::make_shared<BaseLib::Variable>();
 
@@ -5776,13 +6685,15 @@ BaseLib::PVariable RPCUpdateCategory::invoke(BaseLib::PRpcClientInfo clientInfo,
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct }),
 			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
         if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("updateCategory", (uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 
-		return GD::bl->db->updateCategory((uint64_t)parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
+		if(parameters->size() == 3) return GD::bl->db->updateCategory((uint64_t)parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
+        else return GD::bl->db->updateCategory((uint64_t)parameters->at(0)->integerValue64, std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct), parameters->at(1));
 	}
 	catch(const std::exception& ex)
     {
@@ -5899,13 +6810,15 @@ BaseLib::PVariable RPCUpdateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct })
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct }),
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
         if(!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("updateRoom", (uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 
-		return GD::bl->db->updateRoom((uint64_t)parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
+		if(parameters->size() == 3) return GD::bl->db->updateRoom((uint64_t)parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
+        else return GD::bl->db->updateRoom((uint64_t)parameters->at(0)->integerValue64, std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct), parameters->at(1));
 	}
 	catch(const std::exception& ex)
     {

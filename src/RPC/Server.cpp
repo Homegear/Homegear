@@ -62,11 +62,17 @@ void Server::registerMethods()
 		_server->registerMethod("system.multicall", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSystemMulticall(_server)));
 		_server->registerMethod("activateLinkParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCActivateLinkParamset()));
 		_server->registerMethod("abortEventReset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCTriggerEvent()));
+		_server->registerMethod("addCategoryToChannel", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddCategoryToChannel()));
 		_server->registerMethod("addCategoryToDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddCategoryToDevice()));
+        _server->registerMethod("addCategoryToSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddCategoryToSystemVariable()));
+        _server->registerMethod("addCategoryToVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddCategoryToVariable()));
+        _server->registerMethod("addChannelToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddChannelToRoom()));
 		_server->registerMethod("addDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddDevice()));
 		_server->registerMethod("addDeviceToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddDeviceToRoom()));
 		_server->registerMethod("addEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddEvent()));
 		_server->registerMethod("addLink", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddLink()));
+        _server->registerMethod("addSystemVariableToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddSystemVariableToRoom()));
+        _server->registerMethod("addVariableToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddVariableToRoom()));
 		_server->registerMethod("copyConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCCopyConfig()));
 		_server->registerMethod("clientServerInitialized", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCClientServerInitialized()));
 		_server->registerMethod("createCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCCreateCategory()));
@@ -87,6 +93,9 @@ void Server::registerMethods()
 		_server->registerMethod("getAllSystemVariables", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetAllSystemVariables()));
 		_server->registerMethod("getAllValues", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetAllValues()));
 		_server->registerMethod("getCategories", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetCategories()));
+        _server->registerMethod("getCategoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetCategoryMetadata()));
+        _server->registerMethod("getChannelsInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetChannelsInCategory()));
+        _server->registerMethod("getChannelsInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetChannelsInRoom()));
 		_server->registerMethod("getConfigParameter", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetConfigParameter()));
 		_server->registerMethod("getData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetData()));
 		_server->registerMethod("getDeviceDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetDeviceDescription()));
@@ -112,6 +121,7 @@ void Server::registerMethods()
 		_server->registerMethod("getParamsetDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetParamsetDescription()));
 		_server->registerMethod("getParamsetId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetParamsetId()));
 		_server->registerMethod("getPeerId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetPeerId()));
+        _server->registerMethod("getRoomMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetRoomMetadata()));
 		_server->registerMethod("getRooms", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetRooms()));
 		_server->registerMethod("getServiceMessages", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetServiceMessages()));
 		_server->registerMethod("getSniffedDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetSniffedDevices()));
@@ -119,6 +129,10 @@ void Server::registerMethods()
 		_server->registerMethod("getUpdateStatus", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetUpdateStatus()));
 		_server->registerMethod("getValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetValue()));
 		_server->registerMethod("getVariableDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetVariableDescription()));
+        _server->registerMethod("getSystemVariablesInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetSystemVariablesInCategory()));
+        _server->registerMethod("getSystemVariablesInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetSystemVariablesInRoom()));
+        _server->registerMethod("getVariablesInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetVariablesInCategory()));
+        _server->registerMethod("getVariablesInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetVariablesInRoom()));
 		_server->registerMethod("getVersion", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetVersion()));
 		_server->registerMethod("init", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCInit()));
 		_server->registerMethod("listBidcosInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCListBidcosInterfaces()));
@@ -133,8 +147,14 @@ void Server::registerMethods()
 		_server->registerMethod("nodeOutput", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCNodeOutput()));
 		_server->registerMethod("ping", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCPing()));
 		_server->registerMethod("putParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCPutParamset()));
+        _server->registerMethod("removeCategoryFromChannel", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveCategoryFromChannel()));
 		_server->registerMethod("removeCategoryFromDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveCategoryFromDevice()));
+        _server->registerMethod("removeCategoryFromSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveCategoryFromSystemVariable()));
+        _server->registerMethod("removeCategoryFromVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveCategoryFromVariable()));
+        _server->registerMethod("removeChannelFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveChannelFromRoom()));
 		_server->registerMethod("removeDeviceFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveDeviceFromRoom()));
+        _server->registerMethod("removeSystemVariableFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveSystemVariableFromRoom()));
+        _server->registerMethod("removeVariableFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveVariableFromRoom()));
 		_server->registerMethod("removeEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveEvent()));
 		_server->registerMethod("removeLink", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveLink()));
 		_server->registerMethod("reportValueUsage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCReportValueUsage()));
@@ -142,6 +162,7 @@ void Server::registerMethods()
 		_server->registerMethod("runScript", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRunScript()));
 		_server->registerMethod("searchDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSearchDevices()));
         _server->registerMethod("searchInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSearchInterfaces()));
+        _server->registerMethod("setCategoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetCategoryMetadata()));
 		_server->registerMethod("setData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetData()));
 		_server->registerMethod("setId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetId()));
 		_server->registerMethod("setInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetInstallMode()));
@@ -154,6 +175,7 @@ void Server::registerMethods()
 		_server->registerMethod("setFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetFlowData()));
 		_server->registerMethod("setGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetGlobalData()));
 		_server->registerMethod("setNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetNodeVariable()));
+        _server->registerMethod("setRoomMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetRoomMetadata()));
 		_server->registerMethod("setSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetSystemVariable()));
 		_server->registerMethod("setTeam", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetTeam()));
 		_server->registerMethod("setValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetValue()));

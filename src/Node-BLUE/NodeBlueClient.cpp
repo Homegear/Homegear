@@ -801,10 +801,12 @@ Flows::PVariable NodeBlueClient::invoke(std::string methodName, Flows::PArray pa
             }
         }
 
+        int64_t startTime = BaseLib::HelperFunctions::getTime();
         std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
         while (!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]
         {
-            return response->finished || _stopped;
+            if(_shuttingDownOrRestarting && BaseLib::HelperFunctions::getTime() - startTime > 30000) return true;
+            else return response->finished || _stopped;
         }));
 
         if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)

@@ -116,11 +116,14 @@ public:
 	// {{{ System variables
         virtual BaseLib::PVariable deleteSystemVariable(std::string& variableId);
         virtual BaseLib::PVariable getSystemVariable(std::string& variableId);
+		virtual BaseLib::Database::PSystemVariable getSystemVariableInternal(std::string& variableId);
         virtual BaseLib::PVariable getSystemVariableCategories(std::string& variableId);
         virtual std::set<uint64_t> getSystemVariableCategoriesInternal(std::string& variableId);
         virtual BaseLib::PVariable getSystemVariableRoom(std::string& variableId);
+		virtual BaseLib::PVariable getSystemVariablesInCategory(BaseLib::PRpcClientInfo clientInfo, uint64_t categoryId, bool checkAcls);
+		virtual BaseLib::PVariable getSystemVariablesInRoom(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId, bool checkAcls);
         virtual uint64_t getSystemVariableRoomInternal(std::string& variableId);
-        virtual BaseLib::PVariable getAllSystemVariables(bool returnRoomsAndCategories);
+        virtual BaseLib::PVariable getAllSystemVariables(BaseLib::PRpcClientInfo clientInfo, bool returnRoomsAndCategories, bool checkAcls);
         virtual void removeCategoryFromSystemVariables(uint64_t categoryId);
         virtual void removeRoomFromSystemVariables(uint64_t roomId);
         virtual BaseLib::PVariable setSystemVariable(std::string& variableId, BaseLib::PVariable& value);
@@ -206,14 +209,6 @@ public:
 		virtual void deleteLicenseVariable(int32_t moduleId, uint64_t mapKey);
 	// }}}
 protected:
-    struct SystemVariable
-    {
-        uint64_t room = 0;
-        std::set<uint64_t> categories;
-        BaseLib::PVariable value;
-    };
-    typedef std::shared_ptr<SystemVariable> PSystemVariable;
-
 	std::atomic_bool _disposing;
 
 	BaseLib::Database::SQLite3 _db;
@@ -222,7 +217,7 @@ protected:
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
 	std::mutex _systemVariableMutex;
-	std::map<std::string, PSystemVariable> _systemVariables;
+	std::map<std::string, BaseLib::Database::PSystemVariable> _systemVariables;
 
 	std::mutex _dataMutex;
 	std::map<std::string, std::map<std::string, BaseLib::PVariable>> _data;

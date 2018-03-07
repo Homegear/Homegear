@@ -306,7 +306,11 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 					{
 						if(id == 0)
 						{
-							if(!server->second->clientInfo->acls->checkSystemVariableReadAccess(valueKeys->at(i))) continue;
+							if(server->second->clientInfo->acls->variablesRoomsCategoriesReadSet())
+							{
+								auto systemVariable = GD::bl->db->getSystemVariableInternal(valueKeys->at(i));
+								if(!systemVariable || !server->second->clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) continue;
+							}
 						}
 						else if(!peer || !server->second->clientInfo->acls->checkVariableReadAccess(peer, channel, valueKeys->at(i))) continue;
 					}
@@ -335,7 +339,11 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
                     {
                         if(id == 0)
                         {
-                            if(!server->second->clientInfo->acls->checkSystemVariableReadAccess(valueKeys->at(i))) continue;
+							if(server->second->clientInfo->acls->variablesRoomsCategoriesReadSet())
+							{
+								auto systemVariable = GD::bl->db->getSystemVariableInternal(valueKeys->at(i));
+								if(!systemVariable || !server->second->clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) continue;
+							}
                         }
                         else if(!peer || !server->second->clientInfo->acls->checkVariableReadAccess(peer, channel, valueKeys->at(i))) continue;
                     }
