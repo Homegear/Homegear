@@ -397,6 +397,7 @@ public:
 	RPCGetAllSystemVariables()
 	{
 		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>());
+        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tBoolean});
 	}
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };

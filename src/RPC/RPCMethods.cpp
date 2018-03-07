@@ -421,7 +421,7 @@ BaseLib::PVariable RPCAddCategoryToDevice::invoke(BaseLib::PRpcClientInfo client
 					if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 				}
 
-				return central->addCategoryToDevice(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue64);
+				return central->addCategoryToChannel(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue64, -1);
 			}
 		}
 
@@ -527,7 +527,7 @@ BaseLib::PVariable RPCAddDeviceToRoom::invoke(BaseLib::PRpcClientInfo clientInfo
 					if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 				}
 
-				return central->addDeviceToRoom(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue64);
+				return central->addChannelToRoom(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue64, -1);
 			}
 		}
 
@@ -931,11 +931,22 @@ BaseLib::PVariable RPCDeleteCategory::invoke(BaseLib::PRpcClientInfo clientInfo,
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
 			{
-				BaseLib::PVariable devices = central->getDevicesInCategory(clientInfo, parameters->at(0)->integerValue64, false);
-				for(auto device : *devices->arrayValue)
+				BaseLib::PVariable devices = central->getChannelsInCategory(clientInfo, parameters->at(0)->integerValue64, false);
+				for(auto& device : *devices->structValue)
 				{
-					central->removeCategoryFromDevice(clientInfo, device->integerValue64, parameters->at(0)->integerValue64);
+                    for(auto& channel : *device.second->arrayValue)
+                    {
+                        central->removeCategoryFromChannel(clientInfo, BaseLib::Math::getNumber64(device.first, false), channel->integerValue, parameters->at(0)->integerValue64);
+                    }
 				}
+
+                auto peers = central->getPeers();
+                for(auto& peer : peers)
+                {
+                    peer->removeCategoryFromVariables(parameters->at(0)->integerValue64);
+                }
+
+				GD::bl->db->removeCategoryFromSystemVariables(parameters->at(0)->integerValue64);
 			}
 		}
 
@@ -1063,11 +1074,22 @@ BaseLib::PVariable RPCDeleteRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
 			{
-				BaseLib::PVariable devices = central->getDevicesInRoom(clientInfo, parameters->at(0)->integerValue64, false);
-				for(auto device : *devices->arrayValue)
+				BaseLib::PVariable devices = central->getChannelsInRoom(clientInfo, parameters->at(0)->integerValue64, false);
+				for(auto& device : *devices->structValue)
 				{
-					central->removeDeviceFromRoom(clientInfo, device->integerValue64, parameters->at(0)->integerValue64);
+					for(auto& channel : *device.second->arrayValue)
+					{
+						central->removeChannelFromRoom(clientInfo, BaseLib::Math::getNumber64(device.first, false), channel->integerValue, parameters->at(0)->integerValue64);
+					}
 				}
+
+				auto peers = central->getPeers();
+				for(auto& peer : peers)
+				{
+					peer->removeRoomFromVariables(parameters->at(0)->integerValue64);
+				}
+
+                GD::bl->db->removeRoomFromSystemVariables(parameters->at(0)->integerValue64);
 			}
 		}
 
@@ -1468,9 +1490,18 @@ BaseLib::PVariable RPCGetAllSystemVariables::invoke(BaseLib::PRpcClientInfo clie
 	try
 	{
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("getAllSystemVariables")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
-		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
+        bool returnRoomsAndCategories = false;
+		if(parameters->size() > 0)
+        {
+            ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tBoolean })
+            }));
+            if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::bl->db->getAllSystemVariables();
+            returnRoomsAndCategories = parameters->at(0)->booleanValue;
+        }
+
+		return GD::bl->db->getAllSystemVariables(returnRoomsAndCategories);
 	}
 	catch(const std::exception& ex)
     {
@@ -4171,7 +4202,7 @@ BaseLib::PVariable RPCRemoveCategoryFromDevice::invoke(BaseLib::PRpcClientInfo c
 					if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 				}
 
-				return central->removeCategoryFromDevice(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue64);
+				return central->removeCategoryFromChannel(clientInfo, parameters->at(0)->integerValue64, -1, parameters->at(1)->integerValue64);
 			}
 		}
 
@@ -4218,7 +4249,7 @@ BaseLib::PVariable RPCRemoveDeviceFromRoom::invoke(BaseLib::PRpcClientInfo clien
 					if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 				}
 
-				return central->removeDeviceFromRoom(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue64);
+				return central->removeChannelFromRoom(clientInfo, parameters->at(0)->integerValue64, -1, parameters->at(1)->integerValue64);
 			}
 		}
 

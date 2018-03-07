@@ -1770,19 +1770,90 @@ BaseLib::PVariable DatabaseController::deleteMetadata(uint64_t peerID, std::stri
 //End metadata
 
 //System variables
-BaseLib::PVariable DatabaseController::getAllSystemVariables()
+BaseLib::PVariable DatabaseController::deleteSystemVariable(std::string& variableId)
+{
+    try
+    {
+        if(variableId.size() > 250) return BaseLib::Variable::createError(-32602, "variableId has more than 250 characters.");
+
+        {
+            std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+            if(_systemVariables.find(variableId) != _systemVariables.end()) _systemVariables.erase(variableId);
+        }
+
+        BaseLib::Database::DataRow data;
+        data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableId)));
+        std::string command("DELETE FROM systemVariables WHERE variableID=?");
+        std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>(command, data);
+        enqueue(0, entry);
+
+        std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableId});
+        std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>());
+        BaseLib::PVariable value(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+        value->structValue->insert(BaseLib::StructElement("TYPE", BaseLib::PVariable(new BaseLib::Variable(0))));
+        value->structValue->insert(BaseLib::StructElement("CODE", BaseLib::PVariable(new BaseLib::Variable(1))));
+        values->push_back(value);
+#ifdef EVENTHANDLER
+        GD::eventHandler->trigger(variableId, value);
+#endif
+        if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(0, -1, valueKeys, values);
+#ifndef NO_SCRIPTENGINE
+        GD::scriptEngineServer->broadcastEvent(0, -1, valueKeys, values);
+#endif
+        if(GD::ipcServer) GD::ipcServer->broadcastEvent(0, -1, valueKeys, values);
+        GD::rpcClient->broadcastEvent(0, -1, "", valueKeys, values);
+
+        return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::getAllSystemVariables(bool returnRoomsAndCategories)
 {
 	try
 	{
-		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT variableID, serializedObject FROM systemVariables");
+		std::shared_ptr<BaseLib::Database::DataTable> rows;
+        if(returnRoomsAndCategories) rows = _db.executeCommand("SELECT variableID, serializedObject, room, categories FROM systemVariables");
+        else rows = _db.executeCommand("SELECT variableID, serializedObject FROM systemVariables");
 
-		BaseLib::PVariable systemVariableStruct(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+		BaseLib::PVariable systemVariableStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 		if(rows->empty()) return systemVariableStruct;
 		for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
 		{
 			if(i->second.size() < 2) continue;
 			BaseLib::PVariable value = _rpcDecoder->decodeResponse(*i->second.at(1)->binaryValue);
-			systemVariableStruct->structValue->insert(BaseLib::StructElement(i->second.at(0)->textValue, value));
+            if(returnRoomsAndCategories)
+            {
+                BaseLib::PVariable element = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+                uint64_t room = i->second.at(2)->intValue;
+                if(room != 0) element->structValue->emplace("ROOM", std::make_shared<BaseLib::Variable>(room));
+
+                BaseLib::PVariable categoriesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(3)->textValue, ',');
+                categoriesArray->arrayValue->reserve(categoryStrings.size());
+                for(auto categoryString : categoryStrings)
+                {
+                    uint64_t category = BaseLib::Math::getNumber64(categoryString);
+                    if(category != 0) categoriesArray->arrayValue->push_back(std::make_shared<BaseLib::Variable>(category));
+                }
+                if(!categoriesArray->arrayValue->empty()) element->structValue->emplace("CATEGORIES", std::make_shared<BaseLib::Variable>(room));
+
+                element->structValue->emplace("VALUE", value);
+            }
+			else systemVariableStruct->structValue->insert(BaseLib::StructElement(i->second.at(0)->textValue, value));
 		}
 
 		return systemVariableStruct;
@@ -1802,32 +1873,109 @@ BaseLib::PVariable DatabaseController::getAllSystemVariables()
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable DatabaseController::getSystemVariable(std::string& variableID)
+void DatabaseController::removeCategoryFromSystemVariables(uint64_t categoryId)
 {
 	try
 	{
-		if(variableID.size() > 250) return BaseLib::Variable::createError(-32602, "variableID has more than 250 characters.");
+        if(categoryId == 0) return;
+        std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT variableID, categories FROM systemVariables");
 
-		BaseLib::PVariable value;
-		_systemVariableMutex.lock();
-		if(_systemVariables.find(variableID) != _systemVariables.end())
+        for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
+        {
+            std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(1)->textValue, ',');
+            bool containsCategory = false;
+
+            std::ostringstream categoryStream;
+            for(auto categoryString : categoryStrings)
+            {
+                uint64_t category = BaseLib::Math::getNumber64(categoryString);
+                if(category == categoryId) containsCategory = true;
+                else categoryStream << std::to_string(category) << ",";
+            }
+
+            if(containsCategory)
+            {
+                std::string categoryString = categoryStream.str();
+                BaseLib::Database::DataRow data;
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(categoryString));
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(rows->at(0).at(0)->intValue));
+                _db.executeCommand("UPDATE systemVariables SET categories=? WHERE variableID=?", data);
+            }
+        }
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void DatabaseController::removeRoomFromSystemVariables(uint64_t roomId)
+{
+    try
+    {
+        if(roomId == 0) return;
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(roomId));
+        _db.executeCommand("UPDATE systemVariables SET room=0 WHERE room=?", data);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+BaseLib::PVariable DatabaseController::getSystemVariable(std::string& variableId)
+{
+	try
+	{
+		if(variableId.size() > 250) return BaseLib::Variable::createError(-32602, "variableId has more than 250 characters.");
+
 		{
-			 value = _systemVariables.at(variableID);
-			_systemVariableMutex.unlock();
-			return value;
+			std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+			auto systemVariableIterator = _systemVariables.find(variableId);
+			if(systemVariableIterator != _systemVariables.end())
+			{
+				return systemVariableIterator->second->value;
+			}
 		}
-		_systemVariableMutex.unlock();
 
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableID)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableId)));
 
-		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT serializedObject FROM systemVariables WHERE variableID=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT serializedObject, room, categories FROM systemVariables WHERE variableID=?", data);
 		if(rows->empty() || rows->at(0).empty()) return std::make_shared<BaseLib::Variable>();
 
-		value = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
-		_systemVariableMutex.lock();
-		_systemVariables[variableID] = value;
-		_systemVariableMutex.unlock();
+		auto value = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+
+		auto systemVariable = std::make_shared<SystemVariable>();
+		systemVariable->value = value;
+		systemVariable->room = rows->at(0).at(1)->intValue;
+
+		std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(2)->textValue, ',');
+		for(auto categoryString : categoryStrings)
+		{
+			uint64_t category = BaseLib::Math::getNumber64(categoryString);
+			if(category != 0) systemVariable->categories.emplace(category);
+		}
+
+		std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+		_systemVariables.emplace(variableId, systemVariable);
 		return value;
 	}
 	catch(const std::exception& ex)
@@ -1845,53 +1993,18 @@ BaseLib::PVariable DatabaseController::getSystemVariable(std::string& variableID
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableID, BaseLib::PVariable& value)
+BaseLib::PVariable DatabaseController::getSystemVariableCategories(std::string& variableId)
 {
 	try
 	{
-		if(!value) return BaseLib::Variable::createError(-32602, "Could not parse data.");
-		if(variableID.empty()) return BaseLib::Variable::createError(-32602, "variableID is an empty string.");
-		if(variableID.size() > 250) return BaseLib::Variable::createError(-32602, "variableID has more than 250 characters.");
-		//Don't check for type here, so base64, string and future data types that use stringValue are handled
-		if(value->type != BaseLib::VariableType::tBase64 && value->type != BaseLib::VariableType::tString && value->type != BaseLib::VariableType::tInteger && value->type != BaseLib::VariableType::tInteger64 && value->type != BaseLib::VariableType::tFloat && value->type != BaseLib::VariableType::tBoolean && value->type != BaseLib::VariableType::tStruct && value->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-32602, "Type " + BaseLib::Variable::getTypeString(value->type) + " is currently not supported.");
-
-		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT COUNT(*) FROM systemVariables");
-		if(rows->size() == 0 || rows->at(0).size() == 0)
+		auto categories = getSystemVariableCategoriesInternal(variableId);
+		BaseLib::PVariable result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+		result->arrayValue->reserve(categories.size());
+		for(auto category : categories)
 		{
-			return BaseLib::Variable::createError(-32500, "Error counting system variables in database.");
+			result->arrayValue->push_back(std::make_shared<BaseLib::Variable>(category));
 		}
-		if(rows->at(0).at(0)->intValue > 1000000)
-		{
-			return BaseLib::Variable::createError(-32500, "Reached limit of 1000000 system variable entries. Please delete system variables before adding new ones.");
-		}
-
-		{
-			std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
-			_systemVariables[variableID] = value;
-		}
-
-		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableID)));
-		std::vector<char> encodedValue;
-		_rpcEncoder->encodeResponse(value, encodedValue);
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(encodedValue)));
-
-		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO systemVariables(variableID, serializedObject) VALUES(?, ?)", data);
-		enqueue(0, entry);
-
-#ifdef EVENTHANDLER
-		GD::eventHandler->trigger(variableID, value);
-#endif
-		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableID});
-		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{value});
-		if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(0, -1, valueKeys, values);
-#ifndef NO_SCRIPTENGINE
-		GD::scriptEngineServer->broadcastEvent(0, -1, valueKeys, values);
-#endif
-		if(GD::ipcServer) GD::ipcServer->broadcastEvent(0, -1, valueKeys, values);
-		GD::rpcClient->broadcastEvent(0, -1, "", valueKeys, values);
-
-		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+		return result;
 	}
 	catch(const std::exception& ex)
 	{
@@ -1908,32 +2021,163 @@ BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableID
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable DatabaseController::deleteSystemVariable(std::string& variableID)
+std::set<uint64_t> DatabaseController::getSystemVariableCategoriesInternal(std::string& variableId)
 {
 	try
 	{
-		if(variableID.size() > 250) return BaseLib::Variable::createError(-32602, "variableID has more than 250 characters.");
+		if(variableId.size() > 250) return std::set<uint64_t>();
 
 		{
 			std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
-			if(_systemVariables.find(variableID) != _systemVariables.end()) _systemVariables.erase(variableID);
+			auto systemVariableIterator = _systemVariables.find(variableId);
+			if(systemVariableIterator != _systemVariables.end())
+			{
+				return systemVariableIterator->second->categories;
+			}
 		}
 
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableID)));
-		std::string command("DELETE FROM systemVariables WHERE variableID=?");
-		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>(command, data);
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableId)));
+
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT serializedObject, room, categories FROM systemVariables WHERE variableID=?", data);
+		if(rows->empty() || rows->at(0).empty()) return std::set<uint64_t>();
+
+		auto value = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+
+		auto systemVariable = std::make_shared<SystemVariable>();
+		systemVariable->value = value;
+		systemVariable->room = rows->at(0).at(1)->intValue;
+
+		std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(2)->textValue, ',');
+		for(auto categoryString : categoryStrings)
+		{
+			uint64_t category = BaseLib::Math::getNumber64(categoryString);
+			if(category != 0) systemVariable->categories.emplace(category);
+		}
+
+		std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+		_systemVariables.emplace(variableId, systemVariable);
+		return systemVariable->categories;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::set<uint64_t>();
+}
+
+BaseLib::PVariable DatabaseController::getSystemVariableRoom(std::string& variableId)
+{
+	return std::make_shared<BaseLib::Variable>(getSystemVariableRoomInternal(variableId));
+}
+
+uint64_t DatabaseController::getSystemVariableRoomInternal(std::string& variableId)
+{
+	try
+	{
+		if(variableId.size() > 250) return 0;
+
+		{
+			std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+			auto systemVariableIterator = _systemVariables.find(variableId);
+			if(systemVariableIterator != _systemVariables.end())
+			{
+				return systemVariableIterator->second->room;
+			}
+		}
+
+		BaseLib::Database::DataRow data;
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableId)));
+
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT serializedObject, room, categories FROM systemVariables WHERE variableID=?", data);
+		if(rows->empty() || rows->at(0).empty()) return 0;
+
+		auto value = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+
+		auto systemVariable = std::make_shared<SystemVariable>();
+		systemVariable->value = value;
+		systemVariable->room = rows->at(0).at(1)->intValue;
+
+		std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(2)->textValue, ',');
+		for(auto categoryString : categoryStrings)
+		{
+			uint64_t category = BaseLib::Math::getNumber64(categoryString);
+			if(category != 0) systemVariable->categories.emplace(category);
+		}
+
+		std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+		_systemVariables.emplace(variableId, systemVariable);
+		return systemVariable->room;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return 0;
+}
+
+BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableId, BaseLib::PVariable& value)
+{
+	try
+	{
+		if(!value) return BaseLib::Variable::createError(-32602, "Could not parse data.");
+		if(variableId.empty()) return BaseLib::Variable::createError(-32602, "variableId is an empty string.");
+		if(variableId.size() > 250) return BaseLib::Variable::createError(-32602, "variableId has more than 250 characters.");
+		//Don't check for type here, so base64, string and future data types that use stringValue are handled
+		if(value->type != BaseLib::VariableType::tBase64 && value->type != BaseLib::VariableType::tString && value->type != BaseLib::VariableType::tInteger && value->type != BaseLib::VariableType::tInteger64 && value->type != BaseLib::VariableType::tFloat && value->type != BaseLib::VariableType::tBoolean && value->type != BaseLib::VariableType::tStruct && value->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-32602, "Type " + BaseLib::Variable::getTypeString(value->type) + " is currently not supported.");
+
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT COUNT(*) FROM systemVariables");
+		if(rows->size() == 0 || rows->at(0).size() == 0)
+		{
+			return BaseLib::Variable::createError(-32500, "Error counting system variables in database.");
+		}
+		if(rows->at(0).at(0)->intValue > 1000000)
+		{
+			return BaseLib::Variable::createError(-32500, "Reached limit of 1000000 system variable entries. Please delete system variables before adding new ones.");
+		}
+
+		{
+			std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+			auto systemVariableIterator = _systemVariables.find(variableId);
+			if(systemVariableIterator == _systemVariables.end())
+			{
+				auto systemVariable = std::make_shared<SystemVariable>();
+				systemVariable->value = value;
+				_systemVariables.emplace(variableId, systemVariable);
+			}
+			else systemVariableIterator->second->value = value;
+		}
+
+		BaseLib::Database::DataRow data;
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableId)));
+		std::vector<char> encodedValue;
+		_rpcEncoder->encodeResponse(value, encodedValue);
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(encodedValue)));
+
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO systemVariables(variableID, serializedObject) VALUES(?, ?)", data);
 		enqueue(0, entry);
 
-		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableID});
-		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>());
-		BaseLib::PVariable value(new BaseLib::Variable(BaseLib::VariableType::tStruct));
-		value->structValue->insert(BaseLib::StructElement("TYPE", BaseLib::PVariable(new BaseLib::Variable(0))));
-		value->structValue->insert(BaseLib::StructElement("CODE", BaseLib::PVariable(new BaseLib::Variable(1))));
-		values->push_back(value);
 #ifdef EVENTHANDLER
-		GD::eventHandler->trigger(variableID, value);
+		GD::eventHandler->trigger(variableId, value);
 #endif
+		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableId});
+		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{value});
 		if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(0, -1, valueKeys, values);
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(0, -1, valueKeys, values);
@@ -1941,9 +2185,58 @@ BaseLib::PVariable DatabaseController::deleteSystemVariable(std::string& variabl
 		if(GD::ipcServer) GD::ipcServer->broadcastEvent(0, -1, valueKeys, values);
 		GD::rpcClient->broadcastEvent(0, -1, "", valueKeys, values);
 
-		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+        return std::make_shared<BaseLib::Variable>();
 	}
 	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::setSystemVariableCategories(std::string& variableId, std::set<uint64_t>& categoryIds)
+{
+    try
+    {
+        if(variableId.empty()) return BaseLib::Variable::createError(-32602, "variableId is an empty string.");
+        if(variableId.size() > 250) return BaseLib::Variable::createError(-32602, "variableId has more than 250 characters.");
+
+        {
+            std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+            auto systemVariableIterator = _systemVariables.find(variableId);
+            if(systemVariableIterator == _systemVariables.end())
+            {
+                auto value = getSystemVariable(variableId);
+                systemVariableIterator = _systemVariables.find(variableId);
+                if(systemVariableIterator == _systemVariables.end()) return BaseLib::Variable::createError(-5, "Unknown variable.");
+            }
+
+            systemVariableIterator->second->categories = categoryIds;
+        }
+
+		std::ostringstream categories;
+		for(auto category : categoryIds)
+		{
+			categories << std::to_string(category) << ",";
+		}
+		std::string categoryString = categories.str();
+
+        BaseLib::Database::DataRow data;
+        data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(categoryString)));
+        data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableId)));
+        _db.executeCommand("UPDATE systemVariables SET categories=? WHERE variableID=?", data);
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1957,6 +2250,67 @@ BaseLib::PVariable DatabaseController::deleteSystemVariable(std::string& variabl
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
+
+BaseLib::PVariable DatabaseController::setSystemVariableRoom(std::string& variableId, uint64_t roomId)
+{
+    try
+    {
+        if(variableId.empty()) return BaseLib::Variable::createError(-32602, "variableId is an empty string.");
+        if(variableId.size() > 250) return BaseLib::Variable::createError(-32602, "variableId has more than 250 characters.");
+
+        {
+            std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+            auto systemVariableIterator = _systemVariables.find(variableId);
+            if(systemVariableIterator == _systemVariables.end())
+            {
+                auto value = getSystemVariable(variableId);
+                systemVariableIterator = _systemVariables.find(variableId);
+                if(systemVariableIterator == _systemVariables.end()) return BaseLib::Variable::createError(-5, "Unknown variable.");
+            }
+
+            if(systemVariableIterator->second->room != roomId) systemVariableIterator->second->room = roomId;
+            else return std::make_shared<BaseLib::Variable>();
+        }
+
+        BaseLib::Database::DataRow data;
+        data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(roomId)));
+        data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableId)));
+        _db.executeCommand("UPDATE systemVariables SET room=? WHERE variableID=?", data);
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+bool DatabaseController::systemVariableHasCategory(std::string& variableId, uint64_t categoryId)
+{
+	//No try/catch to throw exceptions in calling method => avoid valid return on errors. Important for ACLs.
+	{
+		std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+		auto systemVariableIterator = _systemVariables.find(variableId);
+		if(systemVariableIterator != _systemVariables.end())
+		{
+			return systemVariableIterator->second->categories.find(categoryId) != systemVariableIterator->second->categories.end();
+		}
+	}
+
+	//Not in cache
+	auto categories = getSystemVariableCategoriesInternal(variableId);
+	return categories.find(categoryId) != categories.end();
+}
+
 //End system variables
 
 //Users
@@ -2517,7 +2871,15 @@ BaseLib::PVariable DatabaseController::updateGroup(uint64_t groupId, BaseLib::PV
         std::vector<char> translationsBlob;
         if(!translations->structValue->empty()) _rpcEncoder->encodeResponse(translations, translationsBlob);
 
-		BaseLib::Security::Acl acl(GD::bl.get());
+		try
+		{
+			BaseLib::Security::Acl acl;
+			acl.fromVariable(aclStruct);
+		}
+		catch(BaseLib::Security::AclException& ex)
+		{
+			return BaseLib::Variable::createError(-1, "Error in ACL: " + ex.what());
+		}
 
         std::vector<char> aclBlob;
         _rpcEncoder->encodeResponse(aclStruct, aclBlob);

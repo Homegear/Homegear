@@ -107,17 +107,26 @@ public:
 	// }}}
 
 	// {{{ Metadata
-		virtual BaseLib::PVariable setMetadata(uint64_t peerID, std::string& serialNumber, std::string& dataID, BaseLib::PVariable& metadata);
-		virtual BaseLib::PVariable getMetadata(uint64_t peerID, std::string& dataID);
-		virtual BaseLib::PVariable getAllMetadata(uint64_t peerID);
-		virtual BaseLib::PVariable deleteMetadata(uint64_t peerID, std::string& serialNumber, std::string& dataID);
+		virtual BaseLib::PVariable setMetadata(uint64_t peerId, std::string& serialNumber, std::string& dataId, BaseLib::PVariable& metadata);
+		virtual BaseLib::PVariable getMetadata(uint64_t peerId, std::string& dataId);
+		virtual BaseLib::PVariable getAllMetadata(uint64_t peerId);
+		virtual BaseLib::PVariable deleteMetadata(uint64_t peerId, std::string& serialNumber, std::string& dataId);
 	// }}}
 
 	// {{{ System variables
-		virtual BaseLib::PVariable setSystemVariable(std::string& variableID, BaseLib::PVariable& value);
-		virtual BaseLib::PVariable getSystemVariable(std::string& variableID);
-		virtual BaseLib::PVariable getAllSystemVariables();
-		virtual BaseLib::PVariable deleteSystemVariable(std::string& variableID);
+        virtual BaseLib::PVariable deleteSystemVariable(std::string& variableId);
+        virtual BaseLib::PVariable getSystemVariable(std::string& variableId);
+        virtual BaseLib::PVariable getSystemVariableCategories(std::string& variableId);
+        virtual std::set<uint64_t> getSystemVariableCategoriesInternal(std::string& variableId);
+        virtual BaseLib::PVariable getSystemVariableRoom(std::string& variableId);
+        virtual uint64_t getSystemVariableRoomInternal(std::string& variableId);
+        virtual BaseLib::PVariable getAllSystemVariables(bool returnRoomsAndCategories);
+        virtual void removeCategoryFromSystemVariables(uint64_t categoryId);
+        virtual void removeRoomFromSystemVariables(uint64_t roomId);
+        virtual BaseLib::PVariable setSystemVariable(std::string& variableId, BaseLib::PVariable& value);
+        virtual BaseLib::PVariable setSystemVariableCategories(std::string& variableId, std::set<uint64_t>& categories);
+        virtual BaseLib::PVariable setSystemVariableRoom(std::string& variableId, uint64_t room);
+        virtual bool systemVariableHasCategory(std::string& variableId, uint64_t categoryId);
 	// }}}
 
 	// {{{ Users
@@ -197,6 +206,14 @@ public:
 		virtual void deleteLicenseVariable(int32_t moduleId, uint64_t mapKey);
 	// }}}
 protected:
+    struct SystemVariable
+    {
+        uint64_t room = 0;
+        std::set<uint64_t> categories;
+        BaseLib::PVariable value;
+    };
+    typedef std::shared_ptr<SystemVariable> PSystemVariable;
+
 	std::atomic_bool _disposing;
 
 	BaseLib::Database::SQLite3 _db;
@@ -205,7 +222,7 @@ protected:
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
 	std::mutex _systemVariableMutex;
-	std::map<std::string, BaseLib::PVariable> _systemVariables;
+	std::map<std::string, PSystemVariable> _systemVariables;
 
 	std::mutex _dataMutex;
 	std::map<std::string, std::map<std::string, BaseLib::PVariable>> _data;
