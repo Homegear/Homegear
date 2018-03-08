@@ -451,10 +451,10 @@ BaseLib::PVariable RPCAddCategoryToDevice::invoke(BaseLib::PRpcClientInfo client
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("addCategoryToDevice", parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("addCategoryToDevice", (uint64_t)parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 		bool checkAcls = clientInfo->acls->roomsCategoriesDevicesWriteSet();
 
-		if(!GD::bl->db->categoryExists(parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
+		if(!GD::bl->db->categoryExists((uint64_t)parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
 
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -468,7 +468,7 @@ BaseLib::PVariable RPCAddCategoryToDevice::invoke(BaseLib::PRpcClientInfo client
 					if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 				}
 
-				return central->addCategoryToChannel(clientInfo, parameters->at(0)->integerValue64, -1, parameters->at(1)->integerValue64);
+				return central->addCategoryToChannel(clientInfo, (uint64_t)parameters->at(0)->integerValue64, -1, (uint64_t)parameters->at(1)->integerValue64);
 			}
 		}
 
@@ -584,10 +584,10 @@ BaseLib::PVariable RPCAddChannelToRoom::invoke(BaseLib::PRpcClientInfo clientInf
                                                                                                                  }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        if(!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("addChannelToRoom", parameters->at(2)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        if(!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("addChannelToRoom", (uint64_t)parameters->at(2)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
         bool checkAcls = clientInfo->acls->roomsCategoriesDevicesWriteSet();
 
-        if(!GD::bl->db->roomExists(parameters->at(2)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
+        if(!GD::bl->db->roomExists((uint64_t)parameters->at(2)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
 
         std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
         for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -601,7 +601,7 @@ BaseLib::PVariable RPCAddChannelToRoom::invoke(BaseLib::PRpcClientInfo clientInf
                     if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
                 }
 
-                return central->addChannelToRoom(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue, parameters->at(2)->integerValue64);
+                return central->addChannelToRoom(clientInfo, (uint64_t)parameters->at(0)->integerValue64, parameters->at(1)->integerValue, (uint64_t)parameters->at(2)->integerValue64);
             }
         }
 
@@ -690,10 +690,10 @@ BaseLib::PVariable RPCAddDeviceToRoom::invoke(BaseLib::PRpcClientInfo clientInfo
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-        if(!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("addDeviceToRoom", parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        if(!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("addDeviceToRoom", (uint64_t)parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 		bool checkAcls = clientInfo->acls->roomsCategoriesDevicesWriteSet();
 
-		if(!GD::bl->db->roomExists(parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
+		if(!GD::bl->db->roomExists((uint64_t)parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
 
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -707,7 +707,7 @@ BaseLib::PVariable RPCAddDeviceToRoom::invoke(BaseLib::PRpcClientInfo clientInfo
 					if(!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 				}
 
-				return central->addChannelToRoom(clientInfo, parameters->at(0)->integerValue64, -1, parameters->at(1)->integerValue64);
+				return central->addChannelToRoom(clientInfo, (uint64_t)parameters->at(0)->integerValue64, -1, (uint64_t)parameters->at(1)->integerValue64);
 			}
 		}
 
@@ -871,17 +871,17 @@ BaseLib::PVariable RPCAddSystemVariableToRoom::invoke(BaseLib::PRpcClientInfo cl
         }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("addSystemVariableToRoom", parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("addSystemVariableToRoom", (uint64_t)parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
         bool checkAcls = clientInfo->acls->variablesRoomsCategoriesWriteSet();
 
-        if(!GD::bl->db->roomExists(parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
+        if(!GD::bl->db->roomExists((uint64_t)parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
 
         auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
         if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
         if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 
-        return GD::bl->db->setSystemVariableRoom(systemVariable->name, systemVariable->room);
+        return GD::bl->db->setSystemVariableRoom(systemVariable->name, (uint64_t)parameters->at(1)->integerValue64);
     }
     catch(const std::exception& ex)
     {
@@ -907,10 +907,10 @@ BaseLib::PVariable RPCAddVariableToRoom::invoke(BaseLib::PRpcClientInfo clientIn
         }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("addVariableToRoom", parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("addVariableToRoom", (uint64_t)parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
         bool checkAcls = clientInfo->acls->variablesRoomsCategoriesDevicesWriteSet();
 
-        if(!GD::bl->db->roomExists(parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
+        if(!GD::bl->db->roomExists((uint64_t)parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
 
         std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
         for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -925,7 +925,7 @@ BaseLib::PVariable RPCAddVariableToRoom::invoke(BaseLib::PRpcClientInfo clientIn
                 if(!clientInfo->acls->checkVariableWriteAccess(peer, parameters->at(1)->integerValue, parameters->at(2)->stringValue)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
             }
 
-            bool result = peer->setVariableRoom(parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->integerValue64);
+            bool result = peer->setVariableRoom(parameters->at(1)->integerValue, parameters->at(2)->stringValue, (uint64_t)parameters->at(3)->integerValue64);
             return std::make_shared<BaseLib::Variable>(result);
         }
 
@@ -1093,11 +1093,12 @@ BaseLib::PVariable RPCCreateCategory::invoke(BaseLib::PRpcClientInfo clientInfo,
 	{
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("createCategory")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tStruct }),
 			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::bl->db->createCategory(parameters->at(0), parameters->at(1));
+		return GD::bl->db->createCategory(parameters->at(0), parameters->size() == 2 ? parameters->at(1) : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
 	}
 	catch(const std::exception& ex)
     {
@@ -1154,11 +1155,12 @@ BaseLib::PVariable RPCCreateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
 	{
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("createRoom")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tStruct }),
 			std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::bl->db->createRoom(parameters->at(0), parameters->at(1));
+		return GD::bl->db->createRoom(parameters->at(0), parameters->size() == 2 ? parameters->at(1) : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
 	}
 	catch(const std::exception& ex)
     {
@@ -1979,12 +1981,12 @@ BaseLib::PVariable RPCGetChannelsInRoom::invoke(BaseLib::PRpcClientInfo clientIn
                                                                                                                  }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        if(!clientInfo || !clientInfo->acls->checkMethodAndRoomReadAccess("getChannelsInRoom", parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        if(!clientInfo || !clientInfo->acls->checkMethodAndRoomReadAccess("getChannelsInRoom", (uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
         bool checkAcls = clientInfo->acls->roomsCategoriesDevicesReadSet();
 
-        if(!GD::bl->db->roomExists(parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
+        if(!GD::bl->db->roomExists((uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
 
-        BaseLib::PVariable result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+        BaseLib::PVariable result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 
         std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
         for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -1992,7 +1994,7 @@ BaseLib::PVariable RPCGetChannelsInRoom::invoke(BaseLib::PRpcClientInfo clientIn
             std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
             if(central)
             {
-                BaseLib::PVariable devices = central->getChannelsInRoom(clientInfo, parameters->at(0)->integerValue64, checkAcls);
+                BaseLib::PVariable devices = central->getChannelsInRoom(clientInfo, (uint64_t)parameters->at(0)->integerValue64, checkAcls);
                 result->structValue->insert(devices->structValue->begin(), devices->structValue->end());
             }
         }
@@ -2348,10 +2350,10 @@ BaseLib::PVariable RPCGetDevicesInRoom::invoke(BaseLib::PRpcClientInfo clientInf
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-        if(!clientInfo || !clientInfo->acls->checkMethodAndRoomReadAccess("getDevicesInRoom", parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        if(!clientInfo || !clientInfo->acls->checkMethodAndRoomReadAccess("getDevicesInRoom", (uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
         bool checkAcls = clientInfo->acls->roomsCategoriesDevicesReadSet();
 
-		if(!GD::bl->db->roomExists(parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
+		if(!GD::bl->db->roomExists((uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
 
 		BaseLib::PVariable result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 
@@ -2361,7 +2363,7 @@ BaseLib::PVariable RPCGetDevicesInRoom::invoke(BaseLib::PRpcClientInfo clientInf
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central)
 			{
-				BaseLib::PVariable devices = central->getDevicesInRoom(clientInfo, parameters->at(0)->integerValue64, checkAcls);
+				BaseLib::PVariable devices = central->getDevicesInRoom(clientInfo, (uint64_t)parameters->at(0)->integerValue64, checkAcls);
 				if(result->arrayValue->size() + devices->arrayValue->size() > result->arrayValue->capacity()) result->arrayValue->reserve(result->arrayValue->size() + devices->arrayValue->size() + 1000);
 				result->arrayValue->insert(result->arrayValue->end(), devices->arrayValue->begin(), devices->arrayValue->end());
 			}
@@ -5204,7 +5206,7 @@ BaseLib::PVariable RPCRemoveVariableFromRoom::invoke(BaseLib::PRpcClientInfo cli
             bool result = false;
             if(peer->getVariableRoom(parameters->at(1)->integerValue, parameters->at(2)->stringValue) == roomId)
             {
-                result = peer->setVariableRoom(parameters->at(1)->integerValue, parameters->at(2)->stringValue, roomId);
+                result = peer->setVariableRoom(parameters->at(1)->integerValue, parameters->at(2)->stringValue, 0);
             }
             return std::make_shared<BaseLib::Variable>(result);
         }

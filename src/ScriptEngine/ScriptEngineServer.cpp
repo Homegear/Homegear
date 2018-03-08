@@ -2508,6 +2508,8 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
 				if(parameters->at(1)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is empty.");
 
+				BaseLib::HelperFunctions::toLower(parameters->at(0)->stringValue);
+
 				return std::make_shared<BaseLib::Variable>(User::verify(parameters->at(0)->stringValue, parameters->at(1)->stringValue));
 			}
 			catch(const std::exception& ex)
@@ -2534,6 +2536,8 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 				if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 or 2 is not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
                 if(parameters->at(2)->arrayValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 3 is empty or no array.");
+
+				BaseLib::HelperFunctions::toLower(parameters->at(0)->stringValue);
 
                 std::vector<uint64_t> groups;
                 groups.reserve(parameters->at(2)->arrayValue->size());
@@ -2682,6 +2686,8 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
                 if(parameters->at(1)->type == BaseLib::VariableType::tArray && parameters->at(1)->arrayValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is empty.");
 
+				BaseLib::HelperFunctions::toLower(parameters->at(0)->stringValue);
+
                 int32_t groupsIndex = parameters->size() == 3 ? 2 : (parameters->at(1)->type == BaseLib::VariableType::tArray ? 1 : -1);
 				if(groupsIndex != -1)
 				{
@@ -2720,6 +2726,8 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 				if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
+
+				BaseLib::HelperFunctions::toLower(parameters->at(0)->stringValue);
 
 				return std::make_shared<BaseLib::Variable>(User::exists(parameters->at(0)->stringValue));
 			}

@@ -1642,6 +1642,7 @@ void ScriptEngineClient::checkSessionIdThread(std::string sessionId, std::string
 						if(token2 != nullptr && Z_STRLEN_P(token2) > 0)
 						{
 							*result = std::string(Z_STRVAL_P(token2), Z_STRLEN_P(token2));
+							BaseLib::HelperFunctions::toLower(*result);
 						}
 					}
 				}
