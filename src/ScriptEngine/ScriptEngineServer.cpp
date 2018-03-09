@@ -2624,6 +2624,8 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
                 if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
 
                 auto groups = User::getGroups(parameters->at(0)->stringValue);
+                if(groups.empty()) return BaseLib::Variable::createError(-1, "Unknown user.");
+
                 auto groupArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
                 groupArray->arrayValue->reserve(groups.size());
 

@@ -2818,7 +2818,7 @@ BaseLib::PVariable DatabaseController::setUserMetadata(uint64_t userId, BaseLib:
 //End users
 
 //Groups
-BaseLib::PVariable DatabaseController::createGroup(BaseLib::PVariable translations, BaseLib::PVariable acl)
+BaseLib::PVariable DatabaseController::createGroup(BaseLib::PVariable translations, BaseLib::PVariable aclStruct)
 {
     try
     {
@@ -2833,8 +2833,18 @@ BaseLib::PVariable DatabaseController::createGroup(BaseLib::PVariable translatio
         std::vector<char> translationsBlob;
         _rpcEncoder->encodeResponse(translations, translationsBlob);
 
+        try
+        {
+            BaseLib::Security::Acl acl;
+            acl.fromVariable(aclStruct);
+        }
+        catch(BaseLib::Security::AclException& ex)
+        {
+            return BaseLib::Variable::createError(-1, "Error in ACL: " + ex.what());
+        }
+
         std::vector<char> aclBlob;
-        _rpcEncoder->encodeResponse(acl, aclBlob);
+        _rpcEncoder->encodeResponse(aclStruct, aclBlob);
 
         BaseLib::Database::DataRow data;
         if(largestId < 100) data.push_back(std::make_shared<BaseLib::Database::DataColumn>(100));

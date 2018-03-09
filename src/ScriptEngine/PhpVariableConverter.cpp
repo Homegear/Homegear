@@ -42,7 +42,7 @@ PhpVariableConverter::~PhpVariableConverter()
 }
 
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-BaseLib::PVariable PhpVariableConverter::getVariable(zval* value)
+BaseLib::PVariable PhpVariableConverter::getVariable(zval* value, bool arraysAreStructs)
 {
 	try
 	{
@@ -81,24 +81,41 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval* value)
 				variable.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
 				return variable;
 			}
-			ZEND_HASH_FOREACH_KEY_VAL(ht, keyIndex, key, element)
-			{
-				if(!variable)
-				{
-					if(key) variable.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
-					else variable.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
-				}
-				BaseLib::PVariable arrayElement = getVariable(element);
-				if(!arrayElement) continue;
-				if(key)
-				{
-					std::string keyName;
-					keyName = std::string(key->val, key->len);
-					if(keyName.size() > 1 && keyName.at(0) == '\\') keyName = keyName.substr(1);
-					variable->structValue->insert(BaseLib::StructElement(keyName, arrayElement));
-				}
-				else variable->arrayValue->push_back(arrayElement);
-			} ZEND_HASH_FOREACH_END();
+            bool arraysAreStructsLocal = arraysAreStructs;
+            for(int32_t i = 0; i < 2; i++)
+            {
+                int64_t indexSum = 0;
+                ZEND_HASH_FOREACH_KEY_VAL(ht, keyIndex, key, element)
+                {
+                    if(!variable)
+                    {
+                        if(key || arraysAreStructsLocal) variable.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+                        else variable.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
+                    }
+                    BaseLib::PVariable arrayElement = getVariable(element, arraysAreStructs);
+                    if(!arrayElement) continue;
+                    if(key || arraysAreStructsLocal)
+                    {
+                        std::string keyName;
+                        keyName = key ? std::string(key->val, key->len) : std::to_string((int64_t)keyIndex);
+                        if(keyName.size() > 1 && keyName.at(0) == '\\') keyName = keyName.substr(1);
+                        variable->structValue->insert(BaseLib::StructElement(keyName, arrayElement));
+                    }
+                    else
+                    {
+                        if(indexSum >= 0) indexSum += keyIndex;
+                        if(keyIndex < 0) indexSum = -1;
+                        variable->arrayValue->push_back(arrayElement);
+                    }
+                } ZEND_HASH_FOREACH_END();
+
+                if(variable->type == BaseLib::VariableType::tArray && (uint64_t)indexSum * 2 != (variable->arrayValue->size() - 1) * variable->arrayValue->size())
+                {
+                    arraysAreStructsLocal = true;
+                    variable.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+                }
+                else break;
+            }
 		}
 		else
 		{

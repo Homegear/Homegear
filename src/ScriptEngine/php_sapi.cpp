@@ -1999,7 +1999,7 @@ ZEND_METHOD(Homegear, __call)
 	zval* args = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "zz", &zMethodName, &args) != SUCCESS) RETURN_NULL();
 	std::string methodName(std::string(Z_STRVAL_P(zMethodName), Z_STRLEN_P(zMethodName)));
-	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args);
+	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args, methodName == "createGroup" || methodName == "updateGroup");
 	php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 }
 
@@ -2010,7 +2010,7 @@ ZEND_METHOD(Homegear, __callStatic)
 	zval* args = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "zz", &zMethodName, &args) != SUCCESS) RETURN_NULL();
 	std::string methodName(std::string(Z_STRVAL_P(zMethodName), Z_STRLEN_P(zMethodName)));
-	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args);
+	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args, methodName == "createGroup" || methodName == "updateGroup");
 	php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 }
 

@@ -46,7 +46,7 @@ public:
 	PhpVariableConverter();
 	virtual ~PhpVariableConverter();
 
-	static BaseLib::PVariable getVariable(zval* value);
+	static BaseLib::PVariable getVariable(zval* value, bool arraysAreStructs = false);
 	static void getPHPVariable(BaseLib::PVariable input, zval* output);
 protected:
 };
