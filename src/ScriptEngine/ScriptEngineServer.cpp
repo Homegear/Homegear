@@ -2803,7 +2803,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
             try
             {
 				if(!_dummyClientInfo || !_dummyClientInfo->acls->checkMethodAccess("createGroup")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
-                if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
+                if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters. " + std::to_string(parameters->size()) + " given.");
                 if(parameters->at(0)->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type struct.");
                 if(parameters->at(1)->type != BaseLib::VariableType::tStruct || parameters->at(1)->structValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type struct or is empty.");
 

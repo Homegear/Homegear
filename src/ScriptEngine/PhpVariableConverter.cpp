@@ -42,7 +42,7 @@ PhpVariableConverter::~PhpVariableConverter()
 }
 
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-BaseLib::PVariable PhpVariableConverter::getVariable(zval* value, bool arraysAreStructs)
+BaseLib::PVariable PhpVariableConverter::getVariable(zval* value, bool arraysAreStructs, bool subArraysAreStructs)
 {
 	try
 	{
@@ -92,19 +92,19 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval* value, bool arraysAre
                         if(key || arraysAreStructsLocal) variable.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
                         else variable.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
                     }
-                    BaseLib::PVariable arrayElement = getVariable(element, arraysAreStructs);
+                    BaseLib::PVariable arrayElement = getVariable(element, subArraysAreStructs, subArraysAreStructs);
                     if(!arrayElement) continue;
                     if(key || arraysAreStructsLocal)
                     {
                         std::string keyName;
                         keyName = key ? std::string(key->val, key->len) : std::to_string((int64_t)keyIndex);
                         if(keyName.size() > 1 && keyName.at(0) == '\\') keyName = keyName.substr(1);
-                        variable->structValue->insert(BaseLib::StructElement(keyName, arrayElement));
+                        variable->structValue->emplace(keyName, arrayElement);
                     }
                     else
                     {
-                        if(indexSum >= 0) indexSum += keyIndex;
                         if(keyIndex < 0) indexSum = -1;
+                        if(indexSum >= 0) indexSum += keyIndex;
                         variable->arrayValue->push_back(arrayElement);
                     }
                 } ZEND_HASH_FOREACH_END();
