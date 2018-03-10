@@ -71,6 +71,7 @@ void Server::registerMethods()
 		_server->registerMethod("addDeviceToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddDeviceToRoom()));
 		_server->registerMethod("addEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddEvent()));
 		_server->registerMethod("addLink", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddLink()));
+		_server->registerMethod("addRoomToStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddRoomToStory()));
         _server->registerMethod("addSystemVariableToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddSystemVariableToRoom()));
         _server->registerMethod("addVariableToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddVariableToRoom()));
 		_server->registerMethod("copyConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCCopyConfig()));
@@ -78,12 +79,14 @@ void Server::registerMethods()
 		_server->registerMethod("createCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCCreateCategory()));
 		_server->registerMethod("createDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCCreateDevice()));
 		_server->registerMethod("createRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCCreateRoom()));
+        _server->registerMethod("createStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCCreateStory()));
 		_server->registerMethod("deleteCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteCategory()));
 		_server->registerMethod("deleteData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteData()));
 		_server->registerMethod("deleteDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteDevice()));
 		_server->registerMethod("deleteMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteMetadata()));
 		_server->registerMethod("deleteNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteNodeData()));
 		_server->registerMethod("deleteRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteRoom()));
+        _server->registerMethod("deleteStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteStory()));
 		_server->registerMethod("deleteSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCDeleteSystemVariable()));
 		_server->registerMethod("enableEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCEnableEvent()));
 		_server->registerMethod("executeMiscellaneousDeviceMethod", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCExecuteMiscellaneousDeviceMethod()));
@@ -123,8 +126,11 @@ void Server::registerMethods()
 		_server->registerMethod("getPeerId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetPeerId()));
         _server->registerMethod("getRoomMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetRoomMetadata()));
 		_server->registerMethod("getRooms", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetRooms()));
+        _server->registerMethod("getRoomsInStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetRoomsInStory()));
 		_server->registerMethod("getServiceMessages", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetServiceMessages()));
 		_server->registerMethod("getSniffedDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetSniffedDevices()));
+        _server->registerMethod("getStories", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetStories()));
+        _server->registerMethod("getStoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetStoryMetadata()));
 		_server->registerMethod("getSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetSystemVariable()));
 		_server->registerMethod("getUpdateStatus", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetUpdateStatus()));
 		_server->registerMethod("getValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetValue()));
@@ -153,6 +159,7 @@ void Server::registerMethods()
         _server->registerMethod("removeCategoryFromVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveCategoryFromVariable()));
         _server->registerMethod("removeChannelFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveChannelFromRoom()));
 		_server->registerMethod("removeDeviceFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveDeviceFromRoom()));
+        _server->registerMethod("removeRoomFromStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveRoomFromStory()));
         _server->registerMethod("removeSystemVariableFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveSystemVariableFromRoom()));
         _server->registerMethod("removeVariableFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveVariableFromRoom()));
 		_server->registerMethod("removeEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveEvent()));
@@ -176,6 +183,7 @@ void Server::registerMethods()
 		_server->registerMethod("setGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetGlobalData()));
 		_server->registerMethod("setNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetNodeVariable()));
         _server->registerMethod("setRoomMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetRoomMetadata()));
+        _server->registerMethod("setStoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetStoryMetadata()));
 		_server->registerMethod("setSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetSystemVariable()));
 		_server->registerMethod("setTeam", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetTeam()));
 		_server->registerMethod("setValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetValue()));
@@ -188,6 +196,7 @@ void Server::registerMethods()
 		_server->registerMethod("updateCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCUpdateCategory()));
 		_server->registerMethod("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCUpdateFirmware()));
 		_server->registerMethod("updateRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCUpdateRoom()));
+        _server->registerMethod("updateStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCUpdateStory()));
 		_server->registerMethod("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCWriteLog()));
 	}
 	catch(const std::exception& ex)

@@ -113,6 +113,8 @@ void DatabaseController::initializeDatabase()
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS dataIndex ON data (component, key)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS rooms (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, metadata BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS roomsIndex ON rooms (id)");
+        _db.executeCommand("CREATE TABLE IF NOT EXISTS stories (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, rooms TEXT, metadata BLOB)");
+        _db.executeCommand("CREATE INDEX IF NOT EXISTS storiesIndex ON stories (id)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, metadata BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS categoriesIndex ON categories (id)");
 
@@ -871,6 +873,427 @@ BaseLib::PVariable DatabaseController::deleteData(std::string& component, std::s
 }
 //}}}
 
+//{{{ Stories
+BaseLib::PVariable DatabaseController::addRoomToStory(uint64_t storyId, uint64_t roomId)
+{
+    try
+    {
+        if(!roomExists(roomId)) return BaseLib::Variable::createError(-2, "Unknown room.");
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(storyId));
+        std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT rooms FROM stories WHERE id=?", data);
+        if(rows->empty()) return BaseLib::Variable::createError(-1, "Unknown story.");
+
+        std::vector<std::string> roomStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(0)->textValue, ',');
+        bool containsRoom = false;
+
+        std::ostringstream roomStream;
+        for(auto& roomString : roomStrings)
+        {
+            uint64_t room = (uint64_t)BaseLib::Math::getNumber64(roomString);
+            if(room == roomId) containsRoom = true;
+            roomStream << std::to_string(room) << ",";
+        }
+        if(!containsRoom)
+        {
+            roomStream << std::to_string(roomId) << ",";
+            std::string roomString = roomStream.str();
+            data.push_front(std::make_shared<BaseLib::Database::DataColumn>(roomString));
+            _db.executeCommand("UPDATE stories SET rooms=? WHERE id=?", data);
+        }
+
+        return std::make_shared<BaseLib::Variable>(true);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::createStory(BaseLib::PVariable translations, BaseLib::PVariable metadata)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+
+        std::vector<char> translationsBlob;
+        _rpcEncoder->encodeResponse(translations, translationsBlob);
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(std::string()));
+
+        std::vector<char> metadataBlob;
+        _rpcEncoder->encodeResponse(metadata, metadataBlob);
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+
+        uint64_t result = _db.executeWriteCommand("REPLACE INTO stories VALUES(?, ?, ?, ?)", data);
+
+        return std::make_shared<BaseLib::Variable>(result);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::deleteStory(uint64_t storyId)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(storyId));
+        if(_db.executeCommand("SELECT id FROM stories WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown story.");
+
+        _db.executeWriteCommand("DELETE FROM stories WHERE id=?", data);
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::getRoomsInStory(BaseLib::PRpcClientInfo clientInfo, uint64_t storyId, bool checkAcls)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(storyId));
+        std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT rooms FROM stories WHERE id=?", data);
+        if(rows->empty()) return BaseLib::Variable::createError(-1, "Unknown story.");
+
+        std::vector<std::string> roomStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(0)->textValue, ',');
+        auto rooms = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+        rooms->arrayValue->reserve(roomStrings.size());
+        for(auto& roomString : roomStrings)
+        {
+            uint64_t room = (uint64_t)BaseLib::Math::getNumber64(roomString);
+            if(checkAcls && !clientInfo->acls->checkRoomReadAccess(room)) continue;
+            if(room != 0) rooms->arrayValue->push_back(std::make_shared<BaseLib::Variable>(room));
+        }
+
+        return rooms;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::getStoryMetadata(uint64_t storyId)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(storyId));
+        auto rows = _db.executeCommand("SELECT metadata FROM stories WHERE id=?", data);
+
+        if(rows->empty()) return BaseLib::Variable::createError(-1, "Unknown story.");
+
+        return _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::getStories(std::string languageCode)
+{
+    try
+    {
+        BaseLib::PVariable stories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+
+        std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, rooms, metadata FROM stories");
+        stories->arrayValue->reserve(rows->size());
+        for(auto& row : *rows)
+        {
+            BaseLib::PVariable story = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            story->structValue->emplace("ID", std::make_shared<BaseLib::Variable>(row.second.at(0)->intValue));
+            BaseLib::PVariable translations = _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue);
+            if(languageCode.empty()) story->structValue->emplace("TRANSLATIONS", translations);
+            else
+            {
+                auto translationIterator = translations->structValue->find(languageCode);
+                if(translationIterator != translations->structValue->end()) story->structValue->emplace("NAME", translationIterator->second);
+                else
+                {
+                    translationIterator = translations->structValue->find("en-US");
+                    if(translationIterator != translations->structValue->end()) story->structValue->emplace("NAME", translationIterator->second);
+                    else story->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+                }
+            }
+
+            BaseLib::PVariable rooms = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+            std::vector<std::string> roomStrings = BaseLib::HelperFunctions::splitAll(row.second.at(2)->textValue, ',');
+            rooms->arrayValue->reserve(roomStrings.size());
+            for(auto& roomString : roomStrings)
+            {
+                if(roomString.empty()) continue;
+                uint64_t room = (uint64_t)BaseLib::Math::getNumber64(roomString);
+                if(room != 0) rooms->arrayValue->push_back(std::make_shared<BaseLib::Variable>(room));
+            }
+			story->structValue->emplace("ROOMS", rooms);
+
+            if(!row.second.at(3)->binaryValue->empty())
+            {
+                BaseLib::PVariable metadata = _rpcDecoder->decodeResponse(*row.second.at(3)->binaryValue);
+                story->structValue->emplace("METADATA", metadata);
+            }
+            else story->structValue->emplace("METADATA", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+
+            stories->arrayValue->push_back(story);
+        }
+
+        return stories;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::removeRoomFromStories(uint64_t roomId)
+{
+    try
+    {
+        if(roomId == 0) return std::make_shared<BaseLib::Variable>(false);
+        std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, rooms FROM stories");
+
+        for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
+        {
+            std::vector<std::string> roomStrings = BaseLib::HelperFunctions::splitAll(i->second.at(1)->textValue, ',');
+            bool containsRoom = false;
+
+            std::ostringstream roomStream;
+            for(auto& roomString : roomStrings)
+            {
+                uint64_t room = (uint64_t)BaseLib::Math::getNumber64(roomString);
+                if(room == roomId) containsRoom = true;
+                else roomStream << std::to_string(room) << ",";
+            }
+
+            if(containsRoom)
+            {
+                std::string roomString = roomStream.str();
+                BaseLib::Database::DataRow data;
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(roomString));
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(i->second.at(0)->intValue));
+                _db.executeCommand("UPDATE stories SET rooms=? WHERE id=?", data);
+            }
+        }
+
+        return std::make_shared<BaseLib::Variable>(true);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::removeRoomFromStory(uint64_t storyId, uint64_t roomId)
+{
+    try
+    {
+        if(roomId == 0) return std::make_shared<BaseLib::Variable>(false);
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(storyId));
+        std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT rooms FROM stories WHERE id=?", data);
+        if(rows->empty()) return BaseLib::Variable::createError(-1, "Unknown story.");
+
+        std::vector<std::string> roomStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(0)->textValue, ',');
+        bool containsRoom = false;
+
+        std::ostringstream roomStream;
+        for(auto& roomString : roomStrings)
+        {
+            uint64_t room = (uint64_t)BaseLib::Math::getNumber64(roomString);
+            if(room == roomId) containsRoom = true;
+            else roomStream << std::to_string(room) << ",";
+        }
+
+        if(containsRoom)
+        {
+            std::string roomString = roomStream.str();
+            data.push_front(std::make_shared<BaseLib::Database::DataColumn>(roomString));
+            _db.executeCommand("UPDATE stories SET rooms=? WHERE id=?", data);
+        }
+
+        return std::make_shared<BaseLib::Variable>(true);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+bool DatabaseController::storyExists(uint64_t storyId)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(storyId));
+        return !_db.executeCommand("SELECT id FROM stories WHERE id=?", data)->empty();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
+BaseLib::PVariable DatabaseController::setStoryMetadata(uint64_t storyId, BaseLib::PVariable metadata)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(storyId));
+        if(_db.executeCommand("SELECT id FROM stories WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown story.");
+
+        std::vector<char> metadataBlob;
+        _rpcEncoder->encodeResponse(metadata, metadataBlob);
+
+        data.push_front(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+        _db.executeCommand("UPDATE stories SET metadata=? WHERE id=?", data);
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::updateStory(uint64_t storyId, BaseLib::PVariable translations, BaseLib::PVariable metadata)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(storyId));
+        if(_db.executeCommand("SELECT id FROM stories WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown story.");
+
+		std::vector<char> translationsBlob;
+		_rpcEncoder->encodeResponse(translations, translationsBlob);
+		data.push_front(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+
+        if(!metadata->structValue->empty())
+        {
+			std::vector<char> metadataBlob;
+			_rpcEncoder->encodeResponse(metadata, metadataBlob);
+			data.push_front(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+            _db.executeCommand("UPDATE stories SET metadata=?, translations=? WHERE id=?", data);
+        }
+        else _db.executeCommand("UPDATE stories SET translations=? WHERE id=?", data);
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+//}}}
+
 //{{{ Rooms
 BaseLib::PVariable DatabaseController::createRoom(BaseLib::PVariable translations, BaseLib::PVariable metadata)
 {
@@ -968,7 +1391,7 @@ BaseLib::PVariable DatabaseController::getRooms(BaseLib::PRpcClientInfo clientIn
 
 		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, metadata FROM rooms");
 		rooms->arrayValue->reserve(rows->size());
-		for(auto row : *rows)
+		for(auto& row : *rows)
 		{
             if(checkAcls && !clientInfo->acls->checkRoomReadAccess(row.second.at(0)->intValue)) continue;
 			BaseLib::PVariable room = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -1075,18 +1498,18 @@ BaseLib::PVariable DatabaseController::updateRoom(uint64_t roomId, BaseLib::PVar
 		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(roomId));
 		if(_db.executeCommand("SELECT id FROM rooms WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown room.");
 
-		std::vector<char> metadataBlob;
-		_rpcEncoder->encodeResponse(metadata, metadataBlob);
-		data.push_front(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+		std::vector<char> translationsBlob;
+		_rpcEncoder->encodeResponse(translations, translationsBlob);
+		data.push_front(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
 
-		if(!translations->structValue->empty())
+		if(!metadata->structValue->empty())
 		{
-			std::vector<char> translationsBlob;
-			_rpcEncoder->encodeResponse(translations, translationsBlob);
-			data.push_front(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
-			_db.executeCommand("UPDATE rooms SET translations=?, metadata=? WHERE id=?", data);
+			std::vector<char> metadataBlob;
+			_rpcEncoder->encodeResponse(metadata, metadataBlob);
+			data.push_front(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+			_db.executeCommand("UPDATE rooms SET metadata=?, translations=? WHERE id=?", data);
 		}
-		else _db.executeCommand("UPDATE rooms SET metadata=? WHERE id=?", data);
+		else _db.executeCommand("UPDATE rooms SET translations=? WHERE id=?", data);
 
 		return std::make_shared<BaseLib::Variable>();
 	}
@@ -1176,7 +1599,7 @@ BaseLib::PVariable DatabaseController::getCategories(BaseLib::PRpcClientInfo cli
 
 		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, metadata FROM categories");
 		categories->arrayValue->reserve(rows->size());
-		for(auto row : *rows)
+		for(auto& row : *rows)
 		{
             if(checkAcls && !clientInfo->acls->checkCategoryReadAccess(row.second.at(0)->intValue)) continue;
 			BaseLib::PVariable category = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -1309,18 +1732,18 @@ BaseLib::PVariable DatabaseController::updateCategory(uint64_t categoryId, BaseL
 		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(categoryId));
 		if(_db.executeCommand("SELECT id FROM categories WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown category.");
 
-		std::vector<char> metadataBlob;
-		_rpcEncoder->encodeResponse(metadata, metadataBlob);
-		data.push_front(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+		std::vector<char> translationsBlob;
+		_rpcEncoder->encodeResponse(translations, translationsBlob);
+		data.push_front(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
 
-		if(!translations->structValue->empty())
+		if(!metadata->structValue->empty())
 		{
-			std::vector<char> translationsBlob;
-			_rpcEncoder->encodeResponse(translations, translationsBlob);
-			data.push_front(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
-			_db.executeCommand("UPDATE categories SET translations=?, metadata=? WHERE id=?", data);
+			std::vector<char> metadataBlob;
+			_rpcEncoder->encodeResponse(metadata, metadataBlob);
+			data.push_front(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+			_db.executeCommand("UPDATE categories SET metadata=?, translations=? WHERE id=?", data);
 		}
-		else _db.executeCommand("UPDATE categories SET metadata=? WHERE id=?", data);
+		else _db.executeCommand("UPDATE categories SET translations=? WHERE id=?", data);
 
 		return std::make_shared<BaseLib::Variable>();
 	}
@@ -1907,13 +2330,13 @@ void DatabaseController::removeCategoryFromSystemVariables(uint64_t categoryId)
 
         for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
         {
-            std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(1)->textValue, ',');
+            std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(i->second.at(1)->textValue, ',');
             bool containsCategory = false;
 
             std::ostringstream categoryStream;
-            for(auto categoryString : categoryStrings)
+            for(auto& categoryString : categoryStrings)
             {
-                uint64_t category = BaseLib::Math::getNumber64(categoryString);
+                uint64_t category = (uint64_t)BaseLib::Math::getNumber64(categoryString);
                 if(category == categoryId) containsCategory = true;
                 else categoryStream << std::to_string(category) << ",";
             }
@@ -1923,7 +2346,7 @@ void DatabaseController::removeCategoryFromSystemVariables(uint64_t categoryId)
                 std::string categoryString = categoryStream.str();
                 BaseLib::Database::DataRow data;
                 data.push_back(std::make_shared<BaseLib::Database::DataColumn>(categoryString));
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(rows->at(0).at(0)->intValue));
+                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(i->second.at(0)->intValue));
                 _db.executeCommand("UPDATE systemVariables SET categories=? WHERE variableID=?", data);
             }
         }

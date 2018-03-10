@@ -79,6 +79,20 @@ public:
 		virtual BaseLib::PVariable deleteData(std::string& component, std::string& key);
 	// }}}
 
+	// {{{ Stories
+        virtual BaseLib::PVariable addRoomToStory(uint64_t storyId, uint64_t roomId);
+        virtual BaseLib::PVariable createStory(BaseLib::PVariable translations, BaseLib::PVariable metadata);
+        virtual BaseLib::PVariable deleteStory(uint64_t storyId);
+        virtual BaseLib::PVariable getRoomsInStory(BaseLib::PRpcClientInfo clientInfo, uint64_t storyId, bool checkAcls);
+        virtual BaseLib::PVariable getStoryMetadata(uint64_t storyId);
+        virtual BaseLib::PVariable getStories(std::string languageCode);
+        virtual BaseLib::PVariable removeRoomFromStories(uint64_t roomId);
+        virtual BaseLib::PVariable removeRoomFromStory(uint64_t storyId, uint64_t roomId);
+        virtual bool storyExists(uint64_t storyId);
+        virtual BaseLib::PVariable setStoryMetadata(uint64_t storyId, BaseLib::PVariable metadata);
+        virtual BaseLib::PVariable updateStory(uint64_t storyId, BaseLib::PVariable translations, BaseLib::PVariable metadata);
+	// }}}
+
 	// {{{ Rooms
 		virtual BaseLib::PVariable createRoom(BaseLib::PVariable translations, BaseLib::PVariable metadata);
 		virtual BaseLib::PVariable deleteRoom(uint64_t roomId);
