@@ -1095,6 +1095,15 @@ void startUp()
         GD::eventHandler->load();
 #endif
 
+		GD::out.printInfo("Start listening for packets...");
+        GD::familyController->physicalInterfaceStartListening();
+		if(!GD::familyController->physicalInterfaceIsOpen())
+        {
+        	GD::out.printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
+        	GD::familyController->physicalInterfaceStopListening();
+        	exitHomegear(1);
+        }
+
 		if(GD::bl->settings.enableNodeBlue())
 		{
 			GD::out.printInfo("Starting Node-BLUE server...");
@@ -1111,15 +1120,6 @@ void startUp()
 			GD::out.printCritical("Critical: Cannot start IPC server. Exiting Homegear.");
 			exitHomegear(1);
 		}
-
-		GD::out.printInfo("Start listening for packets...");
-        GD::familyController->physicalInterfaceStartListening();
-		if(!GD::familyController->physicalInterfaceIsOpen())
-        {
-        	GD::out.printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
-        	GD::familyController->physicalInterfaceStopListening();
-        	exitHomegear(1);
-        }
 
         GD::out.printMessage("Startup complete. Waiting for physical interfaces to connect.");
 
