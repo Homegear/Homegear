@@ -1937,10 +1937,10 @@ BaseLib::PVariable RPCGetChannelsInCategory::invoke(BaseLib::PRpcClientInfo clie
         }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryReadAccess("getChannelsInCategory", parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryReadAccess("getChannelsInCategory", (uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
         bool checkAcls = clientInfo->acls->roomsCategoriesDevicesReadSet();
 
-        if(!GD::bl->db->categoryExists(parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
+        if(!GD::bl->db->categoryExists((uint64_t)parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
 
         BaseLib::PVariable result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 
@@ -1950,7 +1950,7 @@ BaseLib::PVariable RPCGetChannelsInCategory::invoke(BaseLib::PRpcClientInfo clie
             std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
             if(central)
             {
-                BaseLib::PVariable devices = central->getChannelsInCategory(clientInfo, parameters->at(0)->integerValue64, checkAcls);
+                BaseLib::PVariable devices = central->getChannelsInCategory(clientInfo, (uint64_t)parameters->at(0)->integerValue64, checkAcls);
                 result->structValue->insert(devices->structValue->begin(), devices->structValue->end());
             }
         }

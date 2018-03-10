@@ -526,7 +526,7 @@ std::string MiscCentral::handleCliCommand(std::string command)
 							typeID += "...";
 						}
 						else typeID.resize(typeWidth2, ' ');
-						stringStream << typeID << bar;
+						stringStream << typeID;
 					}
 					else stringStream << std::setw(typeWidth2);
 					stringStream << std::endl << std::dec;
