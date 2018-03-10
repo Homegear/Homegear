@@ -902,7 +902,7 @@ BaseLib::PVariable DatabaseController::addRoomToStory(uint64_t storyId, uint64_t
             _db.executeCommand("UPDATE stories SET rooms=? WHERE id=?", data);
         }
 
-        return std::make_shared<BaseLib::Variable>(true);
+        return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
     {
@@ -1160,7 +1160,7 @@ BaseLib::PVariable DatabaseController::removeRoomFromStory(uint64_t storyId, uin
 {
     try
     {
-        if(roomId == 0) return std::make_shared<BaseLib::Variable>(false);
+        if(roomId == 0) return BaseLib::Variable::createError(-2, "Invalid room ID.");
         BaseLib::Database::DataRow data;
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(storyId));
         std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT rooms FROM stories WHERE id=?", data);
@@ -1184,7 +1184,7 @@ BaseLib::PVariable DatabaseController::removeRoomFromStory(uint64_t storyId, uin
             _db.executeCommand("UPDATE stories SET rooms=? WHERE id=?", data);
         }
 
-        return std::make_shared<BaseLib::Variable>(true);
+        return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
     {
