@@ -99,6 +99,13 @@ private:
 		// }}}
 	};
 
+	struct ClientScriptInfo
+	{
+		int32_t scriptId = 0;
+		BaseLib::PRpcClientInfo clientInfo;
+	};
+	typedef std::shared_ptr<ClientScriptInfo> PClientScriptInfo;
+
 	BaseLib::Output _out;
 #ifdef DEBUGSESOCKET
 	std::mutex _socketOutputMutex;
@@ -120,9 +127,9 @@ private:
 	std::map<int32_t, PScriptEngineClientData> _clients;
 	int32_t _currentClientId = 0;
 	int64_t _lastGargabeCollection = 0;
-	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
+	BaseLib::PRpcClientInfo _dummyClientInfo;
 	std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> _rpcMethods;
-	std::map<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>> _localRpcMethods;
+	std::map<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)>> _localRpcMethods;
 	std::mutex _executeScriptMutex;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
@@ -158,61 +165,61 @@ private:
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 
 	// {{{ RPC methods
-		BaseLib::PVariable registerScriptEngineClient(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+		BaseLib::PVariable registerScriptEngineClient(PScriptEngineClientData& clientData, BaseLib::PArray& parameters);
 		BaseLib::PVariable scriptFinished(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-		BaseLib::PVariable scriptOutput(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-		BaseLib::PVariable scriptHeaders(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-		BaseLib::PVariable peerExists(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+		BaseLib::PVariable scriptOutput(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+		BaseLib::PVariable scriptHeaders(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+		BaseLib::PVariable peerExists(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
 
-		BaseLib::PVariable listRpcClients(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-		BaseLib::PVariable raiseDeleteDevice(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-		BaseLib::PVariable getFamilySetting(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-		BaseLib::PVariable setFamilySetting(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-		BaseLib::PVariable deleteFamilySetting(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+		BaseLib::PVariable listRpcClients(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+		BaseLib::PVariable raiseDeleteDevice(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+		BaseLib::PVariable getFamilySetting(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+		BaseLib::PVariable setFamilySetting(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+		BaseLib::PVariable deleteFamilySetting(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
 
 		// {{{ MQTT
-			BaseLib::PVariable mqttPublish(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+			BaseLib::PVariable mqttPublish(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
 		// }}}
 
 		// {{{ User methods
-			BaseLib::PVariable auth(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-			BaseLib::PVariable createUser(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-			BaseLib::PVariable deleteUser(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-			BaseLib::PVariable getUserMetadata(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-			BaseLib::PVariable getUsersGroups(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-			BaseLib::PVariable setUserMetadata(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-			BaseLib::PVariable updateUser(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-			BaseLib::PVariable userExists(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-			BaseLib::PVariable listUsers(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+			BaseLib::PVariable auth(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable createUser(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable deleteUser(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable getUserMetadata(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable getUsersGroups(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable setUserMetadata(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable updateUser(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable userExists(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable listUsers(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
 		// }}}
 
         // {{{ Group methods
-            BaseLib::PVariable createGroup(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-            BaseLib::PVariable deleteGroup(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-			BaseLib::PVariable getGroup(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-            BaseLib::PVariable getGroups(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-            BaseLib::PVariable groupExists(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-            BaseLib::PVariable updateGroup(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+            BaseLib::PVariable createGroup(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+            BaseLib::PVariable deleteGroup(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable getGroup(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+            BaseLib::PVariable getGroups(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+            BaseLib::PVariable groupExists(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+            BaseLib::PVariable updateGroup(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
         // }}}
 
 		// {{{ Module methods
-			BaseLib::PVariable listModules(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-			BaseLib::PVariable loadModule(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-			BaseLib::PVariable unloadModule(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-			BaseLib::PVariable reloadModule(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+			BaseLib::PVariable listModules(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable loadModule(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable unloadModule(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable reloadModule(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
 		// }}}
 
 		// {{{ Licensing methods
-			BaseLib::PVariable checkLicense(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-			BaseLib::PVariable removeLicense(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-			BaseLib::PVariable getLicenseStates(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-			BaseLib::PVariable getTrialStartTime(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+			BaseLib::PVariable checkLicense(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable removeLicense(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable getLicenseStates(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable getTrialStartTime(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
 		// }}}
 
 		// {{{ Flows
-			BaseLib::PVariable nodeEvent(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-			BaseLib::PVariable nodeOutput(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-			BaseLib::PVariable executePhpNodeBaseMethod(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
+			BaseLib::PVariable nodeEvent(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable nodeOutput(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable executePhpNodeBaseMethod(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
 		// }}}
 	// }}}
 };

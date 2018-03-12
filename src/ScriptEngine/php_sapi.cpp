@@ -107,6 +107,7 @@ ZEND_FUNCTION(hg_create_user);
 ZEND_FUNCTION(hg_delete_user);
 ZEND_FUNCTION(hg_get_user_metadata);
 ZEND_FUNCTION(hg_set_user_metadata);
+ZEND_FUNCTION(hg_set_user_privileges);
 ZEND_FUNCTION(hg_update_user);
 ZEND_FUNCTION(hg_user_exists);
 ZEND_FUNCTION(hg_users);
@@ -156,6 +157,7 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_delete_user, NULL)
     ZEND_FE(hg_get_user_metadata, NULL)
     ZEND_FE(hg_set_user_metadata, NULL)
+	ZEND_FE(hg_set_user_privileges, NULL)
 	ZEND_FE(hg_update_user, NULL)
 	ZEND_FE(hg_user_exists, NULL)
 	ZEND_FE(hg_users, NULL)
@@ -958,6 +960,28 @@ ZEND_FUNCTION(hg_register_thread)
         php_homegear_invoke_rpc(methodName, parameters, return_value, true);
     }
 
+	ZEND_FUNCTION(hg_set_user_privileges)
+	{
+		if(_disposed) RETURN_NULL();
+		int argc = 0;
+		zval* args = nullptr;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+		std::string user;
+
+		if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::setUserPrivileges().");
+		else if(argc == 1)
+		{
+			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "user is not of type string.");
+			else
+			{
+				if(Z_STRLEN(args[0]) > 0) user = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+			}
+		}
+		if(user.empty()) RETURN_FALSE;
+
+		SEG(user) = user;
+	}
+
 	ZEND_FUNCTION(hg_update_user)
 	{
 		if(_disposed) RETURN_NULL();
@@ -1052,6 +1076,11 @@ ZEND_FUNCTION(hg_poll_event)
 	if(SEG(id) == 0)
 	{
 		zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Did you call \"registerThread\"?", -1);
+		RETURN_FALSE
+	}
+	if(!SEG(user).empty())
+	{
+		zend_throw_exception(homegear_exception_class_entry, "Can't poll events when user privileges are set.", -1);
 		RETURN_FALSE
 	}
 	int argc = 0;
@@ -2029,6 +2058,7 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME_MAPPING(getHttpContents, hg_get_http_contents, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(download, hg_download, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(pollEvent, hg_poll_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(setUserPrivileges, hg_set_user_privileges, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(subscribePeer, hg_subscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(unsubscribePeer, hg_unsubscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(shuttingDown, hg_shutting_down, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)

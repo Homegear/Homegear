@@ -526,7 +526,7 @@ void ScriptEngineClient::sendScriptFinished(int32_t exitCode)
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		std::string methodName("scriptFinished");
 		BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(exitCode))});
-		sendRequest(globals->id, methodName, parameters, false);
+		sendRequest(globals->id, globals->user, methodName, parameters, false);
 	}
 	catch(const std::exception& ex)
     {
@@ -746,7 +746,7 @@ void ScriptEngineClient::sendOutput(std::string output)
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		std::string methodName("scriptOutput");
 		BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(output))});
-		sendRequest(globals->id, methodName, parameters, true);
+		sendRequest(globals->id, globals->user, methodName, parameters, true);
 	}
 	catch(const std::exception& ex)
     {
@@ -769,7 +769,7 @@ void ScriptEngineClient::sendHeaders(BaseLib::PVariable headers)
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		std::string methodName("scriptHeaders");
 		BaseLib::PArray parameters(new BaseLib::Array{headers});
-		sendRequest(globals->id, methodName, parameters, true);
+		sendRequest(globals->id, globals->user, methodName, parameters, true);
 	}
 	catch(const std::exception& ex)
     {
@@ -791,7 +791,7 @@ BaseLib::PVariable ScriptEngineClient::callMethod(std::string methodName, BaseLi
 	{
 		if(_nodesStopped) return BaseLib::Variable::createError(-32500, "RPC calls are forbidden after \"stop\" is executed.");
 		zend_homegear_globals* globals = php_homegear_get_globals();
-		return sendRequest(globals->id, std::move(methodName), parameters->arrayValue, wait);
+		return sendRequest(globals->id, globals->user, methodName, parameters->arrayValue, wait);
 	}
 	catch(const std::exception& ex)
     {
@@ -841,7 +841,7 @@ BaseLib::PVariable ScriptEngineClient::send(std::vector<char>& data)
     return BaseLib::PVariable(new BaseLib::Variable());
 }
 
-BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string methodName, BaseLib::PArray& parameters, bool wait)
+BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string user, std::string methodName, BaseLib::PArray& parameters, bool wait)
 {
 	try
 	{
@@ -863,7 +863,10 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string
 		}
 		BaseLib::PArray array = std::make_shared<BaseLib::Array>();
 		array->reserve(4);
-		array->push_back(std::make_shared<BaseLib::Variable>(scriptId));
+		auto scriptInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+		scriptInfo->structValue->emplace("scriptId", std::make_shared<BaseLib::Variable>(scriptId));
+		scriptInfo->structValue->emplace("user", std::make_shared<BaseLib::Variable>(user));
+		array->push_back(scriptInfo);
 		array->push_back(std::make_shared<BaseLib::Variable>(packetId));
 		array->push_back(std::make_shared<BaseLib::Variable>(wait));
 		array->push_back(std::make_shared<BaseLib::Variable>(parameters));
@@ -952,7 +955,10 @@ BaseLib::PVariable ScriptEngineClient::sendGlobalRequest(std::string methodName,
 		}
 		BaseLib::PArray array = std::make_shared<BaseLib::Array>();
 		array->reserve(4);
-		array->push_back(std::make_shared<BaseLib::Variable>(0));
+        auto scriptInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+        scriptInfo->structValue->emplace("scriptId", std::make_shared<BaseLib::Variable>(0));
+        scriptInfo->structValue->emplace("user", std::make_shared<BaseLib::Variable>(std::string()));
+        array->push_back(scriptInfo);
 		array->push_back(std::make_shared<BaseLib::Variable>(packetId));
 		array->push_back(std::make_shared<BaseLib::Variable>(true));
 		array->push_back(std::make_shared<BaseLib::Variable>(parameters));

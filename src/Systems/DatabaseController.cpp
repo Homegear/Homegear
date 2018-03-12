@@ -3010,7 +3010,7 @@ bool DatabaseController::updateUser(uint64_t id, const std::vector<uint8_t>& pas
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
             _db.executeCommand("UPDATE users SET password=?, salt=?, groups=? WHERE userID=?", data);
 
-            rows = _db.executeCommand("SELECT userID FROM users WHERE password=? AND salt=? AND userID=?", data);
+            rows = _db.executeCommand("SELECT userID FROM users WHERE password=? AND salt=? AND groups=? AND userID=?", data);
         }
         else if(!passwordHash.empty())
         {
@@ -3030,7 +3030,7 @@ bool DatabaseController::updateUser(uint64_t id, const std::vector<uint8_t>& pas
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
             _db.executeCommand("UPDATE users SET groups=? WHERE userID=?", data);
 
-            rows = _db.executeCommand("SELECT userID FROM users WHERE userID=?", data);
+            rows = _db.executeCommand("SELECT userID FROM users WHERE groups=? AND userID=?", data);
         }
         else return true; //Nothing to update
 
