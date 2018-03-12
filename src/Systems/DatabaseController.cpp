@@ -2281,7 +2281,7 @@ BaseLib::PVariable DatabaseController::getAllSystemVariables(BaseLib::PRpcClient
                 _systemVariables.emplace(systemVariable->name, systemVariable);
             }
 
-            if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+            if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) continue;
 
             if(returnRoomsAndCategories)
             {
