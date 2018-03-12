@@ -90,7 +90,11 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval* value, bool arraysAre
                     if(!variable)
                     {
                         if(key || arraysAreStructsLocal) variable.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
-                        else variable.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
+                        else
+						{
+							variable.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
+							variable->arrayValue->reserve(zend_hash_num_elements(ht));
+						}
                     }
                     BaseLib::PVariable arrayElement = getVariable(element, subArraysAreStructs, subArraysAreStructs);
                     if(!arrayElement) continue;
