@@ -123,7 +123,7 @@ public:
 	// {{{ Metadata
 		virtual BaseLib::PVariable setMetadata(uint64_t peerId, std::string& serialNumber, std::string& dataId, BaseLib::PVariable& metadata);
 		virtual BaseLib::PVariable getMetadata(uint64_t peerId, std::string& dataId);
-		virtual BaseLib::PVariable getAllMetadata(uint64_t peerId);
+		virtual BaseLib::PVariable getAllMetadata(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<BaseLib::Systems::Peer> peer, bool checkAcls);
 		virtual BaseLib::PVariable deleteMetadata(uint64_t peerId, std::string& serialNumber, std::string& dataId);
 	// }}}
 

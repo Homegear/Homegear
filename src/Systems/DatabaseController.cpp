@@ -1978,12 +1978,12 @@ BaseLib::PVariable DatabaseController::deleteNodeData(std::string& node, std::st
 //End node data
 
 //Metadata
-BaseLib::PVariable DatabaseController::getAllMetadata(uint64_t peerID)
+BaseLib::PVariable DatabaseController::getAllMetadata(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<BaseLib::Systems::Peer> peer, bool checkAcls)
 {
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peerID))));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peer->getID()))));
 
 		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT dataID, serializedObject FROM metadata WHERE objectID=?", data);
 
@@ -1991,12 +1991,10 @@ BaseLib::PVariable DatabaseController::getAllMetadata(uint64_t peerID)
 		for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
 		{
 			if(i->second.size() < 2) continue;
+            if(checkAcls && !clientInfo->acls->checkVariableReadAccess(peer, -2, i->second.at(0)->textValue)) continue;
 			BaseLib::PVariable metadata = _rpcDecoder->decodeResponse(*i->second.at(1)->binaryValue);
 			metadataStruct->structValue->insert(BaseLib::StructElement(i->second.at(0)->textValue, metadata));
 		}
-
-		//getAllMetadata is called repetitively for all central peers. That takes a lot of ressources, so we wait a little after each call.
-		std::this_thread::sleep_for(std::chrono::milliseconds(3));
 
 		return metadataStruct;
 	}
