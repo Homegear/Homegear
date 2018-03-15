@@ -137,6 +137,7 @@ void Server::registerMethods()
 		_server->registerMethod("getVariableDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetVariableDescription()));
         _server->registerMethod("getSystemVariablesInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetSystemVariablesInCategory()));
         _server->registerMethod("getSystemVariablesInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetSystemVariablesInRoom()));
+		_server->registerMethod("getUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetUiElements()));
         _server->registerMethod("getVariablesInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetVariablesInCategory()));
         _server->registerMethod("getVariablesInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetVariablesInRoom()));
 		_server->registerMethod("getVersion", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetVersion()));

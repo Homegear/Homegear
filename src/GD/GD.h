@@ -40,10 +40,11 @@
 #include "../Licensing/LicensingController.h"
 #include "../Systems/FamilyController.h"
 #include "../Systems/DatabaseController.h"
-#include <homegear-base/BaseLib.h>
 #include "../RPC/Server.h"
 #include "../RPC/Client.h"
 #include "../MQTT/Mqtt.h"
+#include <homegear-base/BaseLib.h>
+#include <homegear-base/DeviceDescription/UI/UiElements.h>
 
 #include <vector>
 #include <map>
@@ -83,6 +84,7 @@ public:
 	static std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>> licensingModules;
 	static std::unique_ptr<UPnP> uPnP;
 	static std::unique_ptr<Mqtt> mqtt;
+	static std::unique_ptr<BaseLib::DeviceDescription::UiElements> uiElements;
 #ifdef EVENTHANDLER
 	static std::unique_ptr<EventHandler> eventHandler;
 #endif

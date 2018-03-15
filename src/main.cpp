@@ -1036,6 +1036,8 @@ void startUp()
 			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 		}
 
+        GD::uiElements.reset(new BaseLib::DeviceDescription::UiElements(GD::bl.get()));
+
 #ifdef EVENTHANDLER
 		GD::eventHandler.reset(new EventHandler());
 #endif

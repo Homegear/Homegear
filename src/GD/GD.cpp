@@ -52,6 +52,7 @@ Rpc::ClientSettings GD::clientSettings;
 std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>> GD::licensingModules;
 std::unique_ptr<UPnP> GD::uPnP(new UPnP());
 std::unique_ptr<Mqtt> GD::mqtt;
+std::unique_ptr<BaseLib::DeviceDescription::UiElements> GD::uiElements;
 #ifdef EVENTHANDLER
 std::unique_ptr<EventHandler> GD::eventHandler;
 #endif

@@ -598,14 +598,10 @@ bool DatabaseController::convertDatabase()
 				data.push_back(i->second.at(1));
 				_db.executeCommand("INSERT OR REPLACE INTO systemVariables2(variableID, serializedObject) VALUES(?, ?)", data);
 			}
+            _db.executeCommand("DROP INDEX systemVariablesIndex");
 			_db.executeCommand("DROP TABLE systemVariables");
-			_db.executeCommand("DROP INDEX systemVariablesIndex");
 			_db.executeCommand("ALTER TABLE systemVariables2 RENAME TO systemVariables");
 			_db.executeCommand("CREATE INDEX IF NOT EXISTS systemVariablesIndex ON systemVariables (variableID)");
-
-			_db.executeCommand("ALTER TABLE systemVariables ADD COLUMN room INTEGER");
-			_db.executeCommand("ALTER TABLE systemVariables ADD COLUMN categories TEXT");
-
 
 
 			data.clear();
