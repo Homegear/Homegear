@@ -17,14 +17,14 @@ try {
         $familyNames[$value["ID"]] = $value["NAME"];
     }
 
-    $rawDevices = $hg->listDevices(false, ["FAMILY", "ID", "ADDRESS", "TYPE", "FIRMWARE"]);
+    $rawDevices = $hg->listDevices(false, ["FAMILY", "ID", "ADDRESS", "TYPE", "FIRMWARE", "NAME"]);
 
     foreach ($rawDevices as $item) {
 
-        $info = $hg->getDeviceInfo($item["ID"], ["NAME", "INTERFACE"]);
+        $info = $hg->getDeviceInfo($item["ID"], ["INTERFACE"]);
 
         $hgDevices[] = [
-            'name' => $info["NAME"],
+            'name' => $item["NAME"],
             'family' => $familyNames[$item["FAMILY"]],
             'id' => ($item["ID"] > 999999 ? "0x" . dechex($item["ID"]) : $item["ID"]),
             'address' => $item["ADDRESS"],
