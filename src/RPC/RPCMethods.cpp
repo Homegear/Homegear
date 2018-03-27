@@ -3236,7 +3236,7 @@ BaseLib::PVariable RPCGetParamsetDescription::invoke(BaseLib::PRpcClientInfo cli
 			else
 			{
 				type = BaseLib::DeviceDescription::ParameterGroup::Type::Enum::link;
-				remoteId = parameters->at(2)->integerValue64;
+				remoteId = (uint64_t)parameters->at(2)->integerValue64;
 				remoteChannel = parameters->at(3)->integerValue;
 			}
 
