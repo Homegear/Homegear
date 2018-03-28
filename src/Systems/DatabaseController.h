@@ -31,7 +31,7 @@
 #ifndef DATABASECONTROLLER_H_
 #define DATABASECONTROLLER_H_
 
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 #include "../Database/SQLite3.h"
 
 #include <thread>

@@ -258,6 +258,16 @@ public:
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
+class RPCAddUiElement : public BaseLib::Rpc::RpcMethod
+{
+public:
+    RPCAddUiElement()
+    {
+        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tStruct});
+    }
+    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
 class RPCAddVariableToRoom : public BaseLib::Rpc::RpcMethod
 {
 public:

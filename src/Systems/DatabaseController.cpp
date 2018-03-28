@@ -117,6 +117,8 @@ void DatabaseController::initializeDatabase()
         _db.executeCommand("CREATE INDEX IF NOT EXISTS storiesIndex ON stories (id)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, metadata BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS categoriesIndex ON categories (id)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS uiElements (id INTEGER PRIMARY KEY UNIQUE, element TEXT, data BLOB)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS uiElementsIndex ON uiElements (id)");
 
 		//{{{ Create default groups
         {

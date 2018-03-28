@@ -926,6 +926,34 @@ BaseLib::PVariable RPCAddSystemVariableToRoom::invoke(BaseLib::PRpcClientInfo cl
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCAddUiElement::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tStruct })
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("addUiElement")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCAddVariableToRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
     try

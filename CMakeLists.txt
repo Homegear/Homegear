@@ -99,6 +99,8 @@ set(SOURCE_FILES
         src/Systems/DatabaseController.h
         src/Systems/FamilyController.cpp
         src/Systems/FamilyController.h
+        src/Systems/UiController.cpp
+        src/Systems/UiController.h
         src/UPnP/UPnP.cpp
         src/UPnP/UPnP.h
         src/User/User.cpp
