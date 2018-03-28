@@ -1213,7 +1213,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			{
 				globals->webRequest = true;
 				globals->commandLine = false;
-				globals->cookiesParsed = !scriptInfo->script.empty();
+				globals->cookiesParsed = false;
 				globals->http = scriptInfo->http;
 				serverInfo = scriptInfo->serverInfo;
 			}
