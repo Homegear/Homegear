@@ -32,13 +32,39 @@
 #define UICONTROLLER_H_
 
 #include <homegear-base/BaseLib.h>
+#include <homegear-base/DeviceDescription/UI/UiElements.h>
 
 class UiController
 {
 public:
+    struct UiElement
+    {
+        uint64_t databaseId = 0;
+        std::string elementId;
+        BaseLib::PVariable data;
+        uint64_t roomId = 0;
+        std::unordered_set<uint64_t> categoryIds;
+        BaseLib::DeviceDescription::UiElements::PUiPeerInfo peerInfo = std::make_shared<BaseLib::DeviceDescription::UiElements::UiPeerInfo>();
+        std::unordered_map<std::string, BaseLib::DeviceDescription::PHomegearUiElement> rpcElement;
+    };
+    typedef std::shared_ptr<UiElement> PUiElement;
+
     UiController();
     virtual ~UiController();
+
+    void load();
+
+    BaseLib::PVariable addUiElement(BaseLib::PRpcClientInfo clientInfo, std::string& elementId, BaseLib::PVariable data);
+    BaseLib::PVariable getUiElementsInRoom(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId, std::string& language);
 protected:
+    std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
+
+    std::mutex _uiElementsMutex;
+    std::unordered_map<uint64_t, PUiElement> _uiElements;
+    std::unordered_map<uint64_t, std::unordered_set<PUiElement>> _uiElementsByRoom;
+    std::unordered_map<uint64_t, std::unordered_set<PUiElement>> _uiElementsByCategory;
+
+    void addDataInfo(PUiElement& uiElement, BaseLib::PVariable& data);
 };
 
 #endif

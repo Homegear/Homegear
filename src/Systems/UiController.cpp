@@ -29,10 +29,11 @@
 */
 
 #include "UiController.h"
+#include "../GD/GD.h"
 
 UiController::UiController()
 {
-
+    _rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
 }
 
 UiController::~UiController()
@@ -40,3 +41,171 @@ UiController::~UiController()
 
 }
 
+void UiController::load()
+{
+    try
+    {
+        std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
+        _uiElements.clear();
+        _uiElementsByRoom.clear();
+        _uiElementsByCategory.clear();
+        auto rows = GD::bl->db->getUiElements();
+        for(auto& row : *rows)
+        {
+            auto uiElement = std::make_shared<UiElement>();
+            uiElement->databaseId = (uint64_t)row.second.at(0)->intValue;
+            uiElement->elementId = row.second.at(1)->textValue;
+            uiElement->data = _rpcDecoder->decodeResponse(*row.second.at(2)->binaryValue);
+
+            if(uiElement->databaseId == 0 || uiElement->elementId.empty()) continue;
+
+            addDataInfo(uiElement, uiElement->data);
+
+            _uiElements.emplace(uiElement->databaseId, uiElement);
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+BaseLib::PVariable UiController::addUiElement(BaseLib::PRpcClientInfo clientInfo, std::string& elementId, BaseLib::PVariable data)
+{
+    try
+    {
+        if(elementId.empty()) return BaseLib::Variable::createError(-1, "elementId is empty.");
+        if(data->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "data is not of type Struct.");
+
+        std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
+        auto databaseId = GD::bl->db->addUiElement(elementId, data);
+
+        if(databaseId == 0) return BaseLib::Variable::createError(-1, "Error adding element to database.");
+
+        auto uiElement = std::make_shared<UiElement>();
+        uiElement->databaseId = databaseId;
+        uiElement->elementId = elementId;
+        uiElement->data = data;
+
+        addDataInfo(uiElement, data);
+
+        _uiElements.emplace(uiElement->databaseId, uiElement);
+        _uiElementsByRoom[uiElement->roomId].emplace(uiElement);
+        for(auto categoryId : uiElement->categoryIds)
+        {
+            _uiElementsByCategory[categoryId].emplace(uiElement);
+        }
+
+        return std::make_shared<BaseLib::Variable>(databaseId);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVariable& data)
+{
+    try
+    {
+        uiElement->peerInfo->inputPeers.clear();
+        uiElement->peerInfo->outputPeers.clear();
+        uiElement->roomId = 0;
+        uiElement->categoryIds.clear();
+
+        auto dataIterator = data->structValue->find("inputPeers");
+        if(dataIterator != data->structValue->end())
+        {
+            uiElement->peerInfo->inputPeers.reserve(dataIterator->second->arrayValue->size());
+            for(auto& outerArray : *dataIterator->second->arrayValue)
+            {
+                std::vector<uint64_t> peers;
+                peers.reserve(outerArray->arrayValue->size());
+                for(auto& peerIdElement : *outerArray->arrayValue)
+                {
+                    peers.push_back((uint64_t)peerIdElement->integerValue64);
+                }
+                uiElement->peerInfo->inputPeers.emplace_back(std::move(peers));
+            }
+        }
+
+        dataIterator = data->structValue->find("outputPeers");
+        if(dataIterator != data->structValue->end())
+        {
+            uiElement->peerInfo->outputPeers.reserve(dataIterator->second->arrayValue->size());
+            for(auto& outerArray : *dataIterator->second->arrayValue)
+            {
+                std::vector<uint64_t> peers;
+                peers.reserve(outerArray->arrayValue->size());
+                for(auto& peerIdElement : *outerArray->arrayValue)
+                {
+                    peers.push_back((uint64_t)peerIdElement->integerValue64);
+                }
+                uiElement->peerInfo->outputPeers.emplace_back(std::move(peers));
+            }
+        }
+
+        dataIterator = data->structValue->find("room");
+        if(dataIterator != data->structValue->end()) uiElement->roomId = (uint64_t)dataIterator->second->integerValue64;
+
+        dataIterator = data->structValue->find("categories");
+        if(dataIterator != data->structValue->end())
+        {
+            for(auto& categoryElement : *dataIterator->second->arrayValue)
+            {
+                uiElement->categoryIds.emplace((uint64_t)categoryElement->integerValue64);
+            }
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+BaseLib::PVariable UiController::getUiElementsInRoom(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId, std::string& language)
+{
+    try
+    {
+        std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
+
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}

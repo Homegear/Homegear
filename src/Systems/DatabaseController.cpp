@@ -118,7 +118,7 @@ void DatabaseController::initializeDatabase()
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, metadata BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS categoriesIndex ON categories (id)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS uiElements (id INTEGER PRIMARY KEY UNIQUE, element TEXT, data BLOB)");
-		_db.executeCommand("CREATE INDEX IF NOT EXISTS uiElementsIndex ON uiElements (id)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS uiElementsIndex ON uiElements (id, element)");
 
 		//{{{ Create default groups
         {
@@ -868,6 +868,61 @@ BaseLib::PVariable DatabaseController::deleteData(std::string& component, std::s
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+//}}}
+
+//{{{ UI
+uint64_t DatabaseController::addUiElement(std::string& elementId, BaseLib::PVariable data)
+{
+    try
+    {
+        BaseLib::Database::DataRow rowData;
+        rowData.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+
+        rowData.push_back(std::make_shared<BaseLib::Database::DataColumn>(elementId));
+
+        std::vector<char> dataBlob;
+        _rpcEncoder->encodeResponse(data, dataBlob);
+        rowData.push_back(std::make_shared<BaseLib::Database::DataColumn>(dataBlob));
+
+        uint64_t result = _db.executeWriteCommand("REPLACE INTO uiElements VALUES(?, ?, ?)", rowData);
+
+        return result;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return 0;
+}
+
+std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getUiElements()
+{
+	try
+	{
+		return _db.executeCommand("SELECT id, element, data FROM uiElements");
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::shared_ptr<BaseLib::Database::DataTable>();
 }
 //}}}
 
