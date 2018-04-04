@@ -34,6 +34,7 @@
 UiController::UiController()
 {
     _rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
+    _descriptions = std::unique_ptr<BaseLib::DeviceDescription::UiElements>(new BaseLib::DeviceDescription::UiElements(GD::bl.get()));
 }
 
 UiController::~UiController()
@@ -62,6 +63,11 @@ void UiController::load()
             addDataInfo(uiElement, uiElement->data);
 
             _uiElements.emplace(uiElement->databaseId, uiElement);
+            _uiElementsByRoom[uiElement->roomId].emplace(uiElement);
+            for(auto categoryId : uiElement->categoryIds)
+            {
+                _uiElementsByCategory[categoryId].emplace(uiElement);
+            }
         }
     }
     catch(const std::exception& ex)
@@ -188,12 +194,339 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
     }
 }
 
+BaseLib::PVariable UiController::getAllUiElements(BaseLib::PRpcClientInfo clientInfo, std::string& language)
+{
+    try
+    {
+        std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
+
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+
+        auto uiElements = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+        uiElements->arrayValue->reserve(_uiElements.size());
+
+        for(auto& uiElement : _uiElements)
+        {
+            auto languageIterator = uiElement.second->rpcElement.find(language);
+            if(languageIterator == uiElement.second->rpcElement.end())
+            {
+                auto rpcElement = _descriptions->getUiElement(language, uiElement.second->elementId, uiElement.second->peerInfo);
+                if(!rpcElement) continue;
+                uiElement.second->rpcElement.emplace(language, rpcElement);
+                languageIterator = uiElement.second->rpcElement.find(language);
+                if(languageIterator == uiElement.second->rpcElement.end()) continue;
+            }
+
+            if(checkAcls)
+            {
+                if(!clientInfo->acls->checkRoomReadAccess(uiElement.second->roomId)) continue;
+                for(auto categoryId : uiElement.second->categoryIds)
+                {
+                    if(!clientInfo->acls->checkCategoryReadAccess(categoryId)) continue;
+                }
+                if(!checkElementAccess(clientInfo, uiElement.second, languageIterator->second)) continue;
+            }
+
+            auto elementInfo = languageIterator->second->getElementInfo();
+            elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement.second->databaseId));
+            elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement.second->roomId));
+            auto categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+            categories->arrayValue->reserve(uiElement.second->categoryIds.size());
+            for(auto categoryId : uiElement.second->categoryIds)
+            {
+                categories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(categoryId));
+            }
+            elementInfo->structValue->emplace("categories", categories);
+            uiElements->arrayValue->emplace_back(elementInfo);
+        }
+
+        return uiElements;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable UiController::getAvailableUiElements(BaseLib::PRpcClientInfo clientInfo, std::string& language)
+{
+    try
+    {
+        return _descriptions->getUiElements(language);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable UiController::getUiElementsInRoom(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId, std::string& language)
 {
     try
     {
         std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
 
+        if(clientInfo->acls->roomsReadSet() && !clientInfo->acls->checkRoomReadAccess(roomId)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+
+        auto roomIterator = _uiElementsByRoom.find(roomId);
+        if(roomIterator == _uiElementsByRoom.end()) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+        auto uiElements = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+        uiElements->arrayValue->reserve(roomIterator->second.size());
+
+        for(auto& uiElement : roomIterator->second)
+        {
+            auto languageIterator = uiElement->rpcElement.find(language);
+            if(languageIterator == uiElement->rpcElement.end())
+            {
+                auto rpcElement = _descriptions->getUiElement(language, uiElement->elementId, uiElement->peerInfo);
+                if(!rpcElement) continue;
+                uiElement->rpcElement.emplace(language, rpcElement);
+                languageIterator = uiElement->rpcElement.find(language);
+                if(languageIterator == uiElement->rpcElement.end()) continue;
+            }
+
+            if(checkAcls && !checkElementAccess(clientInfo, uiElement, languageIterator->second)) continue;
+
+            auto elementInfo = languageIterator->second->getElementInfo();
+            elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
+            elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
+            auto categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+            categories->arrayValue->reserve(uiElement->categoryIds.size());
+            for(auto categoryId : uiElement->categoryIds)
+            {
+                categories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(categoryId));
+            }
+            elementInfo->structValue->emplace("categories", categories);
+            uiElements->arrayValue->emplace_back(elementInfo);
+        }
+
+        return uiElements;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable UiController::getUiElementsInCategory(BaseLib::PRpcClientInfo clientInfo, uint64_t categoryId, std::string& language)
+{
+    try
+    {
+        std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
+
+        if(clientInfo->acls->categoriesReadSet() && !clientInfo->acls->checkCategoryReadAccess(categoryId)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+
+        auto categoryIterator = _uiElementsByCategory.find(categoryId);
+        if(categoryIterator == _uiElementsByCategory.end()) return BaseLib::Variable::createError(-1, "Unknown category.");
+
+        auto uiElements = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+        uiElements->arrayValue->reserve(categoryIterator->second.size());
+
+        for(auto& uiElement : categoryIterator->second)
+        {
+            auto languageIterator = uiElement->rpcElement.find(language);
+            if(languageIterator == uiElement->rpcElement.end())
+            {
+                auto rpcElement = _descriptions->getUiElement(language, uiElement->elementId, uiElement->peerInfo);
+                if(!rpcElement) continue;
+                uiElement->rpcElement.emplace(language, rpcElement);
+                languageIterator = uiElement->rpcElement.find(language);
+                if(languageIterator == uiElement->rpcElement.end()) continue;
+            }
+
+            if(checkAcls && !checkElementAccess(clientInfo, uiElement, languageIterator->second)) continue;
+
+            auto elementInfo = languageIterator->second->getElementInfo();
+            elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
+            elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
+            auto categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+            categories->arrayValue->reserve(uiElement->categoryIds.size());
+            for(auto categoryId : uiElement->categoryIds)
+            {
+                categories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(categoryId));
+            }
+            elementInfo->structValue->emplace("categories", categories);
+            uiElements->arrayValue->emplace_back(elementInfo);
+        }
+
+        return uiElements;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo, const UiController::PUiElement& uiElement, const BaseLib::DeviceDescription::PHomegearUiElement& rpcElement)
+{
+    try
+    {
+        auto families = GD::familyController->getFamilies();
+
+        for(auto& peerVector : uiElement->peerInfo->inputPeers)
+        {
+            for(auto& peerId : peerVector)
+            {
+                for(auto& family : families)
+                {
+                    auto central = family.second->getCentral();
+                    if(!central) continue;
+
+                    auto peer = central->getPeer((uint64_t) peerId);
+                    if(!peer) continue;
+
+                    if(!clientInfo->acls->checkDeviceReadAccess(peer)) return false;
+                }
+            }
+        }
+
+        for(auto& peerVector : uiElement->peerInfo->outputPeers)
+        {
+            for(auto& peerId : peerVector)
+            {
+                for(auto& family : families)
+                {
+                    auto central = family.second->getCentral();
+                    if(!central) continue;
+
+                    auto peer = central->getPeer((uint64_t) peerId);
+                    if(!peer) continue;
+
+                    if(!clientInfo->acls->checkDeviceReadAccess(peer)) return false;
+                }
+            }
+        }
+
+        for(auto& variableInput : rpcElement->variableInputs)
+        {
+            for(auto& family : families)
+            {
+                auto central = family.second->getCentral();
+                if(!central) continue;
+
+                auto peer = central->getPeer((uint64_t)variableInput->peerId);
+                if(!peer) continue;
+
+                if(!clientInfo->acls->checkVariableReadAccess(peer, variableInput->channel, variableInput->name)) return false;
+            }
+        }
+
+        for(auto& variableOutput : rpcElement->variableOutputs)
+        {
+            for(auto& family : families)
+            {
+                auto central = family.second->getCentral();
+                if(!central) continue;
+
+                auto peer = central->getPeer((uint64_t)variableOutput->peerId);
+                if(!peer) continue;
+
+                if(!clientInfo->acls->checkVariableReadAccess(peer, variableOutput->channel, variableOutput->name)) return false;
+            }
+        }
+
+        return true;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
+BaseLib::PVariable UiController::removeUiElement(BaseLib::PRpcClientInfo clientInfo, uint64_t databaseId)
+{
+    try
+    {
+        if(databaseId == 0) return BaseLib::Variable::createError(-1, "databaseId is invalid.");
+
+        std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
+        auto elementIterator = _uiElements.find(databaseId);
+        if(elementIterator == _uiElements.end()) return BaseLib::Variable::createError(-2, "Unknown element.");
+
+        GD::bl->db->removeUiElement(databaseId);
+
+        auto roomIterator = _uiElementsByRoom.find(elementIterator->second->roomId);
+        if(roomIterator != _uiElementsByRoom.end())
+        {
+            for(auto& roomUiElement : roomIterator->second)
+            {
+                if(roomUiElement.get() == elementIterator->second.get())
+                {
+                    roomIterator->second.erase(roomUiElement);
+                    break;
+                }
+            }
+            if(roomIterator->second.empty()) _uiElementsByRoom.erase(roomIterator);
+        }
+
+        for(auto categoryId : elementIterator->second->categoryIds)
+        {
+            auto categoryIterator = _uiElementsByCategory.find(categoryId);
+            if(categoryIterator != _uiElementsByCategory.end())
+            {
+                for(auto& categoryUiElement : categoryIterator->second)
+                {
+                    if(categoryUiElement.get() == elementIterator->second.get())
+                    {
+                        categoryIterator->second.erase(categoryUiElement);
+                        break;
+                    }
+                }
+                if(categoryIterator->second.empty()) _uiElementsByCategory.erase(categoryIterator);
+            }
+        }
+
+        _uiElements.erase(elementIterator);
+
+        return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
     {

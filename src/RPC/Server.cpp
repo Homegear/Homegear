@@ -137,7 +137,6 @@ void Server::registerMethods()
 		_server->registerMethod("getVariableDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetVariableDescription()));
         _server->registerMethod("getSystemVariablesInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetSystemVariablesInCategory()));
         _server->registerMethod("getSystemVariablesInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetSystemVariablesInRoom()));
-		_server->registerMethod("getUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetUiElements()));
         _server->registerMethod("getVariablesInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetVariablesInCategory()));
         _server->registerMethod("getVariablesInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetVariablesInRoom()));
 		_server->registerMethod("getVersion", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetVersion()));
@@ -199,6 +198,15 @@ void Server::registerMethods()
 		_server->registerMethod("updateRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCUpdateRoom()));
         _server->registerMethod("updateStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCUpdateStory()));
 		_server->registerMethod("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCWriteLog()));
+
+		//{{{ UI
+		_server->registerMethod("addUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddUiElement()));
+		_server->registerMethod("getAllUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetAllUiElements()));
+		_server->registerMethod("getAvailableUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetAvailableUiElements()));
+		_server->registerMethod("getCategoryUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetCategoryUiElements()));
+		_server->registerMethod("getRoomUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCGetRoomUiElements()));
+		_server->registerMethod("removeUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCRemoveUiElement()));
+		//}}}
 	}
 	catch(const std::exception& ex)
     {

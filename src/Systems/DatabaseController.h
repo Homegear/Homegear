@@ -82,6 +82,7 @@ public:
 	// {{{ UI
 		virtual uint64_t addUiElement(std::string& elementId, BaseLib::PVariable data);
         virtual std::shared_ptr<BaseLib::Database::DataTable> getUiElements();
+		virtual void removeUiElement(uint64_t databaseId);
 	// }}}
 
 	// {{{ Stories

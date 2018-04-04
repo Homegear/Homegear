@@ -924,6 +924,29 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getUiElements(
 	}
 	return std::shared_ptr<BaseLib::Database::DataTable>();
 }
+
+void DatabaseController::removeUiElement(uint64_t databaseId)
+{
+	try
+	{
+		BaseLib::Database::DataRow rowData;
+		rowData.push_back(std::make_shared<BaseLib::Database::DataColumn>(databaseId));
+
+        _db.executeWriteCommand("DELETE FROM uiElements WHERE id=?", rowData);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
 //}}}
 
 //{{{ Stories

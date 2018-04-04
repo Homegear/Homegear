@@ -55,9 +55,14 @@ public:
     void load();
 
     BaseLib::PVariable addUiElement(BaseLib::PRpcClientInfo clientInfo, std::string& elementId, BaseLib::PVariable data);
+    BaseLib::PVariable getAllUiElements(BaseLib::PRpcClientInfo clientInfo, std::string& language);
+    BaseLib::PVariable getAvailableUiElements(BaseLib::PRpcClientInfo clientInfo, std::string& language);
     BaseLib::PVariable getUiElementsInRoom(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId, std::string& language);
+    BaseLib::PVariable getUiElementsInCategory(BaseLib::PRpcClientInfo clientInfo, uint64_t categoryId, std::string& language);
+    BaseLib::PVariable removeUiElement(BaseLib::PRpcClientInfo clientInfo, uint64_t databaseId);
 protected:
     std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
+    std::unique_ptr<BaseLib::DeviceDescription::UiElements> _descriptions;
 
     std::mutex _uiElementsMutex;
     std::unordered_map<uint64_t, PUiElement> _uiElements;
@@ -65,6 +70,7 @@ protected:
     std::unordered_map<uint64_t, std::unordered_set<PUiElement>> _uiElementsByCategory;
 
     void addDataInfo(PUiElement& uiElement, BaseLib::PVariable& data);
+    bool checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, const BaseLib::DeviceDescription::PHomegearUiElement& rpcElement);
 };
 
 #endif
