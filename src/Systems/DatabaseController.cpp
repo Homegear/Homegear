@@ -2653,12 +2653,12 @@ BaseLib::PVariable DatabaseController::getSystemVariablesInCategory(BaseLib::PRp
                 systemVariable = std::make_shared<BaseLib::Database::SystemVariable>();
                 systemVariable->name = i->second.at(0)->textValue;
                 systemVariable->value = _rpcDecoder->decodeResponse(*i->second.at(1)->binaryValue);
-                systemVariable->room = rows->at(0).at(2)->intValue;
+                systemVariable->room = (uint64_t)i->second.at(2)->intValue;
 
-                std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(3)->textValue, ',');
-                for(auto categoryString : categoryStrings)
+                std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(i->second.at(3)->textValue, ',');
+                for(auto& categoryString : categoryStrings)
                 {
-                    uint64_t category = BaseLib::Math::getNumber64(categoryString);
+                    uint64_t category = (uint64_t)BaseLib::Math::getNumber64(categoryString);
                     if(category != 0) systemVariable->categories.emplace(category);
                 }
 
@@ -2696,7 +2696,7 @@ BaseLib::PVariable DatabaseController::getSystemVariablesInRoom(BaseLib::PRpcCli
     try
     {
         BaseLib::Database::DataRow data;
-        data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(roomId)));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(roomId));
         std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT variableID, serializedObject, categories FROM systemVariables WHERE room=?", data);
 
         BaseLib::PVariable systemVariableArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
@@ -2721,10 +2721,10 @@ BaseLib::PVariable DatabaseController::getSystemVariablesInRoom(BaseLib::PRpcCli
                 systemVariable->value = _rpcDecoder->decodeResponse(*i->second.at(1)->binaryValue);
                 systemVariable->room = roomId;
 
-                std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(2)->textValue, ',');
-                for(auto categoryString : categoryStrings)
+                std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(i->second.at(2)->textValue, ',');
+                for(auto& categoryString : categoryStrings)
                 {
-                    uint64_t category = BaseLib::Math::getNumber64(categoryString);
+                    uint64_t category = (uint64_t)BaseLib::Math::getNumber64(categoryString);
                     if(category != 0) systemVariable->categories.emplace(category);
                 }
 
@@ -2828,26 +2828,35 @@ BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableId
 			return BaseLib::Variable::createError(-32500, "Reached limit of 1000000 system variable entries. Please delete system variables before adding new ones.");
 		}
 
-		{
-			std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
-			auto systemVariableIterator = _systemVariables.find(variableId);
-			if(systemVariableIterator == _systemVariables.end())
+        BaseLib::Database::PSystemVariable systemVariable = getSystemVariableInternal(variableId);
+
+        {
+			if(!systemVariable)
 			{
-				auto systemVariable = std::make_shared<BaseLib::Database::SystemVariable>();
+				systemVariable = std::make_shared<BaseLib::Database::SystemVariable>();
                 systemVariable->name = variableId;
 				systemVariable->value = value;
+                std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
 				_systemVariables.emplace(variableId, systemVariable);
 			}
-			else systemVariableIterator->second->value = value;
+			else systemVariable->value = value;
 		}
 
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableId)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(variableId));
 		std::vector<char> encodedValue;
 		_rpcEncoder->encodeResponse(value, encodedValue);
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(encodedValue)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(encodedValue));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(systemVariable->room));
+        std::ostringstream categories;
+        for(auto category : systemVariable->categories)
+        {
+            categories << std::to_string(category) << ",";
+        }
+        std::string categoryString = categories.str();
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(categoryString));
 
-		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO systemVariables(variableID, serializedObject) VALUES(?, ?)", data);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO systemVariables(variableID, serializedObject, room, categories) VALUES(?, ?, ?, ?)", data);
 		enqueue(0, entry);
 
 #ifdef EVENTHANDLER

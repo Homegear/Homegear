@@ -136,6 +136,9 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
         uiElement->roomId = 0;
         uiElement->categoryIds.clear();
 
+        std::shared_ptr<BaseLib::Variable> bla;
+        BaseLib::PVariable blupp;
+
         auto dataIterator = data->structValue->find("inputPeers");
         if(dataIterator != data->structValue->end())
         {
