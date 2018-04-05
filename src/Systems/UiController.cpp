@@ -146,17 +146,26 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
                 peers.reserve(outerArray->arrayValue->size());
                 for(auto& peerElement : *outerArray->arrayValue)
                 {
-                    auto peerIdIterator = peerElement->structValue->find("peerId");
-                    if(peerIdIterator == peerElement->structValue->end() || peerIdIterator->second->integerValue64 == 0) continue;
-
                     auto variableInfo = std::make_shared<BaseLib::DeviceDescription::UiElements::UiVariableInfo>();
-                    variableInfo->peerId = (uint64_t)peerIdIterator->second->integerValue64;
 
-                    auto channelIterator = peerElement->structValue->find("channel");
-                    if(channelIterator != peerElement->structValue->end()) variableInfo->channel = channelIterator->second->integerValue;
+                    if(peerElement->type == BaseLib::VariableType::tStruct)
+                    {
+                        auto peerIdIterator = peerElement->structValue->find("peerId");
+                        if(peerIdIterator == peerElement->structValue->end() || peerIdIterator->second->integerValue64 == 0) continue;
 
-                    auto nameIterator = peerElement->structValue->find("variableName");
-                    if(nameIterator != peerElement->structValue->end()) variableInfo->name = nameIterator->second->stringValue;
+                        variableInfo->peerId = (uint64_t)peerIdIterator->second->integerValue64;
+
+                        auto channelIterator = peerElement->structValue->find("channel");
+                        if(channelIterator != peerElement->structValue->end()) variableInfo->channel = channelIterator->second->integerValue;
+
+                        auto nameIterator = peerElement->structValue->find("variableName");
+                        if(nameIterator != peerElement->structValue->end()) variableInfo->name = nameIterator->second->stringValue;
+                    }
+                    else if(peerElement->integerValue64 != 0)
+                    {
+                        variableInfo->peerId = (uint64_t)peerElement->integerValue64;
+                    }
+                    else continue;
 
                     peers.push_back(variableInfo);
                 }
@@ -174,17 +183,26 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
                 peers.reserve(outerArray->arrayValue->size());
                 for(auto& peerElement : *outerArray->arrayValue)
                 {
-                    auto peerIdIterator = peerElement->structValue->find("peerId");
-                    if(peerIdIterator == peerElement->structValue->end() || peerIdIterator->second->integerValue64 == 0) continue;
-
                     auto variableInfo = std::make_shared<BaseLib::DeviceDescription::UiElements::UiVariableInfo>();
-                    variableInfo->peerId = (uint64_t)peerIdIterator->second->integerValue64;
 
-                    auto channelIterator = peerElement->structValue->find("channel");
-                    if(channelIterator != peerElement->structValue->end()) variableInfo->channel = channelIterator->second->integerValue;
+                    if(peerElement->type == BaseLib::VariableType::tStruct)
+                    {
+                        auto peerIdIterator = peerElement->structValue->find("peerId");
+                        if(peerIdIterator == peerElement->structValue->end() || peerIdIterator->second->integerValue64 == 0) continue;
 
-                    auto nameIterator = peerElement->structValue->find("variableName");
-                    if(nameIterator != peerElement->structValue->end()) variableInfo->name = nameIterator->second->stringValue;
+                        variableInfo->peerId = (uint64_t)peerIdIterator->second->integerValue64;
+
+                        auto channelIterator = peerElement->structValue->find("channel");
+                        if(channelIterator != peerElement->structValue->end()) variableInfo->channel = channelIterator->second->integerValue;
+
+                        auto nameIterator = peerElement->structValue->find("variableName");
+                        if(nameIterator != peerElement->structValue->end()) variableInfo->name = nameIterator->second->stringValue;
+                    }
+                    else if(peerElement->integerValue64 != 0)
+                    {
+                        variableInfo->peerId = (uint64_t)peerElement->integerValue64;
+                    }
+                    else continue;
 
                     peers.push_back(variableInfo);
                 }
