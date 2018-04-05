@@ -142,11 +142,23 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
             uiElement->peerInfo->inputPeers.reserve(dataIterator->second->arrayValue->size());
             for(auto& outerArray : *dataIterator->second->arrayValue)
             {
-                std::vector<uint64_t> peers;
+                std::vector<BaseLib::DeviceDescription::UiElements::PUiVariableInfo> peers;
                 peers.reserve(outerArray->arrayValue->size());
-                for(auto& peerIdElement : *outerArray->arrayValue)
+                for(auto& peerElement : *outerArray->arrayValue)
                 {
-                    peers.push_back((uint64_t)peerIdElement->integerValue64);
+                    auto peerIdIterator = peerElement->structValue->find("peerId");
+                    if(peerIdIterator == peerElement->structValue->end() || peerIdIterator->second->integerValue64 == 0) continue;
+
+                    auto variableInfo = std::make_shared<BaseLib::DeviceDescription::UiElements::UiVariableInfo>();
+                    variableInfo->peerId = (uint64_t)peerIdIterator->second->integerValue64;
+
+                    auto channelIterator = peerElement->structValue->find("channel");
+                    if(channelIterator != peerElement->structValue->end()) variableInfo->channel = channelIterator->second->integerValue;
+
+                    auto nameIterator = peerElement->structValue->find("variableName");
+                    if(nameIterator != peerElement->structValue->end()) variableInfo->name = nameIterator->second->stringValue;
+
+                    peers.push_back(variableInfo);
                 }
                 uiElement->peerInfo->inputPeers.emplace_back(std::move(peers));
             }
@@ -158,11 +170,23 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
             uiElement->peerInfo->outputPeers.reserve(dataIterator->second->arrayValue->size());
             for(auto& outerArray : *dataIterator->second->arrayValue)
             {
-                std::vector<uint64_t> peers;
+                std::vector<BaseLib::DeviceDescription::UiElements::PUiVariableInfo> peers;
                 peers.reserve(outerArray->arrayValue->size());
-                for(auto& peerIdElement : *outerArray->arrayValue)
+                for(auto& peerElement : *outerArray->arrayValue)
                 {
-                    peers.push_back((uint64_t)peerIdElement->integerValue64);
+                    auto peerIdIterator = peerElement->structValue->find("peerId");
+                    if(peerIdIterator == peerElement->structValue->end() || peerIdIterator->second->integerValue64 == 0) continue;
+
+                    auto variableInfo = std::make_shared<BaseLib::DeviceDescription::UiElements::UiVariableInfo>();
+                    variableInfo->peerId = (uint64_t)peerIdIterator->second->integerValue64;
+
+                    auto channelIterator = peerElement->structValue->find("channel");
+                    if(channelIterator != peerElement->structValue->end()) variableInfo->channel = channelIterator->second->integerValue;
+
+                    auto nameIterator = peerElement->structValue->find("variableName");
+                    if(nameIterator != peerElement->structValue->end()) variableInfo->name = nameIterator->second->stringValue;
+
+                    peers.push_back(variableInfo);
                 }
                 uiElement->peerInfo->outputPeers.emplace_back(std::move(peers));
             }
@@ -404,14 +428,14 @@ bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo,
 
         for(auto& peerVector : uiElement->peerInfo->inputPeers)
         {
-            for(auto& peerId : peerVector)
+            for(auto& peerInfo : peerVector)
             {
                 for(auto& family : families)
                 {
                     auto central = family.second->getCentral();
                     if(!central) continue;
 
-                    auto peer = central->getPeer((uint64_t) peerId);
+                    auto peer = central->getPeer((uint64_t) peerInfo->peerId);
                     if(!peer) continue;
 
                     if(!clientInfo->acls->checkDeviceReadAccess(peer)) return false;
@@ -421,14 +445,14 @@ bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo,
 
         for(auto& peerVector : uiElement->peerInfo->outputPeers)
         {
-            for(auto& peerId : peerVector)
+            for(auto& peerInfo : peerVector)
             {
                 for(auto& family : families)
                 {
                     auto central = family.second->getCentral();
                     if(!central) continue;
 
-                    auto peer = central->getPeer((uint64_t) peerId);
+                    auto peer = central->getPeer((uint64_t) peerInfo->peerId);
                     if(!peer) continue;
 
                     if(!clientInfo->acls->checkDeviceReadAccess(peer)) return false;
