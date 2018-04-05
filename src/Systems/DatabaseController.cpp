@@ -592,7 +592,7 @@ bool DatabaseController::convertDatabase()
 
 			_db.executeCommand("CREATE TABLE IF NOT EXISTS systemVariables2 (variableID TEXT PRIMARY KEY UNIQUE NOT NULL, serializedObject BLOB, room INTEGER, categories TEXT)");
 			std::shared_ptr<BaseLib::Database::DataTable> systemVariablesRows = _db.executeCommand("SELECT variableID, serializedObject FROM systemVariables");
-			for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
+			for(BaseLib::Database::DataTable::iterator i = systemVariablesRows->begin(); i != systemVariablesRows->end(); ++i)
 			{
 				if(i->second.size() < 2) continue;
 				data.clear();
