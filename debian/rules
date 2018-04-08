@@ -19,6 +19,10 @@ override_dh_auto_install:
 
 	chown -R root:root $(CURDIR)/debian/homegear/etc/homegear
 
+	mkdir -p $(CURDIR)/debian/homegear/etc/init.d
+	cp $(CURDIR)/misc/System\ Config/homegear.init $(CURDIR)/debian/homegear/etc/init.d/homegear
+	chown root:root $(CURDIR)/debian/homegear/etc/init.d/homegear
+	chmod 755 $(CURDIR)/debian/homegear/etc/init.d/homegear
 	mkdir -p $(CURDIR)/debian/homegear/lib/systemd/system
 	cp $(CURDIR)/misc/System\ Config/homegear.service $(CURDIR)/debian/homegear/lib/systemd/system/
 	chown root:root $(CURDIR)/debian/homegear/lib/systemd/system/homegear.service
