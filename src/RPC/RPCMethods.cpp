@@ -2015,8 +2015,8 @@ BaseLib::PVariable RPCGetAvailableUiElements::invoke(BaseLib::PRpcClientInfo cli
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("getAvailableUiElements")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
 
         ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                         std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString })
-                                                                                                                 }));
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString })
+        }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
         return GD::uiController->getAvailableUiElements(clientInfo, parameters->at(0)->stringValue);

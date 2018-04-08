@@ -136,9 +136,6 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
         uiElement->roomId = 0;
         uiElement->categoryIds.clear();
 
-        std::shared_ptr<BaseLib::Variable> bla;
-        BaseLib::PVariable blupp;
-
         auto dataIterator = data->structValue->find("inputPeers");
         if(dataIterator != data->structValue->end())
         {
@@ -282,6 +279,19 @@ BaseLib::PVariable UiController::getAllUiElements(BaseLib::PRpcClientInfo client
                 categories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(categoryId));
             }
             elementInfo->structValue->emplace("categories", categories);
+
+            auto dataIterator = uiElement.second->data->structValue->find("metadata");
+            if(dataIterator != uiElement.second->data->structValue->end())
+            {
+                auto metadataIterator = elementInfo->structValue->find("metadata");
+                if(metadataIterator == elementInfo->structValue->end()) metadataIterator = elementInfo->structValue->emplace("metadata", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct)).first;
+
+                for(auto& metadataElement : *dataIterator->second->structValue)
+                {
+                    metadataIterator->second->structValue->emplace(metadataElement);
+                }
+            }
+
             uiElements->arrayValue->emplace_back(elementInfo);
         }
 

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<homegearUiElements lang="en-US">
+	<homegearUiElement>
+		<id>254.100.Refresh</id>
+		<type>simple</type>
+		<control>button</control>
+		<icon>refresh</icon>
+		<variableOutputs>
+			<variable>
+				<familyId>254</familyId>
+				<deviceTypeId>0x100</deviceTypeId>
+				<channel>1</channel>
+				<name>REQUEST</name>
+			</variable>
+		</variableOutputs>
+	</homegearUiElement>
+	<homegearUiElement>
+		<id>254.100.OpenWeatherMap</id>
+		<type>complex</type>
+		<icon>weather</icon>
+		<width>3</width>
+		<height>3</height>
+		<cols>1</cols>
+		<rows>3</rows>
+		<controls>
+			<control id="Base.Temperature.Channel1">
+				<posX>0</posX>
+				<posY>0</posY>
+				<colWidth>1</colWidth>
+			</control>
+			<control id="Base.Humidity.Channel1">
+				<posX>0</posX>
+				<posY>1</posY>
+				<colWidth>1</colWidth>
+			</control>
+			<control id="254.100.Refresh">
+				<posX>0</posX>
+				<posY>2</posY>
+				<colWidth>1</colWidth>
+			</control>
+		</controls>
+		<metadata>
+			<!--<foo></foo>-->
+			<!--<bar></bar>-->
+		</metadata>
+	</homegearUiElement>
+</homegearUiElements>
