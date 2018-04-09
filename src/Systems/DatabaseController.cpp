@@ -87,8 +87,8 @@ void DatabaseController::initializeDatabase()
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS peersIndex ON peers (peerID, parent, address, serialNumber, type)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS peerVariables (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS peerVariablesIndex ON peerVariables (variableID, peerID, variableIndex)");
-		_db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
-		_db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON peerVariables (variableID, peerID, variableIndex)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, familyID INTEGER NOT NULL, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, timestamp INTEGER, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
+		_db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, peerID, variableIndex, timestamp)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB, room INTEGER, categories TEXT)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS parametersIndex ON parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
@@ -340,7 +340,7 @@ void DatabaseController::initializeDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.1")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.2")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
@@ -407,8 +407,8 @@ bool DatabaseController::convertDatabase()
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data);
 		if(result->empty()) return false; //Handled in initializeDatabase
 		std::string version = result->at(0).at(3)->textValue;
-		if(version == "0.7.1") return false; //Up to date
-		if(version != "0.3.1" && version != "0.4.3" && version != "0.5.0" && version != "0.5.1" && version != "0.6.0" && version != "0.6.1" && version != "0.7.0")
+		if(version == "0.7.2") return false; //Up to date
+		if(version != "0.3.1" && version != "0.4.3" && version != "0.5.0" && version != "0.5.1" && version != "0.6.0" && version != "0.6.1" && version != "0.7.0" && version != "0.7.1")
 		{
 			GD::out.printCritical("Critical: Unknown database version: " + version);
 			return true; //Don't know, what to do
@@ -612,6 +612,40 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			//Don't forget to set new version in initializeDatabase!!!
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.1")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+		}
+		if(version == "0.7.1")
+		{
+			GD::out.printMessage("Converting database from version " + version + " to version 0.7.2...");
+
+			_db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages2 (variableID INTEGER PRIMARY KEY UNIQUE, familyID INTEGER NOT NULL, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, timestamp INTEGER, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
+			std::shared_ptr<BaseLib::Database::DataTable> serviceMessagesRows = _db.executeCommand("SELECT * FROM serviceMessages");
+			for(BaseLib::Database::DataTable::iterator i = serviceMessagesRows->begin(); i != serviceMessagesRows->end(); ++i)
+			{
+				if(i->second.size() < 6) continue;
+				data.clear();
+				data.push_back(i->second.at(0));
+				data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
+				data.push_back(i->second.at(1));
+				data.push_back(i->second.at(2));
+				data.push_back(i->second.at(3));
+				data.push_back(i->second.at(4));
+				data.push_back(i->second.at(5));
+				_db.executeCommand("INSERT OR REPLACE INTO serviceMessages2(variableID, familyID, peerID, variableIndex, integerValue, stringValue, binaryValue) VALUES(?, ?, ?, ?, ?, ?, ?)", data);
+			}
+			_db.executeCommand("DROP INDEX serviceMessagesIndex");
+			_db.executeCommand("DROP TABLE serviceMessages");
+			_db.executeCommand("ALTER TABLE serviceMessages2 RENAME TO serviceMessages");
+			_db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, peerID, variableIndex, timestamp)");
+
+
+			data.clear();
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			//Don't forget to set new version in initializeDatabase!!!
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.2")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 		}
@@ -4432,30 +4466,30 @@ void DatabaseController::saveServiceMessageAsynchronous(uint64_t peerID, BaseLib
 {
 	try
 	{
-		if(data.size() == 2)
+		if(data.size() == 3)
 		{
-			if(data.at(1)->intValue == 0)
+			if(data.at(2)->intValue == 0)
 			{
 				GD::out.printError("Error: Could not save service message. Variable ID is \"0\".");
 				return;
 			}
-			switch(data.at(0)->dataType)
+			switch(data.at(1)->dataType)
 			{
 			case BaseLib::Database::DataColumn::DataType::INTEGER:
 				{
-					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE serviceMessages SET integerValue=? WHERE variableID=?", data);
+					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE serviceMessages SET timestamp=?, integerValue=? WHERE variableID=?", data);
 					enqueue(0, entry);
 				}
 				break;
 			case BaseLib::Database::DataColumn::DataType::TEXT:
 				{
-					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE serviceMessages SET stringValue=? WHERE variableID=?", data);
+					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE serviceMessages SET timestamp=?, stringValue=? WHERE variableID=?", data);
 					enqueue(0, entry);
 				}
 				break;
 			case BaseLib::Database::DataColumn::DataType::BLOB:
 				{
-					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE serviceMessages SET binaryValue=? WHERE variableID=?", data);
+					std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE serviceMessages SET timestamp=?, binaryValue=? WHERE variableID=?", data);
 					enqueue(0, entry);
 				}
 				break;
@@ -4467,24 +4501,24 @@ void DatabaseController::saveServiceMessageAsynchronous(uint64_t peerID, BaseLib
 				break;
 			}
 		}
-		else if(data.size() == 4)
+		else if(data.size() == 5)
 		{
-			if(data.at(3)->intValue == 0)
+			if(data.at(4)->intValue == 0)
 			{
 				GD::out.printError("Error: Could not save service message. Variable ID is \"0\".");
 				return;
 			}
-			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE serviceMessages SET integerValue=?, stringValue=?, binaryValue=? WHERE variableID=?", data);
+			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE serviceMessages SET timestamp=?, integerValue=?, stringValue=?, binaryValue=? WHERE variableID=?", data);
 			enqueue(0, entry);
 		}
-		else if(data.size() == 5)
+		else if(data.size() == 7)
 		{
-			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO serviceMessages (variableID, peerID, variableIndex, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM serviceMessages WHERE peerID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(1)->intValue) + "), ?, ?, ?, ?, ?)", data);
+			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO serviceMessages (variableID, familyID, peerID, variableIndex, timestamp, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM serviceMessages WHERE peerID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(1)->intValue) + "), ?, ?, ?, ?, ?, ?, ?)", data);
 			enqueue(0, entry);
 		}
-		else  if(data.size() == 6 && data.at(0)->intValue != 0)
+		else  if(data.size() == 8 && data.at(0)->intValue != 0)
 		{
-			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("REPLACE INTO serviceMessages VALUES(?, ?, ?, ?, ?, ?)", data);
+			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("REPLACE INTO serviceMessages VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
 			enqueue(0, entry);
 		}
 		else GD::out.printError("Error: Either variableID is 0 or the number of columns is invalid.");
