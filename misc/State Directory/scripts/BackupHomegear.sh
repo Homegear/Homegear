@@ -14,7 +14,7 @@ service homegear reload
 if [ -d /data/homegear-data ]; then
 	tar -zcpf $1 /etc/homegear /etc/openvpn /data/homegear-data/db.sql* /data/homegear-data/node-blue /data/homegear-data/families /var/lib/homegear/audio /var/lib/homegear/scripts /var/lib/homegear/phpinclude /var/lib/homegear/www
 else
-	tar -zcpf $1 /etc/homegear /etc/openvpn /var/lib/homegear/db.sql.bak* /var/lib/homegear/node-blue /var/lib/homegear/families /var/lib/homegear/audio /var/lib/homegear/scripts /var/lib/homegear/phpinclude /var/lib/homegear/www
+	tar -zcpf $1 /etc/homegear /etc/openvpn /var/lib/homegear/db.sql.bak* /var/lib/homegear/node-blue/data /var/lib/homegear/families /var/lib/homegear/audio /var/lib/homegear/scripts /var/lib/homegear/phpinclude /var/lib/homegear/www
 fi
 
 chown homegear:homegear $1

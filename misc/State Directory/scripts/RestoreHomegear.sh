@@ -5,6 +5,8 @@ if [ -z $1 ]; then
 	exit 1
 fi
 
+sleep 5
+
 service homegear stop
 TEMPDIR=$(mktemp -d)
 
@@ -40,7 +42,7 @@ rm -Rf /var/lib/homegear/phpinclude
 rm -Rf /var/lib/homegear/scripts
 rm -Rf /var/lib/homegear/www
 
-if [ -d /data/homegear-data];
+if [ -d /data/homegear-data]; then
 	mv /data/homegear-data /data/homegear-data.bak${TIME}
 
 	cp -a $TEMPDIR/data/homegear-data /data/
