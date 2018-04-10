@@ -375,6 +375,7 @@ int32_t NodeManager::loadNode(std::string nodeNamespace, std::string type, std::
 			else
 			{
 				if(loaderCreated) _nodeLoaders.erase(nodeNamespace + "." + type);
+				GD::out.printError("Error: Could not load node file " + path + ".");
 				return -3;
 			}
 			return 0;
@@ -409,7 +410,11 @@ int32_t NodeManager::loadNode(std::string nodeNamespace, std::string type, std::
 			return 0;
 		}
 #endif
-		else return -2;
+		else
+		{
+			GD::out.printError("Error: No node file starting with \"" + path + type + "\" found (possible endings: \".so\", \".s.hgn\", \".s.php\", \".hgn\" and \".php\".");
+			return -2;
+		}
 	}
 	catch(const std::exception& ex)
     {
