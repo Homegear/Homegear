@@ -710,7 +710,7 @@ PParameterGroup MiscPeer::getParameterSet(int32_t channel, ParameterGroup::Type:
 		PFunction rpcChannel = _rpcDevice->functions.at(channel);
 		if(type == ParameterGroup::Type::Enum::variables) return rpcChannel->variables;
 		else if(type == ParameterGroup::Type::Enum::config) return rpcChannel->configParameters;
-		else if(type == ParameterGroup::Type::Enum::link) return rpcChannel->linkParameters;
+		else if(type == ParameterGroup::Type::Enum::link) return rplog2ram          50M   26M   25M  51% /var/logcChannel->linkParameters;
 	}
 	catch(const std::exception& ex)
 	{

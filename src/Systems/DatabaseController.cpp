@@ -357,6 +357,15 @@ void DatabaseController::initializeDatabase()
 			std::string content = "Default password for user \"homegear\": " + password + "\nPlease write down the password and delete this file.\n";
 			std::string path = GD::bl->settings.dataPath() + "defaultPassword.txt";
 			BaseLib::Io::writeFile(path, content);
+            uid_t userId = GD::bl->hf.userId(GD::bl->settings.dataPathUser());
+            gid_t groupId = GD::bl->hf.groupId(GD::bl->settings.dataPathGroup());
+            if(((int32_t)userId) == -1 || ((int32_t)groupId) == -1)
+            {
+                userId = GD::bl->userId;
+                groupId = GD::bl->groupId;
+            }
+            if(chown(path.c_str(), userId, groupId) == -1) GD::out.printError("Could not set owner on " + path);
+            if(chmod(path.c_str(), GD::bl->settings.dataPathPermissions()) == -1) GD::out.printError("Could not set permissions on " + path);
 
 			std::vector<uint8_t> salt;
 			std::vector<uint8_t> passwordHash = User::generateWHIRLPOOL(password, salt);

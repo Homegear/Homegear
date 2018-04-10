@@ -16,3 +16,5 @@ if [ -d /data/homegear-data ]; then
 else
 	tar -zcpf $1 /etc/homegear /etc/openvpn /var/lib/homegear/db.sql.bak* /var/lib/homegear/node-blue /var/lib/homegear/families /var/lib/homegear/audio /var/lib/homegear/scripts /var/lib/homegear/phpinclude /var/lib/homegear/www
 fi
+
+chown homegear:homegear $1
