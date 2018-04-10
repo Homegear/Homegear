@@ -59,3 +59,5 @@ fi
 cp -a $TEMPDIR/var/lib/homegear/* /var/lib/homegear/
 
 rm -Rf $TEMPDIR
+
+reboot
