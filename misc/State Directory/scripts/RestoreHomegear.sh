@@ -42,7 +42,7 @@ rm -Rf /var/lib/homegear/phpinclude
 rm -Rf /var/lib/homegear/scripts
 rm -Rf /var/lib/homegear/www
 
-if [ -d /data/homegear-data]; then
+if [ -d /data/homegear-data ]; then
 	mv /data/homegear-data /data/homegear-data.bak${TIME}
 
 	cp -a $TEMPDIR/data/homegear-data /data/
