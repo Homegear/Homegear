@@ -9,7 +9,7 @@ sleep 5
 
 TEMPDIR=$(mktemp -d)
 
-tar -zxf $1 -C $TEMPDIR && exit 1
+tar -zxf $1 -C $TEMPDIR || exit 1
 
 if test ! -d $TEMPDIR/etc/homegear || test ! -f $TEMPDIR/etc/homegear/main.conf; then
 	rm -Rf $TEMPDIR
