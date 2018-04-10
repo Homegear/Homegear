@@ -65,7 +65,7 @@ static zend_class_entry* homegear_i2c_class_entry = nullptr;
 #endif
 
 static char* ini_path_override = nullptr;
-static char* ini_entries = nullptr;
+static char* sapi_ini_entries = nullptr;
 static const char HARDCODED_INI[] =
 	"register_argc_argv=1\n"
 	"max_execution_time=0\n"
@@ -2122,9 +2122,9 @@ int php_homegear_init()
 	php_homegear_sapi_module.php_ini_ignore_cwd = 1;
 	sapi_startup(&php_homegear_sapi_module);
 
-	ini_entries = (char*)malloc(sizeof(HARDCODED_INI));
-	memcpy(ini_entries, HARDCODED_INI, sizeof(HARDCODED_INI));
-	php_homegear_sapi_module.ini_entries = ini_entries;
+	sapi_ini_entries = (char*)malloc(sizeof(HARDCODED_INI));
+	memcpy(sapi_ini_entries, HARDCODED_INI, sizeof(HARDCODED_INI));
+	php_homegear_sapi_module.ini_entries = sapi_ini_entries;
 
 	sapi_module.startup(&php_homegear_sapi_module);
 
@@ -2142,7 +2142,7 @@ void php_homegear_shutdown()
 
 	tsrm_shutdown(); //Needs to be called once for the entire process (see TSRM.c)
 	if(ini_path_override) free(ini_path_override);
-	if(ini_entries) free(ini_entries);
+	if(sapi_ini_entries) free(sapi_ini_entries);
 	if(_superglobals.http)
 	{
 		delete(_superglobals.http);
