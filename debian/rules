@@ -47,6 +47,7 @@ override_dh_auto_install:
 	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear
 	find $(CURDIR)/debian/homegear/var/lib/homegear -type d -exec chmod 550 {} \;
 	find $(CURDIR)/debian/homegear/var/lib/homegear -type f -exec chmod 440 {} \;
+	chmod 755 $(CURDIR)/debian/homegear/var/lib/homegear/scripts/*.sh
 
 	mkdir -p $(CURDIR)/debian/homegear/usr/share/homegear
 	chown -R root:root $(CURDIR)/debian/homegear/usr/share/homegear
