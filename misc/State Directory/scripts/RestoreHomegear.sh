@@ -7,10 +7,10 @@ fi
 
 sleep 5
 
-service homegear stop
 TEMPDIR=$(mktemp -d)
 
-tar -zxf $1 -C $TEMPDIR
+tar -zxf $1 -C $TEMPDIR && exit 1
+
 if test ! -d $TEMPDIR/etc/homegear || test ! -f $TEMPDIR/etc/homegear/main.conf; then
 	rm -Rf $TEMPDIR
 	exit 1
@@ -20,6 +20,8 @@ if test ! -f $TEMPDIR/data/homegear-data/db.sql.bak0 && test ! -f $TEMPDIR/var/l
 	rm -Rf $TEMPDIR
 	exit 1
 fi
+
+service homegear stop
 
 if [ -d $TEMPDIR/data/homegear-data ]; then
 	mv $TEMPDIR/data/homegear-data/db.sql* $TEMPDIR/var/lib/homegear/
