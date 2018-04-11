@@ -60,6 +60,7 @@ void Server::registerMethods()
 		_server->registerMethod("system.methodHelp", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSystemMethodHelp(_server)));
 		_server->registerMethod("system.methodSignature", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSystemMethodSignature(_server)));
 		_server->registerMethod("system.multicall", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSystemMulticall(_server)));
+		_server->registerMethod("acknowledgeGlobalServiceMessage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAcknowledgeGlobalServiceMessage()));
 		_server->registerMethod("activateLinkParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCActivateLinkParamset()));
 		_server->registerMethod("abortEventReset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCTriggerEvent()));
 		_server->registerMethod("addCategoryToChannel", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddCategoryToChannel()));
@@ -171,6 +172,7 @@ void Server::registerMethods()
         _server->registerMethod("searchInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSearchInterfaces()));
         _server->registerMethod("setCategoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetCategoryMetadata()));
 		_server->registerMethod("setData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetData()));
+        _server->registerMethod("setGlobalServiceMessage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetGlobalServiceMessage()));
 		_server->registerMethod("setId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetId()));
 		_server->registerMethod("setInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetInstallMode()));
 		_server->registerMethod("setInterface", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCSetInterface()));

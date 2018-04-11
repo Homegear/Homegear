@@ -4546,11 +4546,36 @@ void DatabaseController::saveServiceMessageAsynchronous(uint64_t peerID, BaseLib
 	}
 }
 
+void DatabaseController::saveGlobalServiceMessageAsynchronous(BaseLib::Database::DataRow& data)
+{
+    try
+    {
+        if(data.size() == 7)
+        {
+            std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO serviceMessages (variableID, familyID, peerID, variableIndex, timestamp, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM serviceMessages WHERE familyID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(2)->intValue) + "), ?, ?, ?, ?, ?, ?, ?)", data);
+            enqueue(0, entry);
+        }
+        else GD::out.printError("Error: Either variableID is 0 or the number of columns is invalid.");
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void DatabaseController::deleteServiceMessage(uint64_t databaseID)
 {
 	try
 	{
-		BaseLib::Database::DataRow data({std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(databaseID))});
+        BaseLib::Database::DataRow data({std::make_shared<BaseLib::Database::DataColumn>(databaseID)});
 		_db.executeCommand("DELETE FROM serviceMessages WHERE variableID=?", data);
 	}
 	catch(const std::exception& ex)
@@ -4565,6 +4590,27 @@ void DatabaseController::deleteServiceMessage(uint64_t databaseID)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+}
+
+void DatabaseController::deleteGlobalServiceMessage(int32_t familyId, int32_t messageId)
+{
+    try
+    {
+        BaseLib::Database::DataRow data({std::make_shared<BaseLib::Database::DataColumn>(familyId), std::make_shared<BaseLib::Database::DataColumn>(messageId)});
+        _db.executeCommand("DELETE FROM serviceMessages WHERE familyID=? AND variableIndex=?", data);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 //End service messages
 

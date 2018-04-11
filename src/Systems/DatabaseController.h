@@ -218,9 +218,11 @@ public:
 	// }}}
 
 	// {{{ Service messages
-		virtual std::shared_ptr<BaseLib::Database::DataTable> getServiceMessages(uint64_t peerID);
-		virtual void saveServiceMessageAsynchronous(uint64_t peerID, BaseLib::Database::DataRow& data);
-		virtual void deleteServiceMessage(uint64_t databaseID);
+		virtual std::shared_ptr<BaseLib::Database::DataTable> getServiceMessages(uint64_t peerId);
+		virtual void saveServiceMessageAsynchronous(uint64_t peerId, BaseLib::Database::DataRow& data);
+        virtual void saveGlobalServiceMessageAsynchronous(BaseLib::Database::DataRow& data);
+		virtual void deleteServiceMessage(uint64_t databaseId);
+		virtual void deleteGlobalServiceMessage(int32_t familyId, int32_t messageId);
 	// }}}
 
 	// {{{ License modules

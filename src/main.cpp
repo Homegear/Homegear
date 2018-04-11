@@ -1036,6 +1036,8 @@ void startUp()
 			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 		}
 
+        GD::bl->globalServiceMessages.load();
+
         GD::uiController.reset(new UiController());
 		GD::uiController->load();
 
