@@ -552,8 +552,8 @@ static void php_homegear_register_variables(zval* track_vars_array)
 			else php_register_variable_safe((char*)"HTTPS", (char*)"", 0, track_vars_array);
 			std::string connection = (header.connection & BaseLib::Http::Connection::keepAlive) ? "keep-alive" : "close";
 			php_register_variable_safe((char*)"HTTP_CONNECTION", (char*)connection.c_str(), connection.size(), track_vars_array);
-			php_register_variable_safe((char*)"DOCUMENT_ROOT", (char*)server->contentPath.c_str(), server->contentPath.size(), track_vars_array);
-			std::string filename = server->contentPath;
+			php_register_variable_safe((char*)"DOCUMENT_ROOT", (char*)scriptInfo->contentPath.c_str(), scriptInfo->contentPath.size(), track_vars_array);
+			std::string filename = scriptInfo->contentPath;
 			filename += (!scriptInfo->relativePath.empty() && scriptInfo->relativePath.front() == '/') ? scriptInfo->relativePath.substr(1) : scriptInfo->relativePath;
 			php_register_variable_safe((char*)"SCRIPT_FILENAME", (char*)filename.c_str(), filename.size(), track_vars_array);
 			php_register_variable_safe((char*)"SERVER_NAME", (char*)server->name.c_str(), server->name.size(), track_vars_array);

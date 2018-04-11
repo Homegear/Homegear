@@ -1980,6 +1980,7 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 			parameters = std::move(BaseLib::PArray(new BaseLib::Array{
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
 				BaseLib::PVariable(new BaseLib::Variable((int32_t)scriptInfo->getType())),
+				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->contentPath)),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
 				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
 				scriptInfo->http.serialize(),
