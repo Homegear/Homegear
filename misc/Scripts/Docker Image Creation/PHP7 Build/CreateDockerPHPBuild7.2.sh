@@ -132,6 +132,11 @@ if [ "$distver" == "stretch" ]; then
 	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
 fi
 
+if [ "$distver" == "bionic" ]; then
+	chroot $rootfs apt-get update
+	chroot $rootfs apt-get -y install gnupg
+fi
+
 cat > "$rootfs/php-gpg.key" <<'EOF'
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: GnuPG v1

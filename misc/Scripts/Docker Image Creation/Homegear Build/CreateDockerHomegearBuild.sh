@@ -129,6 +129,11 @@ if [ "$distver" == "stretch" ]; then
 	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
 fi
 
+if [ "$distver" == "bionic" ]; then
+	chroot $rootfs apt-get update
+	chroot $rootfs apt-get -y install gnupg
+fi
+
 chroot $rootfs apt-get update
 if [ "$distver" == "stretch" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
