@@ -321,11 +321,11 @@ BaseLib::PVariable RPCAcknowledgeGlobalServiceMessage::invoke(BaseLib::PRpcClien
     {
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("acknowledgeGlobalServiceMessage")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
         ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger })
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString })
         }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        GD::bl->globalServiceMessages.unset(parameters->at(0)->integerValue, parameters->at(1)->integerValue);
+        GD::bl->globalServiceMessages.unset(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue);
 
         return std::make_shared<BaseLib::Variable>();
     }

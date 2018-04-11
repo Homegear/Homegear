@@ -4550,9 +4550,9 @@ void DatabaseController::saveGlobalServiceMessageAsynchronous(BaseLib::Database:
 {
     try
     {
-        if(data.size() == 7)
+        if(data.size() == 8)
         {
-            std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO serviceMessages (variableID, familyID, peerID, variableIndex, timestamp, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM serviceMessages WHERE familyID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(2)->intValue) + "), ?, ?, ?, ?, ?, ?, ?)", data);
+            std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO serviceMessages (variableID, familyID, peerID, variableIndex, timestamp, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM serviceMessages WHERE familyID=" + std::to_string(data.at(1)->intValue) + " AND variableIndex=" + std::to_string(data.at(3)->intValue) + " AND stringValue=?), ?, ?, ?, ?, ?, ?, ?)", data);
             enqueue(0, entry);
         }
         else GD::out.printError("Error: Either variableID is 0 or the number of columns is invalid.");
@@ -4592,12 +4592,12 @@ void DatabaseController::deleteServiceMessage(uint64_t databaseID)
 	}
 }
 
-void DatabaseController::deleteGlobalServiceMessage(int32_t familyId, int32_t messageId)
+void DatabaseController::deleteGlobalServiceMessage(int32_t familyId, int32_t messageId, std::string& message)
 {
     try
     {
-        BaseLib::Database::DataRow data({std::make_shared<BaseLib::Database::DataColumn>(familyId), std::make_shared<BaseLib::Database::DataColumn>(messageId)});
-        _db.executeCommand("DELETE FROM serviceMessages WHERE familyID=? AND variableIndex=?", data);
+        BaseLib::Database::DataRow data({std::make_shared<BaseLib::Database::DataColumn>(familyId), std::make_shared<BaseLib::Database::DataColumn>(messageId), std::make_shared<BaseLib::Database::DataColumn>(message)});
+        _db.executeCommand("DELETE FROM serviceMessages WHERE familyID=? AND variableIndex=? AND stringValue=?", data);
     }
     catch(const std::exception& ex)
     {
