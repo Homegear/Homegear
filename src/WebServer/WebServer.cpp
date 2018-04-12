@@ -83,22 +83,8 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 				return;
 			}
 			if(path == "node-blue/") path = "node-blue/index.php";
-            else if(path.compare(0, 3, "ui/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs")))
-            {
-                if(path == "ui/")
-                {
-                    if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php")) path = "ui/index.php";
-                    else path = "ui/index.hgs";
-                }
-            }
-            else if(path.compare(0, 6, "admin/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs")))
-            {
-                if(path == "admin/")
-                {
-                    if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
-                    else path = "admin/index.hgs";
-                }
-            }
+            else if(path.compare(0, 3, "ui/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))) {}
+            else if(path.compare(0, 6, "admin/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))) {}
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
@@ -198,12 +184,50 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
             }
             else if(path.compare(0, 6, "admin/") == 0)
             {
-                fullPath = GD::bl->settings.adminUiPath() + path.substr(6);
+                if(path == "admin/")
+                {
+                    if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php"))
+                    {
+                        fullPath = GD::bl->settings.adminUiPath() + "index.php";
+                        ending = "php";
+                    }
+                    else if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
+                    {
+                        fullPath = GD::bl->settings.adminUiPath() + "index.hgs";
+                        ending = "hgs";
+                    }
+                    else
+                    {
+                        getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+                        send(socket, content);
+                        return;
+                    }
+                }
+                else fullPath = GD::bl->settings.adminUiPath() + path.substr(6);
                 contentPath = GD::bl->settings.adminUiPath();
             }
             else if(path.compare(0, 3, "ui/") == 0)
             {
-                fullPath = GD::bl->settings.uiPath() + path.substr(3);
+                if(path == "ui/")
+                {
+                    if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php"))
+                    {
+                        fullPath = GD::bl->settings.uiPath() + "index.php";
+                        ending = "php";
+                    }
+                    else if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))
+                    {
+                        fullPath = GD::bl->settings.uiPath() + "index.hgs";
+                        ending = "hgs";
+                    }
+                    else
+                    {
+                        getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+                        send(socket, content);
+                        return;
+                    }
+                }
+                else fullPath = GD::bl->settings.uiPath() + path.substr(3);
                 contentPath = GD::bl->settings.uiPath();
             }
             else fullPath = _serverInfo->contentPath + path;
@@ -310,22 +334,8 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 				return;
 			}
 			if (path == "node-blue/") path = "node-blue/index.php";
-            else if(path.compare(0, 3, "ui/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs")))
-            {
-                if(path == "ui/")
-                {
-                    if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php")) path = "ui/index.php";
-                    else path = "ui/index.hgs";
-                }
-            }
-            else if(path.compare(0, 6, "admin/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs")))
-            {
-                if(path == "admin/")
-                {
-                    if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
-                    else path = "admin/index.hgs";
-                }
-            }
+            else if(path.compare(0, 3, "ui/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))) {}
+            else if(path.compare(0, 6, "admin/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))) {}
 			else if (GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
@@ -417,12 +427,34 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
             }
             else if(path.compare(0, 6, "admin/") == 0)
             {
-                fullPath = GD::bl->settings.adminUiPath() + path.substr(6);
+                if(path == "admin/")
+                {
+                    if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php")) fullPath = GD::bl->settings.adminUiPath() + "index.php";
+                    else if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs")) fullPath = GD::bl->settings.adminUiPath() + "index.hgs";
+                    else
+                    {
+                        getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+                        send(socket, content);
+                        return;
+                    }
+                }
+                else fullPath = GD::bl->settings.adminUiPath() + path.substr(6);
                 contentPath = GD::bl->settings.adminUiPath();
             }
             else if(path.compare(0, 3, "ui/") == 0)
             {
-                fullPath = GD::bl->settings.uiPath() + path.substr(3);
+                if(path == "ui/")
+                {
+                    if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php")) fullPath = GD::bl->settings.uiPath() + "index.php";
+                    else if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs")) fullPath = GD::bl->settings.uiPath() + "index.hgs";
+                    else
+                    {
+                        getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+                        send(socket, content);
+                        return;
+                    }
+                }
+                else fullPath = GD::bl->settings.uiPath() + path.substr(3);
                 contentPath = GD::bl->settings.uiPath();
             }
 			else fullPath = _serverInfo->contentPath + path;
