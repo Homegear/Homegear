@@ -183,42 +183,34 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			if(pos != (signed)std::string::npos && (unsigned)pos < path.size() - 1) ending = path.substr(pos + 1);
 			GD::bl->hf.toLower(ending);
 			std::string contentString;
+            std::string contentPath = _serverInfo->contentPath;
+            std::string fullPath;
+
+            if(path == "node-blue/index.php")
+            {
+                fullPath = GD::bl->settings.nodeBluePath() + "www/index.php";
+                contentPath = GD::bl->settings.nodeBluePath();
+            }
+            else if(path == "node-blue/signin.php")
+            {
+                fullPath = GD::bl->settings.nodeBluePath() + "www/signin.php";
+                contentPath = GD::bl->settings.nodeBluePath();
+            }
+            else if(path.compare(0, 6, "admin/") == 0)
+            {
+                fullPath = GD::bl->settings.adminUiPath() + path.substr(6);
+                contentPath = GD::bl->settings.adminUiPath();
+            }
+            else if(path.compare(0, 3, "ui/") == 0)
+            {
+                fullPath = GD::bl->settings.uiPath() + path.substr(3);
+                contentPath = GD::bl->settings.uiPath();
+            }
+            else fullPath = _serverInfo->contentPath + path;
+
 #ifndef NO_SCRIPTENGINE
 			if(ending == "php" || ending == "php5" || ending == "php7" || ending == "hgs")
 			{
-				std::string fullPath;
-				std::string contentPath = _serverInfo->contentPath;
-				if(path == "node-blue/index.php")
-                {
-                    fullPath = GD::bl->settings.nodeBluePath() + "www/index.php";
-                    contentPath = GD::bl->settings.nodeBluePath();
-                }
-				else if(path == "node-blue/signin.php")
-                {
-                    fullPath = GD::bl->settings.nodeBluePath() + "www/signin.php";
-                    contentPath = GD::bl->settings.nodeBluePath();
-                }
-                else if(path == "admin/index.php")
-                {
-                    fullPath = GD::bl->settings.adminUiPath() + "index.php";
-                    contentPath = GD::bl->settings.adminUiPath();
-                }
-                else if(path == "admin/index.hgs")
-                {
-                    fullPath = GD::bl->settings.adminUiPath() + "index.hgs";
-                    contentPath = GD::bl->settings.adminUiPath();
-                }
-                else if(path == "ui/index.php")
-                {
-                    fullPath = GD::bl->settings.uiPath() + "index.php";
-                    contentPath = GD::bl->settings.uiPath();
-                }
-                else if(path == "ui/index.hgs")
-                {
-                    fullPath = GD::bl->settings.uiPath() + "index.hgs";
-                    contentPath = GD::bl->settings.uiPath();
-                }
-				else fullPath = _serverInfo->contentPath + path;
 				std::string relativePath = '/' + path;
 				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo));
 				scriptInfo->socket = socket;
@@ -231,7 +223,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			std::string contentType = _http.getMimeType(ending);
 			if(contentType.empty()) contentType = "application/octet-stream";
 			//Don't return content when method is "HEAD"
-			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_serverInfo->contentPath + path);
+			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(fullPath);
 			std::string header;
 			_http.constructHeader(contentString.size(), contentType, 200, "OK", headers, header);
 			content.insert(content.end(), header.begin(), header.end());
@@ -423,24 +415,14 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
                 fullPath = GD::bl->settings.nodeBluePath() + "www/signin.php";
                 contentPath = GD::bl->settings.nodeBluePath();
             }
-            else if(path == "admin/index.php")
+            else if(path.compare(0, 6, "admin/") == 0)
             {
-                fullPath = GD::bl->settings.adminUiPath() + "index.php";
+                fullPath = GD::bl->settings.adminUiPath() + path.substr(6);
                 contentPath = GD::bl->settings.adminUiPath();
             }
-            else if(path == "admin/index.hgs")
+            else if(path.compare(0, 3, "ui/") == 0)
             {
-                fullPath = GD::bl->settings.adminUiPath() + "index.hgs";
-                contentPath = GD::bl->settings.adminUiPath();
-            }
-            else if(path == "ui/index.php")
-            {
-                fullPath = GD::bl->settings.uiPath() + "index.php";
-                contentPath = GD::bl->settings.uiPath();
-            }
-            else if(path == "ui/index.hgs")
-            {
-                fullPath = GD::bl->settings.uiPath() + "index.hgs";
+                fullPath = GD::bl->settings.uiPath() + path.substr(3);
                 contentPath = GD::bl->settings.uiPath();
             }
 			else fullPath = _serverInfo->contentPath + path;
