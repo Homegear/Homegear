@@ -164,7 +164,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
                 }
             }
 
-			std::string ending = "";
+			std::string ending;
 			int32_t pos = path.find_last_of('.');
 			if(pos != (signed)std::string::npos && (unsigned)pos < path.size() - 1) ending = path.substr(pos + 1);
 			GD::bl->hf.toLower(ending);
@@ -186,6 +186,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
             {
                 if(path == "admin/")
                 {
+                    path = "admin";
                     if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php"))
                     {
                         fullPath = GD::bl->settings.adminUiPath() + "index.php";
@@ -210,6 +211,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
             {
                 if(path == "ui/")
                 {
+                    path = "ui";
                     if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php"))
                     {
                         fullPath = GD::bl->settings.uiPath() + "index.php";
@@ -429,6 +431,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
             {
                 if(path == "admin/")
                 {
+                    path = "admin";
                     if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php")) fullPath = GD::bl->settings.adminUiPath() + "index.php";
                     else if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs")) fullPath = GD::bl->settings.adminUiPath() + "index.hgs";
                     else
@@ -445,6 +448,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
             {
                 if(path == "ui/")
                 {
+                    path = "ui";
                     if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php")) fullPath = GD::bl->settings.uiPath() + "index.php";
                     else if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs")) fullPath = GD::bl->settings.uiPath() + "index.hgs";
                     else
