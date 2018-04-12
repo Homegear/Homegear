@@ -146,29 +146,44 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 		try
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
-			std::string ending = "";
-			int32_t pos = path.find_last_of('.');
-			if(pos != (signed)std::string::npos && (unsigned)pos < path.size() - 1) ending = path.substr(pos + 1);
-			GD::bl->hf.toLower(ending);
-			std::string contentString;
-#ifndef NO_SCRIPTENGINE
+
             if(path.compare(0, 3, "ui/") == 0 && path.size() > 3)
             {
                 if(!GD::bl->io.fileExists(GD::bl->settings.uiPath() + path.substr(3)))
                 {
-                    if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php")) path = "ui/index.php";
-                    else if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs")) path = "ui/index.hgs";
+                    if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))
+                    {
+                        http.setRedirectUrl(path);
+                        http.setRedirectQueryString(http.getHeader().args);
+                        http.setRedirectStatus(200);
+
+                        if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php")) path = "ui/index.php";
+                        else path = "ui/index.hgs";
+                    }
                 }
             }
             else if(path.compare(0, 6, "admin/") == 0 && path.size() > 6)
             {
                 if(!GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + path.substr(6)))
                 {
-                    if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
-                    else if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs")) path = "admin/index.hgs";
+                    if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
+                    {
+                        http.setRedirectUrl(path);
+                        http.setRedirectQueryString(http.getHeader().args);
+                        http.setRedirectStatus(200);
+
+                        if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
+                        else path = "admin/index.hgs";
+                    }
                 }
             }
 
+			std::string ending = "";
+			int32_t pos = path.find_last_of('.');
+			if(pos != (signed)std::string::npos && (unsigned)pos < path.size() - 1) ending = path.substr(pos + 1);
+			GD::bl->hf.toLower(ending);
+			std::string contentString;
+#ifndef NO_SCRIPTENGINE
 			if(ending == "php" || ending == "php5" || ending == "php7" || ending == "hgs")
 			{
 				std::string fullPath;
@@ -185,25 +200,21 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
                 }
                 else if(path == "admin/index.php")
                 {
-                    path = "index.php";
                     fullPath = GD::bl->settings.adminUiPath() + "index.php";
                     contentPath = GD::bl->settings.adminUiPath();
                 }
                 else if(path == "admin/index.hgs")
                 {
-                    path = "index.hgs";
                     fullPath = GD::bl->settings.adminUiPath() + "index.hgs";
                     contentPath = GD::bl->settings.adminUiPath();
                 }
                 else if(path == "ui/index.php")
                 {
-                    path = "index.php";
                     fullPath = GD::bl->settings.uiPath() + "index.php";
                     contentPath = GD::bl->settings.uiPath();
                 }
                 else if(path == "ui/index.hgs")
                 {
-                    path = "index.hgs";
                     fullPath = GD::bl->settings.uiPath() + "index.hgs";
                     contentPath = GD::bl->settings.uiPath();
                 }
@@ -366,22 +377,36 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 		}
 
 #ifndef NO_SCRIPTENGINE
-        if(path.compare(0, 3, "ui/") == 0 && path.size() > 3)
-        {
-            if(!GD::bl->io.fileExists(GD::bl->settings.uiPath() + path.substr(3)))
-            {
-                if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php")) path = "ui/index.php";
-                else if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs")) path = "ui/index.hgs";
-            }
-        }
-        else if(path.compare(0, 6, "admin/") == 0 && path.size() > 6)
-        {
-            if(!GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + path.substr(6)))
-            {
-                if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
-                else if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs")) path = "admin/index.hgs";
-            }
-        }
+		if(path.compare(0, 3, "ui/") == 0 && path.size() > 3)
+		{
+			if(!GD::bl->io.fileExists(GD::bl->settings.uiPath() + path.substr(3)))
+			{
+				if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))
+				{
+					http.setRedirectUrl(path);
+					http.setRedirectQueryString(http.getHeader().args);
+					http.setRedirectStatus(200);
+
+					if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php")) path = "ui/index.php";
+					else path = "ui/index.hgs";
+				}
+			}
+		}
+		else if(path.compare(0, 6, "admin/") == 0 && path.size() > 6)
+		{
+			if(!GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + path.substr(6)))
+			{
+				if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
+				{
+					http.setRedirectUrl(path);
+					http.setRedirectQueryString(http.getHeader().args);
+					http.setRedirectStatus(200);
+
+					if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
+					else path = "admin/index.hgs";
+				}
+			}
+		}
 
 		try
 		{
@@ -400,25 +425,21 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
             }
             else if(path == "admin/index.php")
             {
-                path = "index.php";
                 fullPath = GD::bl->settings.adminUiPath() + "index.php";
                 contentPath = GD::bl->settings.adminUiPath();
             }
             else if(path == "admin/index.hgs")
             {
-                path = "index.hgs";
                 fullPath = GD::bl->settings.adminUiPath() + "index.hgs";
                 contentPath = GD::bl->settings.adminUiPath();
             }
             else if(path == "ui/index.php")
             {
-                path = "index.php";
                 fullPath = GD::bl->settings.uiPath() + "index.php";
                 contentPath = GD::bl->settings.uiPath();
             }
             else if(path == "ui/index.hgs")
             {
-                path = "index.hgs";
                 fullPath = GD::bl->settings.uiPath() + "index.hgs";
                 contentPath = GD::bl->settings.uiPath();
             }

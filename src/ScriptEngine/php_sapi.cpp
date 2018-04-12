@@ -578,6 +578,15 @@ static void php_homegear_register_variables(zval* track_vars_array)
 		}
 		php_register_variable_safe((char*)"HTTP_HOST", (char*)header.host.c_str(), header.host.size(), track_vars_array);
 		php_register_variable_safe((char*)"QUERY_STRING", (char*)header.args.c_str(), header.args.size(), track_vars_array);
+        std::string redirectQueryString = http->getRedirectQueryString();
+        if(!redirectQueryString.empty()) php_register_variable_safe((char*)"REDIRECT_QUERY_STRING", (char*)redirectQueryString.c_str(), redirectQueryString.size(), track_vars_array);
+        std::string redirectUrl = http->getRedirectUrl();
+        if(!redirectUrl.empty()) php_register_variable_safe((char*)"REDIRECT_URL", (char*)redirectUrl.c_str(), redirectUrl.size(), track_vars_array);
+		if(http->getRedirectStatus() != -1)
+        {
+            ZVAL_LONG(&value, http->getRedirectStatus());
+            php_register_variable_ex((char*) "REDIRECT_STATUS", &value, track_vars_array);
+        }
 		php_register_variable_safe((char*)"SERVER_PROTOCOL", (char*)"HTTP/1.1", 8, track_vars_array);
 		php_register_variable_safe((char*)"REMOTE_ADDR", (char*)header.remoteAddress.c_str(), header.remoteAddress.size(), track_vars_array);
 		ZVAL_LONG(&value, header.remotePort);
