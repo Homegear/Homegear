@@ -1269,7 +1269,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 				SG(request_info).request_method = globals->http.getHeader().method.c_str();
 				SG(request_info).proto_num = globals->http.getHeader().protocol == BaseLib::Http::Protocol::http10 ? 1000 : 1001;
 				std::string redirectUrl = globals->http.getRedirectUrl();
-				std::string uri = (redirectUrl.empty() ? globals->scriptInfo->relativePath : redirectUrl) + globals->http.getHeader().pathInfo;
+				std::string uri = (redirectUrl.empty() ? globals->http.getHeader().path : redirectUrl) + globals->http.getHeader().pathInfo;
 				if (!globals->http.getHeader().args.empty()) uri.append('?' + globals->http.getHeader().args);
 				if (!globals->http.getHeader().args.empty()) SG(request_info).query_string = estrndup(&globals->http.getHeader().args.at(0), globals->http.getHeader().args.size());
 				if (!uri.empty()) SG(request_info).request_uri = estrndup(uri.data(), uri.size());
