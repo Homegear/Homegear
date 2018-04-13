@@ -397,12 +397,13 @@ void Mqtt::listen()
 					bytesReceived = _socket->proofread(&buffer[0], bufferMax);
 					if(bytesReceived > 0)
 					{
-						data.insert(data.end(), &buffer.at(0), &buffer.at(0) + bytesReceived);
+						data.insert(data.end(), buffer.data(), buffer.data() + bytesReceived);
 						if(data.size() > 1000000)
 						{
 							_out.printError("Could not read packet: Too much data.");
 							break;
 						}
+						if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: MQTT packet received: " + BaseLib::HelperFunctions::getHexString(data));
 					}
 					if(length == 0)
 					{
